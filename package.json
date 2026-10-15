@@ -1,0 +1,111 @@
+{
+    "name": "@deltabox/toolchain",
+    "version": "1.0.0",
+    "description": "All-in-one toolchain: scaffold projects, manage configs, tsconfigs, changelogs and builds.",
+    "author": "Victor Sango <victor@deltabox.studio>",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/deltabox-studio/toolchain.git"
+    },
+    "license": "MPL-2.0",
+    "type": "module",
+    "sideEffects": false,
+    "bin": {
+        "dbx": "./dist/cli/index.js"
+    },
+    "keywords": [
+        "tooling",
+        "cli",
+        "monorepo",
+        "tsconfig",
+        "tsdown",
+        "biome",
+        "changelog",
+        "scaffold"
+    ],
+    "scripts": {
+        "build": "vp run --filter \"./packages/*\" build && vp run build:root",
+        "format": "vp fmt",
+        "format:check": "vp fmt --check",
+        "lint": "vp lint --fix",
+        "lint:check": "vp lint",
+        "check": "vp check",
+        "typecheck": "vp run --filter \"./packages/*\" build && vp run --filter \"./packages/*\" typecheck && vp run typecheck:root",
+        "test": "vp run --filter \"./packages/*\" build && vp run --filter \"./packages/*\" test && vp run test:root",
+        "vp:test": "vp test --run --config vite.config.ts",
+        "vp:toolchain": "vp toolchain",
+        "config:generate": "tsx scripts/generate-config.ts",
+        "dev": "tsx src/cli/index.ts",
+        "dbx": "tsx src/cli/index.ts",
+        "commitlint": "commitlint",
+        "prepare": "husky"
+    },
+    "publishConfig": {
+        "access": "public",
+        "provenance": true
+    },
+    "workspaces": [
+        "packages/*",
+        "apps/*"
+    ],
+    "dependencies": {
+        "commander": "^14.0.0",
+        "glob": "catalog:",
+        "lodash": "catalog:",
+        "tsdown": "catalog:",
+        "untyped": "^2.0.0",
+        "zod": "catalog:"
+    },
+    "devDependencies": {
+        "@commitlint/cli": "^21.2.2",
+        "@commitlint/config-conventional": "^21.2.2",
+        "@deltabox/toolchain-biome": "workspace:*",
+        "@deltabox/toolchain-changelog": "workspace:*",
+        "@deltabox/toolchain-config": "workspace:*",
+        "@deltabox/toolchain-core": "workspace:*",
+        "@deltabox/toolchain-migrate": "workspace:*",
+        "@deltabox/toolchain-project": "workspace:*",
+        "@deltabox/toolchain-shared": "workspace:*",
+        "@deltabox/toolchain-template": "workspace:*",
+        "@deltabox/toolchain-tsconfig": "workspace:*",
+        "@deltabox/toolchain-tsdown": "workspace:*",
+        "@deltabox/toolchain-vite": "workspace:*",
+        "@types/node": "catalog:",
+        "@typescript/native-preview": "catalog:",
+        "cross-env": "catalog:",
+        "dotenv": "catalog:",
+        "husky": "^9.1.7",
+        "publint": "^0.3.24",
+        "tsx": "catalog:",
+        "type-fest": "catalog:",
+        "typescript": "catalog:",
+        "unrun": "^0.3.1",
+        "vite": "catalog:",
+        "vite-plus": "^1.2.0",
+        "vitest": "catalog:"
+    },
+    "packageManager": "yarn@4.17.1",
+    "engines": {
+        "node": ">=22.5.0"
+    },
+    "files": [
+        "dist"
+    ],
+    "exports": {
+        ".": "./dist/index.js",
+        "./biome": "./dist/biome.js",
+        "./changelog": "./dist/changelog.js",
+        "./cli": "./dist/cli/index.js",
+        "./config": "./dist/config.js",
+        "./core": "./dist/core.js",
+        "./migrate": "./dist/migrate.js",
+        "./project": "./dist/project.js",
+        "./providers": "./dist/providers.js",
+        "./shared": "./dist/shared.js",
+        "./template": "./dist/template.js",
+        "./tsconfig": "./dist/tsconfig.js",
+        "./tsdown": "./dist/tsdown.js",
+        "./vite": "./dist/vite.js",
+        "./package.json": "./package.json"
+    }
+}

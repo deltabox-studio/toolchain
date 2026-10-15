@@ -1,0 +1,70 @@
+# Migrations
+
+`dbx migrate` converts a project's tooling config from another tool to
+**Ox** (Oxfmt + Oxlint). Migrations are pluggable — adding a source tool is a
+matter of implementing one interface.
+
+```bash
+dbx migrate:list                       # what's available + detected
+dbx migrate --from biome               # dry-run
+dbx migrate --from biome --write       # writes the ox config
+dbx migrate --from biome --target vite --write
+dbx migrate --from all                 # every detected source
+dbx migrate --check                    # CI: exit 1 when the ox config is stale
+dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
+```
+
+## Sources
+
+| Source     | Notes                                                                                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `biome`    | Formatter options, `files.includes` negations → `ignorePatterns`, **`organizeImports.groups` → Oxfmt `sortImports`**, and a curated Biome → Oxlint rule map. |
+| `prettier` | Prettier-compatible options transfer directly; Tailwind/PackageJson plugins detected; `.prettierignore` → `ignorePatterns`.                                  |
+| `eslint`   | JSON configs map rule names + severities (`@typescript-eslint/*` → `typescript/*`); JS/flat configs use `@oxlint/migrate` with `--online --write`.           |
+| `dprint`   | `dprint.json` layout + TypeScript options → Oxfmt.                                                                                                           |
+
+## Targets
+
+- `--target files` (default) — writes `.oxfmtrc.json` and `.oxlintrc.json`.
+- `--target vite` — folds the result into an existing `vite.config.ts`
+  (inserting/replacing `fmt` and `lint`), which is what Vite+ reads.
+
+## CI check
+
+`--check` runs the migrations without writing and exits non-zero when a target
+file is missing or differs from what the migration would produce, so a pipeline
+can require that a repo is fully on Ox:
+
+```bash
+dbx migrate --check || echo "still on Biome/ESLint — run migrate --write"
+```
+
+`--online` allows network access: the ESLint migration shells out to
+`@oxlint/migrate` to evaluate JS/flat configs (it writes `.oxlintrc.json`, so it
+runs only together with `--write`).
+
+## Honest output
+
+Anything that cannot be mapped faithfully is reported instead of dropped:
+
+```
+unmapped (7):
+  - organizeImports !lucide*: negated group members are approximated
+  - linter.rules.suspicious.noUnknownAtRules: no Oxlint equivalent
+```
+
+## Programmatic
+
+```ts
+import { listMigrations, detectMigrations, runMigration } from '@deltabox/toolchain/migrate';
+
+const detected = detectMigrations(process.cwd());
+const result = await runMigration('biome', { cwd: process.cwd(), target: 'vite', write: true });
+console.log(result.unmapped);
+```
+
+## Notes
+
+`oxfmt --migrate biome`-style tools cover formatter options only; the pieces the
+upstream tools skip (Biome `organizeImports`, Biome linter rules, Dprint) are
+handled here.

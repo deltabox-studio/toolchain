@@ -1,0 +1,5 @@
+{
+    "extends": "./tsconfig.default.json",
+    "include": ["src", "{{envTypesFile}}", "apps/*/src", "packages/*/src", "scripts", "sdk/*/src"],
+    "exclude": ["**/dist", "**/node_modules", "docs"]
+}

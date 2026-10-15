@@ -1,0 +1,82 @@
+import type { Command } from 'commander';
+
+import type { ToolingCommand, ToolingCommandContext } from '@deltabox/toolchain-shared';
+
+import { loadContext } from './context.js';
+import { optionKeys } from './options.js';
+
+/**
+ * Register {@link ToolingCommand} descriptors on a commander program. Before a
+ * command runs, the consumer's `dbx.config.*` is loaded (once per cwd)
+ * and passed as context. Only flags the user *explicitly typed* are forwarded,
+ * so config-derived defaults win unless overridden on the CLI.
+ */
+export function registerToolingCommands(program: Command, commands: ToolingCommand[]): Command {
+    for (const cmd of commands) {
+        const instance = program.command(cmd.name).description(cmd.description);
+        if (cmd.passthrough) {
+            // Forward unknown flags + excess operands verbatim to the provider.
+            instance.allowUnknownOption(true).allowExcessArguments(true);
+        }
+        const keys = new Set<string>();
+        for (const option of cmd.options ?? []) {
+            for (const key of optionKeys(option.flags)) keys.add(key);
+            if (option.default !== undefined) {
+                instance.option(option.flags, option.description, option.default);
+            } else {
+                instance.option(option.flags, option.description);
+            }
+        }
+        for (const arg of cmd.args ?? []) {
+            const open = arg.required === false ? '[' : '<';
+            const close = arg.required === false ? ']' : '>';
+            instance.argument(
+                `${open}${arg.name}${arg.variadic ? '...' : ''}${close}`,
+                arg.description
+            );
+        }
+        instance.action(async (...actionArgs: unknown[]) => {
+            const command = actionArgs.pop() as Command;
+            const options = (actionArgs.pop() ?? {}) as Record<string, unknown>;
+            const provided: Record<string, unknown> = {};
+            for (const key of keys) {
+                if (command.getOptionValueSource(key) === 'cli') provided[key] = options[key];
+            }
+            if (cmd.passthrough) {
+                // Every operand (incl. unknown flags) collected by commander.
+                provided.args = command.args.slice();
+            } else {
+                for (const [index, arg] of (cmd.args ?? []).entries()) {
+                    if (actionArgs[index] !== undefined) provided[arg.name] = actionArgs[index];
+                }
+            }
+            const cwd = (provided.cwd as string | undefined) ?? process.cwd();
+            try {
+                if (cmd.passthrough) {
+                    // A passthrough wraps an external binary: no config needed.
+                    await cmd.run(provided, {
+                        cwd,
+                        projectType: 'project',
+                        config: {},
+                        tokens: {},
+                    });
+                } else {
+                    const loaded = await loadContext(cwd);
+                    const context: ToolingCommandContext = {
+                        cwd,
+                        projectType: loaded.projectType,
+                        config: loaded.config,
+                        tokens: loaded.tokens,
+                        ...(loaded.path ? { configPath: loaded.path } : {}),
+                    };
+                    await cmd.run(provided, context);
+                }
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                console.error(`dbx: ${message}`);
+                process.exitCode = 1;
+            }
+        });
+    }
+    return program;
+}

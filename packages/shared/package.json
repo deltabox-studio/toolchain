@@ -1,0 +1,31 @@
+{
+    "name": "@deltabox/toolchain-shared",
+    "version": "1.0.0",
+    "description": "Shared helpers and the replacement/template engine used by the @deltabox/toolchain packages.",
+    "author": "Victor Sango <victor@deltabox.studio>",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/deltabox-studio/toolchain.git",
+        "directory": "packages/shared"
+    },
+    "license": "MPL-2.0",
+    "type": "module",
+    "files": [
+        "dist"
+    ],
+    "private": true,
+    "dependencies": {
+        "zod": "catalog:"
+    },
+    "devDependencies": {
+        "@types/node": "catalog:",
+        "tsdown": "catalog:",
+        "type-fest": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:"
+    },
+    "exports": {
+        ".": "./dist/index.js",
+        "./package.json": "./package.json"
+    }
+}

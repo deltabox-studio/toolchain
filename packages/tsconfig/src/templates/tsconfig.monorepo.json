@@ -1,0 +1,38 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "types": ["node"],
+        "allowJs": true,
+        "noEmit": false,
+        "declaration": true,
+        "emitDeclarationOnly": true,
+        "paths": {
+            "@proxified/frontend/*": ["./apps/frontend/src/*"],
+
+            "@proxified/server": ["./packages/server/src/index.ts"],
+            "@proxified/server/*": ["./packages/server/src/*"],
+
+            "@proxified/cli": ["./packages/cli/src/index.ts"],
+            "@proxified/shared": ["./packages/shared/src/index.ts"],
+            "@proxified/shared/*": ["./packages/shared/src/*"],
+
+            "@proxified/js": ["./sdk/js/src/index.ts"],
+            "@proxified/js/*": ["./sdk/js/src/*"],
+
+            "@proxified/graphql-js": ["./sdk/graphql-js/src/index.ts"],
+            "@proxified/graphql-js/*": ["./sdk/graphql-js/src/*"],
+
+            "@proxified/hey-api-sdk-modules": ["./packages/hey-api-sdk-modules/src/index.ts"],
+            "@proxified/hey-api-sdk-modules/*": ["./packages/hey-api-sdk-modules/src/*"]
+        }
+    },
+    "references": [
+        { "path": "./apps/frontend/tsconfig.json" },
+        { "path": "./packages/server/tsconfig.json" },
+        { "path": "./packages/cli/tsconfig.json" },
+        { "path": "./packages/shared/tsconfig.json" },
+        { "path": "./sdk/js/tsconfig.json" },
+        { "path": "./sdk/graphql-js/tsconfig.json" },
+        { "path": "./packages/hey-api-sdk-modules/tsconfig.json" }
+    ]
+}

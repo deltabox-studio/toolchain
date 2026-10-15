@@ -1,0 +1,45 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "types": ["node"],
+        "allowJs": true,
+        "noEmit": false,
+        "declaration": true,
+        "emitDeclarationOnly": true,
+        "paths": {
+            "@deltabox/toolchain-shared": ["./packages/shared/src/index.ts"],
+            "@deltabox/toolchain-shared/*": ["./packages/shared/src/*"],
+
+            "@deltabox/toolchain-config": ["./packages/config/src/index.ts"],
+            "@deltabox/toolchain-config/*": ["./packages/config/src/*"],
+
+            "@deltabox/toolchain-core": ["./packages/core/src/index.ts"],
+            "@deltabox/toolchain-core/*": ["./packages/core/src/*"],
+
+            "@deltabox/toolchain-changelog": ["./packages/changelog/src/index.ts"],
+            "@deltabox/toolchain-changelog/*": ["./packages/changelog/src/*"],
+
+            "@deltabox/toolchain-tsconfig": ["./packages/tsconfig/src/index.ts"],
+            "@deltabox/toolchain-tsconfig/*": ["./packages/tsconfig/src/*"],
+
+            "@deltabox/toolchain-tsdown": ["./packages/tsdown/src/index.ts"],
+            "@deltabox/toolchain-tsdown/*": ["./packages/tsdown/src/*"],
+
+            "@deltabox/toolchain-biome": ["./packages/biome/src/index.ts"],
+            "@deltabox/toolchain-biome/*": ["./packages/biome/src/*"],
+
+            "@deltabox/toolchain-project": ["./packages/project/src/index.ts"],
+            "@deltabox/toolchain-project/*": ["./packages/project/src/*"]
+        }
+    },
+    "references": [
+        { "path": "./packages/shared/tsconfig.json" },
+        { "path": "./packages/config/tsconfig.json" },
+        { "path": "./packages/core/tsconfig.json" },
+        { "path": "./packages/changelog/tsconfig.json" },
+        { "path": "./packages/tsconfig/tsconfig.json" },
+        { "path": "./packages/tsdown/tsconfig.json" },
+        { "path": "./packages/biome/tsconfig.json" },
+        { "path": "./packages/project/tsconfig.json" }
+    ]
+}

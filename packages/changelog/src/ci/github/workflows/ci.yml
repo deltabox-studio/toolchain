@@ -1,0 +1,36 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [release/**, feat/**, feature/**, fix/**, chore/**]
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: "${{ secrets.GITHUB_TOKEN }}"
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@4.17.1 --activate
+      - name: Install dependencies
+        run: yarn install --immutable
+      - name: Commitlint (Conventional Commits)
+        if: "${{ github.event_name == 'pull_request' || github.event.before != '0000000000000000000000000000000000000000' }}"
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha || github.event.before }}"
+          head="${{ github.event.pull_request.head.sha || github.event.after }}"
+          yarn commitlint --from "$base" --to "$head"
+      - name: Verify generated files are in sync
+        run: yarn dbx sync --check
+      - name: Build
+        run: yarn build

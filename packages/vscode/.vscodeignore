@@ -1,0 +1,13 @@
+# Only ship what the extension host needs (deps are bundled into dist).
+src/**
+tests/**
+scripts/**
+.turbo/**
+.vscode/**
+*.vsix
+tsconfig.json
+tsconfig.default.json
+tsconfig.build.json
+tsdown.config.ts
+vitest.config.ts
+node_modules/**

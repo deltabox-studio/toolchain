@@ -1,0 +1,248 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import { afterEach, describe, expect, it } from 'vitest';
+
+import {
+    detectMigrations,
+    diffFiles,
+    hasPending,
+    listMigrations,
+    mapPrettierToOxfmt,
+    mergeViteConfig,
+    readJsonc,
+    renderViteTarget,
+    runMigration,
+} from '../src/index.js';
+
+const tmpDirs: string[] = [];
+
+function makeTmp(): string {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-migrate-'));
+    tmpDirs.push(dir);
+    return dir;
+}
+
+afterEach(() => {
+    for (const dir of tmpDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+});
+
+const BIOME = {
+    formatter: { indentStyle: 'space', indentWidth: 4, lineWidth: 100, lineEnding: 'lf' },
+    javascript: {
+        formatter: {
+            quoteStyle: 'single',
+            jsxQuoteStyle: 'double',
+            semicolons: 'always',
+            trailingCommas: 'es5',
+            arrowParentheses: 'asNeeded',
+        },
+    },
+    files: { includes: ['**/*.{ts,js}', '!**/*/dist', '!**/node_modules'] },
+    assist: {
+        actions: {
+            source: {
+                organizeImports: {
+                    options: {
+                        groups: [[':NODE:'], ':BLANK_LINE:', [':PACKAGE:'], ['@/**'], [':PATH:']],
+                    },
+                },
+            },
+        },
+    },
+    linter: {
+        rules: {
+            correctness: { noUnusedVariables: 'warn' },
+            suspicious: { noDoubleEquals: 'warn', noExplicitAny: 'off' },
+        },
+    },
+};
+
+describe('readJsonc', () => {
+    it('parses comments and trailing commas', () => {
+        const dir = makeTmp();
+        const file = path.join(dir, 'biome.jsonc');
+        fs.writeFileSync(
+            file,
+            '{\n  // a comment\n  "a": 1, /* block */\n  "b": [1, 2,],\n}\n',
+            'utf-8'
+        );
+        expect(readJsonc(file)).toEqual({ a: 1, b: [1, 2] });
+    });
+});
+
+describe('biome -> ox', () => {
+    it('maps formatter, ignore, sortImports and rules', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
+
+        const result = await runMigration('biome', { cwd: dir, write: true });
+
+        const oxfmt = result.oxfmt as Record<string, any>;
+        expect(oxfmt.useTabs).toBe(false);
+        expect(oxfmt.tabWidth).toBe(4);
+        expect(oxfmt.printWidth).toBe(100);
+        expect(oxfmt.singleQuote).toBe(true);
+        expect(oxfmt.jsxSingleQuote).toBe(false);
+        expect(oxfmt.semi).toBe(true);
+        expect(oxfmt.trailingComma).toBe('es5');
+        expect(oxfmt.arrowParens).toBe('avoid');
+        expect(oxfmt.ignorePatterns).toContain('**/*/dist');
+        expect(oxfmt.sortImports.groups[0]).toBe('builtin');
+        expect(oxfmt.sortImports.groups).toContain('internal');
+        expect(oxfmt.sortImports.internalPattern).toContain('@/');
+
+        const oxlint = result.oxlint as Record<string, any>;
+        expect(oxlint.rules['no-unused-vars']).toBe('warn');
+        expect(oxlint.rules.eqeqeq).toBe('warn');
+        expect(oxlint.rules['typescript/no-explicit-any']).toBe('off');
+
+        expect(fs.existsSync(path.join(dir, '.oxfmtrc.json'))).toBe(true);
+        expect(fs.existsSync(path.join(dir, '.oxlintrc.json'))).toBe(true);
+    });
+
+    it('does not write without --write', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
+        await runMigration('biome', { cwd: dir });
+        expect(fs.existsSync(path.join(dir, '.oxfmtrc.json'))).toBe(false);
+    });
+});
+
+describe('prettier -> ox', () => {
+    it('maps options and detects plugins', () => {
+        const mapped = mapPrettierToOxfmt({
+            semi: false,
+            singleQuote: true,
+            printWidth: 80,
+            plugins: ['prettier-plugin-tailwindcss', 'some-other-plugin'],
+        });
+        expect(mapped.oxfmt.semi).toBe(false);
+        expect(mapped.oxfmt.singleQuote).toBe(true);
+        expect(mapped.oxfmt.printWidth).toBe(80);
+        expect(mapped.oxfmt.sortTailwindcss).toBe(true);
+        expect(mapped.unmapped).toContain('plugin: some-other-plugin');
+    });
+});
+
+describe('eslint -> ox', () => {
+    it('maps rule names and severities', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, '.eslintrc.json'),
+            JSON.stringify({
+                rules: {
+                    'no-unused-vars': 'warn',
+                    '@typescript-eslint/no-explicit-any': 2,
+                    'import/order': 'off',
+                },
+            }),
+            'utf-8'
+        );
+        const result = await runMigration('eslint', { cwd: dir, write: true });
+        const oxlint = result.oxlint as Record<string, any>;
+        expect(oxlint.rules['no-unused-vars']).toBe('warn');
+        expect(oxlint.rules['typescript/no-explicit-any']).toBe('error');
+        expect(oxlint.rules['import/order']).toBe('off');
+    });
+});
+
+describe('migrate --target vite', () => {
+    it('renders a fresh vite.config.ts', () => {
+        const out = mergeViteConfig(undefined, {
+            fmt: { semi: true, singleQuote: true },
+            lint: { rules: { eqeqeq: 'warn' } },
+        });
+        expect(out).toContain("import { defineConfig } from 'vite-plus';");
+        expect(out).toContain('fmt: {');
+        expect(out).toContain("eqeqeq: 'warn'");
+    });
+
+    it('inserts and replaces fmt/lint in an existing config', () => {
+        const existing = `import { defineConfig } from 'vite-plus';\n\nexport default defineConfig({\n    test: { include: ['x'] },\n    fmt: { semi: false },\n});\n`;
+        const out = mergeViteConfig(existing, { fmt: { semi: true }, lint: { rules: {} } });
+        expect(out).toContain("test: { include: ['x'] }");
+        expect(out).toContain('semi: true');
+        expect(out).not.toContain('semi: false');
+        expect(out).toContain('lint: {');
+    });
+});
+
+describe('registry', () => {
+    it('detects present configs', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, 'biome.json'), '{}', 'utf-8');
+        expect(detectMigrations(dir).map(m => m.id)).toContain('biome-to-ox');
+        const infos = listMigrations(dir);
+        expect(infos.find(info => info.id === 'biome-to-ox')?.detected).toBe(true);
+    });
+
+    it('detects several sources at once (--from all)', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, 'biome.json'), '{}', 'utf-8');
+        fs.writeFileSync(path.join(dir, '.prettierrc'), '{}', 'utf-8');
+        const ids = detectMigrations(dir).map(m => m.id);
+        expect(ids).toContain('biome-to-ox');
+        expect(ids).toContain('prettier-to-ox');
+    });
+});
+
+describe('produced files + --target vite', () => {
+    it('renders a vite.config.ts without writing (renderViteTarget)', () => {
+        const dir = makeTmp();
+        const file = renderViteTarget(dir, { fmt: { semi: true } });
+        expect(file.path).toBe(path.join(dir, 'vite.config.ts'));
+        expect(file.content).toContain('semi: true');
+        expect(fs.existsSync(file.path)).toBe(false);
+    });
+
+    it('biome --target vite folds fmt + lint into vite.config.ts', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
+        const result = await runMigration('biome', { cwd: dir, target: 'vite', write: true });
+        const file = path.join(dir, 'vite.config.ts');
+        expect(result.written).toEqual([file]);
+        expect(result.files?.[0]?.path).toBe(file);
+        const content = fs.readFileSync(file, 'utf-8');
+        expect(content).toContain('fmt: {');
+        expect(content).toContain('lint: {');
+    });
+
+    it('exposes file contents so --check can compare them', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
+        const dry = await runMigration('biome', { cwd: dir });
+        expect(dry.files?.map(f => path.basename(f.path))).toEqual([
+            '.oxfmtrc.json',
+            '.oxlintrc.json',
+        ]);
+        expect(diffFiles(dry.files!).map(d => d.status)).toEqual(['missing', 'missing']);
+        expect(hasPending(diffFiles(dry.files!))).toBe(true);
+
+        await runMigration('biome', { cwd: dir, write: true });
+        expect(diffFiles(dry.files!).map(d => d.status)).toEqual(['same', 'same']);
+        expect(hasPending(diffFiles(dry.files!))).toBe(false);
+    });
+});
+
+describe('diffFiles', () => {
+    it('detects missing, changed and same', () => {
+        const dir = makeTmp();
+        const file = path.join(dir, 'x.json');
+        expect(diffFiles([{ path: file, content: '{}\n' }])[0]?.status).toBe('missing');
+        fs.writeFileSync(file, '{"a":1}\n', 'utf-8');
+        expect(diffFiles([{ path: file, content: '{}\n' }])[0]?.status).toBe('changed');
+        expect(diffFiles([{ path: file, content: '{"a":1}\n' }])[0]?.status).toBe('same');
+    });
+});
+
+describe('eslint flat config', () => {
+    it('points at --online for a JS/flat config', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, 'eslint.config.js'), 'export default [];', 'utf-8');
+        const result = await runMigration('eslint', { cwd: dir });
+        expect(result.notes?.join('\n')).toContain('--online');
+        expect(result.files?.map(f => path.basename(f.path))).toEqual(['.oxlintrc.json']);
+    });
+});

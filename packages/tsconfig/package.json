@@ -1,0 +1,38 @@
+{
+    "name": "@deltabox/toolchain-tsconfig",
+    "version": "1.0.0",
+    "description": "TypeScript config templates and the tsconfig generator (path aliases + project references).",
+    "author": "Victor Sango <victor@deltabox.studio>",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/deltabox-studio/toolchain.git",
+        "directory": "packages/tsconfig"
+    },
+    "license": "MPL-2.0",
+    "type": "module",
+    "files": [
+        "dist"
+    ],
+    "private": true,
+    "dependencies": {
+        "@deltabox/toolchain-shared": "workspace:*",
+        "glob": "catalog:",
+        "type-fest": "catalog:"
+    },
+    "devDependencies": {
+        "@deltabox/toolchain-tsdown": "workspace:*",
+        "@types/node": "catalog:",
+        "tsdown": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:"
+    },
+    "exports": {
+        ".": "./dist/index.js",
+        "./cli": "./dist/cli/index.js",
+        "./cli/generate": "./dist/cli/generate/index.js",
+        "./package.json": "./package.json"
+    },
+    "bin": {
+        "toolchain-tsconfig": "./dist/cli/generate/index.js"
+    }
+}

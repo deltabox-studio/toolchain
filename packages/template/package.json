@@ -1,0 +1,34 @@
+{
+    "name": "@deltabox/toolchain-template",
+    "version": "1.0.0",
+    "description": "Custom project/tooling/pipeline template registry: builtin, local and online (npm/git/Vite+) sources.",
+    "author": "Victor Sango <victor@deltabox.studio>",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/deltabox-studio/toolchain.git",
+        "directory": "packages/template"
+    },
+    "license": "MPL-2.0",
+    "type": "module",
+    "files": [
+        "dist"
+    ],
+    "private": true,
+    "dependencies": {
+        "@deltabox/toolchain-project": "workspace:*",
+        "@deltabox/toolchain-shared": "workspace:*",
+        "@deltabox/toolchain-vite": "workspace:*"
+    },
+    "devDependencies": {
+        "@deltabox/toolchain-tsdown": "workspace:*",
+        "@types/node": "catalog:",
+        "tsdown": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:"
+    },
+    "exports": {
+        ".": "./dist/index.js",
+        "./cli": "./dist/cli/index.js",
+        "./package.json": "./package.json"
+    }
+}

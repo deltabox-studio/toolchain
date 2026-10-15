@@ -1,0 +1,307 @@
+{
+    "name": "toolchain-vscode",
+    "displayName": "deltabox toolchain",
+    "description": "Sync/generate @deltabox/toolchain managed files, run tooling across projects and scaffold new ones.",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "publisher": "deltabox",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/deltabox-studio/toolchain.git",
+        "directory": "packages/vscode"
+    },
+    "icon": "resources/icon.png",
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "main": "./dist/extension.cjs",
+    "activationEvents": [
+        "onStartupFinished"
+    ],
+    "contributes": {
+        "commands": [
+            {
+                "command": "deltabox.toolchain.sync",
+                "title": "Sync active project",
+                "category": "deltabox",
+                "icon": "$(sync)"
+            },
+            {
+                "command": "deltabox.toolchain.syncSelected",
+                "title": "Sync selected projects",
+                "category": "deltabox",
+                "icon": "$(checklist)"
+            },
+            {
+                "command": "deltabox.toolchain.syncAll",
+                "title": "Sync all projects",
+                "category": "deltabox",
+                "icon": "$(sync)"
+            },
+            {
+                "command": "deltabox.toolchain.syncCheck",
+                "title": "Check sync",
+                "category": "deltabox",
+                "icon": "$(check-all)"
+            },
+            {
+                "command": "deltabox.toolchain.syncProject",
+                "title": "Sync this project",
+                "category": "deltabox"
+            },
+            {
+                "command": "deltabox.toolchain.checkProject",
+                "title": "Check sync",
+                "category": "deltabox",
+                "icon": "$(check-all)"
+            },
+            {
+                "command": "deltabox.toolchain.scaffold",
+                "title": "Scaffold project…",
+                "category": "deltabox",
+                "icon": "$(add)"
+            },
+            {
+                "command": "deltabox.toolchain.generateConfigs",
+                "title": "Generate configs…",
+                "category": "deltabox",
+                "icon": "$(new-file)"
+            },
+            {
+                "command": "deltabox.toolchain.generateConfig",
+                "title": "Generate config",
+                "category": "deltabox",
+                "icon": "$(new-file)"
+            },
+            {
+                "command": "deltabox.toolchain.runWorkflow",
+                "title": "Run workflow…",
+                "category": "deltabox",
+                "icon": "$(play)"
+            },
+            {
+                "command": "deltabox.toolchain.resetTooling",
+                "title": "Reset tooling…",
+                "category": "deltabox",
+                "icon": "$(trash)"
+            },
+            {
+                "command": "deltabox.toolchain.goToProject",
+                "title": "Go to project",
+                "category": "deltabox",
+                "icon": "$(go-to-file)"
+            },
+            {
+                "command": "deltabox.toolchain.refresh",
+                "title": "Refresh projects",
+                "category": "deltabox",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "deltabox.toolchain.toggle",
+                "title": "Toggle auto-sync",
+                "category": "deltabox"
+            },
+            {
+                "command": "deltabox.toolchain.refreshFiles",
+                "title": "Refresh files",
+                "category": "deltabox",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "deltabox.toolchain.runVite",
+                "title": "Run Vite+ command…",
+                "category": "deltabox",
+                "icon": "$(play)"
+            },
+            {
+                "command": "deltabox.toolchain.runProjectVite",
+                "title": "Run Vite+ command…",
+                "category": "deltabox",
+                "icon": "$(play)"
+            },
+            {
+                "command": "deltabox.toolchain.createVite",
+                "title": "Create Vite+ project…",
+                "category": "deltabox",
+                "icon": "$(new-folder)"
+            },
+            {
+                "command": "deltabox.toolchain.templateAdd",
+                "title": "Add template…",
+                "category": "deltabox",
+                "icon": "$(add)"
+            },
+            {
+                "command": "deltabox.toolchain.templateRemove",
+                "title": "Remove template…",
+                "category": "deltabox",
+                "icon": "$(remove)"
+            }
+        ],
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "deltabox",
+                    "title": "deltabox toolchain",
+                    "icon": "resources/toolchain.svg"
+                }
+            ]
+        },
+        "views": {
+            "deltabox": [
+                {
+                    "id": "deltabox.home",
+                    "name": "Home",
+                    "type": "webview",
+                    "contextualTitle": "deltabox toolchain"
+                },
+                {
+                    "id": "deltabox.files",
+                    "name": "Files",
+                    "contextualTitle": "deltabox files"
+                },
+                {
+                    "id": "deltabox.projects",
+                    "name": "Projects",
+                    "contextualTitle": "deltabox projects"
+                }
+            ]
+        },
+        "menus": {
+            "view/title": [
+                {
+                    "command": "deltabox.toolchain.syncSelected",
+                    "when": "view == deltabox.projects",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "deltabox.toolchain.generateConfigs",
+                    "when": "view == deltabox.projects",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "deltabox.toolchain.refresh",
+                    "when": "view == deltabox.projects",
+                    "group": "navigation@3"
+                },
+                {
+                    "command": "deltabox.toolchain.refreshFiles",
+                    "when": "view == deltabox.files",
+                    "group": "navigation@1"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "deltabox.toolchain.syncProject",
+                    "when": "view == deltabox.projects && viewItem =~ /deltabox\\.project/",
+                    "group": "inline@1"
+                },
+                {
+                    "command": "deltabox.toolchain.syncAll",
+                    "when": "view == deltabox.projects && viewItem == deltabox.projectGroup",
+                    "group": "inline@1"
+                },
+                {
+                    "command": "deltabox.toolchain.checkProject",
+                    "when": "view == deltabox.projects && viewItem =~ /deltabox\\.project/",
+                    "group": "deltabox@1"
+                },
+                {
+                    "command": "deltabox.toolchain.generateConfig",
+                    "when": "view == deltabox.projects && viewItem == deltabox.project",
+                    "group": "deltabox@2"
+                },
+                {
+                    "command": "deltabox.toolchain.runWorkflow",
+                    "when": "view == deltabox.projects && viewItem =~ /deltabox\\.project/",
+                    "group": "deltabox@3"
+                },
+                {
+                    "command": "deltabox.toolchain.resetTooling",
+                    "when": "view == deltabox.projects && viewItem =~ /deltabox\\.project/",
+                    "group": "deltabox@4"
+                },
+                {
+                    "command": "deltabox.toolchain.goToProject",
+                    "when": "view == deltabox.projects && viewItem =~ /deltabox\\.project/",
+                    "group": "deltabox@5"
+                },
+                {
+                    "command": "deltabox.toolchain.runProjectVite",
+                    "when": "view == deltabox.projects && viewItem =~ /deltabox\\.project/",
+                    "group": "deltabox@6"
+                }
+            ],
+            "commandPalette": [
+                {
+                    "command": "deltabox.toolchain.syncProject",
+                    "when": "false"
+                },
+                {
+                    "command": "deltabox.toolchain.checkProject",
+                    "when": "false"
+                },
+                {
+                    "command": "deltabox.toolchain.generateConfig",
+                    "when": "false"
+                },
+                {
+                    "command": "deltabox.toolchain.goToProject",
+                    "when": "false"
+                },
+                {
+                    "command": "deltabox.toolchain.runProjectVite",
+                    "when": "false"
+                }
+            ]
+        },
+        "configuration": {
+            "title": "deltabox toolchain",
+            "properties": {
+                "deltabox.toolchain.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Auto sync/generate on watched file changes."
+                },
+                "deltabox.toolchain.debounce": {
+                    "type": "number",
+                    "default": 300,
+                    "description": "Debounce (ms) before running a sync."
+                },
+                "deltabox.toolchain.command": {
+                    "type": "string",
+                    "default": "sync",
+                    "description": "The dbx command to run on change."
+                },
+                "deltabox.toolchain.watch": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [
+                        "**/dbx.config.*",
+                        "**/tsconfig.default.json",
+                        "**/tsconfig.monorepo.json"
+                    ],
+                    "description": "Input globs that trigger a sync. Generated outputs are never watched (prevents sync loops)."
+                }
+            }
+        }
+    },
+    "scripts": {
+        "package:vsix": "vp run build && npx --yes @vscode/vsce package --no-dependencies --out deltabox-toolchain.vsix"
+    },
+    "devDependencies": {
+        "@deltabox/toolchain-tsdown": "workspace:*",
+        "@types/node": "catalog:",
+        "@types/vscode": "^1.85.0",
+        "tsdown": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:"
+    }
+}

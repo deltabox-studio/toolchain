@@ -1,0 +1,152 @@
+{
+    "$schema": "https://biomejs.dev/schemas/2.5.13/schema.json",
+    "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+    "files": {
+        "includes": [
+            "**/*.{ts,tsx,d.ts,js,json,css}",
+            "!*.json",
+            "!apps/*/*.json",
+            "!docs/*/*.json",
+            "!packages/*/*.json",
+            "!sdk/*/*.json",
+            "!**/*/dist",
+            "!**/*/node_modules",
+            "!**/.turbo/**",
+            "!**/.generated"
+        ]
+    },
+    "formatter": {
+        "enabled": true,
+        "formatWithErrors": false,
+        "indentStyle": "space",
+        "indentWidth": 4,
+        "lineEnding": "lf",
+        "lineWidth": 100,
+        "attributePosition": "auto",
+        "bracketSameLine": false,
+        "bracketSpacing": true,
+        "expand": "never",
+        "useEditorconfig": false,
+        "includes": [
+            "**/*.{ts,tsx,d.ts,js,json,css}",
+            "!*.json",
+            "!apps/*/*.json",
+            "!docs/*/*.json",
+            "!packages/*/*.json",
+            "!sdk/*/*.json",
+            "!**/*/dist",
+            "!**/*/node_modules",
+            "!**/.turbo/**",
+            "!**/.generated"
+        ]
+    },
+    "linter": {
+        "enabled": true,
+        "rules": {
+            "a11y": {
+                "useAltText": "off",
+                "useAriaPropsForRole": "info",
+                "useButtonType": "off",
+                "useFocusableInteractive": "off",
+                "useKeyWithClickEvents": "off",
+                "useSemanticElements": "warn",
+                "noStaticElementInteractions": "off",
+                "noSvgWithoutTitle": "off",
+                "noLabelWithoutControl": "off"
+            },
+            "complexity": {
+                "noBannedTypes": "off",
+                "noImportantStyles": "off",
+                "noUselessEscapeInRegex": "info",
+                "noUselessEmptyExport": "off",
+                "noStaticOnlyClass": "off"
+            },
+            "correctness": {
+                "noConstantCondition": "off",
+                "noInnerDeclarations": "off",
+                "noUnusedFunctionParameters": "off",
+                "noUnusedImports": "off",
+                "noUnusedVariables": "warn",
+                "noSwitchDeclarations": "off",
+                "useExhaustiveDependencies": "info"
+            },
+            "performance": { "noAccumulatingSpread": "off" },
+            "style": {
+                "useExponentiationOperator": "off",
+                "noNonNullAssertion": "off",
+                "useNodejsImportProtocol": "off",
+                "useTemplate": "off"
+            },
+            "suspicious": {
+                "noAssignInExpressions": "off",
+                "noDoubleEquals": "warn",
+                "noExplicitAny": "off",
+                "noImplicitAnyLet": "off",
+                "noUnknownAtRules": {
+                    "level": "warn",
+                    "options": { "ignore": ["apply", "config", "screen", "tailwind"] }
+                },
+                "noUselessEscapeInString": "off"
+            }
+        }
+    },
+    "javascript": {
+        "formatter": {
+            "jsxQuoteStyle": "double",
+            "quoteProperties": "asNeeded",
+            "trailingCommas": "es5",
+            "semicolons": "always",
+            "arrowParentheses": "asNeeded",
+            "bracketSameLine": false,
+            "quoteStyle": "single",
+            "attributePosition": "auto",
+            "bracketSpacing": true
+        }
+    },
+    "css": { "parser": { "tailwindDirectives": true } },
+    "html": { "formatter": { "indentScriptAndStyle": false, "selfCloseVoidElements": "always" } },
+    "assist": {
+        "enabled": true,
+        "actions": {
+            "source": {
+                "organizeImports": {
+                    "level": "on",
+                    "options": {
+                        "groups": [
+                            [":BUN:", ":NODE:"],
+                            ":BLANK_LINE:",
+                            [
+                                ":PACKAGE:",
+                                "!lucide*",
+                                "!iconify*",
+                                "!{{name}}",
+                                "!{{name}}/**",
+                                "!{{scope}}/**"
+                            ],
+                            ":BLANK_LINE:",
+                            ["{{name}}", "{{name}}/**", "{{scope}}/**"],
+                            ":BLANK_LINE:",
+                            ["@/lib/**", "@/utils/**"],
+                            ":BLANK_LINE:",
+                            ["@/pages/**"],
+                            ":BLANK_LINE:",
+                            ["@/components/**"],
+                            ":BLANK_LINE:",
+                            ["lucide*", "iconify*"],
+                            ":BLANK_LINE:",
+                            [
+                                ":ALIAS:",
+                                "!@/lib/**",
+                                "!@/utils/**",
+                                "!@/pages/**",
+                                "!@/components/**"
+                            ],
+                            ":BLANK_LINE:",
+                            [":PATH:"]
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}

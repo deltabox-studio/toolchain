@@ -1,0 +1,20 @@
+{
+    "extends": "./tsconfig.base.json",
+    "compilerOptions": {
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "jsx": "react-jsx",
+        "lib": ["ES2022", "DOM", "DOM.Iterable"],
+        "types": ["node"]
+    },
+    "exclude": ["**/dist", "**/node_modules", "docs", "packages"],
+    "include": [
+        "src",
+        "scripts",
+        "tests",
+        "dbx.config.ts",
+        "tsdown.config.ts",
+        "vitest.config.ts",
+        "package.json"
+    ]
+}

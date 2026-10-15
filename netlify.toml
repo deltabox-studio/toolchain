@@ -1,0 +1,12 @@
+# Netlify deploy for the docs site (apps/docs).
+#
+# Build runs from the repo root so the Yarn workspace resolves; the VitePress
+# output lives under apps/docs. To deploy, connect this repository to a Netlify
+# site (no build settings need changing — this file is picked up automatically).
+
+[build]
+command = "yarn workspace @deltabox/toolchain-docs build"
+publish = "apps/docs/.vitepress/dist"
+
+[build.environment]
+NODE_VERSION = "22"

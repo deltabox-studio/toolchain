@@ -1,0 +1,39 @@
+{
+    "name": "@deltabox/toolchain-config",
+    "version": "1.0.0",
+    "description": "Generic Zod/env-backed configuration engine: env parsing, schema walking, and .env/types/markdown/JSON/CLI generators.",
+    "author": "Victor Sango <victor@deltabox.studio>",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/deltabox-studio/toolchain.git",
+        "directory": "packages/config"
+    },
+    "license": "MPL-2.0",
+    "type": "module",
+    "files": [
+        "dist"
+    ],
+    "private": true,
+    "dependencies": {
+        "@deltabox/toolchain-shared": "workspace:*",
+        "lodash": "catalog:",
+        "untyped": "^2.0.0",
+        "zod": "catalog:"
+    },
+    "devDependencies": {
+        "@deltabox/toolchain-tsdown": "workspace:*",
+        "@types/lodash": "catalog:",
+        "@types/node": "catalog:",
+        "fastify": "catalog:",
+        "tsdown": "catalog:",
+        "type-fest": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:"
+    },
+    "exports": {
+        ".": "./dist/index.js",
+        "./cli": "./dist/cli/index.js",
+        "./generators": "./dist/generators/index.js",
+        "./package.json": "./package.json"
+    }
+}

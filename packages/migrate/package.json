@@ -1,0 +1,32 @@
+{
+    "name": "@deltabox/toolchain-migrate",
+    "version": "1.0.0",
+    "description": "Pluggable tooling-config migrations to Ox: Biome/ESLint/Prettier -> Oxfmt/Oxlint.",
+    "author": "Victor Sango <victor@deltabox.studio>",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/deltabox-studio/toolchain.git",
+        "directory": "packages/migrate"
+    },
+    "license": "MPL-2.0",
+    "type": "module",
+    "files": [
+        "dist"
+    ],
+    "private": true,
+    "dependencies": {
+        "@deltabox/toolchain-shared": "workspace:*"
+    },
+    "devDependencies": {
+        "@deltabox/toolchain-tsdown": "workspace:*",
+        "@types/node": "catalog:",
+        "tsdown": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:"
+    },
+    "exports": {
+        ".": "./dist/index.js",
+        "./cli": "./dist/cli/index.js",
+        "./package.json": "./package.json"
+    }
+}
