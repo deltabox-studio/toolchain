@@ -24,7 +24,8 @@
         "vite",
         "viteplus",
         "changelog",
-        "scaffold"
+        "scaffold",
+        "extension"
     ],
     "scripts": {
         "build": "vp run --filter \"./packages/*\" build && vp run build:root",
