@@ -1,13 +1,10 @@
 # deltabox toolchain
 
-> All-in-one, config-driven dev toolchain: scaffold projects, generate and manage
-> configs, tsconfigs, changelogs and CI, run Vite+, and migrate other tools onto Ox.
+All-in-one, config-driven dev toolchain: scaffold projects, generate and manage configs, tsconfigs, changelogs and CI, run Vite+, and migrate other tools onto Ox.
 
 [![license: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](./package.json)
-[![node](https://img.shields.io/badge/node-%3E%3D22.5.0-brightgreen.svg)](./package.json)
-[![yarn](https://img.shields.io/badge/yarn-4.17.1-2188b6.svg)](./package.json)
-[![package](https://img.shields.io/badge/npm-@deltabox%2Ftoolchain-cb3837.svg)](https://www.npmjs.com/package/@deltabox/toolchain)
 [![tests](https://img.shields.io/github/actions/workflow/status/deltabox-studio/toolchain/ci.yml?label=tests&logo=github)](https://github.com/deltabox-studio/toolchain/actions/workflows/ci.yml)
+[![package](https://img.shields.io/badge/npm-@deltabox%2Ftoolchain-cb3837.svg)](https://www.npmjs.com/package/@deltabox/toolchain)
 
 `@deltabox/toolchain` is driven by a single `dbx.config.ts` at a repo
 root. Define the sections you want and the toolchain generates and keeps the
