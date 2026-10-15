@@ -1,16 +1,30 @@
 # Changelog
 
-## 1.0.6 (October 2026)
+## 1.0.7 (October 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Vscode
+- Package the VSIX without vp; ignore vite.config.ts; untrack *.vsix ([#9d1e403](https://github.com/deltabox-studio/toolchain/commit/9d1e403) by [T0chi](https://github.com/T0chi))
+### Continuous integration
+#### Release
+- Release on push to main (tag + GitHub Release + npm + Marketplace) ([#4714b1a](https://github.com/deltabox-studio/toolchain/commit/4714b1a) by [T0chi](https://github.com/T0chi))
+  - Replaces the generated release-PR workflow with a hand-written one that, on
+    each push to main, packages the VS Code extension, creates the v<version> tag
+    and a GitHub Release (notes from CHANGELOG.md + the .vsix asset), publishes
+    @deltabox/toolchain to npm, and publishes the extension to the VS Code
+    Marketplace. Idempotent: skipped when the tag already exists.
+
+<!-- release:end -->
+
+
+## 1.0.6 (October 2026)
 
 ### Documentation
 - Add GitHub social links to the navbar and footer ([#2925f1a](https://github.com/deltabox-studio/toolchain/commit/2925f1a) by [T0chi](https://github.com/T0chi))
 ### Chores
 - Name the changelog/tsconfig bins explicitly and disable publish provenance ([#ba2737d](https://github.com/deltabox-studio/toolchain/commit/ba2737d) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.0.5 (October 2026)
 
