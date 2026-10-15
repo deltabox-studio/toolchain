@@ -16,6 +16,7 @@ export default defineConfig({
             scope: '@deltabox',
             author: 'Victor Sango <victor@deltabox.studio>',
             license: 'MPL-2.0',
+            homepage: 'https://toolchain.deltabox.studio',
             repo: 'https://github.com/deltabox-studio/toolchain',
             description:
                 'All-in-one toolchain: scaffold projects, manage configs, tsconfigs, changelogs and builds.',

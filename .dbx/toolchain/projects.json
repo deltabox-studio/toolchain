@@ -1,7 +1,7 @@
 {
     "root": "C:\\Users\\user\\coding\\projects\\deltabox\\@deltabox\\toolchain",
     "packageManager": "yarn",
-    "generatedAt": "2026-10-15T20:11:34.635Z",
+    "generatedAt": "2026-10-15T20:20:35.192Z",
     "projects": [
         {
             "name": "@deltabox/toolchain",
