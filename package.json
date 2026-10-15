@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "All-in-one toolchain: scaffold projects, manage template, configs, tsconfigs, changelogs and builds.",
     "homepage": "https://toolchain.deltabox.studio",
     "author": "Victor Sango <victor@deltabox.studio>",

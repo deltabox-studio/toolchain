@@ -1,15 +1,23 @@
 # Changelog
 
-## 1.0.2 (October 2026)
+## 1.0.3 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+- Highlight the config generator and link toolchain.deltabox.studio ([#836cd36](https://github.com/deltabox-studio/toolchain/commit/836cd36) by [T0chi](https://github.com/T0chi))
+### Chores
+- Exclude CHANGELOG.md from Oxfmt (the changelog pipeline owns its format) ([#f6ad3c0](https://github.com/deltabox-studio/toolchain/commit/f6ad3c0) by [T0chi](https://github.com/T0chi))
+- Add MPL-2.0 LICENSE and the project homepage ([#cea0fb5](https://github.com/deltabox-studio/toolchain/commit/cea0fb5) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.0.2 (October 2026)
 
 ### Tests
 #### Changelog
 - Update the release workflow reference fixture ([#e7efe0a](https://github.com/deltabox-studio/toolchain/commit/e7efe0a) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.0.1 (October 2026)
 
