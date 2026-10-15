@@ -27,7 +27,6 @@ See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
     - [Config generator](#config-generator)
     - [CLI](#cli)
     - [Programmatic API](#programmatic-api)
-    - [Packages](#packages)
     - [VS Code extension](#vs-code-extension)
     - [Development](#development)
     - [Docs](#docs)
@@ -170,26 +169,6 @@ const { config, tokens, projectType } = await loadToolingConfig(process.cwd());
 await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, projectType });
 ```
 
-## Packages
-
-The root package re-exports every workspace below, and each is also importable
-via a subpath (`@deltabox/toolchain/tsconfig`, `…/vite`, `…/migrate`, …).
-
-| Package                         | Responsibility                                            |
-| ------------------------------- | --------------------------------------------------------- |
-| `@deltabox/toolchain-shared`    | Config model, template engine, provider model, run/spawn. |
-| `@deltabox/toolchain-core`      | Config loader, project graph, sync engine, manifest.      |
-| `@deltabox/toolchain-project`   | Scaffold generators (single / monorepo / workspace).      |
-| `@deltabox/toolchain-tsconfig`  | TypeScript config templates + tsconfig generator.         |
-| `@deltabox/toolchain-changelog` | Workflows, commitlint, changelog pipeline.                |
-| `@deltabox/toolchain-biome`     | `biome.json` generation + VS Code settings.               |
-| `@deltabox/toolchain-tsdown`    | tsdown base config + cleanup.                             |
-| `@deltabox/toolchain-config`    | Generic Zod/env config engine.                            |
-| `@deltabox/toolchain-vite`      | Vite+ provider (`vp` wrapper).                            |
-| `@deltabox/toolchain-template`  | Template registry/scaffolder.                             |
-| `@deltabox/toolchain-migrate`   | Biome/Prettier/ESLint/Dprint → Ox migrations.             |
-| `toolchain-vscode`              | VS Code extension (`deltabox-toolchain.vsix`).            |
-
 ## VS Code extension
 
 Install `packages/vscode/deltabox-toolchain.vsix`, then use the **deltabox
@@ -220,22 +199,10 @@ Docs live in `apps/docs` (VitePress): `yarn workspace @deltabox/toolchain-docs b
 
 ## Docs
 
-Full documentation, guides and examples live at
-**[toolchain.deltabox.studio](https://toolchain.deltabox.studio)**:
+Full documentation, guides and examples live at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
 
-- [Getting Started](https://toolchain.deltabox.studio/guide/)
-- [Monorepo guide](https://toolchain.deltabox.studio/guide/monorepo)
-- [CLI](https://toolchain.deltabox.studio/guide/cli)
-- [Configuration](https://toolchain.deltabox.studio/guide/config)
-- [Config generator](https://toolchain.deltabox.studio/guide/config-generator)
-- [Providers (Vite+)](https://toolchain.deltabox.studio/guide/providers)
-- [Templates](https://toolchain.deltabox.studio/guide/templates)
-- [Migrations](https://toolchain.deltabox.studio/guide/migrations)
-- [Programmatic API](https://toolchain.deltabox.studio/guide/api)
-- [Config reference](https://toolchain.deltabox.studio/config/reference)
-
-The source pages live in `apps/docs` (VitePress).
+The source pages live in `apps/docs`.
 
 ## License
 
-[MPL-2.0](./LICENSE) © Victor Sango
+[MPL-2.0](./LICENSE) © deltabox
