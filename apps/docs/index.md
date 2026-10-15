@@ -4,7 +4,7 @@ layout: home
 hero:
     name: deltabox toolchain
     text: One toolchain for the whole repo
-    tagline: Scaffold projects, generate configs, manage tsconfigs, changelogs and CI, and run Vite+ — all from a single `dbx.config.ts`.
+    tagline: Scaffold projects, generate configs, manage tsconfigs, changelogs and CI, and run Vite+
     actions:
         - theme: brand
           text: Get Started
