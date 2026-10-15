@@ -1,3 +1,6 @@
+import { copyFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { defineConfig } from 'vitepress';
 
 /**
@@ -9,6 +12,15 @@ export default defineConfig({
     description:
         'All-in-one toolchain: scaffold projects, manage configs, tsconfigs, changelogs and builds.',
     cleanUrls: true,
+
+    // Publish the generated dbx JSON schema at the site root so editors can
+    // point at https://toolchain.deltabox.studio/config.schema.json.
+    buildEnd(siteConfig) {
+        const schema = resolve(siteConfig.root, '../../config.schema.json');
+        if (existsSync(schema)) {
+            copyFileSync(schema, resolve(siteConfig.outDir, 'config.schema.json'));
+        }
+    },
     themeConfig: {
         nav: [
             { text: 'Guide', link: '/guide/' },
