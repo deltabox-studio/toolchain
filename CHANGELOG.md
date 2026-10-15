@@ -1,16 +1,21 @@
 # Changelog
 
-## 1.0.4 (October 2026)
+## 1.0.5 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+- Update tagline ([#e1fa86e](https://github.com/deltabox-studio/toolchain/commit/e1fa86e) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.0.4 (October 2026)
 
 ### Documentation
 - Add a table of contents to the README ([#b2702e8](https://github.com/deltabox-studio/toolchain/commit/b2702e8) by [T0chi](https://github.com/T0chi))
 ### Chores
 - Fix grammar in the package description ([#8a199b8](https://github.com/deltabox-studio/toolchain/commit/8a199b8) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.0.3 (October 2026)
 
