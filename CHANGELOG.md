@@ -1,8 +1,17 @@
 # Changelog
 
-## 1.1.1 (October 2026)
+## 1.1.2 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+- Add a tests badge to the README ([#01513ee](https://github.com/deltabox-studio/toolchain/commit/01513ee) by [T0chi](https://github.com/T0chi))
+- Fix CHANGELOG.md mojibake and add backticks to code refs ([#6b721eb](https://github.com/deltabox-studio/toolchain/commit/6b721eb) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.1.1 (October 2026)
 
 ### Documentation
 
@@ -19,8 +28,6 @@
       trusted publishing: `id-token: write`, setup-node `registry-url`, `yarn pack`
       (resolves `catalog:`/`workspace:`) + `npm publish <tarball>` — provenance is
       generated automatically. Re-enable `publishConfig.provenance`.
-
-<!-- release:end -->
 
 ## 1.1.0 (October 2026)
 
