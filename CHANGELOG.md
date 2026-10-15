@@ -1,14 +1,19 @@
 # Changelog
 
-## 1.1.13 (October 2026)
+## 1.1.14 (October 2026)
 
 <!-- release:start -->
 
-### Chores
-- Re-enable npm provenance (repo is public) ([#71ed60d](https://github.com/deltabox-studio/toolchain/commit/71ed60d) by [T0chi](https://github.com/T0chi))
+### Documentation
+- Highlight the Vite/Vite+ plugin in the README and docs ([#8218179](https://github.com/deltabox-studio/toolchain/issues/8218179) by [T0chi](https://github.com/T0chi))
 
 <!-- release:end -->
 
+
+## 1.1.13 (October 2026)
+
+### Chores
+- Re-enable npm provenance (repo is public) ([#71ed60d](https://github.com/deltabox-studio/toolchain/commit/71ed60d) by [T0chi](https://github.com/T0chi))
 
 ## 1.1.12 (October 2026)
 
