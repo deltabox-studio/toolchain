@@ -1,14 +1,19 @@
 # Changelog
 
-## 1.1.14 (October 2026)
+## 1.1.15 (October 2026)
 
 <!-- release:start -->
 
-### Documentation
-- Highlight the Vite/Vite+ plugin in the README and docs ([#8218179](https://github.com/deltabox-studio/toolchain/issues/8218179) by [T0chi](https://github.com/T0chi))
+### Chores
+- Formatted README.md ([#4485c48](https://github.com/deltabox-studio/toolchain/commit/4485c48) by [T0chi](https://github.com/T0chi))
 
 <!-- release:end -->
 
+
+## 1.1.14 (October 2026)
+
+### Documentation
+- Highlight the Vite/Vite+ plugin in the README and docs ([#8218179](https://github.com/deltabox-studio/toolchain/issues/8218179) by [T0chi](https://github.com/T0chi))
 
 ## 1.1.13 (October 2026)
 
