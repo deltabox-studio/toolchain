@@ -1,17 +1,22 @@
 # Changelog
 
-## 1.1.9 (October 2026)
+## 1.1.10 (October 2026)
 
 <!-- release:start -->
+
+### Chores
+- Removed unnecessary shields ([#1efbe68](https://github.com/deltabox-studio/toolchain/commit/1efbe68) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.1.9 (October 2026)
 
 ### Documentation
 - Reindent the README lists ([#1d41d68](https://github.com/deltabox-studio/toolchain/commit/1d41d68) by [T0chi](https://github.com/T0chi))
 - Mirror the VS Code extension installation guide from the README ([#1889832](https://github.com/deltabox-studio/toolchain/issues/1889832) by [T0chi](https://github.com/T0chi))
 ### Chores
 - Update VS Code extension installation guide in README.md ([#aab06d5](https://github.com/deltabox-studio/toolchain/commit/aab06d5) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.1.8 (October 2026)
 
