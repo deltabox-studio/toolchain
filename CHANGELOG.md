@@ -1,14 +1,19 @@
 # Changelog
 
-## 1.1.6 (October 2026)
+## 1.1.7 (October 2026)
 
 <!-- release:start -->
 
-### Documentation
-- Use box2d.svg for the navbar/hero logo and box2d_bg.svg for the favicon ([#2c7a094](https://github.com/deltabox-studio/toolchain/commit/2c7a094) by [T0chi](https://github.com/T0chi))
+### Chores
+- Revise CLI commands and VS Code extension details ([#7f043f9](https://github.com/deltabox-studio/toolchain/commit/7f043f9) by [T0chi](https://github.com/T0chi))
 
 <!-- release:end -->
 
+
+## 1.1.6 (October 2026)
+
+### Documentation
+- Use box2d.svg for the navbar/hero logo and box2d_bg.svg for the favicon ([#2c7a094](https://github.com/deltabox-studio/toolchain/commit/2c7a094) by [T0chi](https://github.com/T0chi))
 
 ## 1.1.5 (October 2026)
 
