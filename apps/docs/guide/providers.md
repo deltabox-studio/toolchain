@@ -57,6 +57,39 @@ if (hasVp(process.cwd())) {
 }
 ```
 
+### Use dbx from Vite+
+
+Vite+ consumers can drive dbx from `vite.config.ts`, so a Vite+-only project
+still gets dbx's generated/managed files:
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite-plus';
+
+import { defineDbxConfig } from '@deltabox/toolchain/vite';
+
+export default defineConfig(
+    defineDbxConfig({
+        // your usual Vite / Vite+ config
+    })
+);
+```
+
+- The `dbx()` plugin runs `dbx sync` before the dev server / build, or
+  `dbx sync --check` in CI (which fails the build when generated files are out of
+  date), and re-syncs when a `dbx.config.*` / `tsconfig.*.json` input changes.
+- `defineDbxConfig` also registers `vp run dbx:sync` / `vp run dbx:check`. Vite+
+  reads `run.tasks` from the **static** config (a plugin's `config` hook is
+  ignored), which is why the wrapper — not the plugin — adds them.
+
+Prefer the bare plugin when you don't want the tasks:
+
+```ts
+import { dbx } from '@deltabox/toolchain/vite';
+
+export default defineConfig({ plugins: [dbx({ check: true })] });
+```
+
 ## Providers in the editor
 
 The VS Code extension reads `providers --json` and builds its menus from it, so

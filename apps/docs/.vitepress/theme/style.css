@@ -1,0 +1,6 @@
+/* Footer social links, rendered below the default footer. */
+.dbx-footer-social {
+    display: flex;
+    justify-content: center;
+    padding: 24px 24px 32px;
+}
