@@ -42,15 +42,23 @@ export function readRootVersion(): string {
     return pkg.version ?? '0.0.0';
 }
 
-/** Write `version` into every workspace package.json. */
+/**
+ * Write `version` into every workspace package.json.
+ *
+ * Only the `"version"` value is replaced in place, so the bump never reorders or
+ * drops other fields (eg. `bin`) or the file's formatting — keeping the version
+ * commit to a minimal diff.
+ */
 export function writeVersion(version: string): void {
     for (const dir of discoverWorkspaceDirs()) {
         const file = resolve(dir, 'package.json');
         if (!existsSync(file)) continue;
-        const pkg = JSON.parse(readFileSync(file, 'utf8')) as { version?: string };
-        pkg.version = version;
-        writeFileSync(file, `${JSON.stringify(pkg, null, 4)}\n`, 'utf8');
-        console.log(`  bumped ${file}`);
+        const content = readFileSync(file, 'utf8');
+        const next = content.replace(/("version"\s*:\s*)"[^"]*"/, `$1"${version}"`);
+        if (next !== content) {
+            writeFileSync(file, next, 'utf8');
+            console.log(`  bumped ${file}`);
+        }
     }
 }
 
