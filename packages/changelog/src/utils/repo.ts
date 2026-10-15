@@ -1,17 +1,21 @@
 import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
-/** The monorepo root (found by walking up to the nearest package.json). */
+/**
+ * The monorepo root: the nearest ancestor of the current working directory that
+ * has a `package.json`. The `changelog` command runs at the project root, so
+ * this resolves correctly both for the toolchain's own repo and for consumers
+ * (resolving from the module location would land in `node_modules`).
+ */
 export function repoRoot(): string {
-    // Works from both the source location (scripts/changelog) and the compiled
-    // location (scripts/dist/changelog).
-    let dir = dirname(fileURLToPath(import.meta.url));
+    let dir = process.cwd();
     for (let i = 0; i < 8; i++) {
         if (existsSync(resolve(dir, 'package.json'))) return dir;
-        dir = resolve(dir, '..');
+        const parent = resolve(dir, '..');
+        if (parent === dir) break;
+        dir = parent;
     }
-    return dirname(fileURLToPath(import.meta.url));
+    return process.cwd();
 }
 
 /** Every workspace directory declared by the root `workspaces` globs (+ root). */
