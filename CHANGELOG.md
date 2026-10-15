@@ -1,8 +1,17 @@
 # Changelog
 
-## 1.0.1 (October 2026)
+## 1.0.2 (October 2026)
 
 <!-- release:start -->
+
+### Tests
+#### Changelog
+- Update the release workflow reference fixture ([#e7efe0a](https://github.com/deltabox-studio/toolchain/commit/e7efe0a) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.0.1 (October 2026)
 
 ### Bug fixes
 #### Changelog
@@ -26,5 +35,3 @@
   - Self-hosts CI + changelog: dbx.config.ts drives the generated workflows,
     commitlint config and Conventional-Commits VS Code settings. Config file is
     dbx.config.* with sections wrapped under 	oolchain.
-
-<!-- release:end -->
