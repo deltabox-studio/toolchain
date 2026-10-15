@@ -26,13 +26,13 @@ features:
     - title: tsconfig generation
       details: Workspace tsconfig.json files with path aliases and project references, generated from one config.
     - title: Providers
-      details: Wire external toolchains behind one CLI. Vite+ ships as a provider — every `vp` command is a `dbx vite:*` passthrough.
+      details: Wire external toolchains behind one CLI. Vite+ ships as a provider — every vp command is a dbx vite:* passthrough.
     - title: Templates
-      details: Offline (builtin + local `template.json` dirs) and online (npm/git/Vite+) templates, creatable from the CLI or the VS Code extension.
+      details: Offline (builtin + local template.json dirs) and online (npm/git/Vite+) templates, creatable from the CLI or the VS Code extension.
     - title: Migrations
       details: Move Biome, Prettier, ESLint or Dprint onto Ox (Oxfmt/Oxlint) with a pluggable migration engine.
     - title: Editor first
       details: A VS Code extension to sync, scaffold, run workflows, run Vite+ commands and pick templates.
     - title: Monorepo aware
-      details: Project graph, workspace tsconfigs, dependency-ordered tasks via `vp run`, and per-workspace files.
+      details: Project graph, workspace tsconfigs, dependency-ordered tasks via vp run, and per-workspace files.
 ---
