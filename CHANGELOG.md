@@ -1,14 +1,19 @@
 # Changelog
 
-## 1.1.7 (October 2026)
+## 1.1.8 (October 2026)
 
 <!-- release:start -->
 
-### Chores
-- Revise CLI commands and VS Code extension details ([#7f043f9](https://github.com/deltabox-studio/toolchain/commit/7f043f9) by [T0chi](https://github.com/T0chi))
+### Documentation
+- Hide the site title next to the navbar logo ([#c7935ec](https://github.com/deltabox-studio/toolchain/commit/c7935ec) by [T0chi](https://github.com/T0chi))
 
 <!-- release:end -->
 
+
+## 1.1.7 (October 2026)
+
+### Chores
+- Revise CLI commands and VS Code extension details ([#7f043f9](https://github.com/deltabox-studio/toolchain/commit/7f043f9) by [T0chi](https://github.com/T0chi))
 
 ## 1.1.6 (October 2026)
 
