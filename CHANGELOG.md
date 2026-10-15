@@ -1,8 +1,26 @@
 # Changelog
 
-## 1.1.0 (October 2026)
+## 1.1.1 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+- Publish config.schema.json at the docs site root ([#b7680cb](https://github.com/deltabox-studio/toolchain/commit/b7680cb) by [T0chi](https://github.com/T0chi))
+  - The VitePress build now copies the generated dbx JSON schema into the dist
+    root, so it is served at https://toolchain.deltabox.studio/config.schema.json.
+### Continuous integration
+#### Release
+- Publish to npm via trusted publishing (OIDC) ([#41be869](https://github.com/deltabox-studio/toolchain/commit/41be869) by [T0chi](https://github.com/T0chi))
+  - Drop the NPM_TOKEN-based \yarn npm publish\ (which also staged). Use npm
+    trusted publishing: id-token: write, setup-node registry-url, \yarn pack\
+    (resolves catalog:/workspace:) + \
+    pm publish <tarball>\ — provenance is
+    generated automatically. Re-enable publishConfig.provenance.
+
+<!-- release:end -->
+
+
+## 1.1.0 (October 2026)
 
 ### New features
 #### Vite
@@ -17,9 +35,6 @@
 ### Package changes
 #### Updated
 - `vite` `^8.3.0` → `>=5`
-
-<!-- release:end -->
-
 
 ## 1.0.8 (October 2026)
 
