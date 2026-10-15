@@ -47,9 +47,97 @@ export default defineConfig({
                 'deps',
             ],
             workflows: {
-                // The repo ships a custom `release.yml` (tag + GitHub Release +
-                // npm + VS Code Marketplace) instead of the generated PR flow.
-                release: false,
+                // Release on every push to `main`: tag + GitHub Release (notes
+                // from CHANGELOG.md + the packaged VS Code extension), publish to
+                // npm and publish the extension to the VS Code Marketplace. The
+                // whole flow is managed here — no hand-written workflow file.
+                release: {
+                    extra: {
+                        permissions: { contents: 'write', 'id-token': 'write' },
+                        concurrency: { group: 'release', 'cancel-in-progress': false },
+                    },
+                    jobs: {
+                        'create-release-pr': {
+                            name: 'release',
+                            'runs-on': 'ubuntu-latest',
+                            steps: [
+                                {
+                                    name: 'Checkout',
+                                    uses: 'actions/checkout@v4',
+                                    with: {
+                                        'fetch-depth': 0,
+                                        token: '${{ secrets.GITHUB_TOKEN }}',
+                                    },
+                                },
+                                {
+                                    name: 'Setup Node',
+                                    uses: 'actions/setup-node@v4',
+                                    with: { 'node-version': '{{nodeVersion}}' },
+                                },
+                                {
+                                    name: 'Enable Corepack',
+                                    run: 'corepack enable\ncorepack prepare {{packageManager}}@{{yarnVersion}} --activate',
+                                },
+                                {
+                                    name: 'Install dependencies',
+                                    run: '{{packageManager}} install --immutable',
+                                },
+                                { name: 'Build', run: '{{packageManager}} build' },
+                                {
+                                    name: 'Resolve version + release state',
+                                    id: 'release',
+                                    run: [
+                                        'version="$(node -p "require(\'./package.json\').version")"',
+                                        'echo "version=$version" >> "$GITHUB_OUTPUT"',
+                                        'if git ls-remote --exit-code --tags origin "v$version" >/dev/null 2>&1; then',
+                                        '  echo "Release v$version already exists; skipping."',
+                                        '  echo "skip=true" >> "$GITHUB_OUTPUT"',
+                                        'else',
+                                        '  echo "skip=false" >> "$GITHUB_OUTPUT"',
+                                        'fi',
+                                    ].join('\n'),
+                                },
+                                {
+                                    name: 'Package the VS Code extension',
+                                    if: "steps.release.outputs.skip == 'false'",
+                                    run: '{{packageManager}} workspace toolchain-vscode package:vsix',
+                                },
+                                {
+                                    name: 'Extract release notes',
+                                    if: "steps.release.outputs.skip == 'false'",
+                                    run: [
+                                        'notes="$(awk \'/<!-- release:start -->/{f=1;next} /<!-- release:end -->/{exit} f{print}\' CHANGELOG.md 2>/dev/null || true)"',
+                                        '[ -n "$notes" ] || notes="Release v${{ steps.release.outputs.version }}"',
+                                        'printf \'%s\\n\' "$notes" > RELEASE_NOTES.md',
+                                    ].join('\n'),
+                                },
+                                {
+                                    name: 'Create the GitHub Release',
+                                    if: "steps.release.outputs.skip == 'false'",
+                                    env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' },
+                                    run: [
+                                        'gh release create "v${{ steps.release.outputs.version }}" \\',
+                                        '  --title "v${{ steps.release.outputs.version }}" \\',
+                                        '  --notes-file RELEASE_NOTES.md \\',
+                                        '  "packages/vscode/deltabox-toolchain.vsix"',
+                                    ].join('\n'),
+                                },
+                                {
+                                    name: 'Publish to npm',
+                                    if: "steps.release.outputs.skip == 'false'",
+                                    env: { YARN_NPM_AUTH_TOKEN: '${{ secrets.NPM_TOKEN }}' },
+                                    run: '{{packageManager}} npm publish --tolerate-republish',
+                                },
+                                {
+                                    name: 'Publish to the VS Code Marketplace',
+                                    if: "steps.release.outputs.skip == 'false'",
+                                    env: { VSCE_PAT: '${{ secrets.VSCE_PAT }}' },
+                                    run: 'npx --yes @vscode/vsce publish --packagePath packages/vscode/deltabox-toolchain.vsix',
+                                },
+                            ],
+                        },
+                    },
+                },
                 // Keep the hand-written CI checks on top of the generated
                 // workflow (commitlint + `sync --check` + build come first).
                 ci: {

@@ -3,10 +3,11 @@
         ".github/workflows/changelog.yml",
         ".github/workflows/ci.yml",
         ".github/workflows/issues.yml",
+        ".github/workflows/release.yml",
         ".github/workflows/sync.yml",
         ".vscode/extensions.json",
         ".vscode/settings.json",
         "commitlint.config.mjs"
     ],
-    "syncedAt": "2026-10-15T21:18:00.351Z"
+    "syncedAt": "2026-10-15T21:28:26.520Z"
 }
