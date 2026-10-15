@@ -7,26 +7,31 @@
 [![node](https://img.shields.io/badge/node-%3E%3D22.5.0-brightgreen.svg)](./package.json)
 [![yarn](https://img.shields.io/badge/yarn-4.17.1-2188b6.svg)](./package.json)
 [![package](https://img.shields.io/badge/npm-@deltabox%2Ftoolchain-cb3837.svg)](https://www.npmjs.com/package/@deltabox/toolchain)
+[![tests](https://img.shields.io/github/actions/workflow/status/deltabox-studio/toolchain/ci.yml?label=tests&logo=github)](https://github.com/deltabox-studio/toolchain/actions/workflows/ci.yml)
 
 `@deltabox/toolchain` is driven by a single `dbx.config.ts` at a repo
 root. Define the sections you want and the toolchain generates and keeps the
 matching files in sync — from a CLI, a programmatic API, and a VS Code extension.
 
-> **Documentation, guides and examples: [toolchain.deltabox.studio](https://toolchain.deltabox.studio).**
+See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
+
+**Documentation, guides and examples:** [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
 
 ## Table of contents
 
-- [Features](#features)
-- [Install](#install)
-- [Quickstart](#quickstart)
-- [Config generator](#config-generator)
-- [CLI](#cli)
-- [Programmatic API](#programmatic-api)
-- [Packages](#packages)
-- [VS Code extension](#vs-code-extension)
-- [Development](#development)
-- [Docs](#docs)
-- [License](#license)
+- [deltabox toolchain](#deltabox-toolchain)
+    - [Table of contents](#table-of-contents)
+    - [Features](#features)
+    - [Install](#install)
+    - [Quickstart](#quickstart)
+    - [Config generator](#config-generator)
+    - [CLI](#cli)
+    - [Programmatic API](#programmatic-api)
+    - [Packages](#packages)
+    - [VS Code extension](#vs-code-extension)
+    - [Development](#development)
+    - [Docs](#docs)
+    - [License](#license)
 
 ## Features
 
