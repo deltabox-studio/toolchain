@@ -162,7 +162,9 @@ export default defineConfig({
                     ],
                     steps: {
                         after: [
-                            { name: 'Check (format + lint)', run: 'yarn check' },
+                            // Auto-fix formatting + lint instead of failing the
+                            // build on drift.
+                            { name: 'Format + lint (auto-fix)', run: 'yarn check --fix' },
                             { name: 'Test', run: 'yarn test' },
                             {
                                 name: 'Generate config docs + schema',
