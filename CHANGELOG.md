@@ -1,16 +1,22 @@
 # Changelog
 
-## 1.1.4 (October 2026)
+## 1.1.5 (October 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Changelog
+- Bump only the version field and stage only owned files ([#8b14cc9](https://github.com/deltabox-studio/toolchain/commit/8b14cc9) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.1.4 (October 2026)
 
 ### Documentation
 - Trim the README and refresh the docs/license sections ([#a20deb5](https://github.com/deltabox-studio/toolchain/commit/a20deb5) by [T0chi](https://github.com/T0chi))
 ### Chores
 - Name the changelog and tsconfig bins explicitly ([#50144cd](https://github.com/deltabox-studio/toolchain/commit/50144cd) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.1.3 (October 2026)
 
