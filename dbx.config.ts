@@ -72,7 +72,10 @@ export default defineConfig({
                                 {
                                     name: 'Setup Node',
                                     uses: 'actions/setup-node@v4',
-                                    with: { 'node-version': '{{nodeVersion}}' },
+                                    with: {
+                                        'node-version': '{{nodeVersion}}',
+                                        'registry-url': 'https://registry.npmjs.org',
+                                    },
                                 },
                                 {
                                     name: 'Enable Corepack',
@@ -123,10 +126,16 @@ export default defineConfig({
                                     ].join('\n'),
                                 },
                                 {
+                                    // Trusted publishing (OIDC): no token — the npm
+                                    // CLI exchanges the GitHub OIDC token and adds
+                                    // provenance automatically. `yarn pack` resolves
+                                    // `catalog:`/`workspace:` before `npm publish`.
                                     name: 'Publish to npm',
                                     if: "steps.release.outputs.skip == 'false'",
-                                    env: { YARN_NPM_AUTH_TOKEN: '${{ secrets.NPM_TOKEN }}' },
-                                    run: '{{packageManager}} npm publish --tolerate-republish',
+                                    run: [
+                                        '{{packageManager}} pack --out toolchain.tgz',
+                                        'npm publish toolchain.tgz --access public',
+                                    ].join('\n'),
                                 },
                                 {
                                     name: 'Publish to the VS Code Marketplace',

@@ -24,6 +24,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          registry-url: https://registry.npmjs.org
       - name: Enable Corepack
         run: |
           corepack enable
@@ -63,9 +64,9 @@ jobs:
             "packages/vscode/deltabox-toolchain.vsix"
       - name: Publish to npm
         if: steps.release.outputs.skip == 'false'
-        env:
-          YARN_NPM_AUTH_TOKEN: "${{ secrets.NPM_TOKEN }}"
-        run: yarn npm publish --tolerate-republish
+        run: |
+          yarn pack --out toolchain.tgz
+          npm publish toolchain.tgz --access public
       - name: Publish to the VS Code Marketplace
         if: steps.release.outputs.skip == 'false'
         env:
