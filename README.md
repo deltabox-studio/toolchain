@@ -142,22 +142,9 @@ guide](https://toolchain.deltabox.studio/guide/config-generator).
 
 ## CLI
 
-| Command                                           | Description                                                            |
-| ------------------------------------------------- | ---------------------------------------------------------------------- |
-| `projects`                                        | Discover projects and write `.dbx/toolchain/projects.json`.            |
-| `sync`                                            | Regenerate managed files (`--check`, `--recursive`, `--watch`).        |
-| `watch`                                           | Sync once, then re-sync on change.                                     |
-| `reset`                                           | Remove generated files, the manifest and/or the config.                |
-| `project:init` / `:monorepo` / `:workspace`       | Scaffold a project, a monorepo root, or a workspace.                   |
-| `project:config`                                  | Generate `dbx.config.ts` for projects missing one.                     |
-| `create`                                          | Scaffold from a template (`--template`, `--name`, `--scope`, `--out`). |
-| `template:list` / `:add` / `:info`                | Inspect and record template sources.                                   |
-| `providers`                                       | List registered providers and their commands (`--json`).               |
-| `vite <args…>` / `vite:<sub>`                     | Passthrough to the Vite+ `vp` binary.                                  |
-| `migrate` / `migrate:list`                        | Convert Biome/Prettier/ESLint/Dprint onto Ox.                          |
-| `tsconfig` / `changelog` / `workflow` / `cleanup` | tsconfigs, changelog + versions, GitHub workflows, artifacts.          |
+Visit the [CLI docs](https://toolchain.deltabox.studio/guide/cli) to learn more.
 
-Commands that run against a project load its `dbx.config.ts` first, so
+Note: Commands that run against a project load its `dbx.config.ts` first, so
 config-derived defaults apply unless overridden on the command line.
 
 ## Programmatic API
@@ -171,10 +158,18 @@ await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, p
 
 ## VS Code extension
 
-Install `packages/vscode/deltabox-toolchain.vsix`, then use the **deltabox
-toolchain** activity bar: Sync / Check sync / Scaffold project, **From
-template…**, **Run Vite+ command…** and **Create Vite+ project…**. See
-[`packages/vscode/README.md`](./packages/vscode/README.md).
+A VS Code extension is available for `deltabox toolchain`.
+
+Follow the steps below to use it. Will be published to the marketplace in the future.
+
+1. Download `deltabox-toolchain.vsix` from [releases](https://github.com/deltabox-studio/toolchain/releases).
+2. In VS Code install the `deltabox-toolchain.vsix` by going to the Extensions sidebar panel, click the three dotted menu on the panel header and select `Install from VSIX...` from the context menu.
+3. Now a screwdriver icon should pop up on the VS Code sidemenu, and you can use the command palette (Ctrl + P) as well:
+    1. Sync / Check sync / Scaffold project, From template…
+    2. Run Vite+ command...
+    3. Create Vite+ project...
+
+See [packages/vscode/README.md](./packages/vscode/README.md) to learn more about how it works.
 
 ## Development
 

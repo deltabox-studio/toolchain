@@ -24,6 +24,7 @@ export default defineConfig({
     },
     themeConfig: {
         logo: '/box2d.svg',
+        siteTitle: false,
         nav: [
             { text: 'Guide', link: '/guide/' },
             { text: 'Config', link: '/config/reference' },

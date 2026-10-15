@@ -6,7 +6,19 @@ with whatever `@deltabox/toolchain` version a project has installed.
 
 ## Install
 
-Build and install the VSIX:
+A VS Code extension is available for `deltabox toolchain`. Follow the steps
+below to use it. It will be published to the Marketplace in the future.
+
+1. Download `deltabox-toolchain.vsix` from [releases](https://github.com/deltabox-studio/toolchain/releases).
+2. In VS Code, install it by going to the Extensions sidebar panel, clicking the
+   three dotted menu on the panel header and selecting **Install from VSIX…**.
+3. A screwdriver icon appears in the activity bar, and the commands are also in
+   the command palette (`Ctrl`+`P` → `deltabox:`):
+    1. Sync / Check sync / Scaffold project, From template…
+    2. Run Vite+ command…
+    3. Create Vite+ project…
+
+To build the VSIX from a checkout instead:
 
 ```bash
 yarn workspace toolchain-vscode package:vsix
