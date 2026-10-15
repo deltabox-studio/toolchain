@@ -195,7 +195,7 @@ export function defaultWorkflows(tokens: Replacements): Record<WorkflowId, Workf
                                 'git add -A',
                                 'git commit -m "chore: version packages ($version)" || true',
                                 'git push origin "$branch"',
-                                'notes="$(awk \'/<!-- release:start -->/{f=1;next} /<!-- release:end -->/{exit} f{print}\' CHANGELOG.md)"',
+                                'notes="$(awk \'/<!-- release:start -->/{f=1;next} /<!-- release:end -->/{exit} f{print}\' CHANGELOG.md 2>/dev/null || true)"',
                                 '[ -n "$notes" ] || notes="Release $version"',
                                 `gh pr create --base ${main} --head "$branch" --title "release: $version" --body "$notes"`,
                             ].join('\n'),
