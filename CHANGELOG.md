@@ -1,15 +1,20 @@
 # Changelog
 
-## 1.1.5 (October 2026)
+## 1.1.6 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+- Use box2d.svg for the navbar/hero logo and box2d_bg.svg for the favicon ([#2c7a094](https://github.com/deltabox-studio/toolchain/commit/2c7a094) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.1.5 (October 2026)
 
 ### Bug fixes
 #### Changelog
 - Bump only the version field and stage only owned files ([#8b14cc9](https://github.com/deltabox-studio/toolchain/commit/8b14cc9) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.1.4 (October 2026)
 
