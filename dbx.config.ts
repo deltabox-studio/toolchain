@@ -6,7 +6,9 @@ import { defineConfig } from '@deltabox/toolchain';
  * settings from here.
  *
  * Changelog automation follows the `dev` -> `main` flow: pushes to `dev` generate
- * the changelog (and version bumps), and pushes to `main` open the release PR.
+ * the changelog (and version bumps), and pushes to `main` run the hand-written
+ * `release.yml` (tag + GitHub Release with the VSIX, npm publish, Marketplace).
+ * The generated `release` workflow is disabled in favour of that custom one.
  */
 export default defineConfig({
     toolchain: {
@@ -45,6 +47,9 @@ export default defineConfig({
                 'deps',
             ],
             workflows: {
+                // The repo ships a custom `release.yml` (tag + GitHub Release +
+                // npm + VS Code Marketplace) instead of the generated PR flow.
+                release: false,
                 // Keep the hand-written CI checks on top of the generated
                 // workflow (commitlint + `sync --check` + build come first).
                 ci: {
