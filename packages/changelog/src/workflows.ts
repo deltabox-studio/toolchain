@@ -158,7 +158,9 @@ export function defaultWorkflows(tokens: Replacements): Record<WorkflowId, Workf
                                 'git diff --quiet && { echo "No changelog changes."; exit 0; }',
                                 'git config user.name "github-actions[bot]"',
                                 'git config user.email "41898282+github-actions[bot]@users.noreply.github.com"',
-                                'git add -A',
+                                // Stage only the files this pipeline owns, so a
+                                // stray working-tree change is never committed.
+                                'git add -u -- "*package.json" "*CHANGELOG.md"',
                                 'git commit -m "chore: version packages ($(node -p "require(\'./package.json\').version"))"',
                                 `git push origin ${dev}`,
                             ].join('\n'),

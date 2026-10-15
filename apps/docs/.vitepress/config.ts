@@ -12,6 +12,7 @@ export default defineConfig({
     description:
         'All-in-one toolchain: scaffold projects, manage configs, tsconfigs, changelogs and builds.',
     cleanUrls: true,
+    head: [['link', { rel: 'icon', type: 'image/svg+xml', href: '/box2d_bg.svg' }]],
 
     // Publish the generated dbx JSON schema at the site root so editors can
     // point at https://toolchain.deltabox.studio/config.schema.json.
@@ -22,6 +23,7 @@ export default defineConfig({
         }
     },
     themeConfig: {
+        logo: '/box2d.svg',
         nav: [
             { text: 'Guide', link: '/guide/' },
             { text: 'Config', link: '/config/reference' },

@@ -7,26 +7,30 @@
 [![node](https://img.shields.io/badge/node-%3E%3D22.5.0-brightgreen.svg)](./package.json)
 [![yarn](https://img.shields.io/badge/yarn-4.17.1-2188b6.svg)](./package.json)
 [![package](https://img.shields.io/badge/npm-@deltabox%2Ftoolchain-cb3837.svg)](https://www.npmjs.com/package/@deltabox/toolchain)
+[![tests](https://img.shields.io/github/actions/workflow/status/deltabox-studio/toolchain/ci.yml?label=tests&logo=github)](https://github.com/deltabox-studio/toolchain/actions/workflows/ci.yml)
 
 `@deltabox/toolchain` is driven by a single `dbx.config.ts` at a repo
 root. Define the sections you want and the toolchain generates and keeps the
 matching files in sync — from a CLI, a programmatic API, and a VS Code extension.
 
-> **Documentation, guides and examples: [toolchain.deltabox.studio](https://toolchain.deltabox.studio).**
+See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
+
+**Documentation, guides and examples:** [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
 
 ## Table of contents
 
-- [Features](#features)
-- [Install](#install)
-- [Quickstart](#quickstart)
-- [Config generator](#config-generator)
-- [CLI](#cli)
-- [Programmatic API](#programmatic-api)
-- [Packages](#packages)
-- [VS Code extension](#vs-code-extension)
-- [Development](#development)
-- [Docs](#docs)
-- [License](#license)
+- [deltabox toolchain](#deltabox-toolchain)
+    - [Table of contents](#table-of-contents)
+    - [Features](#features)
+    - [Install](#install)
+    - [Quickstart](#quickstart)
+    - [Config generator](#config-generator)
+    - [CLI](#cli)
+    - [Programmatic API](#programmatic-api)
+    - [VS Code extension](#vs-code-extension)
+    - [Development](#development)
+    - [Docs](#docs)
+    - [License](#license)
 
 ## Features
 
@@ -165,26 +169,6 @@ const { config, tokens, projectType } = await loadToolingConfig(process.cwd());
 await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, projectType });
 ```
 
-## Packages
-
-The root package re-exports every workspace below, and each is also importable
-via a subpath (`@deltabox/toolchain/tsconfig`, `…/vite`, `…/migrate`, …).
-
-| Package                         | Responsibility                                            |
-| ------------------------------- | --------------------------------------------------------- |
-| `@deltabox/toolchain-shared`    | Config model, template engine, provider model, run/spawn. |
-| `@deltabox/toolchain-core`      | Config loader, project graph, sync engine, manifest.      |
-| `@deltabox/toolchain-project`   | Scaffold generators (single / monorepo / workspace).      |
-| `@deltabox/toolchain-tsconfig`  | TypeScript config templates + tsconfig generator.         |
-| `@deltabox/toolchain-changelog` | Workflows, commitlint, changelog pipeline.                |
-| `@deltabox/toolchain-biome`     | `biome.json` generation + VS Code settings.               |
-| `@deltabox/toolchain-tsdown`    | tsdown base config + cleanup.                             |
-| `@deltabox/toolchain-config`    | Generic Zod/env config engine.                            |
-| `@deltabox/toolchain-vite`      | Vite+ provider (`vp` wrapper).                            |
-| `@deltabox/toolchain-template`  | Template registry/scaffolder.                             |
-| `@deltabox/toolchain-migrate`   | Biome/Prettier/ESLint/Dprint → Ox migrations.             |
-| `toolchain-vscode`              | VS Code extension (`deltabox-toolchain.vsix`).            |
-
 ## VS Code extension
 
 Install `packages/vscode/deltabox-toolchain.vsix`, then use the **deltabox
@@ -215,22 +199,10 @@ Docs live in `apps/docs` (VitePress): `yarn workspace @deltabox/toolchain-docs b
 
 ## Docs
 
-Full documentation, guides and examples live at
-**[toolchain.deltabox.studio](https://toolchain.deltabox.studio)**:
+Full documentation, guides and examples live at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
 
-- [Getting Started](https://toolchain.deltabox.studio/guide/)
-- [Monorepo guide](https://toolchain.deltabox.studio/guide/monorepo)
-- [CLI](https://toolchain.deltabox.studio/guide/cli)
-- [Configuration](https://toolchain.deltabox.studio/guide/config)
-- [Config generator](https://toolchain.deltabox.studio/guide/config-generator)
-- [Providers (Vite+)](https://toolchain.deltabox.studio/guide/providers)
-- [Templates](https://toolchain.deltabox.studio/guide/templates)
-- [Migrations](https://toolchain.deltabox.studio/guide/migrations)
-- [Programmatic API](https://toolchain.deltabox.studio/guide/api)
-- [Config reference](https://toolchain.deltabox.studio/config/reference)
-
-The source pages live in `apps/docs` (VitePress).
+The source pages live in `apps/docs`.
 
 ## License
 
-[MPL-2.0](./LICENSE) © Victor Sango
+[MPL-2.0](./LICENSE) © deltabox
