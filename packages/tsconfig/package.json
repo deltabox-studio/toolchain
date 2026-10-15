@@ -32,5 +32,7 @@
         "./cli/generate": "./dist/cli/generate/index.js",
         "./package.json": "./package.json"
     },
-    "bin": "./dist/cli/generate/index.js"
+    "bin": {
+        "toolchain-tsconfig": "./dist/cli/generate/index.js"
+    }
 }
