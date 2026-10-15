@@ -1,8 +1,16 @@
 # Changelog
 
-## 1.1.11 (October 2026)
+## 1.1.12 (October 2026)
 
 <!-- release:start -->
+
+### Chores
+- Disable npm provenance (unsupported from a private repo) ([#f118193](https://github.com/deltabox-studio/toolchain/commit/f118193) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.1.11 (October 2026)
 
 ### Documentation
 - Drop backticks from the landing feature cards ([#9d6ed28](https://github.com/deltabox-studio/toolchain/commit/9d6ed28) by [T0chi](https://github.com/T0chi))
@@ -11,9 +19,6 @@
 - Make the logo black in light mode (white in dark) ([#c6d9410](https://github.com/deltabox-studio/toolchain/commit/c6d9410) by [T0chi](https://github.com/T0chi))
 ### CI
 - Auto-fix format + lint in the CI check step ([#9da9797](https://github.com/deltabox-studio/toolchain/commit/9da9797) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.1.10 (October 2026)
 
