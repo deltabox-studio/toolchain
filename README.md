@@ -14,6 +14,20 @@ matching files in sync — from a CLI, a programmatic API, and a VS Code extensi
 
 > **Documentation, guides and examples: [toolchain.deltabox.studio](https://toolchain.deltabox.studio).**
 
+## Table of contents
+
+- [Features](#features)
+- [Install](#install)
+- [Quickstart](#quickstart)
+- [Config generator](#config-generator)
+- [CLI](#cli)
+- [Programmatic API](#programmatic-api)
+- [Packages](#packages)
+- [VS Code extension](#vs-code-extension)
+- [Development](#development)
+- [Docs](#docs)
+- [License](#license)
+
 ## Features
 
 - **Config-driven.** Every area is an opt-in section in `dbx.config.ts`
@@ -44,6 +58,9 @@ matching files in sync — from a CLI, a programmatic API, and a VS Code extensi
 ```bash
 # as a dev dependency in the project you want to manage
 yarn add -D @deltabox/toolchain
+
+# or for global usage
+npm install -g @deltabox/toolchain
 ```
 
 The package exposes one binary, `dbx`:
