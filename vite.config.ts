@@ -41,6 +41,9 @@ export default defineConfig({
             'biome.json',
             '**/*.yml',
             '**/*.yaml',
+            // The changelog pipeline owns its own markdown format.
+            '**/CHANGELOG.md',
+            'CHANGELOG.proposed.md',
         ],
         // Biome `assist.actions.source.organizeImports.groups`.
         sortImports: {
