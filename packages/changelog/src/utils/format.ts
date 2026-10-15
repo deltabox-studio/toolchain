@@ -12,7 +12,7 @@ const RULE_TITLES: Record<string, string> = {
     test: 'Tests',
     perf: 'Performance',
     build: 'Build system',
-    ci: 'Continuous integration',
+    ci: 'CI',
     revert: 'Reverts',
     breaking: 'Breaking changes',
 };

@@ -19,7 +19,7 @@
     - The VitePress build now copies the generated dbx JSON schema into the dist
       root, so it is served at https://toolchain.deltabox.studio/config.schema.json.
 
-### Continuous integration
+### CI
 
 #### Release
 
@@ -53,7 +53,7 @@
 
 ## 1.0.8 (October 2026)
 
-### Continuous integration
+### CI
 
 #### Release
 
@@ -71,7 +71,7 @@
 
 - Package the VSIX without `vp`; ignore `vite.config.ts`; untrack `*.vsix` ([#9d1e403](https://github.com/deltabox-studio/toolchain/commit/9d1e403) by [T0chi](https://github.com/T0chi))
 
-### Continuous integration
+### CI
 
 #### Release
 
