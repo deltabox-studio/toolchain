@@ -1,15 +1,21 @@
 # Changelog
 
-## 1.1.2 (October 2026)
+## 1.1.3 (October 2026)
 
 <!-- release:start -->
+
+### Chores
+#### Changelog
+- Title the CI section "CI" instead of "Continuous integration" ([#09deb7f](https://github.com/deltabox-studio/toolchain/commit/09deb7f) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.1.2 (October 2026)
 
 ### Documentation
 - Add a tests badge to the README ([#01513ee](https://github.com/deltabox-studio/toolchain/commit/01513ee) by [T0chi](https://github.com/T0chi))
 - Fix CHANGELOG.md mojibake and add backticks to code refs ([#6b721eb](https://github.com/deltabox-studio/toolchain/commit/6b721eb) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.1.1 (October 2026)
 
