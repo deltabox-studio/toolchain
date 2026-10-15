@@ -4,6 +4,9 @@ logs
 
 # Changelog dry-run output
 CHANGELOG.proposed.md
+
+# Packaged VS Code extension (built + attached to releases)
+*.vsix
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
