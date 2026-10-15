@@ -16,6 +16,7 @@ export default defineConfig({
             { text: 'Providers', link: '/guide/providers' },
             { text: 'Migrations', link: '/guide/migrations' },
         ],
+        socialLinks: [{ icon: 'github', link: 'https://github.com/deltabox-studio/toolchain' }],
         sidebar: {
             '/guide/': [
                 {
