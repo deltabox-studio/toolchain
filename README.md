@@ -38,6 +38,9 @@ See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
   your schemas into a `.env.example`, a JSON Schema, a markdown reference, TS
   types and CLI flags, and wires `config:*` commands into your own CLI. See the
   [config generator guide](https://toolchain.deltabox.studio/guide/config-generator).
+- **Vite / Vite+ plugin.** Drive dbx from `vite.config.ts`: the `dbx()` plugin
+  runs `dbx sync` before dev/build (or `dbx sync --check` in CI). Works with both
+  Vite and Vite+.
 - **Changelogs & releases.** Conventional-Commits commitlint, a changelog
   pipeline that bumps versions and writes `CHANGELOG.md`, plus GitHub workflows
   for CI, changelog, release and issues.
@@ -136,6 +139,38 @@ engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
 `configCommands({ engine })` also exposes the same generators as `config:*`
 commands on your own CLI. See the [config generator
 guide](https://toolchain.deltabox.studio/guide/config-generator).
+
+## Vite / Vite+ plugin
+
+`@deltabox/toolchain` ships a Vite plugin, so a Vite (or Vite+) project can run
+dbx as part of its own pipeline — no separate `dbx sync` step:
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite'; // or 'vite-plus'
+
+import { defineDbxConfig } from '@deltabox/toolchain/vite';
+
+export default defineConfig(
+    defineDbxConfig({
+        // your usual Vite / Vite+ config
+    })
+);
+```
+
+- The `dbx()` plugin runs `dbx sync` before the dev server / build, or
+  `dbx sync --check` in CI (which fails the build when generated files are out of
+  date), and re-syncs when a `dbx.config.*` / `tsconfig.*.json` input changes.
+- `defineDbxConfig` also registers `vp run dbx:sync` / `vp run dbx:check`. Prefer
+  the bare plugin when you don't want the tasks:
+
+```ts
+import { dbx } from '@deltabox/toolchain/vite';
+
+export default defineConfig({ plugins: [dbx({ check: true })] });
+```
+
+See the [providers guide](https://toolchain.deltabox.studio/guide/providers).
 
 ## CLI
 
