@@ -78,7 +78,8 @@ export function insertNewEntry(existing: string, entry: string): string {
 }
 
 export function prependChangelogEntry(file: string, entry: string): void {
-    writeFileSync(file, insertNewEntry(readFileSync(file, 'utf8'), entry), 'utf8');
+    const existing = existsSync(file) ? readFileSync(file, 'utf8') : '# Changelog\n';
+    writeFileSync(file, insertNewEntry(existing, entry), 'utf8');
 }
 
 /** Rename the newest `## <current>` heading to `## <next>` in every changelog. */
