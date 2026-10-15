@@ -20,17 +20,17 @@ See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
 ## Table of contents
 
 - [deltabox toolchain](#deltabox-toolchain)
-    - [Table of contents](#table-of-contents)
-    - [Features](#features)
-    - [Install](#install)
-    - [Quickstart](#quickstart)
-    - [Config generator](#config-generator)
-    - [CLI](#cli)
-    - [Programmatic API](#programmatic-api)
-    - [VS Code extension](#vs-code-extension)
-    - [Development](#development)
-    - [Docs](#docs)
-    - [License](#license)
+  - [Table of contents](#table-of-contents)
+  - [Features](#features)
+  - [Install](#install)
+  - [Quickstart](#quickstart)
+  - [Config generator](#config-generator)
+  - [CLI](#cli)
+  - [Programmatic API](#programmatic-api)
+  - [VS Code extension](#vs-code-extension)
+  - [Development](#development)
+  - [Docs](#docs)
+  - [License](#license)
 
 ## Features
 
@@ -162,11 +162,14 @@ A VS Code extension is available for `deltabox toolchain`.
 
 Follow the steps below to use it. Will be published to the marketplace in the future.
 
-1. Download and install `deltabox-toolchain.vsix` from [releases](https://github.com/deltabox-studio/toolchain/releases).
-2. Use the **deltabox toolchain** activity bar: `Sync / Check sync / Scaffold project, **From
-template…**` > `**Run Vite+ command…**` > `**Create Vite+ project…**`.
+1. Download `deltabox-toolchain.vsix` from [releases](https://github.com/deltabox-studio/toolchain/releases).
+2. In VS Code install the `deltabox-toolchain.vsix` by going to the Extensions sidebar panel, click the three dotted menu on the panel header and select `Install from VSIX...` from the context menu.
+3. Now a screwdriver icon should pop up on the VS Code sidemenu, and you can use the command palette (Ctrl + P) as well:
+   1. Sync / Check sync / Scaffold project, From template…
+   2. Run Vite+ command...
+   3. Create Vite+ project...
 
-See [`packages/vscode/README.md`](./packages/vscode/README.md) to learn more about how it works.
+See [packages/vscode/README.md](./packages/vscode/README.md) to learn more about how it works.
 
 ## Development
 
