@@ -12,11 +12,22 @@
 root. Define the sections you want and the toolchain generates and keeps the
 matching files in sync — from a CLI, a programmatic API, and a VS Code extension.
 
+> **Documentation, guides and examples: [toolchain.deltabox.studio](https://toolchain.deltabox.studio).**
+
 ## Features
 
 - **Config-driven.** Every area is an opt-in section in `dbx.config.ts`
   (`project`, `changelog`, `biome`, `tsconfig`, `templates`, `vite`, `watch`,
   `hooks`). Define a section to enable it; omit it and nothing is touched.
+- **Config generator.** A generic Zod/env engine (`createConfigEngine`) turns
+  your schemas into a `.env.example`, a JSON Schema, a markdown reference, TS
+  types and CLI flags, and wires `config:*` commands into your own CLI. See the
+  [config generator guide](https://toolchain.deltabox.studio/guide/config-generator).
+- **Changelogs & releases.** Conventional-Commits commitlint, a changelog
+  pipeline that bumps versions and writes `CHANGELOG.md`, plus GitHub workflows
+  for CI, changelog, release and issues.
+- **tsconfig generation.** Workspace `tsconfig.json` files with path aliases and
+  project references, driven from one config.
 - **Providers.** Wire external toolchains behind one CLI. Vite+ ships as a
   provider, so every `vp` command is reachable as `dbx vite:*`.
 - **Templates.** Offline (builtin + local `template.json` dirs) and online
@@ -73,7 +84,40 @@ export default defineConfig({
 The `@deltabox/toolchain` settings live under the `toolchain` key. Every section
 there is **opt-in by presence**: `section: true` enables it with defaults,
 `section: false` disables it, and `section: { ... }` configures it.
-See the [configuration reference](https://github.com/deltabox-studio/toolchain/blob/main/apps/docs/config/reference.md).
+See the [configuration reference](https://toolchain.deltabox.studio/config/reference).
+
+## Config generator
+
+The same Zod-first approach powers a standalone config engine. Describe your
+config once and generate `.env.example`, a JSON Schema, a markdown reference, TS
+types and CLI flags from it — no hand-maintained docs to drift:
+
+```ts
+import { z } from 'zod';
+
+import { createConfigEngine } from '@deltabox/toolchain/config';
+
+export const engine = createConfigEngine({
+    scopes: {
+        server: {
+            zodSchema: z.object({
+                port: z.number().default(3000).meta({ env: 'MYAPP_PORT' }),
+            }),
+        },
+    },
+    envPrefix: 'MYAPP_',
+    baseGroup: 'base',
+    root: process.cwd(),
+});
+
+await engine.writeJsonSchema({ output: 'config.schema.json' });
+engine.writeEnvFile({ output: '.env.example' });
+engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
+```
+
+`configCommands({ engine })` also exposes the same generators as `config:*`
+commands on your own CLI. See the [config generator
+guide](https://toolchain.deltabox.studio/guide/config-generator).
 
 ## CLI
 
@@ -154,15 +198,22 @@ Docs live in `apps/docs` (VitePress): `yarn workspace @deltabox/toolchain-docs b
 
 ## Docs
 
-The VitePress site (`apps/docs`) covers the [Getting
-Started](https://github.com/deltabox-studio/toolchain/blob/main/apps/docs/guide/index.md),
-[Monorepo](https://github.com/deltabox-studio/toolchain/blob/main/apps/docs/guide/monorepo.md),
-[CLI](https://github.com/deltabox-studio/toolchain/blob/main/apps/docs/guide/cli.md),
-[Providers](https://github.com/deltabox-studio/toolchain/blob/main/apps/docs/guide/providers.md),
-[Templates](https://github.com/deltabox-studio/toolchain/blob/main/apps/docs/guide/templates.md),
-[Migrations](https://github.com/deltabox-studio/toolchain/blob/main/apps/docs/guide/migrations.md)
-and the [config reference](https://github.com/deltabox-studio/toolchain/blob/main/apps/docs/config/reference.md).
+Full documentation, guides and examples live at
+**[toolchain.deltabox.studio](https://toolchain.deltabox.studio)**:
+
+- [Getting Started](https://toolchain.deltabox.studio/guide/)
+- [Monorepo guide](https://toolchain.deltabox.studio/guide/monorepo)
+- [CLI](https://toolchain.deltabox.studio/guide/cli)
+- [Configuration](https://toolchain.deltabox.studio/guide/config)
+- [Config generator](https://toolchain.deltabox.studio/guide/config-generator)
+- [Providers (Vite+)](https://toolchain.deltabox.studio/guide/providers)
+- [Templates](https://toolchain.deltabox.studio/guide/templates)
+- [Migrations](https://toolchain.deltabox.studio/guide/migrations)
+- [Programmatic API](https://toolchain.deltabox.studio/guide/api)
+- [Config reference](https://toolchain.deltabox.studio/config/reference)
+
+The source pages live in `apps/docs` (VitePress).
 
 ## License
 
-[MPL-2.0](./package.json) © Victor Sango
+[MPL-2.0](./LICENSE) © Victor Sango

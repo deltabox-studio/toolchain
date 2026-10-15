@@ -16,6 +16,12 @@ hero:
 features:
     - title: Config-driven
       details: opt-in sections in dbx.config.ts (biome, tsconfig, changelog, templates, vite, ...). Define a section to enable it; nothing is touched otherwise.
+    - title: Config generator
+      details: A generic Zod/env engine that generates .env.example, a JSON Schema, a markdown reference, TS types and CLI flags from your schemas — no docs to drift.
+    - title: Changelogs & CI
+      details: Conventional-Commits commitlint, an automatic changelog + version bump pipeline, and GitHub workflows for CI, changelog, release and issues.
+    - title: tsconfig generation
+      details: Workspace tsconfig.json files with path aliases and project references, generated from one config.
     - title: Providers
       details: Wire external toolchains behind one CLI. Vite+ ships as a provider — every `vp` command is a `dbx vite:*` passthrough.
     - title: Templates
