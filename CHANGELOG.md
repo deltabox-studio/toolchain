@@ -1,15 +1,22 @@
 # Changelog
 
-## 1.1.3 (October 2026)
+## 1.1.4 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+- Trim the README and refresh the docs/license sections ([#a20deb5](https://github.com/deltabox-studio/toolchain/commit/a20deb5) by [T0chi](https://github.com/T0chi))
+### Chores
+- Name the changelog and tsconfig bins explicitly ([#50144cd](https://github.com/deltabox-studio/toolchain/commit/50144cd) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.1.3 (October 2026)
 
 ### Chores
 #### Changelog
 - Title the CI section "CI" instead of "Continuous integration" ([#09deb7f](https://github.com/deltabox-studio/toolchain/commit/09deb7f) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.1.2 (October 2026)
 
