@@ -4,3 +4,10 @@
     justify-content: center;
     padding: 24px 24px 32px;
 }
+
+/* The home hero logo is black on a transparent background; invert it in dark
+   mode (VitePress's home hero image is a single <img>, so it can't be swapped
+   like the navbar logo). */
+.dark .VPHomeHero .image-src {
+    filter: invert(1);
+}

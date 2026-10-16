@@ -23,7 +23,7 @@ export default defineConfig({
         }
     },
     themeConfig: {
-        logo: '/box2d.svg',
+        logo: { light: '/box2d.svg', dark: '/box2d-dark.svg' },
         siteTitle: false,
         nav: [
             { text: 'Guide', link: '/guide/' },
