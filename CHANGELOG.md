@@ -1,8 +1,21 @@
 # Changelog
 
-## 1.1.21 (October 2026)
+## 1.1.22 (October 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Ci
+- Skip the Marketplace publish when VSCE_PAT is unset ([#fe4b3ad](https://github.com/deltabox-studio/toolchain/commit/fe4b3ad) by [T0chi](https://github.com/T0chi))
+  - The VS Code Marketplace publish was the only failing release step (no
+    VSCE_PAT set). Make it a no-op while the secret is unset and publish
+    automatically once it is added to the `toolchain / release` environment.
+  - Also remove the temporary OIDC diagnostic step now that the release publishes.
+
+<!-- release:end -->
+
+
+## 1.1.21 (October 2026)
 
 ### Bug fixes
 #### Ci
@@ -15,9 +28,6 @@
 - Show the published npm version in the README badge ([#5f83ca2](https://github.com/deltabox-studio/toolchain/commit/5f83ca2) by [T0chi](https://github.com/T0chi))
   - Replace the static npm-name badge with a shields.io npm/v badge so the README
     shows the currently published version.
-
-<!-- release:end -->
-
 
 ## 1.1.20 (October 2026)
 
