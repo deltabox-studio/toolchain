@@ -1,16 +1,24 @@
 # Changelog
 
-## 1.2.7 (October 2026)
+## 1.2.8 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+- Drive Vite+ from `dbx` in the recommended package scripts ([#6131c59](https://github.com/deltabox-studio/toolchain/commit/6131c59) by [T0chi](https://github.com/T0chi))
+  - Use `dbx vite <command>` (the Vite+ passthrough) instead of calling `vp`
+    directly in the Package scripts, Migrations and Monorepo guides, so a project
+    only needs the one `dbx` command.
+
+<!-- release:end -->
+
+
+## 1.2.7 (October 2026)
 
 ### Documentation
 - Link package script migrations from the Migrations page ([#036ebf5](https://github.com/deltabox-studio/toolchain/commit/036ebf5) by [T0chi](https://github.com/T0chi))
   - Add a "Package scripts" section to the Migrations guide with the Biome/Turbo
     script swaps and a link to the full Package scripts page.
-
-<!-- release:end -->
-
 
 ## 1.2.6 (October 2026)
 
