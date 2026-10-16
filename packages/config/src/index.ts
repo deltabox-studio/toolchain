@@ -12,6 +12,7 @@ export * from './config-json.js';
 export * from './engine.js';
 export * from './env.js';
 export * from './env-file.js';
+export * from './generated-format.js';
 export * from './generators/index.js';
 export * from './root.js';
 export * from './schema.js';
