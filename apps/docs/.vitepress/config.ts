@@ -43,7 +43,7 @@ export default defineConfig({
                     ],
                 },
                 {
-                    text: 'Project Toolchain',
+                    text: 'Toolchain',
                     items: [
                         { text: 'CLI', link: '/guide/cli' },
                         { text: 'Configuration', link: '/guide/config' },

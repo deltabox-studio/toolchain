@@ -17,18 +17,18 @@ See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
 ## Table of contents
 
 - [deltabox toolchain](#deltabox-toolchain)
-  - [Table of contents](#table-of-contents)
-  - [Features](#features)
-  - [Install](#install)
-  - [Quickstart](#quickstart)
-  - [Config generator](#config-generator)
-  - [Vite / Vite+ plugin](#vite--vite-plugin)
-  - [CLI](#cli)
-  - [Programmatic API](#programmatic-api)
-  - [VS Code extension](#vs-code-extension)
-  - [Development](#development)
-  - [Docs](#docs)
-  - [License](#license)
+    - [Table of contents](#table-of-contents)
+    - [Features](#features)
+    - [Install](#install)
+    - [Quickstart](#quickstart)
+    - [Config generator](#config-generator)
+    - [Vite / Vite+ plugin](#vite--vite-plugin)
+    - [CLI](#cli)
+    - [Programmatic API](#programmatic-api)
+    - [VS Code extension](#vs-code-extension)
+    - [Development](#development)
+    - [Docs](#docs)
+    - [License](#license)
 
 ## Features
 
@@ -136,6 +136,26 @@ await engine.writeJsonSchema({ output: 'config.schema.json' });
 engine.writeEnvFile({ output: '.env.example' });
 engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
 ```
+
+It also generates the TypeScript types — named interfaces with jsdoc from
+`.describe()`, where unions and nested objects stay named instead of being
+inlined:
+
+```ts
+engine.writeConfigTypes({ outputDir: 'types' });
+```
+
+```ts
+// types/server.ts
+export interface ServerConfig {
+    /** HTTP port. */
+    port?: number;
+}
+```
+
+The toolchain generates its own config types this way — see
+`packages/shared/src/config-types.ts` and the [config generator
+guide](https://toolchain.deltabox.studio/guide/config-generator#generated-outputs).
 
 `configCommands({ engine })` also exposes the same generators as `config:*`
 commands on your own CLI. See the [config generator
