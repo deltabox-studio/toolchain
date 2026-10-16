@@ -1,14 +1,19 @@
 # Changelog
 
-## 1.2.2 (October 2026)
+## 1.2.3 (October 2026)
 
 <!-- release:start -->
 
 ### Documentation
-- Update config generator documentation ([#8305ef8](https://github.com/deltabox-studio/toolchain/commit/8305ef8) by [T0chi](https://github.com/T0chi))
+- Update vscode extension screenshot ([#e3e189d](https://github.com/deltabox-studio/toolchain/commit/e3e189d) by [T0chi](https://github.com/T0chi))
 
 <!-- release:end -->
 
+
+## 1.2.2 (October 2026)
+
+### Documentation
+- Update config generator documentation ([#8305ef8](https://github.com/deltabox-studio/toolchain/commit/8305ef8) by [T0chi](https://github.com/T0chi))
 
 ## 1.2.1 (October 2026)
 
