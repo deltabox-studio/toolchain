@@ -1,8 +1,32 @@
 # Changelog
 
-## 1.1.18 (October 2026)
+## 1.1.20 (October 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Ci
+- Stage npm releases via OIDC instead of publishing directly ([#53d1f52](https://github.com/deltabox-studio/toolchain/commit/53d1f52) by [T0chi](https://github.com/T0chi))
+  - Default to `npm stage publish` for OIDC trusted publishing: it always stages
+    the version and defers the maintainer's 2FA approval, and is always permitted
+    for a trusted publisher (unlike direct `npm publish`, which the package's 2FA
+    policy rejects). Drop the automation-token fallback and require npm >= 11.15.1
+    (the first with `npm stage`).
+
+<!-- release:end -->
+
+
+## 1.1.19 (October 2026)
+
+### Chores
+#### Ci
+- Add a temporary OIDC diagnostic to the release workflow ([#7b42e33](https://github.com/deltabox-studio/toolchain/commit/7b42e33) by [T0chi](https://github.com/T0chi))
+  - The publish still fails after binding the environment, and npm falls back to
+    the (automation) token and 403s. Add a temporary step that decodes the OIDC
+    claims and calls the token-exchange endpoint directly so the exact
+    trusted-publisher mismatch is visible in the log. Removed once fixed.
+
+## 1.1.18 (October 2026)
 
 ### Bug fixes
 #### Ci
@@ -27,9 +51,6 @@
     captureCli/runCli no longer reject on a spawn failure. Also fix cliInvocation
     for the integrated terminal: process.execPath is the VS Code binary in the
     extension host, so it now uses `npx dbx` / `npx --yes @deltabox/toolchain`.
-
-<!-- release:end -->
-
 
 ## 1.1.17 (October 2026)
 

@@ -65,14 +65,28 @@ jobs:
             "packages/vscode/deltabox-toolchain.vsix"
       - name: Upgrade npm for trusted publishing
         if: steps.release.outputs.skip == 'false'
-        run: npm install -g npm@^11.5.1
-      - name: Publish to npm
+        run: npm install -g npm@^11.15.1
+      - name: Diagnose OIDC trusted publishing
         if: steps.release.outputs.skip == 'false'
-        env:
-          NODE_AUTH_TOKEN: "${{ secrets.NPM_TOKEN }}"
+        run: |
+          set -euo pipefail
+          cat > /tmp/oidc-diag.mjs <<'EOF'
+          const { fetch } = globalThis;
+          const url = process.env.ACTIONS_ID_TOKEN_REQUEST_URL + '&audience=npm:registry.npmjs.org';
+          const tokenRes = await fetch(url, { headers: { Authorization: 'bearer ' + process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN } });
+          const { value: idToken } = await tokenRes.json();
+          const payload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64url').toString());
+          console.log('OIDC claims:', JSON.stringify({ repository: payload.repository, repository_owner: payload.repository_owner, workflow_ref: payload.workflow_ref, job_workflow_ref: payload.job_workflow_ref, environment: payload.environment, ref: payload.ref, event_name: payload.event_name }, null, 2));
+          const res = await fetch('https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/@deltabox%2ftoolchain', { method: 'POST', headers: { Authorization: 'Bearer ' + idToken } });
+          if (res.ok) { const body = await res.json(); console.log('exchange OK; token ' + (body && body.token ? 'present' : 'missing')); }
+          else { console.log('exchange status:', res.status); console.log('exchange body:', await res.text()); }
+          EOF
+          node /tmp/oidc-diag.mjs
+      - name: Stage the npm release
+        if: steps.release.outputs.skip == 'false'
         run: |
           yarn pack --out toolchain.tgz
-          npm publish toolchain.tgz --access public
+          npm stage publish toolchain.tgz --access public
       - name: Publish to the VS Code Marketplace
         if: steps.release.outputs.skip == 'false'
         env:
