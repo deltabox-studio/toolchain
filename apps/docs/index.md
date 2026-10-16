@@ -21,6 +21,8 @@ features:
       details: opt-in sections in dbx.config.ts (biome, tsconfig, changelog, templates, vite, ...). Define a section to enable it; nothing is touched otherwise.
     - title: Config generator
       details: A generic Zod/env engine that generates .env.example, a JSON Schema, a markdown reference, TS types and CLI flags from your schemas — no docs to drift.
+    - title: Vite / Vite+ plugin
+      details: Drive dbx from vite.config.ts with the dbx() plugin — it syncs before dev/build (or checks in CI), and registers vp run dbx:* tasks. Works with Vite and Vite+.
     - title: Changelogs & CI
       details: Conventional-Commits commitlint, an automatic changelog + version bump pipeline, and GitHub workflows for CI, changelog, release and issues.
     - title: tsconfig generation
