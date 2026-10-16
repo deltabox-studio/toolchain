@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 
 import { defineConfig } from 'vitepress';
 
+import pkg from '../../../package.json';
+
 /**
  * VitePress config for the `@deltabox/toolchain` docs. Structured like the
  * Vite+ docs: an Introduction + Guide, then a Config reference per area.
@@ -30,6 +32,23 @@ export default defineConfig({
             { text: 'Config', link: '/config/reference' },
             { text: 'Providers', link: '/guide/providers' },
             { text: 'Migrations', link: '/guide/migrations' },
+            {
+                text: `v${pkg.version}`,
+                items: [
+                    {
+                        text: 'Changelog',
+                        link: 'https://github.com/deltabox-studio/toolchain/blob/main/CHANGELOG.md',
+                    },
+                    {
+                        text: 'Releases',
+                        link: 'https://github.com/deltabox-studio/toolchain/releases',
+                    },
+                    {
+                        text: 'npm',
+                        link: 'https://www.npmjs.com/package/@deltabox/toolchain',
+                    },
+                ],
+            },
         ],
         socialLinks: [{ icon: 'github', link: 'https://github.com/deltabox-studio/toolchain' }],
         sidebar: {
@@ -49,6 +68,7 @@ export default defineConfig({
                         { text: 'Configuration', link: '/guide/config' },
                         { text: 'Config Generator', link: '/guide/config-generator' },
                         { text: 'Providers (Vite+)', link: '/guide/providers' },
+                        { text: 'Package Scripts', link: '/guide/scripts' },
                         { text: 'Templates', link: '/guide/templates' },
                         { text: 'Migrations', link: '/guide/migrations' },
                         { text: 'Programmatic API', link: '/guide/api' },

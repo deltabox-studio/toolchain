@@ -69,6 +69,7 @@ that area untouched.
 - [Configuration reference](/config/reference)
 - [Config generator](/guide/config-generator)
 - [Providers (Vite+)](/guide/providers)
+- [Package scripts](/guide/scripts)
 - [Templates](/guide/templates)
 - [Migrations](/guide/migrations)
 - [Programmatic API](/guide/api)
