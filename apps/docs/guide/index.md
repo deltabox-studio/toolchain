@@ -10,6 +10,9 @@ API and the VS Code extension.
 ```bash
 # as a dev dependency in the project you want to manage
 yarn add -D @deltabox/toolchain
+
+# or for global usage
+npm install -g @deltabox/toolchain
 ```
 
 The published package exposes one binary, `dbx`:
