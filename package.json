@@ -27,7 +27,14 @@
         "vite-plus",
         "changelog",
         "scaffold",
-        "extension"
+        "extension",
+        "zod",
+        "types",
+        "markdown",
+        "environment",
+        "variables",
+        "configuration",
+        "settings"
     ],
     "scripts": {
         "build": "vp run --filter \"./packages/*\" build && vp run build:root",

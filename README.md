@@ -1,62 +1,50 @@
 # deltabox toolchain
 
-All-in-one, config-driven dev toolchain: scaffold projects, generate and manage configs, tsconfigs, changelogs and CI, run Vite+, and migrate other tools onto Ox.
-
 [![license: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](./package.json)
 [![tests](https://img.shields.io/github/actions/workflow/status/deltabox-studio/toolchain/ci.yml?label=tests&logo=github)](https://github.com/deltabox-studio/toolchain/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/@deltabox/toolchain.svg?color=cb3837&label=npm)](https://www.npmjs.com/package/@deltabox/toolchain)
 
+All-in-one, config-driven dev toolchain: scaffold projects, generate and manage configs, tsconfigs, syncing, changelogs and CI, run Vite+, and migrate other tools onto Ox.
+
 `@deltabox/toolchain` is driven by a single `dbx.config.ts` at a repo
 root. Define the sections you want and the toolchain generates and keeps the
-matching files in sync — from a CLI, a programmatic API, and a VS Code extension.
+matching files in sync.
 
 See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
 
-**Documentation, guides and examples:** [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
+Documentation, guides and examples: [toolchain.deltabox.studio](https://toolchain.deltabox.studio/guide).
 
 ## Table of contents
 
 - [deltabox toolchain](#deltabox-toolchain)
-    - [Table of contents](#table-of-contents)
-    - [Features](#features)
-    - [Install](#install)
-    - [Quickstart](#quickstart)
-    - [Config generator](#config-generator)
-    - [Vite / Vite+ plugin](#vite--vite-plugin)
-    - [CLI](#cli)
-    - [Programmatic API](#programmatic-api)
-    - [VS Code extension](#vs-code-extension)
-    - [Development](#development)
-    - [Docs](#docs)
-    - [License](#license)
+  - [Table of contents](#table-of-contents)
+  - [Features](#features)
+  - [Install](#install)
+  - [Quickstart](#quickstart)
+  - [Config generator](#config-generator)
+  - [Vite / Vite+ plugin](#vite--vite-plugin)
+  - [CLI](#cli)
+  - [Programmatic API](#programmatic-api)
+  - [VS Code extension](#vs-code-extension)
+  - [Development](#development)
+  - [Docs](#docs)
+  - [License](#license)
 
 ## Features
 
-- **Config-driven.** Every area is an opt-in section in `dbx.config.ts`
-  (`project`, `changelog`, `biome`, `tsconfig`, `templates`, `vite`, `watch`,
-  `hooks`). Define a section to enable it; omit it and nothing is touched.
-- **Config generator.** A generic Zod/env engine (`createConfigEngine`) turns
-  your schemas into a `.env.example`, a JSON Schema, a markdown reference, TS
-  types and CLI flags, and wires `config:*` commands into your own CLI. See the
-  [config generator guide](https://toolchain.deltabox.studio/guide/config-generator).
-- **Vite / Vite+ plugin.** Drive dbx from `vite.config.ts`: the `dbx()` plugin
-  runs `dbx sync` before dev/build (or `dbx sync --check` in CI). Works with both
-  Vite and Vite+.
-- **Changelogs & releases.** Conventional-Commits commitlint, a changelog
-  pipeline that bumps versions and writes `CHANGELOG.md`, plus GitHub workflows
-  for CI, changelog, release and issues.
-- **tsconfig generation.** Workspace `tsconfig.json` files with path aliases and
-  project references, driven from one config.
-- **Providers.** Wire external toolchains behind one CLI. Vite+ ships as a
-  provider, so every `vp` command is reachable as `dbx vite:*`.
-- **Templates.** Offline (builtin + local `template.json` dirs) and online
-  (npm/git/Vite+) templates, creatable from the CLI or the extension.
-- **Migrations.** Move Biome, Prettier, ESLint or Dprint onto Ox
-  (Oxfmt/Oxlint) with a pluggable migration engine (`--target files` or `vite`).
-- **Editor first.** A VS Code extension to sync, scaffold, run workflows, run
-  Vite+ commands and pick templates.
-- **Monorepo aware.** Project graph, workspace tsconfigs, dependency-ordered
-  tasks via `vp run`, and per-workspace files.
+- **Config-driven**
+- **Config generator**
+- **Vite / Vite+ plugin**
+- **Changelogs & releases**
+- **tsconfig generation**
+- **Providers**
+- **Templates**
+- **Migrations**
+- **Editor first**
+- **Monorepo aware**
+- **Auto sync**
+
+See more at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
 
 ## Install
 
@@ -252,7 +240,7 @@ Docs live in `apps/docs` (VitePress): `yarn workspace @deltabox/toolchain-docs b
 
 ## Docs
 
-Full documentation, guides and examples live at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
+Full documentation, guides and examples live at [toolchain.deltabox.studio](https://toolchain.deltabox.studio/guide).
 
 The source pages live in `apps/docs`.
 
