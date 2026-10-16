@@ -1,14 +1,19 @@
 # Changelog
 
-## 1.2.3 (October 2026)
+## 1.2.4 (October 2026)
 
 <!-- release:start -->
 
 ### Documentation
-- Update vscode extension screenshot ([#e3e189d](https://github.com/deltabox-studio/toolchain/commit/e3e189d) by [T0chi](https://github.com/T0chi))
+- Update documentation ([#3880aaa](https://github.com/deltabox-studio/toolchain/commit/3880aaa) by [T0chi](https://github.com/T0chi))
 
 <!-- release:end -->
 
+
+## 1.2.3 (October 2026)
+
+### Documentation
+- Update vscode extension screenshot ([#e3e189d](https://github.com/deltabox-studio/toolchain/commit/e3e189d) by [T0chi](https://github.com/T0chi))
 
 ## 1.2.2 (October 2026)
 
