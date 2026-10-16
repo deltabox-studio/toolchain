@@ -60,6 +60,11 @@ export default defineConfig({
                         'create-release-pr': {
                             name: 'release',
                             'runs-on': 'ubuntu-latest',
+                            // The npm OIDC trusted publisher is bound to this GitHub
+                            // environment, so the job must declare it for the OIDC
+                            // `environment` claim to match. It is also what exposes
+                            // the environment's `NPM_TOKEN` secret to the job.
+                            environment: 'toolchain / release',
                             steps: [
                                 {
                                     name: 'Checkout',
@@ -135,12 +140,18 @@ export default defineConfig({
                                     run: 'npm install -g npm@^11.5.1',
                                 },
                                 {
-                                    // Trusted publishing (OIDC): no token — the npm
-                                    // CLI exchanges the GitHub OIDC token and adds
-                                    // provenance automatically. `yarn pack` resolves
-                                    // `catalog:`/`workspace:` before `npm publish`.
+                                    // Trusted publishing (OIDC) is the primary path:
+                                    // npm exchanges the GitHub OIDC token for a
+                                    // short-lived registry token and adds provenance
+                                    // automatically. `NODE_AUTH_TOKEN` (the
+                                    // environment's `NPM_TOKEN`) is only a fallback
+                                    // used when the OIDC exchange fails — it is
+                                    // optional and may be absent, so never rely on
+                                    // it. `yarn pack` resolves `catalog:`/`workspace:`
+                                    // before `npm publish`.
                                     name: 'Publish to npm',
                                     if: "steps.release.outputs.skip == 'false'",
+                                    env: { NODE_AUTH_TOKEN: '${{ secrets.NPM_TOKEN }}' },
                                     run: [
                                         '{{packageManager}} pack --out toolchain.tgz',
                                         'npm publish toolchain.tgz --access public',

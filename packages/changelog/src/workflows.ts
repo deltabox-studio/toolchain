@@ -23,6 +23,8 @@ export interface WorkflowJob {
     'runs-on': string;
     if?: string;
     needs?: string | string[];
+    /** A GitHub environment name (matched by the OIDC trusted publisher). */
+    environment?: string;
     permissions?: Record<string, string>;
     env?: Record<string, string>;
     outputs?: Record<string, string>;
