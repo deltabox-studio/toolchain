@@ -5,6 +5,9 @@ logs
 # Changelog dry-run output
 CHANGELOG.proposed.md
 
+# Generated toolchain state (managed-file manifest + project graph)
+.dbx/
+
 # Packaged VS Code extension (built + attached to releases)
 *.vsix
 npm-debug.log*
