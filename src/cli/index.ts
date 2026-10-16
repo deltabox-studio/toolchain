@@ -16,7 +16,13 @@ import { Command } from 'commander';
 import { changelogCommands } from '@deltabox/toolchain-changelog/cli';
 import { migrateCommands } from '@deltabox/toolchain-migrate/cli';
 import { projectCommands } from '@deltabox/toolchain-project/cli';
-import type { ToolingCommand } from '@deltabox/toolchain-shared';
+import {
+    LOG_LEVELS,
+    normalizeLogLevel,
+    setLogOverrides,
+    type LoggerOptions,
+    type ToolingCommand,
+} from '@deltabox/toolchain-shared';
 import { templateCommands } from '@deltabox/toolchain-template/cli';
 import { tsconfigCommands } from '@deltabox/toolchain-tsconfig/cli';
 import { cleanupCommands } from '@deltabox/toolchain-tsdown/cli';
@@ -64,6 +70,31 @@ export function withDefaultVite(
     return [...argv.slice(0, 2), 'vite', ...argv.slice(2)];
 }
 
+/**
+ * Pull the global logger flags out of `argv` (so they work before *or* after a
+ * subcommand) and turn them into logger overrides.
+ */
+export function extractLogOptions(argv: string[]): { argv: string[]; options: LoggerOptions } {
+    const options: LoggerOptions = {};
+    const rest: string[] = [];
+    for (let index = 0; index < argv.length; index++) {
+        const arg = argv[index] as string;
+        if (arg === '--no-color') {
+            options.color = false;
+        } else if (arg === '--color') {
+            options.color = true;
+        } else if (arg === '--log-level') {
+            const value = argv[++index];
+            if (value !== undefined) options.level = normalizeLogLevel(value);
+        } else if (arg.startsWith('--log-level=')) {
+            options.level = normalizeLogLevel(arg.slice('--log-level='.length));
+        } else {
+            rest.push(arg);
+        }
+    }
+    return { argv: rest, options };
+}
+
 /** Build the `dbx` commander program. */
 export function createCli(): Command {
     const program = new Command();
@@ -71,6 +102,8 @@ export function createCli(): Command {
         .name('dbx')
         .description('All-in-one project toolchain: configs, tsconfigs, changelogs, scaffolding.')
         .version(rootPkg.version, '-V, --version', 'Output the version number')
+        .option('--log-level <level>', `Minimum log level (${LOG_LEVELS.join('|')}).`)
+        .option('--no-color', 'Disable coloured output.')
         .showHelpAfterError();
     registerToolingCommands(program, builtinCommands());
     return program;
@@ -78,7 +111,9 @@ export function createCli(): Command {
 
 /** Parse and run the CLI. */
 export async function runCli(argv: string[] = process.argv): Promise<void> {
-    await createCli().parseAsync(withDefaultVite(argv));
+    const { argv: rest, options } = extractLogOptions(argv);
+    setLogOverrides(options);
+    await createCli().parseAsync(withDefaultVite(rest));
 }
 
 /** Whether this module is the process entry point (symlink-safe). */

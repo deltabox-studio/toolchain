@@ -273,6 +273,28 @@ Watch by default (enabled when the section is defined).
 
 Debounce window in ms (default 150).
 
+## `logger`
+
+Logging level, colours and prefix for toolchain output.
+
+### `level`
+
+- **Type**: `'debug' | 'info' | 'warn' | 'error' | 'silent'`
+
+Minimum level to print (default `info`).
+
+### `color`
+
+- **Type**: `boolean`
+
+Force colours on/off (default: auto).
+
+### `name`
+
+- **Type**: `string`
+
+Prefix non-indented lines with `<name>:` (default `dbx`).
+
 ## Full example
 
 ```ts

@@ -15,6 +15,7 @@
     ],
     "private": true,
     "dependencies": {
+        "picocolors": "catalog:",
         "zod": "catalog:"
     },
     "devDependencies": {

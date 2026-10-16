@@ -175,6 +175,21 @@ export const watchConfigSchema = z
     })
     .meta({ id: 'ToolingWatchConfig' });
 
+/** Logging (level, colour, prefix) for every toolchain message. */
+export const loggerConfigSchema = z
+    .object({
+        level: z
+            .enum(['debug', 'info', 'warn', 'error', 'silent'])
+            .describe('Minimum level to print (default `info`).')
+            .optional(),
+        color: z.boolean().describe('Force colours on/off (default: auto).').optional(),
+        name: z
+            .string()
+            .describe('Prefix non-indented lines with `<name>:` (default `dbx`).')
+            .optional(),
+    })
+    .meta({ id: 'ToolingLoggerConfig' });
+
 /** Where a template source is loaded from. */
 export const templateSourceTypeSchema = z
     .enum(['builtin', 'local', 'npm', 'git', 'vite-plus'])
@@ -262,6 +277,7 @@ export const toolingConfigSchema = z
         templates: section(templatesConfigSchema).optional(),
         vite: section(viteConfigSchema).optional(),
         watch: section(watchConfigSchema).optional(),
+        logger: section(loggerConfigSchema).optional(),
     })
     .meta({ id: 'ToolingConfigSections' });
 
@@ -294,6 +310,7 @@ export const CONFIG_TYPE_SCHEMAS = {
     ToolingTemplateSource: templateSourceSchema,
     ToolingTemplatesConfig: templatesConfigSchema,
     ToolingViteConfig: viteConfigSchema,
+    ToolingLoggerConfig: loggerConfigSchema,
     ToolingConfigSections: toolingConfigSchema,
     DbxConfigSections: dbxConfigSchema,
 } as const;
@@ -307,6 +324,7 @@ export const CONFIG_SECTION_SCHEMAS = {
     templates: templatesConfigSchema,
     vite: viteConfigSchema,
     watch: watchConfigSchema,
+    logger: loggerConfigSchema,
 } as const;
 
 /** One-line descriptions for the generated docs index. */
@@ -318,4 +336,5 @@ export const CONFIG_SECTION_DESCRIPTIONS: Record<keyof typeof CONFIG_SECTION_SCH
     templates: 'Template sources / scaffolding.',
     vite: 'Vite+ configuration (manages `vite.config.ts` + the `vite:*` commands).',
     watch: 'Watch behaviour for `dbx watch`.',
+    logger: 'Logging level, colours and prefix for toolchain output.',
 };

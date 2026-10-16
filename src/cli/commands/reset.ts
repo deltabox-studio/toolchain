@@ -1,5 +1,5 @@
 import { resetProjects } from '@deltabox/toolchain-core';
-import type { ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
 
 /** `dbx reset` — remove a project's generated files, manifest and/or config. */
 export function resetCommand(): ToolingCommand {
@@ -45,7 +45,7 @@ export function resetCommand(): ToolingCommand {
             });
 
             if (opts.json) {
-                console.log(JSON.stringify(result, null, 4));
+                logger.raw(JSON.stringify(result, null, 4));
                 return;
             }
 
@@ -54,12 +54,10 @@ export function resetCommand(): ToolingCommand {
             for (const entry of result.results) {
                 if (entry.removed.length === 0) continue;
                 total += entry.removed.length;
-                console.log(`dbx: ${entry.rel === '.' ? root : entry.rel}`);
-                for (const file of entry.removed) console.log(`  - ${file}`);
+                logger.info(`${entry.rel === '.' ? root : entry.rel}`);
+                for (const file of entry.removed) logger.info(`  - ${file}`);
             }
-            console.log(
-                `dbx: ${verb} ${total} item(s) across ${result.results.length} project(s).`
-            );
+            logger.info(`${verb} ${total} item(s) across ${result.results.length} project(s).`);
         },
     };
 }

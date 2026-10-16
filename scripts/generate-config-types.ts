@@ -12,7 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { formatGenerated, renderConfigTypes, resolveScopeSchema } from '@deltabox/toolchain-config';
-import { CONFIG_TYPE_SCHEMAS } from '@deltabox/toolchain-shared';
+import { CONFIG_TYPE_SCHEMAS, logger } from '@deltabox/toolchain-shared';
 
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -30,4 +30,4 @@ const outPath = path.join(root, 'packages/shared/src/config-types.ts');
 // to the repo-root `vp`, so the committed file is written already formatted.
 fs.writeFileSync(outPath, await formatGenerated(content, { fileName: outPath }), 'utf-8');
 
-console.log(`Generated ${path.relative(root, outPath)}`);
+logger.info(`Generated ${path.relative(root, outPath)}`);

@@ -1,6 +1,13 @@
 import type { Command } from 'commander';
 
-import type { ToolingCommand, ToolingCommandContext } from '@deltabox/toolchain-shared';
+import {
+    getLogOverrides,
+    logger,
+    setLogConfig,
+    setLogOverrides,
+    type ToolingCommand,
+    type ToolingCommandContext,
+} from '@deltabox/toolchain-shared';
 
 import { loadContext } from './context.js';
 import { optionKeys } from './options.js';
@@ -62,6 +69,10 @@ export function registerToolingCommands(program: Command, commands: ToolingComma
                     });
                 } else {
                     const loaded = await loadContext(cwd);
+                    setLogConfig(loaded.config.logger);
+                    if (provided.quiet === true) {
+                        setLogOverrides({ ...getLogOverrides(), level: 'silent' });
+                    }
                     const context: ToolingCommandContext = {
                         cwd,
                         projectType: loaded.projectType,
@@ -73,7 +84,7 @@ export function registerToolingCommands(program: Command, commands: ToolingComma
                 }
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
-                console.error(`dbx: ${message}`);
+                logger.error(message);
                 process.exitCode = 1;
             }
         });

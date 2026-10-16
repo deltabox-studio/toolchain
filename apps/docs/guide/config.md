@@ -78,6 +78,28 @@ export default defineConfig({
 
 Return values are awaited.
 
+## Logging
+
+Every toolchain message goes through one logger. Configure it in the config:
+
+```ts
+export default defineConfig({
+    toolchain: {
+        logger: { level: 'debug', color: false, name: 'dbx' },
+    },
+});
+```
+
+| Option  | Values                                             | Default |
+| ------- | -------------------------------------------------- | ------- |
+| `level` | `debug` \| `info` \| `warn` \| `error` \| `silent` | `info`  |
+| `color` | `true` \| `false`                                  | auto    |
+| `name`  | prefix for non-indented lines                      | `dbx`   |
+
+On the CLI, `--log-level <level>` and `--no-color` override the config (see the
+[CLI reference](/guide/cli)). Machine output (`--json`) is written unprefixed
+through the same logger.
+
 ## Programmatic API
 
 ```ts

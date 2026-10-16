@@ -5,6 +5,16 @@ descriptors. Commands that run against a project load its
 `dbx.config.ts` first, so config-derived defaults apply unless you
 override them on the command line.
 
+## Global flags
+
+| Flag                | Description                                                    |
+| ------------------- | -------------------------------------------------------------- |
+| `--log-level <lvl>` | Minimum log level: `debug`, `info`, `warn`, `error`, `silent`. |
+| `--no-color`        | Disable coloured output.                                       |
+
+Both override the [`logger` config](/guide/config#logging) and may appear
+before or after the subcommand.
+
 ## Core
 
 | Command     | Description                                                                      |

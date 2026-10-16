@@ -1,6 +1,8 @@
 import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { logger } from '@deltabox/toolchain-shared';
+
 /**
  * The monorepo root: the nearest ancestor of the current working directory that
  * has a `package.json`. The `changelog` command runs at the project root, so
@@ -57,7 +59,7 @@ export function writeVersion(version: string): void {
         const next = content.replace(/("version"\s*:\s*)"[^"]*"/, `$1"${version}"`);
         if (next !== content) {
             writeFileSync(file, next, 'utf8');
-            console.log(`  bumped ${file}`);
+            logger.info(`  bumped ${file}`);
         }
     }
 }

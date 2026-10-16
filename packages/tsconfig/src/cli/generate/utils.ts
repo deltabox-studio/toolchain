@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import type { TsConfigJson } from 'type-fest';
 
+import { logger } from '@deltabox/toolchain-shared';
+
 export type GeneratedTsconfigResult = ReturnType<typeof generateTsconfig>;
 
 export function generateTsconfig(options: {
@@ -50,7 +52,7 @@ export function generateTsconfig(options: {
             throw new Error(`Root 'tsconfig.monorepo.json' not found: ${monorepoTsconfigPath}`);
         }
 
-        console.log(`  - ${dirnameRelative}`);
+        logger.info(`  - ${dirnameRelative}`);
 
         const tsconfigFilename = path.basename(tsconfigPath);
 
@@ -162,7 +164,7 @@ export function generateTsconfig(options: {
             tsconfigBuild,
         };
     } catch (e: any) {
-        console.error('  Failed to extend tsconfig for', dirnameRelative, 'due to:', e);
+        logger.error(`  Failed to extend tsconfig for ${dirnameRelative} due to: ${e}`);
         process.exit(1);
     }
 }

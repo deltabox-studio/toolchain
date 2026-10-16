@@ -76,6 +76,16 @@
                             "$ref": "#/$defs/ToolingWatchConfig"
                         }
                     ]
+                },
+                "logger": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolingLoggerConfig"
+                        }
+                    ]
                 }
             },
             "additionalProperties": false
@@ -564,6 +574,31 @@
                 "debounce": {
                     "type": "number",
                     "description": "Debounce window in ms (default 150)."
+                }
+            },
+            "additionalProperties": false
+        },
+        "ToolingLoggerConfig": {
+            "type": "object",
+            "properties": {
+                "level": {
+                    "type": "string",
+                    "enum": [
+                        "debug",
+                        "info",
+                        "warn",
+                        "error",
+                        "silent"
+                    ],
+                    "description": "Minimum level to print (default `info`)."
+                },
+                "color": {
+                    "type": "boolean",
+                    "description": "Force colours on/off (default: auto)."
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Prefix non-indented lines with `<name>:` (default `dbx`)."
                 }
             },
             "additionalProperties": false

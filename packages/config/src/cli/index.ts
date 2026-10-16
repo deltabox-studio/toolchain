@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
 
 import type { ConfigEngine } from '../engine.js';
 
@@ -56,7 +56,7 @@ export function configCommands(ctx: ConfigCommandContext): ToolingCommand[] {
                     '.env.example'
                 );
                 engine.writeEnvFile({ output });
-                console.log(`Generated ${path.relative(process.cwd(), output)}`);
+                logger.info(`Generated ${path.relative(process.cwd(), output)}`);
             },
         },
         {
@@ -71,7 +71,7 @@ export function configCommands(ctx: ConfigCommandContext): ToolingCommand[] {
                 const written = engine.writeConfigTypes({ outputDir: outDir });
                 if (env) written.push(...engine.writeEnvTypes({ outputDir: outDir }));
                 for (const file of written)
-                    console.log(`Generated ${path.relative(process.cwd(), file)}`);
+                    logger.info(`Generated ${path.relative(process.cwd(), file)}`);
             },
         },
         {
@@ -86,7 +86,7 @@ export function configCommands(ctx: ConfigCommandContext): ToolingCommand[] {
                 const doc = engine.buildConfigJson();
                 fs.mkdirSync(path.dirname(output), { recursive: true });
                 fs.writeFileSync(output, `${JSON.stringify(doc, null, 4)}\n`, 'utf-8');
-                console.log(`Generated ${path.relative(process.cwd(), output)}`);
+                logger.info(`Generated ${path.relative(process.cwd(), output)}`);
             },
         },
         {
@@ -99,7 +99,7 @@ export function configCommands(ctx: ConfigCommandContext): ToolingCommand[] {
                     d.schemaPath ?? path.join(engine.root, 'config.schema.json')
                 );
                 await engine.writeJsonSchema({ output });
-                console.log(`Generated ${path.relative(process.cwd(), output)}`);
+                logger.info(`Generated ${path.relative(process.cwd(), output)}`);
             },
         },
         {
@@ -113,7 +113,7 @@ export function configCommands(ctx: ConfigCommandContext): ToolingCommand[] {
                 );
                 const written = engine.writeMarkdown({ outDir });
                 for (const file of written)
-                    console.log(`Generated ${path.relative(process.cwd(), file)}`);
+                    logger.info(`Generated ${path.relative(process.cwd(), file)}`);
             },
         },
         {
@@ -126,7 +126,7 @@ export function configCommands(ctx: ConfigCommandContext): ToolingCommand[] {
                     d.cliOptionsPath ?? path.join(engine.root, 'cli-options.json')
                 );
                 engine.generateCliOptions({ output });
-                console.log(`Generated ${path.relative(process.cwd(), output)}`);
+                logger.info(`Generated ${path.relative(process.cwd(), output)}`);
             },
         },
         {
@@ -153,7 +153,7 @@ export function configCommands(ctx: ConfigCommandContext): ToolingCommand[] {
                     }) as unknown as string
                 );
                 for (const file of written.filter(f => typeof f === 'string')) {
-                    console.log(`Generated ${path.relative(process.cwd(), file)}`);
+                    logger.info(`Generated ${path.relative(process.cwd(), file)}`);
                 }
             },
         },

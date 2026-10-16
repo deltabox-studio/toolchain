@@ -185,6 +185,15 @@ export interface ToolingViteConfig {
     overrides?: Record<string, unknown>;
 }
 
+export interface ToolingLoggerConfig {
+    /** Minimum level to print (default `info`). */
+    level?: 'debug' | 'info' | 'warn' | 'error' | 'silent';
+    /** Force colours on/off (default: auto). */
+    color?: boolean;
+    /** Prefix non-indented lines with `<name>:` (default `dbx`). */
+    name?: string;
+}
+
 export interface ToolingConfigSections {
     project?: ToolingProjectConfig;
     changelog?: boolean | ToolingChangelogConfig;
@@ -193,6 +202,7 @@ export interface ToolingConfigSections {
     templates?: boolean | ToolingTemplatesConfig;
     vite?: boolean | ToolingViteConfig;
     watch?: boolean | ToolingWatchConfig;
+    logger?: boolean | ToolingLoggerConfig;
 }
 
 export interface DbxConfigSections {

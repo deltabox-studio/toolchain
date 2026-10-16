@@ -7,7 +7,7 @@ import {
     runWatch,
     writeProjectGraph,
 } from '@deltabox/toolchain-core';
-import type { ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
 
 import { defaultSyncTasks } from '../../sync.js';
 import { baseOptions, watchOptions } from './shared.js';
@@ -55,8 +55,8 @@ export function syncCommand(): ToolingCommand {
             }
 
             if (!context.configPath && !opts.force) {
-                console.warn(
-                    'dbx: no dbx.config.* found here; nothing to sync (use --force to run anyway).'
+                logger.warn(
+                    'no dbx.config.* found here; nothing to sync (use --force to run anyway).'
                 );
                 return;
             }

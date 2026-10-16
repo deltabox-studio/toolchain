@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import { Glob } from 'glob';
 
+import { logger } from '@deltabox/toolchain-shared';
+
 export interface CleanupOptions {
     /** Directory to search from (default `process.cwd()`). */
     cwd?: string;
@@ -23,7 +25,7 @@ export function cleanup(
 ): string[] {
     const list = Array.isArray(patterns) ? patterns : [patterns];
     if (!list.length) {
-        if (!options.silent) console.log(`Search pattern not provided. Skipping ${type} cleanup.`);
+        if (!options.silent) logger.info(`Search pattern not provided. Skipping ${type} cleanup.`);
         return [];
     }
 
@@ -35,16 +37,16 @@ export function cleanup(
     }).walkSync();
 
     if (!files.length) {
-        if (!options.silent) console.log(`No ${type} artifacts found. Skipping cleanup.`);
+        if (!options.silent) logger.info(`No ${type} artifacts found. Skipping cleanup.`);
         return [];
     }
 
-    if (!options.silent) console.log(`Cleaning up ${type} artifacts:`);
+    if (!options.silent) logger.info(`Cleaning up ${type} artifacts:`);
     const removed: string[] = [];
     for (const file of files) {
         fs.rmSync(path.resolve(cwd, file), { recursive: true, force: true });
         removed.push(file);
-        if (!options.silent) console.log(`  - ${file}`);
+        if (!options.silent) logger.info(`  - ${file}`);
     }
     return removed;
 }

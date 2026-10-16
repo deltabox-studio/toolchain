@@ -67,6 +67,7 @@
         "commander": "^14.0.0",
         "glob": "catalog:",
         "lodash": "catalog:",
+        "picocolors": "catalog:",
         "tsdown": "catalog:",
         "untyped": "^2.0.0",
         "zod": "catalog:"

@@ -1,5 +1,5 @@
 import { buildProjectGraph, writeProjectGraph } from '@deltabox/toolchain-core';
-import type { ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
 
 /** `dbx projects` — discover projects and write the graph file. */
 export function projectsCommand(): ToolingCommand {
@@ -18,18 +18,18 @@ export function projectsCommand(): ToolingCommand {
             });
             if (opts.write !== false) writeProjectGraph(context.cwd, graph);
             if (opts.json) {
-                console.log(JSON.stringify(graph, null, 4));
+                logger.raw(JSON.stringify(graph, null, 4));
                 return;
             }
-            console.log(
-                `dbx: ${graph.dbxProjects.length} dbx project(s), ${graph.projects.length} package(s), package manager: ${graph.packageManager ?? 'unknown'}`
+            logger.info(
+                `${graph.dbxProjects.length} dbx project(s), ${graph.projects.length} package(s), package manager: ${graph.packageManager ?? 'unknown'}`
             );
             for (const dir of graph.order) {
                 const project = graph.dbxProjects.find(p => p.dir === dir);
                 const deps = project?.dependencies.length
                     ? `  (deps: ${project.dependencies.join(', ')})`
                     : '';
-                console.log(`  - ${project?.name ?? dir}  [${dir}]${deps}`);
+                logger.info(`  - ${project?.name ?? dir}  [${dir}]${deps}`);
             }
         },
     };

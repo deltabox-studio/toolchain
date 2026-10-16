@@ -2,6 +2,8 @@ import { type ChildProcess, type SpawnOptions, spawn } from 'node:child_process'
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { logger } from './logger.js';
+
 const IS_WINDOWS = process.platform === 'win32';
 
 // cmd.exe meta characters that must be caret-escaped when building a command
@@ -96,7 +98,7 @@ export function run(cmd: string, args: string[], options?: RunOptions): ChildPro
 
     const finalArgs = [...args, ...(argsEndingDashes ? ['--'] : [])];
 
-    if (verbose) console.log(`$ ${cmd} ${finalArgs.join(' ')}`);
+    if (verbose) logger.info(`$ ${cmd} ${finalArgs.join(' ')}`);
 
     const proc = spawnCross(cmd, finalArgs, spawnOpts);
 
