@@ -4,7 +4,7 @@ All-in-one, config-driven dev toolchain: scaffold projects, generate and manage 
 
 [![license: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](./package.json)
 [![tests](https://img.shields.io/github/actions/workflow/status/deltabox-studio/toolchain/ci.yml?label=tests&logo=github)](https://github.com/deltabox-studio/toolchain/actions/workflows/ci.yml)
-[![package](https://img.shields.io/badge/npm-@deltabox%2Ftoolchain-cb3837.svg)](https://www.npmjs.com/package/@deltabox/toolchain)
+[![npm version](https://img.shields.io/npm/v/@deltabox/toolchain.svg?color=cb3837&label=npm)](https://www.npmjs.com/package/@deltabox/toolchain)
 
 `@deltabox/toolchain` is driven by a single `dbx.config.ts` at a repo
 root. Define the sections you want and the toolchain generates and keeps the
