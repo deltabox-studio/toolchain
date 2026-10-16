@@ -6,7 +6,7 @@ hero:
     text: One toolchain for the whole repo
     tagline: Scaffold projects, generate configs, manage tsconfigs, changelogs and CI, and run Vite+
     image:
-        src: /box2d.svg
+        src: /toolchain.svg
         alt: deltabox toolchain
     actions:
         - theme: brand
