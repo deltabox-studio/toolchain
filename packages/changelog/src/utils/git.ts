@@ -1,4 +1,6 @@
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 
 import type { AuthorInfo, BumpType, CommitRecord, IssueInfo } from './types.js';
 
@@ -24,17 +26,37 @@ export function readCommits(range: string, path?: string): CommitRecord[] {
         .filter(record => record.subject.length > 0);
 }
 
-/** The `owner/name` slug of the `origin` remote, or undefined. */
+/** The `owner/name` slug of a GitHub URL, or undefined. */
+function githubSlug(url: string): string | undefined {
+    const match = url.match(/(?:github\.com[/:])([^/]+)\/([^/.]+?)(?:\.git)?$/);
+    if (match?.[1] && match[2]) return `${match[1]}/${match[2]}`;
+    return undefined;
+}
+
+/**
+ * The `owner/name` slug of the `origin` remote. When there is no usable GitHub
+ * remote (eg. a local clone), fall back to the root `package.json`
+ * `repository.url` so commit links still resolve instead of pointing at
+ * `https://github.com/undefined/...`.
+ */
 export function repoSlug(): string | undefined {
     try {
         const url = execFileSync('git', ['remote', 'get-url', 'origin'], {
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'ignore'],
         }).trim();
-        const match = url.match(/(?:github\.com[/:])([^/]+)\/([^/.]+?)(?:\.git)?$/);
-        if (match?.[1] && match[2]) return `${match[1]}/${match[2]}`;
+        const slug = githubSlug(url);
+        if (slug) return slug;
     } catch {
         // no remote configured
+    }
+    try {
+        const raw = fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8');
+        const pkg = JSON.parse(raw) as { repository?: string | { url?: string } };
+        const url = typeof pkg.repository === 'string' ? pkg.repository : pkg.repository?.url;
+        if (url) return githubSlug(url);
+    } catch {
+        // no readable root package.json
     }
     return undefined;
 }

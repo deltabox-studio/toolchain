@@ -111,6 +111,10 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
 
     await new Promise<void>(resolve => {
         const stop = () => {
+            // Drop any pending debounce so a queued re-sync cannot fire while
+            // shutting down and the process can exit promptly.
+            if (timer) clearTimeout(timer);
+            timer = undefined;
             for (const watcher of watchers) watcher.close();
             process.off('SIGINT', stop);
             process.off('SIGTERM', stop);

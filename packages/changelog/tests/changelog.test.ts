@@ -11,6 +11,7 @@ import {
     readCommits,
     reformatChangelogContent,
     renderChangelogEntry,
+    renderCommitRef,
     renderGroups,
     ruleTitle,
     splitInlineDescription,
@@ -189,6 +190,18 @@ describe('changelog formatting', () => {
         expect(entries[0]!.bullets[0]).toContain('- **chore(scripts):** tidy');
         expect(entries[0]!.bullets.join('\n')).not.toContain('release:');
         expect(entries[0]!.bullets.join('\n')).not.toContain('A nested description line.');
+    });
+});
+
+describe('renderCommitRef', () => {
+    it('links the short hash when a repo slug is known', () => {
+        expect(renderCommitRef('o/r', 'abcdef1234567890')).toBe(
+            '[#abcdef1](https://github.com/o/r/commit/abcdef1234567890)'
+        );
+    });
+
+    it('renders a plain short hash when the slug cannot be resolved', () => {
+        expect(renderCommitRef(undefined, 'abcdef1234567890')).toBe('#abcdef1');
     });
 });
 
