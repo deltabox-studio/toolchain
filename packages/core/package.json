@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-core",
-    "version": "1.2.5",
+    "version": "1.2.6",
     "description": "Loads dbx.config.*, runs the sync tasks and watches key files.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {

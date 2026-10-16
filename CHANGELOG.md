@@ -1,8 +1,33 @@
 # Changelog
 
-## 1.2.5 (October 2026)
+## 1.2.6 (October 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Config
+- Tidy generated types and format them with Oxfmt ([#6fef440](https://github.com/deltabox-studio/toolchain/commit/6fef440) by [T0chi](https://github.com/T0chi))
+  - untyped's type generator emits a blank line between every member and verbose
+    multi-line JSDoc. Strip the member blank lines in the generator, then run the
+    generated output through Oxfmt's programmatic `format()` (with `jsdoc: true`)
+    at generation time instead of shelling out to the repo-root `vp`, so the file
+    is written already formatted and resembles the hand-written `types.ts`.
+  - Also drop the toolchain-specific `yarn config:types` hint from the generated
+    header: the types ship through `@deltabox/toolchain-shared`, so a script name
+    that only exists in this repo's package.json is misleading to consumers (a
+    consumer supplies its own header via the `header` option).
+### Documentation
+- Add Package scripts guide and a navbar version ([#b279739](https://github.com/deltabox-studio/toolchain/commit/b279739) by [T0chi](https://github.com/T0chi))
+  - Add a guide page covering the recommended root scripts (Vite+ format/lint and
+    Vite Task) and how to migrate an existing Biome + Turbo project onto them, and
+    surface it in the sidebar and Getting Started list. Also show the current
+    version in the navbar (linked to the changelog, releases and npm), like the
+    Proxified docs.
+
+<!-- release:end -->
+
+
+## 1.2.5 (October 2026)
 
 ### Bug fixes
 #### Changelog
@@ -13,9 +38,6 @@
     line comment inside each enum keeps the list expanded regardless of the
     consumer's print width, so the generated file is now Oxfmt-idempotent and
     consumers no longer need to exclude it from formatting.
-
-<!-- release:end -->
-
 
 ## 1.2.4 (October 2026)
 

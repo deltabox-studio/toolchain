@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-biome",
-    "version": "1.2.5",
+    "version": "1.2.6",
     "description": "Generic Biome configuration and VS Code settings templates.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
