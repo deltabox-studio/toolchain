@@ -1,8 +1,20 @@
 # Changelog
 
-## 1.2.0 (October 2026)
+## 1.2.1 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+- Show how to load the generated config ([#0f4d0d1](https://github.com/deltabox-studio/toolchain/commit/0f4d0d1) by [T0chi](https://github.com/T0chi))
+  - Add a "Load the config at runtime" section to the config generator guide
+    (`parseEnvTree`, the typed accessors, `applyOverrides`, and schema validation via
+    `compileZodSchema`) plus a short loading example in the README.
+- Update description and tags ([#64b64aa](https://github.com/deltabox-studio/toolchain/commit/64b64aa) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.2.0 (October 2026)
 
 ### New features
 #### Config
@@ -27,9 +39,6 @@
   - Show a short example of each generated output (config types, markdown, env,
     JSON schema) in the config generator guide and the README.
 - Update vscode extension preview ([#fd90dda](https://github.com/deltabox-studio/toolchain/commit/fd90dda) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.1.24 (October 2026)
 

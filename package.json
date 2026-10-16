@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "description": "All-in-one toolchain: scaffold projects, manage templates, configs, tsconfigs, changelogs and builds.",
     "homepage": "https://toolchain.deltabox.studio",
     "author": "Victor Sango <victor@deltabox.studio>",
@@ -27,7 +27,14 @@
         "vite-plus",
         "changelog",
         "scaffold",
-        "extension"
+        "extension",
+        "zod",
+        "types",
+        "markdown",
+        "environment",
+        "variables",
+        "configuration",
+        "settings"
     ],
     "scripts": {
         "build": "vp run --filter \"./packages/*\" build && vp run build:root",

@@ -4,8 +4,7 @@
 **Zod schema is the single source of truth**: attach env metadata to leaves with
 `.meta()`, then generate the `.env` file, env/config TypeScript types, a JSON
 Schema, a markdown reference, config metadata JSON and CLI option definitions —
-all from that one schema. This is the engine Proxified uses for its
-`PROXIFIED_*` config.
+all from that one schema.
 
 ## 1. Describe a scope
 
@@ -112,11 +111,83 @@ const commands = configCommands({
 // register `commands` on your commander program
 ```
 
+## 5. Load the config at runtime
+
+Generation is only half of it — the same schema backs a small, dependency-free
+**loader**. `parseEnvTree` folds `PREFIX_*` variables into a nested tree
+(splitting the remainder on `_`), and the typed accessors read dotted paths out
+of it:
+
+```ts
+import {
+    applyOverrides,
+    envBool,
+    envInt,
+    envList,
+    envMap,
+    envString,
+    parseEnvTree,
+} from '@deltabox/toolchain/config';
+
+// MYAPP_HOST, MYAPP_PORT, MYAPP_LOG_PRETTY, ... -> a nested tree
+const tree = parseEnvTree(process.env, 'MYAPP_');
+
+const config = {
+    host: envString(tree, 'host', '0.0.0.0'),
+    port: envInt(tree, 'port', 3000),
+    pretty: envBool(tree, 'log.pretty', true),
+    corsOrigins: envList(tree, 'cors.origin', []),
+    headers: envMap(tree, 'response.headers.map'), // `Key=value,...` -> record
+};
+```
+
+| Helper                       | Reads                                                |
+| ---------------------------- | ---------------------------------------------------- |
+| `envString(tree, path, fb?)` | string (unset/empty -> fallback)                     |
+| `envInt` / `envBool`         | number / boolean (`true/1/yes/on`, `false/0/no/off`) |
+| `envList`                    | comma-separated list                                 |
+| `envMap`                     | `Key=value,...` into a lowercase-keyed record        |
+| `readEnvPath(tree, path)`    | the raw value at a dotted path                       |
+
+Layer typed overrides on top of the env values (a config file, then CLI flags)
+with `applyOverrides`, then validate the result through the scope schema so it is
+guaranteed to match the generated types:
+
+```ts
+import { compileZodSchema } from '@deltabox/toolchain/config';
+
+const parse = compileZodSchema(serverConfig);
+
+export function loadConfig(env = process.env, file = {}, cli = {}) {
+    const tree = parseEnvTree(env, 'MYAPP_');
+    const fromEnv = {
+        base: {
+            host: envString(tree, 'host', '0.0.0.0'),
+            port: envInt(tree, 'port', 3000),
+        },
+        auth: {
+            password: envString(tree, 'auth.password', ''),
+            tokenTtl: envInt(tree, 'auth.token.ttl', 3600),
+        },
+    };
+    return parse.parse(applyOverrides(applyOverrides(fromEnv, file), cli));
+}
+```
+
+A resolver like this is the runtime counterpart of the generators — same schema,
+same defaults, one typed object out. (Proxified's `loadServerConfig` is exactly
+this shape: parse the tree, read typed values, merge overrides, and validate —
+returning a fully-typed `ResolvedServerConfig`.)
+
+> The dotted path is the env name with the prefix removed and `_` folded to `.`,
+> so `MYAPP_AUTH_TOKEN_TTL` reads as `auth.token.ttl`. When a field name differs
+> from its env-derived path, map it explicitly in the resolver (as above).
+
 ## Generated outputs
 
 Every generator writes from the same Zod schema. The engine's own config model
 is the living example: its types are committed at
-`packages/shared/src/config-types.ts`.
+[packages/shared/src/config-types.ts](https://github.com/deltabox-studio/toolchain/blob/main/packages/shared/src/config-types.ts).
 
 ### Config types — `renderConfigTypes()` / `writeConfigTypes()`
 
@@ -147,6 +218,8 @@ One reference page per scope plus an index listing the required/core env vars:
 engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
 // docs/reference/configuration/server.md, .../index.md
 ```
+
+See a real full example at [apps/docs/config/reference.md](https://github.com/deltabox-studio/toolchain/blob/main/apps/docs/config/reference.md).
 
 ### Env — `renderEnvFile()` / `writeEnvFile()`
 
@@ -195,5 +268,6 @@ export const configEngine = createConfigEngine({
 The generators then run from a `config:generate-all` script (built on the
 `configCommands({ engine })` helpers) to keep `.env.example`, the JSON Schema,
 the markdown reference, the types and the CLI options in sync with the schemas.
-These `config:*` commands belong to the consumer's own CLI — `dbx`
+
+These `config:*` commands belong to the consumer's own CLI, `dbx`
 itself does not expose them.
