@@ -4,6 +4,11 @@ The `deltabox toolchain` extension drives everything through the resolved local
 CLI — it never imports the toolchain packages at build time, so it stays in sync
 with whatever `@deltabox/toolchain` version a project has installed.
 
+<div align="center">
+  <img src="/vscode-img-1.png" width="250" />
+  <img src="/vscode-img-2.png" width="250" />
+</div>
+
 ## Install
 
 A VS Code extension is available for `deltabox toolchain`. Follow the steps

@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain",
-    "version": "1.1.22",
+    "version": "1.2.0",
     "description": "All-in-one toolchain: scaffold projects, manage templates, configs, tsconfigs, changelogs and builds.",
     "homepage": "https://toolchain.deltabox.studio",
     "author": "Victor Sango <victor@deltabox.studio>",
@@ -31,6 +31,7 @@
     ],
     "scripts": {
         "build": "vp run --filter \"./packages/*\" build && vp run build:root",
+        "docs": "vp run --filter \"./apps/docs\"",
         "format": "vp fmt",
         "format:check": "vp fmt --check",
         "lint": "vp lint --fix",
@@ -41,6 +42,7 @@
         "vp:test": "vp test --run --config vite.config.ts",
         "vp:toolchain": "vp toolchain",
         "config:generate": "tsx scripts/generate-config.ts",
+        "config:types": "tsx scripts/generate-config-types.ts",
         "dev": "tsx src/cli/index.ts",
         "dbx": "tsx src/cli/index.ts",
         "commitlint": "commitlint",

@@ -259,26 +259,42 @@ export class TrackedFilesTreeProvider implements vscode.TreeDataProvider<Tracked
         this.emitter.fire(undefined);
     }
 
+    /**
+     * Group every managed file by the project that owns it. A workspace root's
+     * manifest records the files repo-relative, so each file is matched to the
+     * deepest project directory that contains it (falling back to the root
+     * project) — so root-level managed files still show up.
+     */
     private build(): TrackedFileNode[] {
         const groups: TrackedFileNode[] = [];
         for (const workspace of discoverProjectGroups()) {
-            for (const project of workspace.projects) {
-                const files = [...readManifest(project.dir).files].sort((a, b) =>
-                    a.localeCompare(b)
-                );
-                if (files.length === 0) continue;
-                groups.push({
-                    kind: 'fileGroup',
-                    label: project.label,
-                    root: project.dir,
-                    children: files.map(file => ({
-                        kind: 'file' as const,
-                        label: file,
-                        root: project.dir,
-                        file,
-                    })),
-                });
+            const files = [...readManifest(workspace.dir).files].sort((a, b) => a.localeCompare(b));
+            if (files.length === 0) continue;
+            // Longest directory first, so `find` returns the deepest owner; the
+            // shortest (the workspace root) is the fallback.
+            const projects = [...workspace.projects].sort((a, b) => b.dir.length - a.dir.length);
+            const rootProject = projects[projects.length - 1];
+            const buckets = new Map<string, TrackedFileNode>();
+            for (const file of files) {
+                const abs = path.resolve(workspace.dir, file);
+                const owner =
+                    projects.find(
+                        project => abs === project.dir || abs.startsWith(project.dir + path.sep)
+                    ) ?? rootProject;
+                const key = owner?.dir ?? workspace.dir;
+                let group = buckets.get(key);
+                if (!group) {
+                    group = {
+                        kind: 'fileGroup',
+                        label: owner?.label ?? path.basename(workspace.dir),
+                        root: workspace.dir,
+                        children: [],
+                    };
+                    buckets.set(key, group);
+                }
+                group.children?.push({ kind: 'file', label: file, root: workspace.dir, file });
             }
+            groups.push(...buckets.values());
         }
         return groups;
     }

@@ -112,6 +112,65 @@ const commands = configCommands({
 // register `commands` on your commander program
 ```
 
+## Generated outputs
+
+Every generator writes from the same Zod schema. The engine's own config model
+is the living example: its types are committed at
+`packages/shared/src/config-types.ts`.
+
+### Config types — `renderConfigTypes()` / `writeConfigTypes()`
+
+Named `interface`s (and `type` aliases for enums/unions) with jsdoc taken from
+`.describe()`. Unions and refs stay named, so nested objects are referenced
+rather than inlined:
+
+```ts
+// engine.renderConfigTypes() -> { server: "...", cli: "..." }
+engine.writeConfigTypes({ outputDir: 'types' }); // types/server.ts, types/cli.ts
+```
+
+```ts
+// types/server.ts
+export interface ServerConfig {
+    /** Bind host. */
+    host?: string;
+    port?: number;
+    auth?: { password?: string; enabled?: boolean };
+}
+```
+
+### Markdown — `writeMarkdown()`
+
+One reference page per scope plus an index listing the required/core env vars:
+
+```ts
+engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
+// docs/reference/configuration/server.md, .../index.md
+```
+
+### Env — `renderEnvFile()` / `writeEnvFile()`
+
+A `.env.example`; secrets are emitted commented out so operators fill them in:
+
+```bash
+engine.writeEnvFile({ output: '.env.example' });
+
+# ---- SERVER ----
+MYAPP_HOST=localhost
+# MYAPP_AUTH_PASSWORD=
+```
+
+### JSON Schema — `generateJsonSchema()` / `writeJsonSchema()`
+
+The resolved untyped JSON Schema for every scope, for editor autocomplete:
+
+```ts
+await engine.writeJsonSchema({ output: 'config.schema.json' });
+```
+
+For a full, real example of the generated config types, see
+`packages/shared/src/config-types.ts`.
+
 ## Real-world shape (Proxified)
 
 Proxified binds three scopes under a `PROXIFIED_` prefix and reuses the engine

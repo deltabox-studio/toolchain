@@ -137,6 +137,26 @@ engine.writeEnvFile({ output: '.env.example' });
 engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
 ```
 
+It also generates the TypeScript types — named interfaces with jsdoc from
+`.describe()`, where unions and nested objects stay named instead of being
+inlined:
+
+```ts
+engine.writeConfigTypes({ outputDir: 'types' });
+```
+
+```ts
+// types/server.ts
+export interface ServerConfig {
+    /** HTTP port. */
+    port?: number;
+}
+```
+
+The toolchain generates its own config types this way — see
+`packages/shared/src/config-types.ts` and the [config generator
+guide](https://toolchain.deltabox.studio/guide/config-generator#generated-outputs).
+
 `configCommands({ engine })` also exposes the same generators as `config:*`
 commands on your own CLI. See the [config generator
 guide](https://toolchain.deltabox.studio/guide/config-generator).
@@ -192,6 +212,11 @@ await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, p
 ## VS Code extension
 
 A VS Code extension is available for `deltabox toolchain`.
+
+<div align="center">
+  <img src="./apps/docs/public/vscode-img-1.png" width="250" />
+  <img src="./apps/docs/public/vscode-img-2.png" width="250" />
+</div>
 
 Follow the steps below to use it. Will be published to the marketplace in the future.
 

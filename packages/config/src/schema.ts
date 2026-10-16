@@ -22,6 +22,11 @@ interface JsonSchemaNode {
     defaultValue?: unknown;
     description?: string;
     enum?: string[];
+    const?: unknown;
+    anyOf?: JsonSchemaNode[];
+    oneOf?: JsonSchemaNode[];
+    $ref?: string;
+    $defs?: Record<string, JsonSchemaNode>;
     items?: JsonSchemaNode;
     additionalProperties?: JsonSchemaNode;
     propertyNames?: JsonSchemaNode;
@@ -47,26 +52,90 @@ export function envMetaOf(schema: ZodType): EnvVarMeta | undefined {
         : undefined;
 }
 
+/** A JSON Schema node with no keys describes "anything" (`unknown`). */
+function isEmptySchema(node: JsonSchemaNode | undefined): boolean {
+    return !node || Object.keys(node).length === 0;
+}
+
+function quoteString(value: unknown): string {
+    return `'${String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+}
+
+/**
+ * Render a JSON Schema node as a TypeScript type string. Nested `$defs` are
+ * referenced by name, unions become `A | B`, records become `Record<...>` and
+ * object nodes without properties are inlined. Never throws.
+ */
+export function renderTsType(
+    node: JsonSchemaNode | undefined,
+    defs: Record<string, JsonSchemaNode> = {}
+): string {
+    if (!node || isEmptySchema(node)) return 'unknown';
+    if (node.$ref) {
+        const name = node.$ref.split('/').pop() ?? 'unknown';
+        return defs[name] ? name : 'unknown';
+    }
+    if (node.const !== undefined) {
+        return typeof node.const === 'string' ? quoteString(node.const) : String(node.const);
+    }
+    if (Array.isArray(node.enum) && node.enum.length > 0) {
+        return node.enum.map(quoteString).join(' | ');
+    }
+    const variants = node.anyOf ?? node.oneOf;
+    if (Array.isArray(variants) && variants.length > 0) {
+        return variants.map(variant => renderTsType(variant, defs)).join(' | ');
+    }
+    if (node.properties) {
+        const required = Array.isArray(node.required) ? node.required : [];
+        const members = Object.entries(node.properties).map(
+            ([key, child]) =>
+                `${key}${required.includes(key) ? '' : '?'}: ${renderTsType(child, defs)}`
+        );
+        return `{ ${members.join('; ')} }`;
+    }
+    const types = Array.isArray(node.type) ? node.type : node.type ? [node.type] : [];
+    if (types.includes('array')) {
+        return `Array<${renderTsType(node.items, defs)}>`;
+    }
+    if (types.includes('object')) {
+        if (node.additionalProperties !== undefined) {
+            const value = isEmptySchema(node.additionalProperties)
+                ? 'unknown'
+                : renderTsType(node.additionalProperties, defs);
+            return `Record<string, ${value}>`;
+        }
+        return 'Record<string, unknown>';
+    }
+    if (types.length === 0) return 'unknown';
+    return types.map(type => TS_TYPE_MAP[type] ?? 'unknown').join(' | ');
+}
+
 function jsonType(node: JsonSchemaNode): string {
+    if (node.$ref) return 'any';
+    if (node.const !== undefined) {
+        return typeof node.const === 'string' ? 'string' : typeof node.const;
+    }
+    if (node.anyOf || node.oneOf) return 'any';
     if (node.enum) return 'string';
     if (Array.isArray(node.type)) return node.type.find(t => t !== 'null') ?? 'string';
     return node.type ?? 'string';
 }
 
-function itemTsType(node: JsonSchemaNode | undefined): string {
-    const t = typeof node?.type === 'string' ? node.type : 'string';
-    return TS_TYPE_MAP[t] ?? 'string';
-}
+function jsonNodeToDefinition(
+    node: JsonSchemaNode,
+    fieldRequired = false,
+    defs: Record<string, JsonSchemaNode> = {}
+): unknown {
+    if (node.$ref) {
+        return {
+            $schema: {
+                type: 'any',
+                tsType: node.$ref.split('/').pop() ?? 'unknown',
+                ...(fieldRequired ? { tags: ['@required'] } : {}),
+            },
+        };
+    }
 
-function leafTsType(node: JsonSchemaNode): string {
-    if (node.enum && Array.isArray(node.enum)) return `'${node.enum.join("' | '")}'`;
-    const types = Array.isArray(node.type) ? node.type : [node.type ?? 'string'];
-    if (types.includes('array')) return `Array<${itemTsType(node.items)}>`;
-    if (types.includes('object')) return `Record<string, ${itemTsType(node.additionalProperties)}>`;
-    return types.map(t => TS_TYPE_MAP[t] ?? t).join(' | ');
-}
-
-function jsonNodeToDefinition(node: JsonSchemaNode, fieldRequired = false): unknown {
     if (node.properties) {
         const out: Record<string, unknown> = fieldRequired
             ? { $schema: { tags: ['@required'] } }
@@ -74,19 +143,21 @@ function jsonNodeToDefinition(node: JsonSchemaNode, fieldRequired = false): unkn
         for (const [key, child] of Object.entries(node.properties)) {
             out[key] = jsonNodeToDefinition(
                 child,
-                (node.required as string[] | undefined)?.includes(key) ?? false
+                (node.required as string[] | undefined)?.includes(key) ?? false,
+                defs
             );
         }
         return out;
     }
 
+    const resolvedType = jsonType(node);
     const out: Record<string, unknown> = {};
     if (node.defaultValue !== undefined) out.$default = node.defaultValue;
     else if (node.default !== undefined) out.$default = node.default;
     out.$schema = {
-        type: jsonType(node),
-        tsType: leafTsType(node),
-        ...(jsonType(node) === 'array' ? { items: { type: itemTsType(node.items) } } : {}),
+        type: resolvedType,
+        tsType: renderTsType(node, defs),
+        ...(resolvedType === 'array' ? { items: { type: jsonType(node.items ?? {}) } } : {}),
         ...(fieldRequired ? { tags: ['@required'] } : {}),
         ...(node.description ? { description: node.description } : {}),
         ...(node.env ? { env: node.env } : {}),
@@ -103,8 +174,14 @@ function jsonNodeToDefinition(node: JsonSchemaNode, fieldRequired = false): unkn
 
 /** Lower a Zod config schema into an untyped definition object. */
 export function zodToUntypedDefinition(zodSchema: ZodType): Record<string, unknown> {
-    const jsonSchema = (zodSchema as ZodType & { toJSONSchema: () => unknown }).toJSONSchema();
-    return jsonNodeToDefinition(jsonSchema as JsonSchemaNode) as Record<string, unknown>;
+    const jsonSchema = (zodSchema as ZodType & { toJSONSchema: () => unknown }).toJSONSchema() as
+        | JsonSchemaNode
+        | undefined;
+    if (!jsonSchema) return {};
+    const defs = jsonSchema.$defs ?? {};
+    const refName = jsonSchema.$ref?.split('/').pop();
+    const root = refName && defs[refName] ? defs[refName] : jsonSchema;
+    return jsonNodeToDefinition(root, false, defs) as Record<string, unknown>;
 }
 
 /** Compile a Zod schema to a fast native parse function, falling back on error. */

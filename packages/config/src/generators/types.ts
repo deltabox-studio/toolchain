@@ -51,9 +51,21 @@ export function renderConfigTypes(
     const baseGroup = options.baseGroup ?? 'base';
     const interfaceName = options.interfaceNames?.[scopeName] ?? `${pascalCase(scopeName)}Config`;
     const aliases = options.aliases?.[scopeName] ?? '';
+    const wrap = (body: string): string => (options.header ? `${options.header}\n\n${body}` : body);
+
+    // A non-object root (enum, union, record, ...) is rendered as a type alias.
+    if (!schema.properties) {
+        const tsType = (schema as { tsType?: string }).tsType ?? 'unknown';
+        return wrap(`export type ${interfaceName} = ${tsType};\n${aliases}`);
+    }
 
     const { base, groups, hasBase } = splitBaseSchema(schema, baseGroup);
     const groupKeys = Object.keys((groups.properties ?? {}) as Record<string, unknown>);
+
+    // Without a base group the full schema becomes the main interface directly.
+    if (!hasBase) {
+        return wrap(`${generateTypes(schema, { ...GENERATE_OPTIONS, interfaceName })}\n${aliases}`);
+    }
 
     const baseInterface = generateTypes(base, {
         ...GENERATE_OPTIONS,
@@ -61,19 +73,16 @@ export function renderConfigTypes(
     });
 
     let mainInterface: string;
-    if (hasBase && groupKeys.length > 0) {
+    if (groupKeys.length > 0) {
         mainInterface = generateTypes(groups, { ...GENERATE_OPTIONS, interfaceName }).replace(
             `export interface ${interfaceName} {`,
             `export interface ${interfaceName} extends ${interfaceName}Base {`
         );
-    } else if (hasBase) {
-        mainInterface = `export interface ${interfaceName} extends ${interfaceName}Base {}\n`;
     } else {
-        mainInterface = generateTypes(groups, { ...GENERATE_OPTIONS, interfaceName });
+        mainInterface = `export interface ${interfaceName} extends ${interfaceName}Base {}\n`;
     }
 
-    const body = `${baseInterface}\n${mainInterface}\n${aliases}`;
-    return options.header ? `${options.header}\n\n${body}` : body;
+    return wrap(`${baseInterface}\n${mainInterface}\n${aliases}`);
 }
 
 /** Render every config type file, keyed by scope name. */
