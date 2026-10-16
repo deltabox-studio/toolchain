@@ -100,3 +100,15 @@ export const VP_COMMANDS: VpCommandInfo[] = [
 export function viteCommandName(subcommand: string): string {
     return `vite:${subcommand}`;
 }
+
+/**
+ * Resolve a vp subcommand **or alias** to its canonical name (`i` -> `install`),
+ * or `undefined` when it is not a Vite+ command. Used to let a bare
+ * `dbx <command>` fall through to the `vite` passthrough.
+ */
+export function resolveVpCommand(name: string): string | undefined {
+    const command = VP_COMMANDS.find(
+        info => info.name === name || info.aliases?.includes(name) === true
+    );
+    return command?.name;
+}

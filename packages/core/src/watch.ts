@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import { Glob } from 'glob';
 
+import { logger } from '@deltabox/toolchain-shared';
+
 import { type RunSyncOptions, runSync } from './sync.js';
 
 export interface RunWatchOptions extends Omit<RunSyncOptions, 'check'> {
@@ -20,7 +22,7 @@ export interface RunWatchOptions extends Omit<RunSyncOptions, 'check'> {
 export async function runWatch(options: RunWatchOptions): Promise<void> {
     const { cwd, tasks } = options;
     const debounce = options.debounce ?? 150;
-    const log = options.quiet ? () => {} : (options.log ?? ((m: string) => console.log(m)));
+    const log = options.quiet ? () => {} : (options.log ?? ((m: string) => logger.info(m)));
 
     let ignoreUntil = 0;
     let timer: NodeJS.Timeout | undefined;
@@ -105,10 +107,14 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
         }
     }
 
-    log('dbx: watching for changes (Ctrl+C to stop)');
+    log('watching for changes (Ctrl+C to stop)');
 
     await new Promise<void>(resolve => {
         const stop = () => {
+            // Drop any pending debounce so a queued re-sync cannot fire while
+            // shutting down and the process can exit promptly.
+            if (timer) clearTimeout(timer);
+            timer = undefined;
             for (const watcher of watchers) watcher.close();
             process.off('SIGINT', stop);
             process.off('SIGTERM', stop);

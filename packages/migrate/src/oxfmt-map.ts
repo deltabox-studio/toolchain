@@ -47,9 +47,19 @@ export function mapBiomeFormatter(biome: Json): OxfmtMapping {
     if (js.arrowParentheses)
         oxfmt.arrowParens = js.arrowParentheses === 'always' ? 'always' : 'avoid';
 
-    for (const key of ['expand', 'useEditorconfig', 'formatWithErrors', 'jsxQuoteStyle']) {
-        if (key in formatter)
-            unmapped.push({ source: `formatter.${key}`, reason: 'no Oxfmt equivalent' });
+    // Biome options with no faithful Oxfmt equivalent, each probed in the
+    // section it actually lives in. `expand`/`useEditorconfig`/
+    // `formatWithErrors` are top-level `formatter` options, but `jsxQuoteStyle`
+    // lives under `javascript.formatter` (`js`) — probing `formatter` for it
+    // never matches, so it used to go unreported.
+    const unmappedKeys: [source: string, container: Json, key: string][] = [
+        ['formatter.expand', formatter, 'expand'],
+        ['formatter.useEditorconfig', formatter, 'useEditorconfig'],
+        ['formatter.formatWithErrors', formatter, 'formatWithErrors'],
+        ['javascript.formatter.jsxQuoteStyle', js, 'jsxQuoteStyle'],
+    ];
+    for (const [source, container, key] of unmappedKeys) {
+        if (key in container) unmapped.push({ source, reason: 'no Oxfmt equivalent' });
     }
     return { oxfmt, unmapped };
 }

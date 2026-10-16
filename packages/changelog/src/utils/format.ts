@@ -1,5 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 
+import { logger } from '@deltabox/toolchain-shared';
+
 import type { GroupedItem, GroupedRule, ParsedCommit } from './types.js';
 
 const RULE_TITLES: Record<string, string> = {
@@ -234,6 +236,6 @@ export function formatChangelogFile(file: string, repo: string | undefined): voi
         .join('\n');
     if (formatted !== content) {
         writeFileSync(file, formatted, 'utf8');
-        console.log(`  formatted ${file}`);
+        logger.info(`  formatted ${file}`);
     }
 }

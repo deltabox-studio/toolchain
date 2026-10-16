@@ -1,6 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { logger } from '@deltabox/toolchain-shared';
+
 import { discoverWorkspaceDirs, repoRoot } from './repo.js';
 import type { BumpType } from './types.js';
 
@@ -95,7 +97,7 @@ export function retagChangelogs(current: string, next: string): void {
         const updated = content.replace(`## ${current}`, `## ${next}`);
         if (updated !== content) {
             writeFileSync(file, updated, 'utf8');
-            console.log(`  retagged ${file}`);
+            logger.info(`  retagged ${file}`);
         }
     }
 }

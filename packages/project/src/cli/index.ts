@@ -1,4 +1,4 @@
-import type { ProjectType, ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ProjectType, type ToolingCommand } from '@deltabox/toolchain-shared';
 
 import { generateProjectConfigs } from '../config.js';
 import {
@@ -37,7 +37,7 @@ export function projectCommands(): ToolingCommand[] {
                     includeConfig: (opts.config as boolean | undefined) ?? true,
                 });
                 const written = writeGeneratedFiles(files, (opts.out as string) ?? context.cwd);
-                for (const file of written) console.log(`Created ${file}`);
+                for (const file of written) logger.info(`Created ${file}`);
             },
         },
         {
@@ -74,7 +74,7 @@ export function projectCommands(): ToolingCommand[] {
                     }).map(f => ({ ...f, path: `packages/core/${f.path}` }))
                 );
                 const written = writeGeneratedFiles(files, out);
-                for (const file of written) console.log(`Created ${file}`);
+                for (const file of written) logger.info(`Created ${file}`);
             },
         },
         {
@@ -113,7 +113,7 @@ export function projectCommands(): ToolingCommand[] {
                 }).map(file => ({ ...file, path: `${wsDir}/${file.path}` }));
 
                 const written = writeGeneratedFiles(files, root);
-                for (const file of written) console.log(`Created ${file}`);
+                for (const file of written) logger.info(`Created ${file}`);
             },
         },
         {
@@ -149,16 +149,16 @@ export function projectCommands(): ToolingCommand[] {
                 });
 
                 if (opts.json) {
-                    console.log(JSON.stringify(result, null, 4));
+                    logger.raw(JSON.stringify(result, null, 4));
                     return;
                 }
                 const verb = result.dryRun ? 'would create' : 'created';
-                console.log(
-                    `dbx: ${verb} ${result.created.length} config(s), skipped ${result.skipped.length}.`
+                logger.info(
+                    `${verb} ${result.created.length} config(s), skipped ${result.skipped.length}.`
                 );
                 for (const config of result.configs) {
                     if (!config.created) continue;
-                    console.log(
+                    logger.info(
                         `  + ${config.rel === '.' ? 'dbx.config.ts' : `${config.rel}/dbx.config.ts`}  [${config.type}]`
                     );
                 }

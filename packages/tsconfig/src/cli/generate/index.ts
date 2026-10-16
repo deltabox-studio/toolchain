@@ -2,11 +2,13 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 
 import { Glob } from 'glob';
 import type { TsConfigJson } from 'type-fest';
+
+import { logger } from '@deltabox/toolchain-shared';
 
 import { type GeneratedTsconfigResult, generateTsconfig } from './utils.js';
 
@@ -54,7 +56,7 @@ export function generateTsconfigs(
     } = options;
     const cwd = options.cwd ?? process.cwd();
     const say = (message: string) => {
-        if (log) console.log(message);
+        if (log) logger.info(message);
     };
 
     if (!enableAliases) say('Ignoring path aliases for all tsconfigs...');
@@ -150,12 +152,17 @@ export function runTsconfigCli(argv: string[] = process.argv.slice(2)): void {
     });
 }
 
-// Run only when executed directly.
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+// Run only when executed directly (not when imported by the toolchain, and not
+// when this module is inlined into a single-file bundle where `import.meta.url`
+// resolves to the bundle rather than to this file).
+if (
+    /[\\/]generate[\\/]index\.[cm]?[jt]s$/.test(fileURLToPath(import.meta.url)) &&
+    import.meta.url === pathToFileURL(process.argv[1] ?? '').href
+) {
     try {
         runTsconfigCli();
     } catch (e) {
-        console.error('Failed to generate tsconfigs due to:', e);
+        logger.error(`Failed to generate tsconfigs due to: ${e}`);
         process.exit(1);
     }
 }

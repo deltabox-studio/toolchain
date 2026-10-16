@@ -11,6 +11,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { logger } from '@deltabox/toolchain-shared';
+
 import {
     DEFAULT_WORKFLOW_TOKENS,
     renderWorkflow,
@@ -28,5 +30,5 @@ for (const id of Object.keys(WORKFLOW_FILENAMES) as WorkflowId[]) {
     if (!yaml) continue;
     const file = path.resolve(dir, WORKFLOW_FILENAMES[id]);
     fs.writeFileSync(file, yaml, 'utf-8');
-    console.log(`wrote ${path.relative(process.cwd(), file)}`);
+    logger.info(`wrote ${path.relative(process.cwd(), file)}`);
 }

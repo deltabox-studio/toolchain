@@ -8,6 +8,9 @@ import { isCmdShim, windowsShimCommand } from './win-spawn.js';
 
 const IS_WINDOWS = process.platform === 'win32';
 
+/** The extension's own id (`<publisher>.<name>`). */
+const EXTENSION_ID = 'deltabox.toolchain-vscode';
+
 /** A resolved `dbx` invocation. */
 export interface CliCommand {
     exe: string;
@@ -38,10 +41,32 @@ function localCliEntry(cwd: string): string | undefined {
 }
 
 /**
- * Resolve the CLI to run, preferring the workspace's local `@deltabox/toolchain`
- * (its built entry, then the `.bin` shim) over a global `npx` fallback.
+ * The self-contained CLI bundle shipped inside the extension
+ * (`<extensionPath>/dist/dbx.cjs`), if present. This is preferred over any
+ * workspace-local install or the `npx` fallback so a consumer never has to
+ * install `@deltabox/toolchain`.
+ */
+export function bundledCliEntry(): string | undefined {
+    const extensionPath = vscode.extensions.getExtension(EXTENSION_ID)?.extensionPath;
+    if (!extensionPath) return undefined;
+    const entry = path.join(extensionPath, 'dist', 'dbx.cjs');
+    return fs.existsSync(entry) ? entry : undefined;
+}
+
+/**
+ * Resolve the CLI to run, preferring the extension's bundled `dbx.cjs`, then the
+ * workspace's local `@deltabox/toolchain` (its built entry, then the `.bin`
+ * shim), over a global `npx` fallback.
+ *
+ * The bundled/local entries are run with `process.execPath`. In the extension
+ * host that is the VS Code/Electron binary, but VS Code launches the host with
+ * `ELECTRON_RUN_AS_NODE=1`, so it executes as Node and `spawnCli` inherits that
+ * variable. The integrated terminal is a separate process without it, so it
+ * cannot use `process.execPath` — see {@link cliInvocation}.
  */
 export function resolveCliCommand(cwd: string): CliCommand {
+    const bundled = bundledCliEntry();
+    if (bundled) return { exe: process.execPath, args: [bundled] };
     const entry = localCliEntry(cwd);
     if (entry) return { exe: process.execPath, args: [entry] };
     if (!IS_WINDOWS) {
@@ -75,11 +100,17 @@ export function spawnCli(cwd: string, args: string[], options: SpawnOptions = {}
 
 /**
  * The shell command that runs the resolved CLI in `cwd`, for an integrated
- * terminal. `process.execPath` is the VS Code binary in the extension host, so
- * the terminal must reach the CLI through `npx` (which resolves the project's
- * local `dbx` bin) rather than spawn `process.execPath` directly.
+ * terminal. Unlike `spawnCli`, which runs inside the extension host (where VS
+ * Code sets `ELECTRON_RUN_AS_NODE=1`, so `process.execPath` executes as Node),
+ * the terminal is a separate process without that variable: there
+ * `process.execPath` is the VS Code GUI binary and cannot run the CLI. The
+ * bundled entry is therefore reached through a real `node`, and the fallbacks
+ * through the project's local `dbx` bin (`npx`) or a published
+ * `@deltabox/toolchain`.
  */
 export function cliInvocation(cwd: string): string {
+    const bundled = bundledCliEntry();
+    if (bundled) return `node "${bundled}"`;
     if (localCliEntry(cwd)) return 'npx dbx';
     return IS_WINDOWS ? 'npx.cmd --yes @deltabox/toolchain' : 'npx --yes @deltabox/toolchain';
 }

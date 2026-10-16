@@ -1,5 +1,5 @@
 import { runWatch } from '@deltabox/toolchain-core';
-import { sectionConfig, type ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, sectionConfig, type ToolingCommand } from '@deltabox/toolchain-shared';
 
 import { baseOptions, watchOptions } from './shared.js';
 
@@ -17,13 +17,13 @@ export function watchCommand(): ToolingCommand {
         ],
         run: async (opts, context) => {
             if (!context.configPath && !opts.force) {
-                console.warn(
-                    'dbx: no dbx.config.* found here; nothing to watch (use --force to run anyway).'
+                logger.warn(
+                    'no dbx.config.* found here; nothing to watch (use --force to run anyway).'
                 );
                 return;
             }
             if (sectionConfig(context.config.watch)?.enabled === false) {
-                console.warn('dbx: watch is disabled in the config.');
+                logger.warn('watch is disabled in the config.');
                 return;
             }
             await runWatch({ ...watchOptions(context), quiet: Boolean(opts.quiet) });

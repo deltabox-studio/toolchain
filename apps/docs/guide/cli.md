@@ -5,6 +5,22 @@ descriptors. Commands that run against a project load its
 `dbx.config.ts` first, so config-derived defaults apply unless you
 override them on the command line.
 
+## Global flags
+
+| Flag                | Description                                                    |
+| ------------------- | -------------------------------------------------------------- |
+| `--log-level <lvl>` | Minimum log level: `debug`, `info`, `warn`, `error`, `silent`. |
+| `--no-color`        | Disable coloured output.                                       |
+| `--no-update-check` | Do not check for a newer `dbx` version.                        |
+
+These override the [`logger` config](/guide/config#logging) and may appear
+before or after the subcommand.
+
+`dbx` checks the npm registry in the background (about once a day) and prints a
+short notice with a link to the release when a newer version is published. The
+check is skipped in CI and when `NO_UPDATE_NOTIFIER` or `DBX_NO_UPDATE_CHECK` is
+set, and can be turned off with `--no-update-check`.
+
 ## Core
 
 | Command     | Description                                                                      |
@@ -60,16 +76,57 @@ See [Migrations](/guide/migrations).
 
 ## Providers
 
-Every provider subcommand is a passthrough. For Vite+:
+Every provider subcommand is a passthrough. Vite+ commands are reachable both
+directly and through the `vite` namespace:
 
 ```bash
-dbx vite dev            # forwards to `vp dev`
-dbx vite add zod        # forwards to `vp add zod`
+dbx fmt                 # a bare Vite+ command forwards to `vp fmt`
+dbx run -r build        # forwards to `vp run -r build`
+dbx vite dev            # explicit namespace (always works)
 dbx vite:build          # named alias for `vp build`
 ```
 
-The generic `vite` command forwards its operands verbatim to `vp`, so **every**
-Vite+ CLI command and flag is reachable.
+A bare `dbx <command>` is forwarded to Vite+ when the name (or a Vite+ alias)
+matches — built-in commands win, so `dbx migrate` stays the toolchain's
+migration. The `vite` command forwards its operands verbatim, so **every** Vite+
+CLI command and flag is reachable.
+
+## Programmatic
+
+The CLI is assembled from framework-agnostic command descriptors, so a consumer
+can build its own program (or reuse the routing helpers):
+
+```ts
+import {
+    createCli,
+    runCli,
+    builtinCommands,
+    registerToolingCommands,
+    withDefaultVite,
+    extractLogOptions,
+} from '@deltabox/toolchain/cli';
+```
+
+| Export                                       | Description                                                            |
+| -------------------------------------------- | ---------------------------------------------------------------------- |
+| `createCli()`                                | Build the `dbx` commander program (global flags + built-in commands).  |
+| `runCli(argv?)`                              | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
+| `builtinCommands()`                          | The commands built into the root CLI (config commands need an engine). |
+| `registerToolingCommands(program, commands)` | Wire `ToolingCommand[]` descriptors onto a commander program.          |
+| `withDefaultVite(argv, commandNames?)`       | Insert `vite` before a bare Vite+ command (built-ins win).             |
+| `extractLogOptions(argv)`                    | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
+
+`extractLogOptions` makes the logger flags work before _or_ after the
+subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.
+`withDefaultVite` powers the bare-command passthrough described above:
+
+```ts
+extractLogOptions(['node', 'dbx', 'sync', '--no-color']);
+// { argv: ['node', 'dbx', 'sync'], options: { color: false } }
+
+withDefaultVite(['node', 'dbx', 'fmt', '--check']);
+// ['node', 'dbx', 'vite', 'fmt', '--check']
+```
 
 ## Config generator
 

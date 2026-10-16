@@ -34,7 +34,27 @@ dbx vite check
 ```
 
 Everything after `vite` is forwarded verbatim to `vp`, so all Vite+ commands and
-flags are reachable.
+flags are reachable. A bare `dbx <command>` whose name is a Vite+ command (or a
+Vite+ alias) is forwarded too, so `dbx fmt` / `dbx run -r build` need no `vite`
+namespace — built-in commands win (`dbx migrate` stays the toolchain's).
+
+### Colour
+
+Provider output keeps `vp`'s own colours, but follows the logger's colour state.
+The global `--no-color` flag turns provider colour off, and the `providers`
+section can opt out on its own even on a colour terminal:
+
+```ts
+export default defineConfig({
+    toolchain: {
+        providers: { color: false },
+    },
+});
+```
+
+When colour is off, `dbx` runs `vp` with `NO_COLOR=1` and `FORCE_COLOR=0` so the
+wrapped process emits plain output. Leave the section unset to let `vp` detect
+colour from its own terminal.
 
 ### Named commands
 
@@ -50,11 +70,37 @@ vite:toolchain vite:upgrade vite:implode
 ### Programmatic
 
 ```ts
-import { resolveVp, runVp, hasVp } from '@deltabox/toolchain/vite';
+import {
+    resolveVp,
+    runVp,
+    hasVp,
+    vpVersion,
+    describeVp,
+    resolveVpCommand,
+    viteCommandName,
+    VP_COMMANDS,
+} from '@deltabox/toolchain/vite';
 
 if (hasVp(process.cwd())) {
     await runVp(['check'], { cwd: process.cwd() });
 }
+```
+
+| Export                                 | Description                                                                 |
+| -------------------------------------- | --------------------------------------------------------------------------- |
+| `resolveVp(cwd?)`                      | Resolve the `vp` invocation (`{ exe, args, source }`).                      |
+| `hasVp(cwd?)`                          | Whether a local/global `vp` is available (no `npx` fallback).               |
+| `runVp(args, options?)`                | Run `vp`, streaming output or `mode: 'capture'`; never exits the host.      |
+| `vpVersion(cwd?)` / `describeVp(cwd?)` | The `vp --version` output / a one-line resolution description.              |
+| `which(bin)`                           | Find an executable on `PATH` (resolves `PATHEXT` on Windows).               |
+| `resolveVpCommand(name)`               | Resolve a subcommand **or alias** to its canonical name (`i` -> `install`). |
+| `viteCommandName(name)`                | The `dbx` command name for a `vp` subcommand (`dev` -> `vite:dev`).         |
+| `VP_COMMANDS`                          | The `vp` command catalog that drives the CLI + the provider descriptor.     |
+
+```ts
+// A bare `dbx <command>` falls through to `vite` when it names a Vite+ command.
+resolveVpCommand('fmt'); // 'fmt'
+viteCommandName('fmt'); // 'vite:fmt'
 ```
 
 ### Use dbx from Vite+

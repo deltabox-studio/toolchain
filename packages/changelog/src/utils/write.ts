@@ -1,6 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 
+import { logger } from '@deltabox/toolchain-shared';
+
 import { formatChangelogFile } from './format.js';
 import { readCommits, repoSlug } from './git.js';
 import { packageChangesForCurrent } from './packages.js';
@@ -36,14 +38,14 @@ export function writeChangelogs(
         const reformatted = reformatRootChangelog(packageChanges);
         if (reformatted) {
             writeFileSync(rootChangelog, reformatted, 'utf8');
-            console.log(`  reformatted ${rootChangelog}`);
+            logger.info(`  reformatted ${rootChangelog}`);
         }
     }
 
     // The root changelog lists every pushed commit.
     const entry = renderChangelogEntry(version, summary, new Date(), true, footer);
     prependChangelogEntry(rootChangelog, entry);
-    console.log(`  updated ${rootChangelog}`);
+    logger.info(`  updated ${rootChangelog}`);
 
     // Each workspace changelog only lists commits touching that workspace dir.
     for (const dir of discoverWorkspaceDirs()) {
@@ -53,12 +55,12 @@ export function writeChangelogs(
         const rel = relative(root, dir).replace(/\\/g, '/');
         const filtered = readCommits(range, rel);
         if (filtered.length === 0) {
-            console.log(`  skipped ${file} (no commits in ${rel})`);
+            logger.info(`  skipped ${file} (no commits in ${rel})`);
             continue;
         }
         const wsSummary = buildSummary(filtered);
         prependChangelogEntry(file, renderChangelogEntry(version, wsSummary, new Date()));
-        console.log(`  updated ${file}`);
+        logger.info(`  updated ${file}`);
     }
     // Normalize every changelog (all versions, including old entries).
     for (const file of [

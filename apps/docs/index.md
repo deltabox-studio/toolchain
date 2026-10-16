@@ -37,4 +37,6 @@ features:
       details: A VS Code extension to sync, scaffold, run workflows, run Vite+ or other provider commands and pick templates.
     - title: Monorepo aware
       details: Project graph, workspace tsconfigs, dependency-ordered tasks, and per-workspace files.
+    - title: Sync projects
+      details: Sync your entire project so workspaces, docs and CI are always up-to-date.
 ---

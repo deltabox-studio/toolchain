@@ -10,6 +10,9 @@ API and the VS Code extension.
 ```bash
 # as a dev dependency in the project you want to manage
 yarn add -D @deltabox/toolchain
+
+# or for global usage
+npm install -g @deltabox/toolchain
 ```
 
 The published package exposes one binary, `dbx`:
@@ -45,6 +48,19 @@ dbx sync --recursive  # every discovered project, in dependency order
 dbx watch             # re-sync on change
 ```
 
+The generated state lives under `.dbx/`. Add it to `.gitignore`, keeping only
+the manifest (it holds no absolute paths):
+
+```gitignore
+.dbx/*
+!.dbx/toolchain
+.dbx/toolchain/*
+!.dbx/toolchain/manifest.json
+```
+
+`dbx sync` adds this block to an existing `.gitignore` automatically, so you only
+need to add it by hand when the repo has no `.gitignore` yet.
+
 ## What gets managed
 
 | Area                                                                | Section in the config |
@@ -66,6 +82,7 @@ that area untouched.
 - [Configuration reference](/config/reference)
 - [Config generator](/guide/config-generator)
 - [Providers (Vite+)](/guide/providers)
+- [Package scripts](/guide/scripts)
 - [Templates](/guide/templates)
 - [Migrations](/guide/migrations)
 - [Programmatic API](/guide/api)

@@ -1,15 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type {
-    ManagedFile,
-    ProjectType,
-    Replacements,
-    SyncContext,
-    SyncTask,
-    ToolingConfig,
+import {
+    logger,
+    type ManagedFile,
+    type ProjectType,
+    type Replacements,
+    type SyncContext,
+    type SyncTask,
+    type ToolingConfig,
 } from '@deltabox/toolchain-shared';
 
+import { ensureDbxGitignore } from './gitignore.js';
 import { readManifest, writeManifest } from './manifest.js';
 import { resolveProjectType } from './project-type.js';
 
@@ -28,7 +30,7 @@ export interface RunSyncOptions {
     check?: boolean;
     /** Suppress logging. */
     quiet?: boolean;
-    /** Custom logger (default `console.log`). */
+    /** Custom logger (default `logger.info`). */
     log?: (message: string) => void;
 }
 
@@ -55,7 +57,7 @@ function norm(relative: string): string {
  */
 export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     const { tasks, cwd, config, tokens } = options;
-    const log = options.quiet ? () => {} : (options.log ?? ((m: string) => console.log(m)));
+    const log = options.quiet ? () => {} : (options.log ?? ((m: string) => logger.info(m)));
     const projectType = options.projectType ?? resolveProjectType(cwd, config);
     const ctx: SyncContext = { cwd, projectType, config, tokens, log };
     const hooks = config.hooks ?? {};
@@ -66,7 +68,7 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
             (!task.projectTypes || task.projectTypes.includes(projectType)) &&
             (!task.enabled || task.enabled(config))
     );
-    log(`dbx: running ${active.length} task(s)${options.check ? ' (check)' : ''} [${projectType}]`);
+    log(`running ${active.length} task(s)${options.check ? ' (check)' : ''} [${projectType}]`);
 
     const files: ManagedFile[] = [];
     for (const task of active) {
@@ -113,9 +115,9 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
 
     if (options.check) {
         if (upToDate) {
-            log('dbx: generated files are in sync.');
+            log('generated files are in sync.');
         } else {
-            log('dbx: generated files are out of date:');
+            log('generated files are out of date:');
             for (const relative of changed) log(`  M ${relative}`);
             for (const relative of removed) log(`  D ${relative}`);
             log('Run `dbx sync` to regenerate them.');
@@ -136,9 +138,10 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
         fs.rmSync(path.resolve(cwd, relative), { force: true });
     }
     writeManifest(cwd, [...desired.keys()]);
+    if (ensureDbxGitignore(cwd)) log('  I .gitignore (added the .dbx ignore block)');
 
     log(
-        `dbx: wrote ${written.length}, removed ${removed.length} file(s)${
+        `wrote ${written.length}, removed ${removed.length} file(s)${
             changed.length ? `, updated ${changed.length}` : ''
         }.`
     );

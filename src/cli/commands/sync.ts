@@ -7,7 +7,7 @@ import {
     runWatch,
     writeProjectGraph,
 } from '@deltabox/toolchain-core';
-import type { ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
 
 import { defaultSyncTasks } from '../../sync.js';
 import { baseOptions, watchOptions } from './shared.js';
@@ -36,7 +36,7 @@ export function syncCommand(): ToolingCommand {
 
             if (opts.recursive) {
                 const graph = buildProjectGraph(context.cwd);
-                writeProjectGraph(context.cwd, graph);
+                if (!check) writeProjectGraph(context.cwd, graph);
                 for (const relDir of graph.order) {
                     const dir = path.resolve(context.cwd, relDir);
                     const loaded = await loadToolingConfig(dir);
@@ -55,8 +55,8 @@ export function syncCommand(): ToolingCommand {
             }
 
             if (!context.configPath && !opts.force) {
-                console.warn(
-                    'dbx: no dbx.config.* found here; nothing to sync (use --force to run anyway).'
+                logger.warn(
+                    'no dbx.config.* found here; nothing to sync (use --force to run anyway).'
                 );
                 return;
             }
@@ -69,11 +69,14 @@ export function syncCommand(): ToolingCommand {
             const result = await runSync({ ...watchOptions(context), check, quiet });
             if (check && !result.upToDate) process.exitCode = 1;
 
-            // Keep the project graph fresh for the IDE/other tools.
-            try {
-                writeProjectGraph(context.cwd, buildProjectGraph(context.cwd));
-            } catch {
-                // best-effort
+            // Keep the project graph fresh for the IDE/other tools (`--check`
+            // must not write anything).
+            if (!check) {
+                try {
+                    writeProjectGraph(context.cwd, buildProjectGraph(context.cwd));
+                } catch {
+                    // best-effort
+                }
             }
         },
     };

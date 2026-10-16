@@ -1,14 +1,149 @@
 # Changelog
 
-## 1.2.3 (October 2026)
+## 1.3.0 (October 2026)
 
 <!-- release:start -->
 
+### New features
+#### Core
+- Keep the generated .dbx directory out of git ([#9fc1434](https://github.com/deltabox-studio/toolchain/commit/9fc1434) by [T0chi](https://github.com/T0chi))
+  - dbx sync now appends the .dbx ignore block (everything under .dbx/ except the
+    manifest, which holds no absolute paths) to an existing .gitignore, and the
+    installation guide documents the pattern and the automatic step.
+#### Cli
+- Route CLI output through the logger, add a providers colour option ([#ce76a4d](https://github.com/deltabox-studio/toolchain/commit/ce76a4d) by [T0chi](https://github.com/T0chi))
+  - Commander's help and errors now go through the shared logger (help to stdout,
+    errors to stderr, colour-aware, ANSI stripped when colour is off). Vite+
+    passthrough commands keep commander's defaults so the spawned vp keeps its own
+    coloured logging.
+  - Add a providers config section (color?: boolean): color: false forces plain
+    provider output, the global --no-color still turns it off, and runVp sets
+    NO_COLOR / FORCE_COLOR on the child when colour is disabled.
+- Check for a newer dbx version ([#772aae2](https://github.com/deltabox-studio/toolchain/commit/772aae2) by [T0chi](https://github.com/T0chi))
+  - On each run, check the npm registry in the background (cached for a day, never
+    blocking) and print a short notice with a link to the release when a newer
+    @deltabox/toolchain exists. Skipped in CI and by NO_UPDATE_NOTIFIER or
+    DBX_NO_UPDATE_CHECK, and can be turned off with the new --no-update-check flag.
+- Default a bare Vite+ command to the `vite` passthrough ([#75770e4](https://github.com/deltabox-studio/toolchain/commit/75770e4) by [T0chi](https://github.com/T0chi))
+  - `dbx fmt` / `dbx lint` / `dbx run` / `dbx dev` now work: when the first operand
+    is not a built-in command but names a Vite+ subcommand (or one of its aliases),
+    `vite` is inserted before it and the whole Vite+ CLI stays reachable without the
+    explicit namespace. Built-in commands win, so `dbx migrate` remains the
+    toolchain's migration (`dbx vite migrate` is Vite+'s).
+  - The Package scripts, Migrations, Monorepo, CLI and Providers guides now show the
+    bare form, and the consumers' root scripts were updated to match.
+#### Vscode
+- Bundle the dbx CLI into the extension ([#bf12403](https://github.com/deltabox-studio/toolchain/commit/bf12403) by [T0chi](https://github.com/T0chi))
+  - Ship a self-contained dbx.cjs inside the VSIX (built by the new
+    tsdown.bin.config.ts) and prefer it in the extension, so a consumer no longer
+    needs to install @deltabox/toolchain. It falls back to a workspace-local
+    install and then npx.
+  - Make the changelog and tsconfig direct-run guards basename-aware so they do not
+    fire when the module is inlined into the single-file bundle.
+#### Shared
+- Add a configurable shared logger ([#54b51fa](https://github.com/deltabox-studio/toolchain/commit/54b51fa) by [T0chi](https://github.com/T0chi))
+  - Add packages/shared/src/logger.ts: one level-aware, colour-aware sink (colours
+    via picocolors, the same package Vite uses) with debug, info, success, warn,
+    error and raw (unprefixed machine output). It is configurable from dbx.config's
+    new logger section and from the CLI (--log-level, --no-color), with the CLI
+    taking precedence.
+  - Every console call in the toolchain now goes through the logger (JSON output
+    through raw), including the sync/watch log callback and the run helper's
+    verbose line. The generated config types, the JSON schema, the docs reference
+    and the Configuration/CLI guides document the new logger section.
+### Bug fixes
+- Correct tsconfig aliases under --cwd, prune self-referential task runs ([#40e0c34](https://github.com/deltabox-studio/toolchain/commit/40e0c34) by [T0chi](https://github.com/T0chi))
+  - Two bugs found by exercising the CLI against the local consumer projects:
+  - instead of process.cwd(), so `dbx sync --cwd <dir>` (run from elsewhere)
+    writes correct relative paths rather than paths pointing at the caller.
+    spawning the task runner, and prunes itself when the same command runs again
+    from the same root. A root task whose script calls `run -r <task>` can no
+    longer recurse.
+- Changelog links, oxfmt map, build idempotency, watch timer, vscode spawn ([#2389c98](https://github.com/deltabox-studio/toolchain/commit/2389c98) by [T0chi](https://github.com/T0chi))
+  - render commits as a plain short hash instead of a github.com/undefined link
+    `yarn build` no longer rewrites it and the working tree stays idempotent
+    spawnCli and cliInvocation
+- Sync --check writes, quiet level, log flags and template tokens ([#7f5690f](https://github.com/deltabox-studio/toolchain/commit/7f5690f) by [T0chi](https://github.com/T0chi))
+  - Audit pass over the toolchain source:
+  - actually generated by dbx sync
 ### Documentation
-- Update vscode extension screenshot ([#e3e189d](https://github.com/deltabox-studio/toolchain/commit/e3e189d) by [T0chi](https://github.com/T0chi))
+- Document the full public API surface ([#6f78245](https://github.com/deltabox-studio/toolchain/commit/6f78245) by [T0chi](https://github.com/T0chi))
+  - Expand guide/api.md to cover the umbrella plus every subpath export, grouped by
+    package. Add the logging API (logger, createLogger, setLogConfig,
+    setLogOverrides, levels, colours, raw) to the API and Configuration guides, and
+    document the config generator's formatGenerated helper and the Vite and CLI
+    programmatic helpers.
+### Chores
+- Track only the .dbx manifest ([#a254062](https://github.com/deltabox-studio/toolchain/commit/a254062) by [T0chi](https://github.com/T0chi))
+  - Ignore everything under .dbx/ except .dbx/toolchain/manifest.json, which records the managed files and holds no absolute paths. The project graph (which embeds the absolute root) stays ignored.
+- Stop tracking the generated .dbx directory ([#b7c53f0](https://github.com/deltabox-studio/toolchain/commit/b7c53f0) by [T0chi](https://github.com/T0chi))
+  - The managed-file manifest and project graph under .dbx/ are generated state, so ignore them and untrack the two committed files.
+
+### Package changes
+#### Added
+- `picocolors` `^1.1.1`
 
 <!-- release:end -->
 
+
+## 1.2.8 (October 2026)
+
+### Documentation
+- Drive Vite+ from `dbx` in the recommended package scripts ([#6131c59](https://github.com/deltabox-studio/toolchain/commit/6131c59) by [T0chi](https://github.com/T0chi))
+  - Use `dbx vite <command>` (the Vite+ passthrough) instead of calling `vp`
+    directly in the Package scripts, Migrations and Monorepo guides, so a project
+    only needs the one `dbx` command.
+
+## 1.2.7 (October 2026)
+
+### Documentation
+- Link package script migrations from the Migrations page ([#036ebf5](https://github.com/deltabox-studio/toolchain/commit/036ebf5) by [T0chi](https://github.com/T0chi))
+  - Add a "Package scripts" section to the Migrations guide with the Biome/Turbo
+    script swaps and a link to the full Package scripts page.
+
+## 1.2.6 (October 2026)
+
+### Bug fixes
+#### Config
+- Tidy generated types and format them with Oxfmt ([#6fef440](https://github.com/deltabox-studio/toolchain/commit/6fef440) by [T0chi](https://github.com/T0chi))
+  - untyped's type generator emits a blank line between every member and verbose
+    multi-line JSDoc. Strip the member blank lines in the generator, then run the
+    generated output through Oxfmt's programmatic `format()` (with `jsdoc: true`)
+    at generation time instead of shelling out to the repo-root `vp`, so the file
+    is written already formatted and resembles the hand-written `types.ts`.
+  - Also drop the toolchain-specific `yarn config:types` hint from the generated
+    header: the types ship through `@deltabox/toolchain-shared`, so a script name
+    that only exists in this repo's package.json is misleading to consumers (a
+    consumer supplies its own header via the `header` option).
+### Documentation
+- Add Package scripts guide and a navbar version ([#b279739](https://github.com/deltabox-studio/toolchain/commit/b279739) by [T0chi](https://github.com/T0chi))
+  - Add a guide page covering the recommended root scripts (Vite+ format/lint and
+    Vite Task) and how to migrate an existing Biome + Turbo project onto them, and
+    surface it in the sidebar and Getting Started list. Also show the current
+    version in the navbar (linked to the changelog, releases and npm), like the
+    Proxified docs.
+
+## 1.2.5 (October 2026)
+
+### Bug fixes
+#### Changelog
+- Keep generated commitlint enums expanded ([#a6ad600](https://github.com/deltabox-studio/toolchain/commit/a6ad600) by [T0chi](https://github.com/T0chi))
+  - Oxfmt collapses an array onto one line when it fits the print width, so a
+    generated `commitlint.config.mjs` whose type/scope enum is short was
+    reformatted by `vp fmt` and then failed `dbx sync --check`. An inert leading
+    line comment inside each enum keeps the list expanded regardless of the
+    consumer's print width, so the generated file is now Oxfmt-idempotent and
+    consumers no longer need to exclude it from formatting.
+
+## 1.2.4 (October 2026)
+
+### Documentation
+- Update documentation ([#3880aaa](https://github.com/deltabox-studio/toolchain/commit/3880aaa) by [T0chi](https://github.com/T0chi))
+
+## 1.2.3 (October 2026)
+
+### Documentation
+- Update vscode extension screenshot ([#e3e189d](https://github.com/deltabox-studio/toolchain/commit/e3e189d) by [T0chi](https://github.com/T0chi))
 
 ## 1.2.2 (October 2026)
 

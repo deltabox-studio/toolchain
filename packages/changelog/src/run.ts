@@ -69,6 +69,8 @@ import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { logger } from '@deltabox/toolchain-shared';
+
 import { parseArgsCli } from './utils/args.js';
 import { deriveBump, readCommits } from './utils/git.js';
 import { packageChangesForCurrent } from './utils/packages.js';
@@ -94,7 +96,7 @@ export function runChangelog(argv: string[] = process.argv.slice(2)): void {
     // `--format-only` just regroups the existing changelog files (no bump, no
     // new entry); `--range`/`--dry-run` still apply.
     if (options.formatOnly) {
-        console.log(
+        logger.info(
             `[format-only] Reformatting ${changelogFiles().length} changelog file(s)${
                 options.dryRun ? ' (dry run)' : ''
             }.`
@@ -110,12 +112,12 @@ export function runChangelog(argv: string[] = process.argv.slice(2)): void {
         const next = options.version.trim();
         if (!/^\d+\.\d+\.\d+$/.test(next)) throw new Error(`Invalid version: ${next}`);
         if (next === localCurrent) {
-            console.log(`Version is already ${next}; nothing to do.`);
+            logger.info(`Version is already ${next}; nothing to do.`);
             return;
         }
         writeVersion(next);
         retagChangelogs(localCurrent, next);
-        console.log(`Retagged versions ${localCurrent} -> ${next}.`);
+        logger.info(`Retagged versions ${localCurrent} -> ${next}.`);
         return;
     }
 
@@ -152,17 +154,17 @@ export function runChangelog(argv: string[] = process.argv.slice(2)): void {
                 ? packageChangesForCurrent(previousVersion)
                 : '';
         const entry = renderChangelogEntry(next, summary, new Date(), true, footer);
-        console.log(`[DRY-RUN] Range: ${range}`);
-        console.log(
+        logger.info(`[DRY-RUN] Range: ${range}`);
+        logger.info(
             `[DRY-RUN] Processing method: ${method}${reformatAll ? ' (backward reformat)' : ''}`
         );
-        console.log(`[DRY-RUN] Bump: ${type} (\`${current}\` -> \`${next}\`)`);
-        console.log(`[DRY-RUN] ${records.length} commit(s) scanned. Project files untouched.`);
-        console.log('');
-        console.log('Proposed new CHANGELOG.md entry (new version only):');
-        console.log('');
-        console.log(entry);
-        console.log('--- end of proposed entry ---');
+        logger.info(`[DRY-RUN] Bump: ${type} (\`${current}\` -> \`${next}\`)`);
+        logger.info(`[DRY-RUN] ${records.length} commit(s) scanned. Project files untouched.`);
+        logger.info('');
+        logger.info('Proposed new CHANGELOG.md entry (new version only):');
+        logger.info('');
+        logger.raw(entry);
+        logger.info('--- end of proposed entry ---');
         // Write the full proposed root CHANGELOG.md (existing content + new
         // entry, or the fully reformatted changelog for `all`) to
         // CHANGELOG.proposed.md, with the new entry inserted at the top.
@@ -170,13 +172,13 @@ export function runChangelog(argv: string[] = process.argv.slice(2)): void {
         const content = insertNewEntry(base, entry);
         const proposed = resolve(root, 'CHANGELOG.proposed.md');
         writeFileSync(proposed, content, 'utf8');
-        console.log(`Wrote ${proposed}`);
+        logger.info(`Wrote ${proposed}`);
         return;
     }
 
     writeVersion(next);
     writeChangelogs(next, range, records, summary, reformatAll, options.packageChanges);
-    console.log(`Bumped ${current} -> ${next} (${type}) from ${records.length} commit(s).`);
+    logger.info(`Bumped ${current} -> ${next} (${type}) from ${records.length} commit(s).`);
 }
 
 // Exported so tests can dry-run the pipeline (grouping/rendering) directly.
@@ -197,8 +199,15 @@ export { renderChangelogEntry } from './utils/version.js';
 /** Alias kept for backwards compatibility. */
 export const main = runChangelog;
 
-// Run only when executed directly (not when imported by tests/tooling).
-if (process.argv[1] && safeRealpath(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Run only when executed directly (not when imported by tests/tooling, and not
+// when this module is inlined into a single-file bundle where `import.meta.url`
+// resolves to the bundle rather than to this file).
+const modulePath = fileURLToPath(import.meta.url);
+if (
+    process.argv[1] &&
+    /[\\/]run\.[cm]?[jt]s$/.test(modulePath) &&
+    safeRealpath(process.argv[1]) === modulePath
+) {
     runChangelog();
 }
 

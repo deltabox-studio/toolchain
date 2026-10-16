@@ -21,6 +21,7 @@ import {
     CONFIG_SECTION_DESCRIPTIONS,
     CONFIG_SECTION_SCHEMAS,
     dbxConfigSchema,
+    logger,
 } from '@deltabox/toolchain-shared';
 import { renderConfigFileMarkdown } from '@deltabox/toolchain/config';
 
@@ -79,4 +80,4 @@ jsonSchema.description =
 const schemaPath = path.join(root, 'config.schema.json');
 fs.writeFileSync(schemaPath, `${JSON.stringify(jsonSchema, null, 4)}\n`, 'utf-8');
 
-console.log(`Generated ${path.relative(root, docsPath)} and ${path.relative(root, schemaPath)}`);
+logger.info(`Generated ${path.relative(root, docsPath)} and ${path.relative(root, schemaPath)}`);

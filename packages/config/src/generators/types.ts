@@ -42,6 +42,43 @@ export function resolveScopeSchema(schema: Schema | undefined, zodSchema: unknow
     return (schema ?? zodToJsonSchema(zodSchema as never)) as Schema;
 }
 
+/**
+ * Drop the blank line untyped inserts between members inside a type body
+ * (brace depth > 0), keeping the blank lines that separate top-level
+ * declarations. Comment lines are skipped so a `{`/`}`/`[`/`]` inside a doc
+ * comment never shifts the tracked depth.
+ */
+function stripMemberBlankLines(source: string): string {
+    const out: string[] = [];
+    let depth = 0;
+    let inComment = false;
+    for (const line of source.split('\n')) {
+        const trimmed = line.trim();
+        if (inComment) {
+            out.push(line);
+            if (trimmed.endsWith('*/')) inComment = false;
+            continue;
+        }
+        if (trimmed.startsWith('/*')) {
+            out.push(line);
+            if (!trimmed.endsWith('*/')) inComment = true;
+            continue;
+        }
+        if (trimmed === '' && depth > 0) continue;
+        out.push(line);
+        for (const char of line) {
+            if (char === '{' || char === '(' || char === '[') depth++;
+            else if ((char === '}' || char === ')' || char === ']') && depth > 0) depth--;
+        }
+    }
+    return out.join('\n');
+}
+
+/** Generate an interface from a schema and normalize its member spacing. */
+function tidyInterface(schema: Schema, interfaceName: string): string {
+    return stripMemberBlankLines(generateTypes(schema, { ...GENERATE_OPTIONS, interfaceName }));
+}
+
 /** Render the generated type file content for one scope. */
 export function renderConfigTypes(
     scopeName: string,
@@ -64,17 +101,14 @@ export function renderConfigTypes(
 
     // Without a base group the full schema becomes the main interface directly.
     if (!hasBase) {
-        return wrap(`${generateTypes(schema, { ...GENERATE_OPTIONS, interfaceName })}\n${aliases}`);
+        return wrap(`${tidyInterface(schema, interfaceName)}\n${aliases}`);
     }
 
-    const baseInterface = generateTypes(base, {
-        ...GENERATE_OPTIONS,
-        interfaceName: `${interfaceName}Base`,
-    });
+    const baseInterface = tidyInterface(base, `${interfaceName}Base`);
 
     let mainInterface: string;
     if (groupKeys.length > 0) {
-        mainInterface = generateTypes(groups, { ...GENERATE_OPTIONS, interfaceName }).replace(
+        mainInterface = tidyInterface(groups, interfaceName).replace(
             `export interface ${interfaceName} {`,
             `export interface ${interfaceName} extends ${interfaceName}Base {`
         );

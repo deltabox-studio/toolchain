@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import type { ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
 
 import { diffFiles, hasPending } from '../check.js';
 import { detectMigrations, listMigrations, migrations } from '../registry.js';
@@ -44,10 +44,10 @@ export function migrateCommands(): ToolingCommand[] {
                         : migrations().filter(migration => migration.from === from);
 
                 if (selected.length === 0) {
-                    console.log(
+                    logger.info(
                         from && from !== 'all'
-                            ? `dbx: no "${from}" migration is registered.`
-                            : 'dbx: nothing to migrate (no Biome/ESLint/Prettier/Dprint config detected).'
+                            ? `no "${from}" migration is registered.`
+                            : 'nothing to migrate (no Biome/ESLint/Prettier/Dprint config detected).'
                     );
                     return;
                 }
@@ -60,40 +60,40 @@ export function migrateCommands(): ToolingCommand[] {
                     const diffs = results.flatMap(result => diffFiles(result.files ?? []));
                     const pending = diffs.filter(diff => diff.status !== 'same');
                     if (opts.json) {
-                        console.log(JSON.stringify(results, null, 4));
+                        logger.raw(JSON.stringify(results, null, 4));
                     } else if (pending.length) {
                         for (const diff of pending)
-                            console.log(
-                                `dbx: ${diff.status}  ${path.relative(cwd, diff.path) || diff.path}`
+                            logger.info(
+                                `${diff.status}  ${path.relative(cwd, diff.path) || diff.path}`
                             );
-                        console.log(
-                            `dbx: ${pending.length} file(s) out of date — run \`migrate --write\` to apply.`
+                        logger.info(
+                            `${pending.length} file(s) out of date — run \`migrate --write\` to apply.`
                         );
                     } else {
-                        console.log('dbx: up to date.');
+                        logger.info('up to date.');
                     }
                     if (hasPending(diffs)) process.exitCode = 1;
                     return;
                 }
 
                 if (opts.json) {
-                    console.log(JSON.stringify(results, null, 4));
+                    logger.raw(JSON.stringify(results, null, 4));
                     return;
                 }
                 for (const result of results) {
-                    console.log(
-                        `dbx: ${result.from} -> ${result.to} ${write ? 'wrote' : 'would write'}`
+                    logger.info(
+                        `${result.from} -> ${result.to} ${write ? 'wrote' : 'would write'}`
                     );
                     for (const file of result.written)
-                        console.log(`  ${write ? '+' : '?'} ${file}`);
-                    for (const note of result.notes ?? []) console.log(`  ${note}`);
+                        logger.info(`  ${write ? '+' : '?'} ${file}`);
+                    for (const note of result.notes ?? []) logger.info(`  ${note}`);
                     if (result.unmapped?.length) {
-                        console.log(`  unmapped (${result.unmapped.length}):`);
+                        logger.info(`  unmapped (${result.unmapped.length}):`);
                         for (const item of result.unmapped.slice(0, 25))
-                            console.log(`    - ${item.source}: ${item.reason}`);
+                            logger.info(`    - ${item.source}: ${item.reason}`);
                     }
                 }
-                if (!write) console.log('dbx: dry-run — re-run with --write to apply.');
+                if (!write) logger.info('dry-run — re-run with --write to apply.');
             },
         },
         {
@@ -107,14 +107,14 @@ export function migrateCommands(): ToolingCommand[] {
                 const cwd = (opts.cwd as string | undefined) ?? context.cwd;
                 const infos = listMigrations(cwd);
                 if (opts.json) {
-                    console.log(JSON.stringify(infos, null, 4));
+                    logger.raw(JSON.stringify(infos, null, 4));
                     return;
                 }
                 for (const info of infos) {
-                    console.log(
+                    logger.info(
                         `  ${info.id.padEnd(16)} ${info.from} -> ${info.to}  [${info.detected ? 'detected' : 'not found'}]`
                     );
-                    console.log(`    ${info.description}`);
+                    logger.info(`    ${info.description}`);
                 }
             },
         },

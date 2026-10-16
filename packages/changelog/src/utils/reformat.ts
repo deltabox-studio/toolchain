@@ -1,6 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { logger } from '@deltabox/toolchain-shared';
+
 import {
     capitalize,
     formatBody,
@@ -134,10 +136,10 @@ export function formatExistingChangelogs(dryRun: boolean, packageChanges = false
         if (dryRun) {
             const proposed = file.replace(/CHANGELOG\.md$/, 'CHANGELOG.proposed.md');
             writeFileSync(proposed, reformatted, 'utf8');
-            console.log(`[DRY-RUN] Wrote ${proposed}`);
+            logger.info(`[DRY-RUN] Wrote ${proposed}`);
         } else {
             writeFileSync(file, reformatted, 'utf8');
-            console.log(`  formatted ${file}`);
+            logger.info(`  formatted ${file}`);
         }
     }
 }

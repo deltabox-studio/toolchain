@@ -12,6 +12,8 @@ import {
     generateCliOptions,
     generateEnvFile,
     parseEnvTree,
+    renderConfigTypes,
+    resolveScopeSchema,
     splitBaseSchema,
     zodToJsonSchema,
 } from '../src/index.js';
@@ -131,5 +133,17 @@ describe('createConfigEngine', () => {
         expect(schema.$id).toBeDefined();
         const types = engine.renderConfigTypes();
         expect(Object.keys(types)).toEqual(['server', 'cli']);
+    });
+});
+
+describe('renderConfigTypes', () => {
+    it('strips the blank line untyped inserts between members', () => {
+        const out = renderConfigTypes('cli', resolveScopeSchema(undefined, cliSchema), {
+            interfaceNames: { cli: 'CliConfig' },
+        });
+        expect(out).toContain('export interface CliConfig {');
+        // No empty line between members (or right after the opening brace).
+        expect(out).not.toMatch(/;\n\n/);
+        expect(out).not.toMatch(/\{\n\n/);
     });
 });

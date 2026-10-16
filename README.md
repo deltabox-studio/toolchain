@@ -6,6 +6,14 @@
 
 All-in-one, config-driven dev toolchain: scaffold projects, generate and manage configs, tsconfigs, syncing, changelogs and CI, run Vite+, and migrate other tools onto Ox.
 
+- Save and use templates (local/remote) so you never have to scaffold the same projects over and over again.
+- Generate config types, env variables, cli flags, markdown and JSON schemas, so your codebase stays consistent, validated and well-documented.
+- Simply extend or setup CI for your changelogs, releases, issues etc.
+- Sync your entire project so workspaces, docs and CI are always up-to-date.
+- Plug it into Vite / Vite+ and streamline your DX for your existing Vite setup.
+
+See the [list of features](#features) below.
+
 `@deltabox/toolchain` is driven by a single `dbx.config.ts` at a repo
 root. Define the sections you want and the toolchain generates and keeps the
 matching files in sync.

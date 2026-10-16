@@ -9,6 +9,7 @@ import {
     diffFiles,
     hasPending,
     listMigrations,
+    mapBiomeFormatter,
     mapPrettierToOxfmt,
     mergeViteConfig,
     readJsonc,
@@ -107,6 +108,22 @@ describe('biome -> ox', () => {
         fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
         await runMigration('biome', { cwd: dir });
         expect(fs.existsSync(path.join(dir, '.oxfmtrc.json'))).toBe(false);
+    });
+});
+
+describe('biome -> ox unmapped', () => {
+    it('reports jsxQuoteStyle from javascript.formatter, not formatter', () => {
+        const { unmapped } = mapBiomeFormatter({
+            javascript: { formatter: { jsxQuoteStyle: 'double' } },
+        });
+        expect(unmapped).toContainEqual({
+            source: 'javascript.formatter.jsxQuoteStyle',
+            reason: 'no Oxfmt equivalent',
+        });
+        // A top-level `formatter.jsxQuoteStyle` is not where Biome stores it.
+        expect(mapBiomeFormatter({ formatter: { jsxQuoteStyle: 'double' } }).unmapped).toHaveLength(
+            0
+        );
     });
 });
 

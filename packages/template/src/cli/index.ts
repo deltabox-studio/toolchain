@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
 
 import { TEMPLATE_MANIFEST, writeTemplateManifest } from '../local.js';
 import { parseSourceSpec } from '../online.js';
@@ -76,7 +76,7 @@ export function templateCommands(): ToolingCommand[] {
                 if (opts.registry) {
                     const sources = readTemplateRegistry(cwd).sources;
                     if (opts.json) {
-                        console.log(
+                        logger.raw(
                             JSON.stringify(
                                 sources.map(source => ({
                                     key: `${source.type}:${source.locate}`,
@@ -89,11 +89,11 @@ export function templateCommands(): ToolingCommand[] {
                         return;
                     }
                     if (sources.length === 0) {
-                        console.log('dbx: the template registry is empty.');
+                        logger.info('the template registry is empty.');
                         return;
                     }
                     for (const source of sources)
-                        console.log(
+                        logger.info(
                             `  ${`${source.type}:${source.locate}`.padEnd(40)} ${source.name ?? source.id ?? ''}`
                         );
                     return;
@@ -105,11 +105,11 @@ export function templateCommands(): ToolingCommand[] {
                     ? templates.filter(template => template.kind === kind)
                     : templates;
                 if (opts.json) {
-                    console.log(JSON.stringify(filtered.map(toJson), null, 4));
+                    logger.raw(JSON.stringify(filtered.map(toJson), null, 4));
                     return;
                 }
                 if (filtered.length === 0) {
-                    console.log('dbx: no templates found.');
+                    logger.info('no templates found.');
                     return;
                 }
                 for (const template of filtered) {
@@ -118,7 +118,7 @@ export function templateCommands(): ToolingCommand[] {
                         template.source.type,
                         template.online ? 'online' : 'offline',
                     ].join(', ');
-                    console.log(
+                    logger.info(
                         `  ${template.id.padEnd(24)} ${template.name}  [${flags}]${template.description ? `\n    ${template.description}` : ''}`
                     );
                 }
@@ -168,11 +168,11 @@ export function templateCommands(): ToolingCommand[] {
                     });
                 }
                 if (opts.json) {
-                    console.log(JSON.stringify(manifest, null, 4));
+                    logger.raw(JSON.stringify(manifest, null, 4));
                     return;
                 }
-                console.log(`dbx: wrote ${file}`);
-                if (opts.add) console.log('dbx: registered the folder as a template.');
+                logger.info(`wrote ${file}`);
+                if (opts.add) logger.info('registered the folder as a template.');
             },
         },
         {
@@ -216,11 +216,11 @@ export function templateCommands(): ToolingCommand[] {
                 }
                 const registry = addTemplateSource(context.cwd, source);
                 if (opts.json) {
-                    console.log(JSON.stringify(registry, null, 4));
+                    logger.raw(JSON.stringify(registry, null, 4));
                     return;
                 }
-                console.log(
-                    `dbx: added ${source.type}:${source.locate} (${registry.sources.length} source(s)).`
+                logger.info(
+                    `added ${source.type}:${source.locate} (${registry.sources.length} source(s)).`
                 );
             },
         },
@@ -232,15 +232,15 @@ export function templateCommands(): ToolingCommand[] {
             run: (opts, context) => {
                 const { registry, removed } = removeTemplateSource(context.cwd, String(opts.id));
                 if (opts.json) {
-                    console.log(JSON.stringify(registry, null, 4));
+                    logger.raw(JSON.stringify(registry, null, 4));
                     return;
                 }
                 if (removed === 0) {
-                    console.error(`dbx: no source matching "${opts.id}".`);
+                    logger.error(`no source matching "${opts.id}".`);
                     process.exitCode = 1;
                     return;
                 }
-                console.log(`dbx: removed ${removed} source(s) (${registry.sources.length} left).`);
+                logger.info(`removed ${removed} source(s) (${registry.sources.length} left).`);
             },
         },
         {
@@ -257,11 +257,11 @@ export function templateCommands(): ToolingCommand[] {
                 });
                 const template = templates.find(candidate => candidate.id === opts.id);
                 if (!template) {
-                    console.error(`dbx: unknown template "${opts.id}".`);
+                    logger.error(`unknown template "${opts.id}".`);
                     process.exitCode = 1;
                     return;
                 }
-                console.log(JSON.stringify(toJson(template), null, 4));
+                logger.raw(JSON.stringify(toJson(template), null, 4));
             },
         },
         {
@@ -311,16 +311,16 @@ export function templateCommands(): ToolingCommand[] {
                     );
                 }
                 const tokens = {
+                    ...context.config.project,
                     name:
                         (opts.name as string | undefined) ?? context.config.project?.name ?? 'app',
                     ...(opts.scope ? { scope: opts.scope as string } : {}),
-                    ...context.config.project,
                 };
                 const variables = parseVars(opts.var as string[] | undefined);
                 const result = await scaffoldTemplate(template, { cwd: out, tokens, variables });
 
                 if (opts.json) {
-                    console.log(JSON.stringify({ template: template.id, out, ...result }, null, 4));
+                    logger.raw(JSON.stringify({ template: template.id, out, ...result }, null, 4));
                     return;
                 }
                 if (
@@ -331,7 +331,7 @@ export function templateCommands(): ToolingCommand[] {
                     if (result.code) process.exitCode = result.code;
                     return;
                 }
-                for (const file of result.written) console.log(`Created ${file}`);
+                for (const file of result.written) logger.info(`Created ${file}`);
             },
         },
     ];

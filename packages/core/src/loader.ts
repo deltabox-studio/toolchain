@@ -35,7 +35,9 @@ export function findConfigFile(cwd: string = process.cwd()): string | undefined 
 /** Import a config module: JSON natively, TS/JS via dynamic import (tsx fallback). */
 async function importModule(file: string): Promise<unknown> {
     if (file.endsWith('.json')) {
-        return JSON.parse(fs.readFileSync(file, 'utf-8'));
+        // Strip a UTF-8 BOM: editors/PowerShell often write one, and JSON.parse
+        // rejects it (the other JSON readers in the toolchain strip it too).
+        return JSON.parse(fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, ''));
     }
     const url = pathToFileURL(file).href;
     try {

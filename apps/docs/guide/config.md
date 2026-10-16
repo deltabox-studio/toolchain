@@ -78,6 +78,49 @@ export default defineConfig({
 
 Return values are awaited.
 
+## Logging
+
+Every toolchain message goes through one logger. Configure it in the config:
+
+```ts
+export default defineConfig({
+    toolchain: {
+        logger: { level: 'debug', color: false, name: 'dbx' },
+    },
+});
+```
+
+| Option  | Values                                             | Default |
+| ------- | -------------------------------------------------- | ------- |
+| `level` | `debug` \| `info` \| `warn` \| `error` \| `silent` | `info`  |
+| `color` | `true` \| `false`                                  | auto    |
+| `name`  | prefix for non-indented lines                      | `dbx`   |
+
+On the CLI, `--log-level <level>` and `--no-color` override the config (see the
+[CLI reference](/guide/cli)). Machine output (`--json`) is written unprefixed
+through the same logger.
+
+## Providers
+
+Provider passthrough commands (Vite+) follow the logger's colour setting. The
+`providers` section can force provider colours on or off on its own:
+
+```ts
+export default defineConfig({
+    toolchain: {
+        providers: { color: false },
+    },
+});
+```
+
+| Option  | Values            | Default        |
+| ------- | ----------------- | -------------- |
+| `color` | `true` \| `false` | inherit logger |
+
+`color: false` runs the wrapped binary with `NO_COLOR=1` and `FORCE_COLOR=0`, so
+it emits plain output even on a colour terminal. The global CLI `--no-color`
+flag turns provider colour off too. See [Providers](/guide/providers#colour).
+
 ## Programmatic API
 
 ```ts

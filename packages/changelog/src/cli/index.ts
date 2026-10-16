@@ -1,4 +1,4 @@
-import type { ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
 
 import { runWorkflows } from '../run-workflows.js';
 import { runChangelog } from '../run.js';
@@ -39,10 +39,10 @@ export function changelogCommands(): ToolingCommand[] {
                 let failed = false;
                 for (const workflow of result.ran) {
                     if (workflow.code === 0) {
-                        console.log(`dbx: triggered ${workflow.file}`);
+                        logger.info(`triggered ${workflow.file}`);
                     } else {
                         failed = true;
-                        console.error(`dbx: ${workflow.file} exited ${workflow.code}`);
+                        logger.error(`${workflow.file} exited ${workflow.code}`);
                     }
                 }
                 if (failed) process.exitCode = 1;

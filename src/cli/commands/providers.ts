@@ -1,4 +1,4 @@
-import type { ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
 
 import { toolingProviders } from '../../providers.js';
 
@@ -18,15 +18,15 @@ export function providerCommands(): ToolingCommand[] {
             run: opts => {
                 const providers = toolingProviders();
                 if (opts.json) {
-                    console.log(JSON.stringify(providers, null, 4));
+                    logger.raw(JSON.stringify(providers, null, 4));
                     return;
                 }
                 for (const provider of providers) {
                     const binary = provider.binary ? ` (${provider.binary})` : '';
-                    console.log(`${provider.name}${binary} [${provider.id}]`);
-                    if (provider.description) console.log(`  ${provider.description}`);
+                    logger.info(`${provider.name}${binary} [${provider.id}]`);
+                    if (provider.description) logger.info(`  ${provider.description}`);
                     for (const command of provider.commands) {
-                        console.log(`  ${command.name.padEnd(20)} ${command.description}`);
+                        logger.info(`  ${command.name.padEnd(20)} ${command.description}`);
                     }
                 }
             },

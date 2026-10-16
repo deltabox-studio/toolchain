@@ -2,7 +2,7 @@
     "name": "toolchain-vscode",
     "displayName": "deltabox toolchain",
     "description": "Sync/generate @deltabox/toolchain managed files, run tooling across projects and scaffold new ones.",
-    "version": "1.2.3",
+    "version": "1.3.0",
     "private": true,
     "type": "module",
     "publisher": "deltabox",
@@ -294,7 +294,7 @@
         }
     },
     "scripts": {
-        "package:vsix": "npx --yes @vscode/vsce package --no-dependencies --out deltabox-toolchain.vsix"
+        "package:vsix": "tsdown --config ../../tsdown.bin.config.ts --config-loader unrun && tsdown --no-clean --config-loader unrun && npx --yes @vscode/vsce package --no-dependencies --out deltabox-toolchain.vsix"
     },
     "devDependencies": {
         "@deltabox/toolchain-tsdown": "workspace:*",

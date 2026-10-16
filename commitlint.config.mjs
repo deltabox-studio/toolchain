@@ -10,6 +10,7 @@ export default {
             2,
             'always',
             [
+                // allowed commit types
                 'feat',
                 'fix',
                 'docs',
@@ -29,6 +30,7 @@ export default {
             2,
             'always',
             [
+                // allowed commit scopes
                 'shared',
                 'config',
                 'core',
