@@ -1,8 +1,18 @@
 # Changelog
 
-## 1.2.6 (October 2026)
+## 1.2.7 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+- Link package script migrations from the Migrations page ([#036ebf5](https://github.com/deltabox-studio/toolchain/commit/036ebf5) by [T0chi](https://github.com/T0chi))
+  - Add a "Package scripts" section to the Migrations guide with the Biome/Turbo
+    script swaps and a link to the full Package scripts page.
+
+<!-- release:end -->
+
+
+## 1.2.6 (October 2026)
 
 ### Bug fixes
 #### Config
@@ -23,9 +33,6 @@
     surface it in the sidebar and Getting Started list. Also show the current
     version in the navbar (linked to the changelog, releases and npm), like the
     Proxified docs.
-
-<!-- release:end -->
-
 
 ## 1.2.5 (October 2026)
 
