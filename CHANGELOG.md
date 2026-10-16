@@ -1,8 +1,16 @@
 # Changelog
 
-## 1.1.22 (October 2026)
+## 1.1.23 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+- Using different logo for the hero ([#552172d](https://github.com/deltabox-studio/toolchain/commit/552172d) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.1.22 (October 2026)
 
 ### Bug fixes
 #### Ci
@@ -11,9 +19,6 @@
     VSCE_PAT set). Make it a no-op while the secret is unset and publish
     automatically once it is added to the `toolchain / release` environment.
   - Also remove the temporary OIDC diagnostic step now that the release publishes.
-
-<!-- release:end -->
-
 
 ## 1.1.21 (October 2026)
 
