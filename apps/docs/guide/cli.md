@@ -85,6 +85,43 @@ matches — built-in commands win, so `dbx migrate` stays the toolchain's
 migration. The `vite` command forwards its operands verbatim, so **every** Vite+
 CLI command and flag is reachable.
 
+## Programmatic
+
+The CLI is assembled from framework-agnostic command descriptors, so a consumer
+can build its own program (or reuse the routing helpers):
+
+```ts
+import {
+    createCli,
+    runCli,
+    builtinCommands,
+    registerToolingCommands,
+    withDefaultVite,
+    extractLogOptions,
+} from '@deltabox/toolchain/cli';
+```
+
+| Export                                       | Description                                                            |
+| -------------------------------------------- | ---------------------------------------------------------------------- |
+| `createCli()`                                | Build the `dbx` commander program (global flags + built-in commands).  |
+| `runCli(argv?)`                              | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
+| `builtinCommands()`                          | The commands built into the root CLI (config commands need an engine). |
+| `registerToolingCommands(program, commands)` | Wire `ToolingCommand[]` descriptors onto a commander program.          |
+| `withDefaultVite(argv, commandNames?)`       | Insert `vite` before a bare Vite+ command (built-ins win).             |
+| `extractLogOptions(argv)`                    | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
+
+`extractLogOptions` makes the logger flags work before _or_ after the
+subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.
+`withDefaultVite` powers the bare-command passthrough described above:
+
+```ts
+extractLogOptions(['node', 'dbx', 'sync', '--no-color']);
+// { argv: ['node', 'dbx', 'sync'], options: { color: false } }
+
+withDefaultVite(['node', 'dbx', 'fmt', '--check']);
+// ['node', 'dbx', 'vite', 'fmt', '--check']
+```
+
 ## Config generator
 
 The generic Zod/env config engine is not a `dbx` command: a consumer

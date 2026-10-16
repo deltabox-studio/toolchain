@@ -239,6 +239,29 @@ The resolved untyped JSON Schema for every scope, for editor autocomplete:
 await engine.writeJsonSchema({ output: 'config.schema.json' });
 ```
 
+### Formatting — `formatGenerated()`
+
+Generated text is formatted **at generation time**, so a written file is already
+formatted instead of relying on a separate `yarn format` pass. `formatGenerated`
+runs source through Oxfmt, preferring the project-local `vite-plus/fmt` (Oxfmt
+ships with Vite+), then `oxfmt`, and returns the input untouched when no formatter
+is resolvable, so generation never fails on a missing formatter.
+
+```ts
+import { formatGenerated, GENERATED_FORMAT_OPTIONS } from '@deltabox/toolchain/config';
+
+const source = 'export const config={a:1}';
+const formatted = await formatGenerated(source, {
+    fileName: 'config.ts', // infers the language (default `generated.ts`)
+    options: { printWidth: 100 }, // merged over GENERATED_FORMAT_OPTIONS
+});
+```
+
+`GENERATED_FORMAT_OPTIONS` is the baseline Oxfmt config matching the toolchain's
+own `vite.config.ts` (4-space indent, single quotes, `trailingComma: 'es5'`,
+`jsdoc: true`, ...). Pass `options.fileName` to format JSON, markdown or another
+language, and `options.options` to override any single option.
+
 For a full, real example of the generated config types, see
 `packages/shared/src/config-types.ts`.
 

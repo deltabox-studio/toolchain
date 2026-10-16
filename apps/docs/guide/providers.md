@@ -52,11 +52,37 @@ vite:toolchain vite:upgrade vite:implode
 ### Programmatic
 
 ```ts
-import { resolveVp, runVp, hasVp } from '@deltabox/toolchain/vite';
+import {
+    resolveVp,
+    runVp,
+    hasVp,
+    vpVersion,
+    describeVp,
+    resolveVpCommand,
+    viteCommandName,
+    VP_COMMANDS,
+} from '@deltabox/toolchain/vite';
 
 if (hasVp(process.cwd())) {
     await runVp(['check'], { cwd: process.cwd() });
 }
+```
+
+| Export                                 | Description                                                                 |
+| -------------------------------------- | --------------------------------------------------------------------------- |
+| `resolveVp(cwd?)`                      | Resolve the `vp` invocation (`{ exe, args, source }`).                      |
+| `hasVp(cwd?)`                          | Whether a local/global `vp` is available (no `npx` fallback).               |
+| `runVp(args, options?)`                | Run `vp`, streaming output or `mode: 'capture'`; never exits the host.      |
+| `vpVersion(cwd?)` / `describeVp(cwd?)` | The `vp --version` output / a one-line resolution description.              |
+| `which(bin)`                           | Find an executable on `PATH` (resolves `PATHEXT` on Windows).               |
+| `resolveVpCommand(name)`               | Resolve a subcommand **or alias** to its canonical name (`i` -> `install`). |
+| `viteCommandName(name)`                | The `dbx` command name for a `vp` subcommand (`dev` -> `vite:dev`).         |
+| `VP_COMMANDS`                          | The `vp` command catalog that drives the CLI + the provider descriptor.     |
+
+```ts
+// A bare `dbx <command>` falls through to `vite` when it names a Vite+ command.
+resolveVpCommand('fmt'); // 'fmt'
+viteCommandName('fmt'); // 'vite:fmt'
 ```
 
 ### Use dbx from Vite+
