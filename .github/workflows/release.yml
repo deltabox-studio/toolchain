@@ -62,6 +62,9 @@ jobs:
             --title "v${{ steps.release.outputs.version }}" \
             --notes-file RELEASE_NOTES.md \
             "packages/vscode/deltabox-toolchain.vsix"
+      - name: Upgrade npm for trusted publishing
+        if: steps.release.outputs.skip == 'false'
+        run: npm install -g npm@^11.5.1
       - name: Publish to npm
         if: steps.release.outputs.skip == 'false'
         run: |

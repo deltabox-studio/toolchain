@@ -1,15 +1,26 @@
 # Changelog
 
-## 1.1.16 (October 2026)
+## 1.1.17 (October 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Ci
+- Upgrade npm before publishing for OIDC trusted publishing ([#657d4b9](https://github.com/deltabox-studio/toolchain/commit/657d4b9) by [T0chi](https://github.com/T0chi))
+  - Node 22 bundles npm 10.x, but npm OIDC trusted publishing requires
+    npm >= 11.5.1. Without it `npm publish` fell back to token auth and the
+    registry answered a misleading 404, so every release since 1.0.7 failed
+    at the publish step. Add an explicit npm upgrade step before the publish
+    step in the generated release workflow.
+
+<!-- release:end -->
+
+
+## 1.1.16 (October 2026)
 
 ### Documentation
 - Reindent the README table of contents ([#5646bcc](https://github.com/deltabox-studio/toolchain/commit/5646bcc) by [T0chi](https://github.com/T0chi))
 - Theme-aware logo (light/dark) + invert the home hero logo in dark mode ([#fd3691f](https://github.com/deltabox-studio/toolchain/commit/fd3691f) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.1.15 (October 2026)
 

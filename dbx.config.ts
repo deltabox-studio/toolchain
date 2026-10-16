@@ -126,6 +126,15 @@ export default defineConfig({
                                     ].join('\n'),
                                 },
                                 {
+                                    // Trusted publishing (OIDC) needs npm >= 11.5.1,
+                                    // but Node 22 bundles npm 10 — without the
+                                    // upgrade `npm publish` silently falls back to
+                                    // token auth and fails with a misleading 404.
+                                    name: 'Upgrade npm for trusted publishing',
+                                    if: "steps.release.outputs.skip == 'false'",
+                                    run: 'npm install -g npm@^11.5.1',
+                                },
+                                {
                                     // Trusted publishing (OIDC): no token — the npm
                                     // CLI exchanges the GitHub OIDC token and adds
                                     // provenance automatically. `yarn pack` resolves
