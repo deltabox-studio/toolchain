@@ -140,29 +140,6 @@ export default defineConfig({
                                     run: 'npm install -g npm@^11.15.1',
                                 },
                                 {
-                                    // TEMPORARY diagnostic: surface the exact OIDC
-                                    // trusted-publishing failure (the exchange
-                                    // error/claims) instead of npm's misleading
-                                    // E404/E403. Remove once the publish is green.
-                                    name: 'Diagnose OIDC trusted publishing',
-                                    if: "steps.release.outputs.skip == 'false'",
-                                    run: [
-                                        'set -euo pipefail',
-                                        "cat > /tmp/oidc-diag.mjs <<'EOF'",
-                                        'const { fetch } = globalThis;',
-                                        "const url = process.env.ACTIONS_ID_TOKEN_REQUEST_URL + '&audience=npm:registry.npmjs.org';",
-                                        "const tokenRes = await fetch(url, { headers: { Authorization: 'bearer ' + process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN } });",
-                                        'const { value: idToken } = await tokenRes.json();',
-                                        "const payload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64url').toString());",
-                                        "console.log('OIDC claims:', JSON.stringify({ repository: payload.repository, repository_owner: payload.repository_owner, workflow_ref: payload.workflow_ref, job_workflow_ref: payload.job_workflow_ref, environment: payload.environment, ref: payload.ref, event_name: payload.event_name }, null, 2));",
-                                        "const res = await fetch('https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/@deltabox%2ftoolchain', { method: 'POST', headers: { Authorization: 'Bearer ' + idToken } });",
-                                        "if (res.ok) { const body = await res.json(); console.log('exchange OK; token ' + (body && body.token ? 'present' : 'missing')); }",
-                                        "else { console.log('exchange status:', res.status); console.log('exchange body:', await res.text()); }",
-                                        'EOF',
-                                        'node /tmp/oidc-diag.mjs',
-                                    ].join('\n'),
-                                },
-                                {
                                     // Try a direct publish first; if the trusted
                                     // publisher isn't allowed to `npm publish`, fall
                                     // back to a **staged** publish (which is always
@@ -184,10 +161,22 @@ export default defineConfig({
                                     ].join('\n'),
                                 },
                                 {
+                                    // Disabled until a Marketplace PAT exists: skipped
+                                    // while `secrets.VSCE_PAT` is unset, enabling
+                                    // automatically once it is set (add it to the
+                                    // `toolchain / release` environment). A missing
+                                    // secret can't gate a step via `if` (the secrets
+                                    // context isn't available there).
                                     name: 'Publish to the VS Code Marketplace',
                                     if: "steps.release.outputs.skip == 'false'",
                                     env: { VSCE_PAT: '${{ secrets.VSCE_PAT }}' },
-                                    run: 'npx --yes @vscode/vsce publish --packagePath packages/vscode/deltabox-toolchain.vsix',
+                                    run: [
+                                        'if [ -n "${VSCE_PAT:-}" ]; then',
+                                        '  npx --yes @vscode/vsce publish --packagePath packages/vscode/deltabox-toolchain.vsix',
+                                        'else',
+                                        '  echo "VSCE_PAT is not set; skipping the VS Code Marketplace publish."',
+                                        'fi',
+                                    ].join('\n'),
                                 },
                             ],
                         },
