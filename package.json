@@ -42,6 +42,7 @@
         "vp:test": "vp test --run --config vite.config.ts",
         "vp:toolchain": "vp toolchain",
         "config:generate": "tsx scripts/generate-config.ts",
+        "config:types": "tsx scripts/generate-config-types.ts",
         "dev": "tsx src/cli/index.ts",
         "dbx": "tsx src/cli/index.ts",
         "commitlint": "commitlint",

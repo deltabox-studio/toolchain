@@ -8,15 +8,16 @@
  * loads the config and runs the tasks (optionally watching for changes).
  *
  * The config *sections* are defined as Zod schemas in `config-schema.ts` (the
- * single source of truth); the types below are derived from them. Only `hooks`
- * (functions) is hand-written.
+ * single source of truth); their TypeScript types are generated into
+ * `config-types.ts`. Only `hooks` (functions) is hand-written.
  */
 
-import type { ProjectType, ToolingConfigSections } from './config-schema.js';
+import type { ProjectType, ToolingConfigSections } from './config-types.js';
 import type { Replacements } from './template.js';
 import type { Awaitable } from './types.js';
 
 export * from './config-schema.js';
+export * from './config-types.js';
 
 /** A summary of a sync run, handed to {@link ToolingHooks.afterSync}. */
 export interface SyncSummary {

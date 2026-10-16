@@ -19,9 +19,8 @@ Project metadata used as replacement tokens across every template.
 
 ### `type`
 
-- **Type**: `'monorepo-root' | 'monorepo-workspace' | 'project'`
-
-The project kind (detected when omitted).
+- **Type**: `ProjectType`
+- **Default**: `{}`
 
 ### `name`
 
@@ -95,25 +94,8 @@ Master switch (enabled when the section is defined).
 
 ### `workflows`
 
-#### `ci`
-
-- **Type**: `string`
-
-#### `changelog`
-
-- **Type**: `string`
-
-#### `release`
-
-- **Type**: `string`
-
-#### `issues`
-
-- **Type**: `string`
-
-#### `sync`
-
-- **Type**: `string`
+- **Type**: `ChangelogWorkflowsConfig`
+- **Default**: `{}`
 
 ### `branches`
 
@@ -161,7 +143,7 @@ Write the Biome VS Code settings (default true).
 
 ### `overrides`
 
-- **Type**: `Record<string, string>`
+- **Type**: `Record<string, unknown>`
 - **Default**: `{}`
 
 Deep-merged over the generated `biome.json` (arrays union).
@@ -230,7 +212,7 @@ Master switch (enabled when the section is defined).
 
 ### `sources`
 
-- **Type**: `Array<string>`
+- **Type**: `Array<ToolingTemplateSource>`
 
 Extra sources on top of the builtin + registry sources.
 
@@ -270,7 +252,7 @@ Glob patterns Oxlint should ignore.
 
 ### `overrides`
 
-- **Type**: `Record<string, string>`
+- **Type**: `Record<string, unknown>`
 - **Default**: `{}`
 
 Deep-merged over the generated `vite.config.ts` object.

@@ -1,64 +1,21 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-        "toolchain": {
+    "$ref": "#/$defs/DbxConfigSections",
+    "$defs": {
+        "DbxConfigSections": {
+            "type": "object",
+            "properties": {
+                "toolchain": {
+                    "$ref": "#/$defs/ToolingConfigSections"
+                }
+            },
+            "additionalProperties": false
+        },
+        "ToolingConfigSections": {
             "type": "object",
             "properties": {
                 "project": {
-                    "type": "object",
-                    "properties": {
-                        "type": {
-                            "type": "string",
-                            "enum": [
-                                "monorepo-root",
-                                "monorepo-workspace",
-                                "project"
-                            ],
-                            "description": "The project kind (detected when omitted)."
-                        },
-                        "name": {
-                            "type": "string",
-                            "description": "The unscoped project name."
-                        },
-                        "scope": {
-                            "type": "string",
-                            "description": "The npm scope, eg. `@acme`."
-                        },
-                        "author": {
-                            "type": "string",
-                            "description": "Package author."
-                        },
-                        "license": {
-                            "type": "string",
-                            "description": "SPDX license id."
-                        },
-                        "homepage": {
-                            "type": "string",
-                            "description": "Project homepage."
-                        },
-                        "repo": {
-                            "type": "string",
-                            "description": "Repository URL, eg. `https://github.com/acme/app`."
-                        },
-                        "nodeVersion": {
-                            "type": "string",
-                            "description": "Node engine range, eg. `>=22`."
-                        },
-                        "packageManager": {
-                            "type": "string",
-                            "description": "Package manager name (default `yarn`)."
-                        },
-                        "packageManagerVersion": {
-                            "type": "string",
-                            "description": "Package manager version, eg. `4.17.1`."
-                        },
-                        "description": {
-                            "type": "string",
-                            "description": "One-line description."
-                        }
-                    },
-                    "additionalProperties": false
+                    "$ref": "#/$defs/ToolingProjectConfig"
                 },
                 "changelog": {
                     "anyOf": [
@@ -66,1597 +23,7 @@
                             "type": "boolean"
                         },
                         {
-                            "type": "object",
-                            "properties": {
-                                "enabled": {
-                                    "type": "boolean",
-                                    "description": "Master switch (enabled when the section is defined)."
-                                },
-                                "workflows": {
-                                    "type": "object",
-                                    "properties": {
-                                        "ci": {
-                                            "anyOf": [
-                                                {
-                                                    "type": "boolean"
-                                                },
-                                                {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "enabled": {
-                                                            "type": "boolean",
-                                                            "description": "Enable/disable this workflow (default true)."
-                                                        },
-                                                        "pushBranches": {
-                                                            "type": "array",
-                                                            "items": {
-                                                                "type": "string"
-                                                            },
-                                                            "description": "Replace `on.push.branches`."
-                                                        },
-                                                        "pullRequestBranches": {
-                                                            "type": "array",
-                                                            "items": {
-                                                                "type": "string"
-                                                            },
-                                                            "description": "Replace `on.pull_request.branches`."
-                                                        },
-                                                        "triggers": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {},
-                                                            "description": "Extra `on.*` triggers."
-                                                        },
-                                                        "extra": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {},
-                                                            "description": "Extra top-level keys (`permissions`, `concurrency`, `env`, ...)."
-                                                        },
-                                                        "steps": {
-                                                            "anyOf": [
-                                                                {
-                                                                    "type": "object",
-                                                                    "properties": {
-                                                                        "job": {
-                                                                            "type": "string",
-                                                                            "description": "Target job id (defaults to the primary/first job)."
-                                                                        },
-                                                                        "before": {
-                                                                            "type": "array",
-                                                                            "items": {
-                                                                                "type": "object",
-                                                                                "properties": {
-                                                                                    "name": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "id": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "if": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "uses": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "run": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "shell": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "working-directory": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "with": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": [
-                                                                                                "string",
-                                                                                                "number",
-                                                                                                "boolean"
-                                                                                            ]
-                                                                                        }
-                                                                                    },
-                                                                                    "env": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": "string"
-                                                                                        }
-                                                                                    }
-                                                                                },
-                                                                                "additionalProperties": false
-                                                                            },
-                                                                            "description": "Steps inserted at the start."
-                                                                        },
-                                                                        "after": {
-                                                                            "type": "array",
-                                                                            "items": {
-                                                                                "type": "object",
-                                                                                "properties": {
-                                                                                    "name": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "id": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "if": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "uses": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "run": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "shell": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "working-directory": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "with": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": [
-                                                                                                "string",
-                                                                                                "number",
-                                                                                                "boolean"
-                                                                                            ]
-                                                                                        }
-                                                                                    },
-                                                                                    "env": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": "string"
-                                                                                        }
-                                                                                    }
-                                                                                },
-                                                                                "additionalProperties": false
-                                                                            },
-                                                                            "description": "Steps appended at the end."
-                                                                        }
-                                                                    },
-                                                                    "additionalProperties": false
-                                                                },
-                                                                {
-                                                                    "type": "array",
-                                                                    "items": {
-                                                                        "type": "object",
-                                                                        "properties": {
-                                                                            "job": {
-                                                                                "type": "string",
-                                                                                "description": "Target job id (defaults to the primary/first job)."
-                                                                            },
-                                                                            "before": {
-                                                                                "type": "array",
-                                                                                "items": {
-                                                                                    "type": "object",
-                                                                                    "properties": {
-                                                                                        "name": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "id": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "if": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "uses": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "run": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "shell": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "working-directory": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "with": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": [
-                                                                                                    "string",
-                                                                                                    "number",
-                                                                                                    "boolean"
-                                                                                                ]
-                                                                                            }
-                                                                                        },
-                                                                                        "env": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": "string"
-                                                                                            }
-                                                                                        }
-                                                                                    },
-                                                                                    "additionalProperties": false
-                                                                                },
-                                                                                "description": "Steps inserted at the start."
-                                                                            },
-                                                                            "after": {
-                                                                                "type": "array",
-                                                                                "items": {
-                                                                                    "type": "object",
-                                                                                    "properties": {
-                                                                                        "name": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "id": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "if": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "uses": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "run": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "shell": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "working-directory": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "with": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": [
-                                                                                                    "string",
-                                                                                                    "number",
-                                                                                                    "boolean"
-                                                                                                ]
-                                                                                            }
-                                                                                        },
-                                                                                        "env": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": "string"
-                                                                                            }
-                                                                                        }
-                                                                                    },
-                                                                                    "additionalProperties": false
-                                                                                },
-                                                                                "description": "Steps appended at the end."
-                                                                            }
-                                                                        },
-                                                                        "additionalProperties": false
-                                                                    }
-                                                                }
-                                                            ],
-                                                            "description": "Extra steps for a job (one group, or per-job groups)."
-                                                        },
-                                                        "jobs": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {},
-                                                            "description": "Extra complete jobs merged in."
-                                                        },
-                                                        "tokens": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {
-                                                                "type": [
-                                                                    "string",
-                                                                    "number",
-                                                                    "boolean"
-                                                                ]
-                                                            },
-                                                            "description": "Per-workflow token overrides (`nodeVersion`, `packageManager`, ...)."
-                                                        }
-                                                    },
-                                                    "additionalProperties": false
-                                                }
-                                            ]
-                                        },
-                                        "changelog": {
-                                            "anyOf": [
-                                                {
-                                                    "type": "boolean"
-                                                },
-                                                {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "enabled": {
-                                                            "type": "boolean",
-                                                            "description": "Enable/disable this workflow (default true)."
-                                                        },
-                                                        "pushBranches": {
-                                                            "type": "array",
-                                                            "items": {
-                                                                "type": "string"
-                                                            },
-                                                            "description": "Replace `on.push.branches`."
-                                                        },
-                                                        "pullRequestBranches": {
-                                                            "type": "array",
-                                                            "items": {
-                                                                "type": "string"
-                                                            },
-                                                            "description": "Replace `on.pull_request.branches`."
-                                                        },
-                                                        "triggers": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {},
-                                                            "description": "Extra `on.*` triggers."
-                                                        },
-                                                        "extra": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {},
-                                                            "description": "Extra top-level keys (`permissions`, `concurrency`, `env`, ...)."
-                                                        },
-                                                        "steps": {
-                                                            "anyOf": [
-                                                                {
-                                                                    "type": "object",
-                                                                    "properties": {
-                                                                        "job": {
-                                                                            "type": "string",
-                                                                            "description": "Target job id (defaults to the primary/first job)."
-                                                                        },
-                                                                        "before": {
-                                                                            "type": "array",
-                                                                            "items": {
-                                                                                "type": "object",
-                                                                                "properties": {
-                                                                                    "name": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "id": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "if": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "uses": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "run": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "shell": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "working-directory": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "with": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": [
-                                                                                                "string",
-                                                                                                "number",
-                                                                                                "boolean"
-                                                                                            ]
-                                                                                        }
-                                                                                    },
-                                                                                    "env": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": "string"
-                                                                                        }
-                                                                                    }
-                                                                                },
-                                                                                "additionalProperties": false
-                                                                            },
-                                                                            "description": "Steps inserted at the start."
-                                                                        },
-                                                                        "after": {
-                                                                            "type": "array",
-                                                                            "items": {
-                                                                                "type": "object",
-                                                                                "properties": {
-                                                                                    "name": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "id": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "if": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "uses": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "run": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "shell": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "working-directory": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "with": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": [
-                                                                                                "string",
-                                                                                                "number",
-                                                                                                "boolean"
-                                                                                            ]
-                                                                                        }
-                                                                                    },
-                                                                                    "env": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": "string"
-                                                                                        }
-                                                                                    }
-                                                                                },
-                                                                                "additionalProperties": false
-                                                                            },
-                                                                            "description": "Steps appended at the end."
-                                                                        }
-                                                                    },
-                                                                    "additionalProperties": false
-                                                                },
-                                                                {
-                                                                    "type": "array",
-                                                                    "items": {
-                                                                        "type": "object",
-                                                                        "properties": {
-                                                                            "job": {
-                                                                                "type": "string",
-                                                                                "description": "Target job id (defaults to the primary/first job)."
-                                                                            },
-                                                                            "before": {
-                                                                                "type": "array",
-                                                                                "items": {
-                                                                                    "type": "object",
-                                                                                    "properties": {
-                                                                                        "name": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "id": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "if": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "uses": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "run": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "shell": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "working-directory": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "with": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": [
-                                                                                                    "string",
-                                                                                                    "number",
-                                                                                                    "boolean"
-                                                                                                ]
-                                                                                            }
-                                                                                        },
-                                                                                        "env": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": "string"
-                                                                                            }
-                                                                                        }
-                                                                                    },
-                                                                                    "additionalProperties": false
-                                                                                },
-                                                                                "description": "Steps inserted at the start."
-                                                                            },
-                                                                            "after": {
-                                                                                "type": "array",
-                                                                                "items": {
-                                                                                    "type": "object",
-                                                                                    "properties": {
-                                                                                        "name": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "id": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "if": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "uses": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "run": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "shell": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "working-directory": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "with": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": [
-                                                                                                    "string",
-                                                                                                    "number",
-                                                                                                    "boolean"
-                                                                                                ]
-                                                                                            }
-                                                                                        },
-                                                                                        "env": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": "string"
-                                                                                            }
-                                                                                        }
-                                                                                    },
-                                                                                    "additionalProperties": false
-                                                                                },
-                                                                                "description": "Steps appended at the end."
-                                                                            }
-                                                                        },
-                                                                        "additionalProperties": false
-                                                                    }
-                                                                }
-                                                            ],
-                                                            "description": "Extra steps for a job (one group, or per-job groups)."
-                                                        },
-                                                        "jobs": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {},
-                                                            "description": "Extra complete jobs merged in."
-                                                        },
-                                                        "tokens": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {
-                                                                "type": [
-                                                                    "string",
-                                                                    "number",
-                                                                    "boolean"
-                                                                ]
-                                                            },
-                                                            "description": "Per-workflow token overrides (`nodeVersion`, `packageManager`, ...)."
-                                                        }
-                                                    },
-                                                    "additionalProperties": false
-                                                }
-                                            ]
-                                        },
-                                        "release": {
-                                            "anyOf": [
-                                                {
-                                                    "type": "boolean"
-                                                },
-                                                {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "enabled": {
-                                                            "type": "boolean",
-                                                            "description": "Enable/disable this workflow (default true)."
-                                                        },
-                                                        "pushBranches": {
-                                                            "type": "array",
-                                                            "items": {
-                                                                "type": "string"
-                                                            },
-                                                            "description": "Replace `on.push.branches`."
-                                                        },
-                                                        "pullRequestBranches": {
-                                                            "type": "array",
-                                                            "items": {
-                                                                "type": "string"
-                                                            },
-                                                            "description": "Replace `on.pull_request.branches`."
-                                                        },
-                                                        "triggers": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {},
-                                                            "description": "Extra `on.*` triggers."
-                                                        },
-                                                        "extra": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {},
-                                                            "description": "Extra top-level keys (`permissions`, `concurrency`, `env`, ...)."
-                                                        },
-                                                        "steps": {
-                                                            "anyOf": [
-                                                                {
-                                                                    "type": "object",
-                                                                    "properties": {
-                                                                        "job": {
-                                                                            "type": "string",
-                                                                            "description": "Target job id (defaults to the primary/first job)."
-                                                                        },
-                                                                        "before": {
-                                                                            "type": "array",
-                                                                            "items": {
-                                                                                "type": "object",
-                                                                                "properties": {
-                                                                                    "name": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "id": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "if": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "uses": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "run": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "shell": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "working-directory": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "with": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": [
-                                                                                                "string",
-                                                                                                "number",
-                                                                                                "boolean"
-                                                                                            ]
-                                                                                        }
-                                                                                    },
-                                                                                    "env": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": "string"
-                                                                                        }
-                                                                                    }
-                                                                                },
-                                                                                "additionalProperties": false
-                                                                            },
-                                                                            "description": "Steps inserted at the start."
-                                                                        },
-                                                                        "after": {
-                                                                            "type": "array",
-                                                                            "items": {
-                                                                                "type": "object",
-                                                                                "properties": {
-                                                                                    "name": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "id": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "if": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "uses": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "run": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "shell": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "working-directory": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "with": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": [
-                                                                                                "string",
-                                                                                                "number",
-                                                                                                "boolean"
-                                                                                            ]
-                                                                                        }
-                                                                                    },
-                                                                                    "env": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": "string"
-                                                                                        }
-                                                                                    }
-                                                                                },
-                                                                                "additionalProperties": false
-                                                                            },
-                                                                            "description": "Steps appended at the end."
-                                                                        }
-                                                                    },
-                                                                    "additionalProperties": false
-                                                                },
-                                                                {
-                                                                    "type": "array",
-                                                                    "items": {
-                                                                        "type": "object",
-                                                                        "properties": {
-                                                                            "job": {
-                                                                                "type": "string",
-                                                                                "description": "Target job id (defaults to the primary/first job)."
-                                                                            },
-                                                                            "before": {
-                                                                                "type": "array",
-                                                                                "items": {
-                                                                                    "type": "object",
-                                                                                    "properties": {
-                                                                                        "name": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "id": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "if": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "uses": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "run": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "shell": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "working-directory": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "with": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": [
-                                                                                                    "string",
-                                                                                                    "number",
-                                                                                                    "boolean"
-                                                                                                ]
-                                                                                            }
-                                                                                        },
-                                                                                        "env": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": "string"
-                                                                                            }
-                                                                                        }
-                                                                                    },
-                                                                                    "additionalProperties": false
-                                                                                },
-                                                                                "description": "Steps inserted at the start."
-                                                                            },
-                                                                            "after": {
-                                                                                "type": "array",
-                                                                                "items": {
-                                                                                    "type": "object",
-                                                                                    "properties": {
-                                                                                        "name": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "id": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "if": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "uses": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "run": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "shell": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "working-directory": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "with": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": [
-                                                                                                    "string",
-                                                                                                    "number",
-                                                                                                    "boolean"
-                                                                                                ]
-                                                                                            }
-                                                                                        },
-                                                                                        "env": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": "string"
-                                                                                            }
-                                                                                        }
-                                                                                    },
-                                                                                    "additionalProperties": false
-                                                                                },
-                                                                                "description": "Steps appended at the end."
-                                                                            }
-                                                                        },
-                                                                        "additionalProperties": false
-                                                                    }
-                                                                }
-                                                            ],
-                                                            "description": "Extra steps for a job (one group, or per-job groups)."
-                                                        },
-                                                        "jobs": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {},
-                                                            "description": "Extra complete jobs merged in."
-                                                        },
-                                                        "tokens": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {
-                                                                "type": [
-                                                                    "string",
-                                                                    "number",
-                                                                    "boolean"
-                                                                ]
-                                                            },
-                                                            "description": "Per-workflow token overrides (`nodeVersion`, `packageManager`, ...)."
-                                                        }
-                                                    },
-                                                    "additionalProperties": false
-                                                }
-                                            ]
-                                        },
-                                        "issues": {
-                                            "anyOf": [
-                                                {
-                                                    "type": "boolean"
-                                                },
-                                                {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "enabled": {
-                                                            "type": "boolean",
-                                                            "description": "Enable/disable this workflow (default true)."
-                                                        },
-                                                        "pushBranches": {
-                                                            "type": "array",
-                                                            "items": {
-                                                                "type": "string"
-                                                            },
-                                                            "description": "Replace `on.push.branches`."
-                                                        },
-                                                        "pullRequestBranches": {
-                                                            "type": "array",
-                                                            "items": {
-                                                                "type": "string"
-                                                            },
-                                                            "description": "Replace `on.pull_request.branches`."
-                                                        },
-                                                        "triggers": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {},
-                                                            "description": "Extra `on.*` triggers."
-                                                        },
-                                                        "extra": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {},
-                                                            "description": "Extra top-level keys (`permissions`, `concurrency`, `env`, ...)."
-                                                        },
-                                                        "steps": {
-                                                            "anyOf": [
-                                                                {
-                                                                    "type": "object",
-                                                                    "properties": {
-                                                                        "job": {
-                                                                            "type": "string",
-                                                                            "description": "Target job id (defaults to the primary/first job)."
-                                                                        },
-                                                                        "before": {
-                                                                            "type": "array",
-                                                                            "items": {
-                                                                                "type": "object",
-                                                                                "properties": {
-                                                                                    "name": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "id": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "if": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "uses": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "run": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "shell": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "working-directory": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "with": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": [
-                                                                                                "string",
-                                                                                                "number",
-                                                                                                "boolean"
-                                                                                            ]
-                                                                                        }
-                                                                                    },
-                                                                                    "env": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": "string"
-                                                                                        }
-                                                                                    }
-                                                                                },
-                                                                                "additionalProperties": false
-                                                                            },
-                                                                            "description": "Steps inserted at the start."
-                                                                        },
-                                                                        "after": {
-                                                                            "type": "array",
-                                                                            "items": {
-                                                                                "type": "object",
-                                                                                "properties": {
-                                                                                    "name": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "id": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "if": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "uses": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "run": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "shell": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "working-directory": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "with": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": [
-                                                                                                "string",
-                                                                                                "number",
-                                                                                                "boolean"
-                                                                                            ]
-                                                                                        }
-                                                                                    },
-                                                                                    "env": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": "string"
-                                                                                        }
-                                                                                    }
-                                                                                },
-                                                                                "additionalProperties": false
-                                                                            },
-                                                                            "description": "Steps appended at the end."
-                                                                        }
-                                                                    },
-                                                                    "additionalProperties": false
-                                                                },
-                                                                {
-                                                                    "type": "array",
-                                                                    "items": {
-                                                                        "type": "object",
-                                                                        "properties": {
-                                                                            "job": {
-                                                                                "type": "string",
-                                                                                "description": "Target job id (defaults to the primary/first job)."
-                                                                            },
-                                                                            "before": {
-                                                                                "type": "array",
-                                                                                "items": {
-                                                                                    "type": "object",
-                                                                                    "properties": {
-                                                                                        "name": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "id": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "if": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "uses": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "run": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "shell": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "working-directory": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "with": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": [
-                                                                                                    "string",
-                                                                                                    "number",
-                                                                                                    "boolean"
-                                                                                                ]
-                                                                                            }
-                                                                                        },
-                                                                                        "env": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": "string"
-                                                                                            }
-                                                                                        }
-                                                                                    },
-                                                                                    "additionalProperties": false
-                                                                                },
-                                                                                "description": "Steps inserted at the start."
-                                                                            },
-                                                                            "after": {
-                                                                                "type": "array",
-                                                                                "items": {
-                                                                                    "type": "object",
-                                                                                    "properties": {
-                                                                                        "name": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "id": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "if": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "uses": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "run": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "shell": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "working-directory": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "with": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": [
-                                                                                                    "string",
-                                                                                                    "number",
-                                                                                                    "boolean"
-                                                                                                ]
-                                                                                            }
-                                                                                        },
-                                                                                        "env": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": "string"
-                                                                                            }
-                                                                                        }
-                                                                                    },
-                                                                                    "additionalProperties": false
-                                                                                },
-                                                                                "description": "Steps appended at the end."
-                                                                            }
-                                                                        },
-                                                                        "additionalProperties": false
-                                                                    }
-                                                                }
-                                                            ],
-                                                            "description": "Extra steps for a job (one group, or per-job groups)."
-                                                        },
-                                                        "jobs": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {},
-                                                            "description": "Extra complete jobs merged in."
-                                                        },
-                                                        "tokens": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {
-                                                                "type": [
-                                                                    "string",
-                                                                    "number",
-                                                                    "boolean"
-                                                                ]
-                                                            },
-                                                            "description": "Per-workflow token overrides (`nodeVersion`, `packageManager`, ...)."
-                                                        }
-                                                    },
-                                                    "additionalProperties": false
-                                                }
-                                            ]
-                                        },
-                                        "sync": {
-                                            "anyOf": [
-                                                {
-                                                    "type": "boolean"
-                                                },
-                                                {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "enabled": {
-                                                            "type": "boolean",
-                                                            "description": "Enable/disable this workflow (default true)."
-                                                        },
-                                                        "pushBranches": {
-                                                            "type": "array",
-                                                            "items": {
-                                                                "type": "string"
-                                                            },
-                                                            "description": "Replace `on.push.branches`."
-                                                        },
-                                                        "pullRequestBranches": {
-                                                            "type": "array",
-                                                            "items": {
-                                                                "type": "string"
-                                                            },
-                                                            "description": "Replace `on.pull_request.branches`."
-                                                        },
-                                                        "triggers": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {},
-                                                            "description": "Extra `on.*` triggers."
-                                                        },
-                                                        "extra": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {},
-                                                            "description": "Extra top-level keys (`permissions`, `concurrency`, `env`, ...)."
-                                                        },
-                                                        "steps": {
-                                                            "anyOf": [
-                                                                {
-                                                                    "type": "object",
-                                                                    "properties": {
-                                                                        "job": {
-                                                                            "type": "string",
-                                                                            "description": "Target job id (defaults to the primary/first job)."
-                                                                        },
-                                                                        "before": {
-                                                                            "type": "array",
-                                                                            "items": {
-                                                                                "type": "object",
-                                                                                "properties": {
-                                                                                    "name": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "id": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "if": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "uses": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "run": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "shell": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "working-directory": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "with": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": [
-                                                                                                "string",
-                                                                                                "number",
-                                                                                                "boolean"
-                                                                                            ]
-                                                                                        }
-                                                                                    },
-                                                                                    "env": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": "string"
-                                                                                        }
-                                                                                    }
-                                                                                },
-                                                                                "additionalProperties": false
-                                                                            },
-                                                                            "description": "Steps inserted at the start."
-                                                                        },
-                                                                        "after": {
-                                                                            "type": "array",
-                                                                            "items": {
-                                                                                "type": "object",
-                                                                                "properties": {
-                                                                                    "name": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "id": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "if": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "uses": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "run": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "shell": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "working-directory": {
-                                                                                        "type": "string"
-                                                                                    },
-                                                                                    "with": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": [
-                                                                                                "string",
-                                                                                                "number",
-                                                                                                "boolean"
-                                                                                            ]
-                                                                                        }
-                                                                                    },
-                                                                                    "env": {
-                                                                                        "type": "object",
-                                                                                        "propertyNames": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "additionalProperties": {
-                                                                                            "type": "string"
-                                                                                        }
-                                                                                    }
-                                                                                },
-                                                                                "additionalProperties": false
-                                                                            },
-                                                                            "description": "Steps appended at the end."
-                                                                        }
-                                                                    },
-                                                                    "additionalProperties": false
-                                                                },
-                                                                {
-                                                                    "type": "array",
-                                                                    "items": {
-                                                                        "type": "object",
-                                                                        "properties": {
-                                                                            "job": {
-                                                                                "type": "string",
-                                                                                "description": "Target job id (defaults to the primary/first job)."
-                                                                            },
-                                                                            "before": {
-                                                                                "type": "array",
-                                                                                "items": {
-                                                                                    "type": "object",
-                                                                                    "properties": {
-                                                                                        "name": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "id": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "if": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "uses": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "run": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "shell": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "working-directory": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "with": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": [
-                                                                                                    "string",
-                                                                                                    "number",
-                                                                                                    "boolean"
-                                                                                                ]
-                                                                                            }
-                                                                                        },
-                                                                                        "env": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": "string"
-                                                                                            }
-                                                                                        }
-                                                                                    },
-                                                                                    "additionalProperties": false
-                                                                                },
-                                                                                "description": "Steps inserted at the start."
-                                                                            },
-                                                                            "after": {
-                                                                                "type": "array",
-                                                                                "items": {
-                                                                                    "type": "object",
-                                                                                    "properties": {
-                                                                                        "name": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "id": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "if": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "uses": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "run": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "shell": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "working-directory": {
-                                                                                            "type": "string"
-                                                                                        },
-                                                                                        "with": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": [
-                                                                                                    "string",
-                                                                                                    "number",
-                                                                                                    "boolean"
-                                                                                                ]
-                                                                                            }
-                                                                                        },
-                                                                                        "env": {
-                                                                                            "type": "object",
-                                                                                            "propertyNames": {
-                                                                                                "type": "string"
-                                                                                            },
-                                                                                            "additionalProperties": {
-                                                                                                "type": "string"
-                                                                                            }
-                                                                                        }
-                                                                                    },
-                                                                                    "additionalProperties": false
-                                                                                },
-                                                                                "description": "Steps appended at the end."
-                                                                            }
-                                                                        },
-                                                                        "additionalProperties": false
-                                                                    }
-                                                                }
-                                                            ],
-                                                            "description": "Extra steps for a job (one group, or per-job groups)."
-                                                        },
-                                                        "jobs": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {},
-                                                            "description": "Extra complete jobs merged in."
-                                                        },
-                                                        "tokens": {
-                                                            "type": "object",
-                                                            "propertyNames": {
-                                                                "type": "string"
-                                                            },
-                                                            "additionalProperties": {
-                                                                "type": [
-                                                                    "string",
-                                                                    "number",
-                                                                    "boolean"
-                                                                ]
-                                                            },
-                                                            "description": "Per-workflow token overrides (`nodeVersion`, `packageManager`, ...)."
-                                                        }
-                                                    },
-                                                    "additionalProperties": false
-                                                }
-                                            ]
-                                        }
-                                    },
-                                    "additionalProperties": false,
-                                    "description": "Which workflows to write into `.github/workflows`."
-                                },
-                                "branches": {
-                                    "type": "object",
-                                    "properties": {
-                                        "main": {
-                                            "type": "string"
-                                        },
-                                        "dev": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "additionalProperties": false,
-                                    "description": "Branch names the workflows target."
-                                },
-                                "types": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    },
-                                    "description": "Allowed commit types (commitlint)."
-                                },
-                                "scopes": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    },
-                                    "description": "Allowed commit scopes (commitlint)."
-                                },
-                                "vscode": {
-                                    "type": "boolean",
-                                    "description": "Write the Conventional-Commits VS Code settings."
-                                }
-                            },
-                            "additionalProperties": false
+                            "$ref": "#/$defs/ToolingChangelogConfig"
                         }
                     ]
                 },
@@ -1666,26 +33,7 @@
                             "type": "boolean"
                         },
                         {
-                            "type": "object",
-                            "properties": {
-                                "enabled": {
-                                    "type": "boolean",
-                                    "description": "Master switch (enabled when the section is defined)."
-                                },
-                                "vscode": {
-                                    "type": "boolean",
-                                    "description": "Write the Biome VS Code settings (default true)."
-                                },
-                                "overrides": {
-                                    "type": "object",
-                                    "propertyNames": {
-                                        "type": "string"
-                                    },
-                                    "additionalProperties": {},
-                                    "description": "Deep-merged over the generated `biome.json` (arrays union)."
-                                }
-                            },
-                            "additionalProperties": false
+                            "$ref": "#/$defs/ToolingBiomeConfig"
                         }
                     ]
                 },
@@ -1695,42 +43,7 @@
                             "type": "boolean"
                         },
                         {
-                            "type": "object",
-                            "properties": {
-                                "enabled": {
-                                    "type": "boolean",
-                                    "description": "Master switch (enabled when the section is defined)."
-                                },
-                                "glob": {
-                                    "type": "string",
-                                    "description": "Glob for workspace `tsconfig.default.json` files."
-                                },
-                                "appGlob": {
-                                    "type": "string",
-                                    "description": "Glob for \"override\" (app) workspaces."
-                                },
-                                "refs": {
-                                    "type": "boolean",
-                                    "description": "Wire project references (default false)."
-                                },
-                                "composite": {
-                                    "type": "boolean",
-                                    "description": "Emit `composite: true` (default false)."
-                                },
-                                "aliases": {
-                                    "type": "boolean",
-                                    "description": "Inject path aliases (default true)."
-                                },
-                                "indent": {
-                                    "type": "number",
-                                    "description": "JSON indentation (default 4)."
-                                },
-                                "rootFile": {
-                                    "type": "string",
-                                    "description": "The monorepo tsconfig file name (default `tsconfig.monorepo.json`)."
-                                }
-                            },
-                            "additionalProperties": false
+                            "$ref": "#/$defs/ToolingTsconfigConfig"
                         }
                     ]
                 },
@@ -1740,86 +53,7 @@
                             "type": "boolean"
                         },
                         {
-                            "type": "object",
-                            "properties": {
-                                "enabled": {
-                                    "type": "boolean",
-                                    "description": "Master switch (enabled when the section is defined)."
-                                },
-                                "sources": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "type": "string",
-                                                "enum": [
-                                                    "builtin",
-                                                    "local",
-                                                    "npm",
-                                                    "git",
-                                                    "vite-plus"
-                                                ],
-                                                "description": "How to load the source."
-                                            },
-                                            "locate": {
-                                                "type": "string",
-                                                "description": "A builtin id, local dir, npm scope, git URL or Vite+ id."
-                                            },
-                                            "id": {
-                                                "type": "string",
-                                                "description": "Stable id (defaults to the basename/scope)."
-                                            },
-                                            "name": {
-                                                "type": "string",
-                                                "description": "Display name override."
-                                            },
-                                            "description": {
-                                                "type": "string",
-                                                "description": "Description override."
-                                            },
-                                            "kind": {
-                                                "type": "string",
-                                                "enum": [
-                                                    "project",
-                                                    "workspace",
-                                                    "application",
-                                                    "folder",
-                                                    "tooling",
-                                                    "pipeline"
-                                                ],
-                                                "description": "What the template produces."
-                                            },
-                                            "ref": {
-                                                "type": "string",
-                                                "description": "Git branch/tag/commit."
-                                            },
-                                            "subdir": {
-                                                "type": "string",
-                                                "description": "Subdirectory within the source that holds the template."
-                                            },
-                                            "tags": {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "string"
-                                                },
-                                                "description": "Free-form tags."
-                                            },
-                                            "online": {
-                                                "type": "boolean",
-                                                "description": "Whether the source needs network access."
-                                            }
-                                        },
-                                        "required": [
-                                            "type",
-                                            "locate"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    "description": "Extra sources on top of the builtin + registry sources."
-                                }
-                            },
-                            "additionalProperties": false
+                            "$ref": "#/$defs/ToolingTemplatesConfig"
                         }
                     ]
                 },
@@ -1829,44 +63,7 @@
                             "type": "boolean"
                         },
                         {
-                            "type": "object",
-                            "properties": {
-                                "enabled": {
-                                    "type": "boolean",
-                                    "description": "Master switch (enabled when the section is defined)."
-                                },
-                                "config": {
-                                    "type": "boolean",
-                                    "description": "Write the managed `vite.config.ts` (default true when the section is set)."
-                                },
-                                "defaultTemplate": {
-                                    "type": "string",
-                                    "description": "`create.defaultTemplate`, eg. `@acme` for `@acme/create`."
-                                },
-                                "testInclude": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    },
-                                    "description": "Extra Vitest include globs (default: tests under src + tests)."
-                                },
-                                "lintIgnore": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    },
-                                    "description": "Glob patterns Oxlint should ignore."
-                                },
-                                "overrides": {
-                                    "type": "object",
-                                    "propertyNames": {
-                                        "type": "string"
-                                    },
-                                    "additionalProperties": {},
-                                    "description": "Deep-merged over the generated `vite.config.ts` object."
-                                }
-                            },
-                            "additionalProperties": false
+                            "$ref": "#/$defs/ToolingViteConfig"
                         }
                     ]
                 },
@@ -1876,26 +73,502 @@
                             "type": "boolean"
                         },
                         {
-                            "type": "object",
-                            "properties": {
-                                "enabled": {
-                                    "type": "boolean",
-                                    "description": "Watch by default (enabled when the section is defined)."
-                                },
-                                "debounce": {
-                                    "type": "number",
-                                    "description": "Debounce window in ms (default 150)."
-                                }
-                            },
-                            "additionalProperties": false
+                            "$ref": "#/$defs/ToolingWatchConfig"
                         }
                     ]
                 }
             },
             "additionalProperties": false
+        },
+        "ToolingProjectConfig": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "$ref": "#/$defs/ProjectType"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "The unscoped project name."
+                },
+                "scope": {
+                    "type": "string",
+                    "description": "The npm scope, eg. `@acme`."
+                },
+                "author": {
+                    "type": "string",
+                    "description": "Package author."
+                },
+                "license": {
+                    "type": "string",
+                    "description": "SPDX license id."
+                },
+                "homepage": {
+                    "type": "string",
+                    "description": "Project homepage."
+                },
+                "repo": {
+                    "type": "string",
+                    "description": "Repository URL, eg. `https://github.com/acme/app`."
+                },
+                "nodeVersion": {
+                    "type": "string",
+                    "description": "Node engine range, eg. `>=22`."
+                },
+                "packageManager": {
+                    "type": "string",
+                    "description": "Package manager name (default `yarn`)."
+                },
+                "packageManagerVersion": {
+                    "type": "string",
+                    "description": "Package manager version, eg. `4.17.1`."
+                },
+                "description": {
+                    "type": "string",
+                    "description": "One-line description."
+                }
+            },
+            "additionalProperties": false
+        },
+        "ProjectType": {
+            "type": "string",
+            "enum": [
+                "monorepo-root",
+                "monorepo-workspace",
+                "project"
+            ],
+            "description": "The project kind (detected when omitted)."
+        },
+        "ToolingChangelogConfig": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Master switch (enabled when the section is defined)."
+                },
+                "workflows": {
+                    "description": "Which workflows to write into `.github/workflows`.",
+                    "$ref": "#/$defs/ChangelogWorkflowsConfig"
+                },
+                "branches": {
+                    "type": "object",
+                    "properties": {
+                        "main": {
+                            "type": "string"
+                        },
+                        "dev": {
+                            "type": "string"
+                        }
+                    },
+                    "additionalProperties": false,
+                    "description": "Branch names the workflows target."
+                },
+                "types": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Allowed commit types (commitlint)."
+                },
+                "scopes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Allowed commit scopes (commitlint)."
+                },
+                "vscode": {
+                    "type": "boolean",
+                    "description": "Write the Conventional-Commits VS Code settings."
+                }
+            },
+            "additionalProperties": false
+        },
+        "WorkflowSetting": {
+            "anyOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "$ref": "#/$defs/WorkflowConfig"
+                }
+            ]
+        },
+        "WorkflowConfig": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable/disable this workflow (default true)."
+                },
+                "pushBranches": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Replace `on.push.branches`."
+                },
+                "pullRequestBranches": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Replace `on.pull_request.branches`."
+                },
+                "triggers": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Extra `on.*` triggers."
+                },
+                "extra": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Extra top-level keys (`permissions`, `concurrency`, `env`, ...)."
+                },
+                "steps": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/$defs/WorkflowStepsConfig"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/$defs/WorkflowStepsConfig"
+                            }
+                        }
+                    ],
+                    "description": "Extra steps for a job (one group, or per-job groups)."
+                },
+                "jobs": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Extra complete jobs merged in."
+                },
+                "tokens": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "type": [
+                            "string",
+                            "number",
+                            "boolean"
+                        ]
+                    },
+                    "description": "Per-workflow token overrides (`nodeVersion`, `packageManager`, ...)."
+                }
+            },
+            "additionalProperties": false
+        },
+        "WorkflowStepsConfig": {
+            "type": "object",
+            "properties": {
+                "job": {
+                    "type": "string",
+                    "description": "Target job id (defaults to the primary/first job)."
+                },
+                "before": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/WorkflowStep"
+                    },
+                    "description": "Steps inserted at the start."
+                },
+                "after": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/WorkflowStep"
+                    },
+                    "description": "Steps appended at the end."
+                }
+            },
+            "additionalProperties": false
+        },
+        "WorkflowStep": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "if": {
+                    "type": "string"
+                },
+                "uses": {
+                    "type": "string"
+                },
+                "run": {
+                    "type": "string"
+                },
+                "shell": {
+                    "type": "string"
+                },
+                "working-directory": {
+                    "type": "string"
+                },
+                "with": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "type": [
+                            "string",
+                            "number",
+                            "boolean"
+                        ]
+                    }
+                },
+                "env": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                }
+            },
+            "additionalProperties": false
+        },
+        "ChangelogWorkflowsConfig": {
+            "type": "object",
+            "properties": {
+                "ci": {
+                    "$ref": "#/$defs/WorkflowSetting"
+                },
+                "changelog": {
+                    "$ref": "#/$defs/WorkflowSetting"
+                },
+                "release": {
+                    "$ref": "#/$defs/WorkflowSetting"
+                },
+                "issues": {
+                    "$ref": "#/$defs/WorkflowSetting"
+                },
+                "sync": {
+                    "$ref": "#/$defs/WorkflowSetting"
+                }
+            },
+            "additionalProperties": false
+        },
+        "ToolingBiomeConfig": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Master switch (enabled when the section is defined)."
+                },
+                "vscode": {
+                    "type": "boolean",
+                    "description": "Write the Biome VS Code settings (default true)."
+                },
+                "overrides": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Deep-merged over the generated `biome.json` (arrays union)."
+                }
+            },
+            "additionalProperties": false
+        },
+        "ToolingTsconfigConfig": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Master switch (enabled when the section is defined)."
+                },
+                "glob": {
+                    "type": "string",
+                    "description": "Glob for workspace `tsconfig.default.json` files."
+                },
+                "appGlob": {
+                    "type": "string",
+                    "description": "Glob for \"override\" (app) workspaces."
+                },
+                "refs": {
+                    "type": "boolean",
+                    "description": "Wire project references (default false)."
+                },
+                "composite": {
+                    "type": "boolean",
+                    "description": "Emit `composite: true` (default false)."
+                },
+                "aliases": {
+                    "type": "boolean",
+                    "description": "Inject path aliases (default true)."
+                },
+                "indent": {
+                    "type": "number",
+                    "description": "JSON indentation (default 4)."
+                },
+                "rootFile": {
+                    "type": "string",
+                    "description": "The monorepo tsconfig file name (default `tsconfig.monorepo.json`)."
+                }
+            },
+            "additionalProperties": false
+        },
+        "ToolingTemplatesConfig": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Master switch (enabled when the section is defined)."
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/ToolingTemplateSource"
+                    },
+                    "description": "Extra sources on top of the builtin + registry sources."
+                }
+            },
+            "additionalProperties": false
+        },
+        "ToolingTemplateSource": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "$ref": "#/$defs/ToolingTemplateSourceType"
+                },
+                "locate": {
+                    "type": "string",
+                    "description": "A builtin id, local dir, npm scope, git URL or Vite+ id."
+                },
+                "id": {
+                    "type": "string",
+                    "description": "Stable id (defaults to the basename/scope)."
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Display name override."
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Description override."
+                },
+                "kind": {
+                    "$ref": "#/$defs/ToolingTemplateKind"
+                },
+                "ref": {
+                    "type": "string",
+                    "description": "Git branch/tag/commit."
+                },
+                "subdir": {
+                    "type": "string",
+                    "description": "Subdirectory within the source that holds the template."
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Free-form tags."
+                },
+                "online": {
+                    "type": "boolean",
+                    "description": "Whether the source needs network access."
+                }
+            },
+            "required": [
+                "type",
+                "locate"
+            ],
+            "additionalProperties": false
+        },
+        "ToolingTemplateSourceType": {
+            "type": "string",
+            "enum": [
+                "builtin",
+                "local",
+                "npm",
+                "git",
+                "vite-plus"
+            ],
+            "description": "How to load the source."
+        },
+        "ToolingTemplateKind": {
+            "type": "string",
+            "enum": [
+                "project",
+                "workspace",
+                "application",
+                "folder",
+                "tooling",
+                "pipeline"
+            ],
+            "description": "What the template produces."
+        },
+        "ToolingViteConfig": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Master switch (enabled when the section is defined)."
+                },
+                "config": {
+                    "type": "boolean",
+                    "description": "Write the managed `vite.config.ts` (default true when the section is set)."
+                },
+                "defaultTemplate": {
+                    "type": "string",
+                    "description": "`create.defaultTemplate`, eg. `@acme` for `@acme/create`."
+                },
+                "testInclude": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Extra Vitest include globs (default: tests under src + tests)."
+                },
+                "lintIgnore": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Glob patterns Oxlint should ignore."
+                },
+                "overrides": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Deep-merged over the generated `vite.config.ts` object."
+                }
+            },
+            "additionalProperties": false
+        },
+        "ToolingWatchConfig": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Watch by default (enabled when the section is defined)."
+                },
+                "debounce": {
+                    "type": "number",
+                    "description": "Debounce window in ms (default 150)."
+                }
+            },
+            "additionalProperties": false
         }
     },
-    "additionalProperties": false,
     "$id": "https://deltabox.studio/schemas/dbx.config.json",
     "title": "dbx.config",
     "description": "The dbx configuration model (the @deltabox/toolchain settings live under `toolchain`)."
