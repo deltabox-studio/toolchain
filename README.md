@@ -17,18 +17,18 @@ Documentation, guides and examples: [toolchain.deltabox.studio](https://toolchai
 ## Table of contents
 
 - [deltabox toolchain](#deltabox-toolchain)
-  - [Table of contents](#table-of-contents)
-  - [Features](#features)
-  - [Install](#install)
-  - [Quickstart](#quickstart)
-  - [Config generator](#config-generator)
-  - [Vite / Vite+ plugin](#vite--vite-plugin)
-  - [CLI](#cli)
-  - [Programmatic API](#programmatic-api)
-  - [VS Code extension](#vs-code-extension)
-  - [Development](#development)
-  - [Docs](#docs)
-  - [License](#license)
+    - [Table of contents](#table-of-contents)
+    - [Features](#features)
+    - [Install](#install)
+    - [Quickstart](#quickstart)
+    - [Config generator](#config-generator)
+    - [Vite / Vite+ plugin](#vite--vite-plugin)
+    - [CLI](#cli)
+    - [Programmatic API](#programmatic-api)
+    - [VS Code extension](#vs-code-extension)
+    - [Development](#development)
+    - [Docs](#docs)
+    - [License](#license)
 
 ## Features
 
@@ -140,6 +140,22 @@ export interface ServerConfig {
     port?: number;
 }
 ```
+
+At runtime the same package loads it back — `parseEnvTree` folds the `PREFIX_*`
+variables into a tree and the typed accessors read it (schema validation is just
+a `.parse()` away):
+
+```ts
+import { envInt, envString, parseEnvTree } from '@deltabox/toolchain/config';
+
+const tree = parseEnvTree(process.env, 'MYAPP_');
+const port = envInt(tree, 'port', 3000);
+const host = envString(tree, 'host', '0.0.0.0');
+```
+
+See the [config generator
+guide](https://toolchain.deltabox.studio/guide/config-generator) for loading,
+overriding and validating the config.
 
 The toolchain generates its own config types this way — see
 `packages/shared/src/config-types.ts` and the [config generator
