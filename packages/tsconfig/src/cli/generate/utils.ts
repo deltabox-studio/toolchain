@@ -97,7 +97,7 @@ export function generateTsconfig(options: {
                                                 const [key, value] = pair;
                                                 let skip = true;
                                                 const values = value.map(v =>
-                                                    transformPath(v, dirname)
+                                                    transformPath(v, dirname, cwd)
                                                 );
                                                 const newValue: string[] = [];
                                                 for (const {
@@ -131,7 +131,8 @@ export function generateTsconfig(options: {
                               if (acc.find(r => r.path === ref.path)) return acc;
                               const { newPath, isRoot, inRootDir } = transformPath(
                                   ref.path,
-                                  dirname
+                                  dirname,
+                                  cwd
                               );
                               const skip = isRoot || inRootDir;
                               return skip && !/^.$/.test(dirnameRelative)
@@ -169,18 +170,13 @@ export function generateTsconfig(options: {
     }
 }
 
-function transformPath(sourcePath: string, dirname: string) {
-    const segments = sourcePath.split('/');
-    if (!segments.length) return { isRoot: false, newPath: sourcePath };
-
-    const lastSegment = segments[segments.length - 1];
-    if (!lastSegment) return { isRoot: false, newPath: sourcePath };
-
-    const valueBasename = path.basename(sourcePath);
-    const valueDirname = path.dirname(sourcePath);
-
-    let isRoot = false;
-    let inRootDir = false;
+function transformPath(sourcePath: string, dirname: string, root: string) {
+    // Monorepo tsconfig paths are relative to the monorepo root, which is not
+    // necessarily `process.cwd()` (eg. when `dbx sync --cwd <dir>` runs from
+    // elsewhere). Resolve against the root so the computed alias is correct.
+    const absolute = path.resolve(root, sourcePath);
+    const valueBasename = path.basename(absolute);
+    const valueDirname = path.dirname(absolute);
 
     let newPath = path
         .join(path.relative(dirname, valueDirname), valueBasename)
@@ -189,8 +185,8 @@ function transformPath(sourcePath: string, dirname: string) {
     newPath = !newPath.startsWith('.') ? `./${newPath}` : newPath;
 
     const newPathDirname = path.dirname(path.resolve(dirname, newPath));
-    if (dirname === newPathDirname) isRoot = true;
-    if (newPathDirname.startsWith(dirname)) inRootDir = true;
+    const isRoot = dirname === newPathDirname;
+    const inRootDir = newPathDirname.startsWith(dirname);
 
     return { isRoot, inRootDir, newPath, newPathDirname };
 }
