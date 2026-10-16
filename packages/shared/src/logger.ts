@@ -53,7 +53,7 @@ export interface Logger {
 
 /** Whether a value is a valid {@link LogLevel}. */
 export function isLogLevel(value: unknown): value is LogLevel {
-    return typeof value === 'string' && value in LEVELS;
+    return typeof value === 'string' && (LOG_LEVELS as readonly string[]).includes(value);
 }
 
 /** Coerce a possibly-invalid level to a known one (default `info`). */

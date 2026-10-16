@@ -7,6 +7,7 @@ import {
 import { vscodeSyncTask } from '@deltabox/toolchain-core';
 import { type SyncTask, sectionConfig, sectionEnabled } from '@deltabox/toolchain-shared';
 import { tsconfigSyncTask } from '@deltabox/toolchain-tsconfig';
+import { viteSyncTask } from '@deltabox/toolchain-vite';
 
 /**
  * The default sync tasks run by `dbx sync` / `dbx watch`:
@@ -18,6 +19,7 @@ export function defaultSyncTasks(): SyncTask[] {
         changelogSyncTask(),
         biomeSyncTask(),
         tsconfigSyncTask(),
+        viteSyncTask(),
         vscodeSyncTask({
             settings: config => [
                 ...(sectionEnabled(config.biome) ? [biomeVscodeSettings] : []),

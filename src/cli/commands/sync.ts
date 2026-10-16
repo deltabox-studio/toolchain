@@ -36,7 +36,7 @@ export function syncCommand(): ToolingCommand {
 
             if (opts.recursive) {
                 const graph = buildProjectGraph(context.cwd);
-                writeProjectGraph(context.cwd, graph);
+                if (!check) writeProjectGraph(context.cwd, graph);
                 for (const relDir of graph.order) {
                     const dir = path.resolve(context.cwd, relDir);
                     const loaded = await loadToolingConfig(dir);
@@ -69,11 +69,14 @@ export function syncCommand(): ToolingCommand {
             const result = await runSync({ ...watchOptions(context), check, quiet });
             if (check && !result.upToDate) process.exitCode = 1;
 
-            // Keep the project graph fresh for the IDE/other tools.
-            try {
-                writeProjectGraph(context.cwd, buildProjectGraph(context.cwd));
-            } catch {
-                // best-effort
+            // Keep the project graph fresh for the IDE/other tools (`--check`
+            // must not write anything).
+            if (!check) {
+                try {
+                    writeProjectGraph(context.cwd, buildProjectGraph(context.cwd));
+                } catch {
+                    // best-effort
+                }
             }
         },
     };

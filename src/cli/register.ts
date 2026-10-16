@@ -71,7 +71,7 @@ export function registerToolingCommands(program: Command, commands: ToolingComma
                     const loaded = await loadContext(cwd);
                     setLogConfig(loaded.config.logger);
                     if (provided.quiet === true) {
-                        setLogOverrides({ ...getLogOverrides(), level: 'silent' });
+                        setLogOverrides({ ...getLogOverrides(), level: 'error' });
                     }
                     const context: ToolingCommandContext = {
                         cwd,

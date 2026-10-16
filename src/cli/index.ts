@@ -79,6 +79,12 @@ export function extractLogOptions(argv: string[]): { argv: string[]; options: Lo
     const rest: string[] = [];
     for (let index = 0; index < argv.length; index++) {
         const arg = argv[index] as string;
+        if (arg === '--') {
+            // Everything after `--` is an operand for the subcommand (or the
+            // wrapped binary): never treat a logger flag there as our own.
+            rest.push(...argv.slice(index));
+            break;
+        }
         if (arg === '--no-color') {
             options.color = false;
         } else if (arg === '--color') {

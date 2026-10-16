@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createLogger, getLogger, setLogConfig, setLogOverrides } from '../src/index.js';
+import {
+    createLogger,
+    getLogger,
+    isLogLevel,
+    normalizeLogLevel,
+    setLogConfig,
+    setLogOverrides,
+} from '../src/index.js';
 
 /** Capture stdout/stderr into arrays for the duration of a test. */
 function capture() {
@@ -71,5 +78,11 @@ describe('logger', () => {
     it('falls back to info for an unknown level', () => {
         setLogConfig({ level: 'nonsense' as never });
         expect(getLogger().level).toBe('info');
+    });
+
+    it('rejects inherited object keys as levels', () => {
+        expect(isLogLevel('toString')).toBe(false);
+        expect(isLogLevel('constructor')).toBe(false);
+        expect(normalizeLogLevel('toString')).toBe('info');
     });
 });

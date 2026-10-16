@@ -311,10 +311,10 @@ export function templateCommands(): ToolingCommand[] {
                     );
                 }
                 const tokens = {
+                    ...context.config.project,
                     name:
                         (opts.name as string | undefined) ?? context.config.project?.name ?? 'app',
                     ...(opts.scope ? { scope: opts.scope as string } : {}),
-                    ...context.config.project,
                 };
                 const variables = parseVars(opts.var as string[] | undefined);
                 const result = await scaffoldTemplate(template, { cwd: out, tokens, variables });

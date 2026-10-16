@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { builtinCommands, createCli, withDefaultVite } from '../src/cli/index.js';
+import {
+    builtinCommands,
+    createCli,
+    extractLogOptions,
+    withDefaultVite,
+} from '../src/cli/index.js';
 import {
     applyReplacementsDeep,
     camelCase,
@@ -9,6 +14,7 @@ import {
     pascalCase,
     sort,
 } from '../src/index.js';
+import { defaultSyncTasks } from '../src/sync.js';
 
 describe('root API re-exports', () => {
     it('exposes shared helpers from the root', () => {
@@ -76,5 +82,33 @@ describe('default Vite+ command', () => {
         expect(withDefaultVite(argv('not-a-real-command'))).toEqual(argv('not-a-real-command'));
         expect(withDefaultVite(argv('--help'))).toEqual(argv('--help'));
         expect(withDefaultVite(['node', 'dbx'])).toEqual(['node', 'dbx']);
+    });
+});
+
+describe('logger flag pre-scan', () => {
+    const argv = (...args: string[]) => ['node', 'dbx', ...args];
+
+    it('pulls the flags out before or after the subcommand', () => {
+        expect(extractLogOptions(argv('--log-level', 'debug', 'sync'))).toEqual({
+            argv: ['node', 'dbx', 'sync'],
+            options: { level: 'debug' },
+        });
+        expect(extractLogOptions(argv('sync', '--no-color', '--log-level=warn'))).toEqual({
+            argv: ['node', 'dbx', 'sync'],
+            options: { level: 'warn', color: false },
+        });
+    });
+
+    it('leaves everything after `--` untouched', () => {
+        expect(extractLogOptions(argv('run', '--', '--color', '--log-level=debug'))).toEqual({
+            argv: ['node', 'dbx', 'run', '--', '--color', '--log-level=debug'],
+            options: {},
+        });
+    });
+});
+
+describe('default sync tasks', () => {
+    it('includes the Vite+ sync task', () => {
+        expect(defaultSyncTasks().map(task => task.name)).toContain('vite');
     });
 });
