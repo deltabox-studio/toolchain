@@ -1,14 +1,19 @@
 # Changelog
 
-## 1.1.23 (October 2026)
+## 1.1.24 (October 2026)
 
 <!-- release:start -->
 
 ### Documentation
-- Using different logo for the hero ([#552172d](https://github.com/deltabox-studio/toolchain/commit/552172d) by [T0chi](https://github.com/T0chi))
+- Update features ([#071006e](https://github.com/deltabox-studio/toolchain/commit/071006e) by [T0chi](https://github.com/T0chi))
 
 <!-- release:end -->
 
+
+## 1.1.23 (October 2026)
+
+### Documentation
+- Using different logo for the hero ([#552172d](https://github.com/deltabox-studio/toolchain/commit/552172d) by [T0chi](https://github.com/T0chi))
 
 ## 1.1.22 (October 2026)
 
