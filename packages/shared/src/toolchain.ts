@@ -109,8 +109,12 @@ export function sectionEnabled(
     return section.enabled !== false;
 }
 
-/** The options object for a section (`undefined` when it is a boolean/absent). */
-export function sectionConfig<T extends { enabled?: boolean }>(
+/**
+ * The options object for a section (`undefined` when it is a boolean/absent).
+ * Not every section declares `enabled` (eg. `providers`), so the constraint is
+ * any object rather than `{ enabled?: boolean }`.
+ */
+export function sectionConfig<T extends object>(
     section: ToolingSection<T> | undefined
 ): T | undefined {
     return section !== undefined && typeof section === 'object' ? section : undefined;

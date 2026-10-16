@@ -6,7 +6,7 @@
  * first-class `dbx vite:<name>` alias for discoverability + the editor.
  */
 
-import type { ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, sectionConfig, type ToolingCommand } from '@deltabox/toolchain-shared';
 
 import { VP_COMMANDS, viteCommandName } from '../commands.js';
 import { runVp } from '../vp.js';
@@ -29,7 +29,12 @@ function passthroughCommand(name: string, description: string, leading: string[]
         run: async (opts, context) => {
             const raw = (opts.args as string[] | undefined) ?? [];
             const cwd = (opts.cwd as string | undefined) ?? context.cwd;
-            const result = await runVp([...leading, ...raw], { cwd });
+            // Provider colour follows the logger (so `--no-color` turns it off)
+            // unless the `providers` section opts out even on a colour terminal.
+            const color =
+                logger.colors.isColorSupported &&
+                sectionConfig(context.config.providers)?.color !== false;
+            const result = await runVp([...leading, ...raw], { cwd, color });
             if (result.code !== 0) process.exitCode = result.code;
         },
     };

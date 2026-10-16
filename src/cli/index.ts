@@ -18,8 +18,10 @@ import { migrateCommands } from '@deltabox/toolchain-migrate/cli';
 import { projectCommands } from '@deltabox/toolchain-project/cli';
 import {
     LOG_LEVELS,
+    logger,
     normalizeLogLevel,
     setLogOverrides,
+    stripAnsi,
     type LoggerOptions,
     type ToolingCommand,
 } from '@deltabox/toolchain-shared';
@@ -30,7 +32,7 @@ import { resolveVpCommand, viteCommands } from '@deltabox/toolchain-vite/cli';
 
 import rootPkg from '../../package.json' with { type: 'json' };
 import { syncCommands } from './commands/index.js';
-import { registerToolingCommands } from './register.js';
+import { isPassthroughCommand, registerToolingCommands } from './register.js';
 import { runUpdateCheck } from './update-check.js';
 
 export { registerToolingCommands } from './register.js';
@@ -122,9 +124,34 @@ export function extractUpdateCheck(argv: string[]): { argv: string[]; updateChec
     return { argv: rest, updateCheck };
 }
 
-/** Build the `dbx` commander program. */
+/**
+ * Build the `dbx` commander program.
+ *
+ * Commander's own help/error output is routed through the shared logger so it
+ * honours the same colour settings and sink as everything else. A provider
+ * passthrough (`vite:*`) is the exception: it keeps commander's default output
+ * so the spawned `vp` process keeps its own coloured logging.
+ */
 export function createCli(): Command {
     const program = new Command();
+    // Capture commander's defaults before overriding them (used for passthrough).
+    const defaults = program.configureOutput();
+    program.configureOutput({
+        writeOut: text =>
+            isPassthroughCommand() ? defaults.writeOut?.(text) : logger.write('out', text),
+        writeErr: text =>
+            isPassthroughCommand() ? defaults.writeErr?.(text) : logger.write('err', text),
+        getOutHasColors: () =>
+            isPassthroughCommand()
+                ? (defaults.getOutHasColors?.() ?? false)
+                : logger.colors.isColorSupported,
+        getErrHasColors: () =>
+            isPassthroughCommand()
+                ? (defaults.getErrHasColors?.() ?? false)
+                : logger.colors.isColorSupported,
+        stripColor: text =>
+            isPassthroughCommand() ? (defaults.stripColor?.(text) ?? text) : stripAnsi(text),
+    });
     program
         .name('dbx')
         .description('All-in-one project toolchain: configs, tsconfigs, changelogs, scaffolding.')

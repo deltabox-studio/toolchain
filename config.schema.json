@@ -86,6 +86,16 @@
                             "$ref": "#/$defs/ToolingLoggerConfig"
                         }
                     ]
+                },
+                "providers": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolingProvidersConfig"
+                        }
+                    ]
                 }
             },
             "additionalProperties": false
@@ -599,6 +609,16 @@
                 "name": {
                     "type": "string",
                     "description": "Prefix non-indented lines with `<name>:` (default `dbx`)."
+                }
+            },
+            "additionalProperties": false
+        },
+        "ToolingProvidersConfig": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "boolean",
+                    "description": "Force provider command colours on/off (default: inherit the logger)."
                 }
             },
             "additionalProperties": false

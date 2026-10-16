@@ -194,6 +194,11 @@ export interface ToolingLoggerConfig {
     name?: string;
 }
 
+export interface ToolingProvidersConfig {
+    /** Force provider command colours on/off (default: inherit the logger). */
+    color?: boolean;
+}
+
 export interface ToolingConfigSections {
     project?: ToolingProjectConfig;
     changelog?: boolean | ToolingChangelogConfig;
@@ -203,6 +208,7 @@ export interface ToolingConfigSections {
     vite?: boolean | ToolingViteConfig;
     watch?: boolean | ToolingWatchConfig;
     logger?: boolean | ToolingLoggerConfig;
+    providers?: boolean | ToolingProvidersConfig;
 }
 
 export interface DbxConfigSections {

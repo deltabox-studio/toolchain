@@ -13,12 +13,31 @@ import { loadContext } from './context.js';
 import { optionKeys } from './options.js';
 
 /**
+ * Whether commander is currently dispatching a provider passthrough command
+ * (eg. `vite:*`). The CLI consults this from its `configureOutput` hooks so a
+ * passthrough keeps commander's default output (the spawned provider keeps its
+ * own colours) instead of being funnelled through the shared logger.
+ */
+let passthroughCommand = false;
+
+/** Whether the command commander is handling is a provider passthrough. */
+export function isPassthroughCommand(): boolean {
+    return passthroughCommand;
+}
+
+/**
  * Register {@link ToolingCommand} descriptors on a commander program. Before a
  * command runs, the consumer's `dbx.config.*` is loaded (once per cwd)
  * and passed as context. Only flags the user *explicitly typed* are forwarded,
  * so config-derived defaults win unless overridden on the CLI.
  */
 export function registerToolingCommands(program: Command, commands: ToolingCommand[]): Command {
+    const passthroughNames = new Set(
+        commands.filter(command => command.passthrough).map(command => command.name)
+    );
+    program.hook('preSubcommand', (_parent, subcommand) => {
+        passthroughCommand = passthroughNames.has(subcommand.name());
+    });
     for (const cmd of commands) {
         const instance = program.command(cmd.name).description(cmd.description);
         if (cmd.passthrough) {
@@ -59,29 +78,22 @@ export function registerToolingCommands(program: Command, commands: ToolingComma
             }
             const cwd = (provided.cwd as string | undefined) ?? process.cwd();
             try {
-                if (cmd.passthrough) {
-                    // A passthrough wraps an external binary: no config needed.
-                    await cmd.run(provided, {
-                        cwd,
-                        projectType: 'project',
-                        config: {},
-                        tokens: {},
-                    });
-                } else {
-                    const loaded = await loadContext(cwd);
-                    setLogConfig(loaded.config.logger);
-                    if (provided.quiet === true) {
-                        setLogOverrides({ ...getLogOverrides(), level: 'error' });
-                    }
-                    const context: ToolingCommandContext = {
-                        cwd,
-                        projectType: loaded.projectType,
-                        config: loaded.config,
-                        tokens: loaded.tokens,
-                        ...(loaded.path ? { configPath: loaded.path } : {}),
-                    };
-                    await cmd.run(provided, context);
+                // Load the config for every command (a passthrough reads the
+                // `providers` section to decide whether the wrapped binary may
+                // colour its output).
+                const loaded = await loadContext(cwd);
+                setLogConfig(loaded.config.logger);
+                if (provided.quiet === true) {
+                    setLogOverrides({ ...getLogOverrides(), level: 'error' });
                 }
+                const context: ToolingCommandContext = {
+                    cwd,
+                    projectType: loaded.projectType,
+                    config: loaded.config,
+                    tokens: loaded.tokens,
+                    ...(loaded.path ? { configPath: loaded.path } : {}),
+                };
+                await cmd.run(provided, context);
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
                 logger.error(message);

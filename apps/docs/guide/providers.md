@@ -38,6 +38,24 @@ flags are reachable. A bare `dbx <command>` whose name is a Vite+ command (or a
 Vite+ alias) is forwarded too, so `dbx fmt` / `dbx run -r build` need no `vite`
 namespace — built-in commands win (`dbx migrate` stays the toolchain's).
 
+### Colour
+
+Provider output keeps `vp`'s own colours, but follows the logger's colour state.
+The global `--no-color` flag turns provider colour off, and the `providers`
+section can opt out on its own even on a colour terminal:
+
+```ts
+export default defineConfig({
+    toolchain: {
+        providers: { color: false },
+    },
+});
+```
+
+When colour is off, `dbx` runs `vp` with `NO_COLOR=1` and `FORCE_COLOR=0` so the
+wrapped process emits plain output. Leave the section unset to let `vp` detect
+colour from its own terminal.
+
 ### Named commands
 
 Every catalogued subcommand is also available as a first-class command for

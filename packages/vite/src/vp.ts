@@ -80,6 +80,12 @@ export interface RunVpOptions {
     mode?: 'inherit' | 'capture';
     /** Extra environment variables. */
     env?: NodeJS.ProcessEnv;
+    /**
+     * Whether the child may colour its output. `false` sets `NO_COLOR=1` and
+     * `FORCE_COLOR=0` in the child env so Vite+ emits no colour; `true`/
+     * `undefined` leaves detection to the child.
+     */
+    color?: boolean;
 }
 
 export interface VpResult {
@@ -99,12 +105,17 @@ export function runVp(args: string[], options: RunVpOptions = {}): Promise<VpRes
     const cwd = options.cwd ?? process.cwd();
     const resolved = resolveVp(cwd);
     const capture = options.mode === 'capture';
+    const env: NodeJS.ProcessEnv = { ...process.env, ...options.env };
+    if (options.color === false) {
+        env.NO_COLOR = '1';
+        env.FORCE_COLOR = '0';
+    }
     return new Promise<VpResult>(resolve => {
         let stdout = '';
         let stderr = '';
         const child = spawnCross(resolved.exe, [...resolved.args, ...args], {
             cwd,
-            env: { ...process.env, ...options.env },
+            env,
             stdio: capture ? 'pipe' : 'inherit',
         });
         child.stdout?.on('data', chunk => {

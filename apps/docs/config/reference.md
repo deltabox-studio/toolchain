@@ -295,6 +295,16 @@ Force colours on/off (default: auto).
 
 Prefix non-indented lines with `<name>:` (default `dbx`).
 
+## `providers`
+
+Provider command behaviour (eg. colour for the provider passthrough commands).
+
+### `color`
+
+- **Type**: `boolean`
+
+Force provider command colours on/off (default: inherit the logger).
+
 ## Full example
 
 ```ts

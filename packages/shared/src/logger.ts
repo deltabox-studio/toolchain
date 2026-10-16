@@ -17,6 +17,9 @@ import pc from 'picocolors';
 /** Ordered from most to least verbose. */
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'silent';
 
+/** A raw output channel: `out` is stdout, `err` is stderr. */
+export type LogChannel = 'out' | 'err';
+
 /** A `picocolors` color set (color-aware). */
 export type Colors = ReturnType<typeof pc.createColors>;
 
@@ -44,6 +47,10 @@ export interface Logger {
     readonly colors: Colors;
     /** Machine-readable output: raw to stdout, no prefix, no color. */
     raw(message?: string): void;
+    /** Raw output to stderr, no prefix, no color. */
+    rawError(message?: string): void;
+    /** Write `text` verbatim to a channel (no prefix, no color, no added newline). */
+    write(channel: LogChannel, text: string): void;
     debug(message?: string): void;
     info(message?: string): void;
     success(message?: string): void;
@@ -59,6 +66,16 @@ export function isLogLevel(value: unknown): value is LogLevel {
 /** Coerce a possibly-invalid level to a known one (default `info`). */
 export function normalizeLogLevel(value: unknown, fallback: LogLevel = 'info'): LogLevel {
     return isLogLevel(value) ? value : fallback;
+}
+
+/**
+ * Strip ANSI SGR escape codes from `text`. Used to keep commander's help/error
+ * output plain when the logger's colours are disabled (`--no-color` or
+ * `logger.color: false`).
+ */
+export function stripAnsi(text: string): string {
+    // eslint-disable-next-line no-control-regex
+    return text.replace(/\x1b\[[0-9;]*m/g, '');
 }
 
 /** Create a logger with the given options. */
@@ -79,11 +96,17 @@ export function createLogger(options: LoggerOptions = {}): Logger {
     const err = (text: string): void => {
         process.stderr.write(`${text}\n`);
     };
+    const write = (channel: LogChannel, text: string): void => {
+        if (channel === 'err') process.stderr.write(text);
+        else process.stdout.write(text);
+    };
 
     return {
         level,
         colors,
         raw: (message = '') => out(message),
+        rawError: (message = '') => err(message),
+        write,
         debug: (message = '') => {
             if (threshold <= LEVELS.debug) out(line(message, colors.dim));
         },
@@ -163,6 +186,8 @@ export const logger: Logger = {
         return active.colors;
     },
     raw: (message = '') => active.raw(message),
+    rawError: (message = '') => active.rawError(message),
+    write: (channel, text) => active.write(channel, text),
     debug: (message = '') => active.debug(message),
     info: (message = '') => active.info(message),
     success: (message = '') => active.success(message),

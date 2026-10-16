@@ -190,6 +190,16 @@ export const loggerConfigSchema = z
     })
     .meta({ id: 'ToolingLoggerConfig' });
 
+/** Provider command behaviour (colour of the provider passthrough commands). */
+export const providersConfigSchema = z
+    .object({
+        color: z
+            .boolean()
+            .describe('Force provider command colours on/off (default: inherit the logger).')
+            .optional(),
+    })
+    .meta({ id: 'ToolingProvidersConfig' });
+
 /** Where a template source is loaded from. */
 export const templateSourceTypeSchema = z
     .enum(['builtin', 'local', 'npm', 'git', 'vite-plus'])
@@ -278,6 +288,7 @@ export const toolingConfigSchema = z
         vite: section(viteConfigSchema).optional(),
         watch: section(watchConfigSchema).optional(),
         logger: section(loggerConfigSchema).optional(),
+        providers: section(providersConfigSchema).optional(),
     })
     .meta({ id: 'ToolingConfigSections' });
 
@@ -311,6 +322,7 @@ export const CONFIG_TYPE_SCHEMAS = {
     ToolingTemplatesConfig: templatesConfigSchema,
     ToolingViteConfig: viteConfigSchema,
     ToolingLoggerConfig: loggerConfigSchema,
+    ToolingProvidersConfig: providersConfigSchema,
     ToolingConfigSections: toolingConfigSchema,
     DbxConfigSections: dbxConfigSchema,
 } as const;
@@ -325,6 +337,7 @@ export const CONFIG_SECTION_SCHEMAS = {
     vite: viteConfigSchema,
     watch: watchConfigSchema,
     logger: loggerConfigSchema,
+    providers: providersConfigSchema,
 } as const;
 
 /** One-line descriptions for the generated docs index. */
@@ -337,4 +350,5 @@ export const CONFIG_SECTION_DESCRIPTIONS: Record<keyof typeof CONFIG_SECTION_SCH
     vite: 'Vite+ configuration (manages `vite.config.ts` + the `vite:*` commands).',
     watch: 'Watch behaviour for `dbx watch`.',
     logger: 'Logging level, colours and prefix for toolchain output.',
+    providers: 'Provider command behaviour (eg. colour for the provider passthrough commands).',
 };

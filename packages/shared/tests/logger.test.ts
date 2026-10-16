@@ -7,6 +7,7 @@ import {
     normalizeLogLevel,
     setLogConfig,
     setLogOverrides,
+    stripAnsi,
 } from '../src/index.js';
 
 /** Capture stdout/stderr into arrays for the duration of a test. */
@@ -65,6 +66,25 @@ describe('logger', () => {
         const log = createLogger({ name: 'dbx', color: false });
         log.raw('{"a":1}');
         expect(cap.out).toEqual(['{"a":1}\n']);
+    });
+
+    it('writes raw errors to stderr without a prefix', () => {
+        const log = createLogger({ name: 'dbx', color: false });
+        log.rawError('boom');
+        expect(cap.out).toEqual([]);
+        expect(cap.err).toEqual(['boom\n']);
+    });
+
+    it('writes verbatim text to a channel without adding a newline', () => {
+        const log = createLogger({ name: 'dbx', color: false });
+        log.write('out', 'help\n');
+        log.write('err', 'error\n');
+        expect(cap.out).toEqual(['help\n']);
+        expect(cap.err).toEqual(['error\n']);
+    });
+
+    it('strips ANSI escape codes', () => {
+        expect(stripAnsi('\u001b[31mred\u001b[39m plain')).toBe('red plain');
     });
 
     it('lets CLI overrides win over the config', () => {
