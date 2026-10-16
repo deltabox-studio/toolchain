@@ -17,18 +17,18 @@ See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
 ## Table of contents
 
 - [deltabox toolchain](#deltabox-toolchain)
-    - [Table of contents](#table-of-contents)
-    - [Features](#features)
-    - [Install](#install)
-    - [Quickstart](#quickstart)
-    - [Config generator](#config-generator)
-    - [Vite / Vite+ plugin](#vite--vite-plugin)
-    - [CLI](#cli)
-    - [Programmatic API](#programmatic-api)
-    - [VS Code extension](#vs-code-extension)
-    - [Development](#development)
-    - [Docs](#docs)
-    - [License](#license)
+  - [Table of contents](#table-of-contents)
+  - [Features](#features)
+  - [Install](#install)
+  - [Quickstart](#quickstart)
+  - [Config generator](#config-generator)
+  - [Vite / Vite+ plugin](#vite--vite-plugin)
+  - [CLI](#cli)
+  - [Programmatic API](#programmatic-api)
+  - [VS Code extension](#vs-code-extension)
+  - [Development](#development)
+  - [Docs](#docs)
+  - [License](#license)
 
 ## Features
 
@@ -192,6 +192,11 @@ await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, p
 ## VS Code extension
 
 A VS Code extension is available for `deltabox toolchain`.
+
+<div align="center">
+  <img src="./apps/docs/public/vscode-img-1.png" width="250" />
+  <img src="./apps/docs/public/vscode-img-2.png" width="250" />
+</div>
 
 Follow the steps below to use it. Will be published to the marketplace in the future.
 
