@@ -17,18 +17,18 @@ See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
 ## Table of contents
 
 - [deltabox toolchain](#deltabox-toolchain)
-  - [Table of contents](#table-of-contents)
-  - [Features](#features)
-  - [Install](#install)
-  - [Quickstart](#quickstart)
-  - [Config generator](#config-generator)
-  - [Vite / Vite+ plugin](#vite--vite-plugin)
-  - [CLI](#cli)
-  - [Programmatic API](#programmatic-api)
-  - [VS Code extension](#vs-code-extension)
-  - [Development](#development)
-  - [Docs](#docs)
-  - [License](#license)
+    - [Table of contents](#table-of-contents)
+    - [Features](#features)
+    - [Install](#install)
+    - [Quickstart](#quickstart)
+    - [Config generator](#config-generator)
+    - [Vite / Vite+ plugin](#vite--vite-plugin)
+    - [CLI](#cli)
+    - [Programmatic API](#programmatic-api)
+    - [VS Code extension](#vs-code-extension)
+    - [Development](#development)
+    - [Docs](#docs)
+    - [License](#license)
 
 ## Features
 
