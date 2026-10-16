@@ -48,6 +48,19 @@ dbx sync --recursive  # every discovered project, in dependency order
 dbx watch             # re-sync on change
 ```
 
+The generated state lives under `.dbx/`. Add it to `.gitignore`, keeping only
+the manifest (it holds no absolute paths):
+
+```gitignore
+.dbx/*
+!.dbx/toolchain
+.dbx/toolchain/*
+!.dbx/toolchain/manifest.json
+```
+
+`dbx sync` adds this block to an existing `.gitignore` automatically, so you only
+need to add it by hand when the repo has no `.gitignore` yet.
+
 ## What gets managed
 
 | Area                                                                | Section in the config |

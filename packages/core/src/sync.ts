@@ -11,6 +11,7 @@ import {
     type ToolingConfig,
 } from '@deltabox/toolchain-shared';
 
+import { ensureDbxGitignore } from './gitignore.js';
 import { readManifest, writeManifest } from './manifest.js';
 import { resolveProjectType } from './project-type.js';
 
@@ -137,6 +138,7 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
         fs.rmSync(path.resolve(cwd, relative), { force: true });
     }
     writeManifest(cwd, [...desired.keys()]);
+    if (ensureDbxGitignore(cwd)) log('  I .gitignore (added the .dbx ignore block)');
 
     log(
         `wrote ${written.length}, removed ${removed.length} file(s)${
