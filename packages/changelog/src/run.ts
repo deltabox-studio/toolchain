@@ -199,8 +199,15 @@ export { renderChangelogEntry } from './utils/version.js';
 /** Alias kept for backwards compatibility. */
 export const main = runChangelog;
 
-// Run only when executed directly (not when imported by tests/tooling).
-if (process.argv[1] && safeRealpath(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Run only when executed directly (not when imported by tests/tooling, and not
+// when this module is inlined into a single-file bundle where `import.meta.url`
+// resolves to the bundle rather than to this file).
+const modulePath = fileURLToPath(import.meta.url);
+if (
+    process.argv[1] &&
+    /[\\/]run\.[cm]?[jt]s$/.test(modulePath) &&
+    safeRealpath(process.argv[1]) === modulePath
+) {
     runChangelog();
 }
 

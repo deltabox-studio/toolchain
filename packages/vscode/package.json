@@ -294,7 +294,7 @@
         }
     },
     "scripts": {
-        "package:vsix": "npx --yes @vscode/vsce package --no-dependencies --out deltabox-toolchain.vsix"
+        "package:vsix": "tsdown --config ../../tsdown.bin.config.ts --config-loader unrun && tsdown --no-clean --config-loader unrun && npx --yes @vscode/vsce package --no-dependencies --out deltabox-toolchain.vsix"
     },
     "devDependencies": {
         "@deltabox/toolchain-tsdown": "workspace:*",

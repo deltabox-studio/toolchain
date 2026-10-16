@@ -2,7 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 
 import { Glob } from 'glob';
@@ -152,8 +152,13 @@ export function runTsconfigCli(argv: string[] = process.argv.slice(2)): void {
     });
 }
 
-// Run only when executed directly.
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+// Run only when executed directly (not when imported by the toolchain, and not
+// when this module is inlined into a single-file bundle where `import.meta.url`
+// resolves to the bundle rather than to this file).
+if (
+    /[\\/]generate[\\/]index\.[cm]?[jt]s$/.test(fileURLToPath(import.meta.url)) &&
+    import.meta.url === pathToFileURL(process.argv[1] ?? '').href
+) {
     try {
         runTsconfigCli();
     } catch (e) {
