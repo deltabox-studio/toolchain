@@ -140,6 +140,29 @@ export default defineConfig({
                                     run: 'npm install -g npm@^11.5.1',
                                 },
                                 {
+                                    // TEMPORARY diagnostic: surface the exact OIDC
+                                    // trusted-publishing failure (the exchange
+                                    // error/claims) instead of npm's misleading
+                                    // E404/E403. Remove once the publish is green.
+                                    name: 'Diagnose OIDC trusted publishing',
+                                    if: "steps.release.outputs.skip == 'false'",
+                                    run: [
+                                        'set -euo pipefail',
+                                        "cat > /tmp/oidc-diag.mjs <<'EOF'",
+                                        'const { fetch } = globalThis;',
+                                        "const url = process.env.ACTIONS_ID_TOKEN_REQUEST_URL + '&audience=npm:registry.npmjs.org';",
+                                        "const tokenRes = await fetch(url, { headers: { Authorization: 'bearer ' + process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN } });",
+                                        'const { value: idToken } = await tokenRes.json();',
+                                        "const payload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64url').toString());",
+                                        "console.log('OIDC claims:', JSON.stringify({ repository: payload.repository, repository_owner: payload.repository_owner, workflow_ref: payload.workflow_ref, job_workflow_ref: payload.job_workflow_ref, environment: payload.environment, ref: payload.ref, event_name: payload.event_name }, null, 2));",
+                                        "const res = await fetch('https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/@deltabox%2ftoolchain', { method: 'POST', headers: { Authorization: 'Bearer ' + idToken } });",
+                                        "if (res.ok) { const body = await res.json(); console.log('exchange OK; token ' + (body && body.token ? 'present' : 'missing')); }",
+                                        "else { console.log('exchange status:', res.status); console.log('exchange body:', await res.text()); }",
+                                        'EOF',
+                                        'node /tmp/oidc-diag.mjs',
+                                    ].join('\n'),
+                                },
+                                {
                                     // Trusted publishing (OIDC) is the primary path:
                                     // npm exchanges the GitHub OIDC token for a
                                     // short-lived registry token and adds provenance
