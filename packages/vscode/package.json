@@ -161,14 +161,14 @@
                     "contextualTitle": "deltabox toolchain"
                 },
                 {
-                    "id": "deltabox.files",
-                    "name": "Files",
-                    "contextualTitle": "deltabox files"
-                },
-                {
                     "id": "deltabox.projects",
                     "name": "Projects",
                     "contextualTitle": "deltabox projects"
+                },
+                {
+                    "id": "deltabox.files",
+                    "name": "Managed Files",
+                    "contextualTitle": "deltabox managed files"
                 }
             ]
         },
