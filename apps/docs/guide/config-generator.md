@@ -113,7 +113,7 @@ const commands = configCommands({
 
 ## 5. Load the config at runtime
 
-Generation is only half of it — the same schema backs a small, dependency-free
+Generation is only half of it. The same schema backs a small, dependency-free
 **loader**. `parseEnvTree` folds `PREFIX_*` variables into a nested tree
 (splitting the remainder on `_`), and the typed accessors read dotted paths out
 of it:
@@ -175,9 +175,7 @@ export function loadConfig(env = process.env, file = {}, cli = {}) {
 ```
 
 A resolver like this is the runtime counterpart of the generators — same schema,
-same defaults, one typed object out. (Proxified's `loadServerConfig` is exactly
-this shape: parse the tree, read typed values, merge overrides, and validate —
-returning a fully-typed `ResolvedServerConfig`.)
+same defaults, one typed object out.
 
 > The dotted path is the env name with the prefix removed and `_` folded to `.`,
 > so `MYAPP_AUTH_TOKEN_TTL` reads as `auth.token.ttl`. When a field name differs
@@ -244,7 +242,7 @@ await engine.writeJsonSchema({ output: 'config.schema.json' });
 For a full, real example of the generated config types, see
 `packages/shared/src/config-types.ts`.
 
-## Real-world shape (Proxified)
+## Real-world shape
 
 Proxified binds three scopes under a `PROXIFIED_` prefix and reuses the engine
 for every generator:
