@@ -1,14 +1,26 @@
 # Changelog
 
-## 1.2.4 (October 2026)
+## 1.2.5 (October 2026)
 
 <!-- release:start -->
 
-### Documentation
-- Update documentation ([#3880aaa](https://github.com/deltabox-studio/toolchain/commit/3880aaa) by [T0chi](https://github.com/T0chi))
+### Bug fixes
+#### Changelog
+- Keep generated commitlint enums expanded ([#a6ad600](https://github.com/deltabox-studio/toolchain/commit/a6ad600) by [T0chi](https://github.com/T0chi))
+  - Oxfmt collapses an array onto one line when it fits the print width, so a
+    generated `commitlint.config.mjs` whose type/scope enum is short was
+    reformatted by `vp fmt` and then failed `dbx sync --check`. An inert leading
+    line comment inside each enum keeps the list expanded regardless of the
+    consumer's print width, so the generated file is now Oxfmt-idempotent and
+    consumers no longer need to exclude it from formatting.
 
 <!-- release:end -->
 
+
+## 1.2.4 (October 2026)
+
+### Documentation
+- Update documentation ([#3880aaa](https://github.com/deltabox-studio/toolchain/commit/3880aaa) by [T0chi](https://github.com/T0chi))
 
 ## 1.2.3 (October 2026)
 
