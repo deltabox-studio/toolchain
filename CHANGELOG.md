@@ -1,8 +1,21 @@
 # Changelog
 
-## 1.1.18 (October 2026)
+## 1.1.19 (October 2026)
 
 <!-- release:start -->
+
+### Chores
+#### Ci
+- Add a temporary OIDC diagnostic to the release workflow ([#7b42e33](https://github.com/deltabox-studio/toolchain/commit/7b42e33) by [T0chi](https://github.com/T0chi))
+  - The publish still fails after binding the environment, and npm falls back to
+    the (automation) token and 403s. Add a temporary step that decodes the OIDC
+    claims and calls the token-exchange endpoint directly so the exact
+    trusted-publisher mismatch is visible in the log. Removed once fixed.
+
+<!-- release:end -->
+
+
+## 1.1.18 (October 2026)
 
 ### Bug fixes
 #### Ci
@@ -27,9 +40,6 @@
     captureCli/runCli no longer reject on a spawn failure. Also fix cliInvocation
     for the integrated terminal: process.execPath is the VS Code binary in the
     extension host, so it now uses `npx dbx` / `npx --yes @deltabox/toolchain`.
-
-<!-- release:end -->
-
 
 ## 1.1.17 (October 2026)
 
