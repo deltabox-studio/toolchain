@@ -163,19 +163,24 @@ export default defineConfig({
                                     ].join('\n'),
                                 },
                                 {
-                                    // Default to **staged** publishing for OIDC: `npm
-                                    // stage publish` always stages the version and
-                                    // defers the maintainer's 2FA approval, and is
-                                    // always permitted for a trusted publisher (unlike
-                                    // direct `npm publish`). npm exchanges the GitHub
-                                    // OIDC token for a short-lived registry token and
-                                    // adds provenance automatically. `yarn pack`
-                                    // resolves `catalog:`/`workspace:` first.
-                                    name: 'Stage the npm release',
+                                    // Try a direct publish first; if the trusted
+                                    // publisher isn't allowed to `npm publish`, fall
+                                    // back to a **staged** publish (which is always
+                                    // permitted for a trusted publisher and defers
+                                    // the maintainer's 2FA approval). npm exchanges
+                                    // the GitHub OIDC token for a short-lived registry
+                                    // token and adds provenance automatically. `yarn
+                                    // pack` resolves `catalog:`/`workspace:` first.
+                                    name: 'Publish to npm (fallback: staged)',
                                     if: "steps.release.outputs.skip == 'false'",
                                     run: [
                                         '{{packageManager}} pack --out toolchain.tgz',
-                                        'npm stage publish toolchain.tgz --access public',
+                                        'if npm publish toolchain.tgz --access public; then',
+                                        '  echo "Published to npm."',
+                                        'else',
+                                        '  echo "::warning::Direct publish failed; falling back to a staged publish."',
+                                        '  npm stage publish toolchain.tgz --access public',
+                                        'fi',
                                     ].join('\n'),
                                 },
                                 {

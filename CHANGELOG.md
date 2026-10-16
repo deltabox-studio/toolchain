@@ -1,8 +1,25 @@
 # Changelog
 
-## 1.1.20 (October 2026)
+## 1.1.21 (October 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Ci
+- Publish to npm directly, falling back to a staged publish ([#85cffe7](https://github.com/deltabox-studio/toolchain/commit/85cffe7) by [T0chi](https://github.com/T0chi))
+  - Try `npm publish` first and fall back to `npm stage publish` on failure, so
+    toggling the trusted publisher's publish/stage permissions on npm never breaks
+    the release: a direct publish succeeds when allowed, and a staged publish (always
+    permitted) is used otherwise.
+### Documentation
+- Show the published npm version in the README badge ([#5f83ca2](https://github.com/deltabox-studio/toolchain/commit/5f83ca2) by [T0chi](https://github.com/T0chi))
+  - Replace the static npm-name badge with a shields.io npm/v badge so the README
+    shows the currently published version.
+
+<!-- release:end -->
+
+
+## 1.1.20 (October 2026)
 
 ### Bug fixes
 #### Ci
@@ -12,9 +29,6 @@
     for a trusted publisher (unlike direct `npm publish`, which the package's 2FA
     policy rejects). Drop the automation-token fallback and require npm >= 11.15.1
     (the first with `npm stage`).
-
-<!-- release:end -->
-
 
 ## 1.1.19 (October 2026)
 

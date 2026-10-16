@@ -82,11 +82,16 @@ jobs:
           else { console.log('exchange status:', res.status); console.log('exchange body:', await res.text()); }
           EOF
           node /tmp/oidc-diag.mjs
-      - name: Stage the npm release
+      - name: "Publish to npm (fallback: staged)"
         if: steps.release.outputs.skip == 'false'
         run: |
           yarn pack --out toolchain.tgz
-          npm stage publish toolchain.tgz --access public
+          if npm publish toolchain.tgz --access public; then
+            echo "Published to npm."
+          else
+            echo "::warning::Direct publish failed; falling back to a staged publish."
+            npm stage publish toolchain.tgz --access public
+          fi
       - name: Publish to the VS Code Marketplace
         if: steps.release.outputs.skip == 'false'
         env:
