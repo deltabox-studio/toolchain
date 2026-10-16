@@ -131,13 +131,13 @@ export default defineConfig({
                                     ].join('\n'),
                                 },
                                 {
-                                    // Trusted publishing (OIDC) needs npm >= 11.5.1,
-                                    // but Node 22 bundles npm 10 — without the
-                                    // upgrade `npm publish` silently falls back to
-                                    // token auth and fails with a misleading 404.
+                                    // Trusted publishing (OIDC) needs npm >= 11.5.1
+                                    // (and >= 11.15.0 for `npm stage`), but Node 22
+                                    // bundles npm 10 — without the upgrade the publish
+                                    // silently falls back to token auth and fails.
                                     name: 'Upgrade npm for trusted publishing',
                                     if: "steps.release.outputs.skip == 'false'",
-                                    run: 'npm install -g npm@^11.5.1',
+                                    run: 'npm install -g npm@^11.15.1',
                                 },
                                 {
                                     // TEMPORARY diagnostic: surface the exact OIDC
@@ -163,21 +163,19 @@ export default defineConfig({
                                     ].join('\n'),
                                 },
                                 {
-                                    // Trusted publishing (OIDC) is the primary path:
-                                    // npm exchanges the GitHub OIDC token for a
-                                    // short-lived registry token and adds provenance
-                                    // automatically. `NODE_AUTH_TOKEN` (the
-                                    // environment's `NPM_TOKEN`) is only a fallback
-                                    // used when the OIDC exchange fails — it is
-                                    // optional and may be absent, so never rely on
-                                    // it. `yarn pack` resolves `catalog:`/`workspace:`
-                                    // before `npm publish`.
-                                    name: 'Publish to npm',
+                                    // Default to **staged** publishing for OIDC: `npm
+                                    // stage publish` always stages the version and
+                                    // defers the maintainer's 2FA approval, and is
+                                    // always permitted for a trusted publisher (unlike
+                                    // direct `npm publish`). npm exchanges the GitHub
+                                    // OIDC token for a short-lived registry token and
+                                    // adds provenance automatically. `yarn pack`
+                                    // resolves `catalog:`/`workspace:` first.
+                                    name: 'Stage the npm release',
                                     if: "steps.release.outputs.skip == 'false'",
-                                    env: { NODE_AUTH_TOKEN: '${{ secrets.NPM_TOKEN }}' },
                                     run: [
                                         '{{packageManager}} pack --out toolchain.tgz',
-                                        'npm publish toolchain.tgz --access public',
+                                        'npm stage publish toolchain.tgz --access public',
                                     ].join('\n'),
                                 },
                                 {
