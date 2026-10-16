@@ -20,7 +20,7 @@ import type { ToolingCommand } from '@deltabox/toolchain-shared';
 import { templateCommands } from '@deltabox/toolchain-template/cli';
 import { tsconfigCommands } from '@deltabox/toolchain-tsconfig/cli';
 import { cleanupCommands } from '@deltabox/toolchain-tsdown/cli';
-import { viteCommands } from '@deltabox/toolchain-vite/cli';
+import { resolveVpCommand, viteCommands } from '@deltabox/toolchain-vite/cli';
 
 import rootPkg from '../../package.json' with { type: 'json' };
 import { syncCommands } from './commands/index.js';
@@ -42,6 +42,28 @@ export function builtinCommands(): ToolingCommand[] {
     ];
 }
 
+/** Every built-in command name (a bare Vite+ command never shadows one). */
+function builtinCommandNames(): Set<string> {
+    return new Set(builtinCommands().map(command => command.name));
+}
+
+/**
+ * Default a bare Vite+ command to the `vite` passthrough: when the first
+ * operand is not a built-in `dbx` command but names a Vite+ subcommand (or one
+ * of its aliases), insert `vite` so `dbx fmt` / `dbx run` / `dbx dev` work
+ * without the explicit namespace. Built-in commands always win (`dbx migrate`
+ * stays the toolchain's migration; use `dbx vite migrate` for Vite+'s).
+ */
+export function withDefaultVite(
+    argv: string[],
+    commandNames: ReadonlySet<string> = builtinCommandNames()
+): string[] {
+    const first = argv[2];
+    if (!first || first.startsWith('-')) return argv;
+    if (commandNames.has(first) || !resolveVpCommand(first)) return argv;
+    return [...argv.slice(0, 2), 'vite', ...argv.slice(2)];
+}
+
 /** Build the `dbx` commander program. */
 export function createCli(): Command {
     const program = new Command();
@@ -56,7 +78,7 @@ export function createCli(): Command {
 
 /** Parse and run the CLI. */
 export async function runCli(argv: string[] = process.argv): Promise<void> {
-    await createCli().parseAsync(argv);
+    await createCli().parseAsync(withDefaultVite(argv));
 }
 
 /** Whether this module is the process entry point (symlink-safe). */

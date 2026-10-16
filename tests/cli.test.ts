@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { builtinCommands, createCli } from '../src/cli/index.js';
+import { builtinCommands, createCli, withDefaultVite } from '../src/cli/index.js';
 import {
     applyReplacementsDeep,
     camelCase,
@@ -49,5 +49,32 @@ describe('dbx CLI', () => {
             ])
         );
         expect(program.name()).toBe('dbx');
+    });
+});
+
+describe('default Vite+ command', () => {
+    const argv = (...args: string[]) => ['node', 'dbx', ...args];
+
+    it('inserts `vite` for a bare Vite+ command', () => {
+        expect(withDefaultVite(argv('fmt', '--check'))).toEqual(argv('vite', 'fmt', '--check'));
+        expect(withDefaultVite(argv('lint', '--fix'))).toEqual(argv('vite', 'lint', '--fix'));
+        expect(withDefaultVite(argv('run', '-r', 'build'))).toEqual(
+            argv('vite', 'run', '-r', 'build')
+        );
+    });
+
+    it('defaults a Vite+ alias too', () => {
+        expect(withDefaultVite(argv('i'))).toEqual(argv('vite', 'i'));
+    });
+
+    it('leaves built-in commands, options and unknowns untouched', () => {
+        expect(withDefaultVite(argv('sync', '--check'))).toEqual(argv('sync', '--check'));
+        expect(withDefaultVite(argv('migrate', '--from', 'biome'))).toEqual(
+            argv('migrate', '--from', 'biome')
+        );
+        expect(withDefaultVite(argv('vite', 'dev'))).toEqual(argv('vite', 'dev'));
+        expect(withDefaultVite(argv('not-a-real-command'))).toEqual(argv('not-a-real-command'));
+        expect(withDefaultVite(argv('--help'))).toEqual(argv('--help'));
+        expect(withDefaultVite(['node', 'dbx'])).toEqual(['node', 'dbx']);
     });
 });

@@ -30,13 +30,13 @@ dbx project:init:workspace --name utils --scope @acme --root . --dir packages/ut
 
 ## Tasks
 
-This repo (and Vite+ consumers) use **Vite Task** (`dbx vite run`) instead of
-Turbo. The package graph orders execution via each package's `package.json`
+This repo (and Vite+ consumers) use **Vite Task** (`dbx run`) instead of Turbo.
+The package graph orders execution via each package's `package.json`
 dependencies.
 
 Each package declares `build`, `typecheck` and `test` in its own
-`vite.config.ts` with explicit cache input/output, so `dbx vite run` reports
-cache hits (a `package.json` script cannot carry cache config):
+`vite.config.ts` with explicit cache input/output, so `dbx run` reports cache
+hits (a `package.json` script cannot carry cache config):
 
 ```ts
 // packages/<pkg>/vite.config.ts
@@ -68,12 +68,12 @@ The root `package.json` orchestrates them and adds the umbrella build:
 ```json
 {
     "scripts": {
-        "build": "dbx vite run --filter \"./packages/*\" build && dbx vite run build:root",
-        "test": "dbx vite run --filter \"./packages/*\" test && dbx vite run test:root"
+        "build": "dbx run --filter \"./packages/*\" build && dbx run build:root",
+        "test": "dbx run --filter \"./packages/*\" test && dbx run test:root"
     }
 }
 ```
 
-`dbx vite run --filter "./packages/*" build` runs each package's `build` in
+`dbx run --filter "./packages/*" build` runs each package's `build` in
 dependency order (excluding the root, which avoids recursion), then `build:root`
 builds the umbrella dist.

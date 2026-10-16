@@ -2,10 +2,10 @@
 
 `dbx` writes files, not your `package.json` — but a few scripts are worth
 standardizing, because the toolchain's formatting/linting and task running both
-go through **Vite+**. Instead of invoking `vp` directly, drive it through `dbx`:
-`dbx vite <command>` forwards every operand to the Vite+ CLI, so a project only
-needs one command (`dbx`). This page shows the recommended root scripts and how
-to move an existing Biome + Turbo project onto them.
+go through **Vite+**. Any bare `dbx <command>` that matches a Vite+ command is
+forwarded straight to it (`dbx fmt`, `dbx run -r build`, `dbx dev`), so a project
+only needs the one `dbx` command. This page shows the recommended root scripts
+and how to move an existing Biome + Turbo project onto them.
 
 ## Recommended scripts
 
@@ -14,12 +14,12 @@ The repo root `package.json`:
 ```json
 {
     "scripts": {
-        "format": "dbx vite fmt",
-        "lint": "dbx vite lint --fix",
-        "check": "dbx vite check",
-        "build": "dbx vite run -r build",
-        "typecheck": "dbx vite run -r typecheck",
-        "test": "dbx vite run -r test",
+        "format": "dbx fmt",
+        "lint": "dbx lint --fix",
+        "check": "dbx check",
+        "build": "dbx run -r build",
+        "typecheck": "dbx run -r typecheck",
+        "test": "dbx run -r test",
         "dbx:sync": "dbx sync",
         "dbx:watch": "dbx watch",
         "commitlint": "commitlint",
@@ -37,15 +37,16 @@ The repo root `package.json`:
 
 Notes:
 
-- `dbx vite <command>` is a passthrough to Vite+ (`vp`), so the whole Vite+ CLI
-  is reachable through `dbx` — eg. `dbx vite dev`, `dbx vite run -r build`,
-  `dbx vite add zod`. The named aliases (`dbx vite:build`) are the same thing.
-- `vp` resolves from the **repo root**, so `format`/`lint` live there — keep them
-  out of the individual workspaces.
-- `dbx vite run -r <task>` runs a task in every workspace package in dependency
-  order. A task is either a `package.json` script or a `vite.config.ts`
-  `run.tasks` entry. For long-running processes use
-  `dbx vite run -r --parallel dev`.
+- A bare command that names a Vite+ command is forwarded to Vite+ (`vp`) — eg.
+  `dbx fmt`, `dbx dev`, `dbx run -r build`, `dbx add zod` (Vite+ aliases too).
+  Built-in commands win, so `dbx migrate` is the toolchain's migration — use
+  `dbx vite migrate` for Vite+'s. The explicit `dbx vite <command>` passthrough
+  always works.
+- Vite+ resolves from the **repo root**, so `format`/`lint` live there — keep
+  them out of the individual workspaces.
+- `dbx run -r <task>` runs a task in every workspace package in dependency order.
+  A task is either a `package.json` script or a `vite.config.ts` `run.tasks`
+  entry. For long-running processes use `dbx run -r --parallel dev`.
 - `dbx` is the toolchain binary, so `yarn dbx <cmd>` (eg. `yarn dbx sync`) works
   even without a script; the `dbx:*` aliases are just for discoverability.
 
@@ -84,11 +85,11 @@ Notes:
 
 ### Biome → Ox
 
-| Before                   | After                 |
-| ------------------------ | --------------------- |
-| `biome format --write .` | `dbx vite fmt`        |
-| `biome check --fix .`    | `dbx vite lint --fix` |
-| `biome.json`             | `vite.config.ts`      |
+| Before                   | After            |
+| ------------------------ | ---------------- |
+| `biome format --write .` | `dbx fmt`        |
+| `biome check --fix .`    | `dbx lint --fix` |
+| `biome.json`             | `vite.config.ts` |
 
 Remove `@biomejs/biome`, delete `biome.json`, and drop any per-workspace
 `format`/`lint` scripts.
@@ -97,10 +98,10 @@ Remove `@biomejs/biome`, delete `biome.json`, and drop any per-workspace
 
 | Before            | After                                      |
 | ----------------- | ------------------------------------------ |
-| `turbo build`     | `dbx vite run -r build`                    |
-| `turbo typecheck` | `dbx vite run -r typecheck`                |
-| `turbo test`      | `dbx vite run -r test`                     |
-| `turbo dev`       | `dbx vite run -r --parallel dev`           |
+| `turbo build`     | `dbx run -r build`                         |
+| `turbo typecheck` | `dbx run -r typecheck`                     |
+| `turbo test`      | `dbx run -r test`                          |
+| `turbo dev`       | `dbx run -r --parallel dev`                |
 | `turbo.json`      | (optional) `run.tasks` in `vite.config.ts` |
 
 Remove `turbo` and `turbo.json`. Ordering comes from each package's
@@ -133,4 +134,4 @@ export default defineConfig({
 
 See the [Monorepo guide](/guide/monorepo) for the full task setup,
 [Migrations](/guide/migrations) for the `dbx migrate` reference, and
-[Providers (Vite+)](/guide/providers) for the `dbx vite:*` passthroughs.
+[Providers (Vite+)](/guide/providers) for the `dbx vite` passthrough.

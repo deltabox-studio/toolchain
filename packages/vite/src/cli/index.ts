@@ -11,6 +11,8 @@ import type { ToolingCommand } from '@deltabox/toolchain-shared';
 import { VP_COMMANDS, viteCommandName } from '../commands.js';
 import { runVp } from '../vp.js';
 
+export { resolveVpCommand } from '../commands.js';
+
 /** A leading `--cwd` lets a passthrough target another project root. */
 const CWD_OPTION = {
     flags: '--cwd <dir>',

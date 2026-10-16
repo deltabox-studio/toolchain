@@ -60,16 +60,20 @@ See [Migrations](/guide/migrations).
 
 ## Providers
 
-Every provider subcommand is a passthrough. For Vite+:
+Every provider subcommand is a passthrough. Vite+ commands are reachable both
+directly and through the `vite` namespace:
 
 ```bash
-dbx vite dev            # forwards to `vp dev`
-dbx vite add zod        # forwards to `vp add zod`
+dbx fmt                 # a bare Vite+ command forwards to `vp fmt`
+dbx run -r build        # forwards to `vp run -r build`
+dbx vite dev            # explicit namespace (always works)
 dbx vite:build          # named alias for `vp build`
 ```
 
-The generic `vite` command forwards its operands verbatim to `vp`, so **every**
-Vite+ CLI command and flag is reachable.
+A bare `dbx <command>` is forwarded to Vite+ when the name (or a Vite+ alias)
+matches — built-in commands win, so `dbx migrate` stays the toolchain's
+migration. The `vite` command forwards its operands verbatim, so **every** Vite+
+CLI command and flag is reachable.
 
 ## Config generator
 

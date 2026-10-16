@@ -34,7 +34,9 @@ dbx vite check
 ```
 
 Everything after `vite` is forwarded verbatim to `vp`, so all Vite+ commands and
-flags are reachable.
+flags are reachable. A bare `dbx <command>` whose name is a Vite+ command (or a
+Vite+ alias) is forwarded too, so `dbx fmt` / `dbx run -r build` need no `vite`
+namespace — built-in commands win (`dbx migrate` stays the toolchain's).
 
 ### Named commands
 
