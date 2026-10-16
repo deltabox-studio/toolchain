@@ -1,8 +1,37 @@
 # Changelog
 
-## 1.1.17 (October 2026)
+## 1.1.18 (October 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Ci
+- Bind the release job to the OIDC environment ([#7b8f1b4](https://github.com/deltabox-studio/toolchain/commit/7b8f1b4) by [T0chi](https://github.com/T0chi))
+  - The npm OIDC trusted publisher is bound to the GitHub environment
+    "toolchain / release", but the release job declared no environment. The OIDC
+    environment claim therefore did not match, the token exchange failed, and npm
+    silently fell back to the placeholder token (the misleading E404).
+  - Declare `environment: 'toolchain / release'` on the job and add an optional
+    NODE_AUTH_TOKEN fallback (the environment's NPM_TOKEN) to the publish step.
+    OIDC is still tried first, so the token is never relied on.
+#### Vscode
+- Spawn the CLI safely on Windows ([#99e3ad1](https://github.com/deltabox-studio/toolchain/commit/99e3ad1) by [T0chi](https://github.com/T0chi))
+  - `spawn('npx.cmd', ...)` throws EINVAL synchronously on Windows, and
+    `captureCli`/`runCli` call spawn inside a Promise executor, so the throw
+    rejected the promise and the command aborted with no UI ("nothing happens").
+    This fired whenever the CLI resolved to the npx.cmd fallback (a workspace
+    without a local @deltabox/toolchain), e.g. "From template..." which round-trips
+    template:list --json through captureCli.
+  - Add a pure win-spawn module (ported from the shared spawnCross) that escapes
+    the command + args and runs a .cmd shim through cmd.exe; use it from spawnCli.
+    captureCli/runCli no longer reject on a spawn failure. Also fix cliInvocation
+    for the integrated terminal: process.execPath is the VS Code binary in the
+    extension host, so it now uses `npx dbx` / `npx --yes @deltabox/toolchain`.
+
+<!-- release:end -->
+
+
+## 1.1.17 (October 2026)
 
 ### Bug fixes
 #### Ci
@@ -12,9 +41,6 @@
     registry answered a misleading 404, so every release since 1.0.7 failed
     at the publish step. Add an explicit npm upgrade step before the publish
     step in the generated release workflow.
-
-<!-- release:end -->
-
 
 ## 1.1.16 (October 2026)
 

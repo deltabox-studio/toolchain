@@ -1,9 +1,9 @@
-import { type ChildProcess, spawn } from 'node:child_process';
+import { type ChildProcess } from 'node:child_process';
 import path from 'node:path';
 
 import * as vscode from 'vscode';
 
-import { captureCli, cliInvocation, resolveCliCommand, workspaceRoots } from './cli.js';
+import { captureCli, cliInvocation, spawnCli, workspaceRoots } from './cli.js';
 import { type HomeAction, HomeViewProvider } from './home-view.js';
 import {
     discoverProjectGroups,
@@ -60,19 +60,25 @@ export function activate(context: vscode.ExtensionContext): void {
 
     /** Run `dbx <args>` in `cwd`, streaming output to the channel. */
     const runCli = (cwd: string, args: string[]): Promise<number> => {
-        const resolved = resolveCliCommand(cwd);
-        const fullArgs = [...resolved.args, ...args];
-        output.appendLine(`\n> ${resolved.exe} ${fullArgs.join(' ')}  (${cwd})`);
+        output.appendLine(`\n> ${cliInvocation(cwd)} ${args.join(' ')}  (${cwd})`);
         return new Promise<number>(resolve => {
-            child = spawn(resolved.exe, fullArgs, { cwd });
-            child.stdout?.on('data', d => output.append(d.toString()));
-            child.stderr?.on('data', d => output.append(d.toString()));
-            child.on('error', error => {
+            let proc: ChildProcess;
+            try {
+                proc = spawnCli(cwd, args);
+            } catch (error) {
+                output.appendLine(`dbx: ${String(error)}`);
+                resolve(1);
+                return;
+            }
+            child = proc;
+            proc.stdout?.on('data', d => output.append(d.toString()));
+            proc.stderr?.on('data', d => output.append(d.toString()));
+            proc.on('error', error => {
                 output.appendLine(`dbx: ${String(error)}`);
                 child = undefined;
                 resolve(1);
             });
-            child.on('exit', code => {
+            proc.on('exit', code => {
                 child = undefined;
                 resolve(code ?? 0);
             });
