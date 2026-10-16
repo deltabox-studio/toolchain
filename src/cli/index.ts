@@ -31,6 +31,7 @@ import { resolveVpCommand, viteCommands } from '@deltabox/toolchain-vite/cli';
 import rootPkg from '../../package.json' with { type: 'json' };
 import { syncCommands } from './commands/index.js';
 import { registerToolingCommands } from './register.js';
+import { runUpdateCheck } from './update-check.js';
 
 export { registerToolingCommands } from './register.js';
 
@@ -101,6 +102,26 @@ export function extractLogOptions(argv: string[]): { argv: string[]; options: Lo
     return { argv: rest, options };
 }
 
+/**
+ * Pull the update-check flags out of `argv` (so `--no-update-check` works before
+ * or after a subcommand) and report whether the check is enabled.
+ */
+export function extractUpdateCheck(argv: string[]): { argv: string[]; updateCheck: boolean } {
+    let updateCheck = true;
+    const rest: string[] = [];
+    for (let index = 0; index < argv.length; index++) {
+        const arg = argv[index] as string;
+        if (arg === '--') {
+            rest.push(...argv.slice(index));
+            break;
+        }
+        if (arg === '--no-update-check') updateCheck = false;
+        else if (arg === '--update-check') updateCheck = true;
+        else rest.push(arg);
+    }
+    return { argv: rest, updateCheck };
+}
+
 /** Build the `dbx` commander program. */
 export function createCli(): Command {
     const program = new Command();
@@ -110,6 +131,7 @@ export function createCli(): Command {
         .version(rootPkg.version, '-V, --version', 'Output the version number')
         .option('--log-level <level>', `Minimum log level (${LOG_LEVELS.join('|')}).`)
         .option('--no-color', 'Disable coloured output.')
+        .option('--no-update-check', 'Do not check for a newer dbx version.')
         .showHelpAfterError();
     registerToolingCommands(program, builtinCommands());
     return program;
@@ -118,8 +140,11 @@ export function createCli(): Command {
 /** Parse and run the CLI. */
 export async function runCli(argv: string[] = process.argv): Promise<void> {
     const { argv: rest, options } = extractLogOptions(argv);
+    const { argv: rest2, updateCheck } = extractUpdateCheck(rest);
     setLogOverrides(options);
-    await createCli().parseAsync(withDefaultVite(rest));
+    const wantsHelp = argv.some(arg => arg === '--help' || arg === '-h' || arg === '--version');
+    if (!wantsHelp) runUpdateCheck(rootPkg.version, updateCheck);
+    await createCli().parseAsync(withDefaultVite(rest2));
 }
 
 /** Whether this module is the process entry point (symlink-safe). */

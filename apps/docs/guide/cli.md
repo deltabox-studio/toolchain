@@ -11,9 +11,15 @@ override them on the command line.
 | ------------------- | -------------------------------------------------------------- |
 | `--log-level <lvl>` | Minimum log level: `debug`, `info`, `warn`, `error`, `silent`. |
 | `--no-color`        | Disable coloured output.                                       |
+| `--no-update-check` | Do not check for a newer `dbx` version.                        |
 
-Both override the [`logger` config](/guide/config#logging) and may appear
+These override the [`logger` config](/guide/config#logging) and may appear
 before or after the subcommand.
+
+`dbx` checks the npm registry in the background (about once a day) and prints a
+short notice with a link to the release when a newer version is published. The
+check is skipped in CI and when `NO_UPDATE_NOTIFIER` or `DBX_NO_UPDATE_CHECK` is
+set, and can be turned off with `--no-update-check`.
 
 ## Core
 

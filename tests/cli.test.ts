@@ -4,8 +4,10 @@ import {
     builtinCommands,
     createCli,
     extractLogOptions,
+    extractUpdateCheck,
     withDefaultVite,
 } from '../src/cli/index.js';
+import { isNewer } from '../src/cli/update-check.js';
 import {
     applyReplacementsDeep,
     camelCase,
@@ -110,5 +112,27 @@ describe('logger flag pre-scan', () => {
 describe('default sync tasks', () => {
     it('includes the Vite+ sync task', () => {
         expect(defaultSyncTasks().map(task => task.name)).toContain('vite');
+    });
+});
+
+describe('update check', () => {
+    const argv = (...args: string[]) => ['node', 'dbx', ...args];
+
+    it('compares versions', () => {
+        expect(isNewer('1.2.9', '1.2.8')).toBe(true);
+        expect(isNewer('1.3.0', '1.2.9')).toBe(true);
+        expect(isNewer('1.2.8', '1.2.8')).toBe(false);
+        expect(isNewer('1.2.0', '1.3.0')).toBe(false);
+    });
+
+    it('strips the update-check flags and respects `--`', () => {
+        expect(extractUpdateCheck(argv('--no-update-check', 'sync'))).toEqual({
+            argv: ['node', 'dbx', 'sync'],
+            updateCheck: false,
+        });
+        expect(extractUpdateCheck(argv('run', '--', '--no-update-check'))).toEqual({
+            argv: ['node', 'dbx', 'run', '--', '--no-update-check'],
+            updateCheck: true,
+        });
     });
 });
