@@ -1,8 +1,16 @@
 # Changelog
 
-## 1.2.1 (October 2026)
+## 1.2.2 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+- Update config generator documentation ([#8305ef8](https://github.com/deltabox-studio/toolchain/commit/8305ef8) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.2.1 (October 2026)
 
 ### Documentation
 - Show how to load the generated config ([#0f4d0d1](https://github.com/deltabox-studio/toolchain/commit/0f4d0d1) by [T0chi](https://github.com/T0chi))
@@ -10,9 +18,6 @@
     (`parseEnvTree`, the typed accessors, `applyOverrides`, and schema validation via
     `compileZodSchema`) plus a short loading example in the README.
 - Update description and tags ([#64b64aa](https://github.com/deltabox-studio/toolchain/commit/64b64aa) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.2.0 (October 2026)
 
