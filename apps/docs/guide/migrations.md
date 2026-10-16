@@ -29,6 +29,25 @@ dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
 - `--target vite` — folds the result into an existing `vite.config.ts`
   (inserting/replacing `fmt` and `lint`), which is what Vite+ reads.
 
+## Package scripts
+
+`dbx migrate` migrates the tooling **files**; the matching `package.json` scripts
+are a small follow-up. The common swaps:
+
+| Before                   | After                      |
+| ------------------------ | -------------------------- |
+| `biome format --write .` | `vp fmt`                   |
+| `biome check --fix .`    | `vp lint --fix`            |
+| `turbo build`            | `vp run -r build`          |
+| `turbo typecheck`        | `vp run -r typecheck`      |
+| `turbo test`             | `vp run -r test`           |
+| `turbo dev`              | `vp run -r --parallel dev` |
+
+Then drop `@biomejs/biome` + `turbo` (and `biome.json` + `turbo.json`) and add
+`@deltabox/toolchain` + `vite-plus`. The full walkthrough — recommended scripts,
+the dependency diff and per-workspace tasks — is on the
+[Package scripts](/guide/scripts) page.
+
 ## CI check
 
 `--check` runs the migrations without writing and exits non-zero when a target
