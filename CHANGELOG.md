@@ -1,14 +1,40 @@
 # Changelog
 
-## 1.1.24 (October 2026)
+## 1.2.0 (October 2026)
 
 <!-- release:start -->
 
+### New features
+#### Config
+- Generate the shared config types via the config generator ([#a063a2d](https://github.com/deltabox-studio/toolchain/commit/a063a2d) by [T0chi](https://github.com/T0chi))
+  - Teach the config engine's Zod->untyped bridge and types generator to handle
+    unions (anyOf/oneOf), `const`, and unknown records, and to render a schema's
+    fields on the main interface when it has no `base` group (plus type aliases for
+    non-object roots). Named `$ref`s (via `.meta({ id })`) render as the type name,
+    so the generated config types reference each other instead of inlining.
+  - Generate `packages/shared/src/config-types.ts` from the Zod config model with the
+    engine's `renderConfigTypes` (`yarn config:types`); `config-schema.ts` keeps only
+    the schemas and the types are exported from `config-types.ts`.
+### Bug fixes
+#### Vscode
+- Group managed files by project and reorder the views ([#f5b49d9](https://github.com/deltabox-studio/toolchain/commit/f5b49d9) by [T0chi](https://github.com/T0chi))
+  - The Managed Files view read a manifest per project, so a monorepo's root-level
+    managed files never showed. Read each workspace root's manifest and group its
+    files by the deepest project that owns them. Move the Projects view above
+    Managed Files (renamed from Files).
 ### Documentation
-- Update features ([#071006e](https://github.com/deltabox-studio/toolchain/commit/071006e) by [T0chi](https://github.com/T0chi))
+- Document the config generator outputs ([#fcfcd69](https://github.com/deltabox-studio/toolchain/commit/fcfcd69) by [T0chi](https://github.com/T0chi))
+  - Show a short example of each generated output (config types, markdown, env,
+    JSON schema) in the config generator guide and the README.
+- Update vscode extension preview ([#fd90dda](https://github.com/deltabox-studio/toolchain/commit/fd90dda) by [T0chi](https://github.com/T0chi))
 
 <!-- release:end -->
 
+
+## 1.1.24 (October 2026)
+
+### Documentation
+- Update features ([#071006e](https://github.com/deltabox-studio/toolchain/commit/071006e) by [T0chi](https://github.com/T0chi))
 
 ## 1.1.23 (October 2026)
 
