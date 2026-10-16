@@ -1,14 +1,20 @@
 # Changelog
 
-## 1.1.15 (October 2026)
+## 1.1.16 (October 2026)
 
 <!-- release:start -->
 
-### Chores
-- Formatted README.md ([#4485c48](https://github.com/deltabox-studio/toolchain/commit/4485c48) by [T0chi](https://github.com/T0chi))
+### Documentation
+- Reindent the README table of contents ([#5646bcc](https://github.com/deltabox-studio/toolchain/commit/5646bcc) by [T0chi](https://github.com/T0chi))
+- Theme-aware logo (light/dark) + invert the home hero logo in dark mode ([#fd3691f](https://github.com/deltabox-studio/toolchain/commit/fd3691f) by [T0chi](https://github.com/T0chi))
 
 <!-- release:end -->
 
+
+## 1.1.15 (October 2026)
+
+### Chores
+- Formatted README.md ([#4485c48](https://github.com/deltabox-studio/toolchain/commit/4485c48) by [T0chi](https://github.com/T0chi))
 
 ## 1.1.14 (October 2026)
 
