@@ -18,4 +18,5 @@ export * from './oxlint-map.js';
 export * from './prettier.js';
 export * from './registry.js';
 export * from './types.js';
+export * from './vite.js';
 export * from './vite-target.js';

@@ -171,18 +171,9 @@ export interface ToolingTemplatesConfig {
 }
 
 export interface ToolingViteConfig {
-    /** Master switch (enabled when the section is defined). */
-    enabled?: boolean;
-    /** Write the managed `vite.config.ts` (default true when the section is set). */
+    /** Write the managed `vite.config.ts` (default true). */
     config?: boolean;
-    /** `create.defaultTemplate`, eg. `@acme` for `@acme/create`. */
-    defaultTemplate?: string;
-    /** Extra Vitest include globs (default: tests under src + tests). */
-    testInclude?: Array<string>;
-    /** Glob patterns Oxlint should ignore. */
-    lintIgnore?: Array<string>;
-    /** Deep-merged over the generated `vite.config.ts` object. */
-    overrides?: Record<string, unknown>;
+    [key: string]: unknown;
 }
 
 export interface ToolingLoggerConfig {

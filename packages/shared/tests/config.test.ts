@@ -60,7 +60,7 @@ describe('dbx.config model', () => {
                     rootFile: 'tsconfig.monorepo.json',
                 },
                 templates: { sources: [{ type: 'local', locate: './templates' }] },
-                vite: { defaultTemplate: '@acme', testInclude: ['src/**/*.test.ts'] },
+                vite: { fmt: { semi: true }, test: { include: ['src/**/*.test.ts'] } },
                 watch: { debounce: 100 },
                 hooks: { afterSync: () => undefined },
             },
@@ -69,7 +69,7 @@ describe('dbx.config model', () => {
         const toolchain = config.toolchain!;
         expect(sectionEnabled(toolchain.changelog)).toBe(true);
         expect(sectionEnabled(toolchain.tsconfig)).toBe(true);
-        expect(sectionConfig(toolchain.vite)?.defaultTemplate).toBe('@acme');
+        expect(sectionConfig(toolchain.vite)?.fmt).toEqual({ semi: true });
         expect(sectionConfig(toolchain.watch)?.debounce).toBe(100);
     });
 });

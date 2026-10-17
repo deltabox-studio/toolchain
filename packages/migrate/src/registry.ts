@@ -12,10 +12,11 @@ import { dprintToOx } from './dprint.js';
 import { eslintToOx } from './eslint.js';
 import { prettierToOx } from './prettier.js';
 import type { MigrateTool, MigrationContext, MigrationResult, ToolingMigration } from './types.js';
+import { viteToToolchain } from './vite.js';
 
 /** Every registered migration. */
 export function migrations(): ToolingMigration[] {
-    return [biomeToOx, prettierToOx, dprintToOx, eslintToOx];
+    return [biomeToOx, prettierToOx, dprintToOx, eslintToOx, viteToToolchain];
 }
 
 /** A migration summary for listings. */

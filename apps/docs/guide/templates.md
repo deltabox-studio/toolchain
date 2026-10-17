@@ -107,8 +107,8 @@ export default defineConfig({
   are listed and created through `vp create`.
 - **git** — a repository (optionally with a `subdir`) listed as a template and
   created through `vp create`.
-- **Vite+** — set `create.defaultTemplate` in the `vite` section to make a scope
-  the default for `vp create`.
+- **Vite+** — set `create.defaultTemplate` in the `vite` section (the full Vite+
+  config) to make a scope the default for `vp create`.
 
 ## VS Code
 

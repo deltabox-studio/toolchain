@@ -8,7 +8,16 @@
  */
 
 /** A tool a migration can read from or write to. */
-export type MigrateTool = 'biome' | 'eslint' | 'prettier' | 'dprint' | 'oxfmt' | 'oxlint' | 'ox';
+export type MigrateTool =
+    | 'biome'
+    | 'eslint'
+    | 'prettier'
+    | 'dprint'
+    | 'oxfmt'
+    | 'oxlint'
+    | 'ox'
+    | 'vite'
+    | 'toolchain';
 
 /** Where a migration writes its result. */
 export type MigrateTarget = 'files' | 'vite';

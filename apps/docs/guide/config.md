@@ -18,7 +18,11 @@ export default defineConfig({
         },
         tsconfig: { refs: true },
         biome: true,
-        vite: { defaultTemplate: '@acme' },
+        vite: {
+            fmt: { semi: true, singleQuote: true },
+            lint: { ignorePatterns: ['dist/**'] },
+            test: { include: ['src/**/*.test.ts'] },
+        },
         watch: { debounce: 150 },
     },
 });
@@ -120,6 +124,42 @@ export default defineConfig({
 `color: false` runs the wrapped binary with `NO_COLOR=1` and `FORCE_COLOR=0`, so
 it emits plain output even on a colour terminal. The global CLI `--no-color`
 flag turns provider colour off too. See [Providers](/guide/providers#colour).
+
+## Vite+
+
+The whole Vite+ config lives in `toolchain.vite`. Every key is passed through
+verbatim to the generated root `vite.config.ts`, so `dbx.config.*` stays the only
+hand-authored root config and `dbx sync` keeps `vite.config.ts` in step:
+
+```ts
+export default defineConfig({
+    toolchain: {
+        vite: {
+            test: { include: ['src/**/*.test.ts'], environment: 'node' },
+            lint: { ignorePatterns: ['dist/**'] },
+            fmt: { semi: true, singleQuote: true },
+        },
+    },
+});
+```
+
+`dbx sync` writes the file with a managed header and `import { defineConfig }
+from 'vite-plus'`, then `export default defineConfig({ ... })`. The file must
+live at the root because `vp run` / `vp check` / `vp staged` do not accept
+`--config`.
+
+The single toolchain opt-out is `config`. Set `vite: { config: false }` to leave
+a hand-written `vite.config.ts` alone. Everything else under `vite` is Vite+
+config (plugins, `test`, `lint`, `fmt`, `run.tasks`, ...), so `toolchain.vite`
+is the full Vite+ configuration.
+
+To adopt an existing hand-written `vite.config.ts`, fold it in with the
+migration (see [Migrations](/guide/migrations#vite-config)):
+
+```bash
+dbx migrate --from vite --write   # folds the object into toolchain.vite
+dbx sync                          # regenerates the managed vite.config.ts
+```
 
 ## Programmatic API
 

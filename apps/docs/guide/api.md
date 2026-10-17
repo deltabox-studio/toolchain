@@ -151,8 +151,8 @@ sync task (see the [Providers](/guide/providers) guide).
 | `viteProvider()` / `viteCommands()`                                | The provider descriptor and the `dbx vite:*` commands.            |
 | `dbx(options?)` / `defineDbxConfig(config, options?)`              | The Vite/Vite+ plugin and the `run.tasks` wrapper.                |
 | `resolveDbx(cwd?)` / `runDbx(args, cwd?)` / `DBX_TASKS`            | Resolve/run the `dbx` binary and the registered tasks.            |
-| `viteConfigObject(tokens?, config?)` / `renderViteConfig(...)`     | Build/serialize a generated `vite.config.ts`.                     |
-| `viteSyncTask()` / `DEFAULT_TEST_INCLUDE` / `DEFAULT_LINT_IGNORE`  | The `vite` sync task and its defaults.                            |
+| `renderViteConfig(config?, tokens?)` / `viteConfigObject(config?)` | Serialize `toolchain.vite` to a managed `vite.config.ts`.         |
+| `viteSyncTask()` / `renderObjectLiteral(value, indent?)`           | The `vite` sync task and the object-literal renderer.             |
 
 ### `@deltabox/toolchain/cli`
 
@@ -169,14 +169,15 @@ See the [CLI](/guide/cli) guide for the routing behaviour.
 
 ### `@deltabox/toolchain/migrate`
 
-| Export                                                                             | Description                                      |
-| ---------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `migrations()` / `listMigrations(cwd)` / `detectMigrations(cwd)`                   | The registered migrations and detection.         |
-| `findMigration(idOrFrom)` / `runMigration(...)` / `runDetectedMigrations(ctx)`     | Run one or every detected migration.             |
-| `biomeToOx` / `eslintToOx` / `prettierToOx` / `dprintToOx`                         | The built-in `ToolingMigration` objects.         |
-| `mapBiomeToOxfmt` / `mapBiomeToOxlint` / `mapPrettierToOxfmt` / `mapDprintToOxfmt` | Source-to-Ox mapping helpers.                    |
-| `diffFiles(files)` / `hasPending(diffs)`                                           | Diff planned files against disk (for `--check`). |
-| `mergeViteConfig(source, ...)` / `writeViteTarget(...)`                            | The Vite+ (`--target vite`) output helpers.      |
+| Export                                                                              | Description                                      |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `migrations()` / `listMigrations(cwd)` / `detectMigrations(cwd)`                    | The registered migrations and detection.         |
+| `findMigration(idOrFrom)` / `runMigration(...)` / `runDetectedMigrations(ctx)`      | Run one or every detected migration.             |
+| `biomeToOx` / `eslintToOx` / `prettierToOx` / `dprintToOx` / `viteToToolchain`      | The built-in `ToolingMigration` objects.         |
+| `mapBiomeToOxfmt` / `mapBiomeToOxlint` / `mapPrettierToOxfmt` / `mapDprintToOxfmt`  | Source-to-Ox mapping helpers.                    |
+| `extractViteObject(source)` / `scanLiteralObject(text)` / `foldViteIntoConfig(...)` | The `vite` source's extraction + splice helpers. |
+| `diffFiles(files)` / `hasPending(diffs)`                                            | Diff planned files against disk (for `--check`). |
+| `mergeViteConfig(source, ...)` / `writeViteTarget(...)`                             | The Vite+ (`--target vite`) output helpers.      |
 
 ### `@deltabox/toolchain/template`
 

@@ -147,6 +147,11 @@ function jsonNodeToDefinition(
                 defs
             );
         }
+        // A schema that also accepts arbitrary keys (`.catchall` / `.passthrough`)
+        // becomes an object with an index signature in the generated interface.
+        if (node.additionalProperties !== undefined && node.additionalProperties !== false) {
+            out.$schema = { ...((out.$schema as object | undefined) ?? {}), allowExtraKeys: true };
+        }
         return out;
     }
 

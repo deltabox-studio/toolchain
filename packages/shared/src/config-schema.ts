@@ -245,31 +245,23 @@ export const templatesConfigSchema = z
     })
     .meta({ id: 'ToolingTemplatesConfig' });
 
-/** Vite+ configuration (manages `vite.config.ts` + the `vite:*` commands). */
+/**
+ * Vite+ configuration: the raw `vite.config.ts` object, held under
+ * `toolchain.vite`, plus the single toolchain opt-out `config`.
+ *
+ * Every other key is passed through verbatim to the generated
+ * `vite.config.ts` (see the `vite` sync task), so `dbx.config.*` is the only
+ * hand-authored root config. `config: false` leaves a hand-written
+ * `vite.config.ts` alone.
+ */
 export const viteConfigSchema = z
     .object({
-        enabled: z
-            .boolean()
-            .describe('Master switch (enabled when the section is defined).')
-            .optional(),
         config: z
             .boolean()
-            .describe('Write the managed `vite.config.ts` (default true when the section is set).')
-            .optional(),
-        defaultTemplate: z
-            .string()
-            .describe('`create.defaultTemplate`, eg. `@acme` for `@acme/create`.')
-            .optional(),
-        testInclude: z
-            .array(z.string())
-            .describe('Extra Vitest include globs (default: tests under src + tests).')
-            .optional(),
-        lintIgnore: z.array(z.string()).describe('Glob patterns Oxlint should ignore.').optional(),
-        overrides: z
-            .record(z.string(), z.unknown())
-            .describe('Deep-merged over the generated `vite.config.ts` object.')
+            .describe('Write the managed `vite.config.ts` (default true).')
             .optional(),
     })
+    .catchall(z.unknown())
     .meta({ id: 'ToolingViteConfig' });
 
 /** A section: enabled/disabled with a boolean, or configured with an object. */
@@ -347,7 +339,7 @@ export const CONFIG_SECTION_DESCRIPTIONS: Record<keyof typeof CONFIG_SECTION_SCH
     biome: 'Biome config generation (for consumers that still want a `biome.json`).',
     tsconfig: 'Workspace tsconfig generation (path aliases + project references).',
     templates: 'Template sources / scaffolding.',
-    vite: 'Vite+ configuration (manages `vite.config.ts` + the `vite:*` commands).',
+    vite: 'The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.',
     watch: 'Watch behaviour for `dbx watch`.',
     logger: 'Logging level, colours and prefix for toolchain output.',
     providers: 'Provider command behaviour (eg. colour for the provider passthrough commands).',

@@ -7,6 +7,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
     detectMigrations,
     diffFiles,
+    extractViteObject,
+    foldViteIntoConfig,
     hasPending,
     listMigrations,
     mapBiomeFormatter,
@@ -15,6 +17,7 @@ import {
     readJsonc,
     renderViteTarget,
     runMigration,
+    scanLiteralObject,
 } from '../src/index.js';
 
 const tmpDirs: string[] = [];
@@ -261,5 +264,83 @@ describe('eslint flat config', () => {
         const result = await runMigration('eslint', { cwd: dir });
         expect(result.notes?.join('\n')).toContain('--online');
         expect(result.files?.map(f => path.basename(f.path))).toEqual(['.oxlintrc.json']);
+    });
+});
+
+const VITE_SAMPLE = `import { defineConfig } from 'vite-plus';
+
+export default defineConfig({
+    test: { include: ['src/**/*.test.ts'], environment: 'node' },
+    fmt: { semi: true, singleQuote: true },
+});
+`;
+
+describe('vite -> toolchain', () => {
+    it('extracts the defineConfig object literal (balanced-paren aware)', () => {
+        expect(extractViteObject(VITE_SAMPLE)).toEqual({
+            text: "{\n    test: { include: ['src/**/*.test.ts'], environment: 'node' },\n    fmt: { semi: true, singleQuote: true },\n}",
+        });
+    });
+
+    it('extracts a default-exported object when there is no defineConfig', () => {
+        const source = 'export default {\n    fmt: { semi: false },\n};\n';
+        expect(extractViteObject(source)).toEqual({ text: '{\n    fmt: { semi: false },\n}' });
+    });
+
+    it('flags non-literal configs (imports/plugins/helpers)', () => {
+        expect(scanLiteralObject('{ fmt: { semi: true } }').ok).toBe(true);
+        expect(scanLiteralObject('{ plugins: [react()] }')).toEqual({
+            ok: false,
+            reason: 'non-literal value `react`',
+        });
+        expect(scanLiteralObject('{ x: `a${b}` }').ok).toBe(false);
+    });
+
+    it('splices a `vite` key into an existing toolchain (and replaces one)', () => {
+        const base = `export default defineConfig({\n    toolchain: {\n        project: { name: 'acme' },\n    },\n});\n`;
+        const folded = foldViteIntoConfig(base, '{ fmt: { semi: true } }');
+        expect('content' in folded && folded.content).toContain('vite: { fmt: { semi: true } },');
+        expect('content' in folded && folded.content).toContain("project: { name: 'acme' }");
+
+        const withVite = `export default defineConfig({\n    toolchain: {\n        vite: { config: false },\n    },\n});\n`;
+        const replaced = foldViteIntoConfig(withVite, '{ fmt: { semi: true } }');
+        expect('content' in replaced && replaced.content).toContain(
+            'vite: { fmt: { semi: true } }'
+        );
+        expect('content' in replaced && replaced.content).not.toContain('config: false');
+    });
+
+    it('folds a hand-written vite.config.ts into dbx.config.ts', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'dbx.config.ts'),
+            `import { defineConfig } from '@deltabox/toolchain';\n\nexport default defineConfig({\n    toolchain: {\n        project: { name: 'acme' },\n    },\n});\n`,
+            'utf-8'
+        );
+        fs.writeFileSync(path.join(dir, 'vite.config.ts'), VITE_SAMPLE, 'utf-8');
+
+        const result = await runMigration('vite', { cwd: dir, write: true });
+        expect(result.from).toBe('vite');
+        expect(result.written).toEqual([path.join(dir, 'dbx.config.ts')]);
+        const content = fs.readFileSync(path.join(dir, 'dbx.config.ts'), 'utf-8');
+        expect(content).toContain('vite: {');
+        expect(content).toContain("environment: 'node'");
+        expect(content).toContain('singleQuote: true');
+        expect(content).toContain("project: { name: 'acme' }");
+    });
+
+    it('changes nothing when the config is not foldable', async () => {
+        const dir = makeTmp();
+        const dbx = `export default defineConfig({\n    toolchain: {},\n});\n`;
+        fs.writeFileSync(path.join(dir, 'dbx.config.ts'), dbx, 'utf-8');
+        fs.writeFileSync(
+            path.join(dir, 'vite.config.ts'),
+            "import { defineConfig } from 'vite-plus';\nimport react from '@vitejs/plugin-react';\n\nexport default defineConfig({ plugins: [react()] });\n",
+            'utf-8'
+        );
+        const result = await runMigration('vite', { cwd: dir, write: true });
+        expect(result.written).toEqual([]);
+        expect(result.unmapped?.length).toBe(1);
+        expect(fs.readFileSync(path.join(dir, 'dbx.config.ts'), 'utf-8')).toBe(dbx);
     });
 });

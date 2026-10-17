@@ -537,42 +537,12 @@
         "ToolingViteConfig": {
             "type": "object",
             "properties": {
-                "enabled": {
-                    "type": "boolean",
-                    "description": "Master switch (enabled when the section is defined)."
-                },
                 "config": {
                     "type": "boolean",
-                    "description": "Write the managed `vite.config.ts` (default true when the section is set)."
-                },
-                "defaultTemplate": {
-                    "type": "string",
-                    "description": "`create.defaultTemplate`, eg. `@acme` for `@acme/create`."
-                },
-                "testInclude": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "description": "Extra Vitest include globs (default: tests under src + tests)."
-                },
-                "lintIgnore": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "description": "Glob patterns Oxlint should ignore."
-                },
-                "overrides": {
-                    "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
-                    "additionalProperties": {},
-                    "description": "Deep-merged over the generated `vite.config.ts` object."
+                    "description": "Write the managed `vite.config.ts` (default true)."
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": {}
         },
         "ToolingWatchConfig": {
             "type": "object",

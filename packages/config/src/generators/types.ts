@@ -79,6 +79,17 @@ function tidyInterface(schema: Schema, interfaceName: string): string {
     return stripMemberBlankLines(generateTypes(schema, { ...GENERATE_OPTIONS, interfaceName }));
 }
 
+/**
+ * Insert a `[key: string]: unknown` index signature before the closing brace of
+ * a generated interface. Used for schemas that accept arbitrary keys
+ * (`.catchall` / `.passthrough`), so the generated type stays open.
+ */
+function withIndexSignature(body: string): string {
+    const close = body.lastIndexOf('}');
+    if (close === -1) return body;
+    return `${body.slice(0, close)}    [key: string]: unknown;\n${body.slice(close)}`;
+}
+
 /** Render the generated type file content for one scope. */
 export function renderConfigTypes(
     scopeName: string,
@@ -89,6 +100,7 @@ export function renderConfigTypes(
     const interfaceName = options.interfaceNames?.[scopeName] ?? `${pascalCase(scopeName)}Config`;
     const aliases = options.aliases?.[scopeName] ?? '';
     const wrap = (body: string): string => (options.header ? `${options.header}\n\n${body}` : body);
+    const allowExtraKeys = (schema as { allowExtraKeys?: boolean }).allowExtraKeys === true;
 
     // A non-object root (enum, union, record, ...) is rendered as a type alias.
     if (!schema.properties) {
@@ -101,7 +113,8 @@ export function renderConfigTypes(
 
     // Without a base group the full schema becomes the main interface directly.
     if (!hasBase) {
-        return wrap(`${tidyInterface(schema, interfaceName)}\n${aliases}`);
+        const body = tidyInterface(schema, interfaceName);
+        return wrap(`${allowExtraKeys ? withIndexSignature(body) : body}\n${aliases}`);
     }
 
     const baseInterface = tidyInterface(base, `${interfaceName}Base`);
@@ -115,6 +128,7 @@ export function renderConfigTypes(
     } else {
         mainInterface = `export interface ${interfaceName} extends ${interfaceName}Base {}\n`;
     }
+    if (allowExtraKeys) mainInterface = withIndexSignature(mainInterface);
 
     return wrap(`${baseInterface}\n${mainInterface}\n${aliases}`);
 }
