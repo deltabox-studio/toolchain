@@ -217,7 +217,7 @@ engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
 // docs/reference/configuration/server.md, .../index.md
 ```
 
-See a real full example at [apps/docs/config/reference.md](https://github.com/deltabox-studio/toolchain/blob/main/apps/docs/config/reference.md).
+See a real full example at [config/reference.md](../config/reference.md).
 
 ### Env — `renderEnvFile()` / `writeEnvFile()`
 
