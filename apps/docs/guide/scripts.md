@@ -67,6 +67,11 @@ Notes:
     dbx migrate --from biome --target vite --write
     ```
 
+    Or, if the project uses `dbx.config.ts`, author the Vite+ config there under
+    `toolchain.vite`. `dbx sync` then writes the root `vite.config.ts` shim (see
+    [Vite+](/guide/config#vite)). `dbx migrate --from vite --write` folds an
+    existing hand-written `vite.config.ts` in.
+
 3. Replace the scripts (see the tables below), then delete `biome.json` and
    `turbo.json`.
 

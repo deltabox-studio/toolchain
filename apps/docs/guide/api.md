@@ -78,6 +78,7 @@ the template engine.
 | `resolveTokens(config)`                                          | Flatten a config into `{{ token }}` replacements.                         |
 | `CONFIG_FILE_NAMES`                                              | The config file names the loader probes, in priority order.               |
 | `repoSlugFromUrl(url)`                                           | Derive an `owner/name` slug from a repository URL.                        |
+| `findOwnCliEntry(cwd?)` / `TOOLCHAIN_PACKAGE`                    | Locate a project's own toolchain bin (prefer it over a global `dbx`).     |
 | `createLogger(options)` / `logger`                               | The shared logger (see [Logging](#logging)).                              |
 | `spawnCross(cmd, args, options)` / `run(cmd, args, options)`     | Cross-platform, shell-free process spawning.                              |
 | `readJsonFile` / `readJsonAt` / `toJson` / `writeJsonFile`       | Small JSON file helpers.                                                  |
