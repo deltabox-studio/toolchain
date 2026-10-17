@@ -78,10 +78,11 @@ engine.collectEnvVars(); // EnvVarDef[] across every scope
 engine.requiredEnvVars('server'); // required var names for a scope
 
 engine.writeEnvFile({ output: '.env.example' });
-engine.writeConfigTypes({ outputDir: 'types' });
 engine.writeEnvTypes({ outputDir: 'types' });
-await engine.writeJsonSchema({ output: 'config.schema.json' });
+engine.writeConfigTypes({ outputDir: 'types' });
+engine.writeJsonSchema({ output: 'config.schema.json' });
 engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
+
 engine.generateCliOptions({ output: 'cli-options.json' });
 engine.buildConfigJson(); // the config metadata document
 ```
@@ -156,7 +157,7 @@ guaranteed to match the generated types:
 ```ts
 import { compileZodSchema } from '@deltabox/toolchain/config';
 
-const parse = compileZodSchema(serverConfig);
+const schemaCompiler = compileZodSchema(serverConfig);
 
 export function loadConfig(env = process.env, file = {}, cli = {}) {
     const tree = parseEnvTree(env, 'MYAPP_');
@@ -170,7 +171,7 @@ export function loadConfig(env = process.env, file = {}, cli = {}) {
             tokenTtl: envInt(tree, 'auth.token.ttl', 3600),
         },
     };
-    return parse.parse(applyOverrides(applyOverrides(fromEnv, file), cli));
+    return schemaCompiler.parse(applyOverrides(applyOverrides(fromEnv, file), cli));
 }
 ```
 
