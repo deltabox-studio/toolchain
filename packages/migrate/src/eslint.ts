@@ -17,7 +17,7 @@ import type {
     MigrationContext,
     MigrationFile,
     MigrationResult,
-    ToolingMigration,
+    ToolchainMigration,
 } from './types.js';
 import { renderViteTarget } from './vite-target.js';
 
@@ -100,7 +100,7 @@ export async function runOxlintMigrate(cwd: string): Promise<Json | undefined> {
     }
 }
 
-export const eslintToOx: ToolingMigration = {
+export const eslintToOx: ToolchainMigration = {
     id: 'eslint-to-ox',
     from: 'eslint',
     to: 'oxlint',

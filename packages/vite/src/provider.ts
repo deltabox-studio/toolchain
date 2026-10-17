@@ -5,12 +5,12 @@
  * VS Code extension, which builds its menus + actions from it.
  */
 
-import type { ToolingProvider, ToolingProviderAction } from '@deltabox/toolchain-shared';
+import type { ToolchainProvider, ToolchainProviderAction } from '@deltabox/toolchain-shared';
 
 import { VP_COMMANDS, viteCommandName } from './commands.js';
 
 /** Curated actions for the VS Code extension (a useful subset of vp commands). */
-const ACTIONS: ToolingProviderAction[] = [
+const ACTIONS: ToolchainProviderAction[] = [
     {
         id: 'vite-create',
         label: 'Create project (vp create)',
@@ -41,7 +41,7 @@ const ACTIONS: ToolingProviderAction[] = [
  * Build the Vite+ provider descriptor. The command list mirrors {@link VP_COMMANDS}
  * so the CLI and the extension stay in sync automatically.
  */
-export function viteProvider(): ToolingProvider {
+export function viteProvider(): ToolchainProvider {
     return {
         id: 'vite-plus',
         name: 'Vite+',

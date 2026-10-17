@@ -15,6 +15,7 @@
     ],
     "private": true,
     "dependencies": {
+        "@clack/prompts": "catalog:",
         "picocolors": "catalog:",
         "zod": "catalog:"
     },

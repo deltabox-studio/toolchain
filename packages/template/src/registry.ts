@@ -4,8 +4,8 @@ import path from 'node:path';
 import {
     sectionConfig,
     sectionEnabled,
-    type ToolingConfig,
-    type ToolingTemplateSource,
+    type ToolchainConfig,
+    type ToolchainTemplateSource,
 } from '@deltabox/toolchain-shared';
 
 import { BUILTIN_TEMPLATES } from './builtin.js';
@@ -19,7 +19,7 @@ export const REGISTRY_FILE = 'templates.json';
 
 /** The on-disk registry of template sources. */
 export interface TemplateRegistry {
-    sources: ToolingTemplateSource[];
+    sources: ToolchainTemplateSource[];
 }
 
 /** Read `<cwd>/.dbx/toolchain/templates.json` (empty when missing/invalid). */
@@ -35,16 +35,16 @@ export function readTemplateRegistry(cwd: string): TemplateRegistry {
 }
 
 /** Write `<cwd>/.dbx/toolchain/templates.json`. */
-export function writeTemplateRegistry(cwd: string, sources: ToolingTemplateSource[]): void {
+export function writeTemplateRegistry(cwd: string, sources: ToolchainTemplateSource[]): void {
     const file = path.join(cwd, REGISTRY_DIR, REGISTRY_FILE);
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, `${JSON.stringify({ sources }, null, 4)}\n`, 'utf-8');
 }
 
 /** Append a source to the registry, deduplicating on `type:locate`. */
-export function addTemplateSource(cwd: string, source: ToolingTemplateSource): TemplateRegistry {
+export function addTemplateSource(cwd: string, source: ToolchainTemplateSource): TemplateRegistry {
     const registry = readTemplateRegistry(cwd);
-    const key = (s: ToolingTemplateSource): string => `${s.type}:${s.locate}`;
+    const key = (s: ToolchainTemplateSource): string => `${s.type}:${s.locate}`;
     const sources = registry.sources.filter(existing => key(existing) !== key(source));
     sources.push(source);
     writeTemplateRegistry(cwd, sources);
@@ -72,17 +72,17 @@ export interface LoadTemplatesOptions {
     /** Project root. */
     cwd: string;
     /** The loaded tooling config (its `templates.sources` are included). */
-    config?: ToolingConfig;
+    config?: ToolchainConfig;
     /** Resolve online sources (`npm`/`git`). Default: false. */
     online?: boolean;
     /** Include the builtin templates (default: true). */
     builtin?: boolean;
     /** Extra sources on top of the config + registry. */
-    sources?: ToolingTemplateSource[];
+    sources?: ToolchainTemplateSource[];
 }
 
 /** Every source considered: builtin + config `templates.sources` + registry + extras. */
-export function collectSources(options: LoadTemplatesOptions): ToolingTemplateSource[] {
+export function collectSources(options: LoadTemplatesOptions): ToolchainTemplateSource[] {
     const configSources =
         options.config && sectionEnabled(options.config.templates)
             ? (sectionConfig(options.config.templates)?.sources ?? [])

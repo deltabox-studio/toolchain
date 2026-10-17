@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import { diffFiles, hasPending } from '../check.js';
 import { detectMigrations, listMigrations, migrations } from '../registry.js';
@@ -8,19 +8,20 @@ import type { MigrateTarget } from '../types.js';
 
 /**
  * `dbx migrate` — convert a project's tooling config from another
- * tool (Biome / ESLint / Prettier / Dprint) to Ox (Oxfmt / Oxlint). Dry-run by
- * default; pass `--write` to apply, or `--check` for a CI gate.
+ * tool (Biome / ESLint / Prettier / Dprint) to Ox (Oxfmt / Oxlint), or fold a
+ * hand-written `vite.config.*` into `dbx.config.*`. Dry-run by default; pass
+ * `--write` to apply, or `--check` for a CI gate.
  */
-export function migrateCommands(): ToolingCommand[] {
+export function migrateCommands(): ToolchainCommand[] {
     return [
         {
             name: 'migrate',
             description:
-                'Migrate Biome / ESLint / Prettier / Dprint config to Ox (oxlint + oxfmt).',
+                'Migrate Biome / ESLint / Prettier / Dprint config to Ox, or fold vite.config.* into dbx.config.',
             options: [
                 {
                     flags: '--from <tool>',
-                    description: 'Source tool: biome | eslint | prettier | dprint | all.',
+                    description: 'Source tool: biome | eslint | prettier | dprint | vite | all.',
                 },
                 { flags: '--to <tool>', description: 'Target tool (default: ox).', default: 'ox' },
                 { flags: '--cwd <dir>', description: 'Project root (default: cwd).' },
@@ -47,7 +48,7 @@ export function migrateCommands(): ToolingCommand[] {
                     logger.info(
                         from && from !== 'all'
                             ? `no "${from}" migration is registered.`
-                            : 'nothing to migrate (no Biome/ESLint/Prettier/Dprint config detected).'
+                            : 'nothing to migrate (no Biome/ESLint/Prettier/Dprint/vite config detected).'
                     );
                     return;
                 }

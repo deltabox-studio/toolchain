@@ -53,7 +53,7 @@
         "dev": "tsx src/cli/index.ts",
         "dbx": "tsx src/cli/index.ts",
         "commitlint": "commitlint",
-        "prepare": "husky"
+        "prepare": "husky && node scripts/bootstrap.mjs"
     },
     "publishConfig": {
         "access": "public",
@@ -64,6 +64,7 @@
         "apps/*"
     ],
     "dependencies": {
+        "@clack/prompts": "catalog:",
         "commander": "^14.0.0",
         "glob": "catalog:",
         "lodash": "catalog:",
@@ -99,6 +100,14 @@
         "vite": "catalog:",
         "vite-plus": "^1.2.0",
         "vitest": "catalog:"
+    },
+    "peerDependencies": {
+        "vite-plus": ">=1"
+    },
+    "peerDependenciesMeta": {
+        "vite-plus": {
+            "optional": true
+        }
     },
     "packageManager": "yarn@4.17.1",
     "engines": {

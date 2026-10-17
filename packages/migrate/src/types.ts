@@ -8,7 +8,16 @@
  */
 
 /** A tool a migration can read from or write to. */
-export type MigrateTool = 'biome' | 'eslint' | 'prettier' | 'dprint' | 'oxfmt' | 'oxlint' | 'ox';
+export type MigrateTool =
+    | 'biome'
+    | 'eslint'
+    | 'prettier'
+    | 'dprint'
+    | 'oxfmt'
+    | 'oxlint'
+    | 'ox'
+    | 'vite'
+    | 'toolchain';
 
 /** Where a migration writes its result. */
 export type MigrateTarget = 'files' | 'vite';
@@ -62,7 +71,7 @@ export interface MigrationResult {
 }
 
 /** A pluggable config migration. */
-export interface ToolingMigration {
+export interface ToolchainMigration {
     /** Stable id, eg. `biome-to-ox`. */
     id: string;
     /** The source tool. */

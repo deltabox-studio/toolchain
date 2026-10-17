@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { DBX_TASKS, dbx, defineDbxConfig, resolveDbx } from '../src/index.js';
+import { DBX_TASKS, dbx, resolveDbx } from '../src/index.js';
 
 const tmpDirs: string[] = [];
 
@@ -28,27 +28,10 @@ describe('dbx() plugin', () => {
     });
 });
 
-describe('defineDbxConfig()', () => {
-    it('prepends the plugin and registers the dbx tasks', () => {
-        const config = defineDbxConfig({ server: { port: 4000 } });
-        expect(config.server?.port).toBe(4000);
-        const plugins = config.plugins as unknown as { name: string }[];
-        expect(plugins[0]?.name).toBe('deltabox-toolchain');
-        const tasks = (config.run as { tasks: Record<string, unknown> }).tasks;
-        expect(tasks['dbx:sync']).toEqual(DBX_TASKS['dbx:sync']);
-        expect(tasks['dbx:check']).toEqual(DBX_TASKS['dbx:check']);
-    });
-
-    it('keeps existing plugins and tasks', () => {
-        const existing = { name: 'existing' };
-        const config = defineDbxConfig({
-            plugins: [existing],
-            run: { tasks: { build: { command: 'vp build' } } },
-        });
-        const plugins = config.plugins as unknown as { name: string }[];
-        expect(plugins.map(plugin => plugin.name)).toEqual(['deltabox-toolchain', 'existing']);
-        const tasks = (config.run as { tasks: Record<string, unknown> }).tasks;
-        expect(tasks.build).toEqual({ command: 'vp build' });
+describe('DBX_TASKS', () => {
+    it('exposes the sync + check tasks to spread into run.tasks', () => {
+        expect(DBX_TASKS['dbx:sync']).toEqual({ command: 'dbx sync' });
+        expect(DBX_TASKS['dbx:check']).toEqual({ command: 'dbx sync --check' });
     });
 });
 
@@ -61,6 +44,19 @@ describe('dbx resolution', () => {
             fs.writeFileSync(path.join(bin, name), '');
         }
         expect(resolveDbx(dir).source).toBe('local');
+    });
+
+    it('prefers the repo’s own @deltabox/toolchain bin over a global dbx', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'package.json'),
+            JSON.stringify({ name: '@deltabox/toolchain', bin: { dbx: './dist/cli/index.js' } })
+        );
+        fs.mkdirSync(path.join(dir, 'dist', 'cli'), { recursive: true });
+        fs.writeFileSync(path.join(dir, 'dist', 'cli', 'index.js'), '');
+        const resolved = resolveDbx(dir);
+        expect(resolved.source).toBe('local');
+        expect(resolved.args).toEqual([path.join(dir, 'dist', 'cli', 'index.js')]);
     });
 
     it('falls back to a known source everywhere else', () => {

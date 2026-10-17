@@ -1,8 +1,8 @@
 import { buildProjectGraph, writeProjectGraph } from '@deltabox/toolchain-core';
-import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 /** `dbx projects` — discover projects and write the graph file. */
-export function projectsCommand(): ToolingCommand {
+export function projectsCommand(): ToolchainCommand {
     return {
         name: 'projects',
         description: 'Discover projects and write .dbx/toolchain/projects.json.',

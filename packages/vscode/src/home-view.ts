@@ -31,7 +31,7 @@ export type HomeAction =
     | { type: 'refresh' }
     | { type: 'generateConfigs' }
     | { type: 'runWorkflow' }
-    | { type: 'resetTooling' }
+    | { type: 'resetToolchain' }
     | { type: 'toggle' }
     | { type: 'runVite' }
     | { type: 'templateAdd' }
@@ -212,7 +212,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
       <button class="secondary" data-action="runVite">Run Vite+ command\u2026</button>
       <button class="secondary" data-action="templateAdd">Add template\u2026</button>
       <button class="secondary" data-action="templateRemove">Remove template\u2026</button>
-      <button class="secondary" data-action="resetTooling">Reset tooling\u2026</button>
+      <button class="secondary" data-action="resetToolchain">Reset tooling\u2026</button>
       <button class="secondary" data-action="refresh">Refresh projects</button>
       <button class="secondary" data-action="toggle">Toggle auto-sync</button>
     </div>

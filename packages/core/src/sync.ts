@@ -8,7 +8,7 @@ import {
     type Replacements,
     type SyncContext,
     type SyncTask,
-    type ToolingConfig,
+    type ToolchainConfig,
 } from '@deltabox/toolchain-shared';
 
 import { ensureDbxGitignore } from './gitignore.js';
@@ -21,7 +21,7 @@ export interface RunSyncOptions {
     /** The project root. */
     cwd: string;
     /** The loaded config. */
-    config: ToolingConfig;
+    config: ToolchainConfig;
     /** The resolved replacement tokens. */
     tokens: Replacements;
     /** The project kind (resolved from the config/cwd when omitted). */

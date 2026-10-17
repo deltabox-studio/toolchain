@@ -25,18 +25,18 @@ Documentation, guides and examples: [toolchain.deltabox.studio](https://toolchai
 ## Table of contents
 
 - [deltabox toolchain](#deltabox-toolchain)
-  - [Table of contents](#table-of-contents)
-  - [Features](#features)
-  - [Install](#install)
-  - [Quickstart](#quickstart)
-  - [Config generator](#config-generator)
-  - [Vite / Vite+ plugin](#vite--vite-plugin)
-  - [CLI](#cli)
-  - [Programmatic API](#programmatic-api)
-  - [VS Code extension](#vs-code-extension)
-  - [Development](#development)
-  - [Docs](#docs)
-  - [License](#license)
+    - [Table of contents](#table-of-contents)
+    - [Features](#features)
+    - [Install](#install)
+    - [Quickstart](#quickstart)
+    - [Config generator](#config-generator)
+    - [Vite / Vite+ plugin](#vite--vite-plugin)
+    - [CLI](#cli)
+    - [Programmatic API](#programmatic-api)
+    - [VS Code extension](#vs-code-extension)
+    - [Development](#development)
+    - [Docs](#docs)
+    - [License](#license)
 
 ## Features
 
@@ -94,7 +94,7 @@ export default defineConfig({
         changelog: { workflows: { ci: true, release: true } },
         tsconfig: { refs: true },
         biome: true,
-        vite: { defaultTemplate: '@acme' },
+        vite: { fmt: { semi: true, singleQuote: true } },
     },
 });
 ```
@@ -182,26 +182,21 @@ dbx as part of its own pipeline — no separate `dbx sync` step:
 // vite.config.ts
 import { defineConfig } from 'vite'; // or 'vite-plus'
 
-import { defineDbxConfig } from '@deltabox/toolchain/vite';
+import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
 
-export default defineConfig(
-    defineDbxConfig({
-        // your usual Vite / Vite+ config
-    })
-);
+export default defineConfig({
+    plugins: [dbx()],
+    run: { tasks: { ...DBX_TASKS } },
+    // your usual Vite / Vite+ config
+});
 ```
 
 - The `dbx()` plugin runs `dbx sync` before the dev server / build, or
   `dbx sync --check` in CI (which fails the build when generated files are out of
   date), and re-syncs when a `dbx.config.*` / `tsconfig.*.json` input changes.
-- `defineDbxConfig` also registers `vp run dbx:sync` / `vp run dbx:check`. Prefer
-  the bare plugin when you don't want the tasks:
-
-```ts
-import { dbx } from '@deltabox/toolchain/vite';
-
-export default defineConfig({ plugins: [dbx({ check: true })] });
-```
+- `run: { tasks: { ...DBX_TASKS } }` additionally exposes `vp run dbx:sync` /
+  `vp run dbx:check` (Vite+ reads `run.tasks` from the static config, which a
+  plugin cannot add). Drop the `run` block if you don't want those tasks.
 
 See the [providers guide](https://toolchain.deltabox.studio/guide/providers).
 
@@ -215,9 +210,9 @@ config-derived defaults apply unless overridden on the command line.
 ## Programmatic API
 
 ```ts
-import { defineConfig, loadToolingConfig, runSync, defaultSyncTasks } from '@deltabox/toolchain';
+import { defineConfig, loadToolchainConfig, runSync, defaultSyncTasks } from '@deltabox/toolchain';
 
-const { config, tokens, projectType } = await loadToolingConfig(process.cwd());
+const { config, tokens, projectType } = await loadToolchainConfig(process.cwd());
 await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, projectType });
 ```
 

@@ -212,50 +212,19 @@ Master switch (enabled when the section is defined).
 
 ### `sources`
 
-- **Type**: `Array<ToolingTemplateSource>`
+- **Type**: `Array<ToolchainTemplateSource>`
 
 Extra sources on top of the builtin + registry sources.
 
 ## `vite`
 
-Vite+ configuration (manages `vite.config.ts` + the `vite:*` commands).
-
-### `enabled`
-
-- **Type**: `boolean`
-
-Master switch (enabled when the section is defined).
+The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.
 
 ### `config`
 
 - **Type**: `boolean`
 
-Write the managed `vite.config.ts` (default true when the section is set).
-
-### `defaultTemplate`
-
-- **Type**: `string`
-
-`create.defaultTemplate`, eg. `@acme` for `@acme/create`.
-
-### `testInclude`
-
-- **Type**: `Array<string>`
-
-Extra Vitest include globs (default: tests under src + tests).
-
-### `lintIgnore`
-
-- **Type**: `Array<string>`
-
-Glob patterns Oxlint should ignore.
-
-### `overrides`
-
-- **Type**: `Record<string, unknown>`
-- **Default**: `{}`
-
-Deep-merged over the generated `vite.config.ts` object.
+Write the managed `vite.config.ts` (default true).
 
 ## `watch`
 
@@ -287,7 +256,7 @@ Minimum level to print (default `info`).
 
 - **Type**: `boolean`
 
-Force colours on/off (default: auto).
+Force colours on/off (default: on; `--no-color` disables).
 
 ### `name`
 
@@ -316,7 +285,7 @@ export default defineConfig({
         changelog: { workflows: { ci: true, release: true }, branches: { main: 'main' } },
         tsconfig: { refs: true },
         templates: { sources: [{ type: 'local', locate: './templates', kind: 'application' }] },
-        vite: { defaultTemplate: '@acme' },
+        vite: { fmt: { semi: true, singleQuote: true }, test: { include: ['src/**/*.test.ts'] } },
         watch: { debounce: 150 },
     },
 });

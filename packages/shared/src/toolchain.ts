@@ -12,14 +12,14 @@
  * `config-types.ts`. Only `hooks` (functions) is hand-written.
  */
 
-import type { ProjectType, ToolingConfigSections } from './config-types.js';
+import type { ProjectType, ToolchainConfigSections } from './config-types.js';
 import type { Replacements } from './template.js';
 import type { Awaitable } from './types.js';
 
 export * from './config-schema.js';
 export * from './config-types.js';
 
-/** A summary of a sync run, handed to {@link ToolingHooks.afterSync}. */
+/** A summary of a sync run, handed to {@link ToolchainHooks.afterSync}. */
 export interface SyncSummary {
     written: string[];
     changed: string[];
@@ -31,11 +31,11 @@ export interface SyncSummary {
  * Lifecycle hooks, declared as functions in `dbx.config.ts` (so they only work
  * from a `.ts`/`.js` config, not JSON). Return values are awaited.
  */
-export interface ToolingHooks {
+export interface ToolchainHooks {
     /** Runs after the config is loaded + tokens resolved. */
     afterLoad?: (info: {
         cwd: string;
-        config: ToolingConfig;
+        config: ToolchainConfig;
         tokens: Replacements;
         path?: string;
     }) => Awaitable<void>;
@@ -52,7 +52,7 @@ export interface ToolingHooks {
     /** Runs once after the sync tasks with the result summary. */
     afterSync?: (info: {
         cwd: string;
-        config: ToolingConfig;
+        config: ToolchainConfig;
         result: SyncSummary;
     }) => Awaitable<void>;
     /** Runs on every watch-triggered change. */
@@ -67,7 +67,7 @@ export interface ToolingHooks {
  * section to enable it; omit it to leave that area untouched. Within a defined
  * section, `enabled: false` disables it explicitly.
  */
-export type ToolingConfig = ToolingConfigSections & { hooks?: ToolingHooks };
+export type ToolchainConfig = ToolchainConfigSections & { hooks?: ToolchainHooks };
 
 /**
  * The root shape of a `dbx.config.*` file. The `@deltabox/toolchain` settings
@@ -75,7 +75,7 @@ export type ToolingConfig = ToolingConfigSections & { hooks?: ToolingHooks };
  * alongside it.
  */
 export interface DbxConfig {
-    toolchain?: ToolingConfig;
+    toolchain?: ToolchainConfig;
 }
 
 /**
@@ -90,7 +90,7 @@ export function defineConfig(config: DbxConfig): DbxConfig {
  * A config section that is enabled with `true`, disabled with `false`, or
  * configured with an options object.
  */
-export type ToolingSection<T> = boolean | T;
+export type ToolchainSection<T> = boolean | T;
 
 /**
  * Whether an optional top-level config section is enabled.
@@ -101,12 +101,10 @@ export type ToolingSection<T> = boolean | T;
  * no options, or configure it with an object (`biome: { overrides: { ... } }`).
  * Either way the tooling never touches an area the consumer did not ask for.
  */
-export function sectionEnabled(
-    section: ToolingSection<{ enabled?: boolean }> | undefined
-): boolean {
+export function sectionEnabled(section: boolean | object | undefined): boolean {
     if (section === undefined) return false;
     if (typeof section === 'boolean') return section;
-    return section.enabled !== false;
+    return (section as { enabled?: boolean }).enabled !== false;
 }
 
 /**
@@ -115,7 +113,7 @@ export function sectionEnabled(
  * any object rather than `{ enabled?: boolean }`.
  */
 export function sectionConfig<T extends object>(
-    section: ToolingSection<T> | undefined
+    section: ToolchainSection<T> | undefined
 ): T | undefined {
     return section !== undefined && typeof section === 'object' ? section : undefined;
 }
@@ -138,10 +136,10 @@ export function repoSlugFromUrl(repo: string | undefined): string | undefined {
 }
 
 /**
- * Flatten a {@link ToolingConfig} into the `{{ token }}` replacements every
+ * Flatten a {@link ToolchainConfig} into the `{{ token }}` replacements every
  * template understands. Defaults are chosen so a bare config still renders.
  */
-export function resolveTokens(config: ToolingConfig = {}): Replacements {
+export function resolveTokens(config: ToolchainConfig = {}): Replacements {
     const project = config.project ?? {};
     const changelog = sectionConfig(config.changelog) ?? {};
     const name = project.name ?? 'app';
@@ -183,7 +181,7 @@ export interface SyncContext {
     /** The detected/configured project kind. */
     projectType: ProjectType;
     /** The loaded config. */
-    config: ToolingConfig;
+    config: ToolchainConfig;
     /** The resolved replacement tokens. */
     tokens: Replacements;
     /** Log a line (respects `--quiet`). */
@@ -207,7 +205,7 @@ export interface SyncTask {
      */
     keep?: string[];
     /** Whether the task runs for the given config (default: always). */
-    enabled?: (config: ToolingConfig) => boolean;
+    enabled?: (config: ToolchainConfig) => boolean;
     /**
      * The project kinds the task applies to (default: all). A task is skipped
      * when the resolved project type is not in this list.

@@ -1,13 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { type ProjectType, readJsonAt, type ToolingConfig } from '@deltabox/toolchain-shared';
+import { type ProjectType, readJsonAt, type ToolchainConfig } from '@deltabox/toolchain-shared';
 
 /**
  * Resolve the project kind: an explicit `project.type` in the config wins,
  * otherwise it is detected from the filesystem.
  */
-export function resolveProjectType(cwd: string, config: ToolingConfig = {}): ProjectType {
+export function resolveProjectType(cwd: string, config: ToolchainConfig = {}): ProjectType {
     if (config.project?.type) return config.project.type;
     return detectProjectType(cwd);
 }

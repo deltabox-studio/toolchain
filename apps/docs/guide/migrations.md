@@ -22,12 +22,38 @@ dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
 | `prettier` | Prettier-compatible options transfer directly; Tailwind/PackageJson plugins detected; `.prettierignore` → `ignorePatterns`.                                  |
 | `eslint`   | JSON configs map rule names + severities (`@typescript-eslint/*` → `typescript/*`); JS/flat configs use `@oxlint/migrate` with `--online --write`.           |
 | `dprint`   | `dprint.json` layout + TypeScript options → Oxfmt.                                                                                                           |
+| `vite`     | Folds a hand-written root `vite.config.*` into `dbx.config.*`'s `toolchain.vite` (see below).                                                                |
 
 ## Targets
 
 - `--target files` (default) — writes `.oxfmtrc.json` and `.oxlintrc.json`.
 - `--target vite` — folds the result into an existing `vite.config.ts`
   (inserting/replacing `fmt` and `lint`), which is what Vite+ reads.
+
+## `vite.config`
+
+The `vite` source moves a hand-written root `vite.config.*` into
+`dbx.config.*`'s `toolchain.vite`, so the whole Vite+ config lives in the one
+hand-authored root config and `dbx sync` writes a thin `vite.config.ts` shim that
+resolves it at load time:
+
+```bash
+dbx migrate --from vite          # dry-run: shows what would fold in
+dbx migrate --from vite --write  # folds the object into toolchain.vite
+dbx sync                         # writes the managed vite.config.ts shim
+```
+
+It also adds `/vite.config.ts` to `toolchain.vite.fmt.ignorePatterns`, so Oxfmt
+leaves the generated shim alone (otherwise `vp fmt` would rewrite it and
+`dbx sync --check` would report drift).
+
+It extracts the object literal passed to `defineConfig(...)` (or the
+default-exported object) with a string-aware, balanced-paren scanner and
+text-splices it into the nearest `dbx.config.*` (inserting `vite: { ... }`, or
+replacing an existing `vite` value). When the config references imports, plugins
+or any non-literal expression it is reported as **unmapped** and nothing is
+written, rather than emitting broken output. A JSON `dbx.config.json` is also
+left alone (the object is folded by hand).
 
 ## Package scripts
 

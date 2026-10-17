@@ -60,7 +60,7 @@ const example = [
     '        changelog: { workflows: { ci: true, release: true }, branches: { main: "main" } },',
     '        tsconfig: { refs: true },',
     "        templates: { sources: [{ type: 'local', locate: './templates', kind: 'application' }] },",
-    "        vite: { defaultTemplate: '@acme' },",
+    "        vite: { fmt: { semi: true, singleQuote: true }, test: { include: ['src/**/*.test.ts'] } },",
     '        watch: { debounce: 150 },',
     '    },',
     '});',

@@ -209,7 +209,7 @@ export function defaultWorkflows(tokens: Replacements): Record<WorkflowId, Workf
             },
         },
         sync: {
-            name: 'Tooling sync',
+            name: 'Toolchain sync',
             on: { push: { branches: [main, dev] }, pull_request: null },
             jobs: {
                 sync: {

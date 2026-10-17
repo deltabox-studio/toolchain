@@ -16,7 +16,7 @@ import type {
     MigrationContext,
     MigrationFile,
     MigrationResult,
-    ToolingMigration,
+    ToolchainMigration,
 } from './types.js';
 import { renderViteTarget } from './vite-target.js';
 
@@ -80,7 +80,7 @@ export function readJsonc(file: string): Record<string, any> {
 }
 
 /** Build the Biome -> ox migration. */
-export const biomeToOx: ToolingMigration = {
+export const biomeToOx: ToolchainMigration = {
     id: 'biome-to-ox',
     from: 'biome',
     to: 'ox',

@@ -1,7 +1,7 @@
-import type { ToolingTemplateKind, ToolingTemplateSource } from '@deltabox/toolchain-shared';
+import type { ToolchainTemplateKind, ToolchainTemplateSource } from '@deltabox/toolchain-shared';
 
 /** What a template produces (shared with the registry source model). */
-export type TemplateKind = ToolingTemplateKind;
+export type TemplateKind = ToolchainTemplateKind;
 
 /** A value a local template prompts for / substitutes. */
 export interface TemplateVariable {
@@ -22,7 +22,7 @@ export interface Template {
     description?: string;
     kind: TemplateKind;
     /** How/where the template is loaded from. */
-    source: ToolingTemplateSource;
+    source: ToolchainTemplateSource;
     tags?: string[];
     /** Whether creating from it needs network access. */
     online?: boolean;

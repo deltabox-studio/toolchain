@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import type { ConfigEngine } from '../engine.js';
 
@@ -41,7 +41,7 @@ function resolve(value: string | undefined, fallback: string): string {
 }
 
 /** Build the config commands bound to a consumer's engine. */
-export function configCommands(ctx: ConfigCommandContext): ToolingCommand[] {
+export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
     const { engine } = ctx;
     const d = ctx.defaults ?? {};
 

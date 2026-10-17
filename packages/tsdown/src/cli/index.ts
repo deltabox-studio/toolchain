@@ -1,4 +1,4 @@
-import type { ToolingCommand } from '@deltabox/toolchain-shared';
+import type { ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import { cleanup } from '../cleanup.js';
 
@@ -6,7 +6,7 @@ import { cleanup } from '../cleanup.js';
  * The cleanup commands (`cleanup`, `cleanup:turbo`). The working directory
  * comes from `context.cwd` (the root the config was loaded from).
  */
-export function cleanupCommands(): ToolingCommand[] {
+export function cleanupCommands(): ToolchainCommand[] {
     return [
         {
             name: 'cleanup',

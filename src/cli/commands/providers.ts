@@ -1,13 +1,13 @@
-import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
-import { toolingProviders } from '../../providers.js';
+import { toolchainProviders } from '../../providers.js';
 
 /**
  * `dbx providers` — list the registered providers and the CLI commands
  * they contribute. `--json` is the machine-readable form the VS Code extension
  * consumes to build its menus.
  */
-export function providerCommands(): ToolingCommand[] {
+export function providerCommands(): ToolchainCommand[] {
     return [
         {
             name: 'providers',
@@ -16,7 +16,7 @@ export function providerCommands(): ToolingCommand[] {
                 { flags: '--json', description: 'Print the providers (with actions) as JSON.' },
             ],
             run: opts => {
-                const providers = toolingProviders();
+                const providers = toolchainProviders();
                 if (opts.json) {
                     logger.raw(JSON.stringify(providers, null, 4));
                     return;

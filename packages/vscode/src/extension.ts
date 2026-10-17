@@ -255,7 +255,7 @@ export function activate(context: vscode.ExtensionContext): void {
         }
     };
 
-    const resetTooling = async (targets?: Project[]): Promise<void> => {
+    const resetToolchain = async (targets?: Project[]): Promise<void> => {
         const scope = await vscode.window.showQuickPick(
             [
                 {
@@ -346,7 +346,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 },
                 { label: 'Application', value: 'application', detail: 'A runnable application' },
                 { label: 'Folder', value: 'folder', detail: 'A bare folder of files' },
-                { label: 'Tooling', value: 'tooling', detail: 'A tooling config/pipeline' },
+                { label: 'Toolchain', value: 'tooling', detail: 'A tooling config/pipeline' },
                 { label: 'Pipeline', value: 'pipeline', detail: 'A CI/pipeline template' },
             ],
             { placeHolder: 'What kind of template is this?' }
@@ -504,8 +504,8 @@ export function activate(context: vscode.ExtensionContext): void {
                 case 'runWorkflow':
                     await runWorkflow(workspaceRoots()[0] ?? process.cwd());
                     break;
-                case 'resetTooling':
-                    await resetTooling();
+                case 'resetToolchain':
+                    await resetToolchain();
                     break;
                 case 'toggle':
                     await vscode.commands.executeCommand(`${SECTION}.toggle`);
@@ -535,7 +535,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     const project = discoverProjects().find(
                         candidate => candidate.dir === action.dir
                     );
-                    await resetTooling(
+                    await resetToolchain(
                         project
                             ? [project]
                             : [{ dir: action.dir, label: path.basename(action.dir) } as Project]
@@ -843,9 +843,9 @@ export function activate(context: vscode.ExtensionContext): void {
             removeTemplate()
         ),
         vscode.commands.registerCommand(
-            'deltabox.toolchain.resetTooling',
+            'deltabox.toolchain.resetToolchain',
             async (node?: Project) => {
-                await resetTooling(node ? [node] : undefined);
+                await resetToolchain(node ? [node] : undefined);
             }
         ),
         vscode.commands.registerCommand('deltabox.toolchain.goToProject', (node?: Project) => {

@@ -10,6 +10,7 @@ override them on the command line.
 | Flag                | Description                                                    |
 | ------------------- | -------------------------------------------------------------- |
 | `--log-level <lvl>` | Minimum log level: `debug`, `info`, `warn`, `error`, `silent`. |
+| `--color`           | Force coloured output (the default).                           |
 | `--no-color`        | Disable coloured output.                                       |
 | `--no-update-check` | Do not check for a newer `dbx` version.                        |
 
@@ -20,6 +21,10 @@ before or after the subcommand.
 short notice with a link to the release when a newer version is published. The
 check is skipped in CI and when `NO_UPDATE_NOTIFIER` or `DBX_NO_UPDATE_CHECK` is
 set, and can be turned off with `--no-update-check`.
+
+## Output
+
+Colour is on by default and follows `--no-color` / the [`logger` config](/guide/config#logging).
 
 ## Core
 
@@ -40,6 +45,10 @@ set, and can be turned off with `--no-update-check`.
 | `project:init:workspace` | A workspace package into an existing monorepo root.                             |
 | `project:config`         | Generate `dbx.config.ts` for projects missing one.                              |
 | `create`                 | Scaffold from a template (`--template`/`--kind`, `--name`, `--scope`, `--out`). |
+
+On an interactive terminal, a bare `dbx create` (no `--template`/`--kind`/`--name`)
+prompts for the template, name and scope with clack; Ctrl-C cancels. See
+[Templates](/guide/templates).
 
 ## Templates
 
@@ -101,20 +110,20 @@ import {
     createCli,
     runCli,
     builtinCommands,
-    registerToolingCommands,
+    registerToolchainCommands,
     withDefaultVite,
     extractLogOptions,
 } from '@deltabox/toolchain/cli';
 ```
 
-| Export                                       | Description                                                            |
-| -------------------------------------------- | ---------------------------------------------------------------------- |
-| `createCli()`                                | Build the `dbx` commander program (global flags + built-in commands).  |
-| `runCli(argv?)`                              | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
-| `builtinCommands()`                          | The commands built into the root CLI (config commands need an engine). |
-| `registerToolingCommands(program, commands)` | Wire `ToolingCommand[]` descriptors onto a commander program.          |
-| `withDefaultVite(argv, commandNames?)`       | Insert `vite` before a bare Vite+ command (built-ins win).             |
-| `extractLogOptions(argv)`                    | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
+| Export                                         | Description                                                            |
+| ---------------------------------------------- | ---------------------------------------------------------------------- |
+| `createCli()`                                  | Build the `dbx` commander program (global flags + built-in commands).  |
+| `runCli(argv?)`                                | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
+| `builtinCommands()`                            | The commands built into the root CLI (config commands need an engine). |
+| `registerToolchainCommands(program, commands)` | Wire `ToolchainCommand[]` descriptors onto a commander program.        |
+| `withDefaultVite(argv, commandNames?)`         | Insert `vite` before a bare Vite+ command (built-ins win).             |
+| `extractLogOptions(argv)`                      | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
 
 `extractLogOptions` makes the logger flags work before _or_ after the
 subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.

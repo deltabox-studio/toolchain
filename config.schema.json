@@ -6,16 +6,16 @@
             "type": "object",
             "properties": {
                 "toolchain": {
-                    "$ref": "#/$defs/ToolingConfigSections"
+                    "$ref": "#/$defs/ToolchainConfigSections"
                 }
             },
             "additionalProperties": false
         },
-        "ToolingConfigSections": {
+        "ToolchainConfigSections": {
             "type": "object",
             "properties": {
                 "project": {
-                    "$ref": "#/$defs/ToolingProjectConfig"
+                    "$ref": "#/$defs/ToolchainProjectConfig"
                 },
                 "changelog": {
                     "anyOf": [
@@ -23,7 +23,7 @@
                             "type": "boolean"
                         },
                         {
-                            "$ref": "#/$defs/ToolingChangelogConfig"
+                            "$ref": "#/$defs/ToolchainChangelogConfig"
                         }
                     ]
                 },
@@ -33,7 +33,7 @@
                             "type": "boolean"
                         },
                         {
-                            "$ref": "#/$defs/ToolingBiomeConfig"
+                            "$ref": "#/$defs/ToolchainBiomeConfig"
                         }
                     ]
                 },
@@ -43,7 +43,7 @@
                             "type": "boolean"
                         },
                         {
-                            "$ref": "#/$defs/ToolingTsconfigConfig"
+                            "$ref": "#/$defs/ToolchainTsconfigConfig"
                         }
                     ]
                 },
@@ -53,7 +53,7 @@
                             "type": "boolean"
                         },
                         {
-                            "$ref": "#/$defs/ToolingTemplatesConfig"
+                            "$ref": "#/$defs/ToolchainTemplatesConfig"
                         }
                     ]
                 },
@@ -63,7 +63,7 @@
                             "type": "boolean"
                         },
                         {
-                            "$ref": "#/$defs/ToolingViteConfig"
+                            "$ref": "#/$defs/ToolchainViteConfig"
                         }
                     ]
                 },
@@ -73,7 +73,7 @@
                             "type": "boolean"
                         },
                         {
-                            "$ref": "#/$defs/ToolingWatchConfig"
+                            "$ref": "#/$defs/ToolchainWatchConfig"
                         }
                     ]
                 },
@@ -83,7 +83,7 @@
                             "type": "boolean"
                         },
                         {
-                            "$ref": "#/$defs/ToolingLoggerConfig"
+                            "$ref": "#/$defs/ToolchainLoggerConfig"
                         }
                     ]
                 },
@@ -93,14 +93,14 @@
                             "type": "boolean"
                         },
                         {
-                            "$ref": "#/$defs/ToolingProvidersConfig"
+                            "$ref": "#/$defs/ToolchainProvidersConfig"
                         }
                     ]
                 }
             },
             "additionalProperties": false
         },
-        "ToolingProjectConfig": {
+        "ToolchainProjectConfig": {
             "type": "object",
             "properties": {
                 "type": {
@@ -158,7 +158,7 @@
             ],
             "description": "The project kind (detected when omitted)."
         },
-        "ToolingChangelogConfig": {
+        "ToolchainChangelogConfig": {
             "type": "object",
             "properties": {
                 "enabled": {
@@ -383,7 +383,7 @@
             },
             "additionalProperties": false
         },
-        "ToolingBiomeConfig": {
+        "ToolchainBiomeConfig": {
             "type": "object",
             "properties": {
                 "enabled": {
@@ -405,7 +405,7 @@
             },
             "additionalProperties": false
         },
-        "ToolingTsconfigConfig": {
+        "ToolchainTsconfigConfig": {
             "type": "object",
             "properties": {
                 "enabled": {
@@ -443,7 +443,7 @@
             },
             "additionalProperties": false
         },
-        "ToolingTemplatesConfig": {
+        "ToolchainTemplatesConfig": {
             "type": "object",
             "properties": {
                 "enabled": {
@@ -453,18 +453,18 @@
                 "sources": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/$defs/ToolingTemplateSource"
+                        "$ref": "#/$defs/ToolchainTemplateSource"
                     },
                     "description": "Extra sources on top of the builtin + registry sources."
                 }
             },
             "additionalProperties": false
         },
-        "ToolingTemplateSource": {
+        "ToolchainTemplateSource": {
             "type": "object",
             "properties": {
                 "type": {
-                    "$ref": "#/$defs/ToolingTemplateSourceType"
+                    "$ref": "#/$defs/ToolchainTemplateSourceType"
                 },
                 "locate": {
                     "type": "string",
@@ -483,7 +483,7 @@
                     "description": "Description override."
                 },
                 "kind": {
-                    "$ref": "#/$defs/ToolingTemplateKind"
+                    "$ref": "#/$defs/ToolchainTemplateKind"
                 },
                 "ref": {
                     "type": "string",
@@ -511,7 +511,7 @@
             ],
             "additionalProperties": false
         },
-        "ToolingTemplateSourceType": {
+        "ToolchainTemplateSourceType": {
             "type": "string",
             "enum": [
                 "builtin",
@@ -522,7 +522,7 @@
             ],
             "description": "How to load the source."
         },
-        "ToolingTemplateKind": {
+        "ToolchainTemplateKind": {
             "type": "string",
             "enum": [
                 "project",
@@ -534,47 +534,17 @@
             ],
             "description": "What the template produces."
         },
-        "ToolingViteConfig": {
+        "ToolchainViteConfig": {
             "type": "object",
             "properties": {
-                "enabled": {
-                    "type": "boolean",
-                    "description": "Master switch (enabled when the section is defined)."
-                },
                 "config": {
                     "type": "boolean",
-                    "description": "Write the managed `vite.config.ts` (default true when the section is set)."
-                },
-                "defaultTemplate": {
-                    "type": "string",
-                    "description": "`create.defaultTemplate`, eg. `@acme` for `@acme/create`."
-                },
-                "testInclude": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "description": "Extra Vitest include globs (default: tests under src + tests)."
-                },
-                "lintIgnore": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "description": "Glob patterns Oxlint should ignore."
-                },
-                "overrides": {
-                    "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
-                    "additionalProperties": {},
-                    "description": "Deep-merged over the generated `vite.config.ts` object."
+                    "description": "Write the managed `vite.config.ts` (default true)."
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": {}
         },
-        "ToolingWatchConfig": {
+        "ToolchainWatchConfig": {
             "type": "object",
             "properties": {
                 "enabled": {
@@ -588,7 +558,7 @@
             },
             "additionalProperties": false
         },
-        "ToolingLoggerConfig": {
+        "ToolchainLoggerConfig": {
             "type": "object",
             "properties": {
                 "level": {
@@ -604,7 +574,7 @@
                 },
                 "color": {
                     "type": "boolean",
-                    "description": "Force colours on/off (default: auto)."
+                    "description": "Force colours on/off (default: on; `--no-color` disables)."
                 },
                 "name": {
                     "type": "string",
@@ -613,7 +583,7 @@
             },
             "additionalProperties": false
         },
-        "ToolingProvidersConfig": {
+        "ToolchainProvidersConfig": {
             "type": "object",
             "properties": {
                 "color": {

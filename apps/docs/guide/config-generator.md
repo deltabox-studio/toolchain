@@ -89,7 +89,7 @@ engine.buildConfigJson(); // the config metadata document
 
 ## 4. CLI commands
 
-`configCommands({ engine, defaults })` returns `ToolingCommand[]` (register them
+`configCommands({ engine, defaults })` returns `ToolchainCommand[]` (register them
 on your commander program with `@deltabox/toolchain/cli`):
 
 | Command           | Writes                                       |
@@ -206,6 +206,19 @@ export interface ServerConfig {
     host?: string;
     port?: number;
     auth?: { password?: string; enabled?: boolean };
+}
+```
+
+An object schema that also accepts arbitrary keys (Zod `.catchall(...)` /
+`.passthrough()`, ie. `additionalProperties` in the JSON Schema) generates an
+open interface with an index signature, so the extra keys stay typed as
+`unknown` instead of being rejected:
+
+```ts
+export interface ServerConfig {
+    /** Bind host. */
+    host?: string;
+    [key: string]: unknown;
 }
 ```
 
