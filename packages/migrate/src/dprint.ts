@@ -15,7 +15,7 @@ import type {
     MigrationContext,
     MigrationFile,
     MigrationResult,
-    ToolingMigration,
+    ToolchainMigration,
 } from './types.js';
 import { renderViteTarget } from './vite-target.js';
 
@@ -73,7 +73,7 @@ export function mapDprintToOxfmt(dprint: Json): { oxfmt: Json; unmapped: string[
     return { oxfmt, unmapped };
 }
 
-export const dprintToOx: ToolingMigration = {
+export const dprintToOx: ToolchainMigration = {
     id: 'dprint-to-ox',
     from: 'dprint',
     to: 'oxfmt',

@@ -215,9 +215,9 @@ config-derived defaults apply unless overridden on the command line.
 ## Programmatic API
 
 ```ts
-import { defineConfig, loadToolingConfig, runSync, defaultSyncTasks } from '@deltabox/toolchain';
+import { defineConfig, loadToolchainConfig, runSync, defaultSyncTasks } from '@deltabox/toolchain';
 
-const { config, tokens, projectType } = await loadToolingConfig(process.cwd());
+const { config, tokens, projectType } = await loadToolchainConfig(process.cwd());
 await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, projectType });
 ```
 

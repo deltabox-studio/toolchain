@@ -31,6 +31,16 @@ export interface GenerateTypesOptions {
     interfaceNames?: Record<string, string>;
     /** Per-scope extra aliases appended after the generated interface. */
     aliases?: Record<string, string>;
+    /**
+     * Per-scope hand-written overrides: the full declaration text emitted
+     * verbatim instead of a generated interface. Keyed by type name.
+     */
+    overrides?: Record<string, string>;
+    /**
+     * Import lines emitted once at the top of the file (after the header) so a
+     * hand-written override can reference an imported type.
+     */
+    imports?: string[];
     /** File extension for generated files (default `ts`). */
     extension?: string;
     /** A raw (verbatim) header prepended to every generated file. */
@@ -100,6 +110,13 @@ export function renderConfigTypes(
     const interfaceName = options.interfaceNames?.[scopeName] ?? `${pascalCase(scopeName)}Config`;
     const aliases = options.aliases?.[scopeName] ?? '';
     const wrap = (body: string): string => (options.header ? `${options.header}\n\n${body}` : body);
+
+    // A hand-written override replaces the generated interface verbatim.
+    const override = options.overrides?.[scopeName];
+    if (override !== undefined) {
+        return wrap(`${override.trimEnd()}\n${aliases}`.trimEnd());
+    }
+
     const allowExtraKeys = (schema as { allowExtraKeys?: boolean }).allowExtraKeys === true;
 
     // A non-object root (enum, union, record, ...) is rendered as a type alias.
@@ -131,6 +148,15 @@ export function renderConfigTypes(
     if (allowExtraKeys) mainInterface = withIndexSignature(mainInterface);
 
     return wrap(`${baseInterface}\n${mainInterface}\n${aliases}`);
+}
+
+/**
+ * Render the import block for the generated file (empty when none are
+ * configured). Emitted once at the top of the file, after the header, so a
+ * hand-written override can reference imported types.
+ */
+export function renderConfigImports(options: GenerateTypesOptions = {}): string {
+    return (options.imports ?? []).join('\n');
 }
 
 /** Render every config type file, keyed by scope name. */

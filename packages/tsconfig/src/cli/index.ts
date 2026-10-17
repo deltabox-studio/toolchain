@@ -1,4 +1,4 @@
-import { sectionConfig, type ToolingCommand } from '@deltabox/toolchain-shared';
+import { sectionConfig, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import { generateTsconfigs } from '../cli/generate/index.js';
 
@@ -6,7 +6,7 @@ import { generateTsconfigs } from '../cli/generate/index.js';
  * The `tsconfig` command. Defaults come from `dbx.config.tsconfig.*;
  * (via the command context); any CLI flag overrides them.
  */
-export function tsconfigCommands(): ToolingCommand[] {
+export function tsconfigCommands(): ToolchainCommand[] {
     return [
         {
             name: 'tsconfig',

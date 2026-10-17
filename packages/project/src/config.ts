@@ -4,7 +4,7 @@ import path from 'node:path';
 import { detectProjectType, selectProjects } from '@deltabox/toolchain-core';
 import { type PackageJson, type ProjectType, readJsonAt } from '@deltabox/toolchain-shared';
 
-import { renderToolingConfig } from './typescript.js';
+import { renderToolchainConfig } from './typescript.js';
 
 /** The file name a generated dbx config uses. */
 export const GENERATED_CONFIG_FILENAME = 'dbx.config.ts';
@@ -103,7 +103,7 @@ export function generateProjectConfigs(
         const type = options.type ?? detectProjectType(project.dir);
         const pkg = readJsonAt<PackageJson>(project.dir, 'package.json');
         const { name, scope } = splitName(project.name ?? pkg?.name, project.dir);
-        const content = renderToolingConfig({ name, ...(scope ? { scope } : {}), type });
+        const content = renderToolchainConfig({ name, ...(scope ? { scope } : {}), type });
 
         if (!dryRun) fs.writeFileSync(configPath, content, 'utf-8');
         created.push(project.rel);

@@ -5,8 +5,8 @@ import {
     logger,
     setLogConfig,
     setLogOverrides,
-    type ToolingCommand,
-    type ToolingCommandContext,
+    type ToolchainCommand,
+    type ToolchainCommandContext,
 } from '@deltabox/toolchain-shared';
 
 import { loadContext } from './context.js';
@@ -26,12 +26,12 @@ export function isPassthroughCommand(): boolean {
 }
 
 /**
- * Register {@link ToolingCommand} descriptors on a commander program. Before a
+ * Register {@link ToolchainCommand} descriptors on a commander program. Before a
  * command runs, the consumer's `dbx.config.*` is loaded (once per cwd)
  * and passed as context. Only flags the user *explicitly typed* are forwarded,
  * so config-derived defaults win unless overridden on the CLI.
  */
-export function registerToolingCommands(program: Command, commands: ToolingCommand[]): Command {
+export function registerToolchainCommands(program: Command, commands: ToolchainCommand[]): Command {
     const passthroughNames = new Set(
         commands.filter(command => command.passthrough).map(command => command.name)
     );
@@ -86,7 +86,7 @@ export function registerToolingCommands(program: Command, commands: ToolingComma
                 if (provided.quiet === true) {
                     setLogOverrides({ ...getLogOverrides(), level: 'error' });
                 }
-                const context: ToolingCommandContext = {
+                const context: ToolchainCommandContext = {
                     cwd,
                     projectType: loaded.projectType,
                     config: loaded.config,

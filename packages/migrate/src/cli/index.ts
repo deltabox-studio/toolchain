@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import { diffFiles, hasPending } from '../check.js';
 import { detectMigrations, listMigrations, migrations } from '../registry.js';
@@ -12,7 +12,7 @@ import type { MigrateTarget } from '../types.js';
  * hand-written `vite.config.*` into `dbx.config.*`. Dry-run by default; pass
  * `--write` to apply, or `--check` for a CI gate.
  */
-export function migrateCommands(): ToolingCommand[] {
+export function migrateCommands(): ToolchainCommand[] {
     return [
         {
             name: 'migrate',

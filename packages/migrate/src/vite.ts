@@ -21,7 +21,7 @@ import type {
     MigrationContext,
     MigrationFile,
     MigrationResult,
-    ToolingMigration,
+    ToolchainMigration,
     UnmappedItem,
 } from './types.js';
 import { findTopLevelValue, matchBracket } from './vite-target.js';
@@ -206,7 +206,7 @@ export function foldViteIntoConfig(
 }
 
 /** Fold a hand-written root `vite.config.*` into `dbx.config.*`. */
-export const viteToToolchain: ToolingMigration = {
+export const viteToToolchain: ToolchainMigration = {
     id: 'vite-to-toolchain',
     from: 'vite',
     to: 'toolchain',

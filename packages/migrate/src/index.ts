@@ -4,7 +4,7 @@
  * Converts Biome / ESLint / Prettier configurations into Oxfmt (`.oxfmtrc.json`)
  * and Oxlint (`.oxlintrc.json`), including the pieces the upstream tools skip
  * (Biome `organizeImports` -> Oxfmt `sortImports`, and Biome rules -> Oxlint
- * rules). New source tools are added by implementing `ToolingMigration` and
+ * rules). New source tools are added by implementing `ToolchainMigration` and
  * registering it in `registry.ts`.
  */
 

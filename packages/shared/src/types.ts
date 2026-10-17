@@ -1,5 +1,5 @@
 import type { Replacements } from './template.js';
-import type { ProjectType, ToolingConfig } from './toolchain.js';
+import type { ProjectType, ToolchainConfig } from './toolchain.js';
 
 /** A value that may or may not be awaited. */
 export type Awaitable<T> = T | Promise<T>;
@@ -20,7 +20,7 @@ export type JsonValue =
     | { [key: string]: JsonValue };
 
 /** A CLI option a tooling command exposes (framework-agnostic). */
-export interface ToolingOption {
+export interface ToolchainOption {
     /** Commander-style flags, eg. `-o, --out <path>`. */
     flags: string;
     /** Human-readable description. */
@@ -34,13 +34,13 @@ export interface ToolingOption {
  * `dbx.config.*` has been loaded, so a command can derive its defaults
  * from the config; explicit CLI flags override those defaults.
  */
-export interface ToolingCommandContext {
+export interface ToolchainCommandContext {
     /** The project root the config was loaded from. */
     cwd: string;
     /** The detected/configured project kind. */
     projectType: ProjectType;
     /** The loaded tooling config (empty object when none was found). */
-    config: ToolingConfig;
+    config: ToolchainConfig;
     /** The resolved replacement tokens. */
     tokens: Replacements;
     /** The config file that was loaded, if any. */
@@ -48,7 +48,7 @@ export interface ToolingCommandContext {
 }
 
 /** A positional argument a command accepts. */
-export interface ToolingArgument {
+export interface ToolchainArgument {
     /** The argument name (also its key in the run `args` object). */
     name: string;
     /** Human-readable description. */
@@ -66,15 +66,15 @@ export interface ToolingArgument {
  * the flags explicitly passed on the command line (so config defaults apply
  * otherwise); `context` carries the loaded config.
  */
-export interface ToolingCommand<Args extends Record<string, unknown> = Record<string, unknown>> {
+export interface ToolchainCommand<Args extends Record<string, unknown> = Record<string, unknown>> {
     /** The command name, eg. `config` or `generate`. */
     name: string;
     /** Human-readable description. */
     description: string;
     /** Positional arguments the command accepts. */
-    args?: ToolingArgument[];
+    args?: ToolchainArgument[];
     /** Options the command accepts. */
-    options?: ToolingOption[];
+    options?: ToolchainOption[];
     /**
      * Forward every operand (including unknown flags) to the command instead of
      * parsing them. Used by provider passthrough commands (eg. `vite:dev`), which
@@ -83,7 +83,7 @@ export interface ToolingCommand<Args extends Record<string, unknown> = Record<st
      */
     passthrough?: boolean;
     /** Run the command with the CLI-provided options + the loaded config. */
-    run: (args: Args, context: ToolingCommandContext) => Awaitable<void>;
+    run: (args: Args, context: ToolchainCommandContext) => Awaitable<void>;
 }
 
 /** A package.json-shaped object (loose; only the fields the tooling touches). */

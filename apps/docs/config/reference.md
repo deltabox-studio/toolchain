@@ -212,7 +212,7 @@ Master switch (enabled when the section is defined).
 
 ### `sources`
 
-- **Type**: `Array<ToolingTemplateSource>`
+- **Type**: `Array<ToolchainTemplateSource>`
 
 Extra sources on top of the builtin + registry sources.
 

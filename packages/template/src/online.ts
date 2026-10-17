@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import type { ToolingTemplateSource } from '@deltabox/toolchain-shared';
+import type { ToolchainTemplateSource } from '@deltabox/toolchain-shared';
 
 import type { Template } from './types.js';
 
@@ -66,7 +66,7 @@ export async function loadNpmTemplates(pkg: string): Promise<Template[]> {
 }
 
 /** A single template backed by a git repository. */
-export function gitTemplate(source: ToolingTemplateSource): Template {
+export function gitTemplate(source: ToolchainTemplateSource): Template {
     const base =
         source.locate
             .replace(/\.git$/, '')
@@ -89,10 +89,16 @@ export function gitTemplate(source: ToolingTemplateSource): Template {
  * `npm:@acme/create`) or an inferred source (a path that exists -> local, an
  * `@scope/name` -> npm, a URL/scp -> git).
  */
-export function parseSourceSpec(spec: string, cwd: string = process.cwd()): ToolingTemplateSource {
+export function parseSourceSpec(
+    spec: string,
+    cwd: string = process.cwd()
+): ToolchainTemplateSource {
     const match = spec.match(/^(builtin|local|npm|git|vite-plus):(.+)$/i);
     if (match?.[1] && match[2]) {
-        return { type: match[1].toLowerCase() as ToolingTemplateSource['type'], locate: match[2] };
+        return {
+            type: match[1].toLowerCase() as ToolchainTemplateSource['type'],
+            locate: match[2],
+        };
     }
     if (/^(https?:|git@|git:\/\/|ssh:\/\/)/.test(spec) || spec.endsWith('.git')) {
         return { type: 'git', locate: spec, online: true };

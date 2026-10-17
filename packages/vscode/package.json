@@ -84,7 +84,7 @@
                 "icon": "$(play)"
             },
             {
-                "command": "deltabox.toolchain.resetTooling",
+                "command": "deltabox.toolchain.resetToolchain",
                 "title": "Reset tooling…",
                 "category": "deltabox",
                 "icon": "$(trash)"
@@ -222,7 +222,7 @@
                     "group": "deltabox@3"
                 },
                 {
-                    "command": "deltabox.toolchain.resetTooling",
+                    "command": "deltabox.toolchain.resetToolchain",
                     "when": "view == deltabox.projects && viewItem =~ /deltabox\\.project/",
                     "group": "deltabox@4"
                 },

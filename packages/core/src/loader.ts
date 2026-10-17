@@ -8,14 +8,14 @@ import {
     type ProjectType,
     type Replacements,
     resolveTokens,
-    type ToolingConfig,
+    type ToolchainConfig,
 } from '@deltabox/toolchain-shared';
 
 import { resolveProjectType } from './project-type.js';
 
 /** A loaded tooling config plus its resolved path + replacement tokens. */
 export interface LoadedConfig {
-    config: ToolingConfig;
+    config: ToolchainConfig;
     /** The config file that was loaded (undefined when none was found). */
     path?: string;
     tokens: Replacements;
@@ -62,9 +62,9 @@ async function importModule(file: string): Promise<unknown> {
  * `toolchain` key) exists an empty config is returned (so every task falls back
  * to its defaults).
  */
-export async function loadToolingConfig(cwd: string = process.cwd()): Promise<LoadedConfig> {
+export async function loadToolchainConfig(cwd: string = process.cwd()): Promise<LoadedConfig> {
     const file = findConfigFile(cwd);
-    let config: ToolingConfig = {};
+    let config: ToolchainConfig = {};
     if (file) {
         const loaded = await importModule(file);
         const toolchain =

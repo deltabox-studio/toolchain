@@ -14,7 +14,7 @@ import type {
     MigrationContext,
     MigrationFile,
     MigrationResult,
-    ToolingMigration,
+    ToolchainMigration,
 } from './types.js';
 import { renderViteTarget } from './vite-target.js';
 
@@ -109,7 +109,7 @@ export function mapPrettierToOxfmt(prettier: Json): { oxfmt: Json; unmapped: str
     return { oxfmt, unmapped };
 }
 
-export const prettierToOx: ToolingMigration = {
+export const prettierToOx: ToolchainMigration = {
     id: 'prettier-to-ox',
     from: 'prettier',
     to: 'oxfmt',

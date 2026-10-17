@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import { TEMPLATE_MANIFEST, writeTemplateManifest } from '../local.js';
 import { parseSourceSpec } from '../online.js';
@@ -55,7 +55,7 @@ function parseVarDefs(pairs: string[] | undefined): TemplateVariable[] {
 }
 
 /** The `template:*` commands plus the template-driven `create`. */
-export function templateCommands(): ToolingCommand[] {
+export function templateCommands(): ToolchainCommand[] {
     return [
         {
             name: 'template:list',

@@ -16,7 +16,7 @@ import {
     // identity helper (typed config)
     defineConfig,
     // config + sync
-    loadToolingConfig,
+    loadToolchainConfig,
     runSync,
     runWatch,
     defaultSyncTasks,
@@ -42,7 +42,7 @@ import {
 ```
 
 ```ts
-const { config, tokens, projectType } = await loadToolingConfig(process.cwd());
+const { config, tokens, projectType } = await loadToolchainConfig(process.cwd());
 await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, projectType });
 ```
 
@@ -56,7 +56,7 @@ await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, p
 | `@deltabox/toolchain/vite`      | Resolve/run `vp`, the Vite+ provider, the `dbx()` plugin and `vite` sync.      |
 | `@deltabox/toolchain/migrate`   | Pluggable migrations to Oxfmt/Oxlint (Biome, ESLint, Prettier, Dprint).        |
 | `@deltabox/toolchain/template`  | The builtin/local/online template registry, loading and scaffolding.           |
-| `@deltabox/toolchain/providers` | The provider registry (`toolingProviders`) the editor reads.                   |
+| `@deltabox/toolchain/providers` | The provider registry (`toolchainProviders`) the editor reads.                 |
 | `@deltabox/toolchain/tsdown`    | The tsdown base config, `createTsdownConfig`, post banner and cleanup.         |
 | `@deltabox/toolchain/tsconfig`  | The tsconfig sync task, templates and the tsconfig generator.                  |
 | `@deltabox/toolchain/changelog` | The changelog runner, workflows, commitlint and the changelog sync task.       |
@@ -86,9 +86,9 @@ the template engine.
 | `applyReplacements` / `applyReplacementsDeep` / `createReplacer` | The `{{ token }}` template engine (also `tokenPattern`, `extractTokens`). |
 | `toYaml(value)`                                                  | A tiny YAML emitter for the GitHub Actions subset.                        |
 
-The config **types** and **schemas** also live here: `ToolingConfig`, `DbxConfig`,
-`SyncTask`, `SyncContext`, `ManagedFile`, `ToolingCommand`, `ToolingOption`,
-`ToolingProvider`, `Replacements`, and the generated `config-types` /
+The config **types** and **schemas** also live here: `ToolchainConfig`, `DbxConfig`,
+`SyncTask`, `SyncContext`, `ManagedFile`, `ToolchainCommand`, `ToolchainOption`,
+`ToolchainProvider`, `Replacements`, and the generated `config-types` /
 `config-schema` exports.
 
 ```ts
@@ -103,7 +103,7 @@ Loads `dbx.config.*`, builds the project graph and runs the sync tasks.
 
 | Export                                                        | Description                                                            |
 | ------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `loadToolingConfig(cwd?)`                                     | Find + load the config, resolve tokens and the project type.           |
+| `loadToolchainConfig(cwd?)`                                   | Find + load the config, resolve tokens and the project type.           |
 | `findConfigFile(cwd?)`                                        | The config file path, if any.                                          |
 | `runSync(options)`                                            | Run the given `SyncTask[]` and return the summary.                     |
 | `runWatch(options)`                                           | Sync once, then watch inputs and re-sync.                              |
@@ -111,7 +111,7 @@ Loads `dbx.config.*`, builds the project graph and runs the sync tasks.
 | `orderProjects(nodes)` / `detectPackageManager(root)`         | Dependency ordering and package-manager detection.                     |
 | `writeProjectGraph` / `readProjectGraph`                      | Persist/read `.dbx/toolchain/projects.json`.                           |
 | `selectProjects(options)`                                     | Select projects by kind/name/glob.                                     |
-| `resetTooling(options)` / `resetProjects(options)`            | Remove generated files, the manifest and/or the config.                |
+| `resetToolchain(options)` / `resetProjects(options)`          | Remove generated files, the manifest and/or the config.                |
 | `vscodeSyncTask(options?)`                                    | The VS Code settings/extensions sync task.                             |
 | `resolveProjectType(cwd, config?)` / `detectProjectType(cwd)` | The project kind (`monorepo-root` / `monorepo-workspace` / `project`). |
 | `readManifest(cwd)` / `writeManifest(cwd, files)`             | The `.dbx/toolchain/manifest.json` helpers.                            |
@@ -156,14 +156,14 @@ sync task (see the [Providers](/guide/providers) guide).
 
 ### `@deltabox/toolchain/cli`
 
-| Export                                       | Description                                                            |
-| -------------------------------------------- | ---------------------------------------------------------------------- |
-| `registerToolingCommands(program, commands)` | Wire framework-agnostic commands onto a commander program.             |
-| `builtinCommands()`                          | The commands built into the root CLI (config commands need an engine). |
-| `createCli()`                                | Build the `dbx` commander program.                                     |
-| `runCli(argv?)`                              | Parse and run the CLI (extracts logger flags, defaults bare Vite+).    |
-| `withDefaultVite(argv, commandNames?)`       | Insert `vite` before a bare Vite+ command.                             |
-| `extractLogOptions(argv)`                    | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
+| Export                                         | Description                                                            |
+| ---------------------------------------------- | ---------------------------------------------------------------------- |
+| `registerToolchainCommands(program, commands)` | Wire framework-agnostic commands onto a commander program.             |
+| `builtinCommands()`                            | The commands built into the root CLI (config commands need an engine). |
+| `createCli()`                                  | Build the `dbx` commander program.                                     |
+| `runCli(argv?)`                                | Parse and run the CLI (extracts logger flags, defaults bare Vite+).    |
+| `withDefaultVite(argv, commandNames?)`         | Insert `vite` before a bare Vite+ command.                             |
+| `extractLogOptions(argv)`                      | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
 
 See the [CLI](/guide/cli) guide for the routing behaviour.
 
@@ -173,7 +173,7 @@ See the [CLI](/guide/cli) guide for the routing behaviour.
 | ----------------------------------------------------------------------------------- | ------------------------------------------------ |
 | `migrations()` / `listMigrations(cwd)` / `detectMigrations(cwd)`                    | The registered migrations and detection.         |
 | `findMigration(idOrFrom)` / `runMigration(...)` / `runDetectedMigrations(ctx)`      | Run one or every detected migration.             |
-| `biomeToOx` / `eslintToOx` / `prettierToOx` / `dprintToOx` / `viteToToolchain`      | The built-in `ToolingMigration` objects.         |
+| `biomeToOx` / `eslintToOx` / `prettierToOx` / `dprintToOx` / `viteToToolchain`      | The built-in `ToolchainMigration` objects.       |
 | `mapBiomeToOxfmt` / `mapBiomeToOxlint` / `mapPrettierToOxfmt` / `mapDprintToOxfmt`  | Source-to-Ox mapping helpers.                    |
 | `extractViteObject(source)` / `scanLiteralObject(text)` / `foldViteIntoConfig(...)` | The `vite` source's extraction + splice helpers. |
 | `diffFiles(files)` / `hasPending(diffs)`                                            | Diff planned files against disk (for `--check`). |
@@ -195,13 +195,13 @@ See the [CLI](/guide/cli) guide for the routing behaviour.
 
 | Export                      | Description                                           |
 | --------------------------- | ----------------------------------------------------- |
-| `toolingProviders()`        | Every registered provider with its actions resolved.  |
+| `toolchainProviders()`      | Every registered provider with its actions resolved.  |
 | `providerActions(provider)` | The default actions for a provider (one per command). |
 | `viteProvider()`            | The Vite+ provider descriptor.                        |
 
 ```ts
-import { toolingProviders } from '@deltabox/toolchain/providers';
-console.log(toolingProviders().map(p => p.id));
+import { toolchainProviders } from '@deltabox/toolchain/providers';
+console.log(toolchainProviders().map(p => p.id));
 ```
 
 ### `@deltabox/toolchain/tsdown`
@@ -249,7 +249,7 @@ console.log(toolingProviders().map(p => p.id));
 | -------------------------------------------------------------------------------------------- | -------------------------------------------------- |
 | `createRootProjectFiles(ctx)` / `createMonorepoRootFiles(ctx)` / `createWorkspaceFiles(ctx)` | Scaffold files for each project kind.              |
 | `generateProjectConfigs(options)`                                                            | Generate `dbx.config.ts` for projects missing one. |
-| `renderToolingConfig(ctx)` / `renderWorkspaceTsconfig(composite?)`                           | Render the tooling config / a workspace tsconfig.  |
+| `renderToolchainConfig(ctx)` / `renderWorkspaceTsconfig(composite?)`                         | Render the tooling config / a workspace tsconfig.  |
 | `renderTurboJson()` / `renderGitignore()`                                                    | Render `turbo.json` / `.gitignore`.                |
 | `writeGeneratedFiles(files, cwd?)`                                                           | Write a `GeneratedFile[]`.                         |
 | `projectCommands()`                                                                          | The `project:*` commands.                          |
@@ -307,8 +307,8 @@ const [template] = await loadTemplates({ cwd: process.cwd() });
 if (template) await scaffoldTemplate(template, { cwd: './out', tokens: { name: 'acme' } });
 
 // Providers (what the editor reads)
-import { toolingProviders } from '@deltabox/toolchain/providers';
-console.log(toolingProviders().map(p => p.id));
+import { toolchainProviders } from '@deltabox/toolchain/providers';
+console.log(toolchainProviders().map(p => p.id));
 
 // Config engine
 import { createConfigEngine } from '@deltabox/toolchain/config';
@@ -316,17 +316,17 @@ import { createConfigEngine } from '@deltabox/toolchain/config';
 
 ## Registering commands
 
-Packages export framework-agnostic `ToolingCommand[]` descriptors; wire them onto
-a commander program with `registerToolingCommands` (this is how the bundled
+Packages export framework-agnostic `ToolchainCommand[]` descriptors; wire them onto
+a commander program with `registerToolchainCommands` (this is how the bundled
 `dbx` binary, and a consumer's own CLI, are assembled):
 
 ```ts
 import { Command } from 'commander';
 
-import { registerToolingCommands } from '@deltabox/toolchain/cli';
+import { registerToolchainCommands } from '@deltabox/toolchain/cli';
 import { configCommands } from '@deltabox/toolchain/config';
 
 const program = new Command();
-registerToolingCommands(program, configCommands({ engine }));
+registerToolchainCommands(program, configCommands({ engine }));
 await program.parseAsync();
 ```

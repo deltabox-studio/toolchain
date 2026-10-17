@@ -1,4 +1,4 @@
-name: Tooling sync
+name: Toolchain sync
 on:
   push:
     branches: [main, dev]

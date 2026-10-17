@@ -16,7 +16,7 @@ import {
     type SyncTask,
     sectionConfig,
     sectionEnabled,
-    type ToolingViteConfig,
+    type ToolchainViteConfig,
 } from '@deltabox/toolchain-shared';
 
 /**
@@ -46,7 +46,7 @@ export function renderObjectLiteral(value: unknown, indent = 0): string {
 }
 
 /** The `vite` section with the toolchain opt-out (`config`) removed. */
-export function viteConfigObject(config: ToolingViteConfig = {}): Record<string, unknown> {
+export function viteConfigObject(config: ToolchainViteConfig = {}): Record<string, unknown> {
     const { config: _config, ...vite } = config as Record<string, unknown>;
     return vite;
 }
@@ -56,7 +56,7 @@ export function viteConfigObject(config: ToolingViteConfig = {}): Record<string,
  * the `vite-plus` import and `defineConfig(<the toolchain.vite object>)`.
  */
 export function renderViteConfig(
-    config: ToolingViteConfig = {},
+    config: ToolchainViteConfig = {},
     tokens: Replacements = {}
 ): string {
     const vite = applyReplacementsDeep(viteConfigObject(config), tokens);

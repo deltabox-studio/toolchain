@@ -1,4 +1,4 @@
-import { sectionConfig, type ToolingCommandContext } from '@deltabox/toolchain-shared';
+import { sectionConfig, type ToolchainCommandContext } from '@deltabox/toolchain-shared';
 
 import { defaultSyncTasks } from '../../sync.js';
 
@@ -9,7 +9,7 @@ export const baseOptions = [
 ];
 
 /** Build the run options for `runSync`/`runWatch` from the command context. */
-export function watchOptions(context: ToolingCommandContext) {
+export function watchOptions(context: ToolchainCommandContext) {
     const watch = sectionConfig(context.config.watch);
     return {
         tasks: defaultSyncTasks(),

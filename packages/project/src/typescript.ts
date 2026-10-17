@@ -47,7 +47,7 @@ const json = (value: unknown, indent = 4): string => `${JSON.stringify(value, nu
  * `project.type` lets the sync know whether the folder is a monorepo root, a
  * workspace, or a single project.
  */
-export function renderToolingConfig(ctx: ProjectContext & { type: ProjectType }): string {
+export function renderToolchainConfig(ctx: ProjectContext & { type: ProjectType }): string {
     const entries: [string, string][] = [
         ['type', ctx.type],
         ['name', ctx.name],
@@ -125,7 +125,7 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
             : [
                   {
                       path: 'dbx.config.ts',
-                      content: renderToolingConfig({ ...ctx, type: ctx.type ?? 'project' }),
+                      content: renderToolchainConfig({ ...ctx, type: ctx.type ?? 'project' }),
                   },
               ]),
         { path: 'package.json', content: json(pkg) },
@@ -180,7 +180,7 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
             : [
                   {
                       path: 'dbx.config.ts',
-                      content: renderToolingConfig({ ...ctx, type: ctx.type ?? 'monorepo-root' }),
+                      content: renderToolchainConfig({ ...ctx, type: ctx.type ?? 'monorepo-root' }),
                   },
               ]),
         { path: 'package.json', content: json(pkg) },
@@ -231,7 +231,7 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
             : [
                   {
                       path: 'dbx.config.ts',
-                      content: renderToolingConfig({
+                      content: renderToolchainConfig({
                           ...ctx,
                           type: ctx.type ?? 'monorepo-workspace',
                       }),

@@ -7,18 +7,18 @@
  * editor automatically.
  */
 
-import { providerActions, type ToolingProvider } from '@deltabox/toolchain-shared';
+import { providerActions, type ToolchainProvider } from '@deltabox/toolchain-shared';
 import { viteProvider } from '@deltabox/toolchain-vite';
 
 export type {
-    ToolingProvider,
-    ToolingProviderAction,
-    ToolingProviderCommand,
+    ToolchainProvider,
+    ToolchainProviderAction,
+    ToolchainProviderCommand,
 } from '@deltabox/toolchain-shared';
 export { providerActions } from '@deltabox/toolchain-shared';
 export { viteProvider } from '@deltabox/toolchain-vite';
 
 /** The registered providers, each with its actions resolved (defaults applied). */
-export function toolingProviders(): ToolingProvider[] {
+export function toolchainProviders(): ToolchainProvider[] {
     return [viteProvider()].map(provider => ({ ...provider, actions: providerActions(provider) }));
 }

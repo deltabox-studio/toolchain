@@ -13,7 +13,7 @@
  */
 
 /** A CLI command a provider contributes (namespaced, eg. `vite:dev`). */
-export interface ToolingProviderCommand {
+export interface ToolchainProviderCommand {
     /** The namespaced `dbx` command name, eg. `vite:dev`. */
     name: string;
     /** The wrapped subcommand on the provider binary, eg. `dev`. */
@@ -27,7 +27,7 @@ export interface ToolingProviderCommand {
 }
 
 /** A curated action the VS Code extension can surface for a provider. */
-export interface ToolingProviderAction {
+export interface ToolchainProviderAction {
     /** Stable id, unique within the provider. */
     id: string;
     /** Menu label. */
@@ -41,7 +41,7 @@ export interface ToolingProviderAction {
 }
 
 /** A provider descriptor consumed by the CLI + the VS Code extension. */
-export interface ToolingProvider {
+export interface ToolchainProvider {
     /** Stable id, eg. `vite-plus`. */
     id: string;
     /** Display name, eg. `Vite+`. */
@@ -53,9 +53,9 @@ export interface ToolingProvider {
     /** The external binary the provider wraps, eg. `vp`. */
     binary?: string;
     /** The commands the provider contributes to the CLI. */
-    commands: ToolingProviderCommand[];
+    commands: ToolchainProviderCommand[];
     /** Curated actions for the extension (defaults to one per command). */
-    actions?: ToolingProviderAction[];
+    actions?: ToolchainProviderAction[];
 }
 
 /**
@@ -63,7 +63,7 @@ export interface ToolingProvider {
  * declare its own. This keeps a provider descriptor minimal while still giving
  * the extension something to render.
  */
-export function providerActions(provider: ToolingProvider): ToolingProviderAction[] {
+export function providerActions(provider: ToolchainProvider): ToolchainProviderAction[] {
     if (provider.actions?.length) return provider.actions;
     return provider.commands.map(command => ({
         id: command.name.replace(/[:]/g, '-'),

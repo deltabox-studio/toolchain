@@ -2,7 +2,7 @@
 /**
  * The `dbx` CLI entry point.
  *
- * Packages export framework-agnostic {@link ToolingCommand} descriptors; the
+ * Packages export framework-agnostic {@link ToolchainCommand} descriptors; the
  * root wires them together and hands each command the loaded
  * `dbx.config.*` context (see `./register.ts`). The config-driven
  * `projects`/`sync`/`watch` commands live in `./commands`.
@@ -23,7 +23,7 @@ import {
     setLogOverrides,
     stripAnsi,
     type LoggerOptions,
-    type ToolingCommand,
+    type ToolchainCommand,
 } from '@deltabox/toolchain-shared';
 import { templateCommands } from '@deltabox/toolchain-template/cli';
 import { tsconfigCommands } from '@deltabox/toolchain-tsconfig/cli';
@@ -32,13 +32,13 @@ import { resolveVpCommand, viteCommands } from '@deltabox/toolchain-vite/cli';
 
 import rootPkg from '../../package.json' with { type: 'json' };
 import { syncCommands } from './commands/index.js';
-import { isPassthroughCommand, registerToolingCommands } from './register.js';
+import { isPassthroughCommand, registerToolchainCommands } from './register.js';
 import { runUpdateCheck } from './update-check.js';
 
-export { registerToolingCommands } from './register.js';
+export { registerToolchainCommands } from './register.js';
 
 /** The commands built into the root CLI (config commands need a consumer engine). */
-export function builtinCommands(): ToolingCommand[] {
+export function builtinCommands(): ToolchainCommand[] {
     return [
         ...syncCommands(),
         ...tsconfigCommands(),
@@ -160,7 +160,7 @@ export function createCli(): Command {
         .option('--no-color', 'Disable coloured output.')
         .option('--no-update-check', 'Do not check for a newer dbx version.')
         .showHelpAfterError();
-    registerToolingCommands(program, builtinCommands());
+    registerToolchainCommands(program, builtinCommands());
     return program;
 }
 

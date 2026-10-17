@@ -164,9 +164,9 @@ dbx sync                          # regenerates the managed vite.config.ts
 ## Programmatic API
 
 ```ts
-import { loadToolingConfig, runSync, defaultSyncTasks } from '@deltabox/toolchain';
+import { loadToolchainConfig, runSync, defaultSyncTasks } from '@deltabox/toolchain';
 
-const { config, tokens, projectType } = await loadToolingConfig(process.cwd());
+const { config, tokens, projectType } = await loadToolchainConfig(process.cwd());
 await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, projectType });
 ```
 

@@ -89,7 +89,7 @@ engine.buildConfigJson(); // the config metadata document
 
 ## 4. CLI commands
 
-`configCommands({ engine, defaults })` returns `ToolingCommand[]` (register them
+`configCommands({ engine, defaults })` returns `ToolchainCommand[]` (register them
 on your commander program with `@deltabox/toolchain/cli`):
 
 | Command           | Writes                                       |

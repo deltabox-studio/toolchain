@@ -4,7 +4,7 @@ import {
     mergeJsonAt,
     type ProjectType,
     type SyncTask,
-    type ToolingConfig,
+    type ToolchainConfig,
 } from '@deltabox/toolchain-shared';
 
 export interface VscodeSyncOptions {
@@ -13,11 +13,11 @@ export interface VscodeSyncOptions {
      * A function lets the patches depend on the config (eg. only inject Biome
      * settings when the `biome` section is enabled).
      */
-    settings?: Record<string, unknown>[] | ((config: ToolingConfig) => Record<string, unknown>[]);
+    settings?: Record<string, unknown>[] | ((config: ToolchainConfig) => Record<string, unknown>[]);
     /** Recommended extensions (unioned with the consumer's existing list). */
     extensions?: string[];
     /** Whether the task runs (default: always). */
-    enabled?: (config: ToolingConfig) => boolean;
+    enabled?: (config: ToolchainConfig) => boolean;
     /** The project kinds the task applies to (default root + single project). */
     projectTypes?: ProjectType[];
 }

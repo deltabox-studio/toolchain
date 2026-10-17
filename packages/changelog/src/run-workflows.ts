@@ -11,7 +11,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { sectionConfig, sectionEnabled, type ToolingConfig } from '@deltabox/toolchain-shared';
+import { sectionConfig, sectionEnabled, type ToolchainConfig } from '@deltabox/toolchain-shared';
 
 import { isEnabled, WORKFLOW_FILENAMES, type WorkflowId } from './workflows.js';
 
@@ -23,7 +23,7 @@ export interface RunWorkflowsOptions {
     /** Git ref to run the workflow on (eg. `main`). */
     ref?: string;
     /** The loaded tooling config, used to check `changelog.workflows`. */
-    config?: ToolingConfig;
+    config?: ToolchainConfig;
     /** The `gh` executable (default `gh`). */
     gh?: string;
 }

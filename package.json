@@ -100,6 +100,14 @@
         "vite-plus": "^1.2.0",
         "vitest": "catalog:"
     },
+    "peerDependencies": {
+        "vite-plus": ">=1"
+    },
+    "peerDependenciesMeta": {
+        "vite-plus": {
+            "optional": true
+        }
+    },
     "packageManager": "yarn@4.17.1",
     "engines": {
         "node": ">=22.5.0"

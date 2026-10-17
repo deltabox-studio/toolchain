@@ -71,7 +71,7 @@ export interface MigrationResult {
 }
 
 /** A pluggable config migration. */
-export interface ToolingMigration {
+export interface ToolchainMigration {
     /** Stable id, eg. `biome-to-ox`. */
     id: string;
     /** The source tool. */

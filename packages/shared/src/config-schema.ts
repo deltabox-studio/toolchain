@@ -38,7 +38,7 @@ export const projectConfigSchema = z
             .optional(),
         description: z.string().describe('One-line description.').optional(),
     })
-    .meta({ id: 'ToolingProjectConfig' });
+    .meta({ id: 'ToolchainProjectConfig' });
 
 /** A GitHub Actions step (the subset the workflow builder understands). */
 export const workflowStepSchema = z
@@ -127,7 +127,7 @@ export const changelogConfigSchema = z
         scopes: z.array(z.string()).describe('Allowed commit scopes (commitlint).').optional(),
         vscode: z.boolean().describe('Write the Conventional-Commits VS Code settings.').optional(),
     })
-    .meta({ id: 'ToolingChangelogConfig' });
+    .meta({ id: 'ToolchainChangelogConfig' });
 
 /** Biome config generation (for consumers that still want a `biome.json`). */
 export const biomeConfigSchema = z
@@ -142,7 +142,7 @@ export const biomeConfigSchema = z
             .describe('Deep-merged over the generated `biome.json` (arrays union).')
             .optional(),
     })
-    .meta({ id: 'ToolingBiomeConfig' });
+    .meta({ id: 'ToolchainBiomeConfig' });
 
 /** Workspace tsconfig generation (aliases + project references). */
 export const tsconfigConfigSchema = z
@@ -162,7 +162,7 @@ export const tsconfigConfigSchema = z
             .describe('The monorepo tsconfig file name (default `tsconfig.monorepo.json`).')
             .optional(),
     })
-    .meta({ id: 'ToolingTsconfigConfig' });
+    .meta({ id: 'ToolchainTsconfigConfig' });
 
 /** Watch behaviour for `dbx watch`. */
 export const watchConfigSchema = z
@@ -173,7 +173,7 @@ export const watchConfigSchema = z
             .optional(),
         debounce: z.number().describe('Debounce window in ms (default 150).').optional(),
     })
-    .meta({ id: 'ToolingWatchConfig' });
+    .meta({ id: 'ToolchainWatchConfig' });
 
 /** Logging (level, colour, prefix) for every toolchain message. */
 export const loggerConfigSchema = z
@@ -188,7 +188,7 @@ export const loggerConfigSchema = z
             .describe('Prefix non-indented lines with `<name>:` (default `dbx`).')
             .optional(),
     })
-    .meta({ id: 'ToolingLoggerConfig' });
+    .meta({ id: 'ToolchainLoggerConfig' });
 
 /** Provider command behaviour (colour of the provider passthrough commands). */
 export const providersConfigSchema = z
@@ -198,19 +198,19 @@ export const providersConfigSchema = z
             .describe('Force provider command colours on/off (default: inherit the logger).')
             .optional(),
     })
-    .meta({ id: 'ToolingProvidersConfig' });
+    .meta({ id: 'ToolchainProvidersConfig' });
 
 /** Where a template source is loaded from. */
 export const templateSourceTypeSchema = z
     .enum(['builtin', 'local', 'npm', 'git', 'vite-plus'])
     .describe('How to load the source.')
-    .meta({ id: 'ToolingTemplateSourceType' });
+    .meta({ id: 'ToolchainTemplateSourceType' });
 
 /** What a template produces. */
 export const templateKindSchema = z
     .enum(['project', 'workspace', 'application', 'folder', 'tooling', 'pipeline'])
     .describe('What the template produces.')
-    .meta({ id: 'ToolingTemplateKind' });
+    .meta({ id: 'ToolchainTemplateKind' });
 
 /** A source a template registry loads templates from (offline or online). */
 export const templateSourceSchema = z
@@ -229,7 +229,7 @@ export const templateSourceSchema = z
         tags: z.array(z.string()).describe('Free-form tags.').optional(),
         online: z.boolean().describe('Whether the source needs network access.').optional(),
     })
-    .meta({ id: 'ToolingTemplateSource' });
+    .meta({ id: 'ToolchainTemplateSource' });
 
 /** Template sources / scaffolding. */
 export const templatesConfigSchema = z
@@ -243,7 +243,7 @@ export const templatesConfigSchema = z
             .describe('Extra sources on top of the builtin + registry sources.')
             .optional(),
     })
-    .meta({ id: 'ToolingTemplatesConfig' });
+    .meta({ id: 'ToolchainTemplatesConfig' });
 
 /**
  * Vite+ configuration: the raw `vite.config.ts` object, held under
@@ -262,7 +262,7 @@ export const viteConfigSchema = z
             .optional(),
     })
     .catchall(z.unknown())
-    .meta({ id: 'ToolingViteConfig' });
+    .meta({ id: 'ToolchainViteConfig' });
 
 /** A section: enabled/disabled with a boolean, or configured with an object. */
 function section<T extends z.ZodTypeAny>(schema: T) {
@@ -270,7 +270,7 @@ function section<T extends z.ZodTypeAny>(schema: T) {
 }
 
 /** The full `dbx.config` schema (minus the function-bearing `hooks`). */
-export const toolingConfigSchema = z
+export const toolchainConfigSchema = z
     .object({
         project: projectConfigSchema.optional(),
         changelog: section(changelogConfigSchema).optional(),
@@ -282,12 +282,12 @@ export const toolingConfigSchema = z
         logger: section(loggerConfigSchema).optional(),
         providers: section(providersConfigSchema).optional(),
     })
-    .meta({ id: 'ToolingConfigSections' });
+    .meta({ id: 'ToolchainConfigSections' });
 
 /** The root `dbx.config` schema — the toolchain configuration lives under `toolchain`. */
 export const dbxConfigSchema = z
     .object({
-        toolchain: toolingConfigSchema.optional(),
+        toolchain: toolchainConfigSchema.optional(),
     })
     .meta({ id: 'DbxConfigSections' });
 
@@ -298,24 +298,24 @@ export const dbxConfigSchema = z
  */
 export const CONFIG_TYPE_SCHEMAS = {
     ProjectType: projectTypeSchema,
-    ToolingProjectConfig: projectConfigSchema,
+    ToolchainProjectConfig: projectConfigSchema,
     WorkflowStep: workflowStepSchema,
     WorkflowStepsConfig: workflowStepsConfigSchema,
     WorkflowConfig: workflowConfigSchema,
     WorkflowSetting: workflowSettingSchema,
     ChangelogWorkflowsConfig: changelogWorkflowsConfigSchema,
-    ToolingChangelogConfig: changelogConfigSchema,
-    ToolingBiomeConfig: biomeConfigSchema,
-    ToolingTsconfigConfig: tsconfigConfigSchema,
-    ToolingWatchConfig: watchConfigSchema,
-    ToolingTemplateSourceType: templateSourceTypeSchema,
-    ToolingTemplateKind: templateKindSchema,
-    ToolingTemplateSource: templateSourceSchema,
-    ToolingTemplatesConfig: templatesConfigSchema,
-    ToolingViteConfig: viteConfigSchema,
-    ToolingLoggerConfig: loggerConfigSchema,
-    ToolingProvidersConfig: providersConfigSchema,
-    ToolingConfigSections: toolingConfigSchema,
+    ToolchainChangelogConfig: changelogConfigSchema,
+    ToolchainBiomeConfig: biomeConfigSchema,
+    ToolchainTsconfigConfig: tsconfigConfigSchema,
+    ToolchainWatchConfig: watchConfigSchema,
+    ToolchainTemplateSourceType: templateSourceTypeSchema,
+    ToolchainTemplateKind: templateKindSchema,
+    ToolchainTemplateSource: templateSourceSchema,
+    ToolchainTemplatesConfig: templatesConfigSchema,
+    ToolchainViteConfig: viteConfigSchema,
+    ToolchainLoggerConfig: loggerConfigSchema,
+    ToolchainProvidersConfig: providersConfigSchema,
+    ToolchainConfigSections: toolchainConfigSchema,
     DbxConfigSections: dbxConfigSchema,
 } as const;
 

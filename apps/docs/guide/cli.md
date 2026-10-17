@@ -101,20 +101,20 @@ import {
     createCli,
     runCli,
     builtinCommands,
-    registerToolingCommands,
+    registerToolchainCommands,
     withDefaultVite,
     extractLogOptions,
 } from '@deltabox/toolchain/cli';
 ```
 
-| Export                                       | Description                                                            |
-| -------------------------------------------- | ---------------------------------------------------------------------- |
-| `createCli()`                                | Build the `dbx` commander program (global flags + built-in commands).  |
-| `runCli(argv?)`                              | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
-| `builtinCommands()`                          | The commands built into the root CLI (config commands need an engine). |
-| `registerToolingCommands(program, commands)` | Wire `ToolingCommand[]` descriptors onto a commander program.          |
-| `withDefaultVite(argv, commandNames?)`       | Insert `vite` before a bare Vite+ command (built-ins win).             |
-| `extractLogOptions(argv)`                    | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
+| Export                                         | Description                                                            |
+| ---------------------------------------------- | ---------------------------------------------------------------------- |
+| `createCli()`                                  | Build the `dbx` commander program (global flags + built-in commands).  |
+| `runCli(argv?)`                                | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
+| `builtinCommands()`                            | The commands built into the root CLI (config commands need an engine). |
+| `registerToolchainCommands(program, commands)` | Wire `ToolchainCommand[]` descriptors onto a commander program.        |
+| `withDefaultVite(argv, commandNames?)`         | Insert `vite` before a bare Vite+ command (built-ins win).             |
+| `extractLogOptions(argv)`                      | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
 
 `extractLogOptions` makes the logger flags work before _or_ after the
 subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.

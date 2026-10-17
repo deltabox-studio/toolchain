@@ -16,7 +16,7 @@ Every template declares a `kind`, used by `template:list --kind` and
 | `workspace`   | A package inside an existing monorepo. |
 | `application` | A runnable application package.        |
 | `folder`      | A bare folder of files.                |
-| `tooling`     | Tooling config/pipeline files.         |
+| `tooling`     | Toolchain config/pipeline files.       |
 | `pipeline`    | A CI/pipeline template.                |
 
 ## List + create

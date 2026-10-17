@@ -1,10 +1,10 @@
 import { runWatch } from '@deltabox/toolchain-core';
-import { logger, sectionConfig, type ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, sectionConfig, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import { baseOptions, watchOptions } from './shared.js';
 
 /** `dbx watch` — sync once, then re-sync on input changes. */
-export function watchCommand(): ToolingCommand {
+export function watchCommand(): ToolchainCommand {
     return {
         name: 'watch',
         description: 'Sync once, then watch key files and re-sync on change.',
