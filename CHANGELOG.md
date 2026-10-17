@@ -1,8 +1,18 @@
 # Changelog
 
-## 1.3.0 (October 2026)
+## 1.3.1 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+- Update config generator documentation ([#0dfbf88](https://github.com/deltabox-studio/toolchain/commit/0dfbf88) by [T0chi](https://github.com/T0chi))
+- Update config generator reference link ([#2f0adde](https://github.com/deltabox-studio/toolchain/commit/2f0adde) by [T0chi](https://github.com/T0chi))
+- Update features descriptions ([#e9c0a6d](https://github.com/deltabox-studio/toolchain/commit/e9c0a6d) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.3.0 (October 2026)
 
 ### New features
 #### Core
@@ -82,9 +92,6 @@
 ### Package changes
 #### Added
 - `picocolors` `^1.1.1`
-
-<!-- release:end -->
-
 
 ## 1.2.8 (October 2026)
 
