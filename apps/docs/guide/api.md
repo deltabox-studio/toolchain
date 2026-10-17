@@ -88,7 +88,8 @@ the template engine.
 
 The config **types** and **schemas** also live here: `ToolchainConfig`, `DbxConfig`,
 `SyncTask`, `SyncContext`, `ManagedFile`, `ToolchainCommand`, `ToolchainOption`,
-`ToolchainProvider`, `Replacements`, and the generated `config-types` /
+`ToolchainProvider`, `ToolchainViteConfig` (Vite+'s config type), `Replacements`,
+and the generated `config-types` /
 `config-schema` exports.
 
 ```ts

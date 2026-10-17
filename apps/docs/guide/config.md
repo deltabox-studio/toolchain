@@ -151,7 +151,9 @@ live at the root because `vp run` / `vp check` / `vp staged` do not accept
 The single toolchain opt-out is `config`. Set `vite: { config: false }` to leave
 a hand-written `vite.config.ts` alone. Everything else under `vite` is Vite+
 config (plugins, `test`, `lint`, `fmt`, `run.tasks`, ...), so `toolchain.vite`
-is the full Vite+ configuration.
+is the full Vite+ configuration. The section is typed as Vite+'s own config
+(`ToolchainViteConfig` = Vite's `UserConfig` as augmented by Vite+), so the whole
+Vite+ surface autocompletes in `dbx.config.ts`.
 
 To adopt an existing hand-written `vite.config.ts`, fold it in with the
 migration (see [Migrations](/guide/migrations#vite-config)):
