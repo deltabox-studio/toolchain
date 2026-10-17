@@ -1,3 +1,4 @@
+export * from './bin.js';
 export * from './fs-utils.js';
 export * from './logger.js';
 export * from './object-utils.js';

@@ -34,13 +34,18 @@ dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
 
 The `vite` source moves a hand-written root `vite.config.*` into
 `dbx.config.*`'s `toolchain.vite`, so the whole Vite+ config lives in the one
-hand-authored root config and `dbx sync` regenerates `vite.config.ts` from it:
+hand-authored root config and `dbx sync` writes a thin `vite.config.ts` shim that
+resolves it at load time:
 
 ```bash
 dbx migrate --from vite          # dry-run: shows what would fold in
 dbx migrate --from vite --write  # folds the object into toolchain.vite
-dbx sync                         # regenerates the managed vite.config.ts
+dbx sync                         # writes the managed vite.config.ts shim
 ```
+
+It also adds `/vite.config.ts` to `toolchain.vite.fmt.ignorePatterns`, so Oxfmt
+leaves the generated shim alone (otherwise `vp fmt` would rewrite it and
+`dbx sync --check` would report drift).
 
 It extracts the object literal passed to `defineConfig(...)` (or the
 default-exported object) with a string-aware, balanced-paren scanner and

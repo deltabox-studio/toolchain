@@ -144,16 +144,17 @@ guide for the full workflow).
 The Vite+ provider: resolving/running `vp`, the `dbx()` plugin and the `vite`
 sync task (see the [Providers](/guide/providers) guide).
 
-| Export                                                             | Description                                                       |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| `resolveVp(cwd?)` / `hasVp(cwd?)` / `runVp(args, options?)`        | Resolve and run the `vp` binary (local shim, global, then `npx`). |
-| `vpVersion(cwd?)` / `describeVp(cwd?)` / `which(bin)`              | Version, resolution description and PATH lookup.                  |
-| `VP_COMMANDS` / `viteCommandName(name)` / `resolveVpCommand(name)` | The `vp` command catalog + name/alias resolution.                 |
-| `viteProvider()` / `viteCommands()`                                | The provider descriptor and the `dbx vite:*` commands.            |
-| `dbx(options?)` / `DBX_TASKS`                                      | The Vite/Vite+ plugin and the `run.tasks` to spread in.           |
-| `resolveDbx(cwd?)` / `runDbx(args, cwd?)`                          | Resolve/run the `dbx` binary.                                     |
-| `renderViteConfig(config?, tokens?)` / `viteConfigObject(config?)` | Serialize `toolchain.vite` to a managed `vite.config.ts`.         |
-| `viteSyncTask()` / `renderObjectLiteral(value, indent?)`           | The `vite` sync task and the object-literal renderer.             |
+| Export                                                             | Description                                                          |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| `resolveVp(cwd?)` / `hasVp(cwd?)` / `runVp(args, options?)`        | Resolve and run the `vp` binary (local shim, global, then `npx`).    |
+| `vpVersion(cwd?)` / `describeVp(cwd?)` / `which(bin)`              | Version, resolution description and PATH lookup.                     |
+| `VP_COMMANDS` / `viteCommandName(name)` / `resolveVpCommand(name)` | The `vp` command catalog + name/alias resolution.                    |
+| `viteProvider()` / `viteCommands()`                                | The provider descriptor and the `dbx vite:*` commands.               |
+| `dbx(options?)` / `DBX_TASKS`                                      | The Vite/Vite+ plugin and the `run.tasks` to spread in.              |
+| `resolveDbx(cwd?)` / `runDbx(args, cwd?)`                          | Resolve/run the `dbx` binary (always the project's own first).       |
+| `resolveVite(dbxConfig?, options?)`                                | Resolve `toolchain.vite` from a `dbx.config.*` (or a passed config). |
+| `renderViteConfig()` / `viteConfigObject(config?)`                 | The managed `vite.config.ts` shim + the section minus `config`.      |
+| `viteSyncTask()`                                                   | The `vite` sync task that writes the shim.                           |
 
 ### `@deltabox/toolchain/cli`
 
@@ -257,9 +258,10 @@ console.log(toolchainProviders().map(p => p.id));
 
 ## Logging
 
-Every toolchain message goes through one level-aware, color-aware logger
-(`picocolors`). Use it instead of `console.log` so output stays consistent and
-respects the config and the CLI flags.
+Every toolchain message goes through one level-aware logger, rendered with
+[`@clack/prompts`](https://bombshell.dev/clack) (level symbols + guide). Use it
+instead of `console.log` so output stays consistent and respects the config and
+the CLI flags.
 
 | Export / member                                   | Description                                                                                  |
 | ------------------------------------------------- | -------------------------------------------------------------------------------------------- |
@@ -282,8 +284,8 @@ logger.error('failed');
 logger.raw(JSON.stringify(payload)); // machine output: no prefix, no colour
 ```
 
-Use `raw` for machine output (`--json`): it is never prefixed or coloured.
-`logger.success`/`warn`/`error` write to stderr; `debug`/`info`/`raw` to stdout.
+Use `raw` for machine output (`--json`): it is never prefixed or decorated.
+`logger.warn`/`error` write to stderr; `debug`/`info`/`success`/`raw` to stdout.
 Messages that start with whitespace (indented continuations) are never prefixed.
 
 This mirrors the [`logger` config section](/guide/config#logging) and the

@@ -28,7 +28,7 @@ interface JsonSchemaNode {
     $ref?: string;
     $defs?: Record<string, JsonSchemaNode>;
     items?: JsonSchemaNode;
-    additionalProperties?: JsonSchemaNode;
+    additionalProperties?: JsonSchemaNode | boolean;
     propertyNames?: JsonSchemaNode;
     env?: string;
     scope?: string;
@@ -98,13 +98,13 @@ export function renderTsType(
         return `Array<${renderTsType(node.items, defs)}>`;
     }
     if (types.includes('object')) {
-        if (node.additionalProperties !== undefined) {
-            const value = isEmptySchema(node.additionalProperties)
+        const additional = node.additionalProperties;
+        if (additional === undefined || additional === false) return 'Record<string, unknown>';
+        const value =
+            additional === true || isEmptySchema(additional)
                 ? 'unknown'
-                : renderTsType(node.additionalProperties, defs);
-            return `Record<string, ${value}>`;
-        }
-        return 'Record<string, unknown>';
+                : renderTsType(additional, defs);
+        return `Record<string, ${value}>`;
     }
     if (types.length === 0) return 'unknown';
     return types.map(type => TS_TYPE_MAP[type] ?? 'unknown').join(' | ');

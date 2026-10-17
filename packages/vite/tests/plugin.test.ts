@@ -46,6 +46,19 @@ describe('dbx resolution', () => {
         expect(resolveDbx(dir).source).toBe('local');
     });
 
+    it('prefers the repo’s own @deltabox/toolchain bin over a global dbx', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'package.json'),
+            JSON.stringify({ name: '@deltabox/toolchain', bin: { dbx: './dist/cli/index.js' } })
+        );
+        fs.mkdirSync(path.join(dir, 'dist', 'cli'), { recursive: true });
+        fs.writeFileSync(path.join(dir, 'dist', 'cli', 'index.js'), '');
+        const resolved = resolveDbx(dir);
+        expect(resolved.source).toBe('local');
+        expect(resolved.args).toEqual([path.join(dir, 'dist', 'cli', 'index.js')]);
+    });
+
     it('falls back to a known source everywhere else', () => {
         const resolved = resolveDbx(makeTmp());
         expect(['global', 'npx']).toContain(resolved.source);

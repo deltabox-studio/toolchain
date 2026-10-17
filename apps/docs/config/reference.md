@@ -256,7 +256,7 @@ Minimum level to print (default `info`).
 
 - **Type**: `boolean`
 
-Force colours on/off (default: auto).
+Force colours on/off (default: on; `--no-color` disables).
 
 ### `name`
 

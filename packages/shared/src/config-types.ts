@@ -180,7 +180,7 @@ export type ToolchainViteConfig = ViteUserConfig & {
 export interface ToolchainLoggerConfig {
     /** Minimum level to print (default `info`). */
     level?: 'debug' | 'info' | 'warn' | 'error' | 'silent';
-    /** Force colours on/off (default: auto). */
+    /** Force colours on/off (default: on; `--no-color` disables). */
     color?: boolean;
     /** Prefix non-indented lines with `<name>:` (default `dbx`). */
     name?: string;

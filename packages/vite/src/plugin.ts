@@ -25,7 +25,7 @@ import path from 'node:path';
 
 import type { Plugin } from 'vite';
 
-import { spawnCross } from '@deltabox/toolchain-shared';
+import { findOwnCliEntry, spawnCross } from '@deltabox/toolchain-shared';
 
 import { which } from './vp.js';
 
@@ -51,13 +51,20 @@ function localCandidates(cwd: string): string[] {
 }
 
 /**
- * Resolve the `dbx` binary: project-local shim -> global `PATH` ->
- * `npx --yes @deltabox/toolchain`.
+ * Resolve the `dbx` binary, always preferring the project's own over a global
+ * install: `DBX_BIN` override -> project-local shim -> the repo's own
+ * `@deltabox/toolchain` bin -> global `PATH` -> `npx --yes @deltabox/toolchain`.
+ * A project-local binary is what the project pins, so a stale global `dbx` can
+ * never be used by accident.
  */
 export function resolveDbx(cwd: string = process.cwd()): ResolvedDbx {
+    const override = process.env.DBX_BIN;
+    if (override) return { exe: override, args: [], source: 'local' };
     for (const candidate of localCandidates(cwd)) {
         if (fs.existsSync(candidate)) return { exe: candidate, args: [], source: 'local' };
     }
+    const own = findOwnCliEntry(cwd);
+    if (own) return { exe: process.execPath, args: [own], source: 'local' };
     const global = which('dbx');
     if (global) return { exe: global, args: [], source: 'global' };
     return {

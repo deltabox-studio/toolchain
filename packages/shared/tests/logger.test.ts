@@ -25,6 +25,8 @@ function capture() {
     return {
         out,
         err,
+        /** Everything written to stdout/stderr, ANSI stripped. */
+        all: () => stripAnsi([...out, ...err].join('')),
         restore: () => {
             outSpy.mockRestore();
             errSpy.mockRestore();
@@ -49,7 +51,19 @@ describe('logger', () => {
         const log = createLogger({ name: 'dbx', color: false });
         log.info('hello');
         log.info('  - sub');
-        expect(cap.out).toEqual(['dbx: hello\n', '  - sub\n']);
+        expect(cap.all()).toContain('dbx: hello');
+        expect(cap.all()).toContain('  - sub');
+        expect(cap.all()).not.toContain('dbx:   - sub');
+    });
+
+    it('renders human output through clack (level symbols)', () => {
+        const log = createLogger({ name: 'dbx', color: false });
+        log.success('done');
+        log.warn('careful');
+        log.error('boom');
+        expect(cap.all()).toContain('dbx: done');
+        expect(cap.all()).toContain('dbx: careful');
+        expect(cap.all()).toContain('dbx: boom');
     });
 
     it('honours the level threshold', () => {
@@ -59,10 +73,11 @@ describe('logger', () => {
         log.warn('yes');
         log.error('boom');
         expect(cap.out).toEqual([]);
-        expect(cap.err).toEqual(['yes\n', 'boom\n']);
+        expect(cap.err.join('')).toContain('yes');
+        expect(cap.err.join('')).toContain('boom');
     });
 
-    it('writes raw output without a prefix', () => {
+    it('writes raw output without a prefix or decoration', () => {
         const log = createLogger({ name: 'dbx', color: false });
         log.raw('{"a":1}');
         expect(cap.out).toEqual(['{"a":1}\n']);
@@ -92,7 +107,7 @@ describe('logger', () => {
         setLogOverrides({ level: 'debug', color: false });
         expect(getLogger().level).toBe('debug');
         getLogger().info('shown');
-        expect(cap.out).toEqual(['dbx: shown\n']);
+        expect(cap.all()).toContain('dbx: shown');
     });
 
     it('falls back to info for an unknown level', () => {

@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
     detectMigrations,
     diffFiles,
+    ensureViteFmtIgnore,
     extractViteObject,
     foldViteIntoConfig,
     hasPending,
@@ -310,6 +311,20 @@ describe('vite -> toolchain', () => {
         expect('content' in replaced && replaced.content).not.toContain('config: false');
     });
 
+    it('adds `/vite.config.ts` to fmt.ignorePatterns', () => {
+        expect(ensureViteFmtIgnore('{ fmt: { semi: true } }')).toBe(
+            "{ fmt: { ignorePatterns: ['/vite.config.ts'], semi: true } }"
+        );
+        expect(ensureViteFmtIgnore("{ fmt: { ignorePatterns: ['dist/**'] } }")).toBe(
+            "{ fmt: { ignorePatterns: ['/vite.config.ts', 'dist/**'] } }"
+        );
+        expect(ensureViteFmtIgnore('{ test: {} }')).toBe(
+            "{ fmt: { ignorePatterns: ['/vite.config.ts'] }, test: {} }"
+        );
+        const once = ensureViteFmtIgnore('{ fmt: { semi: true } }');
+        expect(ensureViteFmtIgnore(once)).toBe(once);
+    });
+
     it('folds a hand-written vite.config.ts into dbx.config.ts', async () => {
         const dir = makeTmp();
         fs.writeFileSync(
@@ -327,6 +342,7 @@ describe('vite -> toolchain', () => {
         expect(content).toContain("environment: 'node'");
         expect(content).toContain('singleQuote: true');
         expect(content).toContain("project: { name: 'acme' }");
+        expect(content).toContain("ignorePatterns: ['/vite.config.ts']");
     });
 
     it('changes nothing when the config is not foldable', async () => {

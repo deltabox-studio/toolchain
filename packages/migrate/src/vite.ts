@@ -205,6 +205,42 @@ export function foldViteIntoConfig(
     };
 }
 
+/** The root file the generated shim lives in; excluded from Oxfmt via `fmt`. */
+const VITE_CONFIG_IGNORE = '/vite.config.ts';
+
+/**
+ * Ensure `fmt.ignorePatterns` contains `'/vite.config.ts'` in a folded Vite
+ * object literal, so Oxfmt does not reformat the generated root `vite.config.ts`
+ * shim (which would make `dbx sync --check` drift). Works on the object text
+ * (braces included) with the same balanced scanner used to fold it in.
+ */
+export function ensureViteFmtIgnore(objectText: string): string {
+    const open = objectText.indexOf('{');
+    if (open === -1) return objectText;
+    const close = matchBracket(objectText, open);
+    if (close === -1) return objectText;
+    const entry = `'${VITE_CONFIG_IGNORE}'`;
+
+    const fmt = findTopLevelValue(objectText, open, close, 'fmt');
+    if (fmt && objectText[fmt[0]] === '{' && objectText[fmt[1] - 1] === '}') {
+        const [fmtStart, fmtEnd] = fmt;
+        const ignore = findTopLevelValue(objectText, fmtStart, fmtEnd, 'ignorePatterns');
+        if (ignore) {
+            const [ipStart, ipEnd] = ignore;
+            if (objectText.slice(ipStart, ipEnd).includes(VITE_CONFIG_IGNORE)) return objectText;
+            if (objectText[ipStart] === '[') {
+                return `${objectText.slice(0, ipStart + 1)}${entry}, ${objectText.slice(ipStart + 1)}`;
+            }
+            return `${objectText.slice(0, ipStart)}[${entry}]${objectText.slice(ipEnd)}`;
+        }
+        return `${objectText.slice(0, fmtStart + 1)} ignorePatterns: [${entry}],${objectText.slice(fmtStart + 1)}`;
+    }
+    if (fmt) {
+        return `${objectText.slice(0, fmt[0])}{ ignorePatterns: [${entry}] }${objectText.slice(fmt[1])}`;
+    }
+    return `${objectText.slice(0, open + 1)} fmt: { ignorePatterns: [${entry}] },${objectText.slice(open + 1)}`;
+}
+
 /** Fold a hand-written root `vite.config.*` into `dbx.config.*`. */
 export const viteToToolchain: ToolchainMigration = {
     id: 'vite-to-toolchain',
@@ -266,7 +302,7 @@ export const viteToToolchain: ToolchainMigration = {
         }
 
         const configSource = fs.readFileSync(configFile, 'utf-8').replace(/^\uFEFF/, '');
-        const folded = foldViteIntoConfig(configSource, extracted.text);
+        const folded = foldViteIntoConfig(configSource, ensureViteFmtIgnore(extracted.text));
         if ('error' in folded) {
             unmapped.push({ source: path.basename(configFile), reason: folded.error });
             notes.push('Left dbx.config.* unchanged; fold `toolchain.vite` in by hand.');
@@ -276,7 +312,7 @@ export const viteToToolchain: ToolchainMigration = {
         const file: MigrationFile = { path: configFile, content: folded.content };
         if (ctx.write) fs.writeFileSync(configFile, file.content, 'utf-8');
         notes.push(
-            `Folded into \`toolchain.vite\` (${path.basename(configFile)}); run \`dbx sync\` to regenerate vite.config.ts.`
+            `Folded into \`toolchain.vite\` (${path.basename(configFile)}); added \`${VITE_CONFIG_IGNORE}\` to \`fmt.ignorePatterns\`; run \`dbx sync\` to regenerate vite.config.ts.`
         );
         return {
             id: viteToToolchain.id,

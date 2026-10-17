@@ -15,6 +15,7 @@
     ],
     "private": true,
     "dependencies": {
+        "@clack/prompts": "catalog:",
         "@deltabox/toolchain-project": "workspace:*",
         "@deltabox/toolchain-shared": "workspace:*",
         "@deltabox/toolchain-vite": "workspace:*"

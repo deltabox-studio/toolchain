@@ -53,7 +53,7 @@
         "dev": "tsx src/cli/index.ts",
         "dbx": "tsx src/cli/index.ts",
         "commitlint": "commitlint",
-        "prepare": "husky"
+        "prepare": "husky && node scripts/bootstrap.mjs"
     },
     "publishConfig": {
         "access": "public",
@@ -64,6 +64,7 @@
         "apps/*"
     ],
     "dependencies": {
+        "@clack/prompts": "catalog:",
         "commander": "^14.0.0",
         "glob": "catalog:",
         "lodash": "catalog:",

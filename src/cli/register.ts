@@ -1,3 +1,4 @@
+import { intro, outro } from '@clack/prompts';
 import type { Command } from 'commander';
 
 import {
@@ -77,6 +78,11 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                 }
             }
             const cwd = (provided.cwd as string | undefined) ?? process.cwd();
+            // Bracket the run with clack's `intro`/`outro` for a human-facing
+            // command (not a provider passthrough, and not machine/quiet output).
+            const framed = !cmd.passthrough && provided.json !== true && provided.quiet !== true;
+            const label = `${command.parent?.name() ?? ''} ${cmd.name}`.trim();
+            if (framed) intro(label);
             try {
                 // Load the config for every command (a passthrough reads the
                 // `providers` section to decide whether the wrapped binary may
@@ -94,9 +100,11 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                     ...(loaded.path ? { configPath: loaded.path } : {}),
                 };
                 await cmd.run(provided, context);
+                if (framed) outro(process.exitCode ? 'Failed' : 'Done');
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
                 logger.error(message);
+                if (framed) outro('Failed');
                 process.exitCode = 1;
             }
         });

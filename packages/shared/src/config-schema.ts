@@ -182,7 +182,10 @@ export const loggerConfigSchema = z
             .enum(['debug', 'info', 'warn', 'error', 'silent'])
             .describe('Minimum level to print (default `info`).')
             .optional(),
-        color: z.boolean().describe('Force colours on/off (default: auto).').optional(),
+        color: z
+            .boolean()
+            .describe('Force colours on/off (default: on; `--no-color` disables).')
+            .optional(),
         name: z
             .string()
             .describe('Prefix non-indented lines with `<name>:` (default `dbx`).')

@@ -15,6 +15,7 @@
     ],
     "private": true,
     "dependencies": {
+        "@deltabox/toolchain-core": "workspace:*",
         "@deltabox/toolchain-shared": "workspace:*"
     },
     "devDependencies": {

@@ -10,5 +10,6 @@ export * from './cli/index.js';
 export * from './commands.js';
 export * from './plugin.js';
 export * from './provider.js';
+export * from './resolve.js';
 export * from './sync.js';
 export * from './vp.js';

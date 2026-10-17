@@ -9,5 +9,5 @@ export default defineConfig({
         'cli/index': 'src/cli/index.ts',
         'cli/generate/index': 'src/cli/generate/index.ts',
     },
-    deps: { ...baseTsdownConfig.deps, alwaysBundle: [/^@deltabox\/tooling-shared/] },
+    deps: { ...baseTsdownConfig.deps, alwaysBundle: [/^@deltabox\/toolchain-shared/] },
 });

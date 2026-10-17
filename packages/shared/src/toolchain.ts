@@ -101,12 +101,10 @@ export type ToolchainSection<T> = boolean | T;
  * no options, or configure it with an object (`biome: { overrides: { ... } }`).
  * Either way the tooling never touches an area the consumer did not ask for.
  */
-export function sectionEnabled(
-    section: ToolchainSection<{ enabled?: boolean }> | undefined
-): boolean {
+export function sectionEnabled(section: boolean | object | undefined): boolean {
     if (section === undefined) return false;
     if (typeof section === 'boolean') return section;
-    return section.enabled !== false;
+    return (section as { enabled?: boolean }).enabled !== false;
 }
 
 /**

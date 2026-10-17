@@ -35,6 +35,8 @@ dbx create --template mytpl --name acme --var port=4000
 
 With no `--template`, `create --kind <kind>` picks the first matching template.
 An unlisted `--template` id is treated as a Vite+ template (`vp create <id>`).
+On an interactive terminal, a bare `dbx create` (no `--template`/`--kind`/`--name`)
+prompts for the template, name and scope instead (Ctrl-C cancels).
 
 ## Builtin templates
 

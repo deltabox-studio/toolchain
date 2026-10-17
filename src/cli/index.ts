@@ -160,6 +160,18 @@ export function createCli(): Command {
         .option('--no-color', 'Disable coloured output.')
         .option('--no-update-check', 'Do not check for a newer dbx version.')
         .showHelpAfterError();
+    // Commander's built-in Help does not colourise; wire its style hooks to the
+    // logger's colour set (identity when colours are off, so `--no-color` is plain).
+    program.configureHelp({
+        styleTitle: str => logger.colors.bold(str),
+        styleCommandText: str => logger.colors.cyan(str),
+        styleOptionText: str => logger.colors.yellow(str),
+        styleOptionTerm: str => logger.colors.yellow(str),
+        styleSubcommandText: str => logger.colors.cyan(str),
+        styleSubcommandTerm: str => logger.colors.cyan(str),
+        styleArgumentText: str => logger.colors.yellow(str),
+        styleArgumentTerm: str => logger.colors.yellow(str),
+    });
     registerToolchainCommands(program, builtinCommands());
     return program;
 }

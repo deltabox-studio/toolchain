@@ -574,7 +574,7 @@
                 },
                 "color": {
                     "type": "boolean",
-                    "description": "Force colours on/off (default: auto)."
+                    "description": "Force colours on/off (default: on; `--no-color` disables)."
                 },
                 "name": {
                     "type": "string",
