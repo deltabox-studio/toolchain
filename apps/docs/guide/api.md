@@ -149,8 +149,8 @@ sync task (see the [Providers](/guide/providers) guide).
 | `vpVersion(cwd?)` / `describeVp(cwd?)` / `which(bin)`              | Version, resolution description and PATH lookup.                  |
 | `VP_COMMANDS` / `viteCommandName(name)` / `resolveVpCommand(name)` | The `vp` command catalog + name/alias resolution.                 |
 | `viteProvider()` / `viteCommands()`                                | The provider descriptor and the `dbx vite:*` commands.            |
-| `dbx(options?)` / `defineDbxConfig(config, options?)`              | The Vite/Vite+ plugin and the `run.tasks` wrapper.                |
-| `resolveDbx(cwd?)` / `runDbx(args, cwd?)` / `DBX_TASKS`            | Resolve/run the `dbx` binary and the registered tasks.            |
+| `dbx(options?)` / `DBX_TASKS`                                      | The Vite/Vite+ plugin and the `run.tasks` to spread in.           |
+| `resolveDbx(cwd?)` / `runDbx(args, cwd?)`                          | Resolve/run the `dbx` binary.                                     |
 | `renderViteConfig(config?, tokens?)` / `viteConfigObject(config?)` | Serialize `toolchain.vite` to a managed `vite.config.ts`.         |
 | `viteSyncTask()` / `renderObjectLiteral(value, indent?)`           | The `vite` sync task and the object-literal renderer.             |
 
