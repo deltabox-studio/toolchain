@@ -18,9 +18,9 @@ hero:
 
 features:
     - title: Config-driven
-      details: opt-in sections in dbx.config.ts or CLI (biome, tsconfig, changelog, templates, vite, ...). Define a section to enable it; nothing is touched otherwise.
+      details: Configure everything from a single configuration file.
     - title: Config generator
-      details: Define your config once, and generate .env.example, a JSON Schema, a markdown reference, TS types and CLI flags from your schemas. No config docs to drift.
+      details: Define your config once, and generate .env.example, JSON Schema, markdown, TS types and CLI flags from your schemas. No config docs to drift.
     - title: Vite / Vite+ plugin
       details: Drive dbx from vite.config.ts with the dbx() plugin. Works with Vite and Vite+.
     - title: Changelogs & CI
@@ -28,13 +28,13 @@ features:
     - title: tsconfig generation
       details: Workspace tsconfig.json files with path aliases and project references, generated from one config.
     - title: Providers
-      details: Wire external toolchains behind one CLI. Vite+ ships as a provider.
+      details: Wire external toolchains behind one CLI.
     - title: Templates
-      details: Offline (builtin + local template.json dirs) and online (npm/git/Vite+) templates, creatable from the CLI or the VS Code extension.
+      details: Offline (builtin + local template.json dirs) and online (npm/git) templates.
     - title: Migrations
-      details: Move Biome, Prettier, ESLint or Dprint onto Ox (Oxfmt/Oxlint) with a pluggable migration engine.
+      details: Migrate Biome, Prettier, ESLint or Dprint onto Ox (Oxfmt/Oxlint).
     - title: Editor first
-      details: A VS Code extension to sync, scaffold, run workflows, run Vite+ or other provider commands and pick templates.
+      details: A VS Code extension to sync, scaffold, run workflows, run commands and pick templates.
     - title: Monorepo aware
       details: Project graph, workspace tsconfigs, dependency-ordered tasks, and per-workspace files.
     - title: Sync projects
