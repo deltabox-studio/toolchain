@@ -5,10 +5,11 @@
         ".github/workflows/issues.yml",
         ".github/workflows/release.yml",
         ".github/workflows/sync.yml",
+        ".husky/commit-msg",
         ".vscode/extensions.json",
         ".vscode/settings.json",
         "commitlint.config.mjs",
         "vite.config.ts"
     ],
-    "syncedAt": "2026-10-18T15:23:29.634Z"
+    "syncedAt": "2026-10-18T16:48:02.005Z"
 }
