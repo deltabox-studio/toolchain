@@ -37,6 +37,12 @@ import { which } from './vp.js';
 
 const IS_WINDOWS = process.platform === 'win32';
 
+/** Whether the "no project-local toolchain" npx-fallback warning was emitted. */
+let warnedNpxFallback = false;
+
+/** Whether the invalid-`DBX_BIN` warning was emitted. */
+let warnedBadDbxBin = false;
+
 /** How a `dbx` binary was resolved. */
 export type DbxSource = 'local' | 'global' | 'npx';
 
@@ -74,7 +80,10 @@ export function resolveDbx(cwd: string = process.cwd()): ResolvedDbx {
         if (fs.existsSync(override)) return { exe: override, args: [], source: 'local' };
         // A missing/typo'd DBX_BIN must not wedge every `dbx` call: warn once and
         // fall through to the normal resolution.
-        logger.warn(`DBX_BIN points at ${override}, which does not exist; ignoring it.`);
+        if (!warnedBadDbxBin) {
+            warnedBadDbxBin = true;
+            logger.warn(`DBX_BIN points at ${override}, which does not exist; ignoring it.`);
+        }
     }
     for (const candidate of localCandidates(cwd)) {
         if (fs.existsSync(candidate)) return { exe: candidate, args: [], source: 'local' };
@@ -91,6 +100,12 @@ export function resolveDbx(cwd: string = process.cwd()): ResolvedDbx {
         );
     }
     const spec = expected ? `${TOOLCHAIN_PACKAGE}@${expected}` : TOOLCHAIN_PACKAGE;
+    if (!warnedNpxFallback) {
+        warnedNpxFallback = true;
+        logger.warn(
+            `no project-local ${TOOLCHAIN_PACKAGE} found — running \`npx --yes ${spec}\` (needs network).`
+        );
+    }
     return { exe: IS_WINDOWS ? 'npx.cmd' : 'npx', args: ['--yes', spec], source: 'npx' };
 }
 
@@ -108,10 +123,29 @@ export function runDbx(args: string[], cwd: string = process.cwd()): Promise<num
     });
 }
 
+/** Quote a value for a shell command line when it needs it. */
+function shellPart(value: string): string {
+    return /[\s"'&|<>^()]/.test(value) ? `"${value.replace(/"/g, '\\"')}"` : value;
+}
+
+/**
+ * The shell command Vite Task runs for a `dbx` subcommand. Vite Task runs the
+ * `command` string through a shell, so instead of relying on `dbx` being on
+ * `PATH` (an env-dependent lookup that can miss or pick a stale global) the
+ * command is built from {@link resolveDbx} — the project's own binary, or the
+ * pinned `npx` fallback — resolved when the config loads. `resolveDbx` warns
+ * when it has to fall back, so a missing environment is visible rather than
+ * silent.
+ */
+export function dbxTaskCommand(subcommand: string, cwd: string = process.cwd()): string {
+    const resolved = resolveDbx(cwd);
+    return [...[resolved.exe, ...resolved.args].map(shellPart), subcommand].join(' ');
+}
+
 /** The Vite+ tasks the wrapper registers, keyed by task name. */
 export const DBX_TASKS = {
-    'dbx:sync': { command: 'dbx sync' },
-    'dbx:check': { command: 'dbx sync --check' },
+    'dbx:sync': { command: dbxTaskCommand('sync') },
+    'dbx:check': { command: dbxTaskCommand('sync --check') },
 } as const;
 
 export interface DbxPluginOptions {

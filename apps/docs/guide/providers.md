@@ -134,6 +134,11 @@ export default defineConfig({
   `vp run dbx:check`. Vite+ reads `run.tasks` from the **static** config (a
   plugin's `config` hook is ignored), so the tasks are spread in the config
   rather than added by the plugin. Drop the `run` block if you don't want them.
+- Because Vite Task runs a task's `command` through a shell, `DBX_TASKS` bakes in
+  the binary resolved by `resolveDbx` (the project's own, or the pinned `npx`
+  fallback) rather than relying on `dbx` being on `PATH` — a missing environment
+  then warns instead of silently running the wrong binary. Use `dbxTaskCommand(sub)`
+  to build a task command for another subcommand.
 
 ## Custom providers
 

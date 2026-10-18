@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { DBX_TASKS, dbx, resolveDbx } from '../src/index.js';
+import { DBX_TASKS, dbx, dbxTaskCommand, resolveDbx } from '../src/index.js';
 
 const tmpDirs: string[] = [];
 
@@ -29,9 +29,16 @@ describe('dbx() plugin', () => {
 });
 
 describe('DBX_TASKS', () => {
-    it('exposes the sync + check tasks to spread into run.tasks', () => {
-        expect(DBX_TASKS['dbx:sync']).toEqual({ command: 'dbx sync' });
-        expect(DBX_TASKS['dbx:check']).toEqual({ command: 'dbx sync --check' });
+    it('exposes shell-ready sync + check tasks resolved from the project (not PATH)', () => {
+        expect(DBX_TASKS['dbx:sync'].command).toMatch(/\bsync$/);
+        expect(DBX_TASKS['dbx:check'].command).toMatch(/\bsync --check$/);
+        // The command is a resolved invocation, never the bare `dbx` (which would
+        // depend on the shell's PATH / environment).
+        expect(DBX_TASKS['dbx:sync'].command).not.toBe('dbx sync');
+    });
+
+    it('builds a task command from a resolved binary', () => {
+        expect(dbxTaskCommand('sync', makeTmp())).toMatch(/\bsync$/);
     });
 });
 
