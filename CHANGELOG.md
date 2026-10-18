@@ -1,8 +1,21 @@
 # Changelog
 
-## 1.4.0 (October 2026)
+## 1.4.1 (October 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Tsdown
+- Pin the changelog and tsconfig bins explicitly ([#f616626](https://github.com/deltabox-studio/toolchain/commit/f616626) by [T0chi](https://github.com/T0chi))
+  - With \exports: true\ and no \in\, tsdown soft auto-detects the shebang entry and derives the command name from the package name, rewriting the committed \in\ on every build. Map the command names explicitly so the field is stable and the build is idempotent.
+#### Ci
+- Bootstrap the dist the vite shim needs before build ([#b96b89a](https://github.com/deltabox-studio/toolchain/commit/b96b89a) by [T0chi](https://github.com/T0chi))
+  - \prepare\ never runs on \yarn install\ under Yarn Berry, so scripts/bootstrap.mjs never built dist/vite.js and \yarn build\ failed to load the generated vite.config.ts shim on a fresh CI checkout. Run the bootstrap from a root \postinstall\ and at the start of build/typecheck/test (all begin with \p run\, which loads the shim); it is a no-op once dist/vite.js exists.
+
+<!-- release:end -->
+
+
+## 1.4.0 (October 2026)
 
 ### New features
 - Render the dbx CLI with clack, author the Vite+ config in dbx.config ([#fb8b9ef](https://github.com/deltabox-studio/toolchain/commit/fb8b9ef) by [T0chi](https://github.com/T0chi))
@@ -69,9 +82,6 @@
 - `@clack/prompts` `^1.8.1`
 #### Updated
 - `vite-plus` `^1.2.0` → `>=1`
-
-<!-- release:end -->
-
 
 ## 1.3.1 (October 2026)
 
