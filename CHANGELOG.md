@@ -1,16 +1,30 @@
 # Changelog
 
-## 1.6.1 (October 2026)
+## 1.7.0 (October 2026)
 
 <!-- release:start -->
+
+### New features
+#### Vscode
+- Let users choose the project or bundled dbx ([#6cdd686](https://github.com/deltabox-studio/toolchain/commit/6cdd686) by [T0chi](https://github.com/T0chi))
+  - The extension had no awareness of a workspace's own @deltabox/toolchain, so its auto-sync ran the bundled (possibly older) dbx. On activation it now detects the workspace dbx, shows a notification with action buttons (project vs bundled), remembers the choice per workspace (workspaceState) and falls back to the bundled CLI. Adds the deltabox.toolchain.chooseDbxSource command + a getDbxSource/setDbxSource API.
+#### Shared
+- Sanitize shell-escape artifacts in generated markdown ([#fcac95e](https://github.com/deltabox-studio/toolchain/commit/fcac95e) by [T0chi](https://github.com/T0chi))
+  - Add stripControlChars/stripEscapeArtifacts/sanitizeText to the shared string utils: they strip the predictable shell-escape artifacts (a backslash before a control character) and any remaining bare control characters, while leaving ordinary backslashes and normal whitespace alone. Apply them to the config markdown generator's descriptions and the changelog commit reader/formatter, and cap generated headings at h6 (VitePress dropped the literal #######).
+### Chores
+#### Changelog
+- Repair escaped commit text and label code refs ([#1425419](https://github.com/deltabox-studio/toolchain/issues/1425419) by [T0chi](https://github.com/T0chi))
+  - PowerShell interpreted the escaped backticks in the commit bodies as control-character escapes, so the changelog carried backslash+control artifacts (TAB/CR/LF/BS/FF/VT) and mojibake. Repair the affected 1.4.1-1.6.1 entries and add backticks around commands, paths, flags, types and identifiers throughout the file.
+
+<!-- release:end -->
+
+
+## 1.6.1 (October 2026)
 
 ### Documentation
 #### Config
 - Inline nested sub-schemas in the generated reference ([#5a9a9e3](https://github.com/deltabox-studio/toolchain/commit/5a9a9e3) by [T0chi](https://github.com/T0chi))
   - `renderConfigFileMarkdown` only recursed into inline objects, so named sub-schemas (`changelog.workflows`, `changelog.versioning.target/workspaces`, `templates.sources[]`, `project.type`) rendered as a bare type name. It now resolves the JSON Schema `$defs` and expands objects, object unions and array items inline (each named type once per section), so the reference documents every option with types, required markers, defaults and descriptions.
-
-<!-- release:end -->
-
 
 ## 1.6.0 (October 2026)
 
