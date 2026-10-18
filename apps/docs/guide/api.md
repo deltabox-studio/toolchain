@@ -80,7 +80,8 @@ the template engine.
 | `repoSlugFromUrl(url)`                                                        | Derive an `owner/name` slug from a repository URL.                                       |
 | `findOwnCliEntry(cwd?)` / `localToolchainVersion(cwd?)` / `TOOLCHAIN_PACKAGE` | Locate a project's own toolchain bin + pinned version (prefer them over a global `dbx`). |
 | `createLogger(options)` / `logger`                                            | The shared logger (see [Logging](#logging)).                                             |
-| `spawnCross(cmd, args, options)` / `run(cmd, args, options)`                  | Cross-platform, shell-free process spawning.                                             |
+| `spawnCross(cmd, args, options)` / `run(cmd, args, options)`                  | Cross-platform, shell-free spawning; `timeoutMs` kills the child tree.                   |
+| `killProcessTree(child)`                                                      | Kill a child process and its descendants (Windows `taskkill /t`).                        |
 | `readJsonFile` / `readJsonAt` / `toJson` / `writeJsonFile`                    | Small JSON file helpers.                                                                 |
 | `mergeJsonAt(cwd, relative, patch)`                                           | Deep-merge a patch over an existing JSON file.                                           |
 | `deepMerge` / `isPlainObject` / `sort` / `mapValues`                          | Object utilities.                                                                        |

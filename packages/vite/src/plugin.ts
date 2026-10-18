@@ -109,14 +109,26 @@ export function resolveDbx(cwd: string = process.cwd()): ResolvedDbx {
     return { exe: IS_WINDOWS ? 'npx.cmd' : 'npx', args: ['--yes', spec], source: 'npx' };
 }
 
+/**
+ * Default deadline for a one-shot `dbx` call (`sync`/`--check`): a stalled run
+ * is killed rather than left hanging. Long-running work streams its own output,
+ * so this only bounds the plugin's own sync.
+ */
+export const DBX_TIMEOUT_MS = 5 * 60 * 1000;
+
 /** Run `dbx <args>` in `cwd`, streaming output. Resolves with the exit code. */
-export function runDbx(args: string[], cwd: string = process.cwd()): Promise<number> {
+export function runDbx(
+    args: string[],
+    cwd: string = process.cwd(),
+    timeoutMs: number = DBX_TIMEOUT_MS
+): Promise<number> {
     const resolved = resolveDbx(cwd);
     return new Promise<number>(resolve => {
         const child = spawnCross(resolved.exe, [...resolved.args, ...args], {
             cwd,
             env: process.env,
             stdio: 'inherit',
+            ...(timeoutMs > 0 ? { timeoutMs } : {}),
         });
         child.on('error', () => resolve(1));
         child.on('exit', code => resolve(code ?? 0));

@@ -95,6 +95,11 @@ export interface RunVpOptions {
      * `undefined` leaves detection to the child.
      */
     color?: boolean;
+    /**
+     * Kill `vp` (and its tree) after this many ms. Omit for long-running
+     * commands (`vp dev`); set it for one-shot ones so a hang can't linger.
+     */
+    timeoutMs?: number;
 }
 
 export interface VpResult {
@@ -126,6 +131,7 @@ export function runVp(args: string[], options: RunVpOptions = {}): Promise<VpRes
             cwd,
             env,
             stdio: capture ? 'pipe' : 'inherit',
+            ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
         });
         child.stdout?.on('data', chunk => {
             stdout += chunk;
