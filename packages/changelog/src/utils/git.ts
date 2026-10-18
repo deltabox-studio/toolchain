@@ -2,6 +2,8 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { sanitizeText } from '@deltabox/toolchain-shared';
+
 import type { AuthorInfo, BumpType, CommitRecord, IssueInfo } from './types.js';
 
 /** Read the commits in a git range (optionally limited to a path), newest first. */
@@ -17,8 +19,8 @@ export function readCommits(range: string, path?: string): CommitRecord[] {
             const [hash, subject, body, author, authorEmail] = record.split('\x1f');
             return {
                 hash: hash!.trim(),
-                subject: (subject ?? '').trim(),
-                body: (body ?? '').trim(),
+                subject: sanitizeText((subject ?? '').trim()),
+                body: sanitizeText((body ?? '').trim()),
                 author: (author ?? '').trim(),
                 authorEmail: (authorEmail ?? '').trim(),
             };

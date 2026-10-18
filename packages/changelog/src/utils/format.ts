@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 
-import { logger } from '@deltabox/toolchain-shared';
+import { logger, sanitizeText } from '@deltabox/toolchain-shared';
 
 import type { GroupedItem, GroupedRule, ParsedCommit } from './types.js';
 
@@ -145,7 +145,7 @@ export function formatBody(body: string): string[][] {
     const paragraphs: string[][] = [];
     let current: string[] = [];
     for (const raw of body.split('\n')) {
-        const trimmed = raw.trim();
+        const trimmed = sanitizeText(raw.trim());
         if (!trimmed) {
             if (current.length > 0) {
                 paragraphs.push(current);

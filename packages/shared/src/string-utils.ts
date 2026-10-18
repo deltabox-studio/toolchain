@@ -157,3 +157,44 @@ export function ensureSlashes(
 function escapeSlash(slash: string): string {
     return slash === '/' ? '\\/' : slash;
 }
+
+/**
+ * Bare C0 control characters that are never intended in generated text, keeping
+ * tab (`\t`), line feed (`\n`) and carriage return (`\r`). These are what a
+ * shell can leave behind when it interprets `\`` escapes (backspace, form feed,
+ * vertical tab, ...) before the text ever reaches us.
+ */
+const BARE_CONTROL_CHARS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g;
+
+/**
+ * A backslash immediately followed by a control character — the predictable
+ * shape of an escaped backtick a **shell** interpreted before writing the text
+ * (`` \`t `` becomes `\` + TAB, `` \`n `` becomes `\` + LF, ...). The backslash
+ * and the control character are both removed.
+ */
+const ESCAPED_CONTROL_CHARS = /\\[\u0000-\u001f]/g;
+
+/** Strip bare control characters, keeping `\t`, `\n` and `\r`. */
+export function stripControlChars(text: string): string {
+    return text.replace(BARE_CONTROL_CHARS, '');
+}
+
+/**
+ * Strip the predictable shell-escape artifacts: a backslash that precedes a
+ * control character. Ordinary backslashes (Windows paths, regular expressions,
+ * Markdown hard breaks that use two trailing spaces) are left untouched — only
+ * a backslash directly before a control character is removed.
+ */
+export function stripEscapeArtifacts(text: string): string {
+    return text.replace(ESCAPED_CONTROL_CHARS, '');
+}
+
+/**
+ * Sanitize text that may have passed through a shell (commit bodies, generated
+ * descriptions) before it is rendered to markdown: normalize CRLF to LF, then
+ * strip shell-escape artifacts followed by any remaining bare control
+ * characters. Conservative by design — it never removes an ordinary backslash.
+ */
+export function sanitizeText(text: string): string {
+    return stripControlChars(stripEscapeArtifacts(text.replace(/\r\n?/g, '\n')));
+}

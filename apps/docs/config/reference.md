@@ -151,39 +151,39 @@ Target job id (defaults to the primary/first job).
 
 Steps inserted at the start.
 
-####### `name`
+###### `name`
 
 - **Type**: `string`
 
-####### `id`
+###### `id`
 
 - **Type**: `string`
 
-####### `if`
+###### `if`
 
 - **Type**: `string`
 
-####### `uses`
+###### `uses`
 
 - **Type**: `string`
 
-####### `run`
+###### `run`
 
 - **Type**: `string`
 
-####### `shell`
+###### `shell`
 
 - **Type**: `string`
 
-####### `working-directory`
+###### `working-directory`
 
 - **Type**: `string`
 
-####### `with`
+###### `with`
 
 - **Type**: `Record<string, unknown>`
 
-####### `env`
+###### `env`
 
 - **Type**: `Record<string, unknown>`
 

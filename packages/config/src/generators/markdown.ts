@@ -9,7 +9,7 @@ import path from 'node:path';
 import type { Schema } from 'untyped';
 import { type ZodType, z } from 'zod';
 
-import { titleCase } from '@deltabox/toolchain-shared';
+import { sanitizeText, titleCase } from '@deltabox/toolchain-shared';
 
 import { type CollectEnvVarsOptions, collectEnvVars, DEFAULT_ENV_PREFIX } from '../collect.js';
 import { splitBaseSchema, zodToJsonSchema } from '../schema.js';
@@ -97,7 +97,7 @@ function renderNode(
     );
     if (schema.default !== undefined)
         lines.push(`- **Default**: \`${JSON.stringify(schema.default)}\``);
-    if (schema.description) lines.push('', schema.description);
+    if (schema.description) lines.push('', sanitizeText(schema.description));
     return lines;
 }
 
@@ -421,16 +421,19 @@ function renderJsonField(
     if (required) lines.push('- **Required**');
     const fallback = node.default ?? resolved.default;
     if (fallback !== undefined) lines.push(`- **Default**: \`${JSON.stringify(fallback)}\``);
-    const description = node.description ?? resolved.description;
+    const description = sanitizeText(node.description ?? resolved.description ?? '');
     if (description) lines.push('', description);
     const children = jsonChildFields(node, defs, seen);
+    // Markdown headings only go to `######` (h6); deeper nesting keeps h6 rather
+    // than emitting a literal `#######`.
+    const childLevel = level.length < 6 ? `${level}#` : level;
     for (const [childKey, childNode] of Object.entries(children.properties)) {
         lines.push(
             '',
             ...renderJsonField(
                 childKey,
                 childNode,
-                `${level}#`,
+                childLevel,
                 defs,
                 seen,
                 children.required.includes(childKey)
