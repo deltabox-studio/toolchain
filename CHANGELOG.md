@@ -1,8 +1,18 @@
 # Changelog
 
-## 1.4.1 (October 2026)
+## 1.5.0 (October 2026)
 
 <!-- release:start -->
+
+### New features
+#### Changelog
+- Emit the husky commit-msg hook for consumers ([#6898386](https://github.com/deltabox-studio/toolchain/issues/6898386) by [T0chi](https://github.com/T0chi))
+  - \dbx sync\ now writes .husky/commit-msg (running commitlint) alongside the workflows and commitlint.config.mjs, so consumers using the Conventional-Commits CI lint commits locally too. The docs recommend \postinstall: husky\ (Yarn Berry never runs \prepare\) and \.husky/* text eol=lf\ (a trailing CR breaks the hook).
+
+<!-- release:end -->
+
+
+## 1.4.1 (October 2026)
 
 ### Bug fixes
 #### Tsdown
@@ -11,9 +21,6 @@
 #### Ci
 - Bootstrap the dist the vite shim needs before build ([#b96b89a](https://github.com/deltabox-studio/toolchain/commit/b96b89a) by [T0chi](https://github.com/T0chi))
   - \prepare\ never runs on \yarn install\ under Yarn Berry, so scripts/bootstrap.mjs never built dist/vite.js and \yarn build\ failed to load the generated vite.config.ts shim on a fresh CI checkout. Run the bootstrap from a root \postinstall\ and at the start of build/typecheck/test (all begin with \p run\, which loads the shim); it is a no-op once dist/vite.js exists.
-
-<!-- release:end -->
-
 
 ## 1.4.0 (October 2026)
 

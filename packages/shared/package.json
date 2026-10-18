@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-shared",
-    "version": "1.4.1",
+    "version": "1.5.0",
     "description": "Shared helpers and the replacement/template engine used by the @deltabox/toolchain packages.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
