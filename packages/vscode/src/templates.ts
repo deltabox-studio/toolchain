@@ -1,0 +1,80 @@
+import * as vscode from 'vscode';
+
+import { captureCli } from './cli.js';
+
+/**
+ * The templates the extension renders, mirroring `dbx template:list --json`
+ * (builtin + local + opted-in online sources), so the extension stays decoupled
+ * from the tooling packages and drives everything through the CLI.
+ */
+
+export interface Template {
+    id: string;
+    name: string;
+    description?: string;
+    kind?: string;
+    type?: string;
+    online?: boolean;
+    tags?: string[];
+}
+
+/** Load the templates via `dbx template:list --json` (empty on failure). */
+export async function loadTemplates(cwd: string): Promise<Template[]> {
+    const result = await captureCli(cwd, ['template:list', '--json', '--cwd', cwd]);
+    if (result.code !== 0) return [];
+    try {
+        const parsed = JSON.parse(result.stdout) as unknown;
+        return Array.isArray(parsed) ? (parsed as Template[]) : [];
+    } catch {
+        return [];
+    }
+}
+
+/** The tree data provider backing the Templates view. */
+export class TemplateTreeProvider implements vscode.TreeDataProvider<Template> {
+    private readonly emitter = new vscode.EventEmitter<Template | undefined>();
+    readonly onDidChangeTreeData = this.emitter.event;
+    private templates: Template[] = [];
+    private loaded = false;
+
+    constructor(private readonly root: () => string | undefined) {}
+
+    /** Reload the templates and repaint. */
+    async refresh(): Promise<void> {
+        const root = this.root();
+        this.templates = root ? await loadTemplates(root) : [];
+        this.loaded = true;
+        this.emitter.fire(undefined);
+    }
+
+    getChildren(element?: Template): Template[] {
+        if (element) return [];
+        if (!this.loaded) void this.refresh();
+        return this.templates;
+    }
+
+    getTreeItem(node: Template): vscode.TreeItem {
+        const item = new vscode.TreeItem(
+            node.name || node.id,
+            vscode.TreeItemCollapsibleState.None
+        );
+        item.description = node.id;
+        item.tooltip = [
+            node.description,
+            [node.kind, node.type, node.online ? 'online' : undefined].filter(Boolean).join(' · '),
+            node.tags?.length ? `Tags: ${node.tags.join(', ')}` : '',
+        ]
+            .filter(Boolean)
+            .join('\n');
+        item.iconPath = new vscode.ThemeIcon(
+            node.online ? 'cloud-download' : node.kind === 'application' ? 'rocket' : 'file-code'
+        );
+        item.contextValue = 'deltabox.template';
+        item.command = {
+            command: 'deltabox.toolchain.templates.create',
+            title: 'Create',
+            arguments: [node],
+        };
+        return item;
+    }
+}

@@ -141,6 +141,75 @@
                 "title": "Remove template…",
                 "category": "deltabox",
                 "icon": "$(remove)"
+            },
+            {
+                "command": "deltabox.toolchain.providers.add",
+                "title": "Add provider...",
+                "category": "deltabox",
+                "icon": "$(add)"
+            },
+            {
+                "command": "deltabox.toolchain.providers.refresh",
+                "title": "Refresh providers",
+                "category": "deltabox",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "deltabox.toolchain.providers.remove",
+                "title": "Remove provider",
+                "category": "deltabox",
+                "icon": "$(trash)"
+            },
+            {
+                "command": "deltabox.toolchain.providers.runCommand",
+                "title": "Run command...",
+                "category": "deltabox",
+                "icon": "$(play)"
+            },
+            {
+                "command": "deltabox.toolchain.providers.openHomepage",
+                "title": "Open homepage",
+                "category": "deltabox",
+                "icon": "$(link-external)"
+            },
+            {
+                "command": "deltabox.toolchain.providers.copyId",
+                "title": "Copy provider id",
+                "category": "deltabox"
+            },
+            {
+                "command": "deltabox.toolchain.templates.add",
+                "title": "Add template...",
+                "category": "deltabox",
+                "icon": "$(add)"
+            },
+            {
+                "command": "deltabox.toolchain.templates.refresh",
+                "title": "Refresh templates",
+                "category": "deltabox",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "deltabox.toolchain.templates.removeSource",
+                "title": "Remove template source...",
+                "category": "deltabox",
+                "icon": "$(remove)"
+            },
+            {
+                "command": "deltabox.toolchain.templates.create",
+                "title": "Create from template...",
+                "category": "deltabox",
+                "icon": "$(new-folder)"
+            },
+            {
+                "command": "deltabox.toolchain.templates.info",
+                "title": "Show template info",
+                "category": "deltabox"
+            },
+            {
+                "command": "deltabox.toolchain.templates.copyId",
+                "title": "Copy template id",
+                "category": "deltabox"
             }
         ],
         "viewsContainers": {
@@ -161,9 +230,19 @@
                     "contextualTitle": "deltabox toolchain"
                 },
                 {
+                    "id": "deltabox.providers",
+                    "name": "Providers",
+                    "contextualTitle": "deltabox providers"
+                },
+                {
                     "id": "deltabox.projects",
                     "name": "Projects",
                     "contextualTitle": "deltabox projects"
+                },
+                {
+                    "id": "deltabox.templates",
+                    "name": "Templates",
+                    "contextualTitle": "deltabox templates"
                 },
                 {
                     "id": "deltabox.files",
@@ -193,6 +272,31 @@
                     "command": "deltabox.toolchain.refreshFiles",
                     "when": "view == deltabox.files",
                     "group": "navigation@1"
+                },
+                {
+                    "command": "deltabox.toolchain.providers.add",
+                    "when": "view == deltabox.providers",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "deltabox.toolchain.providers.refresh",
+                    "when": "view == deltabox.providers",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "deltabox.toolchain.templates.add",
+                    "when": "view == deltabox.templates",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "deltabox.toolchain.templates.removeSource",
+                    "when": "view == deltabox.templates",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "deltabox.toolchain.templates.refresh",
+                    "when": "view == deltabox.templates",
+                    "group": "navigation@3"
                 }
             ],
             "view/item/context": [
@@ -235,6 +339,46 @@
                     "command": "deltabox.toolchain.runProjectVite",
                     "when": "view == deltabox.projects && viewItem =~ /deltabox\\.project/",
                     "group": "deltabox@6"
+                },
+                {
+                    "command": "deltabox.toolchain.providers.runCommand",
+                    "when": "view == deltabox.providers && viewItem == deltabox.providerCommand",
+                    "group": "inline@1"
+                },
+                {
+                    "command": "deltabox.toolchain.providers.runCommand",
+                    "when": "view == deltabox.providers && viewItem =~ /deltabox\\.provider/",
+                    "group": "deltabox@1"
+                },
+                {
+                    "command": "deltabox.toolchain.providers.openHomepage",
+                    "when": "view == deltabox.providers && viewItem =~ /deltabox\\.provider/",
+                    "group": "deltabox@2"
+                },
+                {
+                    "command": "deltabox.toolchain.providers.copyId",
+                    "when": "view == deltabox.providers && viewItem =~ /deltabox\\.provider/",
+                    "group": "deltabox@3"
+                },
+                {
+                    "command": "deltabox.toolchain.providers.remove",
+                    "when": "view == deltabox.providers && viewItem == deltabox.provider.custom",
+                    "group": "deltabox@4"
+                },
+                {
+                    "command": "deltabox.toolchain.templates.create",
+                    "when": "view == deltabox.templates && viewItem == deltabox.template",
+                    "group": "inline@1"
+                },
+                {
+                    "command": "deltabox.toolchain.templates.info",
+                    "when": "view == deltabox.templates && viewItem == deltabox.template",
+                    "group": "deltabox@1"
+                },
+                {
+                    "command": "deltabox.toolchain.templates.copyId",
+                    "when": "view == deltabox.templates && viewItem == deltabox.template",
+                    "group": "deltabox@2"
                 }
             ],
             "commandPalette": [
@@ -257,9 +401,55 @@
                 {
                     "command": "deltabox.toolchain.runProjectVite",
                     "when": "false"
+                },
+                {
+                    "command": "deltabox.toolchain.providers.remove",
+                    "when": "false"
+                },
+                {
+                    "command": "deltabox.toolchain.providers.runCommand",
+                    "when": "false"
+                },
+                {
+                    "command": "deltabox.toolchain.providers.openHomepage",
+                    "when": "false"
+                },
+                {
+                    "command": "deltabox.toolchain.providers.copyId",
+                    "when": "false"
+                },
+                {
+                    "command": "deltabox.toolchain.templates.create",
+                    "when": "false"
+                },
+                {
+                    "command": "deltabox.toolchain.templates.info",
+                    "when": "false"
+                },
+                {
+                    "command": "deltabox.toolchain.templates.copyId",
+                    "when": "false"
                 }
             ]
         },
+        "viewsWelcome": [
+            {
+                "view": "deltabox.providers",
+                "contents": "No providers yet. Install `@deltabox/toolchain` in this project, or register a custom provider.\n[Add provider](command:deltabox.toolchain.providers.add)"
+            },
+            {
+                "view": "deltabox.projects",
+                "contents": "No projects found. [Refresh projects](command:deltabox.toolchain.refresh) or [Scaffold project](command:deltabox.toolchain.scaffold)."
+            },
+            {
+                "view": "deltabox.templates",
+                "contents": "No templates. [Add template](command:deltabox.toolchain.templates.add) or [Refresh](command:deltabox.toolchain.templates.refresh)."
+            },
+            {
+                "view": "deltabox.files",
+                "contents": "No managed files yet. Run [Sync active project](command:deltabox.toolchain.sync)."
+            }
+        ],
         "configuration": {
             "title": "deltabox toolchain",
             "properties": {

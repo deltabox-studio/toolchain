@@ -1,3 +1,8 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+import * as vscode from 'vscode';
+
 import { captureCli } from './cli.js';
 
 /**
@@ -35,5 +40,136 @@ export async function loadProviders(cwd: string): Promise<Provider[]> {
         return Array.isArray(parsed) ? (parsed as Provider[]) : [];
     } catch {
         return [];
+    }
+}
+
+const REGISTRY = path.join('.dbx', 'toolchain', 'providers.json');
+
+/** The absolute path of a project's custom provider registry. */
+export function providerRegistryPath(root: string): string {
+    return path.join(root, REGISTRY);
+}
+
+/** Read a project's custom providers (empty when the registry is absent/invalid). */
+export function readProviderRegistry(root: string): Provider[] {
+    try {
+        const parsed = JSON.parse(fs.readFileSync(providerRegistryPath(root), 'utf-8')) as unknown;
+        return Array.isArray(parsed) ? (parsed as Provider[]) : [];
+    } catch {
+        return [];
+    }
+}
+
+/** Write a project's custom providers (removing the file when the list is empty). */
+export function writeProviderRegistry(root: string, providers: Provider[]): void {
+    const file = providerRegistryPath(root);
+    if (providers.length === 0) {
+        fs.rmSync(file, { force: true });
+        return;
+    }
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, `${JSON.stringify(providers, null, 4)}\n`, 'utf-8');
+}
+
+/** A provider tree node (a provider, or one of its commands). */
+export interface ProviderNode {
+    kind: 'provider';
+    provider: Provider;
+    /** Whether the provider lives in the custom registry (removable). */
+    custom: boolean;
+    root: string;
+}
+
+export interface ProviderCommandNode {
+    kind: 'command';
+    provider: Provider;
+    command: ProviderCommand;
+    root: string;
+}
+
+export type ProviderTreeNode = ProviderNode | ProviderCommandNode;
+
+/** The tree data provider backing the Providers view. */
+export class ProviderTreeProvider implements vscode.TreeDataProvider<ProviderTreeNode> {
+    private readonly emitter = new vscode.EventEmitter<ProviderTreeNode | undefined>();
+    readonly onDidChangeTreeData = this.emitter.event;
+    private roots: ProviderNode[] = [];
+    private loaded = false;
+
+    constructor(private readonly root: () => string | undefined) {}
+
+    /** Reload the providers (CLI list + the custom registry) and repaint. */
+    async refresh(): Promise<void> {
+        const root = this.root();
+        if (!root) {
+            this.roots = [];
+            this.loaded = true;
+            this.emitter.fire(undefined);
+            return;
+        }
+        const listed = await loadProviders(root);
+        const customIds = new Set(readProviderRegistry(root).map(provider => provider.id));
+        this.roots = listed.map(provider => ({
+            kind: 'provider' as const,
+            provider,
+            custom: customIds.has(provider.id),
+            root,
+        }));
+        this.loaded = true;
+        this.emitter.fire(undefined);
+    }
+
+    getChildren(element?: ProviderTreeNode): ProviderTreeNode[] {
+        if (!element) {
+            if (!this.loaded) void this.refresh();
+            return this.roots;
+        }
+        if (element.kind === 'provider') {
+            return element.provider.commands.map(command => ({
+                kind: 'command' as const,
+                provider: element.provider,
+                command,
+                root: element.root,
+            }));
+        }
+        return [];
+    }
+
+    getTreeItem(node: ProviderTreeNode): vscode.TreeItem {
+        if (node.kind === 'provider') {
+            const item = new vscode.TreeItem(
+                node.provider.name,
+                node.provider.commands.length
+                    ? vscode.TreeItemCollapsibleState.Collapsed
+                    : vscode.TreeItemCollapsibleState.None
+            );
+            item.description = node.provider.binary ?? node.provider.id;
+            item.tooltip = [
+                node.provider.description,
+                node.provider.homepage,
+                `${node.provider.commands.length} command(s)`,
+                `dbx ${node.provider.id}`,
+            ]
+                .filter(Boolean)
+                .join('\n');
+            item.iconPath = new vscode.ThemeIcon(node.custom ? 'plug' : 'extensions');
+            item.contextValue = node.custom ? 'deltabox.provider.custom' : 'deltabox.provider';
+            return item;
+        }
+
+        const item = new vscode.TreeItem(
+            node.command.description,
+            vscode.TreeItemCollapsibleState.None
+        );
+        item.description = `dbx ${node.command.name}`;
+        item.tooltip = `${node.command.description}\n\nvp ${node.command.subcommand}\ndbx ${node.command.name}`;
+        item.iconPath = new vscode.ThemeIcon('play');
+        item.contextValue = 'deltabox.providerCommand';
+        item.command = {
+            command: 'deltabox.toolchain.providers.runCommand',
+            title: 'Run',
+            arguments: [node],
+        };
+        return item;
     }
 }

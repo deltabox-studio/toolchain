@@ -132,8 +132,35 @@ export default defineConfig({
   plugin's `config` hook is ignored), so the tasks are spread in the config
   rather than added by the plugin. Drop the `run` block if you don't want them.
 
+## Custom providers
+
+Register extra providers in `.dbx/toolchain/providers.json` (a list of provider
+descriptors). `toolchainProviders()` merges them with the built-ins, so a custom
+provider's commands become `dbx` commands — `dbx <command.name>` forwards to
+`<binary> <subcommand> ...` — and it shows up in `dbx providers` and the editor.
+
+```json
+[
+    {
+        "id": "echo",
+        "name": "Echo",
+        "binary": "node",
+        "commands": [
+            {
+                "name": "echo:version",
+                "subcommand": "--version",
+                "description": "Print the Node version"
+            }
+        ]
+    }
+]
+```
+
+The VS Code **Providers** view manages this file (**Add provider...** /
+**Remove provider**). See [VS Code Extension](/guide/vscode).
+
 ## Providers in the editor
 
-The VS Code extension reads `providers --json` and builds its menus from it, so
-adding a provider surfaces it automatically. See
+The VS Code extension reads `providers --json` and builds its **Providers** view
+and menus from it, so adding a provider surfaces it automatically. See
 [VS Code Extension](/guide/vscode).
