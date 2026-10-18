@@ -112,32 +112,55 @@ still gets dbx's generated/managed files:
 // vite.config.ts
 import { defineConfig } from 'vite-plus';
 
-import { defineDbxConfig } from '@deltabox/toolchain/vite';
+import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
 
-export default defineConfig(
-    defineDbxConfig({
-        // your usual Vite / Vite+ config
-    })
-);
+export default defineConfig({
+    plugins: [dbx()],
+    run: { tasks: { ...DBX_TASKS } },
+    // your usual Vite / Vite+ config
+});
 ```
 
 - The `dbx()` plugin runs `dbx sync` before the dev server / build, or
   `dbx sync --check` in CI (which fails the build when generated files are out of
   date), and re-syncs when a `dbx.config.*` / `tsconfig.*.json` input changes.
-- `defineDbxConfig` also registers `vp run dbx:sync` / `vp run dbx:check`. Vite+
-  reads `run.tasks` from the **static** config (a plugin's `config` hook is
-  ignored), which is why the wrapper — not the plugin — adds them.
+- The plugin resolves the `dbx` binary from the project first. The local
+  `node_modules/.bin/dbx`, then the project's own `@deltabox/toolchain` — before a
+  global `dbx` or `npx`, so the version the project pins is the one that runs.
+- `run: { tasks: { ...DBX_TASKS } }` also exposes `vp run dbx:sync` /
+  `vp run dbx:check`. Vite+ reads `run.tasks` from the **static** config (a
+  plugin's `config` hook is ignored), so the tasks are spread in the config
+  rather than added by the plugin. Drop the `run` block if you don't want them.
 
-Prefer the bare plugin when you don't want the tasks:
+## Custom providers
 
-```ts
-import { dbx } from '@deltabox/toolchain/vite';
+Register extra providers in `.dbx/toolchain/providers.json` (a list of provider
+descriptors). `toolchainProviders()` merges them with the built-ins, so a custom
+provider's commands become `dbx` commands — `dbx <command.name>` forwards to
+`<binary> <subcommand> ...` — and it shows up in `dbx providers` and the editor.
 
-export default defineConfig({ plugins: [dbx({ check: true })] });
+```json
+[
+    {
+        "id": "echo",
+        "name": "Echo",
+        "binary": "node",
+        "commands": [
+            {
+                "name": "echo:version",
+                "subcommand": "--version",
+                "description": "Print the Node version"
+            }
+        ]
+    }
+]
 ```
+
+The VS Code **Providers** view manages this file (**Add provider...** /
+**Remove provider**). See [VS Code Extension](/guide/vscode).
 
 ## Providers in the editor
 
-The VS Code extension reads `providers --json` and builds its menus from it, so
-adding a provider surfaces it automatically. See
+The VS Code extension reads `providers --json` and builds its **Providers** view
+and menus from it, so adding a provider surfaces it automatically. See
 [VS Code Extension](/guide/vscode).

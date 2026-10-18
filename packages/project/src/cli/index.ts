@@ -1,4 +1,4 @@
-import { logger, type ProjectType, type ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ProjectType, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import { generateProjectConfigs } from '../config.js';
 import {
@@ -17,7 +17,7 @@ const CONFIG_OPTIONS = [
 ];
 
 /** Build the project scaffolding commands. */
-export function projectCommands(): ToolingCommand[] {
+export function projectCommands(): ToolchainCommand[] {
     return [
         {
             name: 'project:init',

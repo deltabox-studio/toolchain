@@ -1,8 +1,8 @@
 import { resetProjects } from '@deltabox/toolchain-core';
-import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 /** `dbx reset` — remove a project's generated files, manifest and/or config. */
-export function resetCommand(): ToolingCommand {
+export function resetCommand(): ToolchainCommand {
     return {
         name: 'reset',
         description:

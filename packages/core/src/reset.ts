@@ -15,14 +15,14 @@ export interface ResetSelectors {
     config?: boolean;
 }
 
-export interface ResetToolingOptions extends ResetSelectors {
+export interface ResetToolchainOptions extends ResetSelectors {
     /** The project directory to reset. */
     cwd: string;
     /** Report what would be removed without deleting anything. */
     dryRun?: boolean;
 }
 
-export interface ResetToolingResult {
+export interface ResetToolchainResult {
     /** Repo-relative paths removed (or that would be removed). */
     removed: string[];
     /** Whether this was a dry run. */
@@ -53,7 +53,7 @@ function resolveSelectors(options: ResetSelectors): Required<ResetSelectors> {
  * the `dbx.config.*` file. With no selectors the generated files + the
  * manifest directory are removed (the config is kept).
  */
-export function resetTooling(options: ResetToolingOptions): ResetToolingResult {
+export function resetToolchain(options: ResetToolchainOptions): ResetToolchainResult {
     const { cwd } = options;
     const dryRun = options.dryRun ?? false;
     const selectors = resolveSelectors(options);
@@ -116,7 +116,7 @@ export function resetProjects(options: ResetProjectsOptions): ResetProjectsResul
     const results = targets.map(target => ({
         dir: target.dir,
         rel: target.rel,
-        removed: resetTooling({
+        removed: resetToolchain({
             cwd: target.dir,
             ...(options.generated !== undefined ? { generated: options.generated } : {}),
             ...(options.manifest !== undefined ? { manifest: options.manifest } : {}),

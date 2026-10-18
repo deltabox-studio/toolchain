@@ -1,4 +1,4 @@
-import type { ToolingCommand } from '@deltabox/toolchain-shared';
+import type { ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import { projectsCommand } from './projects.js';
 import { providerCommands } from './providers.js';
@@ -10,7 +10,7 @@ export { providerCommands } from './providers.js';
 export * from './shared.js';
 
 /** The root commands: `projects`, `sync`, `watch`, `reset`, `providers`. */
-export function syncCommands(): ToolingCommand[] {
+export function syncCommands(): ToolchainCommand[] {
     return [
         projectsCommand(),
         syncCommand(),

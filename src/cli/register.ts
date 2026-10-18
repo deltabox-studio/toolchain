@@ -1,3 +1,4 @@
+import { intro, outro } from '@clack/prompts';
 import type { Command } from 'commander';
 
 import {
@@ -5,8 +6,8 @@ import {
     logger,
     setLogConfig,
     setLogOverrides,
-    type ToolingCommand,
-    type ToolingCommandContext,
+    type ToolchainCommand,
+    type ToolchainCommandContext,
 } from '@deltabox/toolchain-shared';
 
 import { loadContext } from './context.js';
@@ -26,12 +27,12 @@ export function isPassthroughCommand(): boolean {
 }
 
 /**
- * Register {@link ToolingCommand} descriptors on a commander program. Before a
+ * Register {@link ToolchainCommand} descriptors on a commander program. Before a
  * command runs, the consumer's `dbx.config.*` is loaded (once per cwd)
  * and passed as context. Only flags the user *explicitly typed* are forwarded,
  * so config-derived defaults win unless overridden on the CLI.
  */
-export function registerToolingCommands(program: Command, commands: ToolingCommand[]): Command {
+export function registerToolchainCommands(program: Command, commands: ToolchainCommand[]): Command {
     const passthroughNames = new Set(
         commands.filter(command => command.passthrough).map(command => command.name)
     );
@@ -77,6 +78,11 @@ export function registerToolingCommands(program: Command, commands: ToolingComma
                 }
             }
             const cwd = (provided.cwd as string | undefined) ?? process.cwd();
+            // Bracket the run with clack's `intro`/`outro` for a human-facing
+            // command (not a provider passthrough, and not machine/quiet output).
+            const framed = !cmd.passthrough && provided.json !== true && provided.quiet !== true;
+            const label = `${command.parent?.name() ?? ''} ${cmd.name}`.trim();
+            if (framed) intro(label);
             try {
                 // Load the config for every command (a passthrough reads the
                 // `providers` section to decide whether the wrapped binary may
@@ -86,7 +92,7 @@ export function registerToolingCommands(program: Command, commands: ToolingComma
                 if (provided.quiet === true) {
                     setLogOverrides({ ...getLogOverrides(), level: 'error' });
                 }
-                const context: ToolingCommandContext = {
+                const context: ToolchainCommandContext = {
                     cwd,
                     projectType: loaded.projectType,
                     config: loaded.config,
@@ -94,9 +100,11 @@ export function registerToolingCommands(program: Command, commands: ToolingComma
                     ...(loaded.path ? { configPath: loaded.path } : {}),
                 };
                 await cmd.run(provided, context);
+                if (framed) outro(process.exitCode ? 'Failed' : 'Done');
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
                 logger.error(message);
+                if (framed) outro('Failed');
                 process.exitCode = 1;
             }
         });

@@ -1,7 +1,7 @@
 /**
  * The migration registry.
  *
- * Registering a {@link ToolingMigration} here exposes it through the
+ * Registering a {@link ToolchainMigration} here exposes it through the
  * `dbx migrate` CLI and the programmatic API. Adding support for a new
  * source tool (Svgo, Stylelint, ...) is a matter of implementing the interface
  * and appending it to {@link migrations}.
@@ -11,11 +11,17 @@ import { biomeToOx } from './biome.js';
 import { dprintToOx } from './dprint.js';
 import { eslintToOx } from './eslint.js';
 import { prettierToOx } from './prettier.js';
-import type { MigrateTool, MigrationContext, MigrationResult, ToolingMigration } from './types.js';
+import type {
+    MigrateTool,
+    MigrationContext,
+    MigrationResult,
+    ToolchainMigration,
+} from './types.js';
+import { viteToToolchain } from './vite.js';
 
 /** Every registered migration. */
-export function migrations(): ToolingMigration[] {
-    return [biomeToOx, prettierToOx, dprintToOx, eslintToOx];
+export function migrations(): ToolchainMigration[] {
+    return [biomeToOx, prettierToOx, dprintToOx, eslintToOx, viteToToolchain];
 }
 
 /** A migration summary for listings. */
@@ -40,12 +46,12 @@ export function listMigrations(cwd: string): MigrationInfo[] {
 }
 
 /** The migrations whose source config is present in `cwd`. */
-export function detectMigrations(cwd: string): ToolingMigration[] {
+export function detectMigrations(cwd: string): ToolchainMigration[] {
     return migrations().filter(migration => migration.detect(cwd));
 }
 
 /** Find a migration by id, or by source tool. */
-export function findMigration(idOrFrom: string): ToolingMigration | undefined {
+export function findMigration(idOrFrom: string): ToolchainMigration | undefined {
     return migrations().find(migration => migration.id === idOrFrom || migration.from === idOrFrom);
 }
 

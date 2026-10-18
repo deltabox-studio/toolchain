@@ -16,7 +16,7 @@ Every template declares a `kind`, used by `template:list --kind` and
 | `workspace`   | A package inside an existing monorepo. |
 | `application` | A runnable application package.        |
 | `folder`      | A bare folder of files.                |
-| `tooling`     | Tooling config/pipeline files.         |
+| `tooling`     | Toolchain config/pipeline files.       |
 | `pipeline`    | A CI/pipeline template.                |
 
 ## List + create
@@ -35,6 +35,8 @@ dbx create --template mytpl --name acme --var port=4000
 
 With no `--template`, `create --kind <kind>` picks the first matching template.
 An unlisted `--template` id is treated as a Vite+ template (`vp create <id>`).
+On an interactive terminal, a bare `dbx create` (no `--template`/`--kind`/`--name`)
+prompts for the template, name and scope instead (Ctrl-C cancels).
 
 ## Builtin templates
 
@@ -107,8 +109,8 @@ export default defineConfig({
   are listed and created through `vp create`.
 - **git** — a repository (optionally with a `subdir`) listed as a template and
   created through `vp create`.
-- **Vite+** — set `create.defaultTemplate` in the `vite` section to make a scope
-  the default for `vp create`.
+- **Vite+** — set `create.defaultTemplate` in the `vite` section (the full Vite+
+  config) to make a scope the default for `vp create`.
 
 ## VS Code
 

@@ -80,7 +80,7 @@ export function readManifest(dir: string): ProjectManifest {
     return { files: doc?.files ?? [], ...(doc?.syncedAt ? { syncedAt: doc.syncedAt } : {}) };
 }
 
-function hasToolingConfig(dir: string): boolean {
+function hasToolchainConfig(dir: string): boolean {
     try {
         return fs.readdirSync(dir).some(name => name.startsWith(CONFIG_PREFIX));
     } catch {
@@ -156,7 +156,7 @@ function scanRoot(root: string): Project[] {
     }
     return [...dirs]
         .sort((a, b) => (packageName(a) ?? a).localeCompare(packageName(b) ?? b))
-        .map(dir => toProject(root, dir, hasToolingConfig(dir), []));
+        .map(dir => toProject(root, dir, hasToolchainConfig(dir), []));
 }
 
 /**

@@ -96,7 +96,6 @@ export function findTopLevelValue(
     close: number,
     key: string
 ): [number, number] | undefined {
-    const inner: Record<string, string> = { '{': '}', '[': ']' };
     let depth = 1;
     for (let i = open + 1; i < close; i++) {
         const skipped = skipTrivia(source, i);

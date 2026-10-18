@@ -1,16 +1,16 @@
 # Migrations
 
 `dbx migrate` converts a project's tooling config from another tool to
-**Ox** (Oxfmt + Oxlint). Migrations are pluggable — adding a source tool is a
+**Oxc** (Oxfmt + Oxlint). Migrations are pluggable — adding a source tool is a
 matter of implementing one interface.
 
 ```bash
 dbx migrate:list                       # what's available + detected
 dbx migrate --from biome               # dry-run
-dbx migrate --from biome --write       # writes the ox config
+dbx migrate --from biome --write       # writes the oxc config
 dbx migrate --from biome --target vite --write
 dbx migrate --from all                 # every detected source
-dbx migrate --check                    # CI: exit 1 when the ox config is stale
+dbx migrate --check                    # CI: exit 1 when the oxc config is stale
 dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
 ```
 
@@ -22,12 +22,38 @@ dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
 | `prettier` | Prettier-compatible options transfer directly; Tailwind/PackageJson plugins detected; `.prettierignore` → `ignorePatterns`.                                  |
 | `eslint`   | JSON configs map rule names + severities (`@typescript-eslint/*` → `typescript/*`); JS/flat configs use `@oxlint/migrate` with `--online --write`.           |
 | `dprint`   | `dprint.json` layout + TypeScript options → Oxfmt.                                                                                                           |
+| `vite`     | Folds a hand-written root `vite.config.*` into `dbx.config.*`'s `toolchain.vite` (see below).                                                                |
 
 ## Targets
 
 - `--target files` (default) — writes `.oxfmtrc.json` and `.oxlintrc.json`.
 - `--target vite` — folds the result into an existing `vite.config.ts`
   (inserting/replacing `fmt` and `lint`), which is what Vite+ reads.
+
+## `vite.config`
+
+The `vite` source moves a hand-written root `vite.config.*` into
+`dbx.config.*`'s `toolchain.vite`, so the whole Vite+ config lives in the one
+hand-authored root config and `dbx sync` writes a thin `vite.config.ts` shim that
+resolves it at load time:
+
+```bash
+dbx migrate --from vite          # dry-run: shows what would fold in
+dbx migrate --from vite --write  # folds the object into toolchain.vite
+dbx sync                         # writes the managed vite.config.ts shim
+```
+
+It also adds `/vite.config.ts` to `toolchain.vite.fmt.ignorePatterns`, so Oxfmt
+leaves the generated shim alone (otherwise `vp fmt` would rewrite it and
+`dbx sync --check` would report drift).
+
+It extracts the object literal passed to `defineConfig(...)` (or the
+default-exported object) with a string-aware, balanced-paren scanner and
+text-splices it into the nearest `dbx.config.*` (inserting `vite: { ... }`, or
+replacing an existing `vite` value). When the config references imports, plugins
+or any non-literal expression it is reported as **unmapped** and nothing is
+written, rather than emitting broken output. A JSON `dbx.config.json` is also
+left alone (the object is folded by hand).
 
 ## Package scripts
 
@@ -52,7 +78,7 @@ the dependency diff and per-workspace tasks — is on the
 
 `--check` runs the migrations without writing and exits non-zero when a target
 file is missing or differs from what the migration would produce, so a pipeline
-can require that a repo is fully on Ox:
+can require that a repo is fully on Oxc:
 
 ```bash
 dbx migrate --check || echo "still on Biome/ESLint — run migrate --write"

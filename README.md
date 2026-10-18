@@ -4,7 +4,7 @@
 [![tests](https://img.shields.io/github/actions/workflow/status/deltabox-studio/toolchain/ci.yml?label=tests&logo=github)](https://github.com/deltabox-studio/toolchain/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/@deltabox/toolchain.svg?color=cb3837&label=npm)](https://www.npmjs.com/package/@deltabox/toolchain)
 
-All-in-one, config-driven dev toolchain: scaffold projects, generate and manage configs, tsconfigs, syncing, changelogs and CI, run Vite+, and migrate other tools onto Ox.
+All-in-one, config-driven dev toolchain: scaffold projects, generate and manage configs, tsconfigs, syncing, changelogs and CI, run Vite+, and migrate other tools onto Oxc.
 
 - Save and use templates (local/remote) so you never have to scaffold the same projects over and over again.
 - Generate config types, env variables, cli flags, markdown and JSON schemas, so your codebase stays consistent, validated and well-documented.
@@ -12,31 +12,33 @@ All-in-one, config-driven dev toolchain: scaffold projects, generate and manage 
 - Sync your entire project so workspaces, docs and CI are always up-to-date.
 - Plug it into Vite / Vite+ and streamline your DX for your existing Vite setup.
 
-See the [list of features](#features) below.
+See the [list of features](#features).
 
-`@deltabox/toolchain` is driven by a single `dbx.config.ts` at a repo
-root. Define the sections you want and the toolchain generates and keeps the
-matching files in sync.
+<div align="left">
+  <img src="./apps/docs/public/vscode-screenshot.png" width="300" />
+</div>
+
+What you see above is the VS Code extension. Read more about it at [toolchain.deltabox.studio/guide/vscode](https://toolchain.deltabox.studio/guide/vscode).
 
 See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
 
-Documentation, guides and examples: [toolchain.deltabox.studio](https://toolchain.deltabox.studio/guide).
+Documentation, guides and examples at [toolchain.deltabox.studio](https://toolchain.deltabox.studio/guide).
 
 ## Table of contents
 
 - [deltabox toolchain](#deltabox-toolchain)
-  - [Table of contents](#table-of-contents)
-  - [Features](#features)
-  - [Install](#install)
-  - [Quickstart](#quickstart)
-  - [Config generator](#config-generator)
-  - [Vite / Vite+ plugin](#vite--vite-plugin)
-  - [CLI](#cli)
-  - [Programmatic API](#programmatic-api)
-  - [VS Code extension](#vs-code-extension)
-  - [Development](#development)
-  - [Docs](#docs)
-  - [License](#license)
+    - [Table of contents](#table-of-contents)
+    - [Features](#features)
+    - [Install](#install)
+    - [Quickstart](#quickstart)
+    - [Config generator](#config-generator)
+    - [Vite / Vite+ plugin](#vite--vite-plugin)
+    - [CLI](#cli)
+    - [Programmatic API](#programmatic-api)
+    - [VS Code extension](#vs-code-extension)
+    - [Development](#development)
+    - [Docs](#docs)
+    - [License](#license)
 
 ## Features
 
@@ -94,7 +96,7 @@ export default defineConfig({
         changelog: { workflows: { ci: true, release: true } },
         tsconfig: { refs: true },
         biome: true,
-        vite: { defaultTemplate: '@acme' },
+        vite: { fmt: { semi: true, singleQuote: true } },
     },
 });
 ```
@@ -182,26 +184,21 @@ dbx as part of its own pipeline — no separate `dbx sync` step:
 // vite.config.ts
 import { defineConfig } from 'vite'; // or 'vite-plus'
 
-import { defineDbxConfig } from '@deltabox/toolchain/vite';
+import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
 
-export default defineConfig(
-    defineDbxConfig({
-        // your usual Vite / Vite+ config
-    })
-);
+export default defineConfig({
+    plugins: [dbx()],
+    run: { tasks: { ...DBX_TASKS } },
+    // your usual Vite / Vite+ config
+});
 ```
 
 - The `dbx()` plugin runs `dbx sync` before the dev server / build, or
   `dbx sync --check` in CI (which fails the build when generated files are out of
   date), and re-syncs when a `dbx.config.*` / `tsconfig.*.json` input changes.
-- `defineDbxConfig` also registers `vp run dbx:sync` / `vp run dbx:check`. Prefer
-  the bare plugin when you don't want the tasks:
-
-```ts
-import { dbx } from '@deltabox/toolchain/vite';
-
-export default defineConfig({ plugins: [dbx({ check: true })] });
-```
+- `run: { tasks: { ...DBX_TASKS } }` additionally exposes `vp run dbx:sync` /
+  `vp run dbx:check` (Vite+ reads `run.tasks` from the static config, which a
+  plugin cannot add). Drop the `run` block if you don't want those tasks.
 
 See the [providers guide](https://toolchain.deltabox.studio/guide/providers).
 
@@ -215,19 +212,15 @@ config-derived defaults apply unless overridden on the command line.
 ## Programmatic API
 
 ```ts
-import { defineConfig, loadToolingConfig, runSync, defaultSyncTasks } from '@deltabox/toolchain';
+import { defineConfig, loadToolchainConfig, runSync, defaultSyncTasks } from '@deltabox/toolchain';
 
-const { config, tokens, projectType } = await loadToolingConfig(process.cwd());
+const { config, tokens, projectType } = await loadToolchainConfig(process.cwd());
 await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, projectType });
 ```
 
 ## VS Code extension
 
 A VS Code extension is available for `deltabox toolchain`.
-
-<div align="center">
-  <img src="./apps/docs/public/vscode-screenshot.png" width="300" />
-</div>
 
 Follow the steps below to use it. Will be published to the marketplace in the future.
 

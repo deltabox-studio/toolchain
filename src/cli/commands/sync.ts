@@ -2,18 +2,18 @@ import path from 'node:path';
 
 import {
     buildProjectGraph,
-    loadToolingConfig,
+    loadToolchainConfig,
     runSync,
     runWatch,
     writeProjectGraph,
 } from '@deltabox/toolchain-core';
-import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import { defaultSyncTasks } from '../../sync.js';
 import { baseOptions, watchOptions } from './shared.js';
 
 /** `dbx sync` — regenerate managed files (single, recursive, or watch). */
-export function syncCommand(): ToolingCommand {
+export function syncCommand(): ToolchainCommand {
     return {
         name: 'sync',
         description: 'Regenerate every managed file from dbx.config.*.',
@@ -39,7 +39,7 @@ export function syncCommand(): ToolingCommand {
                 if (!check) writeProjectGraph(context.cwd, graph);
                 for (const relDir of graph.order) {
                     const dir = path.resolve(context.cwd, relDir);
-                    const loaded = await loadToolingConfig(dir);
+                    const loaded = await loadToolchainConfig(dir);
                     const result = await runSync({
                         tasks: defaultSyncTasks(),
                         cwd: dir,

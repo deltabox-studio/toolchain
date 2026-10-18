@@ -7,6 +7,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
     detectMigrations,
     diffFiles,
+    ensureViteFmtIgnore,
+    extractViteObject,
+    foldViteIntoConfig,
     hasPending,
     listMigrations,
     mapBiomeFormatter,
@@ -15,6 +18,7 @@ import {
     readJsonc,
     renderViteTarget,
     runMigration,
+    scanLiteralObject,
 } from '../src/index.js';
 
 const tmpDirs: string[] = [];
@@ -73,7 +77,7 @@ describe('readJsonc', () => {
     });
 });
 
-describe('biome -> ox', () => {
+describe('biome -> oxc', () => {
     it('maps formatter, ignore, sortImports and rules', async () => {
         const dir = makeTmp();
         fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
@@ -111,7 +115,7 @@ describe('biome -> ox', () => {
     });
 });
 
-describe('biome -> ox unmapped', () => {
+describe('biome -> oxc unmapped', () => {
     it('reports jsxQuoteStyle from javascript.formatter, not formatter', () => {
         const { unmapped } = mapBiomeFormatter({
             javascript: { formatter: { jsxQuoteStyle: 'double' } },
@@ -127,7 +131,7 @@ describe('biome -> ox unmapped', () => {
     });
 });
 
-describe('prettier -> ox', () => {
+describe('prettier -> oxc', () => {
     it('maps options and detects plugins', () => {
         const mapped = mapPrettierToOxfmt({
             semi: false,
@@ -143,7 +147,7 @@ describe('prettier -> ox', () => {
     });
 });
 
-describe('eslint -> ox', () => {
+describe('eslint -> oxc', () => {
     it('maps rule names and severities', async () => {
         const dir = makeTmp();
         fs.writeFileSync(
@@ -190,9 +194,9 @@ describe('registry', () => {
     it('detects present configs', () => {
         const dir = makeTmp();
         fs.writeFileSync(path.join(dir, 'biome.json'), '{}', 'utf-8');
-        expect(detectMigrations(dir).map(m => m.id)).toContain('biome-to-ox');
+        expect(detectMigrations(dir).map(m => m.id)).toContain('biome-to-oxc');
         const infos = listMigrations(dir);
-        expect(infos.find(info => info.id === 'biome-to-ox')?.detected).toBe(true);
+        expect(infos.find(info => info.id === 'biome-to-oxc')?.detected).toBe(true);
     });
 
     it('detects several sources at once (--from all)', () => {
@@ -200,8 +204,8 @@ describe('registry', () => {
         fs.writeFileSync(path.join(dir, 'biome.json'), '{}', 'utf-8');
         fs.writeFileSync(path.join(dir, '.prettierrc'), '{}', 'utf-8');
         const ids = detectMigrations(dir).map(m => m.id);
-        expect(ids).toContain('biome-to-ox');
-        expect(ids).toContain('prettier-to-ox');
+        expect(ids).toContain('biome-to-oxc');
+        expect(ids).toContain('prettier-to-oxc');
     });
 });
 
@@ -261,5 +265,98 @@ describe('eslint flat config', () => {
         const result = await runMigration('eslint', { cwd: dir });
         expect(result.notes?.join('\n')).toContain('--online');
         expect(result.files?.map(f => path.basename(f.path))).toEqual(['.oxlintrc.json']);
+    });
+});
+
+const VITE_SAMPLE = `import { defineConfig } from 'vite-plus';
+
+export default defineConfig({
+    test: { include: ['src/**/*.test.ts'], environment: 'node' },
+    fmt: { semi: true, singleQuote: true },
+});
+`;
+
+describe('vite -> toolchain', () => {
+    it('extracts the defineConfig object literal (balanced-paren aware)', () => {
+        expect(extractViteObject(VITE_SAMPLE)).toEqual({
+            text: "{\n    test: { include: ['src/**/*.test.ts'], environment: 'node' },\n    fmt: { semi: true, singleQuote: true },\n}",
+        });
+    });
+
+    it('extracts a default-exported object when there is no defineConfig', () => {
+        const source = 'export default {\n    fmt: { semi: false },\n};\n';
+        expect(extractViteObject(source)).toEqual({ text: '{\n    fmt: { semi: false },\n}' });
+    });
+
+    it('flags non-literal configs (imports/plugins/helpers)', () => {
+        expect(scanLiteralObject('{ fmt: { semi: true } }').ok).toBe(true);
+        expect(scanLiteralObject('{ plugins: [react()] }')).toEqual({
+            ok: false,
+            reason: 'non-literal value `react`',
+        });
+        expect(scanLiteralObject('{ x: `a${b}` }').ok).toBe(false);
+    });
+
+    it('splices a `vite` key into an existing toolchain (and replaces one)', () => {
+        const base = `export default defineConfig({\n    toolchain: {\n        project: { name: 'acme' },\n    },\n});\n`;
+        const folded = foldViteIntoConfig(base, '{ fmt: { semi: true } }');
+        expect('content' in folded && folded.content).toContain('vite: { fmt: { semi: true } },');
+        expect('content' in folded && folded.content).toContain("project: { name: 'acme' }");
+
+        const withVite = `export default defineConfig({\n    toolchain: {\n        vite: { config: false },\n    },\n});\n`;
+        const replaced = foldViteIntoConfig(withVite, '{ fmt: { semi: true } }');
+        expect('content' in replaced && replaced.content).toContain(
+            'vite: { fmt: { semi: true } }'
+        );
+        expect('content' in replaced && replaced.content).not.toContain('config: false');
+    });
+
+    it('adds `/vite.config.ts` to fmt.ignorePatterns', () => {
+        expect(ensureViteFmtIgnore('{ fmt: { semi: true } }')).toBe(
+            "{ fmt: { ignorePatterns: ['/vite.config.ts'], semi: true } }"
+        );
+        expect(ensureViteFmtIgnore("{ fmt: { ignorePatterns: ['dist/**'] } }")).toBe(
+            "{ fmt: { ignorePatterns: ['/vite.config.ts', 'dist/**'] } }"
+        );
+        expect(ensureViteFmtIgnore('{ test: {} }')).toBe(
+            "{ fmt: { ignorePatterns: ['/vite.config.ts'] }, test: {} }"
+        );
+        const once = ensureViteFmtIgnore('{ fmt: { semi: true } }');
+        expect(ensureViteFmtIgnore(once)).toBe(once);
+    });
+
+    it('folds a hand-written vite.config.ts into dbx.config.ts', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'dbx.config.ts'),
+            `import { defineConfig } from '@deltabox/toolchain';\n\nexport default defineConfig({\n    toolchain: {\n        project: { name: 'acme' },\n    },\n});\n`,
+            'utf-8'
+        );
+        fs.writeFileSync(path.join(dir, 'vite.config.ts'), VITE_SAMPLE, 'utf-8');
+
+        const result = await runMigration('vite', { cwd: dir, write: true });
+        expect(result.from).toBe('vite');
+        expect(result.written).toEqual([path.join(dir, 'dbx.config.ts')]);
+        const content = fs.readFileSync(path.join(dir, 'dbx.config.ts'), 'utf-8');
+        expect(content).toContain('vite: {');
+        expect(content).toContain("environment: 'node'");
+        expect(content).toContain('singleQuote: true');
+        expect(content).toContain("project: { name: 'acme' }");
+        expect(content).toContain("ignorePatterns: ['/vite.config.ts']");
+    });
+
+    it('changes nothing when the config is not foldable', async () => {
+        const dir = makeTmp();
+        const dbx = `export default defineConfig({\n    toolchain: {},\n});\n`;
+        fs.writeFileSync(path.join(dir, 'dbx.config.ts'), dbx, 'utf-8');
+        fs.writeFileSync(
+            path.join(dir, 'vite.config.ts'),
+            "import { defineConfig } from 'vite-plus';\nimport react from '@vitejs/plugin-react';\n\nexport default defineConfig({ plugins: [react()] });\n",
+            'utf-8'
+        );
+        const result = await runMigration('vite', { cwd: dir, write: true });
+        expect(result.written).toEqual([]);
+        expect(result.unmapped?.length).toBe(1);
+        expect(fs.readFileSync(path.join(dir, 'dbx.config.ts'), 'utf-8')).toBe(dbx);
     });
 });

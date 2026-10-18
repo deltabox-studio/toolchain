@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
+import { cancel, isCancel, select, text } from '@clack/prompts';
+
+import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import { TEMPLATE_MANIFEST, writeTemplateManifest } from '../local.js';
 import { parseSourceSpec } from '../online.js';
@@ -54,8 +56,19 @@ function parseVarDefs(pairs: string[] | undefined): TemplateVariable[] {
     });
 }
 
+/** Whether interactive prompts are possible (a TTY, and not machine output). */
+function canPrompt(opts: Record<string, unknown>): boolean {
+    return Boolean(process.stdin.isTTY && process.stdout.isTTY) && opts.json !== true;
+}
+
+/** Print a clack cancel line and mark the run as failed. */
+function abortPrompt(): void {
+    cancel('Cancelled.');
+    process.exitCode = 1;
+}
+
 /** The `template:*` commands plus the template-driven `create`. */
-export function templateCommands(): ToolingCommand[] {
+export function templateCommands(): ToolchainCommand[] {
     return [
         {
             name: 'template:list',
@@ -283,13 +296,54 @@ export function templateCommands(): ToolingCommand[] {
             ],
             run: async (opts, context) => {
                 const out = (opts.out as string | undefined) ?? context.cwd;
-                const id = String(opts.template ?? '');
                 const kind = opts.kind as string | undefined;
                 const templates = await loadTemplates({
                     cwd: context.cwd,
                     config: context.config,
                     online: true,
                 });
+
+                // Prompt for anything the flags left out (interactive terminals only).
+                const interactive = canPrompt(opts as Record<string, unknown>);
+                let id = String(opts.template ?? '');
+                let name = opts.name as string | undefined;
+                let scope = opts.scope as string | undefined;
+
+                if (interactive && !id && !kind) {
+                    if (templates.length === 0) {
+                        throw new Error(
+                            'No templates available. Pass --template <id> (see `dbx template:list`).'
+                        );
+                    }
+                    const picked = await select({
+                        message: 'Pick a template',
+                        options: templates.map(t => ({
+                            value: t.id,
+                            label: t.name,
+                            ...(t.description ? { hint: t.description } : {}),
+                        })),
+                    });
+                    if (isCancel(picked)) return abortPrompt();
+                    id = String(picked);
+                }
+                if (interactive && !name) {
+                    const answer = await text({
+                        message: 'Project name',
+                        placeholder: context.config.project?.name ?? 'app',
+                        defaultValue: context.config.project?.name ?? 'app',
+                    });
+                    if (isCancel(answer)) return abortPrompt();
+                    name = String(answer);
+                }
+                if (interactive && !scope) {
+                    const answer = await text({
+                        message: 'npm scope (optional)',
+                        placeholder: context.config.project?.scope ?? `@${name ?? 'app'}`,
+                    });
+                    if (isCancel(answer)) return abortPrompt();
+                    scope = String(answer) || undefined;
+                }
+
                 let template = templates.find(candidate => candidate.id === id);
                 // With no explicit id, a `--kind` picks the first matching template.
                 if (!template && !id && kind) {
@@ -312,9 +366,8 @@ export function templateCommands(): ToolingCommand[] {
                 }
                 const tokens = {
                     ...context.config.project,
-                    name:
-                        (opts.name as string | undefined) ?? context.config.project?.name ?? 'app',
-                    ...(opts.scope ? { scope: opts.scope as string } : {}),
+                    name: name ?? context.config.project?.name ?? 'app',
+                    ...(scope ? { scope } : {}),
                 };
                 const variables = parseVars(opts.var as string[] | undefined);
                 const result = await scaffoldTemplate(template, { cwd: out, tokens, variables });

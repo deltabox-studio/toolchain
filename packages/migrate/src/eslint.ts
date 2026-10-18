@@ -17,7 +17,7 @@ import type {
     MigrationContext,
     MigrationFile,
     MigrationResult,
-    ToolingMigration,
+    ToolchainMigration,
 } from './types.js';
 import { renderViteTarget } from './vite-target.js';
 
@@ -100,8 +100,8 @@ export async function runOxlintMigrate(cwd: string): Promise<Json | undefined> {
     }
 }
 
-export const eslintToOx: ToolingMigration = {
-    id: 'eslint-to-ox',
+export const eslintToOx: ToolchainMigration = {
+    id: 'eslint-to-oxc',
     from: 'eslint',
     to: 'oxlint',
     description:
@@ -109,7 +109,7 @@ export const eslintToOx: ToolingMigration = {
     detect: cwd => Boolean(findEslintConfig(cwd)),
     run: async (ctx: MigrationContext): Promise<MigrationResult> => {
         const found = findEslintConfig(ctx.cwd);
-        if (!found) throw new Error('eslint-to-ox: no ESLint config found.');
+        if (!found) throw new Error('eslint-to-oxc: no ESLint config found.');
 
         const rules: Json = {};
         const unmapped: { source: string; reason: string }[] = [];

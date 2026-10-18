@@ -36,17 +36,26 @@ falling back to `npx @deltabox/toolchain`.
 
 ## Views
 
-The activity-bar container has three views:
+The activity-bar container has five views:
 
 - **Home** — a dashboard: a last-sync line, status, quick actions, an expandable
   **All actions** list, and a card per project (root first). Configured projects
   show a per-project Sync button, a last-sync line and a `⋮` menu; projects
   without a config show a "no config" badge.
-- **Files** — every generated/managed file, grouped per project (read from each
-  project's `.dbx/toolchain/manifest.json`); click a file to open it.
+- **Providers** — the registered providers (`dbx providers --json`) with their
+  commands nested underneath. The title bar has **Add provider...**; a provider's
+  context menu runs a command (**Run command...**), opens its homepage, copies its
+  id, and — for a provider you added — **Remove provider**. A command runs as
+  `dbx <command.name>` in a terminal.
 - **Projects** — workspace-root groups with every package nested underneath
   (root first). Select one or more and run **Sync selected projects**, use a
   configured project's inline Sync button, or right-click a project for its menu.
+- **Templates** — the available templates (`dbx template:list --json`). The title
+  bar has **Add template...** / **Remove template source...** / **Refresh**; a
+  template's context menu creates a project from it, shows its info, or copies its
+  id.
+- **Files** — every generated/managed file, grouped per project (read from each
+  project's `.dbx/toolchain/manifest.json`); click a file to open it.
 
 The Home quick actions are **Sync all**, **Scaffold project**, **Run Vite+…**,
 **Add template…**, **Check sync** and **Refresh projects**.
@@ -64,6 +73,9 @@ The Home quick actions are **Sync all**, **Scaffold project**, **Run Vite+…**,
 | Run workflow                 | Trigger generated GitHub workflows.                              |
 | Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.   |
 | Create Vite+ project…        | `vp create` in a terminal.                                       |
+| Add provider...              | Register a custom provider in `.dbx/toolchain/providers.json`.   |
+| Run command...               | Run a provider command (`dbx <command>`) in a terminal.          |
+| Create from template...      | `dbx create --template <id>` (terminal for online templates).    |
 | Reset tooling                | Remove generated files / manifest / config.                      |
 | Toggle auto-sync             | Enable/disable sync-on-change.                                   |
 
@@ -84,13 +96,15 @@ actions, scoped to that project:
   including the config.
 - **Go to project** — reveal the project in the Explorer.
 
-## Templates, Vite+ and providers in the editor
+## Providers, templates and Vite+ in the editor
 
-The extension reads `dbx providers --json` for the **Run Vite+
-command…** menu and `dbx template:list --json` for **From template…**;
-**Add template…** runs `template:init --add` and **Remove template…** runs
-`template:list --registry` + `template:remove`. Adding a provider or a template
-surfaces it in the UI automatically.
+The **Providers** and **Templates** views read `dbx providers --json` and
+`dbx template:list --json`, so adding one surfaces it in the UI automatically.
+**Add provider...** writes a custom provider to `.dbx/toolchain/providers.json`,
+which `toolchainProviders()` merges with the built-ins — so a registered
+provider's commands also become `dbx` commands (`dbx <command>`), runnable from
+the view. **Add template...** runs `template:init --add` and **Remove template
+source...** runs `template:list --registry` + `template:remove`.
 
 ## Loop prevention
 
@@ -112,6 +126,8 @@ at most one follow-up, and suppresses events briefly after a run.
 
 Search for `deltabox:` to find **Sync active project**, **Sync selected
 projects**, **Sync all projects**, **Check sync**, **Scaffold project…**,
-**Add template…**, **Remove template…**, **Generate configs…**, **Run
-workflow…**, **Run Vite+ command…**, **Create Vite+ project…**, **Reset
-tooling…**, **Refresh projects** and **Toggle auto-sync**.
+**Add template…**, **Remove template…**, **Add provider...**, **Refresh
+providers**, **Add template...**, **Remove template source...**, **Refresh
+templates**, **Generate configs…**, **Run workflow…**, **Run Vite+ command…**,
+**Create Vite+ project…**, **Reset tooling…**, **Refresh projects** and
+**Toggle auto-sync**.

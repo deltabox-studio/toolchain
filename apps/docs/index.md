@@ -32,7 +32,7 @@ features:
     - title: Templates
       details: Offline (builtin + local template.json dirs) and online (npm/git) templates.
     - title: Migrations
-      details: Migrate Biome, Prettier, ESLint or Dprint onto Ox (Oxfmt/Oxlint).
+      details: Migrate Biome, Prettier, ESLint or Dprint onto Oxc (Oxfmt/Oxlint).
     - title: Editor first
       details: A VS Code extension to sync, scaffold, run workflows, run commands and pick templates.
     - title: Monorepo aware

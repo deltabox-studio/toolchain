@@ -15,7 +15,7 @@ import type {
     MigrationContext,
     MigrationFile,
     MigrationResult,
-    ToolingMigration,
+    ToolchainMigration,
 } from './types.js';
 import { renderViteTarget } from './vite-target.js';
 
@@ -73,15 +73,15 @@ export function mapDprintToOxfmt(dprint: Json): { oxfmt: Json; unmapped: string[
     return { oxfmt, unmapped };
 }
 
-export const dprintToOx: ToolingMigration = {
-    id: 'dprint-to-ox',
+export const dprintToOx: ToolchainMigration = {
+    id: 'dprint-to-oxc',
     from: 'dprint',
     to: 'oxfmt',
     description: 'Migrate a dprint.json (formatter) to Oxfmt.',
     detect: cwd => Boolean(findDprintConfig(cwd)),
     run: async (ctx: MigrationContext): Promise<MigrationResult> => {
         const found = findDprintConfig(ctx.cwd);
-        if (!found) throw new Error('dprint-to-ox: no dprint.json found.');
+        if (!found) throw new Error('dprint-to-oxc: no dprint.json found.');
         const mapped = mapDprintToOxfmt(found.config);
         const unmapped = mapped.unmapped.map(source => ({ source, reason: 'no Oxfmt equivalent' }));
         const notes = [`Source: ${path.basename(found.file)}.`];
@@ -90,7 +90,7 @@ export const dprintToOx: ToolingMigration = {
             const file = renderViteTarget(ctx.cwd, { fmt: mapped.oxfmt });
             if (ctx.write) fs.writeFileSync(file.path, file.content, 'utf-8');
             return {
-                id: 'dprint-to-ox',
+                id: 'dprint-to-oxc',
                 from: 'dprint',
                 to: 'oxfmt',
                 written: [file.path],
@@ -107,7 +107,7 @@ export const dprintToOx: ToolingMigration = {
         };
         if (ctx.write) fs.writeFileSync(file.path, file.content, 'utf-8');
         return {
-            id: 'dprint-to-ox',
+            id: 'dprint-to-oxc',
             from: 'dprint',
             to: 'oxfmt',
             written: [file.path],

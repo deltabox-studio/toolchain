@@ -55,7 +55,7 @@ export default defineConfig({
         '@deltabox/toolchain-vite/cli': src('packages/vite/src/cli/index.ts'),
         '@deltabox/toolchain-vite': src('packages/vite/src/index.ts'),
     },
-    deps: { ...baseTsdownConfig.deps, alwaysBundle: [/^@deltabox\/tooling-/] },
+    deps: { ...baseTsdownConfig.deps, alwaysBundle: [/^@deltabox\/toolchain-/] },
     // Keep the published CLI command name stable (`dbx`) instead of
     // deriving it from the package name.
     exports: { enabled: true, bin: { dbx: 'src/cli/index.ts' } },

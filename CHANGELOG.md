@@ -1,16 +1,101 @@
 # Changelog
 
-## 1.3.1 (October 2026)
+## 1.5.0 (October 2026)
 
 <!-- release:start -->
+
+### New features
+#### Changelog
+- Emit the husky commit-msg hook for consumers ([#6898386](https://github.com/deltabox-studio/toolchain/issues/6898386) by [T0chi](https://github.com/T0chi))
+  - \dbx sync\ now writes .husky/commit-msg (running commitlint) alongside the workflows and commitlint.config.mjs, so consumers using the Conventional-Commits CI lint commits locally too. The docs recommend \postinstall: husky\ (Yarn Berry never runs \prepare\) and \.husky/* text eol=lf\ (a trailing CR breaks the hook).
+
+<!-- release:end -->
+
+
+## 1.4.1 (October 2026)
+
+### Bug fixes
+#### Tsdown
+- Pin the changelog and tsconfig bins explicitly ([#f616626](https://github.com/deltabox-studio/toolchain/commit/f616626) by [T0chi](https://github.com/T0chi))
+  - With \exports: true\ and no \in\, tsdown soft auto-detects the shebang entry and derives the command name from the package name, rewriting the committed \in\ on every build. Map the command names explicitly so the field is stable and the build is idempotent.
+#### Ci
+- Bootstrap the dist the vite shim needs before build ([#b96b89a](https://github.com/deltabox-studio/toolchain/commit/b96b89a) by [T0chi](https://github.com/T0chi))
+  - \prepare\ never runs on \yarn install\ under Yarn Berry, so scripts/bootstrap.mjs never built dist/vite.js and \yarn build\ failed to load the generated vite.config.ts shim on a fresh CI checkout. Run the bootstrap from a root \postinstall\ and at the start of build/typecheck/test (all begin with \p run\, which loads the shim); it is a no-op once dist/vite.js exists.
+
+## 1.4.0 (October 2026)
+
+### New features
+- Render the dbx CLI with clack, author the Vite+ config in dbx.config ([#fb8b9ef](https://github.com/deltabox-studio/toolchain/commit/fb8b9ef) by [T0chi](https://github.com/T0chi))
+  - vite.config.ts in and adds the fmt ignore; dbx resolves its own binary first
+    and colour Commander's help
+#### Vscode
+- Add Providers and Templates views ([#9aa6d12](https://github.com/deltabox-studio/toolchain/commit/9aa6d12) by [T0chi](https://github.com/T0chi))
+  - add/remove/run-command/open-homepage/copy-id actions
+    toolchainProviders(), so a registered provider's commands become dbx commands
+    Templates -> Managed Files
+#### Vite
+- Drive dbx from the dbx plugin, drop defineDbxConfig ([#8d11557](https://github.com/deltabox-studio/toolchain/commit/8d11557) by [T0chi](https://github.com/T0chi))
+  - The Vite/Vite+ integration is now the dbx() plugin plus spreading DBX_TASKS into
+    run.tasks, so the consumer's own vite config stays the config:
+  - export default defineConfig({
+    plugins: [dbx()],
+    run: { tasks: { ...DBX_TASKS } },
+    });
+  - Remove the defineDbxConfig wrapper (and DbxViteConfig) and update the README, the
+    Providers guide and the API reference.
+- Author the Vite+ config in dbx.config, generate vite.config.ts ([#9885225](https://github.com/deltabox-studio/toolchain/issues/9885225) by [T0chi](https://github.com/T0chi))
+  - toolchain.vite now holds the whole Vite+ config (a loose object) with a
+    config: false opt-out, and dbx sync generates the managed root
+    vite.config.ts from it, so dbx.config.* is the only hand-authored root config.
+  - Add dbx migrate --from vite (auto-detected): it extracts the object passed to
+    defineConfig in an existing root vite.config.ts and folds it into dbx.config.*'s
+    toolchain.vite, refusing configs it cannot migrate faithfully.
+  - The config-types generator now honors .catchall, emitting an index signature.
+#### Config
+- Expose the Vite+ config type, rename Tooling* to Toolchain* ([#088de56](https://github.com/deltabox-studio/toolchain/commit/088de56) by [T0chi](https://github.com/T0chi))
+  - ToolchainViteConfig is now Vite+ ViteUserConfig intersected with the managed
+    config?: boolean opt-out, instead of a generated loose object. The config-types
+    generator gains a hand-written type override plus an imports block, used for the
+    vite type, and vite-plus becomes an optional peer dependency.
+  - Rename every Tooling* type, schema id and identifier to Toolchain*. That covers
+    the config schema ids, CONFIG_TYPE_SCHEMAS keys, the provider/migration models
+    and the CLI helpers (toolchainConfigSchema, loadToolchainConfig,
+    toolchainProviders, registerToolchainCommands). Regenerated types/schema/docs.
+### Bug fixes
+#### Deps
+- Sync the lockfile for @clack/prompts ([#568a7c6](https://github.com/deltabox-studio/toolchain/commit/568a7c6) by [T0chi](https://github.com/T0chi))
+  - The lockfile was missing the @clack/prompts entry for packages/shared and
+    packages/template, so 'yarn install --immutable' failed in CI (YN0028).
+### Refactors
+- Rename Ox to Oxc across the project ([#39b37d3](https://github.com/deltabox-studio/toolchain/commit/39b37d3) by [T0chi](https://github.com/T0chi))
+  - (Oxfmt/Oxlint and .oxlintrc/.oxfmtrc are unchanged)
+### Documentation
+- Cover the clack CLI output, prompts and dbx binary resolution ([#f45ed3f](https://github.com/deltabox-studio/toolchain/commit/f45ed3f) by [T0chi](https://github.com/T0chi))
+- Document the Vite+ config type and the Toolchain* names ([#1e70950](https://github.com/deltabox-studio/toolchain/commit/1e70950) by [T0chi](https://github.com/T0chi))
+  - Note that toolchain.vite is typed as Vite's UserConfig as augmented by Vite+
+    (ToolchainViteConfig), and list ToolchainViteConfig among the shared config
+    types. Covers the unreleased changes since v1.3.1 together with the sections the
+    feature commits already added (the Vite+ config in dbx.config, the generated
+    vite.config.ts, the vite migration and the dbx plugin).
+#### Vscode
+- Refresh the extension screenshot and add its LICENSE ([#49d4510](https://github.com/deltabox-studio/toolchain/commit/49d4510) by [T0chi](https://github.com/T0chi))
+### Build system
+- Package the VS Code extension in yarn build ([#1dd14a1](https://github.com/deltabox-studio/toolchain/commit/1dd14a1) by [T0chi](https://github.com/T0chi))
+  - yarn build now also runs the vscode package:vsix, so deltabox-toolchain.vsix
+    is always produced.
+
+### Package changes
+#### Added
+- `@clack/prompts` `^1.8.1`
+#### Updated
+- `vite-plus` `^1.2.0` → `>=1`
+
+## 1.3.1 (October 2026)
 
 ### Documentation
 - Update config generator documentation ([#0dfbf88](https://github.com/deltabox-studio/toolchain/commit/0dfbf88) by [T0chi](https://github.com/T0chi))
 - Update config generator reference link ([#2f0adde](https://github.com/deltabox-studio/toolchain/commit/2f0adde) by [T0chi](https://github.com/T0chi))
 - Update features descriptions ([#e9c0a6d](https://github.com/deltabox-studio/toolchain/commit/e9c0a6d) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.3.0 (October 2026)
 

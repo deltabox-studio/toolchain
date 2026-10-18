@@ -5,23 +5,27 @@
  * ```ts
  * // vite.config.ts
  * import { defineConfig } from 'vite-plus';
- * import { defineDbxConfig } from '@deltabox/toolchain/vite';
+ * import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
  *
- * export default defineConfig(defineDbxConfig({ server: {}, build: {} }));
+ * export default defineConfig({
+ *     plugins: [dbx()],
+ *     run: { tasks: { ...DBX_TASKS } },
+ * });
  * ```
  *
  * The plugin runs `dbx sync` before the dev server / build (or `dbx sync --check`
  * in CI) and re-syncs when a dbx input file changes in watch mode. Vite+ reads
  * `run.tasks` from the **static** config (a plugin's `config` hook is ignored),
- * so {@link defineDbxConfig} is what registers `vp run dbx:sync` / `dbx:check`.
+ * so spread {@link DBX_TASKS} into `run.tasks` to expose `vp run dbx:sync` /
+ * `dbx:check`.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { Plugin, PluginOption, UserConfig } from 'vite';
+import type { Plugin } from 'vite';
 
-import { spawnCross } from '@deltabox/toolchain-shared';
+import { findOwnCliEntry, spawnCross } from '@deltabox/toolchain-shared';
 
 import { which } from './vp.js';
 
@@ -47,13 +51,20 @@ function localCandidates(cwd: string): string[] {
 }
 
 /**
- * Resolve the `dbx` binary: project-local shim -> global `PATH` ->
- * `npx --yes @deltabox/toolchain`.
+ * Resolve the `dbx` binary, always preferring the project's own over a global
+ * install: `DBX_BIN` override -> project-local shim -> the repo's own
+ * `@deltabox/toolchain` bin -> global `PATH` -> `npx --yes @deltabox/toolchain`.
+ * A project-local binary is what the project pins, so a stale global `dbx` can
+ * never be used by accident.
  */
 export function resolveDbx(cwd: string = process.cwd()): ResolvedDbx {
+    const override = process.env.DBX_BIN;
+    if (override) return { exe: override, args: [], source: 'local' };
     for (const candidate of localCandidates(cwd)) {
         if (fs.existsSync(candidate)) return { exe: candidate, args: [], source: 'local' };
     }
+    const own = findOwnCliEntry(cwd);
+    if (own) return { exe: process.execPath, args: [own], source: 'local' };
     const global = which('dbx');
     if (global) return { exe: global, args: [], source: 'global' };
     return {
@@ -105,8 +116,8 @@ const WATCH_INPUTS = [/dbx\.config\.[cm]?[jt]s$/, /tsconfig\.(?:default|monorepo
 /**
  * A Vite / Vite+ plugin that runs `@deltabox/toolchain` in the Vite pipeline:
  * `dbx sync` before dev/build (or `dbx sync --check` in CI) and a debounced
- * re-sync when a dbx input changes. Add it to `plugins`, or use
- * {@link defineDbxConfig}, which also registers the `vp run dbx:*` tasks.
+ * re-sync when a dbx input changes. Add it to `plugins`; spread {@link DBX_TASKS}
+ * into `run.tasks` for the `vp run dbx:*` tasks.
  */
 export function dbx(options: DbxPluginOptions = {}): Plugin {
     const check = options.check ?? Boolean(process.env.CI);
@@ -157,27 +168,5 @@ export function dbx(options: DbxPluginOptions = {}): Plugin {
             if (!watch || !sync) return;
             if (WATCH_INPUTS.some(pattern => pattern.test(id))) schedule();
         },
-    };
-}
-
-/** A Vite+ config: Vite's `UserConfig` plus the Vite+ `run` block. */
-export type DbxViteConfig = UserConfig & {
-    run?: { tasks?: Record<string, unknown> } & Record<string, unknown>;
-};
-
-/**
- * Wrap a Vite+ config with dbx: prepend the {@link dbx} plugin and register the
- * `dbx:sync` / `dbx:check` tasks.
- */
-export function defineDbxConfig(
-    config: DbxViteConfig,
-    options: DbxPluginOptions = {}
-): DbxViteConfig {
-    const existing: PluginOption[] = config.plugins ?? [];
-    const run = config.run ?? {};
-    return {
-        ...config,
-        plugins: [dbx(options), ...existing],
-        run: { ...run, tasks: { ...DBX_TASKS, ...run.tasks } },
     };
 }

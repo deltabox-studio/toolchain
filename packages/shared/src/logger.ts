@@ -1,17 +1,18 @@
 /**
  * The shared console logger.
  *
- * One level-aware, color-aware sink for everything the toolchain prints, so the
- * output is consistent and configurable — from `dbx.config.*`'s `logger` section
- * and from the CLI (`--log-level`, `--color`/`--no-color`). Colors use the same
- * package Vite uses (`picocolors`).
+ * One level-aware sink for everything the toolchain prints, rendered with
+ * [`@clack/prompts`](https://bombshell.dev/clack) so the CLI output has the
+ * familiar clack look (level symbols + guide). Colors follow clack / Node's
+ * `util.styleText`: on by default, off with `--no-color` or `logger.color: false`.
  *
  * Use `logger.info` for human messages, `logger.raw` for machine output (`--json`
- * must not be prefixed or colored), and `logger.success`/`warn`/`error`/`debug`
+ * must not be prefixed or decorated), and `logger.success`/`warn`/`error`/`debug`
  * for the rest. Messages that start with whitespace (indented continuations) are
- * never prefixed.
+ * never prefixed with the `name`.
  */
 
+import { log as clackLog, type LogMessageOptions } from '@clack/prompts';
 import pc from 'picocolors';
 
 /** Ordered from most to least verbose. */
@@ -34,7 +35,10 @@ const DEFAULT_NAME = 'dbx';
 export interface LoggerOptions {
     /** Minimum level to print (default `info`). */
     level?: LogLevel;
-    /** Force colors on/off (default: `picocolors` autodetection). */
+    /**
+     * Force colors on/off (default: on). The toolchain colors its output by
+     * default; `--no-color` or `logger.color: false` turn it off.
+     */
     color?: boolean;
     /** Prefix non-indented lines with `<name>:` (default `dbx`). */
     name?: string;
@@ -45,11 +49,11 @@ export interface Logger {
     readonly level: LogLevel;
     /** A `picocolors` color set honoring the color setting. */
     readonly colors: Colors;
-    /** Machine-readable output: raw to stdout, no prefix, no color. */
+    /** Machine-readable output: raw to stdout, no prefix, no decoration. */
     raw(message?: string): void;
-    /** Raw output to stderr, no prefix, no color. */
+    /** Raw output to stderr, no prefix, no decoration. */
     rawError(message?: string): void;
-    /** Write `text` verbatim to a channel (no prefix, no color, no added newline). */
+    /** Write `text` verbatim to a channel (no prefix, no decoration, no newline). */
     write(channel: LogChannel, text: string): void;
     debug(message?: string): void;
     info(message?: string): void;
@@ -78,49 +82,56 @@ export function stripAnsi(text: string): string {
     return text.replace(/\x1b\[[0-9;]*m/g, '');
 }
 
+/** A clack `log.*` renderer. */
+type ClackLog = (message: string, opts?: LogMessageOptions) => void;
+
 /** Create a logger with the given options. */
 export function createLogger(options: LoggerOptions = {}): Logger {
     const level = normalizeLogLevel(options.level);
     const threshold = LEVELS[level];
-    const colors: Colors = options.color === undefined ? pc : pc.createColors(options.color);
+    const colors: Colors = pc.createColors(options.color ?? true);
     const prefix = options.name ? `${options.name}: ` : '';
+    // clack colours via Node's `util.styleText`, which reads the environment —
+    // apply the resolved colour there so `--no-color` / `logger.color: false`
+    // reach it too. An undefined colour leaves the environment alone (autodetect).
+    if (typeof options.color === 'boolean') applyColorEnv(options.color);
 
-    const line = (message: string, paint: (text: string) => string): string => {
-        const painted = message === '' ? '' : paint(message);
-        if (!prefix || message === '' || /^\s/.test(message)) return painted;
-        return `${colors.dim(prefix)}${painted}`;
-    };
-    const out = (text: string): void => {
-        process.stdout.write(`${text}\n`);
-    };
-    const err = (text: string): void => {
-        process.stderr.write(`${text}\n`);
-    };
-    const write = (channel: LogChannel, text: string): void => {
-        if (channel === 'err') process.stderr.write(text);
-        else process.stdout.write(text);
+    const withPrefix = (message: string): string =>
+        !prefix || message === '' || /^\s/.test(message) ? message : `${prefix}${message}`;
+
+    // clack renders each message as one line: `<symbol>  <message>` (spacing 0
+    // drops the blank guide lines, multi-line messages get the guide bar).
+    const render = (fn: ClackLog, message: string, output?: NodeJS.WriteStream): void => {
+        fn(withPrefix(message), { spacing: 0, ...(output ? { output } : {}) });
     };
 
     return {
         level,
         colors,
-        raw: (message = '') => out(message),
-        rawError: (message = '') => err(message),
-        write,
+        raw: (message = '') => {
+            process.stdout.write(`${message}\n`);
+        },
+        rawError: (message = '') => {
+            process.stderr.write(`${message}\n`);
+        },
+        write: (channel, text) => {
+            if (channel === 'err') process.stderr.write(text);
+            else process.stdout.write(text);
+        },
         debug: (message = '') => {
-            if (threshold <= LEVELS.debug) out(line(message, colors.dim));
+            if (threshold <= LEVELS.debug) render(clackLog.message, message);
         },
         info: (message = '') => {
-            if (threshold <= LEVELS.info) out(line(message, text => text));
+            if (threshold <= LEVELS.info) render(clackLog.info, message);
         },
         success: (message = '') => {
-            if (threshold <= LEVELS.info) out(line(message, colors.green));
+            if (threshold <= LEVELS.info) render(clackLog.success, message);
         },
         warn: (message = '') => {
-            if (threshold <= LEVELS.warn) err(line(message, colors.yellow));
+            if (threshold <= LEVELS.warn) render(clackLog.warn, message, process.stderr);
         },
         error: (message = '') => {
-            if (threshold <= LEVELS.error) err(line(message, colors.red));
+            if (threshold <= LEVELS.error) render(clackLog.error, message, process.stderr);
         },
     };
 }
@@ -144,11 +155,33 @@ function pick(options: LoggerConfig | boolean | undefined): LoggerOptions {
     };
 }
 
-function build(): Logger {
-    return createLogger({ name: DEFAULT_NAME, ...configOptions, ...overrideOptions });
+/**
+ * Apply the resolved colour to the environment so clack (Node's `util.styleText`)
+ * honours it: `FORCE_COLOR` when on, `NO_COLOR` when off.
+ */
+function applyColorEnv(color: boolean): void {
+    if (color) {
+        delete process.env.NO_COLOR;
+        process.env.FORCE_COLOR = '1';
+    } else {
+        delete process.env.FORCE_COLOR;
+        process.env.NO_COLOR = '1';
+    }
 }
 
-let active = build();
+/**
+ * Rebuild the active logger. `applyColor` is `false` for the initial (module
+ * load) instance so merely importing the logger never mutates the host's colour
+ * environment — only an explicit configuration (the CLI, or `configureLogger`)
+ * does, and that defaults colour to on.
+ */
+function build(applyColor = true): Logger {
+    const options: LoggerOptions = { name: DEFAULT_NAME, ...configOptions, ...overrideOptions };
+    if (applyColor && options.color === undefined) options.color = true;
+    return createLogger(options);
+}
+
+let active = build(false);
 
 /** Apply the `logger` section from the loaded `dbx.config.*`. */
 export function setLogConfig(options: LoggerConfig | boolean | undefined): void {

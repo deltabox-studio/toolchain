@@ -9,6 +9,7 @@ export * from './graph.js';
 export * from './loader.js';
 export * from './manifest.js';
 export * from './project-type.js';
+export * from './provider-registry.js';
 export * from './reset.js';
 export * from './select.js';
 export * from './sync.js';

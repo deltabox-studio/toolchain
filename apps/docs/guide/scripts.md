@@ -23,7 +23,7 @@ The repo root `package.json`:
         "dbx:sync": "dbx sync",
         "dbx:watch": "dbx watch",
         "commitlint": "commitlint",
-        "prepare": "husky"
+        "postinstall": "husky"
     }
 }
 ```
@@ -33,7 +33,7 @@ The repo root `package.json`:
 | `format` / `lint` / `check`    | Oxfmt / Oxlint across the repo (`check` = format check + lint). |
 | `build` / `typecheck` / `test` | Runs the task in every workspace, in dependency order.          |
 | `dbx:sync` / `dbx:watch`       | Regenerate the managed files / re-sync on change.               |
-| `commitlint` / `prepare`       | Conventional Commits via commitlint + husky.                    |
+| `commitlint` / `postinstall`   | Conventional Commits via commitlint + husky.                    |
 
 Notes:
 
@@ -49,6 +49,13 @@ Notes:
   entry. For long-running processes use `dbx run -r --parallel dev`.
 - `dbx` is the toolchain binary, so `yarn dbx <cmd>` (eg. `yarn dbx sync`) works
   even without a script; the `dbx:*` aliases are just for discoverability.
+
+When the `changelog` section is enabled, `dbx sync` also writes a husky
+`commit-msg` hook (`.husky/commit-msg`) that runs commitlint, so commits are
+linted locally as well as in CI. Use `postinstall` (not `prepare`) to activate
+husky: Yarn Berry never runs `prepare` on install. Husky hooks have no file
+extension, so on Windows add `.husky/* text eol=lf` to `.gitattributes` — a
+trailing CR silently breaks the hook.
 
 ## Migrate an existing project
 
@@ -67,6 +74,11 @@ Notes:
     dbx migrate --from biome --target vite --write
     ```
 
+    Or, if the project uses `dbx.config.ts`, author the Vite+ config there under
+    `toolchain.vite`. `dbx sync` then writes the root `vite.config.ts` shim (see
+    [Vite+](/guide/config#vite)). `dbx migrate --from vite --write` folds an
+    existing hand-written `vite.config.ts` in.
+
 3. Replace the scripts (see the tables below), then delete `biome.json` and
    `turbo.json`.
 
@@ -83,7 +95,7 @@ Notes:
     yarn build
     ```
 
-### Biome → Ox
+### Biome → Oxc
 
 | Before                   | After            |
 | ------------------------ | ---------------- |

@@ -14,7 +14,7 @@ import type {
     MigrationContext,
     MigrationFile,
     MigrationResult,
-    ToolingMigration,
+    ToolchainMigration,
 } from './types.js';
 import { renderViteTarget } from './vite-target.js';
 
@@ -109,15 +109,15 @@ export function mapPrettierToOxfmt(prettier: Json): { oxfmt: Json; unmapped: str
     return { oxfmt, unmapped };
 }
 
-export const prettierToOx: ToolingMigration = {
-    id: 'prettier-to-ox',
+export const prettierToOx: ToolchainMigration = {
+    id: 'prettier-to-oxc',
     from: 'prettier',
     to: 'oxfmt',
     description: 'Migrate a Prettier config to Oxfmt (.oxfmtrc.json).',
     detect: cwd => Boolean(findPrettierConfig(cwd)),
     run: async (ctx: MigrationContext): Promise<MigrationResult> => {
         const found = findPrettierConfig(ctx.cwd);
-        if (!found) throw new Error('prettier-to-ox: no Prettier config found.');
+        if (!found) throw new Error('prettier-to-oxc: no Prettier config found.');
         const mapped = mapPrettierToOxfmt(found.config);
         const ignore = readPrettierIgnore(ctx.cwd);
         if (ignore.length) mapped.oxfmt.ignorePatterns = ignore;

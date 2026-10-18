@@ -13,13 +13,24 @@ import {
     readProjectGraph,
     TrackedFilesTreeProvider,
 } from './projects.js';
-import { loadProviders } from './providers.js';
+import {
+    loadProviders,
+    type ProviderCommand,
+    type ProviderCommandNode,
+    type ProviderNode,
+    ProviderTreeProvider,
+    readProviderRegistry,
+    writeProviderRegistry,
+} from './providers.js';
 import { type SchedulerState, SyncScheduler } from './sync-scheduler.js';
+import { type Template, TemplateTreeProvider, loadTemplates } from './templates.js';
 
 const SECTION = 'deltabox.toolchain';
 const OUTPUT_NAME = 'deltabox toolchain';
 const PROJECTS_VIEW_ID = 'deltabox.projects';
 const FILES_VIEW_ID = 'deltabox.files';
+const PROVIDERS_VIEW_ID = 'deltabox.providers';
+const TEMPLATES_VIEW_ID = 'deltabox.templates';
 
 /** The workflow ids the CLI understands. */
 const WORKFLOW_IDS = ['ci', 'changelog', 'release', 'sync', 'issues'];
@@ -51,6 +62,18 @@ export function activate(context: vscode.ExtensionContext): void {
     const files = new TrackedFilesTreeProvider();
     const filesView = vscode.window.createTreeView(FILES_VIEW_ID, {
         treeDataProvider: files,
+        showCollapseAll: true,
+    });
+
+    const providers = new ProviderTreeProvider(() => workspaceRoots()[0]);
+    const providersView = vscode.window.createTreeView(PROVIDERS_VIEW_ID, {
+        treeDataProvider: providers,
+        showCollapseAll: true,
+    });
+
+    const templates = new TemplateTreeProvider(() => workspaceRoots()[0]);
+    const templatesView = vscode.window.createTreeView(TEMPLATES_VIEW_ID, {
+        treeDataProvider: templates,
         showCollapseAll: true,
     });
 
@@ -129,6 +152,8 @@ export function activate(context: vscode.ExtensionContext): void {
         tree.refresh();
         files.refresh();
         home.refresh();
+        void providers.refresh();
+        void templates.refresh();
     };
 
     const refreshGraph = async (): Promise<void> => {
@@ -255,7 +280,7 @@ export function activate(context: vscode.ExtensionContext): void {
         }
     };
 
-    const resetTooling = async (targets?: Project[]): Promise<void> => {
+    const resetToolchain = async (targets?: Project[]): Promise<void> => {
         const scope = await vscode.window.showQuickPick(
             [
                 {
@@ -346,7 +371,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 },
                 { label: 'Application', value: 'application', detail: 'A runnable application' },
                 { label: 'Folder', value: 'folder', detail: 'A bare folder of files' },
-                { label: 'Tooling', value: 'tooling', detail: 'A tooling config/pipeline' },
+                { label: 'Toolchain', value: 'tooling', detail: 'A tooling config/pipeline' },
                 { label: 'Pipeline', value: 'pipeline', detail: 'A CI/pipeline template' },
             ],
             { placeHolder: 'What kind of template is this?' }
@@ -434,6 +459,132 @@ export function activate(context: vscode.ExtensionContext): void {
         }
     };
 
+    /** Register a custom provider in `.dbx/toolchain/providers.json`. */
+    const addProvider = async (): Promise<void> => {
+        const root = workspaceRoots()[0];
+        if (!root) {
+            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
+            return;
+        }
+        const id = await vscode.window.showInputBox({
+            prompt: 'Provider id',
+            placeHolder: 'my-tool',
+            validateInput: value =>
+                /^[a-z0-9][a-z0-9-]*$/.test(value.trim())
+                    ? undefined
+                    : 'lowercase letters, digits and dashes',
+        });
+        if (!id) return;
+        const name = await vscode.window.showInputBox({
+            prompt: 'Display name',
+            value: id,
+            validateInput: value => (value.trim() ? undefined : 'Required'),
+        });
+        if (!name) return;
+        const binary = await vscode.window.showInputBox({
+            prompt: 'Binary the provider wraps (optional)',
+            placeHolder: 'mytool',
+        });
+        const description = await vscode.window.showInputBox({ prompt: 'Description (optional)' });
+        const homepage = await vscode.window.showInputBox({ prompt: 'Homepage URL (optional)' });
+
+        const commands: ProviderCommand[] = [];
+        for (;;) {
+            const subcommand = await vscode.window.showInputBox({
+                prompt: 'Command subcommand (leave empty to finish)',
+                placeHolder: 'build',
+            });
+            if (subcommand === undefined) return;
+            if (!subcommand.trim()) break;
+            const label = await vscode.window.showInputBox({
+                prompt: `Description for "${subcommand}"`,
+                value: subcommand,
+            });
+            commands.push({
+                name: `${id}:${subcommand}`,
+                subcommand,
+                description: label ?? subcommand,
+            });
+        }
+
+        const registry = readProviderRegistry(root);
+        if (registry.some(provider => provider.id === id)) {
+            vscode.window.showWarningMessage(`deltabox: provider "${id}" already exists.`);
+            return;
+        }
+        registry.push({
+            id,
+            name,
+            ...(binary ? { binary } : {}),
+            ...(description ? { description } : {}),
+            ...(homepage ? { homepage } : {}),
+            commands,
+        });
+        writeProviderRegistry(root, registry);
+        await providers.refresh();
+        vscode.window.showInformationMessage(`deltabox: added provider "${name}".`);
+    };
+
+    /** Remove a custom provider from the registry. */
+    const removeProvider = async (node?: ProviderNode): Promise<void> => {
+        if (!node || !node.custom) return;
+        const confirm = await vscode.window.showWarningMessage(
+            `Remove provider "${node.provider.name}"?`,
+            { modal: true },
+            'Remove'
+        );
+        if (confirm !== 'Remove') return;
+        writeProviderRegistry(
+            node.root,
+            readProviderRegistry(node.root).filter(provider => provider.id !== node.provider.id)
+        );
+        await providers.refresh();
+    };
+
+    /** Run a provider command (`dbx <command.name>`) in a terminal. */
+    const runProviderCommand = async (node?: ProviderNode | ProviderCommandNode): Promise<void> => {
+        if (!node) return;
+        let command = node.kind === 'command' ? node.command : undefined;
+        if (!command) {
+            if (node.provider.commands.length === 0) {
+                vscode.window.showInformationMessage(
+                    `deltabox: ${node.provider.name} has no commands.`
+                );
+                return;
+            }
+            const picked = await vscode.window.showQuickPick(
+                node.provider.commands.map(candidate => ({
+                    label: candidate.description,
+                    description: `dbx ${candidate.name}`,
+                    command: candidate,
+                })),
+                { placeHolder: `Which ${node.provider.name} command should run?` }
+            );
+            if (!picked) return;
+            command = picked.command;
+        }
+        openTerminalCommand(node.root, command.name, command.name);
+    };
+
+    const openProviderHomepage = (node?: ProviderNode): void => {
+        const url = node?.provider.homepage;
+        if (url) void vscode.env.openExternal(vscode.Uri.parse(url));
+    };
+
+    const copyProviderId = (node?: ProviderNode): void => {
+        if (node) void vscode.env.clipboard.writeText(node.provider.id);
+    };
+
+    /** Show a template's descriptor (`dbx template:info --json`) in the output. */
+    const showTemplateInfo = async (node?: Template): Promise<void> => {
+        const root = workspaceRoots()[0];
+        if (!node || !root) return;
+        const result = await captureCli(root, ['template:info', node.id, '--json', '--cwd', root]);
+        output.appendLine(`\n> dbx template:info ${node.id}`);
+        output.append(result.stdout || result.stderr);
+        output.show();
+    };
+
     /** Scaffold a new Vite+ project (runs interactive `vp create` in a terminal). */
     const createViteProject = async (): Promise<void> => {
         const roots = workspaceRoots();
@@ -504,8 +655,8 @@ export function activate(context: vscode.ExtensionContext): void {
                 case 'runWorkflow':
                     await runWorkflow(workspaceRoots()[0] ?? process.cwd());
                     break;
-                case 'resetTooling':
-                    await resetTooling();
+                case 'resetToolchain':
+                    await resetToolchain();
                     break;
                 case 'toggle':
                     await vscode.commands.executeCommand(`${SECTION}.toggle`);
@@ -535,7 +686,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     const project = discoverProjects().find(
                         candidate => candidate.dir === action.dir
                     );
-                    await resetTooling(
+                    await resetToolchain(
                         project
                             ? [project]
                             : [{ dir: action.dir, label: path.basename(action.dir) } as Project]
@@ -574,49 +725,40 @@ export function activate(context: vscode.ExtensionContext): void {
         }
     };
 
-    interface TemplateChoice {
-        id: string;
-        name: string;
-        description?: string;
-        kind?: string;
-        online?: boolean;
-        type?: string;
-    }
-
-    /** Scaffold from a template listed by `dbx template:list --json`. */
-    const createFromTemplate = async (): Promise<void> => {
+    /** Scaffold from a template (optionally preselected from the Templates view). */
+    const createFromTemplate = async (preselected?: Template): Promise<void> => {
         const base = workspaceRoots()[0];
         if (!base) {
             vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
             return;
         }
-        const listed = await captureCli(base, ['template:list', '--json', '--cwd', base]);
-        let templates: TemplateChoice[] = [];
-        if (listed.code === 0) {
-            try {
-                templates = JSON.parse(listed.stdout) as TemplateChoice[];
-            } catch {
-                templates = [];
+        let template = preselected;
+        if (!template) {
+            const listed = await loadTemplates(base);
+            if (listed.length === 0) {
+                vscode.window.showWarningMessage(
+                    'deltabox: no templates found — install @deltabox/toolchain in this project.'
+                );
+                return;
             }
-        }
-        if (templates.length === 0) {
-            vscode.window.showWarningMessage(
-                'deltabox: no templates found — install @deltabox/toolchain in this project.'
+            const picked = await vscode.window.showQuickPick(
+                listed.map(candidate => ({
+                    label: candidate.name || candidate.id,
+                    description: candidate.id,
+                    detail: [
+                        candidate.kind,
+                        candidate.online ? 'online' : 'offline',
+                        candidate.type,
+                    ]
+                        .filter(Boolean)
+                        .join(' · '),
+                    template: candidate,
+                })),
+                { placeHolder: 'Which template should be used?', matchOnDetail: true }
             );
-            return;
+            if (!picked) return;
+            template = picked.template;
         }
-        const picked = await vscode.window.showQuickPick(
-            templates.map(template => ({
-                label: template.name || template.id,
-                description: template.id,
-                detail: [template.kind, template.online ? 'online' : 'offline', template.type]
-                    .filter(Boolean)
-                    .join(' · '),
-                template,
-            })),
-            { placeHolder: 'Which template should be used?', matchOnDetail: true }
-        );
-        if (!picked) return;
 
         const name = await vscode.window.showInputBox({
             prompt: 'Project name',
@@ -629,22 +771,14 @@ export function activate(context: vscode.ExtensionContext): void {
             placeHolder: '@acme',
         });
 
-        const baseArgs = [
-            'create',
-            '--template',
-            picked.template.id,
-            '--name',
-            name,
-            '--cwd',
-            base,
-        ];
+        const baseArgs = ['create', '--template', template.id, '--name', name, '--cwd', base];
         if (scope) baseArgs.push('--scope', scope);
 
         // Online/Vite+ templates run `vp create`, which is interactive: use a
         // terminal. Builtin/local templates are non-interactive: run in the
         // output channel.
-        if (picked.template.online) {
-            openTerminalCommand(base, baseArgs.join(' '), `create ${picked.template.id}`);
+        if (template.online) {
+            openTerminalCommand(base, baseArgs.join(' '), `create ${template.id}`);
             return;
         }
         const dir = await vscode.window.showOpenDialog({
@@ -658,7 +792,7 @@ export function activate(context: vscode.ExtensionContext): void {
         await refreshGraph();
         if (code === 0) {
             vscode.window.showInformationMessage(
-                `deltabox: created from template "${picked.template.name}".`
+                `deltabox: created from template "${template.name}".`
             );
         } else {
             output.show();
@@ -781,6 +915,8 @@ export function activate(context: vscode.ExtensionContext): void {
         provider,
         treeView,
         filesView,
+        providersView,
+        templatesView,
         vscode.commands.registerCommand('deltabox.toolchain.sync', async () => {
             const root = workspaceRoots()[0];
             if (root) await runCli(root, ['sync']);
@@ -842,10 +978,53 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('deltabox.toolchain.templateRemove', () =>
             removeTemplate()
         ),
+        vscode.commands.registerCommand('deltabox.toolchain.providers.refresh', () =>
+            providers.refresh()
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.providers.add', addProvider),
         vscode.commands.registerCommand(
-            'deltabox.toolchain.resetTooling',
+            'deltabox.toolchain.providers.remove',
+            (node?: ProviderNode) => removeProvider(node)
+        ),
+        vscode.commands.registerCommand(
+            'deltabox.toolchain.providers.runCommand',
+            (node?: ProviderNode | ProviderCommandNode) => runProviderCommand(node)
+        ),
+        vscode.commands.registerCommand(
+            'deltabox.toolchain.providers.openHomepage',
+            (node?: ProviderNode) => openProviderHomepage(node)
+        ),
+        vscode.commands.registerCommand(
+            'deltabox.toolchain.providers.copyId',
+            (node?: ProviderNode) => copyProviderId(node)
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.templates.refresh', () =>
+            templates.refresh()
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.templates.add', async () => {
+            await addTemplate();
+            await templates.refresh();
+        }),
+        vscode.commands.registerCommand('deltabox.toolchain.templates.removeSource', async () => {
+            await removeTemplate();
+            await templates.refresh();
+        }),
+        vscode.commands.registerCommand('deltabox.toolchain.templates.create', (node?: Template) =>
+            createFromTemplate(node)
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.templates.info', (node?: Template) =>
+            showTemplateInfo(node)
+        ),
+        vscode.commands.registerCommand(
+            'deltabox.toolchain.templates.copyId',
+            (node?: Template) => {
+                if (node) void vscode.env.clipboard.writeText(node.id);
+            }
+        ),
+        vscode.commands.registerCommand(
+            'deltabox.toolchain.resetToolchain',
             async (node?: Project) => {
-                await resetTooling(node ? [node] : undefined);
+                await resetToolchain(node ? [node] : undefined);
             }
         ),
         vscode.commands.registerCommand('deltabox.toolchain.goToProject', (node?: Project) => {
@@ -875,6 +1054,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
     rebuildWatchers();
     setStatus('idle');
+    void providers.refresh();
+    void templates.refresh();
     output.appendLine('dbx: extension activated.');
 }
 

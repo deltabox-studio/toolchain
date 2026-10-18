@@ -1,10 +1,10 @@
-import { logger, type ToolingCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import { runWorkflows } from '../run-workflows.js';
 import { runChangelog } from '../run.js';
 
 /** Build the changelog commands (`changelog`, `workflow`). */
-export function changelogCommands(): ToolingCommand[] {
+export function changelogCommands(): ToolchainCommand[] {
     return [
         {
             name: 'workflow',

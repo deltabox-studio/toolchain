@@ -4,13 +4,13 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { findConfigFile, loadToolingConfig } from '../src/loader.js';
+import { findConfigFile, loadToolchainConfig } from '../src/loader.js';
 
 function tmp(): string {
     return fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-load-'));
 }
 
-describe('loadToolingConfig', () => {
+describe('loadToolchainConfig', () => {
     it('finds and loads a JSON config + resolves tokens', async () => {
         const cwd = tmp();
         fs.writeFileSync(
@@ -28,7 +28,7 @@ describe('loadToolingConfig', () => {
         );
         expect(findConfigFile(cwd)).toBe(path.join(cwd, 'dbx.config.json'));
 
-        const loaded = await loadToolingConfig(cwd);
+        const loaded = await loadToolchainConfig(cwd);
         expect(loaded.config.project?.name).toBe('acme');
         expect(loaded.tokens.name).toBe('acme');
         expect(loaded.tokens.scope).toBe('@acme');
@@ -37,7 +37,7 @@ describe('loadToolingConfig', () => {
     });
 
     it('returns defaults when no config file exists', async () => {
-        const loaded = await loadToolingConfig(tmp());
+        const loaded = await loadToolchainConfig(tmp());
         expect(loaded.config).toEqual({});
         expect(loaded.path).toBeUndefined();
         expect(loaded.tokens.name).toBe('app');
@@ -51,7 +51,7 @@ describe('loadToolingConfig', () => {
             path.join(cwd, 'dbx.config.mjs'),
             `export default { toolchain: { hooks: { afterLoad: () => { globalThis.__dbxHook = true; } } } };\n`
         );
-        await loadToolingConfig(cwd);
+        await loadToolchainConfig(cwd);
         expect((globalThis as Record<string, unknown>).__dbxHook).toBe(true);
     });
 });
