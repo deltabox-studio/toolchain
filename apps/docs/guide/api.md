@@ -177,7 +177,7 @@ See the [CLI](/guide/cli) guide for the routing behaviour.
 | `migrations()` / `listMigrations(cwd)` / `detectMigrations(cwd)`                    | The registered migrations and detection.         |
 | `findMigration(idOrFrom)` / `runMigration(...)` / `runDetectedMigrations(ctx)`      | Run one or every detected migration.             |
 | `biomeToOx` / `eslintToOx` / `prettierToOx` / `dprintToOx` / `viteToToolchain`      | The built-in `ToolchainMigration` objects.       |
-| `mapBiomeToOxfmt` / `mapBiomeToOxlint` / `mapPrettierToOxfmt` / `mapDprintToOxfmt`  | Source-to-Ox mapping helpers.                    |
+| `mapBiomeToOxfmt` / `mapBiomeToOxlint` / `mapPrettierToOxfmt` / `mapDprintToOxfmt`  | Source-to-Oxc mapping helpers.                   |
 | `extractViteObject(source)` / `scanLiteralObject(text)` / `foldViteIntoConfig(...)` | The `vite` source's extraction + splice helpers. |
 | `diffFiles(files)` / `hasPending(diffs)`                                            | Diff planned files against disk (for `--check`). |
 | `mergeViteConfig(source, ...)` / `writeViteTarget(...)`                             | The Vite+ (`--target vite`) output helpers.      |

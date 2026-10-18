@@ -88,7 +88,7 @@ Notes:
     yarn build
     ```
 
-### Biome → Ox
+### Biome → Oxc
 
 | Before                   | After            |
 | ------------------------ | ---------------- |

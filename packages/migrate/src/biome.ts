@@ -79,16 +79,16 @@ export function readJsonc(file: string): Record<string, any> {
     return JSON.parse(stripJsonc(text)) as Record<string, any>;
 }
 
-/** Build the Biome -> ox migration. */
+/** Build the Biome -> oxc migration. */
 export const biomeToOx: ToolchainMigration = {
-    id: 'biome-to-ox',
+    id: 'biome-to-oxc',
     from: 'biome',
-    to: 'ox',
+    to: 'oxc',
     description: 'Migrate Biome (formatter + organizeImports + linter) to Oxfmt/Oxlint.',
     detect: cwd => Boolean(findBiomeConfig(cwd)),
     run: async (ctx: MigrationContext): Promise<MigrationResult> => {
         const file = findBiomeConfig(ctx.cwd);
-        if (!file) throw new Error('biome-to-ox: no biome.json/biome.jsonc found.');
+        if (!file) throw new Error('biome-to-oxc: no biome.json/biome.jsonc found.');
         const biome = readJsonc(file);
 
         const fmt = mapBiomeToOxfmt(biome);
@@ -106,7 +106,7 @@ export const biomeToOx: ToolchainMigration = {
             return {
                 id: biomeToOx.id,
                 from: 'biome',
-                to: 'ox',
+                to: 'oxc',
                 written: [file.path],
                 files: [file],
                 oxfmt: fmt.oxfmt,
@@ -129,7 +129,7 @@ export const biomeToOx: ToolchainMigration = {
         return {
             id: biomeToOx.id,
             from: 'biome',
-            to: 'ox',
+            to: 'oxc',
             written: files.map(f => f.path),
             files,
             oxfmt: fmt.oxfmt,

@@ -8,7 +8,7 @@ import type { MigrateTarget } from '../types.js';
 
 /**
  * `dbx migrate` — convert a project's tooling config from another
- * tool (Biome / ESLint / Prettier / Dprint) to Ox (Oxfmt / Oxlint), or fold a
+ * tool (Biome / ESLint / Prettier / Dprint) to Oxc (Oxfmt / Oxlint), or fold a
  * hand-written `vite.config.*` into `dbx.config.*`. Dry-run by default; pass
  * `--write` to apply, or `--check` for a CI gate.
  */
@@ -17,17 +17,24 @@ export function migrateCommands(): ToolchainCommand[] {
         {
             name: 'migrate',
             description:
-                'Migrate Biome / ESLint / Prettier / Dprint config to Ox, or fold vite.config.* into dbx.config.',
+                'Migrate Biome / ESLint / Prettier / Dprint config to Oxc, or fold vite.config.* into dbx.config.',
             options: [
                 {
                     flags: '--from <tool>',
                     description: 'Source tool: biome | eslint | prettier | dprint | vite | all.',
                 },
-                { flags: '--to <tool>', description: 'Target tool (default: ox).', default: 'ox' },
+                {
+                    flags: '--to <tool>',
+                    description: 'Target tool (default: oxc).',
+                    default: 'oxc',
+                },
                 { flags: '--cwd <dir>', description: 'Project root (default: cwd).' },
                 { flags: '--write', description: 'Write the files (default: dry-run).' },
                 { flags: '--dry-run', description: 'Do not write anything (default).' },
-                { flags: '--check', description: 'CI: exit non-zero when the ox config is stale.' },
+                {
+                    flags: '--check',
+                    description: 'CI: exit non-zero when the oxc config is stale.',
+                },
                 { flags: '--target <target>', description: 'files (default) | vite.' },
                 { flags: '--online', description: 'Allow network (e.g. @oxlint/migrate).' },
                 { flags: '--json', description: 'Print the result as JSON.' },

@@ -2,7 +2,7 @@
  * The migration model.
  *
  * A *migration* converts a project's tooling config from a source tool (Biome,
- * ESLint, Prettier, ...) to a target tool (Oxfmt / Oxlint, ie. "ox"). Migrations
+ * ESLint, Prettier, ...) to a target tool (Oxfmt / Oxlint, ie. "oxc"). Migrations
  * are pluggable: registering one here exposes it through the `dbx
  * migrate` CLI, the programmatic API and (over JSON) the VS Code extension.
  */
@@ -15,7 +15,7 @@ export type MigrateTool =
     | 'dprint'
     | 'oxfmt'
     | 'oxlint'
-    | 'ox'
+    | 'oxc'
     | 'vite'
     | 'toolchain';
 
@@ -72,7 +72,7 @@ export interface MigrationResult {
 
 /** A pluggable config migration. */
 export interface ToolchainMigration {
-    /** Stable id, eg. `biome-to-ox`. */
+    /** Stable id, eg. `biome-to-oxc`. */
     id: string;
     /** The source tool. */
     from: MigrateTool;

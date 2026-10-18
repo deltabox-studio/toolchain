@@ -4,7 +4,7 @@
 [![tests](https://img.shields.io/github/actions/workflow/status/deltabox-studio/toolchain/ci.yml?label=tests&logo=github)](https://github.com/deltabox-studio/toolchain/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/@deltabox/toolchain.svg?color=cb3837&label=npm)](https://www.npmjs.com/package/@deltabox/toolchain)
 
-All-in-one, config-driven dev toolchain: scaffold projects, generate and manage configs, tsconfigs, syncing, changelogs and CI, run Vite+, and migrate other tools onto Ox.
+All-in-one, config-driven dev toolchain: scaffold projects, generate and manage configs, tsconfigs, syncing, changelogs and CI, run Vite+, and migrate other tools onto Oxc.
 
 - Save and use templates (local/remote) so you never have to scaffold the same projects over and over again.
 - Generate config types, env variables, cli flags, markdown and JSON schemas, so your codebase stays consistent, validated and well-documented.
@@ -12,15 +12,17 @@ All-in-one, config-driven dev toolchain: scaffold projects, generate and manage 
 - Sync your entire project so workspaces, docs and CI are always up-to-date.
 - Plug it into Vite / Vite+ and streamline your DX for your existing Vite setup.
 
-See the [list of features](#features) below.
+See the [list of features](#features).
 
-`@deltabox/toolchain` is driven by a single `dbx.config.ts` at a repo
-root. Define the sections you want and the toolchain generates and keeps the
-matching files in sync.
+<div align="left">
+  <img src="./apps/docs/public/vscode-screenshot.png" width="300" />
+</div>
+
+What you see above is the VS Code extension. Read more about it at [toolchain.deltabox.studio/guide/vscode](https://toolchain.deltabox.studio/guide/vscode).
 
 See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
 
-Documentation, guides and examples: [toolchain.deltabox.studio](https://toolchain.deltabox.studio/guide).
+Documentation, guides and examples at [toolchain.deltabox.studio](https://toolchain.deltabox.studio/guide).
 
 ## Table of contents
 
@@ -219,10 +221,6 @@ await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, p
 ## VS Code extension
 
 A VS Code extension is available for `deltabox toolchain`.
-
-<div align="center">
-  <img src="./apps/docs/public/vscode-screenshot.png" width="300" />
-</div>
 
 Follow the steps below to use it. Will be published to the marketplace in the future.
 

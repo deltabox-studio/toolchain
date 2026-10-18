@@ -77,7 +77,7 @@ describe('readJsonc', () => {
     });
 });
 
-describe('biome -> ox', () => {
+describe('biome -> oxc', () => {
     it('maps formatter, ignore, sortImports and rules', async () => {
         const dir = makeTmp();
         fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
@@ -115,7 +115,7 @@ describe('biome -> ox', () => {
     });
 });
 
-describe('biome -> ox unmapped', () => {
+describe('biome -> oxc unmapped', () => {
     it('reports jsxQuoteStyle from javascript.formatter, not formatter', () => {
         const { unmapped } = mapBiomeFormatter({
             javascript: { formatter: { jsxQuoteStyle: 'double' } },
@@ -131,7 +131,7 @@ describe('biome -> ox unmapped', () => {
     });
 });
 
-describe('prettier -> ox', () => {
+describe('prettier -> oxc', () => {
     it('maps options and detects plugins', () => {
         const mapped = mapPrettierToOxfmt({
             semi: false,
@@ -147,7 +147,7 @@ describe('prettier -> ox', () => {
     });
 });
 
-describe('eslint -> ox', () => {
+describe('eslint -> oxc', () => {
     it('maps rule names and severities', async () => {
         const dir = makeTmp();
         fs.writeFileSync(
@@ -194,9 +194,9 @@ describe('registry', () => {
     it('detects present configs', () => {
         const dir = makeTmp();
         fs.writeFileSync(path.join(dir, 'biome.json'), '{}', 'utf-8');
-        expect(detectMigrations(dir).map(m => m.id)).toContain('biome-to-ox');
+        expect(detectMigrations(dir).map(m => m.id)).toContain('biome-to-oxc');
         const infos = listMigrations(dir);
-        expect(infos.find(info => info.id === 'biome-to-ox')?.detected).toBe(true);
+        expect(infos.find(info => info.id === 'biome-to-oxc')?.detected).toBe(true);
     });
 
     it('detects several sources at once (--from all)', () => {
@@ -204,8 +204,8 @@ describe('registry', () => {
         fs.writeFileSync(path.join(dir, 'biome.json'), '{}', 'utf-8');
         fs.writeFileSync(path.join(dir, '.prettierrc'), '{}', 'utf-8');
         const ids = detectMigrations(dir).map(m => m.id);
-        expect(ids).toContain('biome-to-ox');
-        expect(ids).toContain('prettier-to-ox');
+        expect(ids).toContain('biome-to-oxc');
+        expect(ids).toContain('prettier-to-oxc');
     });
 });
 

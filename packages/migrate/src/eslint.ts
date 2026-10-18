@@ -101,7 +101,7 @@ export async function runOxlintMigrate(cwd: string): Promise<Json | undefined> {
 }
 
 export const eslintToOx: ToolchainMigration = {
-    id: 'eslint-to-ox',
+    id: 'eslint-to-oxc',
     from: 'eslint',
     to: 'oxlint',
     description:
@@ -109,7 +109,7 @@ export const eslintToOx: ToolchainMigration = {
     detect: cwd => Boolean(findEslintConfig(cwd)),
     run: async (ctx: MigrationContext): Promise<MigrationResult> => {
         const found = findEslintConfig(ctx.cwd);
-        if (!found) throw new Error('eslint-to-ox: no ESLint config found.');
+        if (!found) throw new Error('eslint-to-oxc: no ESLint config found.');
 
         const rules: Json = {};
         const unmapped: { source: string; reason: string }[] = [];

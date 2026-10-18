@@ -1,5 +1,5 @@
 /**
- * `@deltabox/toolchain-migrate` — pluggable tooling-config migrations to Ox.
+ * `@deltabox/toolchain-migrate` — pluggable tooling-config migrations to Oxc.
  *
  * Converts Biome / ESLint / Prettier configurations into Oxfmt (`.oxfmtrc.json`)
  * and Oxlint (`.oxlintrc.json`), including the pieces the upstream tools skip

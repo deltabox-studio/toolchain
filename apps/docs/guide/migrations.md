@@ -1,16 +1,16 @@
 # Migrations
 
 `dbx migrate` converts a project's tooling config from another tool to
-**Ox** (Oxfmt + Oxlint). Migrations are pluggable — adding a source tool is a
+**Oxc** (Oxfmt + Oxlint). Migrations are pluggable — adding a source tool is a
 matter of implementing one interface.
 
 ```bash
 dbx migrate:list                       # what's available + detected
 dbx migrate --from biome               # dry-run
-dbx migrate --from biome --write       # writes the ox config
+dbx migrate --from biome --write       # writes the oxc config
 dbx migrate --from biome --target vite --write
 dbx migrate --from all                 # every detected source
-dbx migrate --check                    # CI: exit 1 when the ox config is stale
+dbx migrate --check                    # CI: exit 1 when the oxc config is stale
 dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
 ```
 
@@ -78,7 +78,7 @@ the dependency diff and per-workspace tasks — is on the
 
 `--check` runs the migrations without writing and exits non-zero when a target
 file is missing or differs from what the migration would produce, so a pipeline
-can require that a repo is fully on Ox:
+can require that a repo is fully on Oxc:
 
 ```bash
 dbx migrate --check || echo "still on Biome/ESLint — run migrate --write"
