@@ -71,27 +71,102 @@ export function pinnedToolchainSpec(): string {
 }
 
 /**
- * Resolve the CLI to run, preferring the extension's bundled `dbx.cjs`, then the
- * workspace's local `@deltabox/toolchain` (its built entry, then the `.bin`
- * shim), over a global `npx` fallback.
- *
- * The bundled/local entries are run with `process.execPath`. In the extension
- * host that is the VS Code/Electron binary, but VS Code launches the host with
- * `ELECTRON_RUN_AS_NODE=1`, so it executes as Node and `spawnCli` inherits that
- * variable. The integrated terminal is a separate process without it, so it
- * cannot use `process.execPath` — see {@link cliInvocation}.
+ * Which `dbx` the extension should prefer: the project's own
+ * `@deltabox/toolchain` (`'project'`) or the extension's bundled `dbx.cjs`
+ * (`'extension'`). The default is the extension, so an unresolved or declined
+ * setup always falls back to a known-good CLI.
  */
-export function resolveCliCommand(cwd: string): CliCommand {
-    const bundled = bundledCliEntry();
-    if (bundled) return { exe: process.execPath, args: [bundled] };
+export type DbxSource = 'project' | 'extension';
+
+/** The `workspaceState` key the chosen source is persisted under. */
+const DBX_SOURCE_KEY = 'deltabox.dbxSource';
+
+let dbxSource: DbxSource = 'extension';
+
+/** Set the preferred `dbx` source (the extension persists it per workspace). */
+export function setDbxSource(source: DbxSource): void {
+    dbxSource = source;
+}
+
+/** The current `dbx` source preference. */
+export function getDbxSource(): DbxSource {
+    return dbxSource;
+}
+
+/** The workspace-local `dbx`: the built `@deltabox/toolchain` entry or a `.bin` shim. */
+export function projectDbx(cwd: string): CliCommand | undefined {
     const entry = localCliEntry(cwd);
     if (entry) return { exe: process.execPath, args: [entry] };
-    if (!IS_WINDOWS) {
-        for (const dir of [cwd, ...workspaceRoots()]) {
-            const bin = path.join(dir, 'node_modules', '.bin', 'dbx');
+    const names = IS_WINDOWS ? ['dbx.cmd', 'dbx.exe', 'dbx.ps1', 'dbx'] : ['dbx'];
+    for (const dir of [cwd, ...workspaceRoots()]) {
+        for (const name of names) {
+            const bin = path.join(dir, 'node_modules', '.bin', name);
             if (fs.existsSync(bin)) return { exe: bin, args: [] };
         }
     }
+    return undefined;
+}
+
+/** Show the "project vs extension `dbx`" notification and return the choice. */
+export async function promptDbxSource(): Promise<DbxSource | undefined> {
+    const useProject = "Use the project's dbx";
+    const useExtension = "Use the extension's bundled dbx";
+    const choice = await vscode.window.showInformationMessage(
+        'deltabox: this workspace has its own @deltabox/toolchain. Which dbx should the extension run?',
+        useProject,
+        useExtension
+    );
+    if (choice === useProject) return 'project';
+    if (choice === useExtension) return 'extension';
+    return undefined;
+}
+
+/**
+ * Detect the current workspace's own `dbx` and, when the extension also ships a
+ * bundled one, ask the user once which to run. The choice is remembered per
+ * workspace; dismissing the notification falls back to the extension's CLI.
+ */
+export async function initDbxSource(context: vscode.ExtensionContext): Promise<void> {
+    const bundled = bundledCliEntry();
+    const project = projectDbx(workspaceRoots()[0] ?? process.cwd());
+    if (!bundled || !project) {
+        dbxSource = project ? 'project' : 'extension';
+        return;
+    }
+    const stored = context.workspaceState.get<DbxSource>(DBX_SOURCE_KEY);
+    if (stored === 'project' || stored === 'extension') {
+        dbxSource = stored;
+        return;
+    }
+    dbxSource = (await promptDbxSource()) ?? 'extension';
+    await context.workspaceState.update(DBX_SOURCE_KEY, dbxSource);
+}
+
+/** Re-prompt for the `dbx` source (the `deltabox.chooseDbxSource` command). */
+export async function chooseDbxSource(
+    context: vscode.ExtensionContext
+): Promise<DbxSource | undefined> {
+    const choice = await promptDbxSource();
+    if (!choice) return undefined;
+    dbxSource = choice;
+    await context.workspaceState.update(DBX_SOURCE_KEY, choice);
+    vscode.window.showInformationMessage(
+        `deltabox: using the ${choice === 'project' ? "project's" : "extension's"} dbx.`
+    );
+    return choice;
+}
+
+/**
+ * Resolve the CLI to run. The project's own (built) entry, or the extension's
+ * bundled `dbx.cjs`, is preferred per {@link getDbxSource}; anything unresolved
+ * falls back to the extension, then the project, then a pinned `npx`.
+ */
+export function resolveCliCommand(cwd: string): CliCommand {
+    const bundled = bundledCliEntry();
+    const project = projectDbx(cwd);
+    if (dbxSource === 'project' && project) return project;
+    if (bundled) return { exe: process.execPath, args: [bundled] };
+    if (project) return project;
     return { exe: IS_WINDOWS ? 'npx.cmd' : 'npx', args: ['--yes', pinnedToolchainSpec()] };
 }
 
@@ -126,9 +201,13 @@ export function spawnCli(cwd: string, args: string[], options: SpawnOptions = {}
  * `@deltabox/toolchain`.
  */
 export function cliInvocation(cwd: string): string {
+    const project = projectDbx(cwd);
+    if (dbxSource === 'project' && project) {
+        return project.args.length ? `node "${project.args[0]}"` : project.exe;
+    }
     const bundled = bundledCliEntry();
     if (bundled) return `node "${bundled}"`;
-    if (localCliEntry(cwd)) return 'npx dbx';
+    if (project) return project.args.length ? `node "${project.args[0]}"` : project.exe;
     return `${IS_WINDOWS ? 'npx.cmd' : 'npx'} --yes ${pinnedToolchainSpec()}`;
 }
 

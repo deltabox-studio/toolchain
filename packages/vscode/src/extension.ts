@@ -3,7 +3,14 @@ import path from 'node:path';
 
 import * as vscode from 'vscode';
 
-import { captureCli, cliInvocation, spawnCli, workspaceRoots } from './cli.js';
+import {
+    captureCli,
+    chooseDbxSource,
+    cliInvocation,
+    initDbxSource,
+    spawnCli,
+    workspaceRoots,
+} from './cli.js';
 import { type HomeAction, HomeViewProvider } from './home-view.js';
 import {
     discoverProjectGroups,
@@ -51,6 +58,9 @@ export function activate(context: vscode.ExtensionContext): void {
     const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     status.command = `${SECTION}.sync`;
     status.show();
+
+    // Detect the workspace's own `dbx` and ask once which one to run (see cli.ts).
+    void initDbxSource(context);
 
     const tree = new ProjectTreeProvider();
     const treeView = vscode.window.createTreeView(PROJECTS_VIEW_ID, {
@@ -947,6 +957,9 @@ export function activate(context: vscode.ExtensionContext): void {
             }
         ),
         vscode.commands.registerCommand('deltabox.toolchain.syncCheck', checkSync),
+        vscode.commands.registerCommand('deltabox.toolchain.chooseDbxSource', () =>
+            chooseDbxSource(context)
+        ),
         vscode.commands.registerCommand('deltabox.toolchain.scaffold', scaffold),
         vscode.commands.registerCommand('deltabox.toolchain.refresh', refreshGraph),
         vscode.commands.registerCommand('deltabox.toolchain.refreshFiles', () => files.refresh()),
