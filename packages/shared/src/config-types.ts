@@ -78,6 +78,20 @@ export interface ChangelogWorkflowsConfig {
     sync?: WorkflowSetting;
 }
 
+export type ChangelogVersioningTarget = 'uniform' | 'root-only' | 'individual';
+
+export interface ChangelogVersioningConfig {
+    target?: ChangelogVersioningTarget;
+    /**
+     * Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root
+     * `package.json` `workspaces` field; when there is none the root `package.json` is used on its
+     * own.
+     */
+    workspaces?: Array<string>;
+}
+
+export type ChangelogVersioning = boolean | ChangelogVersioningConfig;
+
 export interface ToolchainChangelogConfig {
     /** Master switch (enabled when the section is defined). */
     enabled?: boolean;
@@ -90,6 +104,7 @@ export interface ToolchainChangelogConfig {
     types?: Array<string>;
     /** Allowed commit scopes (commitlint). */
     scopes?: Array<string>;
+    versioning?: ChangelogVersioning;
     /** Write the Conventional-Commits VS Code settings. */
     vscode?: boolean;
 }

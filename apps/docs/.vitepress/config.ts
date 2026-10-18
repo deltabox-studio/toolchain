@@ -66,6 +66,7 @@ export default defineConfig({
                     items: [
                         { text: 'CLI', link: '/guide/cli' },
                         { text: 'Configuration', link: '/guide/config' },
+                        { text: 'Changelog & Versioning', link: '/guide/changelog' },
                         { text: 'Config Generator', link: '/guide/config-generator' },
                         { text: 'Providers (Vite+)', link: '/guide/providers' },
                         { text: 'Package Scripts', link: '/guide/scripts' },

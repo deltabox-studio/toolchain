@@ -16,4 +16,5 @@ export { parseExistingChangelog, reformatChangelogContent } from './utils/reform
 export { buildSummary, renderCommitRef } from './utils/summary.js';
 export * from './utils/types.js';
 export { renderChangelogEntry } from './utils/version.js';
+export * from './utils/versioning.js';
 export * from './workflows.js';

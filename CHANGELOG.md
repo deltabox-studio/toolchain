@@ -1,16 +1,44 @@
 # Changelog
 
-## 1.5.0 (October 2026)
+## 1.6.0 (October 2026)
 
 <!-- release:start -->
 
 ### New features
 #### Changelog
-- Emit the husky commit-msg hook for consumers ([#6898386](https://github.com/deltabox-studio/toolchain/issues/6898386) by [T0chi](https://github.com/T0chi))
-  - \dbx sync\ now writes .husky/commit-msg (running commitlint) alongside the workflows and commitlint.config.mjs, so consumers using the Conventional-Commits CI lint commits locally too. The docs recommend \postinstall: husky\ (Yarn Berry never runs \prepare\) and \.husky/* text eol=lf\ (a trailing CR breaks the hook).
+- Add a configurable versioning option ([#e5cbefc](https://github.com/deltabox-studio/toolchain/commit/e5cbefc) by [T0chi](https://github.com/T0chi))
+  - Add \	oolchain.changelog.versioning\ (boolean | { target, workspaces }) to the shared Zod model, defaulting to true/uniform. \	arget\ selects uniform (root + all workspaces), root-only, or individual (each changed workspace bumps on its own); \workspaces\ globs select which workspaces to version (defaulting to the root workspaces field, else the root package.json alone). The CLI now threads the changelog config into the generator and writeChangelogs takes per-workspace versions. Documented in the new 'Changelog & versioning' guide.
+### Bug fixes
+#### Shared
+- Add spawn timeouts so a stalled child can't hang the tool ([#e7fdf96](https://github.com/deltabox-studio/toolchain/commit/e7fdf96) by [T0chi](https://github.com/T0chi))
+  - spawnCross/run gain \	imeoutMs\ (kills the child's whole tree — \	askkill /t\ on Windows — with a warning); runVp forwards it; the plugin's one-shot \unDbx\ sync/check defaults to 5 min; the VS Code extension's captured \dbx\ commands default to 5 min. Dev servers/watchers stay unbounded. Adds killProcessTree() + a timeout test.
+#### Vite
+- Build DBX_TASKS from a resolved binary and warn on fallbacks ([#c1a29db](https://github.com/deltabox-studio/toolchain/commit/c1a29db) by [T0chi](https://github.com/T0chi))
+  - Vite Task runs a task's command through a shell, so a bare \dbx sync\ depended on PATH/environment and could miss or pick a stale binary. DBX_TASKS now bakes in the \esolveDbx\ result (project's own, or pinned npx) at config load; \dbxTaskCommand(sub)\ builds one for any subcommand. resolveDbx also warns (once) when it ignores an invalid DBX_BIN, skips a global for a pinned project, or falls back to npx.
+- Warn and fall back on missing DBX_BIN/PATH/ComSpec ([#f91ad12](https://github.com/deltabox-studio/toolchain/commit/f91ad12) by [T0chi](https://github.com/T0chi))
+  - resolveDbx now ignores a DBX_BIN that points at a missing file (warn + fall through) instead of wedging every dbx call; \which\ warns once when PATH is empty; the Windows spawner warns once when ComSpec is unset before falling back to cmd.exe.
+- Never run a stale global dbx from a pinned project ([#d441427](https://github.com/deltabox-studio/toolchain/commit/d441427) by [T0chi](https://github.com/T0chi))
+  - resolveDbx fell back to a global \dbx\ on PATH whenever the project's own binary wasn't resolvable — which happens in the toolchain repo itself (Yarn doesn't link the root's own bin, and findOwnCliEntry needs a built dist). A stale global dbx would then run \dbx sync\ and rewrite generated files in an older format. Now a project that pins @deltabox/toolchain (node_modules or the repo itself) never uses a global dbx: it warns and uses \
+    px @deltabox/toolchain@<pinned>\; the global is only used when the project pins nothing. Adds localToolchainVersion() + tests, and documents the resolution.
+#### Vscode
+- Pin the npx fallback to the extension's version ([#57d27fa](https://github.com/deltabox-studio/toolchain/commit/57d27fa) by [T0chi](https://github.com/T0chi))
+  - The extension's last-resort \
+    px --yes @deltabox/toolchain\ resolved \@latest\, which could drift from the workspace's generated files. It now pins its own version (\@deltabox/toolchain@<extension version>\), since the extension is versioned in lockstep with the toolchain.
+#### Tsdown
+- Let Yarn own the single-entry bin field ([#d6198b5](https://github.com/deltabox-studio/toolchain/commit/d6198b5) by [T0chi](https://github.com/T0chi))
+  - Reproduced (and minimised) the 'unexplained' bin revert: Yarn 4 normalises a single-entry \in\ object to a plain string on every \yarn install\, so an explicit tsdown \in\ object could never persist — install and build fought over package.json. Set tsdown's \exports.bin\ to \alse\ so tsdown leaves the field alone, and commit the string form Yarn writes. install + build are now idempotent.
+- Re-apply the explicit changelog and tsconfig bins ([#192a2d3](https://github.com/deltabox-studio/toolchain/commit/192a2d3) by [T0chi](https://github.com/T0chi))
+  - The generated version bump commit dropped the explicit \in\ mapping (object form) from both package.jsons; regenerate it from the pinned tsdown \exports.bin\ so \yarn build\ stays idempotent.
 
 <!-- release:end -->
 
+
+## 1.5.0 (October 2026)
+
+### New features
+#### Changelog
+- Emit the husky commit-msg hook for consumers ([#6898386](https://github.com/deltabox-studio/toolchain/issues/6898386) by [T0chi](https://github.com/T0chi))
+  - \dbx sync\ now writes .husky/commit-msg (running commitlint) alongside the workflows and commitlint.config.mjs, so consumers using the Conventional-Commits CI lint commits locally too. The docs recommend \postinstall: husky\ (Yarn Berry never runs \prepare\) and \.husky/* text eol=lf\ (a trailing CR breaks the hook).
 
 ## 1.4.1 (October 2026)
 

@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { findOwnCliEntry } from '../src/index.js';
+import { findOwnCliEntry, localToolchainVersion } from '../src/index.js';
 
 const tmpDirs: string[] = [];
 
@@ -43,5 +43,33 @@ describe('findOwnCliEntry', () => {
             JSON.stringify({ name: '@deltabox/toolchain', bin: { dbx: './dist/cli/index.js' } })
         );
         expect(findOwnCliEntry(dir)).toBeUndefined();
+    });
+});
+
+describe('localToolchainVersion', () => {
+    it('reads the version of an installed @deltabox/toolchain dependency', () => {
+        const dir = makeTmp();
+        const dep = path.join(dir, 'node_modules', '@deltabox', 'toolchain');
+        fs.mkdirSync(dep, { recursive: true });
+        fs.writeFileSync(
+            path.join(dep, 'package.json'),
+            JSON.stringify({ name: '@deltabox/toolchain', version: '9.9.9' })
+        );
+        const nested = path.join(dir, 'packages', 'app');
+        fs.mkdirSync(nested, { recursive: true });
+        expect(localToolchainVersion(nested)).toBe('9.9.9');
+    });
+
+    it('falls back to the enclosing toolchain package version (the repo itself)', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'package.json'),
+            JSON.stringify({ name: '@deltabox/toolchain', version: '1.2.3' })
+        );
+        expect(localToolchainVersion(dir)).toBe('1.2.3');
+    });
+
+    it('returns undefined when the project pins nothing', () => {
+        expect(localToolchainVersion(makeTmp())).toBeUndefined();
     });
 });

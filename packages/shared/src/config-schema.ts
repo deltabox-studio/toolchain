@@ -109,6 +109,39 @@ export const changelogWorkflowsConfigSchema = z
     })
     .meta({ id: 'ChangelogWorkflowsConfig' });
 
+/** Which `package.json` versions a changelog run bumps. */
+export const changelogVersioningTargetSchema = z
+    .enum(['uniform', 'root-only', 'individual'])
+    .describe('Where the changelog version bump is applied.')
+    .meta({ id: 'ChangelogVersioningTarget' });
+
+/** Options for `changelog.versioning` when configured as an object. */
+export const changelogVersioningConfigSchema = z
+    .object({
+        target: changelogVersioningTargetSchema
+            .describe(
+                '`uniform` bumps the root and every workspace to one shared version; ' +
+                    '`root-only` bumps the root only; `individual` bumps each changed ' +
+                    'workspace independently (default `uniform`).'
+            )
+            .optional(),
+        workspaces: z
+            .array(z.string())
+            .describe(
+                'Glob patterns selecting the workspaces to version (relative to the ' +
+                    'root). Defaults to the root `package.json` `workspaces` field; when ' +
+                    'there is none the root `package.json` is used on its own.'
+            )
+            .optional(),
+    })
+    .meta({ id: 'ChangelogVersioningConfig' });
+
+/** Automatic version bumping: `true` (default), `false`, or a set of options. */
+export const changelogVersioningSchema = z
+    .union([z.boolean(), changelogVersioningConfigSchema])
+    .describe('Automatic version bumping when a changelog entry is generated.')
+    .meta({ id: 'ChangelogVersioning' });
+
 /** Conventional-Commits CI, commitlint and the changelog pipeline. */
 export const changelogConfigSchema = z
     .object({
@@ -125,6 +158,9 @@ export const changelogConfigSchema = z
             .optional(),
         types: z.array(z.string()).describe('Allowed commit types (commitlint).').optional(),
         scopes: z.array(z.string()).describe('Allowed commit scopes (commitlint).').optional(),
+        versioning: changelogVersioningSchema
+            .describe('Automatic version bumping on changelog generation (default `true`).')
+            .optional(),
         vscode: z.boolean().describe('Write the Conventional-Commits VS Code settings.').optional(),
     })
     .meta({ id: 'ToolchainChangelogConfig' });
@@ -307,6 +343,9 @@ export const CONFIG_TYPE_SCHEMAS = {
     WorkflowConfig: workflowConfigSchema,
     WorkflowSetting: workflowSettingSchema,
     ChangelogWorkflowsConfig: changelogWorkflowsConfigSchema,
+    ChangelogVersioningTarget: changelogVersioningTargetSchema,
+    ChangelogVersioningConfig: changelogVersioningConfigSchema,
+    ChangelogVersioning: changelogVersioningSchema,
     ToolchainChangelogConfig: changelogConfigSchema,
     ToolchainBiomeConfig: biomeConfigSchema,
     ToolchainTsconfigConfig: tsconfigConfigSchema,

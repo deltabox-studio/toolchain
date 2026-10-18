@@ -71,21 +71,22 @@ await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, p
 The base layer: the config model, logging, process/string/object utilities and
 the template engine.
 
-| Export                                                           | Description                                                               |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `defineConfig(config)`                                           | Identity helper for a typed `dbx.config.*`.                               |
-| `sectionEnabled(section)` / `sectionConfig(section)`             | Opt-in-by-presence helpers for a config section.                          |
-| `resolveTokens(config)`                                          | Flatten a config into `{{ token }}` replacements.                         |
-| `CONFIG_FILE_NAMES`                                              | The config file names the loader probes, in priority order.               |
-| `repoSlugFromUrl(url)`                                           | Derive an `owner/name` slug from a repository URL.                        |
-| `findOwnCliEntry(cwd?)` / `TOOLCHAIN_PACKAGE`                    | Locate a project's own toolchain bin (prefer it over a global `dbx`).     |
-| `createLogger(options)` / `logger`                               | The shared logger (see [Logging](#logging)).                              |
-| `spawnCross(cmd, args, options)` / `run(cmd, args, options)`     | Cross-platform, shell-free process spawning.                              |
-| `readJsonFile` / `readJsonAt` / `toJson` / `writeJsonFile`       | Small JSON file helpers.                                                  |
-| `mergeJsonAt(cwd, relative, patch)`                              | Deep-merge a patch over an existing JSON file.                            |
-| `deepMerge` / `isPlainObject` / `sort` / `mapValues`             | Object utilities.                                                         |
-| `applyReplacements` / `applyReplacementsDeep` / `createReplacer` | The `{{ token }}` template engine (also `tokenPattern`, `extractTokens`). |
-| `toYaml(value)`                                                  | A tiny YAML emitter for the GitHub Actions subset.                        |
+| Export                                                                        | Description                                                                              |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `defineConfig(config)`                                                        | Identity helper for a typed `dbx.config.*`.                                              |
+| `sectionEnabled(section)` / `sectionConfig(section)`                          | Opt-in-by-presence helpers for a config section.                                         |
+| `resolveTokens(config)`                                                       | Flatten a config into `{{ token }}` replacements.                                        |
+| `CONFIG_FILE_NAMES`                                                           | The config file names the loader probes, in priority order.                              |
+| `repoSlugFromUrl(url)`                                                        | Derive an `owner/name` slug from a repository URL.                                       |
+| `findOwnCliEntry(cwd?)` / `localToolchainVersion(cwd?)` / `TOOLCHAIN_PACKAGE` | Locate a project's own toolchain bin + pinned version (prefer them over a global `dbx`). |
+| `createLogger(options)` / `logger`                                            | The shared logger (see [Logging](#logging)).                                             |
+| `spawnCross(cmd, args, options)` / `run(cmd, args, options)`                  | Cross-platform, shell-free spawning; `timeoutMs` kills the child tree.                   |
+| `killProcessTree(child)`                                                      | Kill a child process and its descendants (Windows `taskkill /t`).                        |
+| `readJsonFile` / `readJsonAt` / `toJson` / `writeJsonFile`                    | Small JSON file helpers.                                                                 |
+| `mergeJsonAt(cwd, relative, patch)`                                           | Deep-merge a patch over an existing JSON file.                                           |
+| `deepMerge` / `isPlainObject` / `sort` / `mapValues`                          | Object utilities.                                                                        |
+| `applyReplacements` / `applyReplacementsDeep` / `createReplacer`              | The `{{ token }}` template engine (also `tokenPattern`, `extractTokens`).                |
+| `toYaml(value)`                                                               | A tiny YAML emitter for the GitHub Actions subset.                                       |
 
 The config **types** and **schemas** also live here: `ToolchainConfig`, `DbxConfig`,
 `SyncTask`, `SyncContext`, `ManagedFile`, `ToolchainCommand`, `ToolchainOption`,
@@ -145,17 +146,17 @@ guide for the full workflow).
 The Vite+ provider: resolving/running `vp`, the `dbx()` plugin and the `vite`
 sync task (see the [Providers](/guide/providers) guide).
 
-| Export                                                             | Description                                                          |
-| ------------------------------------------------------------------ | -------------------------------------------------------------------- |
-| `resolveVp(cwd?)` / `hasVp(cwd?)` / `runVp(args, options?)`        | Resolve and run the `vp` binary (local shim, global, then `npx`).    |
-| `vpVersion(cwd?)` / `describeVp(cwd?)` / `which(bin)`              | Version, resolution description and PATH lookup.                     |
-| `VP_COMMANDS` / `viteCommandName(name)` / `resolveVpCommand(name)` | The `vp` command catalog + name/alias resolution.                    |
-| `viteProvider()` / `viteCommands()`                                | The provider descriptor and the `dbx vite:*` commands.               |
-| `dbx(options?)` / `DBX_TASKS`                                      | The Vite/Vite+ plugin and the `run.tasks` to spread in.              |
-| `resolveDbx(cwd?)` / `runDbx(args, cwd?)`                          | Resolve/run the `dbx` binary (always the project's own first).       |
-| `resolveVite(dbxConfig?, options?)`                                | Resolve `toolchain.vite` from a `dbx.config.*` (or a passed config). |
-| `renderViteConfig()` / `viteConfigObject(config?)`                 | The managed `vite.config.ts` shim + the section minus `config`.      |
-| `viteSyncTask()`                                                   | The `vite` sync task that writes the shim.                           |
+| Export                                                             | Description                                                                                         |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `resolveVp(cwd?)` / `hasVp(cwd?)` / `runVp(args, options?)`        | Resolve and run the `vp` binary (local shim, global, then `npx`).                                   |
+| `vpVersion(cwd?)` / `describeVp(cwd?)` / `which(bin)`              | Version, resolution description and PATH lookup.                                                    |
+| `VP_COMMANDS` / `viteCommandName(name)` / `resolveVpCommand(name)` | The `vp` command catalog + name/alias resolution.                                                   |
+| `viteProvider()` / `viteCommands()`                                | The provider descriptor and the `dbx vite:*` commands.                                              |
+| `dbx(options?)` / `DBX_TASKS` / `dbxTaskCommand(sub)`              | The Vite/Vite+ plugin and the resolved `run.tasks` to spread in.                                    |
+| `resolveDbx(cwd?)` / `runDbx(args, cwd?)`                          | Resolve/run the `dbx` binary (the project's own first; a pinned project never runs a global `dbx`). |
+| `resolveVite(dbxConfig?, options?)`                                | Resolve `toolchain.vite` from a `dbx.config.*` (or a passed config).                                |
+| `renderViteConfig()` / `viteConfigObject(config?)`                 | The managed `vite.config.ts` shim + the section minus `config`.                                     |
+| `viteSyncTask()`                                                   | The `vite` sync task that writes the shim.                                                          |
 
 ### `@deltabox/toolchain/cli`
 

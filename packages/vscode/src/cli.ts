@@ -54,6 +54,23 @@ export function bundledCliEntry(): string | undefined {
 }
 
 /**
+ * The `@deltabox/toolchain` spec the `npx` fallback installs. The extension is
+ * versioned in lockstep with the toolchain, so it pins its own version rather
+ * than resolving `@latest` (which could drift from the workspace's generated
+ * files). Falls back to the unpinned name only when the version is unavailable.
+ */
+export function pinnedToolchainSpec(): string {
+    const version = (
+        vscode.extensions.getExtension(EXTENSION_ID)?.packageJSON as
+            | { version?: unknown }
+            | undefined
+    )?.version;
+    return typeof version === 'string' && version
+        ? `@deltabox/toolchain@${version}`
+        : '@deltabox/toolchain';
+}
+
+/**
  * Resolve the CLI to run, preferring the extension's bundled `dbx.cjs`, then the
  * workspace's local `@deltabox/toolchain` (its built entry, then the `.bin`
  * shim), over a global `npx` fallback.
@@ -75,7 +92,7 @@ export function resolveCliCommand(cwd: string): CliCommand {
             if (fs.existsSync(bin)) return { exe: bin, args: [] };
         }
     }
-    return { exe: IS_WINDOWS ? 'npx.cmd' : 'npx', args: ['--yes', '@deltabox/toolchain'] };
+    return { exe: IS_WINDOWS ? 'npx.cmd' : 'npx', args: ['--yes', pinnedToolchainSpec()] };
 }
 
 /**
@@ -112,7 +129,7 @@ export function cliInvocation(cwd: string): string {
     const bundled = bundledCliEntry();
     if (bundled) return `node "${bundled}"`;
     if (localCliEntry(cwd)) return 'npx dbx';
-    return IS_WINDOWS ? 'npx.cmd --yes @deltabox/toolchain' : 'npx --yes @deltabox/toolchain';
+    return `${IS_WINDOWS ? 'npx.cmd' : 'npx'} --yes ${pinnedToolchainSpec()}`;
 }
 
 export interface CapturedResult {
@@ -121,8 +138,34 @@ export interface CapturedResult {
     stderr: string;
 }
 
+/** Default deadline for a captured `dbx` command — a stall is killed, not left hanging. */
+export const CLI_TIMEOUT_MS = 5 * 60 * 1000;
+
+/** Kill the child and its descendants (a Windows `cmd.exe` wrapper needs `taskkill /t`). */
+function killTree(child: ChildProcess): void {
+    const pid = child.pid;
+    if (pid === undefined) return;
+    if (IS_WINDOWS) {
+        try {
+            spawn('taskkill', ['/pid', String(pid), '/t', '/f'], { stdio: 'ignore' });
+            return;
+        } catch {
+            // fall through to a plain kill
+        }
+    }
+    try {
+        child.kill('SIGKILL');
+    } catch {
+        // already gone
+    }
+}
+
 /** Run `dbx <args>` in `cwd`, capturing stdout/stderr. Never rejects. */
-export function captureCli(cwd: string, args: string[]): Promise<CapturedResult> {
+export function captureCli(
+    cwd: string,
+    args: string[],
+    timeoutMs: number = CLI_TIMEOUT_MS
+): Promise<CapturedResult> {
     return new Promise<CapturedResult>(resolve => {
         let stdout = '';
         let stderr = '';
@@ -133,6 +176,13 @@ export function captureCli(cwd: string, args: string[]): Promise<CapturedResult>
             resolve({ code: 1, stdout, stderr: String(error) });
             return;
         }
+
+        let timer: NodeJS.Timeout | undefined;
+        const done = (result: CapturedResult): void => {
+            if (timer) clearTimeout(timer);
+            resolve(result);
+        };
+
         child.stdout?.on('data', chunk => {
             stdout += chunk.toString();
         });
@@ -140,10 +190,18 @@ export function captureCli(cwd: string, args: string[]): Promise<CapturedResult>
             stderr += chunk.toString();
         });
         child.on('error', error => {
-            resolve({ code: 1, stdout, stderr: `${stderr}${String(error)}` });
+            done({ code: 1, stdout, stderr: `${stderr}${String(error)}` });
         });
         child.on('exit', code => {
-            resolve({ code: code ?? 0, stdout, stderr });
+            done({ code: code ?? 0, stdout, stderr });
         });
+
+        if (timeoutMs > 0) {
+            timer = setTimeout(() => {
+                stderr += `\ndbx timed out after ${timeoutMs}ms`;
+                killTree(child);
+            }, timeoutMs);
+            timer.unref?.();
+        }
     });
 }

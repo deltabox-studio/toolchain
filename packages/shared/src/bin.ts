@@ -45,3 +45,53 @@ export function findOwnCliEntry(cwd: string = process.cwd()): string | undefined
         dir = parent;
     }
 }
+
+/** Read the `version` field of a `package.json` (undefined when unreadable). */
+function readPackageVersion(file: string): string | undefined {
+    try {
+        const pkg = JSON.parse(fs.readFileSync(file, 'utf-8')) as { version?: unknown };
+        return typeof pkg.version === 'string' ? pkg.version : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+/**
+ * The version of the `@deltabox/toolchain` this project pins — from the nearest
+ * `node_modules/@deltabox/toolchain/package.json`, else the nearest enclosing
+ * `@deltabox/toolchain` package (so the toolchain repo resolves its own version
+ * even before `dist` is built). `undefined` when the project doesn't pin the
+ * toolchain at all, in which case only a global install / `npx` is available.
+ *
+ * A pinned project must never run a global `dbx`: a stale global install would
+ * write older-format generated files, silently reverting the project's own.
+ */
+export function localToolchainVersion(cwd: string = process.cwd()): string | undefined {
+    let dir = path.resolve(cwd);
+    let ownVersion: string | undefined;
+    for (;;) {
+        const dependency = readPackageVersion(
+            path.join(dir, 'node_modules', TOOLCHAIN_PACKAGE, 'package.json')
+        );
+        if (dependency) return dependency;
+
+        const pkgPath = path.join(dir, 'package.json');
+        if (ownVersion === undefined && fs.existsSync(pkgPath)) {
+            try {
+                const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as {
+                    name?: string;
+                    version?: unknown;
+                };
+                if (pkg.name === TOOLCHAIN_PACKAGE && typeof pkg.version === 'string') {
+                    ownVersion = pkg.version;
+                }
+            } catch {
+                // Ignore a malformed package.json and keep walking up.
+            }
+        }
+
+        const parent = path.dirname(dir);
+        if (parent === dir) return ownVersion;
+        dir = parent;
+    }
+}
