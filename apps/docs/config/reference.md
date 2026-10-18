@@ -19,8 +19,9 @@ Project metadata used as replacement tokens across every template.
 
 ### `type`
 
-- **Type**: `ProjectType`
-- **Default**: `{}`
+- **Type**: `'monorepo-root' | 'monorepo-workspace' | 'project'`
+
+The project kind (detected when omitted).
 
 ### `name`
 
@@ -95,9 +96,136 @@ Master switch (enabled when the section is defined).
 ### `workflows`
 
 - **Type**: `ChangelogWorkflowsConfig`
-- **Default**: `{}`
+
+Which workflows to write into `.github/workflows`.
+
+#### `ci`
+
+- **Type**: `WorkflowSetting`
+
+##### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this workflow (default true).
+
+##### `pushBranches`
+
+- **Type**: `Array<string>`
+
+Replace `on.push.branches`.
+
+##### `pullRequestBranches`
+
+- **Type**: `Array<string>`
+
+Replace `on.pull_request.branches`.
+
+##### `triggers`
+
+- **Type**: `Record<string, unknown>`
+
+Extra `on.*` triggers.
+
+##### `extra`
+
+- **Type**: `Record<string, unknown>`
+
+Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
+
+##### `steps`
+
+- **Type**: `WorkflowStepsConfig | Array<WorkflowStepsConfig>`
+
+Extra steps for a job (one group, or per-job groups).
+
+###### `job`
+
+- **Type**: `string`
+
+Target job id (defaults to the primary/first job).
+
+###### `before`
+
+- **Type**: `Array<WorkflowStep>`
+
+Steps inserted at the start.
+
+####### `name`
+
+- **Type**: `string`
+
+####### `id`
+
+- **Type**: `string`
+
+####### `if`
+
+- **Type**: `string`
+
+####### `uses`
+
+- **Type**: `string`
+
+####### `run`
+
+- **Type**: `string`
+
+####### `shell`
+
+- **Type**: `string`
+
+####### `working-directory`
+
+- **Type**: `string`
+
+####### `with`
+
+- **Type**: `Record<string, unknown>`
+
+####### `env`
+
+- **Type**: `Record<string, unknown>`
+
+###### `after`
+
+- **Type**: `Array<WorkflowStep>`
+
+Steps appended at the end.
+
+##### `jobs`
+
+- **Type**: `Record<string, unknown>`
+
+Extra complete jobs merged in.
+
+##### `tokens`
+
+- **Type**: `Record<string, unknown>`
+
+Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
+
+#### `changelog`
+
+- **Type**: `WorkflowSetting`
+
+#### `release`
+
+- **Type**: `WorkflowSetting`
+
+#### `issues`
+
+- **Type**: `WorkflowSetting`
+
+#### `sync`
+
+- **Type**: `WorkflowSetting`
 
 ### `branches`
+
+- **Type**: `object`
+
+Branch names the workflows target.
 
 #### `main`
 
@@ -122,7 +250,20 @@ Allowed commit scopes (commitlint).
 ### `versioning`
 
 - **Type**: `ChangelogVersioning`
-- **Default**: `{}`
+
+Automatic version bumping on changelog generation (default `true`).
+
+#### `target`
+
+- **Type**: `'uniform' | 'root-only' | 'individual'`
+
+`uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently (default `uniform`).
+
+#### `workspaces`
+
+- **Type**: `Array<string>`
+
+Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own.
 
 ### `vscode`
 
@@ -149,7 +290,6 @@ Write the Biome VS Code settings (default true).
 ### `overrides`
 
 - **Type**: `Record<string, unknown>`
-- **Default**: `{}`
 
 Deep-merged over the generated `biome.json` (arrays union).
 
@@ -220,6 +360,68 @@ Master switch (enabled when the section is defined).
 - **Type**: `Array<ToolchainTemplateSource>`
 
 Extra sources on top of the builtin + registry sources.
+
+#### `type`
+
+- **Type**: `'builtin' | 'local' | 'npm' | 'git' | 'vite-plus'`
+- **Required**
+
+How to load the source.
+
+#### `locate`
+
+- **Type**: `string`
+- **Required**
+
+A builtin id, local dir, npm scope, git URL or Vite+ id.
+
+#### `id`
+
+- **Type**: `string`
+
+Stable id (defaults to the basename/scope).
+
+#### `name`
+
+- **Type**: `string`
+
+Display name override.
+
+#### `description`
+
+- **Type**: `string`
+
+Description override.
+
+#### `kind`
+
+- **Type**: `'project' | 'workspace' | 'application' | 'folder' | 'tooling' | 'pipeline'`
+
+What the template produces.
+
+#### `ref`
+
+- **Type**: `string`
+
+Git branch/tag/commit.
+
+#### `subdir`
+
+- **Type**: `string`
+
+Subdirectory within the source that holds the template.
+
+#### `tags`
+
+- **Type**: `Array<string>`
+
+Free-form tags.
+
+#### `online`
+
+- **Type**: `boolean`
+
+Whether the source needs network access.
 
 ## `vite`
 

@@ -1,8 +1,18 @@
 # Changelog
 
-## 1.6.0 (October 2026)
+## 1.6.1 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+#### Config
+- Inline nested sub-schemas in the generated reference ([#5a9a9e3](https://github.com/deltabox-studio/toolchain/commit/5a9a9e3) by [T0chi](https://github.com/T0chi))
+  - \enderConfigFileMarkdown\ only recursed into inline objects, so named sub-schemas (changelog.workflows, changelog.versioning.target/workspaces, templates.sources[], project.type) rendered as a bare type name. It now resolves the JSON Schema \$defs\ and expands objects, object unions and array items inline (each named type once per section), so the reference documents every option with types, required markers, defaults and descriptions.
+
+<!-- release:end -->
+
+
+## 1.6.0 (October 2026)
 
 ### New features
 #### Changelog
@@ -29,9 +39,6 @@
   - Reproduced (and minimised) the 'unexplained' bin revert: Yarn 4 normalises a single-entry \in\ object to a plain string on every \yarn install\, so an explicit tsdown \in\ object could never persist — install and build fought over package.json. Set tsdown's \exports.bin\ to \alse\ so tsdown leaves the field alone, and commit the string form Yarn writes. install + build are now idempotent.
 - Re-apply the explicit changelog and tsconfig bins ([#192a2d3](https://github.com/deltabox-studio/toolchain/commit/192a2d3) by [T0chi](https://github.com/T0chi))
   - The generated version bump commit dropped the explicit \in\ mapping (object form) from both package.jsons; regenerate it from the pinned tsdown \exports.bin\ so \yarn build\ stays idempotent.
-
-<!-- release:end -->
-
 
 ## 1.5.0 (October 2026)
 
