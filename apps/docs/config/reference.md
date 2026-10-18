@@ -119,6 +119,11 @@ Allowed commit types (commitlint).
 
 Allowed commit scopes (commitlint).
 
+### `versioning`
+
+- **Type**: `ChangelogVersioning`
+- **Default**: `{}`
+
 ### `vscode`
 
 - **Type**: `boolean`

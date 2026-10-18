@@ -19,7 +19,8 @@ export function writeChangelogs(
     records: CommitRecord[],
     summary: string,
     reformatAll: boolean,
-    packageChanges = false
+    packageChanges = false,
+    workspaceEntries?: Map<string, string>
 ): void {
     const root = repoRoot();
     const repo = repoSlug();
@@ -47,9 +48,16 @@ export function writeChangelogs(
     prependChangelogEntry(rootChangelog, entry);
     logger.info(`  updated ${rootChangelog}`);
 
-    // Each workspace changelog only lists commits touching that workspace dir.
-    for (const dir of discoverWorkspaceDirs()) {
-        if (resolve(dir) === resolve(root)) continue;
+    // Each versioned workspace changelog only lists commits touching that
+    // workspace dir, headed by the version the versioning plan assigned it.
+    const entries =
+        workspaceEntries ??
+        new Map<string, string>(
+            discoverWorkspaceDirs()
+                .filter(dir => resolve(dir) !== resolve(root))
+                .map(dir => [dir, version] as [string, string])
+        );
+    for (const [dir, workspaceVersion] of entries) {
         const file = resolve(dir, 'CHANGELOG.md');
         if (!existsSync(file)) continue;
         const rel = relative(root, dir).replace(/\\/g, '/');
@@ -59,17 +67,13 @@ export function writeChangelogs(
             continue;
         }
         const wsSummary = buildSummary(filtered);
-        prependChangelogEntry(file, renderChangelogEntry(version, wsSummary, new Date()));
+        prependChangelogEntry(file, renderChangelogEntry(workspaceVersion, wsSummary, new Date()));
         logger.info(`  updated ${file}`);
     }
     // Normalize every changelog (all versions, including old entries).
-    for (const file of [
-        resolve(root, 'CHANGELOG.md'),
-        ...discoverWorkspaceDirs()
-            .filter(dir => resolve(dir) !== resolve(root))
-            .map(dir => resolve(dir, 'CHANGELOG.md'))
-            .filter(file => existsSync(file)),
-    ]) {
-        formatChangelogFile(file, repo);
+    const dirs = new Set<string>([...discoverWorkspaceDirs(), ...entries.keys()]);
+    for (const dir of dirs) {
+        const file = resolve(dir, 'CHANGELOG.md');
+        if (existsSync(file)) formatChangelogFile(file, repo);
     }
 }

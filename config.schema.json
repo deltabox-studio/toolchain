@@ -196,6 +196,10 @@
                     },
                     "description": "Allowed commit scopes (commitlint)."
                 },
+                "versioning": {
+                    "description": "Automatic version bumping on changelog generation (default `true`).",
+                    "$ref": "#/$defs/ChangelogVersioning"
+                },
                 "vscode": {
                     "type": "boolean",
                     "description": "Write the Conventional-Commits VS Code settings."
@@ -382,6 +386,43 @@
                 }
             },
             "additionalProperties": false
+        },
+        "ChangelogVersioningConfig": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "description": "`uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently (default `uniform`).",
+                    "$ref": "#/$defs/ChangelogVersioningTarget"
+                },
+                "workspaces": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own."
+                }
+            },
+            "additionalProperties": false
+        },
+        "ChangelogVersioningTarget": {
+            "type": "string",
+            "enum": [
+                "uniform",
+                "root-only",
+                "individual"
+            ],
+            "description": "Where the changelog version bump is applied."
+        },
+        "ChangelogVersioning": {
+            "anyOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "$ref": "#/$defs/ChangelogVersioningConfig"
+                }
+            ],
+            "description": "Automatic version bumping when a changelog entry is generated."
         },
         "ToolchainBiomeConfig": {
             "type": "object",

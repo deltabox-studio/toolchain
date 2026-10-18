@@ -1,4 +1,4 @@
-import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
+import { logger, sectionConfig, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import { runWorkflows } from '../run-workflows.js';
 import { runChangelog } from '../run.js';
@@ -70,7 +70,7 @@ export function changelogCommands(): ToolchainCommand[] {
                     description: 'Skip the package-changes footer.',
                 },
             ],
-            run: opts => {
+            run: (opts, context) => {
                 const argv: string[] = [];
                 if (opts.range) argv.push('--range', String(opts.range));
                 if (opts.dryRun) argv.push('--dry-run');
@@ -83,7 +83,7 @@ export function changelogCommands(): ToolchainCommand[] {
                 if (opts.packageChangesSection === false) {
                     argv.push('--no-package-changes-section');
                 }
-                runChangelog(argv);
+                runChangelog(argv, sectionConfig(context.config.changelog));
             },
         },
     ];

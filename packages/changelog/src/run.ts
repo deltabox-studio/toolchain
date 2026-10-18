@@ -69,7 +69,7 @@ import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { logger } from '@deltabox/toolchain-shared';
+import { logger, type ToolchainChangelogConfig } from '@deltabox/toolchain-shared';
 
 import { parseArgsCli } from './utils/args.js';
 import { deriveBump, readCommits } from './utils/git.js';
@@ -81,16 +81,19 @@ import {
 } from './utils/reformat.js';
 import { changelogFiles, readRootVersion, repoRoot, writeVersion } from './utils/repo.js';
 import { buildSummary } from './utils/summary.js';
-import {
-    bumpVersion,
-    insertNewEntry,
-    renderChangelogEntry,
-    retagChangelogs,
-} from './utils/version.js';
+import { insertNewEntry, renderChangelogEntry, retagChangelogs } from './utils/version.js';
+import { planVersions, resolveVersioning, writePackageVersion } from './utils/versioning.js';
 import { writeChangelogs } from './utils/write.js';
 
-/** Run the changelog pipeline (bump versions + write changelogs). */
-export function runChangelog(argv: string[] = process.argv.slice(2)): void {
+/**
+ * Run the changelog pipeline (bump versions + write changelogs). `changelog` is
+ * the consumer's `toolchain.changelog` section (threaded from `dbx changelog`);
+ * the standalone bin runs with the defaults (`versioning: true`, uniform).
+ */
+export function runChangelog(
+    argv: string[] = process.argv.slice(2),
+    changelog?: ToolchainChangelogConfig
+): void {
     const options = parseArgsCli(argv);
 
     // `--format-only` just regroups the existing changelog files (no bump, no
@@ -142,7 +145,9 @@ export function runChangelog(argv: string[] = process.argv.slice(2)): void {
     const type = deriveBump(records);
     const summary = buildSummary(records);
 
-    const next = bumpVersion(current, type);
+    const versioning = resolveVersioning(changelog);
+    const plan = planVersions({ versioning, rootVersion: current, bump: type, range });
+    const next = plan.rootVersion;
 
     if (options.dryRun) {
         const root = repoRoot();
@@ -159,6 +164,7 @@ export function runChangelog(argv: string[] = process.argv.slice(2)): void {
             `[DRY-RUN] Processing method: ${method}${reformatAll ? ' (backward reformat)' : ''}`
         );
         logger.info(`[DRY-RUN] Bump: ${type} (\`${current}\` -> \`${next}\`)`);
+        logger.info(`[DRY-RUN] Versioning: ${versioning.enabled ? versioning.target : 'disabled'}`);
         logger.info(`[DRY-RUN] ${records.length} commit(s) scanned. Project files untouched.`);
         logger.info('');
         logger.info('Proposed new CHANGELOG.md entry (new version only):');
@@ -176,9 +182,23 @@ export function runChangelog(argv: string[] = process.argv.slice(2)): void {
         return;
     }
 
-    writeVersion(next);
-    writeChangelogs(next, range, records, summary, reformatAll, options.packageChanges);
-    logger.info(`Bumped ${current} -> ${next} (${type}) from ${records.length} commit(s).`);
+    for (const [dir, version] of plan.writes) writePackageVersion(dir, version);
+    writeChangelogs(
+        next,
+        range,
+        records,
+        summary,
+        reformatAll,
+        options.packageChanges,
+        plan.entries
+    );
+    if (versioning.enabled) {
+        logger.info(`Bumped ${current} -> ${next} (${type}) from ${records.length} commit(s).`);
+    } else {
+        logger.info(
+            `Wrote changelogs for ${next} (${type}) from ${records.length} commit(s); versioning disabled.`
+        );
+    }
 }
 
 // Exported so tests can dry-run the pipeline (grouping/rendering) directly.
