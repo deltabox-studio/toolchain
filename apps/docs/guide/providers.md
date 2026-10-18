@@ -124,9 +124,12 @@ export default defineConfig({
 - The `dbx()` plugin runs `dbx sync` before the dev server / build, or
   `dbx sync --check` in CI (which fails the build when generated files are out of
   date), and re-syncs when a `dbx.config.*` / `tsconfig.*.json` input changes.
-- The plugin resolves the `dbx` binary from the project first. The local
-  `node_modules/.bin/dbx`, then the project's own `@deltabox/toolchain` — before a
-  global `dbx` or `npx`, so the version the project pins is the one that runs.
+- The plugin resolves the `dbx` binary from the project first: the local
+  `node_modules/.bin/dbx`, then the project's own `@deltabox/toolchain` bin. A
+  global `dbx` on `PATH` is used **only when the project doesn't pin the
+  toolchain at all** — otherwise it's skipped (with a warning) in favour of
+  `npx @deltabox/toolchain@<pinned>`. That way a stale global install can never
+  run and silently revert the project's generated files.
 - `run: { tasks: { ...DBX_TASKS } }` also exposes `vp run dbx:sync` /
   `vp run dbx:check`. Vite+ reads `run.tasks` from the **static** config (a
   plugin's `config` hook is ignored), so the tasks are spread in the config

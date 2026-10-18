@@ -65,4 +65,43 @@ describe('dbx resolution', () => {
         expect(resolved.exe).toBeTruthy();
         if (resolved.source === 'npx') expect(resolved.args).toContain('@deltabox/toolchain');
     });
+
+    /** Put a fake `dbx` on PATH and run `fn`, restoring PATH afterwards. */
+    function withGlobalDbx(fn: (globalBin: string) => void): void {
+        const binDir = makeTmp();
+        const name = process.platform === 'win32' ? 'dbx.cmd' : 'dbx';
+        const globalBin = path.join(binDir, name);
+        fs.writeFileSync(globalBin, '');
+        if (process.platform !== 'win32') fs.chmodSync(globalBin, 0o755);
+        const saved = process.env.PATH;
+        process.env.PATH = `${binDir}${path.delimiter}${saved ?? ''}`;
+        try {
+            fn(globalBin);
+        } finally {
+            process.env.PATH = saved;
+        }
+    }
+
+    it('ignores a stale global dbx when the project pins the toolchain', () => {
+        withGlobalDbx(() => {
+            const project = makeTmp();
+            const dep = path.join(project, 'node_modules', '@deltabox', 'toolchain');
+            fs.mkdirSync(dep, { recursive: true });
+            fs.writeFileSync(
+                path.join(dep, 'package.json'),
+                JSON.stringify({ name: '@deltabox/toolchain', version: '9.9.9' })
+            );
+            const resolved = resolveDbx(project);
+            expect(resolved.source).toBe('npx');
+            expect(resolved.args.join(' ')).toContain('@deltabox/toolchain@9.9.9');
+        });
+    });
+
+    it('uses a global dbx only when the project pins nothing', () => {
+        withGlobalDbx(globalBin => {
+            const resolved = resolveDbx(makeTmp());
+            expect(resolved.source).toBe('global');
+            expect(resolved.exe).toBe(globalBin);
+        });
+    });
 });

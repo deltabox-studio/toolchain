@@ -25,7 +25,13 @@ import path from 'node:path';
 
 import type { Plugin } from 'vite';
 
-import { findOwnCliEntry, spawnCross } from '@deltabox/toolchain-shared';
+import {
+    findOwnCliEntry,
+    localToolchainVersion,
+    logger,
+    spawnCross,
+    TOOLCHAIN_PACKAGE,
+} from '@deltabox/toolchain-shared';
 
 import { which } from './vp.js';
 
@@ -53,9 +59,14 @@ function localCandidates(cwd: string): string[] {
 /**
  * Resolve the `dbx` binary, always preferring the project's own over a global
  * install: `DBX_BIN` override -> project-local shim -> the repo's own
- * `@deltabox/toolchain` bin -> global `PATH` -> `npx --yes @deltabox/toolchain`.
+ * `@deltabox/toolchain` bin -> (only for a project that pins nothing) global
+ * `PATH` -> `npx` of the pinned version.
+ *
  * A project-local binary is what the project pins, so a stale global `dbx` can
- * never be used by accident.
+ * never be used by accident: when the project pins the toolchain but has no
+ * resolvable local binary, the global install is skipped (with a warning) in
+ * favour of `npx @deltabox/toolchain@<pinned>` — a stale global would otherwise
+ * write older-format files and silently revert the project's generated ones.
  */
 export function resolveDbx(cwd: string = process.cwd()): ResolvedDbx {
     const override = process.env.DBX_BIN;
@@ -65,13 +76,17 @@ export function resolveDbx(cwd: string = process.cwd()): ResolvedDbx {
     }
     const own = findOwnCliEntry(cwd);
     if (own) return { exe: process.execPath, args: [own], source: 'local' };
+
+    const expected = localToolchainVersion(cwd);
     const global = which('dbx');
-    if (global) return { exe: global, args: [], source: 'global' };
-    return {
-        exe: IS_WINDOWS ? 'npx.cmd' : 'npx',
-        args: ['--yes', '@deltabox/toolchain'],
-        source: 'npx',
-    };
+    if (global) {
+        if (expected === undefined) return { exe: global, args: [], source: 'global' };
+        logger.warn(
+            `ignoring the global \`dbx\` at ${global} — this project pins ${TOOLCHAIN_PACKAGE}@${expected}.`
+        );
+    }
+    const spec = expected ? `${TOOLCHAIN_PACKAGE}@${expected}` : TOOLCHAIN_PACKAGE;
+    return { exe: IS_WINDOWS ? 'npx.cmd' : 'npx', args: ['--yes', spec], source: 'npx' };
 }
 
 /** Run `dbx <args>` in `cwd`, streaming output. Resolves with the exit code. */
