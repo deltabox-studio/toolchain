@@ -54,6 +54,23 @@ export function bundledCliEntry(): string | undefined {
 }
 
 /**
+ * The `@deltabox/toolchain` spec the `npx` fallback installs. The extension is
+ * versioned in lockstep with the toolchain, so it pins its own version rather
+ * than resolving `@latest` (which could drift from the workspace's generated
+ * files). Falls back to the unpinned name only when the version is unavailable.
+ */
+export function pinnedToolchainSpec(): string {
+    const version = (
+        vscode.extensions.getExtension(EXTENSION_ID)?.packageJSON as
+            | { version?: unknown }
+            | undefined
+    )?.version;
+    return typeof version === 'string' && version
+        ? `@deltabox/toolchain@${version}`
+        : '@deltabox/toolchain';
+}
+
+/**
  * Resolve the CLI to run, preferring the extension's bundled `dbx.cjs`, then the
  * workspace's local `@deltabox/toolchain` (its built entry, then the `.bin`
  * shim), over a global `npx` fallback.
@@ -75,7 +92,7 @@ export function resolveCliCommand(cwd: string): CliCommand {
             if (fs.existsSync(bin)) return { exe: bin, args: [] };
         }
     }
-    return { exe: IS_WINDOWS ? 'npx.cmd' : 'npx', args: ['--yes', '@deltabox/toolchain'] };
+    return { exe: IS_WINDOWS ? 'npx.cmd' : 'npx', args: ['--yes', pinnedToolchainSpec()] };
 }
 
 /**
@@ -112,7 +129,7 @@ export function cliInvocation(cwd: string): string {
     const bundled = bundledCliEntry();
     if (bundled) return `node "${bundled}"`;
     if (localCliEntry(cwd)) return 'npx dbx';
-    return IS_WINDOWS ? 'npx.cmd --yes @deltabox/toolchain' : 'npx --yes @deltabox/toolchain';
+    return `${IS_WINDOWS ? 'npx.cmd' : 'npx'} --yes ${pinnedToolchainSpec()}`;
 }
 
 export interface CapturedResult {
