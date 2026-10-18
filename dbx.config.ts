@@ -97,6 +97,8 @@ export default defineConfig({
                     'no-return-assign': 'off',
                     eqeqeq: 'warn',
                     'typescript/no-explicit-any': 'off',
+                    // The markdown sanitizers intentionally match control chars.
+                    'no-control-regex': 'off',
                 },
             },
 

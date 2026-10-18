@@ -2,7 +2,7 @@
     "name": "toolchain-vscode",
     "displayName": "deltabox toolchain",
     "description": "Sync/generate @deltabox/toolchain managed files, run tooling across projects and scaffold new ones.",
-    "version": "1.6.1",
+    "version": "1.7.0",
     "private": true,
     "type": "module",
     "publisher": "deltabox",
@@ -47,6 +47,12 @@
                 "title": "Check sync",
                 "category": "deltabox",
                 "icon": "$(check-all)"
+            },
+            {
+                "command": "deltabox.toolchain.chooseDbxSource",
+                "title": "Choose dbx source (project vs extension)",
+                "category": "deltabox",
+                "icon": "$(symbol-enum)"
             },
             {
                 "command": "deltabox.toolchain.syncProject",
