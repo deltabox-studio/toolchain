@@ -12,7 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { spawnCross } from '@deltabox/toolchain-shared';
+import { logger, spawnCross } from '@deltabox/toolchain-shared';
 
 const IS_WINDOWS = process.platform === 'win32';
 
@@ -35,12 +35,21 @@ function localCandidates(cwd: string): string[] {
     return IS_WINDOWS ? [`${base}.cmd`, `${base}.exe`, `${base}.ps1`, base] : [base];
 }
 
+/** Whether the missing-`PATH` warning has already been emitted. */
+let warnedMissingPath = false;
+
 /** Find an executable on `PATH` (resolves `PATHEXT` on Windows). */
 export function which(bin: string): string | undefined {
     const exts = IS_WINDOWS
         ? (process.env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean)
         : [''];
     const dirs = (process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
+    // A blank PATH is an environment problem, not "not installed": warn once so
+    // the caller can fall back (npx) instead of silently finding nothing.
+    if (dirs.length === 0 && !warnedMissingPath) {
+        warnedMissingPath = true;
+        logger.warn('PATH is empty — cannot look up binaries on PATH; falling back.');
+    }
     for (const dir of dirs) {
         for (const ext of exts) {
             const candidate = path.join(dir, `${bin}${ext.toLowerCase()}`);

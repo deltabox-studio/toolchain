@@ -70,7 +70,12 @@ function localCandidates(cwd: string): string[] {
  */
 export function resolveDbx(cwd: string = process.cwd()): ResolvedDbx {
     const override = process.env.DBX_BIN;
-    if (override) return { exe: override, args: [], source: 'local' };
+    if (override) {
+        if (fs.existsSync(override)) return { exe: override, args: [], source: 'local' };
+        // A missing/typo'd DBX_BIN must not wedge every `dbx` call: warn once and
+        // fall through to the normal resolution.
+        logger.warn(`DBX_BIN points at ${override}, which does not exist; ignoring it.`);
+    }
     for (const candidate of localCandidates(cwd)) {
         if (fs.existsSync(candidate)) return { exe: candidate, args: [], source: 'local' };
     }

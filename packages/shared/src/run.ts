@@ -6,6 +6,9 @@ import { logger } from './logger.js';
 
 const IS_WINDOWS = process.platform === 'win32';
 
+/** Whether the missing-`ComSpec` warning has already been emitted. */
+let warnedMissingComSpec = false;
+
 // cmd.exe meta characters that must be caret-escaped when building a command
 // line. Ported from the cross-spawn escape algorithm
 // (https://github.com/moxystudio/node-cross-spawn) so a shell-free spawn stays
@@ -73,7 +76,14 @@ export function spawnCross(cmd: string, args: string[], options: SpawnOptions = 
             escapeCmdCommand(cmd),
             ...args.map(arg => escapeCmdArgument(arg, doubleEscape)),
         ].join(' ');
-        return spawn(process.env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', `"${shellCommand}"`], {
+        // `ComSpec` is the documented location of the command interpreter; fall
+        // back to `cmd.exe` (and warn once) when the environment omits it.
+        const comSpec = process.env.ComSpec;
+        if (!comSpec && !warnedMissingComSpec) {
+            warnedMissingComSpec = true;
+            logger.warn('ComSpec is not set — falling back to cmd.exe.');
+        }
+        return spawn(comSpec ?? 'cmd.exe', ['/d', '/s', '/c', `"${shellCommand}"`], {
             stdio: 'inherit',
             ...options,
             shell: false,
