@@ -1,15 +1,24 @@
 # Changelog
 
-## 1.7.1 (October 2026)
+## 1.7.2 (October 2026)
 
 <!-- release:start -->
+
+### CI
+#### Vscode
+- Set up ci with `Azure Pipelines` ([#5bc736f](https://github.com/deltabox-studio/toolchain/commit/5bc736f) by [T0chi](https://github.com/T0chi))
+  - [skip ci]
+### Chores
+- Remove `azure-pipelines.yml` ([#7965965](https://github.com/deltabox-studio/toolchain/issues/7965965) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.7.1 (October 2026)
 
 ### Chores
 #### Vscode
 - Uploaded the vscode extension to the Marketplace ([#993aadf](https://github.com/deltabox-studio/toolchain/commit/993aadf) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.7.0 (October 2026)
 
