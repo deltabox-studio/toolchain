@@ -1,9 +1,0 @@
-steps:
-- task: AzureCLI@2
-  displayName: 'Get identity details'
-  inputs:
-    azureSubscription: $(service-connection-name)
-    scriptType: pscore
-    scriptLocation: inlineScript
-    inlineScript: |
-      az rest -u ${env:API-ENDPOINT} --resource ${env:RESOURCE-ID}
