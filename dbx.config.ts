@@ -221,7 +221,7 @@ export default defineConfig({
                                 {
                                     name: 'Package the VS Code extension',
                                     if: "steps.release.outputs.skip == 'false'",
-                                    run: '{{packageManager}} workspace toolchain-vscode package:vsix',
+                                    run: '{{packageManager}} workspace toolchain package:vsix',
                                 },
                                 {
                                     name: 'Extract release notes',

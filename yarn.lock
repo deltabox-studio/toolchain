@@ -5223,9 +5223,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"toolchain-vscode@workspace:packages/vscode":
+"toolchain@workspace:packages/vscode":
   version: 0.0.0-use.local
-  resolution: "toolchain-vscode@workspace:packages/vscode"
+  resolution: "toolchain@workspace:packages/vscode"
   dependencies:
     "@deltabox/toolchain-tsdown": "workspace:*"
     "@types/node": "catalog:"

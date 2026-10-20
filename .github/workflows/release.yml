@@ -47,7 +47,7 @@ jobs:
           fi
       - name: Package the VS Code extension
         if: steps.release.outputs.skip == 'false'
-        run: yarn workspace toolchain-vscode package:vsix
+        run: yarn workspace toolchain package:vsix
       - name: Extract release notes
         if: steps.release.outputs.skip == 'false'
         run: |

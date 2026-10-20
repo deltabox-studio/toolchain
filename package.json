@@ -37,7 +37,7 @@
         "settings"
     ],
     "scripts": {
-        "build": "node scripts/bootstrap.mjs && vp run --filter \"./packages/*\" build && vp run build:root && yarn workspace toolchain-vscode package:vsix",
+        "build": "node scripts/bootstrap.mjs && vp run --filter \"./packages/*\" build && vp run build:root && yarn workspace toolchain package:vsix",
         "docs": "vp run --filter \"./apps/docs\"",
         "format": "vp fmt",
         "format:check": "vp fmt --check",

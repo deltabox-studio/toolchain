@@ -9,7 +9,7 @@ import { isCmdShim, windowsShimCommand } from './win-spawn.js';
 const IS_WINDOWS = process.platform === 'win32';
 
 /** The extension's own id (`<publisher>.<name>`). */
-const EXTENSION_ID = 'deltabox.toolchain-vscode';
+const EXTENSION_ID = 'deltabox.toolchain';
 
 /** A resolved `dbx` invocation. */
 export interface CliCommand {
