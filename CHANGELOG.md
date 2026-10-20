@@ -1,8 +1,17 @@
 # Changelog
 
-## 1.7.0 (October 2026)
+## 1.7.1 (October 2026)
 
 <!-- release:start -->
+
+### Chores
+#### Vscode
+- Uploaded the vscode extension to the Marketplace ([#993aadf](https://github.com/deltabox-studio/toolchain/commit/993aadf) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.7.0 (October 2026)
 
 ### New features
 #### Vscode
@@ -15,9 +24,6 @@
 #### Changelog
 - Repair escaped commit text and label code refs ([#1425419](https://github.com/deltabox-studio/toolchain/issues/1425419) by [T0chi](https://github.com/T0chi))
   - PowerShell interpreted the escaped backticks in the commit bodies as control-character escapes, so the changelog carried backslash+control artifacts (TAB/CR/LF/BS/FF/VT) and mojibake. Repair the affected 1.4.1-1.6.1 entries and add backticks around commands, paths, flags, types and identifiers throughout the file.
-
-<!-- release:end -->
-
 
 ## 1.6.1 (October 2026)
 
