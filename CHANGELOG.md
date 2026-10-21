@@ -1,14 +1,21 @@
 # Changelog
 
-## 1.7.5 (October 2026)
+## 1.7.6 (October 2026)
 
 <!-- release:start -->
 
-### Chores
-- Revert `extend` value to `tsconfig.base.json` for vscode workspace's `tsconfig.default.json` ([#96e021e](https://github.com/deltabox-studio/toolchain/commit/96e021e) by [T0chi](https://github.com/T0chi))
+### CI
+#### Vscode
+- Fixed failed build in `release-vscode.yml` for Azure Pipelines ([#f6f4b14](https://github.com/deltabox-studio/toolchain/commit/f6f4b14) by [T0chi](https://github.com/T0chi))
+  - The build failed due to missing workspace builds, specifically from `@deltabox/toolchain-tsdown`
 
 <!-- release:end -->
 
+
+## 1.7.5 (October 2026)
+
+### Chores
+- Revert `extend` value to `tsconfig.base.json` for vscode workspace's `tsconfig.default.json` ([#96e021e](https://github.com/deltabox-studio/toolchain/commit/96e021e) by [T0chi](https://github.com/T0chi))
 
 ## 1.7.4 (October 2026)
 

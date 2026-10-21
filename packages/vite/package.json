@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-vite",
-    "version": "1.7.5",
+    "version": "1.7.6",
     "description": "Vite+ provider: wraps the `vp` binary as `dbx vite:*` commands, exposes the Vite+ toolchain and manages its vite.config.ts.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
