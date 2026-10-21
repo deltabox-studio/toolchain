@@ -1,8 +1,17 @@
 # Changelog
 
-## 1.7.3 (October 2026)
+## 1.7.4 (October 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Vscode
+- Extending root `tsconfig.json` instead of root `tsconfig.base.json` ([#9aa9669](https://github.com/deltabox-studio/toolchain/commit/9aa9669) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.7.3 (October 2026)
 
 ### CI
 #### Vscode
@@ -11,9 +20,6 @@
 ### Chores
 #### Ci
 - Remove `azure-pipelines-setup.yml` ([#03a4196](https://github.com/deltabox-studio/toolchain/commit/03a4196) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.7.2 (October 2026)
 
