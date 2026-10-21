@@ -1,15 +1,20 @@
 # Changelog
 
-## 1.7.4 (October 2026)
+## 1.7.5 (October 2026)
 
 <!-- release:start -->
+
+### Chores
+- Revert `extend` value to `tsconfig.base.json` for vscode workspace's `tsconfig.default.json` ([#96e021e](https://github.com/deltabox-studio/toolchain/commit/96e021e) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.7.4 (October 2026)
 
 ### Bug fixes
 #### Vscode
 - Extending root `tsconfig.json` instead of root `tsconfig.base.json` ([#9aa9669](https://github.com/deltabox-studio/toolchain/commit/9aa9669) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.7.3 (October 2026)
 
