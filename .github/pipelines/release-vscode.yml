@@ -4,7 +4,7 @@ trigger:
       - 'v*'
   branches:
     exclude:
-      - '*'        # Disables regular branch commits so it only runs on tag pushes
+      - '*'
 
 pool:
   vmImage: ubuntu-latest
