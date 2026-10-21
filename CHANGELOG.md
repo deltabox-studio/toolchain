@@ -1,8 +1,21 @@
 # Changelog
 
-## 1.7.2 (October 2026)
+## 1.7.3 (October 2026)
 
 <!-- release:start -->
+
+### CI
+#### Vscode
+- Set up CI with `Azure Pipelines` ([#2ec1863](https://github.com/deltabox-studio/toolchain/commit/2ec1863) by [T0chi](https://github.com/T0chi))
+  - [skip ci]
+### Chores
+#### Ci
+- Remove `azure-pipelines-setup.yml` ([#03a4196](https://github.com/deltabox-studio/toolchain/commit/03a4196) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.7.2 (October 2026)
 
 ### CI
 #### Vscode
@@ -10,9 +23,6 @@
   - [skip ci]
 ### Chores
 - Remove `azure-pipelines.yml` ([#7965965](https://github.com/deltabox-studio/toolchain/issues/7965965) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.7.1 (October 2026)
 
