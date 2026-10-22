@@ -221,7 +221,7 @@ export default defineConfig({
                                 {
                                     name: 'Package the VS Code extension',
                                     if: "steps.release.outputs.skip == 'false'",
-                                    run: '{{packageManager}} workspace toolchain package:vsix',
+                                    run: '{{packageManager}} workspace toolchain-vscode package:vsix',
                                 },
                                 {
                                     name: 'Extract release notes',
@@ -272,25 +272,7 @@ export default defineConfig({
                                         '  npm stage publish toolchain.tgz --access public',
                                         'fi',
                                     ].join('\n'),
-                                },
-                                {
-                                    // Disabled until a Marketplace PAT exists: skipped
-                                    // while `secrets.VSCE_PAT` is unset, enabling
-                                    // automatically once it is set (add it to the
-                                    // `toolchain / release` environment). A missing
-                                    // secret can't gate a step via `if` (the secrets
-                                    // context isn't available there).
-                                    name: 'Publish to the VS Code Marketplace',
-                                    if: "steps.release.outputs.skip == 'false'",
-                                    env: { VSCE_PAT: '${{ secrets.VSCE_PAT }}' },
-                                    run: [
-                                        'if [ -n "${VSCE_PAT:-}" ]; then',
-                                        '  npx --yes @vscode/vsce publish --packagePath packages/vscode/deltabox-toolchain.vsix',
-                                        'else',
-                                        '  echo "VSCE_PAT is not set; skipping the VS Code Marketplace publish."',
-                                        'fi',
-                                    ].join('\n'),
-                                },
+                                }
                             ],
                         },
                     },
