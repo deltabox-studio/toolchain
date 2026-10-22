@@ -1,8 +1,66 @@
 # Changelog
 
-## 1.7.0 (October 2026)
+## 1.7.8 (October 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Vscode
+- Reverted VS Code extension package name to `toolchain-vscode` due to `toolchain` ([#5d0d38b](https://github.com/deltabox-studio/toolchain/commit/5d0d38b) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.7.7 (October 2026)
+
+### CI
+#### Vscode
+- Upload `release-vscode.yml` pipeline ([#3080357](https://github.com/deltabox-studio/toolchain/issues/3080357) by [T0chi](https://github.com/T0chi))
+
+## 1.7.6 (October 2026)
+
+### CI
+#### Vscode
+- Fixed failed build in `release-vscode.yml` for Azure Pipelines ([#f6f4b14](https://github.com/deltabox-studio/toolchain/commit/f6f4b14) by [T0chi](https://github.com/T0chi))
+  - The build failed due to missing workspace builds, specifically from `@deltabox/toolchain-tsdown`
+
+## 1.7.5 (October 2026)
+
+### Chores
+- Revert `extend` value to `tsconfig.base.json` for vscode workspace's `tsconfig.default.json` ([#96e021e](https://github.com/deltabox-studio/toolchain/commit/96e021e) by [T0chi](https://github.com/T0chi))
+
+## 1.7.4 (October 2026)
+
+### Bug fixes
+#### Vscode
+- Extending root `tsconfig.json` instead of root `tsconfig.base.json` ([#9aa9669](https://github.com/deltabox-studio/toolchain/commit/9aa9669) by [T0chi](https://github.com/T0chi))
+
+## 1.7.3 (October 2026)
+
+### CI
+#### Vscode
+- Set up CI with `Azure Pipelines` ([#2ec1863](https://github.com/deltabox-studio/toolchain/commit/2ec1863) by [T0chi](https://github.com/T0chi))
+  - [skip ci]
+### Chores
+#### Ci
+- Remove `azure-pipelines-setup.yml` ([#03a4196](https://github.com/deltabox-studio/toolchain/commit/03a4196) by [T0chi](https://github.com/T0chi))
+
+## 1.7.2 (October 2026)
+
+### CI
+#### Vscode
+- Set up ci with `Azure Pipelines` ([#5bc736f](https://github.com/deltabox-studio/toolchain/commit/5bc736f) by [T0chi](https://github.com/T0chi))
+  - [skip ci]
+### Chores
+- Remove `azure-pipelines.yml` ([#7965965](https://github.com/deltabox-studio/toolchain/issues/7965965) by [T0chi](https://github.com/T0chi))
+
+## 1.7.1 (October 2026)
+
+### Chores
+#### Vscode
+- Uploaded the vscode extension to the Marketplace ([#993aadf](https://github.com/deltabox-studio/toolchain/commit/993aadf) by [T0chi](https://github.com/T0chi))
+
+## 1.7.0 (October 2026)
 
 ### New features
 #### Vscode
@@ -15,9 +73,6 @@
 #### Changelog
 - Repair escaped commit text and label code refs ([#1425419](https://github.com/deltabox-studio/toolchain/issues/1425419) by [T0chi](https://github.com/T0chi))
   - PowerShell interpreted the escaped backticks in the commit bodies as control-character escapes, so the changelog carried backslash+control artifacts (TAB/CR/LF/BS/FF/VT) and mojibake. Repair the affected 1.4.1-1.6.1 entries and add backticks around commands, paths, flags, types and identifiers throughout the file.
-
-<!-- release:end -->
-
 
 ## 1.6.1 (October 2026)
 
