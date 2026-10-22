@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-tsdown",
-    "version": "1.7.6",
+    "version": "1.7.7",
     "description": "tsdown base configuration and cleanup commands.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
