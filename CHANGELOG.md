@@ -1,16 +1,22 @@
 # Changelog
 
-## 1.7.6 (October 2026)
+## 1.7.7 (October 2026)
 
 <!-- release:start -->
 
 ### CI
 #### Vscode
-- Fixed failed build in `release-vscode.yml` for Azure Pipelines ([#f6f4b14](https://github.com/deltabox-studio/toolchain/commit/f6f4b14) by [T0chi](https://github.com/T0chi))
-  - The build failed due to missing workspace builds, specifically from `@deltabox/toolchain-tsdown`
+- Upload `release-vscode.yml` pipeline ([#3080357](https://github.com/deltabox-studio/toolchain/issues/3080357) by [T0chi](https://github.com/T0chi))
 
 <!-- release:end -->
 
+
+## 1.7.6 (October 2026)
+
+### CI
+#### Vscode
+- Fixed failed build in `release-vscode.yml` for Azure Pipelines ([#f6f4b14](https://github.com/deltabox-studio/toolchain/commit/f6f4b14) by [T0chi](https://github.com/T0chi))
+  - The build failed due to missing workspace builds, specifically from `@deltabox/toolchain-tsdown`
 
 ## 1.7.5 (October 2026)
 
