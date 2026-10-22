@@ -1,15 +1,21 @@
 # Changelog
 
-## 1.7.7 (October 2026)
+## 1.7.8 (October 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Vscode
+- Reverted VS Code extension package name to `toolchain-vscode` due to `toolchain` ([#5d0d38b](https://github.com/deltabox-studio/toolchain/commit/5d0d38b) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.7.7 (October 2026)
 
 ### CI
 #### Vscode
 - Upload `release-vscode.yml` pipeline ([#3080357](https://github.com/deltabox-studio/toolchain/issues/3080357) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.7.6 (October 2026)
 
