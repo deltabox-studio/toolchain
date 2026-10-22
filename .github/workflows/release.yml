@@ -76,13 +76,3 @@ jobs:
             echo "::warning::Direct publish failed; falling back to a staged publish."
             npm stage publish toolchain.tgz --access public
           fi
-      - name: Publish to the VS Code Marketplace
-        if: steps.release.outputs.skip == 'false'
-        env:
-          VSCE_PAT: "${{ secrets.VSCE_PAT }}"
-        run: |
-          if [ -n "${VSCE_PAT:-}" ]; then
-            npx --yes @vscode/vsce publish --packagePath packages/vscode/deltabox-toolchain.vsix
-          else
-            echo "VSCE_PAT is not set; skipping the VS Code Marketplace publish."
-          fi

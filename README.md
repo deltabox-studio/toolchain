@@ -220,16 +220,13 @@ await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, p
 
 ## VS Code extension
 
-A VS Code extension is available for `deltabox toolchain`.
+Download from the [Visual Studio Code Marketplace](https://marketplace.visualstudio.com/items?itemName=deltabox.toolchain).
 
-Follow the steps below to use it. Will be published to the marketplace in the future.
+or through the CLI:
 
-1. Download `deltabox-toolchain.vsix` from [releases](https://github.com/deltabox-studio/toolchain/releases).
-2. In VS Code install the `deltabox-toolchain.vsix` by going to the Extensions sidebar panel, click the three dotted menu on the panel header and select `Install from VSIX...` from the context menu.
-3. Now a screwdriver icon should pop up on the VS Code sidemenu, and you can use the command palette (Ctrl + P) as well:
-    1. Sync / Check sync / Scaffold project, From template…
-    2. Run Vite+ command...
-    3. Create Vite+ project...
+```bash
+code --install-extension deltabox.toolchain
+```
 
 See [packages/vscode/README.md](./packages/vscode/README.md) to learn more about how it works.
 

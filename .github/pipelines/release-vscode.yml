@@ -1,0 +1,64 @@
+trigger:
+  tags:
+    include:
+      - 'v*'
+  branches:
+    exclude:
+      - '*'
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  nodeVersion: '22.x'
+  minNpmVersion: '11.15.1'
+  packageManager: 'yarn'
+  yarnVersion: '4.17.1'
+
+steps:
+- task: UseNode@1
+  displayName: 'Use node 22'
+  inputs:
+    version: $(nodeVersion)
+
+- script: |
+    npm install -g npm@^$(minNpmVersion)
+  displayName: 'Upgrade npm'
+
+- script: |
+    corepack enable
+    corepack prepare $(packageManager)@$(yarnVersion) --activate
+  displayName: 'Enable corepack'
+
+# Install VS Code Extension Manager (vsce >= v2.26.1 needed)
+- script: |
+    npm install -g @vscode/vsce
+  displayName: 'Install vsce globally'
+
+- script: |
+    $(packageManager) install
+  displayName: 'Install dependencies'
+
+- task: CopyFiles@2
+  inputs:
+    sourceFolder: '.'
+    contents: |
+      CHANGELOG.md
+    targetFolder: $(extension-dir)
+  displayName: 'Copy changelog from root'
+
+# Build
+- script: |
+    $(packageManager) build
+  displayName: 'Build workspaces and the extension'
+
+# Publish
+- task: AzureCLI@2
+  displayName: 'Publish to the VS Code Marketplace using managed identity'
+  inputs:
+    azureSubscription: $(connection-service-name)
+    scriptType: pscore
+    scriptLocation: inlineScript
+    inlineScript: |
+      cd ${env:EXTENSION-DIR}
+      vsce publish --packagePath deltabox-toolchain.vsix --azure-credential
