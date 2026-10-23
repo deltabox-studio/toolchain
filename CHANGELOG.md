@@ -1,15 +1,112 @@
 # Changelog
 
-## 1.7.8 (October 2026)
+## 1.8.0 (October 2026)
 
 <!-- release:start -->
+
+### New features
+#### Cli
+- Expose the sync tasks to commands and keep --json output clean ([#1e4ecec](https://github.com/deltabox-studio/toolchain/commit/1e4ecec) by [T0chi](https://github.com/T0chi))
+  - The command context now carries `syncTasks` (`defaultSyncTasks()`) so a package
+    command such as `migrate` can regenerate managed files without depending on
+    every sync package. Skip the update-check notice when `--json` is passed so it
+    never lands on stdout and corrupts machine output.
+#### Changelog
+- Per-workspace changelogs and configurable branches ([#0aa329c](https://github.com/deltabox-studio/toolchain/commit/0aa329c) by [T0chi](https://github.com/T0chi))
+  - Scan a workspace's own commits (plus its transitive dependencies) via
+    `relatedWorkspacePaths` and create a missing workspace `CHANGELOG.md` instead of
+    skipping it. `changelog.branches.main`/`dev` accept a string or an array, `dev`
+    defaults to `main`, and the branch list is injected into the generated
+    workflows. Add `changelog.commitlint.dir` for a custom commitlint config
+    location. Release notes aggregate every changelog entry since the last tag.
+#### Migrate
+- Recursive, interactive migration and post-migration sync ([#bb87b33](https://github.com/deltabox-studio/toolchain/commit/bb87b33) by [T0chi](https://github.com/T0chi))
+  - `dbx migrate` is now `--recursive` (off by default): it discovers the projects
+    under the root and, on a TTY, prompts a multi-select with an "All projects"
+    option. The `vite` migration creates a fresh nested `dbx.config.ts` (wrapped in
+    `defineConfig`) when the project has none, and removes the folded
+    `vite.config.*` unless `--ignore-vite-config-file`. `--write` also regenerates
+    the project's managed files unless `--ignore-managed-files`, dropping the
+    changelog task when `--ignore-changelog`; removals are reported. Adds
+    `@clack/prompts`, `@deltabox/toolchain-core` and `glob` to the package.
+#### Vite
+- Accept a single options object in resolveVite ([#2e2384b](https://github.com/deltabox-studio/toolchain/commit/2e2384b) by [T0chi](https://github.com/T0chi))
+  - esolveVite(options?: DbxConfig & ResolveViteOptions)\ replaces the two-argument form. The generated shim passes \{ cwd: import.meta.dirname }\ so a nested shim resolves its own \dbx.config.*\ instead of the process cwd's.
+#### Tsconfig
+- Generate workspace tsconfigs from a workspaces file ([#40db765](https://github.com/deltabox-studio/toolchain/commit/40db765) by [T0chi](https://github.com/T0chi))
+  - Rename sconfig.monorepo.json\ to sconfig.workspaces.json\; sconfig.build.json\ and the workspaces file are optional; \glob\ accepts a string or an array (with \!\ negation); add \exclude\/\gitignore\ (nested-aware, symlink-safe) and the ootFile\/\defaultFile\/uildFile\ renames; warn when references/composite are configured but no workspace tsconfigs are found.
+#### Project
+- Sync package.json fields and generate configs ([#e5209ee](https://github.com/deltabox-studio/toolchain/commit/e5209ee) by [T0chi](https://github.com/T0chi))
+  - Add a \project\ sync task that writes the fields a \dbx.config.project\ defines into \package.json\ (with epo\ -> epository\ + \directory\ for workspaces), plus \project:config\ generation for existing projects. Scaffolding validates the name/type.
+#### Core
+- Inherit project config and make discovery symlink-safe ([#92b2b0a](https://github.com/deltabox-studio/toolchain/commit/92b2b0a) by [T0chi](https://github.com/T0chi))
+  - Nested configs inherit the ancestor \project\ minus its identity keys (ame\/\scope\/\description\/ype\), with \project.inherit: false\ to opt out. Discovery no longer follows symlinks/junctions (a self-link would loop), and \DBX_GITIGNORE_BLOCK\ now covers a nested project's \.dbx/\ while still tracking its manifest.
+#### Shared
+- Add ignore resolution, project helpers and config schema updates ([#144b2f0](https://github.com/deltabox-studio/toolchain/commit/144b2f0) by [T0chi](https://github.com/T0chi))
+  - Add symlink-safe gitignore collection (\collectGitignorePatterns\) and esolveIgnorePatterns\ for the glob-based consumers, \projectFromPackageJson\/\projectToPackageJson\, and the \ToolchainCommandContext.syncTasks\ field. Regenerate \config.schema.json\ and the docs config reference.
+### Bug fixes
+#### Vscode
+- Resolve the bundled CLI and gate commands on availability ([#5220ed3](https://github.com/deltabox-studio/toolchain/commit/5220ed3) by [T0chi](https://github.com/T0chi))
+  - Capture the running extension's path and version at activation instead of
+    hardcoding the id (`deltabox.toolchain` is stale: the id is
+    `<publisher>.<name>`), so `bundledCliEntry()`/`pinnedToolchainSpec()` find the
+    shipped `dbx.cjs` and Providers/Templates/scaffolding work without a
+    project-local install. Disable the sync commands (`deltabox.canSync`) and the
+    Vite+ commands (`deltabox.hasVite`) via context keys + command `enablement` and
+    the Home buttons when there is nothing to sync / the provider is unavailable.
+    Exclude `dbx.config.ts` and `.dbx/**` from the VSIX.
+### Documentation
+- Add guides for every config section and the llms output ([#4c231dc](https://github.com/deltabox-studio/toolchain/commit/4c231dc) by [T0chi](https://github.com/T0chi))
+  - Add per-section guides (project, biome, vite, watch, logger, tsconfig), refresh
+    the CLI/config/monorepo/VS Code/api pages and the sidebar, and wire
+    `vitepress-plugin-llms` with `apps/docs/llms.md` plus the script that copies the
+    generated `llms.txt`/`llms-full.txt` to the repo root.
+### Build system
+- Make the published package installable ([#b2597ee](https://github.com/deltabox-studio/toolchain/commit/b2597ee) by [T0chi](https://github.com/T0chi))
+  - npm runs a dependency's `postinstall` on install, so the repo-only
+    `husky && node scripts/bootstrap.mjs` broke every consumer (and global) install
+    with `'husky' is not recognized`. Move the logic into `scripts/bootstrap.mjs`,
+    publish it, and guard every checkout-only step: husky runs only when `.husky`
+    exists and the dist build only when `packages/` exists. A consumer install is
+    now a clean no-op.
+### CI
+- Aggregate release notes and refresh the generated workflows ([#9426a40](https://github.com/deltabox-studio/toolchain/commit/9426a40) by [T0chi](https://github.com/T0chi))
+  - The release workflow now extracts every changelog entry since the last tag, and
+    the generated `ci.yml`/`release.yml` are regenerated from `dbx.config.ts`.
+    Includes the hand-written `release-vscode.yml` pipeline.
+#### Vscode
+- Fix the release-vscode Azure Pipelines trigger ([#b59964c](https://github.com/deltabox-studio/toolchain/commit/b59964c) by [T0chi](https://github.com/T0chi))
+  - `pr` is a top-level pipeline keyword, not a child of `trigger` (whose full
+    syntax only accepts `batch`, `branches`, `paths` and `tags`), so `trigger.pr`
+    was reported as an unexpected property. Move `pr: none` to the top level and
+    trigger on `v*` tags through `tags` (with `branches: exclude: ['*']` for a
+    tag-only trigger) instead of the invalid `branches.include: refs/tags/v*`.
+### Chores
+- Self-host nested dbx configs across the workspaces ([#003cb9f](https://github.com/deltabox-studio/toolchain/commit/003cb9f) by [T0chi](https://github.com/T0chi))
+  - Every workspace now has its own `dbx.config.ts` (holding its Vite Task
+    definitions) and a generated `vite.config.ts` shim, plus its own tracked
+    manifest. The root gains a `@deltabox/toolchain` `portal:.` self-link so the
+    shims resolve `@deltabox/toolchain/vite`, and `.gitignore` keeps nested
+    manifests while ignoring the rest. The root `tsconfig.monorepo.json` is renamed
+    to `tsconfig.workspaces.json`.
+#### Deps
+- Refresh the lockfile ([#420c805](https://github.com/deltabox-studio/toolchain/commit/420c805) by [T0chi](https://github.com/T0chi))
+  - Covers `vitepress-plugin-llms` (docs), `@clack/prompts`/`glob`/core (migrate)
+    and the root `@deltabox/toolchain` `portal:.` self-link.
+
+### Package changes
+#### Added
+- `@deltabox/toolchain` `portal:.`
+- `vitepress-plugin-llms` `^1.14.0`
+
+<!-- release:end -->
+
+
+## 1.7.8 (October 2026)
 
 ### Bug fixes
 #### Vscode
 - Reverted VS Code extension package name to `toolchain-vscode` due to `toolchain` ([#5d0d38b](https://github.com/deltabox-studio/toolchain/commit/5d0d38b) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.7.7 (October 2026)
 
