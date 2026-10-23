@@ -1,8 +1,16 @@
 # Changelog
 
-## 1.9.1 (October 2026)
+## 1.9.2 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+- Added `llms` entry to the sidebar ([#098cc7e](https://github.com/deltabox-studio/toolchain/commit/098cc7e) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.9.1 (October 2026)
 
 ### CI
 #### Vscode
@@ -12,9 +20,6 @@
     "No resource were found in the environment ... ResourceType Undefined". Use the
     string form `environment: 'release'`, which records the deployment against the
     resource-less environment and still applies its approvals/checks.
-
-<!-- release:end -->
-
 
 ## 1.9.0 (October 2026)
 
