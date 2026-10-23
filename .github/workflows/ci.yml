@@ -38,7 +38,7 @@ jobs:
           set -euo pipefail
           base="${{ github.event.pull_request.base.sha || github.event.before }}"
           head="${{ github.event.pull_request.head.sha || github.event.after }}"
-          yarn commitlint --from "$base" --to "$head"
+          yarn commitlint --from "$base" --to "$head" --config commitlint.config.mjs
       - name: Verify generated files are in sync
         run: yarn dbx sync --check
       - name: Build
