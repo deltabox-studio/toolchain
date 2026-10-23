@@ -16,6 +16,9 @@
             "@deltabox/toolchain-core": ["./packages/core/src/index.ts"],
             "@deltabox/toolchain-core/*": ["./packages/core/src/*"],
 
+            "@deltabox/toolchain-migrate": ["./packages/migrate/src/index.ts"],
+            "@deltabox/toolchain-migrate/*": ["./packages/migrate/src/*"],
+
             "@deltabox/toolchain-changelog": ["./packages/changelog/src/index.ts"],
             "@deltabox/toolchain-changelog/*": ["./packages/changelog/src/*"],
 
@@ -29,17 +32,26 @@
             "@deltabox/toolchain-biome/*": ["./packages/biome/src/*"],
 
             "@deltabox/toolchain-project": ["./packages/project/src/index.ts"],
-            "@deltabox/toolchain-project/*": ["./packages/project/src/*"]
+            "@deltabox/toolchain-project/*": ["./packages/project/src/*"],
+
+            "@deltabox/toolchain-template": ["./packages/template/src/index.ts"],
+            "@deltabox/toolchain-template/*": ["./packages/template/src/*"],
+
+            "@deltabox/toolchain-vite": ["./packages/vite/src/index.ts"],
+            "@deltabox/toolchain-vite/*": ["./packages/vite/src/*"]
         }
     },
     "references": [
         { "path": "./packages/shared/tsconfig.json" },
         { "path": "./packages/config/tsconfig.json" },
         { "path": "./packages/core/tsconfig.json" },
+        { "path": "./packages/migrate/tsconfig.json" },
         { "path": "./packages/changelog/tsconfig.json" },
         { "path": "./packages/tsconfig/tsconfig.json" },
         { "path": "./packages/tsdown/tsconfig.json" },
         { "path": "./packages/biome/tsconfig.json" },
-        { "path": "./packages/project/tsconfig.json" }
+        { "path": "./packages/project/tsconfig.json" },
+        { "path": "./packages/template/tsconfig.json" },
+        { "path": "./packages/vite/tsconfig.json" }
     ]
 }

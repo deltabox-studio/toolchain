@@ -3,41 +3,72 @@
     "compilerOptions": {
         "composite": false,
         "paths": {
-            "@deltabox/toolchain": ["./src/index.ts"],
-            "@deltabox/toolchain/*": ["./src/*"],
-
-            "@deltabox/toolchain-shared": ["./packages/shared/src/index.ts"],
-            "@deltabox/toolchain-shared/*": ["./packages/shared/src/*"],
-
-            "@deltabox/toolchain-config": ["./packages/config/src/index.ts"],
-            "@deltabox/toolchain-config/*": ["./packages/config/src/*"],
-
-            "@deltabox/toolchain-core": ["./packages/core/src/index.ts"],
-            "@deltabox/toolchain-core/*": ["./packages/core/src/*"],
-
-            "@deltabox/toolchain-migrate": ["./packages/migrate/src/index.ts"],
-            "@deltabox/toolchain-migrate/*": ["./packages/migrate/src/*"],
-
-            "@deltabox/toolchain-changelog": ["./packages/changelog/src/index.ts"],
-            "@deltabox/toolchain-changelog/*": ["./packages/changelog/src/*"],
-
-            "@deltabox/toolchain-tsconfig": ["./packages/tsconfig/src/index.ts"],
-            "@deltabox/toolchain-tsconfig/*": ["./packages/tsconfig/src/*"],
-
-            "@deltabox/toolchain-tsdown": ["./packages/tsdown/src/index.ts"],
-            "@deltabox/toolchain-tsdown/*": ["./packages/tsdown/src/*"],
-
-            "@deltabox/toolchain-biome": ["./packages/biome/src/index.ts"],
-            "@deltabox/toolchain-biome/*": ["./packages/biome/src/*"],
-
-            "@deltabox/toolchain-project": ["./packages/project/src/index.ts"],
-            "@deltabox/toolchain-project/*": ["./packages/project/src/*"],
-
-            "@deltabox/toolchain-template": ["./packages/template/src/index.ts"],
-            "@deltabox/toolchain-template/*": ["./packages/template/src/*"],
-
-            "@deltabox/toolchain-vite": ["./packages/vite/src/index.ts"],
-            "@deltabox/toolchain-vite/*": ["./packages/vite/src/*"]
+            "@deltabox/toolchain-shared": [
+                "./packages/shared/src/index.ts"
+            ],
+            "@deltabox/toolchain-shared/*": [
+                "./packages/shared/src/*"
+            ],
+            "@deltabox/toolchain-config": [
+                "./packages/config/src/index.ts"
+            ],
+            "@deltabox/toolchain-config/*": [
+                "./packages/config/src/*"
+            ],
+            "@deltabox/toolchain-core": [
+                "./packages/core/src/index.ts"
+            ],
+            "@deltabox/toolchain-core/*": [
+                "./packages/core/src/*"
+            ],
+            "@deltabox/toolchain-migrate": [
+                "./packages/migrate/src/index.ts"
+            ],
+            "@deltabox/toolchain-migrate/*": [
+                "./packages/migrate/src/*"
+            ],
+            "@deltabox/toolchain-changelog": [
+                "./packages/changelog/src/index.ts"
+            ],
+            "@deltabox/toolchain-changelog/*": [
+                "./packages/changelog/src/*"
+            ],
+            "@deltabox/toolchain-tsconfig": [
+                "./packages/tsconfig/src/index.ts"
+            ],
+            "@deltabox/toolchain-tsconfig/*": [
+                "./packages/tsconfig/src/*"
+            ],
+            "@deltabox/toolchain-tsdown": [
+                "./packages/tsdown/src/index.ts"
+            ],
+            "@deltabox/toolchain-tsdown/*": [
+                "./packages/tsdown/src/*"
+            ],
+            "@deltabox/toolchain-biome": [
+                "./packages/biome/src/index.ts"
+            ],
+            "@deltabox/toolchain-biome/*": [
+                "./packages/biome/src/*"
+            ],
+            "@deltabox/toolchain-project": [
+                "./packages/project/src/index.ts"
+            ],
+            "@deltabox/toolchain-project/*": [
+                "./packages/project/src/*"
+            ],
+            "@deltabox/toolchain-template": [
+                "./packages/template/src/index.ts"
+            ],
+            "@deltabox/toolchain-template/*": [
+                "./packages/template/src/*"
+            ],
+            "@deltabox/toolchain-vite": [
+                "./packages/vite/src/index.ts"
+            ],
+            "@deltabox/toolchain-vite/*": [
+                "./packages/vite/src/*"
+            ]
         }
     }
 }

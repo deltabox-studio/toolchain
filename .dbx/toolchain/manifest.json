@@ -9,7 +9,21 @@
         ".vscode/extensions.json",
         ".vscode/settings.json",
         "commitlint.config.mjs",
+        "package.json",
+        "packages/biome/tsconfig.json",
+        "packages/changelog/tsconfig.json",
+        "packages/config/tsconfig.json",
+        "packages/core/tsconfig.json",
+        "packages/migrate/tsconfig.json",
+        "packages/project/tsconfig.json",
+        "packages/shared/tsconfig.json",
+        "packages/template/tsconfig.json",
+        "packages/tsconfig/tsconfig.json",
+        "packages/tsdown/tsconfig.json",
+        "packages/vite/tsconfig.json",
+        "packages/vscode/tsconfig.json",
+        "tsconfig.json",
         "vite.config.ts"
     ],
-    "syncedAt": "2026-10-22T10:45:44.325Z"
+    "syncedAt": "2026-10-23T17:35:41.269Z"
 }

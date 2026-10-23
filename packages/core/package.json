@@ -29,5 +29,7 @@
     "exports": {
         ".": "./dist/index.js",
         "./package.json": "./package.json"
-    }
+    },
+    "homepage": "https://toolchain.deltabox.studio",
+    "packageManager": "yarn@4.17.1"
 }

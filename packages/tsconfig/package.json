@@ -32,5 +32,7 @@
         "./cli/generate": "./dist/cli/generate/index.js",
         "./package.json": "./package.json"
     },
-    "bin": "./dist/cli/generate/index.js"
+    "bin": "./dist/cli/generate/index.js",
+    "homepage": "https://toolchain.deltabox.studio",
+    "packageManager": "yarn@4.17.1"
 }
