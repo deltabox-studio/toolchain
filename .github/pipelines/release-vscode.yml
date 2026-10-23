@@ -134,9 +134,7 @@ stages:
   - deployment: Deploy
     pool:
       vmImage: 'ubuntu-latest'
-    environment:
-      name: 'release'
-      resourceType: none
+    environment: 'release'
     strategy:
       runOnce:
         deploy:
