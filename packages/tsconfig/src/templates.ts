@@ -64,7 +64,7 @@ export interface MonorepoTsconfigOptions {
     composite?: boolean;
 }
 
-/** Build a project-references + path-aliases `tsconfig.monorepo.json` object. */
+/** Build a project-references + path-aliases `tsconfig.workspaces.json` object. */
 export function buildMonorepoTsconfig(options: MonorepoTsconfigOptions): Record<string, unknown> {
     const paths: Record<string, string[]> = {};
     const references: { path: string }[] = [];

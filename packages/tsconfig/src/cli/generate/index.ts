@@ -8,14 +8,14 @@ import { parseArgs } from 'node:util';
 import { Glob } from 'glob';
 import type { TsConfigJson } from 'type-fest';
 
-import { logger } from '@deltabox/toolchain-shared';
+import { logger, resolveIgnorePatterns } from '@deltabox/toolchain-shared';
 
 import { type GeneratedTsconfigResult, generateTsconfig } from './utils.js';
 
 export interface GenerateTsconfigsOptions {
     /** The repo root to scan (default `process.cwd()`). */
     cwd?: string;
-    /** Inject path aliases from the monorepo config (default true). */
+    /** Inject path aliases from the workspaces config (default true). */
     aliases?: boolean;
     /** Emit `composite: true` + project references (default false). */
     composite?: boolean;
@@ -23,11 +23,17 @@ export interface GenerateTsconfigsOptions {
     refs?: boolean;
     /** JSON indentation (default 4). */
     indent?: number;
-    /** The glob for the workspace `tsconfig.default.json` files. */
-    glob?: string;
-    /** The glob for "override" (app) workspaces. */
-    appGlob?: string;
-    /** The monorepo tsconfig file name (default `tsconfig.monorepo.json`). */
+    /** The glob(s) for the workspace default tsconfig files. */
+    glob?: string | string[];
+    /** Extra glob(s) to exclude from `glob` (on top of the common ignored paths). */
+    exclude?: string | string[];
+    /** Respect `.gitignore` files (default true). */
+    gitignore?: boolean;
+    /** The workspace default tsconfig file name (default `tsconfig.default.json`). */
+    defaultFile?: string;
+    /** The workspace build tsconfig file name (default `tsconfig.build.json`). */
+    buildFile?: string;
+    /** The workspaces tsconfig file name (default `tsconfig.workspaces.json`). */
     monorepoTsconfigFilename?: string;
     /** Log progress (default true). */
     log?: boolean;
@@ -36,9 +42,10 @@ export interface GenerateTsconfigsOptions {
 }
 
 /**
- * Extend every workspace `tsconfig.default.json` into a generated
- * `tsconfig.json` (and rewrite its `tsconfig.build.json`), optionally wiring
- * path aliases + project references from `tsconfig.monorepo.json`.
+ * Extend every workspace default tsconfig (`tsconfig.default.json`) into a
+ * generated `tsconfig.json`, optionally wiring path aliases + project references
+ * from the workspaces tsconfig (`tsconfig.workspaces.json`). Both the workspaces
+ * tsconfig and each workspace's `tsconfig.build.json` are optional.
  */
 export function generateTsconfigs(
     options: GenerateTsconfigsOptions = {}
@@ -48,12 +55,14 @@ export function generateTsconfigs(
         composite: enableComposite = false,
         refs: enableReferences = false,
         indent = 4,
-        glob = '**/tsconfig.default.json',
-        appGlob = 'apps/**/tsconfig.default.json',
-        monorepoTsconfigFilename = 'tsconfig.monorepo.json',
+        gitignore = true,
+        defaultFile = 'tsconfig.default.json',
+        buildFile = 'tsconfig.build.json',
+        monorepoTsconfigFilename = 'tsconfig.workspaces.json',
         log = true,
         write = true,
     } = options;
+    const glob = options.glob ?? `**/${defaultFile}`;
     const cwd = options.cwd ?? process.cwd();
     const say = (message: string) => {
         if (log) logger.info(message);
@@ -65,19 +74,36 @@ export function generateTsconfigs(
 
     const monorepoTsconfigPath = path.resolve(cwd, monorepoTsconfigFilename);
     const monorepoTsconfigPathRelative = path.relative(cwd, monorepoTsconfigPath);
+    const hasWorkspacesTsconfig = fs.existsSync(monorepoTsconfigPath);
 
-    const tsconfigPaths = new Glob(glob, { cwd, withFileTypes: true }).walkSync();
-    const overrides = new Glob(appGlob, { cwd, withFileTypes: true })
-        .walkSync()
-        .map(x => x.fullpath());
+    // Support negation patterns (`!...`) in the glob list, eg.
+    // `['**/tsconfig.default.json', '!**/src/templates/**']`, plus the
+    // `exclude` globs, the common ignored paths and (optionally) `.gitignore`.
+    const patterns = Array.isArray(glob) ? glob : [glob];
+    const include = patterns.filter(pattern => !pattern.startsWith('!'));
+    const ignore = [
+        ...patterns.filter(pattern => pattern.startsWith('!')).map(pattern => pattern.slice(1)),
+        ...resolveIgnorePatterns(cwd, {
+            ...(options.exclude !== undefined ? { exclude: options.exclude } : {}),
+            gitignore,
+        }),
+    ];
+    const tsconfigPaths = new Glob(include.length ? include : [`**/${defaultFile}`], {
+        cwd,
+        withFileTypes: true,
+        ignore,
+    }).walkSync();
 
-    say(`Extending ${tsconfigPaths.length} tsconfigs with ${monorepoTsconfigPathRelative}...`);
+    say(
+        hasWorkspacesTsconfig
+            ? `Extending ${tsconfigPaths.length} tsconfigs with ${monorepoTsconfigPathRelative}...`
+            : `Extending ${tsconfigPaths.length} tsconfigs (no ${monorepoTsconfigPathRelative})...`
+    );
 
     const results: GeneratedTsconfigResult[] = [];
     for (const tsconfigPath of tsconfigPaths) {
         const fullPath = tsconfigPath.fullpath();
         const dirname = path.dirname(fullPath);
-        const isOverride = enableReferences && overrides.some(x => x === fullPath);
 
         results.push(
             generateTsconfig({
@@ -85,11 +111,11 @@ export function generateTsconfigs(
                 dirname,
                 tsconfigPath: fullPath,
                 monorepoTsconfigPath,
-                tsconfigBuildPath: path.resolve(dirname, 'tsconfig.build.json'),
+                tsconfigBuildPath: path.resolve(dirname, buildFile),
                 targetTsconfigPath: path.resolve(dirname, 'tsconfig.json'),
-                targetTsconfigBuildPath: path.resolve(dirname, 'tsconfig.build.json'),
+                targetTsconfigBuildPath: path.resolve(dirname, buildFile),
                 indent,
-                disableComposite: !enableComposite || isOverride,
+                disableComposite: !enableComposite,
                 ignoreAliases: !enableAliases,
                 ignoreReferences: !enableReferences,
                 write,
@@ -101,11 +127,8 @@ export function generateTsconfigs(
 
     say('Checking for additional tsconfig changes...');
     for (const result of results) {
-        const { dirname, dirnameRelative, tsconfigPath, targetTsconfigPath, config } = result;
+        const { dirname, dirnameRelative, targetTsconfigPath, config } = result;
         say(`  - ${dirnameRelative}`);
-
-        const isOverride = overrides.some(x => x === tsconfigPath);
-        if (isOverride) continue;
 
         if (config.references?.length) {
             config.references = config.references.filter(ref => {
@@ -141,6 +164,12 @@ export function runTsconfigCli(argv: string[] = process.argv.slice(2)): void {
             composite: { type: 'boolean', short: 'c', default: false },
             refs: { type: 'boolean', short: 'r', default: false },
             indent: { type: 'string', short: 'i', default: '4' },
+            glob: { type: 'string', multiple: true },
+            exclude: { type: 'string', multiple: true },
+            gitignore: { type: 'boolean', default: true },
+            'default-file': { type: 'string' },
+            'build-file': { type: 'string' },
+            'root-file': { type: 'string' },
         },
     });
 
@@ -149,6 +178,12 @@ export function runTsconfigCli(argv: string[] = process.argv.slice(2)): void {
         composite: options.composite,
         refs: options.refs,
         indent: Number.parseInt(options.indent, 10),
+        ...(options.glob ? { glob: options.glob } : {}),
+        ...(options.exclude ? { exclude: options.exclude } : {}),
+        gitignore: options.gitignore,
+        ...(options['default-file'] ? { defaultFile: options['default-file'] } : {}),
+        ...(options['build-file'] ? { buildFile: options['build-file'] } : {}),
+        ...(options['root-file'] ? { monorepoTsconfigFilename: options['root-file'] } : {}),
     });
 }
 
