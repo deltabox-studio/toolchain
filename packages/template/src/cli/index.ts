@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { cancel, isCancel, select, text } from '@clack/prompts';
+import { cancel, confirm, isCancel, select, text } from '@clack/prompts';
 
 import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
@@ -33,6 +33,7 @@ function toJson(template: Template): Record<string, unknown> {
         online: Boolean(template.online),
         ...(template.tags ? { tags: template.tags } : {}),
         ...(template.variables ? { variables: template.variables } : {}),
+        ...(template.actions ? { actions: template.actions } : {}),
     };
 }
 
@@ -291,6 +292,10 @@ export function templateCommands(): ToolchainCommand[] {
                     flags: '--var <pair...>',
                     description: 'Template variables as key=value (repeatable).',
                 },
+                {
+                    flags: '--action <id...>',
+                    description: 'Action id to run after scaffolding (repeatable).',
+                },
                 { flags: '--online', description: 'Resolve online templates too.' },
                 { flags: '--json', description: 'Print the result as JSON.' },
             ],
@@ -370,6 +375,7 @@ export function templateCommands(): ToolchainCommand[] {
                     ...(scope ? { scope } : {}),
                 };
                 const variables = parseVars(opts.var as string[] | undefined);
+                const actions = new Set<string>((opts.action as string[] | undefined) ?? []);
 
                 // Prompt for the template's own inputs (everything except the
                 // standard `name`/`scope`, which are handled above, and any value
@@ -406,9 +412,25 @@ export function templateCommands(): ToolchainCommand[] {
                             variables[variable.name] = value || (variable.default ?? '');
                         }
                     }
+
+                    // Opt-in post-scaffold actions (eg. Install dependencies?).
+                    for (const action of template.actions ?? []) {
+                        if (actions.has(action.id)) continue;
+                        const answer = await confirm({
+                            message: action.prompt ?? `Run ${action.id}?`,
+                            initialValue: action.default ?? false,
+                        });
+                        if (isCancel(answer)) return abortPrompt();
+                        if (answer) actions.add(action.id);
+                    }
                 }
 
-                const result = await scaffoldTemplate(template, { cwd: out, tokens, variables });
+                const result = await scaffoldTemplate(template, {
+                    cwd: out,
+                    tokens,
+                    variables,
+                    actions: [...actions],
+                });
 
                 if (opts.json) {
                     logger.raw(JSON.stringify({ template: template.id, out, ...result }, null, 4));

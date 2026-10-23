@@ -241,6 +241,15 @@ export interface ToolchainTemplatesConfig {
     sources?: Array<ToolchainTemplateSource>;
 }
 
+export interface ToolchainCatalogsConfig {
+    /** Master switch (enabled when the section is defined). */
+    enabled?: boolean;
+    /** The default catalog: package name -> version range. */
+    packages?: Record<string, string>;
+    /** Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages. */
+    named?: Record<string, Record<string, string>>;
+}
+
 export type ToolchainViteConfig = ViteUserConfig & {
     /** Write the managed `vite.config.ts` (default true). */
     config?: boolean;
@@ -270,6 +279,8 @@ export interface ToolchainConfigSections {
     tsconfig?: boolean | ToolchainTsconfigConfig;
     /** Template sources / scaffolding. */
     templates?: boolean | ToolchainTemplatesConfig;
+    /** Package catalogs written to the package manager catalog file (`catalog:`). */
+    catalogs?: boolean | ToolchainCatalogsConfig;
     /** The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it. */
     vite?: boolean | ToolchainViteConfig;
     /** Watch behaviour for `dbx watch`. */

@@ -412,6 +412,28 @@ export const templatesConfigSchema = z
     .meta({ id: 'ToolchainTemplatesConfig' });
 
 /**
+ * Package catalogs: a shared `package -> version range` map written to the
+ * package manager's catalog file (`.yarnrc.yml` for Yarn, `pnpm-workspace.yaml`
+ * for pnpm) so dependencies can be declared with `catalog:`.
+ */
+export const catalogsConfigSchema = z
+    .object({
+        enabled: z
+            .boolean()
+            .describe('Master switch (enabled when the section is defined).')
+            .optional(),
+        packages: z
+            .record(z.string(), z.string())
+            .describe('The default catalog: package name -> version range.')
+            .optional(),
+        named: z
+            .record(z.string(), z.record(z.string(), z.string()))
+            .describe('Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages.')
+            .optional(),
+    })
+    .meta({ id: 'ToolchainCatalogsConfig' });
+
+/**
  * Vite+ configuration: the raw `vite.config.ts` object, held under
  * `toolchain.vite`, plus the single toolchain opt-out `config`.
  *
@@ -455,6 +477,9 @@ export const toolchainConfigSchema = z
             .optional(),
         templates: section(templatesConfigSchema)
             .describe('Template sources / scaffolding.')
+            .optional(),
+        catalogs: section(catalogsConfigSchema)
+            .describe('Package catalogs written to the package manager catalog file (`catalog:`).')
             .optional(),
         vite: section(viteConfigSchema)
             .describe('The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.')
@@ -502,6 +527,7 @@ export const CONFIG_TYPE_SCHEMAS = {
     ToolchainTemplateKind: templateKindSchema,
     ToolchainTemplateSource: templateSourceSchema,
     ToolchainTemplatesConfig: templatesConfigSchema,
+    ToolchainCatalogsConfig: catalogsConfigSchema,
     ToolchainViteConfig: viteConfigSchema,
     ToolchainLoggerConfig: loggerConfigSchema,
     ToolchainProvidersConfig: providersConfigSchema,
@@ -516,6 +542,7 @@ export const CONFIG_SECTION_SCHEMAS = {
     biome: biomeConfigSchema,
     tsconfig: tsconfigConfigSchema,
     templates: templatesConfigSchema,
+    catalogs: catalogsConfigSchema,
     vite: viteConfigSchema,
     watch: watchConfigSchema,
     logger: loggerConfigSchema,
@@ -531,6 +558,7 @@ export const CONFIG_SECTION_DESCRIPTIONS: Record<keyof typeof CONFIG_SECTION_SCH
     biome: 'Biome config generation (for consumers that still want a `biome.json`).',
     tsconfig: 'Workspace tsconfig generation (path aliases + project references).',
     templates: 'Template sources / scaffolding.',
+    catalogs: 'Package catalogs written to the package manager catalog file (`catalog:`).',
     vite: 'The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.',
     watch: 'Watch behaviour for `dbx watch`.',
     logger: 'Logging level, colours and prefix for toolchain output.',

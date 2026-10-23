@@ -121,6 +121,44 @@ dbx project:init:workspace --name web --root . --dir packages/web
 The scaffolded `dbx.config.ts` spells the resolved `project` fields out, so a
 generated project is self-describing from day one.
 
+Pass `--package-manager <pm>` (`yarn` default, or `pnpm` / `npm` / `bun`) to
+choose the manager the scaffold targets.
+
+## Package manager and catalogs
+
+The scaffold and `dbx sync` write a **catalog** (`package -> version range`) into
+the file the package manager reads it from, so dependencies can be declared with
+`catalog:`:
+
+| Manager | Catalog file          | Notes                                        |
+| ------- | --------------------- | -------------------------------------------- |
+| `yarn`  | `.yarnrc.yml`         | `catalog:` / `catalogs:` (default + named).  |
+| `pnpm`  | `pnpm-workspace.yaml` | `catalog:` / `catalogs:`.                    |
+| `bun`   | `package.json`        | `workspaces.catalog`.                        |
+| `npm`   | —                     | No catalog support; dependencies are pinned. |
+
+Scaffolding resolves the manager from the `packageManager` input and writes the
+catalog of the packages the project depends on. To keep it in sync with
+`dbx sync`, add a `catalogs` section to `dbx.config.*`:
+
+```ts
+export default defineConfig({
+    toolchain: {
+        project: { packageManager: 'yarn' },
+        catalogs: {
+            packages: { react: '^19.0.0', lodash: '^4.17.21' },
+            named: { legacy: { react: '^18.0.0' } },
+        },
+    },
+});
+```
+
+`dbx sync` writes (and keeps in sync) `catalog:` / `catalogs:` in `.yarnrc.yml`
+(Yarn) or `pnpm-workspace.yaml` (pnpm). A catalog file is only written when it is
+absent or already toolchain-managed (it carries a marker comment); a hand-written
+one is left untouched. Bun catalogs live in `package.json` and npm has no catalog
+support — both emit a warning.
+
 ## Programmatic API
 
 ```ts

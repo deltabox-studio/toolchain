@@ -874,6 +874,21 @@ export function activate(context: vscode.ExtensionContext): void {
         if (scope) baseArgs.push('--scope', scope);
         if (varArgs.length > 0) baseArgs.push('--var', ...varArgs);
 
+        // Opt-in post-scaffold actions (eg. Install dependencies?).
+        const actionArgs: string[] = [];
+        for (const action of template.actions ?? []) {
+            const yesFirst = action.default === true;
+            const picked = await vscode.window.showQuickPick(
+                yesFirst ? ['Yes', 'No'] : ['No', 'Yes'],
+                {
+                    placeHolder: action.prompt ?? `Run ${action.id}?`,
+                }
+            );
+            if (picked === undefined) return;
+            if (picked === 'Yes') actionArgs.push(action.id);
+        }
+        if (actionArgs.length > 0) baseArgs.push('--action', ...actionArgs);
+
         // Online/Vite+ templates run `vp create`, which is interactive: use a
         // terminal. Builtin/local templates are non-interactive: run in the
         // output channel.
@@ -954,6 +969,10 @@ export function activate(context: vscode.ExtensionContext): void {
             prompt: 'npm scope (optional)',
             placeHolder: '@acme',
         });
+        const packageManager =
+            (await vscode.window.showQuickPick(['yarn', 'pnpm', 'npm', 'bun'], {
+                placeHolder: 'Package manager',
+            })) ?? 'yarn';
         const includeConfig = await vscode.window.showQuickPick(
             [
                 { label: 'Yes', value: 'yes' },
@@ -984,6 +1003,7 @@ export function activate(context: vscode.ExtensionContext): void {
             const args = [kind.command, '--name', name, '--root', root, '--dir', dir];
             if (scope) args.push('--scope', scope);
             if (includeConfig?.value === 'no') args.push('--no-config');
+            args.push('--package-manager', packageManager);
 
             const code = await runCli(root, args);
             await refreshGraph();
@@ -1006,6 +1026,7 @@ export function activate(context: vscode.ExtensionContext): void {
         if (scope) args.push('--scope', scope);
         if (includeConfig?.value === 'no') args.push('--no-config');
         if ((kind as { example?: boolean }).example) args.push('--example');
+        args.push('--package-manager', packageManager);
         args.push('--out', target);
 
         const code = await runCli(target, args);

@@ -255,6 +255,7 @@ console.log(toolchainProviders().map(p => p.id));
 | `generateProjectConfigs(options)`                                                            | Generate `dbx.config.ts` for projects missing one. |
 | `renderToolchainConfig(ctx)` / `renderWorkspaceTsconfig(composite?)`                         | Render the tooling config / a workspace tsconfig.  |
 | `renderGitignore()`                                                                          | Render a generic `.gitignore`.                     |
+| `catalogsSyncTask()` / `renderYarnrc(catalog)` / `renderPnpmWorkspace(catalog, packages?)`   | The catalogs sync task + catalog file renderers.   |
 | `writeGeneratedFiles(files, cwd?)`                                                           | Write a `GeneratedFile[]`.                         |
 | `projectCommands()`                                                                          | The `project:*` commands.                          |
 

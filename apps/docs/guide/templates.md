@@ -57,8 +57,10 @@ prompts for the template, name and scope instead (Ctrl-C cancels).
 The offline builtins (`project`, `application`, `folder`, `monorepo`,
 `monorepo-example`, `workspace`) scaffold a generic, current project: a
 `dbx.config.ts` with only `project` metadata, a `package.json` that depends on
-`@deltabox/toolchain`, and no Turbo (Vite Task replaces it). The `vite-plus*`
-builtins delegate to `vp create` and need network access.
+`@deltabox/toolchain`, and no Turbo (Vite Task replaces it). They ask for a
+**package manager** (default `yarn`) and write that manager's catalog file (see
+[Catalogs](/guide/project#package-manager-and-catalogs)). The `vite-plus*` builtins
+delegate to `vp create` and need network access.
 
 ## Inputs (variables)
 
@@ -97,8 +99,39 @@ The **same input pipeline** runs everywhere:
 - **VS Code** — **Create from template…** prompts for each input (a quick pick
   when `options` is set).
 
-The builtin templates use the same pipeline (they declare `name`, `scope` and
-`includeConfig` inputs).
+The builtin templates use the same pipeline (they declare `name`, `scope`,
+`packageManager` and `includeConfig` inputs).
+
+## Actions
+
+After the files are written, a template can run **actions** — extra steps such as
+installing dependencies. Declare them in `template.json`:
+
+```json
+{
+    "actions": [
+        { "id": "install", "prompt": "Install dependencies?", "builtin": "install" },
+        { "id": "setup", "prompt": "Run the setup script?", "module": "action.mjs" },
+        { "id": "post", "command": "node scripts/post-scaffold.mjs" }
+    ]
+}
+```
+
+- `id` — the action id (also the `--action <id>` key).
+- `prompt` — the prompt text (defaults to `Run <id>?`).
+- `default` — whether it runs by default (**default false** — opt-in).
+- `builtin` — a built-in action. `install` runs `<packageManager> install` in the
+  output directory.
+- `module` — a JS module (relative to the template directory) whose default
+  export is `async (ctx) => void`. The module is **not** copied to the output.
+  The context is `{ cwd, templateDir, tokens, variables, packageManager, log }`.
+- `command` — a shell command run in the output directory.
+
+Actions run through the same pipeline everywhere: the CLI prompts (or takes
+`--action <id>`, repeatable), the extension prompts, and the programmatic API
+passes `actions: string[]` to `scaffoldTemplate`. The builtin templates declare
+an opt-in **Install dependencies?** action (`builtin: 'install'`, off by
+default).
 
 ## Local templates
 

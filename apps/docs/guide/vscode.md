@@ -62,8 +62,9 @@ The **Providers** and **Templates** views read `dbx providers --json` and `dbx t
 
 **Remove template source...** runs `template:list --registry` + `template:remove`.
 
-**Create from template…** prompts for the template's inputs (see
-[Templates](/guide/templates#inputs-variables)) before running `dbx create`.
+**Create from template…** prompts for the template's inputs and actions (see
+[Templates](/guide/templates)) before running `dbx create`. Scaffolding also asks
+for a package manager (`yarn` default).
 
 The Home view links to this documentation with **Need help? Go to documentation**.
 

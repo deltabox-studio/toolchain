@@ -40,11 +40,14 @@ Colour is on by default and follows `--no-color` / the [`logger` config](/guide/
 
 | Command                  | Description                                                                     |
 | ------------------------ | ------------------------------------------------------------------------------- |
-| `project:init`           | A single-package TypeScript project.                                            |
+| `project:init`           | A single-package TypeScript project (`--package-manager`).                      |
 | `project:init:monorepo`  | A monorepo root (add `--example` for one example workspace).                    |
 | `project:init:workspace` | A workspace package into an existing monorepo root.                             |
 | `project:config`         | Generate `dbx.config.ts` for projects missing one.                              |
 | `create`                 | Scaffold from a template (`--template`/`--kind`, `--name`, `--scope`, `--out`). |
+
+Templates that declare inputs/actions are prompted for them (`--var key=value`,
+`--action <id>`), see [Templates](/guide/templates).
 
 On an interactive terminal, a bare `dbx create` (no `--template`/`--kind`/`--name`)
 prompts for the template, name and scope with clack; Ctrl-C cancels. See

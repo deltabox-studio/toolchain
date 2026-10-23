@@ -16,9 +16,19 @@ describe('project scaffolding', () => {
         const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
         expect(pkg.name).toBe('@acme/acme');
         expect(pkg.license).toBe('MIT');
-        // No repo-internal `catalog:` protocol; the toolchain is a real dep.
+        // The default manager (yarn) supports catalogs: the catalog file is
+        // written and the deps reference `catalog:`.
+        expect(paths).toContain('.yarnrc.yml');
+        expect(pkg.devDependencies['@deltabox/toolchain']).toBe('catalog:');
+    });
+
+    it('pins dependencies (no catalog) for npm', () => {
+        const files = createRootProjectFiles({ name: 'acme', packageManager: 'npm' });
+        const paths = files.map(f => f.path);
+        const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
         expect(pkg.devDependencies['@deltabox/toolchain']).toMatch(/^\^\d+\.\d+\.\d+/);
-        expect(Object.values(pkg.devDependencies)).not.toContain('catalog:');
+        expect(paths).not.toContain('.yarnrc.yml');
+        expect(paths).not.toContain('pnpm-workspace.yaml');
     });
 
     it('creates monorepo root files with references', () => {

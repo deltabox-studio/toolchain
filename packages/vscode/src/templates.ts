@@ -16,6 +16,15 @@ export interface TemplateVariable {
     required?: boolean;
 }
 
+export interface TemplateAction {
+    id: string;
+    prompt?: string;
+    default?: boolean;
+    builtin?: string;
+    module?: string;
+    command?: string;
+}
+
 export interface Template {
     id: string;
     name: string;
@@ -25,6 +34,7 @@ export interface Template {
     online?: boolean;
     tags?: string[];
     variables?: TemplateVariable[];
+    actions?: TemplateAction[];
 }
 
 /** Load the templates via `dbx template:list --json` (empty on failure). */

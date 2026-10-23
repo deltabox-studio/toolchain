@@ -1,4 +1,4 @@
-import type { Template, TemplateVariable } from './types.js';
+import type { Template, TemplateAction, TemplateVariable } from './types.js';
 
 /** The `name` input every builtin project template prompts for. */
 const NAME_VAR: TemplateVariable = {
@@ -15,6 +15,14 @@ const SCOPE_VAR: TemplateVariable = {
     default: '',
 };
 
+/** The package manager to scaffold for (drives `packageManager` + the catalog). */
+const PACKAGE_MANAGER_VAR: TemplateVariable = {
+    name: 'packageManager',
+    prompt: 'Package manager',
+    default: 'yarn',
+    options: ['yarn', 'pnpm', 'npm', 'bun'],
+};
+
 /** Whether to write a `dbx.config.ts` (a select, to exercise the input pipeline). */
 const CONFIG_VAR: TemplateVariable = {
     name: 'includeConfig',
@@ -24,7 +32,26 @@ const CONFIG_VAR: TemplateVariable = {
 };
 
 /** The shared inputs for the project/workspace builtins. */
-const PROJECT_VARIABLES: TemplateVariable[] = [NAME_VAR, SCOPE_VAR, CONFIG_VAR];
+const PROJECT_VARIABLES: TemplateVariable[] = [
+    NAME_VAR,
+    SCOPE_VAR,
+    PACKAGE_MANAGER_VAR,
+    CONFIG_VAR,
+];
+
+/**
+ * The opt-in **Install dependencies?** step. Off by default (a scaffold never
+ * installs unless asked); it runs `<packageManager> install` in the output dir.
+ */
+const INSTALL_ACTION: TemplateAction = {
+    id: 'install',
+    prompt: 'Install dependencies?',
+    default: false,
+    builtin: 'install',
+};
+
+/** The actions the project/workspace builtins declare. */
+const PROJECT_ACTIONS: TemplateAction[] = [INSTALL_ACTION];
 
 /**
  * The built-in, offline templates. They map onto the local generators in
@@ -43,6 +70,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
         source: { type: 'builtin', locate: 'project' },
         tags: ['typescript', 'library'],
         variables: PROJECT_VARIABLES,
+        actions: PROJECT_ACTIONS,
     },
     {
         id: 'application',
@@ -53,6 +81,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
         source: { type: 'builtin', locate: 'application' },
         tags: ['application', 'app'],
         variables: PROJECT_VARIABLES,
+        actions: PROJECT_ACTIONS,
     },
     {
         id: 'folder',
@@ -73,6 +102,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
         source: { type: 'builtin', locate: 'monorepo' },
         tags: ['monorepo'],
         variables: PROJECT_VARIABLES,
+        actions: PROJECT_ACTIONS,
     },
     {
         id: 'monorepo-example',
@@ -83,6 +113,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
         source: { type: 'builtin', locate: 'monorepo-example' },
         tags: ['monorepo'],
         variables: PROJECT_VARIABLES,
+        actions: PROJECT_ACTIONS,
     },
     {
         id: 'workspace',
@@ -93,6 +124,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
         source: { type: 'builtin', locate: 'workspace' },
         tags: ['monorepo', 'workspace'],
         variables: PROJECT_VARIABLES,
+        actions: PROJECT_ACTIONS,
     },
     {
         id: 'vite-plus',

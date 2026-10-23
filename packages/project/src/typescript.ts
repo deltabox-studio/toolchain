@@ -12,20 +12,63 @@ import {
 } from '@deltabox/toolchain-tsconfig';
 
 import rootPkg from '../../../package.json' with { type: 'json' };
+import { renderPnpmWorkspace, renderYarnrc, supportsCatalogs } from './catalogs.js';
 
 /**
  * The dev dependencies every scaffolded package gets, pinned to the toolchain's
- * own current versions (rather than the repo-internal `catalog:` protocol, which
- * a fresh consumer has no catalog for). `@deltabox/toolchain` is required so the
- * generated `dbx.config.ts` (which imports `defineConfig`) can be loaded.
+ * own current versions. When the chosen package manager supports catalogs
+ * (yarn/pnpm/bun) the generated root also writes the catalog file and the
+ * dependencies reference `catalog:`; otherwise they are pinned inline (so a
+ * fresh consumer never sees a dangling `catalog:`).
  */
-const DEV_DEPENDENCIES = {
+const CATALOG: Record<string, string> = {
     '@biomejs/biome': '^2.5.13',
     '@deltabox/toolchain': `^${rootPkg.version}`,
     tsdown: '^0.23.0',
     typescript: '^6.0.3',
     vitest: '^5.0.0',
-} as const;
+};
+
+/** The catalog a scaffolded root writes into its package-manager file. */
+export const SCAFFOLD_CATALOG = CATALOG;
+
+/** The dev-dependency map for a package manager (catalog refs or pinned). */
+function devDependencies(packageManager: string | undefined): Record<string, string> {
+    if (!supportsCatalogs(packageManager)) return { ...CATALOG };
+    return Object.fromEntries(Object.keys(CATALOG).map(name => [name, 'catalog:']));
+}
+
+/** The package-manager catalog file(s) a scaffolded root should write. */
+function catalogFiles(packageManager: string | undefined, isMonorepo: boolean): GeneratedFile[] {
+    switch (packageManager ?? 'yarn') {
+        case 'yarn':
+            return [{ path: '.yarnrc.yml', content: renderYarnrc({ packages: CATALOG }) }];
+        case 'pnpm':
+            return [
+                {
+                    path: 'pnpm-workspace.yaml',
+                    content: renderPnpmWorkspace(
+                        { packages: CATALOG },
+                        isMonorepo ? ['packages/*'] : undefined
+                    ),
+                },
+            ];
+        default:
+            // npm has no catalogs; Bun's live in `package.json` (below).
+            return [];
+    }
+}
+
+/** The `workspaces` field for Bun (an object carrying the catalog), else array. */
+function workspacesField(
+    packageManager: string | undefined,
+    globs: string[]
+): string[] | Record<string, unknown> {
+    if ((packageManager ?? 'yarn') === 'bun') {
+        return { packages: globs, catalog: CATALOG };
+    }
+    return globs;
+}
 
 /** The replacement values a project scaffold understands. */
 export interface ProjectContext {
@@ -117,7 +160,7 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
             test: 'vitest run',
             typecheck: 'tsc -p tsconfig.json --noEmit',
         },
-        devDependencies: { ...DEV_DEPENDENCIES },
+        devDependencies: devDependencies(ctx.packageManager),
         ...(ctx.packageManager ? { packageManager: ctx.packageManager } : {}),
         engines: { node: ctx.nodeVersion ? `>=${ctx.nodeVersion}` : '>=22' },
     };
@@ -139,6 +182,7 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
         { path: 'biome.json', content: renderBiomeJson(tokens(ctx)) },
         { path: '.gitignore', content: renderGitignore() },
         { path: 'README.md', content: `# ${ctx.name}\n` },
+        ...catalogFiles(ctx.packageManager, false),
     ];
 }
 
@@ -158,8 +202,8 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
         type: 'module',
         ...(ctx.author ? { author: ctx.author } : {}),
         ...(ctx.license ? { license: ctx.license } : {}),
-        workspaces: ctx.workspaceGlobs ?? ['packages/*'],
-        devDependencies: { ...DEV_DEPENDENCIES },
+        workspaces: workspacesField(ctx.packageManager, ctx.workspaceGlobs ?? ['packages/*']),
+        devDependencies: devDependencies(ctx.packageManager),
         ...(ctx.packageManager ? { packageManager: ctx.packageManager } : {}),
         engines: { node: ctx.nodeVersion ? `>=${ctx.nodeVersion}` : '>=22' },
     };
@@ -185,6 +229,7 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
         { path: 'biome.json', content: renderBiomeJson(tokens(ctx)) },
         { path: '.gitignore', content: renderGitignore() },
         { path: 'README.md', content: `# ${ctx.name}\n` },
+        ...catalogFiles(ctx.packageManager, true),
     ];
 }
 
@@ -193,10 +238,13 @@ export interface WorkspaceContext extends ProjectContext {
     wsName: string;
     /** The workspace directory relative to the root, eg. `packages/core`. */
     wsDir: string;
+    /** Reference the root catalog for dev deps (`catalog:`) instead of pinning. */
+    useCatalog?: boolean;
 }
 
 /** Files for a monorepo workspace package. */
 export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
+    const dev = ctx.useCatalog ? devDependencies(ctx.packageManager) : { ...CATALOG };
     const pkg = {
         name: ctx.scope ? `${ctx.scope}/${ctx.wsName}` : ctx.wsName,
         version: '0.1.0',
@@ -209,7 +257,7 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
             test: 'vitest run',
             typecheck: 'tsc -p tsconfig.build.json --noEmit',
         },
-        devDependencies: { ...DEV_DEPENDENCIES },
+        devDependencies: dev,
         publishConfig: { access: 'public', provenance: true },
     };
 
