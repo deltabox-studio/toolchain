@@ -182,7 +182,9 @@ export async function runCli(argv: string[] = process.argv): Promise<void> {
     const { argv: rest2, updateCheck } = extractUpdateCheck(rest);
     setLogOverrides(options);
     const wantsHelp = argv.some(arg => arg === '--help' || arg === '-h' || arg === '--version');
-    if (!wantsHelp) runUpdateCheck(rootPkg.version, updateCheck);
+    // The notice is human output on stdout; never let it corrupt `--json`.
+    const wantsJson = rest2.some(arg => arg === '--json');
+    if (!wantsHelp && !wantsJson) runUpdateCheck(rootPkg.version, updateCheck);
     await createCli().parseAsync(withDefaultVite(rest2));
 }
 

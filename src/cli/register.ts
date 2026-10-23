@@ -10,6 +10,7 @@ import {
     type ToolchainCommandContext,
 } from '@deltabox/toolchain-shared';
 
+import { defaultSyncTasks } from '../sync.js';
 import { loadContext } from './context.js';
 import { optionKeys } from './options.js';
 
@@ -97,6 +98,7 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                     projectType: loaded.projectType,
                     config: loaded.config,
                     tokens: loaded.tokens,
+                    syncTasks: defaultSyncTasks(),
                     ...(loaded.path ? { configPath: loaded.path } : {}),
                 };
                 await cmd.run(provided, context);
