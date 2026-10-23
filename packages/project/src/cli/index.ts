@@ -86,11 +86,12 @@ export function projectCommands(): ToolchainCommand[] {
         },
         {
             name: 'project:init:monorepo',
-            description: 'Scaffold a monorepo root + one example workspace.',
+            description: 'Scaffold a monorepo root (add --example for one example workspace).',
             options: [
                 { flags: '-n, --name <name>', description: 'Project name.' },
                 { flags: '-s, --scope <scope>', description: 'npm scope, eg. @acme.' },
                 { flags: '-o, --out <dir>', description: 'Output directory (default: cwd).' },
+                { flags: '--example', description: 'Also scaffold one example workspace package.' },
                 ...CONFIG_OPTIONS,
             ],
             run: (opts, context) => {
@@ -99,24 +100,27 @@ export function projectCommands(): ToolchainCommand[] {
                 const out = (opts.out as string) ?? context.cwd;
                 const includeConfig = (opts.config as boolean | undefined) ?? true;
                 const rootType = resolveType(opts, context.config, 'monorepo-root');
+                const withExample = Boolean(opts.example);
 
                 const files = createMonorepoRootFiles({
                     name,
                     scope,
                     type: rootType,
                     includeConfig,
-                    workspaces: [{ alias: 'core', dir: 'packages/core' }],
+                    workspaces: withExample ? [{ alias: 'core', dir: 'packages/core' }] : [],
                 });
-                files.push(
-                    ...createWorkspaceFiles({
-                        name,
-                        scope,
-                        wsName: 'core',
-                        wsDir: 'packages/core',
-                        type: 'monorepo-workspace',
-                        includeConfig,
-                    }).map(f => ({ ...f, path: `packages/core/${f.path}` }))
-                );
+                if (withExample) {
+                    files.push(
+                        ...createWorkspaceFiles({
+                            name,
+                            scope,
+                            wsName: 'core',
+                            wsDir: 'packages/core',
+                            type: 'monorepo-workspace',
+                            includeConfig,
+                        }).map(f => ({ ...f, path: `packages/core/${f.path}` }))
+                    );
+                }
                 const written = writeGeneratedFiles(files, out);
                 for (const file of written) logger.info(`Created ${file}`);
             },

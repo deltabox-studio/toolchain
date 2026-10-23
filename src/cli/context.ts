@@ -9,7 +9,10 @@ const configCache = new Map<string, Promise<LoadedConfig>>();
 export function loadContext(cwd: string): Promise<LoadedConfig> {
     let cached = configCache.get(cwd);
     if (!cached) {
-        cached = loadToolchainConfig(cwd);
+        // Tolerant: a broken config must not take down unrelated commands (eg.
+        // `template:list`/`providers`, and the VS Code views that call them). The
+        // error is surfaced as a warning by the CLI registrar.
+        cached = loadToolchainConfig(cwd, { tolerant: true });
         configCache.set(cwd, cached);
     }
     return cached;

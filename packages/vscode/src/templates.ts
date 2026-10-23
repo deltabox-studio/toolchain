@@ -8,6 +8,14 @@ import { captureCli } from './cli.js';
  * from the tooling packages and drives everything through the CLI.
  */
 
+export interface TemplateVariable {
+    name: string;
+    prompt?: string;
+    default?: string;
+    options?: string[];
+    required?: boolean;
+}
+
 export interface Template {
     id: string;
     name: string;
@@ -16,6 +24,7 @@ export interface Template {
     type?: string;
     online?: boolean;
     tags?: string[];
+    variables?: TemplateVariable[];
 }
 
 /** Load the templates via `dbx template:list --json` (empty on failure). */

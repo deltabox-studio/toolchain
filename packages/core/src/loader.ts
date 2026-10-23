@@ -27,6 +27,27 @@ export interface LoadedConfig {
     tokens: Replacements;
     /** The resolved project kind. */
     projectType: ProjectType;
+    /**
+     * Set when a `dbx.config.*` file could not be imported (in tolerant mode):
+     * the config fell back to an empty/parent config so unrelated commands
+     * (eg. `template:list`, `providers`) still work.
+     */
+    error?: string;
+}
+
+export interface LoadToolchainConfigOptions {
+    /**
+     * Never throw when a config file fails to import: fall back to an
+     * empty/parent config and record {@link LoadedConfig.error} instead. Used by
+     * the CLI so a broken config does not take down unrelated commands (and the
+     * VS Code tree views that drive them). Default: `false` (throw).
+     */
+    tolerant?: boolean;
+}
+
+/** A short, single-line description of a thrown config error. */
+function errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
 }
 
 /** Find the first `dbx.config.*` file at `cwd`, if any. */
@@ -134,15 +155,34 @@ export function mergeToolchainConfig(
  * file (or no `toolchain` key) exists an empty config is returned (so every task
  * falls back to its defaults).
  */
-export async function loadToolchainConfig(cwd: string = process.cwd()): Promise<LoadedConfig> {
+export async function loadToolchainConfig(
+    cwd: string = process.cwd(),
+    options: LoadToolchainConfigOptions = {}
+): Promise<LoadedConfig> {
     const file = findConfigFile(cwd);
     const parentFile = findParentConfigFile(cwd);
+    const tolerant = options.tolerant ?? false;
 
     let config: ToolchainConfig = {};
-    if (parentFile) config = await readToolchainConfig(parentFile);
+    let error: string | undefined;
+    if (parentFile) {
+        try {
+            config = await readToolchainConfig(parentFile);
+        } catch (cause) {
+            if (!tolerant) throw cause;
+            error = `failed to load ${parentFile}: ${errorMessage(cause)}`;
+        }
+    }
     if (file) {
-        const own = await readToolchainConfig(file);
-        config = parentFile ? mergeToolchainConfig(config, own) : own;
+        try {
+            const own = await readToolchainConfig(file);
+            // Merge over the ancestor only when it actually loaded; otherwise the
+            // project's own config stands alone.
+            config = parentFile && !error ? mergeToolchainConfig(config, own) : own;
+        } catch (cause) {
+            if (!tolerant) throw cause;
+            error = `failed to load ${file}: ${errorMessage(cause)}`;
+        }
     }
 
     // When a `project` field is not defined, fall back to the project's own
@@ -158,6 +198,7 @@ export async function loadToolchainConfig(cwd: string = process.cwd()): Promise<
         config,
         ...(file ? { path: file } : {}),
         ...(parentFile ? { parentPath: parentFile } : {}),
+        ...(error ? { error } : {}),
         tokens,
         projectType: resolveProjectType(cwd, config),
     };

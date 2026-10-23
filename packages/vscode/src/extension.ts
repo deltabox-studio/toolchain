@@ -40,6 +40,9 @@ const FILES_VIEW_ID = 'deltabox.files';
 const PROVIDERS_VIEW_ID = 'deltabox.providers';
 const TEMPLATES_VIEW_ID = 'deltabox.templates';
 
+/** The public documentation site (the Home "Need help?" link). */
+const DOCS_URL = 'https://toolchain.deltabox.studio';
+
 /** The workflow ids the CLI understands. */
 const WORKFLOW_IDS = ['ci', 'changelog', 'release', 'sync', 'issues'];
 
@@ -781,6 +784,9 @@ export function activate(context: vscode.ExtensionContext): void {
                 case 'templateRemove':
                     await removeTemplate();
                     break;
+                case 'openDocs':
+                    void vscode.env.openExternal(vscode.Uri.parse(DOCS_URL));
+                    break;
             }
         }
     );
@@ -842,8 +848,31 @@ export function activate(context: vscode.ExtensionContext): void {
             placeHolder: '@acme',
         });
 
+        // Prompt for the template's own inputs (the same pipeline the CLI uses):
+        // a select when the variable declares `options`, otherwise free text.
+        const varArgs: string[] = [];
+        for (const variable of template.variables ?? []) {
+            if (variable.name === 'name' || variable.name === 'scope') continue;
+            const message = variable.prompt ?? variable.name;
+            if (variable.options && variable.options.length > 0) {
+                const picked = await vscode.window.showQuickPick(variable.options, {
+                    placeHolder: message,
+                });
+                if (picked === undefined) return;
+                varArgs.push(`${variable.name}=${picked}`);
+            } else {
+                const value = await vscode.window.showInputBox({
+                    prompt: message,
+                    value: variable.default ?? '',
+                });
+                if (value === undefined) return;
+                varArgs.push(`${variable.name}=${value}`);
+            }
+        }
+
         const baseArgs = ['create', '--template', template.id, '--name', name, '--cwd', base];
         if (scope) baseArgs.push('--scope', scope);
+        if (varArgs.length > 0) baseArgs.push('--var', ...varArgs);
 
         // Online/Vite+ templates run `vp create`, which is interactive: use a
         // terminal. Builtin/local templates are non-interactive: run in the
@@ -882,8 +911,15 @@ export function activate(context: vscode.ExtensionContext): void {
                 {
                     label: 'Monorepo root',
                     command: 'project:init:monorepo',
-                    detail: 'Root + one example workspace',
+                    detail: 'A monorepo root (no example workspace)',
                     flow: 'root',
+                },
+                {
+                    label: 'Monorepo root + example',
+                    command: 'project:init:monorepo',
+                    detail: 'Root plus one example workspace package',
+                    flow: 'root',
+                    example: true,
                 },
                 {
                     label: 'Monorepo workspace',
@@ -969,6 +1005,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const args = [kind.command, '--name', name];
         if (scope) args.push('--scope', scope);
         if (includeConfig?.value === 'no') args.push('--no-config');
+        if ((kind as { example?: boolean }).example) args.push('--example');
         args.push('--out', target);
 
         const code = await runCli(target, args);

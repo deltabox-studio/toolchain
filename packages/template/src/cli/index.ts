@@ -370,6 +370,44 @@ export function templateCommands(): ToolchainCommand[] {
                     ...(scope ? { scope } : {}),
                 };
                 const variables = parseVars(opts.var as string[] | undefined);
+
+                // Prompt for the template's own inputs (everything except the
+                // standard `name`/`scope`, which are handled above, and any value
+                // already supplied with `--var`). This is the same input pipeline
+                // for builtin, local and online templates.
+                if (interactive) {
+                    for (const variable of template.variables ?? []) {
+                        if (variable.name === 'name' || variable.name === 'scope') continue;
+                        if (variables[variable.name] !== undefined) continue;
+                        const message = variable.prompt ?? variable.name;
+                        if (variable.options && variable.options.length > 0) {
+                            const picked = await select({
+                                message,
+                                options: variable.options.map(option => ({
+                                    value: option,
+                                    label: option,
+                                })),
+                                ...(variable.default ? { initialValue: variable.default } : {}),
+                            });
+                            if (isCancel(picked)) return abortPrompt();
+                            variables[variable.name] = String(picked);
+                        } else {
+                            const answer = await text({
+                                message,
+                                ...(variable.default
+                                    ? {
+                                          placeholder: variable.default,
+                                          defaultValue: variable.default,
+                                      }
+                                    : {}),
+                            });
+                            if (isCancel(answer)) return abortPrompt();
+                            const value = String(answer ?? '');
+                            variables[variable.name] = value || (variable.default ?? '');
+                        }
+                    }
+                }
+
                 const result = await scaffoldTemplate(template, { cwd: out, tokens, variables });
 
                 if (opts.json) {

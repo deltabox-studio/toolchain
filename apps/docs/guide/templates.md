@@ -40,14 +40,65 @@ prompts for the template, name and scope instead (Ctrl-C cancels).
 
 ## Builtin templates
 
-| id            | Kind          | Description                                            |
-| ------------- | ------------- | ------------------------------------------------------ |
-| `project`     | `project`     | A single-package TypeScript project.                   |
-| `application` | `application` | A runnable application package.                        |
-| `folder`      | `folder`      | A bare folder (a README).                              |
-| `monorepo`    | `project`     | A monorepo root + one example workspace.               |
-| `workspace`   | `workspace`   | A workspace package into an existing monorepo.         |
-| `vite-plus`   | `project`     | Create through `vp create` (interactive or templated). |
+| id                      | Kind          | Description                                    |
+| ----------------------- | ------------- | ---------------------------------------------- |
+| `project`               | `project`     | A single-package TypeScript project.           |
+| `application`           | `application` | A runnable application package.                |
+| `folder`                | `folder`      | A bare folder (a README).                      |
+| `monorepo`              | `project`     | A monorepo root (no example workspace).        |
+| `monorepo-example`      | `project`     | A monorepo root + one example workspace.       |
+| `workspace`             | `workspace`   | A workspace package into an existing monorepo. |
+| `vite-plus`             | `project`     | `vp create` (interactive or templated).        |
+| `vite-plus-monorepo`    | `project`     | `vp create vite:monorepo`.                     |
+| `vite-plus-application` | `application` | `vp create vite:application`.                  |
+| `vite-plus-library`     | `project`     | `vp create vite:library`.                      |
+| `vite-plus-generator`   | `project`     | `vp create vite:generator` (monorepo only).    |
+
+The offline builtins (`project`, `application`, `folder`, `monorepo`,
+`monorepo-example`, `workspace`) scaffold a generic, current project: a
+`dbx.config.ts` with only `project` metadata, a `package.json` that depends on
+`@deltabox/toolchain`, and no Turbo (Vite Task replaces it). The `vite-plus*`
+builtins delegate to `vp create` and need network access.
+
+## Inputs (variables)
+
+A template can declare **inputs** — values prompted for (and substituted) when it
+is scaffolded. Declare them in `template.json`:
+
+```json
+{
+    "variables": [
+        { "name": "name", "prompt": "Project name", "default": "app", "required": true },
+        { "name": "port", "prompt": "Dev port", "default": "4000" },
+        { "name": "includeDocker", "prompt": "Include a Dockerfile?", "options": ["yes", "no"] }
+    ]
+}
+```
+
+- `name` — the token name (also `{{ name }}` in files).
+- `prompt` — the prompt text (defaults to the name).
+- `default` — the value used when nothing is entered.
+- `options` — a fixed list of choices: the value is picked from a select.
+- `required` — whether a value must be provided.
+
+Files and directory names may contain `{{ token }}` placeholders, resolved while
+copying:
+
+```
+src/{{name}}.ts   ->   src/acme.ts
+```
+
+The **same input pipeline** runs everywhere:
+
+- **CLI** — `dbx create` prompts for each input on an interactive terminal (the
+  standard `name`/`scope` first, then the template's own inputs). Pass
+  `--var key=value` (repeatable) to skip a prompt.
+- **Programmatic API** — `scaffoldTemplate(template, { cwd, tokens, variables })`.
+- **VS Code** — **Create from template…** prompts for each input (a quick pick
+  when `options` is set).
+
+The builtin templates use the same pipeline (they declare `name`, `scope` and
+`includeConfig` inputs).
 
 ## Local templates
 
@@ -68,13 +119,6 @@ dbx template:init ./templates/acme-service \
     "variables": [{ "name": "name", "default": "service" }],
     "ignore": ["fixtures"]
 }
-```
-
-Files and directory names may contain `{{ token }}` placeholders, resolved while
-copying:
-
-```
-src/{{name}}.ts   ->   src/acme.ts
 ```
 
 Register sources so they are picked up automatically:

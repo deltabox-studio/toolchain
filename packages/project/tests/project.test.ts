@@ -5,7 +5,6 @@ import {
     createRootProjectFiles,
     createWorkspaceFiles,
     renderGitignore,
-    renderTurboJson,
 } from '../src/index.js';
 
 describe('project scaffolding', () => {
@@ -17,6 +16,9 @@ describe('project scaffolding', () => {
         const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
         expect(pkg.name).toBe('@acme/acme');
         expect(pkg.license).toBe('MIT');
+        // No repo-internal `catalog:` protocol; the toolchain is a real dep.
+        expect(pkg.devDependencies['@deltabox/toolchain']).toMatch(/^\^\d+\.\d+\.\d+/);
+        expect(Object.values(pkg.devDependencies)).not.toContain('catalog:');
     });
 
     it('creates monorepo root files with references', () => {
@@ -28,6 +30,11 @@ describe('project scaffolding', () => {
         const mono = JSON.parse(files.find(f => f.path === 'tsconfig.workspaces.json')!.content);
         expect(mono.compilerOptions.paths['@acme/core']).toEqual(['./packages/core/src/index.ts']);
         expect(mono.references).toEqual([{ path: './packages/core/tsconfig.json' }]);
+        // No turbo: no turbo.json, no turbo devDependency, no turbo scripts.
+        expect(files.map(f => f.path)).not.toContain('turbo.json');
+        const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
+        expect(pkg.devDependencies.turbo).toBeUndefined();
+        expect(JSON.stringify(pkg.scripts ?? {})).not.toContain('turbo');
     });
 
     it('creates workspace files', () => {
@@ -41,8 +48,7 @@ describe('project scaffolding', () => {
         expect(pkg.name).toBe('@acme/core');
     });
 
-    it('renders turbo + gitignore', () => {
-        expect(() => JSON.parse(renderTurboJson())).not.toThrow();
+    it('renders a gitignore', () => {
         expect(renderGitignore()).toContain('node_modules/');
     });
 });

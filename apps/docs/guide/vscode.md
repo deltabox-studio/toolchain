@@ -18,22 +18,22 @@ code --install-extension deltabox.toolchain
 
 ## Commands
 
-| Command                      | What it does                                                     |
-| ---------------------------- | ---------------------------------------------------------------- |
-| Sync all / active / selected | Run `dbx sync` (`--recursive` / per project).                    |
-| Check sync                   | `sync --check` across the workspace.                             |
-| Scaffold project             | Single project, monorepo root, workspace, or **From template…**. |
-| Add template…                | `template:init --add` on a folder you pick (any kind).           |
-| Remove template…             | `template:list --registry` then `template:remove`.               |
-| Generate configs             | `project:config` for projects missing a config.                  |
-| Run workflow                 | Trigger generated GitHub workflows.                              |
-| Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.   |
-| Create Vite+ project…        | `vp create` in a terminal.                                       |
-| Add provider...              | Register a custom provider in `.dbx/toolchain/providers.json`.   |
-| Run command...               | Run a provider command (`dbx <command>`) in a terminal.          |
-| Create from template...      | `dbx create --template <id>` (terminal for online templates).    |
-| Reset tooling                | Remove generated files / manifest / config.                      |
-| Toggle auto-sync             | Enable/disable sync-on-change.                                   |
+| Command                      | What it does                                                                            |
+| ---------------------------- | --------------------------------------------------------------------------------------- |
+| Sync all / active / selected | Run `dbx sync` (`--recursive` / per project).                                           |
+| Check sync                   | `sync --check` across the workspace.                                                    |
+| Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**. |
+| Add template…                | `template:init --add` on a folder you pick (any kind).                                  |
+| Remove template…             | `template:list --registry` then `template:remove`.                                      |
+| Generate configs             | `project:config` for projects missing a config.                                         |
+| Run workflow                 | Trigger generated GitHub workflows.                                                     |
+| Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                          |
+| Create Vite+ project…        | `vp create` in a terminal.                                                              |
+| Add provider...              | Register a custom provider in `.dbx/toolchain/providers.json`.                          |
+| Run command...               | Run a provider command (`dbx <command>`) in a terminal.                                 |
+| Create from template...      | `dbx create --template <id>` (terminal for online templates).                           |
+| Reset tooling                | Remove generated files / manifest / config.                                             |
+| Toggle auto-sync             | Enable/disable sync-on-change.                                                          |
 
 Interactive commands (the dev server, `vp create`, online scaffolding) run in an
 integrated terminal at the project root; everything else runs in the output
@@ -61,6 +61,11 @@ The **Providers** and **Templates** views read `dbx providers --json` and `dbx t
 **Add template...** runs `template:init --add`.
 
 **Remove template source...** runs `template:list --registry` + `template:remove`.
+
+**Create from template…** prompts for the template's inputs (see
+[Templates](/guide/templates#inputs-variables)) before running `dbx create`.
+
+The Home view links to this documentation with **Need help? Go to documentation**.
 
 ## Auto-sync
 

@@ -89,6 +89,9 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                 // `providers` section to decide whether the wrapped binary may
                 // colour its output).
                 const loaded = await loadContext(cwd);
+                // A broken config is reported on stderr (so `--json` stays clean)
+                // and does not abort unrelated commands; sync fails on it itself.
+                if (loaded.error) logger.warn(loaded.error);
                 setLogConfig(loaded.config.logger);
                 if (provided.quiet === true) {
                     setLogOverrides({ ...getLogOverrides(), level: 'error' });
@@ -100,6 +103,7 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                     tokens: loaded.tokens,
                     syncTasks: defaultSyncTasks(),
                     ...(loaded.path ? { configPath: loaded.path } : {}),
+                    ...(loaded.error ? { configError: loaded.error } : {}),
                 };
                 await cmd.run(provided, context);
                 if (framed) outro(process.exitCode ? 'Failed' : 'Done');

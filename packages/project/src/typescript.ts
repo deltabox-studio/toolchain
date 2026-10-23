@@ -11,6 +11,22 @@ import {
     renderTsconfigDefault,
 } from '@deltabox/toolchain-tsconfig';
 
+import rootPkg from '../../../package.json' with { type: 'json' };
+
+/**
+ * The dev dependencies every scaffolded package gets, pinned to the toolchain's
+ * own current versions (rather than the repo-internal `catalog:` protocol, which
+ * a fresh consumer has no catalog for). `@deltabox/toolchain` is required so the
+ * generated `dbx.config.ts` (which imports `defineConfig`) can be loaded.
+ */
+const DEV_DEPENDENCIES = {
+    '@biomejs/biome': '^2.5.13',
+    '@deltabox/toolchain': `^${rootPkg.version}`,
+    tsdown: '^0.23.0',
+    typescript: '^6.0.3',
+    vitest: '^5.0.0',
+} as const;
+
 /** The replacement values a project scaffold understands. */
 export interface ProjectContext {
     /** The project/package name (unscoped). */
@@ -64,16 +80,9 @@ export function renderToolchainConfig(ctx: ProjectContext & { type: ProjectType 
         .map(([key, value]) => `            ${key}: ${JSON.stringify(value)},`)
         .join('\n');
 
-    // Sections are opt-in by presence; the `true` shorthand enables one with its
-    // defaults, so the scaffold spells out the sections that apply here.
-    const sections: string[] = [];
-    if (ctx.type === 'monorepo-root' || ctx.type === 'project')
-        sections.push('        changelog: true,');
-    sections.push('        biome: true,');
-    if (ctx.type === 'monorepo-root') sections.push('        tsconfig: true,');
-    sections.push('        watch: true,');
-    const body = sections.join('\n');
-
+    // Sections are opt-in by presence, so the scaffold only declares `project`
+    // (its own identity). A consumer enables `changelog`, `biome`, `tsconfig`,
+    // `watch`, ... themselves — the generated config stays generic.
     return `import { defineConfig } from '@deltabox/toolchain';
 
 export default defineConfig({
@@ -81,7 +90,6 @@ export default defineConfig({
         project: {
 ${project}
         },
-${body}
     },
 });
 `;
@@ -103,18 +111,13 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
         ...(ctx.author ? { author: ctx.author } : {}),
         ...(ctx.license ? { license: ctx.license } : {}),
         scripts: {
-            build: 'tsdown --config-loader unrun',
+            build: 'tsdown',
             format: 'biome format --write .',
             lint: 'biome check --fix .',
             test: 'vitest run',
             typecheck: 'tsc -p tsconfig.json --noEmit',
         },
-        devDependencies: {
-            '@biomejs/biome': 'catalog:',
-            tsdown: 'catalog:',
-            typescript: 'catalog:',
-            vitest: 'catalog:',
-        },
+        devDependencies: { ...DEV_DEPENDENCIES },
         ...(ctx.packageManager ? { packageManager: ctx.packageManager } : {}),
         engines: { node: ctx.nodeVersion ? `>=${ctx.nodeVersion}` : '>=22' },
     };
@@ -146,7 +149,7 @@ export interface MonorepoRootContext extends ProjectContext {
     workspaceGlobs?: string[];
 }
 
-/** Files for a monorepo root (workspaces + turbo + monorepo tsconfig). */
+/** Files for a monorepo root (workspaces + monorepo tsconfig). */
 export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile[] {
     const pkg = {
         name: ctx.name,
@@ -155,21 +158,8 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
         type: 'module',
         ...(ctx.author ? { author: ctx.author } : {}),
         ...(ctx.license ? { license: ctx.license } : {}),
-        scripts: {
-            build: 'turbo build',
-            format: 'turbo format',
-            lint: 'turbo lint',
-            test: 'turbo test',
-            typecheck: 'turbo typecheck',
-        },
         workspaces: ctx.workspaceGlobs ?? ['packages/*'],
-        devDependencies: {
-            '@biomejs/biome': 'catalog:',
-            tsdown: 'catalog:',
-            turbo: '^2.11.2',
-            typescript: 'catalog:',
-            vitest: 'catalog:',
-        },
+        devDependencies: { ...DEV_DEPENDENCIES },
         ...(ctx.packageManager ? { packageManager: ctx.packageManager } : {}),
         engines: { node: ctx.nodeVersion ? `>=${ctx.nodeVersion}` : '>=22' },
     };
@@ -184,7 +174,6 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
                   },
               ]),
         { path: 'package.json', content: json(pkg) },
-        { path: 'turbo.json', content: renderTurboJson() },
         { path: 'tsconfig.base.json', content: renderTsconfigBase(tokens(ctx)) },
         {
             path: 'tsconfig.workspaces.json',
@@ -214,12 +203,13 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
         type: 'module',
         files: ['dist'],
         scripts: {
-            build: 'tsdown --config-loader unrun',
+            build: 'tsdown',
             format: 'biome format --write .',
             lint: 'biome check --fix .',
             test: 'vitest run',
             typecheck: 'tsc -p tsconfig.build.json --noEmit',
         },
+        devDependencies: { ...DEV_DEPENDENCIES },
         publishConfig: { access: 'public', provenance: true },
     };
 
@@ -254,35 +244,9 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
         { path: 'tsconfig.json', content: renderWorkspaceTsconfig() },
         {
             path: 'tsdown.config.ts',
-            content: `import { defineConfig } from 'tsdown';\n\nimport { baseTsdownConfig } from '@deltabox/toolchain-tsdown';\n\nexport default defineConfig({\n    ...baseTsdownConfig,\n    entry: { index: 'src/index.ts' },\n});\n`,
+            content: `import { defineConfig } from 'tsdown';\n\nimport { baseTsdownConfig } from '@deltabox/toolchain/tsdown';\n\nexport default defineConfig({\n    ...baseTsdownConfig,\n    entry: { index: 'src/index.ts' },\n});\n`,
         },
     ];
-}
-
-/** The default monorepo turbo pipeline. */
-export function renderTurboJson(): string {
-    return json({
-        $schema: 'https://turborepo.dev/schema.json',
-        ui: 'stream-with-experimental-timestamps',
-        globalDependencies: [
-            'tsconfig.json',
-            'tsconfig.base.json',
-            'tsdown.config.ts',
-            'yarn.lock',
-        ],
-        globalPassThroughEnv: ['NODE_ENV', 'VITE_*'],
-        tasks: {
-            build: {
-                inputs: ['$TURBO_DEFAULT$', '.env*'],
-                outputs: ['dist/**'],
-                dependsOn: ['^lint', '^typecheck', '^test', '^build'],
-            },
-            format: { dependsOn: ['^format'] },
-            lint: { dependsOn: ['^lint'] },
-            typecheck: { dependsOn: ['^typecheck'] },
-            test: { dependsOn: ['^test'] },
-        },
-    });
 }
 
 /** A generic `.gitignore`. */

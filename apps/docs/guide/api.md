@@ -254,7 +254,7 @@ console.log(toolchainProviders().map(p => p.id));
 | `createRootProjectFiles(ctx)` / `createMonorepoRootFiles(ctx)` / `createWorkspaceFiles(ctx)` | Scaffold files for each project kind.              |
 | `generateProjectConfigs(options)`                                                            | Generate `dbx.config.ts` for projects missing one. |
 | `renderToolchainConfig(ctx)` / `renderWorkspaceTsconfig(composite?)`                         | Render the tooling config / a workspace tsconfig.  |
-| `renderTurboJson()` / `renderGitignore()`                                                    | Render `turbo.json` / `.gitignore`.                |
+| `renderGitignore()`                                                                          | Render a generic `.gitignore`.                     |
 | `writeGeneratedFiles(files, cwd?)`                                                           | Write a `GeneratedFile[]`.                         |
 | `projectCommands()`                                                                          | The `project:*` commands.                          |
 

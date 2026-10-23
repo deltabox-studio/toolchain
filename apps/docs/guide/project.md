@@ -114,6 +114,7 @@ section still generates correct tokens from its existing metadata.
 ```bash
 dbx project:init --name my-app --scope @acme --type project --out ./my-app
 dbx project:init:monorepo --name acme --scope @acme --out .
+dbx project:init:monorepo --name acme --scope @acme --example --out .
 dbx project:init:workspace --name web --root . --dir packages/web
 ```
 

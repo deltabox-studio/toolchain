@@ -41,7 +41,7 @@ Colour is on by default and follows `--no-color` / the [`logger` config](/guide/
 | Command                  | Description                                                                     |
 | ------------------------ | ------------------------------------------------------------------------------- |
 | `project:init`           | A single-package TypeScript project.                                            |
-| `project:init:monorepo`  | A monorepo root + one example workspace.                                        |
+| `project:init:monorepo`  | A monorepo root (add `--example` for one example workspace).                    |
 | `project:init:workspace` | A workspace package into an existing monorepo root.                             |
 | `project:config`         | Generate `dbx.config.ts` for projects missing one.                              |
 | `create`                 | Scaffold from a template (`--template`/`--kind`, `--name`, `--scope`, `--out`). |

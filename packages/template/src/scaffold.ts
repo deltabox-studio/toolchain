@@ -51,11 +51,19 @@ function replacementMap(options: ScaffoldOptions): Replacements {
     return { ...options.tokens, ...options.variables };
 }
 
+/** Read a boolean-ish replacement (`'no'`/`'false'`/`false` -> `false`). */
+function boolToken(value: unknown, fallback = true): boolean {
+    if (value === undefined || value === null || value === '') return fallback;
+    if (typeof value === 'boolean') return value;
+    return !['no', 'false', '0', 'off'].includes(String(value).toLowerCase());
+}
+
 /** Scaffold from one of the local generators (builtin templates). */
 function scaffoldBuiltin(template: Template, options: ScaffoldOptions): ScaffoldResult {
     const tokens = replacementMap(options);
     const name = String(tokens.name ?? 'app');
     const scope = tokens.scope ? String(tokens.scope) : undefined;
+    const includeConfig = boolToken(tokens.includeConfig);
     const files: GeneratedFile[] = [];
 
     switch (template.builtin) {
@@ -66,6 +74,20 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
                     name,
                     scope: rootScope,
                     type: 'monorepo-root',
+                    includeConfig,
+                    workspaces: [],
+                })
+            );
+            break;
+        }
+        case 'monorepo-example': {
+            const rootScope = scope ?? `@${name}`;
+            files.push(
+                ...createMonorepoRootFiles({
+                    name,
+                    scope: rootScope,
+                    type: 'monorepo-root',
+                    includeConfig,
                     workspaces: [{ alias: 'core', dir: 'packages/core' }],
                 })
             );
@@ -76,6 +98,7 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
                     wsName: 'core',
                     wsDir: 'packages/core',
                     type: 'monorepo-workspace',
+                    includeConfig,
                 }).map(file => ({ ...file, path: `packages/core/${file.path}` }))
             );
             break;
@@ -89,6 +112,7 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
                     wsName: name,
                     wsDir: dir,
                     type: 'monorepo-workspace',
+                    includeConfig,
                 }).map(file => ({ ...file, path: `${dir}/${file.path}` }))
             );
             break;
@@ -100,7 +124,12 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
         default: {
             // `single` + `application`: a root package project.
             files.push(
-                ...createRootProjectFiles({ name, ...(scope ? { scope } : {}), type: 'project' })
+                ...createRootProjectFiles({
+                    name,
+                    ...(scope ? { scope } : {}),
+                    type: 'project',
+                    includeConfig,
+                })
             );
         }
     }

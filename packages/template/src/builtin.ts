@@ -1,8 +1,37 @@
-import type { Template } from './types.js';
+import type { Template, TemplateVariable } from './types.js';
+
+/** The `name` input every builtin project template prompts for. */
+const NAME_VAR: TemplateVariable = {
+    name: 'name',
+    prompt: 'Project name',
+    default: 'app',
+    required: true,
+};
+
+/** The optional `scope` input (eg. `@acme`). */
+const SCOPE_VAR: TemplateVariable = {
+    name: 'scope',
+    prompt: 'npm scope (optional)',
+    default: '',
+};
+
+/** Whether to write a `dbx.config.ts` (a select, to exercise the input pipeline). */
+const CONFIG_VAR: TemplateVariable = {
+    name: 'includeConfig',
+    prompt: 'Include a dbx.config.ts?',
+    default: 'yes',
+    options: ['yes', 'no'],
+};
+
+/** The shared inputs for the project/workspace builtins. */
+const PROJECT_VARIABLES: TemplateVariable[] = [NAME_VAR, SCOPE_VAR, CONFIG_VAR];
 
 /**
  * The built-in, offline templates. They map onto the local generators in
  * `@deltabox/toolchain-project`, so they need no files on disk or network.
+ *
+ * The Vite+ entries (`vite-plus*`) delegate to `vp create` and need network
+ * access; the rest are fully offline.
  */
 export const BUILTIN_TEMPLATES: Template[] = [
     {
@@ -13,6 +42,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
         builtin: 'single',
         source: { type: 'builtin', locate: 'project' },
         tags: ['typescript', 'library'],
+        variables: PROJECT_VARIABLES,
     },
     {
         id: 'application',
@@ -22,6 +52,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
         builtin: 'application',
         source: { type: 'builtin', locate: 'application' },
         tags: ['application', 'app'],
+        variables: PROJECT_VARIABLES,
     },
     {
         id: 'folder',
@@ -31,16 +62,27 @@ export const BUILTIN_TEMPLATES: Template[] = [
         builtin: 'folder',
         source: { type: 'builtin', locate: 'folder' },
         tags: ['folder'],
+        variables: [NAME_VAR],
     },
     {
         id: 'monorepo',
         name: 'Monorepo',
-        description:
-            'A monorepo root (workspaces, turbo, monorepo tsconfig) + one example package.',
+        description: 'A monorepo root (workspaces + monorepo tsconfig), no example package.',
         kind: 'project',
         builtin: 'monorepo-root',
         source: { type: 'builtin', locate: 'monorepo' },
-        tags: ['monorepo', 'turbo'],
+        tags: ['monorepo'],
+        variables: PROJECT_VARIABLES,
+    },
+    {
+        id: 'monorepo-example',
+        name: 'Monorepo (with example)',
+        description: 'A monorepo root plus one example workspace package.',
+        kind: 'project',
+        builtin: 'monorepo-example',
+        source: { type: 'builtin', locate: 'monorepo-example' },
+        tags: ['monorepo'],
+        variables: PROJECT_VARIABLES,
     },
     {
         id: 'workspace',
@@ -50,14 +92,56 @@ export const BUILTIN_TEMPLATES: Template[] = [
         builtin: 'monorepo-workspace',
         source: { type: 'builtin', locate: 'workspace' },
         tags: ['monorepo', 'workspace'],
+        variables: PROJECT_VARIABLES,
     },
     {
         id: 'vite-plus',
-        name: 'Vite+ app',
+        name: 'Vite+ (interactive)',
         description: 'Create a new project through `vp create` (interactive or templated).',
         kind: 'project',
         source: { type: 'vite-plus', locate: '' },
         tags: ['vite', 'vite-plus'],
         online: true,
+        variables: [NAME_VAR],
+    },
+    {
+        id: 'vite-plus-monorepo',
+        name: 'Vite+ Monorepo',
+        description: 'Create a Vite+ monorepo through `vp create vite:monorepo`.',
+        kind: 'project',
+        source: { type: 'vite-plus', locate: 'vite:monorepo' },
+        tags: ['vite', 'vite-plus', 'monorepo'],
+        online: true,
+        variables: [NAME_VAR],
+    },
+    {
+        id: 'vite-plus-application',
+        name: 'Vite+ Application',
+        description: 'Create a Vite+ application through `vp create vite:application`.',
+        kind: 'application',
+        source: { type: 'vite-plus', locate: 'vite:application' },
+        tags: ['vite', 'vite-plus', 'application'],
+        online: true,
+        variables: [NAME_VAR],
+    },
+    {
+        id: 'vite-plus-library',
+        name: 'Vite+ Library',
+        description: 'Create a Vite+ library through `vp create vite:library`.',
+        kind: 'project',
+        source: { type: 'vite-plus', locate: 'vite:library' },
+        tags: ['vite', 'vite-plus', 'library'],
+        online: true,
+        variables: [NAME_VAR],
+    },
+    {
+        id: 'vite-plus-generator',
+        name: 'Vite+ Generator',
+        description: 'Scaffold a Vite+ code generator (`vp create vite:generator`, monorepo only).',
+        kind: 'project',
+        source: { type: 'vite-plus', locate: 'vite:generator' },
+        tags: ['vite', 'vite-plus', 'generator'],
+        online: true,
+        variables: [NAME_VAR],
     },
 ];
