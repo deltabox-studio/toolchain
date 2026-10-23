@@ -31,19 +31,19 @@
     `@clack/prompts`, `@deltabox/toolchain-core` and `glob` to the package.
 #### Vite
 - Accept a single options object in resolveVite ([#2e2384b](https://github.com/deltabox-studio/toolchain/commit/2e2384b) by [T0chi](https://github.com/T0chi))
-  - esolveVite(options?: DbxConfig & ResolveViteOptions)\ replaces the two-argument form. The generated shim passes \{ cwd: import.meta.dirname }\ so a nested shim resolves its own \dbx.config.*\ instead of the process cwd's.
+  - `resolveVite(options?: DbxConfig & ResolveViteOptions)` replaces the two-argument form. The generated shim passes `{ cwd: import.meta.dirname }` so a nested shim resolves its own `dbx.config.*` instead of the process cwd's.
 #### Tsconfig
 - Generate workspace tsconfigs from a workspaces file ([#40db765](https://github.com/deltabox-studio/toolchain/commit/40db765) by [T0chi](https://github.com/T0chi))
-  - Rename sconfig.monorepo.json\ to sconfig.workspaces.json\; sconfig.build.json\ and the workspaces file are optional; \glob\ accepts a string or an array (with \!\ negation); add \exclude\/\gitignore\ (nested-aware, symlink-safe) and the ootFile\/\defaultFile\/uildFile\ renames; warn when references/composite are configured but no workspace tsconfigs are found.
+  - Rename `tsconfig.monorepo.json` to `tsconfig.workspaces.json`; `tsconfig.build.json` and the workspaces file are optional; `glob` accepts a string or an array (with `!` negation); add `exclude`/`gitignore` (nested-aware, symlink-safe) and the `rootFile`/`defaultFile`/`buildFile` renames; warn when references/composite are configured but no workspace tsconfigs are found.
 #### Project
 - Sync package.json fields and generate configs ([#e5209ee](https://github.com/deltabox-studio/toolchain/commit/e5209ee) by [T0chi](https://github.com/T0chi))
-  - Add a \project\ sync task that writes the fields a \dbx.config.project\ defines into \package.json\ (with epo\ -> epository\ + \directory\ for workspaces), plus \project:config\ generation for existing projects. Scaffolding validates the name/type.
+  - Add a `project` sync task that writes the fields a `dbx.config.project` defines into `package.json` (with `repo` -> `repository` + `directory` for workspaces), plus `project:config` generation for existing projects. Scaffolding validates the name/type.
 #### Core
 - Inherit project config and make discovery symlink-safe ([#92b2b0a](https://github.com/deltabox-studio/toolchain/commit/92b2b0a) by [T0chi](https://github.com/T0chi))
-  - Nested configs inherit the ancestor \project\ minus its identity keys (ame\/\scope\/\description\/ype\), with \project.inherit: false\ to opt out. Discovery no longer follows symlinks/junctions (a self-link would loop), and \DBX_GITIGNORE_BLOCK\ now covers a nested project's \.dbx/\ while still tracking its manifest.
+  - Nested configs inherit the ancestor `project` minus its identity keys (`name`/`scope`/`description`/`type`), with `project.inherit: false` to opt out. Discovery no longer follows symlinks/junctions (a self-link would loop), and `DBX_GITIGNORE_BLOCK` now covers a nested project's `.dbx/` while still tracking its manifest.
 #### Shared
 - Add ignore resolution, project helpers and config schema updates ([#144b2f0](https://github.com/deltabox-studio/toolchain/commit/144b2f0) by [T0chi](https://github.com/T0chi))
-  - Add symlink-safe gitignore collection (\collectGitignorePatterns\) and esolveIgnorePatterns\ for the glob-based consumers, \projectFromPackageJson\/\projectToPackageJson\, and the \ToolchainCommandContext.syncTasks\ field. Regenerate \config.schema.json\ and the docs config reference.
+  - Add symlink-safe gitignore collection (`collectGitignorePatterns`) and `resolveIgnorePatterns` for the glob-based consumers, `projectFromPackageJson`/`projectToPackageJson`, and the `ToolchainCommandContext.syncTasks` field. Regenerate `config.schema.json` and the docs config reference.
 ### Bug fixes
 #### Vscode
 - Resolve the bundled CLI and gate commands on availability ([#5220ed3](https://github.com/deltabox-studio/toolchain/commit/5220ed3) by [T0chi](https://github.com/T0chi))
