@@ -6,145 +6,8 @@
             "type": "object",
             "properties": {
                 "toolchain": {
+                    "description": "The `@deltabox/toolchain` settings (every section is opt-in by presence).",
                     "$ref": "#/$defs/ToolchainConfigSections"
-                }
-            },
-            "additionalProperties": false
-        },
-        "ToolchainConfigSections": {
-            "type": "object",
-            "properties": {
-                "project": {
-                    "$ref": "#/$defs/ToolchainProjectConfig"
-                },
-                "changelog": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainChangelogConfig"
-                        }
-                    ]
-                },
-                "biome": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainBiomeConfig"
-                        }
-                    ]
-                },
-                "tsconfig": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainTsconfigConfig"
-                        }
-                    ]
-                },
-                "templates": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainTemplatesConfig"
-                        }
-                    ]
-                },
-                "vite": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainViteConfig"
-                        }
-                    ]
-                },
-                "watch": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainWatchConfig"
-                        }
-                    ]
-                },
-                "logger": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainLoggerConfig"
-                        }
-                    ]
-                },
-                "providers": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainProvidersConfig"
-                        }
-                    ]
-                }
-            },
-            "additionalProperties": false
-        },
-        "ToolchainProjectConfig": {
-            "type": "object",
-            "properties": {
-                "type": {
-                    "$ref": "#/$defs/ProjectType"
-                },
-                "name": {
-                    "type": "string",
-                    "description": "The unscoped project name."
-                },
-                "scope": {
-                    "type": "string",
-                    "description": "The npm scope, eg. `@acme`."
-                },
-                "author": {
-                    "type": "string",
-                    "description": "Package author."
-                },
-                "license": {
-                    "type": "string",
-                    "description": "SPDX license id."
-                },
-                "homepage": {
-                    "type": "string",
-                    "description": "Project homepage."
-                },
-                "repo": {
-                    "type": "string",
-                    "description": "Repository URL, eg. `https://github.com/acme/app`."
-                },
-                "nodeVersion": {
-                    "type": "string",
-                    "description": "Node engine range, eg. `>=22`."
-                },
-                "packageManager": {
-                    "type": "string",
-                    "description": "Package manager name (default `yarn`)."
-                },
-                "packageManagerVersion": {
-                    "type": "string",
-                    "description": "Package manager version, eg. `4.17.1`."
-                },
-                "description": {
-                    "type": "string",
-                    "description": "One-line description."
                 }
             },
             "additionalProperties": false
@@ -157,6 +20,59 @@
                 "project"
             ],
             "description": "The project kind (detected when omitted)."
+        },
+        "ToolchainProjectConfig": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "$ref": "#/$defs/ProjectType"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "The unscoped project name (written as `<scope>/<name>`)."
+                },
+                "scope": {
+                    "type": "string",
+                    "description": "The npm scope, eg. `@acme`."
+                },
+                "author": {
+                    "type": "string",
+                    "description": "Package author (`package.json` `author`)."
+                },
+                "license": {
+                    "type": "string",
+                    "description": "SPDX license id (`package.json` `license`)."
+                },
+                "homepage": {
+                    "type": "string",
+                    "description": "Project homepage (`package.json` `homepage`)."
+                },
+                "repo": {
+                    "type": "string",
+                    "description": "Repository URL (`package.json` `repository`). For a workspace it also resolves to the workspace path (`repository.directory`)."
+                },
+                "nodeVersion": {
+                    "type": "string",
+                    "description": "Node version for CI/templates, eg. `22` (not `package.json` `engines`)."
+                },
+                "packageManager": {
+                    "type": "string",
+                    "description": "Package manager name, written as `<name>@<version>` (default `yarn`)."
+                },
+                "packageManagerVersion": {
+                    "type": "string",
+                    "description": "Package manager version, eg. `4.17.1`."
+                },
+                "description": {
+                    "type": "string",
+                    "description": "One-line description (`package.json` `description`)."
+                },
+                "inherit": {
+                    "type": "boolean",
+                    "description": "Inherit the parent project metadata (default true). Set false to keep this project entirely independent of the root config."
+                }
+            },
+            "additionalProperties": false
         },
         "ToolchainChangelogConfig": {
             "type": "object",
@@ -173,14 +89,36 @@
                     "type": "object",
                     "properties": {
                         "main": {
-                            "type": "string"
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            ],
+                            "description": "Branch glob(s) the CI + release workflows run on, and the release PR base (default `[\"main\"]`)."
                         },
                         "dev": {
-                            "type": "string"
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            ],
+                            "description": "Branch glob(s) the changelog/version workflow runs on. No default: when omitted it reuses `main` (so a single-branch repo needs no `dev`)."
                         }
                     },
                     "additionalProperties": false,
-                    "description": "Branch names the workflows target."
+                    "description": "Branches the generated workflows target."
                 },
                 "types": {
                     "type": "array",
@@ -196,6 +134,17 @@
                     },
                     "description": "Allowed commit scopes (commitlint)."
                 },
+                "commitlint": {
+                    "type": "object",
+                    "properties": {
+                        "dir": {
+                            "type": "string",
+                            "description": "Directory the generated `commitlint.config.mjs` is written to (default: the project root). The husky hook and CI use `--config` to point at it."
+                        }
+                    },
+                    "additionalProperties": false,
+                    "description": "commitlint config output location."
+                },
                 "versioning": {
                     "description": "Automatic version bumping on changelog generation (default `true`).",
                     "$ref": "#/$defs/ChangelogVersioning"
@@ -206,16 +155,6 @@
                 }
             },
             "additionalProperties": false
-        },
-        "WorkflowSetting": {
-            "anyOf": [
-                {
-                    "type": "boolean"
-                },
-                {
-                    "$ref": "#/$defs/WorkflowConfig"
-                }
-            ]
         },
         "WorkflowConfig": {
             "type": "object",
@@ -321,25 +260,32 @@
             "type": "object",
             "properties": {
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Step display name."
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Step id (for `steps.<id>` outputs)."
                 },
                 "if": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Conditional expression (`if:`)."
                 },
                 "uses": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Action to run (`uses:`), eg. `actions/checkout@v4`."
                 },
                 "run": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Shell command(s) to run (`run:`)."
                 },
                 "shell": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Shell to run `run` in, eg. `bash`."
                 },
                 "working-directory": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Directory the step runs in."
                 },
                 "with": {
                     "type": "object",
@@ -352,7 +298,8 @@
                             "number",
                             "boolean"
                         ]
-                    }
+                    },
+                    "description": "Inputs for a `uses` action."
                 },
                 "env": {
                     "type": "object",
@@ -361,27 +308,43 @@
                     },
                     "additionalProperties": {
                         "type": "string"
-                    }
+                    },
+                    "description": "Environment variables for the step."
                 }
             },
             "additionalProperties": false
+        },
+        "WorkflowSetting": {
+            "anyOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "$ref": "#/$defs/WorkflowConfig"
+                }
+            ]
         },
         "ChangelogWorkflowsConfig": {
             "type": "object",
             "properties": {
                 "ci": {
+                    "description": "The CI workflow (`ci.yml`).",
                     "$ref": "#/$defs/WorkflowSetting"
                 },
                 "changelog": {
+                    "description": "The changelog/version workflow (`changelog.yml`).",
                     "$ref": "#/$defs/WorkflowSetting"
                 },
                 "release": {
+                    "description": "The release workflow (`release.yml`).",
                     "$ref": "#/$defs/WorkflowSetting"
                 },
                 "issues": {
+                    "description": "The issue-title workflow (`issues.yml`).",
                     "$ref": "#/$defs/WorkflowSetting"
                 },
                 "sync": {
+                    "description": "The toolchain sync workflow (`sync.yml`).",
                     "$ref": "#/$defs/WorkflowSetting"
                 }
             },
@@ -454,12 +417,36 @@
                     "description": "Master switch (enabled when the section is defined)."
                 },
                 "glob": {
-                    "type": "string",
-                    "description": "Glob for workspace `tsconfig.default.json` files."
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Glob(s) for the workspace default tsconfig files. Defaults to matching every `defaultFile` recursively."
                 },
-                "appGlob": {
-                    "type": "string",
-                    "description": "Glob for \"override\" (app) workspaces."
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Glob(s) to exclude from `glob`. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...)."
+                },
+                "gitignore": {
+                    "type": "boolean",
+                    "description": "Also respect `.gitignore` files (root + nested) when matching `glob` (default true)."
                 },
                 "refs": {
                     "type": "boolean",
@@ -479,7 +466,15 @@
                 },
                 "rootFile": {
                     "type": "string",
-                    "description": "The monorepo tsconfig file name (default `tsconfig.monorepo.json`)."
+                    "description": "The workspaces tsconfig file name that holds `paths` + `references` (default `tsconfig.workspaces.json`)."
+                },
+                "defaultFile": {
+                    "type": "string",
+                    "description": "The workspace default tsconfig file name that the generator expands (default `tsconfig.default.json`)."
+                },
+                "buildFile": {
+                    "type": "string",
+                    "description": "The workspace build tsconfig file name (default `tsconfig.build.json`)."
                 }
             },
             "additionalProperties": false
@@ -595,6 +590,24 @@
                 "debounce": {
                     "type": "number",
                     "description": "Debounce window in ms (default 150)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...)."
+                },
+                "gitignore": {
+                    "type": "boolean",
+                    "description": "Also respect `.gitignore` files (root + nested) when watching (default true)."
                 }
             },
             "additionalProperties": false
@@ -630,6 +643,104 @@
                 "color": {
                     "type": "boolean",
                     "description": "Force provider command colours on/off (default: inherit the logger)."
+                }
+            },
+            "additionalProperties": false
+        },
+        "ToolchainConfigSections": {
+            "type": "object",
+            "properties": {
+                "project": {
+                    "description": "Project metadata: canonical `package.json` fields and template tokens (inherited by workspaces).",
+                    "$ref": "#/$defs/ToolchainProjectConfig"
+                },
+                "changelog": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainChangelogConfig"
+                        }
+                    ],
+                    "description": "Conventional-Commits CI, commitlint and the changelog pipeline."
+                },
+                "biome": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainBiomeConfig"
+                        }
+                    ],
+                    "description": "Biome config generation (for consumers that still want a `biome.json`)."
+                },
+                "tsconfig": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainTsconfigConfig"
+                        }
+                    ],
+                    "description": "Workspace tsconfig generation (path aliases + project references)."
+                },
+                "templates": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainTemplatesConfig"
+                        }
+                    ],
+                    "description": "Template sources / scaffolding."
+                },
+                "vite": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainViteConfig"
+                        }
+                    ],
+                    "description": "The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it."
+                },
+                "watch": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainWatchConfig"
+                        }
+                    ],
+                    "description": "Watch behaviour for `dbx watch`."
+                },
+                "logger": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainLoggerConfig"
+                        }
+                    ],
+                    "description": "Logging level, colours and prefix for toolchain output."
+                },
+                "providers": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainProvidersConfig"
+                        }
+                    ],
+                    "description": "Provider command behaviour (eg. colour for the passthrough commands)."
                 }
             },
             "additionalProperties": false

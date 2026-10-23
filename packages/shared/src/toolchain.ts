@@ -12,7 +12,11 @@
  * `config-types.ts`. Only `hooks` (functions) is hand-written.
  */
 
-import type { ProjectType, ToolchainConfigSections } from './config-types.js';
+import type {
+    ProjectType,
+    ToolchainChangelogConfig,
+    ToolchainConfigSections,
+} from './config-types.js';
 import type { Replacements } from './template.js';
 import type { Awaitable } from './types.js';
 
@@ -135,6 +139,28 @@ export function repoSlugFromUrl(repo: string | undefined): string | undefined {
     return match?.[1] && match[2] ? `${match[1]}/${match[2]}` : undefined;
 }
 
+/** Normalize a `branches.main` / `branches.dev` value (`string | string[]`) to an array. */
+function branchList(value: string | string[] | undefined): string[] {
+    if (value === undefined) return [];
+    return Array.isArray(value) ? value : [value];
+}
+
+/**
+ * The resolved changelog branches. `main` defaults to `['main']`; `dev` has **no
+ * default** and reuses `main` when omitted, so a single-branch repo needs no
+ * `dev`. Each side accepts a glob or an array of globs.
+ */
+export function resolveChangelogBranches(changelog?: ToolchainChangelogConfig): {
+    main: string[];
+    dev: string[];
+} {
+    const branches = changelog?.branches ?? {};
+    const main = branchList(branches.main);
+    if (main.length === 0) main.push('main');
+    const dev = branchList(branches.dev);
+    return { main, dev: dev.length > 0 ? dev : main };
+}
+
 /**
  * Flatten a {@link ToolchainConfig} into the `{{ token }}` replacements every
  * template understands. Defaults are chosen so a bare config still renders.
@@ -142,6 +168,7 @@ export function repoSlugFromUrl(repo: string | undefined): string | undefined {
 export function resolveTokens(config: ToolchainConfig = {}): Replacements {
     const project = config.project ?? {};
     const changelog = sectionConfig(config.changelog) ?? {};
+    const branches = resolveChangelogBranches(changelog);
     const name = project.name ?? 'app';
     return {
         name,
@@ -156,8 +183,8 @@ export function resolveTokens(config: ToolchainConfig = {}): Replacements {
         packageManager: project.packageManager ?? 'yarn',
         yarnVersion: project.packageManagerVersion ?? '4.17.1',
         packageManagerVersion: project.packageManagerVersion ?? '4.17.1',
-        mainBranch: changelog.branches?.main ?? 'main',
-        devBranch: changelog.branches?.dev ?? 'dev',
+        mainBranch: branches.main[0] ?? 'main',
+        devBranch: branches.dev[0] ?? 'main',
     };
 }
 
@@ -186,6 +213,8 @@ export interface SyncContext {
     tokens: Replacements;
     /** Log a line (respects `--quiet`). */
     log: (message: string) => void;
+    /** Emit a warning (respects `--quiet`, which suppresses warnings too). */
+    warn: (message: string) => void;
 }
 
 /** A unit of sync work exposed by a package. */

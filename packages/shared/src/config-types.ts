@@ -6,37 +6,54 @@ export type ProjectType = 'monorepo-root' | 'monorepo-workspace' | 'project';
 
 export interface ToolchainProjectConfig {
     type?: ProjectType;
-    /** The unscoped project name. */
+    /** The unscoped project name (written as `<scope>/<name>`). */
     name?: string;
     /** The npm scope, eg. `@acme`. */
     scope?: string;
-    /** Package author. */
+    /** Package author (`package.json` `author`). */
     author?: string;
-    /** SPDX license id. */
+    /** SPDX license id (`package.json` `license`). */
     license?: string;
-    /** Project homepage. */
+    /** Project homepage (`package.json` `homepage`). */
     homepage?: string;
-    /** Repository URL, eg. `https://github.com/acme/app`. */
+    /**
+     * Repository URL (`package.json` `repository`). For a workspace it also resolves to the workspace
+     * path (`repository.directory`).
+     */
     repo?: string;
-    /** Node engine range, eg. `>=22`. */
+    /** Node version for CI/templates, eg. `22` (not `package.json` `engines`). */
     nodeVersion?: string;
-    /** Package manager name (default `yarn`). */
+    /** Package manager name, written as `<name>@<version>` (default `yarn`). */
     packageManager?: string;
     /** Package manager version, eg. `4.17.1`. */
     packageManagerVersion?: string;
-    /** One-line description. */
+    /** One-line description (`package.json` `description`). */
     description?: string;
+    /**
+     * Inherit the parent project metadata (default true). Set false to keep this project entirely
+     * independent of the root config.
+     */
+    inherit?: boolean;
 }
 
 export interface WorkflowStep {
+    /** Step display name. */
     name?: string;
+    /** Step id (for `steps.<id>` outputs). */
     id?: string;
+    /** Conditional expression (`if:`). */
     if?: string;
+    /** Action to run (`uses:`), eg. `actions/checkout@v4`. */
     uses?: string;
+    /** Shell command(s) to run (`run:`). */
     run?: string;
+    /** Shell to run `run` in, eg. `bash`. */
     shell?: string;
+    /** Directory the step runs in. */
     'working-directory'?: string;
+    /** Inputs for a `uses` action. */
     with?: Record<string, string | number | boolean>;
+    /** Environment variables for the step. */
     env?: Record<string, string>;
 }
 
@@ -97,13 +114,25 @@ export interface ToolchainChangelogConfig {
     enabled?: boolean;
     workflows?: ChangelogWorkflowsConfig;
     branches?: {
-        main?: string;
-        dev?: string;
+        /** Branch glob(s) the CI + release workflows run on, and the release PR base (default `["main"]`). */
+        main?: string | Array<string>;
+        /**
+         * Branch glob(s) the changelog/version workflow runs on. No default: when omitted it reuses
+         * `main` (so a single-branch repo needs no `dev`).
+         */
+        dev?: string | Array<string>;
     };
     /** Allowed commit types (commitlint). */
     types?: Array<string>;
     /** Allowed commit scopes (commitlint). */
     scopes?: Array<string>;
+    commitlint?: {
+        /**
+         * Directory the generated `commitlint.config.mjs` is written to (default: the project root). The
+         * husky hook and CI use `--config` to point at it.
+         */
+        dir?: string;
+    };
     versioning?: ChangelogVersioning;
     /** Write the Conventional-Commits VS Code settings. */
     vscode?: boolean;
@@ -121,10 +150,18 @@ export interface ToolchainBiomeConfig {
 export interface ToolchainTsconfigConfig {
     /** Master switch (enabled when the section is defined). */
     enabled?: boolean;
-    /** Glob for workspace `tsconfig.default.json` files. */
-    glob?: string;
-    /** Glob for "override" (app) workspaces. */
-    appGlob?: string;
+    /**
+     * Glob(s) for the workspace default tsconfig files. Defaults to matching every `defaultFile`
+     * recursively.
+     */
+    glob?: string | Array<string>;
+    /**
+     * Glob(s) to exclude from `glob`. Defaults to the common ignored paths (`node_modules`, `.dbx`,
+     * `dist`, `build`, ...).
+     */
+    exclude?: string | Array<string>;
+    /** Also respect `.gitignore` files (root + nested) when matching `glob` (default true). */
+    gitignore?: boolean;
     /** Wire project references (default false). */
     refs?: boolean;
     /** Emit `composite: true` (default false). */
@@ -133,8 +170,18 @@ export interface ToolchainTsconfigConfig {
     aliases?: boolean;
     /** JSON indentation (default 4). */
     indent?: number;
-    /** The monorepo tsconfig file name (default `tsconfig.monorepo.json`). */
+    /**
+     * The workspaces tsconfig file name that holds `paths` + `references` (default
+     * `tsconfig.workspaces.json`).
+     */
     rootFile?: string;
+    /**
+     * The workspace default tsconfig file name that the generator expands (default
+     * `tsconfig.default.json`).
+     */
+    defaultFile?: string;
+    /** The workspace build tsconfig file name (default `tsconfig.build.json`). */
+    buildFile?: string;
 }
 
 export interface ToolchainWatchConfig {
@@ -142,6 +189,13 @@ export interface ToolchainWatchConfig {
     enabled?: boolean;
     /** Debounce window in ms (default 150). */
     debounce?: number;
+    /**
+     * Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modules`, `.dbx`,
+     * `dist`, `build`, ...).
+     */
+    exclude?: string | Array<string>;
+    /** Also respect `.gitignore` files (root + nested) when watching (default true). */
+    gitignore?: boolean;
 }
 
 export type ToolchainTemplateSourceType = 'builtin' | 'local' | 'npm' | 'git' | 'vite-plus';
@@ -208,13 +262,21 @@ export interface ToolchainProvidersConfig {
 
 export interface ToolchainConfigSections {
     project?: ToolchainProjectConfig;
+    /** Conventional-Commits CI, commitlint and the changelog pipeline. */
     changelog?: boolean | ToolchainChangelogConfig;
+    /** Biome config generation (for consumers that still want a `biome.json`). */
     biome?: boolean | ToolchainBiomeConfig;
+    /** Workspace tsconfig generation (path aliases + project references). */
     tsconfig?: boolean | ToolchainTsconfigConfig;
+    /** Template sources / scaffolding. */
     templates?: boolean | ToolchainTemplatesConfig;
+    /** The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it. */
     vite?: boolean | ToolchainViteConfig;
+    /** Watch behaviour for `dbx watch`. */
     watch?: boolean | ToolchainWatchConfig;
+    /** Logging level, colours and prefix for toolchain output. */
     logger?: boolean | ToolchainLoggerConfig;
+    /** Provider command behaviour (eg. colour for the passthrough commands). */
     providers?: boolean | ToolchainProvidersConfig;
 }
 
