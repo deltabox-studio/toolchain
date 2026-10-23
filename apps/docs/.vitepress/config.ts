@@ -109,6 +109,7 @@ export default defineConfig({
                         { text: 'Getting Started', link: '/guide/' },
                         { text: 'Monorepo Guide', link: '/guide/monorepo' },
                         { text: 'VS Code Extension', link: '/guide/vscode' },
+                        { text: 'LLM Context Files', link: '/llms' },
                     ],
                 },
                 {
