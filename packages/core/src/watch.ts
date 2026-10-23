@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { Glob } from 'glob';
 
-import { logger } from '@deltabox/toolchain-shared';
+import { isIgnoredPath, logger, resolveIgnorePatterns } from '@deltabox/toolchain-shared';
 
 import { type RunSyncOptions, runSync } from './sync.js';
 
@@ -12,6 +12,10 @@ export interface RunWatchOptions extends Omit<RunSyncOptions, 'check'> {
     configPath?: string;
     /** Debounce window in ms (default 150). */
     debounce?: number;
+    /** Extra glob(s) excluded from watching (on top of the common ignored paths). */
+    exclude?: string | string[];
+    /** Respect `.gitignore` files (default true). */
+    gitignore?: boolean;
 }
 
 /**
@@ -55,27 +59,38 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
 
     await sync();
 
-    // Resolve the directories to watch from the config path + task globs.
+    // Resolve the directories to watch from the config path + task globs, then
+    // filter out anything the ignore list (defaults + `exclude` + `.gitignore`)
+    // excludes.
+    const ignore = resolveIgnorePatterns(cwd, {
+        ...(options.exclude !== undefined ? { exclude: options.exclude } : {}),
+        ...(options.gitignore !== undefined ? { gitignore: options.gitignore } : {}),
+    });
     const dirs = new Set<string>([cwd]);
     const globs = new Set<string>();
     for (const task of tasks) for (const glob of task.watch ?? []) globs.add(glob);
     for (const glob of globs) {
         try {
-            const files = new Glob(glob, {
-                cwd,
-                dot: true,
-                ignore: ['**/node_modules/**'],
-            }).walkSync();
-            for (const file of files) dirs.add(path.dirname(path.resolve(cwd, file)));
+            const files = new Glob(glob, { cwd, dot: true, ignore }).walkSync();
+            for (const file of files) {
+                const abs = path.resolve(cwd, file);
+                const rel = path.relative(cwd, abs).replace(/\\/g, '/');
+                if (isIgnoredPath(rel, ignore)) continue;
+                dirs.add(path.dirname(abs));
+            }
         } catch {
             // ignore invalid globs
         }
     }
 
     const watchers: fs.FSWatcher[] = [];
-    const onChange = (changed?: string) => {
+    const onChange = (changedAbs?: string) => {
         if (Date.now() < ignoreUntil) return;
-        void options.config?.hooks?.onChange?.(changed ? { path: changed } : {});
+        if (changedAbs) {
+            const rel = path.relative(cwd, changedAbs).replace(/\\/g, '/');
+            if (isIgnoredPath(rel, ignore)) return;
+        }
+        void options.config?.hooks?.onChange?.(changedAbs ? { path: changedAbs } : {});
         schedule();
     };
 
@@ -92,15 +107,12 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
         }
     }
     for (const dir of dirs) {
+        const emit = (filename: string | null): void => onChange(path.join(dir, filename ?? ''));
         try {
-            watchers.push(
-                fs.watch(dir, { recursive: true }, (_event, filename) =>
-                    onChange(filename ?? undefined)
-                )
-            );
+            watchers.push(fs.watch(dir, { recursive: true }, (_event, filename) => emit(filename)));
         } catch {
             try {
-                watchers.push(fs.watch(dir, (_event, filename) => onChange(filename ?? undefined)));
+                watchers.push(fs.watch(dir, (_event, filename) => emit(filename)));
             } catch {
                 // directory may not exist
             }

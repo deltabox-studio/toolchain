@@ -4,10 +4,24 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { findConfigFile, loadToolchainConfig } from '../src/loader.js';
+import { sectionConfig } from '@deltabox/toolchain-shared';
+
+import {
+    findConfigFile,
+    findParentConfigFile,
+    loadToolchainConfig,
+    mergeToolchainConfig,
+} from '../src/loader.js';
 
 function tmp(): string {
-    return fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-load-'));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-load-'));
+    // Mark it as a repo root so config inheritance never walks above the test.
+    fs.mkdirSync(path.join(dir, '.git'));
+    return dir;
+}
+
+function writeJson(file: string, value: unknown): void {
+    fs.writeFileSync(file, JSON.stringify(value));
 }
 
 describe('loadToolchainConfig', () => {
@@ -53,5 +67,109 @@ describe('loadToolchainConfig', () => {
         );
         await loadToolchainConfig(cwd);
         expect((globalThis as Record<string, unknown>).__dbxHook).toBe(true);
+    });
+});
+
+describe('nested config inheritance', () => {
+    it('merges a workspace config over the root config (leaves replace)', () => {
+        const merged = mergeToolchainConfig(
+            {
+                changelog: {
+                    branches: { main: 'main', dev: 'dev' },
+                    scopes: ['core', 'cli'],
+                },
+                tsconfig: { refs: true, aliases: true },
+            },
+            {
+                changelog: { scopes: ['web'] },
+                tsconfig: { refs: false },
+            }
+        );
+        // Objects are combined, arrays/booleans in the child replace.
+        const changelog = sectionConfig(merged.changelog);
+        expect(changelog?.branches).toEqual({ main: 'main', dev: 'dev' });
+        expect(changelog?.scopes).toEqual(['web']);
+        expect(sectionConfig(merged.tsconfig)).toEqual({ refs: false, aliases: true });
+    });
+
+    it('inherits shared `project` fields but never the identity ones', () => {
+        const merged = mergeToolchainConfig(
+            {
+                project: {
+                    name: 'acme',
+                    scope: '@acme',
+                    type: 'monorepo-root',
+                    author: 'Acme',
+                    license: 'MIT',
+                },
+            },
+            { biome: true }
+        );
+        // `name`/`scope`/`type` are identity; `author`/`license` flow down.
+        expect(merged.project).toEqual({ author: 'Acme', license: 'MIT' });
+
+        const explicit = mergeToolchainConfig(
+            { project: { name: 'acme', author: 'Acme', license: 'MIT' } },
+            { project: { name: 'web' } }
+        );
+        expect(explicit.project).toEqual({ name: 'web', author: 'Acme', license: 'MIT' });
+
+        // A parent with only identity fields contributes nothing.
+        expect(
+            mergeToolchainConfig(
+                { project: { name: 'acme', type: 'monorepo-root' } },
+                { biome: true }
+            ).project
+        ).toBeUndefined();
+    });
+
+    it('keeps `project` independent when `project.inherit` is false', () => {
+        const merged = mergeToolchainConfig(
+            {
+                project: { name: 'acme', scope: '@acme', type: 'monorepo-root' },
+                biome: true,
+            },
+            { project: { inherit: false, name: 'web' } }
+        );
+        expect(merged.project).toEqual({ inherit: false, name: 'web' });
+        // Non-project sections still inherit.
+        expect(merged.biome).toBe(true);
+    });
+
+    it('does not inherit `hooks` from the parent config', () => {
+        const merged = mergeToolchainConfig(
+            { hooks: { afterSync: () => undefined } },
+            { biome: true }
+        );
+        expect(merged.hooks).toBeUndefined();
+    });
+
+    it('finds the nearest ancestor config and loads it under the child', async () => {
+        const root = tmp();
+        const child = path.join(root, 'packages', 'web');
+        fs.mkdirSync(child, { recursive: true });
+        writeJson(path.join(root, 'dbx.config.json'), {
+            toolchain: {
+                project: { name: 'acme', type: 'monorepo-root' },
+                changelog: { branches: { main: 'trunk' }, scopes: ['core'] },
+            },
+        });
+        writeJson(path.join(child, 'dbx.config.json'), {
+            toolchain: { changelog: { scopes: ['web'] } },
+        });
+
+        expect(findParentConfigFile(child)).toBe(path.join(root, 'dbx.config.json'));
+        // A repo root (with `.git`) never inherits from above itself.
+        expect(findParentConfigFile(root)).toBeUndefined();
+
+        const loaded = await loadToolchainConfig(child);
+        expect(loaded.path).toBe(path.join(child, 'dbx.config.json'));
+        expect(loaded.parentPath).toBe(path.join(root, 'dbx.config.json'));
+        const childChangelog = sectionConfig(loaded.config.changelog);
+        expect(childChangelog?.scopes).toEqual(['web']);
+        expect(childChangelog?.branches?.main).toBe('trunk');
+        // The parent's `project` is identity-only, so nothing is inherited.
+        expect(loaded.config.project).toBeUndefined();
+        expect(loaded.projectType).toBe('project');
     });
 });
