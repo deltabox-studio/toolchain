@@ -55,7 +55,14 @@ export default defineConfig({
         '@deltabox/toolchain-vite/cli': src('packages/vite/src/cli/index.ts'),
         '@deltabox/toolchain-vite': src('packages/vite/src/index.ts'),
     },
-    deps: { ...baseTsdownConfig.deps, alwaysBundle: [/^@deltabox\/toolchain-/] },
+    deps: {
+        ...baseTsdownConfig.deps,
+        alwaysBundle: [/^@deltabox\/toolchain-/],
+        // Keep the optional `tsx` loader external: bundling a bare specifier
+        // bakes the *build machine's* absolute path into `dist`, which breaks the
+        // config loader's transpile fallback everywhere else.
+        neverBundle: [...(baseTsdownConfig.deps?.neverBundle ?? []), /^tsx(\/|$)/],
+    },
     // Keep the published CLI command name stable (`dbx`) instead of
     // deriving it from the package name.
     exports: { enabled: true, bin: { dbx: 'src/cli/index.ts' } },

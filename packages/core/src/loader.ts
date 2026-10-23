@@ -81,6 +81,43 @@ export function findParentConfigFile(cwd: string = process.cwd()): string | unde
     }
 }
 
+/**
+ * Whether a failed native import means Node simply cannot load TypeScript
+ * itself — the only case where the `tsx` fallback helps. Older Node lacks type
+ * stripping (`ERR_UNKNOWN_FILE_EXTENSION`) and strip-only mode rejects syntax a
+ * transpiler handles (`ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`).
+ *
+ * A genuine failure (an unresolvable import, a syntax error, a throw during
+ * evaluation) must **propagate**: a fallback loader might "succeed" and yield an
+ * empty config, silently hiding a broken `dbx.config.*`.
+ */
+function isUntranspiledError(error: unknown): boolean {
+    const code = (error as { code?: unknown } | null)?.code;
+    return code === 'ERR_UNKNOWN_FILE_EXTENSION' || code === 'ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX';
+}
+
+/**
+ * Unwrap a module's default export. `tsx`'s CJS interop can report the default
+ * once or twice (`{ default: X }` / `{ default: { default: X } }`), depending on
+ * the Node/module combination.
+ */
+function unwrapDefault(mod: unknown): unknown {
+    let value = mod;
+    for (let depth = 0; depth < 2; depth++) {
+        if (
+            value &&
+            typeof value === 'object' &&
+            'default' in value &&
+            Object.keys(value).every(key => key === 'default' || key === '__esModule')
+        ) {
+            value = (value as { default: unknown }).default;
+        } else {
+            break;
+        }
+    }
+    return value;
+}
+
 /** Import a config module: JSON natively, TS/JS via dynamic import (tsx fallback). */
 async function importModule(file: string): Promise<unknown> {
     if (file.endsWith('.json')) {
@@ -93,14 +130,11 @@ async function importModule(file: string): Promise<unknown> {
         const mod = (await import(url)) as { default?: unknown };
         return mod.default ?? mod;
     } catch (error) {
-        // Node can import TS directly in recent versions; fall back to tsx.
-        try {
-            const { tsImport } = await import('tsx/esm/api');
-            const mod = (await tsImport(url, import.meta.url)) as { default?: unknown };
-            return mod.default ?? mod;
-        } catch {
-            throw error;
-        }
+        // Node can import TS directly in recent versions; only reach for tsx when
+        // it genuinely cannot (see {@link isUntranspiledError}).
+        if (!isUntranspiledError(error)) throw error;
+        const { tsImport } = await import('tsx/esm/api');
+        return unwrapDefault(await tsImport(url, import.meta.url));
     }
 }
 

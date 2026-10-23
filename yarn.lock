@@ -702,6 +702,7 @@ __metadata:
     lodash: "catalog:"
     picocolors: "catalog:"
     tsdown: "catalog:"
+    tsx: "catalog:"
     untyped: "npm:^2.0.0"
     zod: "catalog:"
   peerDependencies:
