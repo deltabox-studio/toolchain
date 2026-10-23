@@ -34,6 +34,15 @@ export interface MigrationContext {
     write?: boolean;
     /** Allow network (eg. npx-based migrators). Default false. */
     online?: boolean;
+    /**
+     * Do not modify or remove the source tool's config file (eg. the folded
+     * `vite.config.*`). Default false — the migration cleans it up.
+     */
+    ignoreViteConfigFile?: boolean;
+    /** Do not touch the toolchain's managed/generated files. Default false. */
+    ignoreManagedFiles?: boolean;
+    /** Do not touch the `CHANGELOG.md`. Default false. */
+    ignoreChangelog?: boolean;
 }
 
 /** A field that could not be mapped faithfully. */
@@ -58,6 +67,8 @@ export interface MigrationResult {
     to: MigrateTool;
     /** Files written, or that would be written (dry-run). */
     written: string[];
+    /** Files removed, or that would be removed (eg. the folded `vite.config.*`). */
+    removed?: string[];
     /** The produced files with content (drives `--check`). */
     files?: MigrationFile[];
     /** The oxfmt config produced (present for formatter migrations). */

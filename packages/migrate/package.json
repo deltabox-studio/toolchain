@@ -15,7 +15,10 @@
     ],
     "private": true,
     "dependencies": {
-        "@deltabox/toolchain-shared": "workspace:*"
+        "@clack/prompts": "catalog:",
+        "@deltabox/toolchain-core": "workspace:*",
+        "@deltabox/toolchain-shared": "workspace:*",
+        "glob": "catalog:"
     },
     "devDependencies": {
         "@deltabox/toolchain-tsdown": "workspace:*",
@@ -28,5 +31,7 @@
         ".": "./dist/index.js",
         "./cli": "./dist/cli/index.js",
         "./package.json": "./package.json"
-    }
+    },
+    "homepage": "https://toolchain.deltabox.studio",
+    "packageManager": "yarn@4.17.1"
 }
