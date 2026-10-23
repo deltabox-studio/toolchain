@@ -1,8 +1,22 @@
 # Changelog
 
-## 1.9.0 (October 2026)
+## 1.9.1 (October 2026)
 
 <!-- release:start -->
+
+### CI
+#### Vscode
+- Target the release environment by name (drop resourceType) ([#2bbd25a](https://github.com/deltabox-studio/toolchain/commit/2bbd25a) by [T0chi](https://github.com/T0chi))
+  - `resourceType` only accepts `virtualMachine`/`Kubernetes`. `resourceType: none`
+    made the deployment job look for a resource of type `none`, so it failed with
+    "No resource were found in the environment ... ResourceType Undefined". Use the
+    string form `environment: 'release'`, which records the deployment against the
+    resource-less environment and still applies its approvals/checks.
+
+<!-- release:end -->
+
+
+## 1.9.0 (October 2026)
 
 ### New features
 #### Changelog
@@ -37,9 +51,6 @@
     dropped letters, so the 1.8.0 entry read `esolveVite`, `\{ ... }\`, `epo\`, etc.
     Restore the intended text (backticked code, `resolveVite`, `repo`/`repository`,
     `name`/`scope`/`description`/`type`, `rootFile`/`defaultFile`/`buildFile`).
-
-<!-- release:end -->
-
 
 ## 1.8.0 (October 2026)
 
