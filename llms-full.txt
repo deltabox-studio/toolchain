@@ -295,6 +295,32 @@ Search for `deltabox:` to find:
 ---
 
 ---
+url: https://toolchain.deltabox.studio/llms.md
+---
+# LLM context files
+
+This documentation is published in machine-readable forms so LLMs and coding
+agents can read it efficiently, following the [llms.txt](https://llmstxt.org)
+standard:
+
+* [`/llms.txt`](/llms.txt) — a concise, link-first overview: a short description,
+  how the toolchain works, and a table of contents linking to the Markdown
+  version of every page. Small enough to fit in a context window.
+* [`/llms-full.txt`](/llms-full.txt) — the **entire** documentation concatenated
+  into a single Markdown file, for when an agent wants everything in one fetch.
+
+Every page is also available as raw Markdown by appending `.md` to its URL (eg.
+`/guide/tsconfig.md`).
+
+## When the site is unavailable
+
+If `https://toolchain.deltabox.studio` is down, the same documentation lives in
+the repository at
+[github.com/deltabox-studio/toolchain/tree/main/apps/docs](https://github.com/deltabox-studio/toolchain/tree/main/apps/docs).
+
+---
+
+---
 url: https://toolchain.deltabox.studio/guide/cli.md
 ---
 # CLI
@@ -879,6 +905,46 @@ with a `postinstall` script (Yarn Berry never runs `prepare`):
 
 See [Package scripts](/guide/scripts) for the full recommended script set.
 
+## Workflows
+
+`dbx sync` writes the GitHub workflows into `.github/workflows`. Each id (`ci`,
+`changelog`, `release`, `issues`, `sync`) accepts one of three forms:
+
+* `true` / `false` — write the generated default, or skip it;
+* a **`WorkflowConfig` object** — override parts of the default (branches,
+  triggers, extra top-level keys, extra steps/jobs, token overrides);
+* a **raw YAML string** — written **verbatim** as the workflow file, for a
+  workflow the object model can't express.
+
+```ts
+export default defineConfig({
+    toolchain: {
+        changelog: {
+            workflows: {
+                ci: true, // the generated default
+                issues: false, // don't write issues.yml
+                release: { pushBranches: ['main'] }, // override the default
+                // A fully hand-authored workflow, written as-is:
+                sync: `name: Toolchain sync
+on: [push, pull_request]
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: yarn dbx sync --check
+`,
+            },
+        },
+    },
+});
+```
+
+A raw string is **not** merged with the default, is **not** token-replaced, and
+gets **no generated header** — it is the file's exact content. The
+`changelog.branches` defaults don't apply to it either (it defines its own
+triggers). An empty string disables the workflow.
+
 ## Branches
 
 `branches.main` and `branches.dev` pick which branches the generated workflows
@@ -1012,6 +1078,39 @@ dbx changelog --format-only         # regroup existing changelogs, no bump
 The generated `changelog` workflow runs `dbx changelog --range …` on every push
 to the `dev` branches (or `main` when `dev` is unset), so versioning is applied
 from CI as well as locally.
+
+## Writing commit messages
+
+The changelog is rendered from commit **subjects and bodies**, so what you commit
+is what readers see. Watch out for characters that a **shell** re-interprets —
+especially when a message is drafted by an **AI/LLM** and committed through
+`git commit -m "…"`.
+
+### Shell escaping
+
+* **PowerShell** treats a backtick as its escape character, so `` `r `` / `` `n `` /
+  `` `t `` / `` `b `` become CR / LF / TAB / backspace. A preceding `\` is left
+  behind, so `` `resolveVite `` can land in the changelog as a stray `\`, a CR and
+  `esolveVite`.
+* **bash** runs an unquoted `` `…` `` as command substitution, and `$(…)` / `${…}`
+  expand before `git` ever sees them.
+
+The result is invisible control characters, stray `\` and dropped letters. The
+toolchain strips the predictable artifacts
+(`stripControlChars`/`sanitizeText`) but **cannot restore a character the shell
+already consumed**.
+
+### Authoring safely
+
+* Prefer a **file over `-m`**: `git commit -F message.txt`, or a quoted heredoc
+  (`git commit -F - <<'EOF' … EOF`) — nothing is re-interpreted. Avoid assembling
+  multi-line messages inline in PowerShell.
+* When an AI/LLM drafts the message, strip **typographic characters** before
+  committing: curly quotes (`’ “ ”`), em/en dashes (`— –`), non-breaking spaces,
+  zero-width characters and emoji all survive into the changelog and can break
+  `commitlint` or the markdown.
+* **Preview the entry**: `dbx changelog --dry-run` prints the proposed entry —
+  check it for stray `\`, `\r`, `\b`, `\t` or mojibake before releasing.
 
 ## Troubleshooting
 
@@ -2552,10 +2651,9 @@ left alone (the object is folded by hand).
 
 When the project has a `vite.config.*` but **no** `dbx.config.*` (a workspace
 that never had one), the migration creates a fresh `dbx.config.ts` holding the
-folded `toolchain.vite`. That file is a **plain object** (no
-`@deltabox/toolchain` import) because a nested project usually does not depend
-on the toolchain; add `import { defineConfig } from '@deltabox/toolchain'` by
-hand when it does.
+folded `toolchain.vite`, wrapped in `defineConfig` from `@deltabox/toolchain`
+(like the scaffold). A workspace resolves that import through the root's
+installed dependency — in a self-hosted repo, via a root `portal:.` self-link.
 
 The now-redundant `vite.config.*` is removed (it is recreated by `dbx sync`).
 Pass `--ignore-vite-config-file` to keep it.
@@ -3082,7 +3180,7 @@ Master switch (enabled when the section is defined).
 
 * **Type**: `ChangelogWorkflowsConfig`
 
-Which workflows to write into `.github/workflows`.
+Which workflows to write into `.github/workflows`. Each id is `true`/`false`, an object of overrides, or a raw YAML string written verbatim.
 
 #### `ci`
 
@@ -3556,29 +3654,3 @@ export default defineConfig({
     },
 });
 ```
-
----
-
----
-url: https://toolchain.deltabox.studio/llms.md
----
-# LLM context files
-
-This documentation is published in machine-readable forms so LLMs and coding
-agents can read it efficiently, following the [llms.txt](https://llmstxt.org)
-standard:
-
-* [`/llms.txt`](/llms.txt) — a concise, link-first overview: a short description,
-  how the toolchain works, and a table of contents linking to the Markdown
-  version of every page. Small enough to fit in a context window.
-* [`/llms-full.txt`](/llms-full.txt) — the **entire** documentation concatenated
-  into a single Markdown file, for when an agent wants everything in one fetch.
-
-Every page is also available as raw Markdown by appending `.md` to its URL (eg.
-`/guide/tsconfig.md`).
-
-## When the site is unavailable
-
-If `https://toolchain.deltabox.studio` is down, the same documentation lives in
-the repository at
-[github.com/deltabox-studio/toolchain/tree/main/apps/docs](https://github.com/deltabox-studio/toolchain/tree/main/apps/docs).

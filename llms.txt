@@ -22,6 +22,7 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [Getting Started](https://toolchain.deltabox.studio/guide.md)
 - [Monorepo Guide](https://toolchain.deltabox.studio/guide/monorepo.md)
 - [VS Code Extension](https://toolchain.deltabox.studio/guide/vscode.md)
+- [LLM context files](https://toolchain.deltabox.studio/llms.md)
 
 ### Toolchain
 
@@ -45,6 +46,3 @@ This file is a concise, link-first overview. For the **full** documentation in a
 
 - [dbx.config](https://toolchain.deltabox.studio/config/reference.md)
 
-### Other
-
-- [LLM context files](https://toolchain.deltabox.studio/llms.md)
