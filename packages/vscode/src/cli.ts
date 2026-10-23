@@ -8,8 +8,25 @@ import { isCmdShim, windowsShimCommand } from './win-spawn.js';
 
 const IS_WINDOWS = process.platform === 'win32';
 
-/** The extension's own id (`<publisher>.<name>`). */
-const EXTENSION_ID = 'deltabox.toolchain';
+/**
+ * The running extension's path + version, captured at activation. The extension
+ * id is `<publisher>.<name>` and must not be hardcoded (the name has changed
+ * before), so it is read from the live extension object instead.
+ */
+let extensionInfo: { path: string; version?: string } | undefined;
+
+/** Capture the running extension's path + version (call from `activate`). */
+export function setExtensionInfo(extension: vscode.Extension<unknown> | undefined): void {
+    if (!extension) {
+        extensionInfo = undefined;
+        return;
+    }
+    const version = (extension.packageJSON as { version?: unknown } | undefined)?.version;
+    extensionInfo = {
+        path: extension.extensionPath,
+        ...(typeof version === 'string' && version ? { version } : {}),
+    };
+}
 
 /** A resolved `dbx` invocation. */
 export interface CliCommand {
@@ -47,9 +64,8 @@ function localCliEntry(cwd: string): string | undefined {
  * install `@deltabox/toolchain`.
  */
 export function bundledCliEntry(): string | undefined {
-    const extensionPath = vscode.extensions.getExtension(EXTENSION_ID)?.extensionPath;
-    if (!extensionPath) return undefined;
-    const entry = path.join(extensionPath, 'dist', 'dbx.cjs');
+    if (!extensionInfo) return undefined;
+    const entry = path.join(extensionInfo.path, 'dist', 'dbx.cjs');
     return fs.existsSync(entry) ? entry : undefined;
 }
 
@@ -60,13 +76,8 @@ export function bundledCliEntry(): string | undefined {
  * files). Falls back to the unpinned name only when the version is unavailable.
  */
 export function pinnedToolchainSpec(): string {
-    const version = (
-        vscode.extensions.getExtension(EXTENSION_ID)?.packageJSON as
-            | { version?: unknown }
-            | undefined
-    )?.version;
-    return typeof version === 'string' && version
-        ? `@deltabox/toolchain@${version}`
+    return extensionInfo?.version
+        ? `@deltabox/toolchain@${extensionInfo.version}`
         : '@deltabox/toolchain';
 }
 

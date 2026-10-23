@@ -98,6 +98,11 @@ export class ProviderTreeProvider implements vscode.TreeDataProvider<ProviderTre
 
     constructor(private readonly root: () => string | undefined) {}
 
+    /** The providers currently loaded (drives context keys / the home model). */
+    list(): Provider[] {
+        return this.roots.map(node => node.provider);
+    }
+
     /** Reload the providers (CLI list + the custom registry) and repaint. */
     async refresh(): Promise<void> {
         const root = this.root();

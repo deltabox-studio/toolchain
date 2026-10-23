@@ -15,6 +15,12 @@ export interface HomeProject {
 
 export interface HomeModel {
     enabled: boolean;
+    /** Whether any project has a `dbx.config.*` (sync is meaningful). */
+    canSync: boolean;
+    /** Whether any provider is available. */
+    hasProviders: boolean;
+    /** Whether the Vite+ provider is available (its commands are runnable). */
+    hasVite: boolean;
     projects: HomeProject[];
     packageManager?: string;
     /** ISO timestamp of the most recent sync across every project. */
@@ -123,8 +129,11 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
       font:inherit; font-size:11px; font-weight:600; cursor:pointer;
     }
     button:hover { background:var(--vscode-button-hoverBackground); }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    button:disabled:hover { background:var(--vscode-button-background); }
     button.secondary { color:var(--vscode-foreground); background:var(--vscode-button-secondaryBackground); }
     button.secondary:hover { background:var(--vscode-button-secondaryHoverBackground); }
+    button.secondary:disabled:hover { background:var(--vscode-button-secondaryBackground); }
     /* Indeterminate loading bar: a 50%-wide bar sweeping across the button's
        bottom edge until the action completes. */
     button.loading { cursor:progress; }
@@ -237,6 +246,18 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
 
     function closeMenus() {
       for (const menu of document.querySelectorAll('.menu')) menu.hidden = true;
+    }
+
+    // Actions that need a project with a dbx.config.* to be meaningful.
+    const SYNC_ACTIONS = ['syncAll','syncActive','syncSelected','syncCheck','syncProject','checkProject'];
+    // Actions that need the Vite+ provider to be available.
+    const VITE_ACTIONS = ['runVite','runProjectVite'];
+    function applyEnablement(model) {
+      for (const button of document.querySelectorAll('button[data-action]')) {
+        const action = button.dataset.action;
+        if (SYNC_ACTIONS.includes(action)) button.disabled = !model.canSync;
+        if (VITE_ACTIONS.includes(action)) button.disabled = !model.hasVite;
+      }
     }
 
     let pending = null;
@@ -394,6 +415,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         row.append(menuBtn, projectMenu(project.dir));
         list.append(row);
       }
+      applyEnablement(model);
     });
     vscode.postMessage({ type: 'ready' });
   </script>

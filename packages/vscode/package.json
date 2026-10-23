@@ -28,25 +28,29 @@
                 "command": "deltabox.toolchain.sync",
                 "title": "Sync active project",
                 "category": "deltabox",
-                "icon": "$(sync)"
+                "icon": "$(sync)",
+                "enablement": "deltabox.canSync"
             },
             {
                 "command": "deltabox.toolchain.syncSelected",
                 "title": "Sync selected projects",
                 "category": "deltabox",
-                "icon": "$(checklist)"
+                "icon": "$(checklist)",
+                "enablement": "deltabox.canSync"
             },
             {
                 "command": "deltabox.toolchain.syncAll",
                 "title": "Sync all projects",
                 "category": "deltabox",
-                "icon": "$(sync)"
+                "icon": "$(sync)",
+                "enablement": "deltabox.canSync"
             },
             {
                 "command": "deltabox.toolchain.syncCheck",
                 "title": "Check sync",
                 "category": "deltabox",
-                "icon": "$(check-all)"
+                "icon": "$(check-all)",
+                "enablement": "deltabox.canSync"
             },
             {
                 "command": "deltabox.toolchain.chooseDbxSource",
@@ -57,13 +61,15 @@
             {
                 "command": "deltabox.toolchain.syncProject",
                 "title": "Sync this project",
-                "category": "deltabox"
+                "category": "deltabox",
+                "enablement": "deltabox.canSync"
             },
             {
                 "command": "deltabox.toolchain.checkProject",
                 "title": "Check sync",
                 "category": "deltabox",
-                "icon": "$(check-all)"
+                "icon": "$(check-all)",
+                "enablement": "deltabox.canSync"
             },
             {
                 "command": "deltabox.toolchain.scaffold",
@@ -122,13 +128,15 @@
                 "command": "deltabox.toolchain.runVite",
                 "title": "Run Vite+ command…",
                 "category": "deltabox",
-                "icon": "$(play)"
+                "icon": "$(play)",
+                "enablement": "deltabox.hasVite"
             },
             {
                 "command": "deltabox.toolchain.runProjectVite",
                 "title": "Run Vite+ command…",
                 "category": "deltabox",
-                "icon": "$(play)"
+                "icon": "$(play)",
+                "enablement": "deltabox.hasVite"
             },
             {
                 "command": "deltabox.toolchain.createVite",
@@ -441,7 +449,7 @@
         "viewsWelcome": [
             {
                 "view": "deltabox.providers",
-                "contents": "No providers yet. Install `@deltabox/toolchain` in this project, or register a custom provider.\n[Add provider](command:deltabox.toolchain.providers.add)"
+                "contents": "No providers available. [Add provider](command:deltabox.toolchain.providers.add)"
             },
             {
                 "view": "deltabox.projects",
@@ -482,7 +490,7 @@
                     "default": [
                         "**/dbx.config.*",
                         "**/tsconfig.default.json",
-                        "**/tsconfig.monorepo.json"
+                        "**/tsconfig.workspaces.json"
                     ],
                     "description": "Input globs that trigger a sync. Generated outputs are never watched (prevents sync loops)."
                 }
@@ -499,5 +507,9 @@
         "tsdown": "catalog:",
         "typescript": "catalog:",
         "vitest": "catalog:"
-    }
+    },
+    "author": "Victor Sango <victor@deltabox.studio>",
+    "license": "MPL-2.0",
+    "homepage": "https://toolchain.deltabox.studio",
+    "packageManager": "yarn@4.17.1"
 }
