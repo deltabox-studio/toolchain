@@ -208,6 +208,31 @@ export function foldViteIntoConfig(
 /** The root file the generated shim lives in; excluded from Oxfmt via `fmt`. */
 const VITE_CONFIG_IGNORE = '/vite.config.ts';
 
+/** Whether `source` is the managed `vite.config.ts` shim (already migrated). */
+function isManagedShim(source: string): boolean {
+    return source.includes('resolveVite(') && source.includes('@deltabox/toolchain/vite');
+}
+
+/**
+ * Render a fresh `dbx.config.ts` holding the folded Vite object, for a project
+ * that has a hand-written `vite.config.*` but no `dbx.config.*` yet. Like the
+ * scaffold, it wraps the config in `defineConfig` from `@deltabox/toolchain` (a
+ * workspace resolves it through the root's installed dependency).
+ */
+function renderFreshConfig(objectText: string): string {
+    const text = indentBlock(objectText, '        ');
+    return [
+        "import { defineConfig } from '@deltabox/toolchain';",
+        '',
+        'export default defineConfig({',
+        '    toolchain: {',
+        `        vite: ${text},`,
+        '    },',
+        '});',
+        '',
+    ].join('\n');
+}
+
 /**
  * Ensure `fmt.ignorePatterns` contains `'/vite.config.ts'` in a folded Vite
  * object literal, so Oxfmt does not reformat the generated root `vite.config.ts`
@@ -246,8 +271,18 @@ export const viteToToolchain: ToolchainMigration = {
     id: 'vite-to-toolchain',
     from: 'vite',
     to: 'toolchain',
-    description: 'Fold a hand-written root vite.config.* into dbx.config.* (`toolchain.vite`).',
-    detect: cwd => Boolean(findViteConfig(cwd)),
+    description: 'Fold a hand-written vite.config.* into dbx.config.* (`toolchain.vite`).',
+    detect: cwd => {
+        const file = findViteConfig(cwd);
+        if (!file) return false;
+        try {
+            // An already-managed shim (`defineConfig(resolveVite())`) is not a
+            // hand-written config to fold.
+            return !isManagedShim(fs.readFileSync(file, 'utf-8'));
+        } catch {
+            return true;
+        }
+    },
     run: async (ctx: MigrationContext): Promise<MigrationResult> => {
         const viteFile = findViteConfig(ctx.cwd);
         if (!viteFile) throw new Error('vite-to-toolchain: no vite.config.* found.');
@@ -265,21 +300,8 @@ export const viteToToolchain: ToolchainMigration = {
             notes,
         });
 
-        const configFile = findDbxConfig(ctx.cwd);
-        if (!configFile) {
-            unmapped.push({
-                source: path.basename(viteFile),
-                reason: 'no dbx.config.* found to fold into',
-            });
-            notes.push('Create a dbx.config.* first, then re-run this migration.');
-            return empty();
-        }
-        if (configFile.endsWith('.json')) {
-            unmapped.push({
-                source: path.basename(configFile),
-                reason: 'JSON configs cannot hold the extracted object by text-splice',
-            });
-            notes.push('Fold into the JSON config by hand.');
+        if (isManagedShim(source)) {
+            notes.push('Already managed by `dbx sync`; nothing to fold.');
             return empty();
         }
 
@@ -301,8 +323,53 @@ export const viteToToolchain: ToolchainMigration = {
             return empty();
         }
 
+        const objectText = ensureViteFmtIgnore(extracted.text);
+        const tail = `added \`${VITE_CONFIG_IGNORE}\` to \`fmt.ignorePatterns\`; run \`dbx sync\` to regenerate vite.config.ts.`;
+        const configFile = findDbxConfig(ctx.cwd);
+
+        // The hand-written `vite.config.*` is now redundant (managed by
+        // `dbx sync`); remove it unless `ignoreViteConfigFile` was set.
+        const cleanupSource = (): string[] => {
+            if (ctx.ignoreViteConfigFile) {
+                notes.push(`Kept \`${path.basename(viteFile)}\` (ignoreViteConfigFile).`);
+                return [];
+            }
+            if (ctx.write) fs.rmSync(viteFile, { force: true });
+            notes.push(`Removed \`${path.basename(viteFile)}\` (recreated by \`dbx sync\`).`);
+            return [viteFile];
+        };
+
+        if (configFile && configFile.endsWith('.json')) {
+            unmapped.push({
+                source: path.basename(configFile),
+                reason: 'JSON configs cannot hold the extracted object by text-splice',
+            });
+            notes.push('Fold into the JSON config by hand.');
+            return empty();
+        }
+
+        // No config yet: create one (eg. a workspace that only had vite.config.*).
+        if (!configFile) {
+            const target = path.join(ctx.cwd, 'dbx.config.ts');
+            const file: MigrationFile = { path: target, content: renderFreshConfig(objectText) };
+            if (ctx.write) fs.writeFileSync(target, file.content, 'utf-8');
+            const removed = cleanupSource();
+            notes.push(
+                `Created \`${path.basename(target)}\` with the folded \`toolchain.vite\`; ${tail}`
+            );
+            return {
+                id: viteToToolchain.id,
+                from: 'vite',
+                to: 'toolchain',
+                written: [target],
+                removed,
+                files: [file],
+                notes,
+            };
+        }
+
         const configSource = fs.readFileSync(configFile, 'utf-8').replace(/^\uFEFF/, '');
-        const folded = foldViteIntoConfig(configSource, ensureViteFmtIgnore(extracted.text));
+        const folded = foldViteIntoConfig(configSource, objectText);
         if ('error' in folded) {
             unmapped.push({ source: path.basename(configFile), reason: folded.error });
             notes.push('Left dbx.config.* unchanged; fold `toolchain.vite` in by hand.');
@@ -311,14 +378,14 @@ export const viteToToolchain: ToolchainMigration = {
 
         const file: MigrationFile = { path: configFile, content: folded.content };
         if (ctx.write) fs.writeFileSync(configFile, file.content, 'utf-8');
-        notes.push(
-            `Folded into \`toolchain.vite\` (${path.basename(configFile)}); added \`${VITE_CONFIG_IGNORE}\` to \`fmt.ignorePatterns\`; run \`dbx sync\` to regenerate vite.config.ts.`
-        );
+        const removed = cleanupSource();
+        notes.push(`Folded into \`toolchain.vite\` (${path.basename(configFile)}); ${tail}`);
         return {
             id: viteToToolchain.id,
             from: 'vite',
             to: 'toolchain',
             written: [configFile],
+            removed,
             files: [file],
             notes,
         };

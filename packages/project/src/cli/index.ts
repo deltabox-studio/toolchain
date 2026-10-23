@@ -1,4 +1,9 @@
-import { logger, type ProjectType, type ToolchainCommand } from '@deltabox/toolchain-shared';
+import {
+    logger,
+    type ProjectType,
+    type ToolchainCommand,
+    type ToolchainCommandContext,
+} from '@deltabox/toolchain-shared';
 
 import { generateProjectConfigs } from '../config.js';
 import {
@@ -16,6 +21,45 @@ const CONFIG_OPTIONS = [
     },
 ];
 
+/** The valid `project.type` values. */
+const PROJECT_TYPES: ProjectType[] = ['project', 'monorepo-root', 'monorepo-workspace'];
+
+/**
+ * Resolve the project name for a scaffold. A name is **required**: it comes from
+ * `--name` or `project.name` in `dbx.config.*`, otherwise the scaffold fails.
+ */
+function requireName(
+    opts: Record<string, unknown>,
+    config: ToolchainCommandContext['config']
+): string {
+    const name = String(opts.name ?? config.project?.name ?? '').trim();
+    if (!name) {
+        throw new Error(
+            'a project name is required: pass `--name <name>` or set `project.name` in dbx.config.*.'
+        );
+    }
+    return name;
+}
+
+/**
+ * Resolve + validate the project type for a scaffold. An explicit `--type` (or
+ * `project.type` in the config) must be one of {@link PROJECT_TYPES}; otherwise
+ * the command's implied default is used.
+ */
+function resolveType(
+    opts: Record<string, unknown>,
+    config: ToolchainCommandContext['config'],
+    fallback: ProjectType
+): ProjectType {
+    const type = (opts.type as string | undefined) ?? config.project?.type ?? fallback;
+    if (!PROJECT_TYPES.includes(type as ProjectType)) {
+        throw new Error(
+            `invalid project type "${type}" (expected one of: ${PROJECT_TYPES.join(', ')}).`
+        );
+    }
+    return type as ProjectType;
+}
+
 /** Build the project scaffolding commands. */
 export function projectCommands(): ToolchainCommand[] {
     return [
@@ -29,11 +73,11 @@ export function projectCommands(): ToolchainCommand[] {
                 ...CONFIG_OPTIONS,
             ],
             run: (opts, context) => {
-                const name = String(opts.name ?? context.config.project?.name ?? 'app');
+                const name = requireName(opts, context.config);
                 const files = createRootProjectFiles({
                     name,
                     ...(opts.scope ? { scope: opts.scope as string } : {}),
-                    type: (opts.type as ProjectType | undefined) ?? 'project',
+                    type: resolveType(opts, context.config, 'project'),
                     includeConfig: (opts.config as boolean | undefined) ?? true,
                 });
                 const written = writeGeneratedFiles(files, (opts.out as string) ?? context.cwd);
@@ -50,11 +94,11 @@ export function projectCommands(): ToolchainCommand[] {
                 ...CONFIG_OPTIONS,
             ],
             run: (opts, context) => {
-                const name = String(opts.name ?? context.config.project?.name ?? 'monorepo');
+                const name = requireName(opts, context.config);
                 const scope = (opts.scope as string) ?? context.config.project?.scope ?? `@${name}`;
                 const out = (opts.out as string) ?? context.cwd;
                 const includeConfig = (opts.config as boolean | undefined) ?? true;
-                const rootType = (opts.type as ProjectType | undefined) ?? 'monorepo-root';
+                const rootType = resolveType(opts, context.config, 'monorepo-root');
 
                 const files = createMonorepoRootFiles({
                     name,
@@ -92,7 +136,7 @@ export function projectCommands(): ToolchainCommand[] {
             ],
             run: (opts, context) => {
                 const root = (opts.root as string | undefined) ?? context.cwd;
-                const name = String(opts.name ?? 'workspace');
+                const name = requireName(opts, context.config);
                 const scope =
                     (opts.scope as string | undefined) ??
                     context.config.project?.scope ??
@@ -101,7 +145,7 @@ export function projectCommands(): ToolchainCommand[] {
                     .replace(/\\/g, '/')
                     .replace(/\/+$/, '');
                 const includeConfig = (opts.config as boolean | undefined) ?? true;
-                const type = (opts.type as ProjectType | undefined) ?? 'monorepo-workspace';
+                const type = resolveType(opts, context.config, 'monorepo-workspace');
 
                 const files = createWorkspaceFiles({
                     name,

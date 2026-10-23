@@ -8,6 +8,7 @@ import {
     chooseDbxSource,
     cliInvocation,
     initDbxSource,
+    setExtensionInfo,
     spawnCli,
     workspaceRoots,
 } from './cli.js';
@@ -43,7 +44,14 @@ const TEMPLATES_VIEW_ID = 'deltabox.templates';
 const WORKFLOW_IDS = ['ci', 'changelog', 'release', 'sync', 'issues'];
 
 /** Input globs watched by default (never generated outputs). */
-const DEFAULT_WATCH = ['**/dbx.config.*', '**/tsconfig.default.json', '**/tsconfig.monorepo.json'];
+const DEFAULT_WATCH = [
+    '**/dbx.config.*',
+    '**/tsconfig.default.json',
+    '**/tsconfig.workspaces.json',
+];
+
+/** Matches the tsconfig sync task's "no workspaces" warning in the CLI output. */
+const NO_WORKSPACES_WARNING = /no workspace tsconfig files found/i;
 
 function config(): vscode.WorkspaceConfiguration {
     return vscode.workspace.getConfiguration(SECTION);
@@ -58,6 +66,10 @@ export function activate(context: vscode.ExtensionContext): void {
     const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     status.command = `${SECTION}.sync`;
     status.show();
+
+    // Capture the extension's own path/version so the bundled `dbx.cjs` (and the
+    // pinned `npx` fallback) resolve regardless of the extension id.
+    setExtensionInfo(context.extension);
 
     // Detect the workspace's own `dbx` and ask once which one to run (see cli.ts).
     void initDbxSource(context);
@@ -87,9 +99,36 @@ export function activate(context: vscode.ExtensionContext): void {
         showCollapseAll: true,
     });
 
+    /** Set a `when`/`enablement` context key (drives command enablement). */
+    const setContext = (key: string, value: boolean): void => {
+        void vscode.commands.executeCommand('setContext', key, value);
+    };
+
+    /**
+     * Refresh the context keys that gate command enablement: sync is only
+     * meaningful when some project has a `dbx.config.*`, and the Vite+ commands
+     * only when the provider is actually available.
+     */
+    const updateContextKeys = (): void => {
+        const projects = discoverProjects();
+        const listed = providers.list();
+        setContext(
+            'deltabox.canSync',
+            projects.some(project => project.hasConfig)
+        );
+        setContext('deltabox.hasProviders', listed.length > 0);
+        setContext(
+            'deltabox.hasVite',
+            listed.some(provider => provider.id === 'vite-plus' && provider.commands.length > 0)
+        );
+    };
+
     let enabled = getEnabled();
     let child: ChildProcess | undefined;
     let watchers: vscode.FileSystemWatcher[] = [];
+    // The tsconfig "no workspaces" warning is shown once per session (a sync
+    // runs on every watched change, so a notification each time would nag).
+    let warnedNoWorkspaces = false;
 
     /** Run `dbx <args>` in `cwd`, streaming output to the channel. */
     const runCli = (cwd: string, args: string[]): Promise<number> => {
@@ -104,8 +143,14 @@ export function activate(context: vscode.ExtensionContext): void {
                 return;
             }
             child = proc;
-            proc.stdout?.on('data', d => output.append(d.toString()));
-            proc.stderr?.on('data', d => output.append(d.toString()));
+            let captured = '';
+            const capture = (d: Buffer): void => {
+                const text = d.toString();
+                output.append(text);
+                captured += text;
+            };
+            proc.stdout?.on('data', capture);
+            proc.stderr?.on('data', capture);
             proc.on('error', error => {
                 output.appendLine(`dbx: ${String(error)}`);
                 child = undefined;
@@ -113,6 +158,17 @@ export function activate(context: vscode.ExtensionContext): void {
             });
             proc.on('exit', code => {
                 child = undefined;
+                if (!warnedNoWorkspaces && NO_WORKSPACES_WARNING.test(captured)) {
+                    warnedNoWorkspaces = true;
+                    void vscode.window
+                        .showWarningMessage(
+                            'deltabox: no workspace tsconfig files were found, but project references/composite (or a workspaces tsconfig) are configured. See the output channel.',
+                            'Show output'
+                        )
+                        .then(choice => {
+                            if (choice === 'Show output') output.show();
+                        });
+                }
                 resolve(code ?? 0);
             });
         });
@@ -162,7 +218,8 @@ export function activate(context: vscode.ExtensionContext): void {
         tree.refresh();
         files.refresh();
         home.refresh();
-        void providers.refresh();
+        updateContextKeys();
+        void providers.refresh().then(updateContextKeys);
         void templates.refresh();
     };
 
@@ -346,9 +403,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const providers = await loadProviders(root);
         const vite = providers.find(provider => provider.id === 'vite-plus');
         if (!vite || vite.commands.length === 0) {
-            vscode.window.showWarningMessage(
-                'deltabox: the Vite+ provider is unavailable — install @deltabox/toolchain in this project.'
-            );
+            vscode.window.showWarningMessage('deltabox: the Vite+ provider is unavailable.');
             return;
         }
         const choice = await vscode.window.showQuickPick(
@@ -532,6 +587,7 @@ export function activate(context: vscode.ExtensionContext): void {
         });
         writeProviderRegistry(root, registry);
         await providers.refresh();
+        updateContextKeys();
         vscode.window.showInformationMessage(`deltabox: added provider "${name}".`);
     };
 
@@ -549,6 +605,7 @@ export function activate(context: vscode.ExtensionContext): void {
             readProviderRegistry(node.root).filter(provider => provider.id !== node.provider.id)
         );
         await providers.refresh();
+        updateContextKeys();
     };
 
     /** Run a provider command (`dbx <command.name>`) in a terminal. */
@@ -622,8 +679,14 @@ export function activate(context: vscode.ExtensionContext): void {
                 .map(project => project.syncedAt)
                 .filter((value): value is string => Boolean(value))
                 .sort();
+            const listed = providers.list();
             return {
                 enabled,
+                canSync: projects.some(project => project.hasConfig),
+                hasProviders: listed.length > 0,
+                hasVite: listed.some(
+                    provider => provider.id === 'vite-plus' && provider.commands.length > 0
+                ),
                 projects: projects.map(project => ({
                     label: project.label,
                     dir: project.dir,
@@ -746,9 +809,7 @@ export function activate(context: vscode.ExtensionContext): void {
         if (!template) {
             const listed = await loadTemplates(base);
             if (listed.length === 0) {
-                vscode.window.showWarningMessage(
-                    'deltabox: no templates found — install @deltabox/toolchain in this project.'
-                );
+                vscode.window.showWarningMessage('deltabox: no templates found.');
                 return;
             }
             const picked = await vscode.window.showQuickPick(
@@ -1067,7 +1128,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
     rebuildWatchers();
     setStatus('idle');
-    void providers.refresh();
+    updateContextKeys();
+    void providers.refresh().then(updateContextKeys);
     void templates.refresh();
     output.appendLine('dbx: extension activated.');
 }

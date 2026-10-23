@@ -1,15 +1,16 @@
 {
     "name": "@deltabox/toolchain-docs",
-    "version": "1.7.8",
+    "version": "1.9.0",
     "private": true,
     "type": "module",
     "description": "Documentation site for @deltabox/toolchain (VitePress).",
     "scripts": {
         "dev": "vitepress dev",
-        "build": "vitepress build",
+        "build": "vitepress build && node scripts/copy-llms.mjs",
         "preview": "vitepress preview"
     },
     "devDependencies": {
-        "vitepress": "^1.6.4"
+        "vitepress": "^1.6.4",
+        "vitepress-plugin-llms": "^1.14.0"
     }
 }

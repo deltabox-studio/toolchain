@@ -14,6 +14,8 @@ dbx migrate --check                    # CI: exit 1 when the oxc config is stale
 dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
 ```
 
+`dbx migrate` is a dry-run unless you pass `--write` (or `--check`).
+
 ## Sources
 
 | Source     | Notes                                                                                                                                                        |
@@ -30,11 +32,29 @@ dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
 - `--target vite` — folds the result into an existing `vite.config.ts`
   (inserting/replacing `fmt` and `lint`), which is what Vite+ reads.
 
+## Recursive migration
+
+By default `dbx migrate` only touches the root (`--cwd`, or the current
+directory). `--recursive` walks the discovered projects under the root and
+migrates each one that has a **detected source**:
+
+```bash
+dbx migrate --from biome --recursive --write
+```
+
+On an interactive terminal it first asks which projects to migrate with a
+multi-select — every candidate is listed by its relative path (with its package
+name as a hint), plus an **All projects** option. Non-interactive runs (piped
+output, CI, or `--json`) migrate every candidate without prompting. A project is
+a candidate when a migration matching `--from` (or any migration, for `all`/no
+`--from`) is detected in its directory — so a workspace with its own
+`biome.json` or `vite.config.*` is included, and one without is skipped.
+
 ## `vite.config`
 
 The `vite` source moves a hand-written root `vite.config.*` into
 `dbx.config.*`'s `toolchain.vite`, so the whole Vite+ config lives in the one
-hand-authored root config and `dbx sync` writes a thin `vite.config.ts` shim that
+hand-authored config and `dbx sync` writes a thin `vite.config.ts` shim that
 resolves it at load time:
 
 ```bash
@@ -54,6 +74,29 @@ replacing an existing `vite` value). When the config references imports, plugins
 or any non-literal expression it is reported as **unmapped** and nothing is
 written, rather than emitting broken output. A JSON `dbx.config.json` is also
 left alone (the object is folded by hand).
+
+When the project has a `vite.config.*` but **no** `dbx.config.*` (a workspace
+that never had one), the migration creates a fresh `dbx.config.ts` holding the
+folded `toolchain.vite`, wrapped in `defineConfig` from `@deltabox/toolchain`
+(like the scaffold). A workspace resolves that import through the root's
+installed dependency — in a self-hosted repo, via a root `portal:.` self-link.
+
+The now-redundant `vite.config.*` is removed (it is recreated by `dbx sync`).
+Pass `--ignore-vite-config-file` to keep it.
+
+## Post-migration sync
+
+A `--write` run finishes by regenerating the project's toolchain-managed files
+(the same files `dbx sync` writes) for every project it changed — so a migrated
+project is immediately consistent, eg. the managed `vite.config.ts` shim appears
+right after folding a hand-written config. Two flags narrow that step:
+
+| Flag                     | Effect                                                                    |
+| ------------------------ | ------------------------------------------------------------------------- |
+| `--ignore-managed-files` | Skip the post-migration sync entirely; managed files are left untouched.  |
+| `--ignore-changelog`     | Run the sync but drop the `changelog` task (workflows, commitlint, hook). |
+
+The sync only runs after `--write`; a dry-run reports what it would do instead.
 
 ## Package scripts
 

@@ -10,13 +10,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-/** The block appended to a consumer's `.gitignore`. */
+/**
+ * The block appended to a consumer's `.gitignore`.
+ *
+ * The leading globstar covers a nested project's `.dbx/` too (a monorepo
+ * workspace with its own `dbx.config.*` has its own manifest), while still
+ * tracking the manifest at any depth.
+ */
 export const DBX_GITIGNORE_BLOCK = [
-    '# @deltabox/toolchain (generated state; keep only the manifest)',
-    '.dbx/*',
-    '!.dbx/toolchain',
-    '.dbx/toolchain/*',
-    '!.dbx/toolchain/manifest.json',
+    '# @deltabox/toolchain (generated state; keep only the manifests)',
+    '**/.dbx/*',
+    '!**/.dbx/toolchain',
+    '**/.dbx/toolchain/*',
+    '!**/.dbx/toolchain/manifest.json',
 ].join('\n');
 
 /**

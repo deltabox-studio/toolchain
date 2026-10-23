@@ -68,7 +68,7 @@ The **Providers** and **Templates** views read `dbx providers --json` and `dbx t
 
 ## Auto-sync
 
-Auto-sync watches input files only: `dbx.config.*`, `tsconfig.default.json`, and `tsconfig.monorepo.json`.
+Auto-sync watches input files only: `dbx.config.*`, `tsconfig.default.json`, and `tsconfig.workspaces.json`.
 
 Generated outputs are never watched. The scheduler debounces bursts, allows one sync at a time, queues at most one follow-up, and suppresses events briefly after a run.
 

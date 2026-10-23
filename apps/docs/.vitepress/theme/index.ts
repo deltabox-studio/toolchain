@@ -1,4 +1,5 @@
 import type { Theme } from 'vitepress';
+import CopyOrDownloadAsMarkdownButtons from 'vitepress-plugin-llms/vitepress-components/CopyOrDownloadAsMarkdownButtons.vue';
 import DefaultTheme, { VPSocialLinks } from 'vitepress/theme';
 import { h } from 'vue';
 
@@ -15,6 +16,9 @@ const socialLinks = [
 
 export default {
     extends: DefaultTheme,
+    enhanceApp({ app }) {
+        app.component('CopyOrDownloadAsMarkdownButtons', CopyOrDownloadAsMarkdownButtons);
+    },
     Layout() {
         return h(DefaultTheme.Layout, null, {
             'layout-bottom': () =>

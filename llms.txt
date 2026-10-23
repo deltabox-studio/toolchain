@@ -1,0 +1,50 @@
+# deltabox toolchain
+
+> All-in-one, config-driven dev toolchain: one `dbx.config.ts` generates and manages tsconfigs, changelogs + release CI, Biome/Vite+ configs, VS Code settings, project scaffolding and migrations.
+
+> If `https://toolchain.deltabox.studio` is unavailable, the same documentation is available in the repository at <https://github.com/deltabox-studio/toolchain/tree/main/apps/docs> (source Markdown).
+
+This file is a concise, link-first overview. For the **full** documentation in a single file, see [`llms-full.txt`](https://toolchain.deltabox.studio/llms-full.txt).
+
+**How it works** — `@deltabox/toolchain` is a config-driven toolchain:
+
+- **One config.** `dbx.config.ts` exports `{ toolchain: { ...sections } }`; every section is opt-in by presence (`section: true` uses defaults, omit it to leave that area untouched).
+- **Sync.** `dbx sync` runs each enabled section and writes the managed files, tracked in `.dbx/toolchain/manifest.json`; `dbx sync --check` is the CI gate. `dbx sync --recursive` syncs every discovered project in dependency order.
+- **Nested configs.** A non-root `dbx.config.*` merges over the nearest ancestor config: objects merge, while scalars and arrays replace; `project.type` and `hooks` are never inherited.
+- **Project graph.** `dbx projects` writes `.dbx/toolchain/projects.json` (workspace dirs + dependencies), used by `sync --recursive`, the VS Code view and per-workspace changelogs.
+- **Sections.** `project`, `changelog`, `biome`, `tsconfig`, `templates`, `vite`, `watch`, `logger`, `providers`.
+- **Runtime.** Node ≥ 22.5 and Yarn 4 (corepack); Vite+ (`vp`) resolves at the repo root.
+
+## Table of Contents
+
+### Introduction
+
+- [Getting Started](https://toolchain.deltabox.studio/guide.md)
+- [Monorepo Guide](https://toolchain.deltabox.studio/guide/monorepo.md)
+- [VS Code Extension](https://toolchain.deltabox.studio/guide/vscode.md)
+
+### Toolchain
+
+- [CLI](https://toolchain.deltabox.studio/guide/cli.md)
+- [Configuration](https://toolchain.deltabox.studio/guide/config.md)
+- [Project](https://toolchain.deltabox.studio/guide/project.md)
+- [Changelog & versioning](https://toolchain.deltabox.studio/guide/changelog.md)
+- [tsconfig](https://toolchain.deltabox.studio/guide/tsconfig.md)
+- [Biome](https://toolchain.deltabox.studio/guide/biome.md)
+- [Vite+](https://toolchain.deltabox.studio/guide/vite.md)
+- [Watch](https://toolchain.deltabox.studio/guide/watch.md)
+- [Logger](https://toolchain.deltabox.studio/guide/logger.md)
+- [Providers](https://toolchain.deltabox.studio/guide/providers.md)
+- [Config Generator](https://toolchain.deltabox.studio/guide/config-generator.md)
+- [Package scripts](https://toolchain.deltabox.studio/guide/scripts.md)
+- [Templates](https://toolchain.deltabox.studio/guide/templates.md)
+- [Migrations](https://toolchain.deltabox.studio/guide/migrations.md)
+- [Programmatic API](https://toolchain.deltabox.studio/guide/api.md)
+
+### Reference
+
+- [dbx.config](https://toolchain.deltabox.studio/config/reference.md)
+
+### Other
+
+- [LLM context files](https://toolchain.deltabox.studio/llms.md)

@@ -7,8 +7,9 @@
         "lib": ["ES2022", "DOM", "DOM.Iterable"],
         "types": ["node"]
     },
-    "exclude": ["**/dist", "**/node_modules", "docs", "packages"],
+    "exclude": ["**/dist", "**/node_modules", "packages"],
     "include": [
+        "apps/docs/.vitepress/**/*.ts",
         "src",
         "scripts",
         "tests",

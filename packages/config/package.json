@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-config",
-    "version": "1.7.8",
+    "version": "1.9.0",
     "description": "Generic Zod/env-backed configuration engine: env parsing, schema walking, and .env/types/markdown/JSON/CLI generators.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
@@ -35,5 +35,7 @@
         "./cli": "./dist/cli/index.js",
         "./generators": "./dist/generators/index.js",
         "./package.json": "./package.json"
-    }
+    },
+    "homepage": "https://toolchain.deltabox.studio",
+    "packageManager": "yarn@4.17.1"
 }

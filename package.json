@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain",
-    "version": "1.7.8",
+    "version": "1.9.0",
     "description": "All-in-one toolchain: scaffold projects, manage templates, configs, tsconfigs, changelogs and builds.",
     "homepage": "https://toolchain.deltabox.studio",
     "author": "Victor Sango <victor@deltabox.studio>",
@@ -54,7 +54,7 @@
         "dev": "tsx src/cli/index.ts",
         "dbx": "tsx src/cli/index.ts",
         "commitlint": "commitlint",
-        "postinstall": "husky && node scripts/bootstrap.mjs"
+        "postinstall": "node scripts/bootstrap.mjs"
     },
     "publishConfig": {
         "access": "public",
@@ -77,6 +77,7 @@
     "devDependencies": {
         "@commitlint/cli": "^21.2.2",
         "@commitlint/config-conventional": "^21.2.2",
+        "@deltabox/toolchain": "portal:.",
         "@deltabox/toolchain-biome": "workspace:*",
         "@deltabox/toolchain-changelog": "workspace:*",
         "@deltabox/toolchain-config": "workspace:*",
@@ -115,7 +116,8 @@
         "node": ">=22.5.0"
     },
     "files": [
-        "dist"
+        "dist",
+        "scripts/bootstrap.mjs"
     ],
     "exports": {
         ".": "./dist/index.js",

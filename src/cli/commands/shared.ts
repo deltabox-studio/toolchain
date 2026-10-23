@@ -19,5 +19,7 @@ export function watchOptions(context: ToolchainCommandContext) {
         tokens: context.tokens,
         ...(context.configPath ? { configPath: context.configPath } : {}),
         ...(watch?.debounce !== undefined ? { debounce: watch.debounce } : {}),
+        ...(watch?.exclude !== undefined ? { exclude: watch.exclude } : {}),
+        ...(watch?.gitignore !== undefined ? { gitignore: watch.gitignore } : {}),
     };
 }

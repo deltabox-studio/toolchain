@@ -61,9 +61,13 @@ function shouldIgnore(name: string): boolean {
 
 function childDirs(dir: string): string[] {
     try {
+        // Never descend into a symlink/junction (a self-link would cycle) or a
+        // generated/dependency directory.
         return fs
             .readdirSync(dir, { withFileTypes: true })
-            .filter(entry => entry.isDirectory() && !shouldIgnore(entry.name))
+            .filter(
+                entry => entry.isDirectory() && !entry.isSymbolicLink() && !shouldIgnore(entry.name)
+            )
             .map(entry => path.join(dir, entry.name));
     } catch {
         return [];

@@ -187,7 +187,7 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
         { path: 'turbo.json', content: renderTurboJson() },
         { path: 'tsconfig.base.json', content: renderTsconfigBase(tokens(ctx)) },
         {
-            path: 'tsconfig.monorepo.json',
+            path: 'tsconfig.workspaces.json',
             content: renderMonorepoTsconfig({
                 scope: ctx.scope ?? ctx.name,
                 workspaces: ctx.workspaces,

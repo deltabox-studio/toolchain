@@ -1,5 +1,5 @@
 import type { Replacements } from './template.js';
-import type { ProjectType, ToolchainConfig } from './toolchain.js';
+import type { ProjectType, SyncTask, ToolchainConfig } from './toolchain.js';
 
 /** A value that may or may not be awaited. */
 export type Awaitable<T> = T | Promise<T>;
@@ -45,6 +45,13 @@ export interface ToolchainCommandContext {
     tokens: Replacements;
     /** The config file that was loaded, if any. */
     configPath?: string;
+    /**
+     * The managed-file sync tasks `dbx sync` runs. Supplied by the CLI (which
+     * aggregates the packages) so a package command such as `migrate` can
+     * regenerate managed files without depending on every sync package. Absent
+     * when a command is driven programmatically.
+     */
+    syncTasks?: SyncTask[];
 }
 
 /** A positional argument a command accepts. */

@@ -5,11 +5,11 @@ logs
 # Changelog dry-run output
 CHANGELOG.proposed.md
 
-# Generated toolchain state; keep only the manifest (it holds no absolute paths)
-.dbx/*
-!.dbx/toolchain
-.dbx/toolchain/*
-!.dbx/toolchain/manifest.json
+# Generated toolchain state; keep only the manifests (they hold no absolute paths)
+**/.dbx/*
+!**/.dbx/toolchain
+**/.dbx/toolchain/*
+!**/.dbx/toolchain/manifest.json
 
 # Packaged VS Code extension (built + attached to releases)
 *.vsix

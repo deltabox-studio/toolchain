@@ -1,64 +1,155 @@
 trigger:
   tags:
     include:
-      - 'v*'
+      - v*
   branches:
     exclude:
       - '*'
-
-pool:
-  vmImage: ubuntu-latest
+pr: none
 
 variables:
   nodeVersion: '22.x'
   minNpmVersion: '11.15.1'
   packageManager: 'yarn'
   yarnVersion: '4.17.1'
+  extensionWorkspaceDir: 'packages/vscode'
 
-steps:
-- task: UseNode@1
-  displayName: 'Use node 22'
-  inputs:
-    version: $(nodeVersion)
+stages:
+- stage: 'Check'
+  displayName: 'Check the published extension version'
+  jobs:
+  - job: 'CheckJob'
+    displayName: 'Check whether the version is already published'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+      fetchDepth: 1
 
-- script: |
-    npm install -g npm@^$(minNpmVersion)
-  displayName: 'Upgrade npm'
+    # Reads `$(extensionWorkspaceDir)/package.json` and queries the VS Code
+    # Marketplace for that version. `alreadyPublished` is exposed as a stage
+    # output so the Build/Release stages can skip when it is `true`.
+    - task: PowerShell@2
+      name: 'CheckStep'
+      displayName: 'Query the VS Code Marketplace for the current version'
+      inputs:
+        pwsh: true
+        targetType: 'inline'
+        script: |
+          $ErrorActionPreference = 'Stop'
+          $pkg = Get-Content '$(extensionWorkspaceDir)/package.json' -Raw | ConvertFrom-Json
+          $id = "$($pkg.publisher).$($pkg.name)"
+          $version = $pkg.version
+          Write-Host "Checking $id v$version on the VS Code Marketplace..."
 
-- script: |
-    corepack enable
-    corepack prepare $(packageManager)@$(yarnVersion) --activate
-  displayName: 'Enable corepack'
+          $published = $false
+          try {
+            $body = @{
+              filters = @(@{ criteria = @(@{ filterType = 7; value = $id }) })
+              flags   = 1
+            } | ConvertTo-Json -Depth 10
+            $response = Invoke-RestMethod -Method Post -ContentType 'application/json' `
+              -Headers @{ Accept = 'application/json;api-version=7.2-preview.1' } `
+              -Uri 'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery' `
+              -Body $body
+            $versions = @($response.results[0].extensions[0].versions | ForEach-Object { $_.version })
+            $published = $versions -contains $version
+          } catch {
+            Write-Warning "Could not query the VS Code Marketplace; assuming not published. $_"
+          }
 
-# Install VS Code Extension Manager (vsce >= v2.26.1 needed)
-- script: |
-    npm install -g @vscode/vsce
-  displayName: 'Install vsce globally'
+          Write-Host "extension=$id version=$version alreadyPublished=$published"
+          Write-Host "##vso[task.setvariable variable=extensionVersion;isOutput=true]$version"
+          Write-Host "##vso[task.setvariable variable=alreadyPublished;isOutput=true]$($published.ToString().ToLowerInvariant())"
+          if ($published) {
+            Write-Host "##[warning]$id v$version is already published to the VS Code Marketplace; skipping the build and release stages."
+          }
 
-- script: |
-    $(packageManager) install
-  displayName: 'Install dependencies'
+- stage: 'Build'
+  displayName: 'Build the monorepo'
+  dependsOn: Check
+  condition: and(succeeded(), ne(dependencies.Check.outputs['CheckJob.CheckStep.alreadyPublished'], 'true'))
+  jobs: 
+  - job: 'Build'
+    displayName: 'Build job'
+    pool:
+      vmImage: 'ubuntu-latest'
 
-- task: CopyFiles@2
-  inputs:
-    sourceFolder: '.'
-    contents: |
-      CHANGELOG.md
-    targetFolder: $(extension-dir)
-  displayName: 'Copy changelog from root'
+    steps:
+    - checkout: self
+      clean: true
+      fetchDepth: 0
 
-# Build
-- script: |
-    $(packageManager) build
-  displayName: 'Build workspaces and the extension'
+    - script: 'echo "$(Build.DefinitionName), $(Build.BuildId), $(Build.BuildNumber)" > buildinfo.txt'
+      displayName: 'Write build info'
 
-# Publish
-- task: AzureCLI@2
-  displayName: 'Publish to the VS Code Marketplace using managed identity'
-  inputs:
-    azureSubscription: $(connection-service-name)
-    scriptType: pscore
-    scriptLocation: inlineScript
-    inlineScript: |
-      cd ${env:EXTENSION-DIR}
-      vsce publish --packagePath deltabox-toolchain.vsix --azure-credential
+    - task: UseNode@1
+      displayName: 'Use node $(nodeVersion)'
+      inputs:
+        version: $(nodeVersion)
+
+    - script: |
+        npm install -g npm@^$(minNpmVersion)
+      displayName: 'Upgrade npm'
+
+    - script: |
+        corepack enable
+        corepack prepare $(packageManager)@$(yarnVersion) --activate
+      displayName: 'Enable corepack'
+
+    - script: |
+        $(packageManager) install --immutable
+      displayName: 'Install dependencies'
+
+    - task: CopyFiles@2
+      inputs:
+        sourceFolder: '.'
+        contents: |
+          CHANGELOG.md
+        targetFolder: $(extensionWorkspaceDir)
+      displayName: 'Copy changelog from root'
+
+    - script: |
+        $(packageManager) build
+      displayName: 'Build workspaces and the VSIX extension'
+
+    - task: CopyFiles@2
+      inputs:
+        sourceFolder: $(extensionWorkspaceDir)
+        contents: |
+          *.vsix
+        targetFolder: $(Build.ArtifactStagingDirectory)
+      displayName: 'Copy VSIX to artifacts'
+
+    - publish: '$(Build.ArtifactStagingDirectory)'
+      artifact: drop
+  
+- stage: 'Release'
+  displayName: 'Deploy VS Code extension to the release environment'
+  dependsOn:
+  - Check
+  - Build
+  condition: and(succeeded(), ne(dependencies.Check.outputs['CheckJob.CheckStep.alreadyPublished'], 'true'))
+  jobs:
+  - deployment: Deploy
+    pool:
+      vmImage: 'ubuntu-latest'
+    environment:
+      name: 'release'
+      resourceType: none
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: drop
+
+          - task: AzureCLI@2
+            displayName: 'Publish to the VS Code Marketplace using managed identity'
+            inputs:
+              azureSubscription: $(connection-service-name)
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: |
+                cd $(Pipeline.Workspace)/drop
+                npx --yes @vscode/vsce publish --packagePath deltabox-toolchain.vsix --azure-credential

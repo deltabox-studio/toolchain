@@ -48,19 +48,18 @@ export function generateTsconfig(options: {
             throw new Error(`options.monorepoTsconfigPath not set for ${tsconfigPath}`);
         }
 
-        if (!fs.existsSync(monorepoTsconfigPath)) {
-            throw new Error(`Root 'tsconfig.monorepo.json' not found: ${monorepoTsconfigPath}`);
-        }
-
         logger.info(`  - ${dirnameRelative}`);
 
         const tsconfigFilename = path.basename(tsconfigPath);
 
         const tsconfigBuildExists = fs.existsSync(tsconfigBuildPath);
 
-        const tsconfigMonorepo = JSON.parse(
-            fs.readFileSync(monorepoTsconfigPath, 'utf-8')
-        ) as TsConfigJson;
+        // The workspaces tsconfig is optional: without it there is simply nothing
+        // to wire (no shared `paths`/`references`), and each workspace still gets
+        // a `tsconfig.json` that extends its own default.
+        const tsconfigMonorepo = fs.existsSync(monorepoTsconfigPath)
+            ? (JSON.parse(fs.readFileSync(monorepoTsconfigPath, 'utf-8')) as TsConfigJson)
+            : ({} as TsConfigJson);
 
         const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf-8')) as TsConfigJson;
 

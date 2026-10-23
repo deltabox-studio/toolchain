@@ -1,10 +1,11 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { relative, resolve } from 'node:path';
+import { resolve } from 'node:path';
 
 import { logger } from '@deltabox/toolchain-shared';
 
 import { formatChangelogFile } from './format.js';
 import { readCommits, repoSlug } from './git.js';
+import { relatedWorkspacePaths } from './graph.js';
 import { packageChangesForCurrent } from './packages.js';
 import { parseExistingChangelog, reformatRootChangelog } from './reformat.js';
 import { discoverWorkspaceDirs, repoRoot } from './repo.js';
@@ -48,8 +49,9 @@ export function writeChangelogs(
     prependChangelogEntry(rootChangelog, entry);
     logger.info(`  updated ${rootChangelog}`);
 
-    // Each versioned workspace changelog only lists commits touching that
-    // workspace dir, headed by the version the versioning plan assigned it.
+    // Each versioned workspace gets its own changelog, listing only its related
+    // commits: those touching the workspace dir **or any workspace it depends
+    // on** (resolved from the project graph). The file is created when missing.
     const entries =
         workspaceEntries ??
         new Map<string, string>(
@@ -59,16 +61,15 @@ export function writeChangelogs(
         );
     for (const [dir, workspaceVersion] of entries) {
         const file = resolve(dir, 'CHANGELOG.md');
-        if (!existsSync(file)) continue;
-        const rel = relative(root, dir).replace(/\\/g, '/');
-        const filtered = readCommits(range, rel);
+        const filtered = readCommits(range, relatedWorkspacePaths(dir, root));
         if (filtered.length === 0) {
-            logger.info(`  skipped ${file} (no commits in ${rel})`);
+            logger.info(`  skipped ${file} (no related commits)`);
             continue;
         }
+        const created = !existsSync(file);
         const wsSummary = buildSummary(filtered);
         prependChangelogEntry(file, renderChangelogEntry(workspaceVersion, wsSummary, new Date()));
-        logger.info(`  updated ${file}`);
+        logger.info(`  ${created ? 'created' : 'updated'} ${file}`);
     }
     // Normalize every changelog (all versions, including old entries).
     const dirs = new Set<string>([...discoverWorkspaceDirs(), ...entries.keys()]);

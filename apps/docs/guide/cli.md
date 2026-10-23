@@ -68,6 +68,7 @@ See [Templates](/guide/templates).
 dbx migrate --from biome --write           # .oxfmtrc.json + .oxlintrc.json
 dbx migrate --from biome --target vite --write
 dbx migrate --from all                     # every detected source
+dbx migrate --from vite --recursive --write  # migrate every detected project
 dbx migrate --check                        # CI: exit 1 when stale
 dbx migrate:list
 ```

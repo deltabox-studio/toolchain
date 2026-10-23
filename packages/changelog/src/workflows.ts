@@ -47,8 +47,10 @@ export const DEFAULT_WORKFLOW_TOKENS: Replacements = {
     yarnVersion: '4.17.1',
     packageManager: 'yarn',
     mainBranch: 'main',
-    devBranch: 'dev',
+    // `dev` has no default: it reuses `main` unless a consumer sets it.
+    devBranch: 'main',
     tooling: 'dbx',
+    commitlintConfig: 'commitlint.config.mjs',
 };
 
 /** The workflow ids the builder knows about. */
@@ -67,6 +69,8 @@ export const WORKFLOW_FILENAMES: Record<WorkflowId, string> = {
 export function isEnabled(setting: WorkflowSetting | undefined): boolean {
     if (setting === undefined) return true;
     if (typeof setting === 'boolean') return setting;
+    // A raw string is enabled when it has content (an empty string disables it).
+    if (typeof setting === 'string') return setting.trim().length > 0;
     return setting.enabled !== false;
 }
 
@@ -118,7 +122,7 @@ export function defaultWorkflows(tokens: Replacements): Record<WorkflowId, Workf
                         {
                             name: 'Commitlint (Conventional Commits)',
                             if: "${{ github.event_name == 'pull_request' || github.event.before != '0000000000000000000000000000000000000000' }}",
-                            run: `set -euo pipefail\nbase="\${{ github.event.pull_request.base.sha || github.event.before }}"\nhead="\${{ github.event.pull_request.head.sha || github.event.after }}"\n${tokens.packageManager} commitlint --from "$base" --to "$head"`,
+                            run: `set -euo pipefail\nbase="\${{ github.event.pull_request.base.sha || github.event.before }}"\nhead="\${{ github.event.pull_request.head.sha || github.event.after }}"\n${tokens.packageManager} commitlint --from "$base" --to "$head" --config ${tokens.commitlintConfig}`,
                         },
                         {
                             name: 'Verify generated files are in sync',
@@ -199,7 +203,16 @@ export function defaultWorkflows(tokens: Replacements): Record<WorkflowId, Workf
                                 'git add -A',
                                 'git commit -m "chore: version packages ($version)" || true',
                                 'git push origin "$branch"',
-                                'notes="$(awk \'/<!-- release:start -->/{f=1;next} /<!-- release:end -->/{exit} f{print}\' CHANGELOG.md 2>/dev/null || true)"',
+                                // Release notes aggregate every changelog entry from the
+                                // last tag up to the latest version (not just the latest),
+                                // so a release that skips versions includes them all.
+                                'last_tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"',
+                                'if [ -n "$last_tag" ]; then',
+                                '  last_version="${last_tag#v}"',
+                                '  notes="$(awk -v v="$last_version" \'/^## / { if ($2 == v) exit; started = 1 } started { print }\' CHANGELOG.md 2>/dev/null || true)"',
+                                'else',
+                                '  notes="$(cat CHANGELOG.md 2>/dev/null || true)"',
+                                'fi',
                                 '[ -n "$notes" ] || notes="Release $version"',
                                 `gh pr create --base ${main} --head "$branch" --title "release: $version" --body "$notes"`,
                             ].join('\n'),
@@ -210,7 +223,7 @@ export function defaultWorkflows(tokens: Replacements): Record<WorkflowId, Workf
         },
         sync: {
             name: 'Toolchain sync',
-            on: { push: { branches: [main, dev] }, pull_request: null },
+            on: { push: { branches: [...new Set([main, dev])] }, pull_request: null },
             jobs: {
                 sync: {
                     'runs-on': 'ubuntu-latest',
@@ -324,7 +337,11 @@ export function renderWorkflow(id: WorkflowId, options: RenderWorkflowOptions): 
     return toYaml(resolved as unknown as Record<string, YamlValue>);
 }
 
-/** Render every workflow, keyed by file name (disabled ones are omitted). */
+/**
+ * Render every workflow, keyed by file name (disabled ones are omitted). A raw
+ * string setting is used verbatim as the workflow content (no default merge and
+ * no token replacement).
+ */
 export function renderWorkflows(
     tokens: Replacements,
     workflows: Partial<Record<WorkflowId, WorkflowSetting>> = {}
@@ -333,6 +350,10 @@ export function renderWorkflows(
     for (const id of Object.keys(WORKFLOW_FILENAMES) as WorkflowId[]) {
         const setting = workflows[id];
         if (!isEnabled(setting)) continue;
+        if (typeof setting === 'string') {
+            out[WORKFLOW_FILENAMES[id]] = setting;
+            continue;
+        }
         const config = typeof setting === 'object' ? setting : {};
         const yaml = renderWorkflow(id, { tokens, config });
         if (yaml) out[WORKFLOW_FILENAMES[id]] = yaml;

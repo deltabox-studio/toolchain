@@ -58,8 +58,9 @@ function norm(relative: string): string {
 export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     const { tasks, cwd, config, tokens } = options;
     const log = options.quiet ? () => {} : (options.log ?? ((m: string) => logger.info(m)));
+    const warn = options.quiet ? () => {} : (m: string) => logger.warn(m);
     const projectType = options.projectType ?? resolveProjectType(cwd, config);
-    const ctx: SyncContext = { cwd, projectType, config, tokens, log };
+    const ctx: SyncContext = { cwd, projectType, config, tokens, log, warn };
     const hooks = config.hooks ?? {};
     await hooks.beforeSync?.(ctx);
 

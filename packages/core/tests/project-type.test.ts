@@ -20,10 +20,22 @@ describe('detectProjectType', () => {
         expect(detectProjectType(cwd)).toBe('monorepo-root');
     });
 
-    it('detects a monorepo root from tsconfig.monorepo.json', () => {
+    it('detects a monorepo root from tsconfig.workspaces.json', () => {
         const cwd = tmp();
-        fs.writeFileSync(path.join(cwd, 'tsconfig.monorepo.json'), '{}');
+        fs.writeFileSync(path.join(cwd, 'tsconfig.workspaces.json'), '{}');
         expect(detectProjectType(cwd)).toBe('monorepo-root');
+    });
+
+    it('honours a custom workspaces/default file name', () => {
+        const cwd = tmp();
+        fs.writeFileSync(path.join(cwd, 'tsconfig.mono.json'), '{}');
+        expect(detectProjectType(cwd, { rootFile: 'tsconfig.mono.json' })).toBe('monorepo-root');
+
+        const ws = tmp();
+        fs.writeFileSync(path.join(ws, 'tsconfig.ws.json'), '{}');
+        expect(detectProjectType(ws, { defaultFile: 'tsconfig.ws.json' })).toBe(
+            'monorepo-workspace'
+        );
     });
 
     it('detects a monorepo workspace from tsconfig.default.json', () => {
@@ -52,7 +64,7 @@ describe('resolveProjectType', () => {
 
     it('falls back to detection', () => {
         const cwd = tmp();
-        fs.writeFileSync(path.join(cwd, 'tsconfig.monorepo.json'), '{}');
+        fs.writeFileSync(path.join(cwd, 'tsconfig.workspaces.json'), '{}');
         expect(resolveProjectType(cwd, {})).toBe('monorepo-root');
     });
 });

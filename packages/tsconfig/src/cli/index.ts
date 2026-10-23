@@ -3,7 +3,7 @@ import { sectionConfig, type ToolchainCommand } from '@deltabox/toolchain-shared
 import { generateTsconfigs } from '../cli/generate/index.js';
 
 /**
- * The `tsconfig` command. Defaults come from `dbx.config.tsconfig.*;
+ * The `tsconfig` command. Defaults come from `dbx.config.tsconfig.*`
  * (via the command context); any CLI flag overrides them.
  */
 export function tsconfigCommands(): ToolchainCommand[] {
@@ -11,19 +11,29 @@ export function tsconfigCommands(): ToolchainCommand[] {
         {
             name: 'tsconfig',
             description:
-                'Generate workspace tsconfig.json files from tsconfig.default.json (aliases + references).',
+                'Generate workspace tsconfig.json files from the default tsconfig (aliases + references).',
             options: [
                 { flags: '--cwd <dir>', description: 'Repo root to scan (default: cwd).' },
                 { flags: '--no-aliases', description: 'Skip path aliases.' },
                 { flags: '--composite', description: 'Emit composite + references.' },
                 { flags: '--refs', description: 'Wire project references.' },
                 { flags: '-i, --indent <n>', description: 'JSON indentation.' },
-                { flags: '--glob <glob>', description: 'Glob for tsconfig.default.json files.' },
-                { flags: '--app-glob <glob>', description: 'Glob for app override workspaces.' },
-                { flags: '--root-file <file>', description: 'Monorepo tsconfig file name.' },
+                {
+                    flags: '--glob <glob...>',
+                    description: 'Glob(s) for the default tsconfig files.',
+                },
+                {
+                    flags: '--exclude <glob...>',
+                    description: 'Glob(s) to exclude (on top of the common ignored paths).',
+                },
+                { flags: '--no-gitignore', description: 'Do not respect .gitignore files.' },
+                { flags: '--default-file <file>', description: 'Default tsconfig file name.' },
+                { flags: '--build-file <file>', description: 'Build tsconfig file name.' },
+                { flags: '--root-file <file>', description: 'Workspaces tsconfig file name.' },
             ],
             run: (opts, context) => {
                 const t = sectionConfig(context.config.tsconfig) ?? {};
+                const glob = opts.glob as string[] | string | undefined;
                 generateTsconfigs({
                     cwd: context.cwd,
                     aliases: (opts.aliases as boolean | undefined) ?? t.aliases ?? true,
@@ -33,15 +43,21 @@ export function tsconfigCommands(): ToolchainCommand[] {
                         opts.indent !== undefined
                             ? Number.parseInt(String(opts.indent), 10)
                             : t.indent,
-                    glob: (opts.glob as string | undefined) ?? t.glob ?? '**/tsconfig.default.json',
-                    appGlob:
-                        (opts.appGlob as string | undefined) ??
-                        t.appGlob ??
-                        'apps/**/tsconfig.default.json',
+                    glob: glob ?? t.glob ?? '**/tsconfig.default.json',
+                    exclude: (opts.exclude as string[] | string | undefined) ?? t.exclude,
+                    gitignore: (opts.gitignore as boolean | undefined) ?? t.gitignore,
+                    defaultFile:
+                        (opts.defaultFile as string | undefined) ??
+                        t.defaultFile ??
+                        'tsconfig.default.json',
+                    buildFile:
+                        (opts.buildFile as string | undefined) ??
+                        t.buildFile ??
+                        'tsconfig.build.json',
                     monorepoTsconfigFilename:
                         (opts.rootFile as string | undefined) ??
                         t.rootFile ??
-                        'tsconfig.monorepo.json',
+                        'tsconfig.workspaces.json',
                 });
             },
         },

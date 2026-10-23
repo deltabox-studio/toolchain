@@ -20,38 +20,74 @@ export const projectTypeSchema = z
     .describe('The project kind (detected when omitted).')
     .meta({ id: 'ProjectType' });
 
-/** Project-level metadata used as replacement tokens across every template. */
+/**
+ * Project-level metadata: the canonical `package.json` fields (applied on sync,
+ * and inherited by workspaces) plus the replacement tokens every template
+ * understands. When a field is omitted it falls back to the project's own
+ * `package.json` value.
+ */
 export const projectConfigSchema = z
     .object({
         type: projectTypeSchema.optional(),
-        name: z.string().describe('The unscoped project name.').optional(),
+        name: z
+            .string()
+            .describe('The unscoped project name (written as `<scope>/<name>`).')
+            .optional(),
         scope: z.string().describe('The npm scope, eg. `@acme`.').optional(),
-        author: z.string().describe('Package author.').optional(),
-        license: z.string().describe('SPDX license id.').optional(),
-        homepage: z.string().describe('Project homepage.').optional(),
-        repo: z.string().describe('Repository URL, eg. `https://github.com/acme/app`.').optional(),
-        nodeVersion: z.string().describe('Node engine range, eg. `>=22`.').optional(),
-        packageManager: z.string().describe('Package manager name (default `yarn`).').optional(),
+        author: z.string().describe('Package author (`package.json` `author`).').optional(),
+        license: z.string().describe('SPDX license id (`package.json` `license`).').optional(),
+        homepage: z.string().describe('Project homepage (`package.json` `homepage`).').optional(),
+        repo: z
+            .string()
+            .describe(
+                'Repository URL (`package.json` `repository`). For a workspace it also ' +
+                    'resolves to the workspace path (`repository.directory`).'
+            )
+            .optional(),
+        nodeVersion: z
+            .string()
+            .describe('Node version for CI/templates, eg. `22` (not `package.json` `engines`).')
+            .optional(),
+        packageManager: z
+            .string()
+            .describe('Package manager name, written as `<name>@<version>` (default `yarn`).')
+            .optional(),
         packageManagerVersion: z
             .string()
             .describe('Package manager version, eg. `4.17.1`.')
             .optional(),
-        description: z.string().describe('One-line description.').optional(),
+        description: z
+            .string()
+            .describe('One-line description (`package.json` `description`).')
+            .optional(),
+        inherit: z
+            .boolean()
+            .describe(
+                'Inherit the parent project metadata (default true). Set false to keep ' +
+                    'this project entirely independent of the root config.'
+            )
+            .optional(),
     })
     .meta({ id: 'ToolchainProjectConfig' });
 
 /** A GitHub Actions step (the subset the workflow builder understands). */
 export const workflowStepSchema = z
     .object({
-        name: z.string().optional(),
-        id: z.string().optional(),
-        if: z.string().optional(),
-        uses: z.string().optional(),
-        run: z.string().optional(),
-        shell: z.string().optional(),
-        'working-directory': z.string().optional(),
-        with: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
-        env: z.record(z.string(), z.string()).optional(),
+        name: z.string().describe('Step display name.').optional(),
+        id: z.string().describe('Step id (for `steps.<id>` outputs).').optional(),
+        if: z.string().describe('Conditional expression (`if:`).').optional(),
+        uses: z.string().describe('Action to run (`uses:`), eg. `actions/checkout@v4`.').optional(),
+        run: z.string().describe('Shell command(s) to run (`run:`).').optional(),
+        shell: z.string().describe('Shell to run `run` in, eg. `bash`.').optional(),
+        'working-directory': z.string().describe('Directory the step runs in.').optional(),
+        with: z
+            .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+            .describe('Inputs for a `uses` action.')
+            .optional(),
+        env: z
+            .record(z.string(), z.string())
+            .describe('Environment variables for the step.')
+            .optional(),
     })
     .meta({ id: 'WorkflowStep' });
 
@@ -93,19 +129,32 @@ export const workflowConfigSchema = z
     })
     .meta({ id: 'WorkflowConfig' });
 
-/** A workflow can be toggled with a boolean or configured with an object. */
+/**
+ * A workflow can be toggled with a boolean, configured with an object, or set to
+ * a raw YAML string (written verbatim as the workflow file).
+ */
 export const workflowSettingSchema = z
-    .union([z.boolean(), workflowConfigSchema])
+    .union([z.boolean(), z.string(), workflowConfigSchema])
+    .describe(
+        '`true`/`false` to enable/disable, an object to override parts of the default, ' +
+            'or a raw YAML string written verbatim as the workflow file.'
+    )
     .meta({ id: 'WorkflowSetting' });
 
 /** Per-workflow configuration, keyed by workflow id. */
 export const changelogWorkflowsConfigSchema = z
     .object({
-        ci: workflowSettingSchema.optional(),
-        changelog: workflowSettingSchema.optional(),
-        release: workflowSettingSchema.optional(),
-        issues: workflowSettingSchema.optional(),
-        sync: workflowSettingSchema.optional(),
+        ci: workflowSettingSchema.describe('The CI workflow (`ci.yml`).').optional(),
+        changelog: workflowSettingSchema
+            .describe('The changelog/version workflow (`changelog.yml`).')
+            .optional(),
+        release: workflowSettingSchema.describe('The release workflow (`release.yml`).').optional(),
+        issues: workflowSettingSchema
+            .describe('The issue-title workflow (`issues.yml`).')
+            .optional(),
+        sync: workflowSettingSchema
+            .describe('The toolchain sync workflow (`sync.yml`).')
+            .optional(),
     })
     .meta({ id: 'ChangelogWorkflowsConfig' });
 
@@ -150,14 +199,46 @@ export const changelogConfigSchema = z
             .describe('Master switch (enabled when the section is defined).')
             .optional(),
         workflows: changelogWorkflowsConfigSchema
-            .describe('Which workflows to write into `.github/workflows`.')
+            .describe(
+                'Which workflows to write into `.github/workflows`. Each id is ' +
+                    '`true`/`false`, an object of overrides, or a raw YAML string ' +
+                    'written verbatim.'
+            )
             .optional(),
         branches: z
-            .object({ main: z.string().optional(), dev: z.string().optional() })
-            .describe('Branch names the workflows target.')
+            .object({
+                main: z
+                    .union([z.string(), z.array(z.string())])
+                    .describe(
+                        'Branch glob(s) the CI + release workflows run on, and the release PR ' +
+                            'base (default `["main"]`).'
+                    )
+                    .optional(),
+                dev: z
+                    .union([z.string(), z.array(z.string())])
+                    .describe(
+                        'Branch glob(s) the changelog/version workflow runs on. No default: ' +
+                            'when omitted it reuses `main` (so a single-branch repo needs no `dev`).'
+                    )
+                    .optional(),
+            })
+            .describe('Branches the generated workflows target.')
             .optional(),
         types: z.array(z.string()).describe('Allowed commit types (commitlint).').optional(),
         scopes: z.array(z.string()).describe('Allowed commit scopes (commitlint).').optional(),
+        commitlint: z
+            .object({
+                dir: z
+                    .string()
+                    .describe(
+                        'Directory the generated `commitlint.config.mjs` is written to ' +
+                            '(default: the project root). The husky hook and CI use ' +
+                            '`--config` to point at it.'
+                    )
+                    .optional(),
+            })
+            .describe('commitlint config output location.')
+            .optional(),
         versioning: changelogVersioningSchema
             .describe('Automatic version bumping on changelog generation (default `true`).')
             .optional(),
@@ -187,15 +268,48 @@ export const tsconfigConfigSchema = z
             .boolean()
             .describe('Master switch (enabled when the section is defined).')
             .optional(),
-        glob: z.string().describe('Glob for workspace `tsconfig.default.json` files.').optional(),
-        appGlob: z.string().describe('Glob for "override" (app) workspaces.').optional(),
+        glob: z
+            .union([z.string(), z.array(z.string())])
+            .describe(
+                'Glob(s) for the workspace default tsconfig files. Defaults to matching ' +
+                    'every `defaultFile` recursively.'
+            )
+            .optional(),
+        exclude: z
+            .union([z.string(), z.array(z.string())])
+            .describe(
+                'Glob(s) to exclude from `glob`. Defaults to the common ignored paths ' +
+                    '(`node_modules`, `.dbx`, `dist`, `build`, ...).'
+            )
+            .optional(),
+        gitignore: z
+            .boolean()
+            .describe(
+                'Also respect `.gitignore` files (root + nested) when matching `glob` ' +
+                    '(default true).'
+            )
+            .optional(),
         refs: z.boolean().describe('Wire project references (default false).').optional(),
         composite: z.boolean().describe('Emit `composite: true` (default false).').optional(),
         aliases: z.boolean().describe('Inject path aliases (default true).').optional(),
         indent: z.number().describe('JSON indentation (default 4).').optional(),
         rootFile: z
             .string()
-            .describe('The monorepo tsconfig file name (default `tsconfig.monorepo.json`).')
+            .describe(
+                'The workspaces tsconfig file name that holds `paths` + `references` ' +
+                    '(default `tsconfig.workspaces.json`).'
+            )
+            .optional(),
+        defaultFile: z
+            .string()
+            .describe(
+                'The workspace default tsconfig file name that the generator expands ' +
+                    '(default `tsconfig.default.json`).'
+            )
+            .optional(),
+        buildFile: z
+            .string()
+            .describe('The workspace build tsconfig file name (default `tsconfig.build.json`).')
             .optional(),
     })
     .meta({ id: 'ToolchainTsconfigConfig' });
@@ -208,6 +322,19 @@ export const watchConfigSchema = z
             .describe('Watch by default (enabled when the section is defined).')
             .optional(),
         debounce: z.number().describe('Debounce window in ms (default 150).').optional(),
+        exclude: z
+            .union([z.string(), z.array(z.string())])
+            .describe(
+                'Glob(s) excluded from watching. Defaults to the common ignored paths ' +
+                    '(`node_modules`, `.dbx`, `dist`, `build`, ...).'
+            )
+            .optional(),
+        gitignore: z
+            .boolean()
+            .describe(
+                'Also respect `.gitignore` files (root + nested) when watching (default true).'
+            )
+            .optional(),
     })
     .meta({ id: 'ToolchainWatchConfig' });
 
@@ -254,12 +381,12 @@ export const templateKindSchema = z
 /** A source a template registry loads templates from (offline or online). */
 export const templateSourceSchema = z
     .object({
-        type: templateSourceTypeSchema,
+        type: templateSourceTypeSchema.describe('How to load the source.'),
         locate: z.string().describe('A builtin id, local dir, npm scope, git URL or Vite+ id.'),
         id: z.string().describe('Stable id (defaults to the basename/scope).').optional(),
         name: z.string().describe('Display name override.').optional(),
         description: z.string().describe('Description override.').optional(),
-        kind: templateKindSchema.optional(),
+        kind: templateKindSchema.describe('What the template produces.').optional(),
         ref: z.string().describe('Git branch/tag/commit.').optional(),
         subdir: z
             .string()
@@ -311,22 +438,43 @@ function section<T extends z.ZodTypeAny>(schema: T) {
 /** The full `dbx.config` schema (minus the function-bearing `hooks`). */
 export const toolchainConfigSchema = z
     .object({
-        project: projectConfigSchema.optional(),
-        changelog: section(changelogConfigSchema).optional(),
-        biome: section(biomeConfigSchema).optional(),
-        tsconfig: section(tsconfigConfigSchema).optional(),
-        templates: section(templatesConfigSchema).optional(),
-        vite: section(viteConfigSchema).optional(),
-        watch: section(watchConfigSchema).optional(),
-        logger: section(loggerConfigSchema).optional(),
-        providers: section(providersConfigSchema).optional(),
+        project: projectConfigSchema
+            .describe(
+                'Project metadata: canonical `package.json` fields and template tokens ' +
+                    '(inherited by workspaces).'
+            )
+            .optional(),
+        changelog: section(changelogConfigSchema)
+            .describe('Conventional-Commits CI, commitlint and the changelog pipeline.')
+            .optional(),
+        biome: section(biomeConfigSchema)
+            .describe('Biome config generation (for consumers that still want a `biome.json`).')
+            .optional(),
+        tsconfig: section(tsconfigConfigSchema)
+            .describe('Workspace tsconfig generation (path aliases + project references).')
+            .optional(),
+        templates: section(templatesConfigSchema)
+            .describe('Template sources / scaffolding.')
+            .optional(),
+        vite: section(viteConfigSchema)
+            .describe('The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.')
+            .optional(),
+        watch: section(watchConfigSchema).describe('Watch behaviour for `dbx watch`.').optional(),
+        logger: section(loggerConfigSchema)
+            .describe('Logging level, colours and prefix for toolchain output.')
+            .optional(),
+        providers: section(providersConfigSchema)
+            .describe('Provider command behaviour (eg. colour for the passthrough commands).')
+            .optional(),
     })
     .meta({ id: 'ToolchainConfigSections' });
 
 /** The root `dbx.config` schema — the toolchain configuration lives under `toolchain`. */
 export const dbxConfigSchema = z
     .object({
-        toolchain: toolchainConfigSchema.optional(),
+        toolchain: toolchainConfigSchema
+            .describe('The `@deltabox/toolchain` settings (every section is opt-in by presence).')
+            .optional(),
     })
     .meta({ id: 'DbxConfigSections' });
 
@@ -376,7 +524,9 @@ export const CONFIG_SECTION_SCHEMAS = {
 
 /** One-line descriptions for the generated docs index. */
 export const CONFIG_SECTION_DESCRIPTIONS: Record<keyof typeof CONFIG_SECTION_SCHEMAS, string> = {
-    project: 'Project metadata used as replacement tokens across every template.',
+    project:
+        'Project metadata: canonical `package.json` fields (applied on sync, inherited by ' +
+        'workspaces) plus the replacement tokens every template understands.',
     changelog: 'Conventional-Commits CI, commitlint and the changelog pipeline.',
     biome: 'Biome config generation (for consumers that still want a `biome.json`).',
     tsconfig: 'Workspace tsconfig generation (path aliases + project references).',

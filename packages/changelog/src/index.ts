@@ -12,6 +12,7 @@ export {
     splitInlineDescription,
 } from './utils/format.js';
 export { deriveBump, readCommits } from './utils/git.js';
+export { type ProjectGraphNode, readProjectGraph, relatedWorkspacePaths } from './utils/graph.js';
 export { parseExistingChangelog, reformatChangelogContent } from './utils/reformat.js';
 export { buildSummary, renderCommitRef } from './utils/summary.js';
 export * from './utils/types.js';

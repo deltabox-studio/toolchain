@@ -1,13 +1,54 @@
 import {
     type ManagedFile,
+    resolveChangelogBranches,
     type SyncTask,
     sectionConfig,
     sectionEnabled,
     type ToolchainConfig,
+    type WorkflowSetting,
 } from '@deltabox/toolchain-shared';
 
 import { renderCommitlintConfig } from './templates.js';
-import { renderWorkflows } from './workflows.js';
+import {
+    isEnabled,
+    renderWorkflow,
+    renderWorkflows,
+    WORKFLOW_FILENAMES,
+    type WorkflowId,
+} from './workflows.js';
+
+/**
+ * Apply the `changelog.branches` defaults to a workflow's config. An explicit
+ * per-workflow `pushBranches` (or `false` to disable) still wins, and a raw
+ * string setting is left untouched (it defines its own triggers).
+ */
+function withPushBranches(
+    setting: WorkflowSetting | undefined,
+    branches: string[]
+): WorkflowSetting {
+    if (setting === false) return { enabled: false };
+    if (typeof setting === 'string') return setting;
+    if (setting === true || setting === undefined) return { pushBranches: branches };
+    return { pushBranches: branches, ...setting };
+}
+
+/**
+ * Map `changelog.branches` onto the workflows: `main` drives CI + release (and
+ * the release PR base), `dev` drives the changelog workflow (reusing `main` when
+ * omitted), and `sync` runs on both.
+ */
+function withBranchDefaults(
+    workflows: Partial<Record<WorkflowId, WorkflowSetting>>,
+    branches: { main: string[]; dev: string[] }
+): Partial<Record<WorkflowId, WorkflowSetting>> {
+    return {
+        ...workflows,
+        ci: withPushBranches(workflows.ci, branches.main),
+        release: withPushBranches(workflows.release, branches.main),
+        changelog: withPushBranches(workflows.changelog, branches.dev),
+        sync: withPushBranches(workflows.sync, [...new Set([...branches.main, ...branches.dev])]),
+    };
+}
 
 /** The header prepended to every generated GitHub workflow. */
 export const WORKFLOW_HEADER =
@@ -24,9 +65,26 @@ export const HOOK_HEADER =
 /**
  * The husky `commit-msg` hook body. Husky runs it with `sh -e`, so a non-zero
  * exit from commitlint aborts the commit. `npx --no` resolves the locally
- * installed commitlint without falling back to a network install.
+ * installed commitlint without falling back to a network install. When the
+ * config lives outside the project root, `--config <path>` points commitlint at
+ * it.
  */
-export const COMMIT_MSG_HOOK = 'npx --no -- commitlint --edit "$1"';
+export function commitMsgHook(commitlintPath?: string): string {
+    const base = 'npx --no -- commitlint --edit "$1"';
+    return commitlintPath ? `${base} --config ${commitlintPath}` : base;
+}
+
+/** The default husky `commit-msg` hook body (config at the project root). */
+export const COMMIT_MSG_HOOK = commitMsgHook();
+
+/** Normalize a commitlint output directory (no leading `./`, no trailing `/`). */
+function normalizeDir(dir: string | undefined): string {
+    if (!dir) return '';
+    return dir
+        .replace(/\\/g, '/')
+        .replace(/^\.?\//, '')
+        .replace(/\/+$/, '');
+}
 
 /** The workflow file names produced for a config. */
 export function workflowFilenames(config: ToolchainConfig): string[] {
@@ -48,17 +106,37 @@ export function changelogSyncTask(): SyncTask {
             const ch = sectionConfig(ctx.config.changelog) ?? {};
             const files: ManagedFile[] = [];
 
-            for (const [filename, yaml] of Object.entries(
-                renderWorkflows(ctx.tokens, ch.workflows ?? {})
-            )) {
+            const commitlintDir = normalizeDir(ch.commitlint?.dir);
+            const commitlintPath = commitlintDir
+                ? `${commitlintDir}/commitlint.config.mjs`
+                : 'commitlint.config.mjs';
+
+            const workflows = withBranchDefaults(ch.workflows ?? {}, resolveChangelogBranches(ch));
+            const tokens = { ...ctx.tokens, commitlintConfig: commitlintPath };
+
+            for (const [id, filename] of Object.entries(WORKFLOW_FILENAMES) as [
+                WorkflowId,
+                string,
+            ][]) {
+                const setting = workflows[id];
+                if (!isEnabled(setting)) continue;
+                // A raw string is written verbatim (no generated header).
+                const raw = typeof setting === 'string';
+                const content = raw
+                    ? setting
+                    : renderWorkflow(id, {
+                          tokens,
+                          config: typeof setting === 'object' ? setting : {},
+                      });
+                if (!content) continue;
                 files.push({
                     path: `.github/workflows/${filename}`,
-                    content: `${WORKFLOW_HEADER}\n${yaml}`,
+                    content: raw ? content : `${WORKFLOW_HEADER}\n${content}`,
                 });
             }
 
             files.push({
-                path: 'commitlint.config.mjs',
+                path: commitlintPath,
                 content: `${COMMITLINT_HEADER}\n${renderCommitlintConfig({
                     ...(ch.types ? { types: ch.types } : {}),
                     ...(ch.scopes ? { scopes: ch.scopes } : {}),
@@ -70,7 +148,7 @@ export function changelogSyncTask(): SyncTask {
             // the generated CI job lints the pushed range as the backstop.
             files.push({
                 path: '.husky/commit-msg',
-                content: `${HOOK_HEADER}\n${COMMIT_MSG_HOOK}\n`,
+                content: `${HOOK_HEADER}\n${commitMsgHook(commitlintDir ? commitlintPath : undefined)}\n`,
             });
 
             return files;

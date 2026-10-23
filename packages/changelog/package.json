@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-changelog",
-    "version": "1.7.8",
+    "version": "1.9.0",
     "description": "Conventional-Commits changelog + versioning pipeline, commitlint and CI templates.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
@@ -35,5 +35,7 @@
         "./run": "./dist/run.js",
         "./package.json": "./package.json"
     },
-    "bin": "./dist/run.js"
+    "bin": "./dist/run.js",
+    "homepage": "https://toolchain.deltabox.studio",
+    "packageManager": "yarn@4.17.1"
 }

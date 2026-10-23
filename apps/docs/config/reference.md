@@ -15,7 +15,7 @@ define it to enable it, omit it to leave that area untouched.
 
 ## `project`
 
-Project metadata used as replacement tokens across every template.
+Project metadata: canonical `package.json` fields (applied on sync, inherited by workspaces) plus the replacement tokens every template understands.
 
 ### `type`
 
@@ -27,7 +27,7 @@ The project kind (detected when omitted).
 
 - **Type**: `string`
 
-The unscoped project name.
+The unscoped project name (written as `<scope>/<name>`).
 
 ### `scope`
 
@@ -39,37 +39,37 @@ The npm scope, eg. `@acme`.
 
 - **Type**: `string`
 
-Package author.
+Package author (`package.json` `author`).
 
 ### `license`
 
 - **Type**: `string`
 
-SPDX license id.
+SPDX license id (`package.json` `license`).
 
 ### `homepage`
 
 - **Type**: `string`
 
-Project homepage.
+Project homepage (`package.json` `homepage`).
 
 ### `repo`
 
 - **Type**: `string`
 
-Repository URL, eg. `https://github.com/acme/app`.
+Repository URL (`package.json` `repository`). For a workspace it also resolves to the workspace path (`repository.directory`).
 
 ### `nodeVersion`
 
 - **Type**: `string`
 
-Node engine range, eg. `>=22`.
+Node version for CI/templates, eg. `22` (not `package.json` `engines`).
 
 ### `packageManager`
 
 - **Type**: `string`
 
-Package manager name (default `yarn`).
+Package manager name, written as `<name>@<version>` (default `yarn`).
 
 ### `packageManagerVersion`
 
@@ -81,7 +81,13 @@ Package manager version, eg. `4.17.1`.
 
 - **Type**: `string`
 
-One-line description.
+One-line description (`package.json` `description`).
+
+### `inherit`
+
+- **Type**: `boolean`
+
+Inherit the parent project metadata (default true). Set false to keep this project entirely independent of the root config.
 
 ## `changelog`
 
@@ -97,11 +103,13 @@ Master switch (enabled when the section is defined).
 
 - **Type**: `ChangelogWorkflowsConfig`
 
-Which workflows to write into `.github/workflows`.
+Which workflows to write into `.github/workflows`. Each id is `true`/`false`, an object of overrides, or a raw YAML string written verbatim.
 
 #### `ci`
 
 - **Type**: `WorkflowSetting`
+
+The CI workflow (`ci.yml`).
 
 ##### `enabled`
 
@@ -155,37 +163,55 @@ Steps inserted at the start.
 
 - **Type**: `string`
 
+Step display name.
+
 ###### `id`
 
 - **Type**: `string`
+
+Step id (for `steps.<id>` outputs).
 
 ###### `if`
 
 - **Type**: `string`
 
+Conditional expression (`if:`).
+
 ###### `uses`
 
 - **Type**: `string`
+
+Action to run (`uses:`), eg. `actions/checkout@v4`.
 
 ###### `run`
 
 - **Type**: `string`
 
+Shell command(s) to run (`run:`).
+
 ###### `shell`
 
 - **Type**: `string`
+
+Shell to run `run` in, eg. `bash`.
 
 ###### `working-directory`
 
 - **Type**: `string`
 
+Directory the step runs in.
+
 ###### `with`
 
 - **Type**: `Record<string, unknown>`
 
+Inputs for a `uses` action.
+
 ###### `env`
 
 - **Type**: `Record<string, unknown>`
+
+Environment variables for the step.
 
 ###### `after`
 
@@ -209,31 +235,43 @@ Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
 
 - **Type**: `WorkflowSetting`
 
+The changelog/version workflow (`changelog.yml`).
+
 #### `release`
 
 - **Type**: `WorkflowSetting`
+
+The release workflow (`release.yml`).
 
 #### `issues`
 
 - **Type**: `WorkflowSetting`
 
+The issue-title workflow (`issues.yml`).
+
 #### `sync`
 
 - **Type**: `WorkflowSetting`
+
+The toolchain sync workflow (`sync.yml`).
 
 ### `branches`
 
 - **Type**: `object`
 
-Branch names the workflows target.
+Branches the generated workflows target.
 
 #### `main`
 
-- **Type**: `string`
+- **Type**: `string | Array<string>`
+
+Branch glob(s) the CI + release workflows run on, and the release PR base (default `["main"]`).
 
 #### `dev`
 
-- **Type**: `string`
+- **Type**: `string | Array<string>`
+
+Branch glob(s) the changelog/version workflow runs on. No default: when omitted it reuses `main` (so a single-branch repo needs no `dev`).
 
 ### `types`
 
@@ -246,6 +284,18 @@ Allowed commit types (commitlint).
 - **Type**: `Array<string>`
 
 Allowed commit scopes (commitlint).
+
+### `commitlint`
+
+- **Type**: `object`
+
+commitlint config output location.
+
+#### `dir`
+
+- **Type**: `string`
+
+Directory the generated `commitlint.config.mjs` is written to (default: the project root). The husky hook and CI use `--config` to point at it.
 
 ### `versioning`
 
@@ -305,15 +355,21 @@ Master switch (enabled when the section is defined).
 
 ### `glob`
 
-- **Type**: `string`
+- **Type**: `string | Array<string>`
 
-Glob for workspace `tsconfig.default.json` files.
+Glob(s) for the workspace default tsconfig files. Defaults to matching every `defaultFile` recursively.
 
-### `appGlob`
+### `exclude`
 
-- **Type**: `string`
+- **Type**: `string | Array<string>`
 
-Glob for "override" (app) workspaces.
+Glob(s) to exclude from `glob`. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
+
+### `gitignore`
+
+- **Type**: `boolean`
+
+Also respect `.gitignore` files (root + nested) when matching `glob` (default true).
 
 ### `refs`
 
@@ -343,7 +399,19 @@ JSON indentation (default 4).
 
 - **Type**: `string`
 
-The monorepo tsconfig file name (default `tsconfig.monorepo.json`).
+The workspaces tsconfig file name that holds `paths` + `references` (default `tsconfig.workspaces.json`).
+
+### `defaultFile`
+
+- **Type**: `string`
+
+The workspace default tsconfig file name that the generator expands (default `tsconfig.default.json`).
+
+### `buildFile`
+
+- **Type**: `string`
+
+The workspace build tsconfig file name (default `tsconfig.build.json`).
 
 ## `templates`
 
@@ -448,6 +516,18 @@ Watch by default (enabled when the section is defined).
 - **Type**: `number`
 
 Debounce window in ms (default 150).
+
+### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
+
+### `gitignore`
+
+- **Type**: `boolean`
+
+Also respect `.gitignore` files (root + nested) when watching (default true).
 
 ## `logger`
 

@@ -2,4 +2,4 @@
 import { resolveVite } from '@deltabox/toolchain/vite';
 import { defineConfig } from 'vite-plus';
 
-export default defineConfig(resolveVite());
+export default defineConfig(resolveVite({ cwd: import.meta.dirname }));
