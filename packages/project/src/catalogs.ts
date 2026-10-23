@@ -90,6 +90,10 @@ export function catalogsSyncTask(): SyncTask {
     return {
         name: 'catalogs',
         projectTypes: ['monorepo-root', 'project', 'monorepo-workspace'],
+        // Never delete a catalog file, even when the task stops producing it
+        // (eg. the user replaced the managed file with their own): the catalog
+        // files are read by the package manager and may hold hand-written keys.
+        keep: ['.yarnrc.yml', 'pnpm-workspace.yaml'],
         enabled: config => sectionEnabled(config.catalogs),
         run: ctx => {
             const config = sectionConfig(ctx.config.catalogs) ?? {};

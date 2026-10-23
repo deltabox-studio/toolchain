@@ -6,6 +6,7 @@ import {
     type PackageJson,
     projectToPackageJson,
     readJsonAt,
+    splitPackageName,
     type SyncTask,
 } from '@deltabox/toolchain-shared';
 
@@ -43,7 +44,15 @@ export function projectSyncTask(): SyncTask {
                     ? path.relative(root, ctx.cwd).replace(/\\/g, '/')
                     : undefined;
 
-            const updates = projectToPackageJson(project, directory ? { directory } : {}) as Record<
+            // The config wins. When it names the package but omits the scope,
+            // fall back to the `package.json` scope so a nested workspace keeps
+            // its scoped name (mirrors the token resolution in the config loader).
+            const merged: NonNullable<typeof project> = { ...project };
+            if (merged.name !== undefined && merged.scope === undefined && pkg.name) {
+                const { scope } = splitPackageName(pkg.name);
+                if (scope) merged.scope = scope;
+            }
+            const updates = projectToPackageJson(merged, directory ? { directory } : {}) as Record<
                 string,
                 unknown
             >;

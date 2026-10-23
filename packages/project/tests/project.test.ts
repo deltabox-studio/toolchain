@@ -1,11 +1,30 @@
-import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+    catalogsSyncTask,
     createMonorepoRootFiles,
     createRootProjectFiles,
     createWorkspaceFiles,
+    projectSyncTask,
     renderGitignore,
+    renderYarnrc,
 } from '../src/index.js';
+
+const tmpDirs: string[] = [];
+
+function makeTmp(): string {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-proj-'));
+    tmpDirs.push(dir);
+    return dir;
+}
+
+afterEach(() => {
+    for (const dir of tmpDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+});
 
 describe('project scaffolding', () => {
     it('creates root files', () => {
@@ -60,5 +79,29 @@ describe('project scaffolding', () => {
 
     it('renders a gitignore', () => {
         expect(renderGitignore()).toContain('node_modules/');
+    });
+
+    it('keeps the scoped package name when the config omits scope', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'package.json'),
+            JSON.stringify({ name: '@acme/a', version: '0.1.0' })
+        );
+        const files = (await projectSyncTask().run({
+            cwd: dir,
+            projectType: 'monorepo-workspace',
+            config: { project: { type: 'monorepo-workspace', name: 'a' } },
+            tokens: {},
+            log: () => {},
+            warn: () => {},
+        })) as { path: string; content: string }[];
+        const pkg = JSON.parse(files.find(file => file.path === 'package.json')!.content);
+        expect(pkg.name).toBe('@acme/a');
+    });
+
+    it('renders catalogs and marks the file as kept (never deleted)', () => {
+        expect(renderYarnrc({ packages: { react: '^19.0.0' } })).toContain('catalog:');
+        expect(catalogsSyncTask().keep).toContain('.yarnrc.yml');
+        expect(catalogsSyncTask().keep).toContain('pnpm-workspace.yaml');
     });
 });
