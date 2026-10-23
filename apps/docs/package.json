@@ -6,10 +6,11 @@
     "description": "Documentation site for @deltabox/toolchain (VitePress).",
     "scripts": {
         "dev": "vitepress dev",
-        "build": "vitepress build",
+        "build": "vitepress build && node scripts/copy-llms.mjs",
         "preview": "vitepress preview"
     },
     "devDependencies": {
-        "vitepress": "^1.6.4"
+        "vitepress": "^1.6.4",
+        "vitepress-plugin-llms": "^1.14.0"
     }
 }

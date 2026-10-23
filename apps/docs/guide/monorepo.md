@@ -10,7 +10,7 @@ dependency graph to `.dbx/toolchain/projects.json`. The VS Code extension and th
 
 Enable the `tsconfig` section and the toolchain generates each workspace's
 `tsconfig.json` (extending `tsconfig.default.json`) and, for a monorepo root, a
-`tsconfig.monorepo.json` wiring project references and path aliases:
+`tsconfig.workspaces.json` wiring project references and path aliases:
 
 ```ts
 export default defineConfig({
@@ -20,6 +20,9 @@ export default defineConfig({
     },
 });
 ```
+
+See the [tsconfig guide](/guide/tsconfig) for every option and why the toolchain
+splits the config across several files.
 
 ## Scaffolding a monorepo
 
