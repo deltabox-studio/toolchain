@@ -155,10 +155,26 @@ export function dbxTaskCommand(subcommand: string, cwd: string = process.cwd()):
 }
 
 /** The Vite+ tasks the wrapper registers, keyed by task name. */
-export const DBX_TASKS = {
-    'dbx:sync': { command: dbxTaskCommand('sync') },
-    'dbx:check': { command: dbxTaskCommand('sync --check') },
-} as const;
+export interface DbxTask {
+    /** The shell command Vite Task runs. */
+    command: string;
+}
+
+/**
+ * The Vite+ tasks the wrapper registers, keyed by task name. The `command`s are
+ * computed **lazily** (as getters): spreading `{ ...DBX_TASKS }` into
+ * `run.tasks` still resolves them at config-load time, but merely importing
+ * `@deltabox/toolchain/vite` no longer runs {@link resolveDbx} (which would warn
+ * about `dbx` resolution for consumers that never use these tasks).
+ */
+export const DBX_TASKS: Record<'dbx:sync' | 'dbx:check', DbxTask> = {
+    get 'dbx:sync'(): DbxTask {
+        return { command: dbxTaskCommand('sync') };
+    },
+    get 'dbx:check'(): DbxTask {
+        return { command: dbxTaskCommand('sync --check') };
+    },
+};
 
 export interface DbxPluginOptions {
     /** Project root (default: the resolved Vite root). */

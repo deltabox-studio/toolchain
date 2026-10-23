@@ -77,6 +77,22 @@ describe('project scaffolding', () => {
         expect(pkg.name).toBe('@acme/core');
     });
 
+    it('pairs the package manager with a version in the generated config', () => {
+        const files = createRootProjectFiles({ name: 'x', type: 'project' });
+        const config = files.find(f => f.path === 'dbx.config.ts')!.content;
+        expect(config).toContain('packageManager: "yarn"');
+        expect(config).toContain('packageManagerVersion: "4.17.1"');
+        // No explicit manager chosen -> no `packageManager` field yet.
+        const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
+        expect(pkg.packageManager).toBeUndefined();
+    });
+
+    it('writes a versioned packageManager when one is chosen', () => {
+        const files = createRootProjectFiles({ name: 'x', packageManager: 'pnpm' });
+        const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
+        expect(pkg.packageManager).toBe('pnpm@10.11.1');
+    });
+
     it('renders a gitignore', () => {
         expect(renderGitignore()).toContain('node_modules/');
     });

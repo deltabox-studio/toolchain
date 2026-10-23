@@ -261,7 +261,11 @@ export function templateCommands(): ToolchainCommand[] {
             name: 'template:info',
             description: 'Show one template by id.',
             args: [{ name: 'id', description: 'The template id.' }],
-            options: [CWD_OPTION, { flags: '--online', description: 'Resolve online sources.' }],
+            options: [
+                CWD_OPTION,
+                { flags: '--online', description: 'Resolve online sources.' },
+                { flags: '--json', description: 'Print the template as JSON (the default).' },
+            ],
             run: async (opts, context) => {
                 const cwd = (opts.cwd as string | undefined) ?? context.cwd;
                 const templates = await loadTemplates({

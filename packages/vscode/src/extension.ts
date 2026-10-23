@@ -904,6 +904,9 @@ export function activate(context: vscode.ExtensionContext): void {
         });
         const out = dir?.[0]?.fsPath ?? base;
         const code = await runCli(base, [...baseArgs, '--out', out]);
+        // Sync the new project so its managed files (and manifest) exist and the
+        // Managed Files / Home views populate immediately.
+        if (code === 0) await runCli(out, ['sync']);
         await refreshGraph();
         if (code === 0) {
             vscode.window.showInformationMessage(
@@ -1006,6 +1009,7 @@ export function activate(context: vscode.ExtensionContext): void {
             args.push('--package-manager', packageManager);
 
             const code = await runCli(root, args);
+            if (code === 0) await runCli(path.join(root, dir.replace(/\\/g, '/')), ['sync']);
             await refreshGraph();
             if (code === 0) {
                 vscode.window.showInformationMessage(`deltabox: scaffolded workspace "${name}".`);
@@ -1030,6 +1034,7 @@ export function activate(context: vscode.ExtensionContext): void {
         args.push('--out', target);
 
         const code = await runCli(target, args);
+        if (code === 0) await runCli(target, ['sync']);
         await refreshGraph();
         if (code === 0) vscode.window.showInformationMessage(`deltabox: scaffolded "${name}".`);
     };

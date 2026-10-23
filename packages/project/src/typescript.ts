@@ -32,6 +32,28 @@ const CATALOG: Record<string, string> = {
 /** The catalog a scaffolded root writes into its package-manager file. */
 export const SCAFFOLD_CATALOG = CATALOG;
 
+/**
+ * Default package-manager versions used when a scaffold does not specify one.
+ * A `packageManager` field must carry a version (corepack rejects a bare name),
+ * so the scaffold always writes `<pm>@<version>`.
+ */
+export const DEFAULT_PACKAGE_MANAGER_VERSIONS: Record<string, string> = {
+    yarn: '4.17.1',
+    pnpm: '10.11.1',
+    npm: '11.19.0',
+    bun: '1.3.0',
+};
+
+/** The `<pm>@<version>` string for a scaffold (uses the default when unknown). */
+function packageManagerField(
+    packageManager: string | undefined,
+    version: string | undefined
+): string | undefined {
+    if (!packageManager) return undefined;
+    const resolved = version ?? DEFAULT_PACKAGE_MANAGER_VERSIONS[packageManager];
+    return resolved ? `${packageManager}@${resolved}` : packageManager;
+}
+
 /** The dev-dependency map for a package manager (catalog refs or pinned). */
 function devDependencies(packageManager: string | undefined): Record<string, string> {
     if (!supportsCatalogs(packageManager)) return { ...CATALOG };
@@ -116,8 +138,12 @@ export function renderToolchainConfig(ctx: ProjectContext & { type: ProjectType 
     if (ctx.license) entries.push(['license', ctx.license]);
     if (ctx.repoUrl) entries.push(['repo', ctx.repoUrl]);
     entries.push(['nodeVersion', ctx.nodeVersion ?? '22']);
-    entries.push(['packageManager', ctx.packageManager ?? 'yarn']);
-    if (ctx.yarnVersion) entries.push(['packageManagerVersion', ctx.yarnVersion]);
+    const packageManager = ctx.packageManager ?? 'yarn';
+    entries.push(['packageManager', packageManager]);
+    // Always pair the manager with a version: a bare `packageManager` breaks
+    // corepack, and `project` sync mirrors this into package.json.
+    const pmVersion = ctx.yarnVersion ?? DEFAULT_PACKAGE_MANAGER_VERSIONS[packageManager];
+    if (pmVersion) entries.push(['packageManagerVersion', pmVersion]);
 
     const project = entries
         .map(([key, value]) => `            ${key}: ${JSON.stringify(value)},`)
@@ -161,7 +187,9 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
             typecheck: 'tsc -p tsconfig.json --noEmit',
         },
         devDependencies: devDependencies(ctx.packageManager),
-        ...(ctx.packageManager ? { packageManager: ctx.packageManager } : {}),
+        ...(packageManagerField(ctx.packageManager, ctx.yarnVersion)
+            ? { packageManager: packageManagerField(ctx.packageManager, ctx.yarnVersion) }
+            : {}),
         engines: { node: ctx.nodeVersion ? `>=${ctx.nodeVersion}` : '>=22' },
     };
 
@@ -204,7 +232,9 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
         ...(ctx.license ? { license: ctx.license } : {}),
         workspaces: workspacesField(ctx.packageManager, ctx.workspaceGlobs ?? ['packages/*']),
         devDependencies: devDependencies(ctx.packageManager),
-        ...(ctx.packageManager ? { packageManager: ctx.packageManager } : {}),
+        ...(packageManagerField(ctx.packageManager, ctx.yarnVersion)
+            ? { packageManager: packageManagerField(ctx.packageManager, ctx.yarnVersion) }
+            : {}),
         engines: { node: ctx.nodeVersion ? `>=${ctx.nodeVersion}` : '>=22' },
     };
 
