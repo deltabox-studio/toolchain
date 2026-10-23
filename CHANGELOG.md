@@ -1,14 +1,83 @@
 # Changelog
 
-## 1.9.2 (October 2026)
+## 1.10.0 (October 2026)
 
 <!-- release:start -->
 
-### Documentation
-- Added `llms` entry to the sidebar ([#098cc7e](https://github.com/deltabox-studio/toolchain/commit/098cc7e) by [T0chi](https://github.com/T0chi))
+### New features
+#### Template
+- Scaffold actions, package-manager choice and catalogs ([#6c66c97](https://github.com/deltabox-studio/toolchain/commit/6c66c97) by [T0chi](https://github.com/T0chi))
+  - `module` (relative to the template dir, `export default async (ctx) => {}`,
+    not copied to the output) or a shell `command`. Actions run through the same
+    pipeline everywhere (CLI prompts / `--action <id>`, extension prompts,
+    programmatic API `actions: string[]`).
+    (`builtin: 'install'`, default off) and a `packageManager` input
+    (yarn default | pnpm | npm | bun).
+    when supported: `.yarnrc.yml` (yarn), `pnpm-workspace.yaml` (pnpm),
+    `package.json` `workspaces.catalog` (bun); npm pins versions inline.
+    task that keeps `.yarnrc.yml` / `pnpm-workspace.yaml` catalogs in sync. It
+    only writes a file that is absent or toolchain-managed (marker comment), so a
+    hand-written file is never clobbered; bun/npm warn.
+    the manager.
+    config reference/schema/types regenerated.
+- Generic builtins + inputs + Vite+ templates; resilient config loading ([#fb8d7cc](https://github.com/deltabox-studio/toolchain/commit/fb8d7cc) by [T0chi](https://github.com/T0chi))
+  - `catalog:` protocol from generated projects, add a pinned
+    `@deltabox/toolchain` devDependency, and generate a `dbx.config.ts` with only
+    the `project` section — every other section is now opt-in.
+    `monorepo-example`, and expose every Vite+ template
+    (`vite-plus-monorepo`, `-application`, `-library`, `-generator`).
+    shared by the CLI, the programmatic API, the VS Code extension and the
+    builtins; document it in the Templates guide.
+    `@deltabox/toolchain/tsdown` (the private `@deltabox/toolchain-tsdown` package
+    is never published).
+    stderr instead of aborting unrelated commands (`template:list`, `providers`,
+    ...), so the extension views no longer empty out after scaffolding; `sync`
+    still fails on a broken config (and `--recursive` reports per project).
+    choice, and add a "Need help? Go to documentation" link to the Home view.
+### Bug fixes
+- Issues found emulating the extension + command palette ([#1049afa](https://github.com/deltabox-studio/toolchain/commit/1049afa) by [T0chi](https://github.com/T0chi))
+  - Emulated the extension (bundled and portal `dbx`) against a consumer workspace:
+  - name ("No version specified for X") for yarn/pnpm/npm/bun, so `projectToPackageJson`
+    skips the field when no version is known, and scaffolds/`project:config` seed a
+    default version (`DEFAULT_PACKAGE_MANAGER_VERSIONS`) or the existing
+    package.json manager. `renderToolchainConfig` always emits `packageManagerVersion`.
+    `vite-plus` ships two bins, so `npx vite-plus` failed with "could not determine
+    executable to run" (broke `dbx vite:*`).
+    `@deltabox/toolchain/vite` no longer runs `resolveDbx` at module load, so every
+    command stopped printing spurious `dbx`-resolution warnings.
+    option").
+    template), so the Managed Files and Home views populate instead of staying empty.
+#### Project
+- Preserve scoped package name and never delete catalog files ([#dbb0b21](https://github.com/deltabox-studio/toolchain/commit/dbb0b21) by [T0chi](https://github.com/T0chi))
+  - Found by exercising a portal-linked consumer workspace:
+  - defines `name` without `scope` (eg. a nested workspace), instead of renaming
+    `@acme/a` to `a`. Mirrors the token resolution in the config loader.
+    a previously toolchain-managed catalog file is never deleted when the task
+    stops producing it (eg. the user replaces it with a hand-written one) — it
+    already refused to overwrite it, but `runSync` would still remove it.
+### Tests
+- Add a real CLI emulation suite under tests/emulate ([#2c76d66](https://github.com/deltabox-studio/toolchain/commit/2c76d66) by [T0chi](https://github.com/T0chi))
+  - extension and command palette drive) in a per-test scratch workspace under
+    `tests/emulate/<id>` and asserts on real behavior: builtins + inputs/actions,
+    per-package-manager scaffolding (catalog vs pinned), bare/nested monorepos,
+    custom module/command actions, the opt-in install action, catalog sync +
+    never-delete, config-load resilience, `template:info --json`, and the
+    post-scaffold extension flow.
+    boundary and never inherits the toolchain repo's own config/manifest. Scratch
+    dirs are removed after every test (pass or fail), once more on `afterAll`, and
+    again on process exit; the repo's own manifest is snapshotted and restored so
+    the working tree stays clean.
+    always execute against a fresh CLI bundle.
+    emitting a dangling `catalog:` — Bun's catalog lives in `package.json`
+    `workspaces.catalog`, which only a monorepo root writes. Regression tests added.
 
 <!-- release:end -->
 
+
+## 1.9.2 (October 2026)
+
+### Documentation
+- Added `llms` entry to the sidebar ([#098cc7e](https://github.com/deltabox-studio/toolchain/commit/098cc7e) by [T0chi](https://github.com/T0chi))
 
 ## 1.9.1 (October 2026)
 
