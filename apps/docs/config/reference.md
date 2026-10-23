@@ -103,7 +103,7 @@ Master switch (enabled when the section is defined).
 
 - **Type**: `ChangelogWorkflowsConfig`
 
-Which workflows to write into `.github/workflows`.
+Which workflows to write into `.github/workflows`. Each id is `true`/`false`, an object of overrides, or a raw YAML string written verbatim.
 
 #### `ci`
 

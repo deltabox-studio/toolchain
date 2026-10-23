@@ -69,6 +69,8 @@ export const WORKFLOW_FILENAMES: Record<WorkflowId, string> = {
 export function isEnabled(setting: WorkflowSetting | undefined): boolean {
     if (setting === undefined) return true;
     if (typeof setting === 'boolean') return setting;
+    // A raw string is enabled when it has content (an empty string disables it).
+    if (typeof setting === 'string') return setting.trim().length > 0;
     return setting.enabled !== false;
 }
 
@@ -335,7 +337,11 @@ export function renderWorkflow(id: WorkflowId, options: RenderWorkflowOptions): 
     return toYaml(resolved as unknown as Record<string, YamlValue>);
 }
 
-/** Render every workflow, keyed by file name (disabled ones are omitted). */
+/**
+ * Render every workflow, keyed by file name (disabled ones are omitted). A raw
+ * string setting is used verbatim as the workflow content (no default merge and
+ * no token replacement).
+ */
 export function renderWorkflows(
     tokens: Replacements,
     workflows: Partial<Record<WorkflowId, WorkflowSetting>> = {}
@@ -344,6 +350,10 @@ export function renderWorkflows(
     for (const id of Object.keys(WORKFLOW_FILENAMES) as WorkflowId[]) {
         const setting = workflows[id];
         if (!isEnabled(setting)) continue;
+        if (typeof setting === 'string') {
+            out[WORKFLOW_FILENAMES[id]] = setting;
+            continue;
+        }
         const config = typeof setting === 'object' ? setting : {};
         const yaml = renderWorkflow(id, { tokens, config });
         if (yaml) out[WORKFLOW_FILENAMES[id]] = yaml;

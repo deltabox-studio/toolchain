@@ -85,7 +85,7 @@ export interface WorkflowConfig {
     tokens?: Record<string, string | number | boolean>;
 }
 
-export type WorkflowSetting = boolean | WorkflowConfig;
+export type WorkflowSetting = boolean | string | WorkflowConfig;
 
 export interface ChangelogWorkflowsConfig {
     ci?: WorkflowSetting;

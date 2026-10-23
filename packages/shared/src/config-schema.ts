@@ -129,9 +129,16 @@ export const workflowConfigSchema = z
     })
     .meta({ id: 'WorkflowConfig' });
 
-/** A workflow can be toggled with a boolean or configured with an object. */
+/**
+ * A workflow can be toggled with a boolean, configured with an object, or set to
+ * a raw YAML string (written verbatim as the workflow file).
+ */
 export const workflowSettingSchema = z
-    .union([z.boolean(), workflowConfigSchema])
+    .union([z.boolean(), z.string(), workflowConfigSchema])
+    .describe(
+        '`true`/`false` to enable/disable, an object to override parts of the default, ' +
+            'or a raw YAML string written verbatim as the workflow file.'
+    )
     .meta({ id: 'WorkflowSetting' });
 
 /** Per-workflow configuration, keyed by workflow id. */
@@ -192,7 +199,11 @@ export const changelogConfigSchema = z
             .describe('Master switch (enabled when the section is defined).')
             .optional(),
         workflows: changelogWorkflowsConfigSchema
-            .describe('Which workflows to write into `.github/workflows`.')
+            .describe(
+                'Which workflows to write into `.github/workflows`. Each id is ' +
+                    '`true`/`false`, an object of overrides, or a raw YAML string ' +
+                    'written verbatim.'
+            )
             .optional(),
         branches: z
             .object({

@@ -5,22 +5,29 @@ import {
     sectionConfig,
     sectionEnabled,
     type ToolchainConfig,
-    type WorkflowConfig,
     type WorkflowSetting,
 } from '@deltabox/toolchain-shared';
 
 import { renderCommitlintConfig } from './templates.js';
-import { renderWorkflows, type WorkflowId } from './workflows.js';
+import {
+    isEnabled,
+    renderWorkflow,
+    renderWorkflows,
+    WORKFLOW_FILENAMES,
+    type WorkflowId,
+} from './workflows.js';
 
 /**
  * Apply the `changelog.branches` defaults to a workflow's config. An explicit
- * per-workflow `pushBranches` (or `false` to disable) still wins.
+ * per-workflow `pushBranches` (or `false` to disable) still wins, and a raw
+ * string setting is left untouched (it defines its own triggers).
  */
 function withPushBranches(
     setting: WorkflowSetting | undefined,
     branches: string[]
-): WorkflowConfig {
+): WorkflowSetting {
     if (setting === false) return { enabled: false };
+    if (typeof setting === 'string') return setting;
     if (setting === true || setting === undefined) return { pushBranches: branches };
     return { pushBranches: branches, ...setting };
 }
@@ -105,13 +112,26 @@ export function changelogSyncTask(): SyncTask {
                 : 'commitlint.config.mjs';
 
             const workflows = withBranchDefaults(ch.workflows ?? {}, resolveChangelogBranches(ch));
+            const tokens = { ...ctx.tokens, commitlintConfig: commitlintPath };
 
-            for (const [filename, yaml] of Object.entries(
-                renderWorkflows({ ...ctx.tokens, commitlintConfig: commitlintPath }, workflows)
-            )) {
+            for (const [id, filename] of Object.entries(WORKFLOW_FILENAMES) as [
+                WorkflowId,
+                string,
+            ][]) {
+                const setting = workflows[id];
+                if (!isEnabled(setting)) continue;
+                // A raw string is written verbatim (no generated header).
+                const raw = typeof setting === 'string';
+                const content = raw
+                    ? setting
+                    : renderWorkflow(id, {
+                          tokens,
+                          config: typeof setting === 'object' ? setting : {},
+                      });
+                if (!content) continue;
                 files.push({
                     path: `.github/workflows/${filename}`,
-                    content: `${WORKFLOW_HEADER}\n${yaml}`,
+                    content: raw ? content : `${WORKFLOW_HEADER}\n${content}`,
                 });
             }
 

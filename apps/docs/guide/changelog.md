@@ -28,6 +28,46 @@ with a `postinstall` script (Yarn Berry never runs `prepare`):
 
 See [Package scripts](/guide/scripts) for the full recommended script set.
 
+## Workflows
+
+`dbx sync` writes the GitHub workflows into `.github/workflows`. Each id (`ci`,
+`changelog`, `release`, `issues`, `sync`) accepts one of three forms:
+
+- `true` / `false` — write the generated default, or skip it;
+- a **`WorkflowConfig` object** — override parts of the default (branches,
+  triggers, extra top-level keys, extra steps/jobs, token overrides);
+- a **raw YAML string** — written **verbatim** as the workflow file, for a
+  workflow the object model can't express.
+
+```ts
+export default defineConfig({
+    toolchain: {
+        changelog: {
+            workflows: {
+                ci: true, // the generated default
+                issues: false, // don't write issues.yml
+                release: { pushBranches: ['main'] }, // override the default
+                // A fully hand-authored workflow, written as-is:
+                sync: `name: Toolchain sync
+on: [push, pull_request]
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: yarn dbx sync --check
+`,
+            },
+        },
+    },
+});
+```
+
+A raw string is **not** merged with the default, is **not** token-replaced, and
+gets **no generated header** — it is the file's exact content. The
+`changelog.branches` defaults don't apply to it either (it defines its own
+triggers). An empty string disables the workflow.
+
 ## Branches
 
 `branches.main` and `branches.dev` pick which branches the generated workflows
@@ -161,6 +201,39 @@ dbx changelog --format-only         # regroup existing changelogs, no bump
 The generated `changelog` workflow runs `dbx changelog --range …` on every push
 to the `dev` branches (or `main` when `dev` is unset), so versioning is applied
 from CI as well as locally.
+
+## Writing commit messages
+
+The changelog is rendered from commit **subjects and bodies**, so what you commit
+is what readers see. Watch out for characters that a **shell** re-interprets —
+especially when a message is drafted by an **AI/LLM** and committed through
+`git commit -m "…"`.
+
+### Shell escaping
+
+- **PowerShell** treats a backtick as its escape character, so `` `r `` / `` `n `` /
+  `` `t `` / `` `b `` become CR / LF / TAB / backspace. A preceding `\` is left
+  behind, so `` `resolveVite `` can land in the changelog as a stray `\`, a CR and
+  `esolveVite`.
+- **bash** runs an unquoted `` `…` `` as command substitution, and `$(…)` / `${…}`
+  expand before `git` ever sees them.
+
+The result is invisible control characters, stray `\` and dropped letters. The
+toolchain strips the predictable artifacts
+(`stripControlChars`/`sanitizeText`) but **cannot restore a character the shell
+already consumed**.
+
+### Authoring safely
+
+- Prefer a **file over `-m`**: `git commit -F message.txt`, or a quoted heredoc
+  (`git commit -F - <<'EOF' … EOF`) — nothing is re-interpreted. Avoid assembling
+  multi-line messages inline in PowerShell.
+- When an AI/LLM drafts the message, strip **typographic characters** before
+  committing: curly quotes (`’ “ ”`), em/en dashes (`— –`), non-breaking spaces,
+  zero-width characters and emoji all survive into the changelog and can break
+  `commitlint` or the markdown.
+- **Preview the entry**: `dbx changelog --dry-run` prints the proposed entry —
+  check it for stray `\`, `\r`, `\b`, `\t` or mojibake before releasing.
 
 ## Troubleshooting
 

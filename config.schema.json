@@ -82,7 +82,7 @@
                     "description": "Master switch (enabled when the section is defined)."
                 },
                 "workflows": {
-                    "description": "Which workflows to write into `.github/workflows`.",
+                    "description": "Which workflows to write into `.github/workflows`. Each id is `true`/`false`, an object of overrides, or a raw YAML string written verbatim.",
                     "$ref": "#/$defs/ChangelogWorkflowsConfig"
                 },
                 "branches": {
@@ -320,9 +320,13 @@
                     "type": "boolean"
                 },
                 {
+                    "type": "string"
+                },
+                {
                     "$ref": "#/$defs/WorkflowConfig"
                 }
-            ]
+            ],
+            "description": "`true`/`false` to enable/disable, an object to override parts of the default, or a raw YAML string written verbatim as the workflow file."
         },
         "ChangelogWorkflowsConfig": {
             "type": "object",

@@ -111,4 +111,18 @@ describe('workflow config', () => {
         expect(files['ci.yml']).toBeDefined();
         expect(files['issues.yml']).toBeUndefined();
     });
+
+    it('writes a raw string workflow verbatim (no default merge)', () => {
+        const raw =
+            'name: Custom CI\non: [push]\njobs:\n  ci:\n    runs-on: ubuntu-latest\n    steps: []\n';
+        const files = renderWorkflows({}, { ci: raw, issues: false });
+        expect(files['ci.yml']).toBe(raw);
+        expect(files['issues.yml']).toBeUndefined();
+        // A non-string setting still renders from the default.
+        expect(files['sync.yml']).toContain('name: Toolchain sync');
+    });
+
+    it('treats an empty raw string as disabled', () => {
+        expect(renderWorkflows({}, { ci: '' })['ci.yml']).toBeUndefined();
+    });
 });
