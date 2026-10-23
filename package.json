@@ -54,7 +54,7 @@
         "dev": "tsx src/cli/index.ts",
         "dbx": "tsx src/cli/index.ts",
         "commitlint": "commitlint",
-        "postinstall": "husky && node scripts/bootstrap.mjs"
+        "postinstall": "node scripts/bootstrap.mjs"
     },
     "publishConfig": {
         "access": "public",
@@ -115,7 +115,8 @@
         "node": ">=22.5.0"
     },
     "files": [
-        "dist"
+        "dist",
+        "scripts/bootstrap.mjs"
     ],
     "exports": {
         ".": "./dist/index.js",
