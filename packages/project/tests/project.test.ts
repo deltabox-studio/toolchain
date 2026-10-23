@@ -93,6 +93,20 @@ describe('project scaffolding', () => {
         expect(pkg.packageManager).toBe('pnpm@10.11.1');
     });
 
+    it('pins a single Bun project (nowhere to declare the catalog)', () => {
+        const files = createRootProjectFiles({ name: 'x', packageManager: 'bun' });
+        const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
+        expect(pkg.devDependencies['@deltabox/toolchain']).toMatch(/^\^/);
+        expect(pkg.workspaces).toBeUndefined();
+    });
+
+    it('uses the catalog for a Bun monorepo root', () => {
+        const files = createMonorepoRootFiles({ name: 'x', packageManager: 'bun', workspaces: [] });
+        const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
+        expect(pkg.devDependencies['@deltabox/toolchain']).toBe('catalog:');
+        expect((pkg.workspaces as { catalog: Record<string, string> }).catalog).toBeDefined();
+    });
+
     it('renders a gitignore', () => {
         expect(renderGitignore()).toContain('node_modules/');
     });

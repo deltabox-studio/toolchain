@@ -55,9 +55,24 @@ function packageManagerField(
 }
 
 /** The dev-dependency map for a package manager (catalog refs or pinned). */
-function devDependencies(packageManager: string | undefined): Record<string, string> {
-    if (!supportsCatalogs(packageManager)) return { ...CATALOG };
+function devDependencies(
+    packageManager: string | undefined,
+    catalogDefined: boolean
+): Record<string, string> {
+    if (!catalogDefined) return { ...CATALOG };
     return Object.fromEntries(Object.keys(CATALOG).map(name => [name, 'catalog:']));
+}
+
+/**
+ * Whether the scaffold writes a catalog the dependencies can reference. Bun's
+ * catalog lives in `package.json` `workspaces.catalog`, which only a monorepo
+ * root writes — a single Bun project has nowhere to declare it, so it pins.
+ */
+function catalogDefined(packageManager: string | undefined, isMonorepo: boolean): boolean {
+    const pm = packageManager ?? 'yarn';
+    if (!supportsCatalogs(pm)) return false;
+    if (pm === 'bun') return isMonorepo;
+    return true;
 }
 
 /** The package-manager catalog file(s) a scaffolded root should write. */
@@ -186,7 +201,10 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
             test: 'vitest run',
             typecheck: 'tsc -p tsconfig.json --noEmit',
         },
-        devDependencies: devDependencies(ctx.packageManager),
+        devDependencies: devDependencies(
+            ctx.packageManager,
+            catalogDefined(ctx.packageManager, false)
+        ),
         ...(packageManagerField(ctx.packageManager, ctx.yarnVersion)
             ? { packageManager: packageManagerField(ctx.packageManager, ctx.yarnVersion) }
             : {}),
@@ -231,7 +249,10 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
         ...(ctx.author ? { author: ctx.author } : {}),
         ...(ctx.license ? { license: ctx.license } : {}),
         workspaces: workspacesField(ctx.packageManager, ctx.workspaceGlobs ?? ['packages/*']),
-        devDependencies: devDependencies(ctx.packageManager),
+        devDependencies: devDependencies(
+            ctx.packageManager,
+            catalogDefined(ctx.packageManager, true)
+        ),
         ...(packageManagerField(ctx.packageManager, ctx.yarnVersion)
             ? { packageManager: packageManagerField(ctx.packageManager, ctx.yarnVersion) }
             : {}),
@@ -274,7 +295,7 @@ export interface WorkspaceContext extends ProjectContext {
 
 /** Files for a monorepo workspace package. */
 export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
-    const dev = ctx.useCatalog ? devDependencies(ctx.packageManager) : { ...CATALOG };
+    const dev = ctx.useCatalog ? devDependencies(ctx.packageManager, true) : { ...CATALOG };
     const pkg = {
         name: ctx.scope ? `${ctx.scope}/${ctx.wsName}` : ctx.wsName,
         version: '0.1.0',
