@@ -1,14 +1,11 @@
 trigger:
-  pr: none
   tags:
     include:
       - v*
   branches:
-    include:
-      - refs/tags/v*
     exclude:
       - '*'
-      - refs/*
+pr: none
 
 variables:
   nodeVersion: '22.x'
