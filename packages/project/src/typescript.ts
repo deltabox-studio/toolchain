@@ -11,6 +11,102 @@ import {
     renderTsconfigDefault,
 } from '@deltabox/toolchain-tsconfig';
 
+import rootPkg from '../../../package.json' with { type: 'json' };
+import { renderPnpmWorkspace, renderYarnrc, supportsCatalogs } from './catalogs.js';
+
+/**
+ * The dev dependencies every scaffolded package gets, pinned to the toolchain's
+ * own current versions. When the chosen package manager supports catalogs
+ * (yarn/pnpm/bun) the generated root also writes the catalog file and the
+ * dependencies reference `catalog:`; otherwise they are pinned inline (so a
+ * fresh consumer never sees a dangling `catalog:`).
+ */
+const CATALOG: Record<string, string> = {
+    '@biomejs/biome': '^2.5.13',
+    '@deltabox/toolchain': `^${rootPkg.version}`,
+    tsdown: '^0.23.0',
+    typescript: '^6.0.3',
+    vitest: '^5.0.0',
+};
+
+/** The catalog a scaffolded root writes into its package-manager file. */
+export const SCAFFOLD_CATALOG = CATALOG;
+
+/**
+ * Default package-manager versions used when a scaffold does not specify one.
+ * A `packageManager` field must carry a version (corepack rejects a bare name),
+ * so the scaffold always writes `<pm>@<version>`.
+ */
+export const DEFAULT_PACKAGE_MANAGER_VERSIONS: Record<string, string> = {
+    yarn: '4.17.1',
+    pnpm: '10.11.1',
+    npm: '11.19.0',
+    bun: '1.3.0',
+};
+
+/** The `<pm>@<version>` string for a scaffold (uses the default when unknown). */
+function packageManagerField(
+    packageManager: string | undefined,
+    version: string | undefined
+): string | undefined {
+    if (!packageManager) return undefined;
+    const resolved = version ?? DEFAULT_PACKAGE_MANAGER_VERSIONS[packageManager];
+    return resolved ? `${packageManager}@${resolved}` : packageManager;
+}
+
+/** The dev-dependency map for a package manager (catalog refs or pinned). */
+function devDependencies(
+    packageManager: string | undefined,
+    catalogDefined: boolean
+): Record<string, string> {
+    if (!catalogDefined) return { ...CATALOG };
+    return Object.fromEntries(Object.keys(CATALOG).map(name => [name, 'catalog:']));
+}
+
+/**
+ * Whether the scaffold writes a catalog the dependencies can reference. Bun's
+ * catalog lives in `package.json` `workspaces.catalog`, which only a monorepo
+ * root writes — a single Bun project has nowhere to declare it, so it pins.
+ */
+function catalogDefined(packageManager: string | undefined, isMonorepo: boolean): boolean {
+    const pm = packageManager ?? 'yarn';
+    if (!supportsCatalogs(pm)) return false;
+    if (pm === 'bun') return isMonorepo;
+    return true;
+}
+
+/** The package-manager catalog file(s) a scaffolded root should write. */
+function catalogFiles(packageManager: string | undefined, isMonorepo: boolean): GeneratedFile[] {
+    switch (packageManager ?? 'yarn') {
+        case 'yarn':
+            return [{ path: '.yarnrc.yml', content: renderYarnrc({ packages: CATALOG }) }];
+        case 'pnpm':
+            return [
+                {
+                    path: 'pnpm-workspace.yaml',
+                    content: renderPnpmWorkspace(
+                        { packages: CATALOG },
+                        isMonorepo ? ['packages/*'] : undefined
+                    ),
+                },
+            ];
+        default:
+            // npm has no catalogs; Bun's live in `package.json` (below).
+            return [];
+    }
+}
+
+/** The `workspaces` field for Bun (an object carrying the catalog), else array. */
+function workspacesField(
+    packageManager: string | undefined,
+    globs: string[]
+): string[] | Record<string, unknown> {
+    if ((packageManager ?? 'yarn') === 'bun') {
+        return { packages: globs, catalog: CATALOG };
+    }
+    return globs;
+}
+
 /** The replacement values a project scaffold understands. */
 export interface ProjectContext {
     /** The project/package name (unscoped). */
@@ -57,23 +153,20 @@ export function renderToolchainConfig(ctx: ProjectContext & { type: ProjectType 
     if (ctx.license) entries.push(['license', ctx.license]);
     if (ctx.repoUrl) entries.push(['repo', ctx.repoUrl]);
     entries.push(['nodeVersion', ctx.nodeVersion ?? '22']);
-    entries.push(['packageManager', ctx.packageManager ?? 'yarn']);
-    if (ctx.yarnVersion) entries.push(['packageManagerVersion', ctx.yarnVersion]);
+    const packageManager = ctx.packageManager ?? 'yarn';
+    entries.push(['packageManager', packageManager]);
+    // Always pair the manager with a version: a bare `packageManager` breaks
+    // corepack, and `project` sync mirrors this into package.json.
+    const pmVersion = ctx.yarnVersion ?? DEFAULT_PACKAGE_MANAGER_VERSIONS[packageManager];
+    if (pmVersion) entries.push(['packageManagerVersion', pmVersion]);
 
     const project = entries
         .map(([key, value]) => `            ${key}: ${JSON.stringify(value)},`)
         .join('\n');
 
-    // Sections are opt-in by presence; the `true` shorthand enables one with its
-    // defaults, so the scaffold spells out the sections that apply here.
-    const sections: string[] = [];
-    if (ctx.type === 'monorepo-root' || ctx.type === 'project')
-        sections.push('        changelog: true,');
-    sections.push('        biome: true,');
-    if (ctx.type === 'monorepo-root') sections.push('        tsconfig: true,');
-    sections.push('        watch: true,');
-    const body = sections.join('\n');
-
+    // Sections are opt-in by presence, so the scaffold only declares `project`
+    // (its own identity). A consumer enables `changelog`, `biome`, `tsconfig`,
+    // `watch`, ... themselves — the generated config stays generic.
     return `import { defineConfig } from '@deltabox/toolchain';
 
 export default defineConfig({
@@ -81,7 +174,6 @@ export default defineConfig({
         project: {
 ${project}
         },
-${body}
     },
 });
 `;
@@ -103,19 +195,19 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
         ...(ctx.author ? { author: ctx.author } : {}),
         ...(ctx.license ? { license: ctx.license } : {}),
         scripts: {
-            build: 'tsdown --config-loader unrun',
+            build: 'tsdown',
             format: 'biome format --write .',
             lint: 'biome check --fix .',
             test: 'vitest run',
             typecheck: 'tsc -p tsconfig.json --noEmit',
         },
-        devDependencies: {
-            '@biomejs/biome': 'catalog:',
-            tsdown: 'catalog:',
-            typescript: 'catalog:',
-            vitest: 'catalog:',
-        },
-        ...(ctx.packageManager ? { packageManager: ctx.packageManager } : {}),
+        devDependencies: devDependencies(
+            ctx.packageManager,
+            catalogDefined(ctx.packageManager, false)
+        ),
+        ...(packageManagerField(ctx.packageManager, ctx.yarnVersion)
+            ? { packageManager: packageManagerField(ctx.packageManager, ctx.yarnVersion) }
+            : {}),
         engines: { node: ctx.nodeVersion ? `>=${ctx.nodeVersion}` : '>=22' },
     };
 
@@ -136,6 +228,7 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
         { path: 'biome.json', content: renderBiomeJson(tokens(ctx)) },
         { path: '.gitignore', content: renderGitignore() },
         { path: 'README.md', content: `# ${ctx.name}\n` },
+        ...catalogFiles(ctx.packageManager, false),
     ];
 }
 
@@ -146,7 +239,7 @@ export interface MonorepoRootContext extends ProjectContext {
     workspaceGlobs?: string[];
 }
 
-/** Files for a monorepo root (workspaces + turbo + monorepo tsconfig). */
+/** Files for a monorepo root (workspaces + monorepo tsconfig). */
 export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile[] {
     const pkg = {
         name: ctx.name,
@@ -155,22 +248,14 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
         type: 'module',
         ...(ctx.author ? { author: ctx.author } : {}),
         ...(ctx.license ? { license: ctx.license } : {}),
-        scripts: {
-            build: 'turbo build',
-            format: 'turbo format',
-            lint: 'turbo lint',
-            test: 'turbo test',
-            typecheck: 'turbo typecheck',
-        },
-        workspaces: ctx.workspaceGlobs ?? ['packages/*'],
-        devDependencies: {
-            '@biomejs/biome': 'catalog:',
-            tsdown: 'catalog:',
-            turbo: '^2.11.2',
-            typescript: 'catalog:',
-            vitest: 'catalog:',
-        },
-        ...(ctx.packageManager ? { packageManager: ctx.packageManager } : {}),
+        workspaces: workspacesField(ctx.packageManager, ctx.workspaceGlobs ?? ['packages/*']),
+        devDependencies: devDependencies(
+            ctx.packageManager,
+            catalogDefined(ctx.packageManager, true)
+        ),
+        ...(packageManagerField(ctx.packageManager, ctx.yarnVersion)
+            ? { packageManager: packageManagerField(ctx.packageManager, ctx.yarnVersion) }
+            : {}),
         engines: { node: ctx.nodeVersion ? `>=${ctx.nodeVersion}` : '>=22' },
     };
 
@@ -184,7 +269,6 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
                   },
               ]),
         { path: 'package.json', content: json(pkg) },
-        { path: 'turbo.json', content: renderTurboJson() },
         { path: 'tsconfig.base.json', content: renderTsconfigBase(tokens(ctx)) },
         {
             path: 'tsconfig.workspaces.json',
@@ -196,6 +280,7 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
         { path: 'biome.json', content: renderBiomeJson(tokens(ctx)) },
         { path: '.gitignore', content: renderGitignore() },
         { path: 'README.md', content: `# ${ctx.name}\n` },
+        ...catalogFiles(ctx.packageManager, true),
     ];
 }
 
@@ -204,22 +289,26 @@ export interface WorkspaceContext extends ProjectContext {
     wsName: string;
     /** The workspace directory relative to the root, eg. `packages/core`. */
     wsDir: string;
+    /** Reference the root catalog for dev deps (`catalog:`) instead of pinning. */
+    useCatalog?: boolean;
 }
 
 /** Files for a monorepo workspace package. */
 export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
+    const dev = ctx.useCatalog ? devDependencies(ctx.packageManager, true) : { ...CATALOG };
     const pkg = {
         name: ctx.scope ? `${ctx.scope}/${ctx.wsName}` : ctx.wsName,
         version: '0.1.0',
         type: 'module',
         files: ['dist'],
         scripts: {
-            build: 'tsdown --config-loader unrun',
+            build: 'tsdown',
             format: 'biome format --write .',
             lint: 'biome check --fix .',
             test: 'vitest run',
             typecheck: 'tsc -p tsconfig.build.json --noEmit',
         },
+        devDependencies: dev,
         publishConfig: { access: 'public', provenance: true },
     };
 
@@ -254,35 +343,9 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
         { path: 'tsconfig.json', content: renderWorkspaceTsconfig() },
         {
             path: 'tsdown.config.ts',
-            content: `import { defineConfig } from 'tsdown';\n\nimport { baseTsdownConfig } from '@deltabox/toolchain-tsdown';\n\nexport default defineConfig({\n    ...baseTsdownConfig,\n    entry: { index: 'src/index.ts' },\n});\n`,
+            content: `import { defineConfig } from 'tsdown';\n\nimport { baseTsdownConfig } from '@deltabox/toolchain/tsdown';\n\nexport default defineConfig({\n    ...baseTsdownConfig,\n    entry: { index: 'src/index.ts' },\n});\n`,
         },
     ];
-}
-
-/** The default monorepo turbo pipeline. */
-export function renderTurboJson(): string {
-    return json({
-        $schema: 'https://turborepo.dev/schema.json',
-        ui: 'stream-with-experimental-timestamps',
-        globalDependencies: [
-            'tsconfig.json',
-            'tsconfig.base.json',
-            'tsdown.config.ts',
-            'yarn.lock',
-        ],
-        globalPassThroughEnv: ['NODE_ENV', 'VITE_*'],
-        tasks: {
-            build: {
-                inputs: ['$TURBO_DEFAULT$', '.env*'],
-                outputs: ['dist/**'],
-                dependsOn: ['^lint', '^typecheck', '^test', '^build'],
-            },
-            format: { dependsOn: ['^format'] },
-            lint: { dependsOn: ['^lint'] },
-            typecheck: { dependsOn: ['^typecheck'] },
-            test: { dependsOn: ['^test'] },
-        },
-    });
 }
 
 /** A generic `.gitignore`. */

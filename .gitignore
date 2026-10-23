@@ -11,6 +11,9 @@ CHANGELOG.proposed.md
 **/.dbx/toolchain/*
 !**/.dbx/toolchain/manifest.json
 
+# Emulation test scratch workspaces (created + removed by tests/emulate.test.ts)
+tests/emulate/*
+
 # Packaged VS Code extension (built + attached to releases)
 *.vsix
 npm-debug.log*

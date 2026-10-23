@@ -5,7 +5,7 @@ import {
     conventionalCommitsVscodeSettings,
 } from '@deltabox/toolchain-changelog';
 import { vscodeSyncTask } from '@deltabox/toolchain-core';
-import { projectSyncTask } from '@deltabox/toolchain-project';
+import { catalogsSyncTask, projectSyncTask } from '@deltabox/toolchain-project';
 import { type SyncTask, sectionConfig, sectionEnabled } from '@deltabox/toolchain-shared';
 import { tsconfigSyncTask } from '@deltabox/toolchain-tsconfig';
 import { viteSyncTask } from '@deltabox/toolchain-vite';
@@ -18,6 +18,7 @@ import { viteSyncTask } from '@deltabox/toolchain-vite';
 export function defaultSyncTasks(): SyncTask[] {
     return [
         projectSyncTask(),
+        catalogsSyncTask(),
         changelogSyncTask(),
         biomeSyncTask(),
         tsconfigSyncTask(),

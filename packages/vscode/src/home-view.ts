@@ -42,6 +42,7 @@ export type HomeAction =
     | { type: 'runVite' }
     | { type: 'templateAdd' }
     | { type: 'templateRemove' }
+    | { type: 'openDocs' }
     | { type: 'syncProject'; dir: string }
     | { type: 'checkProject'; dir: string }
     | { type: 'generateProjectConfig'; dir: string }
@@ -108,6 +109,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
       font-family: var(--vscode-font-family);
       font-size: var(--vscode-font-size);
     }
+    .docsLink { margin:0 1px 4px; font-size:11px; }
     .lastSync { margin:0 1px 8px; color:var(--vscode-descriptionForeground); font-size:11px; }
     .status {
       display:flex; align-items:center; gap:7px; margin:0 0 12px; padding:8px 9px;
@@ -195,6 +197,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
   </style>
 </head>
 <body>
+  <div class="docsLink"><a class="link" data-action="openDocs">Need help? Go to documentation</a></div>
   <div id="lastSync" class="lastSync"></div>
   <div class="status"><span id="statusDot" class="dot"></span><span id="statusText" class="statusText">Ready</span><span id="manager" class="muted"></span></div>
   <section class="section">

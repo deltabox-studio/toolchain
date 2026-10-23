@@ -40,14 +40,98 @@ prompts for the template, name and scope instead (Ctrl-C cancels).
 
 ## Builtin templates
 
-| id            | Kind          | Description                                            |
-| ------------- | ------------- | ------------------------------------------------------ |
-| `project`     | `project`     | A single-package TypeScript project.                   |
-| `application` | `application` | A runnable application package.                        |
-| `folder`      | `folder`      | A bare folder (a README).                              |
-| `monorepo`    | `project`     | A monorepo root + one example workspace.               |
-| `workspace`   | `workspace`   | A workspace package into an existing monorepo.         |
-| `vite-plus`   | `project`     | Create through `vp create` (interactive or templated). |
+| id                      | Kind          | Description                                    |
+| ----------------------- | ------------- | ---------------------------------------------- |
+| `project`               | `project`     | A single-package TypeScript project.           |
+| `application`           | `application` | A runnable application package.                |
+| `folder`                | `folder`      | A bare folder (a README).                      |
+| `monorepo`              | `project`     | A monorepo root (no example workspace).        |
+| `monorepo-example`      | `project`     | A monorepo root + one example workspace.       |
+| `workspace`             | `workspace`   | A workspace package into an existing monorepo. |
+| `vite-plus`             | `project`     | `vp create` (interactive or templated).        |
+| `vite-plus-monorepo`    | `project`     | `vp create vite:monorepo`.                     |
+| `vite-plus-application` | `application` | `vp create vite:application`.                  |
+| `vite-plus-library`     | `project`     | `vp create vite:library`.                      |
+| `vite-plus-generator`   | `project`     | `vp create vite:generator` (monorepo only).    |
+
+The offline builtins (`project`, `application`, `folder`, `monorepo`,
+`monorepo-example`, `workspace`) scaffold a generic, current project: a
+`dbx.config.ts` with only `project` metadata, a `package.json` that depends on
+`@deltabox/toolchain`, and no Turbo (Vite Task replaces it). They ask for a
+**package manager** (default `yarn`) and write that manager's catalog file (see
+[Catalogs](/guide/project#package-manager-and-catalogs)). The `vite-plus*` builtins
+delegate to `vp create` and need network access.
+
+## Inputs (variables)
+
+A template can declare **inputs** — values prompted for (and substituted) when it
+is scaffolded. Declare them in `template.json`:
+
+```json
+{
+    "variables": [
+        { "name": "name", "prompt": "Project name", "default": "app", "required": true },
+        { "name": "port", "prompt": "Dev port", "default": "4000" },
+        { "name": "includeDocker", "prompt": "Include a Dockerfile?", "options": ["yes", "no"] }
+    ]
+}
+```
+
+- `name` — the token name (also `{{ name }}` in files).
+- `prompt` — the prompt text (defaults to the name).
+- `default` — the value used when nothing is entered.
+- `options` — a fixed list of choices: the value is picked from a select.
+- `required` — whether a value must be provided.
+
+Files and directory names may contain `{{ token }}` placeholders, resolved while
+copying:
+
+```
+src/{{name}}.ts   ->   src/acme.ts
+```
+
+The **same input pipeline** runs everywhere:
+
+- **CLI** — `dbx create` prompts for each input on an interactive terminal (the
+  standard `name`/`scope` first, then the template's own inputs). Pass
+  `--var key=value` (repeatable) to skip a prompt.
+- **Programmatic API** — `scaffoldTemplate(template, { cwd, tokens, variables })`.
+- **VS Code** — **Create from template…** prompts for each input (a quick pick
+  when `options` is set).
+
+The builtin templates use the same pipeline (they declare `name`, `scope`,
+`packageManager` and `includeConfig` inputs).
+
+## Actions
+
+After the files are written, a template can run **actions** — extra steps such as
+installing dependencies. Declare them in `template.json`:
+
+```json
+{
+    "actions": [
+        { "id": "install", "prompt": "Install dependencies?", "builtin": "install" },
+        { "id": "setup", "prompt": "Run the setup script?", "module": "action.mjs" },
+        { "id": "post", "command": "node scripts/post-scaffold.mjs" }
+    ]
+}
+```
+
+- `id` — the action id (also the `--action <id>` key).
+- `prompt` — the prompt text (defaults to `Run <id>?`).
+- `default` — whether it runs by default (**default false** — opt-in).
+- `builtin` — a built-in action. `install` runs `<packageManager> install` in the
+  output directory.
+- `module` — a JS module (relative to the template directory) whose default
+  export is `async (ctx) => void`. The module is **not** copied to the output.
+  The context is `{ cwd, templateDir, tokens, variables, packageManager, log }`.
+- `command` — a shell command run in the output directory.
+
+Actions run through the same pipeline everywhere: the CLI prompts (or takes
+`--action <id>`, repeatable), the extension prompts, and the programmatic API
+passes `actions: string[]` to `scaffoldTemplate`. The builtin templates declare
+an opt-in **Install dependencies?** action (`builtin: 'install'`, off by
+default).
 
 ## Local templates
 
@@ -68,13 +152,6 @@ dbx template:init ./templates/acme-service \
     "variables": [{ "name": "name", "default": "service" }],
     "ignore": ["fixtures"]
 }
-```
-
-Files and directory names may contain `{{ token }}` placeholders, resolved while
-copying:
-
-```
-src/{{name}}.ts   ->   src/acme.ts
 ```
 
 Register sources so they are picked up automatically:

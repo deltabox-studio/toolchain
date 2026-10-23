@@ -70,6 +70,7 @@ need to add it by hand when the repo has no `.gitignore` yet.
 | Workspace `tsconfig.json` files (aliases + references)              | `tsconfig`            |
 | `vite.config.ts` (Vite+ consumers)                                  | `vite`                |
 | Template sources / scaffolding                                      | `templates`           |
+| Package catalogs (`.yarnrc.yml` / `pnpm-workspace.yaml`)            | `catalogs`            |
 | Watch behaviour                                                     | `watch`               |
 
 Every section is **opt-in by presence**: define it to enable it, omit it to leave

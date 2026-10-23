@@ -34,12 +34,23 @@ export function syncCommand(): ToolchainCommand {
             const quiet = Boolean(opts.quiet);
             const check = Boolean(opts.check);
 
+            if (context.configError) {
+                logger.error(context.configError);
+                process.exitCode = 1;
+                return;
+            }
+
             if (opts.recursive) {
                 const graph = buildProjectGraph(context.cwd);
                 if (!check) writeProjectGraph(context.cwd, graph);
                 for (const relDir of graph.order) {
                     const dir = path.resolve(context.cwd, relDir);
-                    const loaded = await loadToolchainConfig(dir);
+                    const loaded = await loadToolchainConfig(dir, { tolerant: true });
+                    if (loaded.error) {
+                        logger.error(loaded.error);
+                        process.exitCode = 1;
+                        continue;
+                    }
                     const result = await runSync({
                         tasks: defaultSyncTasks(),
                         cwd: dir,

@@ -119,10 +119,11 @@ export function projectToPackageJson(
             ...(options.directory ? { directory: options.directory } : {}),
         };
     }
-    if (project.packageManager !== undefined) {
-        out.packageManager = project.packageManagerVersion
-            ? `${project.packageManager}@${project.packageManagerVersion}`
-            : project.packageManager;
+    if (project.packageManager !== undefined && project.packageManagerVersion !== undefined) {
+        // Corepack rejects a version-less `packageManager` ("No version specified
+        // for X"), so only write the field when a version is known (otherwise the
+        // existing value — if any — is left untouched).
+        out.packageManager = `${project.packageManager}@${project.packageManagerVersion}`;
     }
     return out;
 }

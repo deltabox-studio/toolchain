@@ -74,7 +74,13 @@ export function resolveVp(cwd: string = process.cwd()): ResolvedVp {
     }
     const global = which('vp');
     if (global) return { exe: global, args: [], source: 'global' };
-    return { exe: IS_WINDOWS ? 'npx.cmd' : 'npx', args: ['--yes', 'vite-plus'], source: 'npx' };
+    // `vite-plus` ships two bins (`vp`/`vpr`), so `npx vite-plus` cannot tell
+    // which to run ("could not determine executable to run"); name the bin.
+    return {
+        exe: IS_WINDOWS ? 'npx.cmd' : 'npx',
+        args: ['--yes', '--package', 'vite-plus', 'vp'],
+        source: 'npx',
+    };
 }
 
 /** Whether a local or global `vp` is available (ie. no `npx` fallback needed). */
@@ -160,5 +166,5 @@ export function describeVp(cwd: string = process.cwd()): string {
     const resolved = resolveVp(cwd);
     if (resolved.source === 'local') return 'local (node_modules/.bin/vp)';
     if (resolved.source === 'global') return 'global (PATH)';
-    return 'npx --yes vite-plus';
+    return 'npx --yes --package vite-plus vp';
 }

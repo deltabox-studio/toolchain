@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-tsconfig",
-    "version": "1.9.2",
+    "version": "1.10.1",
     "description": "TypeScript config templates and the tsconfig generator (path aliases + project references).",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { cancel, isCancel, select, text } from '@clack/prompts';
+import { cancel, confirm, isCancel, select, text } from '@clack/prompts';
 
 import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
@@ -33,6 +33,7 @@ function toJson(template: Template): Record<string, unknown> {
         online: Boolean(template.online),
         ...(template.tags ? { tags: template.tags } : {}),
         ...(template.variables ? { variables: template.variables } : {}),
+        ...(template.actions ? { actions: template.actions } : {}),
     };
 }
 
@@ -260,7 +261,11 @@ export function templateCommands(): ToolchainCommand[] {
             name: 'template:info',
             description: 'Show one template by id.',
             args: [{ name: 'id', description: 'The template id.' }],
-            options: [CWD_OPTION, { flags: '--online', description: 'Resolve online sources.' }],
+            options: [
+                CWD_OPTION,
+                { flags: '--online', description: 'Resolve online sources.' },
+                { flags: '--json', description: 'Print the template as JSON (the default).' },
+            ],
             run: async (opts, context) => {
                 const cwd = (opts.cwd as string | undefined) ?? context.cwd;
                 const templates = await loadTemplates({
@@ -290,6 +295,10 @@ export function templateCommands(): ToolchainCommand[] {
                 {
                     flags: '--var <pair...>',
                     description: 'Template variables as key=value (repeatable).',
+                },
+                {
+                    flags: '--action <id...>',
+                    description: 'Action id to run after scaffolding (repeatable).',
                 },
                 { flags: '--online', description: 'Resolve online templates too.' },
                 { flags: '--json', description: 'Print the result as JSON.' },
@@ -370,7 +379,62 @@ export function templateCommands(): ToolchainCommand[] {
                     ...(scope ? { scope } : {}),
                 };
                 const variables = parseVars(opts.var as string[] | undefined);
-                const result = await scaffoldTemplate(template, { cwd: out, tokens, variables });
+                const actions = new Set<string>((opts.action as string[] | undefined) ?? []);
+
+                // Prompt for the template's own inputs (everything except the
+                // standard `name`/`scope`, which are handled above, and any value
+                // already supplied with `--var`). This is the same input pipeline
+                // for builtin, local and online templates.
+                if (interactive) {
+                    for (const variable of template.variables ?? []) {
+                        if (variable.name === 'name' || variable.name === 'scope') continue;
+                        if (variables[variable.name] !== undefined) continue;
+                        const message = variable.prompt ?? variable.name;
+                        if (variable.options && variable.options.length > 0) {
+                            const picked = await select({
+                                message,
+                                options: variable.options.map(option => ({
+                                    value: option,
+                                    label: option,
+                                })),
+                                ...(variable.default ? { initialValue: variable.default } : {}),
+                            });
+                            if (isCancel(picked)) return abortPrompt();
+                            variables[variable.name] = String(picked);
+                        } else {
+                            const answer = await text({
+                                message,
+                                ...(variable.default
+                                    ? {
+                                          placeholder: variable.default,
+                                          defaultValue: variable.default,
+                                      }
+                                    : {}),
+                            });
+                            if (isCancel(answer)) return abortPrompt();
+                            const value = String(answer ?? '');
+                            variables[variable.name] = value || (variable.default ?? '');
+                        }
+                    }
+
+                    // Opt-in post-scaffold actions (eg. Install dependencies?).
+                    for (const action of template.actions ?? []) {
+                        if (actions.has(action.id)) continue;
+                        const answer = await confirm({
+                            message: action.prompt ?? `Run ${action.id}?`,
+                            initialValue: action.default ?? false,
+                        });
+                        if (isCancel(answer)) return abortPrompt();
+                        if (answer) actions.add(action.id);
+                    }
+                }
+
+                const result = await scaffoldTemplate(template, {
+                    cwd: out,
+                    tokens,
+                    variables,
+                    actions: [...actions],
+                });
 
                 if (opts.json) {
                     logger.raw(JSON.stringify({ template: template.id, out, ...result }, null, 4));

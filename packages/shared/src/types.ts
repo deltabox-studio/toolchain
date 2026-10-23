@@ -46,6 +46,12 @@ export interface ToolchainCommandContext {
     /** The config file that was loaded, if any. */
     configPath?: string;
     /**
+     * Set when a `dbx.config.*` file failed to import (the CLI loads configs
+     * tolerantly so unrelated commands still work). Commands that cannot operate
+     * without a valid config (eg. `sync`) fail on it.
+     */
+    configError?: string;
+    /**
      * The managed-file sync tasks `dbx sync` runs. Supplied by the CLI (which
      * aggregates the packages) so a package command such as `migrate` can
      * regenerate managed files without depending on every sync package. Absent

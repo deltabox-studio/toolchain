@@ -574,6 +574,42 @@
             ],
             "description": "What the template produces."
         },
+        "ToolchainCatalogsConfig": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Master switch (enabled when the section is defined)."
+                },
+                "packages": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "description": "The default catalog: package name -> version range."
+                },
+                "named": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "type": "object",
+                        "propertyNames": {
+                            "type": "string"
+                        },
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    },
+                    "description": "Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages."
+                }
+            },
+            "additionalProperties": false
+        },
         "ToolchainViteConfig": {
             "type": "object",
             "properties": {
@@ -701,6 +737,17 @@
                         }
                     ],
                     "description": "Template sources / scaffolding."
+                },
+                "catalogs": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainCatalogsConfig"
+                        }
+                    ],
+                    "description": "Package catalogs written to the package manager catalog file (`catalog:`)."
                 },
                 "vite": {
                     "anyOf": [

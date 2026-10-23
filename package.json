@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain",
-    "version": "1.9.2",
+    "version": "1.10.1",
     "description": "All-in-one toolchain: scaffold projects, manage templates, configs, tsconfigs, changelogs and builds.",
     "homepage": "https://toolchain.deltabox.studio",
     "author": "Victor Sango <victor@deltabox.studio>",
@@ -46,7 +46,7 @@
         "lint:check": "vp lint",
         "check": "vp check",
         "typecheck": "node scripts/bootstrap.mjs && vp run --filter \"./packages/*\" build && vp run --filter \"./packages/*\" typecheck && vp run typecheck:root",
-        "test": "node scripts/bootstrap.mjs && vp run --filter \"./packages/*\" build && vp run --filter \"./packages/*\" test && vp run test:root",
+        "test": "node scripts/bootstrap.mjs && vp run --filter \"./packages/*\" build && vp run build:root && vp run --filter \"./packages/*\" test && vp run test:root",
         "vp:test": "vp test --run --config vite.config.ts",
         "vp:toolchain": "vp toolchain",
         "config:generate": "tsx scripts/generate-config.ts",
@@ -71,6 +71,7 @@
         "lodash": "catalog:",
         "picocolors": "catalog:",
         "tsdown": "catalog:",
+        "tsx": "catalog:",
         "untyped": "^2.0.0",
         "zod": "catalog:"
     },
@@ -95,7 +96,6 @@
         "dotenv": "catalog:",
         "husky": "^9.1.7",
         "publint": "^0.3.24",
-        "tsx": "catalog:",
         "type-fest": "catalog:",
         "typescript": "catalog:",
         "unrun": "^0.3.1",

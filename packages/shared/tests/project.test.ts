@@ -67,4 +67,9 @@ describe('projectToPackageJson', () => {
         });
         expect(pkg.packageManager).toBe('yarn@4.17.1');
     });
+
+    it('skips a packageManager without a version (corepack rejects a bare name)', () => {
+        const pkg = projectToPackageJson({ packageManager: 'pnpm' });
+        expect(pkg.packageManager).toBeUndefined();
+    });
 });

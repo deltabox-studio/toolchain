@@ -48,6 +48,7 @@ export function readTemplateDir(dir: string, id?: string): Template | undefined 
         ...(manifest.tags ? { tags: manifest.tags } : {}),
         dir,
         ...(manifest.variables ? { variables: manifest.variables } : {}),
+        ...(manifest.actions ? { actions: manifest.actions } : {}),
         ...(manifest.tokens ? { tokens: manifest.tokens } : {}),
     };
 }

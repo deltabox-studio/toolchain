@@ -73,6 +73,7 @@ need to add it by hand when the repo has no `.gitignore` yet.
 | Workspace `tsconfig.json` files (aliases + references)              | `tsconfig`            |
 | `vite.config.ts` (Vite+ consumers)                                  | `vite`                |
 | Template sources / scaffolding                                      | `templates`           |
+| Package catalogs (`.yarnrc.yml` / `pnpm-workspace.yaml`)            | `catalogs`            |
 | Watch behaviour                                                     | `watch`               |
 
 Every section is **opt-in by presence**: define it to enable it, omit it to leave
@@ -207,22 +208,22 @@ code --install-extension deltabox.toolchain
 
 ## Commands
 
-| Command                      | What it does                                                     |
-| ---------------------------- | ---------------------------------------------------------------- |
-| Sync all / active / selected | Run `dbx sync` (`--recursive` / per project).                    |
-| Check sync                   | `sync --check` across the workspace.                             |
-| Scaffold project             | Single project, monorepo root, workspace, or **From template…**. |
-| Add template…                | `template:init --add` on a folder you pick (any kind).           |
-| Remove template…             | `template:list --registry` then `template:remove`.               |
-| Generate configs             | `project:config` for projects missing a config.                  |
-| Run workflow                 | Trigger generated GitHub workflows.                              |
-| Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.   |
-| Create Vite+ project…        | `vp create` in a terminal.                                       |
-| Add provider...              | Register a custom provider in `.dbx/toolchain/providers.json`.   |
-| Run command...               | Run a provider command (`dbx <command>`) in a terminal.          |
-| Create from template...      | `dbx create --template <id>` (terminal for online templates).    |
-| Reset tooling                | Remove generated files / manifest / config.                      |
-| Toggle auto-sync             | Enable/disable sync-on-change.                                   |
+| Command                      | What it does                                                                            |
+| ---------------------------- | --------------------------------------------------------------------------------------- |
+| Sync all / active / selected | Run `dbx sync` (`--recursive` / per project).                                           |
+| Check sync                   | `sync --check` across the workspace.                                                    |
+| Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**. |
+| Add template…                | `template:init --add` on a folder you pick (any kind).                                  |
+| Remove template…             | `template:list --registry` then `template:remove`.                                      |
+| Generate configs             | `project:config` for projects missing a config.                                         |
+| Run workflow                 | Trigger generated GitHub workflows.                                                     |
+| Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                          |
+| Create Vite+ project…        | `vp create` in a terminal.                                                              |
+| Add provider...              | Register a custom provider in `.dbx/toolchain/providers.json`.                          |
+| Run command...               | Run a provider command (`dbx <command>`) in a terminal.                                 |
+| Create from template...      | `dbx create --template <id>` (terminal for online templates).                           |
+| Reset tooling                | Remove generated files / manifest / config.                                             |
+| Toggle auto-sync             | Enable/disable sync-on-change.                                                          |
 
 Interactive commands (the dev server, `vp create`, online scaffolding) run in an
 integrated terminal at the project root; everything else runs in the output
@@ -250,6 +251,12 @@ The **Providers** and **Templates** views read `dbx providers --json` and `dbx t
 **Add template...** runs `template:init --add`.
 
 **Remove template source...** runs `template:list --registry` + `template:remove`.
+
+**Create from template…** prompts for the template's inputs and actions (see
+[Templates](/guide/templates)) before running `dbx create`. Scaffolding also asks
+for a package manager (`yarn` default).
+
+The Home view links to this documentation with **Need help? Go to documentation**.
 
 ## Auto-sync
 
@@ -365,11 +372,14 @@ Colour is on by default and follows `--no-color` / the [`logger` config](/guide/
 
 | Command                  | Description                                                                     |
 | ------------------------ | ------------------------------------------------------------------------------- |
-| `project:init`           | A single-package TypeScript project.                                            |
-| `project:init:monorepo`  | A monorepo root + one example workspace.                                        |
+| `project:init`           | A single-package TypeScript project (`--package-manager`).                      |
+| `project:init:monorepo`  | A monorepo root (add `--example` for one example workspace).                    |
 | `project:init:workspace` | A workspace package into an existing monorepo root.                             |
 | `project:config`         | Generate `dbx.config.ts` for projects missing one.                              |
 | `create`                 | Scaffold from a template (`--template`/`--kind`, `--name`, `--scope`, `--out`). |
+
+Templates that declare inputs/actions are prompted for them (`--var key=value`,
+`--action <id>`), see [Templates](/guide/templates).
 
 On an interactive terminal, a bare `dbx create` (no `--template`/`--kind`/`--name`)
 prompts for the template, name and scope with clack; Ctrl-C cancels. See
@@ -843,11 +853,50 @@ section still generates correct tokens from its existing metadata.
 ```bash
 dbx project:init --name my-app --scope @acme --type project --out ./my-app
 dbx project:init:monorepo --name acme --scope @acme --out .
+dbx project:init:monorepo --name acme --scope @acme --example --out .
 dbx project:init:workspace --name web --root . --dir packages/web
 ```
 
 The scaffolded `dbx.config.ts` spells the resolved `project` fields out, so a
 generated project is self-describing from day one.
+
+Pass `--package-manager <pm>` (`yarn` default, or `pnpm` / `npm` / `bun`) to
+choose the manager the scaffold targets.
+
+## Package manager and catalogs
+
+The scaffold and `dbx sync` write a **catalog** (`package -> version range`) into
+the file the package manager reads it from, so dependencies can be declared with
+`catalog:`:
+
+| Manager | Catalog file          | Notes                                        |
+| ------- | --------------------- | -------------------------------------------- |
+| `yarn`  | `.yarnrc.yml`         | `catalog:` / `catalogs:` (default + named).  |
+| `pnpm`  | `pnpm-workspace.yaml` | `catalog:` / `catalogs:`.                    |
+| `bun`   | `package.json`        | `workspaces.catalog`.                        |
+| `npm`   | —                     | No catalog support; dependencies are pinned. |
+
+Scaffolding resolves the manager from the `packageManager` input and writes the
+catalog of the packages the project depends on. To keep it in sync with
+`dbx sync`, add a `catalogs` section to `dbx.config.*`:
+
+```ts
+export default defineConfig({
+    toolchain: {
+        project: { packageManager: 'yarn' },
+        catalogs: {
+            packages: { react: '^19.0.0', lodash: '^4.17.21' },
+            named: { legacy: { react: '^18.0.0' } },
+        },
+    },
+});
+```
+
+`dbx sync` writes (and keeps in sync) `catalog:` / `catalogs:` in `.yarnrc.yml`
+(Yarn) or `pnpm-workspace.yaml` (pnpm). A catalog file is only written when it is
+absent or already toolchain-managed (it carries a marker comment); a hand-written
+one is left untouched. Bun catalogs live in `package.json` and npm has no catalog
+support — both emit a warning.
 
 ## Programmatic API
 
@@ -2489,14 +2538,98 @@ prompts for the template, name and scope instead (Ctrl-C cancels).
 
 ## Builtin templates
 
-| id            | Kind          | Description                                            |
-| ------------- | ------------- | ------------------------------------------------------ |
-| `project`     | `project`     | A single-package TypeScript project.                   |
-| `application` | `application` | A runnable application package.                        |
-| `folder`      | `folder`      | A bare folder (a README).                              |
-| `monorepo`    | `project`     | A monorepo root + one example workspace.               |
-| `workspace`   | `workspace`   | A workspace package into an existing monorepo.         |
-| `vite-plus`   | `project`     | Create through `vp create` (interactive or templated). |
+| id                      | Kind          | Description                                    |
+| ----------------------- | ------------- | ---------------------------------------------- |
+| `project`               | `project`     | A single-package TypeScript project.           |
+| `application`           | `application` | A runnable application package.                |
+| `folder`                | `folder`      | A bare folder (a README).                      |
+| `monorepo`              | `project`     | A monorepo root (no example workspace).        |
+| `monorepo-example`      | `project`     | A monorepo root + one example workspace.       |
+| `workspace`             | `workspace`   | A workspace package into an existing monorepo. |
+| `vite-plus`             | `project`     | `vp create` (interactive or templated).        |
+| `vite-plus-monorepo`    | `project`     | `vp create vite:monorepo`.                     |
+| `vite-plus-application` | `application` | `vp create vite:application`.                  |
+| `vite-plus-library`     | `project`     | `vp create vite:library`.                      |
+| `vite-plus-generator`   | `project`     | `vp create vite:generator` (monorepo only).    |
+
+The offline builtins (`project`, `application`, `folder`, `monorepo`,
+`monorepo-example`, `workspace`) scaffold a generic, current project: a
+`dbx.config.ts` with only `project` metadata, a `package.json` that depends on
+`@deltabox/toolchain`, and no Turbo (Vite Task replaces it). They ask for a
+**package manager** (default `yarn`) and write that manager's catalog file (see
+[Catalogs](/guide/project#package-manager-and-catalogs)). The `vite-plus*` builtins
+delegate to `vp create` and need network access.
+
+## Inputs (variables)
+
+A template can declare **inputs** — values prompted for (and substituted) when it
+is scaffolded. Declare them in `template.json`:
+
+```json
+{
+    "variables": [
+        { "name": "name", "prompt": "Project name", "default": "app", "required": true },
+        { "name": "port", "prompt": "Dev port", "default": "4000" },
+        { "name": "includeDocker", "prompt": "Include a Dockerfile?", "options": ["yes", "no"] }
+    ]
+}
+```
+
+* `name` — the token name (also `{{ name }}` in files).
+* `prompt` — the prompt text (defaults to the name).
+* `default` — the value used when nothing is entered.
+* `options` — a fixed list of choices: the value is picked from a select.
+* `required` — whether a value must be provided.
+
+Files and directory names may contain `{{ token }}` placeholders, resolved while
+copying:
+
+```
+src/{{name}}.ts   ->   src/acme.ts
+```
+
+The **same input pipeline** runs everywhere:
+
+* **CLI** — `dbx create` prompts for each input on an interactive terminal (the
+  standard `name`/`scope` first, then the template's own inputs). Pass
+  `--var key=value` (repeatable) to skip a prompt.
+* **Programmatic API** — `scaffoldTemplate(template, { cwd, tokens, variables })`.
+* **VS Code** — **Create from template…** prompts for each input (a quick pick
+  when `options` is set).
+
+The builtin templates use the same pipeline (they declare `name`, `scope`,
+`packageManager` and `includeConfig` inputs).
+
+## Actions
+
+After the files are written, a template can run **actions** — extra steps such as
+installing dependencies. Declare them in `template.json`:
+
+```json
+{
+    "actions": [
+        { "id": "install", "prompt": "Install dependencies?", "builtin": "install" },
+        { "id": "setup", "prompt": "Run the setup script?", "module": "action.mjs" },
+        { "id": "post", "command": "node scripts/post-scaffold.mjs" }
+    ]
+}
+```
+
+* `id` — the action id (also the `--action <id>` key).
+* `prompt` — the prompt text (defaults to `Run <id>?`).
+* `default` — whether it runs by default (**default false** — opt-in).
+* `builtin` — a built-in action. `install` runs `<packageManager> install` in the
+  output directory.
+* `module` — a JS module (relative to the template directory) whose default
+  export is `async (ctx) => void`. The module is **not** copied to the output.
+  The context is `{ cwd, templateDir, tokens, variables, packageManager, log }`.
+* `command` — a shell command run in the output directory.
+
+Actions run through the same pipeline everywhere: the CLI prompts (or takes
+`--action <id>`, repeatable), the extension prompts, and the programmatic API
+passes `actions: string[]` to `scaffoldTemplate`. The builtin templates declare
+an opt-in **Install dependencies?** action (`builtin: 'install'`, off by
+default).
 
 ## Local templates
 
@@ -2517,13 +2650,6 @@ dbx template:init ./templates/acme-service \
     "variables": [{ "name": "name", "default": "service" }],
     "ignore": ["fixtures"]
 }
-```
-
-Files and directory names may contain `{{ token }}` placeholders, resolved while
-copying:
-
-```
-src/{{name}}.ts   ->   src/acme.ts
 ```
 
 Register sources so they are picked up automatically:
@@ -2992,7 +3118,8 @@ console.log(toolchainProviders().map(p => p.id));
 | `createRootProjectFiles(ctx)` / `createMonorepoRootFiles(ctx)` / `createWorkspaceFiles(ctx)` | Scaffold files for each project kind.              |
 | `generateProjectConfigs(options)`                                                            | Generate `dbx.config.ts` for projects missing one. |
 | `renderToolchainConfig(ctx)` / `renderWorkspaceTsconfig(composite?)`                         | Render the tooling config / a workspace tsconfig.  |
-| `renderTurboJson()` / `renderGitignore()`                                                    | Render `turbo.json` / `.gitignore`.                |
+| `renderGitignore()`                                                                          | Render a generic `.gitignore`.                     |
+| `catalogsSyncTask()` / `renderYarnrc(catalog)` / `renderPnpmWorkspace(catalog, packages?)`   | The catalogs sync task + catalog file renderers.   |
 | `writeGeneratedFiles(files, cwd?)`                                                           | Write a `GeneratedFile[]`.                         |
 | `projectCommands()`                                                                          | The `project:*` commands.                          |
 
@@ -3567,6 +3694,28 @@ Free-form tags.
 * **Type**: `boolean`
 
 Whether the source needs network access.
+
+## `catalogs`
+
+Package catalogs written to the package manager catalog file (`catalog:`).
+
+### `enabled`
+
+* **Type**: `boolean`
+
+Master switch (enabled when the section is defined).
+
+### `packages`
+
+* **Type**: `Record<string, unknown>`
+
+The default catalog: package name -> version range.
+
+### `named`
+
+* **Type**: `Record<string, unknown>`
+
+Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages.
 
 ## `vite`
 

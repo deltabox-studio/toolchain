@@ -2,7 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { detectProjectType, selectProjects } from '@deltabox/toolchain-core';
-import { type PackageJson, type ProjectType, readJsonAt } from '@deltabox/toolchain-shared';
+import {
+    type PackageJson,
+    projectFromPackageJson,
+    type ProjectType,
+    readJsonAt,
+} from '@deltabox/toolchain-shared';
 
 import { renderToolchainConfig } from './typescript.js';
 
@@ -103,7 +108,18 @@ export function generateProjectConfigs(
         const type = options.type ?? detectProjectType(project.dir);
         const pkg = readJsonAt<PackageJson>(project.dir, 'package.json');
         const { name, scope } = splitName(project.name ?? pkg?.name, project.dir);
-        const content = renderToolchainConfig({ name, ...(scope ? { scope } : {}), type });
+        // Seed the package manager from the existing package.json (so a pnpm
+        // project does not get pinned to yarn), falling back to the defaults.
+        const fromPkg = pkg ? projectFromPackageJson(pkg) : undefined;
+        const content = renderToolchainConfig({
+            name,
+            ...(scope ? { scope } : {}),
+            type,
+            ...(fromPkg?.packageManager ? { packageManager: fromPkg.packageManager } : {}),
+            ...(fromPkg?.packageManagerVersion
+                ? { yarnVersion: fromPkg.packageManagerVersion }
+                : {}),
+        });
 
         if (!dryRun) fs.writeFileSync(configPath, content, 'utf-8');
         created.push(project.rel);

@@ -491,6 +491,28 @@ Free-form tags.
 
 Whether the source needs network access.
 
+## `catalogs`
+
+Package catalogs written to the package manager catalog file (`catalog:`).
+
+### `enabled`
+
+- **Type**: `boolean`
+
+Master switch (enabled when the section is defined).
+
+### `packages`
+
+- **Type**: `Record<string, unknown>`
+
+The default catalog: package name -> version range.
+
+### `named`
+
+- **Type**: `Record<string, unknown>`
+
+Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages.
+
 ## `vite`
 
 The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.

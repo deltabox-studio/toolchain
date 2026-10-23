@@ -21,6 +21,12 @@ const CONFIG_OPTIONS = [
     },
 ];
 
+/** The package manager to scaffold for (writes a catalog file when supported). */
+const PACKAGE_MANAGER_OPTION = {
+    flags: '--package-manager <pm>',
+    description: 'Package manager: yarn (default) | pnpm | npm | bun.',
+};
+
 /** The valid `project.type` values. */
 const PROJECT_TYPES: ProjectType[] = ['project', 'monorepo-root', 'monorepo-workspace'];
 
@@ -70,6 +76,7 @@ export function projectCommands(): ToolchainCommand[] {
                 { flags: '-n, --name <name>', description: 'Project name.' },
                 { flags: '-s, --scope <scope>', description: 'npm scope, eg. @acme.' },
                 { flags: '-o, --out <dir>', description: 'Output directory (default: cwd).' },
+                PACKAGE_MANAGER_OPTION,
                 ...CONFIG_OPTIONS,
             ],
             run: (opts, context) => {
@@ -77,6 +84,9 @@ export function projectCommands(): ToolchainCommand[] {
                 const files = createRootProjectFiles({
                     name,
                     ...(opts.scope ? { scope: opts.scope as string } : {}),
+                    ...(opts.packageManager
+                        ? { packageManager: opts.packageManager as string }
+                        : {}),
                     type: resolveType(opts, context.config, 'project'),
                     includeConfig: (opts.config as boolean | undefined) ?? true,
                 });
@@ -86,11 +96,13 @@ export function projectCommands(): ToolchainCommand[] {
         },
         {
             name: 'project:init:monorepo',
-            description: 'Scaffold a monorepo root + one example workspace.',
+            description: 'Scaffold a monorepo root (add --example for one example workspace).',
             options: [
                 { flags: '-n, --name <name>', description: 'Project name.' },
                 { flags: '-s, --scope <scope>', description: 'npm scope, eg. @acme.' },
                 { flags: '-o, --out <dir>', description: 'Output directory (default: cwd).' },
+                { flags: '--example', description: 'Also scaffold one example workspace package.' },
+                PACKAGE_MANAGER_OPTION,
                 ...CONFIG_OPTIONS,
             ],
             run: (opts, context) => {
@@ -99,24 +111,31 @@ export function projectCommands(): ToolchainCommand[] {
                 const out = (opts.out as string) ?? context.cwd;
                 const includeConfig = (opts.config as boolean | undefined) ?? true;
                 const rootType = resolveType(opts, context.config, 'monorepo-root');
+                const withExample = Boolean(opts.example);
+                const packageManager = opts.packageManager as string | undefined;
 
                 const files = createMonorepoRootFiles({
                     name,
                     scope,
                     type: rootType,
                     includeConfig,
-                    workspaces: [{ alias: 'core', dir: 'packages/core' }],
+                    ...(packageManager ? { packageManager } : {}),
+                    workspaces: withExample ? [{ alias: 'core', dir: 'packages/core' }] : [],
                 });
-                files.push(
-                    ...createWorkspaceFiles({
-                        name,
-                        scope,
-                        wsName: 'core',
-                        wsDir: 'packages/core',
-                        type: 'monorepo-workspace',
-                        includeConfig,
-                    }).map(f => ({ ...f, path: `packages/core/${f.path}` }))
-                );
+                if (withExample) {
+                    files.push(
+                        ...createWorkspaceFiles({
+                            name,
+                            scope,
+                            wsName: 'core',
+                            wsDir: 'packages/core',
+                            type: 'monorepo-workspace',
+                            includeConfig,
+                            useCatalog: true,
+                            ...(packageManager ? { packageManager } : {}),
+                        }).map(f => ({ ...f, path: `packages/core/${f.path}` }))
+                    );
+                }
                 const written = writeGeneratedFiles(files, out);
                 for (const file of written) logger.info(`Created ${file}`);
             },
@@ -132,6 +151,7 @@ export function projectCommands(): ToolchainCommand[] {
                     flags: '-d, --dir <dir>',
                     description: 'Workspace dir relative to the root (default: packages/<name>).',
                 },
+                PACKAGE_MANAGER_OPTION,
                 ...CONFIG_OPTIONS,
             ],
             run: (opts, context) => {
@@ -146,6 +166,7 @@ export function projectCommands(): ToolchainCommand[] {
                     .replace(/\/+$/, '');
                 const includeConfig = (opts.config as boolean | undefined) ?? true;
                 const type = resolveType(opts, context.config, 'monorepo-workspace');
+                const packageManager = opts.packageManager as string | undefined;
 
                 const files = createWorkspaceFiles({
                     name,
@@ -154,6 +175,7 @@ export function projectCommands(): ToolchainCommand[] {
                     wsDir,
                     type,
                     includeConfig,
+                    ...(packageManager ? { packageManager } : {}),
                 }).map(file => ({ ...file, path: `${wsDir}/${file.path}` }));
 
                 const written = writeGeneratedFiles(files, root);
