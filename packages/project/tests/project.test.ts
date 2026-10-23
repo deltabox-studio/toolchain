@@ -25,7 +25,7 @@ describe('project scaffolding', () => {
             scope: '@acme',
             workspaces: [{ alias: 'core', dir: 'packages/core' }],
         });
-        const mono = JSON.parse(files.find(f => f.path === 'tsconfig.monorepo.json')!.content);
+        const mono = JSON.parse(files.find(f => f.path === 'tsconfig.workspaces.json')!.content);
         expect(mono.compilerOptions.paths['@acme/core']).toEqual(['./packages/core/src/index.ts']);
         expect(mono.references).toEqual([{ path: './packages/core/tsconfig.json' }]);
     });
