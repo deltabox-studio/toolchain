@@ -1,8 +1,27 @@
 # Changelog
 
-## 1.10.0 (October 2026)
+## 1.10.1 (October 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Core
+- Only fall back to tsx when Node cannot load TypeScript ([#c96ae7d](https://github.com/deltabox-studio/toolchain/commit/c96ae7d) by [T0chi](https://github.com/T0chi))
+  - The config loader retried every failed native import through `tsx`, so a
+    genuinely broken `dbx.config.*` could be silently loaded as an empty config.
+    On Linux the root build had baked an absolute path to `tsx` into the bundle,
+    which happened to resolve there: tsx elided the unresolvable (unused) import,
+    the config "loaded", no error was recorded, and `dbx sync` exited 0 instead of
+    failing (the emulation suite caught this in CI).
+  - (`ERR_UNKNOWN_FILE_EXTENSION`, `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`); let
+    genuine errors (module-not-found, syntax errors, throws) propagate.
+    `import('tsx/esm/api')` instead of a build-machine path, and promote `tsx` to
+    a runtime dependency so the config-loader fallback works for consumers.
+
+<!-- release:end -->
+
+
+## 1.10.0 (October 2026)
 
 ### New features
 #### Template
@@ -70,9 +89,6 @@
     always execute against a fresh CLI bundle.
     emitting a dangling `catalog:` — Bun's catalog lives in `package.json`
     `workspaces.catalog`, which only a monorepo root writes. Regression tests added.
-
-<!-- release:end -->
-
 
 ## 1.9.2 (October 2026)
 
