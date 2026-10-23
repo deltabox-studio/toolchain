@@ -6,11 +6,12 @@ import { sanitizeText } from '@deltabox/toolchain-shared';
 
 import type { AuthorInfo, BumpType, CommitRecord, IssueInfo } from './types.js';
 
-/** Read the commits in a git range (optionally limited to a path), newest first. */
-export function readCommits(range: string, path?: string): CommitRecord[] {
+/** Read the commits in a git range (optionally limited to path(s)), newest first. */
+export function readCommits(range: string, path?: string | string[]): CommitRecord[] {
     const format = '%H%x1f%s%x1f%b%x1f%an%x1f%ae%x1e';
+    const paths = path === undefined ? [] : Array.isArray(path) ? path : [path];
     const args = ['log', '--no-merges', `--pretty=format:${format}`, range];
-    if (path) args.push('--', path);
+    if (paths.length > 0) args.push('--', ...paths);
     const log = execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
     return log
         .split('\x1e')

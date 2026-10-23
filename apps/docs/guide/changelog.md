@@ -28,6 +28,52 @@ with a `postinstall` script (Yarn Berry never runs `prepare`):
 
 See [Package scripts](/guide/scripts) for the full recommended script set.
 
+## Branches
+
+`branches.main` and `branches.dev` pick which branches the generated workflows
+target. Each accepts a glob or an array of globs:
+
+| Branch | Drives                                                                         | Default              |
+| ------ | ------------------------------------------------------------------------------ | -------------------- |
+| `main` | The **CI** workflow (push), the **release** workflow, and the release PR base. | `['main']`           |
+| `dev`  | The **changelog/version** workflow (push).                                     | none — reuses `main` |
+
+`dev` has **no default**: when it is omitted the changelog workflow runs on
+`main` (so a single-branch repo needs no `dev`). Set it for a `dev` → `main`
+flow:
+
+```ts
+changelog: { branches: { main: 'main', dev: 'dev' } }
+// or multiple branches per purpose:
+changelog: { branches: { main: ['main', 'release/**'], dev: ['dev', 'next'] } }
+```
+
+The `sync` workflow runs on both. Any per-workflow `pushBranches` override (eg.
+`workflows.ci.pushBranches`) still wins.
+
+## commitlint config location
+
+By default the generated `commitlint.config.mjs` lives at the project root. Set
+`commitlint.dir` to write it elsewhere:
+
+```ts
+changelog: {
+    commitlint: {
+        dir: '.config';
+    }
+} // -> .config/commitlint.config.mjs
+```
+
+When a custom dir is set, the generated husky hook and the CI commitlint step
+both pass `--config <dir>/commitlint.config.mjs`, so commitlint finds it. Note
+that editor tooling that discovers the config by convention (eg. the
+Conventional Commits VS Code extension, which loads from the repo root) expects
+the config at the root — keep the default unless you have a reason to move it.
+
+> The extension's `No "exports" main defined in … conventional-changelog-conventionalcommits …`
+> error is an upstream commitlint bug (ESM-only parser preset), not a config
+> discovery problem. See [Troubleshooting](#troubleshooting).
+
 ## Versioning
 
 `versioning` controls whether — and where — a changelog run writes `version`
@@ -68,8 +114,10 @@ changelog: { versioning: { target: 'individual', workspaces: ['packages/*', '!pa
 ```
 
 `individual` uses a `git log` path filter per workspace, so a workspace is only
-bumped when the scanned commit range touched a file inside it. The root's version
-always follows the overall bump derived from every scanned commit.
+bumped when the scanned commit range touched a file inside it — or a file in one
+of the workspaces it depends on (see [Workspace changelogs](#workspace-changelogs)).
+The root's version always follows the overall bump derived from every scanned
+commit.
 
 ### How a run decides its versions
 
@@ -86,6 +134,20 @@ Each run:
 Use `dbx changelog --dry-run` to preview the proposed root entry without touching
 any file; the log line reports the active `target` (or `disabled`).
 
+### Workspace changelogs
+
+Each versioned workspace gets **its own `CHANGELOG.md`** (created if missing),
+headed by the version the plan assigned it. A workspace's entry only lists its
+**related commits**: those touching the workspace directory **or any workspace it
+transitively depends on**, resolved from the project dependency graph
+(`.dbx/toolchain/projects.json`, written by `dbx projects`). So a change in a
+shared package shows up in the changelog of every package that consumes it, not
+just in its own.
+
+Without a graph (eg. `dbx projects` was never run), a workspace falls back to
+filtering on its own directory only. A workspace with no related commits is
+skipped (no empty entry, no file created).
+
 ## CLI
 
 ```bash
@@ -97,4 +159,45 @@ dbx changelog --format-only         # regroup existing changelogs, no bump
 ```
 
 The generated `changelog` workflow runs `dbx changelog --range …` on every push
-to the dev branch, so versioning is applied from CI as well as locally.
+to the `dev` branches (or `main` when `dev` is unset), so versioning is applied
+from CI as well as locally.
+
+## Troubleshooting
+
+### `No "exports" main defined in … conventional-changelog-conventionalcommits`
+
+Seen from the Conventional Commits VS Code extension (`vivaxy.vscode-conventional-commits`),
+usually alongside empty type/scope suggestions and a `The cwd is …` line:
+
+```
+commitlint: Error: No "exports" main defined in
+  node_modules/conventional-changelog-conventionalcommits/package.json
+```
+
+This is a **known upstream commitlint bug** (commitlint#4864): the generated
+config `extends: ['@commitlint/config-conventional']`, which sets
+`parserPreset: 'conventional-changelog-conventionalcommits'`, and v10 of that
+package is **ESM-only** (`exports` has no `require`/`default`), so the extension's
+bundled (older) commitlint cannot `require.resolve` it. The config is read fine —
+the _preset_ fails to resolve, so the extension falls back to empty rules.
+
+The husky hook and CI are unaffected when commitlint is recent enough to resolve
+pure-ESM presets (commitlint ≥ 21.2.3). If your local commitlint is older, pin
+the preset to the last CJS-compatible release:
+
+```json
+{
+    "resolutions": { "conventional-changelog-conventionalcommits": "9.3.1" }
+}
+```
+
+(Use `overrides` instead of `resolutions` for npm.) Updating the extension to a
+version bundling the fixed commitlint also resolves it.
+
+## Releases
+
+The generated `release` workflow opens a release PR whose body is the
+**aggregated changelog**: every entry from the last tag (`git describe --tags
+--abbrev=0`) up to the latest version, not just the newest one. So a release
+that skips versions (eg. `v1.7.0` → `v1.7.8`) still documents `1.7.1`–`1.7.8`
+in one place.

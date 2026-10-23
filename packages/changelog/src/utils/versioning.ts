@@ -1,9 +1,10 @@
 import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
-import { relative, resolve } from 'node:path';
+import { resolve } from 'node:path';
 
 import { logger, type ToolchainChangelogConfig } from '@deltabox/toolchain-shared';
 
 import { deriveBump, readCommits } from './git.js';
+import { relatedWorkspacePaths } from './graph.js';
 import { repoRoot } from './repo.js';
 import type { BumpType, CommitRecord } from './types.js';
 import { bumpVersion } from './version.js';
@@ -152,9 +153,11 @@ export function planVersions(options: PlanVersionsOptions): VersionPlan {
     const { versioning, bump, range } = options;
     const root = options.root ?? repoRoot();
     const { rootHasPackage, workspaces } = discoverVersionPackages(versioning.workspaces, root);
+    // A workspace's "related" commits include those touching its own files and
+    // those of every workspace it depends on (see `relatedWorkspacePaths`).
     const commitsFor =
         options.commitsFor ??
-        ((dir: string) => readCommits(range, relative(root, dir).replace(/\\/g, '/')));
+        ((dir: string) => readCommits(range, relatedWorkspacePaths(dir, root)));
 
     const rootVersion = bumpVersion(options.rootVersion, bump);
     const writes = new Map<string, string>();

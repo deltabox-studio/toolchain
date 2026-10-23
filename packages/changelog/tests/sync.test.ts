@@ -11,6 +11,7 @@ function makeContext(config: ToolchainConfig): SyncContext {
         config,
         tokens: {},
         log: () => {},
+        warn: () => {},
     };
 }
 
@@ -29,5 +30,16 @@ describe('changelogSyncTask', () => {
     it('still writes the commitlint config alongside the hook', async () => {
         const files = await changelogSyncTask().run(makeContext({ changelog: {} }));
         expect(files?.some(file => file.path === 'commitlint.config.mjs')).toBe(true);
+    });
+
+    it('writes commitlint.config.mjs to a custom dir and points the hook + CI at it', async () => {
+        const files = await changelogSyncTask().run(
+            makeContext({ changelog: { commitlint: { dir: '.config' } } })
+        );
+        expect(files?.some(file => file.path === '.config/commitlint.config.mjs')).toBe(true);
+        const hook = files?.find(file => file.path === '.husky/commit-msg');
+        expect(hook?.content).toContain('--config .config/commitlint.config.mjs');
+        const ci = files?.find(file => file.path === '.github/workflows/ci.yml');
+        expect(ci?.content).toContain('--config .config/commitlint.config.mjs');
     });
 });

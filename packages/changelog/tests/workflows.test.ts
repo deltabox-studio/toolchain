@@ -33,6 +33,14 @@ describe('default workflows', () => {
         expect(release).not.toContain('build-native');
         expect(release).not.toContain('binaries');
     });
+
+    it('aggregates every changelog entry since the last tag in the release notes', () => {
+        const release = renderWorkflow('release', { tokens: {} })!;
+        // Not the marker-only extraction (which only ever yields the latest entry).
+        expect(release).not.toContain('<!-- release:start -->');
+        expect(release).toContain('git describe --tags --abbrev=0');
+        expect(release).toContain('last_version');
+    });
 });
 
 describe('workflow config', () => {
