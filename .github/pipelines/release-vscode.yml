@@ -15,8 +15,60 @@ variables:
   extensionWorkspaceDir: 'packages/vscode'
 
 stages:
+- stage: 'Check'
+  displayName: 'Check the published extension version'
+  jobs:
+  - job: 'CheckJob'
+    displayName: 'Check whether the version is already published'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+      fetchDepth: 1
+
+    # Reads `$(extensionWorkspaceDir)/package.json` and queries the VS Code
+    # Marketplace for that version. `alreadyPublished` is exposed as a stage
+    # output so the Build/Release stages can skip when it is `true`.
+    - task: PowerShell@2
+      name: 'CheckStep'
+      displayName: 'Query the VS Code Marketplace for the current version'
+      inputs:
+        pwsh: true
+        targetType: 'inline'
+        script: |
+          $ErrorActionPreference = 'Stop'
+          $pkg = Get-Content '$(extensionWorkspaceDir)/package.json' -Raw | ConvertFrom-Json
+          $id = "$($pkg.publisher).$($pkg.name)"
+          $version = $pkg.version
+          Write-Host "Checking $id v$version on the VS Code Marketplace..."
+
+          $published = $false
+          try {
+            $body = @{
+              filters = @(@{ criteria = @(@{ filterType = 7; value = $id }) })
+              flags   = 1
+            } | ConvertTo-Json -Depth 10
+            $response = Invoke-RestMethod -Method Post -ContentType 'application/json' `
+              -Headers @{ Accept = 'application/json;api-version=7.2-preview.1' } `
+              -Uri 'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery' `
+              -Body $body
+            $versions = @($response.results[0].extensions[0].versions | ForEach-Object { $_.version })
+            $published = $versions -contains $version
+          } catch {
+            Write-Warning "Could not query the VS Code Marketplace; assuming not published. $_"
+          }
+
+          Write-Host "extension=$id version=$version alreadyPublished=$published"
+          Write-Host "##vso[task.setvariable variable=extensionVersion;isOutput=true]$version"
+          Write-Host "##vso[task.setvariable variable=alreadyPublished;isOutput=true]$($published.ToString().ToLowerInvariant())"
+          if ($published) {
+            Write-Host "##[warning]$id v$version is already published to the VS Code Marketplace; skipping the build and release stages."
+          }
+
 - stage: 'Build'
   displayName: 'Build the monorepo'
+  dependsOn: Check
+  condition: and(succeeded(), ne(dependencies.Check.outputs['CheckJob.CheckStep.alreadyPublished'], 'true'))
   jobs: 
   - job: 'Build'
     displayName: 'Build job'
@@ -74,8 +126,10 @@ stages:
   
 - stage: 'Release'
   displayName: 'Deploy VS Code extension to the release environment'
-  dependsOn: Build
-  condition: succeeded()
+  dependsOn:
+  - Check
+  - Build
+  condition: and(succeeded(), ne(dependencies.Check.outputs['CheckJob.CheckStep.alreadyPublished'], 'true'))
   jobs:
   - deployment: Deploy
     pool:
