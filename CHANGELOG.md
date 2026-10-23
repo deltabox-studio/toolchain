@@ -1,8 +1,47 @@
 # Changelog
 
-## 1.8.0 (October 2026)
+## 1.9.0 (October 2026)
 
 <!-- release:start -->
+
+### New features
+#### Changelog
+- Allow a raw YAML string as a workflow setting ([#aa0e1b7](https://github.com/deltabox-studio/toolchain/commit/aa0e1b7) by [T0chi](https://github.com/T0chi))
+  - `changelog.workflows.<id>` now accepts a raw YAML string in addition to a
+    boolean or a `WorkflowConfig` object. A raw string is written verbatim as the
+    workflow file: no default merge, no token replacement and no generated header,
+    and the `changelog.branches` defaults don't apply (it defines its own triggers).
+    An empty string disables the workflow.
+  - Docs: add a "Workflows" section covering the three forms, and a "Writing commit
+    messages" section warning about shell escaping (PowerShell backtick escapes and
+    bash command substitution) and AI/LLM-drafted messages introducing stray control
+    characters, curly quotes, dashes and other typographic characters. Regenerate
+    the schema, types and docs reference.
+### CI
+#### Vscode
+- Skip the release when the extension version is already published ([#0d54cfe](https://github.com/deltabox-studio/toolchain/commit/0d54cfe) by [T0chi](https://github.com/T0chi))
+  - `vsce publish` fails with "already exists" when `deltabox.toolchain-vscode@<version>`
+    is already on the Marketplace, failing the whole pipeline. Add a `Check` stage
+    before `Build` that reads the version from `packages/vscode/package.json`,
+    queries the Marketplace `extensionquery` API, and exposes an `alreadyPublished`
+    stage output. `Build` and `Release` now depend on `Check` and skip when it is
+    `true` (a failed query assumes "not published" so a release is never silently
+    skipped).
+### Chores
+#### Changelog
+- Repair escaped text in the 1.8.0 entry ([#587e47d](https://github.com/deltabox-studio/toolchain/commit/587e47d) by [T0chi](https://github.com/T0chi))
+  - The shared/core/project/tsconfig/vite commits were authored with PowerShell
+    `\``-escaped backticks, so their bodies carried `\` + control-character
+    artifacts (e.g. `` `r `` -> `\`+CR, `` `b `` -> backspace). The changelog
+    sanitizer stripped the control characters but left the stray backslashes and
+    dropped letters, so the 1.8.0 entry read `esolveVite`, `\{ ... }\`, `epo\`, etc.
+    Restore the intended text (backticked code, `resolveVite`, `repo`/`repository`,
+    `name`/`scope`/`description`/`type`, `rootFile`/`defaultFile`/`buildFile`).
+
+<!-- release:end -->
+
+
+## 1.8.0 (October 2026)
 
 ### New features
 #### Cli
@@ -98,9 +137,6 @@
 #### Added
 - `@deltabox/toolchain` `portal:.`
 - `vitepress-plugin-llms` `^1.14.0`
-
-<!-- release:end -->
-
 
 ## 1.7.8 (October 2026)
 

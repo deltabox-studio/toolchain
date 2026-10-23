@@ -2,7 +2,7 @@
     "name": "toolchain-vscode",
     "displayName": "deltabox toolchain",
     "description": "Sync/generate @deltabox/toolchain managed files, run tooling across projects and scaffold new ones.",
-    "version": "1.8.0",
+    "version": "1.9.0",
     "private": true,
     "type": "module",
     "publisher": "deltabox",
