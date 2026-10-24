@@ -1,15 +1,41 @@
 # Changelog
 
-## 1.10.2 (October 2026)
+## 1.10.3 (October 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Vscode
+- Recompute the Home model when the provider list loads ([#fd6f6f1](https://github.com/deltabox-studio/toolchain/commit/fd6f6f1) by [T0chi](https://github.com/T0chi))
+  - The Home "Run Vite+" button is disabled while the Home model's `hasVite` is
+    false, and that value comes from the asynchronously-loaded provider list (a
+    `dbx providers --json` spawn). A webview rendered before the list resolved was
+    never re-posted, so the button could stay disabled from a cold start even though
+    the `deltabox.hasVite` context key (command palette) was updated.
+  - Recompute the context keys and the Home model whenever the provider tree
+    reloads, via its `onDidChangeTreeData` event. Vite+ is always contributed by the
+    toolchain, so `hasVite` is true as soon as the list loads.
+#### Core
+- Split the last-sync timestamp into a gitignored timestamps.json ([#0aa6f77](https://github.com/deltabox-studio/toolchain/commit/0aa6f77) by [T0chi](https://github.com/T0chi))
+  - The per-project `manifest.json` embedded `syncedAt`, so every sync rewrote a
+    committed file with a new clock value — noisy diffs in the repo and in every
+    consumer. Move the timestamp out into a sibling, gitignored
+    `.dbx/toolchain/timestamps.json`:
+  - to `timestamps.json`, so the next sync migrates a legacy inline value
+    automatically (the property is gone from `manifest.json`).
+    inline `syncedAt` until that migration runs, so nothing breaks in between.
+    only the block's comment was updated.
+### Documentation
+- Added a video preview of the extension ([#6b0ca40](https://github.com/deltabox-studio/toolchain/commit/6b0ca40) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.10.2 (October 2026)
 
 ### Documentation
 #### Vscode
 - Updated extension description & more ([#48993f0](https://github.com/deltabox-studio/toolchain/commit/48993f0) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.10.1 (October 2026)
 
