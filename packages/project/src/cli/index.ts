@@ -48,16 +48,18 @@ function requireName(
 }
 
 /**
- * Resolve + validate the project type for a scaffold. An explicit `--type` (or
- * `project.type` in the config) must be one of {@link PROJECT_TYPES}; otherwise
- * the command's implied default is used.
+ * Resolve + validate the project type for a scaffold: an explicit `--type` wins,
+ * otherwise the command's implied default is used.
+ *
+ * The loaded config's `project.type` is deliberately **ignored**: a scaffold runs
+ * with the config of the directory it is invoked from, which is usually the
+ * *parent* (a monorepo root when adding a workspace). Honouring it would tag the
+ * new project with the wrong kind — eg. a workspace scaffolded as
+ * `monorepo-root`, which then generates root-only CI/husky/vscode files inside
+ * the workspace.
  */
-function resolveType(
-    opts: Record<string, unknown>,
-    config: ToolchainCommandContext['config'],
-    fallback: ProjectType
-): ProjectType {
-    const type = (opts.type as string | undefined) ?? config.project?.type ?? fallback;
+function resolveType(opts: Record<string, unknown>, fallback: ProjectType): ProjectType {
+    const type = (opts.type as string | undefined) ?? fallback;
     if (!PROJECT_TYPES.includes(type as ProjectType)) {
         throw new Error(
             `invalid project type "${type}" (expected one of: ${PROJECT_TYPES.join(', ')}).`
@@ -87,7 +89,7 @@ export function projectCommands(): ToolchainCommand[] {
                     ...(opts.packageManager
                         ? { packageManager: opts.packageManager as string }
                         : {}),
-                    type: resolveType(opts, context.config, 'project'),
+                    type: resolveType(opts, 'project'),
                     includeConfig: (opts.config as boolean | undefined) ?? true,
                 });
                 const written = writeGeneratedFiles(files, (opts.out as string) ?? context.cwd);
@@ -110,7 +112,7 @@ export function projectCommands(): ToolchainCommand[] {
                 const scope = (opts.scope as string) ?? context.config.project?.scope ?? `@${name}`;
                 const out = (opts.out as string) ?? context.cwd;
                 const includeConfig = (opts.config as boolean | undefined) ?? true;
-                const rootType = resolveType(opts, context.config, 'monorepo-root');
+                const rootType = resolveType(opts, 'monorepo-root');
                 const withExample = Boolean(opts.example);
                 const packageManager = opts.packageManager as string | undefined;
 
@@ -165,7 +167,7 @@ export function projectCommands(): ToolchainCommand[] {
                     .replace(/\\/g, '/')
                     .replace(/\/+$/, '');
                 const includeConfig = (opts.config as boolean | undefined) ?? true;
-                const type = resolveType(opts, context.config, 'monorepo-workspace');
+                const type = resolveType(opts, 'monorepo-workspace');
                 const packageManager = opts.packageManager as string | undefined;
 
                 const files = createWorkspaceFiles({
