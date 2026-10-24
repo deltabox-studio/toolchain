@@ -18,7 +18,7 @@ import path from 'node:path';
  * tracking the manifest at any depth.
  */
 export const DBX_GITIGNORE_BLOCK = [
-    '# @deltabox/toolchain (generated state; keep only the manifests)',
+    '# @deltabox/toolchain (generated state; keep only the manifest)',
     '**/.dbx/*',
     '!**/.dbx/toolchain',
     '**/.dbx/toolchain/*',

@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 const CONFIG_PREFIX = 'dbx.config.';
 const PROJECT_GROUPS = ['packages', 'apps', 'sdk'];
 const MANIFEST = path.join('.dbx', 'toolchain', 'manifest.json');
+const TIMESTAMPS = path.join('.dbx', 'toolchain', 'timestamps.json');
 
 export interface Project {
     kind: 'project';
@@ -77,7 +78,11 @@ export interface ProjectManifest {
 /** Read the tracked/generated file manifest for a project dir, if present. */
 export function readManifest(dir: string): ProjectManifest {
     const doc = readJson<{ files?: string[]; syncedAt?: string }>(path.join(dir, MANIFEST));
-    return { files: doc?.files ?? [], ...(doc?.syncedAt ? { syncedAt: doc.syncedAt } : {}) };
+    // The last-sync time lives in its own (gitignored) file; fall back to a
+    // legacy inline `syncedAt` until the next sync migrates it.
+    const timestamps = readJson<{ syncedAt?: string }>(path.join(dir, TIMESTAMPS));
+    const syncedAt = timestamps?.syncedAt ?? doc?.syncedAt;
+    return { files: doc?.files ?? [], ...(syncedAt ? { syncedAt } : {}) };
 }
 
 function hasToolchainConfig(dir: string): boolean {

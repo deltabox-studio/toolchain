@@ -222,7 +222,7 @@ export function activate(context: vscode.ExtensionContext): void {
         files.refresh();
         home.refresh();
         updateContextKeys();
-        void providers.refresh().then(updateContextKeys);
+        void providers.refresh();
         void templates.refresh();
     };
 
@@ -1189,10 +1189,22 @@ export function activate(context: vscode.ExtensionContext): void {
         })
     );
 
+    // The provider list is loaded asynchronously (a CLI spawn), but both the Home
+    // model (`hasVite`) and the `deltabox.hasVite` context key depend on it.
+    // Recompute them whenever it reloads, otherwise a Home view rendered before
+    // the list resolves would leave the "Run Vite+" action disabled from a cold
+    // start (the context key was refreshed, but the webview was never re-posted).
+    context.subscriptions.push(
+        providers.onDidChangeTreeData(() => {
+            updateContextKeys();
+            home.refresh();
+        })
+    );
+
     rebuildWatchers();
     setStatus('idle');
     updateContextKeys();
-    void providers.refresh().then(updateContextKeys);
+    void providers.refresh();
     void templates.refresh();
     output.appendLine('dbx: extension activated.');
 }

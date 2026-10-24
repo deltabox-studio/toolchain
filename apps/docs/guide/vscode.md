@@ -3,8 +3,15 @@
 The `deltabox toolchain` extension provides a sidebar for managing projects.
 
 <div align="center">
+  <video controls>
+    <source src="/vscode-example.mp4" type="video/mp4">
+  </video>
+</div>
+
+<div align="center">
   <img src="/vscode-screenshot.png" width="300" />
 </div>
+
 
 ## Install
 

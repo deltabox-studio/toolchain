@@ -15,6 +15,12 @@ All-in-one, config-driven dev toolchain: scaffold projects, generate and manage 
 See the [list of features](#features).
 
 <div align="left">
+  <video controls>
+    <source src="./apps/docs/public/vscode-example.mp4" type="video/mp4">
+  </video>
+</div>
+
+<div align="left">
   <img src="./apps/docs/public/vscode-screenshot.png" width="300" />
 </div>
 
