@@ -12,7 +12,6 @@ The `deltabox toolchain` extension provides a sidebar for managing projects.
   <img src="/vscode-screenshot.png" width="300" />
 </div>
 
-
 ## Install
 
 Download from the [Visual Studio Code Marketplace](https://marketplace.visualstudio.com/items?itemName=deltabox.toolchain-vscode).

@@ -154,7 +154,9 @@ export function createCli(): Command {
     });
     program
         .name('dbx')
-        .description('All-in-one project toolchain: configs, tsconfigs, changelogs, CI, templates, scaffolding, migrations.')
+        .description(
+            'All-in-one project toolchain: configs, tsconfigs, changelogs, CI, templates, scaffolding, migrations.'
+        )
         .version(rootPkg.version, '-V, --version', 'Output the version number')
         .option('--log-level <level>', `Minimum log level (${LOG_LEVELS.join('|')}).`)
         .option('--no-color', 'Disable coloured output.')

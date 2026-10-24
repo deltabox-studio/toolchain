@@ -6,7 +6,8 @@ import llmstxt, { copyOrDownloadAsMarkdownButtons } from 'vitepress-plugin-llms'
 
 import pkg from '../../../package.json';
 
-const DESCRIPTION = "All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.";
+const DESCRIPTION =
+    "All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.";
 
 /** The prose `llms.txt` opens with, before the generated table of contents. */
 const LLMS_DETAILS = [
