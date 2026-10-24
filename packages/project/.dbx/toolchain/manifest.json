@@ -2,6 +2,5 @@
     "files": [
         "package.json",
         "vite.config.ts"
-    ],
-    "syncedAt": "2026-10-23T17:12:09.830Z"
+    ]
 }

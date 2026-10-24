@@ -503,10 +503,13 @@ describe('emulate: CLI + templates', () => {
             // The extension syncs right after a successful scaffold.
             const sync = await dbx(out, ['sync']);
             expect(sync.code, sync.stderr).toBe(0);
-            const manifest = readJson<{ files: string[] }>(
+            const manifest = readJson<{ files: string[]; syncedAt?: string }>(
                 path.join(out, '.dbx/toolchain/manifest.json')
             );
             expect(manifest.files).toContain('package.json');
+            // The last-sync timestamp is split into its own (gitignored) file.
+            expect(manifest.syncedAt).toBeUndefined();
+            expect(fs.existsSync(path.join(out, '.dbx/toolchain/timestamps.json'))).toBe(true);
 
             const graph = await dbxJson<{ projects: unknown[] }>(out, [
                 'projects',
