@@ -18,7 +18,12 @@ See the [list of features](https://github.com/deltabox-studio/toolchain#features
 
 See all the [commands](#commands) below.
 
-<img src="https://toolchain.deltabox.studio/vscode-screenshot.png" width="300" />
+<div align="left">
+  <video width="500" height="272" controls>
+    <source src="https://toolchain.deltabox.studio/vscode-example.mp4" type="video/mp4">
+  </video>
+  <img src="https://toolchain.deltabox.studio/vscode-screenshot.png" width="300" />
+</div>
 
 ## Commands
 
