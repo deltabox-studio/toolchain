@@ -38,8 +38,15 @@ export interface Template {
 }
 
 /** Load the templates via `dbx template:list --json` (empty on failure). */
-export async function loadTemplates(cwd: string): Promise<Template[]> {
-    const result = await captureCli(cwd, ['template:list', '--json', '--cwd', cwd]);
+export async function loadTemplates(
+    cwd: string,
+    options: { online?: boolean } = {}
+): Promise<Template[]> {
+    // `--online` resolves npm/git sources too, so the picker offers *every*
+    // template (builtin + local + online + Vite+), not just the offline builtins.
+    const args = ['template:list', '--json', '--cwd', cwd];
+    if (options.online !== false) args.push('--online');
+    const result = await captureCli(cwd, args);
     if (result.code !== 0) return [];
     try {
         const parsed = JSON.parse(result.stdout) as unknown;
