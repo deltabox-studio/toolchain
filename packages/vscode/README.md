@@ -19,9 +19,12 @@ See the [list of features](https://github.com/deltabox-studio/toolchain#features
 See all the [commands](#commands) below.
 
 <div align="left">
-  <video width="500" height="272" controls>
+  <video controls>
     <source src="https://toolchain.deltabox.studio/vscode-example.mp4" type="video/mp4">
   </video>
+</div>
+
+<div align="left">
   <img src="https://toolchain.deltabox.studio/vscode-screenshot.png" width="300" />
 </div>
 
