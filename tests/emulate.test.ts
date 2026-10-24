@@ -486,6 +486,175 @@ describe('emulate: CLI + templates', () => {
     );
 
     it(
+        'surfaces a custom template + provider through the CLI (the extension flow)',
+        async () => {
+            const ws = scratch('custom-template-provider');
+
+            // --- A custom local template -----------------------------------
+            // `template:add` records the source in `.dbx/toolchain/templates.json`.
+            await registerTemplate(
+                ws,
+                'greeter',
+                {
+                    name: 'Greeter',
+                    description: 'Writes a greeting file.',
+                    kind: 'project',
+                    variables: [{ name: 'greeting', default: 'hi' }],
+                },
+                { 'greeting.txt': '{{greeting}} from {{name}}\n' }
+            );
+
+            // What the extension's Templates view reads (`template:list --json`).
+            const templates = await dbxJson<
+                {
+                    id: string;
+                    name: string;
+                    kind?: string;
+                    type?: string;
+                    online?: boolean;
+                    variables?: { name: string }[];
+                }[]
+            >(ws, ['template:list', '--json', '--cwd', ws]);
+            const greeter = templates.find(template => template.id === 'greeter');
+            expect(greeter).toMatchObject({
+                id: 'greeter',
+                name: 'Greeter',
+                kind: 'project',
+                type: 'local',
+                online: false,
+            });
+            expect(greeter?.variables?.map(variable => variable.name)).toContain('greeting');
+
+            // The extension's per-template detail.
+            expect(
+                await dbxJson<{ id: string; name: string }>(ws, [
+                    'template:info',
+                    'greeter',
+                    '--json',
+                    '--cwd',
+                    ws,
+                ])
+            ).toMatchObject({ id: 'greeter', name: 'Greeter' });
+
+            // It scaffolds like any other template (variables + `name` tokens).
+            const out = path.join(ws, 'greeter-out');
+            const created = await dbx(ws, [
+                'create',
+                '--template',
+                'greeter',
+                '--name',
+                'demo',
+                '--var',
+                'greeting=hello',
+                '--out',
+                out,
+                '--json',
+            ]);
+            expect(created.code, created.stderr).toBe(0);
+            expect(fs.readFileSync(path.join(out, 'greeting.txt'), 'utf-8')).toBe(
+                'hello from demo\n'
+            );
+
+            // --- A custom provider -----------------------------------------
+            // The extension registers one by writing `.dbx/toolchain/providers.json`
+            // (its `writeProviderRegistry`); the CLI then lists it and registers a
+            // `dbx <command>` passthrough for each of its commands.
+            const provider = {
+                id: 'demo',
+                name: 'Demo provider',
+                description: 'A custom provider for the emulation test.',
+                // A binary name resolved from PATH (as real providers do, eg. `vp`).
+                binary: 'node',
+                commands: [
+                    { name: 'demo:version', subcommand: '--version', description: 'Node version.' },
+                ],
+            };
+            writeJson(path.join(ws, '.dbx/toolchain/providers.json'), [provider]);
+
+            const providers = await dbxJson<
+                { id: string; name: string; commands: { name: string }[] }[]
+            >(ws, ['providers', '--json']);
+            const listed = providers.find(candidate => candidate.id === 'demo');
+            expect(listed).toMatchObject({ id: 'demo', name: 'Demo provider' });
+            expect(listed?.commands.map(command => command.name)).toContain('demo:version');
+
+            // The extension marks a provider "custom" by reading the registry file.
+            expect(
+                readJson<{ id: string }[]>(path.join(ws, '.dbx/toolchain/providers.json')).map(
+                    entry => entry.id
+                )
+            ).toContain('demo');
+
+            // Its command is a real, runnable passthrough.
+            const ran = await dbx(ws, ['demo:version']);
+            expect(ran.code, ran.stderr).toBe(0);
+            expect(ran.stdout.trim()).toMatch(/^v\d+\.\d+\.\d+/);
+        },
+        TIMEOUT
+    );
+
+    it(
+        'scaffolds a workspace without root-only files (CI/husky/vscode stay at the root)',
+        async () => {
+            const ws = scratch('workspace-scaffold');
+            const root = path.join(ws, 'root');
+
+            // A real monorepo root, then enable the root-only sections so the
+            // root generates them and a workspace must *not* inherit their outputs.
+            const init = await dbx(ws, [
+                'project:init:monorepo',
+                '--name',
+                'root',
+                '--scope',
+                '@acme',
+                '--out',
+                root,
+            ]);
+            expect(init.code, init.stderr).toBe(0);
+            fs.rmSync(path.join(root, 'dbx.config.ts'), { force: true });
+            writeJson(path.join(root, 'dbx.config.json'), {
+                toolchain: {
+                    project: { type: 'monorepo-root', name: 'root', scope: '@acme' },
+                    changelog: true,
+                    biome: true,
+                },
+            });
+
+            // The root gets the root-only outputs.
+            const rootSync = await dbx(root, ['sync']);
+            expect(rootSync.code, rootSync.stderr).toBe(0);
+            expect(fs.existsSync(path.join(root, 'commitlint.config.mjs'))).toBe(true);
+            expect(fs.existsSync(path.join(root, '.husky'))).toBe(true);
+
+            // Scaffold a workspace into it (the extension's workspace flow).
+            const scaffold = await dbx(root, [
+                'project:init:workspace',
+                '--name',
+                'my-package',
+                '--root',
+                root,
+                '--dir',
+                'packages/my-package',
+            ]);
+            expect(scaffold.code, scaffold.stderr).toBe(0);
+
+            const pkg = path.join(root, 'packages/my-package');
+            // The generated config tags the folder a workspace, not the root's
+            // `monorepo-root` (which would generate CI/husky/vscode inside it).
+            expect(fs.readFileSync(path.join(pkg, 'dbx.config.ts'), 'utf-8')).toContain(
+                'type: "monorepo-workspace"'
+            );
+
+            const sync = await dbx(pkg, ['sync']);
+            expect(sync.code, sync.stderr).toBe(0);
+            for (const entry of ['.github', '.husky', '.vscode', 'commitlint.config.mjs']) {
+                expect(fs.existsSync(path.join(pkg, entry))).toBe(false);
+            }
+        },
+        TIMEOUT
+    );
+
+    it(
         'populates the manifest and project graph after scaffolding (the extension flow)',
         async () => {
             const ws = scratch('extension-flow');

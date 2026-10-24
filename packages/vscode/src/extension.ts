@@ -419,6 +419,12 @@ export function activate(context: vscode.ExtensionContext): void {
             { placeHolder: 'Which Vite+ command should run?', matchOnDetail: true }
         );
         if (!choice) return;
+        // `vite:create` is the interactive `vp create`; drive it through the
+        // extension instead of dropping into the CLI menu.
+        if (choice.command.name === 'vite:create') {
+            await createViteProject(root);
+            return;
+        }
         openTerminalCommand(root, choice.command.name, `vp ${choice.command.subcommand}`);
     };
 
@@ -633,6 +639,11 @@ export function activate(context: vscode.ExtensionContext): void {
             if (!picked) return;
             command = picked.command;
         }
+        // `vite:create` prompts interactively; run it through the extension.
+        if (command.name === 'vite:create') {
+            await createViteProject(node.root);
+            return;
+        }
         openTerminalCommand(node.root, command.name, command.name);
     };
 
@@ -655,10 +666,13 @@ export function activate(context: vscode.ExtensionContext): void {
         output.show();
     };
 
-    /** Scaffold a new Vite+ project (runs interactive `vp create` in a terminal). */
-    const createViteProject = async (): Promise<void> => {
-        const roots = workspaceRoots();
-        let root = roots[0];
+    /**
+     * Scaffold a Vite+ project through the extension UI: pick a concrete Vite+
+     * template and run it via the same create pipeline as every other template,
+     * instead of dropping the user into the interactive `vp create` menu.
+     */
+    const createViteProject = async (cwd?: string): Promise<void> => {
+        let root = cwd ?? workspaceRoots()[0];
         if (!root) {
             const picked = await vscode.window.showOpenDialog({
                 canSelectFolders: true,
@@ -668,7 +682,26 @@ export function activate(context: vscode.ExtensionContext): void {
             root = picked?.[0]?.fsPath;
         }
         if (!root) return;
-        openTerminalCommand(root, 'vite:create', 'vp create');
+        // The bare `vite-plus` builtin *is* the interactive `vp create`; always
+        // pick a concrete Vite+ template so the create runs non-interactively.
+        const vite = (await loadTemplates(root)).filter(
+            template => template.type === 'vite-plus' && template.id !== 'vite-plus'
+        );
+        if (vite.length === 0) {
+            vscode.window.showWarningMessage('deltabox: no Vite+ templates available.');
+            return;
+        }
+        const picked = await vscode.window.showQuickPick(
+            vite.map(template => ({
+                label: template.name || template.id,
+                description: template.id,
+                detail: template.description,
+                template,
+            })),
+            { placeHolder: 'Which Vite+ project should be created?', matchOnDetail: true }
+        );
+        if (!picked) return;
+        await createFromTemplate(picked.template, root);
     };
 
     const home = new HomeViewProvider(
@@ -805,10 +838,16 @@ export function activate(context: vscode.ExtensionContext): void {
     };
 
     /** Scaffold from a template (optionally preselected from the Templates view). */
-    const createFromTemplate = async (preselected?: Template): Promise<void> => {
-        const base = workspaceRoots()[0];
+    const createFromTemplate = async (preselected?: Template, root?: string): Promise<void> => {
+        const base = root ?? workspaceRoots()[0];
         if (!base) {
             vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
+            return;
+        }
+        // The bare `vite-plus` template *is* the interactive `vp create`; route it
+        // to the Vite+ picker so the user never lands in a CLI prompt.
+        if (preselected?.id === 'vite-plus') {
+            await createViteProject(base);
             return;
         }
         let template = preselected;
@@ -918,46 +957,68 @@ export function activate(context: vscode.ExtensionContext): void {
     };
 
     const scaffold = async (): Promise<void> => {
+        const workspace = workspaceRoots()[0];
+        // Offer *every* template (builtin, local, npm/git, Vite+) directly. The
+        // first four entries are the curated dbx flows (the workspace one has its
+        // own root/dir prompts), so those builtins are not repeated.
+        const covered = new Set([
+            'project',
+            'monorepo',
+            'monorepo-example',
+            'workspace',
+            'vite-plus',
+        ]);
+        const templates = workspace ? await loadTemplates(workspace) : [];
         const kind = await vscode.window.showQuickPick(
             [
                 {
                     label: 'Single project',
                     command: 'project:init',
                     detail: 'One TypeScript package',
-                    flow: 'project',
+                    flow: 'project' as const,
                 },
                 {
                     label: 'Monorepo root',
                     command: 'project:init:monorepo',
                     detail: 'A monorepo root (no example workspace)',
-                    flow: 'root',
+                    flow: 'root' as const,
                 },
                 {
                     label: 'Monorepo root + example',
                     command: 'project:init:monorepo',
                     detail: 'Root plus one example workspace package',
-                    flow: 'root',
+                    flow: 'root' as const,
                     example: true,
                 },
                 {
                     label: 'Monorepo workspace',
                     command: 'project:init:workspace',
                     detail: 'A workspace package inside an existing monorepo',
-                    flow: 'workspace',
+                    flow: 'workspace' as const,
                 },
-                {
-                    label: 'From template\u2026',
-                    command: '',
-                    detail: 'Builtin, local or online project/tooling template',
-                    flow: 'template',
-                },
+                ...templates
+                    .filter(template => !covered.has(template.id))
+                    .map(template => ({
+                        label: template.name || template.id,
+                        command: '',
+                        description: template.id,
+                        detail: [
+                            template.kind,
+                            template.online ? 'online' : 'offline',
+                            template.type,
+                        ]
+                            .filter(Boolean)
+                            .join(' \u00b7 '),
+                        flow: 'template' as const,
+                        template,
+                    })),
             ],
-            { placeHolder: 'What kind of project should be scaffolded?' }
+            { placeHolder: 'What kind of project should be scaffolded?', matchOnDetail: true }
         );
         if (!kind) return;
 
         if (kind.flow === 'template') {
-            await createFromTemplate();
+            await createFromTemplate(kind.template);
             return;
         }
 
