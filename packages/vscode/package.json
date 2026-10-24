@@ -1,8 +1,8 @@
 {
     "name": "toolchain-vscode",
     "displayName": "deltabox toolchain",
-    "description": "Sync/generate @deltabox/toolchain managed files, run tooling across projects and scaffold new ones.",
-    "version": "1.10.1",
+    "description": "All-in-one, config-driven dev toolchain: scaffold projects, generate and manage configs, tsconfigs, syncing, changelogs and CI, run Vite+, and migrations.",
+    "version": "1.10.2",
     "private": true,
     "type": "module",
     "publisher": "deltabox",
