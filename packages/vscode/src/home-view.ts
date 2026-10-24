@@ -157,8 +157,8 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     .accordion:hover { background:var(--vscode-button-secondaryHoverBackground); }
     .accordion .chev { transition:transform .12s ease; }
     .accordion.open .chev { transform:rotate(180deg); }
-    .allActions { display:flex; flex-direction:column; gap:6px; margin-top:7px; }
-    .allActions button { width:100%; text-align:left; }
+    .moreActions { display:flex; flex-direction:column; gap:6px; margin-top:7px; }
+    .moreActions button { width:100%; text-align:left; }
     .projectList { display:flex; flex-direction:column; gap:6px; }
     .project {
       position:relative; display:flex; align-items:center; gap:9px; padding:8px 9px;
@@ -212,8 +212,8 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     </div>
   </section>
   <section class="section">
-    <button class="accordion" data-toggle="allActions">All actions <span class="chev">\u25BE</span></button>
-    <div id="allActions" class="allActions" hidden>
+    <button class="accordion" data-toggle="moreActions">More actions <span class="chev">\u25BE</span></button>
+    <div id="moreActions" class="moreActions" hidden>
       <button class="secondary" data-action="syncAll">Sync all projects</button>
       <button class="secondary" data-action="syncActive">Sync active project</button>
       <button class="secondary" data-action="syncSelected">Sync selected projects</button>
