@@ -928,13 +928,10 @@ export function activate(context: vscode.ExtensionContext): void {
         }
         if (actionArgs.length > 0) baseArgs.push('--action', ...actionArgs);
 
-        // Online/Vite+ templates run `vp create`, which is interactive: use a
-        // terminal. Builtin/local templates are non-interactive: run in the
-        // output channel.
-        if (template.online) {
-            openTerminalCommand(base, baseArgs.join(' '), `create ${template.id}`);
-            return;
-        }
+        // Run every template through the same pipeline (an argv array, no shell),
+        // so a value like an npm `@scope` is never mangled by the terminal's shell
+        // — PowerShell reads a bare `@name` as splatting and drops it. Vite+
+        // templates then run `vp create <template> <name>` in the chosen dir.
         const dir = await vscode.window.showOpenDialog({
             canSelectFolders: true,
             canSelectFiles: false,
@@ -944,8 +941,9 @@ export function activate(context: vscode.ExtensionContext): void {
         const out = dir?.[0]?.fsPath ?? base;
         const code = await runCli(base, [...baseArgs, '--out', out]);
         // Sync the new project so its managed files (and manifest) exist and the
-        // Managed Files / Home views populate immediately.
-        if (code === 0) await runCli(out, ['sync']);
+        // Managed Files / Home views populate immediately. (Vite+ projects are not
+        // dbx-managed out of the box, so there is nothing to sync.)
+        if (code === 0 && !template.online) await runCli(out, ['sync']);
         await refreshGraph();
         if (code === 0) {
             vscode.window.showInformationMessage(
