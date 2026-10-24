@@ -4,7 +4,7 @@
 [![tests](https://img.shields.io/github/actions/workflow/status/deltabox-studio/toolchain/ci.yml?label=tests&logo=github)](https://github.com/deltabox-studio/toolchain/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/@deltabox/toolchain.svg?color=cb3837&label=npm)](https://www.npmjs.com/package/@deltabox/toolchain)
 
-All-in-one, config-driven dev toolchain: scaffold projects, generate and manage configs, tsconfigs, syncing, changelogs and CI, run Vite+, and migrations.
+All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.
 
 - Save and use templates (local/remote) so you never have to scaffold the same projects over and over again.
 - Generate config types, env variables, cli flags, markdown and JSON schemas, so your codebase stays consistent, validated and well-documented.
@@ -15,7 +15,7 @@ All-in-one, config-driven dev toolchain: scaffold projects, generate and manage 
 See the [list of features](#features).
 
 <div align="left">
-  <video controls>
+  <video width="1342" controls>
     <source src="./apps/docs/public/vscode-example.mp4" type="video/mp4">
   </video>
 </div>

@@ -1,6 +1,6 @@
 # deltabox toolchain
 
-> All-in-one, config-driven dev toolchain: one `dbx.config.ts` generates and manages tsconfigs, changelogs + release CI, Biome/Vite+ configs, VS Code settings, project scaffolding and migrations.
+> All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.
 
 > If `https://toolchain.deltabox.studio` is unavailable, the same documentation is available in the repository at <https://github.com/deltabox-studio/toolchain/tree/main/apps/docs> (source Markdown).
 

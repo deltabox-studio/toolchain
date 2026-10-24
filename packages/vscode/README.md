@@ -6,7 +6,7 @@
 
 Provides a sidebar for managing projects.
 
-All-in-one, config-driven dev toolchain: scaffold projects, generate and manage configs, tsconfigs, syncing, changelogs and CI, run Vite+, and migrations.
+All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.
 
 - Save and use templates (local/remote) so you never have to scaffold the same projects over and over again.
 - Generate config types, env variables, cli flags, markdown and JSON schemas, so your codebase stays consistent, validated and well-documented.
@@ -19,7 +19,7 @@ See the [list of features](https://github.com/deltabox-studio/toolchain#features
 See all the [commands](#commands) below.
 
 <div align="left">
-  <video controls>
+  <video width="1342" controls>
     <source src="https://toolchain.deltabox.studio/vscode-example.mp4" type="video/mp4">
   </video>
 </div>
