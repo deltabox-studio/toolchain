@@ -1,14 +1,49 @@
 # Changelog
 
-## 1.10.4 (October 2026)
+## 1.11.0 (October 2026)
 
 <!-- release:start -->
 
+### New features
+#### Vscode
+- Scaffold any template and drive Vite+ create from the extension ([#fb4a55c](https://github.com/deltabox-studio/toolchain/commit/fb4a55c) by [T0chi](https://github.com/T0chi))
+  - project" picker (`template:list --online`) instead of only the dbx builtins;
+    each entry runs the same create pipeline (name/scope/variables/actions).
+    bare `vite-plus` template — through the extension's prompt pipeline: pick a
+    concrete Vite+ template, then create like any other template. Consumers no
+    longer land in the interactive `vp create` CLI menu.
+### Bug fixes
+#### Project
+- Tag a scaffolded workspace with its own project type ([#9d05637](https://github.com/deltabox-studio/toolchain/commit/9d05637) by [T0chi](https://github.com/T0chi))
+  - `resolveType` fell back to the loaded config's `project.type`, but a scaffold
+    runs with the config of the directory it is invoked from — the monorepo root
+    when adding a workspace. A workspace was therefore tagged `monorepo-root`, and
+    the post-scaffold sync then generated root-only CI, husky and VS Code files
+    inside the workspace.
+  - Only honour an explicit `--type` (or the command's implied default); ignore the
+    ambient config type.
 ### Documentation
-- Removed video preview dimensions ([#322b4b1](https://github.com/deltabox-studio/toolchain/commit/322b4b1) by [T0chi](https://github.com/T0chi))
+- Update descriptions and vscode screenshot ([#215bc4f](https://github.com/deltabox-studio/toolchain/commit/215bc4f) by [T0chi](https://github.com/T0chi))
+### Styles
+- Wrap long description lines for the formatter ([#213ea73](https://github.com/deltabox-studio/toolchain/commit/213ea73) by [T0chi](https://github.com/T0chi))
+  - Long single-line descriptions from earlier commits; `vp fmt` wraps them back.
+### Tests
+- Emulate custom templates/providers and workspace scaffolding ([#37d370e](https://github.com/deltabox-studio/toolchain/commit/37d370e) by [T0chi](https://github.com/T0chi))
+  - Code extension writes) and assert the CLI lists, scaffolds and runs them —
+    i.e. the payloads the extension's trees consume.
+    assert the workspace does NOT inherit their outputs
+    (.github/.husky/.vscode/commitlint.config.mjs).
+### Chores
+#### Vscode
+- Rename the Home "All actions" section to "More actions" ([#b8a2137](https://github.com/deltabox-studio/toolchain/commit/b8a2137) by [T0chi](https://github.com/T0chi))
 
 <!-- release:end -->
 
+
+## 1.10.4 (October 2026)
+
+### Documentation
+- Removed video preview dimensions ([#322b4b1](https://github.com/deltabox-studio/toolchain/commit/322b4b1) by [T0chi](https://github.com/T0chi))
 
 ## 1.10.3 (October 2026)
 
