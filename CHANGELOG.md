@@ -1,8 +1,17 @@
 # Changelog
 
-## 1.10.1 (October 2026)
+## 1.10.2 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+#### Vscode
+- Updated extension description & more ([#48993f0](https://github.com/deltabox-studio/toolchain/commit/48993f0) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.10.1 (October 2026)
 
 ### Bug fixes
 #### Core
@@ -17,9 +26,6 @@
     genuine errors (module-not-found, syntax errors, throws) propagate.
     `import('tsx/esm/api')` instead of a build-machine path, and promote `tsx` to
     a runtime dependency so the config-loader fallback works for consumers.
-
-<!-- release:end -->
-
 
 ## 1.10.0 (October 2026)
 
