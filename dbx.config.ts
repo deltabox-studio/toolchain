@@ -28,7 +28,7 @@ export default defineConfig({
             homepage: 'https://toolchain.deltabox.studio',
             repo: 'https://github.com/deltabox-studio/toolchain',
             description:
-                'All-in-one toolchain: scaffold projects, manage templates, configs, tsconfigs, changelogs and builds.',
+                'All-in-one, config-driven dev toolchain: scaffold projects, generate and manage configs, tsconfigs, syncing, changelogs and CI, run Vite+, and migrations.',
             nodeVersion: '22',
             packageManager: 'yarn',
             packageManagerVersion: '4.17.1',

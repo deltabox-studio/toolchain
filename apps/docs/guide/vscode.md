@@ -1,6 +1,6 @@
 # VS Code Extension
 
-The `deltabox toolchain` extension provides a sidebar for managing `@deltabox/toolchain` across projects.
+The `deltabox toolchain` extension provides a sidebar for managing projects.
 
 <div align="center">
   <img src="/vscode-screenshot.png" width="300" />
@@ -8,12 +8,12 @@ The `deltabox toolchain` extension provides a sidebar for managing `@deltabox/to
 
 ## Install
 
-Download from the [Visual Studio Code Marketplace](https://marketplace.visualstudio.com/items?itemName=deltabox.toolchain).
+Download from the [Visual Studio Code Marketplace](https://marketplace.visualstudio.com/items?itemName=deltabox.toolchain-vscode).
 
 or through the CLI:
 
 ```bash
-code --install-extension deltabox.toolchain
+code --install-extension deltabox.toolchain-vscode
 ```
 
 ## Commands
