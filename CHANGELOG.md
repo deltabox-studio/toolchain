@@ -1,8 +1,16 @@
 # Changelog
 
-## 1.10.3 (October 2026)
+## 1.10.4 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+- Removed video preview dimensions ([#322b4b1](https://github.com/deltabox-studio/toolchain/commit/322b4b1) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.10.3 (October 2026)
 
 ### Bug fixes
 #### Vscode
@@ -27,9 +35,6 @@
     only the block's comment was updated.
 ### Documentation
 - Added a video preview of the extension ([#6b0ca40](https://github.com/deltabox-studio/toolchain/commit/6b0ca40) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 1.10.2 (October 2026)
 
