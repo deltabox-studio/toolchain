@@ -1,4 +1,4 @@
-# LLM context files
+# LLMs
 
 This documentation is published in machine-readable forms so LLMs and coding
 agents can read it efficiently, following the [llms.txt](https://llmstxt.org)

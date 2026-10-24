@@ -94,4 +94,4 @@ that area untouched.
 - [Templates](/guide/templates)
 - [Migrations](/guide/migrations)
 - [Programmatic API](/guide/api)
-- [LLM context files](/llms)
+- [LLMs](/llms)
