@@ -18,11 +18,7 @@ All-in-one development toolchain that let's you scaffold projects, generate and 
 
 See the [list of features](#features).
 
-<div align="left">
-  <video width="1342" controls>
-    <source src="./apps/docs/public/vscode-example.mp4" type="video/mp4">
-  </video>
-</div>
+https://github.com/user-attachments/assets/a4f1ad75-fedd-40ee-b84d-3365f7025a3e
 
 <div align="left">
   <img src="./apps/docs/public/vscode-screenshot.png" width="300" />
