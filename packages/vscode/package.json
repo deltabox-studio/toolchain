@@ -11,7 +11,7 @@
         "url": "git+https://github.com/deltabox-studio/toolchain.git",
         "directory": "packages/vscode"
     },
-    "icon": "resources/icon.png",
+    "icon": "resources/logo.png",
     "engines": {
         "vscode": "^1.85.0"
     },
@@ -231,7 +231,7 @@
                 {
                     "id": "deltabox",
                     "title": "deltabox toolchain",
-                    "icon": "resources/toolchain.svg"
+                    "icon": "resources/icon.svg"
                 }
             ]
         },
