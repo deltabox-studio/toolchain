@@ -18,17 +18,17 @@ All-in-one development toolchain that let's you scaffold projects, generate and 
 
 See the [list of features](#features).
 
+See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
+
+Documentation, guides and examples at [toolchain.deltabox.studio](https://toolchain.deltabox.studio/guide).
+
+The video and screenshot below is the VS Code extension. Read more about it at [toolchain.deltabox.studio/guide/vscode](https://toolchain.deltabox.studio/guide/vscode).
+
 https://github.com/user-attachments/assets/a4f1ad75-fedd-40ee-b84d-3365f7025a3e
 
 <div align="left">
   <img src="./apps/docs/public/vscode-screenshot.png" width="300" />
 </div>
-
-What you see above is the VS Code extension. Read more about it at [toolchain.deltabox.studio/guide/vscode](https://toolchain.deltabox.studio/guide/vscode).
-
-See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
-
-Documentation, guides and examples at [toolchain.deltabox.studio](https://toolchain.deltabox.studio/guide).
 
 ## Table of contents
 
