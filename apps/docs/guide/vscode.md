@@ -18,7 +18,7 @@ Download from the [Visual Studio Code Marketplace](https://marketplace.visualstu
 
 or through the CLI:
 
-```bash
+```sh
 code --install-extension deltabox.toolchain-vscode
 ```
 

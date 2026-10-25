@@ -21,7 +21,7 @@ Every template declares a `kind`, used by `template:list --kind` and
 
 ## List + create
 
-```bash
+```sh
 dbx template:list
 dbx template:list --kind application   # filter by kind
 dbx template:list --online             # also resolve npm/git sources
@@ -67,7 +67,7 @@ delegate to `vp create` and need network access.
 A template can declare **inputs** — values prompted for (and substituted) when it
 is scaffolded. Declare them in `template.json`:
 
-```json
+```json [template.json]
 {
     "variables": [
         { "name": "name", "prompt": "Project name", "default": "app", "required": true },
@@ -107,7 +107,7 @@ The builtin templates use the same pipeline (they declare `name`, `scope`,
 After the files are written, a template can run **actions** — extra steps such as
 installing dependencies. Declare them in `template.json`:
 
-```json
+```json [template.json]
 {
     "actions": [
         { "id": "install", "prompt": "Install dependencies?", "builtin": "install" },
@@ -138,12 +138,12 @@ default).
 A local template is a directory with a `template.json`. Turn any folder into one
 with `template:init` (and register it in one step with `--add`):
 
-```bash
+```sh
 dbx template:init ./templates/acme-service \
   --kind application --name "Acme service" --var name --tag service --add
 ```
 
-```json
+```json [template.json]
 {
     "name": "Acme service",
     "description": "A service package",
@@ -156,7 +156,7 @@ dbx template:init ./templates/acme-service \
 
 Register sources so they are picked up automatically:
 
-```bash
+```sh
 dbx template:add ./templates             # local dir (auto-inits if needed)
 dbx template:add @acme/create            # npm @scope/create
 dbx template:add git:https://github.com/acme/tpl.git
@@ -166,7 +166,7 @@ dbx template:remove local:./templates    # drop a source
 `template:add` records them in `.dbx/toolchain/templates.json`; `template:remove`
 takes an id or a `type:locate` key. Sources can also be declared in the config:
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         templates: {

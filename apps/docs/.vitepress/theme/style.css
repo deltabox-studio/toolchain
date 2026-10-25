@@ -1,13 +1,108 @@
-/* Footer social links, rendered below the default footer. */
-.dbx-footer-social {
-    display: flex;
-    justify-content: center;
-    padding: 24px 24px 32px;
+:root {
+    --mktg-accent-primary: #51afcc;
+    --mktg-accent-secondary: #25b9b9;
+    
+    --vp-c-brand-1: #2faef7;
+    --vp-c-brand-2: #1f8feb;
+    --vp-c-brand-3: rgb(37, 125, 196);
+    
+    --vp-home-hero-glow: rgba(63, 116, 185, 0.1);
+    --vp-home-hero-name-color: transparent;
+    --vp-home-hero-name-background: -webkit-linear-gradient(120deg, #2fc8f7 30%, #4759ff);
+    --vp-home-hero-image-background-image: linear-gradient(-45deg, #2faef767 50%, #4759ff57 50%);
+    --vp-home-hero-image-filter: blur(44px);
+
+    --vp-home-card-icon-bg: rgba(63, 130, 185, 0.12);
+    --vp-home-card-icon-color: var(--mktg-accent-primary);
+    --vp-home-card-border-hover-color: rgb(64, 151, 185);
+
+    --vp-button-brand-bg: #1f5a7c;
+    --vp-button-brand-hover-bg: #1f7db4;
+    --vp-button-brand-active-bg: #174e6e;
+
+    --vp-code-color: #0e70a8;
+    --vp-code-link-color: var(--vp-c-brand-1);
+    --vp-code-link-hover-color: var(--vp-c-brand-2);
+
+    --vp-c-tile-1: #0e3344;
+    --vp-c-tile-2: #003c6d;
+    --vp-c-tile-3: #2662a6;
+    --vp-c-tile-4: #3995d3;
+
+    --vp-z-index-footer: 10;
+    --vp-z-index-local-nav: 20;
+    --vp-z-index-nav: 100;
+    --vp-z-index-layout-top: 40;
+    --vp-z-index-backdrop: 50;
+    --vp-z-index-sidebar: 60;
+
 }
 
-/* The home hero logo is black on a transparent background; invert it in dark
-   mode (VitePress's home hero image is a single <img>, so it can't be swapped
-   like the navbar logo). */
-.dark .VPHomeHero .image-src {
-    filter: invert(1);
+@media (min-width: 40rem) {
+  :root {
+    --vp-home-hero-image-filter: blur(56px);
+  }
+}
+
+@media (min-width: 60rem) {
+    :root {
+        --vp-home-hero-image-filter: blur(68px);
+    }
+}
+
+.dark {
+    --vp-c-brand-3: rgb(37, 165, 216);
+    --vp-c-border: #162331;
+    --vp-code-color: #79b9df;
+}
+
+.vp-doc a {
+    color: rgb(59, 117, 172);
+}
+
+.vp-doc a:hover {
+    color: var(--vp-c-brand-1);
+}
+
+.VPNavBarTitle .VPImage.logo {
+    transition: 0.5s;
+}
+
+.VPNavBarTitle .VPImage.logo:hover {
+    rotate: 5deg;
+    transition: 0.15s;
+    filter: drop-shadow(0px 0px 5px rgba(1, 132, 255, 0.3)) brightness(1.5);
+}
+
+.VPHomeHero .VPImage.image-src {
+    rotate: 5deg;
+    animation-name: pulse, rotate;
+    animation-duration: 3.5s, 5s;
+    animation-timing-function: cubic-bezier(0.3, 0, 0.7, 1.0);
+    animation-iteration-count: infinite;
+    transform-origin: 0%;
+}
+
+@keyframes pulse {
+    0% {
+        filter: drop-shadow(0px 0px 70px rgba(1, 132, 255, 0.2)) brightness(1.1);
+    }
+    50% {
+        filter: drop-shadow(0px 0px 70px rgba(1, 132, 255, 0.5)) brightness(1.3);
+    }
+    100% {
+        filter: drop-shadow(0px 0px 70px rgba(1, 132, 255, 0.2)) brightness(1.1);
+    }
+}
+
+@keyframes rotate {
+    0% {
+        rotate: 5deg;
+    }
+    50% {
+        rotate: -5deg;
+    }
+    100% {
+        rotate: 5deg;
+    }
 }

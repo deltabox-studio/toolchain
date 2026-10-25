@@ -6,7 +6,7 @@ commands and a descriptor the editor reads over `dbx providers --json`.
 
 ## List providers
 
-```bash
+```sh
 dbx providers          # table
 dbx providers --json   # descriptor (id, binary, commands, actions)
 ```
@@ -26,7 +26,7 @@ Oxfmt / Rolldown / tsdown toolchain.
 
 ### Generic passthrough
 
-```bash
+```sh
 dbx vite dev
 dbx vite build
 dbx vite add zod
@@ -44,7 +44,7 @@ Provider output keeps `vp`'s own colours, but follows the logger's colour state.
 The global `--no-color` flag turns provider colour off, and the `providers`
 section can opt out on its own even on a colour terminal:
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         providers: { color: false },
@@ -108,8 +108,7 @@ viteCommandName('fmt'); // 'vite:fmt'
 Vite+ consumers can drive dbx from `vite.config.ts`, so a Vite+-only project
 still gets dbx's generated/managed files:
 
-```ts
-// vite.config.ts
+```ts [vite.config.ts]
 import { defineConfig } from 'vite-plus';
 
 import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
@@ -147,7 +146,7 @@ descriptors). `toolchainProviders()` merges them with the built-ins, so a custom
 provider's commands become `dbx` commands — `dbx <command.name>` forwards to
 `<binary> <subcommand> ...` — and it shows up in `dbx providers` and the editor.
 
-```json
+```json [.dbx/toolchain/providers.json]
 [
     {
         "id": "echo",

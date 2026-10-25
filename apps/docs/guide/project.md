@@ -11,7 +11,7 @@ place to declare who a package is, and it does three jobs:
 3. **Drives scaffolding.** `dbx project:init*` uses the section as its defaults
    (and `project.type` picks the kind of project to generate).
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         project: {
@@ -65,8 +65,7 @@ specifically:
 - **`inherit: false`** opts out entirely: the project keeps only its own `project`
   and ignores the parent's (useful for an unrelated package inside the tree).
 
-```ts
-// packages/web/dbx.config.ts — keeps the root scope/author/license, sets its own name
+```ts [packages/web/dbx.config.ts]
 export default defineConfig({
     toolchain: {
         project: { name: 'web' },
@@ -80,7 +79,7 @@ export default defineConfig({
 For a non-root project, `repo` also resolves to the workspace's location in the
 repository, written as `repository.directory`:
 
-```json
+```json [package.json]
 {
     "repository": {
         "type": "git",
@@ -111,7 +110,7 @@ section still generates correct tokens from its existing metadata.
 - **`type` must be valid** (`project`, `monorepo-root` or `monorepo-workspace`)
   when passed explicitly or set in the config; an invalid value is rejected.
 
-```bash
+```sh
 dbx project:init --name my-app --scope @acme --type project --out ./my-app
 dbx project:init:monorepo --name acme --scope @acme --out .
 dbx project:init:monorepo --name acme --scope @acme --example --out .
@@ -141,7 +140,7 @@ Scaffolding resolves the manager from the `packageManager` input and writes the
 catalog of the packages the project depends on. To keep it in sync with
 `dbx sync`, add a `catalogs` section to `dbx.config.*`:
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         project: { packageManager: 'yarn' },

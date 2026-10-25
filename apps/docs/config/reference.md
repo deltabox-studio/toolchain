@@ -585,7 +585,7 @@ Force provider command colours on/off (default: inherit the logger).
 
 ## Full example
 
-```ts
+```ts [dbx.config.ts]
 import { defineConfig } from '@deltabox/toolchain';
 
 export default defineConfig({

@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="./apps/docs/public/logo/logo.svg" width="150" />
+</div>
+
 # deltabox toolchain
 
 [![license: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](./package.json)
@@ -64,7 +68,7 @@ See more at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
 
 ## Install
 
-```bash
+```sh
 # as a dev dependency in the project you want to manage
 yarn add -D @deltabox/toolchain
 
@@ -74,13 +78,13 @@ npm install -g @deltabox/toolchain
 
 The package exposes one binary, `dbx`:
 
-```bash
+```sh
 yarn dbx --help
 ```
 
 ## Quickstart
 
-```bash
+```sh
 # 1. Write a dbx.config.ts for the current project
 dbx project:config
 
@@ -230,7 +234,7 @@ Download from the [Visual Studio Code Marketplace](https://marketplace.visualstu
 
 or through the CLI:
 
-```bash
+```sh
 code --install-extension deltabox.toolchain-vscode
 ```
 
@@ -241,7 +245,7 @@ See [packages/vscode/README.md](./packages/vscode/README.md) to learn more about
 This repo is a Yarn 4 workspace; Vite+ (`vp`) drives format, lint, test and the
 task runner from the root `vite.config.ts`.
 
-```bash
+```sh
 yarn install        # fresh checkout
 yarn build          # packages via `vp run` + root tsdown
 yarn test           # package + root tests
@@ -266,3 +270,7 @@ The source pages live in `apps/docs`.
 ## License
 
 [MPL-2.0](./LICENSE) © deltabox
+
+<div align="center">
+  <img src="./apps/docs/public/logo/outline_colored.svg" width="150" />
+</div>

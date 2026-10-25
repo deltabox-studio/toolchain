@@ -11,7 +11,7 @@ and how to move an existing Biome + Turbo project onto them.
 
 The repo root `package.json`:
 
-```json
+```json [package.json]
 {
     "scripts": {
         "format": "dbx fmt",
@@ -70,7 +70,7 @@ trailing CR silently breaks the hook.
 
 2. Fold the Biome config into a root `vite.config.ts`:
 
-    ```bash
+    ```sh
     dbx migrate --from biome --target vite --write
     ```
 
@@ -84,13 +84,13 @@ trailing CR silently breaks the hook.
 
 4. Add a `dbx.config.ts` and sync the managed files:
 
-    ```bash
+    ```sh
     dbx sync
     ```
 
 5. Verify — this is what CI runs:
 
-    ```bash
+    ```sh
     dbx sync --check
     yarn build
     ```
@@ -125,7 +125,7 @@ For cached, dependency-aware tasks, define them in each package's
 `vite.config.ts` rather than `package.json` — a task and a script cannot share a
 name:
 
-```ts
+```ts [vite.config.ts]
 import { defineConfig } from 'vite-plus';
 
 export default defineConfig({

@@ -237,7 +237,7 @@ See a real full example at [config/reference.md](../config/reference.md).
 
 A `.env.example`; secrets are emitted commented out so operators fill them in:
 
-```bash
+```sh
 engine.writeEnvFile({ output: '.env.example' });
 
 # ---- SERVER ----

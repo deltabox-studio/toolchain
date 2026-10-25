@@ -12,7 +12,7 @@ Enable the `tsconfig` section and the toolchain generates each workspace's
 `tsconfig.json` (extending `tsconfig.default.json`) and, for a monorepo root, a
 `tsconfig.workspaces.json` wiring project references and path aliases:
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
@@ -26,7 +26,7 @@ splits the config across several files.
 
 ## Scaffolding a monorepo
 
-```bash
+```sh
 dbx project:init:monorepo --name acme --scope @acme --out .
 dbx project:init:workspace --name utils --scope @acme --root . --dir packages/utils
 ```
@@ -41,8 +41,7 @@ Each package declares `build`, `typecheck` and `test` in its own
 `vite.config.ts` with explicit cache input/output, so `dbx run` reports cache
 hits (a `package.json` script cannot carry cache config):
 
-```ts
-// packages/<pkg>/vite.config.ts
+```ts [packages/<pkg>/vite.config.ts]
 export default defineConfig({
     run: {
         tasks: {
@@ -68,7 +67,7 @@ export default defineConfig({
 
 The root `package.json` orchestrates them and adds the umbrella build:
 
-```json
+```json [package.json]
 {
     "scripts": {
         "build": "dbx run --filter \"./packages/*\" build && dbx run build:root",

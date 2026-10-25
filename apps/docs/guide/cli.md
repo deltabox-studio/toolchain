@@ -67,7 +67,7 @@ See [Templates](/guide/templates).
 
 ## Migrations
 
-```bash
+```sh
 dbx migrate --from biome --write           # .oxfmtrc.json + .oxlintrc.json
 dbx migrate --from biome --target vite --write
 dbx migrate --from all                     # every detected source
@@ -92,7 +92,7 @@ See [Migrations](/guide/migrations).
 Every provider subcommand is a passthrough. Vite+ commands are reachable both
 directly and through the `vite` namespace:
 
-```bash
+```sh
 dbx fmt                 # a bare Vite+ command forwards to `vp fmt`
 dbx run -r build        # forwards to `vp run -r build`
 dbx vite dev            # explicit namespace (always works)
