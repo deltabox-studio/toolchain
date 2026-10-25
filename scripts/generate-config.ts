@@ -51,7 +51,7 @@ const example = [
     '',
     '## Full example',
     '',
-    '```ts',
+    '```ts [dbx.config.ts]',
     "import { defineConfig } from '@deltabox/toolchain';",
     '',
     'export default defineConfig({',
