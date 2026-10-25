@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { escapeCmdArgument, isCmdShim, windowsShimCommand } from '../src/win-spawn.js';
+import {
+    escapeCmdArgument,
+    escapeCmdCommand,
+    isCmdShim,
+    windowsShimCommand,
+} from '../src/win-spawn.js';
 
 /** True when a cmd metacharacter is left unescaped (not preceded by `^`). */
 function hasUnescapedMeta(value: string): boolean {
@@ -13,6 +18,18 @@ describe('win-spawn', () => {
         expect(isCmdShim('C:\\tools\\foo.BAT')).toBe(true);
         expect(isCmdShim('node.exe')).toBe(false);
         expect(isCmdShim('/usr/local/bin/dbx')).toBe(false);
+    });
+
+    it('escapes the command (not the args)', () => {
+        expect(escapeCmdCommand('npx.cmd')).toBe('npx.cmd');
+        expect(escapeCmdCommand('a&b')).toBe('a^&b');
+    });
+
+    it('quotes a command path that contains a space', () => {
+        // An unquoted command is split at the space by cmd.exe.
+        expect(escapeCmdCommand('C:\\Program Files\\nodejs\\node.exe')).toBe(
+            '"C:\\Program Files\\nodejs\\node.exe"'
+        );
     });
 
     it('wraps in quotes and caret-escapes cmd metacharacters', () => {
