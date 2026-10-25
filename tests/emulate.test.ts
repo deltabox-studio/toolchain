@@ -280,6 +280,38 @@ describe('emulate: CLI + templates', () => {
     );
 
     it(
+        'resolves a `.` scaffold name to the target directory basename',
+        async () => {
+            const ws = scratch('dot-name');
+
+            // Via a template (`create`).
+            const templated = path.join(ws, 'my-app');
+            await dbxJson(ws, [
+                'create',
+                '--template',
+                'project',
+                '--name',
+                '.',
+                '--out',
+                templated,
+                '--json',
+            ]);
+            expect(readJson<{ name: string }>(path.join(templated, 'package.json')).name).toBe(
+                'my-app'
+            );
+
+            // Via the direct scaffold command.
+            const direct = path.join(ws, 'cool-lib');
+            const init = await dbx(ws, ['project:init', '--name', '.', '--out', direct]);
+            expect(init.code, init.stderr).toBe(0);
+            expect(readJson<{ name: string }>(path.join(direct, 'package.json')).name).toBe(
+                'cool-lib'
+            );
+        },
+        TIMEOUT
+    );
+
+    it(
         'runs custom template actions (module + command) and does not copy the module',
         async () => {
             const ws = scratch('template-actions');

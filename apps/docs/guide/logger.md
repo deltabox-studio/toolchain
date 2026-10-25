@@ -4,7 +4,7 @@ Every toolchain message goes through one logger, so output stays consistent and
 respects a single configuration. The `logger` section controls its level,
 colours and prefix.
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         logger: { level: 'debug', color: false, name: 'dbx' },

@@ -18,7 +18,13 @@ const CMD_META_CHARS = /([()\][%!^"`<>&|;, *?])/g;
 
 /** Escape the command (not the args) of a Windows `cmd.exe` command line. */
 export function escapeCmdCommand(value: string): string {
-    return value.replace(CMD_META_CHARS, '^$1');
+    // `cmd.exe` splits an unquoted command at whitespace, so a command that is
+    // itself a path with spaces (e.g. `C:\Program Files\nodejs\node.exe`) must
+    // be quoted — otherwise the interpreter looks for `C:\Program`. Quoting also
+    // protects metacharacters, so no caret escaping is applied in that case.
+    if (!/\s/.test(value)) return value.replace(CMD_META_CHARS, '^$1');
+    const quoted = value.replace(/(?=(\\+?)?)\1"/g, '$1$1\\"').replace(/(?=(\\+?)?)\1$/, '$1$1');
+    return `"${quoted}"`;
 }
 
 /** Escape one argument for a Windows `cmd.exe` command line. */

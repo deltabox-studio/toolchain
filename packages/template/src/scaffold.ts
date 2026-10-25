@@ -164,7 +164,7 @@ function scaffoldLocal(template: Template, options: ScaffoldOptions): ScaffoldRe
     const close = template.tokens?.close ?? '}}';
     const tokens = replacementMap(options);
     const overwrite = options.overwrite !== false;
-    const written: string[] = [];
+    const pending: { target: string; content: string }[] = [];
 
     const walk = (relative: string): void => {
         const abs = path.join(dir, relative);
@@ -180,13 +180,20 @@ function scaffoldLocal(template: Template, options: ScaffoldOptions): ScaffoldRe
                 applyReplacements(childRelative, tokens, { open, close })
             );
             if (!overwrite && fs.existsSync(target)) continue;
-            fs.mkdirSync(path.dirname(target), { recursive: true });
             const content = fs.readFileSync(path.join(dir, childRelative), 'utf-8');
-            fs.writeFileSync(target, applyReplacements(content, tokens, { open, close }), 'utf-8');
-            written.push(target);
+            pending.push({ target, content: applyReplacements(content, tokens, { open, close }) });
         }
     };
     walk('');
+
+    // Write only once the whole tree has been read + rendered, so a failure (or
+    // a cancelled run) can never leave a half-copied template behind.
+    const written: string[] = [];
+    for (const file of pending) {
+        fs.mkdirSync(path.dirname(file.target), { recursive: true });
+        fs.writeFileSync(file.target, file.content, 'utf-8');
+        written.push(file.target);
+    }
     return { written };
 }
 

@@ -10,31 +10,52 @@ API and the VS Code extension.
 
 ## Install
 
-```bash
+::: code-group
+
+```sh [npm]
+# as a dev dependency in the project you want to manage
+npm install @deltabox/toolchain --save-dev
+```
+
+```sh [yarn]
 # as a dev dependency in the project you want to manage
 yarn add -D @deltabox/toolchain
+```
 
+```sh [pnpm]
+# as a dev dependency in the project you want to manage
+pnpm add -D @deltabox/toolchain
+```
+
+```sh [bun]
+# as a dev dependency in the project you want to manage
+bun add -D @deltabox/toolchain
+```
+
+:::
+
+```sh
 # or for global usage
 npm install -g @deltabox/toolchain
 ```
 
 The published package exposes one binary, `dbx`:
 
-```bash
-yarn dbx --help
+```sh
+dbx --help
 ```
 
 ## Create a config
 
 Scaffold a config for a project that does not have one yet:
 
-```bash
+```sh
 dbx project:config        # detect + write dbx.config.ts
 ```
 
 Or start from a template:
 
-```bash
+```sh
 dbx template:list
 dbx create --template project --name my-app --out ./my-app
 ```
@@ -44,7 +65,7 @@ dbx create --template project --name my-app --out ./my-app
 `sync` runs every enabled task and writes the managed files (adding a manifest at
 `.dbx/toolchain/manifest.json`):
 
-```bash
+```sh
 dbx sync              # write managed files
 dbx sync --check      # CI: fail if files are out of date
 dbx sync --recursive  # every discovered project, in dependency order
@@ -97,7 +118,7 @@ that area untouched.
 * [Templates](/guide/templates)
 * [Migrations](/guide/migrations)
 * [Programmatic API](/guide/api)
-* [LLM context files](/llms)
+* [LLMs](/llms)
 
 ---
 
@@ -118,7 +139,7 @@ Enable the `tsconfig` section and the toolchain generates each workspace's
 `tsconfig.json` (extending `tsconfig.default.json`) and, for a monorepo root, a
 `tsconfig.workspaces.json` wiring project references and path aliases:
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
@@ -132,7 +153,7 @@ splits the config across several files.
 
 ## Scaffolding a monorepo
 
-```bash
+```sh
 dbx project:init:monorepo --name acme --scope @acme --out .
 dbx project:init:workspace --name utils --scope @acme --root . --dir packages/utils
 ```
@@ -147,8 +168,7 @@ Each package declares `build`, `typecheck` and `test` in its own
 `vite.config.ts` with explicit cache input/output, so `dbx run` reports cache
 hits (a `package.json` script cannot carry cache config):
 
-```ts
-// packages/<pkg>/vite.config.ts
+```ts [packages/<pkg>/vite.config.ts]
 export default defineConfig({
     run: {
         tasks: {
@@ -174,7 +194,7 @@ export default defineConfig({
 
 The root `package.json` orchestrates them and adds the umbrella build:
 
-```json
+```json [package.json]
 {
     "scripts": {
         "build": "dbx run --filter \"./packages/*\" build && dbx run build:root",
@@ -202,7 +222,7 @@ Download from the [Visual Studio Code Marketplace](https://marketplace.visualstu
 
 or through the CLI:
 
-```bash
+```sh
 code --install-extension deltabox.toolchain-vscode
 ```
 
@@ -304,7 +324,7 @@ Search for `deltabox:` to find:
 ---
 url: https://toolchain.deltabox.studio/llms.md
 ---
-# LLM context files
+# LLMs
 
 This documentation is published in machine-readable forms so LLMs and coding
 agents can read it efficiently, following the [llms.txt](https://llmstxt.org)
@@ -399,7 +419,7 @@ See [Templates](/guide/templates).
 
 ## Migrations
 
-```bash
+```sh
 dbx migrate --from biome --write           # .oxfmtrc.json + .oxlintrc.json
 dbx migrate --from biome --target vite --write
 dbx migrate --from all                     # every detected source
@@ -424,7 +444,7 @@ See [Migrations](/guide/migrations).
 Every provider subcommand is a passthrough. Vite+ commands are reachable both
 directly and through the `vite` namespace:
 
-```bash
+```sh
 dbx fmt                 # a bare Vite+ command forwards to `vp fmt`
 dbx run -r build        # forwards to `vp run -r build`
 dbx vite dev            # explicit namespace (always works)
@@ -488,7 +508,7 @@ url: https://toolchain.deltabox.studio/guide/config.md
 
 A project is driven by a single `dbx.config.ts`:
 
-```ts
+```ts [dbx.config.ts]
 import { defineConfig } from '@deltabox/toolchain';
 
 export default defineConfig({
@@ -551,8 +571,7 @@ The merge is recursive:
 
 This makes a shared root config plus small per-project overrides possible:
 
-```ts
-// <root>/dbx.config.ts
+```ts [<root>/dbx.config.ts]
 export default defineConfig({
     toolchain: {
         changelog: { scopes: ['core', 'cli'], branches: { main: 'main', dev: 'dev' } },
@@ -604,7 +623,7 @@ dbx.config.json
 
 `.ts`/`.js` configs can declare lifecycle hooks (JSON cannot):
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         hooks: {
@@ -624,7 +643,7 @@ Return values are awaited.
 
 Every toolchain message goes through one logger. Configure it in the config:
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         logger: { level: 'debug', color: false, name: 'dbx' },
@@ -652,7 +671,7 @@ through the same logger.
 Provider passthrough commands (Vite+) follow the logger's colour setting. The
 `providers` section can force provider colours on or off on its own:
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         providers: { color: false },
@@ -673,7 +692,7 @@ flag turns provider colour off too. See [Providers](/guide/providers#colour).
 The whole Vite+ config lives in `toolchain.vite`. Every key is passed through
 verbatim to Vite+, so `dbx.config.*` stays the only hand-authored root config:
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         vite: {
@@ -688,7 +707,7 @@ export default defineConfig({
 `dbx sync` writes a thin root `vite.config.ts` that resolves that config at load
 time, so the generated file never duplicates (or drifts from) `dbx.config.*`:
 
-```ts
+```ts [vite.config.ts]
 import { defineConfig } from 'vite-plus';
 
 // Generated by @deltabox/toolchain — edit the vite section in dbx.config and run `dbx sync`.
@@ -716,7 +735,7 @@ would report drift. `dbx migrate --from vite` adds it for you.
 To adopt an existing hand-written `vite.config.ts`, fold it in with the
 migration (see [Migrations](/guide/migrations#vite-config)):
 
-```bash
+```sh
 dbx migrate --from vite --write   # folds the object into toolchain.vite (+ the fmt ignore)
 dbx sync                          # writes the managed vite.config.ts shim
 ```
@@ -750,7 +769,7 @@ place to declare who a package is, and it does three jobs:
 3. **Drives scaffolding.** `dbx project:init*` uses the section as its defaults
    (and `project.type` picks the kind of project to generate).
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         project: {
@@ -804,8 +823,7 @@ specifically:
 * **`inherit: false`** opts out entirely: the project keeps only its own `project`
   and ignores the parent's (useful for an unrelated package inside the tree).
 
-```ts
-// packages/web/dbx.config.ts — keeps the root scope/author/license, sets its own name
+```ts [packages/web/dbx.config.ts]
 export default defineConfig({
     toolchain: {
         project: { name: 'web' },
@@ -819,7 +837,7 @@ export default defineConfig({
 For a non-root project, `repo` also resolves to the workspace's location in the
 repository, written as `repository.directory`:
 
-```json
+```json [package.json]
 {
     "repository": {
         "type": "git",
@@ -850,7 +868,7 @@ section still generates correct tokens from its existing metadata.
 * **`type` must be valid** (`project`, `monorepo-root` or `monorepo-workspace`)
   when passed explicitly or set in the config; an invalid value is rejected.
 
-```bash
+```sh
 dbx project:init --name my-app --scope @acme --type project --out ./my-app
 dbx project:init:monorepo --name acme --scope @acme --out .
 dbx project:init:monorepo --name acme --scope @acme --example --out .
@@ -880,7 +898,7 @@ Scaffolding resolves the manager from the `packageManager` input and writes the
 catalog of the packages the project depends on. To keep it in sync with
 `dbx sync`, add a `catalogs` section to `dbx.config.*`:
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         project: { packageManager: 'yarn' },
@@ -930,7 +948,7 @@ The `changelog` section drives everything Conventional Commits: the CI that
 lints commit messages, the local husky hook, the `commitlint.config.mjs`, and the
 changelog pipeline that bumps versions and writes `CHANGELOG.md`.
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         changelog: {
@@ -948,7 +966,7 @@ export default defineConfig({
 config, and the husky `commit-msg` hook (`.husky/commit-msg`). Activate the hook
 with a `postinstall` script (Yarn Berry never runs `prepare`):
 
-```json
+```json [package.json]
 { "scripts": { "commitlint": "commitlint", "postinstall": "husky" } }
 ```
 
@@ -965,7 +983,7 @@ See [Package scripts](/guide/scripts) for the full recommended script set.
 * a **raw YAML string** — written **verbatim** as the workflow file, for a
   workflow the object model can't express.
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         changelog: {
@@ -1116,7 +1134,7 @@ skipped (no empty entry, no file created).
 
 ## CLI
 
-```bash
+```sh
 dbx changelog                       # bump + write (uses the config versioning)
 dbx changelog --dry-run             # preview the root entry
 dbx changelog --range v1.2.0..HEAD  # scan a specific range
@@ -1184,7 +1202,7 @@ The husky hook and CI are unaffected when commitlint is recent enough to resolve
 pure-ESM presets (commitlint ≥ 21.2.3). If your local commitlint is older, pin
 the preset to the last CJS-compatible release:
 
-```json
+```json [package.json]
 {
     "resolutions": { "conventional-changelog-conventionalcommits": "9.3.1" }
 }
@@ -1214,7 +1232,7 @@ project references from a single root workspaces tsconfig
 (`project.type: 'monorepo-root'`); a single project keeps its hand-written
 tsconfig untouched.
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
@@ -1433,7 +1451,7 @@ renderMonorepoTsconfig({ scope: '@acme', workspaces: [{ alias: 'core', dir: 'pac
 
 ## CLI
 
-```bash
+```sh
 dbx tsconfig                       # regenerate every workspace tsconfig.json
 dbx tsconfig --no-aliases          # skip the workspaces path aliases
 dbx tsconfig --refs                # wire project references
@@ -1522,7 +1540,7 @@ Biome config. The toolchain itself is built on **Oxc** (Oxfmt + Oxlint) through
 Vite+, but a repo that runs Biome directly can let the toolchain manage its
 `biome.json` from the same `dbx.config.*`.
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         biome: true, // or { overrides: { ... } }
@@ -1597,7 +1615,7 @@ through verbatim to Vite+, so `dbx.config.*` stays the only hand-authored root
 config; `dbx sync` writes a thin root `vite.config.ts` that resolves it at load
 time.
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         vite: {
@@ -1618,7 +1636,7 @@ The section is typed as Vite+'s own config (`ToolchainViteConfig` = Vite's
 
 `dbx sync` writes a fixed `vite.config.ts`:
 
-```ts
+```ts [vite.config.ts]
 import { defineConfig } from 'vite-plus';
 
 // Generated by @deltabox/toolchain — edit the vite section in dbx.config and run `dbx sync`.
@@ -1667,7 +1685,7 @@ vite: {
 Vite+ commands are reachable directly or through the `vite` namespace, and are
 registered as a provider (see [Providers](/guide/providers)):
 
-```bash
+```sh
 dbx fmt                 # a bare Vite+ command forwards to `vp fmt`
 dbx run -r build        # forwards to `vp run -r build`
 dbx vite dev            # explicit namespace (always works)
@@ -1711,7 +1729,7 @@ url: https://toolchain.deltabox.studio/guide/watch.md
 The `watch` section configures `dbx watch`, which syncs once and then re-runs on
 input changes.
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         watch: { enabled: true, debounce: 150 },
@@ -1739,7 +1757,7 @@ watch: { exclude: ['**/fixtures/**'], gitignore: true }
 
 ## How it works
 
-```bash
+```sh
 dbx watch
 ```
 
@@ -1771,7 +1789,7 @@ Every toolchain message goes through one logger, so output stays consistent and
 respects a single configuration. The `logger` section controls its level,
 colours and prefix.
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         logger: { level: 'debug', color: false, name: 'dbx' },
@@ -1855,7 +1873,7 @@ commands and a descriptor the editor reads over `dbx providers --json`.
 
 ## List providers
 
-```bash
+```sh
 dbx providers          # table
 dbx providers --json   # descriptor (id, binary, commands, actions)
 ```
@@ -1875,7 +1893,7 @@ Oxfmt / Rolldown / tsdown toolchain.
 
 ### Generic passthrough
 
-```bash
+```sh
 dbx vite dev
 dbx vite build
 dbx vite add zod
@@ -1893,7 +1911,7 @@ Provider output keeps `vp`'s own colours, but follows the logger's colour state.
 The global `--no-color` flag turns provider colour off, and the `providers`
 section can opt out on its own even on a colour terminal:
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         providers: { color: false },
@@ -1957,8 +1975,7 @@ viteCommandName('fmt'); // 'vite:fmt'
 Vite+ consumers can drive dbx from `vite.config.ts`, so a Vite+-only project
 still gets dbx's generated/managed files:
 
-```ts
-// vite.config.ts
+```ts [vite.config.ts]
 import { defineConfig } from 'vite-plus';
 
 import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
@@ -1996,7 +2013,7 @@ descriptors). `toolchainProviders()` merges them with the built-ins, so a custom
 provider's commands become `dbx` commands — `dbx <command.name>` forwards to
 `<binary> <subcommand> ...` — and it shows up in `dbx providers` and the editor.
 
-```json
+```json [.dbx/toolchain/providers.json]
 [
     {
         "id": "echo",
@@ -2266,7 +2283,7 @@ See a real full example at [config/reference.md](../config/reference.md).
 
 A `.env.example`; secrets are emitted commented out so operators fill them in:
 
-```bash
+```sh
 engine.writeEnvFile({ output: '.env.example' });
 
 # ---- SERVER ----
@@ -2354,7 +2371,7 @@ and how to move an existing Biome + Turbo project onto them.
 
 The repo root `package.json`:
 
-```json
+```json [package.json]
 {
     "scripts": {
         "format": "dbx fmt",
@@ -2413,7 +2430,7 @@ trailing CR silently breaks the hook.
 
 2. Fold the Biome config into a root `vite.config.ts`:
 
-   ```bash
+   ```sh
    dbx migrate --from biome --target vite --write
    ```
 
@@ -2427,13 +2444,13 @@ trailing CR silently breaks the hook.
 
 4. Add a `dbx.config.ts` and sync the managed files:
 
-   ```bash
+   ```sh
    dbx sync
    ```
 
 5. Verify — this is what CI runs:
 
-   ```bash
+   ```sh
    dbx sync --check
    yarn build
    ```
@@ -2468,7 +2485,7 @@ For cached, dependency-aware tasks, define them in each package's
 `vite.config.ts` rather than `package.json` — a task and a script cannot share a
 name:
 
-```ts
+```ts [vite.config.ts]
 import { defineConfig } from 'vite-plus';
 
 export default defineConfig({
@@ -2519,7 +2536,7 @@ Every template declares a `kind`, used by `template:list --kind` and
 
 ## List + create
 
-```bash
+```sh
 dbx template:list
 dbx template:list --kind application   # filter by kind
 dbx template:list --online             # also resolve npm/git sources
@@ -2565,7 +2582,7 @@ delegate to `vp create` and need network access.
 A template can declare **inputs** — values prompted for (and substituted) when it
 is scaffolded. Declare them in `template.json`:
 
-```json
+```json [template.json]
 {
     "variables": [
         { "name": "name", "prompt": "Project name", "default": "app", "required": true },
@@ -2605,7 +2622,7 @@ The builtin templates use the same pipeline (they declare `name`, `scope`,
 After the files are written, a template can run **actions** — extra steps such as
 installing dependencies. Declare them in `template.json`:
 
-```json
+```json [template.json]
 {
     "actions": [
         { "id": "install", "prompt": "Install dependencies?", "builtin": "install" },
@@ -2636,12 +2653,12 @@ default).
 A local template is a directory with a `template.json`. Turn any folder into one
 with `template:init` (and register it in one step with `--add`):
 
-```bash
+```sh
 dbx template:init ./templates/acme-service \
   --kind application --name "Acme service" --var name --tag service --add
 ```
 
-```json
+```json [template.json]
 {
     "name": "Acme service",
     "description": "A service package",
@@ -2654,7 +2671,7 @@ dbx template:init ./templates/acme-service \
 
 Register sources so they are picked up automatically:
 
-```bash
+```sh
 dbx template:add ./templates             # local dir (auto-inits if needed)
 dbx template:add @acme/create            # npm @scope/create
 dbx template:add git:https://github.com/acme/tpl.git
@@ -2664,7 +2681,7 @@ dbx template:remove local:./templates    # drop a source
 `template:add` records them in `.dbx/toolchain/templates.json`; `template:remove`
 takes an id or a `type:locate` key. Sources can also be declared in the config:
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         templates: {
@@ -2704,7 +2721,7 @@ url: https://toolchain.deltabox.studio/guide/migrations.md
 **Oxc** (Oxfmt + Oxlint). Migrations are pluggable — adding a source tool is a
 matter of implementing one interface.
 
-```bash
+```sh
 dbx migrate:list                       # what's available + detected
 dbx migrate --from biome               # dry-run
 dbx migrate --from biome --write       # writes the oxc config
@@ -2738,7 +2755,7 @@ By default `dbx migrate` only touches the root (`--cwd`, or the current
 directory). `--recursive` walks the discovered projects under the root and
 migrates each one that has a **detected source**:
 
-```bash
+```sh
 dbx migrate --from biome --recursive --write
 ```
 
@@ -2757,7 +2774,7 @@ The `vite` source moves a hand-written root `vite.config.*` into
 hand-authored config and `dbx sync` writes a thin `vite.config.ts` shim that
 resolves it at load time:
 
-```bash
+```sh
 dbx migrate --from vite          # dry-run: shows what would fold in
 dbx migrate --from vite --write  # folds the object into toolchain.vite
 dbx sync                         # writes the managed vite.config.ts shim
@@ -2823,7 +2840,7 @@ the dependency diff and per-workspace tasks — is on the
 file is missing or differs from what the migration would produce, so a pipeline
 can require that a repo is fully on Oxc:
 
-```bash
+```sh
 dbx migrate --check || echo "still on Biome/ESLint — run migrate --write"
 ```
 
@@ -3789,7 +3806,7 @@ Force provider command colours on/off (default: inherit the logger).
 
 ## Full example
 
-```ts
+```ts [dbx.config.ts]
 import { defineConfig } from '@deltabox/toolchain';
 
 export default defineConfig({

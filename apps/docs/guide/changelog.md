@@ -4,7 +4,7 @@ The `changelog` section drives everything Conventional Commits: the CI that
 lints commit messages, the local husky hook, the `commitlint.config.mjs`, and the
 changelog pipeline that bumps versions and writes `CHANGELOG.md`.
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         changelog: {
@@ -22,7 +22,7 @@ export default defineConfig({
 config, and the husky `commit-msg` hook (`.husky/commit-msg`). Activate the hook
 with a `postinstall` script (Yarn Berry never runs `prepare`):
 
-```json
+```json [package.json]
 { "scripts": { "commitlint": "commitlint", "postinstall": "husky" } }
 ```
 
@@ -39,7 +39,7 @@ See [Package scripts](/guide/scripts) for the full recommended script set.
 - a **raw YAML string** — written **verbatim** as the workflow file, for a
   workflow the object model can't express.
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         changelog: {
@@ -190,7 +190,7 @@ skipped (no empty entry, no file created).
 
 ## CLI
 
-```bash
+```sh
 dbx changelog                       # bump + write (uses the config versioning)
 dbx changelog --dry-run             # preview the root entry
 dbx changelog --range v1.2.0..HEAD  # scan a specific range
@@ -258,7 +258,7 @@ The husky hook and CI are unaffected when commitlint is recent enough to resolve
 pure-ESM presets (commitlint ≥ 21.2.3). If your local commitlint is older, pin
 the preset to the last CJS-compatible release:
 
-```json
+```json [package.json]
 {
     "resolutions": { "conventional-changelog-conventionalcommits": "9.3.1" }
 }

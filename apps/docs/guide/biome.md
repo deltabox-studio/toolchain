@@ -5,7 +5,7 @@ Biome config. The toolchain itself is built on **Oxc** (Oxfmt + Oxlint) through
 Vite+, but a repo that runs Biome directly can let the toolchain manage its
 `biome.json` from the same `dbx.config.*`.
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         biome: true, // or { overrides: { ... } }

@@ -7,7 +7,7 @@ project references from a single root workspaces tsconfig
 (`project.type: 'monorepo-root'`); a single project keeps its hand-written
 tsconfig untouched.
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
@@ -226,7 +226,7 @@ renderMonorepoTsconfig({ scope: '@acme', workspaces: [{ alias: 'core', dir: 'pac
 
 ## CLI
 
-```bash
+```sh
 dbx tsconfig                       # regenerate every workspace tsconfig.json
 dbx tsconfig --no-aliases          # skip the workspaces path aliases
 dbx tsconfig --refs                # wire project references

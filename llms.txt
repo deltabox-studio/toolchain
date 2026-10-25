@@ -9,7 +9,7 @@ This file is a concise, link-first overview. For the **full** documentation in a
 **How it works** — `@deltabox/toolchain` is a config-driven toolchain:
 
 - **One config.** `dbx.config.ts` exports `{ toolchain: { ...sections } }`; every section is opt-in by presence (`section: true` uses defaults, omit it to leave that area untouched).
-- **Sync.** `dbx sync` runs each enabled section and writes the managed files, tracked in `.dbx/toolchain/manifest.json`; `dbx sync --check` is the CI gate. `dbx sync --recursive` syncs every discovered project in dependency order.
+- **Sync.** `dbx sync` runs each enabled section and writes the managed files, tracked in `.dbx/toolchain/manifest.json` (the last-sync time lives in the gitignored `.dbx/toolchain/timestamps.json`); `dbx sync --check` is the CI gate. `dbx sync --recursive` syncs every discovered project in dependency order.
 - **Nested configs.** A non-root `dbx.config.*` merges over the nearest ancestor config: objects merge, while scalars and arrays replace; `project.type` and `hooks` are never inherited.
 - **Project graph.** `dbx projects` writes `.dbx/toolchain/projects.json` (workspace dirs + dependencies), used by `sync --recursive`, the VS Code view and per-workspace changelogs.
 - **Sections.** `project`, `changelog`, `biome`, `tsconfig`, `templates`, `vite`, `watch`, `logger`, `providers`.
@@ -22,7 +22,7 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [Getting Started](https://toolchain.deltabox.studio/guide.md)
 - [Monorepo Guide](https://toolchain.deltabox.studio/guide/monorepo.md)
 - [VS Code Extension](https://toolchain.deltabox.studio/guide/vscode.md)
-- [LLM context files](https://toolchain.deltabox.studio/llms.md)
+- [LLMs](https://toolchain.deltabox.studio/llms.md)
 
 ### Toolchain
 

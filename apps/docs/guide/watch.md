@@ -3,7 +3,7 @@
 The `watch` section configures `dbx watch`, which syncs once and then re-runs on
 input changes.
 
-```ts
+```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
         watch: { enabled: true, debounce: 150 },
@@ -31,7 +31,7 @@ watch: { exclude: ['**/fixtures/**'], gitignore: true }
 
 ## How it works
 
-```bash
+```sh
 dbx watch
 ```
 

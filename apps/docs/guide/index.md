@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="/logo/outline_colored.png" width="150" />
+</div>
+
 # Getting Started
 
 `@deltabox/toolchain` is an all-in-one project toolchain. You drop a
@@ -7,31 +11,52 @@ API and the VS Code extension.
 
 ## Install
 
-```bash
+::: code-group
+
+```sh [npm]
+# as a dev dependency in the project you want to manage
+npm install @deltabox/toolchain --save-dev
+```
+
+```sh [yarn]
 # as a dev dependency in the project you want to manage
 yarn add -D @deltabox/toolchain
+```
 
+```sh [pnpm]
+# as a dev dependency in the project you want to manage
+pnpm add -D @deltabox/toolchain
+```
+
+```sh [bun]
+# as a dev dependency in the project you want to manage
+bun add -D @deltabox/toolchain
+```
+
+:::
+
+```sh
 # or for global usage
 npm install -g @deltabox/toolchain
 ```
 
 The published package exposes one binary, `dbx`:
 
-```bash
-yarn dbx --help
+```sh
+dbx --help
 ```
 
 ## Create a config
 
 Scaffold a config for a project that does not have one yet:
 
-```bash
+```sh
 dbx project:config        # detect + write dbx.config.ts
 ```
 
 Or start from a template:
 
-```bash
+```sh
 dbx template:list
 dbx create --template project --name my-app --out ./my-app
 ```
@@ -41,7 +66,7 @@ dbx create --template project --name my-app --out ./my-app
 `sync` runs every enabled task and writes the managed files (adding a manifest at
 `.dbx/toolchain/manifest.json`):
 
-```bash
+```sh
 dbx sync              # write managed files
 dbx sync --check      # CI: fail if files are out of date
 dbx sync --recursive  # every discovered project, in dependency order
@@ -94,4 +119,4 @@ that area untouched.
 - [Templates](/guide/templates)
 - [Migrations](/guide/migrations)
 - [Programmatic API](/guide/api)
-- [LLM context files](/llms)
+- [LLMs](/llms)

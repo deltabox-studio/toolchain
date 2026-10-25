@@ -373,6 +373,8 @@ export function templateCommands(): ToolchainCommand[] {
                         'No template selected. Pass --template <id> or --kind <kind> (see `dbx template:list`).'
                     );
                 }
+                // A name of `.` means "use the directory I am being created in".
+                if (name === '.') name = path.basename(path.resolve(out));
                 const tokens = {
                     ...context.config.project,
                     name: name ?? context.config.project?.name ?? 'app',

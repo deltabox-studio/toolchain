@@ -4,7 +4,7 @@
 **Oxc** (Oxfmt + Oxlint). Migrations are pluggable — adding a source tool is a
 matter of implementing one interface.
 
-```bash
+```sh
 dbx migrate:list                       # what's available + detected
 dbx migrate --from biome               # dry-run
 dbx migrate --from biome --write       # writes the oxc config
@@ -38,7 +38,7 @@ By default `dbx migrate` only touches the root (`--cwd`, or the current
 directory). `--recursive` walks the discovered projects under the root and
 migrates each one that has a **detected source**:
 
-```bash
+```sh
 dbx migrate --from biome --recursive --write
 ```
 
@@ -57,7 +57,7 @@ The `vite` source moves a hand-written root `vite.config.*` into
 hand-authored config and `dbx sync` writes a thin `vite.config.ts` shim that
 resolves it at load time:
 
-```bash
+```sh
 dbx migrate --from vite          # dry-run: shows what would fold in
 dbx migrate --from vite --write  # folds the object into toolchain.vite
 dbx sync                         # writes the managed vite.config.ts shim
@@ -123,7 +123,7 @@ the dependency diff and per-workspace tasks — is on the
 file is missing or differs from what the migration would produce, so a pipeline
 can require that a repo is fully on Oxc:
 
-```bash
+```sh
 dbx migrate --check || echo "still on Biome/ESLint — run migrate --write"
 ```
 

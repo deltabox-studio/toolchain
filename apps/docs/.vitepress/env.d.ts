@@ -14,3 +14,6 @@ declare module '*.vue' {
 }
 
 declare module '*.css';
+
+/** The group-icons plugin's generated stylesheet. */
+declare module 'virtual:group-icons.css';

@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-project",
-    "version": "1.11.0",
+    "version": "1.11.3",
     "description": "Project scaffolding generators (TypeScript root, monorepo root and workspace files).",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {

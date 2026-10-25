@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="https://toolchain.deltabox.studio/logo/logo.png" width="150" />
+</div>
+
 # deltabox toolchain
 
 [![license: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](./package.json)
@@ -112,3 +116,7 @@ Search for `deltabox:` to find:
 - **Reset tooling…**
 - **Refresh projects**
 - **Toggle auto-sync**
+
+<div align="center">
+  <img src="https://toolchain.deltabox.studio/logo/outline_colored.png" width="150" />
+</div>
