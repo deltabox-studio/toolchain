@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import {
     logger,
     type ProjectType,
@@ -48,6 +50,15 @@ function requireName(
 }
 
 /**
+ * Resolve a scaffold name: a name of `.` means "use the directory I am being
+ * created in", so it becomes that directory's basename (eg. `--name . --out
+ * ./my-app` → `my-app`).
+ */
+function resolveName(name: string, dir: string): string {
+    return name === '.' ? path.basename(path.resolve(dir)) : name;
+}
+
+/**
  * Resolve + validate the project type for a scaffold: an explicit `--type` wins,
  * otherwise the command's implied default is used.
  *
@@ -82,7 +93,8 @@ export function projectCommands(): ToolchainCommand[] {
                 ...CONFIG_OPTIONS,
             ],
             run: (opts, context) => {
-                const name = requireName(opts, context.config);
+                const out = (opts.out as string) ?? context.cwd;
+                const name = resolveName(requireName(opts, context.config), out);
                 const files = createRootProjectFiles({
                     name,
                     ...(opts.scope ? { scope: opts.scope as string } : {}),
@@ -92,7 +104,7 @@ export function projectCommands(): ToolchainCommand[] {
                     type: resolveType(opts, 'project'),
                     includeConfig: (opts.config as boolean | undefined) ?? true,
                 });
-                const written = writeGeneratedFiles(files, (opts.out as string) ?? context.cwd);
+                const written = writeGeneratedFiles(files, out);
                 for (const file of written) logger.info(`Created ${file}`);
             },
         },
@@ -108,9 +120,9 @@ export function projectCommands(): ToolchainCommand[] {
                 ...CONFIG_OPTIONS,
             ],
             run: (opts, context) => {
-                const name = requireName(opts, context.config);
-                const scope = (opts.scope as string) ?? context.config.project?.scope ?? `@${name}`;
                 const out = (opts.out as string) ?? context.cwd;
+                const name = resolveName(requireName(opts, context.config), out);
+                const scope = (opts.scope as string) ?? context.config.project?.scope ?? `@${name}`;
                 const includeConfig = (opts.config as boolean | undefined) ?? true;
                 const rootType = resolveType(opts, 'monorepo-root');
                 const withExample = Boolean(opts.example);
@@ -158,7 +170,7 @@ export function projectCommands(): ToolchainCommand[] {
             ],
             run: (opts, context) => {
                 const root = (opts.root as string | undefined) ?? context.cwd;
-                const name = requireName(opts, context.config);
+                const name = resolveName(requireName(opts, context.config), root);
                 const scope =
                     (opts.scope as string | undefined) ??
                     context.config.project?.scope ??

@@ -457,7 +457,8 @@ export function activate(context: vscode.ExtensionContext): void {
             openLabel: 'Use this folder as a template',
             defaultUri: vscode.Uri.file(base),
         });
-        const dir = picked?.[0]?.fsPath ?? base;
+        if (!picked?.[0]) return;
+        const dir = picked[0].fsPath;
         const name = await vscode.window.showInputBox({
             prompt: 'Template name',
             value: path.basename(dir),
@@ -886,6 +887,8 @@ export function activate(context: vscode.ExtensionContext): void {
             prompt: 'npm scope (optional)',
             placeHolder: '@acme',
         });
+        // Cancelling any prompt aborts the whole scaffold (no files are written).
+        if (scope === undefined) return;
 
         // Prompt for the template's own inputs (the same pipeline the CLI uses):
         // a select when the variable declares `options`, otherwise free text.
@@ -938,7 +941,8 @@ export function activate(context: vscode.ExtensionContext): void {
             openLabel: 'Create here',
             defaultUri: vscode.Uri.file(base),
         });
-        const out = dir?.[0]?.fsPath ?? base;
+        if (!dir?.[0]) return;
+        const out = dir[0].fsPath;
         const code = await runCli(base, [...baseArgs, '--out', out]);
         // Sync the new project so its managed files (and manifest) exist and the
         // Managed Files / Home views populate immediately. (Vite+ projects are not
@@ -1027,14 +1031,17 @@ export function activate(context: vscode.ExtensionContext): void {
         });
         if (!name) return;
 
+        // Every prompt must be answered before anything is written: cancelling
+        // any one of them aborts the scaffold so it can't leave orphan files.
         const scope = await vscode.window.showInputBox({
             prompt: 'npm scope (optional)',
             placeHolder: '@acme',
         });
-        const packageManager =
-            (await vscode.window.showQuickPick(['yarn', 'pnpm', 'npm', 'bun'], {
-                placeHolder: 'Package manager',
-            })) ?? 'yarn';
+        if (scope === undefined) return;
+        const packageManager = await vscode.window.showQuickPick(['yarn', 'pnpm', 'npm', 'bun'], {
+            placeHolder: 'Package manager',
+        });
+        if (!packageManager) return;
         const includeConfig = await vscode.window.showQuickPick(
             [
                 { label: 'Yes', value: 'yes' },
@@ -1042,6 +1049,7 @@ export function activate(context: vscode.ExtensionContext): void {
             ],
             { placeHolder: 'Include a dbx.config.ts? (recommended)' }
         );
+        if (!includeConfig) return;
         const base = workspaceRoots()[0];
 
         // A workspace is scaffolded *into* an existing monorepo root at a
@@ -1053,25 +1061,27 @@ export function activate(context: vscode.ExtensionContext): void {
                 openLabel: 'Select monorepo root',
                 defaultUri: base ? vscode.Uri.file(base) : undefined,
             });
-            const root = pickedRoot?.[0]?.fsPath ?? base;
-            if (!root) return;
+            if (!pickedRoot?.[0]) return;
+            const root = pickedRoot[0].fsPath;
+            // `.` means "use the root directory's name".
+            const wsName = name === '.' ? path.basename(root) : name;
             const dir = await vscode.window.showInputBox({
                 prompt: 'Workspace directory (relative to the root)',
-                value: `packages/${name}`,
+                value: `packages/${wsName}`,
                 validateInput: value => (value.trim() ? undefined : 'Required'),
             });
             if (!dir) return;
 
-            const args = [kind.command, '--name', name, '--root', root, '--dir', dir];
+            const args = [kind.command, '--name', wsName, '--root', root, '--dir', dir];
             if (scope) args.push('--scope', scope);
-            if (includeConfig?.value === 'no') args.push('--no-config');
+            if (includeConfig.value === 'no') args.push('--no-config');
             args.push('--package-manager', packageManager);
 
             const code = await runCli(root, args);
             if (code === 0) await runCli(path.join(root, dir.replace(/\\/g, '/')), ['sync']);
             await refreshGraph();
             if (code === 0) {
-                vscode.window.showInformationMessage(`deltabox: scaffolded workspace "${name}".`);
+                vscode.window.showInformationMessage(`deltabox: scaffolded workspace "${wsName}".`);
             }
             return;
         }
@@ -1082,12 +1092,14 @@ export function activate(context: vscode.ExtensionContext): void {
             openLabel: 'Scaffold here',
             defaultUri: base ? vscode.Uri.file(base) : undefined,
         });
-        const target = picked?.[0]?.fsPath ?? base;
-        if (!target) return;
+        if (!picked?.[0]) return;
+        const target = picked[0].fsPath;
+        // `.` means "use the target directory's name".
+        const finalName = name === '.' ? path.basename(target) : name;
 
-        const args = [kind.command, '--name', name];
+        const args = [kind.command, '--name', finalName];
         if (scope) args.push('--scope', scope);
-        if (includeConfig?.value === 'no') args.push('--no-config');
+        if (includeConfig.value === 'no') args.push('--no-config');
         if ((kind as { example?: boolean }).example) args.push('--example');
         args.push('--package-manager', packageManager);
         args.push('--out', target);
@@ -1095,7 +1107,8 @@ export function activate(context: vscode.ExtensionContext): void {
         const code = await runCli(target, args);
         if (code === 0) await runCli(target, ['sync']);
         await refreshGraph();
-        if (code === 0) vscode.window.showInformationMessage(`deltabox: scaffolded "${name}".`);
+        if (code === 0)
+            vscode.window.showInformationMessage(`deltabox: scaffolded "${finalName}".`);
     };
 
     const provider = vscode.window.registerWebviewViewProvider('deltabox.home', home, {
