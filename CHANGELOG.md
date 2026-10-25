@@ -1,8 +1,16 @@
 # Changelog
 
-## 1.11.1 (October 2026)
+## 1.11.2 (October 2026)
 
 <!-- release:start -->
+
+### Chores
+- Update `README.md` ([#3e7f4e1](https://github.com/deltabox-studio/toolchain/commit/3e7f4e1) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.11.1 (October 2026)
 
 ### Bug fixes
 - Write scaffold files only at the end and resolve "." names ([#c01fcf3](https://github.com/deltabox-studio/toolchain/commit/c01fcf3) by [T0chi](https://github.com/T0chi))
@@ -59,9 +67,6 @@
 #### Added
 - `vitepress-carbon` `^1.7.0`
 - `vitepress-plugin-group-icons` `^1.8.1`
-
-<!-- release:end -->
-
 
 ## 1.11.0 (October 2026)
 
