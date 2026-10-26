@@ -35,6 +35,7 @@ import {
     writeGlobalProviders,
     writeProviderRegistry,
 } from './providers.js';
+import { RegistryTreeProvider, type RegistryItemNode } from './registries.js';
 import { type SchedulerState, SyncScheduler } from './sync-scheduler.js';
 import { type Template, TemplateTreeProvider, loadTemplates } from './templates.js';
 
@@ -44,6 +45,7 @@ const PROJECTS_VIEW_ID = 'deltabox.projects';
 const FILES_VIEW_ID = 'deltabox.files';
 const PROVIDERS_VIEW_ID = 'deltabox.providers';
 const TEMPLATES_VIEW_ID = 'deltabox.templates';
+const REGISTRIES_VIEW_ID = 'deltabox.registries';
 
 /** The public documentation site (the Home "Need help?" link). */
 const DOCS_URL = 'https://toolchain.deltabox.studio';
@@ -104,6 +106,12 @@ export function activate(context: vscode.ExtensionContext): void {
     const templates = new TemplateTreeProvider(() => workspaceRoots()[0]);
     const templatesView = vscode.window.createTreeView(TEMPLATES_VIEW_ID, {
         treeDataProvider: templates,
+        showCollapseAll: true,
+    });
+
+    const registries = new RegistryTreeProvider(() => workspaceRoots()[0]);
+    const registriesView = vscode.window.createTreeView(REGISTRIES_VIEW_ID, {
+        treeDataProvider: registries,
         showCollapseAll: true,
     });
 
@@ -229,6 +237,7 @@ export function activate(context: vscode.ExtensionContext): void {
         updateContextKeys();
         void providers.refresh();
         void templates.refresh();
+        void registries.refresh();
     };
 
     /**
@@ -531,12 +540,9 @@ export function activate(context: vscode.ExtensionContext): void {
             id?: string;
             kind?: string;
         }
-        const listed = await captureCli(base, [
-            'template:list',
-            '--registry',
-            '--json',
-            '--cwd',
-            base,
+        const [listed, globals] = await Promise.all([
+            captureCli(base, ['template:list', '--registry', '--json', '--cwd', base]),
+            captureCli(base, ['template:list', '--global', '--json', '--cwd', base]),
         ]);
         let sources: RegistryEntry[] = [];
         if (listed.code === 0) {
@@ -546,23 +552,47 @@ export function activate(context: vscode.ExtensionContext): void {
                 sources = [];
             }
         }
-        if (sources.length === 0) {
-            vscode.window.showInformationMessage('deltabox: the template registry is empty.');
-            return;
+        let globalTemplates: { id: string; name?: string }[] = [];
+        if (globals.code === 0) {
+            try {
+                globalTemplates = JSON.parse(globals.stdout) as { id: string; name?: string }[];
+            } catch {
+                globalTemplates = [];
+            }
         }
-        const picked = await vscode.window.showQuickPick(
-            sources.map(source => ({
+        const items = [
+            ...sources.map(source => ({
                 label: source.name ?? source.id ?? source.key,
                 description: source.key,
                 detail: [source.kind, source.type].filter(Boolean).join(' \u00b7 '),
                 source,
+                global: false,
             })),
-            { placeHolder: 'Which template source should be removed?', matchOnDetail: true }
-        );
+            ...globalTemplates.map(template => ({
+                label: template.name ?? template.id,
+                description: template.id,
+                detail: 'global',
+                source: { key: template.id },
+                global: true,
+            })),
+        ];
+        if (items.length === 0) {
+            vscode.window.showInformationMessage('deltabox: the template registry is empty.');
+            return;
+        }
+        const picked = await vscode.window.showQuickPick(items, {
+            placeHolder: 'Which template should be removed?',
+            matchOnDetail: true,
+        });
         if (!picked) return;
-        const code = await runCli(base, ['template:remove', picked.source.key, '--cwd', base]);
+        const code = await runCli(
+            base,
+            picked.global
+                ? ['template:remove', picked.source.key, '--global', '--cwd', base]
+                : ['template:remove', picked.source.key, '--cwd', base]
+        );
         if (code === 0) {
-            vscode.window.showInformationMessage(`deltabox: removed ${picked.source.key}.`);
+            vscode.window.showInformationMessage(`deltabox: removed ${picked.label}.`);
         } else {
             output.show();
         }
@@ -664,6 +694,154 @@ export function activate(context: vscode.ExtensionContext): void {
         writeGlobalProviders(readGlobalProviders().filter(provider => provider.id !== id));
         await providers.refresh();
         updateContextKeys();
+    };
+
+    /** Open a registry: the file/folder for locals, the website for remotes. */
+    const openRegistryItem = (node?: RegistryItemNode): void => {
+        if (!node) return;
+        if (node.entry.remote) void vscode.env.openExternal(vscode.Uri.parse(node.entry.path));
+        else
+            void vscode.commands.executeCommand(
+                'revealInExplorer',
+                vscode.Uri.file(node.entry.path)
+            );
+    };
+
+    /** Add a new registry search path (global or project). */
+    const newRegistry = async (): Promise<void> => {
+        const root = workspaceRoots()[0];
+        if (!root) {
+            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
+            return;
+        }
+        const category = await vscode.window.showQuickPick(
+            [
+                { label: 'Templates', value: 'templates' },
+                { label: 'Providers', value: 'providers' },
+            ],
+            { placeHolder: 'Which kind of registry?' }
+        );
+        if (!category) return;
+        if (category.value === 'providers') {
+            await addProvider();
+            await providers.refresh();
+            await registries.refresh();
+            return;
+        }
+        const entry = await vscode.window.showInputBox({
+            prompt: 'Registry path or http(s) URL',
+            value: '.dbx/toolchain/.registry/templates',
+            validateInput: value => (value.trim() ? undefined : 'Required'),
+        });
+        if (!entry) return;
+        const scope = await vscode.window.showQuickPick(
+            [
+                { label: 'Global', detail: 'Available in every project' },
+                { label: 'Project', detail: 'This project only' },
+            ],
+            { placeHolder: 'Where should this registry live?' }
+        );
+        if (!scope) return;
+        const code = await runCli(root, [
+            'registry',
+            '--add',
+            entry,
+            '--scope',
+            scope.label === 'Project' ? 'project' : 'global',
+            '--cwd',
+            root,
+        ]);
+        if (code === 0) {
+            await registries.refresh();
+            await templates.refresh();
+            vscode.window.showInformationMessage(
+                `deltabox: added ${scope.label.toLowerCase()} registry.`
+            );
+        } else {
+            output.show();
+        }
+    };
+
+    /** Remove one or more template registry paths (keeps the files). */
+    const removeRegistry = async (): Promise<void> => {
+        const root = workspaceRoots()[0];
+        if (!root) {
+            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
+            return;
+        }
+        const result = await captureCli(root, ['registry', '--json', '--cwd', root]);
+        let entries: RegistryItemNode['entry'][] = [];
+        if (result.code === 0) {
+            try {
+                entries =
+                    (JSON.parse(result.stdout) as { templates?: typeof entries }).templates ?? [];
+            } catch {
+                entries = [];
+            }
+        }
+        if (entries.length === 0) {
+            vscode.window.showInformationMessage('deltabox: no template registries.');
+            return;
+        }
+        const picked = await vscode.window.showQuickPick(
+            entries.map(entry => ({ label: entry.path, description: entry.scope, entry })),
+            { canPickMany: true, placeHolder: 'Which registries should be removed?' }
+        );
+        if (!picked || picked.length === 0) return;
+        const confirm = await vscode.window.showWarningMessage(
+            `Remove ${picked.length} registry path(s)? The files are kept.`,
+            { modal: true },
+            'Remove'
+        );
+        if (confirm !== 'Remove') return;
+        for (const item of picked) {
+            await runCli(root, [
+                'registry',
+                '--remove',
+                item.entry.path,
+                '--scope',
+                item.entry.scope,
+                '--cwd',
+                root,
+            ]);
+        }
+        await registries.refresh();
+    };
+
+    /** Remove one registry item from the view (template registries only). */
+    const removeRegistryEntry = async (node?: RegistryItemNode): Promise<void> => {
+        if (!node || node.category !== 'templates') return;
+        const root = workspaceRoots()[0];
+        if (!root) return;
+        const confirm = await vscode.window.showWarningMessage(
+            `Remove registry "${node.entry.path}"? The files are kept.`,
+            { modal: true },
+            'Remove'
+        );
+        if (confirm !== 'Remove') return;
+        await runCli(root, [
+            'registry',
+            '--remove',
+            node.entry.path,
+            '--scope',
+            node.entry.scope,
+            '--cwd',
+            root,
+        ]);
+        await registries.refresh();
+    };
+
+    /** Add an item (template/provider) through the category's flow. */
+    const addRegistryEntry = async (node?: RegistryItemNode): Promise<void> => {
+        if (!node) return;
+        if (node.category === 'providers') {
+            await addProvider();
+            await providers.refresh();
+        } else {
+            await addTemplate();
+            await templates.refresh();
+        }
+        await registries.refresh();
     };
 
     /** Run a provider command (`dbx <command.name>`) in a terminal. */
@@ -860,6 +1038,12 @@ export function activate(context: vscode.ExtensionContext): void {
                 case 'addProvider':
                     await addProvider();
                     await providers.refresh();
+                    break;
+                case 'registryNew':
+                    await newRegistry();
+                    break;
+                case 'registryRemove':
+                    await removeRegistry();
                     break;
                 case 'runProjectVite':
                     await runVite(action.dir);
@@ -1175,6 +1359,7 @@ export function activate(context: vscode.ExtensionContext): void {
         filesView,
         providersView,
         templatesView,
+        registriesView,
         vscode.commands.registerCommand('deltabox.toolchain.sync', async () => {
             const root = workspaceRoots()[0];
             if (root) await runCli(root, ['sync']);
@@ -1282,6 +1467,25 @@ export function activate(context: vscode.ExtensionContext): void {
             (node?: Template) => {
                 if (node) void vscode.env.clipboard.writeText(node.id);
             }
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.registry.refresh', () =>
+            registries.refresh()
+        ),
+        vscode.commands.registerCommand(
+            'deltabox.toolchain.registry.open',
+            (node?: RegistryItemNode) => openRegistryItem(node)
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.registry.new', () => newRegistry()),
+        vscode.commands.registerCommand('deltabox.toolchain.registry.remove', () =>
+            removeRegistry()
+        ),
+        vscode.commands.registerCommand(
+            'deltabox.toolchain.registry.removeOne',
+            (node?: RegistryItemNode) => removeRegistryEntry(node)
+        ),
+        vscode.commands.registerCommand(
+            'deltabox.toolchain.registry.addItem',
+            (node?: RegistryItemNode) => addRegistryEntry(node)
         ),
         vscode.commands.registerCommand(
             'deltabox.toolchain.resetToolchain',

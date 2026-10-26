@@ -41,6 +41,8 @@ export type HomeAction =
     | { type: 'toggle' }
     | { type: 'runVite' }
     | { type: 'addProvider' }
+    | { type: 'registryNew' }
+    | { type: 'registryRemove' }
     | { type: 'templateAdd' }
     | { type: 'templateRemove' }
     | { type: 'openDocs' }
@@ -229,6 +231,8 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
       <button class="secondary" data-action="runWorkflow">Run workflow\u2026</button>
       <button class="secondary" data-action="runVite">Run Vite+ command\u2026</button>
       <button class="secondary" data-action="addProvider">Add provider\u2026</button>
+      <button class="secondary" data-action="registryNew">New registry\u2026</button>
+      <button class="secondary" data-action="registryRemove">Remove registry\u2026</button>
       <button class="secondary" data-action="templateAdd">Add template\u2026</button>
       <button class="secondary" data-action="templateRemove">Remove template\u2026</button>
       <button class="secondary" data-action="resetToolchain">Reset tooling\u2026</button>

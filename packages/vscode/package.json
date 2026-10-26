@@ -230,6 +230,42 @@
                 "command": "deltabox.toolchain.templates.copyId",
                 "title": "Copy template id",
                 "category": "deltabox"
+            },
+            {
+                "command": "deltabox.toolchain.registry.new",
+                "title": "New registry…",
+                "category": "deltabox",
+                "icon": "$(add)"
+            },
+            {
+                "command": "deltabox.toolchain.registry.remove",
+                "title": "Remove registry…",
+                "category": "deltabox",
+                "icon": "$(trash)"
+            },
+            {
+                "command": "deltabox.toolchain.registry.refresh",
+                "title": "Refresh registries",
+                "category": "deltabox",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "deltabox.toolchain.registry.open",
+                "title": "Open registry",
+                "category": "deltabox",
+                "icon": "$(link-external)"
+            },
+            {
+                "command": "deltabox.toolchain.registry.addItem",
+                "title": "Add new registry",
+                "category": "deltabox",
+                "icon": "$(add)"
+            },
+            {
+                "command": "deltabox.toolchain.registry.removeOne",
+                "title": "Remove registry",
+                "category": "deltabox",
+                "icon": "$(trash)"
             }
         ],
         "viewsContainers": {
@@ -263,6 +299,12 @@
                     "id": "deltabox.templates",
                     "name": "Templates",
                     "contextualTitle": "deltabox templates"
+                },
+                {
+                    "id": "deltabox.registries",
+                    "name": "Registries",
+                    "contextualTitle": "deltabox registries",
+                    "visibility": "collapsed"
                 },
                 {
                     "id": "deltabox.files",
@@ -317,6 +359,21 @@
                 {
                     "command": "deltabox.toolchain.templates.refresh",
                     "when": "view == deltabox.templates",
+                    "group": "navigation@3"
+                },
+                {
+                    "command": "deltabox.toolchain.registry.new",
+                    "when": "view == deltabox.registries",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "deltabox.toolchain.registry.remove",
+                    "when": "view == deltabox.registries",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "deltabox.toolchain.registry.refresh",
+                    "when": "view == deltabox.registries",
                     "group": "navigation@3"
                 }
             ],
@@ -400,6 +457,21 @@
                     "command": "deltabox.toolchain.templates.copyId",
                     "when": "view == deltabox.templates && viewItem == deltabox.template",
                     "group": "deltabox@2"
+                },
+                {
+                    "command": "deltabox.toolchain.registry.open",
+                    "when": "view == deltabox.registries && viewItem == deltabox.registry",
+                    "group": "inline@1"
+                },
+                {
+                    "command": "deltabox.toolchain.registry.addItem",
+                    "when": "view == deltabox.registries && viewItem == deltabox.registry",
+                    "group": "deltabox@1"
+                },
+                {
+                    "command": "deltabox.toolchain.registry.removeOne",
+                    "when": "view == deltabox.registries && viewItem == deltabox.registry",
+                    "group": "deltabox@2"
                 }
             ],
             "commandPalette": [
@@ -450,6 +522,18 @@
                 {
                     "command": "deltabox.toolchain.templates.copyId",
                     "when": "false"
+                },
+                {
+                    "command": "deltabox.toolchain.registry.open",
+                    "when": "false"
+                },
+                {
+                    "command": "deltabox.toolchain.registry.addItem",
+                    "when": "false"
+                },
+                {
+                    "command": "deltabox.toolchain.registry.removeOne",
+                    "when": "false"
                 }
             ]
         },
@@ -465,6 +549,10 @@
             {
                 "view": "deltabox.templates",
                 "contents": "No templates. [Add template](command:deltabox.toolchain.templates.add) or [Refresh](command:deltabox.toolchain.templates.refresh)."
+            },
+            {
+                "view": "deltabox.registries",
+                "contents": "No registries. [New registry](command:deltabox.toolchain.registry.new) or [Refresh](command:deltabox.toolchain.registry.refresh)."
             },
             {
                 "view": "deltabox.files",
