@@ -62,6 +62,7 @@ prompts for the template, name and scope with clack; Ctrl-C cancels. See
 | `template:add`      | Record a source (auto-inits local; `--no-global` keeps it project-only).             |
 | `template:remove`   | Remove a source by id or `type:locate`.                                              |
 | `template:registry` | List/add/remove the global template search paths (`--vscode-dir`, `--clear`).        |
+| `registry`          | List (or `--add`/`--remove` with `--scope global\|project`) template registries.     |
 | `template:info`     | Show one template.                                                                   |
 
 See [Templates](/guide/templates).

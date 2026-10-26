@@ -212,6 +212,16 @@ dir in that config and mirrors setting changes into it, and the CLI writes the
 setting back when you change the paths. `vscodeDir` in the CLI config points at
 the VS Code user directory (the one containing `settings.json`).
 
+The project-scoped registries are stored in `.dbx/toolchain/registries.json` and
+default to `.dbx/toolchain/.registry/templates`. `dbx registry [--json]` lists
+the detected template/provider registries, and `dbx registry --add <path>
+--scope global|project` (or `--remove`) manages them. A remote (`http(s)`)
+registry is a JSON `{ "sources": [...] }` / array of sources. The VS Code
+**Registries** view (below **Templates**) shows the Providers/Templates roots
+with **New registry…** / **Remove registry…** actions; remote registries open in
+the browser. `dbx template:remove --global <id>` removes a stored global
+template.
+
 ## Online templates
 
 - **npm** — a published `@scope/create` package whose `package.json` has a

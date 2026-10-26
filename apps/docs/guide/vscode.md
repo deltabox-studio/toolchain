@@ -76,6 +76,14 @@ kept in sync with the CLI config.
 
 **Remove template source...** runs `template:list --registry` + `template:remove`.
 
+The **Registries** view (below **Templates**) shows the detected provider and
+template registries as **Providers** / **Templates** roots. Each item has **Open
+registry** (the folder in the explorer, or the website for remote URLs), **Add new
+registry** and **Remove registry** (it only drops the path, keeping the files).
+The title bar's **New registry…** / **Remove registry…** actions add or remove
+search paths, asking whether they are global or project-scoped. Remote
+registries are `http(s)` JSON registries (`{ sources }` or an array of sources).
+
 **Create from template…** prompts for the template's inputs and actions (see
 [Templates](/guide/templates)) before running `dbx create`. Scaffolding also asks
 for a package manager (`yarn` default).
@@ -130,4 +138,6 @@ Search for `deltabox:` to find:
 - **Reset tooling…**
 - **Refresh projects**
 - **Select dbx version…**
+- **New registry…**
+- **Remove registry…**
 - **Toggle auto-sync**
