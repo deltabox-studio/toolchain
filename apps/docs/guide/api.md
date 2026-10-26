@@ -73,7 +73,7 @@ the template engine.
 
 | Export                                                                        | Description                                                                              |
 | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `defineConfig(config)`                                                        | Identity helper for a typed `dbx.config.*`.                                              |
+| `defineConfig(config)`                                                        | Identity helper for a typed `dbx.config.*` (object, promise, or sync/async callback).    |
 | `sectionEnabled(section)` / `sectionConfig(section)`                          | Opt-in-by-presence helpers for a config section.                                         |
 | `resolveTokens(config)`                                                       | Flatten a config into `{{ token }}` replacements.                                        |
 | `CONFIG_FILE_NAMES`                                                           | The config file names the loader probes, in priority order.                              |
@@ -154,8 +154,9 @@ sync task (see the [Providers](/guide/providers) guide).
 | `viteProvider()` / `viteCommands()`                                | The provider descriptor and the `dbx vite:*` commands.                                              |
 | `dbx(options?)` / `DBX_TASKS` / `dbxTaskCommand(sub)`              | The Vite/Vite+ plugin and the resolved `run.tasks` to spread in.                                    |
 | `resolveDbx(cwd?)` / `runDbx(args, cwd?)`                          | Resolve/run the `dbx` binary (the project's own first; a pinned project never runs a global `dbx`). |
-| `resolveVite(options?)`                                            | Resolve `toolchain.vite` from a `dbx.config.*` (or a passed `toolchain`).                           |
-| `renderViteConfig()` / `viteConfigObject(config?)`                 | The managed `vite.config.ts` shim + the section minus `config`.                                     |
+| `resolveVite(options?)`                                            | Resolve `toolchain.vite` (or a passed `toolchain`), with inline `vite` overrides.                   |
+| `detectViteSpecifier(cwd)`                                         | Which package (`vite` / `vite-plus`) the project has, for the shim import.                          |
+| `renderViteConfig(specifier?)` / `viteConfigObject(config?)`       | The managed `vite.config.ts` shim (per specifier) + the section minus `config`.                     |
 | `viteSyncTask()`                                                   | The `vite` sync task that writes the shim.                                                          |
 
 ### `@deltabox/toolchain/cli`
