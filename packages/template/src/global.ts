@@ -46,6 +46,71 @@ export function globalProvidersPath(): string {
     return path.join(globalToolchainDir(), '.registry', 'providers.json');
 }
 
+/** The default project-scoped template registry (`<cwd>/.dbx/toolchain/.registry/templates`). */
+export function defaultProjectTemplatesRegistry(cwd: string): string {
+    return path.join(cwd, '.dbx', 'toolchain', '.registry', 'templates');
+}
+
+/** `<cwd>/.dbx/toolchain/registries.json` (the project-scoped search paths). */
+export function projectRegistriesPath(cwd: string): string {
+    return path.join(cwd, '.dbx', 'toolchain', 'registries.json');
+}
+
+/** The project-scoped registry search paths. */
+export function readProjectRegistries(cwd: string): { templates: string[] } {
+    try {
+        const raw = fs.readFileSync(projectRegistriesPath(cwd), 'utf-8').replace(/^\uFEFF/, '');
+        const parsed = JSON.parse(raw) as { templates?: unknown };
+        return {
+            templates: Array.isArray(parsed.templates)
+                ? parsed.templates.map(String).filter(Boolean)
+                : [],
+        };
+    } catch {
+        return { templates: [] };
+    }
+}
+
+/** Write the project-scoped registry search paths. */
+export function writeProjectRegistries(cwd: string, templates: string[]): void {
+    const file = projectRegistriesPath(cwd);
+    if (templates.length === 0) {
+        fs.rmSync(file, { force: true });
+        return;
+    }
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, `${JSON.stringify({ templates }, null, 4)}\n`, 'utf-8');
+}
+
+/** Add a project-scoped template registry directory (or remote URL). */
+export function addProjectRegistry(cwd: string, entry: string): void {
+    const remote = isRemoteRegistry(entry);
+    const resolved = remote ? entry : path.resolve(cwd, expandHome(entry));
+    if (!remote) fs.mkdirSync(resolved, { recursive: true });
+    const registries = readProjectRegistries(cwd);
+    const same = (existing: string): boolean =>
+        (isRemoteRegistry(existing) ? existing : path.resolve(cwd, expandHome(existing))) ===
+        resolved;
+    if (!registries.templates.some(same))
+        writeProjectRegistries(cwd, [...registries.templates, entry]);
+}
+
+/** Remove a project-scoped template registry directory (never the implicit default). */
+export function removeProjectRegistry(cwd: string, entry: string): void {
+    const remote = isRemoteRegistry(entry);
+    const resolved = remote ? entry : path.resolve(cwd, expandHome(entry));
+    const registries = readProjectRegistries(cwd);
+    writeProjectRegistries(
+        cwd,
+        registries.templates.filter(existing => {
+            const value = isRemoteRegistry(existing)
+                ? existing
+                : path.resolve(cwd, expandHome(existing));
+            return value !== resolved;
+        })
+    );
+}
+
 /** The persisted CLI config (`~/.dbx/toolchain/cli/config.json`). */
 export interface GlobalCliConfig {
     /** Template search paths (directories and/or `http(s)` registry URLs). */
@@ -204,30 +269,99 @@ export function writeVscodeSearchPaths(vscodeDir: string | undefined, paths: str
 export type SearchPathSource = 'cli' | 'vscode' | 'default';
 
 export interface ResolvedSearchPaths {
+    /** Project + global paths in load order (project first). */
     paths: string[];
+    /** Project-scoped registries. */
+    project: string[];
+    /** Global registries (CLI config / VS Code setting / default). */
+    global: string[];
     source: SearchPathSource;
     vscodeDir?: string;
 }
 
 /**
- * Resolve the template search paths: the CLI config wins, then the VS Code
- * global setting, then the default `~/.dbx/toolchain/.registry/templates`.
+ * Resolve the registry search paths: project-scoped paths first (the implicit
+ * `<cwd>/.dbx/toolchain/.registry/templates` plus `registries.json`), then the
+ * global ones (CLI config wins, then the VS Code setting, then the default).
  */
-export function resolveTemplateSearchPaths(): ResolvedSearchPaths {
+export function resolveTemplateSearchPaths(cwd?: string): ResolvedSearchPaths {
+    const project: string[] = [];
+    if (cwd) {
+        const implicit = defaultProjectTemplatesRegistry(cwd);
+        if (fs.existsSync(implicit)) project.push(implicit);
+        for (const entry of readProjectRegistries(cwd).templates) {
+            const resolved = isRemoteRegistry(entry) ? entry : path.resolve(cwd, expandHome(entry));
+            if (!project.includes(resolved)) project.push(resolved);
+        }
+    }
+
     const cli = readGlobalCliConfig();
     const vscodeDir = cli.vscodeDir ? expandHome(cli.vscodeDir) : undefined;
     const cliPaths = normalizeSearchPaths(cli.registrySearchPaths);
+    let global: string[];
+    let source: SearchPathSource;
     if (cliPaths.length > 0) {
-        return { paths: cliPaths, source: 'cli', ...(vscodeDir ? { vscodeDir } : {}) };
+        global = cliPaths;
+        source = 'cli';
+    } else {
+        const vscodePaths = readVscodeSearchPaths(vscodeDir);
+        if (vscodePaths.length > 0) {
+            global = vscodePaths;
+            source = 'vscode';
+        } else {
+            global = [defaultGlobalTemplatesDir()];
+            source = 'default';
+        }
     }
-    const vscodePaths = readVscodeSearchPaths(vscodeDir);
-    if (vscodePaths.length > 0) {
-        return { paths: vscodePaths, source: 'vscode', ...(vscodeDir ? { vscodeDir } : {}) };
-    }
+
+    const paths = [...project, ...global.filter(entry => !project.includes(entry))];
+    return { paths, project, global, source, ...(vscodeDir ? { vscodeDir } : {}) };
+}
+
+/** A detected registry (rendered by the CLI and the VS Code Registries view). */
+export interface RegistryEntry {
+    path: string;
+    scope: 'project' | 'global';
+    remote: boolean;
+    kind: 'templates' | 'providers';
+}
+
+/** List the detected template and provider registries. */
+export function listRegistries(cwd: string): {
+    templates: RegistryEntry[];
+    providers: RegistryEntry[];
+} {
+    const resolved = resolveTemplateSearchPaths(cwd);
     return {
-        paths: [defaultGlobalTemplatesDir()],
-        source: 'default',
-        ...(vscodeDir ? { vscodeDir } : {}),
+        templates: [
+            ...resolved.project.map(
+                entry =>
+                    ({
+                        path: entry,
+                        scope: 'project',
+                        remote: isRemoteRegistry(entry),
+                        kind: 'templates',
+                    }) as const
+            ),
+            ...resolved.global.map(
+                entry =>
+                    ({
+                        path: entry,
+                        scope: 'global',
+                        remote: isRemoteRegistry(entry),
+                        kind: 'templates',
+                    }) as const
+            ),
+        ],
+        providers: [
+            {
+                path: path.join(cwd, '.dbx', 'toolchain', 'providers.json'),
+                scope: 'project',
+                remote: false,
+                kind: 'providers',
+            },
+            { path: globalProvidersPath(), scope: 'global', remote: false, kind: 'providers' },
+        ],
     };
 }
 
@@ -254,6 +388,32 @@ export function addGlobalSource(source: ToolchainTemplateSource): ToolchainTempl
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, `${JSON.stringify({ sources }, null, 4)}\n`, 'utf-8');
     return sources;
+}
+
+/**
+ * Remove a template from the global registry: delete its stored directory and/or
+ * drop a matching global source. Returns whether anything was removed.
+ */
+export function removeGlobalTemplate(id: string): boolean {
+    const { global } = resolveTemplateSearchPaths();
+    let removed = false;
+    for (const entry of global) {
+        if (isRemoteRegistry(entry)) continue;
+        const dir = path.join(entry, id);
+        if (fs.existsSync(path.join(dir, 'template.json'))) {
+            fs.rmSync(dir, { recursive: true, force: true });
+            removed = true;
+        }
+    }
+    const sources = readGlobalSources();
+    const kept = sources.filter(source => (source.id ?? source.locate) !== id);
+    if (kept.length !== sources.length) {
+        const file = globalSourcesPath();
+        if (kept.length === 0) fs.rmSync(file, { force: true });
+        else fs.writeFileSync(file, `${JSON.stringify({ sources: kept }, null, 4)}\n`, 'utf-8');
+        removed = true;
+    }
+    return removed;
 }
 
 /** Directories never copied when a template is stored globally. */
@@ -292,8 +452,8 @@ export interface GlobalTemplates {
  * Load the global templates: local search paths are scanned for template dirs,
  * and remote registry URLs are fetched (their `{ sources }` / array is merged).
  */
-export async function loadGlobalTemplates(): Promise<GlobalTemplates> {
-    const { paths } = resolveTemplateSearchPaths();
+export async function loadGlobalTemplates(cwd?: string): Promise<GlobalTemplates> {
+    const { paths } = resolveTemplateSearchPaths(cwd);
     const templates: Template[] = [];
     const sources: ToolchainTemplateSource[] = readGlobalSources();
     for (const entry of paths) {
@@ -304,8 +464,14 @@ export async function loadGlobalTemplates(): Promise<GlobalTemplates> {
                 const parsed = (await response.json()) as unknown;
                 const list = Array.isArray(parsed)
                     ? parsed
-                    : (parsed as { sources?: unknown }).sources;
-                if (Array.isArray(list)) sources.push(...(list as ToolchainTemplateSource[]));
+                    : ((parsed as { sources?: unknown; templates?: unknown }).sources ??
+                      (parsed as { templates?: unknown }).templates);
+                if (Array.isArray(list)) {
+                    for (const item of list) {
+                        if (item && typeof item === 'object' && 'type' in item && 'locate' in item)
+                            sources.push(item as ToolchainTemplateSource);
+                    }
+                }
             } catch {
                 // A broken/unreachable remote registry is skipped.
             }

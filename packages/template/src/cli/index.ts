@@ -8,9 +8,15 @@ import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 import {
     addGlobalSource,
     addGlobalTemplate,
+    addProjectRegistry,
     defaultGlobalTemplatesDir,
+    expandHome,
+    listRegistries,
+    loadGlobalTemplates,
     normalizeSearchPaths,
     readGlobalCliConfig,
+    removeGlobalTemplate,
+    removeProjectRegistry,
     resolveTemplateSearchPaths,
     writeGlobalCliConfig,
     writeVscodeSearchPaths,
@@ -88,6 +94,7 @@ export function templateCommands(): ToolchainCommand[] {
                 CWD_OPTION,
                 { flags: '--online', description: 'Resolve online sources (npm/git).' },
                 { flags: '--offline', description: 'Force offline (skip npm/git).' },
+                { flags: '--global', description: 'Only the global registry templates.' },
                 KIND_OPTION,
                 {
                     flags: '--registry',
@@ -97,6 +104,20 @@ export function templateCommands(): ToolchainCommand[] {
             ],
             run: async (opts, context) => {
                 const cwd = (opts.cwd as string | undefined) ?? context.cwd;
+                if (opts.global) {
+                    const global = await loadGlobalTemplates(cwd);
+                    if (opts.json) {
+                        logger.raw(JSON.stringify(global.templates.map(toJson), null, 4));
+                        return;
+                    }
+                    if (global.templates.length === 0) {
+                        logger.info('no global templates found.');
+                        return;
+                    }
+                    for (const template of global.templates)
+                        logger.info(`  ${template.id.padEnd(24)} ${template.name}`);
+                    return;
+                }
                 if (opts.registry) {
                     const sources = readTemplateRegistry(cwd).sources;
                     if (opts.json) {
@@ -279,8 +300,26 @@ export function templateCommands(): ToolchainCommand[] {
             name: 'template:remove',
             description: 'Remove a source from .dbx/toolchain/templates.json.',
             args: [{ name: 'id', description: 'Source id or type:locate.' }],
-            options: [CWD_OPTION, { flags: '--json', description: 'Print the registry as JSON.' }],
+            options: [
+                CWD_OPTION,
+                { flags: '--global', description: 'Remove the template from the global registry.' },
+                { flags: '--json', description: 'Print the registry as JSON.' },
+            ],
             run: (opts, context) => {
+                if (opts.global) {
+                    const removed = removeGlobalTemplate(String(opts.id));
+                    if (opts.json) {
+                        logger.raw(JSON.stringify({ removed }, null, 4));
+                        return;
+                    }
+                    if (!removed) {
+                        logger.error(`no global template matching "${opts.id}".`);
+                        process.exitCode = 1;
+                        return;
+                    }
+                    logger.info(`removed global template "${opts.id}".`);
+                    return;
+                }
                 const { registry, removed } = removeTemplateSource(context.cwd, String(opts.id));
                 if (opts.json) {
                     logger.raw(JSON.stringify(registry, null, 4));
@@ -346,6 +385,50 @@ export function templateCommands(): ToolchainCommand[] {
                 for (const entry of paths) logger.info(`  ${entry}`);
                 if (cli.vscodeDir) logger.info(`VS Code user dir: ${cli.vscodeDir}`);
                 if (changed) logger.info('updated the CLI config and VS Code setting.');
+            },
+        },
+        {
+            name: 'registry',
+            description: 'List or manage the template/provider registries.',
+            options: [
+                CWD_OPTION,
+                { flags: '--add <path>', description: 'Add a template registry path.' },
+                { flags: '--remove <path>', description: 'Remove a template registry path.' },
+                { flags: '--scope <scope>', description: 'project | global (default: global).' },
+                { flags: '--json', description: 'Print the registries as JSON.' },
+            ],
+            run: (opts, context) => {
+                const cwd = (opts.cwd as string | undefined) ?? context.cwd;
+                const scope = (opts.scope as string | undefined) ?? 'global';
+                const change = (opts.add ?? opts.remove) as string | undefined;
+                if (change) {
+                    if (scope === 'global') {
+                        const cli = readGlobalCliConfig();
+                        const target = expandHome(change);
+                        const paths = normalizeSearchPaths(cli.registrySearchPaths);
+                        const next = opts.add
+                            ? [...new Set([...paths, target])]
+                            : paths.filter(entry => entry !== target);
+                        writeGlobalCliConfig({ registrySearchPaths: next });
+                    } else if (opts.add) {
+                        addProjectRegistry(cwd, change);
+                    } else {
+                        removeProjectRegistry(cwd, change);
+                    }
+                }
+
+                const result = listRegistries(cwd);
+                if (opts.json) {
+                    logger.raw(JSON.stringify(result, null, 4));
+                    return;
+                }
+                for (const [kind, entries] of Object.entries(result)) {
+                    logger.info(kind);
+                    for (const entry of entries)
+                        logger.info(
+                            `  [${entry.scope}${entry.remote ? ', remote' : ''}] ${entry.path}`
+                        );
+                }
             },
         },
         {

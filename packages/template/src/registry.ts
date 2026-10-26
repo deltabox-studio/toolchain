@@ -114,7 +114,7 @@ export async function loadTemplates(options: LoadTemplatesOptions): Promise<Temp
     // `~/.dbx/toolchain/.registry/templates`) plus remote registry URLs. The
     // project's own sources are loaded first, so a local template wins on an id
     // clash.
-    const global = await loadGlobalTemplates();
+    const global = await loadGlobalTemplates(options.cwd);
     const sources = [...collectSources(options), ...global.sources];
 
     for (const source of sources) {
