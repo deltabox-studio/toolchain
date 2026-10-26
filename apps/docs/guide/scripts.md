@@ -122,22 +122,26 @@ Remove `turbo` and `turbo.json`. Ordering comes from each package's
 ## Per-workspace tasks
 
 For cached, dependency-aware tasks, define them in each package's
-`vite.config.ts` rather than `package.json` — a task and a script cannot share a
+`dbx.config.*` rather than `package.json` — a task and a script cannot share a
 name:
 
-```ts [vite.config.ts]
-import { defineConfig } from 'vite-plus';
+```ts [packages/<pkg>/dbx.config.ts]
+import { defineConfig } from '@deltabox/toolchain';
 
 export default defineConfig({
-    run: {
-        tasks: {
-            build: {
-                command: 'tsdown --config-loader unrun',
-                cache: { input: [{ auto: true }, '!dist/**'], output: ['dist/**'] },
-            },
-            test: {
-                command: 'vitest run',
-                cache: { input: [{ auto: true }], output: [] },
+    toolchain: {
+        vite: {
+            run: {
+                tasks: {
+                    build: {
+                        command: 'tsdown --config-loader unrun',
+                        cache: { input: [{ auto: true }, '!dist/**'], output: ['dist/**'] },
+                    },
+                    test: {
+                        command: 'vitest run',
+                        cache: { input: [{ auto: true }], output: [] },
+                    },
+                },
             },
         },
     },

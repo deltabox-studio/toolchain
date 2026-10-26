@@ -33,32 +33,38 @@ dbx project:init:workspace --name utils --scope @acme --root . --dir packages/ut
 
 ## Tasks
 
-This repo (and Vite+ consumers) use **Vite Task** (`dbx run`) instead of Turbo.
+`deltabox toolchain` (and Vite+ consumers) use **Vite Task** (`dbx run`) instead of Turbo.
 The package graph orders execution via each package's `package.json`
 dependencies.
 
 Each package declares `build`, `typecheck` and `test` in its own
-`vite.config.ts` with explicit cache input/output, so `dbx run` reports cache
+`dbx.config.*` with explicit cache input/output, so `dbx run` reports cache
 hits (a `package.json` script cannot carry cache config):
 
-```ts [packages/<pkg>/vite.config.ts]
+```ts [packages/<pkg>/dbx.config.ts]
+import { defineConfig } from '@deltabox/toolchain';
+
 export default defineConfig({
-    run: {
-        tasks: {
-            build: {
-                command: 'tsdown --config-loader unrun',
-                cache: {
-                    input: [{ auto: true }, '!dist/**', '!**/*.tsbuildinfo'],
-                    output: ['dist/**'],
+    toolchain: {
+        vite: {
+            run: {
+                tasks: {
+                    build: {
+                        command: 'tsdown --config-loader unrun',
+                        cache: {
+                            input: [{ auto: true }, '!dist/**', '!**/*.tsbuildinfo'],
+                            output: ['dist/**'],
+                        },
+                    },
+                    typecheck: {
+                        command: 'tsc -p tsconfig.build.json --noEmit',
+                        cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
+                    },
+                    test: {
+                        command: 'vitest run',
+                        cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
+                    },
                 },
-            },
-            typecheck: {
-                command: 'tsc -p tsconfig.build.json --noEmit',
-                cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
-            },
-            test: {
-                command: 'vitest run',
-                cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
             },
         },
     },
