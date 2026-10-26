@@ -239,13 +239,13 @@ code --install-extension deltabox.toolchain-vscode
 | Sync all / active / selected | Run `dbx sync` (`--recursive` / per project).                                           |
 | Check sync                   | `sync --check` across the workspace.                                                    |
 | Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**. |
-| Add template…                | `template:init --add` on a folder you pick (any kind).                                  |
+| Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.       |
 | Remove template…             | `template:list --registry` then `template:remove`.                                      |
 | Generate configs             | `project:config` for projects missing a config.                                         |
 | Run workflow                 | Trigger generated GitHub workflows.                                                     |
 | Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                          |
 | Create Vite+ project…        | `vp create` in a terminal.                                                              |
-| Add provider...              | Register a custom provider in `.dbx/toolchain/providers.json`.                          |
+| Add provider...              | Register a custom provider (project or global registry).                                |
 | Run command...               | Run a provider command (`dbx <command>`) in a terminal.                                 |
 | Create from template...      | `dbx create --template <id>` (terminal for online templates).                           |
 | Reset tooling                | Remove generated files / manifest / config.                                             |
@@ -272,9 +272,17 @@ actions, scoped to that project:
 
 The **Providers** and **Templates** views read `dbx providers --json` and `dbx template:list --json`, so adding one surfaces it in the UI automatically.
 
-**Add provider...** writes a custom provider to `.dbx/toolchain/providers.json`, which `toolchainProviders()` merges with the built-ins, so a registered provider's commands also become `dbx` commands (`dbx <command>`), runnable from the view.
+**Add provider...** writes a custom provider to `.dbx/toolchain/providers.json`
+(or the global `~/.dbx/toolchain/.registry/providers.json` when you choose the
+global scope), which `toolchainProviders()` merges with the built-ins, so a
+registered provider's commands also become `dbx` commands (`dbx <command>`),
+runnable from the view.
 
-**Add template...** runs `template:init --add`.
+**Add template...** runs `template:init --add` and asks whether to add the
+template to the **global** registry (yes by default), so it is available in every
+project. See [Global templates](/guide/templates#global-templates). The
+`deltabox.templatesSearchPaths` setting controls the global search paths and is
+kept in sync with the CLI config.
 
 **Remove template source...** runs `template:list --registry` + `template:remove`.
 
@@ -294,12 +302,13 @@ When a sync finds no workspace tsconfig files while `tsconfig.refs`/`tsconfig.co
 
 ## Settings
 
-| Setting                       | Default                 | Description                   |
-| ----------------------------- | ----------------------- | ----------------------------- |
-| `deltabox.toolchain.enabled`  | `true`                  | Auto sync on watched changes. |
-| `deltabox.toolchain.debounce` | `300`                   | Debounce (ms) before a sync.  |
-| `deltabox.toolchain.command`  | `sync`                  | The command to run on change. |
-| `deltabox.toolchain.watch`    | config + tsconfig globs | Inputs that trigger a sync.   |
+| Setting                         | Default                 | Description                                                  |
+| ------------------------------- | ----------------------- | ------------------------------------------------------------ |
+| `deltabox.toolchain.enabled`    | `true`                  | Auto sync on watched changes.                                |
+| `deltabox.toolchain.debounce`   | `300`                   | Debounce (ms) before a sync.                                 |
+| `deltabox.toolchain.command`    | `sync`                  | The command to run on change.                                |
+| `deltabox.toolchain.watch`      | config + tsconfig globs | Inputs that trigger a sync.                                  |
+| `deltabox.templatesSearchPaths` | `[]`                    | Global template search paths (dirs or `http(s)` registries). |
 
 ## Command palette
 
@@ -413,13 +422,14 @@ prompts for the template, name and scope with clack; Ctrl-C cancels. See
 
 ## Templates
 
-| Command           | Description                                                            |
-| ----------------- | ---------------------------------------------------------------------- |
-| `template:list`   | List templates (`--kind`, `--registry`, `--online`, `--json`).         |
-| `template:init`   | Write a `template.json` to a directory (`--kind`, `--name`, `--add`).  |
-| `template:add`    | Record a source in `.dbx/toolchain/templates.json` (auto-inits local). |
-| `template:remove` | Remove a source by id or `type:locate`.                                |
-| `template:info`   | Show one template.                                                     |
+| Command             | Description                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------ |
+| `template:list`     | List templates (`--kind`, `--registry`, `--online`, `--json`).                       |
+| `template:init`     | Write a `template.json` to a directory (`--kind`, `--name`, `--add`, `--no-global`). |
+| `template:add`      | Record a source (auto-inits local; `--no-global` keeps it project-only).             |
+| `template:remove`   | Remove a source by id or `type:locate`.                                              |
+| `template:registry` | List/add/remove the global template search paths (`--vscode-dir`, `--clear`).        |
+| `template:info`     | Show one template.                                                                   |
 
 See [Templates](/guide/templates).
 
@@ -2044,9 +2054,12 @@ export default defineConfig({
 ## Custom providers
 
 Register extra providers in `.dbx/toolchain/providers.json` (a list of provider
-descriptors). `toolchainProviders()` merges them with the built-ins, so a custom
-provider's commands become `dbx` commands — `dbx <command.name>` forwards to
-`<binary> <subcommand> ...` — and it shows up in `dbx providers` and the editor.
+descriptors). A provider can also live in the **global** registry at
+`~/.dbx/toolchain/.registry/providers.json`, so it is available in every project;
+`toolchainProviders()` merges both with the built-ins (a project provider wins on
+an id clash), so a custom provider's commands become `dbx` commands —
+`dbx <command.name>` forwards to `<binary> <subcommand> ...` — and it shows up in
+`dbx providers` and the editor.
 
 ```json [.dbx/toolchain/providers.json]
 [
@@ -2733,6 +2746,39 @@ export default defineConfig({
 });
 ```
 
+## Global templates
+
+A template registered with `template:init --add` or `template:add` is **also**
+stored in the global registry at `~/.dbx/toolchain/.registry/templates`, so it is
+available in every project (and in the VS Code extension). Pass `--no-global` to
+keep it project-only:
+
+```sh
+dbx template:init ./templates/acme --kind application --name "Acme" --add  # local + global
+dbx template:add ./templates --no-global                                  # project only
+```
+
+Global templates are merged with the project's own; a project template wins on an
+id clash. The global search paths default to
+`~/.dbx/toolchain/.registry/templates`, and each path may be a directory or an
+`http(s)` **remote registry** (a JSON `{ "sources": [...] }` or an array of
+sources):
+
+```sh
+dbx template:registry                         # list the resolved paths
+dbx template:registry --add ~/shared/templates --add https://acme.dev/templates.json
+dbx template:registry --set ~/shared/templates
+dbx template:registry --remove ~/shared/templates
+dbx template:registry --clear                 # reset to the default
+```
+
+The paths live in the CLI config `~/.dbx/toolchain/cli/config.json`
+(`templatesSearchPaths`, a string or array) and are kept in sync with the VS Code
+setting `deltabox.templatesSearchPaths`: the extension records the VS Code user
+dir in that config and mirrors setting changes into it, and the CLI writes the
+setting back when you change the paths. `vscodeDir` in the CLI config points at
+the VS Code user directory (the one containing `settings.json`).
+
 ## Online templates
 
 * **npm** — a published `@scope/create` package whose `package.json` has a
@@ -2746,8 +2792,11 @@ export default defineConfig({
 ## VS Code
 
 The extension drives the same CLI: **From template…** runs `template:list --json`
-then `create`; **Add template…** runs `template:init --add` on a folder you pick;
-and **Remove template…** runs `template:list --registry` then `template:remove`.
+then `create`; **Add template…** runs `template:init --add` on a folder you pick
+and asks whether to add it to the **global** registry (yes by default);
+**Remove template…** runs `template:list --registry` then `template:remove`. The
+`deltabox.templatesSearchPaths` setting controls the global search paths (see
+[Global templates](#global-templates)).
 
 ---
 

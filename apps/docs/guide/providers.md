@@ -142,9 +142,12 @@ export default defineConfig({
 ## Custom providers
 
 Register extra providers in `.dbx/toolchain/providers.json` (a list of provider
-descriptors). `toolchainProviders()` merges them with the built-ins, so a custom
-provider's commands become `dbx` commands — `dbx <command.name>` forwards to
-`<binary> <subcommand> ...` — and it shows up in `dbx providers` and the editor.
+descriptors). A provider can also live in the **global** registry at
+`~/.dbx/toolchain/.registry/providers.json`, so it is available in every project;
+`toolchainProviders()` merges both with the built-ins (a project provider wins on
+an id clash), so a custom provider's commands become `dbx` commands —
+`dbx <command.name>` forwards to `<binary> <subcommand> ...` — and it shows up in
+`dbx providers` and the editor.
 
 ```json [.dbx/toolchain/providers.json]
 [

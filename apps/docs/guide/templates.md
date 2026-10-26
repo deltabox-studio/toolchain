@@ -179,6 +179,39 @@ export default defineConfig({
 });
 ```
 
+## Global templates
+
+A template registered with `template:init --add` or `template:add` is **also**
+stored in the global registry at `~/.dbx/toolchain/.registry/templates`, so it is
+available in every project (and in the VS Code extension). Pass `--no-global` to
+keep it project-only:
+
+```sh
+dbx template:init ./templates/acme --kind application --name "Acme" --add  # local + global
+dbx template:add ./templates --no-global                                  # project only
+```
+
+Global templates are merged with the project's own; a project template wins on an
+id clash. The global search paths default to
+`~/.dbx/toolchain/.registry/templates`, and each path may be a directory or an
+`http(s)` **remote registry** (a JSON `{ "sources": [...] }` or an array of
+sources):
+
+```sh
+dbx template:registry                         # list the resolved paths
+dbx template:registry --add ~/shared/templates --add https://acme.dev/templates.json
+dbx template:registry --set ~/shared/templates
+dbx template:registry --remove ~/shared/templates
+dbx template:registry --clear                 # reset to the default
+```
+
+The paths live in the CLI config `~/.dbx/toolchain/cli/config.json`
+(`templatesSearchPaths`, a string or array) and are kept in sync with the VS Code
+setting `deltabox.templatesSearchPaths`: the extension records the VS Code user
+dir in that config and mirrors setting changes into it, and the CLI writes the
+setting back when you change the paths. `vscodeDir` in the CLI config points at
+the VS Code user directory (the one containing `settings.json`).
+
 ## Online templates
 
 - **npm** — a published `@scope/create` package whose `package.json` has a
@@ -192,5 +225,8 @@ export default defineConfig({
 ## VS Code
 
 The extension drives the same CLI: **From template…** runs `template:list --json`
-then `create`; **Add template…** runs `template:init --add` on a folder you pick;
-and **Remove template…** runs `template:list --registry` then `template:remove`.
+then `create`; **Add template…** runs `template:init --add` on a folder you pick
+and asks whether to add it to the **global** registry (yes by default);
+**Remove template…** runs `template:list --registry` then `template:remove`. The
+`deltabox.templatesSearchPaths` setting controls the global search paths (see
+[Global templates](#global-templates)).

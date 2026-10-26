@@ -55,13 +55,14 @@ prompts for the template, name and scope with clack; Ctrl-C cancels. See
 
 ## Templates
 
-| Command           | Description                                                            |
-| ----------------- | ---------------------------------------------------------------------- |
-| `template:list`   | List templates (`--kind`, `--registry`, `--online`, `--json`).         |
-| `template:init`   | Write a `template.json` to a directory (`--kind`, `--name`, `--add`).  |
-| `template:add`    | Record a source in `.dbx/toolchain/templates.json` (auto-inits local). |
-| `template:remove` | Remove a source by id or `type:locate`.                                |
-| `template:info`   | Show one template.                                                     |
+| Command             | Description                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------ |
+| `template:list`     | List templates (`--kind`, `--registry`, `--online`, `--json`).                       |
+| `template:init`     | Write a `template.json` to a directory (`--kind`, `--name`, `--add`, `--no-global`). |
+| `template:add`      | Record a source (auto-inits local; `--no-global` keeps it project-only).             |
+| `template:remove`   | Remove a source by id or `type:locate`.                                              |
+| `template:registry` | List/add/remove the global template search paths (`--vscode-dir`, `--clear`).        |
+| `template:info`     | Show one template.                                                                   |
 
 See [Templates](/guide/templates).
 
