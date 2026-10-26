@@ -82,11 +82,22 @@ export interface DbxConfig {
     toolchain?: ToolchainConfig;
 }
 
+/** A `dbx.config` callback: returns the config synchronously or as a promise. */
+export type DbxConfigFunction = () => DbxConfig | Promise<DbxConfig>;
+
+/** Everything {@link defineConfig} accepts: an object, a promise, or a callback. */
+export type DbxConfigInput = DbxConfig | Promise<DbxConfig> | DbxConfigFunction;
+
 /**
  * Identity helper that gives a config file full type-checking + autocomplete.
- * Mirrors Vite's `defineConfig`: `export default defineConfig({ toolchain: { ... } })`.
+ * Mirrors Vite's `defineConfig`: the argument may be an object, a promise, or a
+ * sync/async callback returning the config. The loader resolves it, so a config
+ * can do async work before returning `{ toolchain }`.
  */
-export function defineConfig(config: DbxConfig): DbxConfig {
+export function defineConfig(config: Promise<DbxConfig>): Promise<DbxConfig>;
+export function defineConfig(config: DbxConfigFunction): DbxConfigFunction;
+export function defineConfig(config: DbxConfig): DbxConfig;
+export function defineConfig(config: DbxConfigInput): DbxConfigInput {
     return config;
 }
 

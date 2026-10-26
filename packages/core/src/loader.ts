@@ -140,10 +140,21 @@ async function importModule(file: string): Promise<unknown> {
 
 /** Read the `toolchain` section out of a config module. */
 async function readToolchainConfig(file: string): Promise<ToolchainConfig> {
-    const loaded = await importModule(file);
+    const loaded = await resolveConfigExport(await importModule(file));
     const toolchain =
         loaded && typeof loaded === 'object' ? (loaded as DbxConfig).toolchain : undefined;
     return toolchain && typeof toolchain === 'object' ? toolchain : {};
+}
+
+/**
+ * Resolve a config module's export the way Vite does: await a promise, and call
+ * a callback (then await its return value). This lets `defineConfig` accept
+ * `{ ... }`, `Promise<{ ... }>` or `() => ({ ... }) | Promise<{ ... }>`.
+ */
+async function resolveConfigExport(value: unknown): Promise<unknown> {
+    let resolved = await value;
+    if (typeof resolved === 'function') resolved = await (resolved as () => unknown)();
+    return resolved;
 }
 
 /** `project` fields that are per-project identity and are never inherited. */

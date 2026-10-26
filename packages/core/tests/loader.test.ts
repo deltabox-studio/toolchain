@@ -68,6 +68,26 @@ describe('loadToolchainConfig', () => {
         await loadToolchainConfig(cwd);
         expect((globalThis as Record<string, unknown>).__dbxHook).toBe(true);
     });
+
+    it('resolves a config exported as an async callback', async () => {
+        const cwd = tmp();
+        fs.writeFileSync(
+            path.join(cwd, 'dbx.config.mjs'),
+            `export default async () => ({ toolchain: { project: { name: 'callback' } } });\n`
+        );
+        const loaded = await loadToolchainConfig(cwd);
+        expect(loaded.config.project?.name).toBe('callback');
+    });
+
+    it('resolves a config exported as a promise', async () => {
+        const cwd = tmp();
+        fs.writeFileSync(
+            path.join(cwd, 'dbx.config.mjs'),
+            `export default Promise.resolve({ toolchain: { project: { name: 'promised' } } });\n`
+        );
+        const loaded = await loadToolchainConfig(cwd);
+        expect(loaded.config.project?.name).toBe('promised');
+    });
 });
 
 describe('nested config inheritance', () => {
