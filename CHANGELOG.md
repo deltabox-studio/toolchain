@@ -1,8 +1,19 @@
 # Changelog
 
-## 1.11.3 (October 2026)
+## 1.11.4 (October 2026)
 
 <!-- release:start -->
+
+### Documentation
+- Updated misleading docs ([#5a5e44c](https://github.com/deltabox-studio/toolchain/commit/5a5e44c) by [T0chi](https://github.com/T0chi))
+### Chores
+#### Vscode
+- Rearranged views order ([#0620097](https://github.com/deltabox-studio/toolchain/issues/0620097) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 1.11.3 (October 2026)
 
 ### Bug fixes
 #### Ci
@@ -18,9 +29,6 @@
   - Run the formatter over `apps/docs/.vitepress/theme/style.css` (trailing
     whitespace, indentation, numeric normalization) so `yarn format` no longer
     dirties the tree.
-
-<!-- release:end -->
-
 
 ## 1.11.2 (October 2026)
 

@@ -2,7 +2,7 @@
     "name": "toolchain-vscode",
     "displayName": "deltabox toolchain",
     "description": "All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.",
-    "version": "1.11.3",
+    "version": "1.11.4",
     "private": true,
     "type": "module",
     "publisher": "deltabox",
@@ -244,14 +244,14 @@
                     "contextualTitle": "deltabox toolchain"
                 },
                 {
-                    "id": "deltabox.providers",
-                    "name": "Providers",
-                    "contextualTitle": "deltabox providers"
-                },
-                {
                     "id": "deltabox.projects",
                     "name": "Projects",
                     "contextualTitle": "deltabox projects"
+                },
+                {
+                    "id": "deltabox.providers",
+                    "name": "Providers",
+                    "contextualTitle": "deltabox providers"
                 },
                 {
                     "id": "deltabox.templates",
