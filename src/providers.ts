@@ -7,7 +7,7 @@
  * editor automatically.
  */
 
-import { readProviderRegistry } from '@deltabox/toolchain-core';
+import { readAllProviders } from '@deltabox/toolchain-core';
 import { providerActions, type ToolchainProvider } from '@deltabox/toolchain-shared';
 import { viteProvider } from '@deltabox/toolchain-vite';
 
@@ -21,13 +21,13 @@ export { viteProvider } from '@deltabox/toolchain-vite';
 
 /**
  * The registered providers: the built-ins, then any custom ones from the
- * project's registry (`.dbx/toolchain/providers.json`), deduped by id. Each
+ * project + global registries, deduped by id. Each
  * carries its resolved actions (defaults applied).
  */
 export function toolchainProviders(cwd: string = process.cwd()): ToolchainProvider[] {
     const seen = new Set<string>();
     const providers: ToolchainProvider[] = [];
-    for (const provider of [viteProvider(), ...readProviderRegistry(cwd)]) {
+    for (const provider of [viteProvider(), ...readAllProviders(cwd)]) {
         if (seen.has(provider.id)) continue;
         seen.add(provider.id);
         providers.push({ ...provider, actions: providerActions(provider) });

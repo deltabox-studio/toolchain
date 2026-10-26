@@ -1,4 +1,4 @@
-import { readProviderRegistry } from '@deltabox/toolchain-core';
+import { readAllProviders } from '@deltabox/toolchain-core';
 import {
     logger,
     spawnCross,
@@ -49,7 +49,7 @@ function providerPassthrough(
 
 /** The passthrough commands for every command of the project's custom providers. */
 export function providerPassthroughCommands(cwd: string = process.cwd()): ToolchainCommand[] {
-    return readProviderRegistry(cwd).flatMap(provider =>
+    return readAllProviders(cwd).flatMap(provider =>
         provider.commands.map(command => providerPassthrough(provider, command))
     );
 }
