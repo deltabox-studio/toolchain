@@ -1045,6 +1045,9 @@ export function activate(context: vscode.ExtensionContext): void {
                 case 'registryRemove':
                     await removeRegistry();
                     break;
+                case 'selectVersion':
+                    await selectVersion();
+                    break;
                 case 'runProjectVite':
                     await runVite(action.dir);
                     break;
