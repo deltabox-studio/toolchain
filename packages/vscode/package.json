@@ -244,14 +244,14 @@
                     "contextualTitle": "deltabox toolchain"
                 },
                 {
-                    "id": "deltabox.providers",
-                    "name": "Providers",
-                    "contextualTitle": "deltabox providers"
-                },
-                {
                     "id": "deltabox.projects",
                     "name": "Projects",
                     "contextualTitle": "deltabox projects"
+                },
+                {
+                    "id": "deltabox.providers",
+                    "name": "Providers",
+                    "contextualTitle": "deltabox providers"
                 },
                 {
                     "id": "deltabox.templates",
