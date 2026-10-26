@@ -5,6 +5,16 @@ import { cancel, confirm, isCancel, select, text } from '@clack/prompts';
 
 import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
+import {
+    addGlobalSource,
+    addGlobalTemplate,
+    defaultGlobalTemplatesDir,
+    normalizeSearchPaths,
+    readGlobalCliConfig,
+    resolveTemplateSearchPaths,
+    writeGlobalCliConfig,
+    writeVscodeSearchPaths,
+} from '../global.js';
 import { TEMPLATE_MANIFEST, writeTemplateManifest } from '../local.js';
 import { parseSourceSpec } from '../online.js';
 import {
@@ -157,6 +167,10 @@ export function templateCommands(): ToolchainCommand[] {
                     flags: '--add',
                     description: 'Also record the folder in .dbx/toolchain/templates.json.',
                 },
+                {
+                    flags: '--no-global',
+                    description: 'Do not also store the template in the global registry.',
+                },
                 { flags: '--json', description: 'Print the manifest as JSON.' },
             ],
             run: (opts, context) => {
@@ -180,6 +194,13 @@ export function templateCommands(): ToolchainCommand[] {
                         locate: dir,
                         kind: manifest.kind,
                     });
+                    if (opts.global !== false) {
+                        try {
+                            addGlobalTemplate(dir, path.basename(dir));
+                        } catch (error) {
+                            logger.warn(`could not add the template globally: ${String(error)}`);
+                        }
+                    }
                 }
                 if (opts.json) {
                     logger.raw(JSON.stringify(manifest, null, 4));
@@ -208,6 +229,10 @@ export function templateCommands(): ToolchainCommand[] {
                 KIND_OPTION,
                 { flags: '--ref <ref>', description: 'Git branch/tag/commit.' },
                 { flags: '--subdir <dir>', description: 'Subdirectory within the source.' },
+                {
+                    flags: '--no-global',
+                    description: 'Do not also register the source in the global registry.',
+                },
                 { flags: '--json', description: 'Print the updated registry as JSON.' },
             ],
             run: (opts, context) => {
@@ -229,6 +254,18 @@ export function templateCommands(): ToolchainCommand[] {
                     });
                 }
                 const registry = addTemplateSource(context.cwd, source);
+                if (opts.global !== false) {
+                    try {
+                        if (source.type === 'local')
+                            addGlobalTemplate(
+                                source.locate,
+                                source.id ?? path.basename(source.locate)
+                            );
+                        else addGlobalSource(source);
+                    } catch (error) {
+                        logger.warn(`could not register the source globally: ${String(error)}`);
+                    }
+                }
                 if (opts.json) {
                     logger.raw(JSON.stringify(registry, null, 4));
                     return;
@@ -255,6 +292,60 @@ export function templateCommands(): ToolchainCommand[] {
                     return;
                 }
                 logger.info(`removed ${removed} source(s) (${registry.sources.length} left).`);
+            },
+        },
+        {
+            name: 'template:registry',
+            description:
+                'Manage the global template search paths (and sync them to the VS Code setting).',
+            options: [
+                { flags: '--list', description: 'List the resolved search paths (default).' },
+                { flags: '--add <path...>', description: 'Add global search path(s).' },
+                { flags: '--remove <path...>', description: 'Remove global search path(s).' },
+                { flags: '--set <path...>', description: 'Replace the global search paths.' },
+                { flags: '--clear', description: 'Reset the global search paths to the default.' },
+                {
+                    flags: '--vscode-dir <dir>',
+                    description: 'Record the VS Code user dir (its settings.json holds the paths).',
+                },
+                { flags: '--json', description: 'Print the resolved config as JSON.' },
+            ],
+            run: opts => {
+                let cli = readGlobalCliConfig();
+                if (opts.vscodeDir) {
+                    cli = writeGlobalCliConfig({ vscodeDir: String(opts.vscodeDir) });
+                }
+
+                const current = resolveTemplateSearchPaths();
+                let paths = current.paths;
+                if (opts.clear) paths = [defaultGlobalTemplatesDir()];
+                if (opts.set) paths = normalizeSearchPaths(opts.set as string[]);
+                if (opts.add) paths = normalizeSearchPaths([...paths, ...(opts.add as string[])]);
+                if (opts.remove) {
+                    const removed = new Set(normalizeSearchPaths(opts.remove as string[]));
+                    paths = paths.filter(entry => !removed.has(entry));
+                }
+                const changed = Boolean(opts.clear || opts.set || opts.add || opts.remove);
+                if (changed) {
+                    cli = writeGlobalCliConfig({ templatesSearchPaths: paths });
+                    if ((opts.set || opts.add || opts.remove) && cli.vscodeDir)
+                        writeVscodeSearchPaths(cli.vscodeDir, paths);
+                }
+
+                const result = {
+                    paths,
+                    source: changed ? 'cli' : current.source,
+                    defaultDir: defaultGlobalTemplatesDir(),
+                    ...(cli.vscodeDir ? { vscodeDir: cli.vscodeDir } : {}),
+                };
+                if (opts.json) {
+                    logger.raw(JSON.stringify(result, null, 4));
+                    return;
+                }
+                logger.info(`global templates dir: ${defaultGlobalTemplatesDir()}`);
+                for (const entry of paths) logger.info(`  ${entry}`);
+                if (cli.vscodeDir) logger.info(`VS Code user dir: ${cli.vscodeDir}`);
+                if (changed) logger.info('updated the CLI config and VS Code setting.');
             },
         },
         {

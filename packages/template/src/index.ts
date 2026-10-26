@@ -6,6 +6,7 @@
 
 export * from './builtin.js';
 export * from './cli/index.js';
+export * from './global.js';
 export * from './local.js';
 export * from './online.js';
 export * from './registry.js';

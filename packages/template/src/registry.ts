@@ -9,6 +9,7 @@ import {
 } from '@deltabox/toolchain-shared';
 
 import { BUILTIN_TEMPLATES } from './builtin.js';
+import { loadGlobalTemplates } from './global.js';
 import { loadLocalTemplates } from './local.js';
 import { gitTemplate, loadNpmTemplates } from './online.js';
 import type { Template } from './types.js';
@@ -109,7 +110,14 @@ export async function loadTemplates(options: LoadTemplatesOptions): Promise<Temp
 
     if (options.builtin !== false) for (const template of BUILTIN_TEMPLATES) add(template);
 
-    for (const source of collectSources(options)) {
+    // Global templates/sources: local search paths (default
+    // `~/.dbx/toolchain/.registry/templates`) plus remote registry URLs. The
+    // project's own sources are loaded first, so a local template wins on an id
+    // clash.
+    const global = await loadGlobalTemplates();
+    const sources = [...collectSources(options), ...global.sources];
+
+    for (const source of sources) {
         switch (source.type) {
             case 'builtin': {
                 const builtin = BUILTIN_TEMPLATES.find(candidate => candidate.id === source.locate);
@@ -144,5 +152,7 @@ export async function loadTemplates(options: LoadTemplatesOptions): Promise<Temp
             }
         }
     }
+
+    for (const template of global.templates) add(template);
     return out;
 }
