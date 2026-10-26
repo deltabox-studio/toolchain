@@ -101,6 +101,42 @@ describe('vite.config.ts shim', () => {
         );
     });
 
+    it('preserves existing imports/comments and merges the defineConfig import', () => {
+        const existing = [
+            '// my custom header',
+            "import defaultSomething, { defineConfig, type SomeType } from 'vite';",
+            "import react from '@vitejs/plugin-react';",
+            '',
+            'export default defineConfig({ plugins: [react()] });',
+            '',
+        ].join('\n');
+        const shim = renderViteConfig('vite', existing);
+        expect(shim).toContain('// my custom header');
+        expect(shim).toContain(
+            "import defaultSomething, { defineConfig, type SomeType, type UserConfig } from 'vite';"
+        );
+        expect(shim).toContain("import react from '@vitejs/plugin-react';");
+        expect(shim).toContain("import { resolveVite } from '@deltabox/toolchain/vite';");
+        expect(shim).toContain(
+            'export default defineConfig(resolveVite<UserConfig>({ cwd: import.meta.dirname }));'
+        );
+        // Regenerating from the shim is stable (idempotent).
+        expect(renderViteConfig('vite', shim)).toBe(shim);
+    });
+
+    it('does not duplicate defineConfig when the import is already merged', () => {
+        const existing = [
+            "import { defineConfig, type ViteUserConfig } from 'vite-plus';",
+            '',
+            'export default defineConfig({});',
+            '',
+        ].join('\n');
+        const shim = renderViteConfig('vite-plus', existing);
+        const importLine = shim.split('\n').find(line => line.includes("from 'vite-plus'")) ?? '';
+        expect((importLine.match(/defineConfig/g) ?? []).length).toBe(1);
+        expect((importLine.match(/ViteUserConfig/g) ?? []).length).toBe(1);
+    });
+
     it('strips the toolchain opt-out (`config`) from the resolved object', () => {
         expect(viteConfigObject({ config: false, fmt: { semi: true } })).toEqual({
             fmt: { semi: true },

@@ -71,18 +71,189 @@ function shimTypeName(specifier: ViteSpecifier): string {
     return specifier === 'vite' ? 'UserConfig' : 'ViteUserConfig';
 }
 
+/** A parsed `import ... from '...'` statement. */
+interface ParsedImport {
+    /** The raw statement text (may span lines). */
+    raw: string;
+    /** The module specifier. */
+    from: string;
+    /** The clause between `import` and `from` (empty for a side-effect import). */
+    clause: string;
+}
+
+/** One line/statement in a config file's leading comment+import block. */
+type HeaderEntry = { kind: 'text'; text: string } | { kind: 'import'; parsed: ParsedImport };
+
+/** Split a comma-separated list at the top level (ignores commas inside `{}`). */
+function splitSpecifiers(value: string): string[] {
+    const out: string[] = [];
+    let depth = 0;
+    let start = 0;
+    for (let i = 0; i < value.length; i++) {
+        const ch = value[i];
+        if (ch === '{' || ch === '[' || ch === '(') depth++;
+        else if (ch === '}' || ch === ']' || ch === ')') depth--;
+        else if (ch === ',' && depth === 0) {
+            out.push(value.slice(start, i).trim());
+            start = i + 1;
+        }
+    }
+    const last = value.slice(start).trim();
+    if (last) out.push(last);
+    return out.filter(Boolean);
+}
+
+/** Parse `default, * as ns, { a, type B }` into its specifier parts. */
+function parseImportClause(clause: string): {
+    default?: string;
+    namespace?: string;
+    named: string[];
+} {
+    const result: { default?: string; namespace?: string; named: string[] } = { named: [] };
+    for (const part of splitSpecifiers(clause)) {
+        if (part.startsWith('{') && part.endsWith('}')) {
+            result.named = splitSpecifiers(part.slice(1, -1));
+        } else if (part.startsWith('*')) {
+            const match = part.match(/^\*\s*as\s+([\w$]+)$/);
+            if (match?.[1]) result.namespace = match[1];
+        } else if (/^[\w$]+$/.test(part)) {
+            result.default = part;
+        }
+    }
+    return result;
+}
+
+/** Format specifier parts back into an import clause. */
+function formatImportClause(parts: {
+    default?: string;
+    namespace?: string;
+    named: string[];
+}): string {
+    const out: string[] = [];
+    if (parts.default) out.push(parts.default);
+    if (parts.namespace) out.push(`* as ${parts.namespace}`);
+    if (parts.named.length > 0) out.push(`{ ${parts.named.join(', ')} }`);
+    return out.join(', ');
+}
+
+/** Whether a line is blank or part of a comment. */
+function isCommentLine(line: string): boolean {
+    const trimmed = line.trim();
+    return (
+        trimmed === '' ||
+        trimmed.startsWith('//') ||
+        trimmed.startsWith('/*') ||
+        trimmed.startsWith('*') ||
+        trimmed.startsWith('*/')
+    );
+}
+
+/**
+ * Collect a config file's leading comment+import block (stopping at the first
+ * code line, ie. the old `export default`). Import statements may span lines.
+ */
+function leadingHeader(source: string): HeaderEntry[] {
+    const lines = source.replace(/^\uFEFF/, '').split(/\r?\n/);
+    const entries: HeaderEntry[] = [];
+    let i = 0;
+    while (i < lines.length) {
+        const line = lines[i] as string;
+        if (isCommentLine(line)) {
+            entries.push({ kind: 'text', text: line });
+            i++;
+            continue;
+        }
+        if (!line.trimStart().startsWith('import ')) break;
+        let raw = line;
+        while (
+            !/\bfrom\s*['"][^'"]+['"]\s*;?\s*$/.test(raw.trim()) &&
+            !/^import\s*['"][^'"]+['"]\s*;?\s*$/.test(raw.trim()) &&
+            i + 1 < lines.length
+        ) {
+            i++;
+            raw += `\n${lines[i]}`;
+        }
+        const from =
+            raw.match(/\bfrom\s*['"]([^'"]+)['"]/)?.[1] ??
+            raw.match(/^import\s*['"]([^'"]+)['"]/)?.[1];
+        if (!from) break;
+        const clause = raw.match(/^import\s+([\s\S]*?)\s+from\s*['"]/)?.[1] ?? '';
+        entries.push({ kind: 'import', parsed: { raw, from, clause } });
+        i++;
+    }
+    return entries;
+}
+
+/**
+ * Merge the required `defineConfig` + config-type specifiers into an existing
+ * `vite`/`vite-plus` import, preserving its default/namespace/other named
+ * imports. Other imports and comments are kept; the `resolveVite` import is
+ * dropped (the shim re-adds it) so regeneration is idempotent.
+ */
+function mergeHeader(entries: HeaderEntry[], specifier: ViteSpecifier, type: string): string[] {
+    const out: string[] = [];
+    let merged = false;
+    for (const entry of entries) {
+        if (entry.kind === 'text') {
+            out.push(entry.text);
+            continue;
+        }
+        const { from, clause } = entry.parsed;
+        if (from === '@deltabox/toolchain/vite') continue;
+        if (from === specifier && !merged) {
+            const parts = parseImportClause(clause);
+            const named = parts.named.filter(
+                name =>
+                    name.replace(/^type\s+/, '') !== 'defineConfig' &&
+                    name.replace(/^type\s+/, '') !== type
+            );
+            named.unshift('defineConfig');
+            named.push(`type ${type}`);
+            out.push(`import ${formatImportClause({ ...parts, named })} from '${specifier}';`);
+            merged = true;
+            continue;
+        }
+        out.push(entry.parsed.raw);
+    }
+    if (!merged) {
+        let index = 0;
+        while (index < out.length && isCommentLine(out[index] as string)) index++;
+        out.splice(index, 0, `import { defineConfig, type ${type} } from '${specifier}';`);
+    }
+    return out;
+}
+
 /**
  * The managed `vite.config.ts`: a header, the imports and a one-line shim that
  * resolves the real config from `dbx.config.*` at load time. `defineConfig` and
  * its config type are imported from the project's Vite package (`vite` or
  * `vite-plus`), and `resolveVite` is typed accordingly.
+ *
+ * When `existing` is given, its leading comments and imports are preserved and
+ * the `defineConfig` import is merged into them (keeping default/other named/
+ * type specifiers), so regenerating the shim never drops custom imports/comments.
  */
-export function renderViteConfig(specifier: ViteSpecifier = 'vite-plus'): string {
+export function renderViteConfig(
+    specifier: ViteSpecifier = 'vite-plus',
+    existing?: string
+): string {
     const type = shimTypeName(specifier);
+    const header = existing ? mergeHeader(leadingHeader(existing), specifier, type) : [];
+    if (header.length > 0) {
+        while (header.length > 0 && (header[header.length - 1] as string).trim() === '')
+            header.pop();
+        return [
+            ...header,
+            "import { resolveVite } from '@deltabox/toolchain/vite';",
+            '',
+            `export default defineConfig(resolveVite<${type}>({ cwd: import.meta.dirname }));`,
+            '',
+        ].join('\n');
+    }
     return [
         '// Generated by @deltabox/toolchain — edit the vite section in dbx.config and run `dbx sync`.',
-        "import { resolveVite } from '@deltabox/toolchain/vite';",
         `import { defineConfig, type ${type} } from '${specifier}';`,
+        "import { resolveVite } from '@deltabox/toolchain/vite';",
         '',
         `export default defineConfig(resolveVite<${type}>({ cwd: import.meta.dirname }));`,
         '',
@@ -104,10 +275,16 @@ export function viteSyncTask(): SyncTask {
         run: ctx => {
             const section = sectionConfig(ctx.config.vite) ?? {};
             if (section.config === false) return [];
+            let existing: string | undefined;
+            try {
+                existing = fs.readFileSync(path.join(ctx.cwd, 'vite.config.ts'), 'utf-8');
+            } catch {
+                existing = undefined;
+            }
             return [
                 {
                     path: 'vite.config.ts',
-                    content: renderViteConfig(detectViteSpecifier(ctx.cwd)),
+                    content: renderViteConfig(detectViteSpecifier(ctx.cwd), existing),
                 },
             ];
         },
