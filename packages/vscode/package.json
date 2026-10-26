@@ -493,6 +493,14 @@
                         "**/tsconfig.workspaces.json"
                     ],
                     "description": "Input globs that trigger a sync. Generated outputs are never watched (prevents sync loops)."
+                },
+                "deltabox.templatesSearchPaths": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [],
+                    "description": "Global template search paths (directories or http(s) registry URLs). Synced with the ~/.dbx/toolchain/cli/config.json registry."
                 }
             }
         }

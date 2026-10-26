@@ -23,11 +23,15 @@ import {
 } from './projects.js';
 import {
     loadProviders,
+    type Provider,
     type ProviderCommand,
     type ProviderCommandNode,
     type ProviderNode,
     ProviderTreeProvider,
+    readAllProviders,
+    readGlobalProviders,
     readProviderRegistry,
+    writeGlobalProviders,
     writeProviderRegistry,
 } from './providers.js';
 import { type SchedulerState, SyncScheduler } from './sync-scheduler.js';
@@ -224,6 +228,23 @@ export function activate(context: vscode.ExtensionContext): void {
         updateContextKeys();
         void providers.refresh();
         void templates.refresh();
+    };
+
+    /**
+     * Mirror the `deltabox.templatesSearchPaths` setting into the global CLI
+     * config (`~/.dbx/toolchain/cli/config.json`), and record the VS Code user
+     * dir there so the CLI can find the global `settings.json`.
+     */
+    const syncGlobalTemplatePaths = async (initial = false): Promise<void> => {
+        const vscodeDir = path.dirname(path.dirname(context.globalStorageUri.fsPath));
+        const paths = vscode.workspace
+            .getConfiguration('deltabox')
+            .get<string[]>('templatesSearchPaths', [])
+            .filter(Boolean);
+        const args = ['template:registry', '--vscode-dir', vscodeDir];
+        if (paths.length > 0) args.push('--set', ...paths);
+        else if (!initial) args.push('--clear');
+        await captureCli(workspaceRoots()[0] ?? process.cwd(), args);
     };
 
     const refreshGraph = async (): Promise<void> => {
@@ -465,7 +486,15 @@ export function activate(context: vscode.ExtensionContext): void {
             validateInput: value => (value.trim() ? undefined : 'Required'),
         });
         if (!name) return;
-        const code = await runCli(base, [
+        const scope = await vscode.window.showQuickPick(
+            [
+                { label: 'Yes', detail: 'Available in every project' },
+                { label: 'No', detail: 'Only in this project' },
+            ],
+            { placeHolder: 'Add this template to the global registry?' }
+        );
+        if (!scope) return;
+        const args = [
             'template:init',
             dir,
             '--kind',
@@ -475,7 +504,9 @@ export function activate(context: vscode.ExtensionContext): void {
             '--add',
             '--cwd',
             base,
-        ]);
+        ];
+        if (scope.label === 'No') args.push('--no-global');
+        const code = await runCli(base, args);
         if (code === 0) {
             vscode.window.showInformationMessage(`deltabox: added template "${name}".`);
         } else {
@@ -582,26 +613,38 @@ export function activate(context: vscode.ExtensionContext): void {
             });
         }
 
-        const registry = readProviderRegistry(root);
-        if (registry.some(provider => provider.id === id)) {
+        const existing = readAllProviders(root);
+        if (existing.some(provider => provider.id === id)) {
             vscode.window.showWarningMessage(`deltabox: provider "${id}" already exists.`);
             return;
         }
-        registry.push({
+        const provider: Provider = {
             id,
             name,
             ...(binary ? { binary } : {}),
             ...(description ? { description } : {}),
             ...(homepage ? { homepage } : {}),
             commands,
-        });
-        writeProviderRegistry(root, registry);
+        };
+        const scope = await vscode.window.showQuickPick(
+            [
+                { label: 'Yes', detail: 'Available in every project' },
+                { label: 'No', detail: 'Only in this project' },
+            ],
+            { placeHolder: 'Add this provider to the global registry?' }
+        );
+        if (!scope) return;
+        if (scope.label === 'Yes') {
+            writeGlobalProviders([...readGlobalProviders(), provider]);
+        } else {
+            writeProviderRegistry(root, [...readProviderRegistry(root), provider]);
+        }
         await providers.refresh();
         updateContextKeys();
         vscode.window.showInformationMessage(`deltabox: added provider "${name}".`);
     };
 
-    /** Remove a custom provider from the registry. */
+    /** Remove a custom provider from the (project and global) registries. */
     const removeProvider = async (node?: ProviderNode): Promise<void> => {
         if (!node || !node.custom) return;
         const confirm = await vscode.window.showWarningMessage(
@@ -610,10 +653,12 @@ export function activate(context: vscode.ExtensionContext): void {
             'Remove'
         );
         if (confirm !== 'Remove') return;
+        const id = node.provider.id;
         writeProviderRegistry(
             node.root,
-            readProviderRegistry(node.root).filter(provider => provider.id !== node.provider.id)
+            readProviderRegistry(node.root).filter(provider => provider.id !== id)
         );
+        writeGlobalProviders(readGlobalProviders().filter(provider => provider.id !== id));
         await providers.refresh();
         updateContextKeys();
     };
@@ -1248,6 +1293,9 @@ export function activate(context: vscode.ExtensionContext): void {
             output.appendLine(`dbx: auto-sync ${enabled ? 'enabled' : 'disabled'}.`);
         }),
         vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('deltabox.templatesSearchPaths')) {
+                void syncGlobalTemplatePaths().then(() => templates.refresh());
+            }
             if (!e.affectsConfiguration(SECTION)) return;
             enabled = getEnabled();
             rebuildWatchers();
@@ -1277,7 +1325,7 @@ export function activate(context: vscode.ExtensionContext): void {
     setStatus('idle');
     updateContextKeys();
     void providers.refresh();
-    void templates.refresh();
+    void syncGlobalTemplatePaths(true).then(() => templates.refresh());
     output.appendLine('dbx: extension activated.');
 }
 

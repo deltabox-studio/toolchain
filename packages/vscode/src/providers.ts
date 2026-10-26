@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import * as vscode from 'vscode';
@@ -71,6 +72,46 @@ export function writeProviderRegistry(root: string, providers: Provider[]): void
     fs.writeFileSync(file, `${JSON.stringify(providers, null, 4)}\n`, 'utf-8');
 }
 
+/** The global (`~/.dbx/toolchain/.registry/providers.json`) registry file. */
+export function globalProviderRegistryPath(): string {
+    return path.join(os.homedir(), '.dbx', 'toolchain', '.registry', 'providers.json');
+}
+
+/** Read the global providers (empty when the registry is absent/invalid). */
+export function readGlobalProviders(): Provider[] {
+    try {
+        const parsed = JSON.parse(
+            fs.readFileSync(globalProviderRegistryPath(), 'utf-8')
+        ) as unknown;
+        return Array.isArray(parsed) ? (parsed as Provider[]) : [];
+    } catch {
+        return [];
+    }
+}
+
+/** Write the global providers (removing the file when the list is empty). */
+export function writeGlobalProviders(providers: Provider[]): void {
+    const file = globalProviderRegistryPath();
+    if (providers.length === 0) {
+        fs.rmSync(file, { force: true });
+        return;
+    }
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, `${JSON.stringify(providers, null, 4)}\n`, 'utf-8');
+}
+
+/** The project + global providers (project wins on an id clash). */
+export function readAllProviders(root: string): Provider[] {
+    const seen = new Set<string>();
+    const providers: Provider[] = [];
+    for (const provider of [...readProviderRegistry(root), ...readGlobalProviders()]) {
+        if (seen.has(provider.id)) continue;
+        seen.add(provider.id);
+        providers.push(provider);
+    }
+    return providers;
+}
+
 /** A provider tree node (a provider, or one of its commands). */
 export interface ProviderNode {
     kind: 'provider';
@@ -113,7 +154,7 @@ export class ProviderTreeProvider implements vscode.TreeDataProvider<ProviderTre
             return;
         }
         const listed = await loadProviders(root);
-        const customIds = new Set(readProviderRegistry(root).map(provider => provider.id));
+        const customIds = new Set(readAllProviders(root).map(provider => provider.id));
         this.roots = listed.map(provider => ({
             kind: 'provider' as const,
             provider,
