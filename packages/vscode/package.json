@@ -59,6 +59,12 @@
                 "icon": "$(symbol-enum)"
             },
             {
+                "command": "deltabox.toolchain.selectVersion",
+                "title": "Select dbx version…",
+                "category": "deltabox",
+                "icon": "$(versions)"
+            },
+            {
                 "command": "deltabox.toolchain.syncProject",
                 "title": "Sync this project",
                 "category": "deltabox",
@@ -261,7 +267,8 @@
                 {
                     "id": "deltabox.files",
                     "name": "Managed Files",
-                    "contextualTitle": "deltabox managed files"
+                    "contextualTitle": "deltabox managed files",
+                    "visibility": "collapsed"
                 }
             ]
         },
@@ -482,6 +489,11 @@
                     "default": "sync",
                     "description": "The dbx command to run on change."
                 },
+                "deltabox.toolchain.version": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Pin the @deltabox/toolchain version this workspace runs (empty = auto: the project's install or the extension's bundled CLI)."
+                },
                 "deltabox.toolchain.watch": {
                     "type": "array",
                     "items": {
@@ -494,7 +506,7 @@
                     ],
                     "description": "Input globs that trigger a sync. Generated outputs are never watched (prevents sync loops)."
                 },
-                "deltabox.templatesSearchPaths": {
+                "deltabox.registrySearchPaths": {
                     "type": "array",
                     "items": {
                         "type": "string"

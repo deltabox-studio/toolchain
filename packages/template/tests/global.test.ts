@@ -39,8 +39,8 @@ describe('global template registry', () => {
     });
 
     it('reads search paths from the CLI config (home-expanded)', () => {
-        writeGlobalCliConfig({ templatesSearchPaths: '~/my-templates' });
-        expect(readGlobalCliConfig().templatesSearchPaths).toBe('~/my-templates');
+        writeGlobalCliConfig({ registrySearchPaths: '~/my-templates' });
+        expect(readGlobalCliConfig().registrySearchPaths).toBe('~/my-templates');
         const resolved = resolveTemplateSearchPaths();
         expect(resolved.paths).toEqual([path.join(home, 'my-templates')]);
         expect(resolved.source).toBe('cli');
@@ -87,7 +87,7 @@ describe('global template registry', () => {
 
     it('merges sources from a remote (http) registry', async () => {
         writeGlobalCliConfig({
-            templatesSearchPaths: ['https://example.com/templates.json'],
+            registrySearchPaths: ['https://example.com/templates.json'],
         });
         const fetchMock = vi.fn(async () => ({
             ok: true,

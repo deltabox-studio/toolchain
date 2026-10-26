@@ -40,6 +40,7 @@ export type HomeAction =
     | { type: 'resetToolchain' }
     | { type: 'toggle' }
     | { type: 'runVite' }
+    | { type: 'addProvider' }
     | { type: 'templateAdd' }
     | { type: 'templateRemove' }
     | { type: 'openDocs' }
@@ -159,6 +160,11 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     .accordion.open .chev { transform:rotate(180deg); }
     .moreActions { display:flex; flex-direction:column; gap:6px; margin-top:7px; }
     .moreActions button { width:100%; text-align:left; }
+    /* Prefix action buttons with a play glyph (like the Providers command items)
+       so they read as actions, not as the header card. */
+    .moreActions button::before {
+      content:'\u25B6'; margin-right:7px; font-size:9px; opacity:.75; vertical-align:middle;
+    }
     .projectList { display:flex; flex-direction:column; gap:6px; }
     .project {
       position:relative; display:flex; align-items:center; gap:9px; padding:8px 9px;
@@ -205,7 +211,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     <div class="actions">
       <button data-action="syncAll">Sync all</button>
       <button data-action="scaffold">Scaffold project</button>
-      <button class="secondary" data-action="runVite">Run Vite+\u2026</button>
+      <button class="secondary" data-action="addProvider">Add provider\u2026</button>
       <button class="secondary" data-action="templateAdd">Add template\u2026</button>
       <button class="secondary" data-action="syncCheck">Check sync</button>
       <button class="secondary" data-action="refresh">Refresh projects</button>
@@ -222,6 +228,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
       <button class="secondary" data-action="generateConfigs">Generate configs\u2026</button>
       <button class="secondary" data-action="runWorkflow">Run workflow\u2026</button>
       <button class="secondary" data-action="runVite">Run Vite+ command\u2026</button>
+      <button class="secondary" data-action="addProvider">Add provider\u2026</button>
       <button class="secondary" data-action="templateAdd">Add template\u2026</button>
       <button class="secondary" data-action="templateRemove">Remove template\u2026</button>
       <button class="secondary" data-action="resetToolchain">Reset tooling\u2026</button>

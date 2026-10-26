@@ -327,7 +327,7 @@ export function templateCommands(): ToolchainCommand[] {
                 }
                 const changed = Boolean(opts.clear || opts.set || opts.add || opts.remove);
                 if (changed) {
-                    cli = writeGlobalCliConfig({ templatesSearchPaths: paths });
+                    cli = writeGlobalCliConfig({ registrySearchPaths: paths });
                     if ((opts.set || opts.add || opts.remove) && cli.vscodeDir)
                         writeVscodeSearchPaths(cli.vscodeDir, paths);
                 }

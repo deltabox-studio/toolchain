@@ -206,8 +206,8 @@ dbx template:registry --clear                 # reset to the default
 ```
 
 The paths live in the CLI config `~/.dbx/toolchain/cli/config.json`
-(`templatesSearchPaths`, a string or array) and are kept in sync with the VS Code
-setting `deltabox.templatesSearchPaths`: the extension records the VS Code user
+(`registrySearchPaths`, a string or array) and are kept in sync with the VS Code
+setting `deltabox.registrySearchPaths`: the extension records the VS Code user
 dir in that config and mirrors setting changes into it, and the CLI writes the
 setting back when you change the paths. `vscodeDir` in the CLI config points at
 the VS Code user directory (the one containing `settings.json`).
@@ -228,5 +228,5 @@ The extension drives the same CLI: **From template…** runs `template:list --js
 then `create`; **Add template…** runs `template:init --add` on a folder you pick
 and asks whether to add it to the **global** registry (yes by default);
 **Remove template…** runs `template:list --registry` then `template:remove`. The
-`deltabox.templatesSearchPaths` setting controls the global search paths (see
+`deltabox.registrySearchPaths` setting controls the global search paths (see
 [Global templates](#global-templates)).

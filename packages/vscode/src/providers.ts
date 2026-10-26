@@ -185,9 +185,11 @@ export class ProviderTreeProvider implements vscode.TreeDataProvider<ProviderTre
         if (node.kind === 'provider') {
             const item = new vscode.TreeItem(
                 node.provider.name,
-                node.provider.commands.length
-                    ? vscode.TreeItemCollapsibleState.Collapsed
-                    : vscode.TreeItemCollapsibleState.None
+                node.provider.commands.length === 0
+                    ? vscode.TreeItemCollapsibleState.None
+                    : node.provider.id === 'vite-plus'
+                      ? vscode.TreeItemCollapsibleState.Expanded
+                      : vscode.TreeItemCollapsibleState.Collapsed
             );
             item.description = node.provider.binary ?? node.provider.id;
             item.tooltip = [

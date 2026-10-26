@@ -8,6 +8,7 @@ import {
     chooseDbxSource,
     cliInvocation,
     initDbxSource,
+    selectVersion,
     setExtensionInfo,
     spawnCli,
     workspaceRoots,
@@ -231,7 +232,7 @@ export function activate(context: vscode.ExtensionContext): void {
     };
 
     /**
-     * Mirror the `deltabox.templatesSearchPaths` setting into the global CLI
+     * Mirror the `deltabox.registrySearchPaths` setting into the global CLI
      * config (`~/.dbx/toolchain/cli/config.json`), and record the VS Code user
      * dir there so the CLI can find the global `settings.json`.
      */
@@ -239,7 +240,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const vscodeDir = path.dirname(path.dirname(context.globalStorageUri.fsPath));
         const paths = vscode.workspace
             .getConfiguration('deltabox')
-            .get<string[]>('templatesSearchPaths', [])
+            .get<string[]>('registrySearchPaths', [])
             .filter(Boolean);
         const args = ['template:registry', '--vscode-dir', vscodeDir];
         if (paths.length > 0) args.push('--set', ...paths);
@@ -335,6 +336,7 @@ export function activate(context: vscode.ExtensionContext): void {
         let failed = 0;
         for (const project of selected) {
             if ((await runCli(project.dir, ['project:config'])) !== 0) failed += 1;
+            else await runCli(project.dir, ['sync']);
         }
         await refreshGraph();
         if (failed === 0) {
@@ -351,6 +353,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     const generateProjectConfig = async (dir: string, label: string): Promise<void> => {
         const code = await runCli(dir, ['project:config']);
+        if (code === 0) await runCli(dir, ['sync']);
         await refreshGraph();
         if (code === 0)
             vscode.window.showInformationMessage(`deltabox: config written for ${label}.`);
@@ -854,6 +857,10 @@ export function activate(context: vscode.ExtensionContext): void {
                 case 'runVite':
                     await runVite();
                     break;
+                case 'addProvider':
+                    await addProvider();
+                    await providers.refresh();
+                    break;
                 case 'runProjectVite':
                     await runVite(action.dir);
                     break;
@@ -1201,6 +1208,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('deltabox.toolchain.chooseDbxSource', () =>
             chooseDbxSource(context)
         ),
+        vscode.commands.registerCommand('deltabox.toolchain.selectVersion', () => selectVersion()),
         vscode.commands.registerCommand('deltabox.toolchain.scaffold', scaffold),
         vscode.commands.registerCommand('deltabox.toolchain.refresh', refreshGraph),
         vscode.commands.registerCommand('deltabox.toolchain.refreshFiles', () => files.refresh()),
@@ -1293,7 +1301,7 @@ export function activate(context: vscode.ExtensionContext): void {
             output.appendLine(`dbx: auto-sync ${enabled ? 'enabled' : 'disabled'}.`);
         }),
         vscode.workspace.onDidChangeConfiguration(e => {
-            if (e.affectsConfiguration('deltabox.templatesSearchPaths')) {
+            if (e.affectsConfiguration('deltabox.registrySearchPaths')) {
                 void syncGlobalTemplatePaths().then(() => templates.refresh());
             }
             if (!e.affectsConfiguration(SECTION)) return;

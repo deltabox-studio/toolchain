@@ -71,7 +71,7 @@ runnable from the view.
 **Add template...** runs `template:init --add` and asks whether to add the
 template to the **global** registry (yes by default), so it is available in every
 project. See [Global templates](/guide/templates#global-templates). The
-`deltabox.templatesSearchPaths` setting controls the global search paths and is
+`deltabox.registrySearchPaths` setting controls the global search paths and is
 kept in sync with the CLI config.
 
 **Remove template source...** runs `template:list --registry` + `template:remove`.
@@ -92,13 +92,20 @@ When a sync finds no workspace tsconfig files while `tsconfig.refs`/`tsconfig.co
 
 ## Settings
 
-| Setting                         | Default                 | Description                                                  |
-| ------------------------------- | ----------------------- | ------------------------------------------------------------ |
-| `deltabox.toolchain.enabled`    | `true`                  | Auto sync on watched changes.                                |
-| `deltabox.toolchain.debounce`   | `300`                   | Debounce (ms) before a sync.                                 |
-| `deltabox.toolchain.command`    | `sync`                  | The command to run on change.                                |
-| `deltabox.toolchain.watch`      | config + tsconfig globs | Inputs that trigger a sync.                                  |
-| `deltabox.templatesSearchPaths` | `[]`                    | Global template search paths (dirs or `http(s)` registries). |
+| Setting                        | Default                 | Description                                                |
+| ------------------------------ | ----------------------- | ---------------------------------------------------------- |
+| `deltabox.toolchain.enabled`   | `true`                  | Auto sync on watched changes.                              |
+| `deltabox.toolchain.debounce`  | `300`                   | Debounce (ms) before a sync.                               |
+| `deltabox.toolchain.command`   | `sync`                  | The command to run on change.                              |
+| `deltabox.toolchain.watch`     | config + tsconfig globs | Inputs that trigger a sync.                                |
+| `deltabox.toolchain.version`   | `""` (auto)             | Pin the `@deltabox/toolchain` version this workspace runs. |
+| `deltabox.registrySearchPaths` | `[]`                    | Registry search paths (dirs or `http(s)` registries).      |
+
+When a workspace has its own `@deltabox/toolchain` whose version differs from the
+extension's bundled CLI, the extension asks which to run and shows both detected
+versions. **Select dbx version…** pins a version in the project's
+`.vscode/settings.json` (like TypeScript's version picker); it runs that version
+via `npx` unless the project already installs it.
 
 ## Command palette
 
@@ -122,4 +129,5 @@ Search for `deltabox:` to find:
 - **Create Vite+ project…**
 - **Reset tooling…**
 - **Refresh projects**
+- **Select dbx version…**
 - **Toggle auto-sync**

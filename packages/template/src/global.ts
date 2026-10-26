@@ -6,7 +6,7 @@
  * available in every project (and show up in the VS Code extension). The search
  * paths are configurable from the CLI config
  * (`~/.dbx/toolchain/cli/config.json`) and the VS Code setting
- * `deltabox.templatesSearchPaths`; the two are kept in sync.
+ * `deltabox.registrySearchPaths`; the two are kept in sync.
  */
 
 import fs from 'node:fs';
@@ -19,7 +19,7 @@ import { loadLocalTemplates } from './local.js';
 import type { Template } from './types.js';
 
 /** The VS Code setting that lists the template search paths. */
-export const VSCODE_TEMPLATES_SEARCH_PATHS = 'deltabox.templatesSearchPaths';
+export const VSCODE_REGISTRY_SEARCH_PATHS = 'deltabox.registrySearchPaths';
 
 /** `~/.dbx/toolchain`. */
 export function globalToolchainDir(): string {
@@ -49,7 +49,7 @@ export function globalProvidersPath(): string {
 /** The persisted CLI config (`~/.dbx/toolchain/cli/config.json`). */
 export interface GlobalCliConfig {
     /** Template search paths (directories and/or `http(s)` registry URLs). */
-    templatesSearchPaths?: string | string[];
+    registrySearchPaths?: string | string[];
     /** The VS Code user directory (its `settings.json` holds the search paths). */
     vscodeDir?: string;
 }
@@ -161,13 +161,13 @@ export function vscodeSettingsPath(vscodeDir: string): string {
     return path.join(expandHome(vscodeDir), 'settings.json');
 }
 
-/** Read the `deltabox.templatesSearchPaths` setting from a VS Code user dir. */
+/** Read the `deltabox.registrySearchPaths` setting from a VS Code user dir. */
 export function readVscodeSearchPaths(vscodeDir: string | undefined): string[] {
     if (!vscodeDir) return [];
     try {
         const text = fs.readFileSync(vscodeSettingsPath(vscodeDir), 'utf-8');
         return normalizeSearchPaths(
-            readJsoncValue(text, VSCODE_TEMPLATES_SEARCH_PATHS) as string | string[]
+            readJsoncValue(text, VSCODE_REGISTRY_SEARCH_PATHS) as string | string[]
         );
     } catch {
         return [];
@@ -175,7 +175,7 @@ export function readVscodeSearchPaths(vscodeDir: string | undefined): string[] {
 }
 
 /**
- * Write the `deltabox.templatesSearchPaths` setting into a VS Code user dir.
+ * Write the `deltabox.registrySearchPaths` setting into a VS Code user dir.
  * Best-effort JSONC edit: other settings/comments are preserved.
  */
 export function writeVscodeSearchPaths(vscodeDir: string | undefined, paths: string[]): boolean {
@@ -190,12 +190,11 @@ export function writeVscodeSearchPaths(vscodeDir: string | undefined, paths: str
     }
     // Skip a no-op write (which could re-trigger the extension's setting change).
     if (
-        JSON.stringify(readJsoncValue(text, VSCODE_TEMPLATES_SEARCH_PATHS)) ===
-        JSON.stringify(paths)
+        JSON.stringify(readJsoncValue(text, VSCODE_REGISTRY_SEARCH_PATHS)) === JSON.stringify(paths)
     ) {
         return false;
     }
-    const next = setJsoncValue(text, VSCODE_TEMPLATES_SEARCH_PATHS, paths);
+    const next = setJsoncValue(text, VSCODE_REGISTRY_SEARCH_PATHS, paths);
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, next, 'utf-8');
     return true;
@@ -217,7 +216,7 @@ export interface ResolvedSearchPaths {
 export function resolveTemplateSearchPaths(): ResolvedSearchPaths {
     const cli = readGlobalCliConfig();
     const vscodeDir = cli.vscodeDir ? expandHome(cli.vscodeDir) : undefined;
-    const cliPaths = normalizeSearchPaths(cli.templatesSearchPaths);
+    const cliPaths = normalizeSearchPaths(cli.registrySearchPaths);
     if (cliPaths.length > 0) {
         return { paths: cliPaths, source: 'cli', ...(vscodeDir ? { vscodeDir } : {}) };
     }

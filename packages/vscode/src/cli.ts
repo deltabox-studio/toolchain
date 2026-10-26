@@ -81,6 +81,37 @@ export function pinnedToolchainSpec(): string {
         : '@deltabox/toolchain';
 }
 
+/** The workspace setting that pins a specific `@deltabox/toolchain` version. */
+const SETTINGS_SECTION = 'deltabox.toolchain';
+
+/** The version the user picked for this workspace (`''` = auto). */
+function configuredVersion(): string {
+    return vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('version')?.trim() ?? '';
+}
+
+/** The `@deltabox/toolchain` version installed in the project (if any). */
+export function projectToolchainVersion(cwd: string = process.cwd()): string | undefined {
+    for (const dir of [cwd, ...workspaceRoots()]) {
+        try {
+            const pkg = JSON.parse(
+                fs.readFileSync(
+                    path.join(dir, 'node_modules', '@deltabox', 'toolchain', 'package.json'),
+                    'utf-8'
+                )
+            ) as { version?: unknown };
+            if (typeof pkg.version === 'string' && pkg.version) return pkg.version;
+        } catch {
+            // Try the next workspace root.
+        }
+    }
+    return undefined;
+}
+
+/** The extension's own bundled version (when known). */
+export function extensionVersion(): string | undefined {
+    return extensionInfo?.version;
+}
+
 /**
  * Which `dbx` the extension should prefer: the project's own
  * `@deltabox/toolchain` (`'project'`) or the extension's bundled `dbx.cjs`
@@ -119,17 +150,79 @@ export function projectDbx(cwd: string): CliCommand | undefined {
 }
 
 /** Show the "project vs extension `dbx`" notification and return the choice. */
-export async function promptDbxSource(): Promise<DbxSource | undefined> {
-    const useProject = "Use the project's dbx";
-    const useExtension = "Use the extension's bundled dbx";
-    const choice = await vscode.window.showInformationMessage(
-        'deltabox: this workspace has its own @deltabox/toolchain. Which dbx should the extension run?',
-        useProject,
-        useExtension
-    );
+export async function promptDbxSource(
+    projectVersion?: string,
+    extension?: string
+): Promise<DbxSource | undefined> {
+    const useProject = projectVersion
+        ? `Use the project's dbx (${projectVersion})`
+        : "Use the project's dbx";
+    const useExtension = extension
+        ? `Use the extension's dbx (${extension})`
+        : "Use the extension's bundled dbx";
+    const message =
+        projectVersion && extension
+            ? `deltabox: this workspace has @deltabox/toolchain@${projectVersion}, but the extension ships ${extension}. Which should run?`
+            : 'deltabox: this workspace has its own @deltabox/toolchain. Which dbx should the extension run?';
+    const choice = await vscode.window.showInformationMessage(message, useProject, useExtension);
     if (choice === useProject) return 'project';
     if (choice === useExtension) return 'extension';
     return undefined;
+}
+
+/**
+ * Let the user pick the `@deltabox/toolchain` version for this workspace (like
+ * TypeScript's "Select TypeScript Version"). Writes `deltabox.toolchain.version`
+ * to the project-scoped `.vscode/settings.json`; an empty value means "auto".
+ */
+export async function selectVersion(): Promise<void> {
+    const root = workspaceRoots()[0] ?? process.cwd();
+    const project = projectToolchainVersion(root);
+    const extension = extensionVersion();
+    const current = configuredVersion();
+
+    type Item = vscode.QuickPickItem & { value?: string };
+    const items: Item[] = [
+        { label: 'Auto', description: 'project or extension', value: '', picked: current === '' },
+    ];
+    if (extension)
+        items.push({
+            label: `Extension (${extension})`,
+            description: 'bundled with the extension',
+            value: extension,
+            picked: current === extension,
+        });
+    if (project && project !== extension)
+        items.push({
+            label: `Project (${project})`,
+            description: 'installed in this workspace',
+            value: project,
+            picked: current === project,
+        });
+    items.push({
+        label: '$(cloud-download) Enter a version…',
+        description: 'run via npx',
+        value: '__custom__',
+    });
+
+    const picked = await vscode.window.showQuickPick(items, {
+        placeHolder: 'Which @deltabox/toolchain version should run?',
+    });
+    if (!picked) return;
+
+    let value = picked.value ?? '';
+    if (value === '__custom__') {
+        const input = await vscode.window.showInputBox({
+            prompt: 'Version (eg. 1.11.4)',
+            value: current || extension || '',
+        });
+        if (input === undefined) return;
+        value = input.trim();
+    }
+    await vscode.workspace
+        .getConfiguration(SETTINGS_SECTION)
+        .update('version', value || undefined, vscode.ConfigurationTarget.Workspace);
+    vscode.window.showInformationMessage(`deltabox: using @deltabox/toolchain@${value || 'auto'}.`);
 }
 
 /**
@@ -139,7 +232,8 @@ export async function promptDbxSource(): Promise<DbxSource | undefined> {
  */
 export async function initDbxSource(context: vscode.ExtensionContext): Promise<void> {
     const bundled = bundledCliEntry();
-    const project = projectDbx(workspaceRoots()[0] ?? process.cwd());
+    const root = workspaceRoots()[0] ?? process.cwd();
+    const project = projectDbx(root);
     if (!bundled || !project) {
         dbxSource = project ? 'project' : 'extension';
         return;
@@ -149,7 +243,15 @@ export async function initDbxSource(context: vscode.ExtensionContext): Promise<v
         dbxSource = stored;
         return;
     }
-    dbxSource = (await promptDbxSource()) ?? 'extension';
+    // Only ask when the project pins a different version than the extension (or
+    // the version is otherwise unknown); otherwise prefer the bundled CLI.
+    const projectVersion = projectToolchainVersion(root);
+    const extension = extensionVersion();
+    if (!projectVersion || !extension || projectVersion === extension) {
+        dbxSource = 'extension';
+        return;
+    }
+    dbxSource = (await promptDbxSource(projectVersion, extension)) ?? 'extension';
     await context.workspaceState.update(DBX_SOURCE_KEY, dbxSource);
 }
 
@@ -175,6 +277,16 @@ export async function chooseDbxSource(
 export function resolveCliCommand(cwd: string): CliCommand {
     const bundled = bundledCliEntry();
     const project = projectDbx(cwd);
+    const pinned = configuredVersion();
+    if (pinned) {
+        if (project && projectToolchainVersion(cwd) === pinned) return project;
+        if (bundled && extensionVersion() === pinned)
+            return { exe: process.execPath, args: [bundled] };
+        return {
+            exe: IS_WINDOWS ? 'npx.cmd' : 'npx',
+            args: ['--yes', `@deltabox/toolchain@${pinned}`],
+        };
+    }
     if (dbxSource === 'project' && project) return project;
     if (bundled) return { exe: process.execPath, args: [bundled] };
     if (project) return project;
@@ -213,6 +325,14 @@ export function spawnCli(cwd: string, args: string[], options: SpawnOptions = {}
  */
 export function cliInvocation(cwd: string): string {
     const project = projectDbx(cwd);
+    const pinned = configuredVersion();
+    if (pinned) {
+        if (project && projectToolchainVersion(cwd) === pinned)
+            return project.args.length ? `node "${project.args[0]}"` : project.exe;
+        const bundled = bundledCliEntry();
+        if (bundled && extensionVersion() === pinned) return `node "${bundled}"`;
+        return `${IS_WINDOWS ? 'npx.cmd' : 'npx'} --yes @deltabox/toolchain@${pinned}`;
+    }
     if (dbxSource === 'project' && project) {
         return project.args.length ? `node "${project.args[0]}"` : project.exe;
     }

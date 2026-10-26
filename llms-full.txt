@@ -281,7 +281,7 @@ runnable from the view.
 **Add template...** runs `template:init --add` and asks whether to add the
 template to the **global** registry (yes by default), so it is available in every
 project. See [Global templates](/guide/templates#global-templates). The
-`deltabox.templatesSearchPaths` setting controls the global search paths and is
+`deltabox.registrySearchPaths` setting controls the global search paths and is
 kept in sync with the CLI config.
 
 **Remove template source...** runs `template:list --registry` + `template:remove`.
@@ -302,13 +302,20 @@ When a sync finds no workspace tsconfig files while `tsconfig.refs`/`tsconfig.co
 
 ## Settings
 
-| Setting                         | Default                 | Description                                                  |
-| ------------------------------- | ----------------------- | ------------------------------------------------------------ |
-| `deltabox.toolchain.enabled`    | `true`                  | Auto sync on watched changes.                                |
-| `deltabox.toolchain.debounce`   | `300`                   | Debounce (ms) before a sync.                                 |
-| `deltabox.toolchain.command`    | `sync`                  | The command to run on change.                                |
-| `deltabox.toolchain.watch`      | config + tsconfig globs | Inputs that trigger a sync.                                  |
-| `deltabox.templatesSearchPaths` | `[]`                    | Global template search paths (dirs or `http(s)` registries). |
+| Setting                        | Default                 | Description                                                |
+| ------------------------------ | ----------------------- | ---------------------------------------------------------- |
+| `deltabox.toolchain.enabled`   | `true`                  | Auto sync on watched changes.                              |
+| `deltabox.toolchain.debounce`  | `300`                   | Debounce (ms) before a sync.                               |
+| `deltabox.toolchain.command`   | `sync`                  | The command to run on change.                              |
+| `deltabox.toolchain.watch`     | config + tsconfig globs | Inputs that trigger a sync.                                |
+| `deltabox.toolchain.version`   | `""` (auto)             | Pin the `@deltabox/toolchain` version this workspace runs. |
+| `deltabox.registrySearchPaths` | `[]`                    | Registry search paths (dirs or `http(s)` registries).      |
+
+When a workspace has its own `@deltabox/toolchain` whose version differs from the
+extension's bundled CLI, the extension asks which to run and shows both detected
+versions. **Select dbx version…** pins a version in the project's
+`.vscode/settings.json` (like TypeScript's version picker); it runs that version
+via `npx` unless the project already installs it.
 
 ## Command palette
 
@@ -332,6 +339,7 @@ Search for `deltabox:` to find:
 * **Create Vite+ project…**
 * **Reset tooling…**
 * **Refresh projects**
+* **Select dbx version…**
 * **Toggle auto-sync**
 
 ---
@@ -405,13 +413,13 @@ Colour is on by default and follows `--no-color` / the [`logger` config](/guide/
 
 ## Scaffolding
 
-| Command                  | Description                                                                     |
-| ------------------------ | ------------------------------------------------------------------------------- |
-| `project:init`           | A single-package TypeScript project (`--package-manager`).                      |
-| `project:init:monorepo`  | A monorepo root (add `--example` for one example workspace).                    |
-| `project:init:workspace` | A workspace package into an existing monorepo root.                             |
-| `project:config`         | Generate `dbx.config.ts` for projects missing one.                              |
-| `create`                 | Scaffold from a template (`--template`/`--kind`, `--name`, `--scope`, `--out`). |
+| Command                  | Description                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `project:init`           | A single-package TypeScript project (`--package-manager`).                                                   |
+| `project:init:monorepo`  | A monorepo root (add `--example` for one example workspace).                                                 |
+| `project:init:workspace` | A workspace package into an existing monorepo root.                                                          |
+| `project:config`         | Generate `dbx.config.ts` for projects missing one (folds an existing `vite.config.*` into `toolchain.vite`). |
+| `create`                 | Scaffold from a template (`--template`/`--kind`, `--name`, `--scope`, `--out`).                              |
 
 Templates that declare inputs/actions are prompted for them (`--var key=value`,
 `--action <id>`), see [Templates](/guide/templates).
@@ -2773,8 +2781,8 @@ dbx template:registry --clear                 # reset to the default
 ```
 
 The paths live in the CLI config `~/.dbx/toolchain/cli/config.json`
-(`templatesSearchPaths`, a string or array) and are kept in sync with the VS Code
-setting `deltabox.templatesSearchPaths`: the extension records the VS Code user
+(`registrySearchPaths`, a string or array) and are kept in sync with the VS Code
+setting `deltabox.registrySearchPaths`: the extension records the VS Code user
 dir in that config and mirrors setting changes into it, and the CLI writes the
 setting back when you change the paths. `vscodeDir` in the CLI config points at
 the VS Code user directory (the one containing `settings.json`).
@@ -2795,7 +2803,7 @@ The extension drives the same CLI: **From template…** runs `template:list --js
 then `create`; **Add template…** runs `template:init --add` on a folder you pick
 and asks whether to add it to the **global** registry (yes by default);
 **Remove template…** runs `template:list --registry` then `template:remove`. The
-`deltabox.templatesSearchPaths` setting controls the global search paths (see
+`deltabox.registrySearchPaths` setting controls the global search paths (see
 [Global templates](#global-templates)).
 
 ---
