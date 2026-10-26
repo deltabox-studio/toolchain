@@ -149,8 +149,14 @@ export function migrateCommands(): ToolchainCommand[] {
                 }
 
                 if (results.length === 0) {
+                    // Distinguish "no such migration" from "the migration is
+                    // registered but the source config was not found" (eg. an
+                    // already-managed `vite.config.ts` shim).
+                    const registered = migrations().some(
+                        migration => !from || from === 'all' || migration.from === from
+                    );
                     logger.info(
-                        from && from !== 'all'
+                        from && from !== 'all' && !registered
                             ? `no "${from}" migration is registered.`
                             : 'nothing to migrate (no Biome/ESLint/Prettier/Dprint/vite config detected).'
                     );

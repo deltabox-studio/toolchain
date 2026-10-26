@@ -126,7 +126,11 @@ export function findTopLevelValue(
                     return [valueStart, matchBracket(source, valueStart)];
                 }
                 let valueEnd = valueStart;
-                while (valueEnd < close && source[valueEnd] !== ',') valueEnd++;
+                while (valueEnd < close && source[valueEnd] !== ',' && source[valueEnd] !== '}')
+                    valueEnd++;
+                // Drop trailing whitespace (the value may end at the object's `}`).
+                while (valueEnd > valueStart && /\s/.test(source[valueEnd - 1] as string))
+                    valueEnd--;
                 return [valueStart, valueEnd];
             }
             i = end - 1;
