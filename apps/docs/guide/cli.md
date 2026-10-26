@@ -38,13 +38,13 @@ Colour is on by default and follows `--no-color` / the [`logger` config](/guide/
 
 ## Scaffolding
 
-| Command                  | Description                                                                     |
-| ------------------------ | ------------------------------------------------------------------------------- |
-| `project:init`           | A single-package TypeScript project (`--package-manager`).                      |
-| `project:init:monorepo`  | A monorepo root (add `--example` for one example workspace).                    |
-| `project:init:workspace` | A workspace package into an existing monorepo root.                             |
-| `project:config`         | Generate `dbx.config.ts` for projects missing one.                              |
-| `create`                 | Scaffold from a template (`--template`/`--kind`, `--name`, `--scope`, `--out`). |
+| Command                  | Description                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `project:init`           | A single-package TypeScript project (`--package-manager`).                                                   |
+| `project:init:monorepo`  | A monorepo root (add `--example` for one example workspace).                                                 |
+| `project:init:workspace` | A workspace package into an existing monorepo root.                                                          |
+| `project:config`         | Generate `dbx.config.ts` for projects missing one (folds an existing `vite.config.*` into `toolchain.vite`). |
+| `create`                 | Scaffold from a template (`--template`/`--kind`, `--name`, `--scope`, `--out`).                              |
 
 Templates that declare inputs/actions are prompted for them (`--var key=value`,
 `--action <id>`), see [Templates](/guide/templates).

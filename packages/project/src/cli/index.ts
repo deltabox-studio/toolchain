@@ -241,6 +241,13 @@ export function projectCommands(): ToolchainCommand[] {
                     logger.info(
                         `  + ${config.rel === '.' ? 'dbx.config.ts' : `${config.rel}/dbx.config.ts`}  [${config.type}]`
                     );
+                    if (config.vite) {
+                        logger.info(
+                            config.vite.folded
+                                ? `    vite: folded ${path.basename(config.vite.path)} into toolchain.vite (run \`dbx sync\`)`
+                                : `    vite: left ${path.basename(config.vite.path)} alone (${config.vite.error})`
+                        );
+                    }
                 }
             },
         },

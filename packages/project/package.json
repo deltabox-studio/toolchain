@@ -17,6 +17,7 @@
     "dependencies": {
         "@deltabox/toolchain-biome": "workspace:*",
         "@deltabox/toolchain-core": "workspace:*",
+        "@deltabox/toolchain-migrate": "workspace:*",
         "@deltabox/toolchain-shared": "workspace:*",
         "@deltabox/toolchain-tsconfig": "workspace:*"
     },
