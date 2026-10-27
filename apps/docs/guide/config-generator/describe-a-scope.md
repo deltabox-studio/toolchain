@@ -33,6 +33,21 @@ export const serverConfig = z.object({
 ```
 
 `ConfigMeta` fields: `env`, `path` (dotted config path), `description`,
-`required`, `deprecated`, `example`, `secret`, `scope`, `public` (safe to expose
-to the browser) and `defaultValue` (when the resolved default differs from the env
-default).
+`required`, `deprecated`, `deprecationMessage`, `example`, `since`, `see`,
+`remarks`, `experimental`, `alpha`, `beta`, `secret`, `scope`, `public` (safe to
+expose to the browser) and `defaultValue` (when the resolved default differs
+from the env default).
+
+`required: true` adds `@required` and `- **Required**` above the markdown
+`- **Type**` line. `deprecated: true` adds `@deprecated` / `- **Deprecated**`;
+`deprecationMessage` supplies the text. `example` (string or array) adds one
+`@example` tag/entry per value under `**Example(s):**`. `since` adds `@since` /
+`- **Since**`, `see` adds `@see` / `- **See**` links, `remarks` adds `@remarks` /
+`**Remarks:**`, and `experimental`/`alpha`/`beta` add their stability tags.
+
+Each generator accepts the matching `include*` flag (all default `true`) to
+suppress an annotation: `includeRequired`, `includeDeprecated`,
+`includeExamples`, `includeSince`, `includeSee`, `includeRemarks`,
+`includeExperimental`, `includeAlpha`, `includeBeta` — for example
+`renderConfigTypes(..., { includeExamples: false })` or
+`writeMarkdown(..., { includeDeprecated: false })`.

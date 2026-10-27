@@ -47,8 +47,10 @@ subpath re-exports the types it owns.
 ## Ambient schema metadata
 
 Zod's `.meta()` is typed by default, but the toolchain adds its own fields
-(`env`, `path`, `required`, `example`, `secret`, `scope`, `public`,
-`defaultValue`). Add the ambient declaration once in a project-wide `.d.ts`:
+(`env`, `path`, `required`, `deprecated`, `deprecationMessage`, `example`,
+`since`, `see`, `remarks`, `experimental`, `alpha`, `beta`, `secret`, `scope`,
+`public`, `defaultValue`). Add the ambient declaration once in a project-wide
+`.d.ts`:
 
 ```ts [env.d.ts]
 /// <reference types="@deltabox/toolchain/globals" />
@@ -76,8 +78,9 @@ export const serverConfig = z.object({
 
 `ConfigMeta` is `ConfigBaseMeta & ConfigEnvMeta`:
 
-- `ConfigBaseMeta`: `description`, `required`, `deprecated`, `example`,
-  `secret`, `scope`, `public`, `defaultValue`.
+- `ConfigBaseMeta`: `description`, `required`, `deprecated`,
+  `deprecationMessage`, `example`, `since`, `see`, `remarks`, `experimental`,
+  `alpha`, `beta`, `secret`, `scope`, `public`, `defaultValue`.
 - `ConfigEnvMeta`: `env` and `path` (both optional, so non-env configs can use
   metadata too).
 

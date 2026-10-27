@@ -45,6 +45,24 @@ export interface GenerateTypesOptions {
     extension?: string;
     /** A raw (verbatim) header prepended to every generated file. */
     header?: string;
+    /** Emit `@required` JSDoc tags (default true). */
+    includeRequired?: boolean;
+    /** Emit `@deprecated` JSDoc tags (default true). */
+    includeDeprecated?: boolean;
+    /** Emit `@example` JSDoc tags (default true). */
+    includeExamples?: boolean;
+    /** Emit `@since` JSDoc tags (default true). */
+    includeSince?: boolean;
+    /** Emit `@see` JSDoc tags (default true). */
+    includeSee?: boolean;
+    /** Emit `@remarks` JSDoc tags (default true). */
+    includeRemarks?: boolean;
+    /** Emit `@experimental` JSDoc tags (default true). */
+    includeExperimental?: boolean;
+    /** Emit `@alpha` JSDoc tags (default true). */
+    includeAlpha?: boolean;
+    /** Emit `@beta` JSDoc tags (default true). */
+    includeBeta?: boolean;
 }
 
 /** The resolved schema for a scope (from a precomputed schema or the Zod one). */
@@ -100,6 +118,175 @@ function withIndexSignature(body: string): string {
     return `${body.slice(0, close)}    [key: string]: unknown;\n${body.slice(close)}`;
 }
 
+/** Normalize `example` metadata into a list of strings. */
+function exampleList(example: unknown): string[] {
+    if (example === undefined || example === null) return [];
+    const values = Array.isArray(example) ? example : [example];
+    return values.map(value => String(value)).filter(Boolean);
+}
+
+/** Which JSDoc tags a generator should emit. */
+type JsDocOptions = Pick<
+    GenerateTypesOptions,
+    | 'includeRequired'
+    | 'includeDeprecated'
+    | 'includeExamples'
+    | 'includeSince'
+    | 'includeSee'
+    | 'includeRemarks'
+    | 'includeExperimental'
+    | 'includeAlpha'
+    | 'includeBeta'
+>;
+
+/** The JSDoc tag lines for a node's required / deprecation / example metadata. */
+function jsDocTags(
+    meta: {
+        required?: unknown;
+        deprecated?: unknown;
+        deprecationMessage?: unknown;
+        example?: unknown;
+        since?: unknown;
+        see?: unknown;
+        remarks?: unknown;
+        experimental?: unknown;
+        alpha?: unknown;
+        beta?: unknown;
+    },
+    options: JsDocOptions
+): string[] {
+    const tags: string[] = [];
+    if (options.includeRequired !== false && meta.required === true) tags.push('@required');
+    if (
+        options.includeDeprecated !== false &&
+        meta.deprecated !== undefined &&
+        meta.deprecated !== false
+    ) {
+        const message =
+            typeof meta.deprecationMessage === 'string' ? meta.deprecationMessage.trim() : '';
+        tags.push(message ? `@deprecated ${message}` : '@deprecated');
+    }
+    if (options.includeExamples !== false) {
+        for (const example of exampleList(meta.example)) {
+            tags.push(`@example ${example}`);
+        }
+    }
+    if (options.includeSince !== false && typeof meta.since === 'string' && meta.since.trim()) {
+        tags.push(`@since ${meta.since.trim()}`);
+    }
+    if (options.includeSee !== false) {
+        for (const link of exampleList(meta.see)) tags.push(`@see ${link}`);
+    }
+    if (
+        options.includeRemarks !== false &&
+        typeof meta.remarks === 'string' &&
+        meta.remarks.trim()
+    ) {
+        tags.push(`@remarks ${meta.remarks.trim()}`);
+    }
+    if (options.includeExperimental !== false && meta.experimental === true) {
+        tags.push('@experimental');
+    }
+    if (options.includeAlpha !== false && meta.alpha === true) tags.push('@alpha');
+    if (options.includeBeta !== false && meta.beta === true) tags.push('@beta');
+    return tags;
+}
+
+/**
+ * Convert required / deprecation / example metadata into `tags` (which untyped
+ * renders as JSDoc) and strip the raw keys so they are not emitted as
+ * `@required true`, `@deprecated true` or a single comma-joined `@example`.
+ */
+function withJsDocTags(schema: Schema, options: JsDocOptions): Schema {
+    const source = schema as Record<string, unknown>;
+    const {
+        deprecated,
+        deprecationMessage,
+        example,
+        since,
+        see,
+        remarks,
+        experimental,
+        alpha,
+        beta,
+        tags: rawTags,
+        ...rest
+    } = source;
+    const requiredMeta = source.required === true;
+    const rawTagList = Array.isArray(rawTags) ? rawTags : [];
+    const keptTags = rawTagList.filter(tag => {
+        if (options.includeRequired === false && tag === '@required') return false;
+        if (options.includeDeprecated === false && tag.startsWith('@deprecated')) return false;
+        if (options.includeExamples === false && tag.startsWith('@example')) return false;
+        if (options.includeSince === false && tag.startsWith('@since')) return false;
+        if (options.includeSee === false && tag.startsWith('@see')) return false;
+        if (options.includeRemarks === false && tag.startsWith('@remarks')) return false;
+        if (options.includeExperimental === false && tag.startsWith('@experimental')) return false;
+        if (options.includeAlpha === false && tag.startsWith('@alpha')) return false;
+        if (options.includeBeta === false && tag.startsWith('@beta')) return false;
+        return true;
+    });
+    const tags = [
+        ...new Set([
+            ...keptTags,
+            ...jsDocTags(
+                {
+                    required: requiredMeta,
+                    deprecated,
+                    deprecationMessage,
+                    example,
+                    since,
+                    see,
+                    remarks,
+                    experimental,
+                    alpha,
+                    beta,
+                },
+                options
+            ),
+        ]),
+    ];
+    const out: Record<string, unknown> = { ...rest };
+    // A boolean `required` is metadata; an array is the object's required keys.
+    if (requiredMeta) delete out.required;
+    if (tags.length > 0) out.tags = tags;
+    if (out.properties && typeof out.properties === 'object') {
+        out.properties = Object.fromEntries(
+            Object.entries(out.properties as Record<string, Schema>).map(([key, child]) => [
+                key,
+                withJsDocTags(child, options),
+            ])
+        );
+    }
+    if (out.items && typeof out.items === 'object') {
+        out.items = withJsDocTags(out.items as Schema, options);
+    }
+    return out as Schema;
+}
+
+/** Prepend the interface-level required/deprecated/example tags, if any. */
+function withInterfaceJsDoc(body: string, schema: Schema, options: JsDocOptions): string {
+    const source = schema as Record<string, unknown>;
+    const tags = jsDocTags(
+        {
+            required: source.required,
+            deprecated: source.deprecated,
+            deprecationMessage: source.deprecationMessage,
+            example: source.example,
+            since: source.since,
+            see: source.see,
+            remarks: source.remarks,
+            experimental: source.experimental,
+            alpha: source.alpha,
+            beta: source.beta,
+        },
+        options
+    );
+    if (tags.length === 0) return body;
+    const doc = ['/**', ...tags.map(tag => ` * ${tag}`), ' */'].join('\n');
+    return `${doc}\n${body}`;
+}
+
 /** Render the generated type file content for one scope. */
 export function renderConfigTypes(
     scopeName: string,
@@ -122,16 +309,20 @@ export function renderConfigTypes(
     // A non-object root (enum, union, record, ...) is rendered as a type alias.
     if (!schema.properties) {
         const tsType = (schema as { tsType?: string }).tsType ?? 'unknown';
-        return wrap(`export type ${interfaceName} = ${tsType};\n${aliases}`);
+        return wrap(
+            `${withInterfaceJsDoc(`export type ${interfaceName} = ${tsType};`, schema, options)}\n${aliases}`
+        );
     }
 
-    const { base, groups, hasBase } = splitBaseSchema(schema, baseGroup);
+    const tagged = withJsDocTags(schema, options);
+    const { base, groups, hasBase } = splitBaseSchema(tagged, baseGroup);
     const groupKeys = Object.keys((groups.properties ?? {}) as Record<string, unknown>);
 
     // Without a base group the full schema becomes the main interface directly.
     if (!hasBase) {
-        const body = tidyInterface(schema, interfaceName);
-        return wrap(`${allowExtraKeys ? withIndexSignature(body) : body}\n${aliases}`);
+        let body = withInterfaceJsDoc(tidyInterface(tagged, interfaceName), schema, options);
+        if (allowExtraKeys) body = withIndexSignature(body);
+        return wrap(`${body}\n${aliases}`);
     }
 
     const baseInterface = tidyInterface(base, `${interfaceName}Base`);
@@ -145,6 +336,7 @@ export function renderConfigTypes(
     } else {
         mainInterface = `export interface ${interfaceName} extends ${interfaceName}Base {}\n`;
     }
+    mainInterface = withInterfaceJsDoc(mainInterface, schema, options);
     if (allowExtraKeys) mainInterface = withIndexSignature(mainInterface);
 
     return wrap(`${baseInterface}\n${mainInterface}\n${aliases}`);

@@ -35,7 +35,14 @@ interface JsonSchemaNode {
     secret?: boolean;
     public?: boolean;
     deprecated?: boolean;
+    deprecationMessage?: string;
     example?: string | string[];
+    since?: string;
+    see?: string | string[];
+    remarks?: string;
+    experimental?: boolean;
+    alpha?: boolean;
+    beta?: boolean;
 }
 
 const TS_TYPE_MAP: Record<string, string> = {
@@ -121,6 +128,67 @@ function jsonType(node: JsonSchemaNode): string {
     return node.type ?? 'string';
 }
 
+/** Metadata that can be attached to a node or to the `$ref`/union it points at. */
+interface NodeMeta {
+    required?: boolean;
+    deprecated?: boolean;
+    deprecationMessage?: string;
+    example?: string | string[];
+    since?: string;
+    see?: string | string[];
+    remarks?: string;
+    experimental?: boolean;
+    alpha?: boolean;
+    beta?: boolean;
+}
+
+/** Resolve metadata from a node, its `$ref`, or its union members. */
+function nodeMeta(
+    node: JsonSchemaNode | undefined,
+    defs: Record<string, JsonSchemaNode> = {}
+): NodeMeta {
+    if (!node) return {};
+    const refName = node.$ref?.split('/').pop();
+    const resolved = refName ? defs[refName] : undefined;
+    let required = node.required === true ? true : resolved?.required === true ? true : undefined;
+    let deprecated = node.deprecated ?? resolved?.deprecated;
+    let deprecationMessage = node.deprecationMessage ?? resolved?.deprecationMessage;
+    let example = node.example ?? resolved?.example;
+    let since = node.since ?? resolved?.since;
+    let see = node.see ?? resolved?.see;
+    let remarks = node.remarks ?? resolved?.remarks;
+    let experimental = node.experimental ?? resolved?.experimental;
+    let alpha = node.alpha ?? resolved?.alpha;
+    let beta = node.beta ?? resolved?.beta;
+    for (const variant of [...(node.anyOf ?? []), ...(node.oneOf ?? [])]) {
+        const variantRef = variant.$ref?.split('/').pop();
+        const variantResolved = variantRef ? defs[variantRef] : undefined;
+        required ??=
+            variant.required === true || variantResolved?.required === true ? true : undefined;
+        deprecated ??= variant.deprecated ?? variantResolved?.deprecated;
+        deprecationMessage ??= variant.deprecationMessage ?? variantResolved?.deprecationMessage;
+        example ??= variant.example ?? variantResolved?.example;
+        since ??= variant.since ?? variantResolved?.since;
+        see ??= variant.see ?? variantResolved?.see;
+        remarks ??= variant.remarks ?? variantResolved?.remarks;
+        experimental ??= variant.experimental ?? variantResolved?.experimental;
+        alpha ??= variant.alpha ?? variantResolved?.alpha;
+        beta ??= variant.beta ?? variantResolved?.beta;
+    }
+    return {
+        ...(required !== undefined ? { required } : {}),
+        ...(deprecated !== undefined ? { deprecated } : {}),
+        ...(deprecationMessage !== undefined ? { deprecationMessage } : {}),
+        ...(example !== undefined ? { example } : {}),
+        ...(since !== undefined ? { since } : {}),
+        ...(see !== undefined ? { see } : {}),
+        ...(remarks !== undefined ? { remarks } : {}),
+        ...(experimental !== undefined ? { experimental } : {}),
+        ...(alpha !== undefined ? { alpha } : {}),
+        ...(beta !== undefined ? { beta } : {}),
+    };
+}
+
 function jsonNodeToDefinition(
     node: JsonSchemaNode,
     fieldRequired = false,
@@ -136,7 +204,7 @@ function jsonNodeToDefinition(
                 tsType: name,
                 ...(fieldRequired ? { tags: ['@required'] } : {}),
                 ...(description ? { description } : {}),
-                ...((node.deprecated ?? resolved?.deprecated) ? { deprecated: true } : {}),
+                ...nodeMeta(node, defs),
             },
         };
     }
@@ -151,8 +219,9 @@ function jsonNodeToDefinition(
                 description: node.description,
             };
         }
-        if (node.deprecated) {
-            out.$schema = { ...(out.$schema as object | undefined), deprecated: true };
+        const meta = nodeMeta(node, defs);
+        if (meta.deprecated !== undefined || meta.example !== undefined) {
+            out.$schema = { ...(out.$schema as object | undefined), ...meta };
         }
         for (const [key, child] of Object.entries(node.properties)) {
             out[key] = jsonNodeToDefinition(
@@ -183,9 +252,7 @@ function jsonNodeToDefinition(
         ...(node.scope ? { scope: node.scope } : {}),
         ...(node.secret ? { secret: true } : {}),
         ...(node.public ? { public: true } : {}),
-        ...(node.required === true ? { required: true } : {}),
-        ...(node.deprecated ? { deprecated: true } : {}),
-        ...(node.example !== undefined ? { example: node.example } : {}),
+        ...nodeMeta(node, defs),
         ...(node.defaultValue !== undefined && node.default !== undefined
             ? { envDefault: node.default }
             : {}),

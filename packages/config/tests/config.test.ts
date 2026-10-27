@@ -12,7 +12,9 @@ import {
     generateCliOptions,
     generateEnvFile,
     parseEnvTree,
+    renderConfigFileMarkdown,
     renderConfigTypes,
+    renderScopeMarkdown,
     resolveScopeSchema,
     splitBaseSchema,
     zodToJsonSchema,
@@ -145,5 +147,192 @@ describe('renderConfigTypes', () => {
         // No empty line between members (or right after the opening brace).
         expect(out).not.toMatch(/;\n\n/);
         expect(out).not.toMatch(/\{\n\n/);
+    });
+});
+
+describe('deprecation + examples', () => {
+    const documentedSchema = z.object({
+        old: z
+            .string()
+            .meta({
+                deprecated: true,
+                deprecationMessage: 'Use `fresh` instead.',
+                example: ['one', 'two'],
+            })
+            .optional(),
+        plain: z.string().meta({ deprecated: true }).optional(),
+        fresh: z.string().optional(),
+    });
+
+    it('emits @deprecated and @example JSDoc tags', () => {
+        const out = renderConfigTypes('demo', resolveScopeSchema(undefined, documentedSchema), {
+            interfaceNames: { demo: 'DemoConfig' },
+        });
+        expect(out).toContain('@deprecated Use `fresh` instead.');
+        expect(out).toContain('@example one');
+        expect(out).toContain('@example two');
+        expect(out).toContain('@deprecated\n');
+        expect(out).not.toContain('@deprecated true');
+        expect(out).not.toContain('@example one,two');
+    });
+
+    it('emits interface-level tags for a deprecated section', () => {
+        const legacy = z.object({ old: z.string().optional() }).meta({
+            id: 'LegacyConfig',
+            deprecated: true,
+            deprecationMessage: 'Use `fresh` instead.',
+            example: 'legacy: true',
+        });
+        const out = renderConfigTypes('legacy', resolveScopeSchema(undefined, legacy), {
+            interfaceNames: { legacy: 'LegacyConfig' },
+        });
+        expect(out).toContain('@deprecated Use `fresh` instead.');
+        expect(out).toContain('@example legacy: true');
+    });
+
+    it('renders deprecated + example blocks in the config-file markdown', () => {
+        const md = renderConfigFileMarkdown([
+            { key: 'demo', description: 'Demo section.', schema: documentedSchema },
+        ]);
+        expect(md).toContain('- **Deprecated**: Use `fresh` instead.');
+        expect(md).toContain('- **Deprecated**\n');
+        expect(md).toContain('**Example(s):**');
+        expect(md).toContain('one\n\ntwo');
+        expect(md).not.toContain('@example');
+    });
+
+    it('renders deprecated + example blocks in the env markdown', () => {
+        const md = renderScopeMarkdown('server', resolveScopeSchema(undefined, documentedSchema));
+        expect(md).toContain('- **Deprecated**: Use `fresh` instead.');
+        expect(md).toContain('- **Deprecated**\n');
+        expect(md).toContain('**Example(s):**');
+    });
+});
+
+describe('required metadata + tag options', () => {
+    const schema = z.object({
+        token: z
+            .string()
+            .meta({
+                required: true,
+                deprecated: true,
+                deprecationMessage: 'Use `secret` instead.',
+                example: 'abc',
+            })
+            .optional(),
+    });
+
+    it('emits @required and puts Required above Type', () => {
+        const types = renderConfigTypes('demo', resolveScopeSchema(undefined, schema), {
+            interfaceNames: { demo: 'DemoConfig' },
+        });
+        expect(types).toContain('@required');
+
+        const configMd = renderConfigFileMarkdown([{ key: 'demo', schema }]);
+        expect(configMd.indexOf('- **Required**')).toBeLessThan(configMd.indexOf('- **Type**'));
+
+        const envMd = renderScopeMarkdown('server', resolveScopeSchema(undefined, schema));
+        expect(envMd.indexOf('- **Required**')).toBeLessThan(envMd.indexOf('- **Type**'));
+    });
+
+    it('can suppress each annotation independently', () => {
+        const types = renderConfigTypes('demo', resolveScopeSchema(undefined, schema), {
+            interfaceNames: { demo: 'DemoConfig' },
+            includeRequired: false,
+            includeDeprecated: false,
+            includeExamples: false,
+        });
+        expect(types).not.toContain('@required');
+        expect(types).not.toContain('@deprecated');
+        expect(types).not.toContain('@example');
+
+        const configMd = renderConfigFileMarkdown([{ key: 'demo', schema }], {
+            includeRequired: false,
+            includeDeprecated: false,
+            includeExamples: false,
+        });
+        expect(configMd).not.toContain('- **Required**');
+        expect(configMd).not.toContain('- **Deprecated**');
+        expect(configMd).not.toContain('**Example(s):**');
+
+        const envMd = renderScopeMarkdown('server', resolveScopeSchema(undefined, schema), {
+            includeRequired: false,
+            includeDeprecated: false,
+            includeExamples: false,
+        });
+        expect(envMd).not.toContain('- **Required**');
+        expect(envMd).not.toContain('- **Deprecated**');
+        expect(envMd).not.toContain('**Example(s):**');
+    });
+});
+
+describe('additional annotations', () => {
+    const schema = z.object({
+        opt: z
+            .string()
+            .meta({
+                since: '1.2.0',
+                see: ['https://example.com/a', 'https://example.com/b'],
+                remarks: 'Use this carefully.',
+                experimental: true,
+                alpha: true,
+                beta: true,
+            })
+            .optional(),
+    });
+
+    it('renders since/see/remarks/stability annotations', () => {
+        const types = renderConfigTypes('demo', resolveScopeSchema(undefined, schema), {
+            interfaceNames: { demo: 'DemoConfig' },
+        });
+        expect(types).toContain('@since 1.2.0');
+        expect(types).toContain('@see https://example.com/a');
+        expect(types).toContain('@see https://example.com/b');
+        expect(types).toContain('@remarks Use this carefully.');
+        expect(types).toContain('@experimental');
+        expect(types).toContain('@alpha');
+        expect(types).toContain('@beta');
+
+        const md = renderConfigFileMarkdown([{ key: 'demo', schema }]);
+        expect(md).toContain('- **Since**: 1.2.0');
+        expect(md).toContain('- **See**: https://example.com/a');
+        expect(md).toContain('- **See**: https://example.com/b');
+        expect(md).toContain('**Remarks:**');
+        expect(md).toContain('- **Experimental**');
+        expect(md).toContain('- **Alpha**');
+        expect(md).toContain('- **Beta**');
+
+        const envMd = renderScopeMarkdown('server', resolveScopeSchema(undefined, schema));
+        expect(envMd).toContain('- **Since**: 1.2.0');
+        expect(envMd).toContain('**Remarks:**');
+    });
+
+    it('can suppress the additional annotations', () => {
+        const options = {
+            includeSince: false,
+            includeSee: false,
+            includeRemarks: false,
+            includeExperimental: false,
+            includeAlpha: false,
+            includeBeta: false,
+        } as const;
+        const types = renderConfigTypes('demo', resolveScopeSchema(undefined, schema), {
+            interfaceNames: { demo: 'DemoConfig' },
+            ...options,
+        });
+        expect(types).not.toContain('@since');
+        expect(types).not.toContain('@see');
+        expect(types).not.toContain('@remarks');
+        expect(types).not.toContain('@experimental');
+        expect(types).not.toContain('@alpha');
+        expect(types).not.toContain('@beta');
+
+        const md = renderConfigFileMarkdown([{ key: 'demo', schema }], options);
+        expect(md).not.toContain('- **Since**');
+        expect(md).not.toContain('- **See**');
+        expect(md).not.toContain('**Remarks:**');
+        expect(md).not.toContain('- **Experimental**');
+        expect(md).not.toContain('- **Alpha**');
+        expect(md).not.toContain('- **Beta**');
     });
 });

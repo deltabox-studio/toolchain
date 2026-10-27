@@ -41,6 +41,24 @@ export interface RenderMarkdownOptions {
     shortFlags?: Record<string, string>;
     /** Custom env-name -> dotted-path derivation. */
     envPathOf?: CollectEnvVarsOptions['envPathOf'];
+    /** Emit `- **Required**` lines (default true). */
+    includeRequired?: boolean;
+    /** Emit `- **Deprecated**` lines (default true). */
+    includeDeprecated?: boolean;
+    /** Emit `**Example(s):**` blocks (default true). */
+    includeExamples?: boolean;
+    /** Emit `- **Since**` lines (default true). */
+    includeSince?: boolean;
+    /** Emit `- **See**` lines (default true). */
+    includeSee?: boolean;
+    /** Emit `**Remarks:**` blocks (default true). */
+    includeRemarks?: boolean;
+    /** Emit `- **Experimental**` lines (default true). */
+    includeExperimental?: boolean;
+    /** Emit `- **Alpha**` lines (default true). */
+    includeAlpha?: boolean;
+    /** Emit `- **Beta**` lines (default true). */
+    includeBeta?: boolean;
 }
 
 export interface GenerateMarkdownOptions extends RenderMarkdownOptions {
@@ -69,11 +87,111 @@ interface SchemaNode {
     tsType?: string;
     secret?: boolean;
     public?: boolean;
+    deprecated?: boolean;
+    deprecationMessage?: string;
+    example?: string | string[];
+    since?: string;
+    see?: string | string[];
+    remarks?: string;
+    experimental?: boolean;
+    alpha?: boolean;
+    beta?: boolean;
 }
 
 interface RenderOptions extends CliFlagOptions {
     useFlags?: boolean;
     baseGroup: string;
+    includeRequired?: boolean;
+    includeDeprecated?: boolean;
+    includeExamples?: boolean;
+    includeSince?: boolean;
+    includeSee?: boolean;
+    includeRemarks?: boolean;
+    includeExperimental?: boolean;
+    includeAlpha?: boolean;
+    includeBeta?: boolean;
+}
+
+/** Normalize `example` metadata into a list of strings. */
+function exampleList(example: unknown): string[] {
+    if (example === undefined || example === null) return [];
+    const values = Array.isArray(example) ? example : [example];
+    return values.map(value => sanitizeText(String(value))).filter(Boolean);
+}
+
+/** The `- **Deprecated**` list item, with an optional message. */
+function deprecatedLine(deprecated: unknown, message?: unknown): string | undefined {
+    if (deprecated === undefined || deprecated === false) return undefined;
+    const text = typeof message === 'string' ? sanitizeText(message.trim()) : '';
+    return text ? `- **Deprecated**: ${text}` : '- **Deprecated**';
+}
+
+/** The `**Example(s):**` block (each example on its own line). */
+function exampleLines(example: unknown): string[] {
+    const examples = exampleList(example);
+    if (examples.length === 0) return [];
+    return [
+        '',
+        '**Example(s):**',
+        '',
+        ...examples.flatMap((value, i) => (i ? ['', value] : [value])),
+    ];
+}
+
+interface NodeAnnotations {
+    deprecated?: boolean;
+    deprecationMessage?: string;
+    since?: string;
+    see?: string | string[];
+    remarks?: string;
+    experimental?: boolean;
+    alpha?: boolean;
+    beta?: boolean;
+}
+
+type AnnotationOptions = Pick<
+    RenderOptions,
+    | 'includeRequired'
+    | 'includeDeprecated'
+    | 'includeExamples'
+    | 'includeSince'
+    | 'includeSee'
+    | 'includeRemarks'
+    | 'includeExperimental'
+    | 'includeAlpha'
+    | 'includeBeta'
+>;
+
+/** The `- **Required**` item (rendered above `- **Type**`). */
+function requiredLine(required: boolean, opts: AnnotationOptions): string | undefined {
+    return opts.includeRequired !== false && required ? '- **Required**' : undefined;
+}
+
+/** The list items rendered between `- **Type**` and the description. */
+function annotationLines(meta: NodeAnnotations, opts: AnnotationOptions): string[] {
+    const lines: string[] = [];
+    if (opts.includeDeprecated !== false) {
+        const deprecated = deprecatedLine(meta.deprecated, meta.deprecationMessage);
+        if (deprecated) lines.push(deprecated);
+    }
+    if (opts.includeSince !== false && typeof meta.since === 'string' && meta.since.trim()) {
+        lines.push(`- **Since**: ${sanitizeText(meta.since.trim())}`);
+    }
+    if (opts.includeSee !== false) {
+        for (const link of exampleList(meta.see)) lines.push(`- **See**: ${link}`);
+    }
+    if (opts.includeExperimental !== false && meta.experimental) lines.push('- **Experimental**');
+    if (opts.includeAlpha !== false && meta.alpha) lines.push('- **Alpha**');
+    if (opts.includeBeta !== false && meta.beta) lines.push('- **Beta**');
+    return lines;
+}
+
+/** The `**Remarks:**` block (rendered after the description). */
+function remarksLines(remarks: unknown, opts: AnnotationOptions): string[] {
+    if (opts.includeRemarks === false) return [];
+    const text = typeof remarks === 'string' ? sanitizeText(remarks.trim()) : '';
+    if (!text) return [];
+    return ['', '**Remarks:**', '', ...text.split('\n')];
 }
 
 function renderNode(
@@ -88,6 +206,8 @@ function renderNode(
         return lines;
     }
     if (schema.env) lines.push(`- **Env**: \`${schema.env}\``);
+    const required = requiredLine(schema.required === true, opts);
+    if (required) lines.push(required);
     lines.push(
         `- **Type**: \`${
             schema.tsType ??
@@ -95,9 +215,12 @@ function renderNode(
             'any'
         }\``
     );
+    lines.push(...annotationLines(schema, opts));
     if (schema.default !== undefined)
         lines.push(`- **Default**: \`${JSON.stringify(schema.default)}\``);
     if (schema.description) lines.push('', sanitizeText(schema.description));
+    lines.push(...remarksLines(schema.remarks, opts));
+    if (opts.includeExamples !== false) lines.push(...exampleLines(schema.example));
     return lines;
 }
 
@@ -122,6 +245,23 @@ export function renderScopeMarkdown(
         baseGroup: options.baseGroup ?? 'base',
         ...(options.envPrefix ? { envPrefix: options.envPrefix } : {}),
         ...(options.shortFlags ? { shortFlags: options.shortFlags } : {}),
+        ...(options.includeRequired !== undefined
+            ? { includeRequired: options.includeRequired }
+            : {}),
+        ...(options.includeDeprecated !== undefined
+            ? { includeDeprecated: options.includeDeprecated }
+            : {}),
+        ...(options.includeExamples !== undefined
+            ? { includeExamples: options.includeExamples }
+            : {}),
+        ...(options.includeSince !== undefined ? { includeSince: options.includeSince } : {}),
+        ...(options.includeSee !== undefined ? { includeSee: options.includeSee } : {}),
+        ...(options.includeRemarks !== undefined ? { includeRemarks: options.includeRemarks } : {}),
+        ...(options.includeExperimental !== undefined
+            ? { includeExperimental: options.includeExperimental }
+            : {}),
+        ...(options.includeAlpha !== undefined ? { includeAlpha: options.includeAlpha } : {}),
+        ...(options.includeBeta !== undefined ? { includeBeta: options.includeBeta } : {}),
     };
     const { base, groups } = splitBaseSchema(schema, opts.baseGroup);
     const parts: string[] = [
@@ -300,13 +440,31 @@ export interface RenderConfigFileOptions {
     intro?: string;
     /** Page outline (default `[2, 3, 4]`). */
     outline?: number[];
+    /** Emit `- **Required**` lines (default true). */
+    includeRequired?: boolean;
+    /** Emit `- **Deprecated**` lines (default true). */
+    includeDeprecated?: boolean;
+    /** Emit `**Example(s):**` blocks (default true). */
+    includeExamples?: boolean;
+    /** Emit `- **Since**` lines (default true). */
+    includeSince?: boolean;
+    /** Emit `- **See**` lines (default true). */
+    includeSee?: boolean;
+    /** Emit `**Remarks:**` blocks (default true). */
+    includeRemarks?: boolean;
+    /** Emit `- **Experimental**` lines (default true). */
+    includeExperimental?: boolean;
+    /** Emit `- **Alpha**` lines (default true). */
+    includeAlpha?: boolean;
+    /** Emit `- **Beta**` lines (default true). */
+    includeBeta?: boolean;
 }
 
 /** A JSON Schema (draft 2020-12) node as produced by `z.toJSONSchema`. */
 interface JsonSchemaJson {
     type?: string | string[];
     properties?: Record<string, JsonSchemaJson>;
-    required?: string[];
+    required?: string[] | boolean;
     default?: unknown;
     description?: string;
     enum?: unknown[];
@@ -317,6 +475,15 @@ interface JsonSchemaJson {
     items?: JsonSchemaJson;
     additionalProperties?: JsonSchemaJson | boolean;
     $defs?: Record<string, JsonSchemaJson>;
+    deprecated?: boolean;
+    deprecationMessage?: string;
+    example?: string | string[];
+    since?: string;
+    see?: string | string[];
+    remarks?: string;
+    experimental?: boolean;
+    alpha?: boolean;
+    beta?: boolean;
 }
 
 /** The `$defs` key a `$ref` points at. */
@@ -335,6 +502,64 @@ function resolveJsonRef(
 
 function jsonLiteral(value: unknown): string {
     return typeof value === 'string' ? `'${value}'` : String(value);
+}
+
+/** Resolve metadata from a node, its `$ref`, or its union members. */
+function jsonNodeMeta(
+    node: JsonSchemaJson,
+    defs: Record<string, JsonSchemaJson>
+): {
+    required?: boolean;
+    deprecated?: boolean;
+    deprecationMessage?: string;
+    example?: string | string[];
+    since?: string;
+    see?: string | string[];
+    remarks?: string;
+    experimental?: boolean;
+    alpha?: boolean;
+    beta?: boolean;
+} {
+    const resolved = resolveJsonRef(node, defs);
+    let required = node.required === true || resolved.required === true ? true : undefined;
+    let deprecated = node.deprecated ?? resolved.deprecated;
+    let deprecationMessage = node.deprecationMessage ?? resolved.deprecationMessage;
+    let example = node.example ?? resolved.example;
+    let since = node.since ?? resolved.since;
+    let see = node.see ?? resolved.see;
+    let remarks = node.remarks ?? resolved.remarks;
+    let experimental = node.experimental ?? resolved.experimental;
+    let alpha = node.alpha ?? resolved.alpha;
+    let beta = node.beta ?? resolved.beta;
+    const variants = [
+        ...(resolved.anyOf ?? node.anyOf ?? []),
+        ...(resolved.oneOf ?? node.oneOf ?? []),
+    ];
+    for (const variant of variants) {
+        const target = resolveJsonRef(variant, defs);
+        required ??= variant.required === true || target.required === true ? true : undefined;
+        deprecated ??= variant.deprecated ?? target.deprecated;
+        deprecationMessage ??= variant.deprecationMessage ?? target.deprecationMessage;
+        example ??= variant.example ?? target.example;
+        since ??= variant.since ?? target.since;
+        see ??= variant.see ?? target.see;
+        remarks ??= variant.remarks ?? target.remarks;
+        experimental ??= variant.experimental ?? target.experimental;
+        alpha ??= variant.alpha ?? target.alpha;
+        beta ??= variant.beta ?? target.beta;
+    }
+    return {
+        ...(required !== undefined ? { required } : {}),
+        ...(deprecated !== undefined ? { deprecated } : {}),
+        ...(deprecationMessage !== undefined ? { deprecationMessage } : {}),
+        ...(example !== undefined ? { example } : {}),
+        ...(since !== undefined ? { since } : {}),
+        ...(see !== undefined ? { see } : {}),
+        ...(remarks !== undefined ? { remarks } : {}),
+        ...(experimental !== undefined ? { experimental } : {}),
+        ...(alpha !== undefined ? { alpha } : {}),
+        ...(beta !== undefined ? { beta } : {}),
+    };
 }
 
 /**
@@ -384,7 +609,10 @@ function jsonChildFields(
     }
     const resolved = resolveJsonRef(node, defs);
     if (resolved.properties) {
-        return { properties: resolved.properties, required: resolved.required ?? [] };
+        return {
+            properties: resolved.properties,
+            required: Array.isArray(resolved.required) ? resolved.required : [],
+        };
     }
     const variants = resolved.anyOf ?? resolved.oneOf;
     if (variants) {
@@ -413,16 +641,22 @@ function renderJsonField(
     level: string,
     defs: Record<string, JsonSchemaJson>,
     seen: Set<string>,
-    required: boolean
+    required: boolean,
+    options: RenderConfigFileOptions
 ): string[] {
     const resolved = resolveJsonRef(node, defs);
+    const meta = jsonNodeMeta(node, defs);
     const lines = [`${level} \`${key}\``];
+    const requiredLineText = requiredLine(required || meta.required === true, options);
+    if (requiredLineText) lines.push(requiredLineText);
     lines.push(`- **Type**: \`${jsonTypeLabel(node, defs)}\``);
-    if (required) lines.push('- **Required**');
+    lines.push(...annotationLines(meta, options));
     const fallback = node.default ?? resolved.default;
     if (fallback !== undefined) lines.push(`- **Default**: \`${JSON.stringify(fallback)}\``);
     const description = sanitizeText(node.description ?? resolved.description ?? '');
     if (description) lines.push('', description);
+    lines.push(...remarksLines(meta.remarks, options));
+    if (options.includeExamples !== false) lines.push(...exampleLines(meta.example));
     const children = jsonChildFields(node, defs, seen);
     // Markdown headings only go to `######` (h6); deeper nesting keeps h6 rather
     // than emitting a literal `#######`.
@@ -436,7 +670,8 @@ function renderJsonField(
                 childLevel,
                 defs,
                 seen,
-                children.required.includes(childKey)
+                children.required.includes(childKey),
+                options
             )
         );
     }
@@ -447,12 +682,16 @@ function renderJsonFields(
     node: JsonSchemaJson,
     level: string,
     defs: Record<string, JsonSchemaJson>,
-    seen: Set<string>
+    seen: Set<string>,
+    options: RenderConfigFileOptions
 ): string[] {
     const lines: string[] = [];
-    const required = node.required ?? [];
+    const required = Array.isArray(node.required) ? node.required : [];
     for (const [key, child] of Object.entries(node.properties ?? {})) {
-        lines.push('', ...renderJsonField(key, child, level, defs, seen, required.includes(key)));
+        lines.push(
+            '',
+            ...renderJsonField(key, child, level, defs, seen, required.includes(key), options)
+        );
     }
     return lines;
 }
@@ -485,7 +724,18 @@ export function renderConfigFileMarkdown(
         const json = z.toJSONSchema(section.schema, { target: 'draft-2020-12' }) as JsonSchemaJson;
         const defs = json.$defs ?? {};
         const root = json.$ref ? resolveJsonRef(json, defs) : json;
-        parts.push(...renderJsonFields(root, '###', defs, new Set<string>()), '');
+        const meta = jsonNodeMeta(root, defs);
+        const required = requiredLine(meta.required === true, options);
+        if (required) parts.push(required, '');
+        const annotations = annotationLines(meta, options);
+        if (annotations.length > 0) parts.push(...annotations, '');
+        const remarks = remarksLines(meta.remarks, options);
+        if (remarks.length > 0) parts.push(...remarks, '');
+        if (options.includeExamples !== false) {
+            const examples = exampleLines(meta.example);
+            if (examples.length > 0) parts.push(...examples, '');
+        }
+        parts.push(...renderJsonFields(root, '###', defs, new Set<string>(), options), '');
     }
     return `${parts.join('\n').trim()}\n`;
 }

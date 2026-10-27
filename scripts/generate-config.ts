@@ -69,10 +69,43 @@ const example = [
 ].join('\n');
 fs.writeFileSync(docsPath, `${markdown.trimEnd()}\n${example}`, 'utf-8');
 
+/**
+ * Normalize the metadata Zod emits into standard JSON Schema: `example` ->
+ * `examples`, and a string `deprecated` -> `deprecated: true` plus the VS
+ * Code-friendly `deprecationMessage`.
+ */
+function normalizeMetadata(node: unknown): void {
+    if (!node || typeof node !== 'object' || Array.isArray(node)) return;
+    const record = node as Record<string, unknown>;
+    if (typeof record.deprecated === 'string') {
+        record.deprecationMessage = record.deprecated;
+        record.deprecated = true;
+    }
+    if ('example' in record) {
+        const example = record.example;
+        delete record.example;
+        record.examples = Array.isArray(example) ? example : [example];
+    }
+    for (const key of ['properties', '$defs']) {
+        const map = record[key];
+        if (map && typeof map === 'object' && !Array.isArray(map)) {
+            for (const child of Object.values(map as Record<string, unknown>)) {
+                normalizeMetadata(child);
+            }
+        }
+    }
+    for (const key of ['items', 'additionalProperties']) normalizeMetadata(record[key]);
+    for (const key of ['anyOf', 'oneOf', 'allOf']) {
+        const list = record[key];
+        if (Array.isArray(list)) for (const child of list) normalizeMetadata(child);
+    }
+}
+
 const jsonSchema = z.toJSONSchema(dbxConfigSchema, { target: 'draft-2020-12' }) as Record<
     string,
     unknown
 >;
+normalizeMetadata(jsonSchema);
 jsonSchema.$id = 'https://deltabox.studio/schemas/dbx.config.json';
 jsonSchema.title = 'dbx.config';
 jsonSchema.description =

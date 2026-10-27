@@ -8,10 +8,24 @@ export interface ConfigBaseMeta {
     description?: string;
     /** Whether the var has no safe default and must be set. */
     required?: boolean;
-    /** Mark this config as deprecated (the JSON Schema `deprecated` flag). */
+    /** Mark this config as deprecated (`@deprecated` in the generated types). */
     deprecated?: boolean;
+    /** Optional deprecation message shown after `@deprecated` / `**Deprecated**`. */
+    deprecationMessage?: string;
     /** Add custom example(s) that will be added to the generated documentation. */
     example?: string[] | string;
+    /** Version or date this option was introduced (`@since`). */
+    since?: string;
+    /** Related link(s) for the option (`@see`). */
+    see?: string[] | string;
+    /** Extra notes shown after the description (`@remarks`). */
+    remarks?: string;
+    /** Mark the option as experimental (`@experimental`). */
+    experimental?: boolean;
+    /** Mark the option as alpha (`@alpha`). */
+    alpha?: boolean;
+    /** Mark the option as beta (`@beta`). */
+    beta?: boolean;
     /** Whether the value is a secret (never emitted/logged). */
     secret?: boolean;
     /** The scope the variable belongs to. */
