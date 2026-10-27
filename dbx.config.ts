@@ -212,6 +212,7 @@ export default defineConfig({
                         // build on drift.
                         { name: 'Format + lint (auto-fix)', run: 'yarn check --fix' },
                         { name: 'Test', run: 'yarn test' },
+                        { name: 'Typecheck (build tsconfig)', run: 'yarn typecheck:ci' },
                         {
                             name: 'Generate config docs + schema',
                             run: 'yarn config:generate',
@@ -337,7 +338,7 @@ export default defineConfig({
                         },
                     },
                     'typecheck:root': {
-                        command: 'tsc -p tsconfig.json --noEmit',
+                        command: 'tsc -p tsconfig.build.json --noEmit',
                         cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
                     },
                     'test:root': {

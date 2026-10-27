@@ -47,6 +47,8 @@ jobs:
         run: yarn check --fix
       - name: Test
         run: yarn test
+      - name: Typecheck (build tsconfig)
+        run: yarn typecheck:ci
       - name: Generate config docs + schema
         run: yarn config:generate
       - name: Verify generated config artifacts are up to date
