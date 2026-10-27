@@ -712,12 +712,26 @@ export function activate(context: vscode.ExtensionContext): void {
         }
 
         const existing = readAllProviders(root);
-        if (existing.some(provider => provider.id === id)) {
-            vscode.window.showWarningMessage(`deltabox: provider "${id}" already exists.`);
-            return;
+        let providerId = id;
+        if (existing.some(provider => provider.id === providerId)) {
+            let index = 2;
+            while (existing.some(candidate => candidate.id === `${id}-${index}`)) index += 1;
+            const renamed = await vscode.window.showInputBox({
+                prompt: `Provider "${id}" already exists. New id`,
+                value: `${id}-${index}`,
+                validateInput: value =>
+                    /^[a-z0-9][a-z0-9-]*$/.test(value.trim())
+                        ? existing.some(candidate => candidate.id === value.trim())
+                            ? 'That id already exists.'
+                            : undefined
+                        : 'Use lowercase letters, numbers and dashes.',
+            });
+            if (!renamed) return;
+            providerId = renamed.trim();
+            for (const command of commands) command.name = `${providerId}:${command.subcommand}`;
         }
         const provider: Provider = {
-            id,
+            id: providerId,
             name,
             ...(binary ? { binary } : {}),
             ...(description ? { description } : {}),

@@ -188,6 +188,7 @@ export function templateCommands(): ToolchainCommand[] {
                 CWD_OPTION,
                 KIND_OPTION,
                 { flags: '--name <name>', description: 'Display name (default: folder name).' },
+                { flags: '--id <id>', description: 'Stable template id (default: folder name).' },
                 { flags: '--description <text>', description: 'Description.' },
                 {
                     flags: '--var <pair...>',
@@ -205,7 +206,7 @@ export function templateCommands(): ToolchainCommand[] {
                 },
                 { flags: '--json', description: 'Print the manifest as JSON.' },
             ],
-            run: (opts, context) => {
+            run: async (opts, context) => {
                 const dir = path.resolve(context.cwd, String(opts.dir ?? '.'));
                 const file = path.join(dir, TEMPLATE_MANIFEST);
                 if (fs.existsSync(file) && !opts.force) {
@@ -221,14 +222,37 @@ export function templateCommands(): ToolchainCommand[] {
                 };
                 writeTemplateManifest(dir, manifest);
                 if (opts.add) {
+                    let id = String(opts.id ?? path.basename(dir));
+                    const taken = new Set([
+                        ...(await existingTemplateIds(context.cwd, { global: false })),
+                        ...readTemplateRegistry(context.cwd)
+                            .sources.map(existing => existing.id)
+                            .filter((value): value is string => Boolean(value)),
+                    ]);
+                    if (taken.has(id)) {
+                        if (canPrompt(opts as Record<string, unknown>)) {
+                            const answer = await text({
+                                message: `Template id "${id}" already exists. New id:`,
+                                placeholder: uniqueTemplateId(id, taken),
+                                defaultValue: uniqueTemplateId(id, taken),
+                            });
+                            if (isCancel(answer)) return abortPrompt();
+                            id = String(answer);
+                        } else {
+                            throw new Error(
+                                `template id "${id}" already exists; pass --id <id> to rename it.`
+                            );
+                        }
+                    }
                     addTemplateSource(context.cwd, {
                         type: 'local',
                         locate: dir,
+                        id,
                         kind: manifest.kind,
                     });
                     if (opts.global !== false) {
                         try {
-                            addGlobalTemplate(dir, path.basename(dir));
+                            addGlobalTemplate(dir, id);
                         } catch (error) {
                             logger.warn(`could not add the template globally: ${String(error)}`);
                         }
