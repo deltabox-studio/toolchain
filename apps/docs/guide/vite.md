@@ -114,5 +114,5 @@ import {
 | `viteSyncTask()`               | The sync task (writes the shim).                                                  |
 | `viteProvider()`               | The Vite+ provider descriptor.                                                    |
 
-See [Configuration](/guide/config#vite) for the `dbx.config` integration and the
+See [Configuration](/guide/config/vite) for the `dbx.config` integration and the
 [Providers](/guide/providers) guide for the passthrough commands.

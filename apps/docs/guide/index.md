@@ -90,7 +90,7 @@ need to add it by hand when the repo has no `.gitignore` yet.
 
 | Area                                                                | Section in the config |
 | ------------------------------------------------------------------- | --------------------- |
-| GitHub workflows, commitlint, Conventional-Commits VS Code settings | `changelog`           |
+| GitHub workflows, commitlint, Conventional-Commits VS Code settings | `ci`                  |
 | `biome.json` (Biome consumers)                                      | `biome`               |
 | Workspace `tsconfig.json` files (aliases + references)              | `tsconfig`            |
 | `vite.config.ts` (Vite+ consumers)                                  | `vite`                |
@@ -107,16 +107,16 @@ that area untouched.
 - [CLI reference](/guide/cli)
 - [Configuration reference](/config/reference)
 - [Project](/guide/project)
-- [Changelog & versioning](/guide/changelog)
+- [Changelog](/guide/changelog/)
 - [tsconfig](/guide/tsconfig)
 - [Biome](/guide/biome)
 - [Vite+](/guide/vite)
 - [Watch](/guide/watch)
 - [Logger](/guide/logger)
-- [Config generator](/guide/config-generator)
+- [Config generator](/guide/config-generator/)
 - [Providers (Vite+)](/guide/providers)
 - [Package scripts](/guide/scripts)
 - [Templates](/guide/templates)
 - [Migrations](/guide/migrations)
-- [Programmatic API](/guide/api)
+- [Programmatic API](/guide/api/)
 - [LLMs](/llms)

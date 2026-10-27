@@ -89,7 +89,7 @@ need to add it by hand when the repo has no `.gitignore` yet.
 
 | Area                                                                | Section in the config |
 | ------------------------------------------------------------------- | --------------------- |
-| GitHub workflows, commitlint, Conventional-Commits VS Code settings | `changelog`           |
+| GitHub workflows, commitlint, Conventional-Commits VS Code settings | `ci`                  |
 | `biome.json` (Biome consumers)                                      | `biome`               |
 | Workspace `tsconfig.json` files (aliases + references)              | `tsconfig`            |
 | `vite.config.ts` (Vite+ consumers)                                  | `vite`                |
@@ -106,18 +106,18 @@ that area untouched.
 * [CLI reference](/guide/cli)
 * [Configuration reference](/config/reference)
 * [Project](/guide/project)
-* [Changelog & versioning](/guide/changelog)
+* [Changelog](/guide/changelog/)
 * [tsconfig](/guide/tsconfig)
 * [Biome](/guide/biome)
 * [Vite+](/guide/vite)
 * [Watch](/guide/watch)
 * [Logger](/guide/logger)
-* [Config generator](/guide/config-generator)
+* [Config generator](/guide/config-generator/)
 * [Providers (Vite+)](/guide/providers)
 * [Package scripts](/guide/scripts)
 * [Templates](/guide/templates)
 * [Migrations](/guide/migrations)
-* [Programmatic API](/guide/api)
+* [Programmatic API](/guide/api/)
 * [LLMs](/llms)
 
 ---
@@ -399,7 +399,7 @@ override them on the command line.
 | `--no-color`        | Disable coloured output.                                       |
 | `--no-update-check` | Do not check for a newer `dbx` version.                        |
 
-These override the [`logger` config](/guide/config#logging) and may appear
+These override the [`logger` config](/guide/config/logging) and may appear
 before or after the subcommand.
 
 `dbx` checks the npm registry in the background (about once a day) and prints a
@@ -409,7 +409,7 @@ set, and can be turned off with `--no-update-check`.
 
 ## Output
 
-Colour is on by default and follows `--no-color` / the [`logger` config](/guide/config#logging).
+Colour is on by default and follows `--no-color` / the [`logger` config](/guide/config/logging).
 
 ## Core
 
@@ -532,7 +532,7 @@ withDefaultVite(['node', 'dbx', 'fmt', '--check']);
 
 The generic Zod/env config engine is not a `dbx` command: a consumer
 builds an engine with `createConfigEngine` and registers the `config:*` commands
-on its **own** CLI. See [Config Generator](/guide/config-generator).
+on its **own** CLI. See [Config Generator](/guide/config-generator/).
 
 ---
 
@@ -553,9 +553,12 @@ export default defineConfig({
             name: 'acme',
             scope: '@acme',
         },
-        changelog: {
-            workflows: { ci: true, release: true },
-            branches: { main: 'main', dev: 'dev' },
+        ci: {
+            ci: true,
+            changelog: {
+                branches: { main: 'main', dev: 'dev' },
+                commitlint: { scopes: ['api', 'web', 'deps'] },
+            },
         },
         tsconfig: { refs: true },
         biome: true,
@@ -572,240 +575,27 @@ export default defineConfig({
 The `@deltabox/toolchain` settings live under the `toolchain` key, so a
 `dbx.config.ts` can host other dbx concerns alongside it.
 
-Each section has its own guide: [Project](/guide/project),
-[Changelog](/guide/changelog), [tsconfig](/guide/tsconfig), [Biome](/guide/biome),
+Each section has its own guide: [Project](/guide/project), [CI +
+Changelog](/guide/changelog/), [tsconfig](/guide/tsconfig), [Biome](/guide/biome),
 [Vite+](/guide/vite), [Watch](/guide/watch), [Logger](/guide/logger) and
 [Providers](/guide/providers).
 
-## Opt-in by presence
+## Where to start
 
-Every section under `toolchain` is **opt-in by presence**: the toolchain only
-touches an area you actually ask for.
+* [Opt-in by presence](/guide/config/opt-in-by-presence) — which sections run, and
+  how nested sections like `ci.changelog` and the individual workflows opt in.
+* [Nested configs](/guide/config/nested-configs) — how a workspace config merges
+  over its root.
+* [`defineConfig`](/guide/config/defineconfig) — object, promise or callback.
+* [Config file names](/guide/config/config-file-names) — the file names the loader
+  probes.
+* [Hooks](/guide/config/hooks) — lifecycle hooks in a `.ts`/`.js` config.
+* [Logging](/guide/config/logging) — the logger section and CLI overrides.
+* [Providers](/guide/config/providers) — provider passthrough colour settings.
+* [Vite+](/guide/config/vite) — the full Vite+ config and the generated shim.
+* [Programmatic API](/guide/config/programmatic-api) — load + sync from code.
 
-* Omit a section — that area is left completely alone.
-* `section: true` — enable it with defaults.
-* `section: false` — explicitly disable it.
-* `section: { ...options }` — enable and configure it.
-
-Helpers `sectionEnabled(section)` and `sectionConfig(section)` implement this and
-are exported for programmatic use.
-
-## Nested configs
-
-A `dbx.config.*` in a **non-root** folder (a workspace, an app, a nested
-project) is merged over the nearest ancestor `dbx.config.*` found while walking
-up to the repository root (the walk stops at the `.git` boundary, so it never
-picks up a config from outside the repo).
-
-The merge is recursive:
-
-* **Objects** are merged key by key, so a child keeps every option it does not
-  mention.
-* **Leaves** — booleans, strings, numbers and **arrays** — in the child
-  **replace** the root's value (arrays are not concatenated).
-
-This makes a shared root config plus small per-project overrides possible:
-
-```ts [<root>/dbx.config.ts]
-export default defineConfig({
-    toolchain: {
-        changelog: { scopes: ['core', 'cli'], branches: { main: 'main', dev: 'dev' } },
-        tsconfig: { refs: true, aliases: true },
-    },
-});
-
-// <root>/packages/web/dbx.config.ts — inherits changelog + tsconfig, tweaks both
-export default defineConfig({
-    toolchain: {
-        changelog: { scopes: ['web'] }, // replaces the root's `scopes` array
-        tsconfig: { refs: false }, // boolean overrides the root's `refs`
-    },
-});
-```
-
-The workspace above ends up with `changelog.branches` from the root (unchanged),
-`changelog.scopes: ['web']` (replaced), and `tsconfig: { refs: false, aliases: true }`.
-
-> **`project` is inherited except its identity fields.** `name`, `scope`,
-> `description` and `type` are per-project, so a non-root config keeps its own (or
-> falls back to its `package.json`) and is still detected from its own files — a
-> root `project` never renames a workspace. The shared fields (`author`,
-> `license`, `homepage`, `repo`, `packageManager`, ...) flow down so their
-> `package.json` values and replacement tokens stay shared.
-> `project: { inherit: false }` disables project inheritance entirely. `hooks`
-> are not inherited either — a parent's hooks are code and do not run for a
-> nested project's sync.
-
-## `defineConfig`
-
-`defineConfig` is an identity helper that gives the file full type-checking and
-autocomplete (it mirrors Vite's `defineConfig`). Like Vite, the argument may be a
-plain object, a promise, or a sync/async callback — the loader resolves it, so a
-config can do async work before returning `{ toolchain }`:
-
-```ts [dbx.config.ts]
-export default defineConfig(async () => {
-    const { readFile } = await import('node:fs/promises');
-    const version = (await readFile('./VERSION', 'utf-8')).trim();
-
-    return {
-        toolchain: {
-            project: { name: 'acme', nodeVersion: version },
-        },
-    };
-});
-```
-
-## Config file names
-
-The loader looks for, in order:
-
-```
-dbx.config.ts
-dbx.config.mts
-dbx.config.js
-dbx.config.mjs
-dbx.config.cjs
-dbx.config.json
-```
-
-## Hooks
-
-`.ts`/`.js` configs can declare lifecycle hooks (JSON cannot):
-
-```ts [dbx.config.ts]
-export default defineConfig({
-    toolchain: {
-        hooks: {
-            afterLoad: ({ tokens }) => console.log(tokens),
-            beforeSync: ctx => ctx.log('syncing…'),
-            afterTask: ({ task, files }) => console.log(task.name, files?.length),
-            afterSync: ({ result }) => console.log(result.written.length),
-            onChange: ({ path }) => console.log('changed', path),
-        },
-    },
-});
-```
-
-Return values are awaited.
-
-## Logging
-
-Every toolchain message goes through one logger. Configure it in the config:
-
-```ts [dbx.config.ts]
-export default defineConfig({
-    toolchain: {
-        logger: { level: 'debug', color: false, name: 'dbx' },
-    },
-});
-```
-
-| Option  | Values                                             | Default |
-| ------- | -------------------------------------------------- | ------- |
-| `level` | `debug` | `info` | `warn` | `error` | `silent` | `info`  |
-| `color` | `true` | `false`                                  | `true`  |
-| `name`  | prefix for non-indented lines                      | `dbx`   |
-
-Colour is **on by default** (the toolchain forces it rather than relying on TTY
-autodetection); `--no-color` or `logger: { color: false }` turn it off. Human
-output is rendered with [`@clack/prompts`](https://bombshell.dev/clack) — level
-symbols (`•` info, `◆` success, `▲` warn, `■` error) and a guide.
-
-On the CLI, `--log-level <level>` and `--no-color` override the config (see the
-[CLI reference](/guide/cli)). Machine output (`--json`) is written unprefixed
-through the same logger.
-
-## Providers
-
-Provider passthrough commands (Vite+) follow the logger's colour setting. The
-`providers` section can force provider colours on or off on its own:
-
-```ts [dbx.config.ts]
-export default defineConfig({
-    toolchain: {
-        providers: { color: false },
-    },
-});
-```
-
-| Option  | Values            | Default        |
-| ------- | ----------------- | -------------- |
-| `color` | `true` | `false` | inherit logger |
-
-`color: false` runs the wrapped binary with `NO_COLOR=1` and `FORCE_COLOR=0`, so
-it emits plain output even on a colour terminal. The global CLI `--no-color`
-flag turns provider colour off too. See [Providers](/guide/providers#colour).
-
-## Vite+
-
-The whole Vite+ config lives in `toolchain.vite`. Every key is passed through
-verbatim to Vite+, so `dbx.config.*` stays the only hand-authored root config:
-
-```ts [dbx.config.ts]
-export default defineConfig({
-    toolchain: {
-        vite: {
-            test: { include: ['src/**/*.test.ts'], environment: 'node' },
-            lint: { ignorePatterns: ['dist/**'] },
-            fmt: { semi: true, singleQuote: true },
-        },
-    },
-});
-```
-
-`dbx sync` writes a thin root `vite.config.ts` that resolves that config at load
-time, so the generated file never duplicates (or drifts from) `dbx.config.*`:
-
-```ts [vite.config.ts]
-import { defineConfig, type ViteUserConfig } from 'vite-plus';
-
-// Generated by @deltabox/toolchain — edit the vite section in dbx.config and run `dbx sync`.
-import { resolveVite } from '@deltabox/toolchain/vite';
-
-export default defineConfig(resolveVite<ViteUserConfig>({ cwd: import.meta.dirname }));
-```
-
-The shim imports `defineConfig` from whichever Vite package the project installs
-(`vite` or `vite-plus`, detected from `package.json`), so a plain `vite` project
-gets `import { defineConfig, type UserConfig } from 'vite'` and
-`resolveVite<UserConfig>(...)`.
-
-`resolveVite(options?)` resolves the **same-directory** `dbx.config.*` (so a
-nested `vite.config.ts` uses the nested config it sits next to), or the
-`toolchain` you pass, then returns `toolchain.vite`. Pass `vite` inline to merge
-overrides over the loaded section (`resolveVite({ vite: { ... } })`). It is
-exported from `@deltabox/toolchain/vite` for programmatic use too.
-
-The single toolchain opt-out is `config`. Set `vite: { config: false }` to leave
-a hand-written `vite.config.ts` alone. Everything else under `vite` is Vite+
-config (plugins, `test`, `lint`, `fmt`, `run.tasks`, ...), so `toolchain.vite`
-is the full Vite+ configuration. The section is typed as Vite+'s own config
-(`ToolchainViteConfig` = Vite's `UserConfig` as augmented by Vite+), so the whole
-Vite+ surface autocompletes in `dbx.config.ts`.
-
-Add `/vite.config.ts` to `vite.fmt.ignorePatterns` so Oxfmt leaves the generated
-shim alone — without it `vp fmt` would rewrite the shim and `dbx sync --check`
-would report drift. `dbx migrate --from vite` adds it for you.
-
-To adopt an existing hand-written `vite.config.ts`, fold it in with the
-migration (see [Migrations](/guide/migrations#vite-config)):
-
-```sh
-dbx migrate --from vite --write   # folds the object into toolchain.vite (+ the fmt ignore)
-dbx sync                          # writes the managed vite.config.ts shim
-```
-
-## Programmatic API
-
-```ts
-import { loadToolchainConfig, runSync, defaultSyncTasks } from '@deltabox/toolchain';
-
-const { config, tokens, projectType } = await loadToolchainConfig(process.cwd());
-await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, projectType });
-```
-
-Full section reference: [dbx.config](/config/reference).
+The generated, exhaustive section reference is [dbx.config](/config/reference).
 
 ---
 
@@ -869,7 +659,7 @@ is a different concern from the published `engines.node` range.
 ## Workspace inheritance
 
 A non-root `dbx.config.*` is merged over the nearest ancestor config (see
-[Configuration → Nested configs](/guide/config#nested-configs)). For `project`
+[Configuration → Nested configs](/guide/config/nested-configs)). For `project`
 specifically:
 
 * **Fields are inherited** (scope, author, license, ...), so a workspace keeps the
@@ -998,29 +788,35 @@ projectSyncTask();
 ---
 url: https://toolchain.deltabox.studio/guide/changelog.md
 ---
-# Changelog & versioning
+# Changelog
 
-The `changelog` section drives everything Conventional Commits: the CI that
-lints commit messages, the local husky hook, the `commitlint.config.mjs`, and the
-changelog pipeline that bumps versions and writes `CHANGELOG.md`.
+The `ci` section drives everything Conventional Commits: the CI that lints
+commit messages, the local husky hook, the `commitlint.config.mjs`, the GitHub
+workflows, and the changelog pipeline that bumps versions and writes
+`CHANGELOG.md`. Its `ci.changelog` config holds the changelog-specific options.
 
 ```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
-        changelog: {
-            branches: { main: 'main', dev: 'dev' },
-            workflows: { ci: true, changelog: true, release: true },
-            types: ['feat', 'fix', 'docs', 'chore'],
-            scopes: ['api', 'web', 'deps'],
-            versioning: { target: 'individual', workspaces: ['packages/*', 'apps/*'] },
+        ci: {
+            ci: true,
+            release: true,
+            changelog: {
+                branches: { main: 'main', dev: 'dev' },
+                commitlint: {
+                    types: ['feat', 'fix', 'docs', 'chore'],
+                    scopes: ['api', 'web', 'deps'],
+                },
+                versioning: { target: 'individual', workspaces: ['packages/*', 'apps/*'] },
+            },
         },
     },
 });
 ```
 
-`dbx sync` writes the GitHub workflows (`.github/workflows`), the commitlint
-config, and the husky `commit-msg` hook (`.husky/commit-msg`). Activate the hook
-with a `postinstall` script (Yarn Berry never runs `prepare`):
+`dbx sync` writes the opted-in GitHub workflows (`.github/workflows`), the
+commitlint config, and the husky `commit-msg` hook (`.husky/commit-msg`). Activate
+the hook with a `postinstall` script (Yarn Berry never runs `prepare`):
 
 ```json [package.json]
 { "scripts": { "commitlint": "commitlint", "postinstall": "husky" } }
@@ -1028,251 +824,54 @@ with a `postinstall` script (Yarn Berry never runs `prepare`):
 
 See [Package scripts](/guide/scripts) for the full recommended script set.
 
-## Workflows
+## Migrating from `toolchain.changelog`
 
-`dbx sync` writes the GitHub workflows into `.github/workflows`. Each id (`ci`,
-`changelog`, `release`, `issues`, `sync`) accepts one of three forms:
+The old top-level `changelog` section is **deprecated** and is rejected by the
+loader. Move its workflows to the top-level `ci` section and the rest to
+`ci.changelog`; `types`/`scopes` now live under `ci.changelog.commitlint`:
 
-* `true` / `false` — write the generated default, or skip it;
-* a **`WorkflowConfig` object** — override parts of the default (branches,
-  triggers, extra top-level keys, extra steps/jobs, token overrides);
-* a **raw YAML string** — written **verbatim** as the workflow file, for a
-  workflow the object model can't express.
-
-```ts [dbx.config.ts]
-export default defineConfig({
-    toolchain: {
-        changelog: {
-            workflows: {
-                ci: true, // the generated default
-                issues: false, // don't write issues.yml
-                release: { pushBranches: ['main'] }, // override the default
-                // A fully hand-authored workflow, written as-is:
-                sync: `name: Toolchain sync
-on: [push, pull_request]
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: yarn dbx sync --check
-`,
-            },
-        },
+```ts [before]
+toolchain: {
+    changelog: {
+        workflows: { ci: true, release: true },
+        branches: { main: 'main' },
+        types: ['feat'],
+        scopes: ['api'],
+        versioning: true,
+        vscode: true,
     },
-});
-```
-
-A raw string is **not** merged with the default, is **not** token-replaced, and
-gets **no generated header** — it is the file's exact content. The
-`changelog.branches` defaults don't apply to it either (it defines its own
-triggers). An empty string disables the workflow.
-
-## Branches
-
-`branches.main` and `branches.dev` pick which branches the generated workflows
-target. Each accepts a glob or an array of globs:
-
-| Branch | Drives                                                                         | Default              |
-| ------ | ------------------------------------------------------------------------------ | -------------------- |
-| `main` | The **CI** workflow (push), the **release** workflow, and the release PR base. | `['main']`           |
-| `dev`  | The **changelog/version** workflow (push).                                     | none — reuses `main` |
-
-`dev` has **no default**: when it is omitted the changelog workflow runs on
-`main` (so a single-branch repo needs no `dev`). Set it for a `dev` → `main`
-flow:
-
-```ts
-changelog: { branches: { main: 'main', dev: 'dev' } }
-// or multiple branches per purpose:
-changelog: { branches: { main: ['main', 'release/**'], dev: ['dev', 'next'] } }
-```
-
-The `sync` workflow runs on both. Any per-workflow `pushBranches` override (eg.
-`workflows.ci.pushBranches`) still wins.
-
-## commitlint config location
-
-By default the generated `commitlint.config.mjs` lives at the project root. Set
-`commitlint.dir` to write it elsewhere:
-
-```ts
-changelog: {
-    commitlint: {
-        dir: '.config';
-    }
-} // -> .config/commitlint.config.mjs
-```
-
-When a custom dir is set, the generated husky hook and the CI commitlint step
-both pass `--config <dir>/commitlint.config.mjs`, so commitlint finds it. Note
-that editor tooling that discovers the config by convention (eg. the
-Conventional Commits VS Code extension, which loads from the repo root) expects
-the config at the root — keep the default unless you have a reason to move it.
-
-> The extension's `No "exports" main defined in … conventional-changelog-conventionalcommits …`
-> error is an upstream commitlint bug (ESM-only parser preset), not a config
-> discovery problem. See [Troubleshooting](#troubleshooting).
-
-## Versioning
-
-`versioning` controls whether — and where — a changelog run writes `version`
-fields into `package.json`. It accepts a boolean or an object, and defaults to
-`true`.
-
-```ts
-changelog: { versioning: true }                       // uniform, defaults
-changelog: { versioning: false }                      // never write versions
-changelog: { versioning: { target: 'root-only' } }
-changelog: { versioning: { target: 'individual', workspaces: ['packages/*'] } }
-```
-
-### `target`
-
-| Target       | What it bumps                                                                                                                                                                |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `uniform`    | The root (when it has a `package.json`) **and every workspace** to one shared version. **Default.**                                                                          |
-| `root-only`  | Only the root `package.json`. Workspaces are left untouched and get no changelog entry.                                                                                      |
-| `individual` | The root tracks the overall bump; **each workspace is bumped on its own** from the commits touching its files, so versions can drift apart (like an "independent" monorepo). |
-
-With `versioning: false` no `version` field is written at all — the changelog
-entries are still generated (headed as `uniform` would), so you can keep
-versioning in another tool (for example changesets).
-
-### `workspaces`
-
-An array of glob patterns selecting the workspaces to version, relative to the
-repo root. It resolves in this order:
-
-1. the `workspaces` patterns you pass, when you pass them;
-2. otherwise the root `package.json` `workspaces` field, when present;
-3. otherwise the root `package.json` alone (a single-package repo);
-4. otherwise a warning is logged and nothing is versioned.
-
-```ts
-changelog: { versioning: { target: 'individual', workspaces: ['packages/*', '!packages/private-*'] } }
-```
-
-`individual` uses a `git log` path filter per workspace, so a workspace is only
-bumped when the scanned commit range touched a file inside it — or a file in one
-of the workspaces it depends on (see [Workspace changelogs](#workspace-changelogs)).
-The root's version always follows the overall bump derived from every scanned
-commit.
-
-### How a run decides its versions
-
-Each run:
-
-1. reads the commits in the range (`--range`/`--processing-method`, default
-   `HEAD`);
-2. derives the semver bump (`feat` → minor, `fix`/other → patch, `!` or a
-   `BREAKING CHANGE` footer → major);
-3. plans the versions per `target` + `workspaces` (see above);
-4. writes the plan's `package.json` versions and prepends the new entry to the
-   root `CHANGELOG.md` and each versioned workspace's `CHANGELOG.md`.
-
-Use `dbx changelog --dry-run` to preview the proposed root entry without touching
-any file; the log line reports the active `target` (or `disabled`).
-
-### Workspace changelogs
-
-Each versioned workspace gets **its own `CHANGELOG.md`** (created if missing),
-headed by the version the plan assigned it. A workspace's entry only lists its
-**related commits**: those touching the workspace directory **or any workspace it
-transitively depends on**, resolved from the project dependency graph
-(`.dbx/toolchain/projects.json`, written by `dbx projects`). So a change in a
-shared package shows up in the changelog of every package that consumes it, not
-just in its own.
-
-Without a graph (eg. `dbx projects` was never run), a workspace falls back to
-filtering on its own directory only. A workspace with no related commits is
-skipped (no empty entry, no file created).
-
-## CLI
-
-```sh
-dbx changelog                       # bump + write (uses the config versioning)
-dbx changelog --dry-run             # preview the root entry
-dbx changelog --range v1.2.0..HEAD  # scan a specific range
-dbx changelog --version 2.0.0       # force a version (retags the changelogs)
-dbx changelog --format-only         # regroup existing changelogs, no bump
-```
-
-The generated `changelog` workflow runs `dbx changelog --range …` on every push
-to the `dev` branches (or `main` when `dev` is unset), so versioning is applied
-from CI as well as locally.
-
-## Writing commit messages
-
-The changelog is rendered from commit **subjects and bodies**, so what you commit
-is what readers see. Watch out for characters that a **shell** re-interprets —
-especially when a message is drafted by an **AI/LLM** and committed through
-`git commit -m "…"`.
-
-### Shell escaping
-
-* **PowerShell** treats a backtick as its escape character, so `` `r `` / `` `n `` /
-  `` `t `` / `` `b `` become CR / LF / TAB / backspace. A preceding `\` is left
-  behind, so `` `resolveVite `` can land in the changelog as a stray `\`, a CR and
-  `esolveVite`.
-* **bash** runs an unquoted `` `…` `` as command substitution, and `$(…)` / `${…}`
-  expand before `git` ever sees them.
-
-The result is invisible control characters, stray `\` and dropped letters. The
-toolchain strips the predictable artifacts
-(`stripControlChars`/`sanitizeText`) but **cannot restore a character the shell
-already consumed**.
-
-### Authoring safely
-
-* Prefer a **file over `-m`**: `git commit -F message.txt`, or a quoted heredoc
-  (`git commit -F - <<'EOF' … EOF`) — nothing is re-interpreted. Avoid assembling
-  multi-line messages inline in PowerShell.
-* When an AI/LLM drafts the message, strip **typographic characters** before
-  committing: curly quotes (`’ “ ”`), em/en dashes (`— –`), non-breaking spaces,
-  zero-width characters and emoji all survive into the changelog and can break
-  `commitlint` or the markdown.
-* **Preview the entry**: `dbx changelog --dry-run` prints the proposed entry —
-  check it for stray `\`, `\r`, `\b`, `\t` or mojibake before releasing.
-
-## Troubleshooting
-
-### `No "exports" main defined in … conventional-changelog-conventionalcommits`
-
-Seen from the Conventional Commits VS Code extension (`vivaxy.vscode-conventional-commits`),
-usually alongside empty type/scope suggestions and a `The cwd is …` line:
-
-```
-commitlint: Error: No "exports" main defined in
-  node_modules/conventional-changelog-conventionalcommits/package.json
-```
-
-This is a **known upstream commitlint bug** (commitlint#4864): the generated
-config `extends: ['@commitlint/config-conventional']`, which sets
-`parserPreset: 'conventional-changelog-conventionalcommits'`, and v10 of that
-package is **ESM-only** (`exports` has no `require`/`default`), so the extension's
-bundled (older) commitlint cannot `require.resolve` it. The config is read fine —
-the *preset* fails to resolve, so the extension falls back to empty rules.
-
-The husky hook and CI are unaffected when commitlint is recent enough to resolve
-pure-ESM presets (commitlint ≥ 21.2.3). If your local commitlint is older, pin
-the preset to the last CJS-compatible release:
-
-```json [package.json]
-{
-    "resolutions": { "conventional-changelog-conventionalcommits": "9.3.1" }
 }
 ```
 
-(Use `overrides` instead of `resolutions` for npm.) Updating the extension to a
-version bundling the fixed commitlint also resolves it.
+```ts [after]
+toolchain: {
+    ci: {
+        ci: true,
+        release: true,
+        changelog: {
+            branches: { main: 'main' },
+            commitlint: { types: ['feat'], scopes: ['api'] },
+            versioning: true,
+            vscode: true,
+        },
+    },
+}
+```
 
-## Releases
+## Where to start
 
-The generated `release` workflow opens a release PR whose body is the
-**aggregated changelog**: every entry from the last tag (`git describe --tags --abbrev=0`) up to the latest version, not just the newest one. So a release
-that skips versions (eg. `v1.7.0` → `v1.7.8`) still documents `1.7.1`–`1.7.8`
-in one place.
+* [Workflows](/guide/changelog/workflows) — how each `ci` workflow entry opts in.
+* [Branches](/guide/changelog/branches) — `main`/`dev` branch globs.
+* [commitlint](/guide/changelog/commitlint) — config location, types/scopes and
+  the no-commitlint fallback.
+* [Versioning](/guide/changelog/versioning) — which `package.json` versions a run
+  bumps.
+* [CLI](/guide/changelog/cli) — running the changelog locally.
+* [Writing commit messages](/guide/changelog/writing-commit-messages) — avoiding
+  shell-mangled messages.
+* [Troubleshooting](/guide/changelog/troubleshooting) — the upstream commitlint
+  parser-preset error.
+* [Releases](/guide/changelog/releases) — the aggregated release PR body.
 
 ---
 
@@ -1299,7 +898,7 @@ export default defineConfig({
 
 `dbx sync` regenerates the managed `tsconfig.json` files and tracks them in
 `.dbx/toolchain/manifest.json`; `dbx sync --check` is the CI gate. See
-[Configuration](/guide/config#opt-in-by-presence) for the opt-in-by-presence
+[Configuration](/guide/config/opt-in-by-presence) for the opt-in-by-presence
 shorthand (`tsconfig: true` enables the defaults).
 
 ## Why so many tsconfig files?
@@ -1552,7 +1151,7 @@ import {
 
 `generateTsconfigs` returns one result per workspace (with `newTsconfig`,
 `originalConfig`, ...); pass `write: false` for a dry run. The task-level
-options are documented in the [Programmatic API](/guide/api#deltaboxtoolchaintsconfig)
+options are documented in the [Programmatic API](/guide/api/package-reference#deltaboxtoolchaintsconfig)
 reference.
 
 ## Sync & CI
@@ -1575,7 +1174,7 @@ A non-root `dbx.config.*` is **merged over** the nearest ancestor
 `dbx.config.*`: nested options are combined, and leaf options (booleans,
 strings, numbers, arrays) in the project override the root. So a workspace can
 tweak just its own `tsconfig` (or any other section) and inherit the rest. See
-[Configuration → Nested configs](/guide/config#nested-configs) for the rules.
+[Configuration → Nested configs](/guide/config/nested-configs) for the rules.
 
 ## Scaffolding
 
@@ -1780,7 +1379,7 @@ import {
 | `viteSyncTask()`               | The sync task (writes the shim).                                                  |
 | `viteProvider()`               | The Vite+ provider descriptor.                                                    |
 
-See [Configuration](/guide/config#vite) for the `dbx.config` integration and the
+See [Configuration](/guide/config/vite) for the `dbx.config` integration and the
 [Providers](/guide/providers) guide for the passthrough commands.
 
 ---
@@ -2119,306 +1718,25 @@ url: https://toolchain.deltabox.studio/guide/config-generator.md
 Schema, a markdown reference, config metadata JSON and CLI option definitions —
 all from that one schema.
 
-## 1. Describe a scope
+## Where to start
 
-Each scope is a Zod object. Leaves that are backed by an environment variable
-carry an `.meta()` describing that variable:
-
-```ts
-import { z } from 'zod';
-
-export const serverConfig = z.object({
-    base: z.object({
-        port: z.number().default(3000).meta({
-            env: 'MYAPP_PORT',
-            description: 'HTTP port',
-        }),
-        host: z.string().default('0.0.0.0').meta({
-            env: 'MYAPP_HOST',
-            description: 'Bind address',
-        }),
-    }),
-    auth: z.object({
-        password: z.string().meta({
-            env: 'MYAPP_AUTH_PASSWORD',
-            description: 'Admin password',
-            required: true,
-            secret: true,
-        }),
-        tokenTtl: z.number().default(3600).meta({
-            env: 'MYAPP_AUTH_TOKEN_TTL',
-            description: 'Session lifetime (seconds)',
-        }),
-    }),
-});
-```
-
-`EnvVarMeta` fields: `env`, `path` (dotted config path), `description`,
-`required`, `secret`, `scope`, `public` (safe to expose to the browser) and
-`defaultValue` (when the resolved default differs from the env default).
-
-## 2. Create the engine
-
-Bind the scopes, an env prefix, the base group and the project root once:
+* [Describe a scope](/guide/config-generator/describe-a-scope) — write the Zod
+  schema and its `.meta()`.
+* [Create the engine](/guide/config-generator/create-the-engine) — bind scopes,
+  prefix, base group and root.
+* [Generate](/guide/config-generator/generate) — the generator methods.
+* [CLI commands](/guide/config-generator/cli-commands) — the `config:*` command
+  descriptors.
+* [Load the config](/guide/config-generator/load-the-config) — the runtime loader
+  (`parseEnvTree`, `applyOverrides`, `compileZodSchema`).
+* [Generated outputs](/guide/config-generator/generated-outputs) — types,
+  markdown, env files, JSON Schema and formatting.
+* [Real-world shape](/guide/config-generator/real-world-shape) — how a consumer
+  binds the engine end-to-end.
 
 ```ts
 import { createConfigEngine } from '@deltabox/toolchain/config';
-
-export const engine = createConfigEngine({
-    scopes: {
-        server: { zodSchema: serverConfig },
-        frontend: { zodSchema: frontendConfig },
-        cli: { zodSchema: cliConfig },
-    },
-    envPrefix: 'MYAPP_',
-    baseGroup: 'base', // the flat fields hoisted out of the nested groups
-    root: process.cwd(),
-    // Optional: custom env-name -> dotted-path derivation (eg. dual prefixes).
-    envPathOf: env =>
-        env
-            .replace(/^(MYAPP_|VITE_)/, '')
-            .toLowerCase()
-            .replace(/_/g, '.'),
-});
 ```
-
-## 3. Generate
-
-Every generator is a method on the bound engine:
-
-```ts
-engine.collectEnvVars(); // EnvVarDef[] across every scope
-engine.requiredEnvVars('server'); // required var names for a scope
-
-engine.writeEnvFile({ output: '.env.example' });
-engine.writeEnvTypes({ outputDir: 'types' });
-engine.writeConfigTypes({ outputDir: 'types' });
-engine.writeJsonSchema({ output: 'config.schema.json' });
-engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
-
-engine.generateCliOptions({ output: 'cli-options.json' });
-engine.buildConfigJson(); // the config metadata document
-```
-
-## 4. CLI commands
-
-`configCommands({ engine, defaults })` returns `ToolchainCommand[]` (register them
-on your commander program with `@deltabox/toolchain/cli`):
-
-| Command           | Writes                                       |
-| ----------------- | -------------------------------------------- |
-| `config:env`      | `.env.example`                               |
-| `config:types`    | config types (`--env` also writes env types) |
-| `config:json`     | `config.json` (metadata)                     |
-| `config:schema`   | `config.schema.json`                         |
-| `config:markdown` | the markdown reference                       |
-| `config:cli`      | `cli-options.json`                           |
-| `config:all`      | everything, under one output directory       |
-
-```ts
-import { configCommands } from '@deltabox/toolchain/config';
-
-const commands = configCommands({
-    engine,
-    defaults: { typesDir: 'packages/shared/src/types', docsDir: 'docs/reference' },
-});
-// register `commands` on your commander program
-```
-
-## 5. Load the config at runtime
-
-Generation is only half of it. The same schema backs a small, dependency-free
-**loader**. `parseEnvTree` folds `PREFIX_*` variables into a nested tree
-(splitting the remainder on `_`), and the typed accessors read dotted paths out
-of it:
-
-```ts
-import {
-    applyOverrides,
-    envBool,
-    envInt,
-    envList,
-    envMap,
-    envString,
-    parseEnvTree,
-} from '@deltabox/toolchain/config';
-
-// MYAPP_HOST, MYAPP_PORT, MYAPP_LOG_PRETTY, ... -> a nested tree
-const tree = parseEnvTree(process.env, 'MYAPP_');
-
-const config = {
-    host: envString(tree, 'host', '0.0.0.0'),
-    port: envInt(tree, 'port', 3000),
-    pretty: envBool(tree, 'log.pretty', true),
-    corsOrigins: envList(tree, 'cors.origin', []),
-    headers: envMap(tree, 'response.headers.map'), // `Key=value,...` -> record
-};
-```
-
-| Helper                       | Reads                                                |
-| ---------------------------- | ---------------------------------------------------- |
-| `envString(tree, path, fb?)` | string (unset/empty -> fallback)                     |
-| `envInt` / `envBool`         | number / boolean (`true/1/yes/on`, `false/0/no/off`) |
-| `envList`                    | comma-separated list                                 |
-| `envMap`                     | `Key=value,...` into a lowercase-keyed record        |
-| `readEnvPath(tree, path)`    | the raw value at a dotted path                       |
-
-Layer typed overrides on top of the env values (a config file, then CLI flags)
-with `applyOverrides`, then validate the result through the scope schema so it is
-guaranteed to match the generated types:
-
-```ts
-import { compileZodSchema } from '@deltabox/toolchain/config';
-
-const schemaCompiler = compileZodSchema(serverConfig);
-
-export function loadConfig(env = process.env, file = {}, cli = {}) {
-    const tree = parseEnvTree(env, 'MYAPP_');
-    const fromEnv = {
-        base: {
-            host: envString(tree, 'host', '0.0.0.0'),
-            port: envInt(tree, 'port', 3000),
-        },
-        auth: {
-            password: envString(tree, 'auth.password', ''),
-            tokenTtl: envInt(tree, 'auth.token.ttl', 3600),
-        },
-    };
-    return schemaCompiler.parse(applyOverrides(applyOverrides(fromEnv, file), cli));
-}
-```
-
-A resolver like this is the runtime counterpart of the generators — same schema,
-same defaults, one typed object out.
-
-> The dotted path is the env name with the prefix removed and `_` folded to `.`,
-> so `MYAPP_AUTH_TOKEN_TTL` reads as `auth.token.ttl`. When a field name differs
-> from its env-derived path, map it explicitly in the resolver (as above).
-
-## Generated outputs
-
-Every generator writes from the same Zod schema. The engine's own config model
-is the living example: its types are committed at
-[packages/shared/src/config-types.ts](https://github.com/deltabox-studio/toolchain/blob/main/packages/shared/src/config-types.ts).
-
-### Config types — `renderConfigTypes()` / `writeConfigTypes()`
-
-Named `interface`s (and `type` aliases for enums/unions) with jsdoc taken from
-`.describe()`. Unions and refs stay named, so nested objects are referenced
-rather than inlined:
-
-```ts
-// engine.renderConfigTypes() -> { server: "...", cli: "..." }
-engine.writeConfigTypes({ outputDir: 'types' }); // types/server.ts, types/cli.ts
-```
-
-```ts
-// types/server.ts
-export interface ServerConfig {
-    /** Bind host. */
-    host?: string;
-    port?: number;
-    auth?: { password?: string; enabled?: boolean };
-}
-```
-
-An object schema that also accepts arbitrary keys (Zod `.catchall(...)` /
-`.passthrough()`, ie. `additionalProperties` in the JSON Schema) generates an
-open interface with an index signature, so the extra keys stay typed as
-`unknown` instead of being rejected:
-
-```ts
-export interface ServerConfig {
-    /** Bind host. */
-    host?: string;
-    [key: string]: unknown;
-}
-```
-
-### Markdown — `writeMarkdown()`
-
-One reference page per scope plus an index listing the required/core env vars:
-
-```ts
-engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
-// docs/reference/configuration/server.md, .../index.md
-```
-
-See a real full example at [config/reference.md](../config/reference.md).
-
-### Env — `renderEnvFile()` / `writeEnvFile()`
-
-A `.env.example`; secrets are emitted commented out so operators fill them in:
-
-```sh
-engine.writeEnvFile({ output: '.env.example' });
-
-# ---- SERVER ----
-MYAPP_HOST=localhost
-# MYAPP_AUTH_PASSWORD=
-```
-
-### JSON Schema — `generateJsonSchema()` / `writeJsonSchema()`
-
-The resolved untyped JSON Schema for every scope, for editor autocomplete:
-
-```ts
-await engine.writeJsonSchema({ output: 'config.schema.json' });
-```
-
-### Formatting — `formatGenerated()`
-
-Generated text is formatted **at generation time**, so a written file is already
-formatted instead of relying on a separate `yarn format` pass. `formatGenerated`
-runs source through Oxfmt, preferring the project-local `vite-plus/fmt` (Oxfmt
-ships with Vite+), then `oxfmt`, and returns the input untouched when no formatter
-is resolvable, so generation never fails on a missing formatter.
-
-```ts
-import { formatGenerated, GENERATED_FORMAT_OPTIONS } from '@deltabox/toolchain/config';
-
-const source = 'export const config={a:1}';
-const formatted = await formatGenerated(source, {
-    fileName: 'config.ts', // infers the language (default `generated.ts`)
-    options: { printWidth: 100 }, // merged over GENERATED_FORMAT_OPTIONS
-});
-```
-
-`GENERATED_FORMAT_OPTIONS` is the baseline Oxfmt config matching the toolchain's
-own `vite.config.ts` (4-space indent, single quotes, `trailingComma: 'es5'`,
-`jsdoc: true`, ...). Pass `options.fileName` to format JSON, markdown or another
-language, and `options.options` to override any single option.
-
-For a full, real example of the generated config types, see
-`packages/shared/src/config-types.ts`.
-
-## Real-world shape
-
-Proxified binds three scopes under a `PROXIFIED_` prefix and reuses the engine
-for every generator:
-
-```ts
-import { createConfigEngine } from '@deltabox/toolchain/config';
-
-export const configEngine = createConfigEngine({
-    scopes: {
-        server: { zodSchema: serverConfig },
-        frontend: { zodSchema: frontendConfig },
-        cli: { zodSchema: cliConfig },
-    },
-    envPrefix: 'PROXIFIED_',
-    baseGroup: 'base',
-    root: monorepoRoot(),
-    envPathOf: env => envPathOf(env),
-});
-```
-
-The generators then run from a `config:generate-all` script (built on the
-`configCommands({ engine })` helpers) to keep `.env.example`, the JSON Schema,
-the markdown reference, the types and the CLI options in sync with the schemas.
-
-These `config:*` commands belong to the consumer's own CLI, `dbx`
-itself does not expose them.
 
 ---
 
@@ -2477,7 +1795,7 @@ Notes:
 * `dbx` is the toolchain binary, so `yarn dbx <cmd>` (eg. `yarn dbx sync`) works
   even without a script; the `dbx:*` aliases are just for discoverability.
 
-When the `changelog` section is enabled, `dbx sync` also writes a husky
+When `ci.changelog` is enabled, `dbx sync` also writes a husky
 `commit-msg` hook (`.husky/commit-msg`) that runs commitlint, so commits are
 linted locally as well as in CI. Use `postinstall` (not `prepare`) to activate
 husky: Yarn Berry never runs `prepare` on install. Husky hooks have no file
@@ -2503,7 +1821,7 @@ trailing CR silently breaks the hook.
 
    Or, if the project uses `dbx.config.ts`, author the Vite+ config there under
    `toolchain.vite`. `dbx sync` then writes the root `vite.config.ts` shim (see
-   [Vite+](/guide/config#vite)). `dbx migrate --from vite --write` folds an
+   [Vite+](/guide/config/vite)). `dbx migrate --from vite --write` folds an
    existing hand-written `vite.config.ts` in.
 
 3. Replace the scripts (see the tables below), then delete `biome.json` and
@@ -2814,7 +2132,7 @@ template.
   are listed and created through `vp create`.
 * **git** — a repository (optionally with a `subdir`) listed as a template and
   created through `vp create`.
-* **Vite+** — set `create.defaultTemplate` in the `vite` section (the full Vite+
+* **Vite+** — set `create.defaultTemplate` in the `dbx.config.*`'s `vite` section (the full Vite+
   config) to make a scope the default for `vp create`.
 
 ## VS Code
@@ -3023,337 +2341,23 @@ package re-exports the config model + sync runner and every workspace package, s
 a consumer can import the whole surface from the root or a single package through
 a subpath.
 
-## Umbrella (`@deltabox/toolchain`)
+## Where to start
 
-The root re-exports `@deltabox/toolchain-core` and `@deltabox/toolchain-shared`
-**directly**, and exposes the remaining packages as **namespaces** plus the sync
-runner:
-
-```ts
-import {
-    // identity helper (typed config)
-    defineConfig,
-    // config + sync
-    loadToolchainConfig,
-    runSync,
-    runWatch,
-    defaultSyncTasks,
-    // opt-in-by-presence helpers
-    sectionEnabled,
-    sectionConfig,
-    resolveTokens,
-    // logging
-    logger,
-    createLogger,
-} from '@deltabox/toolchain';
-// The other packages are namespaced:
-import {
-    biome,
-    changelog,
-    config,
-    core,
-    project,
-    shared,
-    tsconfig,
-    tsdown,
-} from '@deltabox/toolchain';
-```
+* [Umbrella (`@deltabox/toolchain`)](/guide/api/umbrella) — the root exports and
+  the namespaced packages.
+* [Subpath exports](/guide/api/subpath-exports) — the per-package entry points.
+* [Package reference](/guide/api/package-reference) — every package's public
+  exports.
+* [Logging](/guide/api/logging) — the shared logger.
+* [Examples](/guide/api/examples) — short, copy-pasteable recipes.
+* [Registering commands](/guide/api/registering-commands) — wire
+  `ToolchainCommand[]` onto a commander program.
 
 ```ts
+import { defineConfig, loadToolchainConfig, runSync, defaultSyncTasks } from '@deltabox/toolchain';
+
 const { config, tokens, projectType } = await loadToolchainConfig(process.cwd());
 await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, projectType });
-```
-
-## Subpath exports
-
-| Import                          | What it provides                                                               |
-| ------------------------------- | ------------------------------------------------------------------------------ |
-| `@deltabox/toolchain/cli`       | Build/register the `dbx` commander program + bare-command routing.             |
-| `@deltabox/toolchain/core`      | Load `dbx.config.*`, run/watch sync, the project graph, manifest, reset.       |
-| `@deltabox/toolchain/config`    | The Zod/env config engine, generators and the `config:*` commands.             |
-| `@deltabox/toolchain/vite`      | Resolve/run `vp`, the Vite+ provider, the `dbx()` plugin and `vite` sync.      |
-| `@deltabox/toolchain/migrate`   | Pluggable migrations to Oxfmt/Oxlint (Biome, ESLint, Prettier, Dprint).        |
-| `@deltabox/toolchain/template`  | The builtin/local/online template registry, loading and scaffolding.           |
-| `@deltabox/toolchain/providers` | The provider registry (`toolchainProviders`) the editor reads.                 |
-| `@deltabox/toolchain/tsdown`    | The tsdown base config, `createTsdownConfig`, post banner and cleanup.         |
-| `@deltabox/toolchain/tsconfig`  | The tsconfig sync task, templates and the tsconfig generator.                  |
-| `@deltabox/toolchain/changelog` | The changelog runner, workflows, commitlint and the changelog sync task.       |
-| `@deltabox/toolchain/biome`     | The generic Biome config, rendering helpers and the biome sync task.           |
-| `@deltabox/toolchain/project`   | Project/monorepo/workspace file generation and `dbx.config.ts` scaffolding.    |
-| `@deltabox/toolchain/shared`    | The config model, logger, provider model, template engine, `run`/`spawnCross`. |
-
-## Package reference
-
-### `@deltabox/toolchain/shared`
-
-The base layer: the config model, logging, process/string/object utilities and
-the template engine.
-
-| Export                                                                        | Description                                                                              |
-| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `defineConfig(config)`                                                        | Identity helper for a typed `dbx.config.*` (object, promise, or sync/async callback).    |
-| `sectionEnabled(section)` / `sectionConfig(section)`                          | Opt-in-by-presence helpers for a config section.                                         |
-| `resolveTokens(config)`                                                       | Flatten a config into `{{ token }}` replacements.                                        |
-| `CONFIG_FILE_NAMES`                                                           | The config file names the loader probes, in priority order.                              |
-| `repoSlugFromUrl(url)`                                                        | Derive an `owner/name` slug from a repository URL.                                       |
-| `findOwnCliEntry(cwd?)` / `localToolchainVersion(cwd?)` / `TOOLCHAIN_PACKAGE` | Locate a project's own toolchain bin + pinned version (prefer them over a global `dbx`). |
-| `createLogger(options)` / `logger`                                            | The shared logger (see [Logging](#logging)).                                             |
-| `spawnCross(cmd, args, options)` / `run(cmd, args, options)`                  | Cross-platform, shell-free spawning; `timeoutMs` kills the child tree.                   |
-| `killProcessTree(child)`                                                      | Kill a child process and its descendants (Windows `taskkill /t`).                        |
-| `readJsonFile` / `readJsonAt` / `toJson` / `writeJsonFile`                    | Small JSON file helpers.                                                                 |
-| `mergeJsonAt(cwd, relative, patch)`                                           | Deep-merge a patch over an existing JSON file.                                           |
-| `deepMerge` / `isPlainObject` / `sort` / `mapValues`                          | Object utilities.                                                                        |
-| `applyReplacements` / `applyReplacementsDeep` / `createReplacer`              | The `{{ token }}` template engine (also `tokenPattern`, `extractTokens`).                |
-| `toYaml(value)`                                                               | A tiny YAML emitter for the GitHub Actions subset.                                       |
-
-The config **types** and **schemas** also live here: `ToolchainConfig`, `DbxConfig`,
-`SyncTask`, `SyncContext`, `ManagedFile`, `ToolchainCommand`, `ToolchainOption`,
-`ToolchainProvider`, `ToolchainViteConfig` (Vite+'s config type), `Replacements`,
-and the generated `config-types` /
-`config-schema` exports.
-
-```ts
-import { defineConfig, sectionEnabled, applyReplacements } from '@deltabox/toolchain/shared';
-
-const text = applyReplacements('Hello {{name:world}}', { name: 'acme' });
-```
-
-### `@deltabox/toolchain/core`
-
-Loads `dbx.config.*`, builds the project graph and runs the sync tasks.
-
-| Export                                                        | Description                                                            |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `loadToolchainConfig(cwd?)`                                   | Find + load the config, resolve tokens and the project type.           |
-| `findConfigFile(cwd?)`                                        | The config file path, if any.                                          |
-| `runSync(options)`                                            | Run the given `SyncTask[]` and return the summary.                     |
-| `runWatch(options)`                                           | Sync once, then watch inputs and re-sync.                              |
-| `buildProjectGraph(root, options?)`                           | Discover workspace packages and their dependencies.                    |
-| `orderProjects(nodes)` / `detectPackageManager(root)`         | Dependency ordering and package-manager detection.                     |
-| `writeProjectGraph` / `readProjectGraph`                      | Persist/read `.dbx/toolchain/projects.json`.                           |
-| `selectProjects(options)`                                     | Select projects by kind/name/glob.                                     |
-| `resetToolchain(options)` / `resetProjects(options)`          | Remove generated files, the manifest and/or the config.                |
-| `vscodeSyncTask(options?)`                                    | The VS Code settings/extensions sync task.                             |
-| `resolveProjectType(cwd, config?)` / `detectProjectType(cwd)` | The project kind (`monorepo-root` / `monorepo-workspace` / `project`). |
-| `readManifest(cwd)` / `writeManifest(cwd, files)`             | The `.dbx/toolchain/manifest.json` helpers.                            |
-
-### `@deltabox/toolchain/config`
-
-The generic Zod/env engine (see the [Config Generator](/guide/config-generator)
-guide for the full workflow).
-
-| Export                                                                                   | Description                                               |
-| ---------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `createConfigEngine(options)`                                                            | Bind scopes + prefix + root into a reusable engine.       |
-| `configCommands({ engine, defaults? })`                                                  | The `config:*` commands for a consumer's own CLI.         |
-| `formatGenerated(source, options?)`                                                      | Format generated output with Oxfmt (see below).           |
-| `GENERATED_FORMAT_OPTIONS`                                                               | The baseline Oxfmt options used by the generators.        |
-| `parseEnvTree(env, prefix?)` / `envString` / `envInt` / `envBool` / `envList` / `envMap` | The dependency-free runtime loader.                       |
-| `applyOverrides(base, overrides?)`                                                       | Layer typed overrides over env-derived values.            |
-| `compileZodSchema(schema)`                                                               | Compile a Zod schema for fast repeated parsing.           |
-| `envPathOf(env, prefix?)` / `envMetaOf(schema)`                                          | Env-name to dotted-path derivation and `.meta()` reading. |
-| `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                    |
-| `renderConfigTypes` / `renderAllConfigTypes` / `generateConfigTypes`                     | Config type generation.                                   |
-| `renderScopeMarkdown` / `generateConfigMarkdown` / `renderConfigFileMarkdown`            | Markdown reference generation.                            |
-| `generateConfigJsonSchema` / `generateJsonSchemaFile`                                    | JSON Schema generation.                                   |
-| `generateEnv` / `generateEnvDts` / `generateEnvTypes`                                    | `.env` / env type generation.                             |
-| `generateCliOptions` / `flagOf` / `cliFlagOf` / `createCliArgsParser`                    | CLI option generation + parsing.                          |
-
-### `@deltabox/toolchain/vite`
-
-The Vite+ provider: resolving/running `vp`, the `dbx()` plugin and the `vite`
-sync task (see the [Providers](/guide/providers) guide).
-
-| Export                                                             | Description                                                                                         |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| `resolveVp(cwd?)` / `hasVp(cwd?)` / `runVp(args, options?)`        | Resolve and run the `vp` binary (local shim, global, then `npx`).                                   |
-| `vpVersion(cwd?)` / `describeVp(cwd?)` / `which(bin)`              | Version, resolution description and PATH lookup.                                                    |
-| `VP_COMMANDS` / `viteCommandName(name)` / `resolveVpCommand(name)` | The `vp` command catalog + name/alias resolution.                                                   |
-| `viteProvider()` / `viteCommands()`                                | The provider descriptor and the `dbx vite:*` commands.                                              |
-| `dbx(options?)` / `DBX_TASKS` / `dbxTaskCommand(sub)`              | The Vite/Vite+ plugin and the resolved `run.tasks` to spread in.                                    |
-| `resolveDbx(cwd?)` / `runDbx(args, cwd?)`                          | Resolve/run the `dbx` binary (the project's own first; a pinned project never runs a global `dbx`). |
-| `resolveVite(options?)`                                            | Resolve `toolchain.vite` (or a passed `toolchain`), with inline `vite` overrides.                   |
-| `detectViteSpecifier(cwd)`                                         | Which package (`vite` / `vite-plus`) the project has, for the shim import.                          |
-| `renderViteConfig(specifier?)` / `viteConfigObject(config?)`       | The managed `vite.config.ts` shim (per specifier) + the section minus `config`.                     |
-| `viteSyncTask()`                                                   | The `vite` sync task that writes the shim.                                                          |
-
-### `@deltabox/toolchain/cli`
-
-| Export                                         | Description                                                            |
-| ---------------------------------------------- | ---------------------------------------------------------------------- |
-| `registerToolchainCommands(program, commands)` | Wire framework-agnostic commands onto a commander program.             |
-| `builtinCommands()`                            | The commands built into the root CLI (config commands need an engine). |
-| `createCli()`                                  | Build the `dbx` commander program.                                     |
-| `runCli(argv?)`                                | Parse and run the CLI (extracts logger flags, defaults bare Vite+).    |
-| `withDefaultVite(argv, commandNames?)`         | Insert `vite` before a bare Vite+ command.                             |
-| `extractLogOptions(argv)`                      | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
-
-See the [CLI](/guide/cli) guide for the routing behaviour.
-
-### `@deltabox/toolchain/migrate`
-
-| Export                                                                              | Description                                      |
-| ----------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `migrations()` / `listMigrations(cwd)` / `detectMigrations(cwd)`                    | The registered migrations and detection.         |
-| `findMigration(idOrFrom)` / `runMigration(...)` / `runDetectedMigrations(ctx)`      | Run one or every detected migration.             |
-| `biomeToOx` / `eslintToOx` / `prettierToOx` / `dprintToOx` / `viteToToolchain`      | The built-in `ToolchainMigration` objects.       |
-| `mapBiomeToOxfmt` / `mapBiomeToOxlint` / `mapPrettierToOxfmt` / `mapDprintToOxfmt`  | Source-to-Oxc mapping helpers.                   |
-| `extractViteObject(source)` / `scanLiteralObject(text)` / `foldViteIntoConfig(...)` | The `vite` source's extraction + splice helpers. |
-| `diffFiles(files)` / `hasPending(diffs)`                                            | Diff planned files against disk (for `--check`). |
-| `mergeViteConfig(source, ...)` / `writeViteTarget(...)`                             | The Vite+ (`--target vite`) output helpers.      |
-
-### `@deltabox/toolchain/template`
-
-| Export                                                                          | Description                                                |
-| ------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `loadTemplates(options)` / `collectSources(options)`                            | Resolve builtin/local/online sources into templates.       |
-| `scaffoldTemplate(template, options)`                                           | Copy a template into a target directory, resolving tokens. |
-| `addTemplateSource(cwd, source)` / `removeTemplateSource(cwd, key)`             | Manage `.dbx/toolchain/templates.json`.                    |
-| `readTemplateRegistry` / `writeTemplateRegistry`                                | Read/write the template source registry.                   |
-| `BUILTIN_TEMPLATES` / `loadLocalTemplates(root, idPrefix?)`                     | The offline templates.                                     |
-| `readTemplateDir` / `readTemplateManifest` / `writeTemplateManifest`            | A local `template.json` directory.                         |
-| `parseSourceSpec(spec, cwd?)` / `gitTemplate(source)` / `loadNpmTemplates(pkg)` | Online source parsing/loading.                             |
-
-### `@deltabox/toolchain/providers`
-
-| Export                      | Description                                           |
-| --------------------------- | ----------------------------------------------------- |
-| `toolchainProviders()`      | Every registered provider with its actions resolved.  |
-| `providerActions(provider)` | The default actions for a provider (one per command). |
-| `viteProvider()`            | The Vite+ provider descriptor.                        |
-
-```ts
-import { toolchainProviders } from '@deltabox/toolchain/providers';
-console.log(toolchainProviders().map(p => p.id));
-```
-
-### `@deltabox/toolchain/tsdown`
-
-| Export                                                         | Description                                  |
-| -------------------------------------------------------------- | -------------------------------------------- |
-| `baseTsdownConfig`                                             | The shared tsdown base config.               |
-| `createTsdownConfig(overrides?)` / `createPostBanner(options)` | Build a tsdown config / a post-build banner. |
-| `cleanup(options?)` / `cleanupCommands()`                      | Remove build artifacts / the turbo cache.    |
-
-### `@deltabox/toolchain/tsconfig`
-
-| Export                                                                       | Description                                           |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `tsconfigSyncTask()`                                                         | The tsconfig sync task.                               |
-| `tsconfigBaseTemplate` / `tsconfigDefaultTemplate` / `tsconfigBuildTemplate` | The base/default/build templates.                     |
-| `renderTsconfigBase` / `renderTsconfigDefault` / `renderTsconfigBuild`       | Render the templates with replacements.               |
-| `buildMonorepoTsconfig(options)` / `renderMonorepoTsconfig(options)`         | The monorepo root tsconfig with references + aliases. |
-| `renderTsconfigTemplates(replacements?)`                                     | Render every template at once.                        |
-| `generateTsconfigs(options)` / `runTsconfigCli(argv?)`                       | The tsconfig generator and its CLI.                   |
-
-### `@deltabox/toolchain/changelog`
-
-| Export                                                                 | Description                                          |
-| ---------------------------------------------------------------------- | ---------------------------------------------------- |
-| `runChangelog(argv?)` / `main`                                         | Derive the bump and update the changelog + versions. |
-| `runWorkflows(options)` / `resolveWorkflowId(name)`                    | Trigger generated GitHub workflows.                  |
-| `renderWorkflow(id, options)` / `renderWorkflows(...)`                 | Render workflow YAML.                                |
-| `renderCommitlintConfig(options?)` / `changelogSyncTask()`             | Commitlint config + the changelog sync task.         |
-| `readCommits(range)` / `deriveBump(records)` / `buildSummary(records)` | Git commit reading, bump derivation and summaries.   |
-| `renderChangelogEntry(...)` / `parseExistingChangelog(content)`        | Changelog entry rendering/parsing.                   |
-
-### `@deltabox/toolchain/biome`
-
-| Export                                                                  | Description                                                |
-| ----------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `biomeConfig` / `biomeVscodeSettings`                                   | The generic Biome config and recommended VS Code settings. |
-| `renderBiomeConfig(replacements?, overrides?)` / `renderBiomeJson(...)` | Resolve tokens + merge overrides, then serialize.          |
-| `mergeBiomeConfig(base, patch)` / `renderVscodeSettings(indent?)`       | Recursive merge and settings rendering.                    |
-| `biomeSyncTask()`                                                       | The biome sync task (writes `biome.json`).                 |
-
-### `@deltabox/toolchain/project`
-
-| Export                                                                                       | Description                                        |
-| -------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `createRootProjectFiles(ctx)` / `createMonorepoRootFiles(ctx)` / `createWorkspaceFiles(ctx)` | Scaffold files for each project kind.              |
-| `generateProjectConfigs(options)`                                                            | Generate `dbx.config.ts` for projects missing one. |
-| `renderToolchainConfig(ctx)` / `renderWorkspaceTsconfig(composite?)`                         | Render the tooling config / a workspace tsconfig.  |
-| `renderGitignore()`                                                                          | Render a generic `.gitignore`.                     |
-| `catalogsSyncTask()` / `renderYarnrc(catalog)` / `renderPnpmWorkspace(catalog, packages?)`   | The catalogs sync task + catalog file renderers.   |
-| `writeGeneratedFiles(files, cwd?)`                                                           | Write a `GeneratedFile[]`.                         |
-| `projectCommands()`                                                                          | The `project:*` commands.                          |
-
-## Logging
-
-Every toolchain message goes through one level-aware logger, rendered with
-[`@clack/prompts`](https://bombshell.dev/clack) (level symbols + guide). Use it
-instead of `console.log` so output stays consistent and respects the config and
-the CLI flags.
-
-| Export / member                                   | Description                                                                                  |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `logger`                                          | The active singleton: `raw`, `debug`, `info`, `success`, `warn`, `error`, `level`, `colors`. |
-| `createLogger(options)`                           | Create an independent logger (`level`, `color`, `name`).                                     |
-| `setLogConfig(section)`                           | Apply the `logger` section from the loaded config.                                           |
-| `setLogOverrides(options)`                        | Apply CLI overrides (win over the config). `configureLogger` is an alias.                    |
-| `getLogOverrides()` / `getLogger()`               | Read the current overrides / the active instance.                                            |
-| `LOG_LEVELS` / `isLogLevel` / `normalizeLogLevel` | The valid levels, most verbose first (`debug`, `info`, `warn`, `error`, `silent`).           |
-
-```ts
-import { createLogger, logger, setLogConfig, setLogOverrides } from '@deltabox/toolchain/shared';
-
-setLogConfig({ level: 'debug', color: false, name: 'dbx' }); // from dbx.config.*
-setLogOverrides({ level: 'warn' }); // from --log-level
-
-logger.info('human message');
-logger.success('done');
-logger.error('failed');
-logger.raw(JSON.stringify(payload)); // machine output: no prefix, no colour
-```
-
-Use `raw` for machine output (`--json`): it is never prefixed or decorated.
-`logger.warn`/`error` write to stderr; `debug`/`info`/`success`/`raw` to stdout.
-Messages that start with whitespace (indented continuations) are never prefixed.
-
-This mirrors the [`logger` config section](/guide/config#logging) and the
-`--log-level <level>` / `--no-color` [CLI flags](/guide/cli#global-flags), which
-call `setLogConfig` / `setLogOverrides` under the hood.
-
-## Examples
-
-```ts
-// Vite+ provider
-import { resolveVp, runVp, resolveVpCommand, VP_COMMANDS } from '@deltabox/toolchain/vite';
-await runVp(['check'], { cwd: process.cwd() });
-resolveVpCommand('i'); // 'install'
-
-// Migrations
-import { detectMigrations, runMigration } from '@deltabox/toolchain/migrate';
-for (const m of detectMigrations(process.cwd())) await m.run({ cwd: process.cwd(), write: true });
-
-// Templates
-import { loadTemplates, scaffoldTemplate } from '@deltabox/toolchain/template';
-const [template] = await loadTemplates({ cwd: process.cwd() });
-if (template) await scaffoldTemplate(template, { cwd: './out', tokens: { name: 'acme' } });
-
-// Providers (what the editor reads)
-import { toolchainProviders } from '@deltabox/toolchain/providers';
-console.log(toolchainProviders().map(p => p.id));
-
-// Config engine
-import { createConfigEngine } from '@deltabox/toolchain/config';
-```
-
-## Registering commands
-
-Packages export framework-agnostic `ToolchainCommand[]` descriptors; wire them onto
-a commander program with `registerToolchainCommands` (this is how the bundled
-`dbx` binary, and a consumer's own CLI, are assembled):
-
-```ts
-import { Command } from 'commander';
-
-import { registerToolchainCommands } from '@deltabox/toolchain/cli';
-import { configCommands } from '@deltabox/toolchain/config';
-
-const program = new Command();
-registerToolchainCommands(program, configCommands({ engine }));
-await program.parseAsync();
 ```
 
 ---
@@ -3366,7 +2370,7 @@ url: https://toolchain.deltabox.studio/config/reference.md
 
 A `dbx.config.ts` file exports `{ toolchain: { ...sections } }`: the
 `@deltabox/toolchain` settings live under the `toolchain` key. Every
-section is **opt-in by presence** (see [Configuration](/guide/config)):
+section is **opt-in by presence** (see [Configuration](/guide/config/opt-in-by-presence)):
 define it to enable it, omit it to leave that area untouched.
 
 > Generated from the Zod config schema — do not edit by hand.
@@ -3448,71 +2452,53 @@ One-line description (`package.json` `description`).
 
 Inherit the parent project metadata (default true). Set false to keep this project entirely independent of the root config.
 
-## `changelog`
+## `ci`
 
-Conventional-Commits CI, commitlint and the changelog pipeline.
+GitHub Actions workflows: CI checks, release, issues, changelog and sync (all opt-in).
 
-### `enabled`
-
-* **Type**: `boolean`
-
-Master switch (enabled when the section is defined).
-
-### `workflows`
-
-* **Type**: `ChangelogWorkflowsConfig`
-
-Which workflows to write into `.github/workflows`. Each id is `true`/`false`, an object of overrides, or a raw YAML string written verbatim.
-
-#### `ci`
+### `ci`
 
 * **Type**: `WorkflowSetting`
 
-The CI workflow (`ci.yml`).
+The CI checks workflow (`ci.yml`).
 
-##### `enabled`
-
-* **Type**: `boolean`
-
-Enable/disable this workflow (default true).
-
-##### `pushBranches`
+#### `pushBranches`
 
 * **Type**: `Array<string>`
 
 Replace `on.push.branches`.
 
-##### `pullRequestBranches`
+#### `pullRequestBranches`
 
 * **Type**: `Array<string>`
 
 Replace `on.pull_request.branches`.
 
-##### `triggers`
+#### `triggers`
 
 * **Type**: `Record<string, unknown>`
 
 Extra `on.*` triggers.
 
-##### `extra`
+#### `extra`
 
 * **Type**: `Record<string, unknown>`
 
 Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
 
-##### `steps`
+#### `steps`
 
 * **Type**: `WorkflowStepsConfig | Array<WorkflowStepsConfig>`
 
 Extra steps for a job (one group, or per-job groups).
 
-###### `job`
+##### `job`
 
 * **Type**: `string`
 
 Target job id (defaults to the primary/first job).
 
-###### `before`
+##### `before`
 
 * **Type**: `Array<WorkflowStep>`
 
@@ -3572,123 +2558,183 @@ Inputs for a `uses` action.
 
 Environment variables for the step.
 
-###### `after`
+##### `after`
 
 * **Type**: `Array<WorkflowStep>`
 
 Steps appended at the end.
 
-##### `jobs`
+#### `jobs`
 
 * **Type**: `Record<string, unknown>`
 
 Extra complete jobs merged in.
 
-##### `tokens`
+#### `tokens`
 
 * **Type**: `Record<string, unknown>`
 
 Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
 
-#### `changelog`
+#### `enabled`
 
-* **Type**: `WorkflowSetting`
+* **Type**: `boolean`
 
-The changelog/version workflow (`changelog.yml`).
+Enable/disable this workflow (default: enabled when present).
 
-#### `release`
+### `changelog`
 
-* **Type**: `WorkflowSetting`
+* **Type**: `ChangelogWorkflowSetting`
 
-The release workflow (`release.yml`).
+The changelog/version workflow (`changelog.yml`) plus the changelog pipeline config (versioning, VS Code settings, commitlint).
 
-#### `issues`
+#### `pushBranches`
 
-* **Type**: `WorkflowSetting`
+* **Type**: `Array<string>`
 
-The issue-title workflow (`issues.yml`).
+Replace `on.push.branches`.
 
-#### `sync`
+#### `pullRequestBranches`
 
-* **Type**: `WorkflowSetting`
+* **Type**: `Array<string>`
 
-The toolchain sync workflow (`sync.yml`).
+Replace `on.pull_request.branches`.
 
-### `branches`
+#### `triggers`
 
-* **Type**: `object`
+* **Type**: `Record<string, unknown>`
+
+Extra `on.*` triggers.
+
+#### `extra`
+
+* **Type**: `Record<string, unknown>`
+
+Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
+
+#### `steps`
+
+* **Type**: `WorkflowStepsConfig | Array<WorkflowStepsConfig>`
+
+Extra steps for a job (one group, or per-job groups).
+
+#### `jobs`
+
+* **Type**: `Record<string, unknown>`
+
+Extra complete jobs merged in.
+
+#### `tokens`
+
+* **Type**: `Record<string, unknown>`
+
+Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
+
+#### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable the changelog workflow and pipeline (default: enabled when present).
+
+#### `branches`
+
+* **Type**: `ChangelogBranchesConfig`
 
 Branches the generated workflows target.
 
-#### `main`
+##### `main`
 
 * **Type**: `string | Array<string>`
 
 Branch glob(s) the CI + release workflows run on, and the release PR base (default `["main"]`).
 
-#### `dev`
+##### `dev`
 
 * **Type**: `string | Array<string>`
 
 Branch glob(s) the changelog/version workflow runs on. No default: when omitted it reuses `main` (so a single-branch repo needs no `dev`).
 
-### `types`
+#### `commitlint`
 
-* **Type**: `Array<string>`
+* **Type**: `boolean | ChangelogCommitlintConfig`
 
-Allowed commit types (commitlint).
+commitlint config; set `false` to disable the Conventional-Commits pipeline.
 
-### `scopes`
-
-* **Type**: `Array<string>`
-
-Allowed commit scopes (commitlint).
-
-### `commitlint`
-
-* **Type**: `object`
-
-commitlint config output location.
-
-#### `dir`
+##### `dir`
 
 * **Type**: `string`
 
 Directory the generated `commitlint.config.mjs` is written to (default: the project root). The husky hook and CI use `--config` to point at it.
 
-### `versioning`
+##### `types`
+
+* **Type**: `Array<string>`
+
+Allowed commit types (commitlint).
+
+##### `scopes`
+
+* **Type**: `Array<string>`
+
+Allowed commit scopes (commitlint).
+
+##### `enabled`
+
+* **Type**: `boolean`
+
+Enable commitlint (default true when the changelog is enabled). Set false to generate changelogs without the Conventional-Commits pipeline.
+
+#### `versioning`
 
 * **Type**: `ChangelogVersioning`
 
 Automatic version bumping on changelog generation (default `true`).
 
-#### `target`
+##### `target`
 
 * **Type**: `'uniform' | 'root-only' | 'individual'`
 
 `uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently (default `uniform`).
 
-#### `workspaces`
+##### `workspaces`
 
 * **Type**: `Array<string>`
 
 Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own.
 
-### `vscode`
+#### `vscode`
 
 * **Type**: `boolean`
 
-Write the Conventional-Commits VS Code settings.
+Write the Conventional-Commits VS Code settings (default true).
 
-## `biome`
+### `release`
 
-Biome config generation (for consumers that still want a `biome.json`).
+* **Type**: `WorkflowSetting`
+
+The release workflow (`release.yml`).
+
+### `issues`
+
+* **Type**: `WorkflowSetting`
+
+The issue-title workflow (`issues.yml`).
+
+### `sync`
+
+* **Type**: `WorkflowSetting`
+
+The toolchain sync workflow (`sync.yml`).
 
 ### `enabled`
 
 * **Type**: `boolean`
 
-Master switch (enabled when the section is defined).
+Enable/disable this section (default: enabled when defined).
+
+## `biome`
+
+Biome config generation (for consumers that still want a `biome.json`).
 
 ### `vscode`
 
@@ -3702,15 +2748,15 @@ Write the Biome VS Code settings (default true).
 
 Deep-merged over the generated `biome.json` (arrays union).
 
-## `tsconfig`
-
-Workspace tsconfig generation (path aliases + project references).
-
 ### `enabled`
 
 * **Type**: `boolean`
 
-Master switch (enabled when the section is defined).
+Enable/disable this section (default: enabled when defined).
+
+## `tsconfig`
+
+Workspace tsconfig generation (path aliases + project references).
 
 ### `glob`
 
@@ -3772,15 +2818,15 @@ The workspace default tsconfig file name that the generator expands (default `ts
 
 The workspace build tsconfig file name (default `tsconfig.build.json`).
 
-## `templates`
-
-Template sources / scaffolding.
-
 ### `enabled`
 
 * **Type**: `boolean`
 
-Master switch (enabled when the section is defined).
+Enable/disable this section (default: enabled when defined).
+
+## `templates`
+
+Template sources / scaffolding.
 
 ### `sources`
 
@@ -3850,15 +2896,15 @@ Free-form tags.
 
 Whether the source needs network access.
 
-## `catalogs`
-
-Package catalogs written to the package manager catalog file (`catalog:`).
-
 ### `enabled`
 
 * **Type**: `boolean`
 
-Master switch (enabled when the section is defined).
+Enable/disable this section (default: enabled when defined).
+
+## `catalogs`
+
+Package catalogs written to the package manager catalog file (`catalog:`).
 
 ### `packages`
 
@@ -3872,6 +2918,12 @@ The default catalog: package name -> version range.
 
 Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages.
 
+### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
 ## `vite`
 
 The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.
@@ -3882,15 +2934,15 @@ The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.
 
 Write the managed `vite.config.ts` (default true).
 
-## `watch`
-
-Watch behaviour for `dbx watch`.
-
 ### `enabled`
 
 * **Type**: `boolean`
 
-Watch by default (enabled when the section is defined).
+Enable/disable this section (default: enabled when defined).
+
+## `watch`
+
+Watch behaviour for `dbx watch`.
 
 ### `debounce`
 
@@ -3909,6 +2961,12 @@ Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modu
 * **Type**: `boolean`
 
 Also respect `.gitignore` files (root + nested) when watching (default true).
+
+### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
 
 ## `logger`
 
@@ -3932,15 +2990,27 @@ Force colours on/off (default: on; `--no-color` disables).
 
 Prefix non-indented lines with `<name>:` (default `dbx`).
 
+### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
 ## `providers`
 
-Provider command behaviour (eg. colour for the provider passthrough commands).
+Provider command behaviour (eg. colour for the passthrough commands).
 
 ### `color`
 
 * **Type**: `boolean`
 
 Force provider command colours on/off (default: inherit the logger).
+
+### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
 
 ## Full example
 
@@ -3950,7 +3020,7 @@ import { defineConfig } from '@deltabox/toolchain';
 export default defineConfig({
     toolchain: {
         project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
-        changelog: { workflows: { ci: true, release: true }, branches: { main: 'main' } },
+        ci: { ci: true, release: true, changelog: { branches: { main: 'main' } } },
         tsconfig: { refs: true },
         templates: { sources: [{ type: 'local', locate: './templates', kind: 'application' }] },
         vite: { fmt: { semi: true, singleQuote: true }, test: { include: ['src/**/*.test.ts'] } },
@@ -3958,3 +3028,1327 @@ export default defineConfig({
     },
 });
 ```
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config/defineconfig.md
+---
+# `defineConfig`
+
+`defineConfig` is an identity helper that gives the file full type-checking and
+autocomplete (it mirrors Vite's `defineConfig`). Like Vite, the argument may be a
+plain object, a promise, or a sync/async callback — the loader resolves it, so a
+config can do async work before returning `{ toolchain }`:
+
+```ts [dbx.config.ts]
+export default defineConfig(async () => {
+    const { readFile } = await import('node:fs/promises');
+    const version = (await readFile('./VERSION', 'utf-8')).trim();
+
+    return {
+        toolchain: {
+            project: { name: 'acme', nodeVersion: version },
+        },
+    };
+});
+```
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/changelog/branches.md
+---
+# Branches
+
+`ci.changelog.branches.main` and `ci.changelog.branches.dev` pick which branches
+the generated workflows target. Each accepts a glob or an array of globs:
+
+| Branch | Drives                                                                         | Default              |
+| ------ | ------------------------------------------------------------------------------ | -------------------- |
+| `main` | The **CI** workflow (push), the **release** workflow, and the release PR base. | `['main']`           |
+| `dev`  | The **changelog/version** workflow (push).                                     | none — reuses `main` |
+
+`dev` has **no default**: when it is omitted the changelog workflow runs on
+`main` (so a single-branch repo needs no `dev`). Set it for a `dev` → `main`
+flow:
+
+```ts
+ci: { changelog: { branches: { main: 'main', dev: 'dev' } } }
+// or multiple branches per purpose:
+ci: { changelog: { branches: { main: ['main', 'release/**'], dev: ['dev', 'next'] } } }
+```
+
+The `sync` workflow runs on both. Any per-workflow `pushBranches` override (eg.
+`ci.release.pushBranches`) still wins.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/changelog/cli.md
+---
+# CLI
+
+```sh
+dbx changelog                       # bump + write (uses ci.changelog.versioning)
+dbx changelog --dry-run             # preview the root entry
+dbx changelog --range v1.2.0..HEAD  # scan a specific range
+dbx changelog --version 2.0.0       # force a version (retags the changelogs)
+dbx changelog --format-only         # regroup existing changelogs, no bump
+```
+
+The generated `changelog` workflow runs `dbx changelog --range …` on every push
+to the `dev` branches (or `main` when `dev` is unset), so versioning is applied
+from CI as well as locally.
+
+`dbx workflow [id…]` triggers the generated GitHub workflows through
+`gh workflow run`; with no ids it triggers every workflow you declared under
+`toolchain.ci`.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/cli-commands.md
+---
+# CLI commands
+
+`configCommands({ engine, defaults })` returns `ToolchainCommand[]` (register them
+on your commander program with `@deltabox/toolchain/cli`):
+
+| Command           | Writes                                       |
+| ----------------- | -------------------------------------------- |
+| `config:env`      | `.env.example`                               |
+| `config:types`    | config types (`--env` also writes env types) |
+| `config:json`     | `config.json` (metadata)                     |
+| `config:schema`   | `config.schema.json`                         |
+| `config:markdown` | the markdown reference                       |
+| `config:cli`      | `cli-options.json`                           |
+| `config:all`      | everything, under one output directory       |
+
+```ts
+import { configCommands } from '@deltabox/toolchain/config';
+
+const commands = configCommands({
+    engine,
+    defaults: { typesDir: 'packages/shared/src/types', docsDir: 'docs/reference' },
+});
+// register `commands` on your commander program
+```
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/changelog/commitlint.md
+---
+# commitlint
+
+By default the generated `commitlint.config.mjs` lives at the project root. Set
+`ci.changelog.commitlint.dir` to write it elsewhere:
+
+```ts
+ci: {
+    changelog: {
+        commitlint: {
+            dir: '.config';
+        }
+    }
+} // -> .config/commitlint.config.mjs
+```
+
+When a custom dir is set, the generated husky hook and the CI commitlint step
+both pass `--config <dir>/commitlint.config.mjs`, so commitlint finds it. Note
+that editor tooling that discovers the config by convention (eg. the
+Conventional Commits VS Code extension, which loads from the repo root) expects
+the config at the root — keep the default unless you have a reason to move it.
+
+`commitlint.types` and `commitlint.scopes` are the allowed Conventional-Commits
+types/scopes:
+
+```ts
+ci: {
+    changelog: {
+        commitlint: {
+            types: ['feat', 'fix', 'docs', 'chore'],
+            scopes: ['api', 'web', 'deps'],
+        },
+    },
+}
+```
+
+## Disabling commitlint
+
+Set `ci.changelog.commitlint: false` (or `{ enabled: false }`) to generate
+changelogs **without** the Conventional-Commits rules. The changelog workflow is
+still generated, but dbx writes no `commitlint.config.mjs`, no husky hook and no
+commitlint step in the CI workflow.
+
+The changelog then falls back to a coarse grouping: commits are hoisted into
+`Major changes`, `Minor changes` and `Patch changes` buckets (breaking commits
+and `feat:` go to major/minor; everything else is a patch), while the package
+changes section (eg. new packages) is kept. This is intentionally less detailed
+than the rule/scope grouping, but it works with any commit-message style.
+
+> The extension's `No "exports" main defined in … conventional-changelog-conventionalcommits …`
+> error is an upstream commitlint bug (ESM-only parser preset), not a config
+> discovery problem. See [Troubleshooting](/guide/changelog/troubleshooting).
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config/config-file-names.md
+---
+# Config file names
+
+The loader looks for, in order:
+
+```
+dbx.config.ts
+dbx.config.mts
+dbx.config.js
+dbx.config.mjs
+dbx.config.cjs
+dbx.config.json
+```
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/create-the-engine.md
+---
+# Create the engine
+
+Bind the scopes, an env prefix, the base group and the project root once:
+
+```ts
+import { createConfigEngine } from '@deltabox/toolchain/config';
+
+export const engine = createConfigEngine({
+    scopes: {
+        server: { zodSchema: serverConfig },
+        frontend: { zodSchema: frontendConfig },
+        cli: { zodSchema: cliConfig },
+    },
+    envPrefix: 'MYAPP_',
+    baseGroup: 'base', // the flat fields hoisted out of the nested groups
+    root: process.cwd(),
+    // Optional: custom env-name -> dotted-path derivation (eg. dual prefixes).
+    envPathOf: env =>
+        env
+            .replace(/^(MYAPP_|VITE_)/, '')
+            .toLowerCase()
+            .replace(/_/g, '.'),
+});
+```
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/describe-a-scope.md
+---
+# Describe a scope
+
+Each scope is a Zod object. Leaves that are backed by an environment variable
+carry an `.meta()` describing that variable:
+
+```ts
+import { z } from 'zod';
+
+export const serverConfig = z.object({
+    base: z.object({
+        port: z.number().default(3000).meta({
+            env: 'MYAPP_PORT',
+            description: 'HTTP port',
+        }),
+        host: z.string().default('0.0.0.0').meta({
+            env: 'MYAPP_HOST',
+            description: 'Bind address',
+        }),
+    }),
+    auth: z.object({
+        password: z.string().meta({
+            env: 'MYAPP_AUTH_PASSWORD',
+            description: 'Admin password',
+            required: true,
+            secret: true,
+        }),
+        tokenTtl: z.number().default(3600).meta({
+            env: 'MYAPP_AUTH_TOKEN_TTL',
+            description: 'Session lifetime (seconds)',
+        }),
+    }),
+});
+```
+
+`ConfigMeta` fields: `env`, `path` (dotted config path), `description`,
+`required`, `deprecated`, `example`, `secret`, `scope`, `public` (safe to expose
+to the browser) and `defaultValue` (when the resolved default differs from the env
+default).
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/api/examples.md
+---
+# Examples
+
+```ts
+// Vite+ provider
+import { resolveVp, runVp, resolveVpCommand, VP_COMMANDS } from '@deltabox/toolchain/vite';
+await runVp(['check'], { cwd: process.cwd() });
+resolveVpCommand('i'); // 'install'
+
+// Migrations
+import { detectMigrations, runMigration } from '@deltabox/toolchain/migrate';
+for (const m of detectMigrations(process.cwd())) await m.run({ cwd: process.cwd(), write: true });
+
+// Templates
+import { loadTemplates, scaffoldTemplate } from '@deltabox/toolchain/template';
+const [template] = await loadTemplates({ cwd: process.cwd() });
+if (template) await scaffoldTemplate(template, { cwd: './out', tokens: { name: 'acme' } });
+
+// Providers (what the editor reads)
+import { toolchainProviders } from '@deltabox/toolchain/providers';
+console.log(toolchainProviders().map(p => p.id));
+
+// Config engine
+import { createConfigEngine } from '@deltabox/toolchain/config';
+```
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/generate.md
+---
+# Generate
+
+Every generator is a method on the bound engine:
+
+```ts
+engine.collectEnvVars(); // EnvVarDef[] across every scope
+engine.requiredEnvVars('server'); // required var names for a scope
+
+engine.writeEnvFile({ output: '.env.example' });
+engine.writeEnvTypes({ outputDir: 'types' });
+engine.writeConfigTypes({ outputDir: 'types' });
+engine.writeJsonSchema({ output: 'config.schema.json' });
+engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
+
+engine.generateCliOptions({ output: 'cli-options.json' });
+engine.buildConfigJson(); // the config metadata document
+```
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/generated-outputs.md
+---
+# Generated outputs
+
+Every generator writes from the same Zod schema. The engine's own config model
+is the living example: its types are committed at
+[packages/shared/src/config-types.ts](https://github.com/deltabox-studio/toolchain/blob/main/packages/shared/src/config-types.ts).
+
+## Config types — `renderConfigTypes()` / `writeConfigTypes()`
+
+Named `interface`s (and `type` aliases for enums/unions) with jsdoc taken from
+`.describe()`. Unions and refs stay named, so nested objects are referenced
+rather than inlined:
+
+```ts
+// engine.renderConfigTypes() -> { server: "...", cli: "..." }
+engine.writeConfigTypes({ outputDir: 'types' }); // types/server.ts, types/cli.ts
+```
+
+```ts
+// types/server.ts
+export interface ServerConfig {
+    /** Bind host. */
+    host?: string;
+    port?: number;
+    auth?: { password?: string; enabled?: boolean };
+}
+```
+
+An object schema that also accepts arbitrary keys (Zod `.catchall(...)` /
+`.passthrough()`, ie. `additionalProperties` in the JSON Schema) generates an
+open interface with an index signature, so the extra keys stay typed as
+`unknown` instead of being rejected:
+
+```ts
+export interface ServerConfig {
+    /** Bind host. */
+    host?: string;
+    [key: string]: unknown;
+}
+```
+
+## Markdown — `writeMarkdown()`
+
+One reference page per scope plus an index listing the required/core env vars:
+
+```ts
+engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
+// docs/reference/configuration/server.md, .../index.md
+```
+
+See a real full example at [config/reference.md](../../config/reference.md).
+
+## Env — `renderEnvFile()` / `writeEnvFile()`
+
+A `.env.example`; secrets are emitted commented out so operators fill them in:
+
+```sh
+engine.writeEnvFile({ output: '.env.example' });
+
+# ---- SERVER ----
+MYAPP_HOST=localhost
+# MYAPP_AUTH_PASSWORD=
+```
+
+## JSON Schema — `generateJsonSchema()` / `writeJsonSchema()`
+
+The resolved untyped JSON Schema for every scope, for editor autocomplete:
+
+```ts
+await engine.writeJsonSchema({ output: 'config.schema.json' });
+```
+
+## Formatting — `formatGenerated()`
+
+Generated text is formatted **at generation time**, so a written file is already
+formatted instead of relying on a separate `yarn format` pass. `formatGenerated`
+runs source through Oxfmt, preferring the project-local `vite-plus/fmt` (Oxfmt
+ships with Vite+), then `oxfmt`, and returns the input untouched when no formatter
+is resolvable, so generation never fails on a missing formatter.
+
+```ts
+import { formatGenerated, GENERATED_FORMAT_OPTIONS } from '@deltabox/toolchain/config';
+
+const source = 'export const config={a:1}';
+const formatted = await formatGenerated(source, {
+    fileName: 'config.ts', // infers the language (default `generated.ts`)
+    options: { printWidth: 100 }, // merged over GENERATED_FORMAT_OPTIONS
+});
+```
+
+`GENERATED_FORMAT_OPTIONS` is the baseline Oxfmt config matching the toolchain's
+own `vite.config.ts` (4-space indent, single quotes, `trailingComma: 'es5'`,
+`jsdoc: true`, ...). Pass `options.fileName` to format JSON, markdown or another
+language, and `options.options` to override any single option.
+
+For a full, real example of the generated config types, see
+`packages/shared/src/config-types.ts`.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config/hooks.md
+---
+# Hooks
+
+`.ts`/`.js` configs can declare lifecycle hooks (JSON cannot):
+
+```ts [dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        hooks: {
+            afterLoad: ({ tokens }) => console.log(tokens),
+            beforeSync: ctx => ctx.log('syncing…'),
+            afterTask: ({ task, files }) => console.log(task.name, files?.length),
+            afterSync: ({ result }) => console.log(result.written.length),
+            onChange: ({ path }) => console.log('changed', path),
+        },
+    },
+});
+```
+
+Return values are awaited.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/load-the-config.md
+---
+# Load the config at runtime
+
+Generation is only half of it. The same schema backs a small, dependency-free
+**loader**. `parseEnvTree` folds `PREFIX_*` variables into a nested tree
+(splitting the remainder on `_`), and the typed accessors read dotted paths out
+of it:
+
+```ts
+import {
+    applyOverrides,
+    envBool,
+    envInt,
+    envList,
+    envMap,
+    envString,
+    parseEnvTree,
+} from '@deltabox/toolchain/config';
+
+// MYAPP_HOST, MYAPP_PORT, MYAPP_LOG_PRETTY, ... -> a nested tree
+const tree = parseEnvTree(process.env, 'MYAPP_');
+
+const config = {
+    host: envString(tree, 'host', '0.0.0.0'),
+    port: envInt(tree, 'port', 3000),
+    pretty: envBool(tree, 'log.pretty', true),
+    corsOrigins: envList(tree, 'cors.origin', []),
+    headers: envMap(tree, 'response.headers.map'), // `Key=value,...` -> record
+};
+```
+
+| Helper                       | Reads                                                |
+| ---------------------------- | ---------------------------------------------------- |
+| `envString(tree, path, fb?)` | string (unset/empty -> fallback)                     |
+| `envInt` / `envBool`         | number / boolean (`true/1/yes/on`, `false/0/no/off`) |
+| `envList`                    | comma-separated list                                 |
+| `envMap`                     | `Key=value,...` into a lowercase-keyed record        |
+| `readEnvPath(tree, path)`    | the raw value at a dotted path                       |
+
+Layer typed overrides on top of the env values (a config file, then CLI flags)
+with `applyOverrides`, then validate the result through the scope schema so it is
+guaranteed to match the generated types:
+
+```ts
+import { compileZodSchema } from '@deltabox/toolchain/config';
+
+const schemaCompiler = compileZodSchema(serverConfig);
+
+export function loadConfig(env = process.env, file = {}, cli = {}) {
+    const tree = parseEnvTree(env, 'MYAPP_');
+    const fromEnv = {
+        base: {
+            host: envString(tree, 'host', '0.0.0.0'),
+            port: envInt(tree, 'port', 3000),
+        },
+        auth: {
+            password: envString(tree, 'auth.password', ''),
+            tokenTtl: envInt(tree, 'auth.token.ttl', 3600),
+        },
+    };
+    return schemaCompiler.parse(applyOverrides(applyOverrides(fromEnv, file), cli));
+}
+```
+
+A resolver like this is the runtime counterpart of the generators — same schema,
+same defaults, one typed object out.
+
+> The dotted path is the env name with the prefix removed and `_` folded to `.`,
+> so `MYAPP_AUTH_TOKEN_TTL` reads as `auth.token.ttl`. When a field name differs
+> from its env-derived path, map it explicitly in the resolver (as above).
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/api/logging.md
+---
+# Logging
+
+Every toolchain message goes through one level-aware logger, rendered with
+[`@clack/prompts`](https://bombshell.dev/clack) (level symbols + guide). Use it
+instead of `console.log` so output stays consistent and respects the config and
+the CLI flags.
+
+| Export / member                                   | Description                                                                                  |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `logger`                                          | The active singleton: `raw`, `debug`, `info`, `success`, `warn`, `error`, `level`, `colors`. |
+| `createLogger(options)`                           | Create an independent logger (`level`, `color`, `name`).                                     |
+| `setLogConfig(section)`                           | Apply the `logger` section from the loaded config.                                           |
+| `setLogOverrides(options)`                        | Apply CLI overrides (win over the config). `configureLogger` is an alias.                    |
+| `getLogOverrides()` / `getLogger()`               | Read the current overrides / the active instance.                                            |
+| `LOG_LEVELS` / `isLogLevel` / `normalizeLogLevel` | The valid levels, most verbose first (`debug`, `info`, `warn`, `error`, `silent`).           |
+
+```ts
+import { createLogger, logger, setLogConfig, setLogOverrides } from '@deltabox/toolchain/shared';
+
+setLogConfig({ level: 'debug', color: false, name: 'dbx' }); // from dbx.config.*
+setLogOverrides({ level: 'warn' }); // from --log-level
+
+logger.info('human message');
+logger.success('done');
+logger.error('failed');
+logger.raw(JSON.stringify(payload)); // machine output: no prefix, no colour
+```
+
+Use `raw` for machine output (`--json`): it is never prefixed or decorated.
+`logger.warn`/`error` write to stderr; `debug`/`info`/`success`/`raw` to stdout.
+Messages that start with whitespace (indented continuations) are never prefixed.
+
+This mirrors the [`logger` config section](/guide/config/logging) and the
+`--log-level <level>` / `--no-color` [CLI flags](/guide/cli#global-flags), which
+call `setLogConfig` / `setLogOverrides` under the hood.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config/logging.md
+---
+# Logging
+
+Every toolchain message goes through one logger. Configure it in the config:
+
+```ts [dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        logger: { level: 'debug', color: false, name: 'dbx' },
+    },
+});
+```
+
+| Option  | Values                                             | Default |
+| ------- | -------------------------------------------------- | ------- |
+| `level` | `debug` | `info` | `warn` | `error` | `silent` | `info`  |
+| `color` | `true` | `false`                                  | `true`  |
+| `name`  | prefix for non-indented lines                      | `dbx`   |
+
+Colour is **on by default** (the toolchain forces it rather than relying on TTY
+autodetection); `--no-color` or `logger: { color: false }` turn it off. Human
+output is rendered with [`@clack/prompts`](https://bombshell.dev/clack) — level
+symbols (`•` info, `◆` success, `▲` warn, `■` error) and a guide.
+
+On the CLI, `--log-level <level>` and `--no-color` override the config (see the
+[CLI reference](/guide/cli)). Machine output (`--json`) is written unprefixed
+through the same logger.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config/nested-configs.md
+---
+# Nested configs
+
+A `dbx.config.*` in a **non-root** folder (a workspace, an app, a nested
+project) is merged over the nearest ancestor `dbx.config.*` found while walking
+up to the repository root (the walk stops at the `.git` boundary, so it never
+picks up a config from outside the repo).
+
+The merge is recursive:
+
+* **Objects** are merged key by key, so a child keeps every option it does not
+  mention.
+* **Leaves** — booleans, strings, numbers and **arrays** — in the child
+  **replace** the root's value (arrays are not concatenated).
+
+This makes a shared root config plus small per-project overrides possible:
+
+```ts [<root>/dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        ci: {
+            changelog: {
+                branches: { main: 'main', dev: 'dev' },
+                commitlint: { scopes: ['core', 'cli'] },
+            },
+        },
+        tsconfig: { refs: true, aliases: true },
+    },
+});
+
+// <root>/packages/web/dbx.config.ts — inherits ci + tsconfig, tweaks both
+export default defineConfig({
+    toolchain: {
+        ci: { changelog: { commitlint: { scopes: ['web'] } } }, // replaces the root's scopes
+        tsconfig: { refs: false }, // boolean overrides the root's refs
+    },
+});
+```
+
+The workspace above ends up with `ci.changelog.branches` from the root
+(unchanged), `ci.changelog.commitlint.scopes: ['web']` (replaced), and
+`tsconfig: { refs: false, aliases: true }`.
+
+> **`project` is inherited except its identity fields.** `name`, `scope`,
+> `description` and `type` are per-project, so a non-root config keeps its own (or
+> falls back to its `package.json`) and is still detected from its own files — a
+> root `project` never renames a workspace. The shared fields (`author`,
+> `license`, `homepage`, `repo`, `packageManager`, ...) flow down so their
+> `package.json` values and replacement tokens stay shared.
+> `project: { inherit: false }` disables project inheritance entirely. `hooks`
+> are not inherited either — a parent's hooks are code and do not run for a
+> nested project's sync.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config/opt-in-by-presence.md
+---
+# Opt-in by presence
+
+Every section under `toolchain` is **opt-in by presence**: the toolchain only
+touches an area you actually ask for.
+
+* Omit a section — that area is left completely alone.
+* `section: true` — enable it with defaults (when the section has defaults).
+* `section: false` — explicitly disable it.
+* `section: { ...options }` — enable and configure it.
+
+This applies to nested sections too. `ci` is opt-in, and every workflow inside it
+(`ci.ci`, `ci.release`, `ci.issues`, `ci.changelog`, `ci.sync`) is opt-in as
+well: omit a workflow (or set it to `false`) and the toolchain will not generate
+or manage its file. Setting `ci: false` or `ci: { enabled: false }` disables the
+whole section, including every nested workflow and the changelog pipeline.
+
+The same rule backs `ci.changelog`: it is only managed when you declare it, and
+`ci.changelog: false` (or `enabled: false`) disables both its workflow and the
+changelog pipeline.
+
+Helpers `sectionEnabled(section)` and `sectionConfig(section)` implement this and
+are exported for programmatic use.
+
+The old top-level `changelog` section is deprecated and rejected by the loader;
+see [Migrating from `toolchain.changelog`](/guide/changelog/#migrating-from-toolchainchangelog).
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/api/package-reference.md
+---
+# Package reference
+
+## `@deltabox/toolchain/shared`
+
+The base layer: the config model, logging, process/string/object utilities and
+the template engine.
+
+| Export                                                                        | Description                                                                              |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `defineConfig(config)`                                                        | Identity helper for a typed `dbx.config.*` (object, promise, or sync/async callback).    |
+| `sectionEnabled(section)` / `sectionConfig(section)`                          | Opt-in-by-presence helpers for a config section.                                         |
+| `resolveTokens(config)`                                                       | Flatten a config into `{{ token }}` replacements.                                        |
+| `CONFIG_FILE_NAMES`                                                           | The config file names the loader probes, in priority order.                              |
+| `repoSlugFromUrl(url)`                                                        | Derive an `owner/name` slug from a repository URL.                                       |
+| `findOwnCliEntry(cwd?)` / `localToolchainVersion(cwd?)` / `TOOLCHAIN_PACKAGE` | Locate a project's own toolchain bin + pinned version (prefer them over a global `dbx`). |
+| `createLogger(options)` / `logger`                                            | The shared logger (see [Logging](/guide/api/logging)).                                   |
+| `spawnCross(cmd, args, options)` / `run(cmd, args, options)`                  | Cross-platform, shell-free spawning; `timeoutMs` kills the child tree.                   |
+| `killProcessTree(child)`                                                      | Kill a child process and its descendants (Windows `taskkill /t`).                        |
+| `readJsonFile` / `readJsonAt` / `toJson` / `writeJsonFile`                    | Small JSON file helpers.                                                                 |
+| `mergeJsonAt(cwd, relative, patch)`                                           | Deep-merge a patch over an existing JSON file.                                           |
+| `deepMerge` / `isPlainObject` / `sort` / `mapValues`                          | Object utilities.                                                                        |
+| `applyReplacements` / `applyReplacementsDeep` / `createReplacer`              | The `{{ token }}` template engine (also `tokenPattern`, `extractTokens`).                |
+| `toYaml(value)`                                                               | A tiny YAML emitter for the GitHub Actions subset.                                       |
+
+The config **types** and **schemas** also live here: `ToolchainConfig`, `DbxConfig`,
+`SyncTask`, `SyncContext`, `ManagedFile`, `ToolchainCommand`, `ToolchainOption`,
+`ToolchainProvider`, `ToolchainViteConfig` (Vite+'s config type), `Replacements`,
+and the generated `config-types` / `config-schema` exports.
+
+```ts
+import { defineConfig, sectionEnabled, applyReplacements } from '@deltabox/toolchain/shared';
+
+const text = applyReplacements('Hello {{name:world}}', { name: 'acme' });
+```
+
+## `@deltabox/toolchain/core`
+
+Loads `dbx.config.*`, builds the project graph and runs the sync tasks.
+
+| Export                                                        | Description                                                            |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `loadToolchainConfig(cwd?)`                                   | Find + load the config, resolve tokens and the project type.           |
+| `findConfigFile(cwd?)`                                        | The config file path, if any.                                          |
+| `runSync(options)`                                            | Run the given `SyncTask[]` and return the summary.                     |
+| `runWatch(options)`                                           | Sync once, then watch inputs and re-sync.                              |
+| `buildProjectGraph(root, options?)`                           | Discover workspace packages and their dependencies.                    |
+| `orderProjects(nodes)` / `detectPackageManager(root)`         | Dependency ordering and package-manager detection.                     |
+| `writeProjectGraph` / `readProjectGraph`                      | Persist/read `.dbx/toolchain/projects.json`.                           |
+| `selectProjects(options)`                                     | Select projects by kind/name/glob.                                     |
+| `resetToolchain(options)` / `resetProjects(options)`          | Remove generated files, the manifest and/or the config.                |
+| `vscodeSyncTask(options?)`                                    | The VS Code settings/extensions sync task.                             |
+| `resolveProjectType(cwd, config?)` / `detectProjectType(cwd)` | The project kind (`monorepo-root` / `monorepo-workspace` / `project`). |
+| `readManifest(cwd)` / `writeManifest(cwd, files)`             | The `.dbx/toolchain/manifest.json` helpers.                            |
+
+## `@deltabox/toolchain/config`
+
+The generic Zod/env engine (see the [Config Generator](/guide/config-generator/)
+guide for the full workflow).
+
+| Export                                                                                   | Description                                               |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `createConfigEngine(options)`                                                            | Bind scopes + prefix + root into a reusable engine.       |
+| `configCommands({ engine, defaults? })`                                                  | The `config:*` commands for a consumer's own CLI.         |
+| `formatGenerated(source, options?)`                                                      | Format generated output with Oxfmt (see below).           |
+| `GENERATED_FORMAT_OPTIONS`                                                               | The baseline Oxfmt options used by the generators.        |
+| `parseEnvTree(env, prefix?)` / `envString` / `envInt` / `envBool` / `envList` / `envMap` | The dependency-free runtime loader.                       |
+| `applyOverrides(base, overrides?)`                                                       | Layer typed overrides over env-derived values.            |
+| `compileZodSchema(schema)`                                                               | Compile a Zod schema for fast repeated parsing.           |
+| `envPathOf(env, prefix?)` / `envMetaOf(schema)`                                          | Env-name to dotted-path derivation and `.meta()` reading. |
+| `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                    |
+| `renderConfigTypes` / `renderAllConfigTypes` / `generateConfigTypes`                     | Config type generation.                                   |
+| `renderScopeMarkdown` / `generateConfigMarkdown` / `renderConfigFileMarkdown`            | Markdown reference generation.                            |
+| `generateConfigJsonSchema` / `generateJsonSchemaFile`                                    | JSON Schema generation.                                   |
+| `generateEnv` / `generateEnvDts` / `generateEnvTypes`                                    | `.env` / env type generation.                             |
+| `generateCliOptions` / `flagOf` / `cliFlagOf` / `createCliArgsParser`                    | CLI option generation + parsing.                          |
+
+## `@deltabox/toolchain/vite`
+
+The Vite+ provider: resolving/running `vp`, the `dbx()` plugin and the `vite`
+sync task (see the [Providers](/guide/providers) guide).
+
+| Export                                                             | Description                                                                                         |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `resolveVp(cwd?)` / `hasVp(cwd?)` / `runVp(args, options?)`        | Resolve and run the `vp` binary (local shim, global, then `npx`).                                   |
+| `vpVersion(cwd?)` / `describeVp(cwd?)` / `which(bin)`              | Version, resolution description and PATH lookup.                                                    |
+| `VP_COMMANDS` / `viteCommandName(name)` / `resolveVpCommand(name)` | The `vp` command catalog + name/alias resolution.                                                   |
+| `viteProvider()` / `viteCommands()`                                | The provider descriptor and the `dbx vite:*` commands.                                              |
+| `dbx(options?)` / `DBX_TASKS` / `dbxTaskCommand(sub)`              | The Vite/Vite+ plugin and the resolved `run.tasks` to spread in.                                    |
+| `resolveDbx(cwd?)` / `runDbx(args, cwd?)`                          | Resolve/run the `dbx` binary (the project's own first; a pinned project never runs a global `dbx`). |
+| `resolveVite(options?)`                                            | Resolve `toolchain.vite` (or a passed `toolchain`), with inline `vite` overrides.                   |
+| `detectViteSpecifier(cwd)`                                         | Which package (`vite` / `vite-plus`) the project has, for the shim import.                          |
+| `renderViteConfig(specifier?)` / `viteConfigObject(config?)`       | The managed `vite.config.ts` shim (per specifier) + the section minus `config`.                     |
+| `viteSyncTask()`                                                   | The `vite` sync task that writes the shim.                                                          |
+
+## `@deltabox/toolchain/cli`
+
+| Export                                         | Description                                                            |
+| ---------------------------------------------- | ---------------------------------------------------------------------- |
+| `registerToolchainCommands(program, commands)` | Wire framework-agnostic commands onto a commander program.             |
+| `builtinCommands()`                            | The commands built into the root CLI (config commands need an engine). |
+| `createCli()`                                  | Build the `dbx` commander program.                                     |
+| `runCli(argv?)`                                | Parse and run the CLI (extracts logger flags, defaults bare Vite+).    |
+| `withDefaultVite(argv, commandNames?)`         | Insert `vite` before a bare Vite+ command.                             |
+| `extractLogOptions(argv)`                      | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
+
+See the [CLI](/guide/cli) guide for the routing behaviour.
+
+## `@deltabox/toolchain/migrate`
+
+| Export                                                                              | Description                                      |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `migrations()` / `listMigrations(cwd)` / `detectMigrations(cwd)`                    | The registered migrations and detection.         |
+| `findMigration(idOrFrom)` / `runMigration(...)` / `runDetectedMigrations(ctx)`      | Run one or every detected migration.             |
+| `biomeToOx` / `eslintToOx` / `prettierToOx` / `dprintToOx` / `viteToToolchain`      | The built-in `ToolchainMigration` objects.       |
+| `mapBiomeToOxfmt` / `mapBiomeToOxlint` / `mapPrettierToOxfmt` / `mapDprintToOxfmt`  | Source-to-Oxc mapping helpers.                   |
+| `extractViteObject(source)` / `scanLiteralObject(text)` / `foldViteIntoConfig(...)` | The `vite` source's extraction + splice helpers. |
+| `diffFiles(files)` / `hasPending(diffs)`                                            | Diff planned files against disk (for `--check`). |
+| `mergeViteConfig(source, ...)` / `writeViteTarget(...)`                             | The Vite+ (`--target vite`) output helpers.      |
+
+## `@deltabox/toolchain/template`
+
+| Export                                                                          | Description                                                |
+| ------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `loadTemplates(options)` / `collectSources(options)`                            | Resolve builtin/local/online sources into templates.       |
+| `scaffoldTemplate(template, options)`                                           | Copy a template into a target directory, resolving tokens. |
+| `addTemplateSource(cwd, source)` / `removeTemplateSource(cwd, key)`             | Manage `.dbx/toolchain/templates.json`.                    |
+| `readTemplateRegistry` / `writeTemplateRegistry`                                | Read/write the template source registry.                   |
+| `BUILTIN_TEMPLATES` / `loadLocalTemplates(root, idPrefix?)`                     | The offline templates.                                     |
+| `readTemplateDir` / `readTemplateManifest` / `writeTemplateManifest`            | A local `template.json` directory.                         |
+| `parseSourceSpec(spec, cwd?)` / `gitTemplate(source)` / `loadNpmTemplates(pkg)` | Online source parsing/loading.                             |
+
+## `@deltabox/toolchain/providers`
+
+| Export                      | Description                                           |
+| --------------------------- | ----------------------------------------------------- |
+| `toolchainProviders()`      | Every registered provider with its actions resolved.  |
+| `providerActions(provider)` | The default actions for a provider (one per command). |
+| `viteProvider()`            | The Vite+ provider descriptor.                        |
+
+```ts
+import { toolchainProviders } from '@deltabox/toolchain/providers';
+console.log(toolchainProviders().map(p => p.id));
+```
+
+## `@deltabox/toolchain/tsdown`
+
+| Export                                                         | Description                                  |
+| -------------------------------------------------------------- | -------------------------------------------- |
+| `baseTsdownConfig`                                             | The shared tsdown base config.               |
+| `createTsdownConfig(overrides?)` / `createPostBanner(options)` | Build a tsdown config / a post-build banner. |
+| `cleanup(options?)` / `cleanupCommands()`                      | Remove build artifacts / the turbo cache.    |
+
+## `@deltabox/toolchain/tsconfig`
+
+| Export                                                                       | Description                                           |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `tsconfigSyncTask()`                                                         | The tsconfig sync task.                               |
+| `tsconfigBaseTemplate` / `tsconfigDefaultTemplate` / `tsconfigBuildTemplate` | The base/default/build templates.                     |
+| `renderTsconfigBase` / `renderTsconfigDefault` / `renderTsconfigBuild`       | Render the templates with replacements.               |
+| `buildMonorepoTsconfig(options)` / `renderMonorepoTsconfig(options)`         | The monorepo root tsconfig with references + aliases. |
+| `renderTsconfigTemplates(replacements?)`                                     | Render every template at once.                        |
+| `generateTsconfigs(options)` / `runTsconfigCli(argv?)`                       | The tsconfig generator and its CLI.                   |
+
+## `@deltabox/toolchain/changelog`
+
+| Export                                                                 | Description                                          |
+| ---------------------------------------------------------------------- | ---------------------------------------------------- |
+| `runChangelog(argv?)` / `main`                                         | Derive the bump and update the changelog + versions. |
+| `runWorkflows(options)` / `resolveWorkflowId(name)`                    | Trigger generated GitHub workflows.                  |
+| `renderWorkflow(id, options)` / `renderWorkflows(...)`                 | Render workflow YAML.                                |
+| `renderCommitlintConfig(options?)` / `changelogSyncTask()`             | Commitlint config + the changelog sync task.         |
+| `readCommits(range)` / `deriveBump(records)` / `buildSummary(records)` | Git commit reading, bump derivation and summaries.   |
+| `renderChangelogEntry(...)` / `parseExistingChangelog(content)`        | Changelog entry rendering/parsing.                   |
+
+## `@deltabox/toolchain/biome`
+
+| Export                                                                  | Description                                                |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `biomeConfig` / `biomeVscodeSettings`                                   | The generic Biome config and recommended VS Code settings. |
+| `renderBiomeConfig(replacements?, overrides?)` / `renderBiomeJson(...)` | Resolve tokens + merge overrides, then serialize.          |
+| `mergeBiomeConfig(base, patch)` / `renderVscodeSettings(indent?)`       | Recursive merge and settings rendering.                    |
+| `biomeSyncTask()`                                                       | The biome sync task (writes `biome.json`).                 |
+
+## `@deltabox/toolchain/project`
+
+| Export                                                                                       | Description                                        |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `createRootProjectFiles(ctx)` / `createMonorepoRootFiles(ctx)` / `createWorkspaceFiles(ctx)` | Scaffold files for each project kind.              |
+| `generateProjectConfigs(options)`                                                            | Generate `dbx.config.ts` for projects missing one. |
+| `renderToolchainConfig(ctx)` / `renderWorkspaceTsconfig(composite?)`                         | Render the tooling config / a workspace tsconfig.  |
+| `renderGitignore()`                                                                          | Render a generic `.gitignore`.                     |
+| `catalogsSyncTask()` / `renderYarnrc(catalog)` / `renderPnpmWorkspace(catalog, packages?)`   | The catalogs sync task + catalog file renderers.   |
+| `writeGeneratedFiles(files, cwd?)`                                                           | Write a `GeneratedFile[]`.                         |
+| `projectCommands()`                                                                          | The `project:*` commands.                          |
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config/programmatic-api.md
+---
+# Programmatic API
+
+```ts
+import { loadToolchainConfig, runSync, defaultSyncTasks } from '@deltabox/toolchain';
+
+const { config, tokens, projectType } = await loadToolchainConfig(process.cwd());
+await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, projectType });
+```
+
+Full section reference: [dbx.config](/config/reference).
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config/providers.md
+---
+# Providers
+
+Provider passthrough commands (Vite+) follow the logger's colour setting. The
+`providers` section can force provider colours on or off on its own:
+
+```ts [dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        providers: { color: false },
+    },
+});
+```
+
+| Option  | Values            | Default        |
+| ------- | ----------------- | -------------- |
+| `color` | `true` | `false` | inherit logger |
+
+`color: false` runs the wrapped binary with `NO_COLOR=1` and `FORCE_COLOR=0`, so
+it emits plain output even on a colour terminal. The global CLI `--no-color`
+flag turns provider colour off too. See [Providers](/guide/providers#colour).
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/real-world-shape.md
+---
+# Real-world shape
+
+Proxified binds three scopes under a `PROXIFIED_` prefix and reuses the engine
+for every generator:
+
+```ts
+import { createConfigEngine } from '@deltabox/toolchain/config';
+
+export const configEngine = createConfigEngine({
+    scopes: {
+        server: { zodSchema: serverConfig },
+        frontend: { zodSchema: frontendConfig },
+        cli: { zodSchema: cliConfig },
+    },
+    envPrefix: 'PROXIFIED_',
+    baseGroup: 'base',
+    root: monorepoRoot(),
+    envPathOf: env => envPathOf(env),
+});
+```
+
+The generators then run from a `config:generate-all` script (built on the
+`configCommands({ engine })` helpers) to keep `.env.example`, the JSON Schema,
+the markdown reference, the types and the CLI options in sync with the schemas.
+
+These `config:*` commands belong to the consumer's own CLI, `dbx`
+itself does not expose them.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/api/registering-commands.md
+---
+# Registering commands
+
+Packages export framework-agnostic `ToolchainCommand[]` descriptors; wire them onto
+a commander program with `registerToolchainCommands` (this is how the bundled
+`dbx` binary, and a consumer's own CLI, are assembled):
+
+```ts
+import { Command } from 'commander';
+
+import { registerToolchainCommands } from '@deltabox/toolchain/cli';
+import { configCommands } from '@deltabox/toolchain/config';
+
+const program = new Command();
+registerToolchainCommands(program, configCommands({ engine }));
+await program.parseAsync();
+```
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/changelog/releases.md
+---
+# Releases
+
+The generated `release` workflow opens a release PR whose body is the
+**aggregated changelog**: every entry from the last tag (`git describe --tags --abbrev=0`) up to the latest version, not just the newest one. So a release
+that skips versions (eg. `v1.7.0` → `v1.7.8`) still documents `1.7.1`–`1.7.8`
+in one place.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/api/subpath-exports.md
+---
+# Subpath exports
+
+| Import                          | What it provides                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------ |
+| `@deltabox/toolchain/cli`       | Build/register the `dbx` commander program + bare-command routing.             |
+| `@deltabox/toolchain/core`      | Load `dbx.config.*`, run/watch sync, the project graph, manifest, reset.       |
+| `@deltabox/toolchain/config`    | The Zod/env config engine, generators and the `config:*` commands.             |
+| `@deltabox/toolchain/vite`      | Resolve/run `vp`, the Vite+ provider, the `dbx()` plugin and `vite` sync.      |
+| `@deltabox/toolchain/migrate`   | Pluggable migrations to Oxfmt/Oxlint (Biome, ESLint, Prettier, Dprint).        |
+| `@deltabox/toolchain/template`  | The builtin/local/online template registry, loading and scaffolding.           |
+| `@deltabox/toolchain/providers` | The provider registry (`toolchainProviders`) the editor reads.                 |
+| `@deltabox/toolchain/tsdown`    | The tsdown base config, `createTsdownConfig`, post banner and cleanup.         |
+| `@deltabox/toolchain/tsconfig`  | The tsconfig sync task, templates and the tsconfig generator.                  |
+| `@deltabox/toolchain/changelog` | The changelog runner, workflows, commitlint and the changelog sync task.       |
+| `@deltabox/toolchain/biome`     | The generic Biome config, rendering helpers and the biome sync task.           |
+| `@deltabox/toolchain/project`   | Project/monorepo/workspace file generation and `dbx.config.ts` scaffolding.    |
+| `@deltabox/toolchain/shared`    | The config model, logger, provider model, template engine, `run`/`spawnCross`. |
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/changelog/troubleshooting.md
+---
+# Troubleshooting
+
+## `No "exports" main defined in … conventional-changelog-conventionalcommits`
+
+Seen from the Conventional Commits VS Code extension (`vivaxy.vscode-conventional-commits`),
+usually alongside empty type/scope suggestions and a `The cwd is …` line:
+
+```
+commitlint: Error: No "exports" main defined in
+  node_modules/conventional-changelog-conventionalcommits/package.json
+```
+
+This is a **known upstream commitlint bug** (commitlint#4864): the generated
+config `extends: ['@commitlint/config-conventional']`, which sets
+`parserPreset: 'conventional-changelog-conventionalcommits'`, and v10 of that
+package is **ESM-only** (`exports` has no `require`/`default`), so the extension's
+bundled (older) commitlint cannot `require.resolve` it. The config is read fine —
+the *preset* fails to resolve, so the extension falls back to empty rules.
+
+The husky hook and CI are unaffected when commitlint is recent enough to resolve
+pure-ESM presets (commitlint ≥ 21.2.3). If your local commitlint is older, pin
+the preset to the last CJS-compatible release:
+
+```json [package.json]
+{
+    "resolutions": { "conventional-changelog-conventionalcommits": "9.3.1" }
+}
+```
+
+(Use `overrides` instead of `resolutions` for npm.) Updating the extension to a
+version bundling the fixed commitlint also resolves it.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/api/umbrella.md
+---
+# Umbrella (`@deltabox/toolchain`)
+
+The root re-exports `@deltabox/toolchain-core` and `@deltabox/toolchain-shared`
+**directly**, and exposes the remaining packages as **namespaces** plus the sync
+runner:
+
+```ts
+import {
+    // identity helper (typed config)
+    defineConfig,
+    // config + sync
+    loadToolchainConfig,
+    runSync,
+    runWatch,
+    defaultSyncTasks,
+    // opt-in-by-presence helpers
+    sectionEnabled,
+    sectionConfig,
+    resolveTokens,
+    // logging
+    logger,
+    createLogger,
+} from '@deltabox/toolchain';
+// The other packages are namespaced:
+import {
+    biome,
+    changelog,
+    config,
+    core,
+    project,
+    shared,
+    tsconfig,
+    tsdown,
+} from '@deltabox/toolchain';
+```
+
+```ts
+const { config, tokens, projectType } = await loadToolchainConfig(process.cwd());
+await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, projectType });
+```
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/changelog/versioning.md
+---
+# Versioning
+
+`ci.changelog.versioning` controls whether — and where — a changelog run writes
+`version` fields into `package.json`. It accepts a boolean or an object, and
+defaults to `true`.
+
+```ts
+ci: { changelog: { versioning: true } }                       // uniform, defaults
+ci: { changelog: { versioning: false } }                      // never write versions
+ci: { changelog: { versioning: { target: 'root-only' } } }
+ci: { changelog: { versioning: { target: 'individual', workspaces: ['packages/*'] } } }
+```
+
+## `target`
+
+| Target       | What it bumps                                                                                                                                                                |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `uniform`    | The root (when it has a `package.json`) **and every workspace** to one shared version. **Default.**                                                                          |
+| `root-only`  | Only the root `package.json`. Workspaces are left untouched and get no changelog entry.                                                                                      |
+| `individual` | The root tracks the overall bump; **each workspace is bumped on its own** from the commits touching its files, so versions can drift apart (like an "independent" monorepo). |
+
+With `versioning: false` no `version` field is written at all — the changelog
+entries are still generated (headed as `uniform` would), so you can keep
+versioning in another tool (for example changesets).
+
+## `workspaces`
+
+An array of glob patterns selecting the workspaces to version, relative to the
+repo root. It resolves in this order:
+
+1. the `workspaces` patterns you pass, when you pass them;
+2. otherwise the root `package.json` `workspaces` field, when present;
+3. otherwise the root `package.json` alone (a single-package repo);
+4. otherwise a warning is logged and nothing is versioned.
+
+```ts
+ci: {
+    changelog: {
+        versioning: {
+            target: 'individual',
+            workspaces: ['packages/*', '!packages/private-*'],
+        },
+    },
+}
+```
+
+`individual` uses a `git log` path filter per workspace, so a workspace is only
+bumped when the scanned commit range touched a file inside it — or a file in one
+of the workspaces it depends on (see [Workspace changelogs](#workspace-changelogs)).
+The root's version always follows the overall bump derived from every scanned
+commit.
+
+## How a run decides its versions
+
+Each run:
+
+1. reads the commits in the range (`--range`/`--processing-method`, default
+   `HEAD`);
+2. derives the semver bump (`feat` → minor, `fix`/other → patch, `!` or a
+   `BREAKING CHANGE` footer → major);
+3. plans the versions per `target` + `workspaces` (see above);
+4. writes the plan's `package.json` versions and prepends the new entry to the
+   root `CHANGELOG.md` and each versioned workspace's `CHANGELOG.md`.
+
+Use `dbx changelog --dry-run` to preview the proposed root entry without touching
+any file; the log line reports the active `target` (or `disabled`).
+
+## Workspace changelogs
+
+Each versioned workspace gets **its own `CHANGELOG.md`** (created if missing),
+headed by the version the plan assigned it. A workspace's entry only lists its
+**related commits**: those touching the workspace directory **or any workspace it
+transitively depends on**, resolved from the project dependency graph
+(`.dbx/toolchain/projects.json`, written by `dbx projects`). So a change in a
+shared package shows up in the changelog of every package that consumes it, not
+just in its own.
+
+Without a graph (eg. `dbx projects` was never run), a workspace falls back to
+filtering on its own directory only. A workspace with no related commits is
+skipped (no empty entry, no file created).
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config/vite.md
+---
+# Vite+
+
+The whole Vite+ config lives in `toolchain.vite`. Every key is passed through
+verbatim to Vite+, so `dbx.config.*` stays the only hand-authored root config:
+
+```ts [dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        vite: {
+            test: { include: ['src/**/*.test.ts'], environment: 'node' },
+            lint: { ignorePatterns: ['dist/**'] },
+            fmt: { semi: true, singleQuote: true },
+        },
+    },
+});
+```
+
+`dbx sync` writes a thin root `vite.config.ts` that resolves that config at load
+time, so the generated file never duplicates (or drifts from) `dbx.config.*`:
+
+```ts [vite.config.ts]
+import { defineConfig, type ViteUserConfig } from 'vite-plus';
+
+// Generated by @deltabox/toolchain — edit the vite section in dbx.config and run `dbx sync`.
+import { resolveVite } from '@deltabox/toolchain/vite';
+
+export default defineConfig(resolveVite<ViteUserConfig>({ cwd: import.meta.dirname }));
+```
+
+The shim imports `defineConfig` from whichever Vite package the project installs
+(`vite` or `vite-plus`, detected from `package.json`), so a plain `vite` project
+gets `import { defineConfig, type UserConfig } from 'vite'` and
+`resolveVite<UserConfig>(...)`.
+
+`resolveVite(options?)` resolves the **same-directory** `dbx.config.*` (so a
+nested `vite.config.ts` uses the nested config it sits next to), or the
+`toolchain` you pass, then returns `toolchain.vite`. Pass `vite` inline to merge
+overrides over the loaded section (`resolveVite({ vite: { ... } })`). It is
+exported from `@deltabox/toolchain/vite` for programmatic use too.
+
+The single toolchain opt-out is `config`. Set `vite: { config: false }` to leave
+a hand-written `vite.config.ts` alone. Everything else under `vite` is Vite+
+config (plugins, `test`, `lint`, `fmt`, `run.tasks`, ...), so `toolchain.vite`
+is the full Vite+ configuration. The section is typed as Vite+'s own config
+(`ToolchainViteConfig` = Vite's `UserConfig` as augmented by Vite+), so the whole
+Vite+ surface autocompletes in `dbx.config.ts`.
+
+Add `/vite.config.ts` to `vite.fmt.ignorePatterns` so Oxfmt leaves the generated
+shim alone — without it `vp fmt` would rewrite the shim and `dbx sync --check`
+would report drift. `dbx migrate --from vite` adds it for you.
+
+To adopt an existing hand-written `vite.config.ts`, fold it in with the
+migration (see [Migrations](/guide/migrations#vite-config)):
+
+```sh
+dbx migrate --from vite --write   # folds the object into toolchain.vite (+ the fmt ignore)
+dbx sync                          # writes the managed vite.config.ts shim
+```
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/changelog/workflows.md
+---
+# Workflows
+
+`dbx sync` writes the GitHub workflows into `.github/workflows`. Every workflow is
+**opt-in**: declare it under `toolchain.ci` to write it; omit it (or set it to
+`false`) and the toolchain leaves that file unmanaged. Each id (`ci`,
+`changelog`, `release`, `issues`, `sync`) accepts one of three forms:
+
+* `true` / `false` — write the generated default, or skip it;
+* a **`WorkflowOptions` object** — override parts of the default (branches,
+  triggers, extra top-level keys, extra steps/jobs, token overrides);
+* a **raw YAML string** — written **verbatim** as the workflow file, for a
+  workflow the object model can't express.
+
+```ts [dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        ci: {
+            ci: true, // the generated CI checks
+            issues: false, // don't write issues.yml
+            release: { pushBranches: ['main'] }, // override the default
+            changelog: { branches: { main: 'main', dev: 'dev' } },
+            // A fully hand-authored workflow, written as-is:
+            sync: `name: Toolchain sync
+on: [push, pull_request]
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: yarn dbx sync --check
+`,
+        },
+    },
+});
+```
+
+A raw string is **not** merged with the default, is **not** token-replaced, and
+gets **no generated header** — it is the file's exact content. The
+`ci.changelog.branches` defaults don't apply to it either (it defines its own
+triggers). An empty string disables the workflow.
+
+The `ci` key doubles as the CI-checks workflow (`ci.yml`) and the section name, so
+`toolchain.ci.ci` is the checks workflow. Set `toolchain.ci.enabled` to `false` to
+disable the whole section (and every nested workflow) at once.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/changelog/writing-commit-messages.md
+---
+# Writing commit messages
+
+The changelog is rendered from commit **subjects and bodies**, so what you commit
+is what readers see. Watch out for characters that a **shell** re-interprets —
+especially when a message is drafted by an **AI/LLM** and committed through
+`git commit -m "…"`.
+
+## Shell escaping
+
+* **PowerShell** treats a backtick as its escape character, so `` `r `` / `` `n `` /
+  `` `t `` / `` `b `` become CR / LF / TAB / backspace. A preceding `\` is left
+  behind, so `` `resolveVite `` can land in the changelog as a stray `\`, a CR and
+  `esolveVite`.
+* **bash** runs an unquoted `` `…` `` as command substitution, and `$(…)` / `${…}`
+  expand before `git` ever sees them.
+
+The result is invisible control characters, stray `\` and dropped letters. The
+toolchain strips the predictable artifacts
+(`stripControlChars`/`sanitizeText`) but **cannot restore a character the shell
+already consumed**.
+
+## Authoring safely
+
+* Prefer a **file over `-m`**: `git commit -F message.txt`, or a quoted heredoc
+  (`git commit -F - <<'EOF' … EOF`) — nothing is re-interpreted. Avoid assembling
+  multi-line messages inline in PowerShell.
+* When an AI/LLM drafts the message, strip **typographic characters** before
+  committing: curly quotes (`’ “ ”`), em/en dashes (`— –`), non-breaking spaces,
+  zero-width characters and emoji all survive into the changelog and can break
+  `commitlint` or the markdown.
+* **Preview the entry**: `dbx changelog --dry-run` prints the proposed entry —
+  check it for stray `\`, `\r`, `\b`, `\t` or mojibake before releasing.

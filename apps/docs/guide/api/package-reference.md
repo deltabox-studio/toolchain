@@ -1,72 +1,6 @@
-# Programmatic API
+# Package reference
 
-Every surface the CLI and the extension use is also importable. The umbrella
-package re-exports the config model + sync runner and every workspace package, so
-a consumer can import the whole surface from the root or a single package through
-a subpath.
-
-## Umbrella (`@deltabox/toolchain`)
-
-The root re-exports `@deltabox/toolchain-core` and `@deltabox/toolchain-shared`
-**directly**, and exposes the remaining packages as **namespaces** plus the sync
-runner:
-
-```ts
-import {
-    // identity helper (typed config)
-    defineConfig,
-    // config + sync
-    loadToolchainConfig,
-    runSync,
-    runWatch,
-    defaultSyncTasks,
-    // opt-in-by-presence helpers
-    sectionEnabled,
-    sectionConfig,
-    resolveTokens,
-    // logging
-    logger,
-    createLogger,
-} from '@deltabox/toolchain';
-// The other packages are namespaced:
-import {
-    biome,
-    changelog,
-    config,
-    core,
-    project,
-    shared,
-    tsconfig,
-    tsdown,
-} from '@deltabox/toolchain';
-```
-
-```ts
-const { config, tokens, projectType } = await loadToolchainConfig(process.cwd());
-await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, projectType });
-```
-
-## Subpath exports
-
-| Import                          | What it provides                                                               |
-| ------------------------------- | ------------------------------------------------------------------------------ |
-| `@deltabox/toolchain/cli`       | Build/register the `dbx` commander program + bare-command routing.             |
-| `@deltabox/toolchain/core`      | Load `dbx.config.*`, run/watch sync, the project graph, manifest, reset.       |
-| `@deltabox/toolchain/config`    | The Zod/env config engine, generators and the `config:*` commands.             |
-| `@deltabox/toolchain/vite`      | Resolve/run `vp`, the Vite+ provider, the `dbx()` plugin and `vite` sync.      |
-| `@deltabox/toolchain/migrate`   | Pluggable migrations to Oxfmt/Oxlint (Biome, ESLint, Prettier, Dprint).        |
-| `@deltabox/toolchain/template`  | The builtin/local/online template registry, loading and scaffolding.           |
-| `@deltabox/toolchain/providers` | The provider registry (`toolchainProviders`) the editor reads.                 |
-| `@deltabox/toolchain/tsdown`    | The tsdown base config, `createTsdownConfig`, post banner and cleanup.         |
-| `@deltabox/toolchain/tsconfig`  | The tsconfig sync task, templates and the tsconfig generator.                  |
-| `@deltabox/toolchain/changelog` | The changelog runner, workflows, commitlint and the changelog sync task.       |
-| `@deltabox/toolchain/biome`     | The generic Biome config, rendering helpers and the biome sync task.           |
-| `@deltabox/toolchain/project`   | Project/monorepo/workspace file generation and `dbx.config.ts` scaffolding.    |
-| `@deltabox/toolchain/shared`    | The config model, logger, provider model, template engine, `run`/`spawnCross`. |
-
-## Package reference
-
-### `@deltabox/toolchain/shared`
+## `@deltabox/toolchain/shared`
 
 The base layer: the config model, logging, process/string/object utilities and
 the template engine.
@@ -79,7 +13,7 @@ the template engine.
 | `CONFIG_FILE_NAMES`                                                           | The config file names the loader probes, in priority order.                              |
 | `repoSlugFromUrl(url)`                                                        | Derive an `owner/name` slug from a repository URL.                                       |
 | `findOwnCliEntry(cwd?)` / `localToolchainVersion(cwd?)` / `TOOLCHAIN_PACKAGE` | Locate a project's own toolchain bin + pinned version (prefer them over a global `dbx`). |
-| `createLogger(options)` / `logger`                                            | The shared logger (see [Logging](#logging)).                                             |
+| `createLogger(options)` / `logger`                                            | The shared logger (see [Logging](/guide/api/logging)).                                   |
 | `spawnCross(cmd, args, options)` / `run(cmd, args, options)`                  | Cross-platform, shell-free spawning; `timeoutMs` kills the child tree.                   |
 | `killProcessTree(child)`                                                      | Kill a child process and its descendants (Windows `taskkill /t`).                        |
 | `readJsonFile` / `readJsonAt` / `toJson` / `writeJsonFile`                    | Small JSON file helpers.                                                                 |
@@ -91,8 +25,7 @@ the template engine.
 The config **types** and **schemas** also live here: `ToolchainConfig`, `DbxConfig`,
 `SyncTask`, `SyncContext`, `ManagedFile`, `ToolchainCommand`, `ToolchainOption`,
 `ToolchainProvider`, `ToolchainViteConfig` (Vite+'s config type), `Replacements`,
-and the generated `config-types` /
-`config-schema` exports.
+and the generated `config-types` / `config-schema` exports.
 
 ```ts
 import { defineConfig, sectionEnabled, applyReplacements } from '@deltabox/toolchain/shared';
@@ -100,7 +33,7 @@ import { defineConfig, sectionEnabled, applyReplacements } from '@deltabox/toolc
 const text = applyReplacements('Hello {{name:world}}', { name: 'acme' });
 ```
 
-### `@deltabox/toolchain/core`
+## `@deltabox/toolchain/core`
 
 Loads `dbx.config.*`, builds the project graph and runs the sync tasks.
 
@@ -119,9 +52,9 @@ Loads `dbx.config.*`, builds the project graph and runs the sync tasks.
 | `resolveProjectType(cwd, config?)` / `detectProjectType(cwd)` | The project kind (`monorepo-root` / `monorepo-workspace` / `project`). |
 | `readManifest(cwd)` / `writeManifest(cwd, files)`             | The `.dbx/toolchain/manifest.json` helpers.                            |
 
-### `@deltabox/toolchain/config`
+## `@deltabox/toolchain/config`
 
-The generic Zod/env engine (see the [Config Generator](/guide/config-generator)
+The generic Zod/env engine (see the [Config Generator](/guide/config-generator/)
 guide for the full workflow).
 
 | Export                                                                                   | Description                                               |
@@ -141,7 +74,7 @@ guide for the full workflow).
 | `generateEnv` / `generateEnvDts` / `generateEnvTypes`                                    | `.env` / env type generation.                             |
 | `generateCliOptions` / `flagOf` / `cliFlagOf` / `createCliArgsParser`                    | CLI option generation + parsing.                          |
 
-### `@deltabox/toolchain/vite`
+## `@deltabox/toolchain/vite`
 
 The Vite+ provider: resolving/running `vp`, the `dbx()` plugin and the `vite`
 sync task (see the [Providers](/guide/providers) guide).
@@ -159,7 +92,7 @@ sync task (see the [Providers](/guide/providers) guide).
 | `renderViteConfig(specifier?)` / `viteConfigObject(config?)`       | The managed `vite.config.ts` shim (per specifier) + the section minus `config`.                     |
 | `viteSyncTask()`                                                   | The `vite` sync task that writes the shim.                                                          |
 
-### `@deltabox/toolchain/cli`
+## `@deltabox/toolchain/cli`
 
 | Export                                         | Description                                                            |
 | ---------------------------------------------- | ---------------------------------------------------------------------- |
@@ -172,7 +105,7 @@ sync task (see the [Providers](/guide/providers) guide).
 
 See the [CLI](/guide/cli) guide for the routing behaviour.
 
-### `@deltabox/toolchain/migrate`
+## `@deltabox/toolchain/migrate`
 
 | Export                                                                              | Description                                      |
 | ----------------------------------------------------------------------------------- | ------------------------------------------------ |
@@ -184,7 +117,7 @@ See the [CLI](/guide/cli) guide for the routing behaviour.
 | `diffFiles(files)` / `hasPending(diffs)`                                            | Diff planned files against disk (for `--check`). |
 | `mergeViteConfig(source, ...)` / `writeViteTarget(...)`                             | The Vite+ (`--target vite`) output helpers.      |
 
-### `@deltabox/toolchain/template`
+## `@deltabox/toolchain/template`
 
 | Export                                                                          | Description                                                |
 | ------------------------------------------------------------------------------- | ---------------------------------------------------------- |
@@ -196,7 +129,7 @@ See the [CLI](/guide/cli) guide for the routing behaviour.
 | `readTemplateDir` / `readTemplateManifest` / `writeTemplateManifest`            | A local `template.json` directory.                         |
 | `parseSourceSpec(spec, cwd?)` / `gitTemplate(source)` / `loadNpmTemplates(pkg)` | Online source parsing/loading.                             |
 
-### `@deltabox/toolchain/providers`
+## `@deltabox/toolchain/providers`
 
 | Export                      | Description                                           |
 | --------------------------- | ----------------------------------------------------- |
@@ -209,7 +142,7 @@ import { toolchainProviders } from '@deltabox/toolchain/providers';
 console.log(toolchainProviders().map(p => p.id));
 ```
 
-### `@deltabox/toolchain/tsdown`
+## `@deltabox/toolchain/tsdown`
 
 | Export                                                         | Description                                  |
 | -------------------------------------------------------------- | -------------------------------------------- |
@@ -217,7 +150,7 @@ console.log(toolchainProviders().map(p => p.id));
 | `createTsdownConfig(overrides?)` / `createPostBanner(options)` | Build a tsdown config / a post-build banner. |
 | `cleanup(options?)` / `cleanupCommands()`                      | Remove build artifacts / the turbo cache.    |
 
-### `@deltabox/toolchain/tsconfig`
+## `@deltabox/toolchain/tsconfig`
 
 | Export                                                                       | Description                                           |
 | ---------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -228,7 +161,7 @@ console.log(toolchainProviders().map(p => p.id));
 | `renderTsconfigTemplates(replacements?)`                                     | Render every template at once.                        |
 | `generateTsconfigs(options)` / `runTsconfigCli(argv?)`                       | The tsconfig generator and its CLI.                   |
 
-### `@deltabox/toolchain/changelog`
+## `@deltabox/toolchain/changelog`
 
 | Export                                                                 | Description                                          |
 | ---------------------------------------------------------------------- | ---------------------------------------------------- |
@@ -239,7 +172,7 @@ console.log(toolchainProviders().map(p => p.id));
 | `readCommits(range)` / `deriveBump(records)` / `buildSummary(records)` | Git commit reading, bump derivation and summaries.   |
 | `renderChangelogEntry(...)` / `parseExistingChangelog(content)`        | Changelog entry rendering/parsing.                   |
 
-### `@deltabox/toolchain/biome`
+## `@deltabox/toolchain/biome`
 
 | Export                                                                  | Description                                                |
 | ----------------------------------------------------------------------- | ---------------------------------------------------------- |
@@ -248,7 +181,7 @@ console.log(toolchainProviders().map(p => p.id));
 | `mergeBiomeConfig(base, patch)` / `renderVscodeSettings(indent?)`       | Recursive merge and settings rendering.                    |
 | `biomeSyncTask()`                                                       | The biome sync task (writes `biome.json`).                 |
 
-### `@deltabox/toolchain/project`
+## `@deltabox/toolchain/project`
 
 | Export                                                                                       | Description                                        |
 | -------------------------------------------------------------------------------------------- | -------------------------------------------------- |
@@ -259,81 +192,3 @@ console.log(toolchainProviders().map(p => p.id));
 | `catalogsSyncTask()` / `renderYarnrc(catalog)` / `renderPnpmWorkspace(catalog, packages?)`   | The catalogs sync task + catalog file renderers.   |
 | `writeGeneratedFiles(files, cwd?)`                                                           | Write a `GeneratedFile[]`.                         |
 | `projectCommands()`                                                                          | The `project:*` commands.                          |
-
-## Logging
-
-Every toolchain message goes through one level-aware logger, rendered with
-[`@clack/prompts`](https://bombshell.dev/clack) (level symbols + guide). Use it
-instead of `console.log` so output stays consistent and respects the config and
-the CLI flags.
-
-| Export / member                                   | Description                                                                                  |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `logger`                                          | The active singleton: `raw`, `debug`, `info`, `success`, `warn`, `error`, `level`, `colors`. |
-| `createLogger(options)`                           | Create an independent logger (`level`, `color`, `name`).                                     |
-| `setLogConfig(section)`                           | Apply the `logger` section from the loaded config.                                           |
-| `setLogOverrides(options)`                        | Apply CLI overrides (win over the config). `configureLogger` is an alias.                    |
-| `getLogOverrides()` / `getLogger()`               | Read the current overrides / the active instance.                                            |
-| `LOG_LEVELS` / `isLogLevel` / `normalizeLogLevel` | The valid levels, most verbose first (`debug`, `info`, `warn`, `error`, `silent`).           |
-
-```ts
-import { createLogger, logger, setLogConfig, setLogOverrides } from '@deltabox/toolchain/shared';
-
-setLogConfig({ level: 'debug', color: false, name: 'dbx' }); // from dbx.config.*
-setLogOverrides({ level: 'warn' }); // from --log-level
-
-logger.info('human message');
-logger.success('done');
-logger.error('failed');
-logger.raw(JSON.stringify(payload)); // machine output: no prefix, no colour
-```
-
-Use `raw` for machine output (`--json`): it is never prefixed or decorated.
-`logger.warn`/`error` write to stderr; `debug`/`info`/`success`/`raw` to stdout.
-Messages that start with whitespace (indented continuations) are never prefixed.
-
-This mirrors the [`logger` config section](/guide/config#logging) and the
-`--log-level <level>` / `--no-color` [CLI flags](/guide/cli#global-flags), which
-call `setLogConfig` / `setLogOverrides` under the hood.
-
-## Examples
-
-```ts
-// Vite+ provider
-import { resolveVp, runVp, resolveVpCommand, VP_COMMANDS } from '@deltabox/toolchain/vite';
-await runVp(['check'], { cwd: process.cwd() });
-resolveVpCommand('i'); // 'install'
-
-// Migrations
-import { detectMigrations, runMigration } from '@deltabox/toolchain/migrate';
-for (const m of detectMigrations(process.cwd())) await m.run({ cwd: process.cwd(), write: true });
-
-// Templates
-import { loadTemplates, scaffoldTemplate } from '@deltabox/toolchain/template';
-const [template] = await loadTemplates({ cwd: process.cwd() });
-if (template) await scaffoldTemplate(template, { cwd: './out', tokens: { name: 'acme' } });
-
-// Providers (what the editor reads)
-import { toolchainProviders } from '@deltabox/toolchain/providers';
-console.log(toolchainProviders().map(p => p.id));
-
-// Config engine
-import { createConfigEngine } from '@deltabox/toolchain/config';
-```
-
-## Registering commands
-
-Packages export framework-agnostic `ToolchainCommand[]` descriptors; wire them onto
-a commander program with `registerToolchainCommands` (this is how the bundled
-`dbx` binary, and a consumer's own CLI, are assembled):
-
-```ts
-import { Command } from 'commander';
-
-import { registerToolchainCommands } from '@deltabox/toolchain/cli';
-import { configCommands } from '@deltabox/toolchain/config';
-
-const program = new Command();
-registerToolchainCommands(program, configCommands({ engine }));
-await program.parseAsync();
-```

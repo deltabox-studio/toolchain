@@ -7,7 +7,7 @@ outline: [2, 3, 4]
 
 A `dbx.config.ts` file exports `{ toolchain: { ...sections } }`: the
 `@deltabox/toolchain` settings live under the `toolchain` key. Every
-section is **opt-in by presence** (see [Configuration](/guide/config)):
+section is **opt-in by presence** (see [Configuration](/guide/config/opt-in-by-presence)):
 define it to enable it, omit it to leave that area untouched.
 
 > Generated from the Zod config schema — do not edit by hand.
@@ -89,71 +89,53 @@ One-line description (`package.json` `description`).
 
 Inherit the parent project metadata (default true). Set false to keep this project entirely independent of the root config.
 
-## `changelog`
+## `ci`
 
-Conventional-Commits CI, commitlint and the changelog pipeline.
+GitHub Actions workflows: CI checks, release, issues, changelog and sync (all opt-in).
 
-### `enabled`
-
-- **Type**: `boolean`
-
-Master switch (enabled when the section is defined).
-
-### `workflows`
-
-- **Type**: `ChangelogWorkflowsConfig`
-
-Which workflows to write into `.github/workflows`. Each id is `true`/`false`, an object of overrides, or a raw YAML string written verbatim.
-
-#### `ci`
+### `ci`
 
 - **Type**: `WorkflowSetting`
 
-The CI workflow (`ci.yml`).
+The CI checks workflow (`ci.yml`).
 
-##### `enabled`
-
-- **Type**: `boolean`
-
-Enable/disable this workflow (default true).
-
-##### `pushBranches`
+#### `pushBranches`
 
 - **Type**: `Array<string>`
 
 Replace `on.push.branches`.
 
-##### `pullRequestBranches`
+#### `pullRequestBranches`
 
 - **Type**: `Array<string>`
 
 Replace `on.pull_request.branches`.
 
-##### `triggers`
+#### `triggers`
 
 - **Type**: `Record<string, unknown>`
 
 Extra `on.*` triggers.
 
-##### `extra`
+#### `extra`
 
 - **Type**: `Record<string, unknown>`
 
 Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
 
-##### `steps`
+#### `steps`
 
 - **Type**: `WorkflowStepsConfig | Array<WorkflowStepsConfig>`
 
 Extra steps for a job (one group, or per-job groups).
 
-###### `job`
+##### `job`
 
 - **Type**: `string`
 
 Target job id (defaults to the primary/first job).
 
-###### `before`
+##### `before`
 
 - **Type**: `Array<WorkflowStep>`
 
@@ -213,123 +195,183 @@ Inputs for a `uses` action.
 
 Environment variables for the step.
 
-###### `after`
+##### `after`
 
 - **Type**: `Array<WorkflowStep>`
 
 Steps appended at the end.
 
-##### `jobs`
+#### `jobs`
 
 - **Type**: `Record<string, unknown>`
 
 Extra complete jobs merged in.
 
-##### `tokens`
+#### `tokens`
 
 - **Type**: `Record<string, unknown>`
 
 Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
 
-#### `changelog`
+#### `enabled`
 
-- **Type**: `WorkflowSetting`
+- **Type**: `boolean`
 
-The changelog/version workflow (`changelog.yml`).
+Enable/disable this workflow (default: enabled when present).
 
-#### `release`
+### `changelog`
 
-- **Type**: `WorkflowSetting`
+- **Type**: `ChangelogWorkflowSetting`
 
-The release workflow (`release.yml`).
+The changelog/version workflow (`changelog.yml`) plus the changelog pipeline config (versioning, VS Code settings, commitlint).
 
-#### `issues`
+#### `pushBranches`
 
-- **Type**: `WorkflowSetting`
+- **Type**: `Array<string>`
 
-The issue-title workflow (`issues.yml`).
+Replace `on.push.branches`.
 
-#### `sync`
+#### `pullRequestBranches`
 
-- **Type**: `WorkflowSetting`
+- **Type**: `Array<string>`
 
-The toolchain sync workflow (`sync.yml`).
+Replace `on.pull_request.branches`.
 
-### `branches`
+#### `triggers`
 
-- **Type**: `object`
+- **Type**: `Record<string, unknown>`
+
+Extra `on.*` triggers.
+
+#### `extra`
+
+- **Type**: `Record<string, unknown>`
+
+Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
+
+#### `steps`
+
+- **Type**: `WorkflowStepsConfig | Array<WorkflowStepsConfig>`
+
+Extra steps for a job (one group, or per-job groups).
+
+#### `jobs`
+
+- **Type**: `Record<string, unknown>`
+
+Extra complete jobs merged in.
+
+#### `tokens`
+
+- **Type**: `Record<string, unknown>`
+
+Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
+
+#### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable the changelog workflow and pipeline (default: enabled when present).
+
+#### `branches`
+
+- **Type**: `ChangelogBranchesConfig`
 
 Branches the generated workflows target.
 
-#### `main`
+##### `main`
 
 - **Type**: `string | Array<string>`
 
 Branch glob(s) the CI + release workflows run on, and the release PR base (default `["main"]`).
 
-#### `dev`
+##### `dev`
 
 - **Type**: `string | Array<string>`
 
 Branch glob(s) the changelog/version workflow runs on. No default: when omitted it reuses `main` (so a single-branch repo needs no `dev`).
 
-### `types`
+#### `commitlint`
 
-- **Type**: `Array<string>`
+- **Type**: `boolean | ChangelogCommitlintConfig`
 
-Allowed commit types (commitlint).
+commitlint config; set `false` to disable the Conventional-Commits pipeline.
 
-### `scopes`
-
-- **Type**: `Array<string>`
-
-Allowed commit scopes (commitlint).
-
-### `commitlint`
-
-- **Type**: `object`
-
-commitlint config output location.
-
-#### `dir`
+##### `dir`
 
 - **Type**: `string`
 
 Directory the generated `commitlint.config.mjs` is written to (default: the project root). The husky hook and CI use `--config` to point at it.
 
-### `versioning`
+##### `types`
+
+- **Type**: `Array<string>`
+
+Allowed commit types (commitlint).
+
+##### `scopes`
+
+- **Type**: `Array<string>`
+
+Allowed commit scopes (commitlint).
+
+##### `enabled`
+
+- **Type**: `boolean`
+
+Enable commitlint (default true when the changelog is enabled). Set false to generate changelogs without the Conventional-Commits pipeline.
+
+#### `versioning`
 
 - **Type**: `ChangelogVersioning`
 
 Automatic version bumping on changelog generation (default `true`).
 
-#### `target`
+##### `target`
 
 - **Type**: `'uniform' | 'root-only' | 'individual'`
 
 `uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently (default `uniform`).
 
-#### `workspaces`
+##### `workspaces`
 
 - **Type**: `Array<string>`
 
 Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own.
 
-### `vscode`
+#### `vscode`
 
 - **Type**: `boolean`
 
-Write the Conventional-Commits VS Code settings.
+Write the Conventional-Commits VS Code settings (default true).
 
-## `biome`
+### `release`
 
-Biome config generation (for consumers that still want a `biome.json`).
+- **Type**: `WorkflowSetting`
+
+The release workflow (`release.yml`).
+
+### `issues`
+
+- **Type**: `WorkflowSetting`
+
+The issue-title workflow (`issues.yml`).
+
+### `sync`
+
+- **Type**: `WorkflowSetting`
+
+The toolchain sync workflow (`sync.yml`).
 
 ### `enabled`
 
 - **Type**: `boolean`
 
-Master switch (enabled when the section is defined).
+Enable/disable this section (default: enabled when defined).
+
+## `biome`
+
+Biome config generation (for consumers that still want a `biome.json`).
 
 ### `vscode`
 
@@ -343,15 +385,15 @@ Write the Biome VS Code settings (default true).
 
 Deep-merged over the generated `biome.json` (arrays union).
 
-## `tsconfig`
-
-Workspace tsconfig generation (path aliases + project references).
-
 ### `enabled`
 
 - **Type**: `boolean`
 
-Master switch (enabled when the section is defined).
+Enable/disable this section (default: enabled when defined).
+
+## `tsconfig`
+
+Workspace tsconfig generation (path aliases + project references).
 
 ### `glob`
 
@@ -413,15 +455,15 @@ The workspace default tsconfig file name that the generator expands (default `ts
 
 The workspace build tsconfig file name (default `tsconfig.build.json`).
 
-## `templates`
-
-Template sources / scaffolding.
-
 ### `enabled`
 
 - **Type**: `boolean`
 
-Master switch (enabled when the section is defined).
+Enable/disable this section (default: enabled when defined).
+
+## `templates`
+
+Template sources / scaffolding.
 
 ### `sources`
 
@@ -491,15 +533,15 @@ Free-form tags.
 
 Whether the source needs network access.
 
-## `catalogs`
-
-Package catalogs written to the package manager catalog file (`catalog:`).
-
 ### `enabled`
 
 - **Type**: `boolean`
 
-Master switch (enabled when the section is defined).
+Enable/disable this section (default: enabled when defined).
+
+## `catalogs`
+
+Package catalogs written to the package manager catalog file (`catalog:`).
 
 ### `packages`
 
@@ -513,6 +555,12 @@ The default catalog: package name -> version range.
 
 Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages.
 
+### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
 ## `vite`
 
 The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.
@@ -523,15 +571,15 @@ The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.
 
 Write the managed `vite.config.ts` (default true).
 
-## `watch`
-
-Watch behaviour for `dbx watch`.
-
 ### `enabled`
 
 - **Type**: `boolean`
 
-Watch by default (enabled when the section is defined).
+Enable/disable this section (default: enabled when defined).
+
+## `watch`
+
+Watch behaviour for `dbx watch`.
 
 ### `debounce`
 
@@ -550,6 +598,12 @@ Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modu
 - **Type**: `boolean`
 
 Also respect `.gitignore` files (root + nested) when watching (default true).
+
+### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
 
 ## `logger`
 
@@ -573,15 +627,27 @@ Force colours on/off (default: on; `--no-color` disables).
 
 Prefix non-indented lines with `<name>:` (default `dbx`).
 
+### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
 ## `providers`
 
-Provider command behaviour (eg. colour for the provider passthrough commands).
+Provider command behaviour (eg. colour for the passthrough commands).
 
 ### `color`
 
 - **Type**: `boolean`
 
 Force provider command colours on/off (default: inherit the logger).
+
+### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
 
 ## Full example
 
@@ -591,7 +657,7 @@ import { defineConfig } from '@deltabox/toolchain';
 export default defineConfig({
     toolchain: {
         project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
-        changelog: { workflows: { ci: true, release: true }, branches: { main: 'main' } },
+        ci: { ci: true, release: true, changelog: { branches: { main: 'main' } } },
         tsconfig: { refs: true },
         templates: { sources: [{ type: 'local', locate: './templates', kind: 'application' }] },
         vite: { fmt: { semi: true, singleQuote: true }, test: { include: ['src/**/*.test.ts'] } },

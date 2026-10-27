@@ -14,7 +14,7 @@ override them on the command line.
 | `--no-color`        | Disable coloured output.                                       |
 | `--no-update-check` | Do not check for a newer `dbx` version.                        |
 
-These override the [`logger` config](/guide/config#logging) and may appear
+These override the [`logger` config](/guide/config/logging) and may appear
 before or after the subcommand.
 
 `dbx` checks the npm registry in the background (about once a day) and prints a
@@ -24,7 +24,7 @@ set, and can be turned off with `--no-update-check`.
 
 ## Output
 
-Colour is on by default and follows `--no-color` / the [`logger` config](/guide/config#logging).
+Colour is on by default and follows `--no-color` / the [`logger` config](/guide/config/logging).
 
 ## Core
 
@@ -147,4 +147,4 @@ withDefaultVite(['node', 'dbx', 'fmt', '--check']);
 
 The generic Zod/env config engine is not a `dbx` command: a consumer
 builds an engine with `createConfigEngine` and registers the `config:*` commands
-on its **own** CLI. See [Config Generator](/guide/config-generator).
+on its **own** CLI. See [Config Generator](/guide/config-generator/).

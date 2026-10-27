@@ -18,7 +18,7 @@ export default defineConfig({
 
 `dbx sync` regenerates the managed `tsconfig.json` files and tracks them in
 `.dbx/toolchain/manifest.json`; `dbx sync --check` is the CI gate. See
-[Configuration](/guide/config#opt-in-by-presence) for the opt-in-by-presence
+[Configuration](/guide/config/opt-in-by-presence) for the opt-in-by-presence
 shorthand (`tsconfig: true` enables the defaults).
 
 ## Why so many tsconfig files?
@@ -271,7 +271,7 @@ import {
 
 `generateTsconfigs` returns one result per workspace (with `newTsconfig`,
 `originalConfig`, ...); pass `write: false` for a dry run. The task-level
-options are documented in the [Programmatic API](/guide/api#deltaboxtoolchaintsconfig)
+options are documented in the [Programmatic API](/guide/api/package-reference#deltaboxtoolchaintsconfig)
 reference.
 
 ## Sync & CI
@@ -294,7 +294,7 @@ A non-root `dbx.config.*` is **merged over** the nearest ancestor
 `dbx.config.*`: nested options are combined, and leaf options (booleans,
 strings, numbers, arrays) in the project override the root. So a workspace can
 tweak just its own `tsconfig` (or any other section) and inherit the rest. See
-[Configuration → Nested configs](/guide/config#nested-configs) for the rules.
+[Configuration → Nested configs](/guide/config/nested-configs) for the rules.
 
 ## Scaffolding
 

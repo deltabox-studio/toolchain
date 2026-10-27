@@ -38,7 +38,7 @@ const markdown = renderConfigFileMarkdown(sections, {
     intro: [
         'A `dbx.config.ts` file exports `{ toolchain: { ...sections } }`: the',
         '`@deltabox/toolchain` settings live under the `toolchain` key. Every',
-        'section is **opt-in by presence** (see [Configuration](/guide/config)):',
+        'section is **opt-in by presence** (see [Configuration](/guide/config/opt-in-by-presence)):',
         'define it to enable it, omit it to leave that area untouched.',
         '',
         '> Generated from the Zod config schema — do not edit by hand.',
@@ -57,7 +57,7 @@ const example = [
     'export default defineConfig({',
     '    toolchain: {',
     "        project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },",
-    '        changelog: { workflows: { ci: true, release: true }, branches: { main: "main" } },',
+    '        ci: { ci: true, release: true, changelog: { branches: { main: "main" } } },',
     '        tsconfig: { refs: true },',
     "        templates: { sources: [{ type: 'local', locate: './templates', kind: 'application' }] },",
     "        vite: { fmt: { semi: true, singleQuote: true }, test: { include: ['src/**/*.test.ts'] } },",

@@ -55,7 +55,7 @@ is a different concern from the published `engines.node` range.
 ## Workspace inheritance
 
 A non-root `dbx.config.*` is merged over the nearest ancestor config (see
-[Configuration → Nested configs](/guide/config#nested-configs)). For `project`
+[Configuration → Nested configs](/guide/config/nested-configs)). For `project`
 specifically:
 
 - **Fields are inherited** (scope, author, license, ...), so a workspace keeps the
