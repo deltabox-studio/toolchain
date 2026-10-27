@@ -3,10 +3,10 @@ import type { ViteUserConfig } from 'vite-plus';
 import { DEFAULT_IGNORE_PATTERNS } from './ignore.js';
 
 /** The Oxfmt options accepted by Vite+ (`toolchain.vite.fmt`). */
-export type ToolchainFmtConfig = NonNullable<ViteUserConfig['fmt']>;
+export type ToolchainOxfmtConfig = NonNullable<ViteUserConfig['fmt']>;
 
 /** The Oxlint options accepted by Vite+ (`toolchain.vite.lint`). */
-export type ToolchainLintConfig = NonNullable<ViteUserConfig['lint']>;
+export type ToolchainOxlintConfig = NonNullable<ViteUserConfig['lint']>;
 
 /**
  * Common paths Oxfmt should leave alone. Starts from the shared build/cache
@@ -34,7 +34,7 @@ export const DEFAULT_FMT_IGNORE_PATTERNS: string[] = [
  * object is merged over. `sortImports` is intentionally left out: import order
  * is project-specific, so consumers opt in with their own groups.
  */
-export const DEFAULT_FMT_RULES: ToolchainFmtConfig = {
+export const DEFAULT_FMT_RULES: ToolchainOxfmtConfig = {
     useTabs: false,
     tabWidth: 4,
     printWidth: 100,
@@ -74,7 +74,7 @@ export const DEFAULT_LINT_IGNORE_PATTERNS: string[] = [
  * object is merged over. Framework/a11y rules are disabled by default (opt in
  * per project); the remaining rules are non-blocking warnings.
  */
-export const DEFAULT_LINT_RULES: ToolchainLintConfig = {
+export const DEFAULT_LINT_RULES: ToolchainOxlintConfig = {
     ignorePatterns: DEFAULT_LINT_IGNORE_PATTERNS,
     rules: {
         'jsx-a11y/alt-text': 'off',

@@ -3,6 +3,7 @@ import {
     isPlainObject,
     type Replacements,
     type SyncTask,
+    type ToolchainConfig,
     sectionConfig,
     sectionEnabled,
 } from '@deltabox/toolchain-shared';
@@ -62,22 +63,33 @@ export function renderVscodeSettings(indent = 4): string {
     return `${JSON.stringify(biomeVscodeSettings, null, indent)}\n`;
 }
 
+/** Merge the deprecated `biome.overrides` with `fmt.biome` / `lint.biome`. */
+function biomeOverrides(config: ToolchainConfig): Record<string, unknown> {
+    let out = (sectionConfig(config.biome)?.overrides ?? {}) as Record<string, unknown>;
+    const fmt = sectionConfig(config.fmt)?.biome;
+    const lint = sectionConfig(config.lint)?.biome;
+    if (fmt) out = mergeBiomeConfig(out, fmt) as Record<string, unknown>;
+    if (lint) out = mergeBiomeConfig(out, lint) as Record<string, unknown>;
+    return out;
+}
+
 /**
  * The biome sync task: writes `biome.json` from the generic config, resolving
- * the `{{name}}` / `{{scope}}` tokens and merging `config.biome.overrides`.
+ * the `{{name}}` / `{{scope}}` tokens and merging `config.biome.overrides` /
+ * `fmt.biome` / `lint.biome`.
  */
 export function biomeSyncTask(): SyncTask {
     return {
         name: 'biome',
         projectTypes: ['monorepo-root', 'monorepo-workspace', 'project'],
-        enabled: config => sectionEnabled(config.biome),
+        enabled: config =>
+            sectionEnabled(config.biome) ||
+            sectionConfig(config.fmt)?.biome !== undefined ||
+            sectionConfig(config.lint)?.biome !== undefined,
         run: ctx => [
             {
                 path: 'biome.json',
-                content: renderBiomeJson(
-                    ctx.tokens,
-                    sectionConfig(ctx.config.biome)?.overrides ?? {}
-                ),
+                content: renderBiomeJson(ctx.tokens, biomeOverrides(ctx.config)),
             },
         ],
     };

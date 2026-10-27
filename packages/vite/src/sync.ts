@@ -18,8 +18,13 @@ import {
     DEFAULT_LINT_RULES,
     deepMerge,
     isPlainObject,
+    type ManagedFile,
     type PackageJson,
     readJsonAt,
+    resolveFmtTools,
+    resolveLintTools,
+    resolveOxcFmtConfig,
+    resolveOxcLintConfig,
     type SyncTask,
     sectionConfig,
     sectionEnabled,
@@ -278,30 +283,111 @@ export function renderViteConfig(
 /** The default managed `vite.config.ts` (imports `defineConfig` from `vite-plus`). */
 export const VITE_CONFIG_SHIM = renderViteConfig('vite-plus');
 
+/** The managed Oxfmt config file (read by the Oxc VS Code extension). */
+export const OXC_FMT_CONFIG_FILE = '.oxfmtrc.json';
+
+/** The managed Oxlint config file (read by the Oxc VS Code extension). */
+export const OXC_LINT_CONFIG_FILE = '.oxlintrc.json';
+
+/** Render an Oxc config file with the package's JSON schema. */
+function renderOxcConfig(schemaPath: string, config: unknown): string {
+    const body = isPlainObject(config) ? config : {};
+    return `${JSON.stringify({ $schema: schemaPath, ...body }, null, 4)}\n`;
+}
+
 /**
  * The vite sync task: writes the `vite.config.ts` shim when the `vite` section is
- * enabled (and `config` is not `false`). Runs for every project kind.
+ * enabled (and `config` is not `false`), plus the root `.oxfmtrc.json` /
+ * `.oxlintrc.json` files the Oxc VS Code extension reads. A nested config only
+ * gets its own Oxc files when it defines `vite.fmt` / `vite.lint` itself (not
+ * merely inherited from the root).
  */
 export function viteSyncTask(): SyncTask {
     return {
         name: 'vite',
         projectTypes: ['monorepo-root', 'monorepo-workspace', 'project'],
-        enabled: config => sectionEnabled(config.vite),
+        enabled: config =>
+            sectionEnabled(config.vite) ||
+            sectionConfig(config.fmt)?.oxc !== undefined ||
+            sectionConfig(config.lint)?.oxc !== undefined,
         run: ctx => {
+            const hasVite = sectionEnabled(ctx.config.vite);
             const section = sectionConfig(ctx.config.vite) ?? {};
-            if (section.config === false) return [];
-            let existing: string | undefined;
-            try {
-                existing = fs.readFileSync(path.join(ctx.cwd, 'vite.config.ts'), 'utf-8');
-            } catch {
-                existing = undefined;
-            }
-            return [
-                {
-                    path: 'vite.config.ts',
+            const ownConfig = ctx.ownConfig ?? ctx.config;
+            const ownVite = sectionConfig(ownConfig.vite) ?? {};
+            const ownFmt = sectionConfig(ownConfig.fmt)?.oxc;
+            const ownLint = sectionConfig(ownConfig.lint)?.oxc;
+            const effective: Record<string, unknown> = { ...section };
+            const fmt = resolveOxcFmtConfig(ctx.config);
+            const lint = resolveOxcLintConfig(ctx.config);
+            if (fmt !== undefined) effective.fmt = fmt;
+            if (lint !== undefined) effective.lint = lint;
+            const resolved = viteConfigObject(effective as ToolchainViteConfig) as {
+                fmt?: unknown;
+                lint?: unknown;
+            };
+            const files: ManagedFile[] = [];
+
+            const configuredPath = section.config;
+            const shimPath =
+                configuredPath === false
+                    ? undefined
+                    : typeof configuredPath === 'string' && configuredPath.trim()
+                      ? configuredPath
+                      : 'vite.config.ts';
+            if (hasVite && shimPath) {
+                let existing: string | undefined;
+                try {
+                    const target = path.isAbsolute(shimPath)
+                        ? shimPath
+                        : path.resolve(ctx.cwd, shimPath);
+                    existing = fs.readFileSync(target, 'utf-8');
+                } catch {
+                    existing = undefined;
+                }
+                files.push({
+                    path: shimPath,
                     content: renderViteConfig(detectViteSpecifier(ctx.cwd), existing),
-                },
-            ];
+                });
+            }
+            const hasFmt =
+                (ownFmt !== undefined || ownVite.fmt !== undefined) &&
+                resolved.fmt !== undefined &&
+                resolved.fmt !== false;
+            const hasLint =
+                (ownLint !== undefined || ownVite.lint !== undefined) &&
+                resolved.lint !== undefined &&
+                resolved.lint !== false;
+            if (hasFmt) {
+                files.push({
+                    path: OXC_FMT_CONFIG_FILE,
+                    content: renderOxcConfig(
+                        './node_modules/oxfmt/configuration_schema.json',
+                        resolved.fmt
+                    ),
+                });
+            }
+            if (hasLint) {
+                files.push({
+                    path: OXC_LINT_CONFIG_FILE,
+                    content: renderOxcConfig(
+                        './node_modules/oxlint/configuration_schema.json',
+                        resolved.lint
+                    ),
+                });
+            }
+            const biomeActive =
+                sectionEnabled(ctx.config.biome) ||
+                resolveFmtTools(ctx.config).includes('biome') ||
+                resolveLintTools(ctx.config).includes('biome');
+            if ((hasFmt || hasLint) && biomeActive) {
+                ctx.warn(
+                    'Both Biome and Oxc are configured: `biome.json` and the Oxc config files may conflict. Disable `toolchain.biome` or `toolchain.vite.fmt`/`lint`.',
+                    'biome.oxc-conflict'
+                );
+            }
+
+            return files;
         },
     };
 }

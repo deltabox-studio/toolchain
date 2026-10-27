@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     biomeConfig,
+    biomeSyncTask,
     biomeVscodeSettings,
     renderBiomeConfig,
     renderBiomeJson,
@@ -31,6 +32,42 @@ describe('biome templates', () => {
 
     it('serializes vscode settings', () => {
         expect(() => JSON.parse(renderVscodeSettings())).not.toThrow();
+    });
+
+    it('writes biome.json when the biome section is enabled', async () => {
+        const task = biomeSyncTask();
+        expect(task.enabled?.({})).toBe(false);
+        expect(task.enabled?.({ biome: true })).toBe(true);
+        const files = await task.run({
+            cwd: '/repo',
+            projectType: 'project',
+            config: { biome: true },
+            tokens: { name: 'acme', scope: '@acme' },
+            log: () => {},
+            warn: () => {},
+        });
+        expect(files?.[0]?.path).toBe('biome.json');
+        expect(JSON.parse(files?.[0]?.content ?? '{}')).toHaveProperty('$schema');
+    });
+
+    it('writes biome.json from fmt.biome / lint.biome too', async () => {
+        const task = biomeSyncTask();
+        const config = {
+            fmt: { biome: { formatter: { indentWidth: 2 } } },
+            lint: { biome: { linter: { rules: { suspicious: { noDoubleEquals: 'error' } } } } },
+        };
+        expect(task.enabled?.(config)).toBe(true);
+        const files = await task.run({
+            cwd: '/repo',
+            projectType: 'project',
+            config,
+            tokens: { name: 'acme', scope: '@acme' },
+            log: () => {},
+            warn: () => {},
+        });
+        const biome = JSON.parse(files?.[0]?.content ?? '{}');
+        expect(biome.formatter.indentWidth).toBe(2);
+        expect(biome.linter.rules.suspicious.noDoubleEquals).toBe('error');
     });
 
     it('merges overrides (arrays union, objects deep-merge)', () => {

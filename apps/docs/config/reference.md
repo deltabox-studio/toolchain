@@ -369,9 +369,85 @@ The toolchain sync workflow (`sync.yml`).
 
 Enable/disable this section (default: enabled when defined).
 
+## `fmt`
+
+Formatter configuration: Oxc/Biome options, editor defaults and source tools.
+
+### `vscode`
+
+- **Type**: `boolean`
+
+Add project-scoped VS Code formatter settings (default false; existing keys are kept).
+
+### `oxc`
+
+- **Type**: `Record<string, unknown>`
+
+Oxfmt options. `toolchain.vite.fmt` overrides these (deep merge).
+
+### `biome`
+
+- **Type**: `Record<string, unknown>`
+
+Biome formatter options (merged into the generated `biome.json`).
+
+### `prettier`
+
+- **Type**: `Record<string, unknown>`
+
+Prettier options (editor defaults/migrations).
+
+### `dprint`
+
+- **Type**: `Record<string, unknown>`
+
+Dprint options (editor defaults/migrations).
+
+### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
+## `lint`
+
+Linter configuration: Oxc/Biome/ESLint options and editor defaults.
+
+### `vscode`
+
+- **Type**: `boolean`
+
+Add project-scoped VS Code linter settings (default false; existing keys are kept).
+
+### `oxc`
+
+- **Type**: `Record<string, unknown>`
+
+Oxlint options. `toolchain.vite.lint` overrides these (deep merge).
+
+### `biome`
+
+- **Type**: `Record<string, unknown>`
+
+Biome linter options (merged into the generated `biome.json`).
+
+### `eslint`
+
+- **Type**: `Record<string, unknown>`
+
+ESLint options (editor defaults/migrations).
+
+### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
 ## `biome`
 
-Biome config generation (for consumers that still want a `biome.json`).
+Deprecated: use `fmt.biome` / `lint.biome`; still writes `biome.json`.
+
+- **Deprecated**
 
 ### `vscode`
 
@@ -473,15 +549,15 @@ Extra sources on top of the builtin + registry sources.
 
 #### `type`
 
-- **Type**: `'builtin' | 'local' | 'npm' | 'git' | 'vite-plus' | 'remote'`
 - **Required**
+- **Type**: `'builtin' | 'local' | 'npm' | 'git' | 'vite-plus' | 'remote'`
 
 How to load the source.
 
 #### `locate`
 
-- **Type**: `string`
 - **Required**
+- **Type**: `string`
 
 A builtin id, local dir, npm scope, git URL or Vite+ id.
 
@@ -607,9 +683,9 @@ The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.
 
 ### `config`
 
-- **Type**: `boolean`
+- **Type**: `boolean | string`
 
-Write the managed `vite.config.ts` (default true).
+Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or absolute).
 
 ### `fmt`
 
@@ -678,6 +754,12 @@ Force colours on/off (default: on; `--no-color` disables).
 - **Type**: `string`
 
 Prefix non-indented lines with `<name>:` (default `dbx`).
+
+### `suppress`
+
+- **Type**: `string | Array<string>`
+
+Warning/error id, message substring, or `/regex/` to silence (single value or array).
 
 ### `enabled`
 

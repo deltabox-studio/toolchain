@@ -194,26 +194,45 @@ export interface ToolchainCiConfig {
 }
 
 export interface ToolchainChangelogConfig {
-    /** Deprecated: use the top-level `toolchain.ci` section instead. */
-    workflows?: WorkflowConfig;
-    /** Deprecated: use `toolchain.ci.changelog.branches`. */
-    branches?: ChangelogBranchesConfig;
-    /** Deprecated: use `toolchain.ci.changelog.commitlint.types`. */
-    types?: Array<string>;
-    /** Deprecated: use `toolchain.ci.changelog.commitlint.scopes`. */
-    scopes?: Array<string>;
-    /** Deprecated: use `toolchain.ci.changelog.commitlint`. */
-    commitlint?: {
-        dir?: string;
-    };
-    /** Deprecated: use `toolchain.ci.changelog.versioning`. */
+    /** Commitlint config; set `false` to disable the Conventional-Commits pipeline. */
+    commitlint?: boolean | ChangelogCommitlintConfig;
+    /** Automatic version bumping on changelog generation (default `true`). */
     versioning?: ChangelogVersioning;
-    /** Deprecated: use `toolchain.ci.changelog.vscode`. */
+    /** Write the Conventional-Commits VS Code settings (default true). */
     vscode?: boolean;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
 }
 
+export interface ToolchainFmtConfig {
+    /** Add project-scoped VS Code formatter settings (default false; existing keys are kept). */
+    vscode?: boolean;
+    /** Oxfmt options. `toolchain.vite.fmt` overrides these (deep merge). */
+    oxc?: Record<string, unknown>;
+    /** Biome formatter options (merged into the generated `biome.json`). */
+    biome?: Record<string, unknown>;
+    /** Prettier options (editor defaults/migrations). */
+    prettier?: Record<string, unknown>;
+    /** Dprint options (editor defaults/migrations). */
+    dprint?: Record<string, unknown>;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
+}
+
+export interface ToolchainLintConfig {
+    /** Add project-scoped VS Code linter settings (default false; existing keys are kept). */
+    vscode?: boolean;
+    /** Oxlint options. `toolchain.vite.lint` overrides these (deep merge). */
+    oxc?: Record<string, unknown>;
+    /** Biome linter options (merged into the generated `biome.json`). */
+    biome?: Record<string, unknown>;
+    /** ESLint options (editor defaults/migrations). */
+    eslint?: Record<string, unknown>;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
+}
+
+/** @deprecated */
 export interface ToolchainBiomeConfig {
     /** Write the Biome VS Code settings (default true). */
     vscode?: boolean;
@@ -359,8 +378,8 @@ export interface ToolchainCatalogsConfig {
 }
 
 export type ToolchainViteConfig = Omit<ViteUserConfig, 'fmt' | 'lint'> & {
-    /** Write the managed `vite.config.ts` (default true). */
-    config?: boolean;
+    /** Write the managed Vite config (default true); a string sets its file name/path. */
+    config?: boolean | string;
     /** Oxfmt options; `true` uses the toolchain defaults. */
     fmt?: boolean | NonNullable<ViteUserConfig['fmt']>;
     /** Oxlint options; `true` uses the toolchain defaults. */
@@ -374,6 +393,8 @@ export interface ToolchainLoggerConfig {
     color?: boolean;
     /** Prefix non-indented lines with `<name>:` (default `dbx`). */
     name?: string;
+    /** Warning/error id, message substring, or `/regex/` to silence (single value or array). */
+    suppress?: string | Array<string>;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
 }
@@ -391,11 +412,19 @@ export interface ToolchainConfigSections {
     /** GitHub Actions workflows to generate (CI, release, issues, changelog, sync). */
     ci?: boolean | ToolchainCiConfig;
     /**
-     * Deprecated: the old changelog section. Move it to `ci.changelog` (and its workflows to the
-     * top-level `ci`).
+     * Manual changelog pipeline options for `dbx changelog`, the VS Code actions and the API.
+     * `ci.changelog` inherits these options.
      */
     changelog?: boolean | ToolchainChangelogConfig;
-    /** Biome config generation (for consumers that still want a `biome.json`). */
+    /** Formatter configuration: Oxc/Biome options, editor defaults and tools. */
+    fmt?: boolean | ToolchainFmtConfig;
+    /** Linter configuration: Oxc/Biome/ESLint options and editor defaults. */
+    lint?: boolean | ToolchainLintConfig;
+    /**
+     * Deprecated: use `toolchain.fmt.biome` / `toolchain.lint.biome` (still writes `biome.json`).
+     *
+     * @deprecated
+     */
     biome?: boolean | ToolchainBiomeConfig;
     /** Workspace tsconfig generation (path aliases + project references). */
     tsconfig?: boolean | ToolchainTsconfigConfig;

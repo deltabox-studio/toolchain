@@ -21,5 +21,7 @@ changelog pipeline.
 Helpers `sectionEnabled(section)` and `sectionConfig(section)` implement this and
 are exported for programmatic use.
 
-The old top-level `changelog` section is deprecated and rejected by the loader;
-see [Migrating from `toolchain.changelog`](/guide/changelog/#migrating-from-toolchainchangelog).
+The top-level `changelog` section configures the manual pipeline for `dbx
+changelog`/the API. It does not enable CI by itself; `ci.changelog` inherits its
+options when they are not overridden. See
+[Manual `toolchain.changelog`](/guide/changelog/#manual-toolchainchangelog).

@@ -28,7 +28,7 @@ const LLMS_DETAILS = [
     '- **Sync.** `dbx sync` runs each enabled section and writes the managed files, tracked in `.dbx/toolchain/manifest.json` (the last-sync time lives in the gitignored `.dbx/toolchain/timestamps.json`); `dbx sync --check` is the CI gate. `dbx sync --recursive` syncs every discovered project in dependency order.',
     '- **Nested configs.** A non-root `dbx.config.*` merges over the nearest ancestor config: objects merge, while scalars and arrays replace; `project.type` and `hooks` are never inherited.',
     '- **Project graph.** `dbx projects` writes `.dbx/toolchain/projects.json` (workspace dirs + dependencies), used by `sync --recursive`, the VS Code view and per-workspace changelogs.',
-    '- **Sections.** `project`, `ci` (workflows + changelog), `biome`, `tsconfig`, `templates`, `vite`, `watch`, `logger`, `providers`; every workflow under `ci` is opt-in.',
+    '- **Sections.** `project`, `ci` (workflows + changelog), `fmt`, `lint`, `biome`, `tsconfig`, `templates`, `vite`, `watch`, `logger`, `providers`; every workflow under `ci` is opt-in.',
     '- **Runtime.** Node ≥ 22.5 and Yarn 4 (corepack); Vite+ (`vp`) resolves at the repo root.',
 ].join('\n');
 
@@ -164,6 +164,7 @@ export default defineConfig({
                         { text: 'Project', link: '/guide/project' },
                         { text: 'Changelog', link: '/guide/changelog/' },
                         { text: 'tsconfig', link: '/guide/tsconfig' },
+                        { text: 'Formatting & linting', link: '/guide/formatting' },
                         { text: 'Biome', link: '/guide/biome' },
                         { text: 'Vite+', link: '/guide/vite' },
                         { text: 'Watch', link: '/guide/watch' },

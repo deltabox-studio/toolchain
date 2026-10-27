@@ -27,3 +27,8 @@ documented in the [Changelog](/guide/changelog/) guide:
 The workflow is opt-in (`ci.changelog: true` or an object). `ci.changelog:
 false` leaves it unmanaged; `ci.changelog.commitlint: false` still generates the
 workflow but skips commitlint, its config and the local hook.
+
+`ci.changelog` inherits the manual `toolchain.changelog` pipeline options when
+it does not set them itself (for example `ci.changelog: true` or an
+object that only sets workflow options like `pushBranches`). Explicit
+`ci.changelog` options win; `branches` only exists on `ci.changelog`.

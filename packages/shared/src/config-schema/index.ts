@@ -27,6 +27,7 @@ import {
     legacyChangelogConfigSchema,
 } from './changelog.js';
 import { ciConfigSchema } from './ci.js';
+import { fmtConfigSchema, lintConfigSchema } from './format.js';
 import { loggerConfigSchema } from './logger.js';
 import { section } from './meta.js';
 import { projectConfigSchema, projectTypeSchema } from './project.js';
@@ -53,6 +54,7 @@ export * from './biome.js';
 export * from './catalogs.js';
 export * from './changelog.js';
 export * from './ci.js';
+export * from './format.js';
 export * from './logger.js';
 export * from './meta.js';
 export * from './project.js';
@@ -80,12 +82,20 @@ export const toolchainConfigSchema = z
             .optional(),
         changelog: section(legacyChangelogConfigSchema)
             .describe(
-                'Deprecated: the old changelog section. Move it to `ci.changelog` (and its ' +
-                    'workflows to the top-level `ci`).'
+                'Manual changelog pipeline options for `dbx changelog`, the VS Code ' +
+                    'actions and the API. `ci.changelog` inherits these options.'
             )
             .optional(),
+        fmt: section(fmtConfigSchema)
+            .describe('Formatter configuration: Oxc/Biome options, editor defaults and tools.')
+            .optional(),
+        lint: section(lintConfigSchema)
+            .describe('Linter configuration: Oxc/Biome/ESLint options and editor defaults.')
+            .optional(),
         biome: section(biomeConfigSchema)
-            .describe('Biome config generation (for consumers that still want a `biome.json`).')
+            .describe(
+                'Deprecated: use `toolchain.fmt.biome` / `toolchain.lint.biome` (still writes `biome.json`).'
+            )
             .optional(),
         tsconfig: section(tsconfigConfigSchema)
             .describe('Workspace tsconfig generation (path aliases + project references).')
@@ -143,6 +153,8 @@ export const CONFIG_TYPE_SCHEMAS = {
     ChangelogWorkflowSetting: changelogWorkflowSettingSchema,
     ToolchainCiConfig: ciConfigSchema,
     ToolchainChangelogConfig: legacyChangelogConfigSchema,
+    ToolchainFmtConfig: fmtConfigSchema,
+    ToolchainLintConfig: lintConfigSchema,
     ToolchainBiomeConfig: biomeConfigSchema,
     ToolchainTsconfigConfig: tsconfigConfigSchema,
     ToolchainWatchConfig: watchConfigSchema,
@@ -164,6 +176,8 @@ export const CONFIG_TYPE_SCHEMAS = {
 export const CONFIG_SECTION_SCHEMAS = {
     project: projectConfigSchema,
     ci: ciConfigSchema,
+    fmt: fmtConfigSchema,
+    lint: lintConfigSchema,
     biome: biomeConfigSchema,
     tsconfig: tsconfigConfigSchema,
     templates: templatesConfigSchema,
@@ -187,7 +201,9 @@ export const CONFIG_SECTION_DESCRIPTIONS: Record<keyof typeof CONFIG_SECTION_SCH
         'Project metadata: canonical `package.json` fields (applied on sync, inherited by ' +
         'workspaces) plus the replacement tokens every template understands.',
     ci: 'GitHub Actions workflows: CI checks, release, issues, changelog and sync (all opt-in).',
-    biome: 'Biome config generation (for consumers that still want a `biome.json`).',
+    fmt: 'Formatter configuration: Oxc/Biome options, editor defaults and source tools.',
+    lint: 'Linter configuration: Oxc/Biome/ESLint options and editor defaults.',
+    biome: 'Deprecated: use `fmt.biome` / `lint.biome`; still writes `biome.json`.',
     tsconfig: 'Workspace tsconfig generation (path aliases + project references).',
     templates: 'Template sources / scaffolding.',
     registry: 'Allow/deny host and path globs for template/provider registries.',

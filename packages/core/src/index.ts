@@ -4,6 +4,7 @@
  * regenerate the managed outputs (workflows, tsconfigs, biome.json, ...).
  */
 
+export * from './editor-config.js';
 export * from './gitignore.js';
 export * from './graph.js';
 export * from './loader.js';

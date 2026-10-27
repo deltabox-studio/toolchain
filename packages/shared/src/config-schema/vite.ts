@@ -14,8 +14,11 @@ import { withEnabled } from './meta.js';
 export const viteConfigSchema = withEnabled(
     z.object({
         config: z
-            .boolean()
-            .describe('Write the managed `vite.config.ts` (default true).')
+            .union([z.boolean(), z.string()])
+            .describe(
+                'Write the managed Vite config (default true). A string sets its file name/path ' +
+                    '(relative to the project, or absolute).'
+            )
             .optional(),
         fmt: z
             .union([z.boolean(), z.record(z.string(), z.unknown())])

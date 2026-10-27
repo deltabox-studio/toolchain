@@ -20,10 +20,9 @@ export default defineConfig({
             },
         },
         tsconfig: { refs: true },
-        biome: true,
+        fmt: { vscode: true, oxc: { semi: true, singleQuote: true } },
+        lint: { oxc: { ignorePatterns: ['dist/**'] } },
         vite: {
-            fmt: { semi: true, singleQuote: true },
-            lint: { ignorePatterns: ['dist/**'] },
             test: { include: ['src/**/*.test.ts'] },
         },
         watch: { debounce: 150 },
@@ -35,7 +34,8 @@ The `@deltabox/toolchain` settings live under the `toolchain` key, so a
 `dbx.config.ts` can host other dbx concerns alongside it.
 
 Each section has its own guide: [Project](/guide/project), [CI +
-Changelog](/guide/changelog/), [tsconfig](/guide/tsconfig), [Biome](/guide/biome),
+Changelog](/guide/changelog/), [tsconfig](/guide/tsconfig),
+[Formatting & linting](/guide/formatting), [Biome](/guide/biome),
 [Vite+](/guide/vite), [Watch](/guide/watch), [Logger](/guide/logger) and
 [Providers](/guide/providers).
 

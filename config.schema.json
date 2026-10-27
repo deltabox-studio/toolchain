@@ -499,45 +499,24 @@
         "ToolchainChangelogConfig": {
             "type": "object",
             "properties": {
-                "workflows": {
-                    "description": "Deprecated: use the top-level `toolchain.ci` section instead.",
-                    "$ref": "#/$defs/WorkflowConfig"
-                },
-                "branches": {
-                    "description": "Deprecated: use `toolchain.ci.changelog.branches`.",
-                    "$ref": "#/$defs/ChangelogBranchesConfig"
-                },
-                "types": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "description": "Deprecated: use `toolchain.ci.changelog.commitlint.types`."
-                },
-                "scopes": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "description": "Deprecated: use `toolchain.ci.changelog.commitlint.scopes`."
-                },
                 "commitlint": {
-                    "type": "object",
-                    "properties": {
-                        "dir": {
-                            "type": "string"
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ChangelogCommitlintConfig"
                         }
-                    },
-                    "additionalProperties": false,
-                    "description": "Deprecated: use `toolchain.ci.changelog.commitlint`."
+                    ],
+                    "description": "commitlint config; set `false` to disable the Conventional-Commits pipeline."
                 },
                 "versioning": {
-                    "description": "Deprecated: use `toolchain.ci.changelog.versioning`.",
+                    "description": "Automatic version bumping on changelog generation (default `true`).",
                     "$ref": "#/$defs/ChangelogVersioning"
                 },
                 "vscode": {
                     "type": "boolean",
-                    "description": "Deprecated: use `toolchain.ci.changelog.vscode`."
+                    "description": "Write the Conventional-Commits VS Code settings (default true)."
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
@@ -545,35 +524,93 @@
                 }
             },
             "additionalProperties": false,
-            "description": "Deprecated: the old `toolchain.changelog` section. Move it to `toolchain.ci.changelog` (and its workflows to the top-level `toolchain.ci`).",
-            "deprecated": true
+            "description": "Manual `toolchain.changelog` pipeline config for `dbx changelog`, the VS Code actions and the API; `ci.changelog` inherits these options."
         },
-        "WorkflowConfig": {
+        "ToolchainFmtConfig": {
             "type": "object",
             "properties": {
-                "ci": {
-                    "description": "The CI checks workflow (`ci.yml`).",
-                    "$ref": "#/$defs/WorkflowSetting"
+                "vscode": {
+                    "type": "boolean",
+                    "description": "Add project-scoped VS Code formatter settings (default false; existing keys are kept)."
                 },
-                "changelog": {
-                    "description": "The changelog/version workflow (`changelog.yml`).",
-                    "$ref": "#/$defs/WorkflowSetting"
+                "oxc": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Oxfmt options. `toolchain.vite.fmt` overrides these (deep merge)."
                 },
-                "release": {
-                    "description": "The release workflow (`release.yml`).",
-                    "$ref": "#/$defs/WorkflowSetting"
+                "biome": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Biome formatter options (merged into the generated `biome.json`)."
                 },
-                "issues": {
-                    "description": "The issue-title workflow (`issues.yml`).",
-                    "$ref": "#/$defs/WorkflowSetting"
+                "prettier": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Prettier options (editor defaults/migrations)."
                 },
-                "sync": {
-                    "description": "The toolchain sync workflow (`sync.yml`).",
-                    "$ref": "#/$defs/WorkflowSetting"
+                "dprint": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Dprint options (editor defaults/migrations)."
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
-            "description": "The GitHub Actions workflows to generate. Every workflow is opt-in: omit it (or set it to `false`) to leave it unmanaged."
+            "description": "Formatter configuration: Oxc/Biome configs, editor defaults and source-tool options."
+        },
+        "ToolchainLintConfig": {
+            "type": "object",
+            "properties": {
+                "vscode": {
+                    "type": "boolean",
+                    "description": "Add project-scoped VS Code linter settings (default false; existing keys are kept)."
+                },
+                "oxc": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Oxlint options. `toolchain.vite.lint` overrides these (deep merge)."
+                },
+                "biome": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Biome linter options (merged into the generated `biome.json`)."
+                },
+                "eslint": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "ESLint options (editor defaults/migrations)."
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false,
+            "description": "Linter configuration: Oxc/Biome configs, editor defaults and ESLint options."
         },
         "ToolchainBiomeConfig": {
             "type": "object",
@@ -596,7 +633,8 @@
                 }
             },
             "additionalProperties": false,
-            "description": "Biome config generation (for consumers that still want a `biome.json`)."
+            "description": "Deprecated: use `toolchain.fmt.biome` / `toolchain.lint.biome`. Still writes `biome.json`.",
+            "deprecated": true
         },
         "ToolchainTsconfigConfig": {
             "type": "object",
@@ -848,8 +886,11 @@
             "type": "object",
             "properties": {
                 "config": {
-                    "type": "boolean",
-                    "description": "Write the managed `vite.config.ts` (default true)."
+                    "description": "Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or absolute).",
+                    "type": [
+                        "boolean",
+                        "string"
+                    ]
                 },
                 "fmt": {
                     "anyOf": [
@@ -944,6 +985,20 @@
                     "type": "string",
                     "description": "Prefix non-indented lines with `<name>:` (default `dbx`)."
                 },
+                "suppress": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Warning/error id, message substring, or `/regex/` to silence (single value or array)."
+                },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
@@ -994,7 +1049,29 @@
                             "$ref": "#/$defs/ToolchainChangelogConfig"
                         }
                     ],
-                    "description": "Deprecated: the old changelog section. Move it to `ci.changelog` (and its workflows to the top-level `ci`)."
+                    "description": "Manual changelog pipeline options for `dbx changelog`, the VS Code actions and the API. `ci.changelog` inherits these options."
+                },
+                "fmt": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainFmtConfig"
+                        }
+                    ],
+                    "description": "Formatter configuration: Oxc/Biome options, editor defaults and tools."
+                },
+                "lint": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainLintConfig"
+                        }
+                    ],
+                    "description": "Linter configuration: Oxc/Biome/ESLint options and editor defaults."
                 },
                 "biome": {
                     "anyOf": [
@@ -1005,7 +1082,7 @@
                             "$ref": "#/$defs/ToolchainBiomeConfig"
                         }
                     ],
-                    "description": "Biome config generation (for consumers that still want a `biome.json`)."
+                    "description": "Deprecated: use `toolchain.fmt.biome` / `toolchain.lint.biome` (still writes `biome.json`)."
                 },
                 "tsconfig": {
                     "anyOf": [

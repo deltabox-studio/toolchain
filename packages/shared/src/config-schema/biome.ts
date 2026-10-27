@@ -12,5 +12,7 @@ export const biomeConfigSchema = withEnabled(
             .optional(),
     })
 )
-    .describe('Biome config generation (for consumers that still want a `biome.json`).')
-    .meta({ id: 'ToolchainBiomeConfig' });
+    .describe(
+        'Deprecated: use `toolchain.fmt.biome` / `toolchain.lint.biome`. Still writes `biome.json`.'
+    )
+    .meta({ id: 'ToolchainBiomeConfig', deprecated: true });

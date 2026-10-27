@@ -90,4 +90,16 @@ describe('changelogSyncTask', () => {
         const ci = files?.find(file => file.path === '.github/workflows/ci.yml');
         expect(ci?.content).not.toContain('Commitlint (Conventional Commits)');
     });
+
+    it('inherits the manual `toolchain.changelog` pipeline options', async () => {
+        const files = await changelogSyncTask().run(
+            makeContext({
+                changelog: { commitlint: { types: ['feat', 'fix'] } },
+                ci: { ci: true, changelog: true },
+            })
+        );
+        const commitlint = files?.find(file => file.path === 'commitlint.config.mjs');
+        expect(commitlint?.content).toContain("'feat'");
+        expect(commitlint?.content).toContain("'fix'");
+    });
 });

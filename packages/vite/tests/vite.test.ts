@@ -8,6 +8,8 @@ import { DEFAULT_FMT_RULES, DEFAULT_LINT_RULES } from '@deltabox/toolchain-share
 
 import {
     detectViteSpecifier,
+    OXC_FMT_CONFIG_FILE,
+    OXC_LINT_CONFIG_FILE,
     renderViteConfig,
     resolveVite,
     resolveVp,
@@ -193,7 +195,7 @@ describe('vite.config.ts shim', () => {
         const ctx = {
             cwd: makeTmp(),
             projectType: 'project' as const,
-            config: { vite: { fmt: { semi: true } } },
+            config: { vite: { config: true } },
             tokens: {},
             log: () => {},
             warn: () => {},
@@ -201,6 +203,134 @@ describe('vite.config.ts shim', () => {
         expect(await viteSyncTask().run(ctx)).toEqual([
             { path: 'vite.config.ts', content: renderViteConfig() },
         ]);
+    });
+
+    it('uses a custom managed vite config file name', async () => {
+        const ctx = {
+            cwd: makeTmp(),
+            projectType: 'project' as const,
+            config: { vite: { config: 'config/vite.custom.ts' } },
+            tokens: {},
+            log: () => {},
+            warn: () => {},
+        };
+        expect(await viteSyncTask().run(ctx)).toEqual([
+            { path: 'config/vite.custom.ts', content: renderViteConfig() },
+        ]);
+    });
+
+    it('writes the Oxc config files when fmt/lint are defined', async () => {
+        const vite = { fmt: { semi: false }, lint: { rules: { eqeqeq: 'error' as const } } };
+        const ctx = {
+            cwd: makeTmp(),
+            projectType: 'project' as const,
+            config: { vite },
+            ownConfig: { vite },
+            tokens: {},
+            log: () => {},
+            warn: () => {},
+        };
+        const files = await viteSyncTask().run(ctx);
+        const fmt = files?.find(file => file.path === OXC_FMT_CONFIG_FILE);
+        const lint = files?.find(file => file.path === OXC_LINT_CONFIG_FILE);
+        expect(JSON.parse(fmt?.content ?? '{}')).toMatchObject({
+            $schema: './node_modules/oxfmt/configuration_schema.json',
+            semi: false,
+        });
+        expect(JSON.parse(lint?.content ?? '{}')).toMatchObject({
+            $schema: './node_modules/oxlint/configuration_schema.json',
+            rules: { eqeqeq: 'error' },
+        });
+    });
+
+    it('generates Oxc files from toolchain.fmt/lint.oxc without a vite section', async () => {
+        const config = { fmt: { oxc: { semi: false } } };
+        const ctx = {
+            cwd: makeTmp(),
+            projectType: 'project' as const,
+            config,
+            ownConfig: config,
+            tokens: {},
+            log: () => {},
+            warn: () => {},
+        };
+        const files = await viteSyncTask().run(ctx);
+        expect(files?.some(file => file.path === 'vite.config.ts')).toBe(false);
+        const fmt = files?.find(file => file.path === OXC_FMT_CONFIG_FILE);
+        expect(JSON.parse(fmt?.content ?? '{}').semi).toBe(false);
+    });
+
+    it('lets vite.fmt override fmt.oxc when generating the Oxc config', async () => {
+        const config = {
+            fmt: { oxc: { semi: false, singleQuote: true } },
+            vite: { fmt: { singleQuote: false } },
+        };
+        const ctx = {
+            cwd: makeTmp(),
+            projectType: 'project' as const,
+            config,
+            ownConfig: config,
+            tokens: {},
+            log: () => {},
+            warn: () => {},
+        };
+        const fmt = (await viteSyncTask().run(ctx))?.find(
+            file => file.path === OXC_FMT_CONFIG_FILE
+        );
+        const parsed = JSON.parse(fmt?.content ?? '{}');
+        expect(parsed.semi).toBe(false);
+        expect(parsed.singleQuote).toBe(false);
+    });
+
+    it('warns when Biome and Oxc are configured together', async () => {
+        const warnings: { message: string; id?: string }[] = [];
+        const vite = { fmt: { semi: false } };
+        const ctx = {
+            cwd: makeTmp(),
+            projectType: 'project' as const,
+            config: { biome: true, vite },
+            ownConfig: { biome: true, vite },
+            tokens: {},
+            log: () => {},
+            warn: (message: string, id?: string) => warnings.push({ message, id }),
+        };
+        await viteSyncTask().run(ctx);
+        expect(warnings).toEqual([
+            {
+                message: expect.stringContaining('Both Biome and Oxc'),
+                id: 'biome.oxc-conflict',
+            },
+        ]);
+    });
+
+    it('skips Oxc files for a workspace that only inherits fmt/lint', async () => {
+        const ctx = {
+            cwd: makeTmp(),
+            projectType: 'monorepo-workspace' as const,
+            config: { vite: { fmt: {}, lint: {} } },
+            ownConfig: {},
+            tokens: {},
+            log: () => {},
+            warn: () => {},
+        };
+        const files = await viteSyncTask().run(ctx);
+        expect(files?.some(file => file.path === OXC_FMT_CONFIG_FILE)).toBe(false);
+        expect(files?.some(file => file.path === OXC_LINT_CONFIG_FILE)).toBe(false);
+    });
+
+    it('writes Oxc files for a workspace that overrides fmt/lint', async () => {
+        const ctx = {
+            cwd: makeTmp(),
+            projectType: 'monorepo-workspace' as const,
+            config: { vite: { fmt: { semi: false } } },
+            ownConfig: { vite: { fmt: { semi: false } } },
+            tokens: {},
+            log: () => {},
+            warn: () => {},
+        };
+        const files = await viteSyncTask().run(ctx);
+        expect(files?.some(file => file.path === OXC_FMT_CONFIG_FILE)).toBe(true);
+        expect(files?.some(file => file.path === OXC_LINT_CONFIG_FILE)).toBe(false);
     });
 });
 
@@ -238,7 +368,7 @@ describe('vite dependency detection', () => {
         const ctx = {
             cwd: dir,
             projectType: 'project' as const,
-            config: { vite: { fmt: { semi: true } } },
+            config: { vite: { config: true } },
             tokens: {},
             log: () => {},
             warn: () => {},

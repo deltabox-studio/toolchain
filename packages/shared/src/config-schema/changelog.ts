@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { section, withEnabled } from './meta.js';
-import { workflowConfigSchema, workflowOptionsSchema } from './workflow.js';
+import { workflowOptionsSchema } from './workflow.js';
 
 /** Branch globs the generated changelog/CI workflows target. */
 export const changelogBranchesConfigSchema = z
@@ -79,6 +79,24 @@ export const changelogVersioningSchema = z
     .meta({ id: 'ChangelogVersioning' });
 
 /**
+ * The changelog pipeline options shared by `ci.changelog` and the manual
+ * `toolchain.changelog` section (the latter omits workflow options and
+ * branches).
+ */
+const changelogPipelineShape = {
+    commitlint: section(changelogCommitlintConfigSchema)
+        .describe('commitlint config; set `false` to disable the Conventional-Commits pipeline.')
+        .optional(),
+    versioning: changelogVersioningSchema
+        .describe('Automatic version bumping on changelog generation (default `true`).')
+        .optional(),
+    vscode: z
+        .boolean()
+        .describe('Write the Conventional-Commits VS Code settings (default true).')
+        .optional(),
+};
+
+/**
  * The changelog pipeline (`ci.changelog`): it configures the changelog workflow
  * and the options the local/CI changelog run uses. The whole section is opt-in
  * by presence; `enabled: false` (or `false`) disables both.
@@ -88,18 +106,7 @@ export const changelogConfigSchema = withEnabled(
         branches: changelogBranchesConfigSchema
             .describe('Branches the generated workflows target.')
             .optional(),
-        commitlint: section(changelogCommitlintConfigSchema)
-            .describe(
-                'commitlint config; set `false` to disable the Conventional-Commits pipeline.'
-            )
-            .optional(),
-        versioning: changelogVersioningSchema
-            .describe('Automatic version bumping on changelog generation (default `true`).')
-            .optional(),
-        vscode: z
-            .boolean()
-            .describe('Write the Conventional-Commits VS Code settings (default true).')
-            .optional(),
+        ...changelogPipelineShape,
     }),
     'Enable/disable the changelog workflow and pipeline (default: enabled when present).'
 )
@@ -116,40 +123,14 @@ export const changelogWorkflowSettingSchema = z
     .meta({ id: 'ChangelogWorkflowSetting' });
 
 /**
- * The deprecated pre-`ci` changelog section. It stays in the schema (marked
- * deprecated) so older configs still type-check, but the loader refuses to run
- * it — consumers must move it under `toolchain.ci.changelog`.
+ * The manual changelog section. It accepts the same pipeline options as
+ * `ci.changelog` (without the CI-only workflow options and branches), so
+ * `dbx changelog`, the VS Code actions and the programmatic API can use it.
+ * `ci.changelog` inherits these values when it does not override them.
  */
-export const legacyChangelogConfigSchema = withEnabled(
-    z.object({
-        workflows: workflowConfigSchema
-            .describe('Deprecated: use the top-level `toolchain.ci` section instead.')
-            .optional(),
-        branches: changelogBranchesConfigSchema
-            .describe('Deprecated: use `toolchain.ci.changelog.branches`.')
-            .optional(),
-        types: z
-            .array(z.string())
-            .describe('Deprecated: use `toolchain.ci.changelog.commitlint.types`.')
-            .optional(),
-        scopes: z
-            .array(z.string())
-            .describe('Deprecated: use `toolchain.ci.changelog.commitlint.scopes`.')
-            .optional(),
-        commitlint: z
-            .object({
-                dir: z.string().optional(),
-            })
-            .describe('Deprecated: use `toolchain.ci.changelog.commitlint`.')
-            .optional(),
-        versioning: changelogVersioningSchema
-            .describe('Deprecated: use `toolchain.ci.changelog.versioning`.')
-            .optional(),
-        vscode: z.boolean().describe('Deprecated: use `toolchain.ci.changelog.vscode`.').optional(),
-    })
-)
+export const legacyChangelogConfigSchema = withEnabled(z.object(changelogPipelineShape))
     .describe(
-        'Deprecated: the old `toolchain.changelog` section. Move it to ' +
-            '`toolchain.ci.changelog` (and its workflows to the top-level `toolchain.ci`).'
+        'Manual `toolchain.changelog` pipeline config for `dbx changelog`, the VS ' +
+            'Code actions and the API; `ci.changelog` inherits these options.'
     )
-    .meta({ id: 'ToolchainChangelogConfig', deprecated: true });
+    .meta({ id: 'ToolchainChangelogConfig' });

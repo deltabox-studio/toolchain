@@ -52,16 +52,18 @@ not accept `--config`, so the shim has to be the file Vite+ loads.
 
 ## Options
 
-| Option   | Type      | Default | Description                              |
-| -------- | --------- | ------- | ---------------------------------------- |
-| `config` | `boolean` | `true`  | Write the managed `vite.config.ts` shim. |
+| Option   | Type                | Default | Description                                     |
+| -------- | ------------------- | ------- | ----------------------------------------------- |
+| `config` | `boolean \| string` | `true`  | Write the managed shim; a string sets its path. |
 
 Everything else under `vite` is Vite+ config (plugins, `test`, `lint`, `fmt`,
-`run.tasks`, ...). `fmt: true` / `lint: true` use the shared
+`run.tasks`, ...). `vite.fmt` / `vite.lint` override `toolchain.fmt.oxc` /
+`toolchain.lint.oxc` (deep merge). `fmt: true` / `lint: true` use the shared
 `DEFAULT_FMT_RULES` / `DEFAULT_LINT_RULES`; an options object is merged over
 them. Set `vite: { config: false }` to leave a hand-written
 `vite.config.ts` alone (the section is still read for provider colouring and the
-`dbx` provider passthrough).
+`dbx` provider passthrough). `config: 'config/vite.custom.ts'` writes the shim
+there instead (relative to the project, or absolute).
 
 ## Keep the shim out of Oxfmt
 
@@ -81,6 +83,10 @@ workspace shim is covered (workspace `fmt` settings are inherited, but an
 `ignorePatterns` array in a workspace replaces the root's list). `dbx migrate
 --from vite` adds the ignore for you (see
 [Migrations](/guide/migrations#vite-config)).
+
+When `fmt` / `lint` are defined, `dbx sync` also writes `.oxfmtrc.json` /
+`.oxlintrc.json` for the Oxc VS Code extension. They are root-only unless a
+workspace config defines its own `fmt` / `lint`.
 
 ## Commands
 

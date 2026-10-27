@@ -34,24 +34,26 @@ the hook with a `postinstall` script (Yarn Berry never runs `prepare`):
 
 See [Package scripts](/guide/scripts) for the full recommended script set.
 
-## Migrating from `toolchain.changelog`
+## Manual `toolchain.changelog`
 
-The old top-level `changelog` section is **deprecated** and is rejected by the
-loader. Move its workflows to the top-level `ci` section and the rest to
-`ci.changelog`; `types`/`scopes` now live under `ci.changelog.commitlint`:
+The top-level `changelog` section configures manual runs for `dbx changelog`, the
+VS Code actions and the programmatic API. It accepts the pipeline options
+(commitlint, versioning, VS Code settings), but not the CI-only workflow options
+or `branches`:
 
-```ts [before]
+```ts [manual pipeline]
 toolchain: {
     changelog: {
-        workflows: { ci: true, release: true },
-        branches: { main: 'main' },
-        types: ['feat'],
-        scopes: ['api'],
+        commitlint: { types: ['feat'], scopes: ['api'] },
         versioning: true,
         vscode: true,
     },
 }
 ```
+
+Move the generated workflows to the top-level `ci` section, and put the pipeline
+options under `ci.changelog` when CI should use them too. Branches and workflow
+overrides only exist on `ci.changelog`:
 
 ```ts [after]
 toolchain: {
@@ -67,6 +69,10 @@ toolchain: {
     },
 }
 ```
+
+`ci.changelog` inherits `toolchain.changelog` when it is enabled without
+pipeline options (`ci.changelog: true`, a raw workflow string, or workflow-only
+overrides). Options set explicitly on `ci.changelog` win.
 
 ## Where to start
 

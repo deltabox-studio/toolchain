@@ -39,9 +39,10 @@ overrides over the loaded section (`resolveVite({ vite: { ... } })`). It is
 exported from `@deltabox/toolchain/vite` for programmatic use too.
 
 The single toolchain opt-out is `config`. Set `vite: { config: false }` to leave
-a hand-written `vite.config.ts` alone. Everything else under `vite` is Vite+
-config (plugins, `test`, `lint`, `fmt`, `run.tasks`, ...), so `toolchain.vite`
-is the full Vite+ configuration. The section is typed as Vite+'s own config
+a hand-written `vite.config.ts` alone; set `config` to a string (relative to the
+project, or absolute) to write the managed shim at a different path instead.
+Everything else under `vite` is Vite+ config (plugins, `test`, `lint`, `fmt`,
+`run.tasks`, ...), so `toolchain.vite` is the full Vite+ configuration. The section is typed as Vite+'s own config
 (`ToolchainViteConfig` = Vite's `UserConfig` as augmented by Vite+), so the whole
 Vite+ surface autocompletes in `dbx.config.ts`.
 
@@ -60,6 +61,15 @@ defaults (`DEFAULT_FMT_RULES` / `DEFAULT_LINT_RULES`, exported from
 `semi`. Shared ignore lists live in `DEFAULT_FMT_IGNORE_PATTERNS` /
 `DEFAULT_LINT_IGNORE_PATTERNS`. `sortImports` is never included by default:
 import ordering is project-specific, so opt in with your own groups.
+
+## Oxc config files
+
+Vite+ reads `fmt`/`lint` from `vite.config.ts`, but the Oxc VS Code extension
+reads `.oxfmtrc.json` / `.oxlintrc.json`. When `vite.fmt` / `vite.lint` are
+defined, `dbx sync` writes those files as managed files so the editor picks up
+the same configuration. Only the root gets them by default; a nested
+`dbx.config.*` gets its own pair only when it defines `vite.fmt` / `vite.lint`
+itself (an inherited root config does not create per-workspace files).
 
 To adopt an existing hand-written `vite.config.ts`, fold it in with the
 migration (see [Migrations](/guide/migrations#vite-config)):

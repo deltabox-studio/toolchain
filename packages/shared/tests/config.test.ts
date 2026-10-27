@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
-import { type DbxConfig, defineConfig, sectionConfig, sectionEnabled } from '../src/index.js';
+import {
+    type DbxConfig,
+    defineConfig,
+    resolveChangelogConfig,
+    resolveFmtTool,
+    resolveFmtTools,
+    resolveLintTool,
+    resolveLintTools,
+    resolveOxcFmtConfig,
+    resolveOxcLintConfig,
+    sectionConfig,
+    sectionEnabled,
+} from '../src/index.js';
 
 describe('dbx.config model', () => {
     it('defineConfig is the identity', () => {
@@ -75,5 +87,83 @@ describe('dbx.config model', () => {
         expect(sectionEnabled(toolchain.tsconfig)).toBe(true);
         expect(sectionConfig(toolchain.vite)?.fmt).toEqual({ semi: true });
         expect(sectionConfig(toolchain.watch)?.debounce).toBe(100);
+    });
+});
+
+describe('resolveChangelogConfig', () => {
+    const legacy = {
+        commitlint: { types: ['feat'], scopes: ['api'] },
+        versioning: { target: 'individual' as const },
+        vscode: true,
+    };
+
+    it('uses the manual `toolchain.changelog` options without CI', () => {
+        expect(resolveChangelogConfig({ changelog: legacy })).toEqual(legacy);
+    });
+
+    it('inherits the manual options when `ci.changelog` is merely enabled', () => {
+        expect(resolveChangelogConfig({ changelog: legacy, ci: { changelog: true } })).toEqual(
+            legacy
+        );
+    });
+
+    it('inherits the manual options under CI workflow-only overrides', () => {
+        const resolved = resolveChangelogConfig({
+            changelog: legacy,
+            ci: { changelog: { pushBranches: ['dev'] } },
+        });
+        expect(resolved).toMatchObject({ ...legacy, pushBranches: ['dev'] });
+    });
+
+    it('lets explicit `ci.changelog` pipeline options win', () => {
+        const resolved = resolveChangelogConfig({
+            changelog: legacy,
+            ci: {
+                changelog: {
+                    branches: { main: 'main' },
+                    commitlint: { scopes: ['web'] },
+                },
+            },
+        });
+        expect(resolved?.commitlint).toEqual({ types: ['feat'], scopes: ['web'] });
+        expect(resolved?.versioning).toEqual({ target: 'individual' });
+        expect(resolved?.branches).toEqual({ main: 'main' });
+    });
+});
+
+describe('formatter/linter precedence', () => {
+    const config = {
+        fmt: {
+            oxc: { semi: false, singleQuote: true },
+            biome: {},
+            prettier: {},
+            dprint: {},
+        },
+        lint: {
+            oxc: { rules: {} },
+            biome: {},
+            eslint: {},
+        },
+        vite: {
+            fmt: { singleQuote: false },
+            lint: { rules: { eqeqeq: 'error' as const } },
+        },
+    };
+
+    it('orders tools by precedence and picks the winner', () => {
+        expect(resolveFmtTools(config)).toEqual(['oxc', 'biome', 'prettier', 'dprint']);
+        expect(resolveLintTools(config)).toEqual(['oxc', 'biome', 'eslint']);
+        expect(resolveFmtTool(config)).toBe('oxc');
+        expect(resolveLintTool(config)).toBe('oxc');
+    });
+
+    it('lets vite.fmt/lint override fmt/lint.oxc (deep merge)', () => {
+        expect(resolveOxcFmtConfig(config)).toEqual({ semi: false, singleQuote: false });
+        expect(resolveOxcLintConfig(config)).toEqual({ rules: { eqeqeq: 'error' } });
+    });
+
+    it('uses oxc when only vite.fmt/lint is set', () => {
+        expect(resolveFmtTools({ vite: { fmt: true } })).toEqual(['oxc']);
+        expect(resolveLintTools({ vite: { lint: true } })).toEqual(['oxc']);
     });
 });

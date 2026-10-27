@@ -18,6 +18,7 @@ import type {
     ToolchainCiConfig,
     ToolchainConfigSections,
 } from './config-types.js';
+import { deepMerge, isPlainObject } from './object-utils.js';
 import type { Replacements } from './template.js';
 import type { Awaitable } from './types.js';
 
@@ -166,13 +167,90 @@ export function resolveCiConfig(config: ToolchainConfig = {}): ToolchainCiConfig
 }
 
 /**
- * The `ci.changelog` pipeline config, when enabled. `ci.changelog` may be a
- * boolean or a raw workflow string, in which case there are no extra options and
- * this returns `undefined`.
+ * The changelog pipeline options, merging the manual `toolchain.changelog`
+ * section under `ci.changelog`. `ci.changelog` wins when it sets the same
+ * option; when it is enabled but not configured (`true`, a raw workflow string,
+ * or workflow-only options) the manual section's options still apply.
  */
 export function resolveChangelogConfig(config: ToolchainConfig = {}): ChangelogConfig | undefined {
+    const legacy = sectionConfig(config.changelog);
+    const legacyOptions = legacy && sectionEnabled(legacy) ? legacy : undefined;
     const setting = resolveCiConfig(config)?.changelog;
-    return setting !== undefined && typeof setting === 'object' ? setting : undefined;
+    if (setting === undefined || setting === false || setting === true) return legacyOptions;
+    if (typeof setting === 'string') return legacyOptions;
+    if (!sectionEnabled(setting)) return legacyOptions;
+    return legacyOptions ? (deepMerge(legacyOptions, setting) as ChangelogConfig) : setting;
+}
+
+/** Formatter tools, highest priority first. */
+export const FORMATTER_PRECEDENCE = ['oxc', 'biome', 'prettier', 'dprint'] as const;
+/** Linter tools, highest priority first. */
+export const LINTER_PRECEDENCE = ['oxc', 'biome', 'eslint'] as const;
+
+export type FormatterTool = (typeof FORMATTER_PRECEDENCE)[number];
+export type LinterTool = (typeof LINTER_PRECEDENCE)[number];
+
+function sectionOptions(value: unknown): Record<string, unknown> | undefined {
+    return sectionEnabled(value as boolean | object | undefined)
+        ? (sectionConfig(value as never) as Record<string, unknown> | undefined)
+        : undefined;
+}
+
+/** The configured formatters, in precedence order (oxc includes `vite.fmt`). */
+export function resolveFmtTools(config: ToolchainConfig = {}): FormatterTool[] {
+    const fmt = sectionOptions(config.fmt) ?? {};
+    const vite = sectionOptions(config.vite);
+    const active = new Set<FormatterTool>();
+    if (vite?.fmt !== undefined && vite.fmt !== false) active.add('oxc');
+    if (fmt.oxc !== undefined && fmt.oxc !== false) active.add('oxc');
+    if (fmt.biome !== undefined) active.add('biome');
+    if (fmt.prettier !== undefined) active.add('prettier');
+    if (fmt.dprint !== undefined) active.add('dprint');
+    return FORMATTER_PRECEDENCE.filter(tool => active.has(tool));
+}
+
+/** The configured linters, in precedence order (oxc includes `vite.lint`). */
+export function resolveLintTools(config: ToolchainConfig = {}): LinterTool[] {
+    const lint = sectionOptions(config.lint) ?? {};
+    const vite = sectionOptions(config.vite);
+    const active = new Set<LinterTool>();
+    if (vite?.lint !== undefined && vite.lint !== false) active.add('oxc');
+    if (lint.oxc !== undefined && lint.oxc !== false) active.add('oxc');
+    if (lint.biome !== undefined) active.add('biome');
+    if (lint.eslint !== undefined) active.add('eslint');
+    return LINTER_PRECEDENCE.filter(tool => active.has(tool));
+}
+
+/** The winning formatter for editor defaults. */
+export function resolveFmtTool(config: ToolchainConfig = {}): FormatterTool | undefined {
+    return resolveFmtTools(config)[0];
+}
+
+/** The winning linter for editor defaults. */
+export function resolveLintTool(config: ToolchainConfig = {}): LinterTool | undefined {
+    return resolveLintTools(config)[0];
+}
+
+/** Merge `vite.fmt` over `fmt.oxc` (leaves/arrays in `vite.fmt` win). */
+export function resolveOxcFmtConfig(config: ToolchainConfig = {}): unknown {
+    const fmt = sectionOptions(config.fmt)?.oxc;
+    const vite = sectionOptions(config.vite)?.fmt;
+    if (vite === undefined) return fmt;
+    if (vite === false) return false;
+    if (vite === true) return fmt ?? true;
+    if (fmt === undefined) return vite;
+    return isPlainObject(fmt) && isPlainObject(vite) ? deepMerge(fmt, vite) : vite;
+}
+
+/** Merge `vite.lint` over `lint.oxc` (leaves/arrays in `vite.lint` win). */
+export function resolveOxcLintConfig(config: ToolchainConfig = {}): unknown {
+    const lint = sectionOptions(config.lint)?.oxc;
+    const vite = sectionOptions(config.vite)?.lint;
+    if (vite === undefined) return lint;
+    if (vite === false) return false;
+    if (vite === true) return lint ?? true;
+    if (lint === undefined) return vite;
+    return isPlainObject(lint) && isPlainObject(vite) ? deepMerge(lint, vite) : vite;
 }
 
 /** Whether the changelog workflow/pipeline is enabled (`ci.changelog`). */
@@ -211,20 +289,6 @@ export function resolveChangelogBranches(changelog?: ChangelogConfig): {
     if (main.length === 0) main.push('main');
     const dev = branchList(branches.dev);
     return { main, dev: dev.length > 0 ? dev : main };
-}
-
-/**
- * A migration error for a config that still uses a deprecated shape. The legacy
- * shape stays in the schema so older configs still type-check, but the loader
- * refuses to run it so a consumer cannot silently keep using it.
- */
-export function deprecatedConfigMessage(config: ToolchainConfig = {}): string | undefined {
-    if (config.changelog === undefined) return undefined;
-    return (
-        '`toolchain.changelog` is deprecated: move the changelog pipeline to ' +
-        '`toolchain.ci.changelog` and its generated workflows to the top-level ' +
-        '`toolchain.ci` section (eg. `ci: { ci: true, changelog: true, release: true }`).'
-    );
 }
 
 /**
@@ -275,12 +339,14 @@ export interface SyncContext {
     projectType: ProjectType;
     /** The loaded config. */
     config: ToolchainConfig;
+    /** The project's own (unmerged) config, when loaded. */
+    ownConfig?: ToolchainConfig;
     /** The resolved replacement tokens. */
     tokens: Replacements;
     /** Log a line (respects `--quiet`). */
     log: (message: string) => void;
-    /** Emit a warning (respects `--quiet`, which suppresses warnings too). */
-    warn: (message: string) => void;
+    /** Emit a warning (respects `--quiet` and `logger.suppress`). */
+    warn: (message: string, id?: string) => void;
 }
 
 /** A unit of sync work exposed by a package. */

@@ -4,7 +4,7 @@ import {
     conventionalCommitsVscodeExtensions,
     conventionalCommitsVscodeSettings,
 } from '@deltabox/toolchain-changelog';
-import { vscodeSyncTask } from '@deltabox/toolchain-core';
+import { editorConfigSyncTask, toolingConfigTask, vscodeSyncTask } from '@deltabox/toolchain-core';
 import { catalogsSyncTask, projectSyncTask } from '@deltabox/toolchain-project';
 import {
     changelogSectionEnabled,
@@ -29,6 +29,8 @@ export function defaultSyncTasks(): SyncTask[] {
         biomeSyncTask(),
         tsconfigSyncTask(),
         viteSyncTask(),
+        toolingConfigTask(),
+        editorConfigSyncTask(),
         vscodeSyncTask({
             settings: config => [
                 ...(sectionEnabled(config.biome) ? [biomeVscodeSettings] : []),

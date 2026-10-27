@@ -17,6 +17,12 @@ export const loggerConfigSchema = withEnabled(
             .string()
             .describe('Prefix non-indented lines with `<name>:` (default `dbx`).')
             .optional(),
+        suppress: z
+            .union([z.string(), z.array(z.string())])
+            .describe(
+                'Warning/error id, message substring, or `/regex/` to silence (single value or array).'
+            )
+            .optional(),
     })
 )
     .describe('Logging level, colours and prefix for toolchain output.')
