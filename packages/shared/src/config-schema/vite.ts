@@ -17,6 +17,14 @@ export const viteConfigSchema = withEnabled(
             .boolean()
             .describe('Write the managed `vite.config.ts` (default true).')
             .optional(),
+        fmt: z
+            .union([z.boolean(), z.record(z.string(), z.unknown())])
+            .describe('Oxfmt options; `true` uses the toolchain defaults.')
+            .optional(),
+        lint: z
+            .union([z.boolean(), z.record(z.string(), z.unknown())])
+            .describe('Oxlint options; `true` uses the toolchain defaults.')
+            .optional(),
     })
 )
     .catchall(z.unknown())

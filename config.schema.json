@@ -851,6 +851,36 @@
                     "type": "boolean",
                     "description": "Write the managed `vite.config.ts` (default true)."
                 },
+                "fmt": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "object",
+                            "propertyNames": {
+                                "type": "string"
+                            },
+                            "additionalProperties": {}
+                        }
+                    ],
+                    "description": "Oxfmt options; `true` uses the toolchain defaults."
+                },
+                "lint": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "object",
+                            "propertyNames": {
+                                "type": "string"
+                            },
+                            "additionalProperties": {}
+                        }
+                    ],
+                    "description": "Oxlint options; `true` uses the toolchain defaults."
+                },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"

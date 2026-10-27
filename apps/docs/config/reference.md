@@ -611,6 +611,18 @@ The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.
 
 Write the managed `vite.config.ts` (default true).
 
+### `fmt`
+
+- **Type**: `boolean | Record<string, unknown>`
+
+Oxfmt options; `true` uses the toolchain defaults.
+
+### `lint`
+
+- **Type**: `boolean | Record<string, unknown>`
+
+Oxlint options; `true` uses the toolchain defaults.
+
 ### `enabled`
 
 - **Type**: `boolean`

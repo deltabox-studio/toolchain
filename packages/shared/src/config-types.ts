@@ -358,9 +358,13 @@ export interface ToolchainCatalogsConfig {
     enabled?: boolean;
 }
 
-export type ToolchainViteConfig = ViteUserConfig & {
+export type ToolchainViteConfig = Omit<ViteUserConfig, 'fmt' | 'lint'> & {
     /** Write the managed `vite.config.ts` (default true). */
     config?: boolean;
+    /** Oxfmt options; `true` uses the toolchain defaults. */
+    fmt?: boolean | NonNullable<ViteUserConfig['fmt']>;
+    /** Oxlint options; `true` uses the toolchain defaults. */
+    lint?: boolean | NonNullable<ViteUserConfig['lint']>;
 };
 
 export interface ToolchainLoggerConfig {

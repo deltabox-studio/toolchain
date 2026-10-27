@@ -45,9 +45,21 @@ is the full Vite+ configuration. The section is typed as Vite+'s own config
 (`ToolchainViteConfig` = Vite's `UserConfig` as augmented by Vite+), so the whole
 Vite+ surface autocompletes in `dbx.config.ts`.
 
-Add `/vite.config.ts` to `vite.fmt.ignorePatterns` so Oxfmt leaves the generated
-shim alone — without it `vp fmt` would rewrite the shim and `dbx sync --check`
-would report drift. `dbx migrate --from vite` adds it for you.
+Add the shim to `vite.fmt.ignorePatterns` so Oxfmt leaves the generated file
+alone - without it `vp fmt` would rewrite the shim and `dbx sync --check` would
+report drift. In a monorepo put `**/vite.config.ts` on the root config: workspace
+`fmt` settings are inherited, but a workspace's `ignorePatterns` array replaces
+the root's list. `dbx migrate --from vite` adds it for you.
+
+## Format and lint defaults
+
+Opt in with `vite: { fmt: true }` / `vite: { lint: true }` to use the toolchain
+defaults (`DEFAULT_FMT_RULES` / `DEFAULT_LINT_RULES`, exported from
+`@deltabox/toolchain`). An options object is merged over those defaults, so
+`fmt: { semi: false }` keeps the shared ignores and print width and only changes
+`semi`. Shared ignore lists live in `DEFAULT_FMT_IGNORE_PATTERNS` /
+`DEFAULT_LINT_IGNORE_PATTERNS`. `sortImports` is never included by default:
+import ordering is project-specific, so opt in with your own groups.
 
 To adopt an existing hand-written `vite.config.ts`, fold it in with the
 migration (see [Migrations](/guide/migrations#vite-config)):

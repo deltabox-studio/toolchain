@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { resolveChangelogConfig, sectionConfig } from '@deltabox/toolchain-shared';
+import { sectionConfig } from '@deltabox/toolchain-shared';
 
 import {
     findConfigFile,
@@ -106,24 +106,46 @@ describe('nested config inheritance', () => {
     it('merges a workspace config over the root config (leaves replace)', () => {
         const merged = mergeToolchainConfig(
             {
-                ci: {
-                    changelog: {
-                        branches: { main: 'main', dev: 'dev' },
-                        commitlint: { scopes: ['core', 'cli'] },
-                    },
-                },
                 tsconfig: { refs: true, aliases: true },
+                vite: { fmt: { printWidth: 100, ignorePatterns: ['**/dist/**'] } },
             },
             {
-                ci: { changelog: { commitlint: { scopes: ['web'] } } },
                 tsconfig: { refs: false },
+                vite: { fmt: { singleQuote: true } },
             }
         );
         // Objects are combined, arrays/booleans in the child replace.
-        const changelog = resolveChangelogConfig(merged);
-        expect(changelog?.branches).toEqual({ main: 'main', dev: 'dev' });
-        expect(changelog?.commitlint).toEqual({ scopes: ['web'] });
         expect(sectionConfig(merged.tsconfig)).toEqual({ refs: false, aliases: true });
+        expect(sectionConfig(merged.vite)?.fmt).toEqual({
+            printWidth: 100,
+            ignorePatterns: ['**/dist/**'],
+            singleQuote: true,
+        });
+    });
+
+    it('does not inherit workspace-scoped sections', () => {
+        const merged = mergeToolchainConfig(
+            {
+                project: { name: 'acme', type: 'monorepo-root', author: 'Acme' },
+                ci: { changelog: { branches: { main: 'main' } } },
+                changelog: { branches: { main: 'main' } },
+                vite: {
+                    fmt: { printWidth: 100 },
+                    test: { include: ['packages/**/tests/**'] },
+                    run: { tasks: { 'build:root': { command: 'tsdown' } } },
+                },
+            },
+            { vite: { run: { tasks: { build: { command: 'tsdown' } } } } }
+        );
+        // CI/changelog are repository-level; test/run describe the workspace.
+        expect(merged.ci).toBeUndefined();
+        expect(merged.changelog).toBeUndefined();
+        expect(sectionConfig(merged.vite)?.fmt).toEqual({ printWidth: 100 });
+        expect(sectionConfig(merged.vite)?.test).toBeUndefined();
+        expect(sectionConfig(merged.vite)?.run).toEqual({
+            tasks: { build: { command: 'tsdown' } },
+        });
+        expect(merged.project).toEqual({ author: 'Acme' });
     });
 
     it('inherits shared `project` fields but never the identity ones', () => {
@@ -185,16 +207,24 @@ describe('nested config inheritance', () => {
         writeJson(path.join(root, 'dbx.config.json'), {
             toolchain: {
                 project: { name: 'acme', type: 'monorepo-root' },
+                tsconfig: { refs: true, aliases: true },
                 ci: {
                     changelog: {
                         branches: { main: 'trunk' },
                         commitlint: { scopes: ['core'] },
                     },
                 },
+                vite: {
+                    fmt: { printWidth: 100 },
+                    run: { tasks: { 'build:root': { command: 'tsdown' } } },
+                },
             },
         });
         writeJson(path.join(child, 'dbx.config.json'), {
-            toolchain: { ci: { changelog: { commitlint: { scopes: ['web'] } } } },
+            toolchain: {
+                tsconfig: { refs: false },
+                vite: { run: { tasks: { build: { command: 'tsdown' } } } },
+            },
         });
 
         expect(findParentConfigFile(child)).toBe(path.join(root, 'dbx.config.json'));
@@ -204,9 +234,13 @@ describe('nested config inheritance', () => {
         const loaded = await loadToolchainConfig(child);
         expect(loaded.path).toBe(path.join(child, 'dbx.config.json'));
         expect(loaded.parentPath).toBe(path.join(root, 'dbx.config.json'));
-        const childChangelog = resolveChangelogConfig(loaded.config);
-        expect(sectionConfig(childChangelog?.commitlint)?.scopes).toEqual(['web']);
-        expect(childChangelog?.branches?.main).toBe('trunk');
+        // Shared sections inherit; workspace-scoped ones do not.
+        expect(sectionConfig(loaded.config.tsconfig)).toEqual({ refs: false, aliases: true });
+        expect(sectionConfig(loaded.config.vite)?.fmt).toEqual({ printWidth: 100 });
+        expect(sectionConfig(loaded.config.vite)?.run).toEqual({
+            tasks: { build: { command: 'tsdown' } },
+        });
+        expect(loaded.config.ci).toBeUndefined();
         // The parent's `project` is identity-only, so nothing is inherited.
         expect(loaded.config.project).toBeUndefined();
         expect(loaded.projectType).toBe('project');

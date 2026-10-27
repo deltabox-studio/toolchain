@@ -11,34 +11,45 @@ The merge is recursive:
   mention.
 - **Leaves** — booleans, strings, numbers and **arrays** — in the child
   **replace** the root's value (arrays are not concatenated).
+- **Workspace-scoped sections are not inherited**: `ci` (and the deprecated
+  top-level `changelog`), `vite.test` and `vite.run`. A workflow, test config or
+  task list describes one repository/workspace, so a child starts without the
+  parent's values for them.
 
-This makes a shared root config plus small per-project overrides possible:
+Everything else is shared unless the child overrides it — `vite.fmt`,
+`vite.lint`, `vite.plugins`, `tsconfig`, `biome`, `templates`, `registry`, and so
+on — so lint/format settings are cohesive across a monorepo by default.
 
 ```ts [<root>/dbx.config.ts]
 export default defineConfig({
     toolchain: {
-        ci: {
-            changelog: {
-                branches: { main: 'main', dev: 'dev' },
-                commitlint: { scopes: ['core', 'cli'] },
-            },
-        },
         tsconfig: { refs: true, aliases: true },
+        vite: {
+            fmt: { printWidth: 100, singleQuote: true },
+        },
     },
 });
 
-// <root>/packages/web/dbx.config.ts — inherits ci + tsconfig, tweaks both
+// <root>/packages/web/dbx.config.ts — inherits `vite.fmt`, tweaks `tsconfig`
 export default defineConfig({
     toolchain: {
-        ci: { changelog: { commitlint: { scopes: ['web'] } } }, // replaces the root's scopes
         tsconfig: { refs: false }, // boolean overrides the root's refs
+        vite: {
+            run: { tasks: { build: { command: 'tsdown' } } }, // not inherited
+        },
     },
 });
 ```
 
-The workspace above ends up with `ci.changelog.branches` from the root
-(unchanged), `ci.changelog.commitlint.scopes: ['web']` (replaced), and
-`tsconfig: { refs: false, aliases: true }`.
+The workspace above ends up with `tsconfig: { refs: false, aliases: true }` and
+the root's `vite.fmt` settings. Its `vite.run` holds only the `build` task it
+declares — the root's tasks are not merged in.
+
+> **Arrays replace, so repeat what you need.** If a workspace sets
+> `vite.fmt.ignorePatterns`, that array replaces the root's list (it is not
+> appended). Either keep the root patterns in the workspace array, or put the
+> shared pattern on the root config — for example `**/vite.config.ts` there
+> covers every workspace's generated shim.
 
 > **`project` is inherited except its identity fields.** `name`, `scope`,
 > `description` and `type` are per-project, so a non-root config keeps its own (or

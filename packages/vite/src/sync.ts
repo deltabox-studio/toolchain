@@ -14,6 +14,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
+    DEFAULT_FMT_RULES,
+    DEFAULT_LINT_RULES,
+    deepMerge,
+    isPlainObject,
     type PackageJson,
     readJsonAt,
     type SyncTask,
@@ -22,10 +26,21 @@ import {
     type ToolchainViteConfig,
 } from '@deltabox/toolchain-shared';
 
-/** The `vite` section with the toolchain opt-out (`config`) removed. */
+/**
+ * The `vite` section with the toolchain opt-out (`config`) removed. `fmt` and
+ * `lint` fall back to the shared defaults when opted in with `true`, and an
+ * options object is merged over those defaults.
+ */
 export function viteConfigObject(config: ToolchainViteConfig = {}): Record<string, unknown> {
-    const { config: _config, ...vite } = config as Record<string, unknown>;
-    return vite;
+    const { config: _config, fmt, lint, ...vite } = config as Record<string, unknown>;
+    const out: Record<string, unknown> = { ...vite };
+    if (fmt === true) out.fmt = DEFAULT_FMT_RULES;
+    else if (isPlainObject(fmt)) out.fmt = deepMerge(DEFAULT_FMT_RULES, fmt);
+    else if (fmt !== undefined) out.fmt = fmt;
+    if (lint === true) out.lint = DEFAULT_LINT_RULES;
+    else if (isPlainObject(lint)) out.lint = deepMerge(DEFAULT_LINT_RULES, lint);
+    else if (lint !== undefined) out.lint = lint;
+    return out;
 }
 
 /** The package a generated shim imports `defineConfig` from. */

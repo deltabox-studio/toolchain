@@ -4,6 +4,8 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { DEFAULT_FMT_RULES, DEFAULT_LINT_RULES } from '@deltabox/toolchain-shared';
+
 import {
     detectViteSpecifier,
     renderViteConfig,
@@ -138,9 +140,39 @@ describe('vite.config.ts shim', () => {
     });
 
     it('strips the toolchain opt-out (`config`) from the resolved object', () => {
-        expect(viteConfigObject({ config: false, fmt: { semi: true } })).toEqual({
-            fmt: { semi: true },
+        const resolved = viteConfigObject({ config: false, fmt: { semi: true } });
+        expect(resolved).not.toHaveProperty('config');
+        expect(resolved.fmt).toMatchObject({ semi: true });
+    });
+
+    it('uses the shared fmt/lint defaults when opted in with `true`', () => {
+        expect(viteConfigObject({ fmt: true, lint: true })).toEqual({
+            fmt: DEFAULT_FMT_RULES,
+            lint: DEFAULT_LINT_RULES,
         });
+        expect(DEFAULT_FMT_RULES).not.toHaveProperty('sortImports');
+    });
+
+    it('merges fmt/lint options over the shared defaults', () => {
+        const resolved = viteConfigObject({
+            fmt: { semi: false, ignorePatterns: ['custom/**'] },
+            lint: { rules: { eqeqeq: 'error' } },
+        }) as {
+            fmt: {
+                semi: boolean;
+                printWidth: number;
+                ignorePatterns: string[];
+                sortImports?: unknown;
+            };
+            lint: { ignorePatterns: string[]; rules: Record<string, string> };
+        };
+        expect(resolved.fmt.semi).toBe(false);
+        expect(resolved.fmt.printWidth).toBe(DEFAULT_FMT_RULES.printWidth);
+        expect(resolved.fmt.ignorePatterns).toEqual(['custom/**']);
+        expect(resolved.fmt.sortImports).toBeUndefined();
+        expect(resolved.lint.rules.eqeqeq).toBe('error');
+        expect(resolved.lint.rules['no-var']).toBe('warn');
+        expect(resolved.lint.ignorePatterns).toEqual(DEFAULT_LINT_RULES.ignorePatterns);
     });
 
     it('opts out of managing vite.config.ts with `config: false`', async () => {
@@ -227,7 +259,10 @@ describe('resolveVite', () => {
             })
         );
         const config = await resolveVite({ cwd: dir });
-        expect(config).toEqual({ fmt: { semi: false, singleQuote: true } });
+        expect(config).toMatchObject({ fmt: { semi: false, singleQuote: true } });
+        expect((config as { fmt: { printWidth: number } }).fmt.printWidth).toBe(
+            DEFAULT_FMT_RULES.printWidth
+        );
     });
 
     it('uses a passed dbx config without touching disk', async () => {
@@ -248,7 +283,7 @@ describe('resolveVite', () => {
             })
         );
         const config = await resolveVite({ cwd: dir, vite: { fmt: { semi: true } } });
-        expect(config).toEqual({ fmt: { semi: true, singleQuote: true } });
+        expect(config).toMatchObject({ fmt: { semi: true, singleQuote: true } });
     });
 
     it('applies inline `vite` overrides over a passed config', async () => {

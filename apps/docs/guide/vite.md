@@ -57,14 +57,16 @@ not accept `--config`, so the shim has to be the file Vite+ loads.
 | `config` | `boolean` | `true`  | Write the managed `vite.config.ts` shim. |
 
 Everything else under `vite` is Vite+ config (plugins, `test`, `lint`, `fmt`,
-`run.tasks`, ...). Set `vite: { config: false }` to leave a hand-written
+`run.tasks`, ...). `fmt: true` / `lint: true` use the shared
+`DEFAULT_FMT_RULES` / `DEFAULT_LINT_RULES`; an options object is merged over
+them. Set `vite: { config: false }` to leave a hand-written
 `vite.config.ts` alone (the section is still read for provider colouring and the
 `dbx` provider passthrough).
 
 ## Keep the shim out of Oxfmt
 
-Add `/vite.config.ts` to `vite.fmt.ignorePatterns`, otherwise `vp fmt` rewrites
-the generated shim and `dbx sync --check` reports drift:
+Add the shim to `vite.fmt.ignorePatterns`, otherwise `vp fmt` rewrites the
+generated file and `dbx sync --check` reports drift:
 
 ```ts
 vite: {
@@ -74,7 +76,10 @@ vite: {
 }
 ```
 
-`dbx migrate --from vite` adds it for you (see
+In a monorepo, put `**/vite.config.ts` on the **root** config so every
+workspace shim is covered (workspace `fmt` settings are inherited, but an
+`ignorePatterns` array in a workspace replaces the root's list). `dbx migrate
+--from vite` adds the ignore for you (see
 [Migrations](/guide/migrations#vite-config)).
 
 ## Commands

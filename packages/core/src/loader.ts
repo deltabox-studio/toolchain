@@ -7,6 +7,7 @@ import {
     deepMerge,
     type DbxConfig,
     deprecatedConfigMessage,
+    isPlainObject,
     type PackageJson,
     type ProjectType,
     projectFromPackageJson,
@@ -14,6 +15,7 @@ import {
     type Replacements,
     resolveTokens,
     type ToolchainConfig,
+    type ToolchainViteConfig,
 } from '@deltabox/toolchain-shared';
 
 import { resolveProjectType } from './project-type.js';
@@ -162,31 +164,62 @@ async function resolveConfigExport(value: unknown): Promise<unknown> {
 const PROJECT_IDENTITY_KEYS = new Set(['name', 'scope', 'description', 'type']);
 
 /**
+ * `vite` keys that describe how a single workspace runs and are therefore not
+ * inherited: `test` (that workspace's test config) and `run` (its Vite Tasks).
+ * The rest of `vite` (`fmt`, `lint`, `plugins`, ...) is shared and flows down.
+ */
+const WORKSPACE_VITE_KEYS = new Set(['test', 'run']);
+
+/** The inheritable part of a parent `vite` section (drops the workspace keys). */
+function inheritedVite(vite: ToolchainConfig['vite']): ToolchainConfig['vite'] {
+    if (!isPlainObject(vite)) return vite;
+    const shared = Object.fromEntries(
+        Object.entries(vite).filter(([key]) => !WORKSPACE_VITE_KEYS.has(key))
+    );
+    return Object.keys(shared).length > 0 ? (shared as ToolchainViteConfig) : undefined;
+}
+
+/**
  * Merge an ancestor config under a project's own config. Nested objects are
  * merged, while leaves (booleans, strings, numbers, arrays) in the child
  * **replace** the ancestor's value — so a non-root `dbx.config` can override
  * individual options of the root config (and keep the rest).
+ *
+ * Some sections are workspace-scoped and are **never inherited**:
+ * - `ci` / the deprecated `changelog` section: workflows are repository-level;
+ * - `vite.test` and `vite.run`: they describe how that workspace runs;
+ * - `hooks`: a parent's hooks are code and must not run for a nested sync.
  *
  * `project` is inherited **except the identity fields** (`name`, `scope`,
  * `description`, `type`): a workspace keeps its own name/description (or falls
  * back to its `package.json`), and is still detected from its own files — so a
  * root `project` never renames a workspace. The shared fields (author, license,
  * homepage, `repo`, `packageManager`, ...) flow down. `project.inherit: false`
- * disables project inheritance entirely. `hooks` are **not** inherited either —
- * a parent's hooks are code and must not run for a nested project's sync.
+ * disables project inheritance entirely.
  */
 export function mergeToolchainConfig(
     parent: ToolchainConfig,
     child: ToolchainConfig
 ): ToolchainConfig {
-    const { hooks: _hooks, project: parentProject, ...parentRest } = parent;
+    const {
+        hooks: _hooks,
+        project: parentProject,
+        ci: _ci,
+        changelog: _changelog,
+        vite: parentVite,
+        ...parentRest
+    } = parent;
     let base = parentRest as ToolchainConfig;
+    const vite = inheritedVite(parentVite);
+    if (vite !== undefined) {
+        base = { ...base, vite };
+    }
     if (child.project?.inherit !== false && parentProject) {
         const shared = Object.fromEntries(
             Object.entries(parentProject).filter(([key]) => !PROJECT_IDENTITY_KEYS.has(key))
         );
         if (Object.keys(shared).length > 0) {
-            base = { ...parentRest, project: shared } as ToolchainConfig;
+            base = { ...base, project: shared };
         }
     }
     return deepMerge(base, child) as ToolchainConfig;
