@@ -10,11 +10,11 @@
 
 All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.
 
-- Save and use templates (local/remote) so you never have to scaffold the same projects over and over again.
-- Generate config types, env variables, cli flags, markdown and JSON schemas, so your codebase stays consistent, validated and well-documented.
-- Simply extend or setup CI for your changelogs, releases, issues etc.
-- Sync your entire project so workspaces, docs and CI are always up-to-date.
-- Plug it into Vite / Vite+ and streamline your DX for your existing Vite setup.
+- **Save and use templates (local/remote)** so you never have to scaffold the same projects over and over again.
+- **Generate** config types, env variables, cli flags, markdown and JSON schemas, so your codebase stays consistent, validated and well-documented.
+- **Extend or setup** CI for your changelogs, releases, issues etc.
+- **Sync** your entire project so workspaces, docs and CI are always up-to-date.
+- **Plug it into Vite / Vite+** and streamline your DX for your existing Vite setup.
 
 See the [list of features](#features).
 

@@ -12,7 +12,7 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - **Sync.** `dbx sync` runs each enabled section and writes the managed files, tracked in `.dbx/toolchain/manifest.json` (the last-sync time lives in the gitignored `.dbx/toolchain/timestamps.json`); `dbx sync --check` is the CI gate. `dbx sync --recursive` syncs every discovered project in dependency order.
 - **Nested configs.** A non-root `dbx.config.*` merges over the nearest ancestor config: objects merge, while scalars and arrays replace; `project.type` and `hooks` are never inherited.
 - **Project graph.** `dbx projects` writes `.dbx/toolchain/projects.json` (workspace dirs + dependencies), used by `sync --recursive`, the VS Code view and per-workspace changelogs.
-- **Sections.** `project`, `ci` (workflows + changelog), `biome`, `tsconfig`, `templates`, `vite`, `watch`, `logger`, `providers`; every workflow under `ci` is opt-in.
+- **Sections.** `project`, `ci` (workflows + changelog), `fmt`, `lint`, `biome`, `tsconfig`, `templates`, `vite`, `watch`, `logger`, `providers`; every workflow under `ci` is opt-in.
 - **Runtime.** Node ≥ 22.5 and Yarn 4 (corepack); Vite+ (`vp`) resolves at the repo root.
 
 ## Table of Contents
@@ -42,6 +42,7 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [Project](https://toolchain.deltabox.studio/guide/project.md)
 - [Changelog](https://toolchain.deltabox.studio/guide/changelog.md)
 - [tsconfig](https://toolchain.deltabox.studio/guide/tsconfig.md)
+- [Formatting & linting](https://toolchain.deltabox.studio/guide/formatting.md)
 - [Biome](https://toolchain.deltabox.studio/guide/biome.md)
 - [Vite+](https://toolchain.deltabox.studio/guide/vite.md)
 - [Watch](https://toolchain.deltabox.studio/guide/watch.md)
