@@ -4,23 +4,26 @@
 
 # deltabox toolchain
 
-[![license: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](./package.json)
-[![tests](https://img.shields.io/github/actions/workflow/status/deltabox-studio/toolchain/ci.yml?label=tests&logo=github)](https://github.com/deltabox-studio/toolchain/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/@deltabox/toolchain.svg?color=cb3837&label=npm)](https://www.npmjs.com/package/@deltabox/toolchain)
-
 Provides a sidebar for managing projects.
 
 All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.
 
-- Save and use templates (local/remote) so you never have to scaffold the same projects over and over again.
-- Generate config types, env variables, cli flags, markdown and JSON schemas, so your codebase stays consistent, validated and well-documented.
-- Simply extend or setup CI for your changelogs, releases, issues etc.
-- Sync your entire project so workspaces, docs and CI are always up-to-date.
-- Plug it into Vite / Vite+ and streamline your DX for your existing Vite setup.
+- **Save and use templates (local/remote)** so you never have to scaffold the same projects over and over again.
+- **Generate** config types, env variables, cli flags, markdown and JSON schemas, so your codebase stays consistent, validated and well-documented.
+- **Extend or setup** CI for your changelogs, releases, issues etc.
+- **Sync** your entire project so workspaces, docs and CI are always up-to-date.
+- **Plug it into Vite / Vite+** and streamline your DX for your existing Vite setup.
 
 See the [list of features](https://github.com/deltabox-studio/toolchain#features).
 
 See all the [commands](#commands) below.
+
+**Requirements:**
+
+- Visual Studio Code version >= 1.85.0
+- Node.js version >= 22.5.0
+
+**Quick showcase:**
 
 <div align="left">
   <video width="1342" controls>
@@ -72,11 +75,17 @@ actions, scoped to that project:
 
 The **Providers** and **Templates** views read `dbx providers --json` and `dbx template:list --json`, so adding one surfaces it in the UI automatically.
 
-**Add provider...** writes a custom provider to `.dbx/toolchain/providers.json`, which `toolchainProviders()` merges with the built-ins, so a registered provider's commands also become `dbx` commands (`dbx <command>`), runnable from the view.
+### Add provider...
 
-**Add template...** runs `template:init --add`.
+writes a custom provider to `.dbx/toolchain/providers.json`, which `toolchainProviders()` merges with the built-ins, so a registered provider's commands also become `dbx` commands (`dbx <command>`), runnable from the view.
 
-**Remove template source...** runs `template:list --registry` + `template:remove`.
+### Add template...
+
+runs `template:init --add`.
+
+### Remove template source...
+
+runs `template:list --registry` + `template:remove`.
 
 ## Auto-sync
 
