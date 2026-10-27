@@ -47,6 +47,7 @@ export type HomeAction =
     | { type: 'templateAdd' }
     | { type: 'templateRemove' }
     | { type: 'openDocs' }
+    | { type: 'openSettings' }
     | { type: 'syncProject'; dir: string }
     | { type: 'checkProject'; dir: string }
     | { type: 'generateProjectConfig'; dir: string }
@@ -207,6 +208,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
 </head>
 <body>
   <div class="docsLink"><a class="link" data-action="openDocs">Need help? Go to documentation</a></div>
+  <div class="docsLink"><a class="link" data-action="openSettings">Configure extension settings</a></div>
   <div id="lastSync" class="lastSync"></div>
   <div class="status"><span id="statusDot" class="dot"></span><span id="statusText" class="statusText">Ready</span><span id="manager" class="muted"></span></div>
   <section class="section">

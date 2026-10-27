@@ -1144,6 +1144,12 @@ export function activate(context: vscode.ExtensionContext): void {
                 case 'openDocs':
                     void vscode.env.openExternal(vscode.Uri.parse(DOCS_URL));
                     break;
+                case 'openSettings':
+                    await vscode.commands.executeCommand(
+                        'workbench.action.openSettings',
+                        `@ext:${context.extension.id}`
+                    );
+                    break;
             }
         }
     );
