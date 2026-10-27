@@ -144,10 +144,23 @@ export default defineConfig({
                     ],
                 },
                 {
+                    text: 'CI',
+                    items: [
+                        { text: 'Overview', link: '/guide/ci/' },
+                        { text: 'Workflow settings', link: '/guide/ci/settings' },
+                        { text: 'CI checks', link: '/guide/ci/ci' },
+                        { text: 'Changelog workflow', link: '/guide/ci/changelog' },
+                        { text: 'Issues', link: '/guide/ci/issues' },
+                        { text: 'Sync', link: '/guide/ci/sync' },
+                        { text: 'Releases', link: '/guide/ci/releases' },
+                    ],
+                },
+                {
                     text: 'Toolchain',
                     items: [
                         { text: 'CLI', link: '/guide/cli' },
                         { text: 'Configuration', link: '/guide/config/' },
+                        { text: 'TypeScript', link: '/guide/typescript' },
                         { text: 'Project', link: '/guide/project' },
                         { text: 'Changelog', link: '/guide/changelog/' },
                         { text: 'tsconfig', link: '/guide/tsconfig' },

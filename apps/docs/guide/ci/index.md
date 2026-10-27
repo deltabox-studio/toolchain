@@ -1,8 +1,8 @@
-# Workflows
+# CI
 
-`dbx sync` writes the GitHub workflows into `.github/workflows`. Every workflow is
-**opt-in**: declare it under `toolchain.ci` to write it; omit it (or set it to
-`false`) and the toolchain leaves that file unmanaged. Each id (`ci`,
+`dbx sync` writes the opted-in GitHub workflows into `.github/workflows`. Every
+workflow is **opt-in**: declare it under `toolchain.ci` to write it; omit it (or
+set it to `false`) and the toolchain leaves that file unmanaged. Every id (`ci`,
 `changelog`, `release`, `issues`, `sync`) accepts one of three forms:
 
 - `true` / `false` — write the generated default, or skip it;
@@ -42,3 +42,16 @@ triggers). An empty string disables the workflow.
 The `ci` key doubles as the CI-checks workflow (`ci.yml`) and the section name, so
 `toolchain.ci.ci` is the checks workflow. Set `toolchain.ci.enabled` to `false` to
 disable the whole section (and every nested workflow) at once.
+
+## Workflows
+
+| Workflow  | File            | Page                                      |
+| --------- | --------------- | ----------------------------------------- |
+| CI checks | `ci.yml`        | [CI checks](/guide/ci/ci)                 |
+| Changelog | `changelog.yml` | [Changelog workflow](/guide/ci/changelog) |
+| Release   | `release.yml`   | [Releases](/guide/ci/releases)            |
+| Issues    | `issues.yml`    | [Issues](/guide/ci/issues)                |
+| Toolchain | `sync.yml`      | [Sync](/guide/ci/sync)                    |
+
+See [Workflow settings](/guide/ci/settings) for the shared object options and the
+[Changelog](/guide/changelog/) guide for the versioning/commitlint pipeline.

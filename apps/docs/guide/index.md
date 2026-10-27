@@ -46,6 +46,21 @@ The published package exposes one binary, `dbx`:
 dbx --help
 ```
 
+## Interactive CLI
+
+Commands are flag-driven, but in an interactive terminal (a TTY) a few prompt for
+the values you omit:
+
+```sh
+dbx create                     # pick a template, project name, scope, inputs and actions
+dbx migrate --recursive        # pick which projects to migrate
+```
+
+`dbx migrate` without `--from` still detects the sources automatically; the
+prompt is only for the project selection with `--recursive`. Pass `--json`, pipe
+the command, or supply the flags to run non-interactively. `dbx template:init`
+also accepts flags (`--name`, `--kind`, ...) for scripted use.
+
 ## Create a config
 
 Scaffold a config for a project that does not have one yet:
@@ -106,7 +121,9 @@ that area untouched.
 - [Monorepo guide](/guide/monorepo)
 - [CLI reference](/guide/cli)
 - [Configuration reference](/config/reference)
+- [TypeScript](/guide/typescript)
 - [Project](/guide/project)
+- [CI](/guide/ci/)
 - [Changelog](/guide/changelog/)
 - [tsconfig](/guide/tsconfig)
 - [Biome](/guide/biome)

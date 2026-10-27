@@ -45,6 +45,21 @@ The published package exposes one binary, `dbx`:
 dbx --help
 ```
 
+## Interactive CLI
+
+Commands are flag-driven, but in an interactive terminal (a TTY) a few prompt for
+the values you omit:
+
+```sh
+dbx create                     # pick a template, project name, scope, inputs and actions
+dbx migrate --recursive        # pick which projects to migrate
+```
+
+`dbx migrate` without `--from` still detects the sources automatically; the
+prompt is only for the project selection with `--recursive`. Pass `--json`, pipe
+the command, or supply the flags to run non-interactively. `dbx template:init`
+also accepts flags (`--name`, `--kind`, ...) for scripted use.
+
 ## Create a config
 
 Scaffold a config for a project that does not have one yet:
@@ -105,7 +120,9 @@ that area untouched.
 * [Monorepo guide](/guide/monorepo)
 * [CLI reference](/guide/cli)
 * [Configuration reference](/config/reference)
+* [TypeScript](/guide/typescript)
 * [Project](/guide/project)
+* [CI](/guide/ci/)
 * [Changelog](/guide/changelog/)
 * [tsconfig](/guide/tsconfig)
 * [Biome](/guide/biome)
@@ -272,11 +289,13 @@ actions, scoped to that project:
 
 The **Providers** and **Templates** views read `dbx providers --json` and `dbx template:list --json`, so adding one surfaces it in the UI automatically.
 
-**Add provider...** writes a custom provider to `.dbx/toolchain/providers.json`
-(or the global `~/.dbx/toolchain/.registry/providers.json` when you choose the
-global scope), which `toolchainProviders()` merges with the built-ins, so a
-registered provider's commands also become `dbx` commands (`dbx <command>`),
-runnable from the view.
+**Add provider...** writes a custom provider to the default project registry
+(`.dbx/toolchain/.registry/providers/providers.json`) or the global
+`~/.dbx/toolchain/.registry/providers/` when you choose the global scope, which
+`toolchainProviders()` merges with the built-ins, so a registered provider's
+commands also become `dbx` commands (`dbx <command>`), runnable from the view.
+Provider search paths can also be added with the **Registries** view; the
+`deltabox.providerRegistrySearchPaths` setting mirrors them globally.
 
 **Add template...** runs `template:init --add` and asks whether to add the
 template to the **global** registry (yes by default), so it is available in every
@@ -291,8 +310,10 @@ template registries as **Providers** / **Templates** roots. Each item has **Open
 registry** (the folder in the explorer, or the website for remote URLs), **Add new
 registry** and **Remove registry** (it only drops the path, keeping the files).
 The title bar's **New registry…** / **Remove registry…** actions add or remove
-search paths, asking whether they are global or project-scoped. Remote
-registries are `http(s)` JSON registries (`{ sources }` or an array of sources).
+search paths for either kind, asking whether they are global or project-scoped.
+Remote registries are `http(s)` JSON registries: template registries accept
+`{ sources }` or an array of sources; provider registries accept
+`{ providers }` or an array of provider descriptors.
 
 **Create from template…** prompts for the template's inputs and actions (see
 [Templates](/guide/templates)) before running `dbx create`. Scaffolding also asks
@@ -308,16 +329,22 @@ Generated outputs are never watched. The scheduler debounces bursts, allows one 
 
 When a sync finds no workspace tsconfig files while `tsconfig.refs`/`tsconfig.composite` are on (or a `tsconfig.workspaces.json` is present), the extension surfaces the CLI's warning as a notification (once per session) with a **Show output** action.
 
+When removing a section stops managing a file that dbx created, the sync
+notification lists the removed relative paths and offers **Restore** (write the
+previous content back) or **Close**. A file that existed before dbx first managed
+it is **adopted**: it is unmanaged but never deleted.
+
 ## Settings
 
-| Setting                        | Default                 | Description                                                |
-| ------------------------------ | ----------------------- | ---------------------------------------------------------- |
-| `deltabox.toolchain.enabled`   | `true`                  | Auto sync on watched changes.                              |
-| `deltabox.toolchain.debounce`  | `300`                   | Debounce (ms) before a sync.                               |
-| `deltabox.toolchain.command`   | `sync`                  | The command to run on change.                              |
-| `deltabox.toolchain.watch`     | config + tsconfig globs | Inputs that trigger a sync.                                |
-| `deltabox.toolchain.version`   | `""` (auto)             | Pin the `@deltabox/toolchain` version this workspace runs. |
-| `deltabox.registrySearchPaths` | `[]`                    | Registry search paths (dirs or `http(s)` registries).      |
+| Setting                                | Default                 | Description                                                |
+| -------------------------------------- | ----------------------- | ---------------------------------------------------------- |
+| `deltabox.toolchain.enabled`           | `true`                  | Auto sync on watched changes.                              |
+| `deltabox.toolchain.debounce`          | `300`                   | Debounce (ms) before a sync.                               |
+| `deltabox.toolchain.command`           | `sync`                  | The command to run on change.                              |
+| `deltabox.toolchain.watch`             | config + tsconfig globs | Inputs that trigger a sync.                                |
+| `deltabox.toolchain.version`           | `""` (auto)             | Pin the `@deltabox/toolchain` version this workspace runs. |
+| `deltabox.registrySearchPaths`         | `[]`                    | Template registry search paths (dirs or `http(s)` URLs).   |
+| `deltabox.providerRegistrySearchPaths` | `[]`                    | Provider registry search paths (JSON files/dirs/URLs).     |
 
 When a workspace has its own `@deltabox/toolchain` whose version differs from the
 extension's bundled CLI, the extension asks which to run and shows both detected
@@ -381,6 +408,285 @@ the repository at
 ---
 
 ---
+url: https://toolchain.deltabox.studio/guide/ci.md
+---
+# CI
+
+`dbx sync` writes the opted-in GitHub workflows into `.github/workflows`. Every
+workflow is **opt-in**: declare it under `toolchain.ci` to write it; omit it (or
+set it to `false`) and the toolchain leaves that file unmanaged. Every id (`ci`,
+`changelog`, `release`, `issues`, `sync`) accepts one of three forms:
+
+* `true` / `false` — write the generated default, or skip it;
+* a **`WorkflowOptions` object** — override parts of the default (branches,
+  triggers, extra top-level keys, extra steps/jobs, token overrides);
+* a **raw YAML string** — written **verbatim** as the workflow file, for a
+  workflow the object model can't express.
+
+```ts [dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        ci: {
+            ci: true, // the generated CI checks
+            issues: false, // don't write issues.yml
+            release: { pushBranches: ['main'] }, // override the default
+            changelog: { branches: { main: 'main', dev: 'dev' } },
+            // A fully hand-authored workflow, written as-is:
+            sync: `name: Toolchain sync
+on: [push, pull_request]
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: yarn dbx sync --check
+`,
+        },
+    },
+});
+```
+
+A raw string is **not** merged with the default, is **not** token-replaced, and
+gets **no generated header** — it is the file's exact content. The
+`ci.changelog.branches` defaults don't apply to it either (it defines its own
+triggers). An empty string disables the workflow.
+
+The `ci` key doubles as the CI-checks workflow (`ci.yml`) and the section name, so
+`toolchain.ci.ci` is the checks workflow. Set `toolchain.ci.enabled` to `false` to
+disable the whole section (and every nested workflow) at once.
+
+## Workflows
+
+| Workflow  | File            | Page                                      |
+| --------- | --------------- | ----------------------------------------- |
+| CI checks | `ci.yml`        | [CI checks](/guide/ci/ci)                 |
+| Changelog | `changelog.yml` | [Changelog workflow](/guide/ci/changelog) |
+| Release   | `release.yml`   | [Releases](/guide/ci/releases)            |
+| Issues    | `issues.yml`    | [Issues](/guide/ci/issues)                |
+| Toolchain | `sync.yml`      | [Sync](/guide/ci/sync)                    |
+
+See [Workflow settings](/guide/ci/settings) for the shared object options and the
+[Changelog](/guide/changelog/) guide for the versioning/commitlint pipeline.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/ci/settings.md
+---
+# Workflow settings
+
+A workflow can be a boolean, a raw YAML string, or a `WorkflowOptions` object.
+The object is merged over the generated default, so you only describe what
+changes. These options apply to every workflow (`ci`, `changelog`, `release`,
+`issues`, `sync`).
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        ci: {
+            enabled: true,
+            pushBranches: ['main', 'next'],
+            pullRequestBranches: ['main', 'release/**'],
+            triggers: { schedule: [{ cron: '0 6 * * *' }] },
+            tokens: { nodeVersion: '24' },
+            extra: { permissions: { contents: 'read' } },
+            steps: {
+                after: [{ name: 'Lint', run: 'yarn lint' }],
+            },
+            jobs: {
+                smoke: {
+                    'runs-on': 'ubuntu-latest',
+                    steps: [{ run: 'echo ok' }],
+                },
+            },
+        },
+    },
+}
+```
+
+| Option                | What it does                                                                    |
+| --------------------- | ------------------------------------------------------------------------------- |
+| `enabled`             | Enable/disable this workflow (default: enabled when present).                   |
+| `pushBranches`        | Replace `on.push.branches`.                                                     |
+| `pullRequestBranches` | Replace `on.pull_request.branches`.                                             |
+| `triggers`            | Merge extra `on.*` triggers.                                                    |
+| `extra`               | Merge extra top-level keys (`permissions`, `concurrency`, `env`, ...).          |
+| `steps`               | Inject steps before/after a job's generated steps (one group or per-job).       |
+| `jobs`                | Merge extra complete jobs.                                                      |
+| `tokens`              | Override workflow tokens (`nodeVersion`, `packageManager`, `yarnVersion`, ...). |
+
+## Steps
+
+`steps` accepts one group or an array of groups. A group targets a job id
+(default: the first/primary job) and can add steps before or after the generated
+ones:
+
+```ts
+steps: [
+    { job: 'ci', before: [{ name: 'Install extras', run: 'yarn add -D foo' }] },
+    { job: 'ci', after: [{ name: 'Smoke', run: 'yarn smoke' }] },
+];
+```
+
+## Tokens
+
+The default workflow templates use `{{ token }}` replacements. `tokens` merges
+over the project-wide values, so one workflow can use a different Node version or
+package manager without changing `project`.
+
+## Raw YAML
+
+A string is used as the workflow file's exact content. It is not merged, not
+token-replaced and gets no generated header; an empty string disables it.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/ci/ci.md
+---
+# CI checks
+
+The `ci.ci` workflow (`ci.yml`) is the repository's main check. It runs on
+pushes to `ci.changelog.branches.main` and on pull requests to the generated
+branch globs, and its default job:
+
+1. checks out the repo, sets up Node and Corepack, and installs dependencies;
+2. runs commitlint over the pushed range — **removed when commitlint is
+   disabled** with `ci.changelog.commitlint: false`;
+3. runs `dbx sync --check` so generated files cannot drift;
+4. runs the package manager's `build`.
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        ci: {
+            pullRequestBranches: ['main', 'dev', 'release/**', 'dependabot/**'],
+            steps: {
+                after: [
+                    { name: 'Format + lint', run: 'yarn check --fix' },
+                    { name: 'Test', run: 'yarn test' },
+                ],
+            },
+        },
+    },
+}
+```
+
+Use [Workflow settings](/guide/ci/settings) for the shared options. The workflow
+is opt-in: `ci: { ci: true }` writes it; omitting `ci.ci` (or setting it to
+`false`) leaves the file unmanaged.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/ci/changelog.md
+---
+# Changelog workflow
+
+The `ci.changelog` workflow (`changelog.yml`) generates the changelog and applies
+the version bump. It runs on every push to `ci.changelog.branches.dev` (or
+`main` when `dev` is not set), then commits the updated `CHANGELOG.md` files and
+`package.json` versions back to the branch.
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        changelog: {
+            branches: { main: 'main', dev: 'dev' },
+            pushBranches: ['dev'], // optional per-workflow override
+        },
+    },
+}
+```
+
+`ci.changelog` is also the changelog **pipeline** config. Its options are
+documented in the [Changelog](/guide/changelog/) guide:
+
+* [Branches](/guide/changelog/branches)
+* [commitlint](/guide/changelog/commitlint)
+* [Versioning](/guide/changelog/versioning)
+* [CLI](/guide/changelog/cli)
+
+The workflow is opt-in (`ci.changelog: true` or an object). `ci.changelog:
+false` leaves it unmanaged; `ci.changelog.commitlint: false` still generates the
+workflow but skips commitlint, its config and the local hook.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/ci/issues.md
+---
+# Issues
+
+The `ci.issues` workflow (`issues.yml`) normalizes new issue titles from the
+issue's labels: a bug-labelled issue gets a `[bug]` prefix, an
+enhancement/feature/feat-labelled issue gets `[feat]`; issues without either
+label are left untouched.
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        issues: true,
+    },
+}
+```
+
+The workflow is opt-in and only runs on `issues: opened`. It needs the
+`issues: write` permission, which the generated default declares.
+
+Use [Workflow settings](/guide/ci/settings) to change its triggers or add jobs.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/ci/sync.md
+---
+# Sync
+
+The `ci.sync` workflow (`sync.yml`) verifies that every generated file is up to
+date: it runs `dbx sync --check` on pushes (to both the `main` and `dev` branch
+globs) and on pull requests. A drift in a workflow, tsconfig, `vite.config.ts`
+or any other managed file fails the job.
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        sync: true,
+    },
+}
+```
+
+The workflow is opt-in. The `ci` check workflow also runs `dbx sync --check`, so
+`sync.yml` is useful when you want the check to run on pull requests without the
+full build. See [Workflow settings](/guide/ci/settings) for trigger overrides.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/ci/releases.md
+---
+# Releases
+
+The generated `ci.release` workflow (`release.yml`) opens a release PR whose body
+is the **aggregated changelog**: every entry from the last tag
+(`git describe --tags --abbrev=0`) up to the latest version, not just the newest
+one. So a release that skips versions (eg. `v1.7.0` → `v1.7.8`) still
+documents `1.7.1`–`1.7.8` in one place.
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        release: { pushBranches: ['main'] },
+    },
+}
+```
+
+The workflow is opt-in. Use [Workflow settings](/guide/ci/settings) to override
+the job's extra steps/jobs or supply a fully hand-authored workflow.
+
+---
+
+---
 url: https://toolchain.deltabox.studio/guide/cli.md
 ---
 # CLI
@@ -407,19 +713,34 @@ short notice with a link to the release when a newer version is published. The
 check is skipped in CI and when `NO_UPDATE_NOTIFIER` or `DBX_NO_UPDATE_CHECK` is
 set, and can be turned off with `--no-update-check`.
 
+## Interactive CLI
+
+The CLI is scriptable first: every prompt has a flag equivalent. In a TTY,
+however, some commands prompt when the flags are omitted:
+
+```sh
+dbx create                     # template + name + scope + template inputs/actions
+dbx migrate --recursive        # choose the projects to migrate
+```
+
+`dbx migrate` detects migrations automatically without `--from`; the prompt is
+only the project picker for `--recursive`. `--json`, a piped stdin, or the
+explicit flags disable prompts. See [Scaffolding](#scaffolding) and
+[Migrations](#migrations) for the flag forms.
+
 ## Output
 
 Colour is on by default and follows `--no-color` / the [`logger` config](/guide/config/logging).
 
 ## Core
 
-| Command     | Description                                                                      |
-| ----------- | -------------------------------------------------------------------------------- |
-| `projects`  | Discover projects and write `.dbx/toolchain/projects.json`.                      |
-| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`).  |
-| `watch`     | Sync once, then watch key inputs and re-sync.                                    |
-| `reset`     | Remove generated files, the manifest and/or the config (`--all`, `--recursive`). |
-| `providers` | List registered providers + their commands (`--json`).                           |
+| Command     | Description                                                                               |
+| ----------- | ----------------------------------------------------------------------------------------- |
+| `projects`  | Discover projects and write `.dbx/toolchain/projects.json`.                               |
+| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`, `--json`). |
+| `watch`     | Sync once, then watch key inputs and re-sync.                                             |
+| `reset`     | Remove generated files, the manifest and/or the config (`--all`, `--recursive`).          |
+| `providers` | List registered providers + their commands (`--json`).                                    |
 
 ## Scaffolding
 
@@ -447,7 +768,7 @@ prompts for the template, name and scope with clack; Ctrl-C cancels. See
 | `template:add`      | Record a source (auto-inits local; `--no-global` keeps it project-only).             |
 | `template:remove`   | Remove a source by id or `type:locate`.                                              |
 | `template:registry` | List/add/remove the global template search paths (`--vscode-dir`, `--clear`).        |
-| `registry`          | List (or `--add`/`--remove` with `--scope global\|project`) template registries.     |
+| `registry`          | List/add/remove/set template **or provider** registries (`--kind`, `--scope`).       |
 | `template:info`     | Show one template.                                                                   |
 
 See [Templates](/guide/templates).
@@ -459,6 +780,7 @@ dbx migrate --from biome --write           # .oxfmtrc.json + .oxlintrc.json
 dbx migrate --from biome --target vite --write
 dbx migrate --from all                     # every detected source
 dbx migrate --from vite --recursive --write  # migrate every detected project
+dbx migrate --recursive                    # interactive project picker
 dbx migrate --check                        # CI: exit 1 when stale
 dbx migrate:list
 ```
@@ -596,6 +918,138 @@ Changelog](/guide/changelog/), [tsconfig](/guide/tsconfig), [Biome](/guide/biome
 * [Programmatic API](/guide/config/programmatic-api) — load + sync from code.
 
 The generated, exhaustive section reference is [dbx.config](/config/reference).
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/typescript.md
+---
+# TypeScript
+
+`@deltabox/toolchain` is written in TypeScript and ships the config model, the
+generated `.d.ts` files and the ambient Zod metadata types. This page covers the
+type-safety story for consumers.
+
+## `dbx.config.ts`
+
+`defineConfig` is an identity helper that gives the config file full
+autocomplete and type-checking, including the opt-in `toolchain.ci` workflows:
+
+```ts [dbx.config.ts]
+import { defineConfig } from '@deltabox/toolchain';
+
+export default defineConfig({
+    toolchain: {
+        project: { name: 'acme', scope: '@acme' },
+        ci: {
+            ci: true,
+            changelog: {
+                commitlint: { scopes: ['api', 'web'] },
+                versioning: { target: 'individual' },
+            },
+        },
+    },
+});
+```
+
+It accepts an object, a promise, or a sync/async callback — the loader resolves
+it (see [`defineConfig`](/guide/config/defineconfig)).
+
+## Config types
+
+The `toolchain` shape is exported as `ToolchainConfig` (and the individual
+sections as `ToolchainCiConfig`, `ToolchainChangelogConfig`, ...):
+
+```ts
+import type { ToolchainConfig, ToolchainCiConfig } from '@deltabox/toolchain';
+
+const ci: ToolchainCiConfig = { ci: true, changelog: true };
+const config: ToolchainConfig = { project: { name: 'acme' }, ci };
+```
+
+The same types are available from `@deltabox/toolchain/shared`, and each
+subpath re-exports the types it owns.
+
+## Ambient schema metadata
+
+Zod's `.meta()` is typed by default, but the toolchain adds its own fields
+(`env`, `path`, `required`, `example`, `secret`, `scope`, `public`,
+`defaultValue`). Add the ambient declaration once in a project-wide `.d.ts`:
+
+```ts [env.d.ts]
+/// <reference types="@deltabox/toolchain/globals" />
+```
+
+Now a schema used with the [config generator](/guide/config-generator/) is fully
+typed:
+
+```ts
+import { z } from 'zod';
+
+export const serverConfig = z.object({
+    port: z.number().default(3000).meta({
+        env: 'MYAPP_PORT',
+        description: 'HTTP port',
+        example: '3000',
+    }),
+    password: z.string().meta({
+        env: 'MYAPP_AUTH_PASSWORD',
+        required: true,
+        secret: true,
+    }),
+});
+```
+
+`ConfigMeta` is `ConfigBaseMeta & ConfigEnvMeta`:
+
+* `ConfigBaseMeta`: `description`, `required`, `deprecated`, `example`,
+  `secret`, `scope`, `public`, `defaultValue`.
+* `ConfigEnvMeta`: `env` and `path` (both optional, so non-env configs can use
+  metadata too).
+
+`.`describe()`is still the primary description and is rendered into the
+generated types, JSON Schema and markdown reference;`.meta({ description })\` is
+used as a fallback and adds env/docs metadata.
+
+## Programmatic API
+
+The loader and sync runner are typed end-to-end:
+
+```ts
+import {
+    defineConfig,
+    defaultSyncTasks,
+    loadToolchainConfig,
+    runSync,
+    type ToolchainConfig,
+} from '@deltabox/toolchain';
+
+const loaded = await loadToolchainConfig(process.cwd());
+const config: ToolchainConfig = loaded.config;
+await runSync({
+    tasks: defaultSyncTasks(),
+    cwd: process.cwd(),
+    config,
+    tokens: loaded.tokens,
+    projectType: loaded.projectType,
+});
+```
+
+See the [Programmatic API](/guide/api/) guide for the package-by-package
+reference.
+
+## Vite+
+
+The generated `vite.config.ts` shim is typed against the project's Vite package
+(`vite` or `vite-plus`) and `resolveVite<T>` is generic, so
+`resolveVite<ViteUserConfig>({ cwd: import.meta.dirname })` keeps the full Vite+
+surface (see [Vite+](/guide/vite)).
+
+## JSON Schema / editor autocomplete
+
+`config.schema.json` is generated from the same Zod model and published at the
+site root, so a `dbx.config.json` gets editor completion. For a TypeScript config,
+`defineConfig` already provides the same information.
 
 ---
 
@@ -860,7 +1314,8 @@ toolchain: {
 
 ## Where to start
 
-* [Workflows](/guide/changelog/workflows) — how each `ci` workflow entry opts in.
+* [CI](/guide/ci/) — the opt-in GitHub workflows (CI checks, changelog, release,
+  issues, sync) and their common settings.
 * [Branches](/guide/changelog/branches) — `main`/`dev` branch globs.
 * [commitlint](/guide/changelog/commitlint) — config location, types/scopes and
   the no-commitlint fallback.
@@ -871,7 +1326,7 @@ toolchain: {
   shell-mangled messages.
 * [Troubleshooting](/guide/changelog/troubleshooting) — the upstream commitlint
   parser-preset error.
-* [Releases](/guide/changelog/releases) — the aggregated release PR body.
+* [Releases](/guide/ci/releases) — the aggregated release PR body.
 
 ---
 
@@ -1671,15 +2126,30 @@ export default defineConfig({
 
 ## Custom providers
 
-Register extra providers in `.dbx/toolchain/providers.json` (a list of provider
-descriptors). A provider can also live in the **global** registry at
-`~/.dbx/toolchain/.registry/providers.json`, so it is available in every project;
-`toolchainProviders()` merges both with the built-ins (a project provider wins on
-an id clash), so a custom provider's commands become `dbx` commands —
-`dbx <command.name>` forwards to `<binary> <subcommand> ...` — and it shows up in
-`dbx providers` and the editor.
+Providers are loaded from **search paths** (JSON files, directories of
+`*.json`, or `http(s)` registry URLs). A JSON file can be an array of provider
+descriptors or `{ "providers": [...] }`.
 
-```json [.dbx/toolchain/providers.json]
+Project paths (first wins on an id clash):
+
+* `.dbx/toolchain/.registry/providers` — the implicit default directory;
+* `.dbx/toolchain/registries.json` — its `providers` array;
+* `.dbx/toolchain/providers.json` — the legacy file, still read.
+
+Global paths:
+
+* `~/.dbx/toolchain/.registry/providers` — the default directory;
+* `~/.dbx/toolchain/cli/config.json` — `providerRegistrySearchPaths`, or
+  `registrySearchPaths.providers`;
+* the VS Code `deltabox.providerRegistrySearchPaths` setting (kept in sync).
+
+`toolchainProviders()` merges every local registry with the built-ins (a project
+provider wins on an id clash), so a custom provider's commands become `dbx`
+commands — `dbx <command.name>` forwards to `<binary> <subcommand> ...` — and it
+shows up in `dbx providers` and the editor. Remote registries are fetched by
+`dbx providers --json`/`loadToolchainProviders()`.
+
+```json [.dbx/toolchain/.registry/providers/providers.json]
 [
     {
         "id": "echo",
@@ -1696,8 +2166,15 @@ an id clash), so a custom provider's commands become `dbx` commands —
 ]
 ```
 
-The VS Code **Providers** view manages this file (**Add provider...** /
-**Remove provider**). See [VS Code Extension](/guide/vscode).
+```sh
+dbx registry --json                                  # list template + provider paths
+dbx registry --kind providers --scope project --add ./providers
+dbx registry --kind providers --scope global --add https://example.com/providers.json
+```
+
+The VS Code **Providers** view manages the registry items (**Add provider...** /
+**Remove provider**), and the **Registries** view shows the provider search
+paths. See [VS Code Extension](/guide/vscode).
 
 ## Providers in the editor
 
@@ -4000,18 +4477,6 @@ await program.parseAsync();
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/changelog/releases.md
----
-# Releases
-
-The generated `release` workflow opens a release PR whose body is the
-**aggregated changelog**: every entry from the last tag (`git describe --tags --abbrev=0`) up to the latest version, not just the newest one. So a release
-that skips versions (eg. `v1.7.0` → `v1.7.8`) still documents `1.7.1`–`1.7.8`
-in one place.
-
----
-
----
 url: https://toolchain.deltabox.studio/guide/api/subpath-exports.md
 ---
 # Subpath exports
@@ -4264,56 +4729,6 @@ migration (see [Migrations](/guide/migrations#vite-config)):
 dbx migrate --from vite --write   # folds the object into toolchain.vite (+ the fmt ignore)
 dbx sync                          # writes the managed vite.config.ts shim
 ```
-
----
-
----
-url: https://toolchain.deltabox.studio/guide/changelog/workflows.md
----
-# Workflows
-
-`dbx sync` writes the GitHub workflows into `.github/workflows`. Every workflow is
-**opt-in**: declare it under `toolchain.ci` to write it; omit it (or set it to
-`false`) and the toolchain leaves that file unmanaged. Each id (`ci`,
-`changelog`, `release`, `issues`, `sync`) accepts one of three forms:
-
-* `true` / `false` — write the generated default, or skip it;
-* a **`WorkflowOptions` object** — override parts of the default (branches,
-  triggers, extra top-level keys, extra steps/jobs, token overrides);
-* a **raw YAML string** — written **verbatim** as the workflow file, for a
-  workflow the object model can't express.
-
-```ts [dbx.config.ts]
-export default defineConfig({
-    toolchain: {
-        ci: {
-            ci: true, // the generated CI checks
-            issues: false, // don't write issues.yml
-            release: { pushBranches: ['main'] }, // override the default
-            changelog: { branches: { main: 'main', dev: 'dev' } },
-            // A fully hand-authored workflow, written as-is:
-            sync: `name: Toolchain sync
-on: [push, pull_request]
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: yarn dbx sync --check
-`,
-        },
-    },
-});
-```
-
-A raw string is **not** merged with the default, is **not** token-replaced, and
-gets **no generated header** — it is the file's exact content. The
-`ci.changelog.branches` defaults don't apply to it either (it defines its own
-triggers). An empty string disables the workflow.
-
-The `ci` key doubles as the CI-checks workflow (`ci.yml`) and the section name, so
-`toolchain.ci.ci` is the checks workflow. Set `toolchain.ci.enabled` to `false` to
-disable the whole section (and every nested workflow) at once.
 
 ---
 

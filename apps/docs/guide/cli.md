@@ -22,19 +22,34 @@ short notice with a link to the release when a newer version is published. The
 check is skipped in CI and when `NO_UPDATE_NOTIFIER` or `DBX_NO_UPDATE_CHECK` is
 set, and can be turned off with `--no-update-check`.
 
+## Interactive CLI
+
+The CLI is scriptable first: every prompt has a flag equivalent. In a TTY,
+however, some commands prompt when the flags are omitted:
+
+```sh
+dbx create                     # template + name + scope + template inputs/actions
+dbx migrate --recursive        # choose the projects to migrate
+```
+
+`dbx migrate` detects migrations automatically without `--from`; the prompt is
+only the project picker for `--recursive`. `--json`, a piped stdin, or the
+explicit flags disable prompts. See [Scaffolding](#scaffolding) and
+[Migrations](#migrations) for the flag forms.
+
 ## Output
 
 Colour is on by default and follows `--no-color` / the [`logger` config](/guide/config/logging).
 
 ## Core
 
-| Command     | Description                                                                      |
-| ----------- | -------------------------------------------------------------------------------- |
-| `projects`  | Discover projects and write `.dbx/toolchain/projects.json`.                      |
-| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`).  |
-| `watch`     | Sync once, then watch key inputs and re-sync.                                    |
-| `reset`     | Remove generated files, the manifest and/or the config (`--all`, `--recursive`). |
-| `providers` | List registered providers + their commands (`--json`).                           |
+| Command     | Description                                                                               |
+| ----------- | ----------------------------------------------------------------------------------------- |
+| `projects`  | Discover projects and write `.dbx/toolchain/projects.json`.                               |
+| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`, `--json`). |
+| `watch`     | Sync once, then watch key inputs and re-sync.                                             |
+| `reset`     | Remove generated files, the manifest and/or the config (`--all`, `--recursive`).          |
+| `providers` | List registered providers + their commands (`--json`).                                    |
 
 ## Scaffolding
 
@@ -62,7 +77,7 @@ prompts for the template, name and scope with clack; Ctrl-C cancels. See
 | `template:add`      | Record a source (auto-inits local; `--no-global` keeps it project-only).             |
 | `template:remove`   | Remove a source by id or `type:locate`.                                              |
 | `template:registry` | List/add/remove the global template search paths (`--vscode-dir`, `--clear`).        |
-| `registry`          | List (or `--add`/`--remove` with `--scope global\|project`) template registries.     |
+| `registry`          | List/add/remove/set template **or provider** registries (`--kind`, `--scope`).       |
 | `template:info`     | Show one template.                                                                   |
 
 See [Templates](/guide/templates).
@@ -74,6 +89,7 @@ dbx migrate --from biome --write           # .oxfmtrc.json + .oxlintrc.json
 dbx migrate --from biome --target vite --write
 dbx migrate --from all                     # every detected source
 dbx migrate --from vite --recursive --write  # migrate every detected project
+dbx migrate --recursive                    # interactive project picker
 dbx migrate --check                        # CI: exit 1 when stale
 dbx migrate:list
 ```

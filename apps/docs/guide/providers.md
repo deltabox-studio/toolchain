@@ -141,15 +141,30 @@ export default defineConfig({
 
 ## Custom providers
 
-Register extra providers in `.dbx/toolchain/providers.json` (a list of provider
-descriptors). A provider can also live in the **global** registry at
-`~/.dbx/toolchain/.registry/providers.json`, so it is available in every project;
-`toolchainProviders()` merges both with the built-ins (a project provider wins on
-an id clash), so a custom provider's commands become `dbx` commands —
-`dbx <command.name>` forwards to `<binary> <subcommand> ...` — and it shows up in
-`dbx providers` and the editor.
+Providers are loaded from **search paths** (JSON files, directories of
+`*.json`, or `http(s)` registry URLs). A JSON file can be an array of provider
+descriptors or `{ "providers": [...] }`.
 
-```json [.dbx/toolchain/providers.json]
+Project paths (first wins on an id clash):
+
+- `.dbx/toolchain/.registry/providers` — the implicit default directory;
+- `.dbx/toolchain/registries.json` — its `providers` array;
+- `.dbx/toolchain/providers.json` — the legacy file, still read.
+
+Global paths:
+
+- `~/.dbx/toolchain/.registry/providers` — the default directory;
+- `~/.dbx/toolchain/cli/config.json` — `providerRegistrySearchPaths`, or
+  `registrySearchPaths.providers`;
+- the VS Code `deltabox.providerRegistrySearchPaths` setting (kept in sync).
+
+`toolchainProviders()` merges every local registry with the built-ins (a project
+provider wins on an id clash), so a custom provider's commands become `dbx`
+commands — `dbx <command.name>` forwards to `<binary> <subcommand> ...` — and it
+shows up in `dbx providers` and the editor. Remote registries are fetched by
+`dbx providers --json`/`loadToolchainProviders()`.
+
+```json [.dbx/toolchain/.registry/providers/providers.json]
 [
     {
         "id": "echo",
@@ -166,8 +181,15 @@ an id clash), so a custom provider's commands become `dbx` commands —
 ]
 ```
 
-The VS Code **Providers** view manages this file (**Add provider...** /
-**Remove provider**). See [VS Code Extension](/guide/vscode).
+```sh
+dbx registry --json                                  # list template + provider paths
+dbx registry --kind providers --scope project --add ./providers
+dbx registry --kind providers --scope global --add https://example.com/providers.json
+```
+
+The VS Code **Providers** view manages the registry items (**Add provider...** /
+**Remove provider**), and the **Registries** view shows the provider search
+paths. See [VS Code Extension](/guide/vscode).
 
 ## Providers in the editor
 

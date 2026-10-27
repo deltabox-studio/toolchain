@@ -70,7 +70,8 @@ toolchain: {
 
 ## Where to start
 
-- [Workflows](/guide/changelog/workflows) — how each `ci` workflow entry opts in.
+- [CI](/guide/ci/) — the opt-in GitHub workflows (CI checks, changelog, release,
+  issues, sync) and their common settings.
 - [Branches](/guide/changelog/branches) — `main`/`dev` branch globs.
 - [commitlint](/guide/changelog/commitlint) — config location, types/scopes and
   the no-commitlint fallback.
@@ -81,4 +82,4 @@ toolchain: {
   shell-mangled messages.
 - [Troubleshooting](/guide/changelog/troubleshooting) — the upstream commitlint
   parser-preset error.
-- [Releases](/guide/changelog/releases) — the aggregated release PR body.
+- [Releases](/guide/ci/releases) — the aggregated release PR body.

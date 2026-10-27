@@ -62,11 +62,13 @@ actions, scoped to that project:
 
 The **Providers** and **Templates** views read `dbx providers --json` and `dbx template:list --json`, so adding one surfaces it in the UI automatically.
 
-**Add provider...** writes a custom provider to `.dbx/toolchain/providers.json`
-(or the global `~/.dbx/toolchain/.registry/providers.json` when you choose the
-global scope), which `toolchainProviders()` merges with the built-ins, so a
-registered provider's commands also become `dbx` commands (`dbx <command>`),
-runnable from the view.
+**Add provider...** writes a custom provider to the default project registry
+(`.dbx/toolchain/.registry/providers/providers.json`) or the global
+`~/.dbx/toolchain/.registry/providers/` when you choose the global scope, which
+`toolchainProviders()` merges with the built-ins, so a registered provider's
+commands also become `dbx` commands (`dbx <command>`), runnable from the view.
+Provider search paths can also be added with the **Registries** view; the
+`deltabox.providerRegistrySearchPaths` setting mirrors them globally.
 
 **Add template...** runs `template:init --add` and asks whether to add the
 template to the **global** registry (yes by default), so it is available in every
@@ -81,8 +83,10 @@ template registries as **Providers** / **Templates** roots. Each item has **Open
 registry** (the folder in the explorer, or the website for remote URLs), **Add new
 registry** and **Remove registry** (it only drops the path, keeping the files).
 The title bar's **New registry…** / **Remove registry…** actions add or remove
-search paths, asking whether they are global or project-scoped. Remote
-registries are `http(s)` JSON registries (`{ sources }` or an array of sources).
+search paths for either kind, asking whether they are global or project-scoped.
+Remote registries are `http(s)` JSON registries: template registries accept
+`{ sources }` or an array of sources; provider registries accept
+`{ providers }` or an array of provider descriptors.
 
 **Create from template…** prompts for the template's inputs and actions (see
 [Templates](/guide/templates)) before running `dbx create`. Scaffolding also asks
@@ -98,16 +102,22 @@ Generated outputs are never watched. The scheduler debounces bursts, allows one 
 
 When a sync finds no workspace tsconfig files while `tsconfig.refs`/`tsconfig.composite` are on (or a `tsconfig.workspaces.json` is present), the extension surfaces the CLI's warning as a notification (once per session) with a **Show output** action.
 
+When removing a section stops managing a file that dbx created, the sync
+notification lists the removed relative paths and offers **Restore** (write the
+previous content back) or **Close**. A file that existed before dbx first managed
+it is **adopted**: it is unmanaged but never deleted.
+
 ## Settings
 
-| Setting                        | Default                 | Description                                                |
-| ------------------------------ | ----------------------- | ---------------------------------------------------------- |
-| `deltabox.toolchain.enabled`   | `true`                  | Auto sync on watched changes.                              |
-| `deltabox.toolchain.debounce`  | `300`                   | Debounce (ms) before a sync.                               |
-| `deltabox.toolchain.command`   | `sync`                  | The command to run on change.                              |
-| `deltabox.toolchain.watch`     | config + tsconfig globs | Inputs that trigger a sync.                                |
-| `deltabox.toolchain.version`   | `""` (auto)             | Pin the `@deltabox/toolchain` version this workspace runs. |
-| `deltabox.registrySearchPaths` | `[]`                    | Registry search paths (dirs or `http(s)` registries).      |
+| Setting                                | Default                 | Description                                                |
+| -------------------------------------- | ----------------------- | ---------------------------------------------------------- |
+| `deltabox.toolchain.enabled`           | `true`                  | Auto sync on watched changes.                              |
+| `deltabox.toolchain.debounce`          | `300`                   | Debounce (ms) before a sync.                               |
+| `deltabox.toolchain.command`           | `sync`                  | The command to run on change.                              |
+| `deltabox.toolchain.watch`             | config + tsconfig globs | Inputs that trigger a sync.                                |
+| `deltabox.toolchain.version`           | `""` (auto)             | Pin the `@deltabox/toolchain` version this workspace runs. |
+| `deltabox.registrySearchPaths`         | `[]`                    | Template registry search paths (dirs or `http(s)` URLs).   |
+| `deltabox.providerRegistrySearchPaths` | `[]`                    | Provider registry search paths (JSON files/dirs/URLs).     |
 
 When a workspace has its own `@deltabox/toolchain` whose version differs from the
 extension's bundled CLI, the extension asks which to run and shows both detected
