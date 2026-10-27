@@ -144,7 +144,7 @@ export function runChangelog(
     const records = readCommits(range);
     const type = deriveBump(records);
     const commitlint = resolveCommitlintEnabled(changelog);
-    const summary = buildSummary(records, { commitlint });
+    const summary = buildSummary(records, { commitlint, range });
 
     const versioning = resolveVersioning(changelog);
     const plan = planVersions({ versioning, rootVersion: current, bump: type, range });

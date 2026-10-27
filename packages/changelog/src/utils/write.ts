@@ -68,7 +68,7 @@ export function writeChangelogs(
             continue;
         }
         const created = !existsSync(file);
-        const wsSummary = buildSummary(filtered, { commitlint });
+        const wsSummary = buildSummary(filtered, { commitlint, range });
         prependChangelogEntry(file, renderChangelogEntry(workspaceVersion, wsSummary, new Date()));
         logger.info(`  ${created ? 'created' : 'updated'} ${file}`);
     }

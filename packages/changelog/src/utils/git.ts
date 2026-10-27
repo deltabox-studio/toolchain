@@ -175,6 +175,52 @@ export function renderIssues(issues: IssueInfo[]): string {
     return ` (fixes ${parts.join(', ')})`;
 }
 
+/**
+ * The author keys (lowercased email + name) of every commit reachable from the
+ * start of a scanned range. Used to find first-time contributors. Returns
+ * `undefined` when the range has no usable boundary (eg. no git history).
+ */
+const priorAuthorsCache = new Map<string, Set<string> | undefined>();
+
+export function readPriorAuthors(range: string, oldestHash?: string): Set<string> | undefined {
+    const key = `${range}::${oldestHash ?? ''}`;
+    if (priorAuthorsCache.has(key)) return priorAuthorsCache.get(key);
+
+    const trimmed = range.trim();
+    const rangeStart = trimmed.includes('..') ? (trimmed.split('..')[0] ?? '').trim() : '';
+    const boundary = rangeStart || (oldestHash ? `${oldestHash}^` : undefined);
+    if (!boundary) {
+        priorAuthorsCache.set(key, undefined);
+        return undefined;
+    }
+
+    let out: string;
+    try {
+        out = execFileSync('git', ['log', '--no-merges', '--format=%ae%x1f%an%x1e', boundary], {
+            encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'ignore'],
+            maxBuffer: 128 * 1024 * 1024,
+        });
+    } catch {
+        // We cannot tell who is new when the boundary does not resolve (a root
+        // commit or an invalid ref), so never guess and list everyone.
+        priorAuthorsCache.set(key, undefined);
+        return undefined;
+    }
+
+    const authors = new Set<string>();
+    for (const record of out.split('\x1e')) {
+        if (!record.trim()) continue;
+        const [email = '', name = ''] = record.split('\x1f');
+        for (const value of [email, name]) {
+            const normalized = value.trim().toLowerCase();
+            if (normalized) authors.add(normalized);
+        }
+    }
+    priorAuthorsCache.set(key, authors);
+    return authors;
+}
+
 /** The commit hash referenced by a changelog bullet (for date derivation). */
 export function bulletHash(text: string): string | undefined {
     const match = /\[(#[0-9a-fA-F]{6,40})\]\([^)]*\)/.exec(text);

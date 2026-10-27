@@ -123,6 +123,50 @@ describe('changelog formatting', () => {
         expect(summary).toContain('- Random change');
     });
 
+    it('adds a New contributors footer with their nested commit messages', () => {
+        const records = [
+            {
+                hash: 'a'.repeat(40),
+                subject: 'feat: first change',
+                body: '',
+                author: 'Ada',
+                authorEmail: 'ada@example.com',
+            },
+            {
+                hash: 'b'.repeat(40),
+                subject: 'fix: second change',
+                body: '',
+                author: 'Ada',
+                authorEmail: 'ada@example.com',
+            },
+            {
+                hash: 'c'.repeat(40),
+                subject: 'chore: old change',
+                body: '',
+                author: 'Old',
+                authorEmail: 'old@example.com',
+            },
+        ];
+        for (const commitlint of [true, false]) {
+            const summary = buildSummary(records, {
+                commitlint,
+                priorAuthors: ['old@example.com'],
+            });
+            const [before, contributors = ''] = summary.split('### New contributors');
+            expect(before).toMatch(/old change/i);
+            expect(contributors).toContain('- Ada');
+            expect(contributors).toContain('  - First change (');
+            expect(contributors).toContain('  - Second change (');
+            expect(contributors).not.toContain('- Old');
+            expect(
+                contributors
+                    .split('\n')
+                    .filter(line => line.startsWith('  - '))
+                    .every(line => !line.includes(' by '))
+            ).toBe(true);
+        }
+    });
+
     it('renders descriptions as nested bullets under the commit', () => {
         const item = {
             parsed: parseCcSubject('feat(server): add things'),
