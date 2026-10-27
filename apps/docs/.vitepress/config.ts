@@ -180,7 +180,12 @@ export default defineConfig({
             '/config/': [
                 {
                     text: 'Reference',
-                    items: [{ text: 'dbx.config', link: '/config/reference' }],
+                    items: [
+                        { text: 'Config types', link: '/config/' },
+                        { text: 'dbx.config', link: '/config/reference' },
+                        { text: 'CLI', link: '/config/cli' },
+                        { text: 'Environment variables', link: '/config/env' },
+                    ],
                 },
             ],
         },

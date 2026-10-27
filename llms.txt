@@ -55,7 +55,10 @@ This file is a concise, link-first overview. For the **full** documentation in a
 
 ### Reference
 
+- [Config types](https://toolchain.deltabox.studio/config.md)
 - [dbx.config](https://toolchain.deltabox.studio/config/reference.md)
+- [CLI reference](https://toolchain.deltabox.studio/config/cli.md)
+- [Environment variables](https://toolchain.deltabox.studio/config/env.md)
 
 ### Other
 
