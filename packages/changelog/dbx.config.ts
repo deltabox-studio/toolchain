@@ -14,6 +14,10 @@ export default defineConfig({
                         },
                     },
                     typecheck: {
+                        command: 'tsc -p tsconfig.json --noEmit',
+                        cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
+                    },
+                    'typecheck:ci': {
                         command: 'tsc -p tsconfig.build.json --noEmit',
                         cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
                     },
