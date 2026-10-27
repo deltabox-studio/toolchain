@@ -263,6 +263,7 @@ Write a template.json to a directory, making it a local template.
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--kind ‹kind›` — project | workspace | application | folder | tooling | pipeline.
 - `--name ‹name›` — Display name (default: folder name).
+- `--id ‹id›` — Stable template id (default: folder name).
 - `--description ‹text›` — Description.
 - `--var ‹pair...›` — Variable name[:default] (repeatable).
 - `--tag ‹tag...›` — Tag (repeatable).

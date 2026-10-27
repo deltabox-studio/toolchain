@@ -17,7 +17,7 @@ toolchain: {
             pullRequestBranches: ['main', 'dev', 'release/**', 'dependabot/**'],
             steps: {
                 after: [
-                    { name: 'Format + lint', run: 'yarn check --fix' },
+                    { name: 'Format + lint', run: 'yarn check:fix' },
                     { name: 'Test', run: 'yarn test' },
                 ],
             },

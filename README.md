@@ -246,7 +246,8 @@ yarn install        # fresh checkout
 yarn build          # packages via `vp run` + root tsdown
 yarn test           # package + root tests
 yarn typecheck      # packages + root
-yarn check          # Oxfmt + Oxlint (format + lint)
+yarn check          # Oxfmt + Oxlint check (no writes)
+yarn check:fix      # same, auto-fixing every workspace + the root
 yarn format         # `vp fmt`
 yarn lint           # `vp lint --fix`
 ```
@@ -255,7 +256,7 @@ yarn lint           # `vp lint --fix`
 > typechecks/tests resolve workspace deps from their built `dist`, so run a full
 > `yarn build` after changing a package's public exports.
 
-Docs live in `apps/docs` (VitePress): `yarn workspace @deltabox/toolchain-docs build`.
+Docs live in `apps/docs` (VitePress): `yarn docs build`.
 
 ## Docs
 

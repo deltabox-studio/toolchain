@@ -210,7 +210,7 @@ export default defineConfig({
                     after: [
                         // Auto-fix formatting + lint instead of failing the
                         // build on drift.
-                        { name: 'Format + lint (auto-fix)', run: 'yarn check --fix' },
+                        { name: 'Format + lint (auto-fix)', run: 'yarn check:fix' },
                         { name: 'Test', run: 'yarn test' },
                         { name: 'Typecheck (build tsconfig)', run: 'yarn typecheck:ci' },
                         {
@@ -226,7 +226,7 @@ export default defineConfig({
                         },
                         {
                             name: 'Build docs',
-                            run: 'yarn workspace @deltabox/toolchain-docs build',
+                            run: 'yarn docs build',
                         },
                     ],
                 },
@@ -349,12 +349,28 @@ export default defineConfig({
                         command: 'vitest run',
                         cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
                     },
+                    'format:root': {
+                        command: 'vp fmt',
+                        cache: { input: [{ auto: true }], output: [] },
+                    },
+                    'format:check:root': {
+                        command: 'vp fmt --check',
+                        cache: { input: [{ auto: true }], output: [] },
+                    },
                     'lint:root': {
                         command: 'vp lint --fix',
                         cache: { input: [{ auto: true }], output: [] },
                     },
+                    'lint:check:root': {
+                        command: 'vp lint',
+                        cache: { input: [{ auto: true }], output: [] },
+                    },
                     'check:root': {
                         command: 'vp check',
+                        cache: { input: [{ auto: true }], output: [] },
+                    },
+                    'check:fix:root': {
+                        command: 'vp check --fix',
                         cache: { input: [{ auto: true }], output: [] },
                     },
                 },

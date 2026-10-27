@@ -44,7 +44,7 @@ jobs:
       - name: Build
         run: yarn build
       - name: Format + lint (auto-fix)
-        run: yarn check --fix
+        run: yarn check:fix
       - name: Test
         run: yarn test
       - name: Typecheck (build tsconfig)
@@ -56,4 +56,4 @@ jobs:
           yarn format
           git diff --exit-code -- apps/docs/config/reference.md apps/docs/config/index.md apps/docs/config/cli.md apps/docs/config/env.md config.schema.json
       - name: Build docs
-        run: yarn workspace @deltabox/toolchain-docs build
+        run: yarn docs build

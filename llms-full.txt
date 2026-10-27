@@ -563,7 +563,7 @@ toolchain: {
             pullRequestBranches: ['main', 'dev', 'release/**', 'dependabot/**'],
             steps: {
                 after: [
-                    { name: 'Format + lint', run: 'yarn check --fix' },
+                    { name: 'Format + lint', run: 'yarn check:fix' },
                     { name: 'Test', run: 'yarn test' },
                 ],
             },
@@ -1777,14 +1777,16 @@ not accept `--config`, so the shim has to be the file Vite+ loads.
 | `config` | `boolean` | `true`  | Write the managed `vite.config.ts` shim. |
 
 Everything else under `vite` is Vite+ config (plugins, `test`, `lint`, `fmt`,
-`run.tasks`, ...). Set `vite: { config: false }` to leave a hand-written
+`run.tasks`, ...). `fmt: true` / `lint: true` use the shared
+`DEFAULT_FMT_RULES` / `DEFAULT_LINT_RULES`; an options object is merged over
+them. Set `vite: { config: false }` to leave a hand-written
 `vite.config.ts` alone (the section is still read for provider colouring and the
 `dbx` provider passthrough).
 
 ## Keep the shim out of Oxfmt
 
-Add `/vite.config.ts` to `vite.fmt.ignorePatterns`, otherwise `vp fmt` rewrites
-the generated shim and `dbx sync --check` reports drift:
+Add the shim to `vite.fmt.ignorePatterns`, otherwise `vp fmt` rewrites the
+generated file and `dbx sync --check` reports drift:
 
 ```ts
 vite: {
@@ -1794,7 +1796,9 @@ vite: {
 }
 ```
 
-`dbx migrate --from vite` adds it for you (see
+In a monorepo, put `**/vite.config.ts` on the **root** config so every
+workspace shim is covered (workspace `fmt` settings are inherited, but an
+`ignorePatterns` array in a workspace replaces the root's list). `dbx migrate --from vite` adds the ignore for you (see
 [Migrations](/guide/migrations#vite-config)).
 
 ## Commands
@@ -3522,6 +3526,18 @@ The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.
 
 Write the managed `vite.config.ts` (default true).
 
+### `fmt`
+
+* **Type**: `boolean | Record<string, unknown>`
+
+Oxfmt options; `true` uses the toolchain defaults.
+
+### `lint`
+
+* **Type**: `boolean | Record<string, unknown>`
+
+Oxlint options; `true` uses the toolchain defaults.
+
 ### `enabled`
 
 * **Type**: `boolean`
@@ -3883,6 +3899,7 @@ Write a template.json to a directory, making it a local template.
 * `--cwd ‹dir›` — Project root (default: cwd).
 * `--kind ‹kind›` — project | workspace | application | folder | tooling | pipeline.
 * `--name ‹name›` — Display name (default: folder name).
+* `--id ‹id›` — Stable template id (default: folder name).
 * `--description ‹text›` — Description.
 * `--var ‹pair...›` — Variable name\[:default] (repeatable).
 * `--tag ‹tag...›` — Tag (repeatable).
@@ -4796,34 +4813,45 @@ The merge is recursive:
   mention.
 * **Leaves** — booleans, strings, numbers and **arrays** — in the child
   **replace** the root's value (arrays are not concatenated).
+* **Workspace-scoped sections are not inherited**: `ci` (and the deprecated
+  top-level `changelog`), `vite.test` and `vite.run`. A workflow, test config or
+  task list describes one repository/workspace, so a child starts without the
+  parent's values for them.
 
-This makes a shared root config plus small per-project overrides possible:
+Everything else is shared unless the child overrides it — `vite.fmt`,
+`vite.lint`, `vite.plugins`, `tsconfig`, `biome`, `templates`, `registry`, and so
+on — so lint/format settings are cohesive across a monorepo by default.
 
 ```ts [<root>/dbx.config.ts]
 export default defineConfig({
     toolchain: {
-        ci: {
-            changelog: {
-                branches: { main: 'main', dev: 'dev' },
-                commitlint: { scopes: ['core', 'cli'] },
-            },
-        },
         tsconfig: { refs: true, aliases: true },
+        vite: {
+            fmt: { printWidth: 100, singleQuote: true },
+        },
     },
 });
 
-// <root>/packages/web/dbx.config.ts — inherits ci + tsconfig, tweaks both
+// <root>/packages/web/dbx.config.ts — inherits `vite.fmt`, tweaks `tsconfig`
 export default defineConfig({
     toolchain: {
-        ci: { changelog: { commitlint: { scopes: ['web'] } } }, // replaces the root's scopes
         tsconfig: { refs: false }, // boolean overrides the root's refs
+        vite: {
+            run: { tasks: { build: { command: 'tsdown' } } }, // not inherited
+        },
     },
 });
 ```
 
-The workspace above ends up with `ci.changelog.branches` from the root
-(unchanged), `ci.changelog.commitlint.scopes: ['web']` (replaced), and
-`tsconfig: { refs: false, aliases: true }`.
+The workspace above ends up with `tsconfig: { refs: false, aliases: true }` and
+the root's `vite.fmt` settings. Its `vite.run` holds only the `build` task it
+declares — the root's tasks are not merged in.
+
+> **Arrays replace, so repeat what you need.** If a workspace sets
+> `vite.fmt.ignorePatterns`, that array replaces the root's list (it is not
+> appended). Either keep the root patterns in the workspace array, or put the
+> shared pattern on the root config — for example `**/vite.config.ts` there
+> covers every workspace's generated shim.
 
 > **`project` is inherited except its identity fields.** `name`, `scope`,
 > `description` and `type` are per-project, so a non-root config keeps its own (or
@@ -5407,9 +5435,21 @@ is the full Vite+ configuration. The section is typed as Vite+'s own config
 (`ToolchainViteConfig` = Vite's `UserConfig` as augmented by Vite+), so the whole
 Vite+ surface autocompletes in `dbx.config.ts`.
 
-Add `/vite.config.ts` to `vite.fmt.ignorePatterns` so Oxfmt leaves the generated
-shim alone — without it `vp fmt` would rewrite the shim and `dbx sync --check`
-would report drift. `dbx migrate --from vite` adds it for you.
+Add the shim to `vite.fmt.ignorePatterns` so Oxfmt leaves the generated file
+alone - without it `vp fmt` would rewrite the shim and `dbx sync --check` would
+report drift. In a monorepo put `**/vite.config.ts` on the root config: workspace
+`fmt` settings are inherited, but a workspace's `ignorePatterns` array replaces
+the root's list. `dbx migrate --from vite` adds it for you.
+
+## Format and lint defaults
+
+Opt in with `vite: { fmt: true }` / `vite: { lint: true }` to use the toolchain
+defaults (`DEFAULT_FMT_RULES` / `DEFAULT_LINT_RULES`, exported from
+`@deltabox/toolchain`). An options object is merged over those defaults, so
+`fmt: { semi: false }` keeps the shared ignores and print width and only changes
+`semi`. Shared ignore lists live in `DEFAULT_FMT_IGNORE_PATTERNS` /
+`DEFAULT_LINT_IGNORE_PATTERNS`. `sortImports` is never included by default:
+import ordering is project-specific, so opt in with your own groups.
 
 To adopt an existing hand-written `vite.config.ts`, fold it in with the
 migration (see [Migrations](/guide/migrations#vite-config)):
