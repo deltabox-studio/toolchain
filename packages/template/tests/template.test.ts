@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
     addTemplateSource,
@@ -66,6 +66,34 @@ describe('template registry', () => {
         });
         const found = templates.find(template => template.name === 'My template');
         expect(found?.kind).toBe('project');
+    });
+
+    it('loads a remote source registry recursively', async () => {
+        const root = makeTmp();
+        const tpl = path.join(root, 'remote-tpl');
+        writeTemplate(tpl, { name: 'Remote template' }, { 'README.md': '# {{name}}' });
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(
+                async () =>
+                    new Response(JSON.stringify({ sources: [{ type: 'local', locate: tpl }] }), {
+                        status: 200,
+                        headers: { 'content-type': 'application/json' },
+                    })
+            )
+        );
+        try {
+            const templates = await loadTemplates({
+                cwd: root,
+                online: true,
+                sources: [{ type: 'remote', locate: 'https://example.com/registry.json' }],
+            });
+            expect(templates.find(template => template.id === 'remote-tpl')?.name).toBe(
+                'Remote template'
+            );
+        } finally {
+            vi.unstubAllGlobals();
+        }
     });
 
     it('round-trips the on-disk source registry', () => {

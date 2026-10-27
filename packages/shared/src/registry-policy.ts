@@ -18,7 +18,7 @@ function globToRegExp(glob: string): RegExp {
 
 function matches(value: string, globs: string[] | undefined): boolean {
     if (!globs || globs.length === 0) return false;
-    return globs.some(glob => globToRegExp(glob).test(value));
+    return globs.some(glob => globToRegExp(glob.replace(/\\/g, '/')).test(value));
 }
 
 /**
