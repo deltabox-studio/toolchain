@@ -2634,7 +2634,7 @@ Online sources are resolved with `--online` (or `dbx template:add`):
   then loaded by its own type:
 
   ```sh
-  dbx template:add remote:https://example.com/dbx-templates.json --online
+  dbx template:add remote:https://example.com/dbx-templates.json
   ```
 
 * **Vite+** — set `create.defaultTemplate` in the `dbx.config.*`'s `vite` section (the full Vite+
@@ -2647,7 +2647,7 @@ paths and remote URLs, which also guards SSRF):
 toolchain: {
     registry: {
         templates: {
-            allow: ['*.example.com', 'https://registry.example.com/**', './templates/**'],
+            allow: ['*.example.com', 'https://registry.example.com/**', '**/templates/**'],
             deny: ['*.internal.example.com'],
         },
     },

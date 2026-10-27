@@ -44,21 +44,40 @@ export async function loadProviders(cwd: string): Promise<Provider[]> {
     }
 }
 
-const REGISTRY = path.join('.dbx', 'toolchain', 'providers.json');
+const REGISTRY = path.join('.dbx', 'toolchain', '.registry', 'providers', 'providers.json');
+const LEGACY_REGISTRY = path.join('.dbx', 'toolchain', 'providers.json');
 
 /** The absolute path of a project's custom provider registry. */
 export function providerRegistryPath(root: string): string {
     return path.join(root, REGISTRY);
 }
 
-/** Read a project's custom providers (empty when the registry is absent/invalid). */
-export function readProviderRegistry(root: string): Provider[] {
+function readProvidersFile(file: string): Provider[] {
     try {
-        const parsed = JSON.parse(fs.readFileSync(providerRegistryPath(root), 'utf-8')) as unknown;
+        const parsed = JSON.parse(fs.readFileSync(file, 'utf-8')) as unknown;
         return Array.isArray(parsed) ? (parsed as Provider[]) : [];
     } catch {
         return [];
     }
+}
+
+function dedupe(providers: Provider[]): Provider[] {
+    const seen = new Set<string>();
+    const out: Provider[] = [];
+    for (const provider of providers) {
+        if (seen.has(provider.id)) continue;
+        seen.add(provider.id);
+        out.push(provider);
+    }
+    return out;
+}
+
+/** Read a project's custom providers (new default + legacy file). */
+export function readProviderRegistry(root: string): Provider[] {
+    return dedupe([
+        ...readProvidersFile(providerRegistryPath(root)),
+        ...readProvidersFile(path.join(root, LEGACY_REGISTRY)),
+    ]);
 }
 
 /** Write a project's custom providers (removing the file when the list is empty). */
@@ -72,21 +91,21 @@ export function writeProviderRegistry(root: string, providers: Provider[]): void
     fs.writeFileSync(file, `${JSON.stringify(providers, null, 4)}\n`, 'utf-8');
 }
 
-/** The global (`~/.dbx/toolchain/.registry/providers.json`) registry file. */
+/** The global (`~/.dbx/toolchain/.registry/providers/providers.json`) file. */
 export function globalProviderRegistryPath(): string {
+    return path.join(os.homedir(), '.dbx', 'toolchain', '.registry', 'providers', 'providers.json');
+}
+
+function legacyGlobalProviderRegistryPath(): string {
     return path.join(os.homedir(), '.dbx', 'toolchain', '.registry', 'providers.json');
 }
 
-/** Read the global providers (empty when the registry is absent/invalid). */
+/** Read the global providers (new default + legacy file). */
 export function readGlobalProviders(): Provider[] {
-    try {
-        const parsed = JSON.parse(
-            fs.readFileSync(globalProviderRegistryPath(), 'utf-8')
-        ) as unknown;
-        return Array.isArray(parsed) ? (parsed as Provider[]) : [];
-    } catch {
-        return [];
-    }
+    return dedupe([
+        ...readProvidersFile(globalProviderRegistryPath()),
+        ...readProvidersFile(legacyGlobalProviderRegistryPath()),
+    ]);
 }
 
 /** Write the global providers (removing the file when the list is empty). */
