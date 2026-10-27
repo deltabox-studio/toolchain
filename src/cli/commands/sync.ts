@@ -10,6 +10,7 @@ import {
 import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import { defaultSyncTasks } from '../../sync.js';
+import { getConfigSelection } from '../config-selection.js';
 import { baseOptions, watchOptions } from './shared.js';
 
 /** `dbx sync` — regenerate managed files (single, recursive, or watch). */
@@ -49,9 +50,10 @@ export function syncCommand(): ToolchainCommand {
                 const graph = buildProjectGraph(context.cwd);
                 if (!check) writeProjectGraph(context.cwd, graph);
                 const results: { dir: string; result: Awaited<ReturnType<typeof runSync>> }[] = [];
+                const selection = getConfigSelection();
                 for (const relDir of graph.order) {
                     const dir = path.resolve(context.cwd, relDir);
-                    const loaded = await loadToolchainConfig(dir, { tolerant: true });
+                    const loaded = await loadToolchainConfig(dir, { tolerant: true, ...selection });
                     if (loaded.error) {
                         logger.error(loaded.error);
                         process.exitCode = 1;
@@ -62,6 +64,7 @@ export function syncCommand(): ToolchainCommand {
                         cwd: dir,
                         projectType: loaded.projectType,
                         config: loaded.config,
+                        ownConfig: loaded.ownConfig,
                         tokens: loaded.tokens,
                         check,
                         quiet,
@@ -73,7 +76,7 @@ export function syncCommand(): ToolchainCommand {
                 return;
             }
 
-            if (!context.configPath && !opts.force) {
+            if (!context.configPath && !opts.force && !context.noConfig) {
                 logger.warn(
                     'no dbx.config.* found here; nothing to sync (use --force to run anyway).'
                 );

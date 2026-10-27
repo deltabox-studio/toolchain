@@ -89,16 +89,40 @@ describe('loadToolchainConfig', () => {
         expect(loaded.config.project?.name).toBe('promised');
     });
 
-    it('rejects the deprecated top-level `changelog` section', async () => {
+    it('loads the manual `changelog` section', async () => {
         const cwd = tmp();
         writeJson(path.join(cwd, 'dbx.config.json'), {
-            toolchain: { changelog: { branches: { main: 'trunk' } } },
+            toolchain: {
+                changelog: { commitlint: { types: ['feat'] }, versioning: false },
+            },
         });
-        await expect(loadToolchainConfig(cwd)).rejects.toThrow(/toolchain\.changelog.*deprecated/);
+        const loaded = await loadToolchainConfig(cwd);
+        expect(loaded.error).toBeUndefined();
+        expect(loaded.config.changelog).toEqual({
+            commitlint: { types: ['feat'] },
+            versioning: false,
+        });
+    });
 
-        // Tolerant loading (the CLI) keeps unrelated commands alive but reports it.
-        const loaded = await loadToolchainConfig(cwd, { tolerant: true });
-        expect(loaded.error).toMatch(/toolchain\.changelog.*deprecated/);
+    it('ignores discovered configs with `noConfig`', async () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'dbx.config.json'), {
+            toolchain: { project: { name: 'discovered' } },
+        });
+        const loaded = await loadToolchainConfig(cwd, { noConfig: true });
+        expect(loaded.config).toEqual({});
+        expect(loaded.path).toBeUndefined();
+        expect(loaded.tokens.name).toBe('app');
+    });
+
+    it('loads an explicit `config` file', async () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'dbx.config.test.json'), {
+            toolchain: { project: { name: 'explicit' } },
+        });
+        const loaded = await loadToolchainConfig(cwd, { config: 'dbx.config.test.json' });
+        expect(loaded.path).toBe(path.join(cwd, 'dbx.config.test.json'));
+        expect(loaded.config.project?.name).toBe('explicit');
     });
 });
 
@@ -106,16 +130,16 @@ describe('nested config inheritance', () => {
     it('merges a workspace config over the root config (leaves replace)', () => {
         const merged = mergeToolchainConfig(
             {
-                tsconfig: { refs: true, aliases: true },
+                logger: { level: 'debug', color: false },
                 vite: { fmt: { printWidth: 100, ignorePatterns: ['**/dist/**'] } },
             },
             {
-                tsconfig: { refs: false },
+                logger: { level: 'warn' },
                 vite: { fmt: { singleQuote: true } },
             }
         );
         // Objects are combined, arrays/booleans in the child replace.
-        expect(sectionConfig(merged.tsconfig)).toEqual({ refs: false, aliases: true });
+        expect(sectionConfig(merged.logger)).toEqual({ level: 'warn', color: false });
         expect(sectionConfig(merged.vite)?.fmt).toEqual({
             printWidth: 100,
             ignorePatterns: ['**/dist/**'],
@@ -128,7 +152,8 @@ describe('nested config inheritance', () => {
             {
                 project: { name: 'acme', type: 'monorepo-root', author: 'Acme' },
                 ci: { changelog: { branches: { main: 'main' } } },
-                changelog: { branches: { main: 'main' } },
+                changelog: { versioning: true },
+                tsconfig: { refs: true, aliases: true },
                 vite: {
                     fmt: { printWidth: 100 },
                     test: { include: ['packages/**/tests/**'] },
@@ -137,15 +162,23 @@ describe('nested config inheritance', () => {
             },
             { vite: { run: { tasks: { build: { command: 'tsdown' } } } } }
         );
-        // CI/changelog are repository-level; test/run describe the workspace.
+        // CI/changelog/tsconfig are repository-level; test/run describe the workspace.
         expect(merged.ci).toBeUndefined();
         expect(merged.changelog).toBeUndefined();
+        expect(merged.tsconfig).toBeUndefined();
         expect(sectionConfig(merged.vite)?.fmt).toEqual({ printWidth: 100 });
         expect(sectionConfig(merged.vite)?.test).toBeUndefined();
         expect(sectionConfig(merged.vite)?.run).toEqual({
             tasks: { build: { command: 'tsdown' } },
         });
         expect(merged.project).toEqual({ author: 'Acme' });
+        // A nested config may still opt into its own tsconfig generation.
+        expect(
+            mergeToolchainConfig(
+                { tsconfig: { refs: true, aliases: true } },
+                { tsconfig: { refs: false } }
+            ).tsconfig
+        ).toEqual({ refs: false });
     });
 
     it('inherits shared `project` fields but never the identity ones', () => {
@@ -208,6 +241,7 @@ describe('nested config inheritance', () => {
             toolchain: {
                 project: { name: 'acme', type: 'monorepo-root' },
                 tsconfig: { refs: true, aliases: true },
+                logger: { level: 'debug', color: false },
                 ci: {
                     changelog: {
                         branches: { main: 'trunk' },
@@ -222,7 +256,7 @@ describe('nested config inheritance', () => {
         });
         writeJson(path.join(child, 'dbx.config.json'), {
             toolchain: {
-                tsconfig: { refs: false },
+                logger: { level: 'warn' },
                 vite: { run: { tasks: { build: { command: 'tsdown' } } } },
             },
         });
@@ -235,7 +269,8 @@ describe('nested config inheritance', () => {
         expect(loaded.path).toBe(path.join(child, 'dbx.config.json'));
         expect(loaded.parentPath).toBe(path.join(root, 'dbx.config.json'));
         // Shared sections inherit; workspace-scoped ones do not.
-        expect(sectionConfig(loaded.config.tsconfig)).toEqual({ refs: false, aliases: true });
+        expect(sectionConfig(loaded.config.logger)).toEqual({ level: 'warn', color: false });
+        expect(loaded.config.tsconfig).toBeUndefined();
         expect(sectionConfig(loaded.config.vite)?.fmt).toEqual({ printWidth: 100 });
         expect(sectionConfig(loaded.config.vite)?.run).toEqual({
             tasks: { build: { command: 'tsdown' } },
@@ -244,5 +279,26 @@ describe('nested config inheritance', () => {
         // The parent's `project` is identity-only, so nothing is inherited.
         expect(loaded.config.project).toBeUndefined();
         expect(loaded.projectType).toBe('project');
+    });
+
+    it('uses the parent tsconfig file names for detection without inheriting the section', async () => {
+        const root = tmp();
+        const child = path.join(root, 'packages', 'web');
+        fs.mkdirSync(child, { recursive: true });
+        writeJson(path.join(root, 'dbx.config.json'), {
+            toolchain: {
+                project: { type: 'monorepo-root' },
+                tsconfig: { defaultFile: 'tsconfig.ws.json', refs: true },
+            },
+        });
+        writeJson(path.join(child, 'dbx.config.json'), {
+            toolchain: { logger: { level: 'warn' } },
+        });
+        fs.writeFileSync(path.join(child, 'tsconfig.ws.json'), '{}');
+
+        const loaded = await loadToolchainConfig(child);
+        expect(loaded.projectType).toBe('monorepo-workspace');
+        // Detection sees the file name, but the generation options stay at the root.
+        expect(loaded.config.tsconfig).toBeUndefined();
     });
 });

@@ -11,29 +11,32 @@ The merge is recursive:
   mention.
 - **Leaves** — booleans, strings, numbers and **arrays** — in the child
   **replace** the root's value (arrays are not concatenated).
-- **Workspace-scoped sections are not inherited**: `ci` (and the deprecated
-  top-level `changelog`), `vite.test` and `vite.run`. A workflow, test config or
-  task list describes one repository/workspace, so a child starts without the
-  parent's values for them.
+- **Repository-scoped sections are not inherited**: `ci` and the top-level
+  `changelog`, `tsconfig`, `vite.test` and `vite.run`. A workflow,
+  workspace tsconfig tree, test config or task list describes the repository or
+  one workspace, so a child starts without the parent's values for them. In
+  particular, the root `tsconfig` task already expands every workspace
+  `tsconfig.json`; inheriting it into each workspace would only re-scan that
+  subtree.
 
 Everything else is shared unless the child overrides it — `vite.fmt`,
-`vite.lint`, `vite.plugins`, `tsconfig`, `biome`, `templates`, `registry`, and so
+`vite.lint`, `vite.plugins`, `logger`, `biome`, `templates`, `registry`, and so
 on — so lint/format settings are cohesive across a monorepo by default.
 
 ```ts [<root>/dbx.config.ts]
 export default defineConfig({
     toolchain: {
-        tsconfig: { refs: true, aliases: true },
+        logger: { level: 'debug', color: false },
         vite: {
             fmt: { printWidth: 100, singleQuote: true },
         },
     },
 });
 
-// <root>/packages/web/dbx.config.ts — inherits `vite.fmt`, tweaks `tsconfig`
+// <root>/packages/web/dbx.config.ts — inherits `vite.fmt`, tweaks `logger`
 export default defineConfig({
     toolchain: {
-        tsconfig: { refs: false }, // boolean overrides the root's refs
+        logger: { level: 'warn' }, // leaf overrides the root's level
         vite: {
             run: { tasks: { build: { command: 'tsdown' } } }, // not inherited
         },
@@ -41,7 +44,7 @@ export default defineConfig({
 });
 ```
 
-The workspace above ends up with `tsconfig: { refs: false, aliases: true }` and
+The workspace above ends up with `logger: { level: 'warn', color: false }` and
 the root's `vite.fmt` settings. Its `vite.run` holds only the `build` task it
 declares — the root's tasks are not merged in.
 

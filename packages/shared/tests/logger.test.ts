@@ -120,4 +120,20 @@ describe('logger', () => {
         expect(isLogLevel('constructor')).toBe(false);
         expect(normalizeLogLevel('toString')).toBe('info');
     });
+
+    it('suppresses warnings/errors by id, substring or regex', () => {
+        const log = createLogger({
+            name: 'dbx',
+            color: false,
+            suppress: ['biome.oxc-conflict', 'deprecated', '/^boom/'],
+        });
+        log.warn('both are configured', 'biome.oxc-conflict');
+        log.warn('a deprecated option');
+        log.error('boom!');
+        log.warn('keep this');
+        expect(cap.all()).not.toContain('both are configured');
+        expect(cap.all()).not.toContain('a deprecated option');
+        expect(cap.all()).not.toContain('boom!');
+        expect(cap.all()).toContain('keep this');
+    });
 });

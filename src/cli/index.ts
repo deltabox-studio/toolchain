@@ -32,9 +32,11 @@ import { resolveVpCommand, viteCommands } from '@deltabox/toolchain-vite/cli';
 
 import rootPkg from '../../package.json' with { type: 'json' };
 import { syncCommands } from './commands/index.js';
+import { extractConfigSelection, setConfigSelection } from './config-selection.js';
 import { isPassthroughCommand, registerToolchainCommands } from './register.js';
 import { runUpdateCheck } from './update-check.js';
 
+export { extractConfigSelection } from './config-selection.js';
 export { registerToolchainCommands } from './register.js';
 
 /** The commands built into the root CLI (config commands need a consumer engine). */
@@ -161,6 +163,8 @@ export function createCli(): Command {
         .option('--log-level <level>', `Minimum log level (${LOG_LEVELS.join('|')}).`)
         .option('--no-color', 'Disable coloured output.')
         .option('--no-update-check', 'Do not check for a newer dbx version.')
+        .option('--config <file>', 'Use a specific dbx config file.')
+        .option('--no-config', 'Ignore discovered config; use CLI flags/env only.')
         .showHelpAfterError();
     // Commander's built-in Help does not colourise; wire its style hooks to the
     // logger's colour set (identity when colours are off, so `--no-color` is plain).
@@ -182,12 +186,14 @@ export function createCli(): Command {
 export async function runCli(argv: string[] = process.argv): Promise<void> {
     const { argv: rest, options } = extractLogOptions(argv);
     const { argv: rest2, updateCheck } = extractUpdateCheck(rest);
+    const { argv: rest3, selection } = extractConfigSelection(rest2);
+    setConfigSelection(selection);
     setLogOverrides(options);
     const wantsHelp = argv.some(arg => arg === '--help' || arg === '-h' || arg === '--version');
     // The notice is human output on stdout; never let it corrupt `--json`.
-    const wantsJson = rest2.some(arg => arg === '--json');
+    const wantsJson = rest3.some(arg => arg === '--json');
     if (!wantsHelp && !wantsJson) runUpdateCheck(rootPkg.version, updateCheck);
-    await createCli().parseAsync(withDefaultVite(rest2));
+    await createCli().parseAsync(withDefaultVite(rest3));
 }
 
 /** Whether this module is the process entry point (symlink-safe). */

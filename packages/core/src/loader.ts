@@ -6,7 +6,6 @@ import {
     CONFIG_FILE_NAMES,
     deepMerge,
     type DbxConfig,
-    deprecatedConfigMessage,
     isPlainObject,
     type PackageJson,
     type ProjectType,
@@ -23,6 +22,8 @@ import { resolveProjectType } from './project-type.js';
 /** A loaded tooling config plus its resolved path + replacement tokens. */
 export interface LoadedConfig {
     config: ToolchainConfig;
+    /** The config from this project's own file (not the inherited parent). */
+    ownConfig: ToolchainConfig;
     /** The config file that was loaded (undefined when none was found). */
     path?: string;
     /** The inherited ancestor config, when the loaded config overrides one. */
@@ -46,6 +47,10 @@ export interface LoadToolchainConfigOptions {
      * VS Code tree views that drive them). Default: `false` (throw).
      */
     tolerant?: boolean;
+    /** Load this config file instead of discovering `dbx.config.*`. */
+    config?: string;
+    /** Ignore every config file and use defaults / CLI flags only. */
+    noConfig?: boolean;
 }
 
 /** A short, single-line description of a thrown config error. */
@@ -186,7 +191,8 @@ function inheritedVite(vite: ToolchainConfig['vite']): ToolchainConfig['vite'] {
  * individual options of the root config (and keep the rest).
  *
  * Some sections are workspace-scoped and are **never inherited**:
- * - `ci` / the deprecated `changelog` section: workflows are repository-level;
+ * - `ci` / the `changelog` section: workflows are repository-level;
+ * - `tsconfig`: the root task expands every workspace tsconfig;
  * - `vite.test` and `vite.run`: they describe how that workspace runs;
  * - `hooks`: a parent's hooks are code and must not run for a nested sync.
  *
@@ -206,6 +212,7 @@ export function mergeToolchainConfig(
         project: parentProject,
         ci: _ci,
         changelog: _changelog,
+        tsconfig: _tsconfig,
         vite: parentVite,
         ...parentRest
     } = parent;
@@ -238,15 +245,24 @@ export async function loadToolchainConfig(
     cwd: string = process.cwd(),
     options: LoadToolchainConfigOptions = {}
 ): Promise<LoadedConfig> {
-    const file = findConfigFile(cwd);
-    const parentFile = findParentConfigFile(cwd);
+    const file = options.noConfig
+        ? undefined
+        : options.config
+          ? path.isAbsolute(options.config)
+              ? options.config
+              : path.resolve(cwd, options.config)
+          : findConfigFile(cwd);
+    const parentFile = options.noConfig ? undefined : findParentConfigFile(cwd);
     const tolerant = options.tolerant ?? false;
 
     let config: ToolchainConfig = {};
+    let ownConfig: ToolchainConfig = {};
+    let parentConfig: ToolchainConfig | undefined;
     let error: string | undefined;
     if (parentFile) {
         try {
-            config = await readToolchainConfig(parentFile);
+            parentConfig = await readToolchainConfig(parentFile);
+            config = parentConfig;
         } catch (cause) {
             if (!tolerant) throw cause;
             error = `failed to load ${parentFile}: ${errorMessage(cause)}`;
@@ -255,6 +271,7 @@ export async function loadToolchainConfig(
     if (file) {
         try {
             const own = await readToolchainConfig(file);
+            ownConfig = own;
             // Merge over the ancestor only when it actually loaded; otherwise the
             // project's own config stands alone.
             config = parentFile && !error ? mergeToolchainConfig(config, own) : own;
@@ -262,14 +279,6 @@ export async function loadToolchainConfig(
             if (!tolerant) throw cause;
             error = `failed to load ${file}: ${errorMessage(cause)}`;
         }
-    }
-
-    // The pre-`ci` changelog shape stays in the schema for compatibility, but a
-    // deprecated config must never be executed silently.
-    const deprecated = deprecatedConfigMessage(config);
-    if (deprecated) {
-        if (!tolerant) throw new Error(deprecated);
-        error = error ?? deprecated;
     }
 
     // When a `project` field is not defined, fall back to the project's own
@@ -281,12 +290,20 @@ export async function loadToolchainConfig(
     };
     const tokens = resolveTokens({ ...config, project });
     await config.hooks?.afterLoad?.({ cwd, config, tokens, ...(file ? { path: file } : {}) });
+    // `tsconfig` is repository-scoped and not inherited, but a workspace still
+    // needs the parent's custom `rootFile`/`defaultFile` names to be detected as
+    // a workspace rather than a standalone project.
+    const detectionConfig =
+        config.tsconfig === undefined && parentConfig?.tsconfig !== undefined
+            ? { ...config, tsconfig: parentConfig.tsconfig }
+            : config;
     return {
         config,
+        ownConfig,
         ...(file ? { path: file } : {}),
         ...(parentFile ? { parentPath: parentFile } : {}),
         ...(error ? { error } : {}),
         tokens,
-        projectType: resolveProjectType(cwd, config),
+        projectType: resolveProjectType(cwd, detectionConfig),
     };
 }

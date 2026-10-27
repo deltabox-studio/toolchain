@@ -22,6 +22,8 @@ export interface RunSyncOptions {
     cwd: string;
     /** The loaded config. */
     config: ToolchainConfig;
+    /** The project's own (unmerged) config, when known. */
+    ownConfig?: ToolchainConfig;
     /** The resolved replacement tokens. */
     tokens: Replacements;
     /** The project kind (resolved from the config/cwd when omitted). */
@@ -65,11 +67,19 @@ function norm(relative: string): string {
  * reported instead (for CI).
  */
 export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
-    const { tasks, cwd, config, tokens } = options;
+    const { tasks, cwd, config, ownConfig, tokens } = options;
     const log = options.quiet ? () => {} : (options.log ?? ((m: string) => logger.info(m)));
-    const warn = options.quiet ? () => {} : (m: string) => logger.warn(m);
+    const warn = options.quiet ? () => {} : (m: string, id?: string) => logger.warn(m, id);
     const projectType = options.projectType ?? resolveProjectType(cwd, config);
-    const ctx: SyncContext = { cwd, projectType, config, tokens, log, warn };
+    const ctx: SyncContext = {
+        cwd,
+        projectType,
+        config,
+        ownConfig: ownConfig ?? config,
+        tokens,
+        log,
+        warn,
+    };
     const hooks = config.hooks ?? {};
     await hooks.beforeSync?.(ctx);
 

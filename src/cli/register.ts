@@ -11,6 +11,7 @@ import {
 } from '@deltabox/toolchain-shared';
 
 import { defaultSyncTasks } from '../sync.js';
+import { getConfigSelection } from './config-selection.js';
 import { loadContext } from './context.js';
 import { optionKeys } from './options.js';
 
@@ -49,7 +50,14 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
         const keys = new Set<string>();
         for (const option of cmd.options ?? []) {
             for (const key of optionKeys(option.flags)) keys.add(key);
-            if (option.default !== undefined) {
+            if (option.multiple) {
+                instance.option(
+                    option.flags,
+                    option.description,
+                    (value: string, previous: string[] = []) => [...previous, value],
+                    option.default !== undefined ? [option.default] : []
+                );
+            } else if (option.default !== undefined) {
                 instance.option(option.flags, option.description, option.default);
             } else {
                 instance.option(option.flags, option.description);
@@ -89,6 +97,7 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                 // `providers` section to decide whether the wrapped binary may
                 // colour its output).
                 const loaded = await loadContext(cwd);
+                const selection = getConfigSelection();
                 // A broken config is reported on stderr (so `--json` stays clean)
                 // and does not abort unrelated commands; sync fails on it itself.
                 if (loaded.error) logger.warn(loaded.error);
@@ -100,9 +109,11 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                     cwd,
                     projectType: loaded.projectType,
                     config: loaded.config,
+                    ownConfig: loaded.ownConfig,
                     tokens: loaded.tokens,
                     syncTasks: defaultSyncTasks(),
                     ...(loaded.path ? { configPath: loaded.path } : {}),
+                    ...(selection.noConfig ? { noConfig: true } : {}),
                     ...(loaded.error ? { configError: loaded.error } : {}),
                 };
                 await cmd.run(provided, context);

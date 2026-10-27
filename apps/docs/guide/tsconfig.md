@@ -290,11 +290,14 @@ its inputs.
 
 ## Per-project configs
 
-A non-root `dbx.config.*` is **merged over** the nearest ancestor
-`dbx.config.*`: nested options are combined, and leaf options (booleans,
-strings, numbers, arrays) in the project override the root. So a workspace can
-tweak just its own `tsconfig` (or any other section) and inherit the rest. See
-[Configuration → Nested configs](/guide/config/nested-configs) for the rules.
+`toolchain.tsconfig` is repository-scoped: the root sync task expands every
+workspace `tsconfig.json`, so nested configs **do not inherit** it — inheriting
+it would make `dbx tsconfig` re-scan a workspace's own subtree. A nested config
+may still declare its own `tsconfig` section when it manages its own workspace
+tree (a nested monorepo); otherwise add the workspace's `tsconfig.default.json`
+and run `dbx tsconfig` / `dbx sync` from the root. Other sections still inherit
+as usual; see [Configuration → Nested configs](/guide/config/nested-configs)
+for the rules.
 
 ## Scaffolding
 

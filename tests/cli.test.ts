@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { extractConfigSelection } from '../src/cli/config-selection.js';
 import {
     builtinCommands,
     createCli,
@@ -74,6 +75,28 @@ describe('dbx CLI', () => {
         expect(isPassthroughCommand()).toBe(true);
         run(['sync', '--help']);
         expect(isPassthroughCommand()).toBe(false);
+    });
+});
+
+describe('config selection flags', () => {
+    it('extracts --config / --no-config and respects `--`', () => {
+        const argv = (value: string): string[] => ['node', 'dbx', ...value.split(' ')];
+        expect(extractConfigSelection(argv('--config dbx.config.test.ts sync'))).toEqual({
+            argv: ['node', 'dbx', 'sync'],
+            selection: { config: 'dbx.config.test.ts' },
+        });
+        expect(extractConfigSelection(argv('sync --no-config'))).toEqual({
+            argv: ['node', 'dbx', 'sync'],
+            selection: { noConfig: true },
+        });
+        expect(extractConfigSelection(argv('--config=dbx.config.test.ts sync'))).toEqual({
+            argv: ['node', 'dbx', 'sync'],
+            selection: { config: 'dbx.config.test.ts' },
+        });
+        expect(extractConfigSelection(argv('run -- --config x --no-config'))).toEqual({
+            argv: ['node', 'dbx', 'run', '--', '--config', 'x', '--no-config'],
+            selection: {},
+        });
     });
 });
 

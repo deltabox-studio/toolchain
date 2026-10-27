@@ -14,11 +14,12 @@ export default defineConfig({
 
 ## Options
 
-| Option  | Type                                               | Default | Description                    |
-| ------- | -------------------------------------------------- | ------- | ------------------------------ |
-| `level` | `debug` \| `info` \| `warn` \| `error` \| `silent` | `info`  | Minimum level to print.        |
-| `color` | `boolean`                                          | `true`  | Force colours on/off.          |
-| `name`  | `string`                                           | `dbx`   | Prefix for non-indented lines. |
+| Option     | Type                                               | Default | Description                                            |
+| ---------- | -------------------------------------------------- | ------- | ------------------------------------------------------ |
+| `level`    | `debug` \| `info` \| `warn` \| `error` \| `silent` | `info`  | Minimum level to print.                                |
+| `color`    | `boolean`                                          | `true`  | Force colours on/off.                                  |
+| `name`     | `string`                                           | `dbx`   | Prefix for non-indented lines.                         |
+| `suppress` | `string \| string[]`                               | none    | Silence warnings/errors by id, substring or `/regex/`. |
 
 Colour is **on by default** (the toolchain forces it rather than relying on TTY
 autodetection); `--no-color` or `logger: { color: false }` turn it off. Human

@@ -10,11 +10,24 @@ export default defineConfig({
 });
 ```
 
-| Option  | Values                                             | Default |
-| ------- | -------------------------------------------------- | ------- |
-| `level` | `debug` \| `info` \| `warn` \| `error` \| `silent` | `info`  |
-| `color` | `true` \| `false`                                  | `true`  |
-| `name`  | prefix for non-indented lines                      | `dbx`   |
+| Option     | Values                                             | Default |
+| ---------- | -------------------------------------------------- | ------- |
+| `level`    | `debug` \| `info` \| `warn` \| `error` \| `silent` | `info`  |
+| `color`    | `true` \| `false`                                  | `true`  |
+| `name`     | prefix for non-indented lines                      | `dbx`   |
+| `suppress` | id, message substring or `/regex/` (single/array)  | none    |
+
+`suppress` silences matching warnings/errors. A string matches an emitted id
+exactly or a message substring; a `/pattern/flags` string is treated as a regex.
+It accepts one value or an array:
+
+```ts [dbx.config.ts]
+toolchain: {
+    logger: {
+        suppress: ['biome.oxc-conflict', 'deprecated option', '/^Could not .* globally/'],
+    },
+}
+```
 
 Colour is **on by default** (the toolchain forces it rather than relying on TTY
 autodetection); `--no-color` or `logger: { color: false }` turn it off. Human

@@ -16,6 +16,7 @@ export function watchOptions(context: ToolchainCommandContext) {
         cwd: context.cwd,
         projectType: context.projectType,
         config: context.config,
+        ...(context.ownConfig ? { ownConfig: context.ownConfig } : {}),
         tokens: context.tokens,
         ...(context.configPath ? { configPath: context.configPath } : {}),
         ...(watch?.debounce !== undefined ? { debounce: watch.debounce } : {}),

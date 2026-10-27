@@ -13,9 +13,13 @@ override them on the command line.
 | `--color`           | Force coloured output (the default).                           |
 | `--no-color`        | Disable coloured output.                                       |
 | `--no-update-check` | Do not check for a newer `dbx` version.                        |
+| `--config <file>`   | Use a specific config file instead of discovering one.         |
+| `--no-config`       | Ignore config files and use CLI flags/env defaults only.       |
 
 These override the [`logger` config](/guide/config/logging) and may appear
-before or after the subcommand.
+before or after the subcommand. `--config` resolves relative to the current
+directory (absolute paths are used as-is); `--no-config` skips discovery
+entirely (including inherited parent configs).
 
 `dbx` checks the npm registry in the background (about once a day) and prints a
 short notice with a link to the release when a newer version is published. The
@@ -86,7 +90,9 @@ See [Templates](/guide/templates).
 
 ```sh
 dbx migrate --from biome --write           # .oxfmtrc.json + .oxlintrc.json
+dbx migrate --from biome --from prettier --write  # several sources
 dbx migrate --from biome --target vite --write
+dbx migrate --from oxc --write             # .oxfmtrc/.oxlintrc -> dbx.config
 dbx migrate --from all                     # every detected source
 dbx migrate --from vite --recursive --write  # migrate every detected project
 dbx migrate --recursive                    # interactive project picker
@@ -134,6 +140,7 @@ import {
     builtinCommands,
     registerToolchainCommands,
     withDefaultVite,
+    extractConfigSelection,
     extractLogOptions,
 } from '@deltabox/toolchain/cli';
 ```
@@ -146,6 +153,7 @@ import {
 | `registerToolchainCommands(program, commands)` | Wire `ToolchainCommand[]` descriptors onto a commander program.        |
 | `withDefaultVite(argv, commandNames?)`         | Insert `vite` before a bare Vite+ command (built-ins win).             |
 | `extractLogOptions(argv)`                      | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
+| `extractConfigSelection(argv)`                 | Pull `--config <file>` / `--no-config` out of argv.                    |
 
 `extractLogOptions` makes the logger flags work before _or_ after the
 subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.

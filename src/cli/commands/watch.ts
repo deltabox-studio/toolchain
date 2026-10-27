@@ -16,7 +16,7 @@ export function watchCommand(): ToolchainCommand {
             },
         ],
         run: async (opts, context) => {
-            if (!context.configPath && !opts.force) {
+            if (!context.configPath && !opts.force && !context.noConfig) {
                 logger.warn(
                     'no dbx.config.* found here; nothing to watch (use --force to run anyway).'
                 );
