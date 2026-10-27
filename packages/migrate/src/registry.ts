@@ -10,6 +10,7 @@
 import { biomeToOx } from './biome.js';
 import { dprintToOx } from './dprint.js';
 import { eslintToOx } from './eslint.js';
+import { oxcToToolchain } from './oxc.js';
 import { prettierToOx } from './prettier.js';
 import type {
     MigrateTool,
@@ -21,7 +22,7 @@ import { viteToToolchain } from './vite.js';
 
 /** Every registered migration. */
 export function migrations(): ToolchainMigration[] {
-    return [biomeToOx, prettierToOx, dprintToOx, eslintToOx, viteToToolchain];
+    return [biomeToOx, prettierToOx, dprintToOx, eslintToOx, oxcToToolchain, viteToToolchain];
 }
 
 /** A migration summary for listings. */

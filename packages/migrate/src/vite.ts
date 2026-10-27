@@ -332,6 +332,62 @@ export function foldViteIntoConfig(
     };
 }
 
+/**
+ * Fold an object literal into a top-level `toolchain.<section>` (or deep-merge
+ * into the existing object), without the Vite-specific `config: true` rewrite.
+ */
+export function foldToolchainSection(
+    source: string,
+    section: string,
+    objectText: string
+): { content: string } | { error: string } {
+    const root = findRootObject(source);
+    if (!root) return { error: 'could not locate the config root object' };
+    const [rootOpen, rootClose] = root;
+    const toolchain = findTopLevelValue(source, rootOpen, rootClose, 'toolchain');
+    if (!toolchain) {
+        return { error: `the config has no \`toolchain\` object to add \`${section}\` to` };
+    }
+    const [toolchainStart, toolchainEnd] = toolchain;
+    const existing = findTopLevelValue(source, toolchainStart, toolchainEnd, section);
+    if (existing) {
+        const [valueStart, valueEnd] = existing;
+        const indent = lineIndentAt(source, valueStart);
+        const current = dedentBlock(source.slice(valueStart, valueEnd), indent);
+        const merged =
+            current.trimStart().startsWith('{') && objectText.trimStart().startsWith('{')
+                ? mergeViteObjects(current, objectText)
+                : objectText;
+        return {
+            content: `${source.slice(0, valueStart)}${indentBlock(merged, indent)}${source.slice(valueEnd)}`,
+        };
+    }
+    const indent = `${lineIndentAt(source, toolchainStart)}    `;
+    return {
+        content: `${source.slice(0, toolchainStart + 1)}\n${indent}${section}: ${indentBlock(
+            objectText,
+            indent
+        )},${source.slice(toolchainStart + 1)}`,
+    };
+}
+
+/** Render a fresh `dbx.config.ts` with one or more folded toolchain sections. */
+export function renderFreshSectionsConfig(sections: { key: string; objectText: string }[]): string {
+    const body = sections
+        .map(({ key, objectText }) => `        ${key}: ${indentBlock(objectText, '        ')},`)
+        .join('\n');
+    return [
+        "import { defineConfig } from '@deltabox/toolchain';",
+        '',
+        'export default defineConfig({',
+        '    toolchain: {',
+        body,
+        '    },',
+        '});',
+        '',
+    ].join('\n');
+}
+
 /** The root file the generated shim lives in; excluded from Oxfmt via `fmt`. */
 const VITE_CONFIG_IGNORE = '/vite.config.ts';
 

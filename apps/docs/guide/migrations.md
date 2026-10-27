@@ -1,7 +1,8 @@
 # Migrations
 
 `dbx migrate` converts a project's tooling config from another tool to
-**Oxc** (Oxfmt + Oxlint). Migrations are pluggable — adding a source tool is a
+**Oxc** (Oxfmt + Oxlint), or folds an existing Oxc/Vite config into
+`dbx.config.*`. Migrations are pluggable — adding a source tool is a
 matter of implementing one interface.
 
 ```sh
@@ -9,12 +10,15 @@ dbx migrate:list                       # what's available + detected
 dbx migrate --from biome               # dry-run
 dbx migrate --from biome --write       # writes the oxc config
 dbx migrate --from biome --target vite --write
+dbx migrate --from biome --from prettier --write  # several sources
+dbx migrate --from oxc --write         # fold .oxfmtrc/.oxlintrc into dbx.config
 dbx migrate --from all                 # every detected source
 dbx migrate --check                    # CI: exit 1 when the oxc config is stale
 dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
 ```
 
-`dbx migrate` is a dry-run unless you pass `--write` (or `--check`).
+`dbx migrate` is a dry-run unless you pass `--write` (or `--check`). `--from`
+is repeatable; `--from all` (or omitting it) selects every detected source.
 
 ## Sources
 
@@ -24,6 +28,7 @@ dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
 | `prettier` | Prettier-compatible options transfer directly; Tailwind/PackageJson plugins detected; `.prettierignore` → `ignorePatterns`.                                  |
 | `eslint`   | JSON configs map rule names + severities (`@typescript-eslint/*` → `typescript/*`); JS/flat configs use `@oxlint/migrate` with `--online --write`.           |
 | `dprint`   | `dprint.json` layout + TypeScript options → Oxfmt.                                                                                                           |
+| `oxc`      | Folds `.oxfmtrc.json` / `.oxlintrc.json` into `dbx.config.*`'s `toolchain.fmt.oxc` / `toolchain.lint.oxc`; `dbx sync` manages them again.                    |
 | `vite`     | Folds a hand-written `vite.config.*` into `dbx.config.*`'s `toolchain.vite` (see below).                                                                     |
 
 ## Targets
@@ -31,6 +36,8 @@ dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
 - `--target files` (default) — writes `.oxfmtrc.json` and `.oxlintrc.json`.
 - `--target vite` — folds the result into an existing `vite.config.ts`
   (inserting/replacing `fmt` and `lint`), which is what Vite+ reads.
+- The `oxc` source always targets `dbx.config.*` (`toolchain.fmt.oxc` /
+  `toolchain.lint.oxc`); `--target` does not apply.
 
 ## Recursive migration
 
@@ -39,7 +46,7 @@ directory). `--recursive` walks the discovered projects under the root and
 migrates each one that has a **detected source**:
 
 ```sh
-dbx migrate --from biome --recursive --write
+dbx migrate --from biome --from prettier --recursive --write
 ```
 
 On an interactive terminal it first asks which projects to migrate with a

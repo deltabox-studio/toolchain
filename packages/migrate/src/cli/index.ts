@@ -35,11 +35,13 @@ export function migrateCommands(): ToolchainCommand[] {
         {
             name: 'migrate',
             description:
-                'Migrate Biome / ESLint / Prettier / Dprint config to Oxc, or fold vite.config.* into dbx.config.',
+                'Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.* into dbx.config.',
             options: [
                 {
                     flags: '--from <tool>',
-                    description: 'Source tool: biome | eslint | prettier | dprint | vite | all.',
+                    description:
+                        'Source tool (repeatable): biome | eslint | prettier | dprint | oxc | vite | all.',
+                    multiple: true,
                 },
                 {
                     flags: '--to <tool>',
@@ -80,7 +82,12 @@ export function migrateCommands(): ToolchainCommand[] {
                 const check = Boolean(opts.check);
                 const write = Boolean(opts.write) && !opts.dryRun && !check;
                 const online = Boolean(opts.online);
-                const from = opts.from as string | undefined;
+                const fromRaw = opts.from as string | string[] | undefined;
+                const fromList = Array.isArray(fromRaw) ? fromRaw : fromRaw ? [fromRaw] : [];
+                const fromAll = fromList.includes('all');
+                const selectedFrom = fromList.filter(value => value !== 'all');
+                const matchesFrom = (migration: { from: string }): boolean =>
+                    fromList.length === 0 || fromAll || selectedFrom.includes(migration.from);
                 const target = (opts.target as MigrateTarget | undefined) ?? 'files';
                 const recursive = Boolean(opts.recursive);
 
@@ -88,9 +95,7 @@ export function migrateCommands(): ToolchainCommand[] {
                 // `all`/none) **and** are detected in `dir`.
                 const pickFor = (dir: string) =>
                     migrations().filter(
-                        migration =>
-                            (!from || from === 'all' || migration.from === from) &&
-                            migration.detect(dir)
+                        migration => matchesFrom(migration) && migration.detect(dir)
                     );
 
                 // The project dirs to migrate. Without `--recursive` that is the
@@ -152,13 +157,11 @@ export function migrateCommands(): ToolchainCommand[] {
                     // Distinguish "no such migration" from "the migration is
                     // registered but the source config was not found" (eg. an
                     // already-managed `vite.config.ts` shim).
-                    const registered = migrations().some(
-                        migration => !from || from === 'all' || migration.from === from
-                    );
+                    const registered = migrations().some(migration => matchesFrom(migration));
                     logger.info(
-                        from && from !== 'all' && !registered
-                            ? `no "${from}" migration is registered.`
-                            : 'nothing to migrate (no Biome/ESLint/Prettier/Dprint/vite config detected).'
+                        selectedFrom.length > 0 && !fromAll && !registered
+                            ? `no migration registered for: ${selectedFrom.join(', ')}.`
+                            : 'nothing to migrate (no Biome/ESLint/Prettier/Dprint/Oxc/vite config detected).'
                     );
                     return;
                 }
@@ -230,6 +233,7 @@ export function migrateCommands(): ToolchainCommand[] {
                             cwd: dir,
                             projectType: loaded.projectType,
                             config: loaded.config,
+                            ownConfig: loaded.ownConfig,
                             tokens: loaded.tokens,
                             quiet: opts.json === true,
                         });

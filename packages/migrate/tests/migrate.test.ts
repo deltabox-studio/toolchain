@@ -211,6 +211,58 @@ describe('registry', () => {
         expect(ids).toContain('biome-to-oxc');
         expect(ids).toContain('prettier-to-oxc');
     });
+
+    it('detects a hand-written Oxc config', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, '.oxfmtrc.json'), '{}', 'utf-8');
+        expect(detectMigrations(dir).map(m => m.id)).toContain('oxc-to-toolchain');
+    });
+});
+
+describe('oxc -> toolchain', () => {
+    it('folds .oxfmtrc.json / .oxlintrc.json into toolchain.fmt/lint.oxc', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'dbx.config.ts'),
+            "import { defineConfig } from '@deltabox/toolchain';\n\nexport default defineConfig({ toolchain: {} });\n",
+            'utf-8'
+        );
+        fs.writeFileSync(
+            path.join(dir, '.oxfmtrc.json'),
+            JSON.stringify({ $schema: './schema.json', semi: false, printWidth: 90 }),
+            'utf-8'
+        );
+        fs.writeFileSync(
+            path.join(dir, '.oxlintrc.json'),
+            JSON.stringify({ rules: { eqeqeq: 'error' }, ignorePatterns: ['dist/**'] }),
+            'utf-8'
+        );
+
+        const result = await runMigration('oxc', { cwd: dir, write: true });
+        const config = fs.readFileSync(path.join(dir, 'dbx.config.ts'), 'utf-8');
+        expect(config).toContain('fmt:');
+        expect(config).toContain('oxc:');
+        expect(config).toContain('semi: false');
+        expect(config).toContain('lint:');
+        expect(config).toContain('eqeqeq');
+        expect(config).not.toContain('$schema');
+        expect(fs.existsSync(path.join(dir, '.oxfmtrc.json'))).toBe(false);
+        expect(fs.existsSync(path.join(dir, '.oxlintrc.json'))).toBe(false);
+        expect(result.from).toBe('oxc');
+        expect(result.to).toBe('toolchain');
+    });
+
+    it('accepts several --from values in the CLI', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
+        fs.writeFileSync(path.join(dir, '.prettierrc'), JSON.stringify({ semi: false }), 'utf-8');
+        await migrateCommand().run(
+            { from: ['biome', 'prettier'], write: true, ignoreManagedFiles: true },
+            cliContext(dir)
+        );
+        expect(fs.existsSync(path.join(dir, '.oxfmtrc.json'))).toBe(true);
+        expect(fs.existsSync(path.join(dir, '.oxlintrc.json'))).toBe(true);
+    });
 });
 
 describe('produced files + --target vite', () => {
@@ -462,6 +514,11 @@ function migrateCommand() {
 }
 
 describe('migrate CLI post-migration sync', () => {
+    it('accepts repeated --from values', () => {
+        const from = migrateCommand().options?.find(option => option.flags.includes('--from'));
+        expect(from?.multiple).toBe(true);
+    });
+
     it('regenerates managed files after --write', async () => {
         const dir = makeTmp();
         fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
