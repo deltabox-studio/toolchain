@@ -140,9 +140,9 @@ export function generateTsconfigs(
                 const refTsconfig = JSON.parse(
                     fs.readFileSync(refTsconfigPath, 'utf-8')
                 ) as TsConfigJson;
-                const hasCompositeOption = refTsconfig.compilerOptions?.composite != null;
-                const compositeDisabled =
-                    !hasCompositeOption || refTsconfig.compilerOptions?.composite === false;
+                const composite = refTsconfig.compilerOptions?.composite;
+                const hasCompositeOption = composite !== null && composite !== undefined;
+                const compositeDisabled = !hasCompositeOption || composite === false;
                 return !compositeDisabled;
             });
         }

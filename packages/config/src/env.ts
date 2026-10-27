@@ -107,8 +107,3 @@ export function applyOverrides<T extends object>(base: T, overrides?: Partial<T>
     }
     return out as T;
 }
-
-/** Trim trailing slashes from a URL-ish string. */
-export function trimTrailingSlashes(value: string): string {
-    return value.replace(/\/+$/, '');
-}
