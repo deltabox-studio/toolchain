@@ -349,6 +349,14 @@ export default defineConfig({
                         command: 'vitest run',
                         cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
                     },
+                    'lint:root': {
+                        command: 'vp lint --fix',
+                        cache: { input: [{ auto: true }], output: [] },
+                    },
+                    'check:root': {
+                        command: 'vp check',
+                        cache: { input: [{ auto: true }], output: [] },
+                    },
                 },
             },
         },
