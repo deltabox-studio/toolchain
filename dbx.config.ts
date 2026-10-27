@@ -337,7 +337,7 @@ export default defineConfig({
                         },
                     },
                     'typecheck:root': {
-                        command: 'tsc -p tsconfig.build.json --noEmit',
+                        command: 'tsc -p tsconfig.json --noEmit',
                         cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
                     },
                     'test:root': {

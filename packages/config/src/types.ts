@@ -8,8 +8,8 @@ export interface ConfigBaseMeta {
     description?: string;
     /** Whether the var has no safe default and must be set. */
     required?: boolean;
-    /** Mark this config as deprecated and optionally add a deprecation message. */
-    deprecated?: boolean | string;
+    /** Mark this config as deprecated (the JSON Schema `deprecated` flag). */
+    deprecated?: boolean;
     /** Add custom example(s) that will be added to the generated documentation. */
     example?: string[] | string;
     /** Whether the value is a secret (never emitted/logged). */

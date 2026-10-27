@@ -126,6 +126,7 @@
         "./cli": "./dist/cli/index.js",
         "./config": "./dist/config.js",
         "./core": "./dist/core.js",
+        "./globals": "./dist/globals.js",
         "./migrate": "./dist/migrate.js",
         "./project": "./dist/project.js",
         "./providers": "./dist/providers.js",
