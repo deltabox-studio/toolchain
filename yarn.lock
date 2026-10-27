@@ -612,6 +612,7 @@ __metadata:
   dependencies:
     "@deltabox/toolchain-biome": "workspace:*"
     "@deltabox/toolchain-core": "workspace:*"
+    "@deltabox/toolchain-migrate": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
     "@deltabox/toolchain-tsconfig": "workspace:*"
     "@deltabox/toolchain-tsdown": "workspace:*"
@@ -642,6 +643,7 @@ __metadata:
   resolution: "@deltabox/toolchain-template@workspace:packages/template"
   dependencies:
     "@clack/prompts": "catalog:"
+    "@deltabox/toolchain-core": "workspace:*"
     "@deltabox/toolchain-project": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
     "@deltabox/toolchain-tsdown": "workspace:*"

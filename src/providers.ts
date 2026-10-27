@@ -1,13 +1,13 @@
 /**
  * The provider registry.
  *
- * Each registered provider (currently Vite+) contributes CLI commands and the
- * metadata the VS Code extension renders. The extension reads this over
- * `dbx providers --json`, so adding a provider here surfaces it in the
- * editor automatically.
+ * Each registered provider (Vite+ and any custom ones) contributes CLI commands
+ * and the metadata the VS Code extension renders. The extension reads this over
+ * `dbx providers --json`, so adding a provider here surfaces it in the editor
+ * automatically.
  */
 
-import { readAllProviders } from '@deltabox/toolchain-core';
+import { readAllProviders, readAllProvidersSync } from '@deltabox/toolchain-core';
 import { providerActions, type ToolchainProvider } from '@deltabox/toolchain-shared';
 import { viteProvider } from '@deltabox/toolchain-vite';
 
@@ -19,18 +19,30 @@ export type {
 export { providerActions } from '@deltabox/toolchain-shared';
 export { viteProvider } from '@deltabox/toolchain-vite';
 
-/**
- * The registered providers: the built-ins, then any custom ones from the
- * project + global registries, deduped by id. Each
- * carries its resolved actions (defaults applied).
- */
-export function toolchainProviders(cwd: string = process.cwd()): ToolchainProvider[] {
+function withBuiltins(providers: ToolchainProvider[]): ToolchainProvider[] {
     const seen = new Set<string>();
-    const providers: ToolchainProvider[] = [];
-    for (const provider of [viteProvider(), ...readAllProviders(cwd)]) {
+    const out: ToolchainProvider[] = [];
+    for (const provider of [viteProvider(), ...providers]) {
         if (seen.has(provider.id)) continue;
         seen.add(provider.id);
-        providers.push({ ...provider, actions: providerActions(provider) });
+        out.push({ ...provider, actions: providerActions(provider) });
     }
-    return providers;
+    return out;
+}
+
+/**
+ * The registered providers from the local registries: the built-ins, then any
+ * custom ones from the project + global registries, deduped by id. Each carries
+ * its resolved actions (defaults applied). Remote registries are skipped; use
+ * {@link loadToolchainProviders} for those.
+ */
+export function toolchainProviders(cwd: string = process.cwd()): ToolchainProvider[] {
+    return withBuiltins(readAllProvidersSync(cwd));
+}
+
+/** Like {@link toolchainProviders}, but also fetches remote registries. */
+export async function loadToolchainProviders(
+    cwd: string = process.cwd()
+): Promise<ToolchainProvider[]> {
+    return withBuiltins(await readAllProviders(cwd));
 }

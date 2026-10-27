@@ -34,6 +34,13 @@ export interface RunSyncOptions {
     log?: (message: string) => void;
 }
 
+export interface RemovedFile {
+    /** Repo-relative path. */
+    path: string;
+    /** The content before removal, so an editor can offer "Restore". */
+    content: string;
+}
+
 export interface SyncResult {
     /** Paths written (empty in check mode). */
     written: string[];
@@ -41,6 +48,8 @@ export interface SyncResult {
     changed: string[];
     /** Previously-managed paths removed because they are no longer generated. */
     removed: string[];
+    /** The removed files' previous content (for a Restore action). */
+    removedFiles: RemovedFile[];
     /** Whether disk already matched the generated output. */
     upToDate: boolean;
 }
@@ -106,12 +115,29 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
         const current = fs.existsSync(abs) ? fs.readFileSync(abs, 'utf-8') : undefined;
         if (current !== content) changed.push(relative);
     }
+    const existedBefore = new Map(
+        [...desired.keys()].map(relative => [relative, fs.existsSync(path.resolve(cwd, relative))])
+    );
+    // A file dbx never created (it existed before the first sync) is adopted:
+    // stop managing it, but never delete it when its section is removed.
+    const originOf = (relative: string): 'created' | 'adopted' =>
+        manifest.origins?.[relative] ??
+        (manifest.files.includes(relative)
+            ? 'created'
+            : existedBefore.get(relative)
+              ? 'adopted'
+              : 'created');
     const removed = manifest.files.filter(
         relative =>
             !desired.has(relative) &&
             !isKept(relative) &&
-            fs.existsSync(path.resolve(cwd, relative))
+            fs.existsSync(path.resolve(cwd, relative)) &&
+            originOf(relative) === 'created'
     );
+    const removedFiles: RemovedFile[] = removed.map(relative => ({
+        path: relative,
+        content: fs.readFileSync(path.resolve(cwd, relative), 'utf-8'),
+    }));
     const upToDate = changed.length === 0 && removed.length === 0;
 
     if (options.check) {
@@ -123,7 +149,7 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
             for (const relative of removed) log(`  D ${relative}`);
             log('Run `dbx sync` to regenerate them.');
         }
-        const summary = { written: [], changed, removed, upToDate };
+        const summary = { written: [], changed, removed, removedFiles, upToDate };
         await hooks.afterSync?.({ cwd, config, result: summary });
         return summary;
     }
@@ -138,7 +164,11 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     for (const relative of removed) {
         fs.rmSync(path.resolve(cwd, relative), { force: true });
     }
-    writeManifest(cwd, [...desired.keys()]);
+    const origins: Record<string, 'created' | 'adopted'> = {};
+    for (const relative of desired.keys()) {
+        origins[relative] = originOf(relative);
+    }
+    writeManifest(cwd, [...desired.keys()], undefined, origins);
     if (ensureDbxGitignore(cwd)) log('  I .gitignore (added the .dbx ignore block)');
 
     log(
@@ -146,7 +176,7 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
             changed.length ? `, updated ${changed.length}` : ''
         }.`
     );
-    const summary = { written, changed, removed, upToDate };
+    const summary = { written, changed, removed, removedFiles, upToDate };
     await hooks.afterSync?.({ cwd, config, result: summary });
     return summary;
 }

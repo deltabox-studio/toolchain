@@ -601,6 +601,14 @@
                     },
                     "default": [],
                     "description": "Global template search paths (directories or http(s) registry URLs). Synced with the ~/.dbx/toolchain/cli/config.json registry."
+                },
+                "deltabox.providerRegistrySearchPaths": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [],
+                    "description": "Global provider search paths (JSON files/directories or http(s) registry URLs). Synced with the ~/.dbx/toolchain/cli/config.json registry."
                 }
             }
         }

@@ -24,5 +24,31 @@
         "packages/vscode/tsconfig.json",
         "tsconfig.json",
         "vite.config.ts"
-    ]
+    ],
+    "origins": {
+        ".github/workflows/changelog.yml": "created",
+        ".github/workflows/ci.yml": "created",
+        ".github/workflows/issues.yml": "created",
+        ".github/workflows/release.yml": "created",
+        ".github/workflows/sync.yml": "created",
+        ".husky/commit-msg": "created",
+        ".vscode/extensions.json": "created",
+        ".vscode/settings.json": "created",
+        "commitlint.config.mjs": "created",
+        "package.json": "created",
+        "packages/biome/tsconfig.json": "created",
+        "packages/changelog/tsconfig.json": "created",
+        "packages/config/tsconfig.json": "created",
+        "packages/core/tsconfig.json": "created",
+        "packages/migrate/tsconfig.json": "created",
+        "packages/project/tsconfig.json": "created",
+        "packages/shared/tsconfig.json": "created",
+        "packages/template/tsconfig.json": "created",
+        "packages/tsconfig/tsconfig.json": "created",
+        "packages/tsdown/tsconfig.json": "created",
+        "packages/vite/tsconfig.json": "created",
+        "packages/vscode/tsconfig.json": "created",
+        "tsconfig.json": "created",
+        "vite.config.ts": "created"
+    }
 }

@@ -29,9 +29,14 @@ export function syncCommand(): ToolchainCommand {
                 flags: '--force',
                 description: 'Run even when no dbx.config.* is present.',
             },
+            {
+                flags: '--json',
+                description: 'Print the sync result (including removed files) as JSON.',
+            },
         ],
         run: async (opts, context) => {
-            const quiet = Boolean(opts.quiet);
+            const json = Boolean(opts.json);
+            const quiet = Boolean(opts.quiet) || json;
             const check = Boolean(opts.check);
 
             if (context.configError) {
@@ -43,6 +48,7 @@ export function syncCommand(): ToolchainCommand {
             if (opts.recursive) {
                 const graph = buildProjectGraph(context.cwd);
                 if (!check) writeProjectGraph(context.cwd, graph);
+                const results: { dir: string; result: Awaited<ReturnType<typeof runSync>> }[] = [];
                 for (const relDir of graph.order) {
                     const dir = path.resolve(context.cwd, relDir);
                     const loaded = await loadToolchainConfig(dir, { tolerant: true });
@@ -60,8 +66,10 @@ export function syncCommand(): ToolchainCommand {
                         check,
                         quiet,
                     });
+                    results.push({ dir: relDir, result });
                     if (check && !result.upToDate) process.exitCode = 1;
                 }
+                if (json) logger.raw(JSON.stringify({ results }, null, 4));
                 return;
             }
 
@@ -89,6 +97,7 @@ export function syncCommand(): ToolchainCommand {
                     // best-effort
                 }
             }
+            if (json) logger.raw(JSON.stringify(result, null, 4));
         },
     };
 }

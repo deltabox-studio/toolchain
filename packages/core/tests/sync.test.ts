@@ -44,6 +44,29 @@ describe('runSync', () => {
         expect(fs.existsSync(path.join(cwd, 'a.txt'))).toBe(false);
     });
 
+    it('never deletes a pre-existing (adopted) file', async () => {
+        const cwd = tmp();
+        fs.writeFileSync(path.join(cwd, 'a.txt'), 'hand-written');
+        await runSync({
+            tasks: [{ name: 'x', run: () => [{ path: 'a.txt', content: 'managed' }] }],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        const result = await runSync({
+            tasks: [{ name: 'x', run: () => [] }],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        expect(result.removed).toEqual([]);
+        expect(fs.existsSync(path.join(cwd, 'a.txt'))).toBe(true);
+        expect(fs.readFileSync(path.join(cwd, 'a.txt'), 'utf-8')).toBe('managed');
+        expect(readManifest(cwd).files).toEqual([]);
+    });
+
     it('reports drift in check mode without writing', async () => {
         const cwd = tmp();
         fs.writeFileSync(path.join(cwd, 'a.txt'), 'old');

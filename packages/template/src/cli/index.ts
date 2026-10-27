@@ -3,6 +3,14 @@ import path from 'node:path';
 
 import { cancel, confirm, isCancel, select, text } from '@clack/prompts';
 
+import {
+    addGlobalProviderRegistry,
+    addProjectProviderRegistry,
+    removeGlobalProviderRegistry,
+    removeProjectProviderRegistry,
+    setGlobalProviderRegistries,
+    setProjectProviderRegistries,
+} from '@deltabox/toolchain-core';
 import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import {
@@ -19,6 +27,7 @@ import {
     removeProjectRegistry,
     resolveTemplateSearchPaths,
     writeGlobalCliConfig,
+    writeProjectRegistries,
     writeVscodeSearchPaths,
 } from '../global.js';
 import { TEMPLATE_MANIFEST, writeTemplateManifest } from '../local.js';
@@ -392,17 +401,43 @@ export function templateCommands(): ToolchainCommand[] {
             description: 'List or manage the template/provider registries.',
             options: [
                 CWD_OPTION,
-                { flags: '--add <path>', description: 'Add a template registry path.' },
-                { flags: '--remove <path>', description: 'Remove a template registry path.' },
+                {
+                    flags: '--kind <kind>',
+                    description: 'What --add/--remove manages: templates | providers.',
+                },
+                { flags: '--add <path>', description: 'Add a registry path (or remote URL).' },
+                { flags: '--remove <path>', description: 'Remove a registry path.' },
+                { flags: '--set <path...>', description: 'Replace the registry search paths.' },
+                { flags: '--clear', description: 'Clear the registry search paths.' },
                 { flags: '--scope <scope>', description: 'project | global (default: global).' },
                 { flags: '--json', description: 'Print the registries as JSON.' },
             ],
             run: (opts, context) => {
                 const cwd = (opts.cwd as string | undefined) ?? context.cwd;
                 const scope = (opts.scope as string | undefined) ?? 'global';
+                const kind = (opts.kind as string | undefined) ?? 'templates';
                 const change = (opts.add ?? opts.remove) as string | undefined;
-                if (change) {
-                    if (scope === 'global') {
+                if (opts.set || opts.clear) {
+                    const next = opts.clear ? [] : normalizeSearchPaths(opts.set as string[]);
+                    if (kind === 'providers') {
+                        if (scope === 'global') setGlobalProviderRegistries(next);
+                        else setProjectProviderRegistries(cwd, next);
+                    } else if (scope === 'global') {
+                        writeGlobalCliConfig({ registrySearchPaths: next });
+                    } else {
+                        writeProjectRegistries(cwd, next);
+                    }
+                } else if (change) {
+                    if (kind === 'providers') {
+                        if (scope === 'global') {
+                            if (opts.add) addGlobalProviderRegistry(change);
+                            else removeGlobalProviderRegistry(change);
+                        } else if (opts.add) {
+                            addProjectProviderRegistry(cwd, change);
+                        } else {
+                            removeProjectProviderRegistry(cwd, change);
+                        }
+                    } else if (scope === 'global') {
                         const cli = readGlobalCliConfig();
                         const target = expandHome(change);
                         const paths = normalizeSearchPaths(cli.registrySearchPaths);

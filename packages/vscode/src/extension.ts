@@ -146,8 +146,60 @@ export function activate(context: vscode.ExtensionContext): void {
     // runs on every watched change, so a notification each time would nag).
     let warnedNoWorkspaces = false;
 
+    interface RemovedFile {
+        path: string;
+        content: string;
+    }
+
+    /** Show the removed managed files with a Restore action. */
+    const notifyRemovedFiles = async (cwd: string, files: RemovedFile[]): Promise<void> => {
+        if (files.length === 0) return;
+        const choice = await vscode.window.showInformationMessage(
+            `deltabox: removed ${files.length} managed file(s).`,
+            {
+                modal: true,
+                detail: files.map(file => file.path).join('\n'),
+            },
+            'Restore',
+            'Close'
+        );
+        if (choice !== 'Restore') return;
+        for (const file of files) {
+            const uri = vscode.Uri.file(path.join(cwd, file.path));
+            await vscode.workspace.fs.createDirectory(vscode.Uri.file(path.dirname(uri.fsPath)));
+            await vscode.workspace.fs.writeFile(uri, new Uint8Array(Buffer.from(file.content)));
+        }
+        vscode.window.showInformationMessage(`deltabox: restored ${files.length} file(s).`);
+    };
+
+    /** Sync through the CLI's JSON output so removed files can be restored. */
+    const runSyncCli = async (cwd: string, args: string[]): Promise<number> => {
+        output.appendLine(`\n> ${cliInvocation(cwd)} ${args.join(' ')} --json  (${cwd})`);
+        const result = await captureCli(cwd, [...args, '--json']);
+        output.append(result.stdout || result.stderr);
+        let removed: RemovedFile[] = [];
+        if (result.code === 0) {
+            try {
+                const parsed = JSON.parse(result.stdout) as {
+                    removedFiles?: RemovedFile[];
+                    results?: { result?: { removedFiles?: RemovedFile[] } }[];
+                };
+                removed = parsed.results
+                    ? parsed.results.flatMap(entry => entry.result?.removedFiles ?? [])
+                    : (parsed.removedFiles ?? []);
+            } catch {
+                // non-JSON output; nothing to notify
+            }
+        }
+        await notifyRemovedFiles(cwd, removed);
+        return result.code;
+    };
+
     /** Run `dbx <args>` in `cwd`, streaming output to the channel. */
     const runCli = (cwd: string, args: string[]): Promise<number> => {
+        if (args[0] === 'sync' && !args.includes('--check') && !args.includes('--json')) {
+            return runSyncCli(cwd, args);
+        }
         output.appendLine(`\n> ${cliInvocation(cwd)} ${args.join(' ')}  (${cwd})`);
         return new Promise<number>(resolve => {
             let proc: ChildProcess;
@@ -254,6 +306,19 @@ export function activate(context: vscode.ExtensionContext): void {
         const args = ['template:registry', '--vscode-dir', vscodeDir];
         if (paths.length > 0) args.push('--set', ...paths);
         else if (!initial) args.push('--clear');
+        await captureCli(workspaceRoots()[0] ?? process.cwd(), args);
+    };
+
+    /** Mirror the provider search-path setting into the global CLI config. */
+    const syncGlobalProviderPaths = async (initial = false): Promise<void> => {
+        const paths = vscode.workspace
+            .getConfiguration('deltabox')
+            .get<string[]>('providerRegistrySearchPaths', [])
+            .filter(Boolean);
+        const args = ['registry', '--kind', 'providers', '--scope', 'global'];
+        if (paths.length > 0) args.push('--set', ...paths);
+        else if (!initial) args.push('--clear');
+        else return;
         await captureCli(workspaceRoots()[0] ?? process.cwd(), args);
     };
 
@@ -722,15 +787,12 @@ export function activate(context: vscode.ExtensionContext): void {
             { placeHolder: 'Which kind of registry?' }
         );
         if (!category) return;
-        if (category.value === 'providers') {
-            await addProvider();
-            await providers.refresh();
-            await registries.refresh();
-            return;
-        }
+        const providersKind = category.value === 'providers';
         const entry = await vscode.window.showInputBox({
             prompt: 'Registry path or http(s) URL',
-            value: '.dbx/toolchain/.registry/templates',
+            value: providersKind
+                ? '.dbx/toolchain/.registry/providers'
+                : '.dbx/toolchain/.registry/templates',
             validateInput: value => (value.trim() ? undefined : 'Required'),
         });
         if (!entry) return;
@@ -742,7 +804,7 @@ export function activate(context: vscode.ExtensionContext): void {
             { placeHolder: 'Where should this registry live?' }
         );
         if (!scope) return;
-        const code = await runCli(root, [
+        const args = [
             'registry',
             '--add',
             entry,
@@ -750,12 +812,15 @@ export function activate(context: vscode.ExtensionContext): void {
             scope.label === 'Project' ? 'project' : 'global',
             '--cwd',
             root,
-        ]);
+        ];
+        if (providersKind) args.push('--kind', 'providers');
+        const code = await runCli(root, args);
         if (code === 0) {
             await registries.refresh();
-            await templates.refresh();
+            if (providersKind) await providers.refresh();
+            else await templates.refresh();
             vscode.window.showInformationMessage(
-                `deltabox: added ${scope.label.toLowerCase()} registry.`
+                `deltabox: added ${scope.label.toLowerCase()} ${category.label.toLowerCase()} registry.`
             );
         } else {
             output.show();
@@ -773,14 +838,17 @@ export function activate(context: vscode.ExtensionContext): void {
         let entries: RegistryItemNode['entry'][] = [];
         if (result.code === 0) {
             try {
-                entries =
-                    (JSON.parse(result.stdout) as { templates?: typeof entries }).templates ?? [];
+                const parsed = JSON.parse(result.stdout) as {
+                    templates?: RegistryItemNode['entry'][];
+                    providers?: RegistryItemNode['entry'][];
+                };
+                entries = [...(parsed.templates ?? []), ...(parsed.providers ?? [])];
             } catch {
                 entries = [];
             }
         }
         if (entries.length === 0) {
-            vscode.window.showInformationMessage('deltabox: no template registries.');
+            vscode.window.showInformationMessage('deltabox: no registries.');
             return;
         }
         const picked = await vscode.window.showQuickPick(
@@ -795,7 +863,7 @@ export function activate(context: vscode.ExtensionContext): void {
         );
         if (confirm !== 'Remove') return;
         for (const item of picked) {
-            await runCli(root, [
+            const args = [
                 'registry',
                 '--remove',
                 item.entry.path,
@@ -803,7 +871,9 @@ export function activate(context: vscode.ExtensionContext): void {
                 item.entry.scope,
                 '--cwd',
                 root,
-            ]);
+            ];
+            if (item.entry.kind === 'providers') args.push('--kind', 'providers');
+            await runCli(root, args);
         }
         await registries.refresh();
     };
@@ -1511,6 +1581,12 @@ export function activate(context: vscode.ExtensionContext): void {
             if (e.affectsConfiguration('deltabox.registrySearchPaths')) {
                 void syncGlobalTemplatePaths().then(() => templates.refresh());
             }
+            if (e.affectsConfiguration('deltabox.providerRegistrySearchPaths')) {
+                void syncGlobalProviderPaths().then(() => {
+                    void providers.refresh();
+                    void registries.refresh();
+                });
+            }
             if (!e.affectsConfiguration(SECTION)) return;
             enabled = getEnabled();
             rebuildWatchers();
@@ -1541,6 +1617,7 @@ export function activate(context: vscode.ExtensionContext): void {
     updateContextKeys();
     void providers.refresh();
     void syncGlobalTemplatePaths(true).then(() => templates.refresh());
+    void syncGlobalProviderPaths(true).then(() => providers.refresh());
     output.appendLine('dbx: extension activated.');
 }
 

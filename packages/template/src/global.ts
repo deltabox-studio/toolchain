@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { providerRegistryPaths } from '@deltabox/toolchain-core';
 import type { ToolchainTemplateSource } from '@deltabox/toolchain-shared';
 
 import { loadLocalTemplates } from './local.js';
@@ -57,29 +58,40 @@ export function projectRegistriesPath(cwd: string): string {
 }
 
 /** The project-scoped registry search paths. */
-export function readProjectRegistries(cwd: string): { templates: string[] } {
+export function readProjectRegistries(cwd: string): {
+    templates: string[];
+    providers: string[];
+} {
     try {
         const raw = fs.readFileSync(projectRegistriesPath(cwd), 'utf-8').replace(/^\uFEFF/, '');
-        const parsed = JSON.parse(raw) as { templates?: unknown };
+        const parsed = JSON.parse(raw) as { templates?: unknown; providers?: unknown };
         return {
             templates: Array.isArray(parsed.templates)
                 ? parsed.templates.map(String).filter(Boolean)
                 : [],
+            providers: Array.isArray(parsed.providers)
+                ? parsed.providers.map(String).filter(Boolean)
+                : [],
         };
     } catch {
-        return { templates: [] };
+        return { templates: [], providers: [] };
     }
 }
 
-/** Write the project-scoped registry search paths. */
+/** Write the project-scoped registry search paths (preserving provider paths). */
 export function writeProjectRegistries(cwd: string, templates: string[]): void {
     const file = projectRegistriesPath(cwd);
-    if (templates.length === 0) {
+    const providers = readProjectRegistries(cwd).providers;
+    const next = {
+        ...(templates.length > 0 ? { templates } : {}),
+        ...(providers.length > 0 ? { providers } : {}),
+    };
+    if (Object.keys(next).length === 0) {
         fs.rmSync(file, { force: true });
         return;
     }
     fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, `${JSON.stringify({ templates }, null, 4)}\n`, 'utf-8');
+    fs.writeFileSync(file, `${JSON.stringify(next, null, 4)}\n`, 'utf-8');
 }
 
 /** Add a project-scoped template registry directory (or remote URL). */
@@ -353,15 +365,10 @@ export function listRegistries(cwd: string): {
                     }) as const
             ),
         ],
-        providers: [
-            {
-                path: path.join(cwd, '.dbx', 'toolchain', 'providers.json'),
-                scope: 'project',
-                remote: false,
-                kind: 'providers',
-            },
-            { path: globalProvidersPath(), scope: 'global', remote: false, kind: 'providers' },
-        ],
+        providers: providerRegistryPaths(cwd).map(entry => ({
+            ...entry,
+            kind: 'providers' as const,
+        })),
     };
 }
 

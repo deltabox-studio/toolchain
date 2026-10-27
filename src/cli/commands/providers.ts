@@ -1,4 +1,4 @@
-import { readAllProviders } from '@deltabox/toolchain-core';
+import { readAllProvidersSync } from '@deltabox/toolchain-core';
 import {
     logger,
     spawnCross,
@@ -7,7 +7,7 @@ import {
     type ToolchainProviderCommand,
 } from '@deltabox/toolchain-shared';
 
-import { toolchainProviders } from '../../providers.js';
+import { loadToolchainProviders } from '../../providers.js';
 
 const CWD_OPTION = { flags: '--cwd <dir>', description: 'Project root (default: cwd).' };
 
@@ -49,7 +49,7 @@ function providerPassthrough(
 
 /** The passthrough commands for every command of the project's custom providers. */
 export function providerPassthroughCommands(cwd: string = process.cwd()): ToolchainCommand[] {
-    return readAllProviders(cwd).flatMap(provider =>
+    return readAllProvidersSync(cwd).flatMap(provider =>
         provider.commands.map(command => providerPassthrough(provider, command))
     );
 }
@@ -67,8 +67,8 @@ export function providerCommands(): ToolchainCommand[] {
             options: [
                 { flags: '--json', description: 'Print the providers (with actions) as JSON.' },
             ],
-            run: opts => {
-                const providers = toolchainProviders();
+            run: async opts => {
+                const providers = await loadToolchainProviders();
                 if (opts.json) {
                     logger.raw(JSON.stringify(providers, null, 4));
                     return;

@@ -12,9 +12,14 @@ export const MANIFEST_FILE = 'manifest.json';
  */
 export const TIMESTAMPS_FILE = 'timestamps.json';
 
+/** Whether dbx created a managed file or adopted a pre-existing one. */
+export type FileOrigin = 'created' | 'adopted';
+
 export interface Manifest {
     /** Repo-relative paths of every generated/managed file. */
     files: string[];
+    /** Per-file origin, so a sync only deletes files that dbx created. */
+    origins?: Record<string, FileOrigin>;
     /**
      * ISO timestamp of the last successful sync (absent when never synced).
      * Read from {@link TIMESTAMPS_FILE}, falling back to a legacy inline
@@ -53,8 +58,11 @@ export function readSyncedAt(cwd: string): string | undefined {
 export function readManifest(cwd: string): Manifest {
     const parsed = readManifestJson<Partial<Manifest>>(cwd, MANIFEST_FILE);
     const syncedAt = readSyncedAt(cwd);
+    const origins =
+        parsed?.origins && typeof parsed.origins === 'object' ? parsed.origins : undefined;
     return {
         files: Array.isArray(parsed?.files) ? parsed.files : [],
+        ...(origins ? { origins } : {}),
         ...(syncedAt ? { syncedAt } : {}),
     };
 }
@@ -64,12 +72,29 @@ export function readManifest(cwd: string): Manifest {
  * creating the directory as needed. Rewriting `manifest.json` without
  * `syncedAt` is what migrates a legacy inline timestamp on the next sync.
  */
-export function writeManifest(cwd: string, files: string[], syncedAt?: string): void {
+export function writeManifest(
+    cwd: string,
+    files: string[],
+    syncedAt?: string,
+    origins?: Record<string, FileOrigin>
+): void {
     const dir = manifestDir(cwd);
     fs.mkdirSync(dir, { recursive: true });
+    const unique = [...new Set(files)].sort();
     fs.writeFileSync(
         path.join(dir, MANIFEST_FILE),
-        toJson({ files: [...new Set(files)].sort() }),
+        toJson({
+            files: unique,
+            ...(origins
+                ? {
+                      origins: Object.fromEntries(
+                          unique
+                              .filter(file => origins[file] !== undefined)
+                              .map(file => [file, origins[file]])
+                      ),
+                  }
+                : {}),
+        }),
         'utf-8'
     );
     fs.writeFileSync(
