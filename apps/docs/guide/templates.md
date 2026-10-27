@@ -258,6 +258,20 @@ Online sources are resolved with `--online` (or `dbx template:add`):
 - **Vite+** — set `create.defaultTemplate` in the `dbx.config.*`'s `vite` section (the full Vite+
   config) to make a scope the default for `vp create`.
 
+Sources and registries can be restricted with host/path globs (checked for local
+paths and remote URLs, which also guards SSRF):
+
+```ts [dbx.config.ts]
+toolchain: {
+    registry: {
+        templates: {
+            allow: ['*.example.com', 'https://registry.example.com/**', './templates/**'],
+            deny: ['*.internal.example.com'],
+        },
+    },
+}
+```
+
 ## VS Code
 
 The extension drives the same CLI: **From template…** runs `template:list --json`

@@ -5,6 +5,7 @@ export * from './logger.js';
 export * from './object-utils.js';
 export * from './project.js';
 export * from './provider.js';
+export * from './registry-policy.js';
 export * from './run.js';
 export * from './string-utils.js';
 export * from './template.js';

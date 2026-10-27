@@ -31,6 +31,7 @@ import { loggerConfigSchema } from './logger.js';
 import { section } from './meta.js';
 import { projectConfigSchema, projectTypeSchema } from './project.js';
 import { providersConfigSchema } from './providers.js';
+import { registryConfigSchema, registryPolicySchema } from './registry.js';
 import {
     templateKindSchema,
     templateSourceSchema,
@@ -56,6 +57,7 @@ export * from './logger.js';
 export * from './meta.js';
 export * from './project.js';
 export * from './providers.js';
+export * from './registry.js';
 export * from './templates.js';
 export * from './tsconfig.js';
 export * from './vite.js';
@@ -90,6 +92,9 @@ export const toolchainConfigSchema = z
             .optional(),
         templates: section(templatesConfigSchema)
             .describe('Template sources / scaffolding.')
+            .optional(),
+        registry: section(registryConfigSchema)
+            .describe('Allow/deny host and path globs for template/provider registries.')
             .optional(),
         catalogs: section(catalogsConfigSchema)
             .describe('Package catalogs written to the package manager catalog file (`catalog:`).')
@@ -145,6 +150,8 @@ export const CONFIG_TYPE_SCHEMAS = {
     ToolchainTemplateKind: templateKindSchema,
     ToolchainTemplateSource: templateSourceSchema,
     ToolchainTemplatesConfig: templatesConfigSchema,
+    ToolchainRegistryPolicy: registryPolicySchema,
+    ToolchainRegistryConfig: registryConfigSchema,
     ToolchainCatalogsConfig: catalogsConfigSchema,
     ToolchainViteConfig: viteConfigSchema,
     ToolchainLoggerConfig: loggerConfigSchema,
@@ -160,6 +167,7 @@ export const CONFIG_SECTION_SCHEMAS = {
     biome: biomeConfigSchema,
     tsconfig: tsconfigConfigSchema,
     templates: templatesConfigSchema,
+    registry: registryConfigSchema,
     catalogs: catalogsConfigSchema,
     vite: viteConfigSchema,
     watch: watchConfigSchema,
@@ -182,6 +190,7 @@ export const CONFIG_SECTION_DESCRIPTIONS: Record<keyof typeof CONFIG_SECTION_SCH
     biome: 'Biome config generation (for consumers that still want a `biome.json`).',
     tsconfig: 'Workspace tsconfig generation (path aliases + project references).',
     templates: 'Template sources / scaffolding.',
+    registry: 'Allow/deny host and path globs for template/provider registries.',
     catalogs: 'Package catalogs written to the package manager catalog file (`catalog:`).',
     vite: 'The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.',
     watch: 'Watch behaviour for `dbx watch`.',

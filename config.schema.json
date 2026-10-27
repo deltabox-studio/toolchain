@@ -767,6 +767,46 @@
             ],
             "description": "What the template produces."
         },
+        "ToolchainRegistryConfig": {
+            "type": "object",
+            "properties": {
+                "templates": {
+                    "description": "Allow/deny globs for template sources and registries.",
+                    "$ref": "#/$defs/ToolchainRegistryPolicy"
+                },
+                "providers": {
+                    "description": "Allow/deny globs for provider sources and registries.",
+                    "$ref": "#/$defs/ToolchainRegistryPolicy"
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false,
+            "description": "Registry source allow/deny policies (templates + providers)."
+        },
+        "ToolchainRegistryPolicy": {
+            "type": "object",
+            "properties": {
+                "allow": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Allowed host/path globs. When non-empty, only matching sources are used (eg. `*.example.com`, `https://registry.example.com/**`)."
+                },
+                "deny": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Denied host/path globs (checked before `allow`)."
+                }
+            },
+            "additionalProperties": false,
+            "description": "Registry source allow/deny globs."
+        },
         "ToolchainCatalogsConfig": {
             "type": "object",
             "properties": {
@@ -958,6 +998,17 @@
                         }
                     ],
                     "description": "Template sources / scaffolding."
+                },
+                "registry": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainRegistryConfig"
+                        }
+                    ],
+                    "description": "Allow/deny host and path globs for template/provider registries."
                 },
                 "catalogs": {
                     "anyOf": [

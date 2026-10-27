@@ -17,7 +17,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import type { ToolchainProvider } from '@deltabox/toolchain-shared';
+import {
+    registrySourceAllowed,
+    type RegistryPolicy,
+    type ToolchainProvider,
+} from '@deltabox/toolchain-shared';
 
 const REGISTRY_DIR = path.join('.dbx', 'toolchain');
 /** The legacy project file, still read for compatibility. */
@@ -226,7 +230,10 @@ export interface ProviderRegistryPath {
  * the legacy project file), then global (CLI config paths or the default dir,
  * plus the legacy global file). Duplicates are removed.
  */
-export function providerRegistryPaths(cwd: string = process.cwd()): ProviderRegistryPath[] {
+export function providerRegistryPaths(
+    cwd: string = process.cwd(),
+    policy?: RegistryPolicy
+): ProviderRegistryPath[] {
     const config = readCliConfig();
     const project: string[] = [];
     const implicit = path.join(cwd, REGISTRY_DIR, '.registry', 'providers');
@@ -250,6 +257,7 @@ export function providerRegistryPaths(cwd: string = process.cwd()): ProviderRegi
         for (const entry of paths) {
             const key = isRemote(entry) ? entry : path.resolve(entry);
             if (seen.has(key)) continue;
+            if (!registrySourceAllowed(key, policy)) continue;
             seen.add(key);
             out.push({ path: entry, scope, remote: isRemote(entry) });
         }
@@ -359,8 +367,11 @@ function dedupeProviders(providers: ToolchainProvider[]): ToolchainProvider[] {
  * project provider wins). Remote registries are skipped; use
  * {@link readAllProviders} for those.
  */
-export function readAllProvidersSync(cwd: string = process.cwd()): ToolchainProvider[] {
-    const entries = providerRegistryPaths(cwd);
+export function readAllProvidersSync(
+    cwd: string = process.cwd(),
+    policy?: RegistryPolicy
+): ToolchainProvider[] {
+    const entries = providerRegistryPaths(cwd, policy);
     const project = entries.filter(entry => entry.scope === 'project' && !entry.remote);
     const global = entries.filter(entry => entry.scope === 'global' && !entry.remote);
     return dedupeProviders([
@@ -383,8 +394,11 @@ async function fetchProviders(url: string): Promise<ToolchainProvider[]> {
  * The project + global providers from every search path, including remote
  * registries, deduped by id (a project provider wins).
  */
-export async function readAllProviders(cwd: string = process.cwd()): Promise<ToolchainProvider[]> {
-    const entries = providerRegistryPaths(cwd);
+export async function readAllProviders(
+    cwd: string = process.cwd(),
+    policy?: RegistryPolicy
+): Promise<ToolchainProvider[]> {
+    const entries = providerRegistryPaths(cwd, policy);
     const loaded: ToolchainProvider[] = [];
     for (const entry of entries) {
         if (entry.remote) loaded.push(...(await fetchProviders(entry.path)));

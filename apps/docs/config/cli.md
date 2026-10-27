@@ -279,6 +279,7 @@ Record a template source in .dbx/toolchain/templates.json.
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--type ‹type›` — Force: builtin | local | npm | git | vite-plus | remote.
 - `--name ‹name›` — Display name.
+- `--id ‹id›` — Stable template id (default: inferred).
 - `--kind ‹kind›` — project | workspace | application | folder | tooling | pipeline.
 - `--ref ‹ref›` — Git branch/tag/commit.
 - `--registry ‹url›` — Custom npm registry (default: the project package manager).

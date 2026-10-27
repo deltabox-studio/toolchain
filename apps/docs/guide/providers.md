@@ -162,7 +162,9 @@ Global paths:
 provider wins on an id clash), so a custom provider's commands become `dbx`
 commands — `dbx <command.name>` forwards to `<binary> <subcommand> ...` — and it
 shows up in `dbx providers` and the editor. Remote registries are fetched by
-`dbx providers --json`/`loadToolchainProviders()`.
+`dbx providers --json`/`loadToolchainProviders()`. Restrict them with
+`toolchain.registry.providers` (`allow`/`deny` host + path globs); the same
+policy applies to local registry paths:
 
 ```json [.dbx/toolchain/.registry/providers/providers.json]
 [

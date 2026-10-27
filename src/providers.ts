@@ -8,7 +8,14 @@
  */
 
 import { readAllProviders, readAllProvidersSync } from '@deltabox/toolchain-core';
-import { providerActions, type ToolchainProvider } from '@deltabox/toolchain-shared';
+import {
+    providerActions,
+    type RegistryPolicy,
+    sectionConfig,
+    sectionEnabled,
+    type ToolchainConfig,
+    type ToolchainProvider,
+} from '@deltabox/toolchain-shared';
 import { viteProvider } from '@deltabox/toolchain-vite';
 
 export type {
@@ -18,6 +25,12 @@ export type {
 } from '@deltabox/toolchain-shared';
 export { providerActions } from '@deltabox/toolchain-shared';
 export { viteProvider } from '@deltabox/toolchain-vite';
+
+/** The provider source policy from `toolchain.registry.providers`. */
+export function providerPolicy(config?: ToolchainConfig): RegistryPolicy | undefined {
+    if (!config || !sectionEnabled(config.registry)) return undefined;
+    return sectionConfig(config.registry)?.providers;
+}
 
 function withBuiltins(providers: ToolchainProvider[]): ToolchainProvider[] {
     const seen = new Set<string>();
@@ -36,13 +49,17 @@ function withBuiltins(providers: ToolchainProvider[]): ToolchainProvider[] {
  * its resolved actions (defaults applied). Remote registries are skipped; use
  * {@link loadToolchainProviders} for those.
  */
-export function toolchainProviders(cwd: string = process.cwd()): ToolchainProvider[] {
-    return withBuiltins(readAllProvidersSync(cwd));
+export function toolchainProviders(
+    cwd: string = process.cwd(),
+    config?: ToolchainConfig
+): ToolchainProvider[] {
+    return withBuiltins(readAllProvidersSync(cwd, providerPolicy(config)));
 }
 
 /** Like {@link toolchainProviders}, but also fetches remote registries. */
 export async function loadToolchainProviders(
-    cwd: string = process.cwd()
+    cwd: string = process.cwd(),
+    config?: ToolchainConfig
 ): Promise<ToolchainProvider[]> {
-    return withBuiltins(await readAllProviders(cwd));
+    return withBuiltins(await readAllProviders(cwd, providerPolicy(config)));
 }

@@ -18,6 +18,7 @@ import {
     addGlobalTemplate,
     addProjectRegistry,
     defaultGlobalTemplatesDir,
+    existingTemplateIds,
     expandHome,
     listRegistries,
     loadGlobalTemplates,
@@ -26,6 +27,7 @@ import {
     removeGlobalTemplate,
     removeProjectRegistry,
     resolveTemplateSearchPaths,
+    uniqueTemplateId,
     writeGlobalCliConfig,
     writeProjectRegistries,
     writeVscodeSearchPaths,
@@ -256,6 +258,7 @@ export function templateCommands(): ToolchainCommand[] {
                     description: 'Force: builtin | local | npm | git | vite-plus | remote.',
                 },
                 { flags: '--name <name>', description: 'Display name.' },
+                { flags: '--id <id>', description: 'Stable template id (default: inferred).' },
                 KIND_OPTION,
                 { flags: '--ref <ref>', description: 'Git branch/tag/commit.' },
                 {
@@ -269,14 +272,51 @@ export function templateCommands(): ToolchainCommand[] {
                 },
                 { flags: '--json', description: 'Print the updated registry as JSON.' },
             ],
-            run: (opts, context) => {
+            run: async (opts, context) => {
                 const source = parseSourceSpec(String(opts.source), context.cwd);
                 if (opts.type) source.type = opts.type as typeof source.type;
                 if (opts.name) source.name = String(opts.name);
+                if (opts.id) source.id = String(opts.id);
                 if (opts.kind) source.kind = opts.kind as NonNullable<typeof source.kind>;
                 if (opts.ref) source.ref = String(opts.ref);
                 if (opts.registry) source.registry = String(opts.registry);
                 if (opts.subdir) source.subdir = String(opts.subdir);
+
+                const inferred =
+                    source.id ??
+                    (source.type === 'builtin'
+                        ? source.locate
+                        : source.type === 'npm'
+                          ? (source.locate.split('/').pop() ?? source.locate)
+                          : path
+                                .basename(
+                                    source.locate.replace(/[\\/]+$/, '').replace(/\.git$/, '')
+                                )
+                                .replace(/[^a-z0-9-_]/gi, '-'));
+                const taken = new Set([
+                    ...(await existingTemplateIds(context.cwd, { global: false })),
+                    ...readTemplateRegistry(context.cwd)
+                        .sources.map(existing => existing.id)
+                        .filter((id): id is string => Boolean(id)),
+                ]);
+                if (inferred && taken.has(inferred)) {
+                    if (canPrompt(opts as Record<string, unknown>)) {
+                        const answer = await text({
+                            message: `Template id "${inferred}" already exists. New id:`,
+                            placeholder: uniqueTemplateId(inferred, taken),
+                            defaultValue: uniqueTemplateId(inferred, taken),
+                        });
+                        if (isCancel(answer)) return abortPrompt();
+                        source.id = String(answer);
+                    } else {
+                        throw new Error(
+                            `template id "${inferred}" already exists; pass --id <id> to rename it.`
+                        );
+                    }
+                } else if (source.id === undefined && inferred) {
+                    source.id = inferred;
+                }
+
                 // A local folder without a template.json is initialised first, so
                 // `template:add ./dir` "just works".
                 if (

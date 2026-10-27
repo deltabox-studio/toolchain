@@ -14,8 +14,13 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { providerRegistryPaths } from '@deltabox/toolchain-core';
-import type { ToolchainTemplateSource } from '@deltabox/toolchain-shared';
+import {
+    registrySourceAllowed,
+    type RegistryPolicy,
+    type ToolchainTemplateSource,
+} from '@deltabox/toolchain-shared';
 
+import { BUILTIN_TEMPLATES } from './builtin.js';
 import { loadLocalTemplates } from './local.js';
 import type { Template } from './types.js';
 
@@ -372,6 +377,34 @@ export function listRegistries(cwd: string): {
     };
 }
 
+/** A unique variant of `id` (`foo-2`, `foo-3`, ...). */
+export function uniqueTemplateId(id: string, taken: Iterable<string>): string {
+    const used = new Set(taken);
+    if (!used.has(id)) return id;
+    let index = 2;
+    while (used.has(`${id}-${index}`)) index += 1;
+    return `${id}-${index}`;
+}
+
+/**
+ * Every template id that already exists: builtins, global/local templates and
+ * the ids declared by global sources. The project registry is added by the
+ * caller when it has one.
+ */
+export async function existingTemplateIds(
+    cwd?: string,
+    options: { global?: boolean } = {}
+): Promise<Set<string>> {
+    const ids = new Set(BUILTIN_TEMPLATES.map(template => template.id));
+    if (options.global === false) return ids;
+    const global = await loadGlobalTemplates(cwd);
+    for (const template of global.templates) ids.add(template.id);
+    for (const source of [...global.sources, ...readGlobalSources()]) {
+        if (source.id) ids.add(source.id);
+    }
+    return ids;
+}
+
 /** The non-local global sources (git/npm/http) stored in the registry. */
 export function readGlobalSources(): ToolchainTemplateSource[] {
     try {
@@ -459,10 +492,21 @@ export interface GlobalTemplates {
  * Load the global templates: local search paths are scanned for template dirs,
  * and remote registry URLs are fetched (their `{ sources }` / array is merged).
  */
-export async function loadGlobalTemplates(cwd?: string): Promise<GlobalTemplates> {
-    const { paths } = resolveTemplateSearchPaths(cwd);
+export async function loadGlobalTemplates(
+    cwd?: string,
+    policy?: RegistryPolicy
+): Promise<GlobalTemplates> {
+    const { paths: allPaths } = resolveTemplateSearchPaths(cwd);
+    const paths = allPaths.filter(entry =>
+        registrySourceAllowed(isRemoteRegistry(entry) ? entry : path.resolve(entry), policy)
+    );
     const templates: Template[] = [];
-    const sources: ToolchainTemplateSource[] = readGlobalSources();
+    const sources: ToolchainTemplateSource[] = readGlobalSources().filter(source =>
+        registrySourceAllowed(
+            source.type === 'local' && cwd ? path.resolve(cwd, source.locate) : source.locate,
+            policy
+        )
+    );
     for (const entry of paths) {
         if (isRemoteRegistry(entry)) {
             try {
@@ -475,8 +519,18 @@ export async function loadGlobalTemplates(cwd?: string): Promise<GlobalTemplates
                       (parsed as { templates?: unknown }).templates);
                 if (Array.isArray(list)) {
                     for (const item of list) {
-                        if (item && typeof item === 'object' && 'type' in item && 'locate' in item)
-                            sources.push(item as ToolchainTemplateSource);
+                        if (!item || typeof item !== 'object') continue;
+                        if (!('type' in item) || !('locate' in item)) continue;
+                        const source = item as ToolchainTemplateSource;
+                        if (
+                            registrySourceAllowed(
+                                source.type === 'local' && cwd
+                                    ? path.resolve(cwd, source.locate)
+                                    : source.locate,
+                                policy
+                            )
+                        )
+                            sources.push(source);
                     }
                 }
             } catch {

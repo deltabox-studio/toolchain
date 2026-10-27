@@ -67,8 +67,8 @@ export function providerCommands(): ToolchainCommand[] {
             options: [
                 { flags: '--json', description: 'Print the providers (with actions) as JSON.' },
             ],
-            run: async opts => {
-                const providers = await loadToolchainProviders();
+            run: async (opts, context) => {
+                const providers = await loadToolchainProviders(process.cwd(), context.config);
                 if (opts.json) {
                     logger.raw(JSON.stringify(providers, null, 4));
                     return;

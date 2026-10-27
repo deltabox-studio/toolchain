@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
+    registrySourceAllowed,
+    type RegistryPolicy,
     sectionConfig,
     sectionEnabled,
     type ToolchainConfig,
@@ -95,6 +97,26 @@ export function collectSources(options: LoadTemplatesOptions): ToolchainTemplate
     ];
 }
 
+/** The template registry policy from `toolchain.registry.templates`. */
+function templatePolicy(config?: ToolchainConfig): RegistryPolicy | undefined {
+    if (!config || !sectionEnabled(config.registry)) return undefined;
+    return sectionConfig(config.registry)?.templates;
+}
+
+/** Whether a template source is allowed by the policy (local paths resolved). */
+function sourceAllowed(
+    source: ToolchainTemplateSource,
+    cwd: string,
+    policy: RegistryPolicy | undefined
+): boolean {
+    if (!policy) return true;
+    if (source.type === 'local')
+        return registrySourceAllowed(path.resolve(cwd, source.locate), policy);
+    if (source.type === 'npm')
+        return registrySourceAllowed(source.registry ?? detectNpmRegistry(cwd), policy);
+    return registrySourceAllowed(source.locate, policy);
+}
+
 /** Fetch a remote source registry (`{ sources }`, `{ templates }` or an array). */
 async function loadRemoteSources(url: string): Promise<ToolchainTemplateSource[]> {
     try {
@@ -138,8 +160,11 @@ export async function loadTemplates(options: LoadTemplatesOptions): Promise<Temp
     // `~/.dbx/toolchain/.registry/templates`) plus remote registry URLs. The
     // project's own sources are loaded first, so a local template wins on an id
     // clash.
-    const global = await loadGlobalTemplates(options.cwd);
-    const sources = [...collectSources(options), ...global.sources];
+    const policy = templatePolicy(options.config);
+    const global = await loadGlobalTemplates(options.cwd, policy);
+    const sources = [...collectSources(options), ...global.sources].filter(source =>
+        sourceAllowed(source, options.cwd, policy)
+    );
     const queue = [...sources];
     const seenRemote = new Set<string>();
 
@@ -149,7 +174,12 @@ export async function loadTemplates(options: LoadTemplatesOptions): Promise<Temp
             case 'remote': {
                 if (options.online && !seenRemote.has(source.locate)) {
                     seenRemote.add(source.locate);
-                    queue.push(...(await loadRemoteSources(source.locate)));
+                    const fetched = await loadRemoteSources(source.locate);
+                    queue.push(
+                        ...fetched.filter(candidate =>
+                            sourceAllowed(candidate, options.cwd, policy)
+                        )
+                    );
                 }
                 break;
             }

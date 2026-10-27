@@ -2147,7 +2147,9 @@ Global paths:
 provider wins on an id clash), so a custom provider's commands become `dbx`
 commands — `dbx <command.name>` forwards to `<binary> <subcommand> ...` — and it
 shows up in `dbx providers` and the editor. Remote registries are fetched by
-`dbx providers --json`/`loadToolchainProviders()`.
+`dbx providers --json`/`loadToolchainProviders()`. Restrict them with
+`toolchain.registry.providers` (`allow`/`deny` host + path globs); the same
+policy applies to local registry paths:
 
 ```json [.dbx/toolchain/.registry/providers/providers.json]
 [
@@ -2637,6 +2639,20 @@ Online sources are resolved with `--online` (or `dbx template:add`):
 
 * **Vite+** — set `create.defaultTemplate` in the `dbx.config.*`'s `vite` section (the full Vite+
   config) to make a scope the default for `vp create`.
+
+Sources and registries can be restricted with host/path globs (checked for local
+paths and remote URLs, which also guards SSRF):
+
+```ts [dbx.config.ts]
+toolchain: {
+    registry: {
+        templates: {
+            allow: ['*.example.com', 'https://registry.example.com/**', './templates/**'],
+            deny: ['*.internal.example.com'],
+        },
+    },
+}
+```
 
 ## VS Code
 
@@ -3440,6 +3456,40 @@ Whether the source needs network access.
 
 Enable/disable this section (default: enabled when defined).
 
+## `registry`
+
+Allow/deny host and path globs for template/provider registries.
+
+### `templates`
+
+* **Type**: `ToolchainRegistryPolicy`
+
+Allow/deny globs for template sources and registries.
+
+#### `allow`
+
+* **Type**: `Array<string>`
+
+Allowed host/path globs. When non-empty, only matching sources are used (eg. `*.example.com`, `https://registry.example.com/**`).
+
+#### `deny`
+
+* **Type**: `Array<string>`
+
+Denied host/path globs (checked before `allow`).
+
+### `providers`
+
+* **Type**: `ToolchainRegistryPolicy`
+
+Allow/deny globs for provider sources and registries.
+
+### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
 ## `catalogs`
 
 Package catalogs written to the package manager catalog file (`catalog:`).
@@ -3849,6 +3899,7 @@ Record a template source in .dbx/toolchain/templates.json.
 * `--cwd ‹dir›` — Project root (default: cwd).
 * `--type ‹type›` — Force: builtin | local | npm | git | vite-plus | remote.
 * `--name ‹name›` — Display name.
+* `--id ‹id›` — Stable template id (default: inferred).
 * `--kind ‹kind›` — project | workspace | application | folder | tooling | pipeline.
 * `--ref ‹ref›` — Git branch/tag/commit.
 * `--registry ‹url›` — Custom npm registry (default: the project package manager).

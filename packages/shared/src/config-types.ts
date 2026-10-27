@@ -330,6 +330,25 @@ export interface ToolchainTemplatesConfig {
     enabled?: boolean;
 }
 
+export interface ToolchainRegistryPolicy {
+    /**
+     * Allowed host/path globs. When non-empty, only matching sources are used (eg. `*.example.com`,
+     * `https://registry.example.com/**`).
+     */
+    allow?: Array<string>;
+    /** Denied host/path globs (checked before `allow`). */
+    deny?: Array<string>;
+}
+
+export interface ToolchainRegistryConfig {
+    /** Allow/deny globs for template sources and registries. */
+    templates?: ToolchainRegistryPolicy;
+    /** Allow/deny globs for provider sources and registries. */
+    providers?: ToolchainRegistryPolicy;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
+}
+
 export interface ToolchainCatalogsConfig {
     /** The default catalog: package name -> version range. */
     packages?: Record<string, string>;
@@ -378,6 +397,8 @@ export interface ToolchainConfigSections {
     tsconfig?: boolean | ToolchainTsconfigConfig;
     /** Template sources / scaffolding. */
     templates?: boolean | ToolchainTemplatesConfig;
+    /** Allow/deny host and path globs for template/provider registries. */
+    registry?: boolean | ToolchainRegistryConfig;
     /** Package catalogs written to the package manager catalog file (`catalog:`). */
     catalogs?: boolean | ToolchainCatalogsConfig;
     /** The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it. */

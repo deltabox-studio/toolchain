@@ -545,6 +545,40 @@ Whether the source needs network access.
 
 Enable/disable this section (default: enabled when defined).
 
+## `registry`
+
+Allow/deny host and path globs for template/provider registries.
+
+### `templates`
+
+- **Type**: `ToolchainRegistryPolicy`
+
+Allow/deny globs for template sources and registries.
+
+#### `allow`
+
+- **Type**: `Array<string>`
+
+Allowed host/path globs. When non-empty, only matching sources are used (eg. `*.example.com`, `https://registry.example.com/**`).
+
+#### `deny`
+
+- **Type**: `Array<string>`
+
+Denied host/path globs (checked before `allow`).
+
+### `providers`
+
+- **Type**: `ToolchainRegistryPolicy`
+
+Allow/deny globs for provider sources and registries.
+
+### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
 ## `catalogs`
 
 Package catalogs written to the package manager catalog file (`catalog:`).
