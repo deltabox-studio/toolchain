@@ -6,6 +6,7 @@ import {
     CONFIG_FILE_NAMES,
     deepMerge,
     type DbxConfig,
+    deprecatedConfigMessage,
     type PackageJson,
     type ProjectType,
     projectFromPackageJson,
@@ -228,6 +229,14 @@ export async function loadToolchainConfig(
             if (!tolerant) throw cause;
             error = `failed to load ${file}: ${errorMessage(cause)}`;
         }
+    }
+
+    // The pre-`ci` changelog shape stays in the schema for compatibility, but a
+    // deprecated config must never be executed silently.
+    const deprecated = deprecatedConfigMessage(config);
+    if (deprecated) {
+        if (!tolerant) throw new Error(deprecated);
+        error = error ?? deprecated;
     }
 
     // When a `project` field is not defined, fall back to the project's own

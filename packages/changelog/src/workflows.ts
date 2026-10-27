@@ -1,18 +1,18 @@
 /**
  * Data-driven GitHub Actions workflow builder.
  *
- * Each default workflow is a plain object; a consumer's
- * `changelog.workflows.<id>` config is merged over it (branches, triggers,
- * extra top-level keys, extra steps/jobs, token overrides) and the result is
- * serialized to YAML by the shared emitter. This keeps every option
- * configurable and extensible without editing the workflow text.
+ * Each default workflow is a plain object; a consumer's `ci.<id>` config is
+ * merged over it (branches, triggers, extra top-level keys, extra steps/jobs,
+ * token overrides) and the result is serialized to YAML by the shared emitter.
+ * This keeps every option configurable and extensible without editing the
+ * workflow text.
  */
 
 import {
     applyReplacementsDeep,
     type Replacements,
     toYaml,
-    type WorkflowConfig,
+    type WorkflowOptions,
     type WorkflowSetting,
     type WorkflowStep,
     type YamlValue,
@@ -65,9 +65,9 @@ export const WORKFLOW_FILENAMES: Record<WorkflowId, string> = {
     issues: 'issues.yml',
 };
 
-/** Whether a workflow setting enables the workflow (default true). */
+/** Whether a workflow setting enables the workflow (opt-in: absent is disabled). */
 export function isEnabled(setting: WorkflowSetting | undefined): boolean {
-    if (setting === undefined) return true;
+    if (setting === undefined) return false;
     if (typeof setting === 'boolean') return setting;
     // A raw string is enabled when it has content (an empty string disables it).
     if (typeof setting === 'string') return setting.trim().length > 0;
@@ -99,11 +99,20 @@ function setupSteps(tokens: Replacements): WorkflowStep[] {
     ];
 }
 
+export interface DefaultWorkflowOptions {
+    /** Include commitlint in the CI workflow (default true). */
+    commitlint?: boolean;
+}
+
 /** Build all default workflows for a set of tokens. */
-export function defaultWorkflows(tokens: Replacements): Record<WorkflowId, Workflow> {
+export function defaultWorkflows(
+    tokens: Replacements,
+    options: DefaultWorkflowOptions = {}
+): Record<WorkflowId, Workflow> {
     const engine = cli(tokens);
     const main = String(tokens.mainBranch);
     const dev = String(tokens.devBranch);
+    const commitlint = options.commitlint !== false;
 
     return {
         ci: {
@@ -119,11 +128,15 @@ export function defaultWorkflows(tokens: Replacements): Record<WorkflowId, Workf
                     'runs-on': 'ubuntu-latest',
                     steps: [
                         ...setupSteps(tokens),
-                        {
-                            name: 'Commitlint (Conventional Commits)',
-                            if: "${{ github.event_name == 'pull_request' || github.event.before != '0000000000000000000000000000000000000000' }}",
-                            run: `set -euo pipefail\nbase="\${{ github.event.pull_request.base.sha || github.event.before }}"\nhead="\${{ github.event.pull_request.head.sha || github.event.after }}"\n${tokens.packageManager} commitlint --from "$base" --to "$head" --config ${tokens.commitlintConfig}`,
-                        },
+                        ...(commitlint
+                            ? [
+                                  {
+                                      name: 'Commitlint (Conventional Commits)',
+                                      if: "${{ github.event_name == 'pull_request' || github.event.before != '0000000000000000000000000000000000000000' }}",
+                                      run: `set -euo pipefail\nbase="\${{ github.event.pull_request.base.sha || github.event.before }}"\nhead="\${{ github.event.pull_request.head.sha || github.event.after }}"\n${tokens.packageManager} commitlint --from "$base" --to "$head" --config ${tokens.commitlintConfig}`,
+                                  } satisfies WorkflowStep,
+                              ]
+                            : []),
                         {
                             name: 'Verify generated files are in sync',
                             run: `${engine} sync --check`,
@@ -275,14 +288,14 @@ export function defaultWorkflows(tokens: Replacements): Record<WorkflowId, Workf
 
 /** Normalize a `steps` config into a list of per-job step groups. */
 function stepGroups(
-    config: WorkflowConfig
+    config: WorkflowOptions
 ): { job?: string; before?: WorkflowStep[]; after?: WorkflowStep[] }[] {
     if (!config.steps) return [];
     return Array.isArray(config.steps) ? config.steps : [config.steps];
 }
 
-/** Merge a consumer's {@link WorkflowConfig} over a default workflow. */
-export function applyWorkflowConfig(workflow: Workflow, config: WorkflowConfig = {}): Workflow {
+/** Merge a consumer's {@link WorkflowOptions} over a default workflow. */
+export function applyWorkflowConfig(workflow: Workflow, config: WorkflowOptions = {}): Workflow {
     const next: Workflow = structuredClone(workflow);
 
     if (config.pushBranches) {
@@ -320,7 +333,9 @@ export interface RenderWorkflowOptions {
     /** Base replacement tokens (merged with the workflow's own `tokens`). */
     tokens: Replacements;
     /** The consumer's per-workflow config. */
-    config?: WorkflowConfig;
+    config?: WorkflowOptions;
+    /** Include commitlint in the CI workflow (default true). */
+    commitlint?: boolean;
 }
 
 /**
@@ -331,7 +346,7 @@ export function renderWorkflow(id: WorkflowId, options: RenderWorkflowOptions): 
     const config = options.config ?? {};
     if (config.enabled === false) return undefined;
     const tokens = { ...DEFAULT_WORKFLOW_TOKENS, ...options.tokens, ...config.tokens };
-    const base = defaultWorkflows(tokens)[id];
+    const base = defaultWorkflows(tokens, { commitlint: options.commitlint !== false })[id];
     // Resolve any `{{ }}` tokens that survived into the object (eg. extra steps).
     const resolved = applyReplacementsDeep(applyWorkflowConfig(base, config), tokens);
     return toYaml(resolved as unknown as Record<string, YamlValue>);
@@ -344,7 +359,8 @@ export function renderWorkflow(id: WorkflowId, options: RenderWorkflowOptions): 
  */
 export function renderWorkflows(
     tokens: Replacements,
-    workflows: Partial<Record<WorkflowId, WorkflowSetting>> = {}
+    workflows: Partial<Record<WorkflowId, WorkflowSetting>> = {},
+    options: DefaultWorkflowOptions = {}
 ): Record<string, string> {
     const out: Record<string, string> = {};
     for (const id of Object.keys(WORKFLOW_FILENAMES) as WorkflowId[]) {
@@ -355,7 +371,7 @@ export function renderWorkflows(
             continue;
         }
         const config = typeof setting === 'object' ? setting : {};
-        const yaml = renderWorkflow(id, { tokens, config });
+        const yaml = renderWorkflow(id, { tokens, config, ...options });
         if (yaml) out[WORKFLOW_FILENAMES[id]] = yaml;
     }
     return out;

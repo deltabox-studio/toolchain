@@ -27,7 +27,8 @@ describe('spawnCross command path with spaces', () => {
                 let stdout = '';
                 child.stdout?.on('data', chunk => (stdout += chunk));
                 const code = await new Promise<number | null>(resolve => child.on('exit', resolve));
-                expect(stdout.trim()).toBe('2');
+                // Strip ANSI escapes: some test runners force colour on the child.
+                expect(stdout.replace(/\u001b\[[0-9;]*m/g, '').trim()).toBe('2');
                 expect(code).toBe(0);
             } finally {
                 fs.rmSync(dir, { recursive: true, force: true });

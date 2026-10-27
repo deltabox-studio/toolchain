@@ -13,14 +13,15 @@
  */
 
 import type {
+    ChangelogConfig,
     ProjectType,
-    ToolchainChangelogConfig,
+    ToolchainCiConfig,
     ToolchainConfigSections,
 } from './config-types.js';
 import type { Replacements } from './template.js';
 import type { Awaitable } from './types.js';
 
-export * from './config-schema.js';
+export * from './config-schema/index.js';
 export * from './config-types.js';
 
 /** A summary of a sync run, handed to {@link ToolchainHooks.afterSync}. */
@@ -157,11 +158,51 @@ function branchList(value: string | string[] | undefined): string[] {
 }
 
 /**
+ * The `ci` section's options, when the section is enabled. It is opt-in by
+ * presence, and `enabled: false` disables every nested workflow.
+ */
+export function resolveCiConfig(config: ToolchainConfig = {}): ToolchainCiConfig | undefined {
+    return sectionEnabled(config.ci) ? sectionConfig(config.ci) : undefined;
+}
+
+/**
+ * The `ci.changelog` pipeline config, when enabled. `ci.changelog` may be a
+ * boolean or a raw workflow string, in which case there are no extra options and
+ * this returns `undefined`.
+ */
+export function resolveChangelogConfig(config: ToolchainConfig = {}): ChangelogConfig | undefined {
+    const setting = resolveCiConfig(config)?.changelog;
+    return setting !== undefined && typeof setting === 'object' ? setting : undefined;
+}
+
+/** Whether the changelog workflow/pipeline is enabled (`ci.changelog`). */
+export function changelogSectionEnabled(config: ToolchainConfig = {}): boolean {
+    const setting = resolveCiConfig(config)?.changelog;
+    if (setting === undefined) return false;
+    if (typeof setting === 'boolean') return setting;
+    // A raw YAML string is enabled when it has content (an empty string disables it).
+    if (typeof setting === 'string') return setting.trim().length > 0;
+    return sectionEnabled(setting);
+}
+
+/**
+ * Whether commitlint is enabled for the changelog pipeline. It defaults to
+ * `true`; set `ci.changelog.commitlint: false` (or `{ enabled: false }`) to
+ * generate changelogs without the Conventional-Commits rules.
+ */
+export function resolveCommitlintEnabled(changelog?: ChangelogConfig): boolean {
+    const commitlint = changelog?.commitlint;
+    if (commitlint === undefined) return true;
+    if (typeof commitlint === 'boolean') return commitlint;
+    return commitlint.enabled !== false;
+}
+
+/**
  * The resolved changelog branches. `main` defaults to `['main']`; `dev` has **no
  * default** and reuses `main` when omitted, so a single-branch repo needs no
  * `dev`. Each side accepts a glob or an array of globs.
  */
-export function resolveChangelogBranches(changelog?: ToolchainChangelogConfig): {
+export function resolveChangelogBranches(changelog?: ChangelogConfig): {
     main: string[];
     dev: string[];
 } {
@@ -173,12 +214,26 @@ export function resolveChangelogBranches(changelog?: ToolchainChangelogConfig): 
 }
 
 /**
+ * A migration error for a config that still uses a deprecated shape. The legacy
+ * shape stays in the schema so older configs still type-check, but the loader
+ * refuses to run it so a consumer cannot silently keep using it.
+ */
+export function deprecatedConfigMessage(config: ToolchainConfig = {}): string | undefined {
+    if (config.changelog === undefined) return undefined;
+    return (
+        '`toolchain.changelog` is deprecated: move the changelog pipeline to ' +
+        '`toolchain.ci.changelog` and its generated workflows to the top-level ' +
+        '`toolchain.ci` section (eg. `ci: { ci: true, changelog: true, release: true }`).'
+    );
+}
+
+/**
  * Flatten a {@link ToolchainConfig} into the `{{ token }}` replacements every
  * template understands. Defaults are chosen so a bare config still renders.
  */
 export function resolveTokens(config: ToolchainConfig = {}): Replacements {
     const project = config.project ?? {};
-    const changelog = sectionConfig(config.changelog) ?? {};
+    const changelog = resolveChangelogConfig(config) ?? {};
     const branches = resolveChangelogBranches(changelog);
     const name = project.name ?? 'app';
     return {

@@ -461,7 +461,7 @@ function renderJsonFields(
  * Render a single markdown reference for a config **file** (no environment-var
  * language): one `## \`key\`` section per schema, with its fields, types,
  * defaults and descriptions. Named sub-schemas (`$defs`) are resolved and
- * expanded inline, so nested options (`changelog.versioning.target`, ...) are
+ * expanded inline, so nested options (`ci.changelog.versioning.target`, ...) are
  * documented too. This is what a `dbx.config.ts`-style reference is generated from.
  */
 export function renderConfigFileMarkdown(

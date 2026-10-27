@@ -1,9 +1,12 @@
 import {
+    changelogSectionEnabled,
     type ManagedFile,
     resolveChangelogBranches,
-    type SyncTask,
+    resolveChangelogConfig,
+    resolveCommitlintEnabled,
     sectionConfig,
     sectionEnabled,
+    type SyncTask,
     type ToolchainConfig,
     type WorkflowSetting,
 } from '@deltabox/toolchain-shared';
@@ -18,9 +21,10 @@ import {
 } from './workflows.js';
 
 /**
- * Apply the `changelog.branches` defaults to a workflow's config. An explicit
+ * Apply the `ci.changelog.branches` defaults to a workflow's config. An explicit
  * per-workflow `pushBranches` (or `false` to disable) still wins, and a raw
- * string setting is left untouched (it defines its own triggers).
+ * string setting is left untouched (it defines its own triggers). Only the
+ * workflows the consumer opted into are touched.
  */
 function withPushBranches(
     setting: WorkflowSetting | undefined,
@@ -32,22 +36,37 @@ function withPushBranches(
     return { pushBranches: branches, ...setting };
 }
 
+/** The workflow settings declared under `toolchain.ci` (all opt-in). */
+function declaredWorkflows(config: ToolchainConfig): Partial<Record<WorkflowId, WorkflowSetting>> {
+    const ci = sectionConfig(config.ci) ?? {};
+    return {
+        ci: ci.ci,
+        changelog: ci.changelog as WorkflowSetting | undefined,
+        release: ci.release,
+        issues: ci.issues,
+        sync: ci.sync,
+    };
+}
+
 /**
- * Map `changelog.branches` onto the workflows: `main` drives CI + release (and
- * the release PR base), `dev` drives the changelog workflow (reusing `main` when
- * omitted), and `sync` runs on both.
+ * Map `ci.changelog.branches` onto the declared workflows: `main` drives CI +
+ * release (and the release PR base), `dev` drives the changelog workflow
+ * (reusing `main` when omitted), and `sync` runs on both.
  */
 function withBranchDefaults(
     workflows: Partial<Record<WorkflowId, WorkflowSetting>>,
     branches: { main: string[]; dev: string[] }
 ): Partial<Record<WorkflowId, WorkflowSetting>> {
-    return {
-        ...workflows,
-        ci: withPushBranches(workflows.ci, branches.main),
-        release: withPushBranches(workflows.release, branches.main),
-        changelog: withPushBranches(workflows.changelog, branches.dev),
-        sync: withPushBranches(workflows.sync, [...new Set([...branches.main, ...branches.dev])]),
+    const next = { ...workflows };
+    const apply = (id: WorkflowId, list: string[]): void => {
+        if (next[id] === undefined) return;
+        next[id] = withPushBranches(next[id], list);
     };
+    apply('ci', branches.main);
+    apply('release', branches.main);
+    apply('changelog', branches.dev);
+    apply('sync', [...new Set([...branches.main, ...branches.dev])]);
+    return next;
 }
 
 /** The header prepended to every generated GitHub workflow. */
@@ -88,30 +107,45 @@ function normalizeDir(dir: string | undefined): string {
 
 /** The workflow file names produced for a config. */
 export function workflowFilenames(config: ToolchainConfig): string[] {
-    return Object.keys(renderWorkflows({}, sectionConfig(config.changelog)?.workflows ?? {}));
+    const changelog = resolveChangelogConfig(config);
+    return Object.keys(
+        renderWorkflows({}, declaredWorkflows(config), {
+            commitlint: resolveCommitlintEnabled(changelog),
+        })
+    );
 }
 
 /**
- * The changelog sync task: writes the GitHub workflows, the commitlint config
- * and the husky `commit-msg` hook from the loaded `dbx.config.*`. Branches,
- * triggers, steps, jobs and per-workflow tokens are all taken from the config.
+ * The CI/changelog sync task: writes the opted-in GitHub workflows, the
+ * commitlint config and the husky `commit-msg` hook from the loaded
+ * `dbx.config.*`. Branches, triggers, steps, jobs and per-workflow tokens are
+ * all taken from the config.
  */
 export function changelogSyncTask(): SyncTask {
     return {
         name: 'changelog',
         // Workflows + commitlint belong at a repo root (or a single project).
         projectTypes: ['monorepo-root', 'project'],
-        enabled: config => sectionEnabled(config.changelog),
+        // The task also writes release/issues/sync/ci workflows, so it runs
+        // whenever the `ci` section is enabled; the changelog-specific outputs
+        // (pipeline config, commitlint) still require `ci.changelog`.
+        enabled: config => sectionEnabled(config.ci),
         run: ctx => {
-            const ch = sectionConfig(ctx.config.changelog) ?? {};
+            const ch = resolveChangelogConfig(ctx.config) ?? {};
+            const commitlintConfig = sectionConfig(ch.commitlint);
+            // commitlint + the husky hook belong to the opted-in changelog pipeline.
+            const commitlint = changelogSectionEnabled(ctx.config) && resolveCommitlintEnabled(ch);
             const files: ManagedFile[] = [];
 
-            const commitlintDir = normalizeDir(ch.commitlint?.dir);
+            const commitlintDir = normalizeDir(commitlintConfig?.dir);
             const commitlintPath = commitlintDir
                 ? `${commitlintDir}/commitlint.config.mjs`
                 : 'commitlint.config.mjs';
 
-            const workflows = withBranchDefaults(ch.workflows ?? {}, resolveChangelogBranches(ch));
+            const workflows = withBranchDefaults(
+                declaredWorkflows(ctx.config),
+                resolveChangelogBranches(ch)
+            );
             const tokens = { ...ctx.tokens, commitlintConfig: commitlintPath };
 
             for (const [id, filename] of Object.entries(WORKFLOW_FILENAMES) as [
@@ -127,6 +161,7 @@ export function changelogSyncTask(): SyncTask {
                     : renderWorkflow(id, {
                           tokens,
                           config: typeof setting === 'object' ? setting : {},
+                          commitlint,
                       });
                 if (!content) continue;
                 files.push({
@@ -135,21 +170,23 @@ export function changelogSyncTask(): SyncTask {
                 });
             }
 
-            files.push({
-                path: commitlintPath,
-                content: `${COMMITLINT_HEADER}\n${renderCommitlintConfig({
-                    ...(ch.types ? { types: ch.types } : {}),
-                    ...(ch.scopes ? { scopes: ch.scopes } : {}),
-                })}`,
-            });
+            if (commitlint) {
+                files.push({
+                    path: commitlintPath,
+                    content: `${COMMITLINT_HEADER}\n${renderCommitlintConfig({
+                        ...(commitlintConfig?.types ? { types: commitlintConfig.types } : {}),
+                        ...(commitlintConfig?.scopes ? { scopes: commitlintConfig.scopes } : {}),
+                    })}`,
+                });
 
-            // The local husky hook. `postinstall: husky` makes husky activate it
-            // (`.husky/_` + `core.hooksPath`), so commits are linted locally;
-            // the generated CI job lints the pushed range as the backstop.
-            files.push({
-                path: '.husky/commit-msg',
-                content: `${HOOK_HEADER}\n${commitMsgHook(commitlintDir ? commitlintPath : undefined)}\n`,
-            });
+                // The local husky hook. `postinstall: husky` makes husky activate it
+                // (`.husky/_` + `core.hooksPath`), so commits are linted locally;
+                // the generated CI job lints the pushed range as the backstop.
+                files.push({
+                    path: '.husky/commit-msg',
+                    content: `${HOOK_HEADER}\n${commitMsgHook(commitlintDir ? commitlintPath : undefined)}\n`,
+                });
+            }
 
             return files;
         },

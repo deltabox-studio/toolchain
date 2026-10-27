@@ -89,6 +89,40 @@ describe('changelog formatting', () => {
         expect(rendered).toContain('### Chores');
     });
 
+    it('falls back to major/minor/patch buckets when commitlint is disabled', () => {
+        const records = [
+            {
+                hash: 'a'.repeat(40),
+                subject: 'feat!: break',
+                body: '',
+                author: 'A',
+                authorEmail: '',
+            },
+            { hash: 'b'.repeat(40), subject: 'feat: add', body: '', author: 'A', authorEmail: '' },
+            {
+                hash: 'c'.repeat(40),
+                subject: 'fix: patch it',
+                body: '',
+                author: 'A',
+                authorEmail: '',
+            },
+            {
+                hash: 'd'.repeat(40),
+                subject: 'random change',
+                body: '',
+                author: 'A',
+                authorEmail: '',
+            },
+        ];
+        const summary = buildSummary(records, { commitlint: false });
+        expect(summary).toContain('### Major changes');
+        expect(summary).toContain('### Minor changes');
+        expect(summary).toContain('### Patch changes');
+        expect(summary).not.toContain('### New features');
+        expect(summary).toContain('- Add');
+        expect(summary).toContain('- Random change');
+    });
+
     it('renders descriptions as nested bullets under the commit', () => {
         const item = {
             parsed: parseCcSubject('feat(server): add things'),

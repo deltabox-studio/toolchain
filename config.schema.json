@@ -72,97 +72,43 @@
                     "description": "Inherit the parent project metadata (default true). Set false to keep this project entirely independent of the root config."
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Project metadata: canonical `package.json` fields and template tokens (shared fields are inherited by workspaces)."
         },
-        "ToolchainChangelogConfig": {
+        "ToolchainCiConfig": {
             "type": "object",
             "properties": {
+                "ci": {
+                    "description": "The CI checks workflow (`ci.yml`).",
+                    "$ref": "#/$defs/WorkflowSetting"
+                },
+                "changelog": {
+                    "description": "The changelog/version workflow (`changelog.yml`) plus the changelog pipeline config (versioning, VS Code settings, commitlint).",
+                    "$ref": "#/$defs/ChangelogWorkflowSetting"
+                },
+                "release": {
+                    "description": "The release workflow (`release.yml`).",
+                    "$ref": "#/$defs/WorkflowSetting"
+                },
+                "issues": {
+                    "description": "The issue-title workflow (`issues.yml`).",
+                    "$ref": "#/$defs/WorkflowSetting"
+                },
+                "sync": {
+                    "description": "The toolchain sync workflow (`sync.yml`).",
+                    "$ref": "#/$defs/WorkflowSetting"
+                },
                 "enabled": {
-                    "type": "boolean",
-                    "description": "Master switch (enabled when the section is defined)."
-                },
-                "workflows": {
-                    "description": "Which workflows to write into `.github/workflows`. Each id is `true`/`false`, an object of overrides, or a raw YAML string written verbatim.",
-                    "$ref": "#/$defs/ChangelogWorkflowsConfig"
-                },
-                "branches": {
-                    "type": "object",
-                    "properties": {
-                        "main": {
-                            "anyOf": [
-                                {
-                                    "type": "string"
-                                },
-                                {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    }
-                                }
-                            ],
-                            "description": "Branch glob(s) the CI + release workflows run on, and the release PR base (default `[\"main\"]`)."
-                        },
-                        "dev": {
-                            "anyOf": [
-                                {
-                                    "type": "string"
-                                },
-                                {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    }
-                                }
-                            ],
-                            "description": "Branch glob(s) the changelog/version workflow runs on. No default: when omitted it reuses `main` (so a single-branch repo needs no `dev`)."
-                        }
-                    },
-                    "additionalProperties": false,
-                    "description": "Branches the generated workflows target."
-                },
-                "types": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "description": "Allowed commit types (commitlint)."
-                },
-                "scopes": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "description": "Allowed commit scopes (commitlint)."
-                },
-                "commitlint": {
-                    "type": "object",
-                    "properties": {
-                        "dir": {
-                            "type": "string",
-                            "description": "Directory the generated `commitlint.config.mjs` is written to (default: the project root). The husky hook and CI use `--config` to point at it."
-                        }
-                    },
-                    "additionalProperties": false,
-                    "description": "commitlint config output location."
-                },
-                "versioning": {
-                    "description": "Automatic version bumping on changelog generation (default `true`).",
-                    "$ref": "#/$defs/ChangelogVersioning"
-                },
-                "vscode": {
-                    "type": "boolean",
-                    "description": "Write the Conventional-Commits VS Code settings."
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "GitHub Actions workflows to generate (CI, release, issues, changelog, sync)."
         },
-        "WorkflowConfig": {
+        "WorkflowOptions": {
             "type": "object",
             "properties": {
-                "enabled": {
-                    "type": "boolean",
-                    "description": "Enable/disable this workflow (default true)."
-                },
                 "pushBranches": {
                     "type": "array",
                     "items": {
@@ -228,9 +174,14 @@
                         ]
                     },
                     "description": "Per-workflow token overrides (`nodeVersion`, `packageManager`, ...)."
+                },
+                "enabled": {
+                    "description": "Enable/disable this workflow (default: enabled when present).",
+                    "type": "boolean"
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Per-workflow overrides merged over the generated default."
         },
         "WorkflowStepsConfig": {
             "type": "object",
@@ -254,7 +205,8 @@
                     "description": "Steps appended at the end."
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Extra steps to inject into a workflow job."
         },
         "WorkflowStep": {
             "type": "object",
@@ -312,7 +264,8 @@
                     "description": "Environment variables for the step."
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "A GitHub Actions workflow step."
         },
         "WorkflowSetting": {
             "anyOf": [
@@ -323,36 +276,173 @@
                     "type": "string"
                 },
                 {
-                    "$ref": "#/$defs/WorkflowConfig"
+                    "$ref": "#/$defs/WorkflowOptions"
                 }
             ],
             "description": "`true`/`false` to enable/disable, an object to override parts of the default, or a raw YAML string written verbatim as the workflow file."
         },
-        "ChangelogWorkflowsConfig": {
+        "ChangelogConfig": {
             "type": "object",
             "properties": {
-                "ci": {
-                    "description": "The CI workflow (`ci.yml`).",
-                    "$ref": "#/$defs/WorkflowSetting"
+                "pushBranches": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Replace `on.push.branches`."
                 },
-                "changelog": {
-                    "description": "The changelog/version workflow (`changelog.yml`).",
-                    "$ref": "#/$defs/WorkflowSetting"
+                "pullRequestBranches": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Replace `on.pull_request.branches`."
                 },
-                "release": {
-                    "description": "The release workflow (`release.yml`).",
-                    "$ref": "#/$defs/WorkflowSetting"
+                "triggers": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Extra `on.*` triggers."
                 },
-                "issues": {
-                    "description": "The issue-title workflow (`issues.yml`).",
-                    "$ref": "#/$defs/WorkflowSetting"
+                "extra": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Extra top-level keys (`permissions`, `concurrency`, `env`, ...)."
                 },
-                "sync": {
-                    "description": "The toolchain sync workflow (`sync.yml`).",
-                    "$ref": "#/$defs/WorkflowSetting"
+                "steps": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/$defs/WorkflowStepsConfig"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/$defs/WorkflowStepsConfig"
+                            }
+                        }
+                    ],
+                    "description": "Extra steps for a job (one group, or per-job groups)."
+                },
+                "jobs": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Extra complete jobs merged in."
+                },
+                "tokens": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "type": [
+                            "string",
+                            "number",
+                            "boolean"
+                        ]
+                    },
+                    "description": "Per-workflow token overrides (`nodeVersion`, `packageManager`, ...)."
+                },
+                "enabled": {
+                    "description": "Enable/disable the changelog workflow and pipeline (default: enabled when present).",
+                    "type": "boolean"
+                },
+                "branches": {
+                    "$ref": "#/$defs/ChangelogBranchesConfig"
+                },
+                "commitlint": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ChangelogCommitlintConfig"
+                        }
+                    ],
+                    "description": "commitlint config; set `false` to disable the Conventional-Commits pipeline."
+                },
+                "versioning": {
+                    "description": "Automatic version bumping on changelog generation (default `true`).",
+                    "$ref": "#/$defs/ChangelogVersioning"
+                },
+                "vscode": {
+                    "type": "boolean",
+                    "description": "Write the Conventional-Commits VS Code settings (default true)."
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Changelog workflow + pipeline: versioning, VS Code settings and commitlint."
+        },
+        "ChangelogBranchesConfig": {
+            "type": "object",
+            "properties": {
+                "main": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Branch glob(s) the CI + release workflows run on, and the release PR base (default `[\"main\"]`)."
+                },
+                "dev": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Branch glob(s) the changelog/version workflow runs on. No default: when omitted it reuses `main` (so a single-branch repo needs no `dev`)."
+                }
+            },
+            "additionalProperties": false,
+            "description": "Branches the generated workflows target."
+        },
+        "ChangelogCommitlintConfig": {
+            "type": "object",
+            "properties": {
+                "dir": {
+                    "type": "string",
+                    "description": "Directory the generated `commitlint.config.mjs` is written to (default: the project root). The husky hook and CI use `--config` to point at it."
+                },
+                "types": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Allowed commit types (commitlint)."
+                },
+                "scopes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Allowed commit scopes (commitlint)."
+                },
+                "enabled": {
+                    "description": "Enable commitlint (default true when the changelog is enabled). Set false to generate changelogs without the Conventional-Commits pipeline.",
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false,
+            "description": "commitlint config, output location and allow-lists."
         },
         "ChangelogVersioningConfig": {
             "type": "object",
@@ -369,7 +459,8 @@
                     "description": "Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own."
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Automatic version bumping options."
         },
         "ChangelogVersioningTarget": {
             "type": "string",
@@ -391,13 +482,102 @@
             ],
             "description": "Automatic version bumping when a changelog entry is generated."
         },
+        "ChangelogWorkflowSetting": {
+            "anyOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "string"
+                },
+                {
+                    "$ref": "#/$defs/ChangelogConfig"
+                }
+            ],
+            "description": "`true`/`false` to enable/disable, the changelog pipeline config object, or a raw YAML string written verbatim as the changelog workflow file."
+        },
+        "ToolchainChangelogConfig": {
+            "type": "object",
+            "properties": {
+                "workflows": {
+                    "description": "Deprecated: use the top-level `toolchain.ci` section instead.",
+                    "$ref": "#/$defs/WorkflowConfig"
+                },
+                "branches": {
+                    "description": "Deprecated: use `toolchain.ci.changelog.branches`.",
+                    "$ref": "#/$defs/ChangelogBranchesConfig"
+                },
+                "types": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Deprecated: use `toolchain.ci.changelog.commitlint.types`."
+                },
+                "scopes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Deprecated: use `toolchain.ci.changelog.commitlint.scopes`."
+                },
+                "commitlint": {
+                    "type": "object",
+                    "properties": {
+                        "dir": {
+                            "type": "string"
+                        }
+                    },
+                    "additionalProperties": false,
+                    "description": "Deprecated: use `toolchain.ci.changelog.commitlint`."
+                },
+                "versioning": {
+                    "description": "Deprecated: use `toolchain.ci.changelog.versioning`.",
+                    "$ref": "#/$defs/ChangelogVersioning"
+                },
+                "vscode": {
+                    "type": "boolean",
+                    "description": "Deprecated: use `toolchain.ci.changelog.vscode`."
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false,
+            "description": "Deprecated: the old `toolchain.changelog` section. Move it to `toolchain.ci.changelog` (and its workflows to the top-level `toolchain.ci`).",
+            "deprecated": true
+        },
+        "WorkflowConfig": {
+            "type": "object",
+            "properties": {
+                "ci": {
+                    "description": "The CI checks workflow (`ci.yml`).",
+                    "$ref": "#/$defs/WorkflowSetting"
+                },
+                "changelog": {
+                    "description": "The changelog/version workflow (`changelog.yml`).",
+                    "$ref": "#/$defs/WorkflowSetting"
+                },
+                "release": {
+                    "description": "The release workflow (`release.yml`).",
+                    "$ref": "#/$defs/WorkflowSetting"
+                },
+                "issues": {
+                    "description": "The issue-title workflow (`issues.yml`).",
+                    "$ref": "#/$defs/WorkflowSetting"
+                },
+                "sync": {
+                    "description": "The toolchain sync workflow (`sync.yml`).",
+                    "$ref": "#/$defs/WorkflowSetting"
+                }
+            },
+            "additionalProperties": false,
+            "description": "The GitHub Actions workflows to generate. Every workflow is opt-in: omit it (or set it to `false`) to leave it unmanaged."
+        },
         "ToolchainBiomeConfig": {
             "type": "object",
             "properties": {
-                "enabled": {
-                    "type": "boolean",
-                    "description": "Master switch (enabled when the section is defined)."
-                },
                 "vscode": {
                     "type": "boolean",
                     "description": "Write the Biome VS Code settings (default true)."
@@ -409,17 +589,18 @@
                     },
                     "additionalProperties": {},
                     "description": "Deep-merged over the generated `biome.json` (arrays union)."
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Biome config generation (for consumers that still want a `biome.json`)."
         },
         "ToolchainTsconfigConfig": {
             "type": "object",
             "properties": {
-                "enabled": {
-                    "type": "boolean",
-                    "description": "Master switch (enabled when the section is defined)."
-                },
                 "glob": {
                     "anyOf": [
                         {
@@ -479,26 +660,32 @@
                 "buildFile": {
                     "type": "string",
                     "description": "The workspace build tsconfig file name (default `tsconfig.build.json`)."
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Workspace tsconfig generation (path aliases + project references)."
         },
         "ToolchainTemplatesConfig": {
             "type": "object",
             "properties": {
-                "enabled": {
-                    "type": "boolean",
-                    "description": "Master switch (enabled when the section is defined)."
-                },
                 "sources": {
                     "type": "array",
                     "items": {
                         "$ref": "#/$defs/ToolchainTemplateSource"
                     },
                     "description": "Extra sources on top of the builtin + registry sources."
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Template sources / scaffolding."
         },
         "ToolchainTemplateSource": {
             "type": "object",
@@ -549,7 +736,8 @@
                 "type",
                 "locate"
             ],
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "A template source: builtin, local, npm, git or Vite+."
         },
         "ToolchainTemplateSourceType": {
             "type": "string",
@@ -577,10 +765,6 @@
         "ToolchainCatalogsConfig": {
             "type": "object",
             "properties": {
-                "enabled": {
-                    "type": "boolean",
-                    "description": "Master switch (enabled when the section is defined)."
-                },
                 "packages": {
                     "type": "object",
                     "propertyNames": {
@@ -606,9 +790,14 @@
                         }
                     },
                     "description": "Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages."
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Package catalogs written to the package manager catalog file (`catalog:`)."
         },
         "ToolchainViteConfig": {
             "type": "object",
@@ -616,17 +805,18 @@
                 "config": {
                     "type": "boolean",
                     "description": "Write the managed `vite.config.ts` (default true)."
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
                 }
             },
-            "additionalProperties": {}
+            "additionalProperties": {},
+            "description": "The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it."
         },
         "ToolchainWatchConfig": {
             "type": "object",
             "properties": {
-                "enabled": {
-                    "type": "boolean",
-                    "description": "Watch by default (enabled when the section is defined)."
-                },
                 "debounce": {
                     "type": "number",
                     "description": "Debounce window in ms (default 150)."
@@ -648,9 +838,14 @@
                 "gitignore": {
                     "type": "boolean",
                     "description": "Also respect `.gitignore` files (root + nested) when watching (default true)."
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Watch behaviour for `dbx watch`."
         },
         "ToolchainLoggerConfig": {
             "type": "object",
@@ -673,9 +868,14 @@
                 "name": {
                     "type": "string",
                     "description": "Prefix non-indented lines with `<name>:` (default `dbx`)."
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Logging level, colours and prefix for toolchain output."
         },
         "ToolchainProvidersConfig": {
             "type": "object",
@@ -683,9 +883,14 @@
                 "color": {
                     "type": "boolean",
                     "description": "Force provider command colours on/off (default: inherit the logger)."
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Provider command behaviour (eg. colour for the passthrough commands)."
         },
         "ToolchainConfigSections": {
             "type": "object",
@@ -693,6 +898,17 @@
                 "project": {
                     "description": "Project metadata: canonical `package.json` fields and template tokens (inherited by workspaces).",
                     "$ref": "#/$defs/ToolchainProjectConfig"
+                },
+                "ci": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainCiConfig"
+                        }
+                    ],
+                    "description": "GitHub Actions workflows to generate (CI, release, issues, changelog, sync)."
                 },
                 "changelog": {
                     "anyOf": [
@@ -703,7 +919,7 @@
                             "$ref": "#/$defs/ToolchainChangelogConfig"
                         }
                     ],
-                    "description": "Conventional-Commits CI, commitlint and the changelog pipeline."
+                    "description": "Deprecated: the old changelog section. Move it to `ci.changelog` (and its workflows to the top-level `ci`)."
                 },
                 "biome": {
                     "anyOf": [

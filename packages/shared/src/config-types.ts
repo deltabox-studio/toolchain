@@ -5,6 +5,7 @@ import type { ViteUserConfig } from 'vite-plus';
 export type ProjectType = 'monorepo-root' | 'monorepo-workspace' | 'project';
 
 export interface ToolchainProjectConfig {
+    /** The project kind (detected when omitted). */
     type?: ProjectType;
     /** The unscoped project name (written as `<scope>/<name>`). */
     name?: string;
@@ -66,9 +67,7 @@ export interface WorkflowStepsConfig {
     after?: Array<WorkflowStep>;
 }
 
-export interface WorkflowConfig {
-    /** Enable/disable this workflow (default true). */
-    enabled?: boolean;
+export interface WorkflowOptions {
     /** Replace `on.push.branches`. */
     pushBranches?: Array<string>;
     /** Replace `on.pull_request.branches`. */
@@ -83,21 +82,59 @@ export interface WorkflowConfig {
     jobs?: Record<string, unknown>;
     /** Per-workflow token overrides (`nodeVersion`, `packageManager`, ...). */
     tokens?: Record<string, string | number | boolean>;
+    /** Enable/disable this workflow (default: enabled when present). */
+    enabled?: boolean;
 }
 
-export type WorkflowSetting = boolean | string | WorkflowConfig;
+export type WorkflowSetting = boolean | string | WorkflowOptions;
 
-export interface ChangelogWorkflowsConfig {
+export interface WorkflowConfig {
+    /** The CI checks workflow (`ci.yml`). */
     ci?: WorkflowSetting;
+    /** The changelog/version workflow (`changelog.yml`). */
     changelog?: WorkflowSetting;
+    /** The release workflow (`release.yml`). */
     release?: WorkflowSetting;
+    /** The issue-title workflow (`issues.yml`). */
     issues?: WorkflowSetting;
+    /** The toolchain sync workflow (`sync.yml`). */
     sync?: WorkflowSetting;
+}
+
+export interface ChangelogBranchesConfig {
+    /** Branch glob(s) the CI + release workflows run on, and the release PR base (default `["main"]`). */
+    main?: string | Array<string>;
+    /**
+     * Branch glob(s) the changelog/version workflow runs on. No default: when omitted it reuses `main`
+     * (so a single-branch repo needs no `dev`).
+     */
+    dev?: string | Array<string>;
+}
+
+export interface ChangelogCommitlintConfig {
+    /**
+     * Directory the generated `commitlint.config.mjs` is written to (default: the project root). The
+     * husky hook and CI use `--config` to point at it.
+     */
+    dir?: string;
+    /** Allowed commit types (commitlint). */
+    types?: Array<string>;
+    /** Allowed commit scopes (commitlint). */
+    scopes?: Array<string>;
+    /**
+     * Enable commitlint (default true when the changelog is enabled). Set false to generate changelogs
+     * without the Conventional-Commits pipeline.
+     */
+    enabled?: boolean;
 }
 
 export type ChangelogVersioningTarget = 'uniform' | 'root-only' | 'individual';
 
 export interface ChangelogVersioningConfig {
+    /**
+     * `uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root
+     * only; `individual` bumps each changed workspace independently (default `uniform`).
+     */
     target?: ChangelogVersioningTarget;
     /**
      * Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root
@@ -109,47 +146,84 @@ export interface ChangelogVersioningConfig {
 
 export type ChangelogVersioning = boolean | ChangelogVersioningConfig;
 
-export interface ToolchainChangelogConfig {
-    /** Master switch (enabled when the section is defined). */
+export interface ChangelogConfig {
+    /** Replace `on.push.branches`. */
+    pushBranches?: Array<string>;
+    /** Replace `on.pull_request.branches`. */
+    pullRequestBranches?: Array<string>;
+    /** Extra `on.*` triggers. */
+    triggers?: Record<string, unknown>;
+    /** Extra top-level keys (`permissions`, `concurrency`, `env`, ...). */
+    extra?: Record<string, unknown>;
+    /** Extra steps for a job (one group, or per-job groups). */
+    steps?: WorkflowStepsConfig | Array<WorkflowStepsConfig>;
+    /** Extra complete jobs merged in. */
+    jobs?: Record<string, unknown>;
+    /** Per-workflow token overrides (`nodeVersion`, `packageManager`, ...). */
+    tokens?: Record<string, string | number | boolean>;
+    /** Enable/disable the changelog workflow and pipeline (default: enabled when present). */
     enabled?: boolean;
-    workflows?: ChangelogWorkflowsConfig;
-    branches?: {
-        /** Branch glob(s) the CI + release workflows run on, and the release PR base (default `["main"]`). */
-        main?: string | Array<string>;
-        /**
-         * Branch glob(s) the changelog/version workflow runs on. No default: when omitted it reuses
-         * `main` (so a single-branch repo needs no `dev`).
-         */
-        dev?: string | Array<string>;
-    };
-    /** Allowed commit types (commitlint). */
-    types?: Array<string>;
-    /** Allowed commit scopes (commitlint). */
-    scopes?: Array<string>;
-    commitlint?: {
-        /**
-         * Directory the generated `commitlint.config.mjs` is written to (default: the project root). The
-         * husky hook and CI use `--config` to point at it.
-         */
-        dir?: string;
-    };
+    /** Branches the generated workflows target. */
+    branches?: ChangelogBranchesConfig;
+    /** Commitlint config; set `false` to disable the Conventional-Commits pipeline. */
+    commitlint?: boolean | ChangelogCommitlintConfig;
+    /** Automatic version bumping on changelog generation (default `true`). */
     versioning?: ChangelogVersioning;
-    /** Write the Conventional-Commits VS Code settings. */
+    /** Write the Conventional-Commits VS Code settings (default true). */
     vscode?: boolean;
 }
 
-export interface ToolchainBiomeConfig {
-    /** Master switch (enabled when the section is defined). */
+export type ChangelogWorkflowSetting = boolean | string | ChangelogConfig;
+
+export interface ToolchainCiConfig {
+    /** The CI checks workflow (`ci.yml`). */
+    ci?: WorkflowSetting;
+    /**
+     * The changelog/version workflow (`changelog.yml`) plus the changelog pipeline config (versioning,
+     * VS Code settings, commitlint).
+     */
+    changelog?: ChangelogWorkflowSetting;
+    /** The release workflow (`release.yml`). */
+    release?: WorkflowSetting;
+    /** The issue-title workflow (`issues.yml`). */
+    issues?: WorkflowSetting;
+    /** The toolchain sync workflow (`sync.yml`). */
+    sync?: WorkflowSetting;
+    /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
+}
+
+export interface ToolchainChangelogConfig {
+    /** Deprecated: use the top-level `toolchain.ci` section instead. */
+    workflows?: WorkflowConfig;
+    /** Deprecated: use `toolchain.ci.changelog.branches`. */
+    branches?: ChangelogBranchesConfig;
+    /** Deprecated: use `toolchain.ci.changelog.commitlint.types`. */
+    types?: Array<string>;
+    /** Deprecated: use `toolchain.ci.changelog.commitlint.scopes`. */
+    scopes?: Array<string>;
+    /** Deprecated: use `toolchain.ci.changelog.commitlint`. */
+    commitlint?: {
+        dir?: string;
+    };
+    /** Deprecated: use `toolchain.ci.changelog.versioning`. */
+    versioning?: ChangelogVersioning;
+    /** Deprecated: use `toolchain.ci.changelog.vscode`. */
+    vscode?: boolean;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
+}
+
+export interface ToolchainBiomeConfig {
     /** Write the Biome VS Code settings (default true). */
     vscode?: boolean;
     /** Deep-merged over the generated `biome.json` (arrays union). */
     overrides?: Record<string, unknown>;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
 }
 
 export interface ToolchainTsconfigConfig {
-    /** Master switch (enabled when the section is defined). */
-    enabled?: boolean;
     /**
      * Glob(s) for the workspace default tsconfig files. Defaults to matching every `defaultFile`
      * recursively.
@@ -182,11 +256,11 @@ export interface ToolchainTsconfigConfig {
     defaultFile?: string;
     /** The workspace build tsconfig file name (default `tsconfig.build.json`). */
     buildFile?: string;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
 }
 
 export interface ToolchainWatchConfig {
-    /** Watch by default (enabled when the section is defined). */
-    enabled?: boolean;
     /** Debounce window in ms (default 150). */
     debounce?: number;
     /**
@@ -196,6 +270,8 @@ export interface ToolchainWatchConfig {
     exclude?: string | Array<string>;
     /** Also respect `.gitignore` files (root + nested) when watching (default true). */
     gitignore?: boolean;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
 }
 
 export type ToolchainTemplateSourceType = 'builtin' | 'local' | 'npm' | 'git' | 'vite-plus';
@@ -209,7 +285,11 @@ export type ToolchainTemplateKind =
     | 'pipeline';
 
 export interface ToolchainTemplateSource {
-    /** @required */
+    /**
+     * How to load the source.
+     *
+     * @required
+     */
     type: ToolchainTemplateSourceType;
     /**
      * A builtin id, local dir, npm scope, git URL or Vite+ id.
@@ -223,6 +303,7 @@ export interface ToolchainTemplateSource {
     name?: string;
     /** Description override. */
     description?: string;
+    /** What the template produces. */
     kind?: ToolchainTemplateKind;
     /** Git branch/tag/commit. */
     ref?: string;
@@ -235,19 +316,19 @@ export interface ToolchainTemplateSource {
 }
 
 export interface ToolchainTemplatesConfig {
-    /** Master switch (enabled when the section is defined). */
-    enabled?: boolean;
     /** Extra sources on top of the builtin + registry sources. */
     sources?: Array<ToolchainTemplateSource>;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
 }
 
 export interface ToolchainCatalogsConfig {
-    /** Master switch (enabled when the section is defined). */
-    enabled?: boolean;
     /** The default catalog: package name -> version range. */
     packages?: Record<string, string>;
     /** Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages. */
     named?: Record<string, Record<string, string>>;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
 }
 
 export type ToolchainViteConfig = ViteUserConfig & {
@@ -262,16 +343,26 @@ export interface ToolchainLoggerConfig {
     color?: boolean;
     /** Prefix non-indented lines with `<name>:` (default `dbx`). */
     name?: string;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
 }
 
 export interface ToolchainProvidersConfig {
     /** Force provider command colours on/off (default: inherit the logger). */
     color?: boolean;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
 }
 
 export interface ToolchainConfigSections {
+    /** Project metadata: canonical `package.json` fields and template tokens (inherited by workspaces). */
     project?: ToolchainProjectConfig;
-    /** Conventional-Commits CI, commitlint and the changelog pipeline. */
+    /** GitHub Actions workflows to generate (CI, release, issues, changelog, sync). */
+    ci?: boolean | ToolchainCiConfig;
+    /**
+     * Deprecated: the old changelog section. Move it to `ci.changelog` (and its workflows to the
+     * top-level `ci`).
+     */
     changelog?: boolean | ToolchainChangelogConfig;
     /** Biome config generation (for consumers that still want a `biome.json`). */
     biome?: boolean | ToolchainBiomeConfig;
@@ -292,5 +383,6 @@ export interface ToolchainConfigSections {
 }
 
 export interface DbxConfigSections {
+    /** The `@deltabox/toolchain` settings (every section is opt-in by presence). */
     toolchain?: ToolchainConfigSections;
 }

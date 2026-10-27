@@ -1,22 +1,17 @@
 import type { Schema } from 'untyped';
 import type { ZodType } from 'zod';
 
-/** The value type an env var resolves to. */
-export type EnvValueType = 'string' | 'number' | 'boolean' | 'array' | 'object';
+export type ConfigMeta = ConfigBaseMeta & ConfigEnvMeta;
 
-/**
- * The metadata a consumer attaches to a Zod leaf via `.meta()` to describe the
- * environment variable that backs a configuration value.
- */
-export interface EnvVarMeta {
-    /** The env var name, e.g. `MYAPP_AUTH_PASSWORD`. */
-    env: string;
-    /** The dotted config path, e.g. `auth.password`. */
-    path?: string;
-    /** Human-readable description (used by `.env.example` + the docs). */
+export interface ConfigBaseMeta {
+    /** Human-readable description (added to the generated types' JSDocs, generated .env and markdown files). */
     description?: string;
     /** Whether the var has no safe default and must be set. */
     required?: boolean;
+    /** Mark this config as deprecated and optionally add a deprecation message. */
+    deprecated?: boolean | string;
+    /** Add custom example(s) that will be added to the generated documentation. */
+    example?: string[] | string;
     /** Whether the value is a secret (never emitted/logged). */
     secret?: boolean;
     /** The scope the variable belongs to. */
@@ -25,10 +20,24 @@ export interface EnvVarMeta {
     public?: boolean;
     /**
      * The resolved-config default, when it differs from the raw env default
-     * (e.g. the positive field behind a negative-named env flag).
+     * (e.g. the positive field behind a negative-named CLI flag).
      */
     defaultValue?: unknown;
 }
+
+/**
+ * The metadata a consumer attaches to a Zod leaf via `.meta()` to describe the
+ * environment variable that backs a configuration value.
+ */
+export interface ConfigEnvMeta {
+    /** The env var name, e.g. `MYAPP_AUTH_PASSWORD` (optional for non-env configs). */
+    env?: string;
+    /** The dotted config path, e.g. `auth.password`. */
+    path?: string;
+}
+
+/** The value type an env var resolves to. */
+export type EnvValueType = 'string' | 'number' | 'boolean' | 'array' | 'object';
 
 /** A collected env-var definition. */
 export interface EnvVarDef {

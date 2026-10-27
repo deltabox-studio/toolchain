@@ -21,7 +21,8 @@ export function writeChangelogs(
     summary: string,
     reformatAll: boolean,
     packageChanges = false,
-    workspaceEntries?: Map<string, string>
+    workspaceEntries?: Map<string, string>,
+    commitlint = true
 ): void {
     const root = repoRoot();
     const repo = repoSlug();
@@ -67,7 +68,7 @@ export function writeChangelogs(
             continue;
         }
         const created = !existsSync(file);
-        const wsSummary = buildSummary(filtered);
+        const wsSummary = buildSummary(filtered, { commitlint });
         prependChangelogEntry(file, renderChangelogEntry(workspaceVersion, wsSummary, new Date()));
         logger.info(`  ${created ? 'created' : 'updated'} ${file}`);
     }

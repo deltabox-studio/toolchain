@@ -3,7 +3,7 @@
  *
  * The workflows are dispatched on GitHub with `gh workflow run <file>`; this
  * module only checks that the requested workflow is known, enabled in
- * `dbx.config.*` (`changelog.workflows`) and actually present on disk
+ * `dbx.config.*` (`ci.*`) and actually present on disk
  * (ie. has been synced) before shelling out.
  */
 
@@ -22,7 +22,7 @@ export interface RunWorkflowsOptions {
     workflows?: string[];
     /** Git ref to run the workflow on (eg. `main`). */
     ref?: string;
-    /** The loaded tooling config, used to check `changelog.workflows`. */
+    /** The loaded tooling config, used to check the `ci` workflows. */
     config?: ToolchainConfig;
     /** The `gh` executable (default `gh`). */
     gh?: string;
@@ -62,9 +62,8 @@ function ghRun(args: string[], cwd: string, gh: string): Promise<number> {
  */
 export async function runWorkflows(options: RunWorkflowsOptions): Promise<RunWorkflowsResult> {
     const { cwd } = options;
-    const enabled = (id: WorkflowId): boolean =>
-        sectionEnabled(options.config?.changelog) &&
-        isEnabled(sectionConfig(options.config?.changelog)?.workflows?.[id]);
+    const ci = sectionEnabled(options.config?.ci) ? sectionConfig(options.config?.ci) : undefined;
+    const enabled = (id: WorkflowId): boolean => isEnabled(ci?.[id]);
 
     const requested = (options.workflows ?? []).map(name => name.trim()).filter(Boolean);
     const ids: WorkflowId[] = [];
@@ -74,7 +73,7 @@ export async function runWorkflows(options: RunWorkflowsOptions): Promise<RunWor
             if (enabled(id)) ids.push(id);
         }
         if (ids.length === 0) {
-            throw new Error('No workflows are enabled in dbx.config.* (changelog.workflows).');
+            throw new Error('No workflows are enabled in dbx.config.* (ci.<workflow>).');
         }
     } else {
         for (const name of requested) {
@@ -85,9 +84,7 @@ export async function runWorkflows(options: RunWorkflowsOptions): Promise<RunWor
                 );
             }
             if (!enabled(id)) {
-                throw new Error(
-                    `Workflow "${id}" is not enabled in dbx.config.* (changelog.workflows.${id}).`
-                );
+                throw new Error(`Workflow "${id}" is not enabled in dbx.config.* (ci.${id}).`);
             }
             if (!ids.includes(id)) ids.push(id);
         }

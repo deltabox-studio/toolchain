@@ -5,7 +5,7 @@ import { type DbxConfig, defineConfig, sectionConfig, sectionEnabled } from '../
 describe('dbx.config model', () => {
     it('defineConfig is the identity', () => {
         const config: DbxConfig = {
-            toolchain: { project: { name: 'acme' }, changelog: true, vite: true },
+            toolchain: { project: { name: 'acme' }, ci: true, vite: true },
         };
         expect(defineConfig(config)).toBe(config);
     });
@@ -38,19 +38,19 @@ describe('dbx.config model', () => {
                     packageManagerVersion: '4.17.1',
                     description: 'Acme app',
                 },
-                // CI + commitlint + changelog all live in the `changelog` section.
-                changelog: {
-                    workflows: {
-                        ci: true,
-                        changelog: { pushBranches: ['main'] },
-                        release: false,
-                        issues: true,
-                        sync: true,
+                // CI workflows + the changelog pipeline live in the `ci` section.
+                ci: {
+                    ci: true,
+                    changelog: {
+                        pushBranches: ['main'],
+                        branches: { main: 'main', dev: 'dev' },
+                        commitlint: { types: ['feat', 'fix'], scopes: ['core'] },
+                        versioning: { target: 'individual' },
+                        vscode: true,
                     },
-                    branches: { main: 'main', dev: 'dev' },
-                    types: ['feat', 'fix'],
-                    scopes: ['core'],
-                    vscode: true,
+                    release: false,
+                    issues: true,
+                    sync: true,
                 },
                 biome: { vscode: true, overrides: { formatter: {} } },
                 tsconfig: {
@@ -70,7 +70,8 @@ describe('dbx.config model', () => {
         });
 
         const toolchain = config.toolchain!;
-        expect(sectionEnabled(toolchain.changelog)).toBe(true);
+        expect(sectionEnabled(toolchain.ci)).toBe(true);
+        expect(sectionConfig(toolchain.ci)?.changelog).toBeDefined();
         expect(sectionEnabled(toolchain.tsconfig)).toBe(true);
         expect(sectionConfig(toolchain.vite)?.fmt).toEqual({ semi: true });
         expect(sectionConfig(toolchain.watch)?.debounce).toBe(100);

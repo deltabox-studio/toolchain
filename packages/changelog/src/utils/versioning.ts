@@ -1,7 +1,7 @@
 import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { logger, type ToolchainChangelogConfig } from '@deltabox/toolchain-shared';
+import { type ChangelogConfig, logger } from '@deltabox/toolchain-shared';
 
 import { deriveBump, readCommits } from './git.js';
 import { relatedWorkspacePaths } from './graph.js';
@@ -12,7 +12,7 @@ import { bumpVersion } from './version.js';
 /** How/where a changelog run applies its version bump. */
 export type VersioningTarget = 'uniform' | 'root-only' | 'individual';
 
-/** The normalized `changelog.versioning` config. */
+/** The normalized `ci.changelog.versioning` config. */
 export interface ResolvedVersioning {
     /** Whether versions are written to `package.json` at all. */
     enabled: boolean;
@@ -23,11 +23,11 @@ export interface ResolvedVersioning {
 }
 
 /**
- * Normalize the `changelog.versioning` union (`boolean | { target, workspaces }`)
+ * Normalize the `ci.changelog.versioning` union (`boolean | { target, workspaces }`)
  * into a concrete plan input. `true`/absent means uniform with defaults; `false`
  * disables writing versions while still generating changelog entries.
  */
-export function resolveVersioning(changelog?: ToolchainChangelogConfig): ResolvedVersioning {
+export function resolveVersioning(changelog?: ChangelogConfig): ResolvedVersioning {
     const versioning = changelog?.versioning;
     if (versioning === false) return { enabled: false, target: 'uniform' };
     if (versioning === undefined || versioning === true) {

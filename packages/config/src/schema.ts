@@ -11,7 +11,7 @@
 import type { Schema } from 'untyped';
 import { type ZodType, z } from 'zod';
 
-import type { EnvVarMeta } from './types.js';
+import type { ConfigMeta } from './types.js';
 
 /** A JSON Schema node produced by `z.toJSONSchema`. */
 interface JsonSchemaNode {
@@ -34,6 +34,8 @@ interface JsonSchemaNode {
     scope?: string;
     secret?: boolean;
     public?: boolean;
+    deprecated?: boolean;
+    example?: string | string[];
 }
 
 const TS_TYPE_MAP: Record<string, string> = {
@@ -44,12 +46,10 @@ const TS_TYPE_MAP: Record<string, string> = {
     null: 'null',
 };
 
-/** Read the env metadata attached to a Zod leaf via `.meta()`. */
-export function envMetaOf(schema: ZodType): EnvVarMeta | undefined {
+/** Read the config metadata attached to a Zod leaf via `.meta()`. */
+export function envMetaOf(schema: ZodType): ConfigMeta | undefined {
     const meta = (schema as ZodType & { meta?: () => unknown }).meta?.();
-    return meta && typeof meta === 'object' && 'env' in meta
-        ? (meta as unknown as EnvVarMeta)
-        : undefined;
+    return meta && typeof meta === 'object' ? (meta as unknown as ConfigMeta) : undefined;
 }
 
 /** A JSON Schema node with no keys describes "anything" (`unknown`). */
@@ -127,11 +127,16 @@ function jsonNodeToDefinition(
     defs: Record<string, JsonSchemaNode> = {}
 ): unknown {
     if (node.$ref) {
+        const name = node.$ref.split('/').pop() ?? 'unknown';
+        const resolved = defs[name];
+        const description = node.description ?? resolved?.description;
         return {
             $schema: {
                 type: 'any',
-                tsType: node.$ref.split('/').pop() ?? 'unknown',
+                tsType: name,
                 ...(fieldRequired ? { tags: ['@required'] } : {}),
+                ...(description ? { description } : {}),
+                ...((node.deprecated ?? resolved?.deprecated) ? { deprecated: true } : {}),
             },
         };
     }
@@ -140,6 +145,15 @@ function jsonNodeToDefinition(
         const out: Record<string, unknown> = fieldRequired
             ? { $schema: { tags: ['@required'] } }
             : {};
+        if (node.description) {
+            out.$schema = {
+                ...(out.$schema as object | undefined),
+                description: node.description,
+            };
+        }
+        if (node.deprecated) {
+            out.$schema = { ...(out.$schema as object | undefined), deprecated: true };
+        }
         for (const [key, child] of Object.entries(node.properties)) {
             out[key] = jsonNodeToDefinition(
                 child,
@@ -150,7 +164,7 @@ function jsonNodeToDefinition(
         // A schema that also accepts arbitrary keys (`.catchall` / `.passthrough`)
         // becomes an object with an index signature in the generated interface.
         if (node.additionalProperties !== undefined && node.additionalProperties !== false) {
-            out.$schema = { ...((out.$schema as object | undefined) ?? {}), allowExtraKeys: true };
+            out.$schema = { ...(out.$schema as object | undefined), allowExtraKeys: true };
         }
         return out;
     }
@@ -170,6 +184,8 @@ function jsonNodeToDefinition(
         ...(node.secret ? { secret: true } : {}),
         ...(node.public ? { public: true } : {}),
         ...(node.required === true ? { required: true } : {}),
+        ...(node.deprecated ? { deprecated: true } : {}),
+        ...(node.example !== undefined ? { example: node.example } : {}),
         ...(node.defaultValue !== undefined && node.default !== undefined
             ? { envDefault: node.default }
             : {}),
@@ -263,7 +279,7 @@ function resolveUntypedNode(
     }
 
     const schema: Record<string, unknown> = {
-        ...((node.$schema as object | undefined) ?? {}),
+        ...(node.$schema as object | undefined),
         id: schemaId,
     };
     ctx.cache.set(id, schema);

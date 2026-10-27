@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { sectionConfig } from '@deltabox/toolchain-shared';
+import { resolveChangelogConfig, sectionConfig } from '@deltabox/toolchain-shared';
 
 import {
     findConfigFile,
@@ -36,7 +36,7 @@ describe('loadToolchainConfig', () => {
                         scope: '@acme',
                         repo: 'https://github.com/acme/app',
                     },
-                    changelog: { branches: { main: 'trunk', dev: 'develop' } },
+                    ci: { changelog: { branches: { main: 'trunk', dev: 'develop' } } },
                 },
             })
         );
@@ -88,27 +88,41 @@ describe('loadToolchainConfig', () => {
         const loaded = await loadToolchainConfig(cwd);
         expect(loaded.config.project?.name).toBe('promised');
     });
+
+    it('rejects the deprecated top-level `changelog` section', async () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'dbx.config.json'), {
+            toolchain: { changelog: { branches: { main: 'trunk' } } },
+        });
+        await expect(loadToolchainConfig(cwd)).rejects.toThrow(/toolchain\.changelog.*deprecated/);
+
+        // Tolerant loading (the CLI) keeps unrelated commands alive but reports it.
+        const loaded = await loadToolchainConfig(cwd, { tolerant: true });
+        expect(loaded.error).toMatch(/toolchain\.changelog.*deprecated/);
+    });
 });
 
 describe('nested config inheritance', () => {
     it('merges a workspace config over the root config (leaves replace)', () => {
         const merged = mergeToolchainConfig(
             {
-                changelog: {
-                    branches: { main: 'main', dev: 'dev' },
-                    scopes: ['core', 'cli'],
+                ci: {
+                    changelog: {
+                        branches: { main: 'main', dev: 'dev' },
+                        commitlint: { scopes: ['core', 'cli'] },
+                    },
                 },
                 tsconfig: { refs: true, aliases: true },
             },
             {
-                changelog: { scopes: ['web'] },
+                ci: { changelog: { commitlint: { scopes: ['web'] } } },
                 tsconfig: { refs: false },
             }
         );
         // Objects are combined, arrays/booleans in the child replace.
-        const changelog = sectionConfig(merged.changelog);
+        const changelog = resolveChangelogConfig(merged);
         expect(changelog?.branches).toEqual({ main: 'main', dev: 'dev' });
-        expect(changelog?.scopes).toEqual(['web']);
+        expect(changelog?.commitlint).toEqual({ scopes: ['web'] });
         expect(sectionConfig(merged.tsconfig)).toEqual({ refs: false, aliases: true });
     });
 
@@ -171,11 +185,16 @@ describe('nested config inheritance', () => {
         writeJson(path.join(root, 'dbx.config.json'), {
             toolchain: {
                 project: { name: 'acme', type: 'monorepo-root' },
-                changelog: { branches: { main: 'trunk' }, scopes: ['core'] },
+                ci: {
+                    changelog: {
+                        branches: { main: 'trunk' },
+                        commitlint: { scopes: ['core'] },
+                    },
+                },
             },
         });
         writeJson(path.join(child, 'dbx.config.json'), {
-            toolchain: { changelog: { scopes: ['web'] } },
+            toolchain: { ci: { changelog: { commitlint: { scopes: ['web'] } } } },
         });
 
         expect(findParentConfigFile(child)).toBe(path.join(root, 'dbx.config.json'));
@@ -185,8 +204,8 @@ describe('nested config inheritance', () => {
         const loaded = await loadToolchainConfig(child);
         expect(loaded.path).toBe(path.join(child, 'dbx.config.json'));
         expect(loaded.parentPath).toBe(path.join(root, 'dbx.config.json'));
-        const childChangelog = sectionConfig(loaded.config.changelog);
-        expect(childChangelog?.scopes).toEqual(['web']);
+        const childChangelog = resolveChangelogConfig(loaded.config);
+        expect(sectionConfig(childChangelog?.commitlint)?.scopes).toEqual(['web']);
         expect(childChangelog?.branches?.main).toBe('trunk');
         // The parent's `project` is identity-only, so nothing is inherited.
         expect(loaded.config.project).toBeUndefined();

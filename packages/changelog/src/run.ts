@@ -69,7 +69,7 @@ import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { logger, type ToolchainChangelogConfig } from '@deltabox/toolchain-shared';
+import { type ChangelogConfig, logger, resolveCommitlintEnabled } from '@deltabox/toolchain-shared';
 
 import { parseArgsCli } from './utils/args.js';
 import { deriveBump, readCommits } from './utils/git.js';
@@ -87,12 +87,12 @@ import { writeChangelogs } from './utils/write.js';
 
 /**
  * Run the changelog pipeline (bump versions + write changelogs). `changelog` is
- * the consumer's `toolchain.changelog` section (threaded from `dbx changelog`);
+ * the consumer's `toolchain.ci.changelog` config (threaded from `dbx changelog`);
  * the standalone bin runs with the defaults (`versioning: true`, uniform).
  */
 export function runChangelog(
     argv: string[] = process.argv.slice(2),
-    changelog?: ToolchainChangelogConfig
+    changelog?: ChangelogConfig
 ): void {
     const options = parseArgsCli(argv);
 
@@ -143,7 +143,8 @@ export function runChangelog(
 
     const records = readCommits(range);
     const type = deriveBump(records);
-    const summary = buildSummary(records);
+    const commitlint = resolveCommitlintEnabled(changelog);
+    const summary = buildSummary(records, { commitlint });
 
     const versioning = resolveVersioning(changelog);
     const plan = planVersions({ versioning, rootVersion: current, bump: type, range });
@@ -190,7 +191,8 @@ export function runChangelog(
         summary,
         reformatAll,
         options.packageChanges,
-        plan.entries
+        plan.entries,
+        commitlint
     );
     if (versioning.enabled) {
         logger.info(`Bumped ${current} -> ${next} (${type}) from ${records.length} commit(s).`);

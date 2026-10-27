@@ -647,7 +647,7 @@ describe('emulate: CLI + templates', () => {
             writeJson(path.join(root, 'dbx.config.json'), {
                 toolchain: {
                     project: { type: 'monorepo-root', name: 'root', scope: '@acme' },
-                    changelog: true,
+                    ci: { changelog: true },
                     biome: true,
                 },
             });

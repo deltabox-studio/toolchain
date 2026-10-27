@@ -1,4 +1,4 @@
-import { logger, sectionConfig, type ToolchainCommand } from '@deltabox/toolchain-shared';
+import { logger, resolveChangelogConfig, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import { runWorkflows } from '../run-workflows.js';
 import { runChangelog } from '../run.js';
@@ -83,7 +83,7 @@ export function changelogCommands(): ToolchainCommand[] {
                 if (opts.packageChangesSection === false) {
                     argv.push('--no-package-changes-section');
                 }
-                runChangelog(argv, sectionConfig(context.config.changelog));
+                runChangelog(argv, resolveChangelogConfig(context.config));
             },
         },
     ];
