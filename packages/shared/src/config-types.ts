@@ -274,7 +274,13 @@ export interface ToolchainWatchConfig {
     enabled?: boolean;
 }
 
-export type ToolchainTemplateSourceType = 'builtin' | 'local' | 'npm' | 'git' | 'vite-plus';
+export type ToolchainTemplateSourceType =
+    | 'builtin'
+    | 'local'
+    | 'npm'
+    | 'git'
+    | 'vite-plus'
+    | 'remote';
 
 export type ToolchainTemplateKind =
     | 'project'
@@ -307,6 +313,8 @@ export interface ToolchainTemplateSource {
     kind?: ToolchainTemplateKind;
     /** Git branch/tag/commit. */
     ref?: string;
+    /** Custom npm registry URL (default: the project package manager registry). */
+    registry?: string;
     /** Subdirectory within the source that holds the template. */
     subdir?: string;
     /** Free-form tags. */

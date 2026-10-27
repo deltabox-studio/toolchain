@@ -473,7 +473,7 @@ Extra sources on top of the builtin + registry sources.
 
 #### `type`
 
-- **Type**: `'builtin' | 'local' | 'npm' | 'git' | 'vite-plus'`
+- **Type**: `'builtin' | 'local' | 'npm' | 'git' | 'vite-plus' | 'remote'`
 - **Required**
 
 How to load the source.
@@ -514,6 +514,12 @@ What the template produces.
 - **Type**: `string`
 
 Git branch/tag/commit.
+
+#### `registry`
+
+- **Type**: `string`
+
+Custom npm registry URL (default: the project package manager registry).
 
 #### `subdir`
 

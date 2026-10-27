@@ -4,7 +4,7 @@ import { withEnabled } from './meta.js';
 
 /** Where a template source is loaded from. */
 export const templateSourceTypeSchema = z
-    .enum(['builtin', 'local', 'npm', 'git', 'vite-plus'])
+    .enum(['builtin', 'local', 'npm', 'git', 'vite-plus', 'remote'])
     .describe('How to load the source.')
     .meta({ id: 'ToolchainTemplateSourceType' });
 
@@ -24,6 +24,10 @@ export const templateSourceSchema = z
         description: z.string().describe('Description override.').optional(),
         kind: templateKindSchema.describe('What the template produces.').optional(),
         ref: z.string().describe('Git branch/tag/commit.').optional(),
+        registry: z
+            .string()
+            .describe('Custom npm registry URL (default: the project package manager registry).')
+            .optional(),
         subdir: z
             .string()
             .describe('Subdirectory within the source that holds the template.')

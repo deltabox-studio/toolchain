@@ -716,6 +716,10 @@
                     "type": "string",
                     "description": "Git branch/tag/commit."
                 },
+                "registry": {
+                    "type": "string",
+                    "description": "Custom npm registry URL (default: the project package manager registry)."
+                },
                 "subdir": {
                     "type": "string",
                     "description": "Subdirectory within the source that holds the template."
@@ -746,7 +750,8 @@
                 "local",
                 "npm",
                 "git",
-                "vite-plus"
+                "vite-plus",
+                "remote"
             ],
             "description": "How to load the source."
         },

@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
     addTemplateSource,
     BUILTIN_TEMPLATES,
+    detectNpmRegistry,
     loadLocalTemplates,
     loadTemplates,
     parseSourceSpec,
@@ -82,8 +83,21 @@ describe('source parsing', () => {
     it('infers the source type', () => {
         expect(parseSourceSpec('git:https://github.com/acme/x.git').type).toBe('git');
         expect(parseSourceSpec('@acme/create').type).toBe('npm');
+        expect(parseSourceSpec('create-acme').type).toBe('npm');
+        expect(parseSourceSpec('acme-create').type).toBe('npm');
+        expect(parseSourceSpec('remote:https://example.com/templates.json').type).toBe('remote');
         expect(parseSourceSpec('https://github.com/acme/x').type).toBe('git');
         expect(parseSourceSpec('./local-dir').type).toBe('local');
+    });
+
+    it('detects the package manager npm registry', () => {
+        const root = makeTmp();
+        fs.writeFileSync(path.join(root, '.yarnrc.yml'), 'npmRegistryServer: https://yarn.test\n');
+        expect(detectNpmRegistry(root)).toBe('https://yarn.test');
+
+        const npmrcRoot = makeTmp();
+        fs.writeFileSync(path.join(npmrcRoot, '.npmrc'), 'registry=https://npm.test/\n');
+        expect(detectNpmRegistry(npmrcRoot)).toBe('https://npm.test');
     });
 });
 

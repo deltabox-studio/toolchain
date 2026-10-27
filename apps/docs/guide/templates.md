@@ -224,11 +224,37 @@ template.
 
 ## Online templates
 
-- **npm** — a published `@scope/create` package whose `package.json` has a
-  `createConfig.templates` (or `dbx.templates`) manifest. Individual templates
-  are listed and created through `vp create`.
-- **git** — a repository (optionally with a `subdir`) listed as a template and
-  created through `vp create`.
+Online sources are resolved with `--online` (or `dbx template:add`):
+
+- **npm** — a published create package whose `package.json` has a
+  `createConfig.templates` (or `dbx.templates`) manifest. Scoped
+  (`@acme/create`) and unscoped (`create-acme`, `acme-create`) packages are
+  supported; individual templates are listed and created through `vp create`.
+  The registry defaults to the project package manager's registry
+  (`.yarnrc.yml` `npmRegistryServer`, `.npmrc` `registry`, ...). Override it
+  per source with `--registry`:
+
+    ```sh
+    dbx template:add @acme/create
+    dbx template:add create-acme
+    dbx template:add create-acme --registry https://registry.example.com
+    ```
+
+- **git** — a repository (optionally with a `ref` and/or `subdir`) listed as a
+  template and created through `vp create`:
+
+    ```sh
+    dbx template:add git:https://github.com/acme/templates --ref v1.2.0 --subdir apps/web
+    ```
+
+- **remote** — an `http(s)` JSON source registry (`{ sources }`, `{ templates }`
+  or an array of sources). Its sources are merged into the registry; each is
+  then loaded by its own type:
+
+    ```sh
+    dbx template:add remote:https://example.com/dbx-templates.json --online
+    ```
+
 - **Vite+** — set `create.defaultTemplate` in the `dbx.config.*`'s `vite` section (the full Vite+
   config) to make a scope the default for `vp create`.
 

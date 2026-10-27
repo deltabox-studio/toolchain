@@ -253,11 +253,15 @@ export function templateCommands(): ToolchainCommand[] {
                 CWD_OPTION,
                 {
                     flags: '--type <type>',
-                    description: 'Force: builtin | local | npm | git | vite-plus.',
+                    description: 'Force: builtin | local | npm | git | vite-plus | remote.',
                 },
                 { flags: '--name <name>', description: 'Display name.' },
                 KIND_OPTION,
                 { flags: '--ref <ref>', description: 'Git branch/tag/commit.' },
+                {
+                    flags: '--registry <url>',
+                    description: 'Custom npm registry (default: the project package manager).',
+                },
                 { flags: '--subdir <dir>', description: 'Subdirectory within the source.' },
                 {
                     flags: '--no-global',
@@ -271,6 +275,7 @@ export function templateCommands(): ToolchainCommand[] {
                 if (opts.name) source.name = String(opts.name);
                 if (opts.kind) source.kind = opts.kind as NonNullable<typeof source.kind>;
                 if (opts.ref) source.ref = String(opts.ref);
+                if (opts.registry) source.registry = String(opts.registry);
                 if (opts.subdir) source.subdir = String(opts.subdir);
                 // A local folder without a template.json is initialised first, so
                 // `template:add ./dir` "just works".

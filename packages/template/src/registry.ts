@@ -11,7 +11,7 @@ import {
 import { BUILTIN_TEMPLATES } from './builtin.js';
 import { loadGlobalTemplates } from './global.js';
 import { loadLocalTemplates } from './local.js';
-import { gitTemplate, loadNpmTemplates } from './online.js';
+import { detectNpmRegistry, gitTemplate, loadNpmTemplates } from './online.js';
 import type { Template } from './types.js';
 
 /** Where `template:add` records sources, relative to a project root. */
@@ -95,9 +95,33 @@ export function collectSources(options: LoadTemplatesOptions): ToolchainTemplate
     ];
 }
 
+/** Fetch a remote source registry (`{ sources }`, `{ templates }` or an array). */
+async function loadRemoteSources(url: string): Promise<ToolchainTemplateSource[]> {
+    try {
+        const response = await fetch(url, { headers: { accept: 'application/json' } });
+        if (!response.ok) return [];
+        const parsed = (await response.json()) as unknown;
+        const list = Array.isArray(parsed)
+            ? parsed
+            : ((parsed as { sources?: unknown; templates?: unknown }).sources ??
+              (parsed as { templates?: unknown }).templates);
+        if (!Array.isArray(list)) return [];
+        return list.filter(
+            (item): item is ToolchainTemplateSource =>
+                Boolean(item) &&
+                typeof item === 'object' &&
+                typeof (item as { type?: unknown }).type === 'string' &&
+                typeof (item as { locate?: unknown }).locate === 'string'
+        );
+    } catch {
+        return [];
+    }
+}
+
 /**
  * Resolve every template: builtin, local directories (offline, always), and —
- * when `online` — npm `@scope/create` manifests + git repositories.
+ * when `online` — npm create packages, git repositories and remote source
+ * registries.
  */
 export async function loadTemplates(options: LoadTemplatesOptions): Promise<Template[]> {
     const seen = new Set<string>();
@@ -116,9 +140,19 @@ export async function loadTemplates(options: LoadTemplatesOptions): Promise<Temp
     // clash.
     const global = await loadGlobalTemplates(options.cwd);
     const sources = [...collectSources(options), ...global.sources];
+    const queue = [...sources];
+    const seenRemote = new Set<string>();
 
-    for (const source of sources) {
+    while (queue.length > 0) {
+        const source = queue.shift()!;
         switch (source.type) {
+            case 'remote': {
+                if (options.online && !seenRemote.has(source.locate)) {
+                    seenRemote.add(source.locate);
+                    queue.push(...(await loadRemoteSources(source.locate)));
+                }
+                break;
+            }
             case 'builtin': {
                 const builtin = BUILTIN_TEMPLATES.find(candidate => candidate.id === source.locate);
                 if (builtin) add(source.id ? { ...builtin, id: source.id } : builtin);
@@ -134,7 +168,11 @@ export async function loadTemplates(options: LoadTemplatesOptions): Promise<Temp
             }
             case 'npm': {
                 if (options.online) {
-                    for (const template of await loadNpmTemplates(source.locate)) add(template);
+                    for (const template of await loadNpmTemplates(
+                        source.locate,
+                        source.registry ?? detectNpmRegistry(options.cwd)
+                    ))
+                        add(template);
                 }
                 break;
             }
