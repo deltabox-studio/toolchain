@@ -113,6 +113,7 @@ export function metaOf(schema: ZodType | Schema): ConfigMeta | undefined {
     const source = schema as Record<string, unknown>;
     const meta: Record<string, unknown> = {};
     for (const key of CONFIG_META_KEYS) {
+        if (key === 'id' && typeof source.id === 'string' && source.id.startsWith('#')) continue;
         if (source[key] !== undefined) meta[key] = source[key];
     }
     return Object.keys(meta).length > 0 ? (meta as ConfigMeta) : undefined;
@@ -518,6 +519,59 @@ export function resolveUntypedSchema(input: Record<string, unknown>): Schema {
     return resolveUntypedNode(input, '', { root: input, cache }) as Schema;
 }
 
+/** Normalize Zod's JSON Schema metadata into standard JSON Schema fields. */
+export function normalizeJsonSchemaMetadata(node: unknown): void {
+    if (!node || typeof node !== 'object' || Array.isArray(node)) return;
+    const record = node as Record<string, unknown>;
+    if (typeof record.deprecated === 'string') {
+        record.deprecationMessage = record.deprecated;
+        record.deprecated = true;
+    }
+    if ('example' in record) {
+        const example = record.example;
+        delete record.example;
+        record.examples = Array.isArray(example) ? example : [example];
+    }
+    for (const key of ['properties', '$defs']) {
+        const map = record[key];
+        if (map && typeof map === 'object' && !Array.isArray(map)) {
+            for (const child of Object.values(map as Record<string, unknown>)) {
+                normalizeJsonSchemaMetadata(child);
+            }
+        }
+    }
+    for (const key of ['items', 'additionalProperties']) normalizeJsonSchemaMetadata(record[key]);
+    for (const key of ['anyOf', 'oneOf', 'allOf']) {
+        const list = record[key];
+        if (Array.isArray(list)) for (const child of list) normalizeJsonSchemaMetadata(child);
+    }
+}
+
+/** Lower a Zod schema and every named `$defs` entry into resolved schemas. */
+export function zodToSchemaMap(zodSchema: ZodType): Record<string, ConfigSchemaType> {
+    const jsonSchema = (zodSchema as ZodType & { toJSONSchema: () => unknown }).toJSONSchema() as
+        | JsonSchemaNode
+        | undefined;
+    if (!jsonSchema) return {};
+    const defs = jsonSchema.$defs ?? {};
+    const out: Record<string, ConfigSchemaType> = {};
+    for (const [name, node] of Object.entries(defs)) {
+        out[name] = resolveUntypedSchema(
+            jsonNodeToDefinition(node, false, defs) as Record<string, unknown>
+        ) as ConfigSchemaType;
+    }
+    const rootName =
+        jsonSchema.$ref?.split('/').pop() ??
+        jsonSchema.id ??
+        metaOf(zodSchema)?.id ??
+        'config';
+    if (!out[rootName]) {
+        out[rootName] = resolveUntypedSchema(
+            jsonNodeToDefinition(jsonSchema, false, defs) as Record<string, unknown>
+        ) as ConfigSchemaType;
+    }
+    return out;
+}
 /** Build the resolved untyped JSON Schema directly from a Zod config schema. */
 export function zodToJsonSchema(zodSchema: ZodType): Schema {
     return resolveUntypedSchema(zodToUntypedDefinition(zodSchema));

@@ -65,6 +65,7 @@
  *   node scripts/dist/changelog/index.js --processing-method all --dry-run
  *   CHANGELOG_PROCESSING_METHOD=all node scripts/dist/changelog/index.js
  */
+import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -81,6 +82,7 @@ import {
 } from './utils/reformat.js';
 import { changelogFiles, readRootVersion, repoRoot, writeVersion } from './utils/repo.js';
 import { buildSummary } from './utils/summary.js';
+import type { ChangelogProvider, CommitFormatOptions } from './utils/types.js';
 import { insertNewEntry, renderChangelogEntry, retagChangelogs } from './utils/version.js';
 import {
     deriveCustomBump,
@@ -148,9 +150,36 @@ export function runChangelog(
 
     const records = readCommits(range);
     const versioning = resolveVersioning(changelog);
+    const provider = versioning.provider as ChangelogProvider | string | undefined;
+    if (!options.dryRun && provider === 'changesets') {
+        const result = spawnSync('npx', ['--yes', 'changeset', 'version'], {
+            cwd: repoRoot(),
+            stdio: 'inherit',
+        });
+        if (result.status !== 0) throw new Error('changesets provider failed.');
+        logger.info('Ran the changesets provider; changesets owns the changelog/version output.');
+        return;
+    }
     const type = deriveCustomBump(records, versioning.bump, versioning.allowOverBump);
     const commitlint = resolveCommitlintEnabled(changelog);
-    const summary = buildSummary(records, { commitlint, range });
+    let summary = buildSummary(records, {
+        commitlint,
+        range,
+        ...(versioning.commit ? { commit: versioning.commit as CommitFormatOptions } : {}),
+    });
+    if (provider && typeof provider === 'object' && typeof provider.run === 'function') {
+        const custom = provider.run({ cwd: repoRoot(), changelog, records });
+        if (typeof custom === 'string') summary = custom;
+    } else if (typeof provider === 'function') {
+        const custom = (
+            provider as (ctx: {
+                cwd: string;
+                changelog?: ChangelogConfig;
+                records: typeof records;
+            }) => string | void
+        )({ cwd: repoRoot(), changelog, records });
+        if (typeof custom === 'string') summary = custom;
+    }
 
     const plan = planVersions({
         versioning,

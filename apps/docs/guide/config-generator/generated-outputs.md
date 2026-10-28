@@ -43,7 +43,7 @@ export interface ServerConfig {
 One reference page per scope plus an index listing the required/core env vars:
 
 ```ts
-engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
+engine.writeMarkdown({ outputDir: 'docs/reference/configuration' });
 // docs/reference/configuration/server.md, .../index.md
 ```
 

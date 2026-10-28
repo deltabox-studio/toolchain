@@ -123,6 +123,29 @@ describe('changelog formatting', () => {
         expect(summary).toContain('- Random change');
     });
 
+    it('customizes commit credits and supports a custom formatter', () => {
+        const records = [
+            {
+                hash: 'a'.repeat(40),
+                subject: 'feat: add',
+                body: '',
+                author: 'A',
+                authorEmail: 'a@example.com',
+            },
+        ];
+        const plain = buildSummary(records, {
+            commit: { author: false, commitSha: false, issues: false },
+        });
+        expect(plain).toContain('- Add');
+        expect(plain).not.toContain(' by ');
+        expect(plain).not.toContain('#aaaaaaa');
+
+        const custom = buildSummary(records, {
+            commit: { format: ctx => `CUSTOM ${ctx.commit.subject}` },
+        });
+        expect(custom).toContain('- CUSTOM feat: add');
+    });
+
     it('adds a New contributors footer with their nested commit messages', () => {
         const records = [
             {

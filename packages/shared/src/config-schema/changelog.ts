@@ -79,12 +79,12 @@ export const changelogVersioningConfigSchema = z
             )
             .optional(),
         commit: z
-            .record(z.string(), z.unknown())
-            .describe('Commit message formatting/credit options.')
+            .unknown()
+            .describe('Commit message formatting/credit options or callback.')
             .optional(),
         provider: z
-            .union([z.literal('default'), z.literal('changesets'), z.string()])
-            .describe('Changelog provider (default `default`; `changesets` or a custom id).')
+            .unknown()
+            .describe('`default`, `changesets`, a provider id, or a custom provider/callback.')
             .optional(),
     })
     .describe('Automatic version bumping options.')

@@ -471,28 +471,10 @@
                     "description": "Apply a bump once per matching change instead of once per run (default false)."
                 },
                 "commit": {
-                    "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
-                    "additionalProperties": {},
-                    "description": "Commit message formatting/credit options."
+                    "description": "Commit message formatting/credit options or callback."
                 },
                 "provider": {
-                    "anyOf": [
-                        {
-                            "type": "string",
-                            "const": "default"
-                        },
-                        {
-                            "type": "string",
-                            "const": "changesets"
-                        },
-                        {
-                            "type": "string"
-                        }
-                    ],
-                    "description": "Changelog provider (default `default`; `changesets` or a custom id)."
+                    "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
                 }
             },
             "additionalProperties": false,

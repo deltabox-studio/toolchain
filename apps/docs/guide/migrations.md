@@ -184,3 +184,7 @@ console.log(result.unmapped);
 `oxfmt --migrate biome`-style tools cover formatter options only; the pieces the
 upstream tools skip (Biome `organizeImports`, Biome linter rules, Dprint) are
 handled here.
+
+## Upgrading from v1
+
+See the [v1 → v2 migration guide](/guide/migration-v1-v2).

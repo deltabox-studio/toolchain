@@ -4,7 +4,7 @@ layout: home
 hero:
     name: deltabox toolchain
     text: One toolchain for the whole repo
-    tagline: Scaffold projects, generate configs, manage tsconfigs, changelogs and CI, and run Vite+
+    tagline: Scaffold projects, generate configs, manage templates, tsconfigs, changelogs & CI, and run Vite+
     image:
         src: /logo/logo.svg
         alt: deltabox toolchain

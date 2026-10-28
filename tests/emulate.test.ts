@@ -723,4 +723,49 @@ describe('emulate: CLI + templates', () => {
         },
         TIMEOUT
     );
+
+    it(
+        'applies shorthand formatter/linter defaults and a custom logger end to end',
+        async () => {
+            const ws = scratch('tooling-defaults');
+            writeJson(path.join(ws, 'package.json'), {
+                name: 'tooling-defaults',
+                version: '1.0.0',
+                private: true,
+                devDependencies: { 'vite-plus': '^1' },
+            });
+            write(
+                path.join(ws, 'dbx.config.ts'),
+                [
+                    'const custom = {',
+                    "    raw: (m = '') => process.stdout.write(`${m}\\n`),",
+                    "    rawError: (m = '') => process.stderr.write(`${m}\\n`),",
+                    '    write: () => {},',
+                    '    debug: () => {},',
+                    "    info: (m = '') => console.log(`CUSTOM:${m}`),",
+                    '    success: () => {},',
+                    "    warn: (m = '') => console.log(`CUSTOM-WARN:${m}`),",
+                    "    error: (m = '') => console.log(`CUSTOM-ERROR:${m}`),",
+                    '};',
+                    'export default {',
+                    '    toolchain: {',
+                    '        fmt: { vscode: false },',
+                    '        lint: { vscode: false },',
+                    '        logger: { logger: custom },',
+                    '    },',
+                    '};',
+                    '',
+                ].join('\n')
+            );
+
+            const result = await dbx(ws, ['sync', '--cwd', ws]);
+            expect(result.code, result.stderr).toBe(0);
+            expect(result.stdout).toContain('CUSTOM:');
+            const fmt = readJson<Record<string, unknown>>(path.join(ws, '.oxfmtrc.json'));
+            expect(fmt.printWidth).toBe(100);
+            const lint = readJson<Record<string, unknown>>(path.join(ws, '.oxlintrc.json'));
+            expect(lint.rules).toBeTruthy();
+        },
+        TIMEOUT
+    );
 });

@@ -14,7 +14,7 @@ import { generateTypes, type Schema } from 'untyped';
 
 import { pascalCase } from '@deltabox/toolchain-shared';
 
-import { normalizeConfigSchema, splitBaseSchema } from '../schema.js';
+import { isZodSchema, metaOf, normalizeConfigSchema, splitBaseSchema, zodToSchemaMap } from '../schema.js';
 import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
 
 /** The `generateTypes` options shared by every interface. */
@@ -305,7 +305,12 @@ function renderConfigTypes(
     const baseGroup = Array.isArray(options.baseGroup)
         ? String((options.baseGroup as unknown[])[0] ?? 'base')
         : String(options.baseGroup ?? 'base');
-    const interfaceName = options.interfaceNames?.[scopeName] ?? `${pascalCase(scopeName)}Config`;
+    const meta = metaOf(schema);
+    const interfaceName =
+        options.interfaceNames?.[scopeName] ??
+        meta?.typeName ??
+        meta?.id ??
+        `${pascalCase(scopeName)}Config`;
     const aliases = options.aliases?.[scopeName] ?? '';
     const wrap = (body: string): string => (options.header ? `${options.header}\n\n${body}` : body);
 
@@ -358,6 +363,17 @@ function renderAllConfigTypes(
     schema: ConfigSchema,
     options: GenerateTypesOptions = {}
 ): Record<string, string> {
+    if (isZodSchema(schema)) {
+        return Object.fromEntries(
+            Object.entries(zodToSchemaMap(schema)).map(([typeName, scopeSchema]) => [
+                typeName,
+                renderConfigTypes(typeName, scopeSchema, {
+                    ...options,
+                    interfaceNames: { [typeName]: typeName, ...options.interfaceNames },
+                }),
+            ])
+        );
+    }
     return Object.fromEntries(
         Object.entries(normalizeConfigSchema(schema)).map(([scopeName, scopeSchema]) => [
             scopeName,

@@ -52,6 +52,7 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [Package scripts](https://toolchain.deltabox.studio/guide/scripts.md)
 - [Templates](https://toolchain.deltabox.studio/guide/templates.md)
 - [Migrations](https://toolchain.deltabox.studio/guide/migrations.md)
+- [Migrating from v1 to v2](https://toolchain.deltabox.studio/guide/migration-v1-v2.md)
 - [Programmatic API](https://toolchain.deltabox.studio/guide/api.md)
 
 ### Reference

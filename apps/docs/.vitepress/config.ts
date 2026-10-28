@@ -174,6 +174,7 @@ export default defineConfig({
                         { text: 'Package Scripts', link: '/guide/scripts' },
                         { text: 'Templates', link: '/guide/templates' },
                         { text: 'Migrations', link: '/guide/migrations' },
+                        { text: 'v1 → v2 migration', link: '/guide/migration-v1-v2' },
                         { text: 'Programmatic API', link: '/guide/api/' },
                     ],
                 },

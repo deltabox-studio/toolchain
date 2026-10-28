@@ -24,4 +24,4 @@ JSON Schema is [config.schema.json](https://toolchain.deltabox.studio/config.sch
 
 Every generated page uses the same `ConfigMeta` fields: `description`,
 `required`, `deprecated`, `example`, `secret`, `scope`, `public`,
-`defaultValue`, plus the env fields `env` and `path`.
+`defaultValue`, the env fields `envName`, `envPath` and more.

@@ -1022,11 +1022,11 @@ export const serverConfig = z.object({
 * `ConfigBaseMeta`: `description`, `required`, `deprecated`,
   `deprecationMessage`, `example`, `since`, `see`, `remarks`, `experimental`,
   `alpha`, `beta`, `secret`, `scope`, `public`, `defaultValue`.
-* `ConfigEnvMeta`: `env` and `path` (both optional, so non-env configs can use
+* `ConfigEnvMeta`: `envName` and `envPath` (both optional, so non-env configs can use
   metadata too).
 
-`.`describe()`is still the primary description and is rendered into the
-generated types, JSON Schema and markdown reference;`.meta({ description })\` is
+`.describe()` is still the primary description and is rendered into the
+generated types, JSON Schema and markdown reference; `.meta({ description })` is
 used as a fallback and adds env/docs metadata.
 
 ## Programmatic API
@@ -1065,7 +1065,7 @@ surface (see [Vite+](/guide/vite)).
 
 ## JSON Schema / editor autocomplete
 
-`config.schema.json` is generated from the same Zod model and published at the
+[config.schema.json](/config.schema.json) is generated from the same Zod model and published at the
 site root, so a `dbx.config.json` gets editor completion. For a TypeScript config,
 `defineConfig` already provides the same information.
 
@@ -1262,7 +1262,9 @@ url: https://toolchain.deltabox.studio/guide/changelog.md
 ---
 # Changelog
 
-The `ci` section drives everything Conventional Commits: the CI that lints
+## CI
+
+The `ci` section drives everything Conventional Commits (by default): the CI that lints
 commit messages, the local husky hook, the `commitlint.config.mjs`, the GitHub
 workflows, and the changelog pipeline that bumps versions and writes
 `CHANGELOG.md`. Its `ci.changelog` config holds the changelog-specific options.
@@ -2364,9 +2366,9 @@ url: https://toolchain.deltabox.studio/guide/config-generator.md
 ---
 # Config Generator
 
-`@deltabox/toolchain/config` is a generic, Zod-backed configuration engine. A
-**Zod schema is the single source of truth**: attach env metadata to leaves with
-`.meta()`, then generate the `.env` file, env/config TypeScript types, a JSON
+`@deltabox/toolchain/config` is a configuration engine. A
+**Zod/untyped schema is the single source of truth**: attach metadata to zod leaves with
+`.meta()`, then generate the env/config TypeScript types, a JSON
 Schema, a markdown reference, config metadata JSON and CLI option definitions —
 all from that one schema.
 
@@ -3028,6 +3030,110 @@ console.log(result.unmapped);
 upstream tools skip (Biome `organizeImports`, Biome linter rules, Dprint) are
 handled here.
 
+## Upgrading from v1
+
+See the [v1 → v2 migration guide](/guide/migration-v1-v2).
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/migration-v1-v2.md
+---
+# Migrating from v1 to v2
+
+v2 focuses on a smaller, schema-driven config-generator API. Most runtime
+features keep working, but the programmatic config-generator surface is a
+breaking change.
+
+## Breaking changes
+
+### `ConfigScopes` and `ConfigScopeDef` are gone
+
+Pass a `ConfigSchema` directly. It accepts a Zod schema, an untyped `Schema`, an
+array of schemas, or a record keyed by scope.
+
+```ts
+// v1
+const engine = createConfigEngine({
+    scopes: {
+        server: { zodSchema: serverConfig },
+        cli: { zodSchema: cliConfig },
+    },
+});
+
+// v2
+const engine = createConfigEngine({
+    schema: { server: serverConfig, cli: cliConfig },
+});
+```
+
+`ConfigSchemaType` is the untyped `Schema` plus the toolchain's `ConfigMeta`.
+
+### Render functions are internal
+
+Use the `generateConfig*` functions or the engine methods. They return generated
+contents and only write when you pass an output directory/path.
+
+```ts
+// v1
+renderConfigTypes(scopes, { outputDir });
+renderScopeMarkdown(scopes, { outDir });
+
+// v2
+generateConfigTypes(schema, { outputDir });
+generateConfigMarkdown(schema, { outputDir });
+```
+
+Set `outputDir: false` (or omit it) to generate without writing.
+
+### Schema maps were removed
+
+`CONFIG_SECTION_SCHEMAS`, `CONFIG_TYPE_SCHEMAS` and
+`CONFIG_SECTION_DESCRIPTIONS` were removed. Use `configSchema` (the section
+schemas) or `dbxConfigSchema`, and read descriptions from each schema's
+`.describe()` / `.meta()`.
+
+### Metadata is the source of truth
+
+Generators read `ConfigMeta` from Zod `.meta()` or from untyped schema nodes.
+`env`/`path` are deprecated in favour of `envName`/`envPath`; `cliFlag` and
+`cliFlagShort` customize CLI flags. Types can use `typeName` / `id` to control
+the generated interface name.
+
+### Collection names
+
+* `collectEnvVars` → `collectVars`
+* `collectRequiredEnvVars` → `collectRequired`
+* `EnvVarDef` → `ConfigDef`
+* `EnvValueType` → `ConfigValueType`
+* engine `requiredEnvVars` → `requiredVars`
+* `writeMarkdown({ outDir })` → `writeMarkdown({ outputDir })`
+
+## Behaviour changes
+
+* `toolchain.fmt` / `toolchain.lint` shorthand (`true` or `{ vscode: ... }`)
+  now infers a tool from installed packages, then VS Code user settings, then
+  falls back to Oxc defaults. Existing user config files are folded through the
+  migration mappings instead of being overwritten.
+* Formatter/linter conflict warnings use `fmt.conflict` / `lint.conflict`.
+  Missing tools warn with `fmt.no-tool` / `lint.no-tool`.
+* `fmt.vscode` / `lint.vscode` only add `editor.defaultFormatter`, language
+  blocks and `editor.codeActionsOnSave`; use `{ overrides, exclude }` to adjust
+  them.
+* A custom logger can be supplied through `toolchain.logger.logger`.
+* Changelog versioning supports custom bump rules/callbacks, over-bump opt-in,
+  provider selection and commit credit/format options.
+
+## Recommended upgrade steps
+
+1. Replace `scopes` with `schema` in `createConfigEngine`.
+2. Replace `render*` imports with `generateConfig*`.
+3. Remove imports of the deleted schema maps; use `configSchema` or individual
+   schema exports.
+4. Rename `env`/`path` metadata to `envName`/`envPath` when convenient (the old
+   names still work).
+5. Run `yarn dbx sync` and `yarn config:types` after upgrading.
+
 ---
 
 ---
@@ -3086,7 +3192,7 @@ JSON Schema is [config.schema.json](https://toolchain.deltabox.studio/config.sch
 
 Every generated page uses the same `ConfigMeta` fields: `description`,
 `required`, `deprecated`, `example`, `secret`, `scope`, `public`,
-`defaultValue`, plus the env fields `env` and `path`.
+`defaultValue`, the env fields `envName`, `envPath` and more.
 
 ---
 
@@ -3588,7 +3694,7 @@ import { defineConfig } from '@deltabox/toolchain';
 export default defineConfig({
     toolchain: {
         project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
-        ci: { ci: true, release: true, changelog: { branches: { main: 'main' } } },
+        ci: { ci: true, release: true, changelog: { branches: { main: "main" } } },
         tsconfig: { refs: true },
         templates: { sources: [{ type: 'local', locate: './templates', kind: 'application' }] },
         vite: { fmt: { semi: true, singleQuote: true }, test: { include: ['src/**/*.test.ts'] } },
@@ -4492,13 +4598,13 @@ Every generator is a method on the bound engine:
 
 ```ts
 engine.collectVars(); // ConfigDef[] across every scope
-engine.requiredEnvVars('server'); // required var names for a scope
+engine.requiredVars('server'); // required var names for a scope
 
 engine.writeEnvFile({ output: '.env.example' });
 engine.writeEnvTypes({ outputDir: 'types' });
 engine.writeConfigTypes({ outputDir: 'types' });
 engine.writeJsonSchema({ output: 'config.schema.json' });
-engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
+engine.writeMarkdown({ outputDir: 'docs/reference/configuration' });
 
 engine.generateCliOptions({ output: 'cli-options.json' });
 engine.buildConfigJson(); // the config metadata document
@@ -4554,7 +4660,7 @@ export interface ServerConfig {
 One reference page per scope plus an index listing the required/core env vars:
 
 ```ts
-engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
+engine.writeMarkdown({ outputDir: 'docs/reference/configuration' });
 // docs/reference/configuration/server.md, .../index.md
 ```
 
@@ -5385,6 +5491,64 @@ just in its own.
 Without a graph (eg. `dbx projects` was never run), a workspace falls back to
 filtering on its own directory only. A workspace with no related commits is
 skipped (no empty entry, no file created).
+
+## Custom bump rules
+
+`versioning.bump` maps `major`, `minor`, `patch` (and `alpha`) to a matcher.
+Matchers can be booleans, substrings, `/regex/` strings, arrays, objects
+(`{ type, types, scope, scopes, pattern, match, breaking }`) or callbacks.
+
+```ts
+ci: {
+    changelog: {
+        versioning: {
+            bump: {
+                major: { scope: 'api', breaking: true },
+                minor: [{ type: 'feat' }, /^feat\(ui\)/],
+                patch: 'fix',
+            },
+            // Apply one bump per matching change instead of once per run.
+            allowOverBump: false,
+        },
+    },
+}
+```
+
+Callbacks receive `{ env, logger, packageJson?, commit }` and may return a
+boolean or a version index.
+
+## Commit credits and formatting
+
+`versioning.commit` controls the commit bullet credits. All options default to
+`true` except `authorAvatar`.
+
+```ts
+ci: {
+    changelog: {
+        versioning: {
+            commit: {
+                author: true,
+                authorAvatar: true,
+                commitSha: true,
+                issues: true,
+                format: ({ commit, author, issues, repo }) =>
+                    `${commit.subject} — ${author.name}${issues.length ? ` (${issues.length} issues)` : ''}`,
+            },
+        },
+    },
+}
+```
+
+## Providers
+
+`versioning.provider` selects the changelog provider:
+
+* `default` (or omitted) uses the built-in pipeline.
+* `changesets` runs `npx changeset version` and leaves changelog/version output
+  to changesets.
+* a callback `(ctx) => string | void` can replace the summary.
+* an object `{ id, run(ctx) }` can run custom logic and optionally return the
+  summary string.
 
 ---
 

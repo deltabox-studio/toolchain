@@ -81,11 +81,11 @@ export const serverConfig = z.object({
 - `ConfigBaseMeta`: `description`, `required`, `deprecated`,
   `deprecationMessage`, `example`, `since`, `see`, `remarks`, `experimental`,
   `alpha`, `beta`, `secret`, `scope`, `public`, `defaultValue`.
-- `ConfigEnvMeta`: `env` and `path` (both optional, so non-env configs can use
+- `ConfigEnvMeta`: `envName` and `envPath` (both optional, so non-env configs can use
   metadata too).
 
-`.`describe()`is still the primary description and is rendered into the
-generated types, JSON Schema and markdown reference;`.meta({ description })` is
+`.describe()` is still the primary description and is rendered into the
+generated types, JSON Schema and markdown reference; `.meta({ description })` is
 used as a fallback and adds env/docs metadata.
 
 ## Programmatic API
@@ -124,6 +124,6 @@ surface (see [Vite+](/guide/vite)).
 
 ## JSON Schema / editor autocomplete
 
-`config.schema.json` is generated from the same Zod model and published at the
+[config.schema.json](/config.schema.json) is generated from the same Zod model and published at the
 site root, so a `dbx.config.json` gets editor completion. For a TypeScript config,
 `defineConfig` already provides the same information.

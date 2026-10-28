@@ -31,7 +31,7 @@ export interface ConfigEngine {
     readonly baseGroup: string;
     readonly root: string;
     collectVars(): ConfigDef[];
-    collectRequired(scope?: string): ConfigDef[];
+    requiredVars(scope?: string): ConfigDef[];
     generateEnvFile(options?: EnvFileOptions): string;
     buildConfigJson(options?: BuildConfigJsonOptions): ConfigJsonDoc;
     generateJsonSchema(options?: GenerateJsonSchemaOptions): Promise<Record<string, unknown>>;
@@ -43,7 +43,7 @@ export interface ConfigEngine {
     writeEnvFile(options: EnvFileOptions & { output: string }): string;
     writeConfigTypes(options: GenerateTypesOptions & { outputDir: string }): string[];
     writeEnvTypes(options: GenerateEnvTypesOptions & { outputDir: string }): string[];
-    writeMarkdown(options: GenerateMarkdownOptions & { outDir: string }): string[];
+    writeMarkdown(options: GenerateMarkdownOptions & { outputDir: string }): string[];
     generateCliOptions(options?: GenerateCliOptionsOptions): CliOptionDef[];
 }
 
@@ -63,7 +63,7 @@ export function createConfigEngine(options: ConfigEngineOptions): ConfigEngine {
         baseGroup: baseGroupName,
         root,
         collectVars: () => collectVars(schema, envPrefix, { envPathOf }),
-        collectRequired: scope =>
+        requiredVars: scope =>
             collectVars(schema, envPrefix, { envPathOf }).filter(
                 def => def.required && (scope === undefined || def.scope === scope)
             ),
@@ -107,7 +107,7 @@ export function createConfigEngine(options: ConfigEngineOptions): ConfigEngine {
                 envPathOf,
                 ...opts,
             });
-            return Object.keys(contents).map(file => path.join(opts.outDir, file));
+            return Object.keys(contents).map(file => path.join(opts.outputDir, file));
         },
         generateCliOptions: (opts = {}) =>
             generateCliOptions(schema, { envPrefix, envPathOf, ...opts }),

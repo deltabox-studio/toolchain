@@ -1,6 +1,8 @@
 # Changelog
 
-The `ci` section drives everything Conventional Commits: the CI that lints
+## CI
+
+The `ci` section drives everything Conventional Commits (by default): the CI that lints
 commit messages, the local husky hook, the `commitlint.config.mjs`, the GitHub
 workflows, and the changelog pipeline that bumps versions and writes
 `CHANGELOG.md`. Its `ci.changelog` config holds the changelog-specific options.

@@ -25,10 +25,10 @@ export interface ResolvedVersioning {
     bump?: Record<string, unknown>;
     /** Apply a bump per matching change instead of once. */
     allowOverBump?: boolean;
-    /** Changelog provider id (`default`, `changesets`, ...). */
-    provider?: string;
+    /** Changelog provider id, callback, or custom provider object. */
+    provider?: unknown;
     /** Commit formatting options. */
-    commit?: Record<string, unknown>;
+    commit?: unknown;
 }
 
 /**
@@ -203,7 +203,19 @@ export function deriveCustomBump(
     for (const level of BUMP_ORDER) {
         const rule = rules[level];
         for (const record of records) {
-            if (!bumpRuleMatches(rule, record, context)) continue;
+            const matched =
+                typeof rule === 'function'
+                    ? (() => {
+                          const value = (
+                              rule as (ctx: BumpRuleContext & {
+                                  commit: CommitRecord;
+                                  level: string;
+                              }) => string | boolean
+                          )({ ...context, commit: record, level });
+                          return typeof value === 'string' ? value === level : Boolean(value);
+                      })()
+                    : bumpRuleMatches(rule, record, context);
+            if (!matched) continue;
             matches += 1;
             if (BUMP_ORDER.indexOf(level) > BUMP_ORDER.indexOf(result)) result = level;
         }

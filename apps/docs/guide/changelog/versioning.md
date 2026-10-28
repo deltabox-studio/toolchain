@@ -78,3 +78,61 @@ just in its own.
 Without a graph (eg. `dbx projects` was never run), a workspace falls back to
 filtering on its own directory only. A workspace with no related commits is
 skipped (no empty entry, no file created).
+
+## Custom bump rules
+
+`versioning.bump` maps `major`, `minor`, `patch` (and `alpha`) to a matcher.
+Matchers can be booleans, substrings, `/regex/` strings, arrays, objects
+(`{ type, types, scope, scopes, pattern, match, breaking }`) or callbacks.
+
+```ts
+ci: {
+    changelog: {
+        versioning: {
+            bump: {
+                major: { scope: 'api', breaking: true },
+                minor: [{ type: 'feat' }, /^feat\(ui\)/],
+                patch: 'fix',
+            },
+            // Apply one bump per matching change instead of once per run.
+            allowOverBump: false,
+        },
+    },
+}
+```
+
+Callbacks receive `{ env, logger, packageJson?, commit }` and may return a
+boolean or a version index.
+
+## Commit credits and formatting
+
+`versioning.commit` controls the commit bullet credits. All options default to
+`true` except `authorAvatar`.
+
+```ts
+ci: {
+    changelog: {
+        versioning: {
+            commit: {
+                author: true,
+                authorAvatar: true,
+                commitSha: true,
+                issues: true,
+                format: ({ commit, author, issues, repo }) =>
+                    `${commit.subject} — ${author.name}${issues.length ? ` (${issues.length} issues)` : ''}`,
+            },
+        },
+    },
+}
+```
+
+## Providers
+
+`versioning.provider` selects the changelog provider:
+
+- `default` (or omitted) uses the built-in pipeline.
+- `changesets` runs `npx changeset version` and leaves changelog/version output
+  to changesets.
+- a callback `(ctx) => string | void` can replace the summary.
+- an object `{ id, run(ctx) }` can run custom logic and optionally return the
+  summary string.

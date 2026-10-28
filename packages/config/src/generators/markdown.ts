@@ -21,7 +21,7 @@ export interface RenderMarkdownFrontmatter {
 
 export interface RenderMarkdownOptions extends Pick<ConfigEngineOptions, 'baseGroup'> {
     /** Output directory. Set false (or omit it) to disable writing. */
-    outDir?: string | false;
+    outputDir?: string | false;
     /** Frontmatter toggle, raw body, or callback. */
     frontmatter?: boolean | string | ((ctx: RenderMarkdownFrontmatter) => string);
     /** Render every scope into one file instead of one file per scope. */
@@ -457,10 +457,10 @@ export function generateConfigMarkdown(
             outline,
         });
     }
-    if (typeof options.outDir === 'string') {
-        fs.mkdirSync(options.outDir, { recursive: true });
+    if (typeof options.outputDir === 'string') {
+        fs.mkdirSync(options.outputDir, { recursive: true });
         for (const [file, content] of Object.entries(contents)) {
-            fs.writeFileSync(path.resolve(options.outDir, file), content, 'utf-8');
+            fs.writeFileSync(path.resolve(options.outputDir, file), content, 'utf-8');
         }
     }
     return contents;

@@ -167,6 +167,36 @@ export function createLogger(options: LoggerOptions = {}): Logger {
         fn(withPrefix(message), { spacing: 0, ...(output ? { output } : {}) });
     };
 
+    const custom = options.logger;
+    if (custom) {
+        return {
+            level,
+            colors,
+            raw: (message = '') => custom.raw(message),
+            rawError: (message = '') => custom.rawError(message),
+            write: (channel, text) => custom.write(channel, text),
+            debug: (message = '') => {
+                if (threshold <= LEVELS.debug) custom.debug(message);
+            },
+            info: (message = '') => {
+                if (threshold <= LEVELS.info) custom.info(message);
+            },
+            success: (message = '') => {
+                if (threshold <= LEVELS.info) custom.success(message);
+            },
+            warn: (message = '', id?: string) => {
+                if (threshold <= LEVELS.warn && !isSuppressed(message, id)) {
+                    custom.warn(message, id);
+                }
+            },
+            error: (message = '', id?: string) => {
+                if (threshold <= LEVELS.error && !isSuppressed(message, id)) {
+                    custom.error(message, id);
+                }
+            },
+        };
+    }
+
     return {
         level,
         colors,

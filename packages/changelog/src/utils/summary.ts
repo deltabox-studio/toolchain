@@ -7,7 +7,12 @@ import {
     repoSlug,
     resolveAuthorInfo,
 } from './git.js';
-import type { AuthorInfo, CommitRecord, GroupedItem } from './types.js';
+import type {
+    AuthorInfo,
+    CommitFormatOptions,
+    CommitRecord,
+    GroupedItem,
+} from './types.js';
 
 /**
  * Render a commit reference for a changelog bullet. With a resolvable repo slug
@@ -37,6 +42,8 @@ export interface BuildSummaryOptions {
      * that already know the history. When omitted, the range is inspected.
      */
     priorAuthors?: Iterable<string>;
+    /** Commit line formatting/credit options. */
+    commit?: CommitFormatOptions;
 }
 
 type BumpGroup = 'major' | 'minor' | 'patch';
@@ -72,12 +79,26 @@ interface CommitItemOptions {
 function commitItem(
     record: CommitRecord,
     repo: string | undefined,
-    options: CommitItemOptions = {}
+    options: CommitItemOptions & CommitFormatOptions = {}
 ): GroupedItem {
     const parsed = parseCcSubject(record.subject);
-    const authorText =
-        options.author === false ? '' : ` by ${renderAuthor(resolveAuthorInfo(record, repo))}`;
-    const text = `- ${capitalize(parsed.rest)} (${renderCommitRef(repo, record.hash)}${authorText})${renderIssues(recordIssues(record, repo))}`;
+    const author = resolveAuthorInfo(record, repo);
+    const issues = recordIssues(record, repo);
+    let text: string;
+    if (options.format) {
+        text = `- ${options.format({ commit: record, repo, author, issues, options })}`;
+    } else {
+        const credit: string[] = [];
+        if (options.commitSha !== false) credit.push(renderCommitRef(repo, record.hash));
+        if (options.author !== false) {
+            const avatar =
+                options.authorAvatar && author.url ? `![${author.name}](${author.url}) ` : '';
+            credit.push(`by ${avatar}${renderAuthor(author)}`);
+        }
+        const creditText = credit.length > 0 ? ` (${credit.join(' ')})` : '';
+        const issueText = options.issues === false ? '' : renderIssues(issues);
+        text = `- ${capitalize(parsed.rest)}${creditText}${issueText}`;
+    }
     return {
         parsed,
         text,
@@ -97,13 +118,13 @@ function renderItem(item: GroupedItem): string[] {
 }
 
 /** The coarse fallback summary used when commitlint is disabled. */
-function buildFallbackSummary(records: CommitRecord[]): string {
+function buildFallbackSummary(records: CommitRecord[], commit?: CommitFormatOptions): string {
     const repo = repoSlug();
     const groups = new Map<BumpGroup, GroupedItem[]>();
     for (const record of records) {
         const group = bumpGroupOf(record);
         const bucket = groups.get(group) ?? [];
-        bucket.push(commitItem(record, repo));
+        bucket.push(commitItem(record, repo, commit ?? {}));
         groups.set(group, bucket);
     }
     if (groups.size === 0) return '- No description provided.';
@@ -198,13 +219,13 @@ export function buildSummary(records: CommitRecord[], options: BuildSummaryOptio
     const repo = repoSlug();
     const summary =
         options.commitlint === false
-            ? buildFallbackSummary(records)
+            ? buildFallbackSummary(records, options.commit)
             : renderGroups(
                   groupItems(
                       records.map(record => {
                           // The CC rule + scope live in the nested group headings, so the
                           // commit line carries just the (capitalized) subject + credit.
-                          return commitItem(record, repo);
+                          return commitItem(record, repo, options.commit ?? {});
                       })
                   )
               );
