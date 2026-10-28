@@ -11,14 +11,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
+    deepMerge,
+    errorMessage,
+    FORMATTER_PRECEDENCE,
     isPlainObject,
+    LINTER_PRECEDENCE,
     resolveFmtTool,
     resolveFmtTools,
     resolveLintTool,
     resolveLintTools,
-    type SyncTask,
     sectionConfig,
+    sectionEnabled,
+    type SyncTask,
     type ToolchainConfig,
+    type ToolchainVscodeSettings,
+    warningMessage,
 } from '@deltabox/toolchain-shared';
 
 const FORMATTER_EXTENSIONS: Record<string, string> = {
@@ -41,14 +48,6 @@ function formatterSettings(tool: string): Record<string, unknown> {
     if (!extension) return {};
     return {
         'editor.defaultFormatter': extension,
-        'editor.formatOnSave': true,
-        ...(tool === 'oxc'
-            ? {
-                  'oxc.disableNestedConfig': true,
-                  'oxc.fmt.disableNestedConfig': true,
-                  'editor.formatOnSaveMode': 'file',
-              }
-            : {}),
         ...Object.fromEntries(
             FORMATTER_LANGUAGES.map(language => [
                 `[${language}]`,
@@ -67,31 +66,72 @@ function addMissing(target: Record<string, unknown>, patch: Record<string, unkno
     }
 }
 
-function warningMessage(
-    kind: 'formatter' | 'linter',
-    tools: readonly string[],
-    winner: string
-): string {
-    return `Multiple ${kind}s configured (${tools.join(', ')}); using ${winner} (precedence) for editor settings.`;
+/** Whether `fmt.vscode` / `lint.vscode` is enabled (`true` or an options object). */
+function vscodeEnabled(value: unknown): boolean {
+    return value === true || isPlainObject(value);
 }
 
 /**
- * Warn when more than one formatter/linter is configured. Runs even when editor
- * defaults are off so CLI/extension users still see the precedence notice.
+ * Apply the `vscode` section's overrides/exclusions to the generated defaults.
+ * `exclude` lists exact setting keys (eg. `editor.defaultFormatter` or
+ * `[typescript]`) to omit.
+ */
+function applyVscodeOptions(
+    patch: Record<string, unknown>,
+    value: unknown
+): Record<string, unknown> {
+    if (!isPlainObject(value)) return patch;
+    const options = value as ToolchainVscodeSettings;
+    let out = options.overrides ? deepMerge(patch, options.overrides) : patch;
+    for (const key of options.exclude ?? []) {
+        const { [key]: _excluded, ...rest } = out;
+        out = rest;
+    }
+    return out;
+}
+
+/**
+ * Emit centralized config warnings: tool precedence conflicts and deprecated
+ * sections. Runs even when editor defaults are off so CLI/extension users still
+ * see the notices.
  */
 export function toolingConfigTask(): SyncTask {
     return {
         name: 'tooling',
         enabled: config =>
-            resolveFmtTools(config).length > 0 || resolveLintTools(config).length > 0,
+            sectionEnabled(config.fmt) ||
+            sectionEnabled(config.lint) ||
+            sectionEnabled(config.biome),
         run: ctx => {
-            const fmt = resolveFmtTools(ctx.config);
-            const lint = resolveLintTools(ctx.config);
+            const legacyBiome = sectionEnabled(ctx.config.biome);
+            const activeFmt = resolveFmtTools(ctx.config);
+            const activeLint = resolveLintTools(ctx.config);
+            const fmt = legacyBiome
+                ? FORMATTER_PRECEDENCE.filter(tool => tool === 'biome' || activeFmt.includes(tool))
+                : activeFmt;
+            const lint = legacyBiome
+                ? LINTER_PRECEDENCE.filter(tool => tool === 'biome' || activeLint.includes(tool))
+                : activeLint;
             if (fmt.length > 1) {
-                ctx.warn(warningMessage('formatter', fmt, fmt[0] as string), 'fmt.multiple');
+                ctx.warn(
+                    warningMessage('fmt.conflict', {
+                        tools: fmt.join(', '),
+                        winner: fmt[0] as string,
+                    }),
+                    'fmt.conflict'
+                );
             }
             if (lint.length > 1) {
-                ctx.warn(warningMessage('linter', lint, lint[0] as string), 'lint.multiple');
+                ctx.warn(
+                    warningMessage('lint.conflict', {
+                        tools: lint.join(', '),
+                        winner: lint[0] as string,
+                    }),
+                    'lint.conflict'
+                );
+            }
+            if (legacyBiome) {
+                ctx.warn(errorMessage('deprecated.section.biome'), 'deprecated.section.biome');
             }
             return [];
         },
@@ -104,17 +144,25 @@ export function editorConfigSyncTask(): SyncTask {
         name: 'editor-config',
         projectTypes: ['monorepo-root', 'project'],
         enabled: (config: ToolchainConfig) =>
-            sectionConfig(config.fmt)?.vscode === true ||
-            sectionConfig(config.lint)?.vscode === true,
+            vscodeEnabled(sectionConfig(config.fmt)?.vscode) ||
+            vscodeEnabled(sectionConfig(config.lint)?.vscode),
         run: ctx => {
             const fmt = resolveFmtTool(ctx.config);
             const lint = resolveLintTool(ctx.config);
+            const fmtVscode = sectionConfig(ctx.config.fmt)?.vscode;
+            const lintVscode = sectionConfig(ctx.config.lint)?.vscode;
             const patch: Record<string, unknown> = {};
-            if (sectionConfig(ctx.config.fmt)?.vscode === true && fmt) {
-                Object.assign(patch, formatterSettings(fmt));
+            if (vscodeEnabled(fmtVscode) && fmt) {
+                Object.assign(patch, applyVscodeOptions(formatterSettings(fmt), fmtVscode));
             }
-            if (sectionConfig(ctx.config.lint)?.vscode === true && lint) {
-                patch['editor.codeActionsOnSave'] = LINTER_ACTIONS[lint] ?? {};
+            if (vscodeEnabled(lintVscode) && lint) {
+                Object.assign(
+                    patch,
+                    applyVscodeOptions(
+                        { 'editor.codeActionsOnSave': LINTER_ACTIONS[lint] ?? {} },
+                        lintVscode
+                    )
+                );
             }
             if (Object.keys(patch).length === 0) return [];
 

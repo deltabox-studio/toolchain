@@ -1697,6 +1697,20 @@ The supported tools are:
 * `fmt`: `oxc` (Oxfmt), `biome`, `prettier`, `dprint`.
 * `lint`: `oxc` (Oxlint), `biome`, `eslint`.
 
+## Shorthand opt-in
+
+`fmt: true` / `lint: true` (or an options object with only `vscode`) picks a tool
+automatically. `dbx sync` first checks the project/workspace dependencies for an
+installed tool (in precedence order), then the VS Code user settings language
+blocks, and finally falls back to Oxc. If nothing is found, sync warns
+(`fmt.no-tool` / `lint.no-tool`) and still applies the Oxc defaults.
+
+Existing user-owned config files are not overwritten blindly: the shorthand
+folds them into the matching `toolchain.fmt.*` / `toolchain.lint.*` options
+using the same mapping as [`dbx migrate`](/guide/migrations). When the mapped
+options are already the dbx defaults, the shorthand simply enables those
+defaults.
+
 ## Precedence
 
 When more than one formatter/linter is configured, editor defaults use:
@@ -1704,7 +1718,7 @@ When more than one formatter/linter is configured, editor defaults use:
 * **formatters**: `oxc` > `biome` > `prettier` > `dprint`.
 * **linters**: `oxc` > `biome` > `eslint`.
 
-`dbx sync` warns (`fmt.multiple` / `lint.multiple`) when this happens; silence it
+`dbx sync` warns (`fmt.conflict` / `lint.conflict`) when this happens; silence it
 with [`logger.suppress`](/guide/config/logging).
 
 `toolchain.vite.fmt` / `toolchain.vite.lint` are the Oxc config written by Vite+,
@@ -1731,20 +1745,41 @@ Oxc files are root-only unless a nested `dbx.config.*` defines `fmt.oxc` /
 `lint.oxc` / `vite.fmt` / `vite.lint` itself. Biome keeps its existing
 per-project behaviour.
 
-When Biome and Oxc are both configured, sync warns (`biome.oxc-conflict`) that
-their configs may conflict.
+When more than one formatter or linter is configured, sync warns (`fmt.conflict`
+/ `lint.conflict`) because the generated config files and editor defaults may
+conflict.
 
 ## VS Code editor defaults
 
-Set `fmt.vscode: true` and/or `lint.vscode: true` (both default `false`) to add
-missing project-scoped settings to `.vscode/settings.json`, including the
-language-specific `editor.defaultFormatter` blocks and save actions.
+Set `fmt.vscode` and/or `lint.vscode` (both default `false`) to add missing
+project-scoped settings to `.vscode/settings.json`. The generated defaults are
+deliberately small:
+
+* `editor.defaultFormatter`
+* language blocks (`[javascript]`, `[typescript]`, ...)
+* `editor.codeActionsOnSave` (lint only)
+
+Use an options object to override or exclude individual keys:
+
+```ts
+toolchain: {
+    fmt: {
+        oxc: {},
+        vscode: {
+            overrides: {
+                'editor.defaultFormatter': 'oxc.oxc-vscode',
+                '[typescript]': { 'editor.defaultFormatter': 'esbenp.prettier-vscode' },
+            },
+            exclude: ['[javascript]'],
+        },
+    },
+    lint: { oxc: {}, vscode: true },
+}
+```
 
 The settings file is **not managed**: existing keys are never overridden, and
 `dbx sync` never rewrites or removes it. Remove or change the generated keys
-freely. With Oxc the defaults follow
-[Vite+'s VS Code setup](https://viteplus.dev/guide/ide-integration#vs-code);
-other tools use their extension id and save action.
+freely. Setting `vscode: false` (or omitting it) adds nothing.
 
 ## Migrating
 
@@ -1783,10 +1818,10 @@ export default defineConfig({
 `dbx sync` writes `biome.json`, resolving the `{{name}}` / `{{scope}}`
 replacement tokens and merging your overrides over the defaults.
 
-If `vite.fmt` / `vite.lint` are also configured, sync still writes both the
-Biome and Oxc config files, but warns that the two formatters/linters may
-conflict. Silencing it is possible with
-`logger: { suppress: ['biome.oxc-conflict'] }`; prefer one toolchain per repo.
+If any other formatter/linter is also configured, sync still writes both the
+Biome and Oxc config files, but warns (`fmt.conflict` / `lint.conflict`) that the
+two tools may conflict. Silencing it is possible with
+`logger: { suppress: ['fmt.conflict'] }`; prefer one toolchain per repo.
 
 ## Options
 
@@ -2345,7 +2380,7 @@ all from that one schema.
 * [CLI commands](/guide/config-generator/cli-commands) — the `config:*` command
   descriptors.
 * [Load the config](/guide/config-generator/load-the-config) — the runtime loader
-  (`parseEnvTree`, `applyOverrides`, `compileZodSchema`).
+  (`parseEnvTree`, `compileZodSchema`, and `applyOverrides` from shared).
 * [Generated outputs](/guide/config-generator/generated-outputs) — types,
   markdown, env files, JSON Schema and formatting.
 * [Real-world shape](/guide/config-generator/real-world-shape) — how a consumer
@@ -3071,11 +3106,12 @@ define it to enable it, omit it to leave that area untouched.
 
 ## `project`
 
-Project metadata: canonical `package.json` fields (applied on sync, inherited by workspaces) plus the replacement tokens every template understands.
+Project metadata: canonical `package.json` fields and template tokens (shared fields are inherited by workspaces).
 
 ### `type`
 
-* **Type**: `'monorepo-root' | 'monorepo-workspace' | 'project'`
+* **Type**: `any`
+* **Default**: `{}`
 
 The project kind (detected when omitted).
 
@@ -3147,275 +3183,40 @@ Inherit the parent project metadata (default true). Set false to keep this proje
 
 ## `ci`
 
-GitHub Actions workflows: CI checks, release, issues, changelog and sync (all opt-in).
+GitHub Actions workflows to generate (CI, release, issues, changelog, sync).
 
 ### `ci`
 
-* **Type**: `WorkflowSetting`
+* **Type**: `any`
+* **Default**: `{}`
 
 The CI checks workflow (`ci.yml`).
 
-#### `pushBranches`
-
-* **Type**: `Array<string>`
-
-Replace `on.push.branches`.
-
-#### `pullRequestBranches`
-
-* **Type**: `Array<string>`
-
-Replace `on.pull_request.branches`.
-
-#### `triggers`
-
-* **Type**: `Record<string, unknown>`
-
-Extra `on.*` triggers.
-
-#### `extra`
-
-* **Type**: `Record<string, unknown>`
-
-Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
-
-#### `steps`
-
-* **Type**: `WorkflowStepsConfig | Array<WorkflowStepsConfig>`
-
-Extra steps for a job (one group, or per-job groups).
-
-##### `job`
-
-* **Type**: `string`
-
-Target job id (defaults to the primary/first job).
-
-##### `before`
-
-* **Type**: `Array<WorkflowStep>`
-
-Steps inserted at the start.
-
-###### `name`
-
-* **Type**: `string`
-
-Step display name.
-
-###### `id`
-
-* **Type**: `string`
-
-Step id (for `steps.<id>` outputs).
-
-###### `if`
-
-* **Type**: `string`
-
-Conditional expression (`if:`).
-
-###### `uses`
-
-* **Type**: `string`
-
-Action to run (`uses:`), eg. `actions/checkout@v4`.
-
-###### `run`
-
-* **Type**: `string`
-
-Shell command(s) to run (`run:`).
-
-###### `shell`
-
-* **Type**: `string`
-
-Shell to run `run` in, eg. `bash`.
-
-###### `working-directory`
-
-* **Type**: `string`
-
-Directory the step runs in.
-
-###### `with`
-
-* **Type**: `Record<string, unknown>`
-
-Inputs for a `uses` action.
-
-###### `env`
-
-* **Type**: `Record<string, unknown>`
-
-Environment variables for the step.
-
-##### `after`
-
-* **Type**: `Array<WorkflowStep>`
-
-Steps appended at the end.
-
-#### `jobs`
-
-* **Type**: `Record<string, unknown>`
-
-Extra complete jobs merged in.
-
-#### `tokens`
-
-* **Type**: `Record<string, unknown>`
-
-Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
-
-#### `enabled`
-
-* **Type**: `boolean`
-
-Enable/disable this workflow (default: enabled when present).
-
 ### `changelog`
 
-* **Type**: `ChangelogWorkflowSetting`
+* **Type**: `any`
+* **Default**: `{}`
 
 The changelog/version workflow (`changelog.yml`) plus the changelog pipeline config (versioning, VS Code settings, commitlint).
 
-#### `pushBranches`
-
-* **Type**: `Array<string>`
-
-Replace `on.push.branches`.
-
-#### `pullRequestBranches`
-
-* **Type**: `Array<string>`
-
-Replace `on.pull_request.branches`.
-
-#### `triggers`
-
-* **Type**: `Record<string, unknown>`
-
-Extra `on.*` triggers.
-
-#### `extra`
-
-* **Type**: `Record<string, unknown>`
-
-Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
-
-#### `steps`
-
-* **Type**: `WorkflowStepsConfig | Array<WorkflowStepsConfig>`
-
-Extra steps for a job (one group, or per-job groups).
-
-#### `jobs`
-
-* **Type**: `Record<string, unknown>`
-
-Extra complete jobs merged in.
-
-#### `tokens`
-
-* **Type**: `Record<string, unknown>`
-
-Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
-
-#### `enabled`
-
-* **Type**: `boolean`
-
-Enable/disable the changelog workflow and pipeline (default: enabled when present).
-
-#### `branches`
-
-* **Type**: `ChangelogBranchesConfig`
-
-Branches the generated workflows target.
-
-##### `main`
-
-* **Type**: `string | Array<string>`
-
-Branch glob(s) the CI + release workflows run on, and the release PR base (default `["main"]`).
-
-##### `dev`
-
-* **Type**: `string | Array<string>`
-
-Branch glob(s) the changelog/version workflow runs on. No default: when omitted it reuses `main` (so a single-branch repo needs no `dev`).
-
-#### `commitlint`
-
-* **Type**: `boolean | ChangelogCommitlintConfig`
-
-commitlint config; set `false` to disable the Conventional-Commits pipeline.
-
-##### `dir`
-
-* **Type**: `string`
-
-Directory the generated `commitlint.config.mjs` is written to (default: the project root). The husky hook and CI use `--config` to point at it.
-
-##### `types`
-
-* **Type**: `Array<string>`
-
-Allowed commit types (commitlint).
-
-##### `scopes`
-
-* **Type**: `Array<string>`
-
-Allowed commit scopes (commitlint).
-
-##### `enabled`
-
-* **Type**: `boolean`
-
-Enable commitlint (default true when the changelog is enabled). Set false to generate changelogs without the Conventional-Commits pipeline.
-
-#### `versioning`
-
-* **Type**: `ChangelogVersioning`
-
-Automatic version bumping on changelog generation (default `true`).
-
-##### `target`
-
-* **Type**: `'uniform' | 'root-only' | 'individual'`
-
-`uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently (default `uniform`).
-
-##### `workspaces`
-
-* **Type**: `Array<string>`
-
-Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own.
-
-#### `vscode`
-
-* **Type**: `boolean`
-
-Write the Conventional-Commits VS Code settings (default true).
-
 ### `release`
 
-* **Type**: `WorkflowSetting`
+* **Type**: `any`
+* **Default**: `{}`
 
 The release workflow (`release.yml`).
 
 ### `issues`
 
-* **Type**: `WorkflowSetting`
+* **Type**: `any`
+* **Default**: `{}`
 
 The issue-title workflow (`issues.yml`).
 
 ### `sync`
 
-* **Type**: `WorkflowSetting`
+* **Type**: `any`
+* **Default**: `{}`
 
 The toolchain sync workflow (`sync.yml`).
 
@@ -3427,35 +3228,40 @@ Enable/disable this section (default: enabled when defined).
 
 ## `fmt`
 
-Formatter configuration: Oxc/Biome options, editor defaults and source tools.
+Formatter configuration: Oxc/Biome configs, editor defaults and source-tool options.
 
 ### `vscode`
 
-* **Type**: `boolean`
+* **Type**: `any`
+* **Default**: `{}`
 
-Add project-scoped VS Code formatter settings (default false; existing keys are kept).
+Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false; existing keys are kept).
 
 ### `oxc`
 
 * **Type**: `Record<string, unknown>`
+* **Default**: `{}`
 
 Oxfmt options. `toolchain.vite.fmt` overrides these (deep merge).
 
 ### `biome`
 
 * **Type**: `Record<string, unknown>`
+* **Default**: `{}`
 
 Biome formatter options (merged into the generated `biome.json`).
 
 ### `prettier`
 
 * **Type**: `Record<string, unknown>`
+* **Default**: `{}`
 
 Prettier options (editor defaults/migrations).
 
 ### `dprint`
 
 * **Type**: `Record<string, unknown>`
+* **Default**: `{}`
 
 Dprint options (editor defaults/migrations).
 
@@ -3467,29 +3273,33 @@ Enable/disable this section (default: enabled when defined).
 
 ## `lint`
 
-Linter configuration: Oxc/Biome/ESLint options and editor defaults.
+Linter configuration: Oxc/Biome configs, editor defaults and ESLint options.
 
 ### `vscode`
 
-* **Type**: `boolean`
+* **Type**: `any`
+* **Default**: `{}`
 
-Add project-scoped VS Code linter settings (default false; existing keys are kept).
+Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false; existing keys are kept).
 
 ### `oxc`
 
 * **Type**: `Record<string, unknown>`
+* **Default**: `{}`
 
 Oxlint options. `toolchain.vite.lint` overrides these (deep merge).
 
 ### `biome`
 
 * **Type**: `Record<string, unknown>`
+* **Default**: `{}`
 
 Biome linter options (merged into the generated `biome.json`).
 
 ### `eslint`
 
 * **Type**: `Record<string, unknown>`
+* **Default**: `{}`
 
 ESLint options (editor defaults/migrations).
 
@@ -3501,9 +3311,9 @@ Enable/disable this section (default: enabled when defined).
 
 ## `biome`
 
-Deprecated: use `fmt.biome` / `lint.biome`; still writes `biome.json`.
+Biome config generation (for consumers that still want a `biome.json`).
 
-* **Deprecated**
+* **Deprecated**: use `toolchain.fmt.biome` / `toolchain.lint.biome`. Still writes `biome.json`.
 
 ### `vscode`
 
@@ -3514,6 +3324,7 @@ Write the Biome VS Code settings (default true).
 ### `overrides`
 
 * **Type**: `Record<string, unknown>`
+* **Default**: `{}`
 
 Deep-merged over the generated `biome.json` (arrays union).
 
@@ -3529,13 +3340,15 @@ Workspace tsconfig generation (path aliases + project references).
 
 ### `glob`
 
-* **Type**: `string | Array<string>`
+* **Type**: `any`
+* **Default**: `{}`
 
 Glob(s) for the workspace default tsconfig files. Defaults to matching every `defaultFile` recursively.
 
 ### `exclude`
 
-* **Type**: `string | Array<string>`
+* **Type**: `any`
+* **Default**: `{}`
 
 Glob(s) to exclude from `glob`. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
 
@@ -3599,77 +3412,9 @@ Template sources / scaffolding.
 
 ### `sources`
 
-* **Type**: `Array<ToolchainTemplateSource>`
+* **Type**: `Array<any>`
 
 Extra sources on top of the builtin + registry sources.
-
-#### `type`
-
-* **Required**
-* **Type**: `'builtin' | 'local' | 'npm' | 'git' | 'vite-plus' | 'remote'`
-
-How to load the source.
-
-#### `locate`
-
-* **Required**
-* **Type**: `string`
-
-A builtin id, local dir, npm scope, git URL or Vite+ id.
-
-#### `id`
-
-* **Type**: `string`
-
-Stable id (defaults to the basename/scope).
-
-#### `name`
-
-* **Type**: `string`
-
-Display name override.
-
-#### `description`
-
-* **Type**: `string`
-
-Description override.
-
-#### `kind`
-
-* **Type**: `'project' | 'workspace' | 'application' | 'folder' | 'tooling' | 'pipeline'`
-
-What the template produces.
-
-#### `ref`
-
-* **Type**: `string`
-
-Git branch/tag/commit.
-
-#### `registry`
-
-* **Type**: `string`
-
-Custom npm registry URL (default: the project package manager registry).
-
-#### `subdir`
-
-* **Type**: `string`
-
-Subdirectory within the source that holds the template.
-
-#### `tags`
-
-* **Type**: `Array<string>`
-
-Free-form tags.
-
-#### `online`
-
-* **Type**: `boolean`
-
-Whether the source needs network access.
 
 ### `enabled`
 
@@ -3679,29 +3424,19 @@ Enable/disable this section (default: enabled when defined).
 
 ## `registry`
 
-Allow/deny host and path globs for template/provider registries.
+Registry source allow/deny policies (templates + providers).
 
 ### `templates`
 
-* **Type**: `ToolchainRegistryPolicy`
+* **Type**: `any`
+* **Default**: `{}`
 
 Allow/deny globs for template sources and registries.
 
-#### `allow`
-
-* **Type**: `Array<string>`
-
-Allowed host/path globs. When non-empty, only matching sources are used (eg. `*.example.com`, `https://registry.example.com/**`).
-
-#### `deny`
-
-* **Type**: `Array<string>`
-
-Denied host/path globs (checked before `allow`).
-
 ### `providers`
 
-* **Type**: `ToolchainRegistryPolicy`
+* **Type**: `any`
+* **Default**: `{}`
 
 Allow/deny globs for provider sources and registries.
 
@@ -3718,12 +3453,14 @@ Package catalogs written to the package manager catalog file (`catalog:`).
 ### `packages`
 
 * **Type**: `Record<string, unknown>`
+* **Default**: `{}`
 
 The default catalog: package name -> version range.
 
 ### `named`
 
 * **Type**: `Record<string, unknown>`
+* **Default**: `{}`
 
 Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages.
 
@@ -3739,19 +3476,21 @@ The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.
 
 ### `config`
 
-* **Type**: `boolean | string`
+* **Type**: `boolean`
 
 Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or absolute).
 
 ### `fmt`
 
-* **Type**: `boolean | Record<string, unknown>`
+* **Type**: `any`
+* **Default**: `{}`
 
 Oxfmt options; `true` uses the toolchain defaults.
 
 ### `lint`
 
-* **Type**: `boolean | Record<string, unknown>`
+* **Type**: `any`
+* **Default**: `{}`
 
 Oxlint options; `true` uses the toolchain defaults.
 
@@ -3773,7 +3512,8 @@ Debounce window in ms (default 150).
 
 ### `exclude`
 
-* **Type**: `string | Array<string>`
+* **Type**: `any`
+* **Default**: `{}`
 
 Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
 
@@ -3795,7 +3535,7 @@ Logging level, colours and prefix for toolchain output.
 
 ### `level`
 
-* **Type**: `'debug' | 'info' | 'warn' | 'error' | 'silent'`
+* **Type**: `string`
 
 Minimum level to print (default `info`).
 
@@ -3813,7 +3553,8 @@ Prefix non-indented lines with `<name>:` (default `dbx`).
 
 ### `suppress`
 
-* **Type**: `string | Array<string>`
+* **Type**: `any`
+* **Default**: `{}`
 
 Warning/error id, message substring, or `/regex/` to silence (single value or array).
 
@@ -3867,68 +3608,68 @@ url: https://toolchain.deltabox.studio/config/cli.md
 Generated from the same `ToolchainCommand` descriptors the `dbx` binary
 registers. Run `yarn config:docs` after changing a command.
 
-| Command                                                 | Description                                                                                     |
-| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| [`dbx projects`](#projects)                             | Discover projects and write .dbx/toolchain/projects.json.                                       |
-| [`dbx sync`](#sync)                                     | Regenerate every managed file from dbx.config.*.                                                |
-| [`dbx watch`](#watch)                                   | Sync once, then watch key files and re-sync on change.                                          |
-| [`dbx reset`](#reset)                                   | Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a project.       |
-| [`dbx providers`](#providers)                           | List the tooling providers (Vite+, ...) and their commands.                                     |
-| [`dbx tsconfig`](#tsconfig)                             | Generate workspace tsconfig.json files from the default tsconfig (aliases + references).        |
-| [`dbx cleanup`](#cleanup)                               | Remove build artifacts (*.tsbuildinfo, dist/).                                                  |
-| [`dbx cleanup:turbo`](#cleanup-turbo)                   | Remove the turbo cache (.turbo/).                                                               |
-| [`dbx workflow`](#workflow)                             | Trigger one or more generated GitHub workflows (via `gh workflow run`).                         |
-| [`dbx changelog`](#changelog)                           | Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.              |
-| [`dbx migrate`](#migrate)                               | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.\* into dbx.config. |
-| [`dbx migrate:list`](#migrate-list)                     | List the registered migrations and whether each is detected.                                    |
-| [`dbx project:init`](#project-init)                     | Scaffold a single-package TypeScript project.                                                   |
-| [`dbx project:init:monorepo`](#project-init-monorepo)   | Scaffold a monorepo root (add --example for one example workspace).                             |
-| [`dbx project:init:workspace`](#project-init-workspace) | Scaffold a monorepo workspace package into an existing monorepo root.                           |
-| [`dbx project:config`](#project-config)                 | Generate dbx.config.ts for existing projects that are missing one.                              |
-| [`dbx template:list`](#template-list)                   | List templates (builtin + local + opted-in online sources).                                     |
-| [`dbx template:init`](#template-init)                   | Write a template.json to a directory, making it a local template.                               |
-| [`dbx template:add`](#template-add)                     | Record a template source in .dbx/toolchain/templates.json.                                      |
-| [`dbx template:remove`](#template-remove)               | Remove a source from .dbx/toolchain/templates.json.                                             |
-| [`dbx template:registry`](#template-registry)           | Manage the global template search paths (and sync them to the VS Code setting).                 |
-| [`dbx registry`](#registry)                             | List or manage the template/provider registries.                                                |
-| [`dbx template:info`](#template-info)                   | Show one template by id.                                                                        |
-| [`dbx create`](#create)                                 | Scaffold a project from a template (builtin, local or Vite+).                                   |
-| [`dbx vite`](#vite)                                     | Run any Vite+ command through `vp` (eg. `dbx vite dev`).                                        |
-| [`dbx vite:create`](#vite-create)                       | Vite+: Create a new project from a template.                                                    |
-| [`dbx vite:migrate`](#vite-migrate)                     | Vite+: Migrate an existing project to Vite+.                                                    |
-| [`dbx vite:config`](#vite-config)                       | Vite+: Configure hooks and agent integration.                                                   |
-| [`dbx vite:hooks`](#vite-hooks)                         | Vite+: Manage the Git hook dispatcher.                                                          |
-| [`dbx vite:staged`](#vite-staged)                       | Vite+: Run linters on staged files.                                                             |
-| [`dbx vite:install`](#vite-install)                     | Vite+: Install dependencies with the detected package manager.                                  |
-| [`dbx vite:env`](#vite-env)                             | Vite+: Manage Node.js and package managers.                                                     |
-| [`dbx vite:dev`](#vite-dev)                             | Vite+: Run the Vite development server.                                                         |
-| [`dbx vite:check`](#vite-check)                         | Vite+: Run format, lint and type checks.                                                        |
-| [`dbx vite:lint`](#vite-lint)                           | Vite+: Lint code with Oxlint.                                                                   |
-| [`dbx vite:fmt`](#vite-fmt)                             | Vite+: Format code with Oxfmt.                                                                  |
-| [`dbx vite:test`](#vite-test)                           | Vite+: Run tests through bundled Vitest.                                                        |
-| [`dbx vite:run`](#vite-run)                             | Vite+: Run package scripts and monorepo tasks.                                                  |
-| [`dbx vite:exec`](#vite-exec)                           | Vite+: Execute a binary from local node_modules.                                                |
-| [`dbx vite:node`](#vite-node)                           | Vite+: Run a Node.js script in the Vite+ env.                                                   |
-| [`dbx vite:dlx`](#vite-dlx)                             | Vite+: Run a package binary without installing it.                                              |
-| [`dbx vite:cache`](#vite-cache)                         | Vite+: Manage the task cache.                                                                   |
-| [`dbx vite:build`](#vite-build)                         | Vite+: Build for production.                                                                    |
-| [`dbx vite:pack`](#vite-pack)                           | Vite+: Build libraries for npm or standalone binaries.                                          |
-| [`dbx vite:preview`](#vite-preview)                     | Vite+: Preview the production build.                                                            |
-| [`dbx vite:add`](#vite-add)                             | Vite+: Add packages to dependencies.                                                            |
-| [`dbx vite:remove`](#vite-remove)                       | Vite+: Remove packages from dependencies.                                                       |
-| [`dbx vite:update`](#vite-update)                       | Vite+: Update packages.                                                                         |
-| [`dbx vite:dedupe`](#vite-dedupe)                       | Vite+: Deduplicate dependencies.                                                                |
-| [`dbx vite:outdated`](#vite-outdated)                   | Vite+: Check for outdated packages.                                                             |
-| [`dbx vite:list`](#vite-list)                           | Vite+: List installed packages.                                                                 |
-| [`dbx vite:why`](#vite-why)                             | Vite+: Explain why a package is installed.                                                      |
-| [`dbx vite:info`](#vite-info)                           | Vite+: View package metadata.                                                                   |
-| [`dbx vite:link`](#vite-link)                           | Vite+: Link local packages.                                                                     |
-| [`dbx vite:unlink`](#vite-unlink)                       | Vite+: Unlink local packages.                                                                   |
-| [`dbx vite:rebuild`](#vite-rebuild)                     | Vite+: Rebuild native modules.                                                                  |
-| [`dbx vite:pm`](#vite-pm)                               | Vite+: Forward a command to the package manager.                                                |
-| [`dbx vite:toolchain`](#vite-toolchain)                 | Vite+: Show Vite+ tool versions.                                                                |
-| [`dbx vite:upgrade`](#vite-upgrade)                     | Vite+: Update `vp` itself.                                                                      |
-| [`dbx vite:implode`](#vite-implode)                     | Vite+: Remove `vp` and all related data.                                                        |
+| Command | Description |
+| ------- | ----------- |
+| [`dbx projects`](#projects) | Discover projects and write .dbx/toolchain/projects.json. |
+| [`dbx sync`](#sync) | Regenerate every managed file from dbx.config.*. |
+| [`dbx watch`](#watch) | Sync once, then watch key files and re-sync on change. |
+| [`dbx reset`](#reset) | Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a project. |
+| [`dbx providers`](#providers) | List the tooling providers (Vite+, ...) and their commands. |
+| [`dbx tsconfig`](#tsconfig) | Generate workspace tsconfig.json files from the default tsconfig (aliases + references). |
+| [`dbx cleanup`](#cleanup) | Remove build artifacts (*.tsbuildinfo, dist/). |
+| [`dbx cleanup:turbo`](#cleanup-turbo) | Remove the turbo cache (.turbo/). |
+| [`dbx workflow`](#workflow) | Trigger one or more generated GitHub workflows (via `gh workflow run`). |
+| [`dbx changelog`](#changelog) | Scan commits, derive the semver bump and update the CHANGELOG.md files + versions. |
+| [`dbx migrate`](#migrate) | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.\* into dbx.config. |
+| [`dbx migrate:list`](#migrate-list) | List the registered migrations and whether each is detected. |
+| [`dbx project:init`](#project-init) | Scaffold a single-package TypeScript project. |
+| [`dbx project:init:monorepo`](#project-init-monorepo) | Scaffold a monorepo root (add --example for one example workspace). |
+| [`dbx project:init:workspace`](#project-init-workspace) | Scaffold a monorepo workspace package into an existing monorepo root. |
+| [`dbx project:config`](#project-config) | Generate dbx.config.ts for existing projects that are missing one. |
+| [`dbx template:list`](#template-list) | List templates (builtin + local + opted-in online sources). |
+| [`dbx template:init`](#template-init) | Write a template.json to a directory, making it a local template. |
+| [`dbx template:add`](#template-add) | Record a template source in .dbx/toolchain/templates.json. |
+| [`dbx template:remove`](#template-remove) | Remove a source from .dbx/toolchain/templates.json. |
+| [`dbx template:registry`](#template-registry) | Manage the global template search paths (and sync them to the VS Code setting). |
+| [`dbx registry`](#registry) | List or manage the template/provider registries. |
+| [`dbx template:info`](#template-info) | Show one template by id. |
+| [`dbx create`](#create) | Scaffold a project from a template (builtin, local or Vite+). |
+| [`dbx vite`](#vite) | Run any Vite+ command through `vp` (eg. `dbx vite dev`). |
+| [`dbx vite:create`](#vite-create) | Vite+: Create a new project from a template. |
+| [`dbx vite:migrate`](#vite-migrate) | Vite+: Migrate an existing project to Vite+. |
+| [`dbx vite:config`](#vite-config) | Vite+: Configure hooks and agent integration. |
+| [`dbx vite:hooks`](#vite-hooks) | Vite+: Manage the Git hook dispatcher. |
+| [`dbx vite:staged`](#vite-staged) | Vite+: Run linters on staged files. |
+| [`dbx vite:install`](#vite-install) | Vite+: Install dependencies with the detected package manager. |
+| [`dbx vite:env`](#vite-env) | Vite+: Manage Node.js and package managers. |
+| [`dbx vite:dev`](#vite-dev) | Vite+: Run the Vite development server. |
+| [`dbx vite:check`](#vite-check) | Vite+: Run format, lint and type checks. |
+| [`dbx vite:lint`](#vite-lint) | Vite+: Lint code with Oxlint. |
+| [`dbx vite:fmt`](#vite-fmt) | Vite+: Format code with Oxfmt. |
+| [`dbx vite:test`](#vite-test) | Vite+: Run tests through bundled Vitest. |
+| [`dbx vite:run`](#vite-run) | Vite+: Run package scripts and monorepo tasks. |
+| [`dbx vite:exec`](#vite-exec) | Vite+: Execute a binary from local node_modules. |
+| [`dbx vite:node`](#vite-node) | Vite+: Run a Node.js script in the Vite+ env. |
+| [`dbx vite:dlx`](#vite-dlx) | Vite+: Run a package binary without installing it. |
+| [`dbx vite:cache`](#vite-cache) | Vite+: Manage the task cache. |
+| [`dbx vite:build`](#vite-build) | Vite+: Build for production. |
+| [`dbx vite:pack`](#vite-pack) | Vite+: Build libraries for npm or standalone binaries. |
+| [`dbx vite:preview`](#vite-preview) | Vite+: Preview the production build. |
+| [`dbx vite:add`](#vite-add) | Vite+: Add packages to dependencies. |
+| [`dbx vite:remove`](#vite-remove) | Vite+: Remove packages from dependencies. |
+| [`dbx vite:update`](#vite-update) | Vite+: Update packages. |
+| [`dbx vite:dedupe`](#vite-dedupe) | Vite+: Deduplicate dependencies. |
+| [`dbx vite:outdated`](#vite-outdated) | Vite+: Check for outdated packages. |
+| [`dbx vite:list`](#vite-list) | Vite+: List installed packages. |
+| [`dbx vite:why`](#vite-why) | Vite+: Explain why a package is installed. |
+| [`dbx vite:info`](#vite-info) | Vite+: View package metadata. |
+| [`dbx vite:link`](#vite-link) | Vite+: Link local packages. |
+| [`dbx vite:unlink`](#vite-unlink) | Vite+: Unlink local packages. |
+| [`dbx vite:rebuild`](#vite-rebuild) | Vite+: Rebuild native modules. |
+| [`dbx vite:pm`](#vite-pm) | Vite+: Forward a command to the package manager. |
+| [`dbx vite:toolchain`](#vite-toolchain) | Vite+: Show Vite+ tool versions. |
+| [`dbx vite:upgrade`](#vite-upgrade) | Vite+: Update `vp` itself. |
+| [`dbx vite:implode`](#vite-implode) | Vite+: Remove `vp` and all related data. |
 
 ## `dbx projects`
 
@@ -4634,10 +4375,10 @@ Bind the scopes, an env prefix, the base group and the project root once:
 import { createConfigEngine } from '@deltabox/toolchain/config';
 
 export const engine = createConfigEngine({
-    scopes: {
-        server: { zodSchema: serverConfig },
-        frontend: { zodSchema: frontendConfig },
-        cli: { zodSchema: cliConfig },
+    schema: {
+        server: serverConfig,
+        frontend: frontendConfig,
+        cli: cliConfig,
     },
     envPrefix: 'MYAPP_',
     baseGroup: 'base', // the flat fields hoisted out of the nested groups
@@ -4707,7 +4448,7 @@ Each generator accepts the matching `include*` flag (all default `true`) to
 suppress an annotation: `includeRequired`, `includeDeprecated`,
 `includeExamples`, `includeSince`, `includeSee`, `includeRemarks`,
 `includeExperimental`, `includeAlpha`, `includeBeta` — for example
-`renderConfigTypes(..., { includeExamples: false })` or
+`generateConfigTypes(..., { includeExamples: false })` or
 `writeMarkdown(..., { includeDeprecated: false })`.
 
 ---
@@ -4750,7 +4491,7 @@ url: https://toolchain.deltabox.studio/guide/config-generator/generate.md
 Every generator is a method on the bound engine:
 
 ```ts
-engine.collectEnvVars(); // EnvVarDef[] across every scope
+engine.collectVars(); // ConfigDef[] across every scope
 engine.requiredEnvVars('server'); // required var names for a scope
 
 engine.writeEnvFile({ output: '.env.example' });
@@ -4774,14 +4515,14 @@ Every generator writes from the same Zod schema. The engine's own config model
 is the living example: its types are committed at
 [packages/shared/src/config-types.ts](https://github.com/deltabox-studio/toolchain/blob/main/packages/shared/src/config-types.ts).
 
-## Config types — `renderConfigTypes()` / `writeConfigTypes()`
+## Config types — `generateConfigTypes()` / `writeConfigTypes()`
 
 Named `interface`s (and `type` aliases for enums/unions) with jsdoc taken from
 `.describe()`. Unions and refs stay named, so nested objects are referenced
 rather than inlined:
 
 ```ts
-// engine.renderConfigTypes() -> { server: "...", cli: "..." }
+// engine.generateConfigTypes() -> { server: "...", cli: "..." }
 engine.writeConfigTypes({ outputDir: 'types' }); // types/server.ts, types/cli.ts
 ```
 
@@ -4904,7 +4645,6 @@ of it:
 
 ```ts
 import {
-    applyOverrides,
     envBool,
     envInt,
     envList,
@@ -4912,6 +4652,7 @@ import {
     envString,
     parseEnvTree,
 } from '@deltabox/toolchain/config';
+import { applyOverrides } from '@deltabox/toolchain/shared';
 
 // MYAPP_HOST, MYAPP_PORT, MYAPP_LOG_PRETTY, ... -> a nested tree
 const tree = parseEnvTree(process.env, 'MYAPP_');
@@ -4954,7 +4695,7 @@ export function loadConfig(env = process.env, file = {}, cli = {}) {
             tokenTtl: envInt(tree, 'auth.token.ttl', 3600),
         },
     };
-    return schemaCompiler.parse(applyOverrides(applyOverrides(fromEnv, file), cli));
+    return schemaCompiler.parse(applyOverrides(fromEnv, file, cli));
 }
 ```
 
@@ -5032,12 +4773,13 @@ export default defineConfig({
 
 `suppress` silences matching warnings/errors. A string matches an emitted id
 exactly or a message substring; a `/pattern/flags` string is treated as a regex.
-It accepts one value or an array:
+Ids are rendered in uppercase in the output (eg. `[FMT_CONFLICT]`), but match
+the lowercase id when suppressing. It accepts one value or an array:
 
 ```ts [dbx.config.ts]
 toolchain: {
     logger: {
-        suppress: ['biome.oxc-conflict', 'deprecated option', '/^Could not .* globally/'],
+        suppress: ['fmt.conflict', 'deprecated option', '/^Could not .* globally/'],
     },
 }
 ```
@@ -5176,11 +4918,12 @@ the template engine.
 | `repoSlugFromUrl(url)`                                                        | Derive an `owner/name` slug from a repository URL.                                       |
 | `findOwnCliEntry(cwd?)` / `localToolchainVersion(cwd?)` / `TOOLCHAIN_PACKAGE` | Locate a project's own toolchain bin + pinned version (prefer them over a global `dbx`). |
 | `createLogger(options)` / `logger`                                            | The shared logger (see [Logging](/guide/api/logging)).                                   |
+| `WARNING_MAP` / `ERROR_MAP` / `warningMessage(id, values?)`                   | Central messages keyed by stable logger/suppression ids.                                 |
 | `spawnCross(cmd, args, options)` / `run(cmd, args, options)`                  | Cross-platform, shell-free spawning; `timeoutMs` kills the child tree.                   |
 | `killProcessTree(child)`                                                      | Kill a child process and its descendants (Windows `taskkill /t`).                        |
 | `readJsonFile` / `readJsonAt` / `toJson` / `writeJsonFile`                    | Small JSON file helpers.                                                                 |
 | `mergeJsonAt(cwd, relative, patch)`                                           | Deep-merge a patch over an existing JSON file.                                           |
-| `deepMerge` / `isPlainObject` / `sort` / `mapValues`                          | Object utilities.                                                                        |
+| `deepMerge` / `applyOverrides` / `isPlainObject` / `sort` / `mapValues`       | Object utilities (including layered typed overrides).                                    |
 | `applyReplacements` / `applyReplacementsDeep` / `createReplacer`              | The `{{ token }}` template engine (also `tokenPattern`, `extractTokens`).                |
 | `toYaml(value)`                                                               | A tiny YAML emitter for the GitHub Actions subset.                                       |
 
@@ -5226,9 +4969,8 @@ guide for the full workflow).
 | `formatGenerated(source, options?)`                                                      | Format generated output with Oxfmt (see below).           |
 | `GENERATED_FORMAT_OPTIONS`                                                               | The baseline Oxfmt options used by the generators.        |
 | `parseEnvTree(env, prefix?)` / `envString` / `envInt` / `envBool` / `envList` / `envMap` | The dependency-free runtime loader.                       |
-| `applyOverrides(base, overrides?)`                                                       | Layer typed overrides over env-derived values.            |
 | `compileZodSchema(schema)`                                                               | Compile a Zod schema for fast repeated parsing.           |
-| `envPathOf(env, prefix?)` / `envMetaOf(schema)`                                          | Env-name to dotted-path derivation and `.meta()` reading. |
+| `envPathOf(env, prefix?)` / `metaOf(schema)`                                             | Env-name to dotted-path derivation and `.meta()` reading. |
 | `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                    |
 | `renderConfigTypes` / `renderAllConfigTypes` / `generateConfigTypes`                     | Config type generation.                                   |
 | `renderScopeMarkdown` / `generateConfigMarkdown` / `renderConfigFileMarkdown`            | Markdown reference generation.                            |
@@ -5411,10 +5153,10 @@ for every generator:
 import { createConfigEngine } from '@deltabox/toolchain/config';
 
 export const configEngine = createConfigEngine({
-    scopes: {
-        server: { zodSchema: serverConfig },
-        frontend: { zodSchema: frontendConfig },
-        cli: { zodSchema: cliConfig },
+    schema: {
+        server: serverConfig,
+        frontend: frontendConfig,
+        cli: cliConfig,
     },
     envPrefix: 'PROXIFIED_',
     baseGroup: 'base',

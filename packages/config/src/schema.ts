@@ -11,7 +11,13 @@
 import type { Schema } from 'untyped';
 import { type ZodType, z } from 'zod';
 
-import type { ConfigMeta } from './types.js';
+import type {
+    ConfigMeta,
+    ConfigSchema,
+    ConfigSchemaInput,
+    ConfigSchemaMap,
+    ConfigSchemaType,
+} from './types.js';
 
 /** A JSON Schema node produced by `z.toJSONSchema`. */
 interface JsonSchemaNode {
@@ -31,6 +37,13 @@ interface JsonSchemaNode {
     additionalProperties?: JsonSchemaNode | boolean;
     propertyNames?: JsonSchemaNode;
     env?: string;
+    envName?: string;
+    envPath?: string;
+    path?: string;
+    cliFlag?: string;
+    cliFlagShort?: string;
+    typeName?: string;
+    id?: string;
     scope?: string;
     secret?: boolean;
     public?: boolean;
@@ -53,10 +66,100 @@ const TS_TYPE_MAP: Record<string, string> = {
     null: 'null',
 };
 
-/** Read the config metadata attached to a Zod leaf via `.meta()`. */
-export function envMetaOf(schema: ZodType): ConfigMeta | undefined {
-    const meta = (schema as ZodType & { meta?: () => unknown }).meta?.();
-    return meta && typeof meta === 'object' ? (meta as unknown as ConfigMeta) : undefined;
+/** Whether a value is a Zod schema. */
+export function isZodSchema(value: unknown): value is ZodType {
+    return typeof value === 'object' && value !== null && 'safeParse' in value;
+}
+
+/** Whether a value is a resolved untyped schema. */
+export function isSchemaType(value: unknown): value is ConfigSchemaType {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+    if (isZodSchema(value)) return false;
+    return 'type' in value || 'properties' in value || 'tsType' in value || 'id' in value;
+}
+
+const CONFIG_META_KEYS: (keyof ConfigMeta)[] = [
+    'id',
+    'description',
+    'required',
+    'deprecated',
+    'deprecationMessage',
+    'example',
+    'since',
+    'see',
+    'remarks',
+    'experimental',
+    'alpha',
+    'beta',
+    'secret',
+    'scope',
+    'public',
+    'defaultValue',
+    'envName',
+    'env',
+    'envPath',
+    'path',
+    'typeName',
+    'cliFlag',
+    'cliFlagShort',
+];
+
+/** Read the config metadata attached to a Zod leaf or an untyped schema node. */
+export function metaOf(schema: ZodType | Schema): ConfigMeta | undefined {
+    if (isZodSchema(schema)) {
+        const meta = (schema as ZodType & { meta?: () => unknown }).meta?.();
+        return meta && typeof meta === 'object' ? (meta as ConfigMeta) : undefined;
+    }
+    const source = schema as Record<string, unknown>;
+    const meta: Record<string, unknown> = {};
+    for (const key of CONFIG_META_KEYS) {
+        if (source[key] !== undefined) meta[key] = source[key];
+    }
+    return Object.keys(meta).length > 0 ? (meta as ConfigMeta) : undefined;
+}
+
+/** Convert a Zod schema or untyped schema to the untyped representation. */
+export function toSchemaType(schema: ConfigSchemaInput): ConfigSchemaType {
+    return (isZodSchema(schema) ? zodToJsonSchema(schema) : schema) as ConfigSchemaType;
+}
+
+/** Merge several root object schemas into one. */
+function mergeSchemas(schemas: ConfigSchemaType[]): ConfigSchemaType {
+    const properties: Record<string, Schema> = {};
+    const required = new Set<string>();
+    let base: ConfigSchemaType = { type: 'object', properties };
+    for (const schema of schemas) {
+        const source = schema as Record<string, unknown>;
+        if (source.properties) Object.assign(properties, source.properties);
+        if (Array.isArray(source.required)) for (const key of source.required) required.add(key);
+        if (schemas.length === 1) base = schema;
+    }
+    return {
+        ...base,
+        type: 'object',
+        properties,
+        ...(required.size > 0 ? { required: [...required] } : {}),
+    } as ConfigSchemaType;
+}
+
+/** Normalize any supported schema shape into scoped untyped schemas. */
+export function normalizeConfigSchema(schema: ConfigSchema): ConfigSchemaMap {
+    if (Array.isArray(schema)) {
+        const merged = mergeSchemas(schema.map(toSchemaType));
+        return { [metaOf(merged)?.id ?? 'config']: merged };
+    }
+    if (isZodSchema(schema) || isSchemaType(schema)) {
+        const resolved = toSchemaType(schema);
+        return { [metaOf(resolved)?.id ?? 'config']: resolved };
+    }
+    const scopes: ConfigSchemaMap = {};
+    for (const [scope, value] of Object.entries(schema)) {
+        const resolved = Array.isArray(value)
+            ? mergeSchemas(value.map(toSchemaType))
+            : toSchemaType(value);
+        scopes[scope] = resolved;
+    }
+    return scopes;
 }
 
 /** A JSON Schema node with no keys describes "anything" (`unknown`). */
@@ -151,6 +254,14 @@ function nodeMeta(
     const refName = node.$ref?.split('/').pop();
     const resolved = refName ? defs[refName] : undefined;
     let required = node.required === true ? true : resolved?.required === true ? true : undefined;
+    let env = node.env ?? resolved?.env;
+    let envName = node.envName ?? resolved?.envName;
+    let envPath = node.envPath ?? resolved?.envPath;
+    let pathMeta = node.path ?? resolved?.path;
+    let cliFlag = node.cliFlag ?? resolved?.cliFlag;
+    let cliFlagShort = node.cliFlagShort ?? resolved?.cliFlagShort;
+    let typeName = node.typeName ?? resolved?.typeName;
+    let id = node.id ?? resolved?.id;
     let deprecated = node.deprecated ?? resolved?.deprecated;
     let deprecationMessage = node.deprecationMessage ?? resolved?.deprecationMessage;
     let example = node.example ?? resolved?.example;
@@ -165,6 +276,14 @@ function nodeMeta(
         const variantResolved = variantRef ? defs[variantRef] : undefined;
         required ??=
             variant.required === true || variantResolved?.required === true ? true : undefined;
+        env ??= variant.env ?? variantResolved?.env;
+        envName ??= variant.envName ?? variantResolved?.envName;
+        envPath ??= variant.envPath ?? variantResolved?.envPath;
+        pathMeta ??= variant.path ?? variantResolved?.path;
+        cliFlag ??= variant.cliFlag ?? variantResolved?.cliFlag;
+        cliFlagShort ??= variant.cliFlagShort ?? variantResolved?.cliFlagShort;
+        typeName ??= variant.typeName ?? variantResolved?.typeName;
+        id ??= variant.id ?? variantResolved?.id;
         deprecated ??= variant.deprecated ?? variantResolved?.deprecated;
         deprecationMessage ??= variant.deprecationMessage ?? variantResolved?.deprecationMessage;
         example ??= variant.example ?? variantResolved?.example;
@@ -176,6 +295,14 @@ function nodeMeta(
         beta ??= variant.beta ?? variantResolved?.beta;
     }
     return {
+        ...(env !== undefined ? { env } : {}),
+        ...(envName !== undefined ? { envName } : {}),
+        ...(envPath !== undefined ? { envPath } : {}),
+        ...(pathMeta !== undefined ? { path: pathMeta } : {}),
+        ...(cliFlag !== undefined ? { cliFlag } : {}),
+        ...(cliFlagShort !== undefined ? { cliFlagShort } : {}),
+        ...(typeName !== undefined ? { typeName } : {}),
+        ...(id !== undefined ? { id } : {}),
         ...(required !== undefined ? { required } : {}),
         ...(deprecated !== undefined ? { deprecated } : {}),
         ...(deprecationMessage !== undefined ? { deprecationMessage } : {}),

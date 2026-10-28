@@ -16,7 +16,7 @@ all from that one schema.
 - [CLI commands](/guide/config-generator/cli-commands) — the `config:*` command
   descriptors.
 - [Load the config](/guide/config-generator/load-the-config) — the runtime loader
-  (`parseEnvTree`, `applyOverrides`, `compileZodSchema`).
+  (`parseEnvTree`, `compileZodSchema`, and `applyOverrides` from shared).
 - [Generated outputs](/guide/config-generator/generated-outputs) — types,
   markdown, env files, JSON Schema and formatting.
 - [Real-world shape](/guide/config-generator/real-world-shape) — how a consumer

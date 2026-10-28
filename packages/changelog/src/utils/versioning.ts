@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 import { type ChangelogConfig, logger } from '@deltabox/toolchain-shared';
 
+import { parseCcSubject } from './format.js';
 import { deriveBump, readCommits } from './git.js';
 import { relatedWorkspacePaths } from './graph.js';
 import { repoRoot } from './repo.js';
@@ -20,6 +21,14 @@ export interface ResolvedVersioning {
     target: VersioningTarget;
     /** Explicit workspace globs (when configured). */
     workspaces?: string[];
+    /** Custom bump rules keyed by version index. */
+    bump?: Record<string, unknown>;
+    /** Apply a bump per matching change instead of once. */
+    allowOverBump?: boolean;
+    /** Changelog provider id (`default`, `changesets`, ...). */
+    provider?: string;
+    /** Commit formatting options. */
+    commit?: Record<string, unknown>;
 }
 
 /**
@@ -37,6 +46,10 @@ export function resolveVersioning(changelog?: ChangelogConfig): ResolvedVersioni
         enabled: true,
         target: versioning.target ?? 'uniform',
         ...(versioning.workspaces ? { workspaces: versioning.workspaces } : {}),
+        ...(versioning.bump ? { bump: versioning.bump } : {}),
+        ...(versioning.allowOverBump ? { allowOverBump: true } : {}),
+        ...(versioning.provider ? { provider: versioning.provider } : {}),
+        ...(versioning.commit ? { commit: versioning.commit } : {}),
     };
 }
 
@@ -114,6 +127,96 @@ export function discoverVersionPackages(workspaces?: string[], root = repoRoot()
     return { root, rootHasPackage, workspaces: [...dirs] };
 }
 
+/** Context handed to custom bump callbacks. */
+export interface BumpRuleContext {
+    env: NodeJS.ProcessEnv;
+    logger: typeof logger;
+    packageJson?: Record<string, unknown>;
+}
+
+/** Whether a bump rule matches a commit. */
+function bumpRuleMatches(rule: unknown, record: CommitRecord, context: BumpRuleContext): boolean {
+    if (rule === true) return true;
+    if (rule === false || rule === undefined || rule === null) return false;
+    if (typeof rule === 'string') {
+        if (rule.startsWith('/') && rule.lastIndexOf('/') > 0) {
+            const last = rule.lastIndexOf('/');
+            try {
+                return new RegExp(rule.slice(1, last), rule.slice(last + 1)).test(
+                    `${record.subject}\n${record.body}`
+                );
+            } catch {
+                return false;
+            }
+        }
+        return `${record.subject}\n${record.body}`.includes(rule);
+    }
+    if (Array.isArray(rule)) return rule.some(item => bumpRuleMatches(item, record, context));
+    if (typeof rule === 'function') {
+        return Boolean(
+            (rule as (ctx: BumpRuleContext & { commit: CommitRecord }) => unknown)({
+                ...context,
+                commit: record,
+            })
+        );
+    }
+    if (typeof rule === 'object') {
+        const source = rule as Record<string, unknown>;
+        const parsed = parseCcSubject(record.subject);
+        if (
+            source.breaking === true &&
+            !parsed.breaking &&
+            !/BREAKING[ -]CHANGE/i.test(record.body)
+        )
+            return false;
+        if (typeof source.type === 'string' && parsed.type !== source.type) return false;
+        if (Array.isArray(source.types) && !source.types.includes(parsed.type)) return false;
+        if (typeof source.scope === 'string' && parsed.scope !== source.scope) return false;
+        if (Array.isArray(source.scopes) && !source.scopes.includes(parsed.scope)) return false;
+        if (
+            typeof source.pattern === 'string' &&
+            !new RegExp(source.pattern).test(`${record.subject}\n${record.body}`)
+        )
+            return false;
+        if (
+            typeof source.match === 'string' &&
+            !`${record.subject}\n${record.body}`.includes(source.match)
+        )
+            return false;
+        return true;
+    }
+    return false;
+}
+
+const BUMP_ORDER: BumpType[] = ['patch', 'minor', 'major'];
+
+/** Resolve a bump from custom rules, falling back to Conventional Commits. */
+export function deriveCustomBump(
+    records: CommitRecord[],
+    rules?: Record<string, unknown>,
+    allowOverBump = false,
+    context: BumpRuleContext = { env: process.env, logger }
+): BumpType {
+    if (!rules || Object.keys(rules).length === 0) return deriveBump(records);
+    let result: BumpType = 'patch';
+    let matches = 0;
+    for (const level of BUMP_ORDER) {
+        const rule = rules[level];
+        for (const record of records) {
+            if (!bumpRuleMatches(rule, record, context)) continue;
+            matches += 1;
+            if (BUMP_ORDER.indexOf(level) > BUMP_ORDER.indexOf(result)) result = level;
+        }
+    }
+    if (allowOverBump && matches > 1) {
+        // Repeated over-bumping is intentionally opt-in.
+        for (let i = 1; i < matches; i += 1) {
+            if (result === 'major') break;
+            result = result === 'patch' ? 'minor' : 'major';
+        }
+    }
+    return result;
+}
 /** The version bump plan for a changelog run. */
 export interface VersionPlan {
     /** The version heading for the root changelog. */
@@ -130,6 +233,10 @@ export interface PlanVersionsOptions {
     rootVersion: string;
     /** The bump derived from all scanned commits. */
     bump: BumpType;
+    /** Custom bump rules (used for per-workspace derivation). */
+    bumpRules?: Record<string, unknown>;
+    /** Allow over-bumping (default false). */
+    allowOverBump?: boolean;
     /** The git revision range the commits were read from. */
     range: string;
     /** The repository root (default: resolved from cwd). */
@@ -171,7 +278,10 @@ export function planVersions(options: PlanVersionsOptions): VersionPlan {
         for (const dir of workspaces) {
             const commits = commitsFor(dir);
             if (commits.length === 0) continue;
-            const next = bumpVersion(readPackageVersion(dir) ?? '0.0.0', deriveBump(commits));
+            const next = bumpVersion(
+                readPackageVersion(dir) ?? '0.0.0',
+                deriveCustomBump(commits, options.bumpRules, options.allowOverBump)
+            );
             entries.set(dir, next);
             if (versioning.enabled) writes.set(dir, next);
         }

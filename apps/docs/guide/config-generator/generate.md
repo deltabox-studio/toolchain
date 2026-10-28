@@ -3,7 +3,7 @@
 Every generator is a method on the bound engine:
 
 ```ts
-engine.collectEnvVars(); // EnvVarDef[] across every scope
+engine.collectVars(); // ConfigDef[] across every scope
 engine.requiredEnvVars('server'); // required var names for a scope
 
 engine.writeEnvFile({ output: '.env.example' });

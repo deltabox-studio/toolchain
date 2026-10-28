@@ -4,14 +4,14 @@ Every generator writes from the same Zod schema. The engine's own config model
 is the living example: its types are committed at
 [packages/shared/src/config-types.ts](https://github.com/deltabox-studio/toolchain/blob/main/packages/shared/src/config-types.ts).
 
-## Config types — `renderConfigTypes()` / `writeConfigTypes()`
+## Config types — `generateConfigTypes()` / `writeConfigTypes()`
 
 Named `interface`s (and `type` aliases for enums/unions) with jsdoc taken from
 `.describe()`. Unions and refs stay named, so nested objects are referenced
 rather than inlined:
 
 ```ts
-// engine.renderConfigTypes() -> { server: "...", cli: "..." }
+// engine.generateConfigTypes() -> { server: "...", cli: "..." }
 engine.writeConfigTypes({ outputDir: 'types' }); // types/server.ts, types/cli.ts
 ```
 

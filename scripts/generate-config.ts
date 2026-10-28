@@ -1,14 +1,9 @@
 #!/usr/bin/env node
 /**
  * Generate the `dbx.config` reference + editor JSON Schema from the Zod config
- * model (the single source of truth in
- * `packages/shared/src/config-schema.ts`).
+ * model (the single source of truth in `packages/shared/src/config-schema`).
  *
  *   yarn config:generate
- *
- * Outputs:
- *   - apps/docs/config/reference.md  (the docs reference)
- *   - config.schema.json             (editor autocomplete for the JSON config)
  */
 
 import fs from 'node:fs';
@@ -17,23 +12,13 @@ import { fileURLToPath } from 'node:url';
 
 import { z } from 'zod';
 
-import {
-    CONFIG_SECTION_DESCRIPTIONS,
-    CONFIG_SECTION_SCHEMAS,
-    dbxConfigSchema,
-    logger,
-} from '@deltabox/toolchain-shared';
-import { renderConfigFileMarkdown } from '@deltabox/toolchain/config';
+import { generateConfigMarkdown } from '@deltabox/toolchain-config';
+import { configSchema, dbxConfigSchema, logger } from '@deltabox/toolchain-shared';
 
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
-const sections = Object.entries(CONFIG_SECTION_SCHEMAS).map(([key, schema]) => ({
-    key,
-    description: CONFIG_SECTION_DESCRIPTIONS[key as keyof typeof CONFIG_SECTION_DESCRIPTIONS],
-    schema,
-}));
-
-const markdown = renderConfigFileMarkdown(sections, {
+const markdown = generateConfigMarkdown(configSchema, {
+    combined: true,
     title: 'dbx.config',
     intro: [
         'A `dbx.config.ts` file exports `{ toolchain: { ...sections } }`: the',
@@ -44,7 +29,7 @@ const markdown = renderConfigFileMarkdown(sections, {
         '> Generated from the Zod config schema — do not edit by hand.',
         '> Run `yarn config:generate`.',
     ].join('\n'),
-});
+})['index.md'];
 const docsPath = path.join(root, 'apps/docs/config/reference.md');
 fs.mkdirSync(path.dirname(docsPath), { recursive: true });
 const example = [
@@ -67,13 +52,8 @@ const example = [
     '```',
     '',
 ].join('\n');
-fs.writeFileSync(docsPath, `${markdown.trimEnd()}\n${example}`, 'utf-8');
+fs.writeFileSync(docsPath, `${markdown?.trimEnd()}\n${example}`, 'utf-8');
 
-/**
- * Normalize the metadata Zod emits into standard JSON Schema: `example` ->
- * `examples`, and a string `deprecated` -> `deprecated: true` plus the VS
- * Code-friendly `deprecationMessage`.
- */
 function normalizeMetadata(node: unknown): void {
     if (!node || typeof node !== 'object' || Array.isArray(node)) return;
     const record = node as Record<string, unknown>;

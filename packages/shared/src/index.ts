@@ -2,6 +2,7 @@ export * from './bin.js';
 export * from './fs-utils.js';
 export * from './ignore.js';
 export * from './logger.js';
+export * from './messages.js';
 export * from './object-utils.js';
 export * from './project.js';
 export * from './provider.js';

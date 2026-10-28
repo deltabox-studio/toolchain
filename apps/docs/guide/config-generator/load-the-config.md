@@ -7,7 +7,6 @@ of it:
 
 ```ts
 import {
-    applyOverrides,
     envBool,
     envInt,
     envList,
@@ -15,6 +14,7 @@ import {
     envString,
     parseEnvTree,
 } from '@deltabox/toolchain/config';
+import { applyOverrides } from '@deltabox/toolchain/shared';
 
 // MYAPP_HOST, MYAPP_PORT, MYAPP_LOG_PRETTY, ... -> a nested tree
 const tree = parseEnvTree(process.env, 'MYAPP_');
@@ -57,7 +57,7 @@ export function loadConfig(env = process.env, file = {}, cli = {}) {
             tokenTtl: envInt(tree, 'auth.token.ttl', 3600),
         },
     };
-    return schemaCompiler.parse(applyOverrides(applyOverrides(fromEnv, file), cli));
+    return schemaCompiler.parse(applyOverrides(fromEnv, file, cli));
 }
 ```
 

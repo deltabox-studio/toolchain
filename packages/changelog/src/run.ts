@@ -72,7 +72,7 @@ import { fileURLToPath } from 'node:url';
 import { type ChangelogConfig, logger, resolveCommitlintEnabled } from '@deltabox/toolchain-shared';
 
 import { parseArgsCli } from './utils/args.js';
-import { deriveBump, readCommits } from './utils/git.js';
+import { readCommits } from './utils/git.js';
 import { packageChangesForCurrent } from './utils/packages.js';
 import {
     formatExistingChangelogs,
@@ -82,7 +82,12 @@ import {
 import { changelogFiles, readRootVersion, repoRoot, writeVersion } from './utils/repo.js';
 import { buildSummary } from './utils/summary.js';
 import { insertNewEntry, renderChangelogEntry, retagChangelogs } from './utils/version.js';
-import { planVersions, resolveVersioning, writePackageVersion } from './utils/versioning.js';
+import {
+    deriveCustomBump,
+    planVersions,
+    resolveVersioning,
+    writePackageVersion,
+} from './utils/versioning.js';
 import { writeChangelogs } from './utils/write.js';
 
 /**
@@ -142,12 +147,19 @@ export function runChangelog(
     const range = method !== 'latest' && method !== 'all' ? method : options.range;
 
     const records = readCommits(range);
-    const type = deriveBump(records);
+    const versioning = resolveVersioning(changelog);
+    const type = deriveCustomBump(records, versioning.bump, versioning.allowOverBump);
     const commitlint = resolveCommitlintEnabled(changelog);
     const summary = buildSummary(records, { commitlint, range });
 
-    const versioning = resolveVersioning(changelog);
-    const plan = planVersions({ versioning, rootVersion: current, bump: type, range });
+    const plan = planVersions({
+        versioning,
+        rootVersion: current,
+        bump: type,
+        range,
+        ...(versioning.bump ? { bumpRules: versioning.bump } : {}),
+        ...(versioning.allowOverBump ? { allowOverBump: true } : {}),
+    });
     const next = plan.rootVersion;
 
     if (options.dryRun) {

@@ -7,12 +7,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { type CollectEnvVarsOptions, collectEnvVars, DEFAULT_ENV_PREFIX } from '../collect.js';
-import type { ConfigScopes } from '../types.js';
+import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from '../collect.js';
+import type { ConfigSchema } from '../types.js';
 
 export interface GenerateEnvTypesOptions {
     /** Output directory. When omitted, nothing is written. */
-    outputDir?: string;
+    outputDir?: string | false;
     /** The env-var prefix (default `APP_`). */
     envPrefix?: string;
     /** The `process.env` interface name (default `AppEnv`). */
@@ -36,7 +36,7 @@ export interface GenerateEnvTypesOptions {
     /** Add a `declare module 'vite'` augmentation to the `.d.ts`. */
     augmentVite?: boolean;
     /** Custom env-name -> dotted-path derivation. */
-    envPathOf?: CollectEnvVarsOptions['envPathOf'];
+    envPathOf?: CollectVarsOptions['envPathOf'];
 }
 
 function headerComment(custom?: string): string {
@@ -44,12 +44,14 @@ function headerComment(custom?: string): string {
 }
 
 /** Render the `env.ts` content (the env + vite-env interfaces). */
-export function generateEnv(scopes: ConfigScopes, options: GenerateEnvTypesOptions = {}): string {
+export function generateEnv(schema: ConfigSchema, options: GenerateEnvTypesOptions = {}): string {
     const envPrefix = options.envPrefix ?? DEFAULT_ENV_PREFIX;
     const envInterface = options.envInterfaceName ?? 'AppEnv';
     const viteEnvInterface = options.viteEnvInterfaceName ?? 'AppViteEnv';
 
-    const vars = collectEnvVars(scopes, envPrefix, { envPathOf: options.envPathOf });
+    const vars = collectVars(schema, envPrefix, { envPathOf: options.envPathOf }).filter(
+        def => def.name
+    );
     const serverVars = vars.filter(def => def.scope !== 'frontend');
     const viteVars = vars.filter(def => def.public);
 
@@ -111,15 +113,25 @@ export {};
 `;
 }
 
-/** Generate `env.ts` + the ambient `.d.ts` into `outputDir`. Returns the paths. */
-export function generateEnvTypes(
-    scopes: ConfigScopes,
-    options: GenerateEnvTypesOptions & { outputDir: string }
-): string[] {
-    const envFile = path.join(options.outputDir, options.envFile ?? 'env.ts');
-    const dtsFile = path.join(options.outputDir, options.dtsFile ?? 'env.d.ts');
-    fs.mkdirSync(options.outputDir, { recursive: true });
-    fs.writeFileSync(envFile, generateEnv(scopes, options), 'utf-8');
-    fs.writeFileSync(dtsFile, generateEnvDts(options), 'utf-8');
-    return [envFile, dtsFile];
+/** Generate env type file contents (and optionally write them). */
+export function generateConfigEnv(
+    schema: ConfigSchema,
+    options: GenerateEnvTypesOptions = {}
+): Record<string, string> {
+    const envFile = options.envFile ?? 'env.ts';
+    const dtsFile = options.dtsFile ?? 'env.d.ts';
+    const contents = {
+        [envFile]: generateEnv(schema, options),
+        [dtsFile]: generateEnvDts(options),
+    };
+    if (typeof options.outputDir === 'string') {
+        fs.mkdirSync(options.outputDir, { recursive: true });
+        for (const [file, content] of Object.entries(contents)) {
+            fs.writeFileSync(path.join(options.outputDir, file), content, 'utf-8');
+        }
+    }
+    return contents;
 }
+
+/** @deprecated Use {@link generateConfigEnv}. */
+export const generateEnvTypes = generateConfigEnv;

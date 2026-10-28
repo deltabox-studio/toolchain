@@ -142,6 +142,14 @@ export interface ChangelogVersioningConfig {
      * own.
      */
     workspaces?: Array<string>;
+    /** Custom bump rules for major/minor/patch/alpha (matchers or callbacks). */
+    bump?: Record<string, unknown>;
+    /** Apply a bump once per matching change instead of once per run (default false). */
+    allowOverBump?: boolean;
+    /** Commit message formatting/credit options. */
+    commit?: Record<string, unknown>;
+    /** Changelog provider (default `default`; `changesets` or a custom id). */
+    provider?: 'default' | 'changesets' | string;
 }
 
 export type ChangelogVersioning = boolean | ChangelogVersioningConfig;
@@ -204,9 +212,19 @@ export interface ToolchainChangelogConfig {
     enabled?: boolean;
 }
 
+export interface ToolchainVscodeSettings {
+    /** Settings deep-merged over the generated editor defaults. */
+    overrides?: Record<string, unknown>;
+    /** Exact setting keys (eg. `editor.defaultFormatter`) to omit. */
+    exclude?: Array<string>;
+}
+
 export interface ToolchainFmtConfig {
-    /** Add project-scoped VS Code formatter settings (default false; existing keys are kept). */
-    vscode?: boolean;
+    /**
+     * Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false;
+     * existing keys are kept).
+     */
+    vscode?: boolean | ToolchainVscodeSettings;
     /** Oxfmt options. `toolchain.vite.fmt` overrides these (deep merge). */
     oxc?: Record<string, unknown>;
     /** Biome formatter options (merged into the generated `biome.json`). */
@@ -220,8 +238,11 @@ export interface ToolchainFmtConfig {
 }
 
 export interface ToolchainLintConfig {
-    /** Add project-scoped VS Code linter settings (default false; existing keys are kept). */
-    vscode?: boolean;
+    /**
+     * Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false;
+     * existing keys are kept).
+     */
+    vscode?: boolean | ToolchainVscodeSettings;
     /** Oxlint options. `toolchain.vite.lint` overrides these (deep merge). */
     oxc?: Record<string, unknown>;
     /** Biome linter options (merged into the generated `biome.json`). */
@@ -232,7 +253,7 @@ export interface ToolchainLintConfig {
     enabled?: boolean;
 }
 
-/** @deprecated */
+/** @deprecated use `toolchain.fmt.biome` / `toolchain.lint.biome`. Still writes `biome.json`. */
 export interface ToolchainBiomeConfig {
     /** Write the Biome VS Code settings (default true). */
     vscode?: boolean;
@@ -421,9 +442,9 @@ export interface ToolchainConfigSections {
     /** Linter configuration: Oxc/Biome/ESLint options and editor defaults. */
     lint?: boolean | ToolchainLintConfig;
     /**
-     * Deprecated: use `toolchain.fmt.biome` / `toolchain.lint.biome` (still writes `biome.json`).
+     * Biome config generation (for consumers that still want a `biome.json`).
      *
-     * @deprecated
+     * @deprecated use `toolchain.fmt.biome` / `toolchain.lint.biome`. Still writes `biome.json`.
      */
     biome?: boolean | ToolchainBiomeConfig;
     /** Workspace tsconfig generation (path aliases + project references). */

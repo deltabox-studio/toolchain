@@ -1,8 +1,10 @@
-import type { ConfigMeta } from './types.js';
+import type { ConfigMeta } from './types.ts';
 
 /**
- * Teach Zod's `.meta()` about the toolchain's config metadata (`env`, `path`,
- * `required`, `example`, ...), so a consumer's schemas are typed without casts.
+ * Consumer-facing ambient metadata types for Zod's `.meta()`.
+ *
+ * Importing `@deltabox/toolchain/shared` (or the root package) brings this
+ * declaration in, so `.meta({ env, description, required, ... })` is typed.
  */
 declare module 'zod/v4/core' {
     interface JSONSchemaMeta extends ConfigMeta {}

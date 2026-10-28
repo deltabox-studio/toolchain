@@ -49,5 +49,5 @@ Each generator accepts the matching `include*` flag (all default `true`) to
 suppress an annotation: `includeRequired`, `includeDeprecated`,
 `includeExamples`, `includeSince`, `includeSee`, `includeRemarks`,
 `includeExperimental`, `includeAlpha`, `includeBeta` — for example
-`renderConfigTypes(..., { includeExamples: false })` or
+`generateConfigTypes(..., { includeExamples: false })` or
 `writeMarkdown(..., { includeDeprecated: false })`.

@@ -21,8 +21,6 @@ import {
     type ManagedFile,
     type PackageJson,
     readJsonAt,
-    resolveFmtTools,
-    resolveLintTools,
     resolveOxcFmtConfig,
     resolveOxcLintConfig,
     type SyncTask,
@@ -308,6 +306,8 @@ export function viteSyncTask(): SyncTask {
         projectTypes: ['monorepo-root', 'monorepo-workspace', 'project'],
         enabled: config =>
             sectionEnabled(config.vite) ||
+            sectionEnabled(config.fmt) ||
+            sectionEnabled(config.lint) ||
             sectionConfig(config.fmt)?.oxc !== undefined ||
             sectionConfig(config.lint)?.oxc !== undefined,
         run: ctx => {
@@ -376,17 +376,6 @@ export function viteSyncTask(): SyncTask {
                     ),
                 });
             }
-            const biomeActive =
-                sectionEnabled(ctx.config.biome) ||
-                resolveFmtTools(ctx.config).includes('biome') ||
-                resolveLintTools(ctx.config).includes('biome');
-            if ((hasFmt || hasLint) && biomeActive) {
-                ctx.warn(
-                    'Both Biome and Oxc are configured: `biome.json` and the Oxc config files may conflict. Disable `toolchain.biome` or `toolchain.vite.fmt`/`lint`.',
-                    'biome.oxc-conflict'
-                );
-            }
-
             return files;
         },
     };

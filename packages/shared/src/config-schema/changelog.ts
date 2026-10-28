@@ -68,6 +68,24 @@ export const changelogVersioningConfigSchema = z
                     'there is none the root `package.json` is used on its own.'
             )
             .optional(),
+        bump: z
+            .record(z.string(), z.unknown())
+            .describe('Custom bump rules for major/minor/patch/alpha (matchers or callbacks).')
+            .optional(),
+        allowOverBump: z
+            .boolean()
+            .describe(
+                'Apply a bump once per matching change instead of once per run (default false).'
+            )
+            .optional(),
+        commit: z
+            .record(z.string(), z.unknown())
+            .describe('Commit message formatting/credit options.')
+            .optional(),
+        provider: z
+            .union([z.literal('default'), z.literal('changesets'), z.string()])
+            .describe('Changelog provider (default `default`; `changesets` or a custom id).')
+            .optional(),
     })
     .describe('Automatic version bumping options.')
     .meta({ id: 'ChangelogVersioningConfig' });

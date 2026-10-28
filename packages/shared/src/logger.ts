@@ -15,6 +15,8 @@
 import { log as clackLog, type LogMessageOptions } from '@clack/prompts';
 import pc from 'picocolors';
 
+import { formatMessageId } from './messages.js';
+
 /** Ordered from most to least verbose. */
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'silent';
 
@@ -35,7 +37,20 @@ const DEFAULT_NAME = 'dbx';
 /** A warning/error suppression rule: a message/id string or a RegExp. */
 export type LogSuppression = string | RegExp;
 
+export interface ToolchainLogger {
+    raw(message?: string): void;
+    rawError(message?: string): void;
+    write(channel: LogChannel, text: string): void;
+    debug(message?: string): void;
+    info(message?: string): void;
+    success(message?: string): void;
+    warn(message?: string, id?: string): void;
+    error(message?: string, id?: string): void;
+}
+
 export interface LoggerOptions {
+    /** Use a custom logger implementation instead of the built-in clack sink. */
+    logger?: ToolchainLogger;
     /** Minimum level to print (default `info`). */
     level?: LogLevel;
     /**
@@ -52,7 +67,7 @@ export interface LoggerOptions {
     suppress?: LogSuppression | LogSuppression[];
 }
 
-export interface Logger {
+export interface Logger extends ToolchainLogger {
     /** The configured level. */
     readonly level: LogLevel;
     /** A `picocolors` color set honoring the color setting. */
@@ -143,6 +158,9 @@ export function createLogger(options: LoggerOptions = {}): Logger {
     const withPrefix = (message: string): string =>
         !prefix || message === '' || /^\s/.test(message) ? message : `${prefix}${message}`;
 
+    const withId = (message: string, id: string | undefined): string =>
+        id ? `[${formatMessageId(id)}] ${message}` : message;
+
     // clack renders each message as one line: `<symbol>  <message>` (spacing 0
     // drops the blank guide lines, multi-line messages get the guide bar).
     const render = (fn: ClackLog, message: string, output?: NodeJS.WriteStream): void => {
@@ -173,12 +191,12 @@ export function createLogger(options: LoggerOptions = {}): Logger {
         },
         warn: (message = '', id?: string) => {
             if (threshold <= LEVELS.warn && !isSuppressed(message, id)) {
-                render(clackLog.warn, message, process.stderr);
+                render(clackLog.warn, withId(message, id), process.stderr);
             }
         },
         error: (message = '', id?: string) => {
             if (threshold <= LEVELS.error && !isSuppressed(message, id)) {
-                render(clackLog.error, message, process.stderr);
+                render(clackLog.error, withId(message, id), process.stderr);
             }
         },
     };
@@ -190,6 +208,8 @@ export interface LoggerConfig {
     color?: boolean;
     name?: string;
     suppress?: LogSuppression | LogSuppression[];
+    /** A custom logger implementation (config files only). */
+    logger?: ToolchainLogger;
 }
 
 let configOptions: LoggerOptions = {};
@@ -202,6 +222,7 @@ function pick(options: LoggerConfig | boolean | undefined): LoggerOptions {
         ...(typeof options.color === 'boolean' ? { color: options.color } : {}),
         ...(typeof options.name === 'string' ? { name: options.name } : {}),
         ...(options.suppress !== undefined ? { suppress: options.suppress } : {}),
+        ...(options.logger ? { logger: options.logger } : {}),
     };
 }
 

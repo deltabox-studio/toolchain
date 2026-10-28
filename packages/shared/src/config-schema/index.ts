@@ -16,39 +16,18 @@ import { z } from 'zod';
 
 import { biomeConfigSchema } from './biome.js';
 import { catalogsConfigSchema } from './catalogs.js';
-import {
-    changelogBranchesConfigSchema,
-    changelogCommitlintConfigSchema,
-    changelogConfigSchema,
-    changelogVersioningConfigSchema,
-    changelogVersioningSchema,
-    changelogVersioningTargetSchema,
-    changelogWorkflowSettingSchema,
-    legacyChangelogConfigSchema,
-} from './changelog.js';
+import { legacyChangelogConfigSchema } from './changelog.js';
 import { ciConfigSchema } from './ci.js';
 import { fmtConfigSchema, lintConfigSchema } from './format.js';
 import { loggerConfigSchema } from './logger.js';
 import { section } from './meta.js';
-import { projectConfigSchema, projectTypeSchema } from './project.js';
+import { projectConfigSchema } from './project.js';
 import { providersConfigSchema } from './providers.js';
-import { registryConfigSchema, registryPolicySchema } from './registry.js';
-import {
-    templateKindSchema,
-    templateSourceSchema,
-    templateSourceTypeSchema,
-    templatesConfigSchema,
-} from './templates.js';
+import { registryConfigSchema } from './registry.js';
+import { templatesConfigSchema } from './templates.js';
 import { tsconfigConfigSchema } from './tsconfig.js';
 import { viteConfigSchema } from './vite.js';
 import { watchConfigSchema } from './watch.js';
-import {
-    workflowConfigSchema,
-    workflowOptionsSchema,
-    workflowSettingSchema,
-    workflowStepSchema,
-    workflowStepsConfigSchema,
-} from './workflow.js';
 
 export * from './biome.js';
 export * from './catalogs.js';
@@ -93,9 +72,7 @@ export const toolchainConfigSchema = z
             .describe('Linter configuration: Oxc/Biome/ESLint options and editor defaults.')
             .optional(),
         biome: section(biomeConfigSchema)
-            .describe(
-                'Deprecated: use `toolchain.fmt.biome` / `toolchain.lint.biome` (still writes `biome.json`).'
-            )
+            .describe('Biome config generation (for consumers that still want a `biome.json`).')
             .optional(),
         tsconfig: section(tsconfigConfigSchema)
             .describe('Workspace tsconfig generation (path aliases + project references).')
@@ -131,49 +108,7 @@ export const dbxConfigSchema = z
     })
     .meta({ id: 'DbxConfigSections' });
 
-/**
- * Every named schema keyed by the TypeScript type it generates. The config
- * type generator walks this in order (dependencies first) to write
- * `packages/shared/src/config-types.ts`.
- */
-export const CONFIG_TYPE_SCHEMAS = {
-    ProjectType: projectTypeSchema,
-    ToolchainProjectConfig: projectConfigSchema,
-    WorkflowStep: workflowStepSchema,
-    WorkflowStepsConfig: workflowStepsConfigSchema,
-    WorkflowOptions: workflowOptionsSchema,
-    WorkflowSetting: workflowSettingSchema,
-    WorkflowConfig: workflowConfigSchema,
-    ChangelogBranchesConfig: changelogBranchesConfigSchema,
-    ChangelogCommitlintConfig: changelogCommitlintConfigSchema,
-    ChangelogVersioningTarget: changelogVersioningTargetSchema,
-    ChangelogVersioningConfig: changelogVersioningConfigSchema,
-    ChangelogVersioning: changelogVersioningSchema,
-    ChangelogConfig: changelogConfigSchema,
-    ChangelogWorkflowSetting: changelogWorkflowSettingSchema,
-    ToolchainCiConfig: ciConfigSchema,
-    ToolchainChangelogConfig: legacyChangelogConfigSchema,
-    ToolchainFmtConfig: fmtConfigSchema,
-    ToolchainLintConfig: lintConfigSchema,
-    ToolchainBiomeConfig: biomeConfigSchema,
-    ToolchainTsconfigConfig: tsconfigConfigSchema,
-    ToolchainWatchConfig: watchConfigSchema,
-    ToolchainTemplateSourceType: templateSourceTypeSchema,
-    ToolchainTemplateKind: templateKindSchema,
-    ToolchainTemplateSource: templateSourceSchema,
-    ToolchainTemplatesConfig: templatesConfigSchema,
-    ToolchainRegistryPolicy: registryPolicySchema,
-    ToolchainRegistryConfig: registryConfigSchema,
-    ToolchainCatalogsConfig: catalogsConfigSchema,
-    ToolchainViteConfig: viteConfigSchema,
-    ToolchainLoggerConfig: loggerConfigSchema,
-    ToolchainProvidersConfig: providersConfigSchema,
-    ToolchainConfigSections: toolchainConfigSchema,
-    DbxConfigSections: dbxConfigSchema,
-} as const;
-
-/** The section schemas keyed by config key, for the docs/JSON-Schema generator. */
-export const CONFIG_SECTION_SCHEMAS = {
+export const configSchema = {
     project: projectConfigSchema,
     ci: ciConfigSchema,
     fmt: fmtConfigSchema,
@@ -188,28 +123,3 @@ export const CONFIG_SECTION_SCHEMAS = {
     logger: loggerConfigSchema,
     providers: providersConfigSchema,
 } as const;
-
-/** Alias used by consumers that prefer the singular name. */
-export const configSchema = CONFIG_SECTION_SCHEMAS;
-
-/** Alias kept for discoverability. */
-export const configSchemas = CONFIG_SECTION_SCHEMAS;
-
-/** One-line descriptions for the generated docs index. */
-export const CONFIG_SECTION_DESCRIPTIONS: Record<keyof typeof CONFIG_SECTION_SCHEMAS, string> = {
-    project:
-        'Project metadata: canonical `package.json` fields (applied on sync, inherited by ' +
-        'workspaces) plus the replacement tokens every template understands.',
-    ci: 'GitHub Actions workflows: CI checks, release, issues, changelog and sync (all opt-in).',
-    fmt: 'Formatter configuration: Oxc/Biome options, editor defaults and source tools.',
-    lint: 'Linter configuration: Oxc/Biome/ESLint options and editor defaults.',
-    biome: 'Deprecated: use `fmt.biome` / `lint.biome`; still writes `biome.json`.',
-    tsconfig: 'Workspace tsconfig generation (path aliases + project references).',
-    templates: 'Template sources / scaffolding.',
-    registry: 'Allow/deny host and path globs for template/provider registries.',
-    catalogs: 'Package catalogs written to the package manager catalog file (`catalog:`).',
-    vite: 'The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.',
-    watch: 'Watch behaviour for `dbx watch`.',
-    logger: 'Logging level, colours and prefix for toolchain output.',
-    providers: 'Provider command behaviour (eg. colour for the passthrough commands).',
-};

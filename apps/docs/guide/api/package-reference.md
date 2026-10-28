@@ -14,11 +14,12 @@ the template engine.
 | `repoSlugFromUrl(url)`                                                        | Derive an `owner/name` slug from a repository URL.                                       |
 | `findOwnCliEntry(cwd?)` / `localToolchainVersion(cwd?)` / `TOOLCHAIN_PACKAGE` | Locate a project's own toolchain bin + pinned version (prefer them over a global `dbx`). |
 | `createLogger(options)` / `logger`                                            | The shared logger (see [Logging](/guide/api/logging)).                                   |
+| `WARNING_MAP` / `ERROR_MAP` / `warningMessage(id, values?)`                   | Central messages keyed by stable logger/suppression ids.                                 |
 | `spawnCross(cmd, args, options)` / `run(cmd, args, options)`                  | Cross-platform, shell-free spawning; `timeoutMs` kills the child tree.                   |
 | `killProcessTree(child)`                                                      | Kill a child process and its descendants (Windows `taskkill /t`).                        |
 | `readJsonFile` / `readJsonAt` / `toJson` / `writeJsonFile`                    | Small JSON file helpers.                                                                 |
 | `mergeJsonAt(cwd, relative, patch)`                                           | Deep-merge a patch over an existing JSON file.                                           |
-| `deepMerge` / `isPlainObject` / `sort` / `mapValues`                          | Object utilities.                                                                        |
+| `deepMerge` / `applyOverrides` / `isPlainObject` / `sort` / `mapValues`       | Object utilities (including layered typed overrides).                                    |
 | `applyReplacements` / `applyReplacementsDeep` / `createReplacer`              | The `{{ token }}` template engine (also `tokenPattern`, `extractTokens`).                |
 | `toYaml(value)`                                                               | A tiny YAML emitter for the GitHub Actions subset.                                       |
 
@@ -64,9 +65,8 @@ guide for the full workflow).
 | `formatGenerated(source, options?)`                                                      | Format generated output with Oxfmt (see below).           |
 | `GENERATED_FORMAT_OPTIONS`                                                               | The baseline Oxfmt options used by the generators.        |
 | `parseEnvTree(env, prefix?)` / `envString` / `envInt` / `envBool` / `envList` / `envMap` | The dependency-free runtime loader.                       |
-| `applyOverrides(base, overrides?)`                                                       | Layer typed overrides over env-derived values.            |
 | `compileZodSchema(schema)`                                                               | Compile a Zod schema for fast repeated parsing.           |
-| `envPathOf(env, prefix?)` / `envMetaOf(schema)`                                          | Env-name to dotted-path derivation and `.meta()` reading. |
+| `envPathOf(env, prefix?)` / `metaOf(schema)`                                             | Env-name to dotted-path derivation and `.meta()` reading. |
 | `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                    |
 | `renderConfigTypes` / `renderAllConfigTypes` / `generateConfigTypes`                     | Config type generation.                                   |
 | `renderScopeMarkdown` / `generateConfigMarkdown` / `renderConfigFileMarkdown`            | Markdown reference generation.                            |

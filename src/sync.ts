@@ -16,6 +16,8 @@ import {
 import { tsconfigSyncTask } from '@deltabox/toolchain-tsconfig';
 import { viteSyncTask } from '@deltabox/toolchain-vite';
 
+import { toolingDefaultsTask } from './tooling.js';
+
 /**
  * The default sync tasks run by `dbx sync` / `dbx watch`:
  * changelog workflows + commitlint, `biome.json`, the workspace tsconfigs, and
@@ -23,6 +25,7 @@ import { viteSyncTask } from '@deltabox/toolchain-vite';
  */
 export function defaultSyncTasks(): SyncTask[] {
     return [
+        toolingDefaultsTask(),
         projectSyncTask(),
         catalogsSyncTask(),
         changelogSyncTask(),

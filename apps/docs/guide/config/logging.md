@@ -19,12 +19,13 @@ export default defineConfig({
 
 `suppress` silences matching warnings/errors. A string matches an emitted id
 exactly or a message substring; a `/pattern/flags` string is treated as a regex.
-It accepts one value or an array:
+Ids are rendered in uppercase in the output (eg. `[FMT_CONFLICT]`), but match
+the lowercase id when suppressing. It accepts one value or an array:
 
 ```ts [dbx.config.ts]
 toolchain: {
     logger: {
-        suppress: ['biome.oxc-conflict', 'deprecated option', '/^Could not .* globally/'],
+        suppress: ['fmt.conflict', 'deprecated option', '/^Could not .* globally/'],
     },
 }
 ```

@@ -72,6 +72,36 @@ describe('editorConfigSyncTask', () => {
             fs.readFileSync(path.join(cwd, '.vscode/settings.json'), 'utf-8')
         );
         expect(settings['editor.defaultFormatter']).toBe('biomejs.biome');
+        // Only the formatter selection + language blocks are added.
+        expect(settings['editor.formatOnSave']).toBeUndefined();
+        expect(settings['editor.formatOnSaveMode']).toBeUndefined();
+        expect(settings['oxc.disableNestedConfig']).toBeUndefined();
+    });
+
+    it('supports overrides and exclusions on an options object', async () => {
+        const cwd = makeTmp();
+        await editorConfigSyncTask().run(
+            context(cwd, {
+                fmt: {
+                    biome: {},
+                    vscode: {
+                        overrides: {
+                            'editor.defaultFormatter': 'custom.formatter',
+                            '[typescript]': { 'editor.defaultFormatter': 'custom.ts' },
+                        },
+                        exclude: ['[javascript]'],
+                    },
+                },
+                lint: { oxc: {}, vscode: { exclude: ['editor.codeActionsOnSave'] } },
+            })
+        );
+        const settings = JSON.parse(
+            fs.readFileSync(path.join(cwd, '.vscode/settings.json'), 'utf-8')
+        );
+        expect(settings['editor.defaultFormatter']).toBe('custom.formatter');
+        expect(settings['[typescript]']['editor.defaultFormatter']).toBe('custom.ts');
+        expect(settings['[javascript]']).toBeUndefined();
+        expect(settings['editor.codeActionsOnSave']).toBeUndefined();
     });
 });
 
@@ -80,14 +110,47 @@ describe('toolingConfigTask', () => {
         const warnings: { message: string; id?: string }[] = [];
         const ctx = {
             ...context(makeTmp(), {
-                fmt: { oxc: {}, biome: {} },
+                fmt: { oxc: {}, biome: {}, prettier: {} },
                 lint: { oxc: {}, eslint: {} },
             }),
             warn: (message: string, id?: string) => warnings.push({ message, id }),
         };
         await toolingConfigTask().run(ctx);
-        expect(warnings.map(warning => warning.id)).toEqual(['fmt.multiple', 'lint.multiple']);
-        expect(warnings[0]?.message).toContain('oxc, biome');
+        expect(warnings.map(warning => warning.id)).toEqual(['fmt.conflict', 'lint.conflict']);
+        expect(warnings[0]?.message).toContain('oxc, biome, prettier');
         expect(warnings[1]?.message).toContain('oxc, eslint');
+    });
+
+    it('warns when the deprecated biome section is used', async () => {
+        const warnings: { message: string; id?: string }[] = [];
+        const ctx = {
+            ...context(makeTmp(), { biome: true }),
+            warn: (message: string, id?: string) => warnings.push({ message, id }),
+        };
+        await toolingConfigTask().run(ctx);
+        expect(warnings).toEqual([
+            {
+                message: expect.stringContaining('toolchain.biome'),
+                id: 'deprecated.section.biome',
+            },
+        ]);
+    });
+
+    it('counts the deprecated biome section as a formatter/linter conflict', async () => {
+        const warnings: { message: string; id?: string }[] = [];
+        const ctx = {
+            ...context(makeTmp(), {
+                biome: true,
+                fmt: { oxc: {} },
+                lint: { oxc: {} },
+            }),
+            warn: (message: string, id?: string) => warnings.push({ message, id }),
+        };
+        await toolingConfigTask().run(ctx);
+        expect(warnings.map(warning => warning.id)).toEqual([
+            'fmt.conflict',
+            'lint.conflict',
+            'deprecated.section.biome',
+        ]);
     });
 });

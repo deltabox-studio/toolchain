@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { collectEnvVars } from '@deltabox/toolchain-config';
+import { collectVars } from '@deltabox/toolchain-config';
 import type { ToolchainCommand } from '@deltabox/toolchain-shared';
 import { toolchainConfigSchema } from '@deltabox/toolchain-shared';
 
@@ -102,7 +102,9 @@ function renderCli(): string {
 }
 
 function renderEnv(): string {
-    const vars = collectEnvVars({ toolchain: { zodSchema: toolchainConfigSchema } }, 'DBX_');
+    const vars = collectVars({ toolchain: toolchainConfigSchema }, 'DBX_').filter(
+        variable => variable.name
+    );
     const lines = [
         '---',
         'title: Environment variables',

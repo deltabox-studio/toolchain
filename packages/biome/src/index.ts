@@ -85,12 +85,23 @@ export function biomeSyncTask(): SyncTask {
         enabled: config =>
             sectionEnabled(config.biome) ||
             sectionConfig(config.fmt)?.biome !== undefined ||
-            sectionConfig(config.lint)?.biome !== undefined,
-        run: ctx => [
-            {
-                path: 'biome.json',
-                content: renderBiomeJson(ctx.tokens, biomeOverrides(ctx.config)),
-            },
-        ],
+            sectionConfig(config.lint)?.biome !== undefined ||
+            sectionEnabled(config.fmt) ||
+            sectionEnabled(config.lint),
+        run: ctx => {
+            if (
+                !sectionEnabled(ctx.config.biome) &&
+                sectionConfig(ctx.config.fmt)?.biome === undefined &&
+                sectionConfig(ctx.config.lint)?.biome === undefined
+            ) {
+                return [];
+            }
+            return [
+                {
+                    path: 'biome.json',
+                    content: renderBiomeJson(ctx.tokens, biomeOverrides(ctx.config)),
+                },
+            ];
+        },
     };
 }

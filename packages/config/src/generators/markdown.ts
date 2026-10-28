@@ -7,22 +7,31 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type { Schema } from 'untyped';
-import { type ZodType, z } from 'zod';
 
 import { sanitizeText, titleCase } from '@deltabox/toolchain-shared';
 
-import { type CollectEnvVarsOptions, collectEnvVars, DEFAULT_ENV_PREFIX } from '../collect.js';
-import { splitBaseSchema, zodToJsonSchema } from '../schema.js';
-import type { ConfigScopes } from '../types.js';
+import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from '../collect.js';
+import { metaOf, normalizeConfigSchema, splitBaseSchema } from '../schema.js';
+import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
 import { type CliFlagOptions, cliFlagLabel } from './cli.js';
 
-export interface RenderMarkdownOptions {
-    /** Output directory. When omitted, nothing is written. */
-    outDir?: string;
+export interface RenderMarkdownFrontmatter {
+    options: GenerateMarkdownOptions;
+}
+
+export interface RenderMarkdownOptions extends Pick<ConfigEngineOptions, 'baseGroup'> {
+    /** Output directory. Set false (or omit it) to disable writing. */
+    outDir?: string | false;
+    /** Frontmatter toggle, raw body, or callback. */
+    frontmatter?: boolean | string | ((ctx: RenderMarkdownFrontmatter) => string);
+    /** Render every scope into one file instead of one file per scope. */
+    combined?: boolean;
+    /** Show env var equivalents (default true). */
+    includeEnv?: boolean;
+    /** Show CLI flag equivalents (default true). */
+    includeCli?: boolean;
     /** Page outline (defaults to `[2, 3, 4]`). */
     outline?: number[];
-    /** The base group hoisted out of the nested groups (default `base`). */
-    baseGroup?: string;
     /** The scope whose env vars render as CLI flags (default `cli`). */
     cliScope?: string;
     /** Env-var prefix (default `APP_`). */
@@ -40,7 +49,7 @@ export interface RenderMarkdownOptions {
     /** Shorthand flags keyed by env var name (for the CLI scope). */
     shortFlags?: Record<string, string>;
     /** Custom env-name -> dotted-path derivation. */
-    envPathOf?: CollectEnvVarsOptions['envPathOf'];
+    envPathOf?: CollectVarsOptions['envPathOf'];
     /** Emit `- **Required**` lines (default true). */
     includeRequired?: boolean;
     /** Emit `- **Deprecated**` lines (default true). */
@@ -62,6 +71,8 @@ export interface RenderMarkdownOptions {
 }
 
 export interface GenerateMarkdownOptions extends RenderMarkdownOptions {
+    /** Document title (default `Configuration`). */
+    title?: string;
     /** Index file name (defaults to `index.md`). */
     indexFilename?: string;
 }
@@ -84,6 +95,10 @@ interface SchemaNode {
     envDefault?: unknown;
     description?: string;
     env?: string;
+    envName?: string;
+    envPath?: string;
+    cliFlag?: string;
+    cliFlagShort?: string;
     tsType?: string;
     secret?: boolean;
     public?: boolean;
@@ -101,6 +116,8 @@ interface SchemaNode {
 interface RenderOptions extends CliFlagOptions {
     useFlags?: boolean;
     baseGroup: string;
+    includeEnv?: boolean;
+    includeCli?: boolean;
     includeRequired?: boolean;
     includeDeprecated?: boolean;
     includeExamples?: boolean;
@@ -205,7 +222,16 @@ function renderNode(
         lines.push(...renderFields(schema, `${level}#`, opts));
         return lines;
     }
-    if (schema.env) lines.push(`- **Env**: \`${schema.env}\``);
+    const envName =
+        typeof schema.envName === 'string'
+            ? schema.envName
+            : typeof schema.env === 'string'
+              ? schema.env
+              : undefined;
+    if (opts.includeEnv !== false && envName) lines.push(`- **Env**: \`${envName}\``);
+    if (opts.includeCli !== false && typeof schema.cliFlag === 'string') {
+        lines.push(`- **CLI**: \`${schema.cliFlag}\``);
+    }
     const required = requiredLine(schema.required === true, opts);
     if (required) lines.push(required);
     lines.push(
@@ -227,14 +253,31 @@ function renderNode(
 function renderFields(schema: SchemaNode, level: string, opts: RenderOptions): string[] {
     const lines: string[] = [];
     for (const [key, child] of Object.entries(schema.properties ?? {})) {
-        const title = opts.useFlags && child.env ? cliFlagLabel(child.env, opts) : `\`${key}\``;
+        const flagEnv = child.cliFlag ?? child.envName ?? child.env;
+        const title = opts.useFlags && flagEnv ? cliFlagLabel(flagEnv, opts) : `\`${key}\``;
         lines.push('', ...renderNode(child, title, level, opts));
     }
     return lines;
 }
 
+function frontmatterLines(
+    options: RenderMarkdownOptions,
+    title: string,
+    outline: number[]
+): string[] {
+    const value = options.frontmatter;
+    if (value === false) return [];
+    const body =
+        typeof value === 'function'
+            ? value({ options: options as GenerateMarkdownOptions })
+            : typeof value === 'string'
+              ? value
+              : `title: ${title}\noutline: ${JSON.stringify(outline)}`;
+    return ['---', ...body.split('\n'), '---', ''];
+}
+
 /** Render the markdown reference for a single scope (base + grouped configs). */
-export function renderScopeMarkdown(
+function renderScopeMarkdown(
     scope: string,
     schema: Schema,
     options: RenderMarkdownOptions = {}
@@ -242,7 +285,9 @@ export function renderScopeMarkdown(
     const outline = options.outline ?? [2, 3, 4];
     const opts: RenderOptions = {
         useFlags: scope === (options.cliScope ?? 'cli'),
-        baseGroup: options.baseGroup ?? 'base',
+        baseGroup: Array.isArray(options.baseGroup)
+            ? String((options.baseGroup as unknown[])[0] ?? 'base')
+            : String(options.baseGroup ?? 'base'),
         ...(options.envPrefix ? { envPrefix: options.envPrefix } : {}),
         ...(options.shortFlags ? { shortFlags: options.shortFlags } : {}),
         ...(options.includeRequired !== undefined
@@ -264,15 +309,12 @@ export function renderScopeMarkdown(
         ...(options.includeBeta !== undefined ? { includeBeta: options.includeBeta } : {}),
     };
     const { base, groups } = splitBaseSchema(schema, opts.baseGroup);
+    const title = `${titleCase(scope)} Configuration`;
     const parts: string[] = [
-        '---',
-        `title: ${titleCase(scope)} Configuration`,
-        `outline: ${JSON.stringify(outline)}`,
-        '---',
+        ...frontmatterLines(options, title, outline),
+        `# ${title}`,
         '',
-        `# ${titleCase(scope)} Configuration`,
-        '',
-        'Every setting below is configured through an environment variable.',
+        'Every setting below is configured through a config value.',
         '',
         '## Base',
         '',
@@ -319,24 +361,23 @@ function collectSchemaEnvVars(schema: Schema, scope: string, out: EnvVarRow[]): 
 }
 
 /** Render the index file: explains the env convention + lists required/core. */
-export function renderConfigIndex(
-    scopes: ConfigScopes,
-    options: RenderMarkdownOptions = {}
-): string {
+function renderConfigIndex(schema: ConfigSchema, options: RenderMarkdownOptions = {}): string {
     const outline = options.outline ?? [2, 3, 4];
-    const baseGroup = options.baseGroup ?? 'base';
+    const baseGroup = Array.isArray(options.baseGroup)
+        ? String((options.baseGroup as unknown[])[0] ?? 'base')
+        : String(options.baseGroup ?? 'base');
     const labels = options.labels ?? {};
     const required: EnvVarRow[] = [];
     const core: EnvVarRow[] = [];
+    const scopes = normalizeConfigSchema(schema);
 
-    for (const [scopeName, scope] of Object.entries(scopes)) {
-        const schema = (scope.jsonSchema ?? zodToJsonSchema(scope.zodSchema)) as Schema;
-        collectSchemaEnvVars(splitBaseSchema(schema, baseGroup).base, scopeName, core);
+    for (const [scopeName, scopeSchema] of Object.entries(scopes)) {
+        collectSchemaEnvVars(splitBaseSchema(scopeSchema, baseGroup).base, scopeName, core);
     }
-    for (const def of collectEnvVars(scopes, options.envPrefix ?? DEFAULT_ENV_PREFIX, {
+    for (const def of collectVars(schema, options.envPrefix ?? DEFAULT_ENV_PREFIX, {
         envPathOf: options.envPathOf,
     })) {
-        if (def.required) {
+        if (def.required && def.name) {
             required.push({
                 name: def.name,
                 scope: def.scope,
@@ -374,11 +415,7 @@ variable equivalent.`;
                   .join('\n')}\n`
             : '';
 
-    return `---
-title: ${title}
-outline: ${JSON.stringify(outline)}
----
-
+    return `${frontmatterLines(options, title, outline).join('\n')}
 # ${title}
 
 ${intro}
@@ -397,40 +434,36 @@ ${table(core)}
 ${references}`;
 }
 
-/** Generate the markdown reference (per-scope files + index) into `outDir`. */
+/** Generate markdown file contents (and optionally write them). */
 export function generateConfigMarkdown(
-    scopes: ConfigScopes,
-    options: GenerateMarkdownOptions & { outDir: string }
-): string[] {
+    schema: ConfigSchema,
+    options: GenerateMarkdownOptions = {}
+): Record<string, string> {
     const outline = options.outline ?? [2, 3, 4];
-    const files: [string, string][] = Object.entries(scopes).map(([scopeName, scope]) => [
-        path.resolve(options.outDir, `${scopeName}.md`),
-        renderScopeMarkdown(
-            scopeName,
-            (scope.jsonSchema ?? zodToJsonSchema(scope.zodSchema)) as Schema,
-            { ...options, outline }
-        ),
-    ]);
-    files.push([
-        path.resolve(options.outDir, options.indexFilename ?? 'index.md'),
-        renderConfigIndex(scopes, { ...options, outline }),
-    ]);
-
-    for (const [filePath, content] of files) {
-        fs.mkdirSync(path.dirname(filePath), { recursive: true });
-        fs.writeFileSync(filePath, content, 'utf-8');
+    const scopes = normalizeConfigSchema(schema);
+    const contents: Record<string, string> = {};
+    if (options.combined) {
+        const file = options.indexFilename ?? 'index.md';
+        contents[file] = renderConfigSectionsMarkdown(scopes, { ...options, outline });
+    } else {
+        for (const [scopeName, scopeSchema] of Object.entries(scopes)) {
+            contents[`${scopeName}.md`] = renderScopeMarkdown(scopeName, scopeSchema, {
+                ...options,
+                outline,
+            });
+        }
+        contents[options.indexFilename ?? 'index.md'] = renderConfigIndex(schema, {
+            ...options,
+            outline,
+        });
     }
-    return files.map(([filePath]) => filePath);
-}
-
-/** A section of a config-file reference (its key + options schema). */
-export interface ConfigFileSection {
-    /** The config key, eg. `project`. */
-    key: string;
-    /** A short description shown under the heading. */
-    description?: string;
-    /** The section's options-object schema. */
-    schema: ZodType;
+    if (typeof options.outDir === 'string') {
+        fs.mkdirSync(options.outDir, { recursive: true });
+        for (const [file, content] of Object.entries(contents)) {
+            fs.writeFileSync(path.resolve(options.outDir, file), content, 'utf-8');
+        }
+    }
+    return contents;
 }
 
 export interface RenderConfigFileOptions {
@@ -703,39 +736,36 @@ function renderJsonFields(
  * expanded inline, so nested options (`ci.changelog.versioning.target`, ...) are
  * documented too. This is what a `dbx.config.ts`-style reference is generated from.
  */
-export function renderConfigFileMarkdown(
-    sections: ConfigFileSection[],
-    options: RenderConfigFileOptions = {}
+function renderConfigSectionsMarkdown(
+    scopes: Record<string, Schema>,
+    options: RenderConfigFileOptions & RenderMarkdownOptions = {}
 ): string {
     const title = options.title ?? 'Configuration';
     const parts: string[] = [
-        '---',
-        `title: ${title}`,
-        `outline: ${JSON.stringify(options.outline ?? [2, 3, 4])}`,
-        '---',
-        '',
+        ...frontmatterLines(options, title, options.outline ?? [2, 3, 4]),
         `# ${title}`,
         '',
     ];
     if (options.intro) parts.push(options.intro, '');
-    for (const section of sections) {
-        parts.push(`## \`${section.key}\``, '');
-        if (section.description) parts.push(section.description, '');
-        const json = z.toJSONSchema(section.schema, { target: 'draft-2020-12' }) as JsonSchemaJson;
-        const defs = json.$defs ?? {};
-        const root = json.$ref ? resolveJsonRef(json, defs) : json;
-        const meta = jsonNodeMeta(root, defs);
-        const required = requiredLine(meta.required === true, options);
+    for (const [key, schema] of Object.entries(scopes)) {
+        const meta = metaOf(schema);
+        parts.push(`## \`${key}\``, '');
+        if (meta?.description) parts.push(meta.description, '');
+        const required = requiredLine(meta?.required === true, options);
         if (required) parts.push(required, '');
-        const annotations = annotationLines(meta, options);
+        const annotations = annotationLines(meta ?? {}, options);
         if (annotations.length > 0) parts.push(...annotations, '');
-        const remarks = remarksLines(meta.remarks, options);
+        const remarks = remarksLines(meta?.remarks, options);
         if (remarks.length > 0) parts.push(...remarks, '');
         if (options.includeExamples !== false) {
-            const examples = exampleLines(meta.example);
+            const examples = exampleLines(meta?.example);
             if (examples.length > 0) parts.push(...examples, '');
         }
-        parts.push(...renderJsonFields(root, '###', defs, new Set<string>(), options), '');
+        const json = schema as unknown as JsonSchemaJson;
+        parts.push(
+            ...renderJsonFields(json, '###', json.$defs ?? {}, new Set<string>(), options),
+            ''
+        );
     }
     return `${parts.join('\n').trim()}\n`;
 }

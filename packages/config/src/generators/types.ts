@@ -14,17 +14,15 @@ import { generateTypes, type Schema } from 'untyped';
 
 import { pascalCase } from '@deltabox/toolchain-shared';
 
-import { splitBaseSchema, zodToJsonSchema } from '../schema.js';
-import type { ConfigScopes } from '../types.js';
+import { normalizeConfigSchema, splitBaseSchema } from '../schema.js';
+import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
 
 /** The `generateTypes` options shared by every interface. */
 const GENERATE_OPTIONS = { addExport: true, partial: true } as const;
 
-export interface GenerateTypesOptions {
-    /** Output directory. When omitted, nothing is written. */
-    outputDir?: string;
-    /** The base group hoisted into `<Name>Base` (default `base`). */
-    baseGroup?: string;
+export interface GenerateTypesOptions extends Pick<ConfigEngineOptions, 'baseGroup'> {
+    /** Output directory. `false` (or omitted) disables writing. */
+    outputDir?: string | false;
     /**
      * Per-scope main interface name. Defaults to `<PascalScope>Config`.
      */
@@ -63,11 +61,10 @@ export interface GenerateTypesOptions {
     includeAlpha?: boolean;
     /** Emit `@beta` JSDoc tags (default true). */
     includeBeta?: boolean;
-}
-
-/** The resolved schema for a scope (from a precomputed schema or the Zod one). */
-export function resolveScopeSchema(schema: Schema | undefined, zodSchema: unknown): Schema {
-    return (schema ?? zodToJsonSchema(zodSchema as never)) as Schema;
+    /** Show the env var equivalent in JSDoc (default true). */
+    includeEnv?: boolean;
+    /** Show the CLI flag equivalent in JSDoc (default true). */
+    includeCli?: boolean;
 }
 
 /**
@@ -137,6 +134,8 @@ type JsDocOptions = Pick<
     | 'includeExperimental'
     | 'includeAlpha'
     | 'includeBeta'
+    | 'includeEnv'
+    | 'includeCli'
 >;
 
 /** The JSDoc tag lines for a node's required / deprecation / example metadata. */
@@ -246,6 +245,16 @@ function withJsDocTags(schema: Schema, options: JsDocOptions): Schema {
             ),
         ]),
     ];
+    const envName =
+        typeof source.envName === 'string'
+            ? source.envName
+            : typeof source.env === 'string'
+              ? source.env
+              : '';
+    if (options.includeEnv !== false && envName) tags.push(`@env ${envName}`);
+    if (options.includeCli !== false && typeof source.cliFlag === 'string') {
+        tags.push(`@cli ${source.cliFlag}`);
+    }
     const out: Record<string, unknown> = { ...rest };
     // A boolean `required` is metadata; an array is the object's required keys.
     if (requiredMeta) delete out.required;
@@ -288,12 +297,14 @@ function withInterfaceJsDoc(body: string, schema: Schema, options: JsDocOptions)
 }
 
 /** Render the generated type file content for one scope. */
-export function renderConfigTypes(
+function renderConfigTypes(
     scopeName: string,
     schema: Schema,
     options: GenerateTypesOptions = {}
 ): string {
-    const baseGroup = options.baseGroup ?? 'base';
+    const baseGroup = Array.isArray(options.baseGroup)
+        ? String((options.baseGroup as unknown[])[0] ?? 'base')
+        : String(options.baseGroup ?? 'base');
     const interfaceName = options.interfaceNames?.[scopeName] ?? `${pascalCase(scopeName)}Config`;
     const aliases = options.aliases?.[scopeName] ?? '';
     const wrap = (body: string): string => (options.header ? `${options.header}\n\n${body}` : body);
@@ -342,44 +353,32 @@ export function renderConfigTypes(
     return wrap(`${baseInterface}\n${mainInterface}\n${aliases}`);
 }
 
-/**
- * Render the import block for the generated file (empty when none are
- * configured). Emitted once at the top of the file, after the header, so a
- * hand-written override can reference imported types.
- */
-export function renderConfigImports(options: GenerateTypesOptions = {}): string {
-    return (options.imports ?? []).join('\n');
-}
-
 /** Render every config type file, keyed by scope name. */
-export function renderAllConfigTypes(
-    scopes: ConfigScopes,
+function renderAllConfigTypes(
+    schema: ConfigSchema,
     options: GenerateTypesOptions = {}
 ): Record<string, string> {
     return Object.fromEntries(
-        Object.entries(scopes).map(([scopeName, scope]) => [
+        Object.entries(normalizeConfigSchema(schema)).map(([scopeName, scopeSchema]) => [
             scopeName,
-            renderConfigTypes(
-                scopeName,
-                resolveScopeSchema(scope.jsonSchema, scope.zodSchema),
-                options
-            ),
+            renderConfigTypes(scopeName, scopeSchema, options),
         ])
     );
 }
 
-/** Generate the config type files into `outputDir`. Returns the paths written. */
+/** Generate config type file contents (and optionally write them). */
 export function generateConfigTypes(
-    scopes: ConfigScopes,
-    options: GenerateTypesOptions & { outputDir: string }
-): string[] {
+    schema: ConfigSchema,
+    options: GenerateTypesOptions = {}
+): Record<string, string> {
     const extension = options.extension ?? 'ts';
-    const written: string[] = [];
-    for (const [scopeName, content] of Object.entries(renderAllConfigTypes(scopes, options))) {
-        const file = path.join(options.outputDir, `${scopeName}.${extension}`);
-        fs.mkdirSync(path.dirname(file), { recursive: true });
-        fs.writeFileSync(file, content, 'utf-8');
-        written.push(file);
+    const contents = renderAllConfigTypes(schema, options);
+    if (typeof options.outputDir === 'string') {
+        for (const [scopeName, content] of Object.entries(contents)) {
+            const file = path.join(options.outputDir, `${scopeName}.${extension}`);
+            fs.mkdirSync(path.dirname(file), { recursive: true });
+            fs.writeFileSync(file, content, 'utf-8');
+        }
     }
-    return written;
+    return contents;
 }

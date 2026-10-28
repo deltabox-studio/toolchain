@@ -457,6 +457,42 @@
                         "type": "string"
                     },
                     "description": "Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own."
+                },
+                "bump": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Custom bump rules for major/minor/patch/alpha (matchers or callbacks)."
+                },
+                "allowOverBump": {
+                    "type": "boolean",
+                    "description": "Apply a bump once per matching change instead of once per run (default false)."
+                },
+                "commit": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Commit message formatting/credit options."
+                },
+                "provider": {
+                    "anyOf": [
+                        {
+                            "type": "string",
+                            "const": "default"
+                        },
+                        {
+                            "type": "string",
+                            "const": "changesets"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "Changelog provider (default `default`; `changesets` or a custom id)."
                 }
             },
             "additionalProperties": false,
@@ -530,8 +566,15 @@
             "type": "object",
             "properties": {
                 "vscode": {
-                    "type": "boolean",
-                    "description": "Add project-scoped VS Code formatter settings (default false; existing keys are kept)."
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainVscodeSettings"
+                        }
+                    ],
+                    "description": "Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false; existing keys are kept)."
                 },
                 "oxc": {
                     "type": "object",
@@ -573,12 +616,40 @@
             "additionalProperties": false,
             "description": "Formatter configuration: Oxc/Biome configs, editor defaults and source-tool options."
         },
+        "ToolchainVscodeSettings": {
+            "type": "object",
+            "properties": {
+                "overrides": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Settings deep-merged over the generated editor defaults."
+                },
+                "exclude": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Exact setting keys (eg. `editor.defaultFormatter`) to omit."
+                }
+            },
+            "additionalProperties": false
+        },
         "ToolchainLintConfig": {
             "type": "object",
             "properties": {
                 "vscode": {
-                    "type": "boolean",
-                    "description": "Add project-scoped VS Code linter settings (default false; existing keys are kept)."
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainVscodeSettings"
+                        }
+                    ],
+                    "description": "Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false; existing keys are kept)."
                 },
                 "oxc": {
                     "type": "object",
@@ -633,8 +704,9 @@
                 }
             },
             "additionalProperties": false,
-            "description": "Deprecated: use `toolchain.fmt.biome` / `toolchain.lint.biome`. Still writes `biome.json`.",
-            "deprecated": true
+            "description": "Biome config generation (for consumers that still want a `biome.json`).",
+            "deprecated": true,
+            "deprecationMessage": "use `toolchain.fmt.biome` / `toolchain.lint.biome`. Still writes `biome.json`."
         },
         "ToolchainTsconfigConfig": {
             "type": "object",
@@ -1082,7 +1154,7 @@
                             "$ref": "#/$defs/ToolchainBiomeConfig"
                         }
                     ],
-                    "description": "Deprecated: use `toolchain.fmt.biome` / `toolchain.lint.biome` (still writes `biome.json`)."
+                    "description": "Biome config generation (for consumers that still want a `biome.json`)."
                 },
                 "tsconfig": {
                     "anyOf": [

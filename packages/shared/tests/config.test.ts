@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    applyOverrides,
     type DbxConfig,
     defineConfig,
     resolveChangelogConfig,
@@ -165,5 +166,17 @@ describe('formatter/linter precedence', () => {
     it('uses oxc when only vite.fmt/lint is set', () => {
         expect(resolveFmtTools({ vite: { fmt: true } })).toEqual(['oxc']);
         expect(resolveLintTools({ vite: { lint: true } })).toEqual(['oxc']);
+    });
+});
+
+describe('applyOverrides', () => {
+    it('layers multiple overrides and merges nested objects', () => {
+        const base = { host: '0.0.0.0', auth: { password: '', ttl: 3600 } };
+        const file = { host: 'localhost', auth: { password: 'file' } } as Partial<typeof base>;
+        const cli = { auth: { ttl: 60 } } as Partial<typeof base>;
+        expect(applyOverrides(base, file, cli)).toEqual({
+            host: 'localhost',
+            auth: { password: 'file', ttl: 60 },
+        });
     });
 });

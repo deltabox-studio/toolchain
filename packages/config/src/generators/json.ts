@@ -7,16 +7,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { type InputObject, resolveSchema } from 'untyped';
+import type { Schema } from 'untyped';
 
-import { flattenBaseSchema, zodToUntypedDefinition } from '../schema.js';
-import type { ConfigScopes } from '../types.js';
+import { flattenBaseSchema, normalizeConfigSchema } from '../schema.js';
+import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
 
-export interface GenerateJsonSchemaOptions {
+export interface GenerateJsonSchemaOptions extends Pick<ConfigEngineOptions, 'baseGroup'> {
     /** Output file path. When omitted, nothing is written. */
-    output?: string;
-    /** The base group hoisted to the top level (default `base`). */
-    baseGroup?: string;
+    output?: string | false;
     /** Document metadata overrides. */
     id?: string;
     title?: string;
@@ -28,14 +26,17 @@ export interface GenerateJsonSchemaOptions {
  * untyped's `resolveSchema` on the definitions lowered from the Zod schemas.
  */
 export async function generateConfigJsonSchema(
-    scopes: ConfigScopes,
+    schema: ConfigSchema,
     options: GenerateJsonSchemaOptions = {}
 ): Promise<Record<string, unknown>> {
+    const scopes = normalizeConfigSchema(schema);
     const properties: Record<string, unknown> = {};
-    for (const [scope, config] of Object.entries(scopes)) {
+    for (const [scope] of Object.entries(scopes)) {
         properties[scope] = flattenBaseSchema(
-            await resolveSchema(zodToUntypedDefinition(config.zodSchema) as InputObject),
-            options.baseGroup
+            scopes[scope] as unknown as Schema,
+            Array.isArray(options.baseGroup)
+                ? String((options.baseGroup as unknown[])[0] ?? 'base')
+                : String(options.baseGroup ?? 'base')
         );
     }
 
@@ -50,7 +51,7 @@ export async function generateConfigJsonSchema(
         required: Object.keys(scopes),
     };
 
-    if (options.output) {
+    if (typeof options.output === 'string') {
         fs.mkdirSync(path.dirname(options.output), { recursive: true });
         fs.writeFileSync(options.output, `${JSON.stringify(doc, null, 4)}\n`, 'utf-8');
     }
@@ -60,9 +61,9 @@ export async function generateConfigJsonSchema(
 
 /** Generate the JSON Schema document into `output`. Returns the path written. */
 export async function generateJsonSchemaFile(
-    scopes: ConfigScopes,
+    schema: ConfigSchema,
     options: GenerateJsonSchemaOptions & { output: string }
 ): Promise<string> {
-    await generateConfigJsonSchema(scopes, options);
+    await generateConfigJsonSchema(schema, options);
     return options.output;
 }

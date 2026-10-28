@@ -15,11 +15,12 @@ define it to enable it, omit it to leave that area untouched.
 
 ## `project`
 
-Project metadata: canonical `package.json` fields (applied on sync, inherited by workspaces) plus the replacement tokens every template understands.
+Project metadata: canonical `package.json` fields and template tokens (shared fields are inherited by workspaces).
 
 ### `type`
 
-- **Type**: `'monorepo-root' | 'monorepo-workspace' | 'project'`
+- **Type**: `any`
+- **Default**: `{}`
 
 The project kind (detected when omitted).
 
@@ -91,275 +92,40 @@ Inherit the parent project metadata (default true). Set false to keep this proje
 
 ## `ci`
 
-GitHub Actions workflows: CI checks, release, issues, changelog and sync (all opt-in).
+GitHub Actions workflows to generate (CI, release, issues, changelog, sync).
 
 ### `ci`
 
-- **Type**: `WorkflowSetting`
+- **Type**: `any`
+- **Default**: `{}`
 
 The CI checks workflow (`ci.yml`).
 
-#### `pushBranches`
-
-- **Type**: `Array<string>`
-
-Replace `on.push.branches`.
-
-#### `pullRequestBranches`
-
-- **Type**: `Array<string>`
-
-Replace `on.pull_request.branches`.
-
-#### `triggers`
-
-- **Type**: `Record<string, unknown>`
-
-Extra `on.*` triggers.
-
-#### `extra`
-
-- **Type**: `Record<string, unknown>`
-
-Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
-
-#### `steps`
-
-- **Type**: `WorkflowStepsConfig | Array<WorkflowStepsConfig>`
-
-Extra steps for a job (one group, or per-job groups).
-
-##### `job`
-
-- **Type**: `string`
-
-Target job id (defaults to the primary/first job).
-
-##### `before`
-
-- **Type**: `Array<WorkflowStep>`
-
-Steps inserted at the start.
-
-###### `name`
-
-- **Type**: `string`
-
-Step display name.
-
-###### `id`
-
-- **Type**: `string`
-
-Step id (for `steps.<id>` outputs).
-
-###### `if`
-
-- **Type**: `string`
-
-Conditional expression (`if:`).
-
-###### `uses`
-
-- **Type**: `string`
-
-Action to run (`uses:`), eg. `actions/checkout@v4`.
-
-###### `run`
-
-- **Type**: `string`
-
-Shell command(s) to run (`run:`).
-
-###### `shell`
-
-- **Type**: `string`
-
-Shell to run `run` in, eg. `bash`.
-
-###### `working-directory`
-
-- **Type**: `string`
-
-Directory the step runs in.
-
-###### `with`
-
-- **Type**: `Record<string, unknown>`
-
-Inputs for a `uses` action.
-
-###### `env`
-
-- **Type**: `Record<string, unknown>`
-
-Environment variables for the step.
-
-##### `after`
-
-- **Type**: `Array<WorkflowStep>`
-
-Steps appended at the end.
-
-#### `jobs`
-
-- **Type**: `Record<string, unknown>`
-
-Extra complete jobs merged in.
-
-#### `tokens`
-
-- **Type**: `Record<string, unknown>`
-
-Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
-
-#### `enabled`
-
-- **Type**: `boolean`
-
-Enable/disable this workflow (default: enabled when present).
-
 ### `changelog`
 
-- **Type**: `ChangelogWorkflowSetting`
+- **Type**: `any`
+- **Default**: `{}`
 
 The changelog/version workflow (`changelog.yml`) plus the changelog pipeline config (versioning, VS Code settings, commitlint).
 
-#### `pushBranches`
-
-- **Type**: `Array<string>`
-
-Replace `on.push.branches`.
-
-#### `pullRequestBranches`
-
-- **Type**: `Array<string>`
-
-Replace `on.pull_request.branches`.
-
-#### `triggers`
-
-- **Type**: `Record<string, unknown>`
-
-Extra `on.*` triggers.
-
-#### `extra`
-
-- **Type**: `Record<string, unknown>`
-
-Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
-
-#### `steps`
-
-- **Type**: `WorkflowStepsConfig | Array<WorkflowStepsConfig>`
-
-Extra steps for a job (one group, or per-job groups).
-
-#### `jobs`
-
-- **Type**: `Record<string, unknown>`
-
-Extra complete jobs merged in.
-
-#### `tokens`
-
-- **Type**: `Record<string, unknown>`
-
-Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
-
-#### `enabled`
-
-- **Type**: `boolean`
-
-Enable/disable the changelog workflow and pipeline (default: enabled when present).
-
-#### `branches`
-
-- **Type**: `ChangelogBranchesConfig`
-
-Branches the generated workflows target.
-
-##### `main`
-
-- **Type**: `string | Array<string>`
-
-Branch glob(s) the CI + release workflows run on, and the release PR base (default `["main"]`).
-
-##### `dev`
-
-- **Type**: `string | Array<string>`
-
-Branch glob(s) the changelog/version workflow runs on. No default: when omitted it reuses `main` (so a single-branch repo needs no `dev`).
-
-#### `commitlint`
-
-- **Type**: `boolean | ChangelogCommitlintConfig`
-
-commitlint config; set `false` to disable the Conventional-Commits pipeline.
-
-##### `dir`
-
-- **Type**: `string`
-
-Directory the generated `commitlint.config.mjs` is written to (default: the project root). The husky hook and CI use `--config` to point at it.
-
-##### `types`
-
-- **Type**: `Array<string>`
-
-Allowed commit types (commitlint).
-
-##### `scopes`
-
-- **Type**: `Array<string>`
-
-Allowed commit scopes (commitlint).
-
-##### `enabled`
-
-- **Type**: `boolean`
-
-Enable commitlint (default true when the changelog is enabled). Set false to generate changelogs without the Conventional-Commits pipeline.
-
-#### `versioning`
-
-- **Type**: `ChangelogVersioning`
-
-Automatic version bumping on changelog generation (default `true`).
-
-##### `target`
-
-- **Type**: `'uniform' | 'root-only' | 'individual'`
-
-`uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently (default `uniform`).
-
-##### `workspaces`
-
-- **Type**: `Array<string>`
-
-Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own.
-
-#### `vscode`
-
-- **Type**: `boolean`
-
-Write the Conventional-Commits VS Code settings (default true).
-
 ### `release`
 
-- **Type**: `WorkflowSetting`
+- **Type**: `any`
+- **Default**: `{}`
 
 The release workflow (`release.yml`).
 
 ### `issues`
 
-- **Type**: `WorkflowSetting`
+- **Type**: `any`
+- **Default**: `{}`
 
 The issue-title workflow (`issues.yml`).
 
 ### `sync`
 
-- **Type**: `WorkflowSetting`
+- **Type**: `any`
+- **Default**: `{}`
 
 The toolchain sync workflow (`sync.yml`).
 
@@ -371,35 +137,40 @@ Enable/disable this section (default: enabled when defined).
 
 ## `fmt`
 
-Formatter configuration: Oxc/Biome options, editor defaults and source tools.
+Formatter configuration: Oxc/Biome configs, editor defaults and source-tool options.
 
 ### `vscode`
 
-- **Type**: `boolean`
+- **Type**: `any`
+- **Default**: `{}`
 
-Add project-scoped VS Code formatter settings (default false; existing keys are kept).
+Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false; existing keys are kept).
 
 ### `oxc`
 
 - **Type**: `Record<string, unknown>`
+- **Default**: `{}`
 
 Oxfmt options. `toolchain.vite.fmt` overrides these (deep merge).
 
 ### `biome`
 
 - **Type**: `Record<string, unknown>`
+- **Default**: `{}`
 
 Biome formatter options (merged into the generated `biome.json`).
 
 ### `prettier`
 
 - **Type**: `Record<string, unknown>`
+- **Default**: `{}`
 
 Prettier options (editor defaults/migrations).
 
 ### `dprint`
 
 - **Type**: `Record<string, unknown>`
+- **Default**: `{}`
 
 Dprint options (editor defaults/migrations).
 
@@ -411,29 +182,33 @@ Enable/disable this section (default: enabled when defined).
 
 ## `lint`
 
-Linter configuration: Oxc/Biome/ESLint options and editor defaults.
+Linter configuration: Oxc/Biome configs, editor defaults and ESLint options.
 
 ### `vscode`
 
-- **Type**: `boolean`
+- **Type**: `any`
+- **Default**: `{}`
 
-Add project-scoped VS Code linter settings (default false; existing keys are kept).
+Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false; existing keys are kept).
 
 ### `oxc`
 
 - **Type**: `Record<string, unknown>`
+- **Default**: `{}`
 
 Oxlint options. `toolchain.vite.lint` overrides these (deep merge).
 
 ### `biome`
 
 - **Type**: `Record<string, unknown>`
+- **Default**: `{}`
 
 Biome linter options (merged into the generated `biome.json`).
 
 ### `eslint`
 
 - **Type**: `Record<string, unknown>`
+- **Default**: `{}`
 
 ESLint options (editor defaults/migrations).
 
@@ -445,9 +220,9 @@ Enable/disable this section (default: enabled when defined).
 
 ## `biome`
 
-Deprecated: use `fmt.biome` / `lint.biome`; still writes `biome.json`.
+Biome config generation (for consumers that still want a `biome.json`).
 
-- **Deprecated**
+- **Deprecated**: use `toolchain.fmt.biome` / `toolchain.lint.biome`. Still writes `biome.json`.
 
 ### `vscode`
 
@@ -458,6 +233,7 @@ Write the Biome VS Code settings (default true).
 ### `overrides`
 
 - **Type**: `Record<string, unknown>`
+- **Default**: `{}`
 
 Deep-merged over the generated `biome.json` (arrays union).
 
@@ -473,13 +249,15 @@ Workspace tsconfig generation (path aliases + project references).
 
 ### `glob`
 
-- **Type**: `string | Array<string>`
+- **Type**: `any`
+- **Default**: `{}`
 
 Glob(s) for the workspace default tsconfig files. Defaults to matching every `defaultFile` recursively.
 
 ### `exclude`
 
-- **Type**: `string | Array<string>`
+- **Type**: `any`
+- **Default**: `{}`
 
 Glob(s) to exclude from `glob`. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
 
@@ -543,77 +321,9 @@ Template sources / scaffolding.
 
 ### `sources`
 
-- **Type**: `Array<ToolchainTemplateSource>`
+- **Type**: `Array<any>`
 
 Extra sources on top of the builtin + registry sources.
-
-#### `type`
-
-- **Required**
-- **Type**: `'builtin' | 'local' | 'npm' | 'git' | 'vite-plus' | 'remote'`
-
-How to load the source.
-
-#### `locate`
-
-- **Required**
-- **Type**: `string`
-
-A builtin id, local dir, npm scope, git URL or Vite+ id.
-
-#### `id`
-
-- **Type**: `string`
-
-Stable id (defaults to the basename/scope).
-
-#### `name`
-
-- **Type**: `string`
-
-Display name override.
-
-#### `description`
-
-- **Type**: `string`
-
-Description override.
-
-#### `kind`
-
-- **Type**: `'project' | 'workspace' | 'application' | 'folder' | 'tooling' | 'pipeline'`
-
-What the template produces.
-
-#### `ref`
-
-- **Type**: `string`
-
-Git branch/tag/commit.
-
-#### `registry`
-
-- **Type**: `string`
-
-Custom npm registry URL (default: the project package manager registry).
-
-#### `subdir`
-
-- **Type**: `string`
-
-Subdirectory within the source that holds the template.
-
-#### `tags`
-
-- **Type**: `Array<string>`
-
-Free-form tags.
-
-#### `online`
-
-- **Type**: `boolean`
-
-Whether the source needs network access.
 
 ### `enabled`
 
@@ -623,29 +333,19 @@ Enable/disable this section (default: enabled when defined).
 
 ## `registry`
 
-Allow/deny host and path globs for template/provider registries.
+Registry source allow/deny policies (templates + providers).
 
 ### `templates`
 
-- **Type**: `ToolchainRegistryPolicy`
+- **Type**: `any`
+- **Default**: `{}`
 
 Allow/deny globs for template sources and registries.
 
-#### `allow`
-
-- **Type**: `Array<string>`
-
-Allowed host/path globs. When non-empty, only matching sources are used (eg. `*.example.com`, `https://registry.example.com/**`).
-
-#### `deny`
-
-- **Type**: `Array<string>`
-
-Denied host/path globs (checked before `allow`).
-
 ### `providers`
 
-- **Type**: `ToolchainRegistryPolicy`
+- **Type**: `any`
+- **Default**: `{}`
 
 Allow/deny globs for provider sources and registries.
 
@@ -662,12 +362,14 @@ Package catalogs written to the package manager catalog file (`catalog:`).
 ### `packages`
 
 - **Type**: `Record<string, unknown>`
+- **Default**: `{}`
 
 The default catalog: package name -> version range.
 
 ### `named`
 
 - **Type**: `Record<string, unknown>`
+- **Default**: `{}`
 
 Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages.
 
@@ -683,19 +385,21 @@ The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.
 
 ### `config`
 
-- **Type**: `boolean | string`
+- **Type**: `boolean`
 
 Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or absolute).
 
 ### `fmt`
 
-- **Type**: `boolean | Record<string, unknown>`
+- **Type**: `any`
+- **Default**: `{}`
 
 Oxfmt options; `true` uses the toolchain defaults.
 
 ### `lint`
 
-- **Type**: `boolean | Record<string, unknown>`
+- **Type**: `any`
+- **Default**: `{}`
 
 Oxlint options; `true` uses the toolchain defaults.
 
@@ -717,7 +421,8 @@ Debounce window in ms (default 150).
 
 ### `exclude`
 
-- **Type**: `string | Array<string>`
+- **Type**: `any`
+- **Default**: `{}`
 
 Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
 
@@ -739,7 +444,7 @@ Logging level, colours and prefix for toolchain output.
 
 ### `level`
 
-- **Type**: `'debug' | 'info' | 'warn' | 'error' | 'silent'`
+- **Type**: `string`
 
 Minimum level to print (default `info`).
 
@@ -757,7 +462,8 @@ Prefix non-indented lines with `<name>:` (default `dbx`).
 
 ### `suppress`
 
-- **Type**: `string | Array<string>`
+- **Type**: `any`
+- **Default**: `{}`
 
 Warning/error id, message substring, or `/regex/` to silence (single value or array).
 

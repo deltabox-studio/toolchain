@@ -282,27 +282,6 @@ describe('vite.config.ts shim', () => {
         expect(parsed.singleQuote).toBe(false);
     });
 
-    it('warns when Biome and Oxc are configured together', async () => {
-        const warnings: { message: string; id?: string }[] = [];
-        const vite = { fmt: { semi: false } };
-        const ctx = {
-            cwd: makeTmp(),
-            projectType: 'project' as const,
-            config: { biome: true, vite },
-            ownConfig: { biome: true, vite },
-            tokens: {},
-            log: () => {},
-            warn: (message: string, id?: string) => warnings.push({ message, id }),
-        };
-        await viteSyncTask().run(ctx);
-        expect(warnings).toEqual([
-            {
-                message: expect.stringContaining('Both Biome and Oxc'),
-                id: 'biome.oxc-conflict',
-            },
-        ]);
-    });
-
     it('skips Oxc files for a workspace that only inherits fmt/lint', async () => {
         const ctx = {
             cwd: makeTmp(),

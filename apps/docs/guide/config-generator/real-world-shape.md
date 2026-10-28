@@ -7,10 +7,10 @@ for every generator:
 import { createConfigEngine } from '@deltabox/toolchain/config';
 
 export const configEngine = createConfigEngine({
-    scopes: {
-        server: { zodSchema: serverConfig },
-        frontend: { zodSchema: frontendConfig },
-        cli: { zodSchema: cliConfig },
+    schema: {
+        server: serverConfig,
+        frontend: frontendConfig,
+        cli: cliConfig,
     },
     envPrefix: 'PROXIFIED_',
     baseGroup: 'base',

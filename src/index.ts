@@ -19,3 +19,4 @@ export * as tsconfig from '@deltabox/toolchain-tsconfig';
 export * as tsdown from '@deltabox/toolchain-tsdown';
 
 export * from './sync.js';
+export * from './tooling.js';

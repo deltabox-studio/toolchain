@@ -6,10 +6,10 @@ Bind the scopes, an env prefix, the base group and the project root once:
 import { createConfigEngine } from '@deltabox/toolchain/config';
 
 export const engine = createConfigEngine({
-    scopes: {
-        server: { zodSchema: serverConfig },
-        frontend: { zodSchema: frontendConfig },
-        cli: { zodSchema: cliConfig },
+    schema: {
+        server: serverConfig,
+        frontend: frontendConfig,
+        cli: cliConfig,
     },
     envPrefix: 'MYAPP_',
     baseGroup: 'base', // the flat fields hoisted out of the nested groups
