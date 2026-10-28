@@ -20,11 +20,35 @@ export default defineConfig({
 | `color`    | `boolean`                                          | `true`  | Force colours on/off.                                  |
 | `name`     | `string`                                           | `dbx`   | Prefix for non-indented lines.                         |
 | `suppress` | `string \| string[]`                               | none    | Silence warnings/errors by id, substring or `/regex/`. |
+| `logger`   | `ToolchainLogger`                                  | none    | Custom logger implementation.                          |
 
 Colour is **on by default** (the toolchain forces it rather than relying on TTY
 autodetection); `--no-color` or `logger: { color: false }` turn it off. Human
 output is rendered with [`@clack/prompts`](https://bombshell.dev/clack) — level
 symbols (`•` info, `◆` success, `▲` warn, `■` error) and a guide.
+
+## Custom logger
+
+`logger.logger` accepts a `ToolchainLogger` (`raw`, `rawError`, `write`, `debug`,
+`info`, `success`, `warn`, `error`). The toolchain still applies `level` and
+`suppress` before delegating, so a custom sink receives only visible messages.
+
+```ts [dbx.config.ts]
+toolchain: {
+    logger: {
+        logger: {
+            raw: m => process.stdout.write(`${m}\n`),
+            rawError: m => process.stderr.write(`${m}\n`),
+            write: () => {},
+            debug: () => {},
+            info: m => sink.info(m),
+            success: m => sink.info(m),
+            warn: m => sink.warn(m),
+            error: m => sink.error(m),
+        },
+    },
+}
+```
 
 ## CLI overrides
 

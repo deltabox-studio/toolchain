@@ -1,6 +1,6 @@
 # Generated outputs
 
-Every generator writes from the same Zod schema. The engine's own config model
+Every generator reads from the same Zod or untyped schema. The engine's own config model
 is the living example: its types are committed at
 [packages/shared/src/config-types.ts](https://github.com/deltabox-studio/toolchain/blob/main/packages/shared/src/config-types.ts).
 
@@ -48,6 +48,21 @@ engine.writeMarkdown({ outputDir: 'docs/reference/configuration' });
 ```
 
 See a real full example at [config/reference.md](../../config/reference.md).
+
+Markdown frontmatter is enabled by default. Set `frontmatter: false` to omit it,
+pass a raw string to replace the body, or pass a callback to build it from the
+generator options. The returned string is wrapped in `---` automatically.
+
+```ts
+generateConfigMarkdown(schema, {
+    frontmatter: ctx => `title: ${ctx.options.title ?? 'Configuration'}`,
+});
+```
+
+Use `combined: true` to render every scope into one file instead of one file per
+scope. `generateConfigTypes`, `generateConfigMarkdown` and `generateConfigEnv`
+return file contents and only write when `outputDir`/`output` is a string;
+`false` explicitly disables writing.
 
 ## Env — `renderEnvFile()` / `writeEnvFile()`
 

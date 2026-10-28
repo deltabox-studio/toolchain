@@ -2097,11 +2097,35 @@ export default defineConfig({
 | `color`    | `boolean`                                          | `true`  | Force colours on/off.                                  |
 | `name`     | `string`                                           | `dbx`   | Prefix for non-indented lines.                         |
 | `suppress` | `string \| string[]`                               | none    | Silence warnings/errors by id, substring or `/regex/`. |
+| `logger`   | `ToolchainLogger`                                  | none    | Custom logger implementation.                          |
 
 Colour is **on by default** (the toolchain forces it rather than relying on TTY
 autodetection); `--no-color` or `logger: { color: false }` turn it off. Human
 output is rendered with [`@clack/prompts`](https://bombshell.dev/clack) — level
 symbols (`•` info, `◆` success, `▲` warn, `■` error) and a guide.
+
+## Custom logger
+
+`logger.logger` accepts a `ToolchainLogger` (`raw`, `rawError`, `write`, `debug`,
+`info`, `success`, `warn`, `error`). The toolchain still applies `level` and
+`suppress` before delegating, so a custom sink receives only visible messages.
+
+```ts [dbx.config.ts]
+toolchain: {
+    logger: {
+        logger: {
+            raw: m => process.stdout.write(`${m}\n`),
+            rawError: m => process.stderr.write(`${m}\n`),
+            write: () => {},
+            debug: () => {},
+            info: m => sink.info(m),
+            success: m => sink.info(m),
+            warn: m => sink.warn(m),
+            error: m => sink.error(m),
+        },
+    },
+}
+```
 
 ## CLI overrides
 
@@ -4475,7 +4499,7 @@ url: https://toolchain.deltabox.studio/guide/config-generator/create-the-engine.
 ---
 # Create the engine
 
-Bind the scopes, an env prefix, the base group and the project root once:
+Bind the schema, an env prefix, the base group and the project root once. A\nschema may be a Zod schema, an untyped Schema, an array, or a record keyed by\nscope:
 
 ```ts
 import { createConfigEngine } from '@deltabox/toolchain/config';
@@ -4537,11 +4561,15 @@ export const serverConfig = z.object({
 });
 ```
 
-`ConfigMeta` fields: `env`, `path` (dotted config path), `description`,
+`ConfigMeta` fields: `envName`, `envPath` (dotted config path), `description`,
 `required`, `deprecated`, `deprecationMessage`, `example`, `since`, `see`,
 `remarks`, `experimental`, `alpha`, `beta`, `secret`, `scope`, `public` (safe to
-expose to the browser) and `defaultValue` (when the resolved default differs
-from the env default).
+expose to the browser), `defaultValue` (when the resolved default differs from
+the env default), `cliFlag`, `cliFlagShort`, `typeName` and `id`.
+
+`env` / `path` remain supported as deprecated aliases. Markdown and type output
+show env/CLI equivalents by default; disable them with `includeEnv: false` /
+`includeCli: false`.
 
 `required: true` adds `@required` and `- **Required**` above the markdown
 `- **Type**` line. `deprecated: true` adds `@deprecated` / `- **Deprecated**`;
@@ -4617,7 +4645,7 @@ url: https://toolchain.deltabox.studio/guide/config-generator/generated-outputs.
 ---
 # Generated outputs
 
-Every generator writes from the same Zod schema. The engine's own config model
+Every generator reads from the same Zod or untyped schema. The engine's own config model
 is the living example: its types are committed at
 [packages/shared/src/config-types.ts](https://github.com/deltabox-studio/toolchain/blob/main/packages/shared/src/config-types.ts).
 
@@ -4665,6 +4693,21 @@ engine.writeMarkdown({ outputDir: 'docs/reference/configuration' });
 ```
 
 See a real full example at [config/reference.md](../../config/reference.md).
+
+Markdown frontmatter is enabled by default. Set `frontmatter: false` to omit it,
+pass a raw string to replace the body, or pass a callback to build it from the
+generator options. The returned string is wrapped in `---` automatically.
+
+```ts
+generateConfigMarkdown(schema, {
+    frontmatter: ctx => `title: ${ctx.options.title ?? 'Configuration'}`,
+});
+```
+
+Use `combined: true` to render every scope into one file instead of one file per
+scope. `generateConfigTypes`, `generateConfigMarkdown` and `generateConfigEnv`
+return file contents and only write when `outputDir`/`output` is a string;
+`false` explicitly disables writing.
 
 ## Env — `renderEnvFile()` / `writeEnvFile()`
 
@@ -4876,6 +4919,7 @@ export default defineConfig({
 | `color`    | `true` | `false`                                  | `true`  |
 | `name`     | prefix for non-indented lines                      | `dbx`   |
 | `suppress` | id, message substring or `/regex/` (single/array)  | none    |
+| `logger`   | custom `ToolchainLogger` implementation            | none    |
 
 `suppress` silences matching warnings/errors. A string matches an emitted id
 exactly or a message substring; a `/pattern/flags` string is treated as a regex.
@@ -4894,6 +4938,29 @@ Colour is **on by default** (the toolchain forces it rather than relying on TTY
 autodetection); `--no-color` or `logger: { color: false }` turn it off. Human
 output is rendered with [`@clack/prompts`](https://bombshell.dev/clack) — level
 symbols (`•` info, `◆` success, `▲` warn, `■` error) and a guide.
+
+### Custom logger
+
+Pass any object implementing the agnostic `ToolchainLogger` interface
+(`raw`, `rawError`, `write`, `debug`, `info`, `success`, `warn`, `error`) to
+`logger.logger`. Level/suppression checks still apply before your methods run.
+
+```ts [dbx.config.ts]
+const custom = {
+    raw: (message = '') => process.stdout.write(`${message}\n`),
+    rawError: (message = '') => process.stderr.write(`${message}\n`),
+    write: () => {},
+    debug: () => {},
+    info: (message = '') => mySink.info(message),
+    success: (message = '') => mySink.info(message),
+    warn: (message = '') => mySink.warn(message),
+    error: (message = '') => mySink.error(message),
+};
+
+export default defineConfig({
+    toolchain: { logger: { logger: custom } },
+});
+```
 
 On the CLI, `--log-level <level>` and `--no-color` override the config (see the
 [CLI reference](/guide/cli)). Machine output (`--json`) is written unprefixed
@@ -5078,10 +5145,11 @@ guide for the full workflow).
 | `compileZodSchema(schema)`                                                               | Compile a Zod schema for fast repeated parsing.           |
 | `envPathOf(env, prefix?)` / `metaOf(schema)`                                             | Env-name to dotted-path derivation and `.meta()` reading. |
 | `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                    |
-| `renderConfigTypes` / `renderAllConfigTypes` / `generateConfigTypes`                     | Config type generation.                                   |
-| `renderScopeMarkdown` / `generateConfigMarkdown` / `renderConfigFileMarkdown`            | Markdown reference generation.                            |
+| `generateConfigTypes` / `generateConfigEnv`                                              | Type/env generators (optional disk writes).               |
+| `generateConfigMarkdown` / `generateConfigCli`                                           | Markdown/CLI generators (optional disk writes).           |
 | `generateConfigJsonSchema` / `generateJsonSchemaFile`                                    | JSON Schema generation.                                   |
-| `generateEnv` / `generateEnvDts` / `generateEnvTypes`                                    | `.env` / env type generation.                             |
+| `normalizeJsonSchemaMetadata(node)`                                                      | Normalize Zod JSON Schema metadata for editor schemas.    |
+| `generateEnv` / `generateEnvDts` / `generateConfigEnv`                                   | `.env` / env type generation.                             |
 | `generateCliOptions` / `flagOf` / `cliFlagOf` / `createCliArgsParser`                    | CLI option generation + parsing.                          |
 
 ## `@deltabox/toolchain/vite`

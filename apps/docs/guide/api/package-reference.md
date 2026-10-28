@@ -68,10 +68,11 @@ guide for the full workflow).
 | `compileZodSchema(schema)`                                                               | Compile a Zod schema for fast repeated parsing.           |
 | `envPathOf(env, prefix?)` / `metaOf(schema)`                                             | Env-name to dotted-path derivation and `.meta()` reading. |
 | `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                    |
-| `renderConfigTypes` / `renderAllConfigTypes` / `generateConfigTypes`                     | Config type generation.                                   |
-| `renderScopeMarkdown` / `generateConfigMarkdown` / `renderConfigFileMarkdown`            | Markdown reference generation.                            |
+| `generateConfigTypes` / `generateConfigEnv`                                              | Type/env generators (optional disk writes).               |
+| `generateConfigMarkdown` / `generateConfigCli`                                           | Markdown/CLI generators (optional disk writes).           |
 | `generateConfigJsonSchema` / `generateJsonSchemaFile`                                    | JSON Schema generation.                                   |
-| `generateEnv` / `generateEnvDts` / `generateEnvTypes`                                    | `.env` / env type generation.                             |
+| `normalizeJsonSchemaMetadata(node)`                                                      | Normalize Zod JSON Schema metadata for editor schemas.    |
+| `generateEnv` / `generateEnvDts` / `generateConfigEnv`                                   | `.env` / env type generation.                             |
 | `generateCliOptions` / `flagOf` / `cliFlagOf` / `createCliArgsParser`                    | CLI option generation + parsing.                          |
 
 ## `@deltabox/toolchain/vite`

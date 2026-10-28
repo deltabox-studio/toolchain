@@ -32,11 +32,15 @@ export const serverConfig = z.object({
 });
 ```
 
-`ConfigMeta` fields: `env`, `path` (dotted config path), `description`,
+`ConfigMeta` fields: `envName`, `envPath` (dotted config path), `description`,
 `required`, `deprecated`, `deprecationMessage`, `example`, `since`, `see`,
 `remarks`, `experimental`, `alpha`, `beta`, `secret`, `scope`, `public` (safe to
-expose to the browser) and `defaultValue` (when the resolved default differs
-from the env default).
+expose to the browser), `defaultValue` (when the resolved default differs from
+the env default), `cliFlag`, `cliFlagShort`, `typeName` and `id`.
+
+`env` / `path` remain supported as deprecated aliases. Markdown and type output
+show env/CLI equivalents by default; disable them with `includeEnv: false` /
+`includeCli: false`.
 
 `required: true` adds `@required` and `- **Required**` above the markdown
 `- **Type**` line. `deprecated: true` adds `@deprecated` / `- **Deprecated**`;

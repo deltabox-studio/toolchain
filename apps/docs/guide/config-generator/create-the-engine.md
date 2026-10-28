@@ -1,6 +1,6 @@
 # Create the engine
 
-Bind the scopes, an env prefix, the base group and the project root once:
+Bind the schema, an env prefix, the base group and the project root once. A\nschema may be a Zod schema, an untyped Schema, an array, or a record keyed by\nscope:
 
 ```ts
 import { createConfigEngine } from '@deltabox/toolchain/config';
