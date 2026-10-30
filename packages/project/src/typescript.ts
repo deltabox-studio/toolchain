@@ -9,6 +9,7 @@ import {
     renderTsconfigBase,
     renderTsconfigBuild,
     renderTsconfigDefault,
+    type TsconfigExtendsOptions,
 } from '@deltabox/toolchain-tsconfig';
 
 import rootPkg from '../../../package.json' with { type: 'json' };
@@ -129,11 +130,14 @@ export interface ProjectContext {
     type?: ProjectType;
     /** Write a `dbx.config.ts` (default true). */
     includeConfig?: boolean;
+    /** Per-file `extends` overrides for the scaffolded tsconfig templates. */
+    tsconfigExtends?: TsconfigExtendsOptions;
 }
 
 /** The token replacements derived from a {@link ProjectContext}. */
 function tokens(ctx: ProjectContext): Replacements {
-    return { ...ctx };
+    const { tsconfigExtends: _tsconfigExtends, ...tokens } = ctx;
+    return tokens;
 }
 
 const json = (value: unknown, indent = 4): string => `${JSON.stringify(value, null, indent)}\n`;
@@ -180,8 +184,14 @@ ${project}
 }
 
 /** A minimal tsconfig.json that extends the default template. */
-export function renderWorkspaceTsconfig(composite = false): string {
-    return json({ extends: './tsconfig.default.json', compilerOptions: { composite } });
+export function renderWorkspaceTsconfig(
+    composite = false,
+    extendsValue: string | string[] | false = './tsconfig.default.json'
+): string {
+    return json({
+        ...(extendsValue === false ? {} : { extends: extendsValue }),
+        compilerOptions: { composite },
+    });
 }
 
 /** Files for a single-package TypeScript project (tsconfig + tooling). */
@@ -221,9 +231,18 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
                   },
               ]),
         { path: 'package.json', content: json(pkg) },
-        { path: 'tsconfig.base.json', content: renderTsconfigBase(tokens(ctx)) },
-        { path: 'tsconfig.default.json', content: renderTsconfigDefault(tokens(ctx)) },
-        { path: 'tsconfig.build.json', content: renderTsconfigBuild(tokens(ctx)) },
+        {
+            path: 'tsconfig.base.json',
+            content: renderTsconfigBase(tokens(ctx), ctx.tsconfigExtends?.base),
+        },
+        {
+            path: 'tsconfig.default.json',
+            content: renderTsconfigDefault(tokens(ctx), ctx.tsconfigExtends?.default),
+        },
+        {
+            path: 'tsconfig.build.json',
+            content: renderTsconfigBuild(tokens(ctx), ctx.tsconfigExtends?.build),
+        },
         { path: 'tsconfig.json', content: renderWorkspaceTsconfig() },
         { path: 'biome.json', content: renderBiomeJson(tokens(ctx)) },
         { path: '.gitignore', content: renderGitignore() },
@@ -269,7 +288,10 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
                   },
               ]),
         { path: 'package.json', content: json(pkg) },
-        { path: 'tsconfig.base.json', content: renderTsconfigBase(tokens(ctx)) },
+        {
+            path: 'tsconfig.base.json',
+            content: renderTsconfigBase(tokens(ctx), ctx.tsconfigExtends?.base),
+        },
         {
             path: 'tsconfig.workspaces.json',
             content: renderMonorepoTsconfig({
@@ -330,7 +352,13 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
         {
             path: 'tsconfig.default.json',
             content: json({
-                extends: `${'../'.repeat(base)}tsconfig.base.json`,
+                ...(ctx.tsconfigExtends?.default === false
+                    ? {}
+                    : {
+                          extends:
+                              ctx.tsconfigExtends?.default ??
+                              `${'../'.repeat(base)}tsconfig.base.json`,
+                      }),
                 compilerOptions: {
                     module: 'NodeNext',
                     moduleResolution: 'NodeNext',
@@ -339,7 +367,10 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
                 include: ['src', 'tests', 'tsdown.config.ts', 'vitest.config.ts'],
             }),
         },
-        { path: 'tsconfig.build.json', content: renderWorkspaceTsconfig() },
+        {
+            path: 'tsconfig.build.json',
+            content: renderWorkspaceTsconfig(false, ctx.tsconfigExtends?.build),
+        },
         { path: 'tsconfig.json', content: renderWorkspaceTsconfig() },
         {
             path: 'tsdown.config.ts',

@@ -10,6 +10,7 @@ import type { TsConfigJson } from 'type-fest';
 
 import { logger, resolveIgnorePatterns } from '@deltabox/toolchain-shared';
 
+import type { TsconfigOverrides } from '../../overrides.js';
 import { type GeneratedTsconfigResult, generateTsconfig } from './utils.js';
 
 export interface GenerateTsconfigsOptions {
@@ -39,6 +40,8 @@ export interface GenerateTsconfigsOptions {
     log?: boolean;
     /** Write the generated files to disk (default true; false for a dry run). */
     write?: boolean;
+    /** Managed file overrides applied before generating each workspace. */
+    overrides?: TsconfigOverrides;
 }
 
 /**
@@ -119,6 +122,7 @@ export function generateTsconfigs(
                 ignoreAliases: !enableAliases,
                 ignoreReferences: !enableReferences,
                 write,
+                ...(options.overrides ? { overrides: options.overrides } : {}),
             })
         );
     }

@@ -74,6 +74,33 @@ describe('generateTsconfigs', () => {
         expect(results[0]!.newTsconfig.extends).toBe('./tsconfig.default.json');
     });
 
+    it('follows extends when wiring the workspaces tsconfig', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'tsconfig.base.json'), {
+            compilerOptions: {
+                paths: {
+                    '@acme/core': ['./packages/core/src/index.ts'],
+                    '@acme/cli': ['./packages/cli/src/index.ts'],
+                },
+            },
+            references: [{ path: './packages/cli/tsconfig.json' }],
+        });
+        writeJson(path.join(cwd, 'tsconfig.workspaces.json'), {
+            extends: './tsconfig.base.json',
+            compilerOptions: { composite: true },
+        });
+        writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {});
+        writeJson(path.join(cwd, 'packages/cli/tsconfig.default.json'), {});
+
+        const results = generateTsconfigs({ cwd, log: false, refs: true, composite: true });
+        const core = results.find(result => result.dirnameRelative === 'packages/core')!;
+
+        expect(core.newTsconfig.compilerOptions?.paths).toEqual({
+            '@acme/cli': ['../cli/src/index.ts'],
+        });
+        expect(core.newTsconfig.references).toEqual([{ path: '../cli/tsconfig.json' }]);
+    });
+
     it('excludes globs via `exclude` and respects `.gitignore`', () => {
         const cwd = tmp();
         writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {});

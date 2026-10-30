@@ -32,9 +32,23 @@ const overrides = {
     /** Oxlint options; \`true\` uses the toolchain defaults. */
     lint?: boolean | NonNullable<ViteUserConfig['lint']>;
 };`,
+    // Type the override bodies as real tsconfigs (the schema keeps them open records).
+    ToolchainTsconfigOverrides: `export interface ToolchainTsconfigOverrides {
+    /** Deep-merged into the root base tsconfig (\`baseFile\`) during sync. */
+    base?: TsConfigJson;
+    /** Deep-merged into every workspace default tsconfig (\`defaultFile\`) during sync. */
+    default?: TsConfigJson;
+    /** Deep-merged into every workspace build tsconfig (\`buildFile\`) during sync. */
+    build?: TsConfigJson;
+    /** Deep-merged into the root workspaces tsconfig (\`rootFile\`) during sync. */
+    root?: TsConfigJson;
+}`,
 } satisfies GenerateTypesOptions['overrides'];
 
-const imports = ["import type { ViteUserConfig } from 'vite-plus';"];
+const imports = [
+    "import type { TsConfigJson } from 'type-fest';",
+    "import type { ViteUserConfig } from 'vite-plus';",
+];
 const engine = createConfigEngine({ schema: dbxConfigSchema });
 const types = engine.generateConfigTypes({ overrides, imports });
 const sections = Object.values(types).map(content => content.trimEnd());

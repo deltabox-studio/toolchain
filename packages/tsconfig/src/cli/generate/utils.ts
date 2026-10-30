@@ -5,6 +5,9 @@ import type { TsConfigJson } from 'type-fest';
 
 import { logger } from '@deltabox/toolchain-shared';
 
+import { mergeOverride, type TsconfigOverrides } from '../../overrides.js';
+import { readTsconfig, resolveTsconfig } from '../../resolve.js';
+
 export type GeneratedTsconfigResult = ReturnType<typeof generateTsconfig>;
 
 export function generateTsconfig(options: {
@@ -21,6 +24,8 @@ export function generateTsconfig(options: {
     disableComposite?: boolean;
     /** Write the generated files to disk (default true). */
     write?: boolean;
+    /** Managed file overrides applied before generating. */
+    overrides?: TsconfigOverrides;
 }) {
     const {
         cwd,
@@ -35,6 +40,7 @@ export function generateTsconfig(options: {
         ignoreAliases,
         ignoreReferences,
         write = true,
+        overrides,
     } = options;
 
     const dirnameRelative = path.relative(cwd, dirname).replace(/\\/g, '/') || '.';
@@ -56,15 +62,30 @@ export function generateTsconfig(options: {
 
         // The workspaces tsconfig is optional: without it there is simply nothing
         // to wire (no shared `paths`/`references`), and each workspace still gets
-        // a `tsconfig.json` that extends its own default.
-        const tsconfigMonorepo = fs.existsSync(monorepoTsconfigPath)
-            ? (JSON.parse(fs.readFileSync(monorepoTsconfigPath, 'utf-8')) as TsConfigJson)
+        // a `tsconfig.json` that extends its own default. It can itself `extend`
+        // another config: the resolver follows the chain per field.
+        const hasMonorepo = fs.existsSync(monorepoTsconfigPath);
+        const tsconfigMonorepoRaw = hasMonorepo
+            ? (readTsconfig(monorepoTsconfigPath) as TsConfigJson)
             : ({} as TsConfigJson);
+        const tsconfigMonorepo = mergeOverride(tsconfigMonorepoRaw, overrides?.root);
+        const resolvedMonorepo = hasMonorepo
+            ? resolveTsconfig({
+                  tsconfig: monorepoTsconfigPath,
+                  root: cwd,
+                  cwd,
+                  ...(overrides?.root ? { overrides: overrides.root } : {}),
+              })
+            : { alias: [], paths: {}, references: [] };
 
-        const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf-8')) as TsConfigJson;
+        const tsconfigRaw = readTsconfig(tsconfigPath) as TsConfigJson;
+        const tsconfig = mergeOverride(tsconfigRaw, overrides?.default);
 
-        const tsconfigBuild = tsconfigBuildExists
-            ? (JSON.parse(fs.readFileSync(tsconfigBuildPath, 'utf-8')) as TsConfigJson)
+        const tsconfigBuildRaw = tsconfigBuildExists
+            ? (readTsconfig(tsconfigBuildPath) as TsConfigJson)
+            : undefined;
+        const tsconfigBuild = tsconfigBuildRaw
+            ? mergeOverride(tsconfigBuildRaw, overrides?.build)
             : undefined;
 
         const types = disableComposite
@@ -75,6 +96,36 @@ export function generateTsconfig(options: {
                       ...(disableComposite ? [] : (tsconfigMonorepo.compilerOptions?.types ?? [])),
                   ]),
               ];
+
+        const monorepoPaths: Record<string, string[]> = {};
+        if (!ignoreAliases) {
+            for (const [key, targets] of Object.entries(resolvedMonorepo.paths)) {
+                const transformed = targets
+                    .map(target => toWorkspacePath(target, dirname, dirnameRelative))
+                    .filter((value): value is string => value !== undefined);
+                if (transformed.length > 0) monorepoPaths[key] = transformed;
+            }
+        }
+
+        const references: TsConfigJson.References[] = [];
+        if (!ignoreReferences) {
+            const seen = new Set<string>();
+            const add = (absolute: string, reference: { path: string; [key: string]: unknown }) => {
+                const relative = toWorkspacePath(absolute, dirname, dirnameRelative);
+                if (relative === undefined || seen.has(relative)) return;
+                seen.add(relative);
+                references.push({ ...reference, path: relative });
+            };
+            // A workspace's own references are authored relative to the repo root
+            // (matching the previous behaviour); the monorepo's are resolved to
+            // absolute paths by the resolver.
+            for (const reference of tsconfig.references ?? []) {
+                add(path.resolve(cwd, reference.path), reference);
+            }
+            for (const reference of resolvedMonorepo.references) {
+                add(reference.path, reference);
+            }
+        }
 
         const newTsconfig: TsConfigJson = {
             ...(disableComposite ? {} : tsconfigMonorepo),
@@ -87,58 +138,11 @@ export function generateTsconfig(options: {
                     : {
                           paths: {
                               ...tsconfig.compilerOptions?.paths,
-                              ...(tsconfigMonorepo.compilerOptions?.paths
-                                  ? Object.fromEntries(
-                                        Object.entries(
-                                            tsconfigMonorepo.compilerOptions.paths
-                                        ).reduce(
-                                            (acc, pair) => {
-                                                const [key, value] = pair;
-                                                let skip = true;
-                                                const values = value.map(v =>
-                                                    transformPath(v, dirname, cwd)
-                                                );
-                                                const newValue: string[] = [];
-                                                for (const {
-                                                    newPath,
-                                                    isRoot,
-                                                    inRootDir,
-                                                } of values) {
-                                                    if (isRoot || inRootDir) {
-                                                        if (!/^.$/.test(dirnameRelative)) {
-                                                            continue;
-                                                        }
-                                                    }
-                                                    skip = false;
-                                                    newValue.push(newPath);
-                                                }
-                                                return skip ? acc : acc.concat([[key, newValue]]);
-                                            },
-                                            [] as [string, string[]][]
-                                        )
-                                    )
-                                  : {}),
+                              ...monorepoPaths,
                           },
                       }),
             },
-            ...(ignoreReferences
-                ? {}
-                : {
-                      references: (tsconfig.references ?? [])
-                          .concat(tsconfigMonorepo.references ?? [])
-                          .reduce((acc, ref) => {
-                              if (acc.find(r => r.path === ref.path)) return acc;
-                              const { newPath, isRoot, inRootDir } = transformPath(
-                                  ref.path,
-                                  dirname,
-                                  cwd
-                              );
-                              const skip = isRoot || inRootDir;
-                              return skip && !/^.$/.test(dirnameRelative)
-                                  ? acc
-                                  : acc.concat([{ ...ref, path: newPath }]);
-                          }, [] as TsConfigJson.References[]),
-                  }),
+            ...(ignoreReferences ? {} : { references }),
         };
 
         const newTsconfigBuild: TsConfigJson | undefined = tsconfigBuildExists
@@ -159,7 +163,7 @@ export function generateTsconfig(options: {
             config: newTsconfig,
             newTsconfig,
             newTsconfigBuild,
-            originalConfig: tsconfig,
+            originalConfig: tsconfigRaw,
             tsconfigMonorepo,
             tsconfigBuild,
         };
@@ -169,23 +173,24 @@ export function generateTsconfig(options: {
     }
 }
 
-function transformPath(sourcePath: string, dirname: string, root: string) {
-    // Monorepo tsconfig paths are relative to the monorepo root, which is not
-    // necessarily `process.cwd()` (eg. when `dbx sync --cwd <dir>` runs from
-    // elsewhere). Resolve against the root so the computed alias is correct.
-    const absolute = path.resolve(root, sourcePath);
-    const valueBasename = path.basename(absolute);
-    const valueDirname = path.dirname(absolute);
+/**
+ * Render an absolute target (path or reference) relative to a workspace.
+ * Targets that live inside the workspace itself are omitted for every workspace
+ * except the repo root (so a package does not alias its own source).
+ */
+function toWorkspacePath(
+    target: string,
+    dirname: string,
+    dirnameRelative: string
+): string | undefined {
+    const absolute = path.resolve(target);
+    const workspace = path.resolve(dirname);
+    const targetDir = path.dirname(absolute);
+    const inWorkspace = targetDir === workspace || targetDir.startsWith(`${workspace}${path.sep}`);
 
-    let newPath = path
-        .join(path.relative(dirname, valueDirname), valueBasename)
-        .replace(/\\/g, '/');
+    if (inWorkspace && dirnameRelative !== '.') return undefined;
 
-    newPath = !newPath.startsWith('.') ? `./${newPath}` : newPath;
-
-    const newPathDirname = path.dirname(path.resolve(dirname, newPath));
-    const isRoot = dirname === newPathDirname;
-    const inRootDir = newPathDirname.startsWith(dirname);
-
-    return { isRoot, inRootDir, newPath, newPathDirname };
+    let relative = path.relative(workspace, absolute).replace(/\\/g, '/');
+    if (!relative.startsWith('.')) relative = `./${relative}`;
+    return relative;
 }

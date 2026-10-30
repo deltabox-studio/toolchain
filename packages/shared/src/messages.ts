@@ -17,6 +17,15 @@ export const WARNING_MAP = {
     'lint.no-tool':
         'No linter found (installed or in VS Code settings); falling back to Oxc defaults. ' +
         'Set `toolchain.lint.oxc` or install a linter to silence this.',
+    'tsconfig.missing-file':
+        'tsconfig override target `{file}` was not found; skipping its {kind} override.',
+    'tsconfig.outside-root':
+        'tsconfig override target `{file}` is outside the project root; skipping it.',
+    'tsconfig.override-edited':
+        '`{file}`: `{key}` changed after the override applied it; keeping the current value.',
+    'tsconfig.restore-reapply':
+        'tsconfig overrides are still configured ({kinds}); the next `dbx sync` applies them again. ' +
+        'Remove them from `toolchain.tsconfig.overrides` to keep the restored files.',
 } as const;
 
 /** Error messages emitted by sync tasks. */

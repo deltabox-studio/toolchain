@@ -89,7 +89,12 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
             const cwd = (provided.cwd as string | undefined) ?? process.cwd();
             // Bracket the run with clack's `intro`/`outro` for a human-facing
             // command (not a provider passthrough, and not machine/quiet output).
-            const framed = !cmd.passthrough && provided.json !== true && provided.quiet !== true;
+            const machine =
+                provided.json === true ||
+                provided.alias === true ||
+                provided.paths === true ||
+                provided.references === true;
+            const framed = !cmd.passthrough && !machine && provided.quiet !== true;
             const label = `${command.parent?.name() ?? ''} ${cmd.name}`.trim();
             if (framed) intro(label);
             try {

@@ -717,6 +717,7 @@ __metadata:
     picocolors: "catalog:"
     tsdown: "catalog:"
     tsx: "catalog:"
+    type-fest: "catalog:"
     untyped: "npm:^2.0.0"
     zod: "catalog:"
   peerDependencies:

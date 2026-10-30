@@ -3,9 +3,11 @@ import path from 'node:path';
 import {
     logger,
     type ProjectType,
+    sectionConfig,
     type ToolchainCommand,
     type ToolchainCommandContext,
 } from '@deltabox/toolchain-shared';
+import type { TsconfigExtendsOptions } from '@deltabox/toolchain-tsconfig';
 
 import { generateProjectConfigs } from '../config.js';
 import {
@@ -79,6 +81,16 @@ function resolveType(opts: Record<string, unknown>, fallback: ProjectType): Proj
     return type as ProjectType;
 }
 
+/** The `tsconfig.extends` overrides to write into scaffolded tsconfig templates. */
+function scaffoldTsconfigExtends(
+    config: ToolchainCommandContext['config']
+): TsconfigExtendsOptions | undefined {
+    const tsconfig = sectionConfig(config.tsconfig) as
+        | { extends?: TsconfigExtendsOptions }
+        | undefined;
+    return tsconfig?.extends;
+}
+
 /** Build the project scaffolding commands. */
 export function projectCommands(): ToolchainCommand[] {
     return [
@@ -95,6 +107,7 @@ export function projectCommands(): ToolchainCommand[] {
             run: (opts, context) => {
                 const out = (opts.out as string) ?? context.cwd;
                 const name = resolveName(requireName(opts, context.config), out);
+                const tsconfigExtends = scaffoldTsconfigExtends(context.config);
                 const files = createRootProjectFiles({
                     name,
                     ...(opts.scope ? { scope: opts.scope as string } : {}),
@@ -103,6 +116,7 @@ export function projectCommands(): ToolchainCommand[] {
                         : {}),
                     type: resolveType(opts, 'project'),
                     includeConfig: (opts.config as boolean | undefined) ?? true,
+                    ...(tsconfigExtends ? { tsconfigExtends } : {}),
                 });
                 const written = writeGeneratedFiles(files, out);
                 for (const file of written) logger.info(`Created ${file}`);
@@ -127,6 +141,7 @@ export function projectCommands(): ToolchainCommand[] {
                 const rootType = resolveType(opts, 'monorepo-root');
                 const withExample = Boolean(opts.example);
                 const packageManager = opts.packageManager as string | undefined;
+                const tsconfigExtends = scaffoldTsconfigExtends(context.config);
 
                 const files = createMonorepoRootFiles({
                     name,
@@ -134,6 +149,7 @@ export function projectCommands(): ToolchainCommand[] {
                     type: rootType,
                     includeConfig,
                     ...(packageManager ? { packageManager } : {}),
+                    ...(tsconfigExtends ? { tsconfigExtends } : {}),
                     workspaces: withExample ? [{ alias: 'core', dir: 'packages/core' }] : [],
                 });
                 if (withExample) {
@@ -147,6 +163,7 @@ export function projectCommands(): ToolchainCommand[] {
                             includeConfig,
                             useCatalog: true,
                             ...(packageManager ? { packageManager } : {}),
+                            ...(tsconfigExtends ? { tsconfigExtends } : {}),
                         }).map(f => ({ ...f, path: `packages/core/${f.path}` }))
                     );
                 }
@@ -181,6 +198,7 @@ export function projectCommands(): ToolchainCommand[] {
                 const includeConfig = (opts.config as boolean | undefined) ?? true;
                 const type = resolveType(opts, 'monorepo-workspace');
                 const packageManager = opts.packageManager as string | undefined;
+                const tsconfigExtends = scaffoldTsconfigExtends(context.config);
 
                 const files = createWorkspaceFiles({
                     name,
@@ -190,6 +208,7 @@ export function projectCommands(): ToolchainCommand[] {
                     type,
                     includeConfig,
                     ...(packageManager ? { packageManager } : {}),
+                    ...(tsconfigExtends ? { tsconfigExtends } : {}),
                 }).map(file => ({ ...file, path: `${wsDir}/${file.path}` }));
 
                 const written = writeGeneratedFiles(files, root);

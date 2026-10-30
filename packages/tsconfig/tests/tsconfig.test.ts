@@ -34,6 +34,20 @@ describe('tsconfig templates', () => {
             'tsconfig.default.json',
         ]);
     });
+
+    it('overrides the extends field per template', () => {
+        const templates = renderTsconfigTemplates(
+            {},
+            {
+                base: '@tsconfig/node22',
+                default: false,
+                build: './tsconfig.json',
+            }
+        );
+        expect(JSON.parse(templates['tsconfig.base.json']!).extends).toBe('@tsconfig/node22');
+        expect(JSON.parse(templates['tsconfig.default.json']!)).not.toHaveProperty('extends');
+        expect(JSON.parse(templates['tsconfig.build.json']!).extends).toBe('./tsconfig.json');
+    });
 });
 
 describe('monorepo tsconfig', () => {

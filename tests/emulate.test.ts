@@ -811,3 +811,186 @@ describe('emulate: CLI + templates', () => {
         TIMEOUT
     );
 });
+
+/** Write a plain-object `dbx.config.ts` (no imports, so it loads in any sandbox). */
+function writeConfig(dir: string, toolchain: Record<string, unknown>): void {
+    write(
+        path.join(dir, 'dbx.config.ts'),
+        `export default ${JSON.stringify({ toolchain }, null, 4)};\n`
+    );
+}
+
+/** A monorepo root with one workspace and every user-owned tsconfig. */
+function tsconfigMonorepo(id: string): string {
+    const ws = scratch(id);
+    writeJson(path.join(ws, 'package.json'), {
+        name: id,
+        private: true,
+        workspaces: ['packages/*'],
+    });
+    // JSONC input: comments are allowed in user-owned tsconfigs.
+    write(
+        path.join(ws, 'tsconfig.base.json'),
+        '{\n    // shared options\n    "compilerOptions": { "target": "ES2022" }\n}\n'
+    );
+    writeJson(path.join(ws, 'tsconfig.workspaces.json'), {
+        compilerOptions: { composite: false, paths: { '@demo/core': ['./packages/core/src'] } },
+    });
+    writeJson(path.join(ws, 'packages/core/package.json'), { name: '@demo/core' });
+    writeJson(path.join(ws, 'packages/core/tsconfig.default.json'), {
+        extends: '../../tsconfig.base.json',
+        include: ['src'],
+    });
+    writeJson(path.join(ws, 'packages/core/tsconfig.build.json'), {
+        extends: './tsconfig.default.json',
+    });
+    return ws;
+}
+
+describe('emulate: tsconfig overrides', () => {
+    const project = { type: 'monorepo-root', name: 'demo', scope: '@demo' };
+    const overrides = {
+        base: { compilerOptions: { target: 'ES2020' } },
+        root: { compilerOptions: { composite: true, types: ['node'] } },
+        default: { compilerOptions: { strict: true } },
+        build: { compilerOptions: { declaration: true } },
+    };
+    const manifestOf = (ws: string) =>
+        readJson<{
+            files: string[];
+            snapshots?: Record<string, any>;
+            tsconfigOverrides?: Record<string, { kind: string }>;
+        }>(path.join(ws, '.dbx/toolchain/manifest.json'));
+
+    it(
+        'applies, checks, reverts, restores and resets overrides through the CLI',
+        async () => {
+            const ws = tsconfigMonorepo('tsconfig-overrides');
+            const base = path.join(ws, 'tsconfig.base.json');
+            const root = path.join(ws, 'tsconfig.workspaces.json');
+            const defaults = path.join(ws, 'packages/core/tsconfig.default.json');
+            const build = path.join(ws, 'packages/core/tsconfig.build.json');
+
+            writeConfig(ws, { project, tsconfig: { overrides } });
+            const sync = await dbx(ws, ['sync']);
+            expect(sync.code, sync.stderr).toBe(0);
+            expect(readJson<any>(base).compilerOptions.target).toBe('ES2020');
+            expect(readJson<any>(root).compilerOptions).toMatchObject({
+                composite: true,
+                types: ['node'],
+            });
+            expect(readJson<any>(defaults).compilerOptions).toEqual({ strict: true });
+            expect(readJson<any>(build).compilerOptions).toEqual({ declaration: true });
+
+            // The manifest tracks only generated files; snapshots mirror the repo
+            // with relative paths.
+            const manifest = manifestOf(ws);
+            expect(manifest.files).toContain('packages/core/tsconfig.json');
+            expect(manifest.files).not.toContain('tsconfig.base.json');
+            expect(manifest.snapshots?.['tsconfig.base.json']).toEqual({
+                compilerOptions: { target: 'ES2022' },
+            });
+            expect(manifest.snapshots?.packages.core['tsconfig.build.json']).toEqual({
+                extends: './tsconfig.default.json',
+            });
+            expect(Object.keys(manifest.tsconfigOverrides ?? {}).sort()).toEqual([
+                'packages/core/tsconfig.build.json',
+                'packages/core/tsconfig.default.json',
+                'tsconfig.base.json',
+                'tsconfig.workspaces.json',
+            ]);
+            const raw = fs.readFileSync(path.join(ws, '.dbx/toolchain/manifest.json'), 'utf-8');
+            expect(raw).not.toContain(ws);
+            expect(raw).not.toContain(ws.replace(/\\/g, '/'));
+
+            const check = await dbx(ws, ['sync', '--check']);
+            expect(check.code, check.stdout + check.stderr).toBe(0);
+
+            // Drop `composite` (the original defined `false`) and `types` (it did not).
+            writeConfig(ws, {
+                project,
+                tsconfig: { overrides: { ...overrides, root: { compilerOptions: {} } } },
+            });
+            expect((await dbx(ws, ['sync'])).code).toBe(0);
+            expect(readJson<any>(root)).toEqual({
+                compilerOptions: {
+                    composite: false,
+                    paths: { '@demo/core': ['./packages/core/src'] },
+                },
+            });
+
+            // `--restore <kind>` removes only that kind and warns it is still configured.
+            const restore = await dbx(ws, ['tsconfig', '--restore', 'default']);
+            expect(restore.code, restore.stderr).toBe(0);
+            expect(restore.stdout + restore.stderr).toContain('TSCONFIG_RESTORE_REAPPLY');
+            expect(readJson<any>(defaults)).toEqual({
+                extends: '../../tsconfig.base.json',
+                include: ['src'],
+            });
+            expect(readJson<any>(base).compilerOptions.target).toBe('ES2020');
+            // Still configured, so the generated state is now out of date.
+            expect((await dbx(ws, ['sync', '--check'])).code).not.toBe(0);
+
+            // `dbx reset` reverts the remaining overrides before dropping the
+            // manifest, and never deletes the user-owned tsconfigs.
+            const reset = await dbx(ws, ['reset']);
+            expect(reset.code, reset.stderr).toBe(0);
+            expect(readJson<any>(base)).toEqual({ compilerOptions: { target: 'ES2022' } });
+            expect(readJson<any>(build)).toEqual({ extends: './tsconfig.default.json' });
+            expect(fs.existsSync(path.join(ws, 'packages/core/tsconfig.json'))).toBe(false);
+            expect(fs.existsSync(path.join(ws, '.dbx/toolchain'))).toBe(false);
+        },
+        TIMEOUT
+    );
+
+    it(
+        'honours custom tsconfig file names and warns on a missing target',
+        async () => {
+            const ws = scratch('tsconfig-overrides-custom');
+            writeJson(path.join(ws, 'package.json'), { name: 'custom', private: true });
+            writeJson(path.join(ws, 'config/tsconfig.shared.json'), { compilerOptions: {} });
+            writeJson(path.join(ws, 'tsconfig.graph.json'), { compilerOptions: {} });
+            writeJson(path.join(ws, 'packages/core/tsconfig.src.json'), { compilerOptions: {} });
+            // No `tsconfig.dist.json`: the build override has nothing to patch.
+            writeConfig(ws, {
+                project,
+                tsconfig: {
+                    baseFile: 'config/tsconfig.shared.json',
+                    rootFile: 'tsconfig.graph.json',
+                    defaultFile: 'tsconfig.src.json',
+                    buildFile: 'tsconfig.dist.json',
+                    overrides,
+                },
+            });
+
+            const sync = await dbx(ws, ['sync']);
+            expect(sync.code, sync.stderr).toBe(0);
+            expect(sync.stdout + sync.stderr).toContain('TSCONFIG_MISSING_FILE');
+            expect(fs.existsSync(path.join(ws, 'packages/core/tsconfig.dist.json'))).toBe(false);
+            expect(readJson<any>(path.join(ws, 'config/tsconfig.shared.json'))).toEqual({
+                compilerOptions: { target: 'ES2020' },
+            });
+            expect(readJson<any>(path.join(ws, 'tsconfig.graph.json')).compilerOptions).toEqual({
+                composite: true,
+                types: ['node'],
+            });
+            expect(
+                readJson<any>(path.join(ws, 'packages/core/tsconfig.src.json')).compilerOptions
+            ).toEqual({ strict: true });
+            expect(readJson<any>(path.join(ws, 'packages/core/tsconfig.json')).extends).toBe(
+                './tsconfig.src.json'
+            );
+            expect(manifestOf(ws).snapshots?.config['tsconfig.shared.json']).toEqual({
+                compilerOptions: {},
+            });
+
+            const restore = await dbx(ws, ['tsconfig', '--restore']);
+            expect(restore.code, restore.stderr).toBe(0);
+            expect(readJson<any>(path.join(ws, 'config/tsconfig.shared.json'))).toEqual({
+                compilerOptions: {},
+            });
+            expect(manifestOf(ws).snapshots).toBeUndefined();
+        },
+        TIMEOUT
+    );
+});
