@@ -23,6 +23,10 @@ const overrides = {
     ToolchainViteConfig: `export type ToolchainViteConfig = Omit<ViteUserConfig, 'fmt' | 'lint'> & {
     /** Write the managed Vite config (default true); a string sets its file name/path. */
     config?: boolean | string;
+    /** Render the shim at runtime (default) or as a fully static config. */
+    shim?: 'runtime' | 'static';
+    /** Module specifier used to import resolveVite in runtime shims. */
+    shimImport?: string;
     /** Oxfmt options; \`true\` uses the toolchain defaults. */
     fmt?: boolean | NonNullable<ViteUserConfig['fmt']>;
     /** Oxlint options; \`true\` uses the toolchain defaults. */

@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
+    applyReplacementsDeep,
     DEFAULT_FMT_RULES,
     DEFAULT_LINT_RULES,
     deepMerge,
@@ -35,7 +36,14 @@ import {
  * options object is merged over those defaults.
  */
 export function viteConfigObject(config: ToolchainViteConfig = {}): Record<string, unknown> {
-    const { config: _config, fmt, lint, ...vite } = config as Record<string, unknown>;
+    const {
+        config: _config,
+        shim: _shim,
+        shimImport: _shimImport,
+        fmt,
+        lint,
+        ...vite
+    } = config as Record<string, unknown>;
     const out: Record<string, unknown> = { ...vite };
     if (fmt === true) out.fmt = DEFAULT_FMT_RULES;
     else if (isPlainObject(fmt)) out.fmt = deepMerge(DEFAULT_FMT_RULES, fmt);
@@ -87,6 +95,31 @@ export function detectViteSpecifier(cwd: string): ViteSpecifier {
 /** The config type a specifier's `defineConfig` accepts. */
 function shimTypeName(specifier: ViteSpecifier): string {
     return specifier === 'vite' ? 'UserConfig' : 'ViteUserConfig';
+}
+
+/** Walk up to the nearest repository boundary (`.git`), else `cwd`. */
+function findRepoRoot(cwd: string): string {
+    let dir = path.resolve(cwd);
+    for (;;) {
+        if (fs.existsSync(path.join(dir, '.git'))) return dir;
+        const parent = path.dirname(dir);
+        if (parent === dir) return path.resolve(cwd);
+        dir = parent;
+    }
+}
+
+/**
+ * Resolve the `resolveVite` import specifier for a generated shim. Bare
+ * specifiers are used as-is; relative/absolute ones are resolved from the repo
+ * root and rewritten relative to the shim's directory.
+ */
+export function resolveShimImport(configured: string | undefined, cwd: string): string {
+    if (!configured) return DEFAULT_RESOLVE_IMPORT;
+    if (!configured.startsWith('.') && !path.isAbsolute(configured)) return configured;
+    const absolute = path.resolve(findRepoRoot(cwd), configured);
+    let relative = path.relative(path.resolve(cwd), absolute).replace(/\\/g, '/');
+    if (!relative.startsWith('.')) relative = `./${relative}`;
+    return relative;
 }
 
 /** A parsed `import ... from '...'` statement. */
@@ -202,13 +235,21 @@ function leadingHeader(source: string): HeaderEntry[] {
     return entries;
 }
 
+/** The default module the runtime shim imports `resolveVite` from. */
+export const DEFAULT_RESOLVE_IMPORT = '@deltabox/toolchain/vite';
+
 /**
  * Merge the required `defineConfig` + config-type specifiers into an existing
  * `vite`/`vite-plus` import, preserving its default/namespace/other named
  * imports. Other imports and comments are kept; the `resolveVite` import is
  * dropped (the shim re-adds it) so regeneration is idempotent.
  */
-function mergeHeader(entries: HeaderEntry[], specifier: ViteSpecifier, type: string): string[] {
+function mergeHeader(
+    entries: HeaderEntry[],
+    specifier: ViteSpecifier,
+    type: string,
+    resolveImport: string = DEFAULT_RESOLVE_IMPORT
+): string[] {
     const out: string[] = [];
     let merged = false;
     for (const entry of entries) {
@@ -217,10 +258,13 @@ function mergeHeader(entries: HeaderEntry[], specifier: ViteSpecifier, type: str
             continue;
         }
         const { from, clause } = entry.parsed;
-        if (from === '@deltabox/toolchain/vite') continue;
+        if (from === DEFAULT_RESOLVE_IMPORT || from === resolveImport) continue;
+        const parts = parseImportClause(clause);
+        const withoutResolve = parts.named.filter(
+            name => name.replace(/^type\s+/, '') !== 'resolveVite'
+        );
         if (from === specifier && !merged) {
-            const parts = parseImportClause(clause);
-            const named = parts.named.filter(
+            const named = withoutResolve.filter(
                 name =>
                     name.replace(/^type\s+/, '') !== 'defineConfig' &&
                     name.replace(/^type\s+/, '') !== type
@@ -229,6 +273,13 @@ function mergeHeader(entries: HeaderEntry[], specifier: ViteSpecifier, type: str
             named.push(`type ${type}`);
             out.push(`import ${formatImportClause({ ...parts, named })} from '${specifier}';`);
             merged = true;
+            continue;
+        }
+        if (withoutResolve.length !== parts.named.length) {
+            const next = { ...parts, named: withoutResolve };
+            if (next.default || next.namespace || next.named.length > 0) {
+                out.push(`import ${formatImportClause(next)} from '${from}';`);
+            }
             continue;
         }
         out.push(entry.parsed.raw);
@@ -253,25 +304,28 @@ function mergeHeader(entries: HeaderEntry[], specifier: ViteSpecifier, type: str
  */
 export function renderViteConfig(
     specifier: ViteSpecifier = 'vite-plus',
-    existing?: string
+    existing?: string,
+    resolveImport: string = DEFAULT_RESOLVE_IMPORT
 ): string {
     const type = shimTypeName(specifier);
-    const header = existing ? mergeHeader(leadingHeader(existing), specifier, type) : [];
+    const header = existing
+        ? mergeHeader(leadingHeader(existing), specifier, type, resolveImport)
+        : [];
     if (header.length > 0) {
         while (header.length > 0 && (header[header.length - 1] as string).trim() === '')
             header.pop();
         return [
             ...header,
-            "import { resolveVite } from '@deltabox/toolchain/vite';",
+            `import { resolveVite } from '${resolveImport}';`,
             '',
             `export default defineConfig(resolveVite<${type}>({ cwd: import.meta.dirname }));`,
             '',
         ].join('\n');
     }
     return [
-        '// Generated by @deltabox/toolchain — edit the vite section in dbx.config and run `dbx sync`.',
+        '// Generated by @deltabox/toolchain - edit the vite section in dbx.config and run `dbx sync`.',
         `import { defineConfig, type ${type} } from '${specifier}';`,
-        "import { resolveVite } from '@deltabox/toolchain/vite';",
+        `import { resolveVite } from '${resolveImport}';`,
         '',
         `export default defineConfig(resolveVite<${type}>({ cwd: import.meta.dirname }));`,
         '',
@@ -280,6 +334,70 @@ export function renderViteConfig(
 
 /** The default managed `vite.config.ts` (imports `defineConfig` from `vite-plus`). */
 export const VITE_CONFIG_SHIM = renderViteConfig('vite-plus');
+
+/** Reject values that `JSON.stringify` would silently drop or mangle. */
+function assertSerializable(value: unknown, at: string): void {
+    if (value === null || value === undefined) return;
+    if (typeof value === 'function') {
+        throw new Error(
+            `vite.shim "static" cannot serialize a function (${at}). Use ` +
+                '`vite.shim: "runtime"` for dynamic configs.'
+        );
+    }
+    if (typeof value === 'symbol' || typeof value === 'bigint' || value instanceof RegExp) {
+        throw new Error(
+            `vite.shim "static" cannot serialize ${typeof value} (${at}). Use ` +
+                '`vite.shim: "runtime"` for dynamic configs.'
+        );
+    }
+    if (Array.isArray(value)) {
+        value.forEach((item, index) => assertSerializable(item, `${at}[${index}]`));
+        return;
+    }
+    if (typeof value === 'object') {
+        if (!isPlainObject(value)) {
+            throw new Error(
+                `vite.shim "static" cannot serialize a non-plain object (${at}). Use ` +
+                    '`vite.shim: "runtime"` for dynamic configs.'
+            );
+        }
+        for (const [key, item] of Object.entries(value)) {
+            assertSerializable(item, at ? `${at}.${key}` : key);
+        }
+    }
+}
+
+/**
+ * Render a fully static `vite.config.ts` from the resolved `dbx.config.*`
+ * object. Unlike {@link renderViteConfig} it does not import
+ * `@deltabox/toolchain`, so Vite+ can load the config without a built `dist`.
+ * Dynamic values (functions, regexps, class instances) are rejected.
+ */
+export function renderStaticViteConfig(
+    specifier: ViteSpecifier,
+    config: Record<string, unknown>,
+    existing?: string,
+    resolveImport: string = DEFAULT_RESOLVE_IMPORT
+): string {
+    const type = shimTypeName(specifier);
+    assertSerializable(config, 'vite');
+    const body = `export default defineConfig<${type}>(${JSON.stringify(config, null, 4)});`;
+    const header = existing
+        ? mergeHeader(leadingHeader(existing), specifier, type, resolveImport)
+        : [];
+    if (header.length > 0) {
+        while (header.length > 0 && (header[header.length - 1] as string).trim() === '')
+            header.pop();
+        return [...header, '', body, ''].join('\n');
+    }
+    return [
+        '// Generated by @deltabox/toolchain - edit the vite section in dbx.config and run `dbx sync`.',
+        `import { defineConfig, type ${type} } from '${specifier}';`,
+        '',
+        body,
+        '',
+    ].join('\n');
+}
 
 /** The managed Oxfmt config file (read by the Oxc VS Code extension). */
 export const OXC_FMT_CONFIG_FILE = '.oxfmtrc.json';
@@ -345,9 +463,22 @@ export function viteSyncTask(): SyncTask {
                 } catch {
                     existing = undefined;
                 }
+                const specifier = detectViteSpecifier(ctx.cwd);
+                const resolveImport = resolveShimImport(section.shimImport, ctx.cwd);
                 files.push({
                     path: shimPath,
-                    content: renderViteConfig(detectViteSpecifier(ctx.cwd), existing),
+                    content:
+                        section.shim === 'static'
+                            ? renderStaticViteConfig(
+                                  specifier,
+                                  applyReplacementsDeep(resolved, ctx.tokens) as Record<
+                                      string,
+                                      unknown
+                                  >,
+                                  existing,
+                                  resolveImport
+                              )
+                            : renderViteConfig(specifier, existing, resolveImport),
                 });
             }
             const hasFmt =

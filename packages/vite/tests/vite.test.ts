@@ -10,7 +10,9 @@ import {
     detectViteSpecifier,
     OXC_FMT_CONFIG_FILE,
     OXC_LINT_CONFIG_FILE,
+    renderStaticViteConfig,
     renderViteConfig,
+    resolveShimImport,
     resolveVite,
     resolveVp,
     VP_COMMANDS,
@@ -105,6 +107,42 @@ describe('vite.config.ts shim', () => {
         );
     });
 
+    it('uses a custom `resolveVite` import specifier', () => {
+        const source = renderViteConfig('vite-plus', undefined, './src/vite.ts');
+        expect(source).toContain("import { resolveVite } from './src/vite.ts';");
+    });
+
+    it('rewrites relative shim imports from the repo root', () => {
+        const repo = makeTmp();
+        expect(resolveShimImport('./src/vite.ts', path.join(repo, 'packages/core'))).toBe(
+            '../../src/vite.ts'
+        );
+        expect(resolveShimImport('@deltabox/toolchain/vite', repo)).toBe(
+            '@deltabox/toolchain/vite'
+        );
+    });
+
+    it('renders a static shim without importing the toolchain', () => {
+        const source = renderStaticViteConfig('vite-plus', {
+            resolve: { tsconfigPaths: true },
+            run: { tasks: {} },
+        });
+        expect(source).toContain("import { defineConfig, type ViteUserConfig } from 'vite-plus';");
+        expect(source).toContain('export default defineConfig<ViteUserConfig>({');
+        expect(source).toContain('"tsconfigPaths": true');
+        expect(source).not.toContain('@deltabox/toolchain/vite');
+        // Regenerating from a static shim is stable (idempotent).
+        expect(renderStaticViteConfig('vite-plus', { run: { tasks: {} } }, source)).toContain(
+            'export default defineConfig<ViteUserConfig>('
+        );
+    });
+
+    it('rejects non-serializable static shims', () => {
+        expect(() =>
+            renderStaticViteConfig('vite-plus', { plugins: [() => ({ name: 'x' })] })
+        ).toThrow(/cannot serialize a function/);
+    });
+
     it('preserves existing imports/comments and merges the defineConfig import', () => {
         const existing = [
             '// my custom header',
@@ -141,9 +179,10 @@ describe('vite.config.ts shim', () => {
         expect((importLine.match(/ViteUserConfig/g) ?? []).length).toBe(1);
     });
 
-    it('strips the toolchain opt-out (`config`) from the resolved object', () => {
-        const resolved = viteConfigObject({ config: false, fmt: { semi: true } });
+    it('strips the toolchain opt-out (`config`) and `shim` from the resolved object', () => {
+        const resolved = viteConfigObject({ config: false, shim: 'static', fmt: { semi: true } });
         expect(resolved).not.toHaveProperty('config');
+        expect(resolved).not.toHaveProperty('shim');
         expect(resolved.fmt).toMatchObject({ semi: true });
     });
 
@@ -202,6 +241,31 @@ describe('vite.config.ts shim', () => {
         };
         expect(await viteSyncTask().run(ctx)).toEqual([
             { path: 'vite.config.ts', content: renderViteConfig() },
+        ]);
+    });
+
+    it('writes a static shim when `shim: static`', async () => {
+        const ctx = {
+            cwd: makeTmp(),
+            projectType: 'project' as const,
+            config: {
+                vite: {
+                    config: true,
+                    shim: 'static' as const,
+                    resolve: { tsconfigPaths: true },
+                },
+            },
+            tokens: {},
+            log: () => {},
+            warn: () => {},
+        };
+        expect(await viteSyncTask().run(ctx)).toEqual([
+            {
+                path: 'vite.config.ts',
+                content: renderStaticViteConfig('vite-plus', {
+                    resolve: { tsconfigPaths: true },
+                }),
+            },
         ]);
     });
 

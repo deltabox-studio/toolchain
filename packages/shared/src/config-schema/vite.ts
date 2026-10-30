@@ -4,7 +4,9 @@ import { withEnabled } from './meta.js';
 
 /**
  * Vite+ configuration: the raw `vite.config.ts` object, held under
- * `toolchain.vite`, plus the single toolchain opt-out `config`.
+ * `toolchain.vite`, plus the toolchain-only `config` (managed shim opt-out),
+ * `shim` (runtime/static render mode) and `shimImport` (runtime import
+ * specifier) keys.
  *
  * Every other key is passed through verbatim to the generated
  * `vite.config.ts` (see the `vite` sync task), so `dbx.config.*` is the only
@@ -18,6 +20,23 @@ export const viteConfigSchema = withEnabled(
             .describe(
                 'Write the managed Vite config (default true). A string sets its file name/path ' +
                     '(relative to the project, or absolute).'
+            )
+            .optional(),
+        shim: z
+            .enum(['runtime', 'static'])
+            .describe(
+                'How the generated `vite.config.ts` is rendered. `runtime` (default) loads the ' +
+                    'config from `dbx.config.*`; `static` serializes it into the file so the shim ' +
+                    'does not import `@deltabox/toolchain` (it then needs no built `dist`).'
+            )
+            .optional(),
+        shimImport: z
+            .string()
+            .describe(
+                'Module specifier used to import `resolveVite` in runtime shims (default ' +
+                    '`@deltabox/toolchain/vite`). A relative path is resolved from the repo root ' +
+                    'and rewritten relative to each generated config - useful for dogfooding a ' +
+                    'source checkout without a built `dist`.'
             )
             .optional(),
         fmt: z
