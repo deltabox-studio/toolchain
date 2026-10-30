@@ -7,10 +7,10 @@ import { defineConfig } from '@deltabox/toolchain';
  *
  * Every workspace also has its own `dbx.config.ts` (holding its Vite Task
  * definitions), so `dbx sync --recursive` writes each workspace's
- * `vite.config.ts` shim. That shim imports `@deltabox/toolchain/vite`, which a
- * workspace cannot resolve on its own here because the root package *is*
- * `@deltabox/toolchain`; the root `devDependencies` self-link
- * (`"@deltabox/toolchain": "portal:."`) provides it.
+ * `vite.config.ts`. The dogfooded shims are static (`vite.shim: 'static'`), so
+ * Vite+ can load them without a built `@deltabox/toolchain` `dist`; the root
+ * `devDependencies` self-link (`"@deltabox/toolchain": "portal:."`) still
+ * provides the package to TypeScript/tests.
  *
  * Changelog automation follows the `dev` -> `main` flow: pushes to `dev` generate
  * the changelog (and version bumps), and pushes to `main` run the hand-written
@@ -212,7 +212,7 @@ export default defineConfig({
                         // build on drift.
                         { name: 'Format + lint (auto-fix)', run: 'yarn check:fix' },
                         { name: 'Test', run: 'yarn test' },
-                        { name: 'Typecheck (build tsconfig)', run: 'yarn typecheck:ci' },
+                        { name: 'Typecheck', run: 'yarn typecheck' },
                         {
                             name: 'Generate config docs + schema',
                             run: 'yarn config:generate',
@@ -235,6 +235,13 @@ export default defineConfig({
             sync: true,
         },
         vite: {
+            // Dogfood a static shim so Vite+ can load it without a built dist.
+            shim: 'static',
+            // Resolve workspace imports through the tsconfig `paths` in Vite.
+            resolve: {
+                tsconfigPaths: true,
+            },
+
             // Vitest: every package's tests + the root CLI tests.
             test: {
                 include: ['packages/**/tests/**/*.test.ts', 'tests/**/*.test.ts'],
@@ -339,10 +346,6 @@ export default defineConfig({
                     },
                     'typecheck:root': {
                         command: 'tsc -p tsconfig.json --noEmit',
-                        cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
-                    },
-                    'typecheck:ci:root': {
-                        command: 'tsc -p tsconfig.build.json --noEmit',
                         cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
                     },
                     'test:root': {

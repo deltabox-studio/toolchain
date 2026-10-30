@@ -12,10 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 import { z } from 'zod';
 
-import {
-    createConfigEngine,
-    normalizeJsonSchemaMetadata,
-} from '@deltabox/toolchain-config';
+import { createConfigEngine, normalizeJsonSchemaMetadata } from '@deltabox/toolchain-config';
 import { configSchema, dbxConfigSchema, logger } from '@deltabox/toolchain-shared';
 
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));

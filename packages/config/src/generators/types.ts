@@ -14,7 +14,13 @@ import { generateTypes, type Schema } from 'untyped';
 
 import { pascalCase } from '@deltabox/toolchain-shared';
 
-import { isZodSchema, metaOf, normalizeConfigSchema, splitBaseSchema, zodToSchemaMap } from '../schema.js';
+import {
+    isZodSchema,
+    metaOf,
+    normalizeConfigSchema,
+    splitBaseSchema,
+    zodToSchemaMap,
+} from '../schema.js';
 import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
 
 /** The `generateTypes` options shared by every interface. */

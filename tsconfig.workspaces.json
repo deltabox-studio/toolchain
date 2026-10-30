@@ -7,6 +7,11 @@
         "declaration": true,
         "emitDeclarationOnly": true,
         "paths": {
+            "@deltabox/toolchain": ["./src/index.ts"],
+            "@deltabox/toolchain/*": ["./src/*"],
+            "@deltabox/toolchain/cli": ["./src/cli/index.ts"],
+            "@deltabox/toolchain/package.json": ["./package.json"],
+
             "@deltabox/toolchain-shared": ["./packages/shared/src/index.ts"],
             "@deltabox/toolchain-shared/*": ["./packages/shared/src/*"],
 

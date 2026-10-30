@@ -207,10 +207,12 @@ export function deriveCustomBump(
                 typeof rule === 'function'
                     ? (() => {
                           const value = (
-                              rule as (ctx: BumpRuleContext & {
-                                  commit: CommitRecord;
-                                  level: string;
-                              }) => string | boolean
+                              rule as (
+                                  ctx: BumpRuleContext & {
+                                      commit: CommitRecord;
+                                      level: string;
+                                  }
+                              ) => string | boolean
                           )({ ...context, commit: record, level });
                           return typeof value === 'string' ? value === level : Boolean(value);
                       })()

@@ -561,10 +561,7 @@ export function zodToSchemaMap(zodSchema: ZodType): Record<string, ConfigSchemaT
         ) as ConfigSchemaType;
     }
     const rootName =
-        jsonSchema.$ref?.split('/').pop() ??
-        jsonSchema.id ??
-        metaOf(zodSchema)?.id ??
-        'config';
+        jsonSchema.$ref?.split('/').pop() ?? jsonSchema.id ?? metaOf(zodSchema)?.id ?? 'config';
     if (!out[rootName]) {
         out[rootName] = resolveUntypedSchema(
             jsonNodeToDefinition(jsonSchema, false, defs) as Record<string, unknown>

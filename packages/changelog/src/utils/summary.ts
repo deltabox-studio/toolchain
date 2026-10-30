@@ -7,12 +7,7 @@ import {
     repoSlug,
     resolveAuthorInfo,
 } from './git.js';
-import type {
-    AuthorInfo,
-    CommitFormatOptions,
-    CommitRecord,
-    GroupedItem,
-} from './types.js';
+import type { AuthorInfo, CommitFormatOptions, CommitRecord, GroupedItem } from './types.js';
 
 /**
  * Render a commit reference for a changelog bullet. With a resolvable repo slug
