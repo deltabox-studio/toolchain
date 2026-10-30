@@ -48,6 +48,7 @@
         "check:fix": "vp run --filter \"./packages/*\" check:fix && vp run -w check:fix:root",
         "typecheck": "vp run --filter \"./packages/*\" typecheck && vp run -w typecheck:root",
         "test": "vp run --filter \"./packages/*\" build && vp run -w build:root && vp run --filter \"./packages/*\" test && vp run -w test:root",
+        "test:clean": "node scripts/clean-emulate.mjs",
         "vp:test": "vp test --run --config vite.config.ts",
         "vp:toolchain": "vp toolchain",
         "config:generate": "tsx scripts/generate-config.ts && tsx scripts/generate-config-docs.ts",

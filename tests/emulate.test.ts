@@ -2,14 +2,15 @@
  * Real end-to-end emulations of the `dbx` CLI (the surface the VS Code
  * extension and the command palette drive), run against the **built** toolchain.
  *
- * Every test gets its own throwaway workspace under `tests/emulate/<id>` (the
- * directory is gitignored linters + VCS); each scratch root carries an empty
- * `.git` so `dbx` treats it as a repository boundary and never inherits the
- * toolchain repo's own `dbx.config.ts`. The workspace is removed when the test
- * finishes (pass or fail) and again on process exit.
+ * Every test gets its own throwaway workspace under a temp directory (never
+ * inside the toolchain repo); each scratch root carries an empty `.git` so `dbx`
+ * treats it as a repository boundary and never inherits the toolchain repo's own
+ * `dbx.config.ts`. The workspace is removed when the test finishes (pass or
+ * fail) and again on process exit.
  */
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,38 +18,76 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CLI = path.join(ROOT, 'dist', 'cli', 'index.js');
-const EMULATE_ROOT = path.join(ROOT, 'tests', 'emulate');
+
+/**
+ * The sandbox lives outside the repo, with a `node_modules` junction back to the
+ * repo's install so scaffolded `dbx.config.ts` files can still resolve
+ * `@deltabox/toolchain`.
+ */
+const EMULATE_ROOT = (() => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-emulate-'));
+    try {
+        fs.symlinkSync(
+            path.join(ROOT, 'node_modules'),
+            path.join(dir, 'node_modules'),
+            process.platform === 'win32' ? 'junction' : 'dir'
+        );
+    } catch {
+        // Best-effort: tests that need the installed package will fail loudly.
+    }
+    return dir;
+})();
 const TIMEOUT = 120_000;
 
 /** Scratch workspaces created this run (removed on completion/failure/exit). */
 const created = new Set<string>();
 
 /**
- * The toolchain repo's own manifest, snapshotted so a stray root sync (some
+ * The toolchain repo's own managed state, snapshotted so a stray root sync (some
  * `vite-plus`/vitest integrations run one) can never leave the working tree
  * dirty. Restored after every test, and once more on exit.
  */
 const REPO_MANIFEST = path.join(ROOT, '.dbx', 'toolchain', 'manifest.json');
-const repoManifestSnapshot = (() => {
+const repoStateSnapshot = (() => {
     try {
-        return fs.readFileSync(REPO_MANIFEST, 'utf-8');
+        const manifest = fs.readFileSync(REPO_MANIFEST, 'utf-8');
+        const files = new Map<string, string>();
+        for (const relative of (JSON.parse(manifest) as { files?: string[] }).files ?? []) {
+            try {
+                files.set(relative, fs.readFileSync(path.join(ROOT, relative), 'utf-8'));
+            } catch {
+                // A manifest entry may already be missing; skip it.
+            }
+        }
+        return { manifest, files };
     } catch {
         return undefined;
     }
 })();
 
-function restoreRepoManifest(): void {
-    if (repoManifestSnapshot === undefined) return;
+function restoreRepoState(): void {
+    if (repoStateSnapshot === undefined) return;
     try {
-        if (fs.readFileSync(REPO_MANIFEST, 'utf-8') !== repoManifestSnapshot) {
-            fs.writeFileSync(REPO_MANIFEST, repoManifestSnapshot, 'utf-8');
+        for (const [relative, content] of repoStateSnapshot.files) {
+            const file = path.join(ROOT, relative);
+            try {
+                if (fs.readFileSync(file, 'utf-8') !== content) {
+                    fs.writeFileSync(file, content, 'utf-8');
+                }
+            } catch {
+                fs.mkdirSync(path.dirname(file), { recursive: true });
+                fs.writeFileSync(file, content, 'utf-8');
+            }
+        }
+        if (fs.readFileSync(REPO_MANIFEST, 'utf-8') !== repoStateSnapshot.manifest) {
+            fs.writeFileSync(REPO_MANIFEST, repoStateSnapshot.manifest, 'utf-8');
         }
     } catch {
         // best-effort
     }
 }
 
-/** Create (or reset) a scratch workspace `tests/emulate/<id>` with a `.git` boundary. */
+/** Create (or reset) a scratch workspace under `<tmp>/dbx-emulate-*` with a `.git` boundary. */
 function scratch(id: string): string {
     const dir = path.join(EMULATE_ROOT, id);
     fs.rmSync(dir, { recursive: true, force: true });
@@ -69,23 +108,26 @@ function removeCreated(): void {
         }
     }
     created.clear();
-    restoreRepoManifest();
+    restoreRepoState();
 }
 
-afterEach(() => removeCreated());
-afterAll(() => {
+/** Remove every scratch workspace plus the sandbox root (idempotent). */
+function cleanupAll(): void {
     removeCreated();
     try {
         fs.rmSync(EMULATE_ROOT, { recursive: true, force: true });
     } catch {
         // best-effort
     }
-});
+}
+
+afterEach(() => removeCreated());
+afterAll(() => cleanupAll());
 // A hard exit (Ctrl-C / a crashed worker) still cleans up.
-process.once('exit', removeCreated);
-for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+process.once('exit', cleanupAll);
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP', 'SIGBREAK'] as const) {
     process.once(signal, () => {
-        removeCreated();
+        cleanupAll();
         process.exit();
     });
 }

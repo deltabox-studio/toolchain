@@ -238,23 +238,29 @@ See [packages/vscode/README.md](./packages/vscode/README.md) to learn more about
 
 ## Development
 
-This repo is a Yarn 4 workspace; Vite+ (`vp`) drives format, lint, test and the
-task runner from the root `vite.config.ts`.
+This repo is a Yarn 4 workspace. Vite+ (`vp`) drives format, lint, test and the
+task runner from the root `vite.config.ts`. The generated shims are dogfooded
+with `vite.shim: 'static'`, so `vp` loads them without a built package; Vite and
+Vitest resolve workspace imports through `resolve.tsconfigPaths`.
 
 ```sh
 yarn install        # fresh checkout
-yarn build          # packages via `vp run` + root tsdown
-yarn test           # package + root tests
+yarn dev            # run the CLI from src/ via tsx
 yarn typecheck      # packages + root
 yarn check          # Oxfmt + Oxlint check (no writes)
 yarn check:fix      # same, auto-fixing every workspace + the root
 yarn format         # `vp fmt`
 yarn lint           # `vp lint --fix`
+yarn build          # packages via `vp run` + root tsdown
+yarn test           # builds, then package + root tests
+yarn test:clean     # remove leftover emulation temp workspaces
 ```
 
-> `vp` resolves only at the repo root, so run these from the root. Package
-> typechecks/tests resolve workspace deps from their built `dist`, so run a full
-> `yarn build` after changing a package's public exports.
+> `vp` resolves only at the repo root, so run these from the root. A full
+> `yarn build` is only needed for the published `dist`/VSIX: typechecks,
+> `vp run`/`fmt`/`lint`/`test`, `yarn dev` and Vitest run from source. The
+> emulate suite spawns the built `dist/cli/index.js` and therefore needs a
+> build.
 
 Docs live in `apps/docs` (VitePress): `yarn docs build`.
 
