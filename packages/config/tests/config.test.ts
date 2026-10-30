@@ -129,6 +129,33 @@ describe('generators', () => {
         expect(cliMarkdown).toContain('- **CLI**: `--base-url`');
     });
 
+    it('keeps union, enum and nested types in the combined reference', () => {
+        const section = z
+            .object({
+                kind: z.enum(['a', 'b']).describe('The kind.').optional(),
+                glob: z
+                    .union([z.string(), z.array(z.string())])
+                    .describe('Glob(s).')
+                    .optional(),
+                nested: z
+                    .union([
+                        z.boolean(),
+                        z.object({ depth: z.number().describe('Depth.').optional() }),
+                    ])
+                    .describe('Nested settings.')
+                    .optional(),
+            })
+            .describe('A section.')
+            .meta({ id: 'SectionConfig' });
+        const markdown = generateConfigMarkdown({ section }, { combined: true })['index.md']!;
+        expect(markdown).toContain('A section.');
+        expect(markdown).toContain("- **Type**: `'a' | 'b'`");
+        expect(markdown).toContain('- **Type**: `string | Array<string>`');
+        expect(markdown).toContain('#### `depth`');
+        expect(markdown).not.toContain('`any`');
+        expect(markdown).not.toContain('- **Default**: `{}`');
+    });
+
     it('builds config metadata', () => {
         const doc = buildConfigJson(scopes, { envPrefix: 'MYAPP_' });
         expect(doc.env.length).toBeGreaterThan(3);

@@ -11,7 +11,13 @@ import type { Schema } from 'untyped';
 import { sanitizeText, titleCase } from '@deltabox/toolchain-shared';
 
 import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from '../collect.js';
-import { metaOf, normalizeConfigSchema, splitBaseSchema } from '../schema.js';
+import {
+    isSchemaType,
+    isZodSchema,
+    metaOf,
+    normalizeConfigSchema,
+    splitBaseSchema,
+} from '../schema.js';
 import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
 import { type CliFlagOptions, cliFlagLabel } from './cli.js';
 
@@ -434,6 +440,36 @@ ${table(core)}
 ${references}`;
 }
 
+/**
+ * The scopes as JSON Schema for the combined reference. Zod scopes go through
+ * `toJSONSchema` (which keeps unions, enums, literals and `$defs`) instead of the
+ * untyped lowering, which collapses unions to `any` with a `{}` default.
+ */
+function jsonScopesOf(
+    schema: ConfigSchema,
+    scopes: Record<string, Schema>
+): Record<string, Schema> {
+    const toJson = (value: unknown): Schema | undefined =>
+        isZodSchema(value)
+            ? ((value as { toJSONSchema: (o?: object) => unknown }).toJSONSchema({
+                  target: 'draft-2020-12',
+              }) as Schema)
+            : undefined;
+    if (Array.isArray(schema)) return scopes;
+    const single = toJson(schema);
+    if (single) {
+        const [key] = Object.keys(scopes);
+        return key ? { [key]: single } : scopes;
+    }
+    if (isSchemaType(schema)) return scopes;
+    const out: Record<string, Schema> = {};
+    for (const [key, resolved] of Object.entries(scopes)) {
+        const value = (schema as Record<string, unknown>)[key];
+        out[key] = (!Array.isArray(value) && toJson(value)) || resolved;
+    }
+    return out;
+}
+
 /** Generate markdown file contents (and optionally write them). */
 export function generateConfigMarkdown(
     schema: ConfigSchema,
@@ -444,7 +480,10 @@ export function generateConfigMarkdown(
     const contents: Record<string, string> = {};
     if (options.combined) {
         const file = options.indexFilename ?? 'index.md';
-        contents[file] = renderConfigSectionsMarkdown(scopes, { ...options, outline });
+        contents[file] = renderConfigSectionsMarkdown(jsonScopesOf(schema, scopes), {
+            ...options,
+            outline,
+        });
     } else {
         for (const [scopeName, scopeSchema] of Object.entries(scopes)) {
             contents[`${scopeName}.md`] = renderScopeMarkdown(scopeName, scopeSchema, {
@@ -748,7 +787,11 @@ function renderConfigSectionsMarkdown(
     ];
     if (options.intro) parts.push(options.intro, '');
     for (const [key, schema] of Object.entries(scopes)) {
-        const meta = metaOf(schema);
+        const json = schema as unknown as JsonSchemaJson;
+        const defs = json.$defs ?? {};
+        // A Zod JSON Schema roots named objects at a `$ref` into `$defs`.
+        const node = resolveJsonRef(json, defs);
+        const meta = metaOf(node as unknown as Schema);
         parts.push(`## \`${key}\``, '');
         if (meta?.description) parts.push(meta.description, '');
         const required = requiredLine(meta?.required === true, options);
@@ -761,11 +804,7 @@ function renderConfigSectionsMarkdown(
             const examples = exampleLines(meta?.example);
             if (examples.length > 0) parts.push(...examples, '');
         }
-        const json = schema as unknown as JsonSchemaJson;
-        parts.push(
-            ...renderJsonFields(json, '###', json.$defs ?? {}, new Set<string>(), options),
-            ''
-        );
+        parts.push(...renderJsonFields(node, '###', defs, new Set<string>(), options), '');
     }
     return `${parts.join('\n').trim()}\n`;
 }
