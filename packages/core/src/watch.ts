@@ -68,7 +68,11 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
     });
     const dirs = new Set<string>([cwd]);
     const globs = new Set<string>();
-    for (const task of tasks) for (const glob of task.watch ?? []) globs.add(glob);
+    for (const task of tasks) {
+        const patterns =
+            typeof task.watch === 'function' ? task.watch(options.config) : (task.watch ?? []);
+        for (const glob of patterns) globs.add(glob);
+    }
     for (const glob of globs) {
         try {
             const files = new Glob(glob, { cwd, dot: true, ignore }).walkSync();

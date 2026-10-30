@@ -26,6 +26,16 @@ export interface Manifest {
      * `syncedAt` in the manifest until the next sync migrates it.
      */
     syncedAt?: string;
+    /**
+     * The `tsconfig.overrides` currently applied, keyed by the repo-relative
+     * target file (`{ kind, override }`), so a removed override can be reverted.
+     */
+    tsconfigOverrides?: Record<string, unknown>;
+    /**
+     * The original (pre-override) tsconfig contents, nested by repo-relative
+     * path (`{ packages: { core: { "tsconfig.build.json": { ... } } } }`).
+     */
+    snapshots?: Record<string, unknown>;
 }
 
 /** Absolute path to a file in the manifest directory. */
@@ -60,9 +70,17 @@ export function readManifest(cwd: string): Manifest {
     const syncedAt = readSyncedAt(cwd);
     const origins =
         parsed?.origins && typeof parsed.origins === 'object' ? parsed.origins : undefined;
+    const tsconfigOverrides =
+        parsed?.tsconfigOverrides && typeof parsed.tsconfigOverrides === 'object'
+            ? parsed.tsconfigOverrides
+            : undefined;
+    const snapshots =
+        parsed?.snapshots && typeof parsed.snapshots === 'object' ? parsed.snapshots : undefined;
     return {
         files: Array.isArray(parsed?.files) ? parsed.files : [],
         ...(origins ? { origins } : {}),
+        ...(tsconfigOverrides ? { tsconfigOverrides } : {}),
+        ...(snapshots ? { snapshots } : {}),
         ...(syncedAt ? { syncedAt } : {}),
     };
 }
@@ -76,7 +94,8 @@ export function writeManifest(
     cwd: string,
     files: string[],
     syncedAt?: string,
-    origins?: Record<string, FileOrigin>
+    origins?: Record<string, FileOrigin>,
+    extras?: Record<string, unknown>
 ): void {
     const dir = manifestDir(cwd);
     fs.mkdirSync(dir, { recursive: true });
@@ -84,6 +103,8 @@ export function writeManifest(
     fs.writeFileSync(
         path.join(dir, MANIFEST_FILE),
         toJson({
+            // Task metadata first, so it can never clobber `files`/`origins`.
+            ...extras,
             files: unique,
             ...(origins
                 ? {

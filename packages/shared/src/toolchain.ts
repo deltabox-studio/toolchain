@@ -329,6 +329,13 @@ export interface ManagedFile {
      * JSON files, which are tracked via the manifest instead).
      */
     header?: string;
+    /**
+     * Record the file in the manifest (default true). An untracked file is
+     * written and drift-checked like any other, but stays user-owned: it is
+     * never pruned by a later sync or removed by `dbx reset` (eg. a user
+     * tsconfig a `tsconfig.overrides` entry patches).
+     */
+    track?: boolean;
 }
 
 /** The context handed to every {@link SyncTask}. */
@@ -347,6 +354,10 @@ export interface SyncContext {
     log: (message: string) => void;
     /** Emit a warning (respects `--quiet` and `logger.suppress`). */
     warn: (message: string, id?: string) => void;
+    /** Dry run: report drift without writing files (including snapshots). */
+    check?: boolean;
+    /** Extra manifest metadata tasks can persist between syncs. */
+    manifest?: Record<string, unknown>;
 }
 
 /** A unit of sync work exposed by a package. */
@@ -355,16 +366,17 @@ export interface SyncTask {
     name: string;
     /**
      * Repo-relative globs to watch; a change re-runs this task. The config file
-     * itself is always watched, and re-runs every task.
+     * itself is always watched, and re-runs every task. A function derives the
+     * globs from the config (eg. custom tsconfig file names).
      */
-    watch?: string[];
+    watch?: string[] | ((config: ToolchainConfig) => string[]);
     /**
      * File names/suffixes the task does **not** own but that may appear in an
      * older manifest. They are never deleted (even though they are no longer
      * generated) and are dropped from the manifest, so a consumer can edit them
-     * freely — eg. `tsconfig.build.json`.
+     * freely — eg. `tsconfig.build.json`. A function derives them from the config.
      */
-    keep?: string[];
+    keep?: string[] | ((config: ToolchainConfig) => string[]);
     /** Whether the task runs for the given config (default: always). */
     enabled?: (config: ToolchainConfig) => boolean;
     /**

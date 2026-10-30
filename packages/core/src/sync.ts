@@ -71,6 +71,7 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     const log = options.quiet ? () => {} : (options.log ?? ((m: string) => logger.info(m)));
     const warn = options.quiet ? () => {} : (m: string, id?: string) => logger.warn(m, id);
     const projectType = options.projectType ?? resolveProjectType(cwd, config);
+    const manifest = readManifest(cwd);
     const ctx: SyncContext = {
         cwd,
         projectType,
@@ -79,6 +80,13 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
         tokens,
         log,
         warn,
+        check: options.check === true,
+        manifest: {
+            ...(manifest.tsconfigOverrides
+                ? { tsconfigOverrides: manifest.tsconfigOverrides }
+                : {}),
+            ...(manifest.snapshots ? { snapshots: manifest.snapshots } : {}),
+        },
     };
     const hooks = config.hooks ?? {};
     await hooks.beforeSync?.(ctx);
@@ -101,12 +109,19 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     }
 
     const desired = new Map(files.map(file => [norm(file.path), file.content]));
-    const manifest = readManifest(cwd);
+    // Untracked files are written + drift-checked but stay user-owned: they are
+    // kept out of the manifest, so they are never pruned or reset.
+    const untracked = new Set(
+        files.filter(file => file.track === false).map(file => norm(file.path))
+    );
 
     // Files a task declares as user-owned (`keep`): never deleted, dropped from
     // the manifest, so consumers can edit them (eg. `tsconfig.build.json`).
     const keep = new Set<string>();
-    for (const task of active) for (const pattern of task.keep ?? []) keep.add(pattern);
+    for (const task of active) {
+        const patterns = typeof task.keep === 'function' ? task.keep(config) : (task.keep ?? []);
+        for (const pattern of patterns) keep.add(pattern);
+    }
     const isKept = (relative: string): boolean => {
         for (const pattern of keep) {
             if (
@@ -140,6 +155,7 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     const removed = manifest.files.filter(
         relative =>
             !desired.has(relative) &&
+            !untracked.has(relative) &&
             !isKept(relative) &&
             fs.existsSync(path.resolve(cwd, relative)) &&
             originOf(relative) === 'created'
@@ -174,11 +190,12 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     for (const relative of removed) {
         fs.rmSync(path.resolve(cwd, relative), { force: true });
     }
+    const tracked = [...desired.keys()].filter(relative => !untracked.has(relative));
     const origins: Record<string, 'created' | 'adopted'> = {};
-    for (const relative of desired.keys()) {
+    for (const relative of tracked) {
         origins[relative] = originOf(relative);
     }
-    writeManifest(cwd, [...desired.keys()], undefined, origins);
+    writeManifest(cwd, tracked, undefined, origins, ctx.manifest);
     if (ensureDbxGitignore(cwd)) log('  I .gitignore (added the .dbx ignore block)');
 
     log(
