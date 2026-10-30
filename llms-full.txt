@@ -745,13 +745,13 @@ Colour is on by default and follows `--no-color` / the [`logger` config](/guide/
 
 ## Core
 
-| Command     | Description                                                                               |
-| ----------- | ----------------------------------------------------------------------------------------- |
-| `projects`  | Discover projects and write `.dbx/toolchain/projects.json`.                               |
-| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`, `--json`). |
-| `watch`     | Sync once, then watch key inputs and re-sync.                                             |
-| `reset`     | Remove generated files, the manifest and/or the config (`--all`, `--recursive`).          |
-| `providers` | List registered providers + their commands (`--json`).                                    |
+| Command     | Description                                                                                                          |
+| ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| `projects`  | Discover projects and write `.dbx/toolchain/projects.json`.                                                          |
+| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`, `--json`).                            |
+| `watch`     | Sync once, then watch key inputs and re-sync.                                                                        |
+| `reset`     | Remove generated files, the manifest and/or the config (`--all`, `--recursive`); reverts `tsconfig.overrides` first. |
+| `providers` | List registered providers + their commands (`--json`).                                                               |
 
 ## Scaffolding
 
@@ -802,12 +802,12 @@ See [Migrations](/guide/migrations).
 
 ## Tsconfig / cleanup / changelog / workflows
 
-| Command                     | Description                                               |
-| --------------------------- | --------------------------------------------------------- |
-| `tsconfig`                  | Regenerate workspace `tsconfig.json` files.               |
-| `cleanup` / `cleanup:turbo` | Remove build artifacts / the turbo cache.                 |
-| `changelog`                 | Derive the semver bump and update CHANGELOG + versions.   |
-| `workflow`                  | Trigger generated GitHub workflows via `gh workflow run`. |
+| Command                     | Description                                                                        |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| `tsconfig`                  | Regenerate workspace `tsconfig.json` files (`--restore [kind]` reverts overrides). |
+| `cleanup` / `cleanup:turbo` | Remove build artifacts / the turbo cache.                                          |
+| `changelog`                 | Derive the semver bump and update CHANGELOG + versions.                            |
+| `workflow`                  | Trigger generated GitHub workflows via `gh workflow run`.                          |
 
 ## Providers
 
@@ -1441,21 +1441,52 @@ The `{{envTypesFile}}` token in the templates (default `src/env.d.ts`) is
 resolved when a project is scaffolded, so a generated config's `include` points
 at the project's env types file.
 
+## Development vs build configs
+
+`tsconfig.json` is the **editor/development** config: it extends
+`tsconfig.default.json` and layers the workspace `paths` aliases on top, so
+imports such as `@acme/core` resolve directly to `packages/core/src`. That is
+what gives go-to-definition, inline diagnostics and fast editor feedback against
+the real workspace source.
+
+`tsconfig.build.json` intentionally extends `tsconfig.default.json`, **not**
+`tsconfig.json`, so it does not get those path aliases. A build (`tsc -p
+tsconfig.build.json`, `tsdown`, ...) therefore treats sibling workspaces as
+packages (resolved through `node_modules` / project references) instead of
+treating their source as part of the current package. Keeping them as packages
+matters: aliasing them into the build graph would compile/bundle another
+workspace's source into the output and increase the package size.
+
+You can opt into build-time aliases by changing the build config to
+
+```json [tsconfig.build.json]
+{
+    "extends": "./tsconfig.json",
+    "include": ["src"]
+}
+```
+
+It works, but sibling workspace source now participates in the build graph, so
+only do it when that is what you want.
+
 ## Options
 
-| Option        | Type                 | Default                    | Description                                                         |
-| ------------- | -------------------- | -------------------------- | ------------------------------------------------------------------- |
-| `enabled`     | `boolean`            | enabled when defined       | Master switch (only meaningful with `project.type: monorepo-root`). |
-| `aliases`     | `boolean`            | `true`                     | Inject `compilerOptions.paths` from the workspaces config.          |
-| `refs`        | `boolean`            | `false`                    | Wire project references between workspaces.                         |
-| `composite`   | `boolean`            | `false`                    | Emit `composite: true` on the generated configs.                    |
-| `glob`        | `string \| string[]` | `**/tsconfig.default.json` | Glob(s) for the workspace default tsconfig files to expand.         |
-| `exclude`     | `string \| string[]` | common ignored paths       | Glob(s) excluded from `glob`.                                       |
-| `gitignore`   | `boolean`            | `true`                     | Respect `.gitignore` files (root + nested).                         |
-| `defaultFile` | `string`             | `tsconfig.default.json`    | The workspace default tsconfig file name.                           |
-| `buildFile`   | `string`             | `tsconfig.build.json`      | The workspace build tsconfig file name.                             |
-| `indent`      | `number`             | `4`                        | JSON indentation of the generated files.                            |
-| `rootFile`    | `string`             | `tsconfig.workspaces.json` | The workspaces tsconfig file name.                                  |
+| Option        | Type                                 | Default                    | Description                                                         |
+| ------------- | ------------------------------------ | -------------------------- | ------------------------------------------------------------------- |
+| `enabled`     | `boolean`                            | enabled when defined       | Master switch (only meaningful with `project.type: monorepo-root`). |
+| `aliases`     | `boolean`                            | `true`                     | Inject `compilerOptions.paths` from the workspaces config.          |
+| `refs`        | `boolean`                            | `false`                    | Wire project references between workspaces.                         |
+| `composite`   | `boolean`                            | `false`                    | Emit `composite: true` on the generated configs.                    |
+| `glob`        | `string \| string[]`                 | `**/tsconfig.default.json` | Glob(s) for the workspace default tsconfig files to expand.         |
+| `exclude`     | `string \| string[]`                 | common ignored paths       | Glob(s) excluded from `glob`.                                       |
+| `gitignore`   | `boolean`                            | `true`                     | Respect `.gitignore` files (root + nested).                         |
+| `defaultFile` | `string`                             | `tsconfig.default.json`    | The workspace default tsconfig file name.                           |
+| `buildFile`   | `string`                             | `tsconfig.build.json`      | The workspace build tsconfig file name.                             |
+| `indent`      | `number`                             | `4`                        | JSON indentation of the generated files.                            |
+| `rootFile`    | `string`                             | `tsconfig.workspaces.json` | The workspaces tsconfig file name.                                  |
+| `baseFile`    | `string`                             | `tsconfig.base.json`       | The root base tsconfig file name (the `overrides.base` target).     |
+| `extends`     | `{ base?, default?, build? }`        | template defaults          | Per-file `extends` overrides for scaffolded tsconfig templates.     |
+| `overrides`   | `{ base?, default?, build?, root? }` | none                       | Managed deep-merge overrides applied to the user-owned tsconfigs.   |
 
 ### `aliases`
 
@@ -1516,24 +1547,150 @@ Set `gitignore: false` to scan ignored paths anyway.
 
 ### Renaming the files
 
-`defaultFile`, `buildFile` and `rootFile` rename the files the generator reads
-and writes:
+`defaultFile`, `buildFile`, `rootFile` and `baseFile` rename the files the
+generator reads and the [`overrides`](#overrides) patch:
 
 ```ts
 tsconfig: {
-    defaultFile: 'tsconfig.src.json',       // expanded into tsconfig.json
-    buildFile: 'tsconfig.dist.json',        // read, never rewritten
-    rootFile: 'tsconfig.graph.json',        // the workspaces paths + references
+    defaultFile: 'tsconfig.src.json',          // expanded into tsconfig.json
+    buildFile: 'tsconfig.dist.json',           // read, never rewritten by the generator
+    rootFile: 'tsconfig.graph.json',           // the workspaces paths + references
+    baseFile: 'config/tsconfig.shared.json',   // the shared base (`overrides.base`)
 }
 ```
 
-Only `tsconfig.json` is fixed (TypeScript's LSP requirement). Project detection
-looks for `tsconfig.workspaces.json` / `tsconfig.default.json` by default, but
-honours `rootFile` / `defaultFile` when they are set in the config.
+Only `tsconfig.json` is fixed (TypeScript's LSP requirement). `rootFile` and
+`baseFile` are paths relative to the repo root; `defaultFile` and `buildFile`
+are file names inside each workspace. The custom names are honoured everywhere
+the sync task looks: the generator, the overrides, the watched inputs
+(`dbx watch`) and the files it keeps. Project detection looks for
+`tsconfig.workspaces.json` / `tsconfig.default.json` by default, but honours
+`rootFile` / `defaultFile` when they are set in the config. Scaffolding
+(`dbx project:init*`) always writes the default names.
 
 ### `indent`
 
 The JSON indentation of every generated file (default `4`).
+
+### `extends`
+
+Overrides the `extends` field written into **scaffolded** tsconfig templates
+(`dbx project:init*`). This is separate from the `tsconfig.workspaces.json`
+`extends` chain used by the resolver. Set a value to add/replace the field, or
+`false` to remove it:
+
+```ts
+tsconfig: {
+    extends: {
+        base: '@tsconfig/node22',       // tsconfig.base.json currently has no extends
+        default: './tsconfig.base.json', // keep/customize the normal default chain
+        build: './tsconfig.json',       // opt into path aliases during builds
+    },
+}
+```
+
+Existing projects are user-owned by default: edit their `tsconfig.base.json`,
+`tsconfig.default.json` and `tsconfig.build.json` directly. `dbx sync` only
+rewrites the generated `tsconfig.json` unless you opt into `overrides`.
+
+### `overrides`
+
+Deep-merges managed options into the **user-owned** tsconfigs during
+`dbx sync`, so a config can define those files programmatically:
+
+```ts
+tsconfig: {
+    overrides: {
+        base: { compilerOptions: { target: 'ES2022' } },
+        root: { compilerOptions: { composite: true, types: ['node'] } },
+        default: { compilerOptions: { strict: true } },
+        build: { compilerOptions: { declaration: true } },
+    },
+}
+```
+
+| Key       | Target                                                           |
+| --------- | ---------------------------------------------------------------- |
+| `base`    | the root base tsconfig (`baseFile`, `tsconfig.base.json`)        |
+| `root`    | the workspaces tsconfig (`rootFile`, `tsconfig.workspaces.json`) |
+| `default` | every workspace's default tsconfig (`defaultFile`)               |
+| `build`   | every workspace's build tsconfig (`buildFile`)                   |
+
+Overrides are **deep-merged**: objects merge key by key, while arrays and
+scalars replace the target value. Keys the override does not mention are left
+alone. The patched files stay yours: they are not added to the manifest's
+managed `files`, so a sync never deletes them and `dbx reset` never removes them.
+
+#### Snapshots
+
+The first time an override touches a file, its original content is saved in
+`.dbx/toolchain/manifest.json` under a top-level `snapshots` field. The tree
+mirrors the repository with **relative** paths (the manifest is the tracked
+file under `.dbx`, so it never holds an absolute path), and the applied override
+per file is recorded under `tsconfigOverrides`:
+
+```json [.dbx/toolchain/manifest.json]
+{
+    "files": ["packages/core/tsconfig.json"],
+    "snapshots": {
+        "tsconfig.workspaces.json": { "compilerOptions": { "composite": false } },
+        "packages": {
+            "core": { "tsconfig.build.json": { "extends": "./tsconfig.default.json" } }
+        }
+    },
+    "tsconfigOverrides": {
+        "tsconfig.workspaces.json": {
+            "kind": "root",
+            "override": { "compilerOptions": { "composite": true, "types": ["node"] } }
+        }
+    }
+}
+```
+
+#### Removing an override
+
+Removing an override (or one of its keys) reverts it on the next sync. For
+every key the override no longer sets, the sync compares the target file with
+the snapshot:
+
+* the snapshot **defines** the key: the original value is restored (eg. dropping
+  `composite: true` above brings back the original `composite: false`);
+* the snapshot **does not define** it: the key is removed, along with any parent
+  object the override created that is now empty (eg. `types`);
+* the key holds **another value** than the override wrote: it was edited after
+  the override applied it, so it is kept and a `tsconfig.override-edited`
+  warning is logged.
+
+Once no override targets a file anymore, its snapshot and `tsconfigOverrides`
+entry are dropped. A file is never deleted, even when nothing else is left in
+it: other tooling may depend on it.
+
+#### Restoring
+
+`dbx tsconfig --restore` removes the applied override content right away (with
+the same snapshot comparison), optionally for one kind only:
+
+```sh
+dbx tsconfig --restore           # every kind
+dbx tsconfig --restore default   # base | root | default | build
+```
+
+If the overrides are still configured, the command warns
+(`tsconfig.restore-reapply`): the next `dbx sync` applies them again, so remove
+them from `toolchain.tsconfig.overrides` to keep the restored files.
+`dbx reset` does the same restore before it removes the manifest, so resetting a
+project never strands override content without its snapshots.
+
+#### Notes
+
+* A target that does not exist is **not created**: the sync warns
+  (`tsconfig.missing-file`) and skips that file. A target outside the project
+  root warns with `tsconfig.outside-root`.
+* The user-owned files are read as JSONC but written back as plain JSON, so
+  comments are dropped from a file the first time an override changes it. A file
+  whose content would not change is never rewritten.
+* `dbx sync --check` reports pending override changes (and reverts) as drift
+  without writing them.
 
 ## How generation works
 
@@ -1550,6 +1707,15 @@ wiring, your workspace-specific options stay in the default tsconfig (the file
 the generator reads, not the one it writes).
 
 ## Warnings
+
+| Id                         | When                                                               |
+| -------------------------- | ------------------------------------------------------------------ |
+| `tsconfig.missing-file`    | An override targets a file that does not exist (it is skipped).    |
+| `tsconfig.outside-root`    | An override target resolves outside the project root.              |
+| `tsconfig.override-edited` | A reverted key was edited after the override set it (it is kept).  |
+| `tsconfig.restore-reapply` | `--restore` ran while the restored overrides are still configured. |
+
+Silence any of them with [`logger.suppress`](/guide/config/logging).
 
 When a sync finds **no** workspace tsconfig files, it warns (in the CLI logs and
 as a VS Code notification) if either:
@@ -1599,11 +1765,35 @@ dbx tsconfig --no-gitignore               # do not respect .gitignore files
 dbx tsconfig --default-file tsconfig.src.json
 dbx tsconfig --build-file tsconfig.dist.json
 dbx tsconfig --root-file tsconfig.workspaces.json
+dbx tsconfig --restore [kind]             # remove applied overrides (base|root|default|build)
 ```
 
 Every flag overrides the matching `tsconfig` option; with no flags the command
-uses the config defaults. `dbx sync` runs the same generator through the
+uses the config defaults (including in-memory `overrides`, so the output matches
+`dbx sync`). `dbx tsconfig --restore [kind]` removes applied overrides instead
+(see [Restoring](#restoring)). `dbx sync` runs the same generator through the
 [tsconfig sync task](#sync--ci).
+
+### Resolving a tsconfig
+
+The same command can inspect a config instead of generating files. It follows
+`extends` per field, so a child can define `paths` while inheriting
+`references` (or the reverse):
+
+```sh
+dbx tsconfig --json               # { alias, paths, references }
+dbx tsconfig --alias              # Vite/Vitest resolve.alias entries
+dbx tsconfig --paths              # resolved compilerOptions.paths
+dbx tsconfig --references         # resolved project references
+dbx tsconfig --tsconfig tsconfig.build.json
+dbx tsconfig --root packages/app  # root used for detection + relative tsconfig
+dbx tsconfig --no-extends         # only the selected file
+```
+
+The output is machine-clean JSON (absolute paths). Exact `alias` keys are strings;
+wildcards are anchored regular expressions (rendered as `/.../` strings in the
+CLI JSON), so `@acme/core` never captures `@acme/core-utils`. Exact keys sort
+before wildcards.
 
 ## Programmatic API
 
@@ -1611,6 +1801,8 @@ uses the config defaults. `dbx sync` runs the same generator through the
 import {
     generateTsconfigs,
     runTsconfigCli,
+    resolveTsconfig,
+    readTsconfig,
     renderTsconfigBase,
     renderTsconfigDefault,
     renderTsconfigBuild,
@@ -1618,22 +1810,40 @@ import {
     buildMonorepoTsconfig,
     renderMonorepoTsconfig,
     tsconfigSyncTask,
+    tsconfigFileNames,
+    restoreTsconfigOverrides,
 } from '@deltabox/toolchain/tsconfig';
 ```
 
-| Export                                                                 | Description                                   |
-| ---------------------------------------------------------------------- | --------------------------------------------- |
-| `generateTsconfigs(options)`                                           | Expand every default tsconfig (dry-run-able). |
-| `runTsconfigCli(argv?)`                                                | The `dbx tsconfig` entry point.               |
-| `renderTsconfigBase` / `renderTsconfigDefault` / `renderTsconfigBuild` | Render a template with replacements.          |
-| `renderTsconfigTemplates(replacements?)`                               | Render every template keyed by file name.     |
-| `buildMonorepoTsconfig(options)` / `renderMonorepoTsconfig(options)`   | The workspaces config (object / JSON text).   |
-| `tsconfigSyncTask()`                                                   | The sync task wired into `dbx sync`.          |
+| Export                                                                 | Description                                             |
+| ---------------------------------------------------------------------- | ------------------------------------------------------- |
+| `generateTsconfigs(options)`                                           | Expand every default tsconfig (dry-run-able).           |
+| `runTsconfigCli(argv?)`                                                | The `dbx tsconfig` entry point.                         |
+| `resolveTsconfig(options?)`                                            | Resolve `{ alias, paths, references }` (extends-aware). |
+| `readTsconfig(file)`                                                   | Read a JSONC tsconfig (comments + trailing commas).     |
+| `renderTsconfigBase` / `renderTsconfigDefault` / `renderTsconfigBuild` | Render a template with replacements.                    |
+| `renderTsconfigTemplates(replacements?)`                               | Render every template keyed by file name.               |
+| `buildMonorepoTsconfig(options)` / `renderMonorepoTsconfig(options)`   | The workspaces config (object / JSON text).             |
+| `tsconfigSyncTask()`                                                   | The sync task wired into `dbx sync`.                    |
+| `tsconfigFileNames(config)`                                            | The configured base/root/default/build file names.      |
+| `restoreTsconfigOverrides(options)`                                    | Remove applied overrides (`{ cwd, kind?, dryRun? }`).   |
+| `applyOverride` / `mergeOverride` / `revertOverride`                   | The deep-merge + snapshot-aware revert helpers.         |
+| `getSnapshot` / `setSnapshot` / `deleteSnapshot`                       | Read/write the manifest snapshot tree by relative path. |
+
+`resolveTsconfig` accepts `{ tsconfig, cwd, root, extends, overrides }`: `tsconfig` is
+resolved from `root` (default `cwd`), and `extends` defaults to `true`. Paths are
+resolved against the defining config's `baseUrl` (or its directory), matching
+TypeScript.
 
 `generateTsconfigs` returns one result per workspace (with `newTsconfig`,
 `originalConfig`, ...); pass `write: false` for a dry run. The task-level
 options are documented in the [Programmatic API](/guide/api/package-reference#deltaboxtoolchaintsconfig)
 reference.
+
+`renderTsconfigBase` / `renderTsconfigDefault` / `renderTsconfigBuild` accept an
+optional second `extends` argument (`string | string[] | false`), and
+`renderTsconfigTemplates` accepts `{ base, default, build }` as its second
+argument.
 
 ## Sync & CI
 
@@ -1644,8 +1854,9 @@ and reports the regenerated files:
 tsconfig: regenerated 6 workspace tsconfig(s).
 ```
 
-The task watches `tsconfig.workspaces.json` and every default tsconfig, keeps
-`tsconfig.build.json`, and only applies to `monorepo-root` projects. Run
+The task watches the workspaces tsconfig and every default tsconfig (custom
+`rootFile` / `defaultFile` names included), keeps the build tsconfigs, and only
+applies to `monorepo-root` projects. Run
 `dbx sync --check` in CI to fail when a generated `tsconfig.json` drifts from
 its inputs.
 
@@ -3148,6 +3359,116 @@ the generated interface name.
 * Changelog versioning supports custom bump rules/callbacks, over-bump opt-in,
   provider selection and commit credit/format options.
 
+## tsconfig changes
+
+### Resolve paths/references programmatically or from the CLI
+
+v2 adds a extends-aware resolver. Use it instead of hand-rolling alias parsing:
+
+```ts
+import { resolveTsconfig } from '@deltabox/toolchain/tsconfig';
+
+const { alias, paths, references } = resolveTsconfig({
+    root: process.cwd(),
+    tsconfig: 'tsconfig.json', // optional; defaults to <root>/tsconfig.json
+});
+```
+
+```sh
+dbx tsconfig --json                       # { alias, paths, references }
+dbx tsconfig --alias                      # Vite/Vitest resolve.alias entries
+dbx tsconfig --paths                      # resolved compilerOptions.paths
+dbx tsconfig --references                 # resolved project references
+dbx tsconfig --tsconfig tsconfig.build.json
+dbx tsconfig --root packages/app --no-extends
+```
+
+The resolver follows `extends` per field: a child can define `paths` while
+inheriting `references` (or the reverse). When a config has no `baseUrl`, its
+relative paths resolve from the config file that declares them.
+
+### Stop editing generated `tsconfig.json` files
+
+`dbx` owns the generated `tsconfig.json`; move customizations to
+`tsconfig.default.json` or `toolchain.tsconfig.overrides` and re-run sync:
+
+```ts
+export default defineConfig({
+    toolchain: {
+        tsconfig: {
+            overrides: {
+                base: { compilerOptions: { target: 'ES2022' } },
+                default: { compilerOptions: { strict: true } },
+                build: { compilerOptions: { declaration: true } },
+                root: { compilerOptions: { types: ['node'] } },
+            },
+        },
+    },
+});
+```
+
+```sh
+dbx sync --recursive
+dbx sync --recursive --check
+```
+
+Overrides are deep-merged into the user-owned files (`baseFile`, `rootFile`,
+`defaultFile`, `buildFile`; custom names are honoured). The first time a file is
+patched, its original content is snapshotted in `.dbx/toolchain/manifest.json`
+under `snapshots` (a tree of **relative** paths mirroring the repo), and the
+applied override under `tsconfigOverrides`. Deleting an override key reverts it:
+the original value comes back when the snapshot defines the key, otherwise the
+key is removed (a value edited after the override set it is kept). A missing
+target is skipped with a `tsconfig.missing-file` warning instead of being created.
+
+```sh
+dbx tsconfig --restore           # remove every applied override now
+dbx tsconfig --restore build     # only base | root | default | build
+```
+
+`dbx reset` restores the overrides before it removes the manifest. The patched
+files are never part of the manifest's managed `files`, so neither a sync nor a
+reset deletes them. See [tsconfig → `overrides`](/guide/tsconfig#overrides).
+
+`tsconfig.baseFile` (default `tsconfig.base.json`) names the root base tsconfig
+that `overrides.base` targets. Use `tsconfig.extends` to choose what scaffolded
+`tsconfig.base/default/build.json` files extend (for example
+`build: './tsconfig.json'` to reuse path aliases in builds, at the cost of
+pulling workspace source into the build).
+
+### Sync task API
+
+Custom sync tasks can use these additions:
+
+* `SyncTask.watch` / `SyncTask.keep` accept a function of the config
+  (`config => string[]`), so globs can follow configured file names.
+* A `ManagedFile` returned with `track: false` is written and drift-checked like
+  any other, but stays user-owned: it is not recorded in the manifest, never
+  pruned by a later sync and never removed by `dbx reset`.
+* `SyncContext.manifest` holds task metadata persisted in the manifest between
+  syncs (`snapshots`, `tsconfigOverrides`); `SyncContext.check` is true for
+  `dbx sync --check`.
+
+### Do not hand-add workspace aliases
+
+Keep `paths`/`references` in `tsconfig.workspaces.json`; the generator expands
+them into each workspace. For Vite/Vitest, prefer Vite's native
+`resolve.tsconfigPaths: true`, or pass `resolveTsconfig().alias` to
+`resolve.alias`. If you created a `vitest.aliases.ts` during the transition,
+delete it and use one of those two options.
+
+## Vite and task changes
+
+* Runtime shims are still the default (`vite.shim: 'runtime'`). Static shims
+  (`vite.shim: 'static'`) serialize the config and import only `defineConfig`,
+  useful when loading the shim without a built package.
+* `vite.shimImport` changes the `resolveVite` import specifier for runtime
+  shims. Relative values are resolved from the repo root and rewritten per
+  generated config.
+* `typecheck:ci` was removed; `typecheck` already uses the source tsconfig. Use
+  `yarn typecheck` in CI and delete any `typecheck:ci` scripts or Vite+ tasks.
+* The emulate test suite can be cleaned with `yarn test:clean`.
+
 ## Recommended upgrade steps
 
 1. Replace `scopes` with `schema` in `createConfigEngine`.
@@ -3156,7 +3477,19 @@ the generated interface name.
    schema exports.
 4. Rename `env`/`path` metadata to `envName`/`envPath` when convenient (the old
    names still work).
-5. Run `yarn dbx sync` and `yarn config:types` after upgrading.
+5. Remove hand-written `tsconfig.json` aliases and move them to
+   `tsconfig.workspaces.json`; run `dbx sync --recursive`.
+6. Replace any custom tsconfig path parser with `resolveTsconfig()` (or
+   `dbx tsconfig --json`).
+7. Delete `vitest.aliases.ts` if present; enable
+   `resolve.tsconfigPaths: true` or use `resolveTsconfig().alias`.
+8. Replace `typecheck:ci` with `typecheck` in scripts/CI.
+9. Optionally move options you want managed in `tsconfig.base.json` /
+   `tsconfig.workspaces.json` / the workspace default and build tsconfigs into
+   `toolchain.tsconfig.overrides`, and keep committing
+   `.dbx/toolchain/manifest.json` (it now holds their snapshots).
+10. Run `yarn dbx sync`, `yarn config:types`, `yarn typecheck`, `yarn test` and
+    `yarn dbx sync --recursive --check` after upgrading.
 
 ---
 
@@ -3240,8 +3573,7 @@ Project metadata: canonical `package.json` fields and template tokens (shared fi
 
 ### `type`
 
-* **Type**: `any`
-* **Default**: `{}`
+* **Type**: `'monorepo-root' | 'monorepo-workspace' | 'project'`
 
 The project kind (detected when omitted).
 
@@ -3317,36 +3649,295 @@ GitHub Actions workflows to generate (CI, release, issues, changelog, sync).
 
 ### `ci`
 
-* **Type**: `any`
-* **Default**: `{}`
+* **Type**: `WorkflowSetting`
 
 The CI checks workflow (`ci.yml`).
 
+#### `pushBranches`
+
+* **Type**: `Array<string>`
+
+Replace `on.push.branches`.
+
+#### `pullRequestBranches`
+
+* **Type**: `Array<string>`
+
+Replace `on.pull_request.branches`.
+
+#### `triggers`
+
+* **Type**: `Record<string, unknown>`
+
+Extra `on.*` triggers.
+
+#### `extra`
+
+* **Type**: `Record<string, unknown>`
+
+Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
+
+#### `steps`
+
+* **Type**: `WorkflowStepsConfig | Array<WorkflowStepsConfig>`
+
+Extra steps for a job (one group, or per-job groups).
+
+##### `job`
+
+* **Type**: `string`
+
+Target job id (defaults to the primary/first job).
+
+##### `before`
+
+* **Type**: `Array<WorkflowStep>`
+
+Steps inserted at the start.
+
+###### `name`
+
+* **Type**: `string`
+
+Step display name.
+
+###### `id`
+
+* **Type**: `string`
+
+Step id (for `steps.<id>` outputs).
+
+###### `if`
+
+* **Type**: `string`
+
+Conditional expression (`if:`).
+
+###### `uses`
+
+* **Type**: `string`
+
+Action to run (`uses:`), eg. `actions/checkout@v4`.
+
+###### `run`
+
+* **Type**: `string`
+
+Shell command(s) to run (`run:`).
+
+###### `shell`
+
+* **Type**: `string`
+
+Shell to run `run` in, eg. `bash`.
+
+###### `working-directory`
+
+* **Type**: `string`
+
+Directory the step runs in.
+
+###### `with`
+
+* **Type**: `Record<string, unknown>`
+
+Inputs for a `uses` action.
+
+###### `env`
+
+* **Type**: `Record<string, unknown>`
+
+Environment variables for the step.
+
+##### `after`
+
+* **Type**: `Array<WorkflowStep>`
+
+Steps appended at the end.
+
+#### `jobs`
+
+* **Type**: `Record<string, unknown>`
+
+Extra complete jobs merged in.
+
+#### `tokens`
+
+* **Type**: `Record<string, unknown>`
+
+Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
+
+#### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable this workflow (default: enabled when present).
+
 ### `changelog`
 
-* **Type**: `any`
-* **Default**: `{}`
+* **Type**: `ChangelogWorkflowSetting`
 
 The changelog/version workflow (`changelog.yml`) plus the changelog pipeline config (versioning, VS Code settings, commitlint).
 
+#### `pushBranches`
+
+* **Type**: `Array<string>`
+
+Replace `on.push.branches`.
+
+#### `pullRequestBranches`
+
+* **Type**: `Array<string>`
+
+Replace `on.pull_request.branches`.
+
+#### `triggers`
+
+* **Type**: `Record<string, unknown>`
+
+Extra `on.*` triggers.
+
+#### `extra`
+
+* **Type**: `Record<string, unknown>`
+
+Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
+
+#### `steps`
+
+* **Type**: `WorkflowStepsConfig | Array<WorkflowStepsConfig>`
+
+Extra steps for a job (one group, or per-job groups).
+
+#### `jobs`
+
+* **Type**: `Record<string, unknown>`
+
+Extra complete jobs merged in.
+
+#### `tokens`
+
+* **Type**: `Record<string, unknown>`
+
+Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
+
+#### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable the changelog workflow and pipeline (default: enabled when present).
+
+#### `branches`
+
+* **Type**: `ChangelogBranchesConfig`
+
+Branches the generated workflows target.
+
+##### `main`
+
+* **Type**: `string | Array<string>`
+
+Branch glob(s) the CI + release workflows run on, and the release PR base (default `["main"]`).
+
+##### `dev`
+
+* **Type**: `string | Array<string>`
+
+Branch glob(s) the changelog/version workflow runs on. No default: when omitted it reuses `main` (so a single-branch repo needs no `dev`).
+
+#### `commitlint`
+
+* **Type**: `boolean | ChangelogCommitlintConfig`
+
+commitlint config; set `false` to disable the Conventional-Commits pipeline.
+
+##### `dir`
+
+* **Type**: `string`
+
+Directory the generated `commitlint.config.mjs` is written to (default: the project root). The husky hook and CI use `--config` to point at it.
+
+##### `types`
+
+* **Type**: `Array<string>`
+
+Allowed commit types (commitlint).
+
+##### `scopes`
+
+* **Type**: `Array<string>`
+
+Allowed commit scopes (commitlint).
+
+##### `enabled`
+
+* **Type**: `boolean`
+
+Enable commitlint (default true when the changelog is enabled). Set false to generate changelogs without the Conventional-Commits pipeline.
+
+#### `versioning`
+
+* **Type**: `ChangelogVersioning`
+
+Automatic version bumping on changelog generation (default `true`).
+
+##### `target`
+
+* **Type**: `'uniform' | 'root-only' | 'individual'`
+
+`uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently (default `uniform`).
+
+##### `workspaces`
+
+* **Type**: `Array<string>`
+
+Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own.
+
+##### `bump`
+
+* **Type**: `Record<string, unknown>`
+
+Custom bump rules for major/minor/patch/alpha (matchers or callbacks).
+
+##### `allowOverBump`
+
+* **Type**: `boolean`
+
+Apply a bump once per matching change instead of once per run (default false).
+
+##### `commit`
+
+* **Type**: `unknown`
+
+Commit message formatting/credit options or callback.
+
+##### `provider`
+
+* **Type**: `unknown`
+
+`default`, `changesets`, a provider id, or a custom provider/callback.
+
+#### `vscode`
+
+* **Type**: `boolean`
+
+Write the Conventional-Commits VS Code settings (default true).
+
 ### `release`
 
-* **Type**: `any`
-* **Default**: `{}`
+* **Type**: `WorkflowSetting`
 
 The release workflow (`release.yml`).
 
 ### `issues`
 
-* **Type**: `any`
-* **Default**: `{}`
+* **Type**: `WorkflowSetting`
 
 The issue-title workflow (`issues.yml`).
 
 ### `sync`
 
-* **Type**: `any`
-* **Default**: `{}`
+* **Type**: `WorkflowSetting`
 
 The toolchain sync workflow (`sync.yml`).
 
@@ -3362,36 +3953,43 @@ Formatter configuration: Oxc/Biome configs, editor defaults and source-tool opti
 
 ### `vscode`
 
-* **Type**: `any`
-* **Default**: `{}`
+* **Type**: `boolean | ToolchainVscodeSettings`
 
 Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false; existing keys are kept).
+
+#### `overrides`
+
+* **Type**: `Record<string, unknown>`
+
+Settings deep-merged over the generated editor defaults.
+
+#### `exclude`
+
+* **Type**: `Array<string>`
+
+Exact setting keys (eg. `editor.defaultFormatter`) to omit.
 
 ### `oxc`
 
 * **Type**: `Record<string, unknown>`
-* **Default**: `{}`
 
 Oxfmt options. `toolchain.vite.fmt` overrides these (deep merge).
 
 ### `biome`
 
 * **Type**: `Record<string, unknown>`
-* **Default**: `{}`
 
 Biome formatter options (merged into the generated `biome.json`).
 
 ### `prettier`
 
 * **Type**: `Record<string, unknown>`
-* **Default**: `{}`
 
 Prettier options (editor defaults/migrations).
 
 ### `dprint`
 
 * **Type**: `Record<string, unknown>`
-* **Default**: `{}`
 
 Dprint options (editor defaults/migrations).
 
@@ -3407,29 +4005,37 @@ Linter configuration: Oxc/Biome configs, editor defaults and ESLint options.
 
 ### `vscode`
 
-* **Type**: `any`
-* **Default**: `{}`
+* **Type**: `boolean | ToolchainVscodeSettings`
 
 Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false; existing keys are kept).
+
+#### `overrides`
+
+* **Type**: `Record<string, unknown>`
+
+Settings deep-merged over the generated editor defaults.
+
+#### `exclude`
+
+* **Type**: `Array<string>`
+
+Exact setting keys (eg. `editor.defaultFormatter`) to omit.
 
 ### `oxc`
 
 * **Type**: `Record<string, unknown>`
-* **Default**: `{}`
 
 Oxlint options. `toolchain.vite.lint` overrides these (deep merge).
 
 ### `biome`
 
 * **Type**: `Record<string, unknown>`
-* **Default**: `{}`
 
 Biome linter options (merged into the generated `biome.json`).
 
 ### `eslint`
 
 * **Type**: `Record<string, unknown>`
-* **Default**: `{}`
 
 ESLint options (editor defaults/migrations).
 
@@ -3454,7 +4060,6 @@ Write the Biome VS Code settings (default true).
 ### `overrides`
 
 * **Type**: `Record<string, unknown>`
-* **Default**: `{}`
 
 Deep-merged over the generated `biome.json` (arrays union).
 
@@ -3470,15 +4075,13 @@ Workspace tsconfig generation (path aliases + project references).
 
 ### `glob`
 
-* **Type**: `any`
-* **Default**: `{}`
+* **Type**: `string | Array<string>`
 
 Glob(s) for the workspace default tsconfig files. Defaults to matching every `defaultFile` recursively.
 
 ### `exclude`
 
-* **Type**: `any`
-* **Default**: `{}`
+* **Type**: `string | Array<string>`
 
 Glob(s) to exclude from `glob`. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
 
@@ -3530,6 +4133,66 @@ The workspace default tsconfig file name that the generator expands (default `ts
 
 The workspace build tsconfig file name (default `tsconfig.build.json`).
 
+### `baseFile`
+
+* **Type**: `string`
+
+The root base tsconfig file name (default `tsconfig.base.json`).
+
+### `extends`
+
+* **Type**: `object`
+
+Per-file `extends` overrides for generated/scaffolded tsconfig templates.
+
+#### `base`
+
+* **Type**: `string | Array<string> | false`
+
+`extends` written into scaffolded `tsconfig.base.json` files (or `false` to remove the field).
+
+#### `default`
+
+* **Type**: `string | Array<string> | false`
+
+`extends` written into scaffolded `tsconfig.default.json` files (or `false` to remove the field).
+
+#### `build`
+
+* **Type**: `string | Array<string> | false`
+
+`extends` written into scaffolded `tsconfig.build.json` files. Default `./tsconfig.default.json`; use `./tsconfig.json` to let builds reuse the path aliases (at the cost of pulling workspace source into the build).
+
+### `overrides`
+
+* **Type**: `ToolchainTsconfigOverrides`
+
+Managed overrides deep-merged into the base/root/default/build tsconfig files during sync. The originals are snapshotted in the manifest, so removing a key reverts it (restoring the original value when the file defined one).
+
+#### `base`
+
+* **Type**: `Record<string, unknown>`
+
+Deep-merged into the root base tsconfig (`baseFile`) during sync.
+
+#### `default`
+
+* **Type**: `Record<string, unknown>`
+
+Deep-merged into every workspace default tsconfig (`defaultFile`) during sync.
+
+#### `build`
+
+* **Type**: `Record<string, unknown>`
+
+Deep-merged into every workspace build tsconfig (`buildFile`) during sync.
+
+#### `root`
+
+* **Type**: `Record<string, unknown>`
+
+Deep-merged into the root workspaces tsconfig (`rootFile`) during sync.
+
 ### `enabled`
 
 * **Type**: `boolean`
@@ -3542,9 +4205,77 @@ Template sources / scaffolding.
 
 ### `sources`
 
-* **Type**: `Array<any>`
+* **Type**: `Array<ToolchainTemplateSource>`
 
 Extra sources on top of the builtin + registry sources.
+
+#### `type`
+
+* **Required**
+* **Type**: `'builtin' | 'local' | 'npm' | 'git' | 'vite-plus' | 'remote'`
+
+How to load the source.
+
+#### `locate`
+
+* **Required**
+* **Type**: `string`
+
+A builtin id, local dir, npm scope, git URL or Vite+ id.
+
+#### `id`
+
+* **Type**: `string`
+
+Stable id (defaults to the basename/scope).
+
+#### `name`
+
+* **Type**: `string`
+
+Display name override.
+
+#### `description`
+
+* **Type**: `string`
+
+Description override.
+
+#### `kind`
+
+* **Type**: `'project' | 'workspace' | 'application' | 'folder' | 'tooling' | 'pipeline'`
+
+What the template produces.
+
+#### `ref`
+
+* **Type**: `string`
+
+Git branch/tag/commit.
+
+#### `registry`
+
+* **Type**: `string`
+
+Custom npm registry URL (default: the project package manager registry).
+
+#### `subdir`
+
+* **Type**: `string`
+
+Subdirectory within the source that holds the template.
+
+#### `tags`
+
+* **Type**: `Array<string>`
+
+Free-form tags.
+
+#### `online`
+
+* **Type**: `boolean`
+
+Whether the source needs network access.
 
 ### `enabled`
 
@@ -3558,15 +4289,25 @@ Registry source allow/deny policies (templates + providers).
 
 ### `templates`
 
-* **Type**: `any`
-* **Default**: `{}`
+* **Type**: `ToolchainRegistryPolicy`
 
 Allow/deny globs for template sources and registries.
 
+#### `allow`
+
+* **Type**: `Array<string>`
+
+Allowed host/path globs. When non-empty, only matching sources are used (eg. `*.example.com`, `https://registry.example.com/**`).
+
+#### `deny`
+
+* **Type**: `Array<string>`
+
+Denied host/path globs (checked before `allow`).
+
 ### `providers`
 
-* **Type**: `any`
-* **Default**: `{}`
+* **Type**: `ToolchainRegistryPolicy`
 
 Allow/deny globs for provider sources and registries.
 
@@ -3583,14 +4324,12 @@ Package catalogs written to the package manager catalog file (`catalog:`).
 ### `packages`
 
 * **Type**: `Record<string, unknown>`
-* **Default**: `{}`
 
 The default catalog: package name -> version range.
 
 ### `named`
 
 * **Type**: `Record<string, unknown>`
-* **Default**: `{}`
 
 Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages.
 
@@ -3606,21 +4345,31 @@ The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.
 
 ### `config`
 
-* **Type**: `boolean`
+* **Type**: `boolean | string`
 
 Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or absolute).
 
+### `shim`
+
+* **Type**: `'runtime' | 'static'`
+
+How the generated `vite.config.ts` is rendered. `runtime` (default) loads the config from `dbx.config.*`; `static` serializes it into the file so the shim does not import `@deltabox/toolchain` (it then needs no built `dist`).
+
+### `shimImport`
+
+* **Type**: `string`
+
+Module specifier used to import `resolveVite` in runtime shims (default `@deltabox/toolchain/vite`). A relative path is resolved from the repo root and rewritten relative to each generated config - useful for dogfooding a source checkout without a built `dist`.
+
 ### `fmt`
 
-* **Type**: `any`
-* **Default**: `{}`
+* **Type**: `boolean | Record<string, unknown>`
 
 Oxfmt options; `true` uses the toolchain defaults.
 
 ### `lint`
 
-* **Type**: `any`
-* **Default**: `{}`
+* **Type**: `boolean | Record<string, unknown>`
 
 Oxlint options; `true` uses the toolchain defaults.
 
@@ -3642,8 +4391,7 @@ Debounce window in ms (default 150).
 
 ### `exclude`
 
-* **Type**: `any`
-* **Default**: `{}`
+* **Type**: `string | Array<string>`
 
 Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
 
@@ -3665,7 +4413,7 @@ Logging level, colours and prefix for toolchain output.
 
 ### `level`
 
-* **Type**: `string`
+* **Type**: `'debug' | 'info' | 'warn' | 'error' | 'silent'`
 
 Minimum level to print (default `info`).
 
@@ -3683,8 +4431,7 @@ Prefix non-indented lines with `<name>:` (default `dbx`).
 
 ### `suppress`
 
-* **Type**: `any`
-* **Default**: `{}`
+* **Type**: `string | Array<string>`
 
 Warning/error id, message substring, or `/regex/` to silence (single value or array).
 
@@ -3718,7 +4465,7 @@ import { defineConfig } from '@deltabox/toolchain';
 export default defineConfig({
     toolchain: {
         project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
-        ci: { ci: true, release: true, changelog: { branches: { main: "main" } } },
+        ci: { ci: true, release: true, changelog: { branches: { main: 'main' } } },
         tsconfig: { refs: true },
         templates: { sources: [{ type: 'local', locate: './templates', kind: 'application' }] },
         vite: { fmt: { semi: true, singleQuote: true }, test: { include: ['src/**/*.test.ts'] } },
@@ -3738,68 +4485,68 @@ url: https://toolchain.deltabox.studio/config/cli.md
 Generated from the same `ToolchainCommand` descriptors the `dbx` binary
 registers. Run `yarn config:docs` after changing a command.
 
-| Command | Description |
-| ------- | ----------- |
-| [`dbx projects`](#projects) | Discover projects and write .dbx/toolchain/projects.json. |
-| [`dbx sync`](#sync) | Regenerate every managed file from dbx.config.*. |
-| [`dbx watch`](#watch) | Sync once, then watch key files and re-sync on change. |
-| [`dbx reset`](#reset) | Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a project. |
-| [`dbx providers`](#providers) | List the tooling providers (Vite+, ...) and their commands. |
-| [`dbx tsconfig`](#tsconfig) | Generate workspace tsconfig.json files from the default tsconfig (aliases + references). |
-| [`dbx cleanup`](#cleanup) | Remove build artifacts (*.tsbuildinfo, dist/). |
-| [`dbx cleanup:turbo`](#cleanup-turbo) | Remove the turbo cache (.turbo/). |
-| [`dbx workflow`](#workflow) | Trigger one or more generated GitHub workflows (via `gh workflow run`). |
-| [`dbx changelog`](#changelog) | Scan commits, derive the semver bump and update the CHANGELOG.md files + versions. |
-| [`dbx migrate`](#migrate) | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.\* into dbx.config. |
-| [`dbx migrate:list`](#migrate-list) | List the registered migrations and whether each is detected. |
-| [`dbx project:init`](#project-init) | Scaffold a single-package TypeScript project. |
-| [`dbx project:init:monorepo`](#project-init-monorepo) | Scaffold a monorepo root (add --example for one example workspace). |
-| [`dbx project:init:workspace`](#project-init-workspace) | Scaffold a monorepo workspace package into an existing monorepo root. |
-| [`dbx project:config`](#project-config) | Generate dbx.config.ts for existing projects that are missing one. |
-| [`dbx template:list`](#template-list) | List templates (builtin + local + opted-in online sources). |
-| [`dbx template:init`](#template-init) | Write a template.json to a directory, making it a local template. |
-| [`dbx template:add`](#template-add) | Record a template source in .dbx/toolchain/templates.json. |
-| [`dbx template:remove`](#template-remove) | Remove a source from .dbx/toolchain/templates.json. |
-| [`dbx template:registry`](#template-registry) | Manage the global template search paths (and sync them to the VS Code setting). |
-| [`dbx registry`](#registry) | List or manage the template/provider registries. |
-| [`dbx template:info`](#template-info) | Show one template by id. |
-| [`dbx create`](#create) | Scaffold a project from a template (builtin, local or Vite+). |
-| [`dbx vite`](#vite) | Run any Vite+ command through `vp` (eg. `dbx vite dev`). |
-| [`dbx vite:create`](#vite-create) | Vite+: Create a new project from a template. |
-| [`dbx vite:migrate`](#vite-migrate) | Vite+: Migrate an existing project to Vite+. |
-| [`dbx vite:config`](#vite-config) | Vite+: Configure hooks and agent integration. |
-| [`dbx vite:hooks`](#vite-hooks) | Vite+: Manage the Git hook dispatcher. |
-| [`dbx vite:staged`](#vite-staged) | Vite+: Run linters on staged files. |
-| [`dbx vite:install`](#vite-install) | Vite+: Install dependencies with the detected package manager. |
-| [`dbx vite:env`](#vite-env) | Vite+: Manage Node.js and package managers. |
-| [`dbx vite:dev`](#vite-dev) | Vite+: Run the Vite development server. |
-| [`dbx vite:check`](#vite-check) | Vite+: Run format, lint and type checks. |
-| [`dbx vite:lint`](#vite-lint) | Vite+: Lint code with Oxlint. |
-| [`dbx vite:fmt`](#vite-fmt) | Vite+: Format code with Oxfmt. |
-| [`dbx vite:test`](#vite-test) | Vite+: Run tests through bundled Vitest. |
-| [`dbx vite:run`](#vite-run) | Vite+: Run package scripts and monorepo tasks. |
-| [`dbx vite:exec`](#vite-exec) | Vite+: Execute a binary from local node_modules. |
-| [`dbx vite:node`](#vite-node) | Vite+: Run a Node.js script in the Vite+ env. |
-| [`dbx vite:dlx`](#vite-dlx) | Vite+: Run a package binary without installing it. |
-| [`dbx vite:cache`](#vite-cache) | Vite+: Manage the task cache. |
-| [`dbx vite:build`](#vite-build) | Vite+: Build for production. |
-| [`dbx vite:pack`](#vite-pack) | Vite+: Build libraries for npm or standalone binaries. |
-| [`dbx vite:preview`](#vite-preview) | Vite+: Preview the production build. |
-| [`dbx vite:add`](#vite-add) | Vite+: Add packages to dependencies. |
-| [`dbx vite:remove`](#vite-remove) | Vite+: Remove packages from dependencies. |
-| [`dbx vite:update`](#vite-update) | Vite+: Update packages. |
-| [`dbx vite:dedupe`](#vite-dedupe) | Vite+: Deduplicate dependencies. |
-| [`dbx vite:outdated`](#vite-outdated) | Vite+: Check for outdated packages. |
-| [`dbx vite:list`](#vite-list) | Vite+: List installed packages. |
-| [`dbx vite:why`](#vite-why) | Vite+: Explain why a package is installed. |
-| [`dbx vite:info`](#vite-info) | Vite+: View package metadata. |
-| [`dbx vite:link`](#vite-link) | Vite+: Link local packages. |
-| [`dbx vite:unlink`](#vite-unlink) | Vite+: Unlink local packages. |
-| [`dbx vite:rebuild`](#vite-rebuild) | Vite+: Rebuild native modules. |
-| [`dbx vite:pm`](#vite-pm) | Vite+: Forward a command to the package manager. |
-| [`dbx vite:toolchain`](#vite-toolchain) | Vite+: Show Vite+ tool versions. |
-| [`dbx vite:upgrade`](#vite-upgrade) | Vite+: Update `vp` itself. |
-| [`dbx vite:implode`](#vite-implode) | Vite+: Remove `vp` and all related data. |
+| Command                                                 | Description                                                                                     |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [`dbx projects`](#projects)                             | Discover projects and write .dbx/toolchain/projects.json.                                       |
+| [`dbx sync`](#sync)                                     | Regenerate every managed file from dbx.config.*.                                                |
+| [`dbx watch`](#watch)                                   | Sync once, then watch key files and re-sync on change.                                          |
+| [`dbx reset`](#reset)                                   | Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a project.       |
+| [`dbx providers`](#providers)                           | List the tooling providers (Vite+, ...) and their commands.                                     |
+| [`dbx tsconfig`](#tsconfig)                             | Generate workspace tsconfig.json files from the default tsconfig (aliases + references).        |
+| [`dbx cleanup`](#cleanup)                               | Remove build artifacts (*.tsbuildinfo, dist/).                                                  |
+| [`dbx cleanup:turbo`](#cleanup-turbo)                   | Remove the turbo cache (.turbo/).                                                               |
+| [`dbx workflow`](#workflow)                             | Trigger one or more generated GitHub workflows (via `gh workflow run`).                         |
+| [`dbx changelog`](#changelog)                           | Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.              |
+| [`dbx migrate`](#migrate)                               | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.\* into dbx.config. |
+| [`dbx migrate:list`](#migrate-list)                     | List the registered migrations and whether each is detected.                                    |
+| [`dbx project:init`](#project-init)                     | Scaffold a single-package TypeScript project.                                                   |
+| [`dbx project:init:monorepo`](#project-init-monorepo)   | Scaffold a monorepo root (add --example for one example workspace).                             |
+| [`dbx project:init:workspace`](#project-init-workspace) | Scaffold a monorepo workspace package into an existing monorepo root.                           |
+| [`dbx project:config`](#project-config)                 | Generate dbx.config.ts for existing projects that are missing one.                              |
+| [`dbx template:list`](#template-list)                   | List templates (builtin + local + opted-in online sources).                                     |
+| [`dbx template:init`](#template-init)                   | Write a template.json to a directory, making it a local template.                               |
+| [`dbx template:add`](#template-add)                     | Record a template source in .dbx/toolchain/templates.json.                                      |
+| [`dbx template:remove`](#template-remove)               | Remove a source from .dbx/toolchain/templates.json.                                             |
+| [`dbx template:registry`](#template-registry)           | Manage the global template search paths (and sync them to the VS Code setting).                 |
+| [`dbx registry`](#registry)                             | List or manage the template/provider registries.                                                |
+| [`dbx template:info`](#template-info)                   | Show one template by id.                                                                        |
+| [`dbx create`](#create)                                 | Scaffold a project from a template (builtin, local or Vite+).                                   |
+| [`dbx vite`](#vite)                                     | Run any Vite+ command through `vp` (eg. `dbx vite dev`).                                        |
+| [`dbx vite:create`](#vite-create)                       | Vite+: Create a new project from a template.                                                    |
+| [`dbx vite:migrate`](#vite-migrate)                     | Vite+: Migrate an existing project to Vite+.                                                    |
+| [`dbx vite:config`](#vite-config)                       | Vite+: Configure hooks and agent integration.                                                   |
+| [`dbx vite:hooks`](#vite-hooks)                         | Vite+: Manage the Git hook dispatcher.                                                          |
+| [`dbx vite:staged`](#vite-staged)                       | Vite+: Run linters on staged files.                                                             |
+| [`dbx vite:install`](#vite-install)                     | Vite+: Install dependencies with the detected package manager.                                  |
+| [`dbx vite:env`](#vite-env)                             | Vite+: Manage Node.js and package managers.                                                     |
+| [`dbx vite:dev`](#vite-dev)                             | Vite+: Run the Vite development server.                                                         |
+| [`dbx vite:check`](#vite-check)                         | Vite+: Run format, lint and type checks.                                                        |
+| [`dbx vite:lint`](#vite-lint)                           | Vite+: Lint code with Oxlint.                                                                   |
+| [`dbx vite:fmt`](#vite-fmt)                             | Vite+: Format code with Oxfmt.                                                                  |
+| [`dbx vite:test`](#vite-test)                           | Vite+: Run tests through bundled Vitest.                                                        |
+| [`dbx vite:run`](#vite-run)                             | Vite+: Run package scripts and monorepo tasks.                                                  |
+| [`dbx vite:exec`](#vite-exec)                           | Vite+: Execute a binary from local node_modules.                                                |
+| [`dbx vite:node`](#vite-node)                           | Vite+: Run a Node.js script in the Vite+ env.                                                   |
+| [`dbx vite:dlx`](#vite-dlx)                             | Vite+: Run a package binary without installing it.                                              |
+| [`dbx vite:cache`](#vite-cache)                         | Vite+: Manage the task cache.                                                                   |
+| [`dbx vite:build`](#vite-build)                         | Vite+: Build for production.                                                                    |
+| [`dbx vite:pack`](#vite-pack)                           | Vite+: Build libraries for npm or standalone binaries.                                          |
+| [`dbx vite:preview`](#vite-preview)                     | Vite+: Preview the production build.                                                            |
+| [`dbx vite:add`](#vite-add)                             | Vite+: Add packages to dependencies.                                                            |
+| [`dbx vite:remove`](#vite-remove)                       | Vite+: Remove packages from dependencies.                                                       |
+| [`dbx vite:update`](#vite-update)                       | Vite+: Update packages.                                                                         |
+| [`dbx vite:dedupe`](#vite-dedupe)                       | Vite+: Deduplicate dependencies.                                                                |
+| [`dbx vite:outdated`](#vite-outdated)                   | Vite+: Check for outdated packages.                                                             |
+| [`dbx vite:list`](#vite-list)                           | Vite+: List installed packages.                                                                 |
+| [`dbx vite:why`](#vite-why)                             | Vite+: Explain why a package is installed.                                                      |
+| [`dbx vite:info`](#vite-info)                           | Vite+: View package metadata.                                                                   |
+| [`dbx vite:link`](#vite-link)                           | Vite+: Link local packages.                                                                     |
+| [`dbx vite:unlink`](#vite-unlink)                       | Vite+: Unlink local packages.                                                                   |
+| [`dbx vite:rebuild`](#vite-rebuild)                     | Vite+: Rebuild native modules.                                                                  |
+| [`dbx vite:pm`](#vite-pm)                               | Vite+: Forward a command to the package manager.                                                |
+| [`dbx vite:toolchain`](#vite-toolchain)                 | Vite+: Show Vite+ tool versions.                                                                |
+| [`dbx vite:upgrade`](#vite-upgrade)                     | Vite+: Update `vp` itself.                                                                      |
+| [`dbx vite:implode`](#vite-implode)                     | Vite+: Remove `vp` and all related data.                                                        |
 
 ## `dbx projects`
 
@@ -3866,6 +4613,14 @@ Generate workspace tsconfig.json files from the default tsconfig (aliases + refe
 * `--default-file ‹file›` — Default tsconfig file name.
 * `--build-file ‹file›` — Build tsconfig file name.
 * `--root-file ‹file›` — Workspaces tsconfig file name.
+* `--tsconfig ‹file›` — Resolve this tsconfig instead of \<root>/tsconfig.json.
+* `--root ‹dir›` — Root used to detect/resolve the tsconfig (default: cwd).
+* `--json` — Print the resolved { alias, paths, references } object.
+* `--alias` — Print only the resolved Vite/Vitest aliases.
+* `--paths` — Print only the resolved compilerOptions.paths.
+* `--references` — Print only the resolved project references.
+* `--no-extends` — Do not follow the tsconfig extends chain.
+* `--restore [kind]` — Remove the applied tsconfig overrides (all, or base|root|default|build) using the manifest snapshots.
 
 ## `dbx cleanup`
 
@@ -5115,20 +5870,20 @@ const text = applyReplacements('Hello {{name:world}}', { name: 'acme' });
 
 Loads `dbx.config.*`, builds the project graph and runs the sync tasks.
 
-| Export                                                        | Description                                                            |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `loadToolchainConfig(cwd?)`                                   | Find + load the config, resolve tokens and the project type.           |
-| `findConfigFile(cwd?)`                                        | The config file path, if any.                                          |
-| `runSync(options)`                                            | Run the given `SyncTask[]` and return the summary.                     |
-| `runWatch(options)`                                           | Sync once, then watch inputs and re-sync.                              |
-| `buildProjectGraph(root, options?)`                           | Discover workspace packages and their dependencies.                    |
-| `orderProjects(nodes)` / `detectPackageManager(root)`         | Dependency ordering and package-manager detection.                     |
-| `writeProjectGraph` / `readProjectGraph`                      | Persist/read `.dbx/toolchain/projects.json`.                           |
-| `selectProjects(options)`                                     | Select projects by kind/name/glob.                                     |
-| `resetToolchain(options)` / `resetProjects(options)`          | Remove generated files, the manifest and/or the config.                |
-| `vscodeSyncTask(options?)`                                    | The VS Code settings/extensions sync task.                             |
-| `resolveProjectType(cwd, config?)` / `detectProjectType(cwd)` | The project kind (`monorepo-root` / `monorepo-workspace` / `project`). |
-| `readManifest(cwd)` / `writeManifest(cwd, files)`             | The `.dbx/toolchain/manifest.json` helpers.                            |
+| Export                                                        | Description                                                                         |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `loadToolchainConfig(cwd?)`                                   | Find + load the config, resolve tokens and the project type.                        |
+| `findConfigFile(cwd?)`                                        | The config file path, if any.                                                       |
+| `runSync(options)`                                            | Run the given `SyncTask[]` and return the summary.                                  |
+| `runWatch(options)`                                           | Sync once, then watch inputs and re-sync.                                           |
+| `buildProjectGraph(root, options?)`                           | Discover workspace packages and their dependencies.                                 |
+| `orderProjects(nodes)` / `detectPackageManager(root)`         | Dependency ordering and package-manager detection.                                  |
+| `writeProjectGraph` / `readProjectGraph`                      | Persist/read `.dbx/toolchain/projects.json`.                                        |
+| `selectProjects(options)`                                     | Select projects by kind/name/glob.                                                  |
+| `resetToolchain(options)` / `resetProjects(options)`          | Remove generated files, the manifest and/or the config (`restore` hook runs first). |
+| `vscodeSyncTask(options?)`                                    | The VS Code settings/extensions sync task.                                          |
+| `resolveProjectType(cwd, config?)` / `detectProjectType(cwd)` | The project kind (`monorepo-root` / `monorepo-workspace` / `project`).              |
+| `readManifest(cwd)` / `writeManifest(cwd, files)`             | The `.dbx/toolchain/manifest.json` helpers.                                         |
 
 ## `@deltabox/toolchain/config`
 
@@ -5237,7 +5992,11 @@ console.log(toolchainProviders().map(p => p.id));
 | `renderTsconfigBase` / `renderTsconfigDefault` / `renderTsconfigBuild`       | Render the templates with replacements.               |
 | `buildMonorepoTsconfig(options)` / `renderMonorepoTsconfig(options)`         | The monorepo root tsconfig with references + aliases. |
 | `renderTsconfigTemplates(replacements?)`                                     | Render every template at once.                        |
+| `resolveTsconfig(options?)` / `readTsconfig(file)`                           | Resolve paths/references/aliases (extends-aware).     |
 | `generateTsconfigs(options)` / `runTsconfigCli(argv?)`                       | The tsconfig generator and its CLI.                   |
+| `tsconfigFileNames(config)` / `restoreTsconfigOverrides(options)`            | Configured file names / remove applied overrides.     |
+| `applyOverride` / `mergeOverride` / `revertOverride`                         | Override deep-merge + snapshot-aware revert helpers.  |
+| `getSnapshot` / `setSnapshot` / `deleteSnapshot`                             | The manifest snapshot tree (repo-relative paths).     |
 
 ## `@deltabox/toolchain/changelog`
 
@@ -5670,6 +6429,59 @@ Everything else under `vite` is Vite+ config (plugins, `test`, `lint`, `fmt`,
 `run.tasks`, ...), so `toolchain.vite` is the full Vite+ configuration. The section is typed as Vite+'s own config
 (`ToolchainViteConfig` = Vite's `UserConfig` as augmented by Vite+), so the whole
 Vite+ surface autocompletes in `dbx.config.ts`.
+
+### Static shims
+
+By default the shim calls `resolveVite` at load time (`shim: 'runtime'`). Set
+`vite: { shim: 'static' }` to serialize the resolved config into the shim
+instead:
+
+```ts [vite.config.ts]
+import { defineConfig, type ViteUserConfig } from 'vite-plus';
+
+export default defineConfig<ViteUserConfig>({
+    resolve: { tsconfigPaths: true },
+    run: { tasks: {/* ... */} },
+});
+```
+
+A static shim imports only `defineConfig`, so Vite+ can load it without a built
+`@deltabox/toolchain` (useful for source-first monorepos and bootstrapping). It
+must stay serializable: functions, regexps and class instances are rejected at
+sync time (plugins still work with `shim: 'runtime'`).
+
+Runtime shims import `@deltabox/toolchain/vite` by default. Set
+`vite.shimImport` to change that specifier, for example to a local wrapper that
+re-exports `resolveVite`. Relative values are resolved from the repository root
+and rewritten relative to each generated config:
+
+```ts [dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        vite: {
+            shimImport: './scripts/local-vite-resolver.ts',
+        },
+    },
+});
+```
+
+This only affects `shim: 'runtime'` (the default); static shims have no
+toolchain import.
+
+Vite 8 resolves TypeScript `paths` through `resolve.tsconfigPaths`. Set it in
+`toolchain.vite.resolve` (and in Vitest configs) to reuse the tsconfig aliases:
+
+```ts [dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        vite: { resolve: { tsconfigPaths: true } },
+    },
+});
+```
+
+For explicit aliases (or Vite versions without built-in `paths` support), use
+`resolveTsconfig()` from `@deltabox/toolchain/tsconfig` (see the
+[tsconfig guide](/guide/tsconfig#resolving-a-tsconfig)).
 
 Add the shim to `vite.fmt.ignorePatterns` so Oxfmt leaves the generated file
 alone - without it `vp fmt` would rewrite the shim and `dbx sync --check` would

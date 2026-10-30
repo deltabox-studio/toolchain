@@ -753,6 +753,74 @@
                     "type": "string",
                     "description": "The workspace build tsconfig file name (default `tsconfig.build.json`)."
                 },
+                "baseFile": {
+                    "type": "string",
+                    "description": "The root base tsconfig file name (default `tsconfig.base.json`)."
+                },
+                "extends": {
+                    "type": "object",
+                    "properties": {
+                        "base": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                {
+                                    "type": "boolean",
+                                    "const": false
+                                }
+                            ],
+                            "description": "`extends` written into scaffolded `tsconfig.base.json` files (or `false` to remove the field)."
+                        },
+                        "default": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                {
+                                    "type": "boolean",
+                                    "const": false
+                                }
+                            ],
+                            "description": "`extends` written into scaffolded `tsconfig.default.json` files (or `false` to remove the field)."
+                        },
+                        "build": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                {
+                                    "type": "boolean",
+                                    "const": false
+                                }
+                            ],
+                            "description": "`extends` written into scaffolded `tsconfig.build.json` files. Default `./tsconfig.default.json`; use `./tsconfig.json` to let builds reuse the path aliases (at the cost of pulling workspace source into the build)."
+                        }
+                    },
+                    "additionalProperties": false,
+                    "description": "Per-file `extends` overrides for generated/scaffolded tsconfig templates."
+                },
+                "overrides": {
+                    "$ref": "#/$defs/ToolchainTsconfigOverrides"
+                },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
@@ -760,6 +828,45 @@
             },
             "additionalProperties": false,
             "description": "Workspace tsconfig generation (path aliases + project references)."
+        },
+        "ToolchainTsconfigOverrides": {
+            "type": "object",
+            "properties": {
+                "base": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Deep-merged into the root base tsconfig (`baseFile`) during sync."
+                },
+                "default": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Deep-merged into every workspace default tsconfig (`defaultFile`) during sync."
+                },
+                "build": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Deep-merged into every workspace build tsconfig (`buildFile`) during sync."
+                },
+                "root": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "Deep-merged into the root workspaces tsconfig (`rootFile`) during sync."
+                }
+            },
+            "additionalProperties": false,
+            "description": "Managed overrides deep-merged into the base/root/default/build tsconfig files during sync. The originals are snapshotted in the manifest, so removing a key reverts it (restoring the original value when the file defined one)."
         },
         "ToolchainTemplatesConfig": {
             "type": "object",
@@ -945,6 +1052,18 @@
                         "boolean",
                         "string"
                     ]
+                },
+                "shim": {
+                    "type": "string",
+                    "enum": [
+                        "runtime",
+                        "static"
+                    ],
+                    "description": "How the generated `vite.config.ts` is rendered. `runtime` (default) loads the config from `dbx.config.*`; `static` serializes it into the file so the shim does not import `@deltabox/toolchain` (it then needs no built `dist`)."
+                },
+                "shimImport": {
+                    "type": "string",
+                    "description": "Module specifier used to import `resolveVite` in runtime shims (default `@deltabox/toolchain/vite`). A relative path is resolved from the repo root and rewritten relative to each generated config - useful for dogfooding a source checkout without a built `dist`."
                 },
                 "fmt": {
                     "anyOf": [

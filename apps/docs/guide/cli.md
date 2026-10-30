@@ -47,13 +47,13 @@ Colour is on by default and follows `--no-color` / the [`logger` config](/guide/
 
 ## Core
 
-| Command     | Description                                                                               |
-| ----------- | ----------------------------------------------------------------------------------------- |
-| `projects`  | Discover projects and write `.dbx/toolchain/projects.json`.                               |
-| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`, `--json`). |
-| `watch`     | Sync once, then watch key inputs and re-sync.                                             |
-| `reset`     | Remove generated files, the manifest and/or the config (`--all`, `--recursive`).          |
-| `providers` | List registered providers + their commands (`--json`).                                    |
+| Command     | Description                                                                                                          |
+| ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| `projects`  | Discover projects and write `.dbx/toolchain/projects.json`.                                                          |
+| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`, `--json`).                            |
+| `watch`     | Sync once, then watch key inputs and re-sync.                                                                        |
+| `reset`     | Remove generated files, the manifest and/or the config (`--all`, `--recursive`); reverts `tsconfig.overrides` first. |
+| `providers` | List registered providers + their commands (`--json`).                                                               |
 
 ## Scaffolding
 
@@ -104,12 +104,12 @@ See [Migrations](/guide/migrations).
 
 ## Tsconfig / cleanup / changelog / workflows
 
-| Command                     | Description                                               |
-| --------------------------- | --------------------------------------------------------- |
-| `tsconfig`                  | Regenerate workspace `tsconfig.json` files.               |
-| `cleanup` / `cleanup:turbo` | Remove build artifacts / the turbo cache.                 |
-| `changelog`                 | Derive the semver bump and update CHANGELOG + versions.   |
-| `workflow`                  | Trigger generated GitHub workflows via `gh workflow run`. |
+| Command                     | Description                                                                        |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| `tsconfig`                  | Regenerate workspace `tsconfig.json` files (`--restore [kind]` reverts overrides). |
+| `cleanup` / `cleanup:turbo` | Remove build artifacts / the turbo cache.                                          |
+| `changelog`                 | Derive the semver bump and update CHANGELOG + versions.                            |
+| `workflow`                  | Trigger generated GitHub workflows via `gh workflow run`.                          |
 
 ## Providers
 

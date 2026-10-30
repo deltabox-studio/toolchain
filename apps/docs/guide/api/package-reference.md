@@ -38,20 +38,20 @@ const text = applyReplacements('Hello {{name:world}}', { name: 'acme' });
 
 Loads `dbx.config.*`, builds the project graph and runs the sync tasks.
 
-| Export                                                        | Description                                                            |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `loadToolchainConfig(cwd?)`                                   | Find + load the config, resolve tokens and the project type.           |
-| `findConfigFile(cwd?)`                                        | The config file path, if any.                                          |
-| `runSync(options)`                                            | Run the given `SyncTask[]` and return the summary.                     |
-| `runWatch(options)`                                           | Sync once, then watch inputs and re-sync.                              |
-| `buildProjectGraph(root, options?)`                           | Discover workspace packages and their dependencies.                    |
-| `orderProjects(nodes)` / `detectPackageManager(root)`         | Dependency ordering and package-manager detection.                     |
-| `writeProjectGraph` / `readProjectGraph`                      | Persist/read `.dbx/toolchain/projects.json`.                           |
-| `selectProjects(options)`                                     | Select projects by kind/name/glob.                                     |
-| `resetToolchain(options)` / `resetProjects(options)`          | Remove generated files, the manifest and/or the config.                |
-| `vscodeSyncTask(options?)`                                    | The VS Code settings/extensions sync task.                             |
-| `resolveProjectType(cwd, config?)` / `detectProjectType(cwd)` | The project kind (`monorepo-root` / `monorepo-workspace` / `project`). |
-| `readManifest(cwd)` / `writeManifest(cwd, files)`             | The `.dbx/toolchain/manifest.json` helpers.                            |
+| Export                                                        | Description                                                                         |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `loadToolchainConfig(cwd?)`                                   | Find + load the config, resolve tokens and the project type.                        |
+| `findConfigFile(cwd?)`                                        | The config file path, if any.                                                       |
+| `runSync(options)`                                            | Run the given `SyncTask[]` and return the summary.                                  |
+| `runWatch(options)`                                           | Sync once, then watch inputs and re-sync.                                           |
+| `buildProjectGraph(root, options?)`                           | Discover workspace packages and their dependencies.                                 |
+| `orderProjects(nodes)` / `detectPackageManager(root)`         | Dependency ordering and package-manager detection.                                  |
+| `writeProjectGraph` / `readProjectGraph`                      | Persist/read `.dbx/toolchain/projects.json`.                                        |
+| `selectProjects(options)`                                     | Select projects by kind/name/glob.                                                  |
+| `resetToolchain(options)` / `resetProjects(options)`          | Remove generated files, the manifest and/or the config (`restore` hook runs first). |
+| `vscodeSyncTask(options?)`                                    | The VS Code settings/extensions sync task.                                          |
+| `resolveProjectType(cwd, config?)` / `detectProjectType(cwd)` | The project kind (`monorepo-root` / `monorepo-workspace` / `project`).              |
+| `readManifest(cwd)` / `writeManifest(cwd, files)`             | The `.dbx/toolchain/manifest.json` helpers.                                         |
 
 ## `@deltabox/toolchain/config`
 
@@ -160,7 +160,11 @@ console.log(toolchainProviders().map(p => p.id));
 | `renderTsconfigBase` / `renderTsconfigDefault` / `renderTsconfigBuild`       | Render the templates with replacements.               |
 | `buildMonorepoTsconfig(options)` / `renderMonorepoTsconfig(options)`         | The monorepo root tsconfig with references + aliases. |
 | `renderTsconfigTemplates(replacements?)`                                     | Render every template at once.                        |
+| `resolveTsconfig(options?)` / `readTsconfig(file)`                           | Resolve paths/references/aliases (extends-aware).     |
 | `generateTsconfigs(options)` / `runTsconfigCli(argv?)`                       | The tsconfig generator and its CLI.                   |
+| `tsconfigFileNames(config)` / `restoreTsconfigOverrides(options)`            | Configured file names / remove applied overrides.     |
+| `applyOverride` / `mergeOverride` / `revertOverride`                         | Override deep-merge + snapshot-aware revert helpers.  |
+| `getSnapshot` / `setSnapshot` / `deleteSnapshot`                             | The manifest snapshot tree (repo-relative paths).     |
 
 ## `@deltabox/toolchain/changelog`
 
