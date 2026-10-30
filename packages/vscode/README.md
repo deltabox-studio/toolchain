@@ -89,18 +89,24 @@ runs `template:list --registry` + `template:remove`.
 
 ## Auto-sync
 
-Auto-sync watches input files only: `dbx.config.*`, `tsconfig.default.json`, and `tsconfig.workspaces.json`.
+Auto-sync watches input files only: `dbx.config.*` plus the inputs each
+project's config resolves to (by default `tsconfig.workspaces.json` and every
+`tsconfig.default.json`). The extension asks the CLI for them
+(`dbx watch --list --json`), so custom `tsconfig.rootFile` / `tsconfig.defaultFile`
+names are watched instead of the defaults, and the list is refreshed whenever a
+`dbx.config.*` changes. Setting `deltabox.toolchain.watch` explicitly replaces
+the resolved inputs.
 
 Generated outputs are never watched. The scheduler debounces bursts, allows one sync at a time, queues at most one follow-up, and suppresses events briefly after a run.
 
 ## Settings
 
-| Setting                       | Default                 | Description                   |
-| ----------------------------- | ----------------------- | ----------------------------- |
-| `deltabox.toolchain.enabled`  | `true`                  | Auto sync on watched changes. |
-| `deltabox.toolchain.debounce` | `300`                   | Debounce (ms) before a sync.  |
-| `deltabox.toolchain.command`  | `sync`                  | The command to run on change. |
-| `deltabox.toolchain.watch`    | config + tsconfig globs | Inputs that trigger a sync.   |
+| Setting                       | Default         | Description                                                    |
+| ----------------------------- | --------------- | -------------------------------------------------------------- |
+| `deltabox.toolchain.enabled`  | `true`          | Auto sync on watched changes.                                  |
+| `deltabox.toolchain.debounce` | `300`           | Debounce (ms) before a sync.                                   |
+| `deltabox.toolchain.command`  | `sync`          | The command to run on change.                                  |
+| `deltabox.toolchain.watch`    | `[]` (resolved) | Inputs that trigger a sync (empty = resolved from the config). |
 
 ## Command palette
 

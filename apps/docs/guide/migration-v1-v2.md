@@ -169,6 +169,10 @@ Custom sync tasks can use these additions:
 - A `ManagedFile` returned with `track: false` is written and drift-checked like
   any other, but stays user-owned: it is not recorded in the manifest, never
   pruned by a later sync and never removed by `dbx reset`.
+- `resolveWatchGlobs(tasks, config, projectType?)` (core) resolves the active
+  tasks' inputs; `dbx watch --list [--json]` prints them, and the VS Code
+  extension watches them (custom tsconfig names included) unless
+  `deltabox.toolchain.watch` is set explicitly. Its default is now `[]`.
 - `SyncContext.manifest` holds task metadata persisted in the manifest between
   syncs (`snapshots`, `tsconfigOverrides`); `SyncContext.check` is true for
   `dbx sync --check`.

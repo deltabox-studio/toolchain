@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import * as vscode from 'vscode';
 
+import { DEFAULT_TSCONFIG_FILES, type TsconfigFileNames } from './watch-inputs.js';
+
 const CONFIG_PREFIX = 'dbx.config.';
 const PROJECT_GROUPS = ['packages', 'apps', 'sdk'];
 const MANIFEST = path.join('.dbx', 'toolchain', 'manifest.json');
@@ -113,9 +115,22 @@ function childDirs(dir: string): string[] {
     }
 }
 
+/** The tsconfig file names resolved from each root's config (see `dbx watch --list`). */
+const tsconfigNames = new Map<string, TsconfigFileNames>();
+
+/** Record the tsconfig file names a workspace root's config resolves to. */
+export function setTsconfigFileNames(root: string, names: TsconfigFileNames): void {
+    tsconfigNames.set(path.resolve(root), names);
+}
+
+/** The workspace default tsconfig name for a root (custom `defaultFile` honoured). */
+export function defaultTsconfigFile(root: string): string {
+    return tsconfigNames.get(path.resolve(root))?.defaultFile ?? DEFAULT_TSCONFIG_FILES.defaultFile;
+}
+
 function inferType(dir: string, root: string): Project['type'] {
     if (dir === root) return 'monorepo-root';
-    return fs.existsSync(path.join(dir, 'tsconfig.default.json'))
+    return fs.existsSync(path.join(dir, defaultTsconfigFile(root)))
         ? 'monorepo-workspace'
         : 'project';
 }

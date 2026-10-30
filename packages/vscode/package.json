@@ -587,12 +587,8 @@
                     "items": {
                         "type": "string"
                     },
-                    "default": [
-                        "**/dbx.config.*",
-                        "**/tsconfig.default.json",
-                        "**/tsconfig.workspaces.json"
-                    ],
-                    "description": "Input globs that trigger a sync. Generated outputs are never watched (prevents sync loops)."
+                    "default": [],
+                    "description": "Input globs that trigger a sync. Leave empty (the default) to watch the inputs resolved from each project's dbx.config (the config file plus the tsconfig inputs, honouring custom `tsconfig.rootFile`/`defaultFile` names). Any explicitly set value, even an empty list, replaces them. Generated outputs are never watched (prevents sync loops)."
                 },
                 "deltabox.registrySearchPaths": {
                     "type": "array",

@@ -325,7 +325,13 @@ The Home view links to this documentation with **Need help? Go to documentation*
 
 ## Auto-sync
 
-Auto-sync watches input files only: `dbx.config.*`, `tsconfig.default.json`, and `tsconfig.workspaces.json`.
+Auto-sync watches input files only: `dbx.config.*` plus the inputs each
+project's config resolves to (by default `tsconfig.workspaces.json` and every
+`tsconfig.default.json`). The extension asks the CLI for them
+(`dbx watch --list --json`), so custom `tsconfig.rootFile` / `tsconfig.defaultFile`
+names are watched instead of the defaults, and the list is refreshed whenever a
+`dbx.config.*` changes. Setting `deltabox.toolchain.watch` explicitly replaces
+the resolved inputs.
 
 Generated outputs are never watched. The scheduler debounces bursts, allows one sync at a time, queues at most one follow-up, and suppresses events briefly after a run.
 
@@ -338,15 +344,15 @@ it is **adopted**: it is unmanaged but never deleted.
 
 ## Settings
 
-| Setting                                | Default                 | Description                                                |
-| -------------------------------------- | ----------------------- | ---------------------------------------------------------- |
-| `deltabox.toolchain.enabled`           | `true`                  | Auto sync on watched changes.                              |
-| `deltabox.toolchain.debounce`          | `300`                   | Debounce (ms) before a sync.                               |
-| `deltabox.toolchain.command`           | `sync`                  | The command to run on change.                              |
-| `deltabox.toolchain.watch`             | config + tsconfig globs | Inputs that trigger a sync.                                |
-| `deltabox.toolchain.version`           | `""` (auto)             | Pin the `@deltabox/toolchain` version this workspace runs. |
-| `deltabox.registrySearchPaths`         | `[]`                    | Template registry search paths (dirs or `http(s)` URLs).   |
-| `deltabox.providerRegistrySearchPaths` | `[]`                    | Provider registry search paths (JSON files/dirs/URLs).     |
+| Setting                                | Default         | Description                                                    |
+| -------------------------------------- | --------------- | -------------------------------------------------------------- |
+| `deltabox.toolchain.enabled`           | `true`          | Auto sync on watched changes.                                  |
+| `deltabox.toolchain.debounce`          | `300`           | Debounce (ms) before a sync.                                   |
+| `deltabox.toolchain.command`           | `sync`          | The command to run on change.                                  |
+| `deltabox.toolchain.watch`             | `[]` (resolved) | Inputs that trigger a sync (empty = resolved from the config). |
+| `deltabox.toolchain.version`           | `""` (auto)     | Pin the `@deltabox/toolchain` version this workspace runs.     |
+| `deltabox.registrySearchPaths`         | `[]`            | Template registry search paths (dirs or `http(s)` URLs).       |
+| `deltabox.providerRegistrySearchPaths` | `[]`            | Provider registry search paths (JSON files/dirs/URLs).         |
 
 When a workspace has its own `@deltabox/toolchain` whose version differs from the
 extension's bundled CLI, the extension asks which to run and shows both detected
@@ -2272,6 +2278,16 @@ Only **input** files are watched (eg. `dbx.config.*`, `tsconfig.default.json`,
 `tsconfig.workspaces.json`), never the generated outputs — so a sync can never
 loop on its own writes.
 
+Custom tsconfig names (`tsconfig.rootFile`, `tsconfig.defaultFile`) are watched
+instead of the defaults. `dbx watch --list` prints the resolved inputs without
+watching (`--json` adds the tsconfig file names; the VS Code extension reads it):
+
+```sh
+dbx watch --list --json
+# { "globs": ["**/dbx.config.*", "tsconfig.workspaces.json", "**/tsconfig.default.json"],
+#   "tsconfig": { "baseFile": "tsconfig.base.json", ... } }
+```
+
 `dbx watch --force` runs even when there is no `dbx.config.*`, and
 `watch: { enabled: false }` disables it (so a plain `dbx watch` warns and exits).
 
@@ -3445,6 +3461,10 @@ Custom sync tasks can use these additions:
 * A `ManagedFile` returned with `track: false` is written and drift-checked like
   any other, but stays user-owned: it is not recorded in the manifest, never
   pruned by a later sync and never removed by `dbx reset`.
+* `resolveWatchGlobs(tasks, config, projectType?)` (core) resolves the active
+  tasks' inputs; `dbx watch --list [--json]` prints them, and the VS Code
+  extension watches them (custom tsconfig names included) unless
+  `deltabox.toolchain.watch` is set explicitly. Its default is now `[]`.
 * `SyncContext.manifest` holds task metadata persisted in the manifest between
   syncs (`snapshots`, `tsconfigOverrides`); `SyncContext.check` is true for
   `dbx sync --check`.
@@ -4576,6 +4596,8 @@ Sync once, then watch key files and re-sync on change.
 * `--cwd ‹dir›` — Project root (default: cwd).
 * `-q, --quiet` — Only log errors.
 * `--force` — Run even when no dbx.config.\* is present.
+* `--list` — Print the resolved input globs (+ tsconfig file names) instead of watching.
+* `--json` — With --list: print the inputs as JSON.
 
 ## `dbx reset`
 

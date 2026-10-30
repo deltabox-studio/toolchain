@@ -20,6 +20,7 @@ import {
     type Project,
     ProjectTreeProvider,
     readProjectGraph,
+    setTsconfigFileNames,
     TrackedFilesTreeProvider,
 } from './projects.js';
 import {
@@ -38,6 +39,12 @@ import {
 import { RegistryTreeProvider, type RegistryItemNode } from './registries.js';
 import { type SchedulerState, SyncScheduler } from './sync-scheduler.js';
 import { type Template, TemplateTreeProvider, loadTemplates } from './templates.js';
+import {
+    defaultWatchInputs,
+    parseWatchInputs,
+    planWatchTargets,
+    type WatchInputs,
+} from './watch-inputs.js';
 
 const SECTION = 'deltabox.toolchain';
 const OUTPUT_NAME = 'deltabox toolchain';
@@ -53,18 +60,29 @@ const DOCS_URL = 'https://toolchain.deltabox.studio';
 /** The workflow ids the CLI understands. */
 const WORKFLOW_IDS = ['ci', 'changelog', 'release', 'sync', 'issues'];
 
-/** Input globs watched by default (never generated outputs). */
-const DEFAULT_WATCH = [
-    '**/dbx.config.*',
-    '**/tsconfig.default.json',
-    '**/tsconfig.workspaces.json',
-];
+/** How long to wait for `dbx watch --list` before falling back to the defaults. */
+const WATCH_INPUTS_TIMEOUT_MS = 30_000;
 
 /** Matches the tsconfig sync task's "no workspaces" warning in the CLI output. */
 const NO_WORKSPACES_WARNING = /no workspace tsconfig files found/i;
 
 function config(): vscode.WorkspaceConfiguration {
     return vscode.workspace.getConfiguration(SECTION);
+}
+
+/**
+ * The `deltabox.toolchain.watch` globs the user set explicitly (any scope), or
+ * `undefined` to watch the inputs resolved from each project's config.
+ */
+function userWatchGlobs(): string[] | undefined {
+    const inspected = config().inspect<string[]>('watch');
+    return inspected?.workspaceFolderValue ?? inspected?.workspaceValue ?? inspected?.globalValue;
+}
+
+/** Ask the CLI which inputs a root syncs from (custom tsconfig names resolved). */
+async function resolveWatchInputs(root: string): Promise<WatchInputs> {
+    const result = await captureCli(root, ['watch', '--list', '--json'], WATCH_INPUTS_TIMEOUT_MS);
+    return (result.code === 0 && parseWatchInputs(result.stdout)) || defaultWatchInputs();
 }
 
 function getEnabled(): boolean {
@@ -1154,15 +1172,42 @@ export function activate(context: vscode.ExtensionContext): void {
         }
     );
 
-    const rebuildWatchers = (): void => {
+    // Each rebuild bumps the generation, so a slower, older resolve never
+    // replaces the watchers of a newer one.
+    let watchGeneration = 0;
+    let watchInputsTimer: NodeJS.Timeout | undefined;
+    const rebuildWatchers = async (): Promise<void> => {
+        const generation = ++watchGeneration;
+        const userGlobs = userWatchGlobs();
+        // Resolved even with explicit watch globs: the tsconfig names also drive
+        // project detection in the Projects view.
+        const roots = workspaceRoots();
+        const resolved = await Promise.all(
+            roots.map(async root => ({ root, inputs: await resolveWatchInputs(root) }))
+        );
+        if (generation !== watchGeneration) return;
+        for (const { root, inputs } of resolved) setTsconfigFileNames(root, inputs.tsconfig);
+        if (resolved.length > 0) tree.refresh();
+
         for (const watcher of watchers) watcher.dispose();
         watchers = [];
         if (!enabled) return;
-        for (const glob of config().get<string[]>('watch', DEFAULT_WATCH)) {
-            const watcher = vscode.workspace.createFileSystemWatcher(glob);
-            watcher.onDidChange(() => scheduler.notify());
-            watcher.onDidCreate(() => scheduler.notify());
-            watcher.onDidDelete(() => scheduler.notify());
+        for (const target of planWatchTargets(userGlobs, resolved)) {
+            const pattern = target.base
+                ? new vscode.RelativePattern(target.base, target.glob)
+                : target.glob;
+            const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+            const onEvent = (uri: vscode.Uri): void => {
+                scheduler.notify();
+                // A config change can rename the watched inputs: re-resolve them.
+                if (path.basename(uri.fsPath).startsWith('dbx.config.')) {
+                    clearTimeout(watchInputsTimer);
+                    watchInputsTimer = setTimeout(() => void rebuildWatchers(), 500);
+                }
+            };
+            watcher.onDidChange(onEvent);
+            watcher.onDidCreate(onEvent);
+            watcher.onDidDelete(onEvent);
             watchers.push(watcher);
         }
     };
@@ -1592,7 +1637,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('deltabox.toolchain.toggle', async () => {
             enabled = !enabled;
             await config().update('enabled', enabled, vscode.ConfigurationTarget.Workspace);
-            rebuildWatchers();
+            void rebuildWatchers();
             setStatus('idle');
             home.refresh();
             output.appendLine(`dbx: auto-sync ${enabled ? 'enabled' : 'disabled'}.`);
@@ -1609,12 +1654,13 @@ export function activate(context: vscode.ExtensionContext): void {
             }
             if (!e.affectsConfiguration(SECTION)) return;
             enabled = getEnabled();
-            rebuildWatchers();
+            void rebuildWatchers();
             setStatus('idle');
             home.refresh();
         }),
         new vscode.Disposable(() => {
             child?.kill();
+            clearTimeout(watchInputsTimer);
             for (const watcher of watchers) watcher.dispose();
             scheduler.dispose();
         })
@@ -1632,7 +1678,7 @@ export function activate(context: vscode.ExtensionContext): void {
         })
     );
 
-    rebuildWatchers();
+    void rebuildWatchers();
     setStatus('idle');
     updateContextKeys();
     void providers.refresh();
