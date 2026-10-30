@@ -993,4 +993,51 @@ describe('emulate: tsconfig overrides', () => {
         },
         TIMEOUT
     );
+
+    it(
+        'reports the watched inputs (default and custom tsconfig names) for the extension',
+        async () => {
+            type Inputs = { globs: string[]; tsconfig: Record<string, string> };
+
+            // Defaults: the config file plus the default tsconfig inputs.
+            const defaults = tsconfigMonorepo('watch-inputs-default');
+            writeConfig(defaults, { project, tsconfig: {} });
+            expect(await dbxJson<Inputs>(defaults, ['watch', '--list', '--json'])).toEqual({
+                globs: ['**/dbx.config.*', 'tsconfig.workspaces.json', '**/tsconfig.default.json'],
+                tsconfig: {
+                    baseFile: 'tsconfig.base.json',
+                    rootFile: 'tsconfig.workspaces.json',
+                    defaultFile: 'tsconfig.default.json',
+                    buildFile: 'tsconfig.build.json',
+                },
+            });
+
+            // Custom names replace the defaults in the watched globs.
+            const custom = scratch('watch-inputs-custom');
+            writeJson(path.join(custom, 'package.json'), { name: 'custom', private: true });
+            const tsconfig = {
+                baseFile: 'config/tsconfig.shared.json',
+                rootFile: 'tsconfig.graph.json',
+                defaultFile: 'tsconfig.src.json',
+                buildFile: 'tsconfig.dist.json',
+            };
+            writeConfig(custom, { project, tsconfig });
+            const inputs = await dbxJson<Inputs>(custom, ['watch', '--list', '--json']);
+            expect(inputs.globs).toEqual([
+                '**/dbx.config.*',
+                'tsconfig.graph.json',
+                '**/tsconfig.src.json',
+            ]);
+            expect(inputs.tsconfig).toEqual(tsconfig);
+
+            // Without a tsconfig section only the config file is an input.
+            const plain = scratch('watch-inputs-plain');
+            writeJson(path.join(plain, 'package.json'), { name: 'plain', private: true });
+            writeConfig(plain, { project: { name: 'plain' } });
+            expect((await dbxJson<Inputs>(plain, ['watch', '--list', '--json'])).globs).toEqual([
+                '**/dbx.config.*',
+            ]);
+        },
+        TIMEOUT
+    );
 });

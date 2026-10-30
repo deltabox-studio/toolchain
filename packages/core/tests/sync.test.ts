@@ -9,6 +9,7 @@ import type { SyncTask } from '@deltabox/toolchain-shared';
 import { readManifest } from '../src/manifest.js';
 import { runSync } from '../src/sync.js';
 import { vscodeSyncTask } from '../src/vscode.js';
+import { resolveWatchGlobs } from '../src/watch.js';
 
 function tmp(): string {
     return fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-sync-'));
@@ -279,5 +280,29 @@ describe('runSync untracked files and task metadata', () => {
         const manifest = readManifest(cwd);
         expect(manifest.files).toEqual(['a.txt']);
         expect(manifest.snapshots).toEqual({ 'a.json': { a: 1 } });
+    });
+});
+
+describe('resolveWatchGlobs', () => {
+    it('resolves the active tasks globs, including config-derived ones', () => {
+        const tasks: SyncTask[] = [
+            { name: 'static', watch: ['a.json'], run: () => [] },
+            {
+                name: 'derived',
+                watch: config => [`**/${(config as { file?: string }).file ?? 'default.json'}`],
+                run: () => [],
+            },
+            { name: 'off', watch: ['off.json'], enabled: () => false, run: () => [] },
+            {
+                name: 'root-only',
+                watch: ['root.json'],
+                projectTypes: ['monorepo-root'],
+                run: () => [],
+            },
+        ];
+        expect(resolveWatchGlobs(tasks, {}, 'project')).toEqual(['a.json', '**/default.json']);
+        expect(resolveWatchGlobs(tasks, { file: 'custom.json' } as never, 'monorepo-root')).toEqual(
+            ['a.json', '**/custom.json', 'root.json']
+        );
     });
 });

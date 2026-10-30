@@ -3,8 +3,16 @@ import path from 'node:path';
 
 import { Glob } from 'glob';
 
-import { isIgnoredPath, logger, resolveIgnorePatterns } from '@deltabox/toolchain-shared';
+import {
+    isIgnoredPath,
+    logger,
+    type ProjectType,
+    resolveIgnorePatterns,
+    type SyncTask,
+    type ToolchainConfig,
+} from '@deltabox/toolchain-shared';
 
+import { resolveProjectType } from './project-type.js';
 import { type RunSyncOptions, runSync } from './sync.js';
 
 export interface RunWatchOptions extends Omit<RunSyncOptions, 'check'> {
@@ -16,6 +24,26 @@ export interface RunWatchOptions extends Omit<RunSyncOptions, 'check'> {
     exclude?: string | string[];
     /** Respect `.gitignore` files (default true). */
     gitignore?: boolean;
+}
+
+/**
+ * The repo-relative input globs of the tasks that run for `config` (and
+ * `projectType`, when given): each task's `watch` globs, with function forms
+ * resolved against the config (eg. custom tsconfig file names).
+ */
+export function resolveWatchGlobs(
+    tasks: SyncTask[],
+    config: ToolchainConfig,
+    projectType?: ProjectType
+): string[] {
+    const globs = new Set<string>();
+    for (const task of tasks) {
+        if (projectType && task.projectTypes && !task.projectTypes.includes(projectType)) continue;
+        if (task.enabled && !task.enabled(config)) continue;
+        const patterns = typeof task.watch === 'function' ? task.watch(config) : (task.watch ?? []);
+        for (const glob of patterns) globs.add(glob);
+    }
+    return [...globs];
 }
 
 /**
@@ -67,12 +95,8 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
         ...(options.gitignore !== undefined ? { gitignore: options.gitignore } : {}),
     });
     const dirs = new Set<string>([cwd]);
-    const globs = new Set<string>();
-    for (const task of tasks) {
-        const patterns =
-            typeof task.watch === 'function' ? task.watch(options.config) : (task.watch ?? []);
-        for (const glob of patterns) globs.add(glob);
-    }
+    const projectType = options.projectType ?? resolveProjectType(cwd, options.config);
+    const globs = new Set(resolveWatchGlobs(tasks, options.config, projectType));
     for (const glob of globs) {
         try {
             const files = new Glob(glob, { cwd, dot: true, ignore }).walkSync();

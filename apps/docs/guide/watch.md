@@ -43,6 +43,16 @@ Only **input** files are watched (eg. `dbx.config.*`, `tsconfig.default.json`,
 `tsconfig.workspaces.json`), never the generated outputs — so a sync can never
 loop on its own writes.
 
+Custom tsconfig names (`tsconfig.rootFile`, `tsconfig.defaultFile`) are watched
+instead of the defaults. `dbx watch --list` prints the resolved inputs without
+watching (`--json` adds the tsconfig file names; the VS Code extension reads it):
+
+```sh
+dbx watch --list --json
+# { "globs": ["**/dbx.config.*", "tsconfig.workspaces.json", "**/tsconfig.default.json"],
+#   "tsconfig": { "baseFile": "tsconfig.base.json", ... } }
+```
+
 `dbx watch --force` runs even when there is no `dbx.config.*`, and
 `watch: { enabled: false }` disables it (so a plain `dbx watch` warns and exits).
 

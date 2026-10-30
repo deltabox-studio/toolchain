@@ -99,6 +99,8 @@ Sync once, then watch key files and re-sync on change.
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `-q, --quiet` — Only log errors.
 - `--force` — Run even when no dbx.config.* is present.
+- `--list` — Print the resolved input globs (+ tsconfig file names) instead of watching.
+- `--json` — With --list: print the inputs as JSON.
 
 ## `dbx reset`
 
