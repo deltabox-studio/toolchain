@@ -113,6 +113,10 @@ notification lists the removed relative paths and offers **Restore** (write the
 previous content back) or **Close**. A file that existed before dbx first managed
 it is **adopted**: it is unmanaged but never deleted.
 
+The **Managed Files** view also shows a **Workflow conflicts** group for
+hand-written workflows dbx left untouched (the manifest's `workflowConflicts`).
+Each item names the config key to opt out with, and opens the existing file.
+
 ## Settings
 
 | Setting                                | Default         | Description                                                    |
