@@ -7,6 +7,6 @@ export default defineConfig({
     entry: { index: 'src/index.ts', 'cli/index': 'src/cli/index.ts' },
     deps: {
         ...baseTsdownConfig.deps,
-        alwaysBundle: [/^@deltabox\/toolchain-(shared|tsconfig|biome|core)/],
+        alwaysBundle: [/^@deltabox\/toolchain-(shared|tsconfig|core)/],
     },
 });

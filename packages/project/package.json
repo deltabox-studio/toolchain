@@ -15,11 +15,11 @@
     ],
     "private": true,
     "dependencies": {
-        "@deltabox/toolchain-biome": "workspace:*",
         "@deltabox/toolchain-core": "workspace:*",
         "@deltabox/toolchain-migrate": "workspace:*",
         "@deltabox/toolchain-shared": "workspace:*",
-        "@deltabox/toolchain-tsconfig": "workspace:*"
+        "@deltabox/toolchain-tsconfig": "workspace:*",
+        "jsonc-parser": "^3.3.1"
     },
     "devDependencies": {
         "@deltabox/toolchain-tsdown": "workspace:*",

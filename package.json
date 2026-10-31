@@ -37,6 +37,7 @@
         "settings"
     ],
     "scripts": {
+        "dev": "tsx src/cli/index.ts",
         "build": "vp run --filter \"./packages/*\" build && vp run -w build:root && yarn build:vscode",
         "build:vscode": "yarn workspace toolchain-vscode package:vsix",
         "docs": "vp run --filter \"./apps/docs\"",
@@ -54,7 +55,6 @@
         "config:generate": "tsx scripts/generate-config.ts && tsx scripts/generate-config-docs.ts",
         "config:docs": "tsx scripts/generate-config-docs.ts",
         "config:types": "tsx scripts/generate-config-types.ts",
-        "dev": "tsx src/cli/index.ts",
         "dbx": "tsx src/cli/index.ts",
         "commitlint": "commitlint",
         "postinstall": "node scripts/bootstrap.mjs"
@@ -71,6 +71,7 @@
         "@clack/prompts": "catalog:",
         "commander": "^14.0.0",
         "glob": "catalog:",
+        "jsonc-parser": "^3.3.1",
         "lodash": "catalog:",
         "picocolors": "catalog:",
         "tsdown": "catalog:",

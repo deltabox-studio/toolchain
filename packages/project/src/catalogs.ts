@@ -33,6 +33,60 @@ export function supportsCatalogs(packageManager: string | undefined): boolean {
     return (CATALOG_PACKAGE_MANAGERS as readonly string[]).includes(pm);
 }
 
+/** The package names in a YAML file's default `catalog:` block. */
+function defaultCatalogKeys(content: string): string[] {
+    const keys: string[] = [];
+    let inCatalog = false;
+    for (const line of content.split(/\r?\n/)) {
+        if (/^catalog:\s*(?:#.*)?$/.test(line)) {
+            inCatalog = true;
+            continue;
+        }
+        if (!inCatalog) continue;
+        // The catalog block ends at the next non-indented key.
+        if (/^\S/.test(line)) break;
+        const match = line.match(/^\s+"?([^":\s][^":]*)"?:\s*/);
+        if (match?.[1]) keys.push(match[1]);
+    }
+    return keys;
+}
+
+/**
+ * Whether a directory already declares a default catalog its workspaces can
+ * reference with `catalog:`. Bun keeps it in `package.json`; Yarn/pnpm in their
+ * catalog file. When `required` is given, every package must be present (so a
+ * partial catalog never produces dangling `catalog:` references).
+ */
+export function hasCatalog(
+    root: string,
+    packageManager: string | undefined,
+    required: string[] = []
+): boolean {
+    const pm = packageManager ?? 'yarn';
+    if (!supportsCatalogs(pm)) return false;
+    const covers = (keys: string[]): boolean =>
+        required.length === 0 ? keys.length > 0 : required.every(name => keys.includes(name));
+
+    if (pm === 'bun') {
+        try {
+            const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf-8')) as {
+                workspaces?: { catalog?: Record<string, string> };
+            };
+            return covers(Object.keys(pkg.workspaces?.catalog ?? {}));
+        } catch {
+            return false;
+        }
+    }
+
+    const file = catalogFileFor(pm);
+    if (!file) return false;
+    try {
+        return covers(defaultCatalogKeys(fs.readFileSync(path.join(root, file), 'utf-8')));
+    } catch {
+        return false;
+    }
+}
+
 /** A resolved catalog: a default map and/or named catalogs. */
 export interface Catalog {
     /** The default catalog (`package -> version range`). */
@@ -89,7 +143,8 @@ export function renderPnpmWorkspace(catalog: Catalog, packages?: string[]): stri
 export function catalogsSyncTask(): SyncTask {
     return {
         name: 'catalogs',
-        projectTypes: ['monorepo-root', 'project', 'monorepo-workspace'],
+        // Catalogs are read from the package-manager root, never a workspace.
+        projectTypes: ['monorepo-root', 'project'],
         // Never delete a catalog file, even when the task stops producing it
         // (eg. the user replaced the managed file with their own): the catalog
         // files are read by the package manager and may hold hand-written keys.
@@ -97,7 +152,9 @@ export function catalogsSyncTask(): SyncTask {
         enabled: config => sectionEnabled(config.catalogs),
         run: ctx => {
             const config = sectionConfig(ctx.config.catalogs) ?? {};
-            const packageManager = ctx.config.project?.packageManager ?? 'yarn';
+            // Use the resolved token so a package.json-only project manager
+            // (`packageManager: "pnpm@…"`) is honoured without a `project` section.
+            const packageManager = String(ctx.tokens.packageManager ?? 'yarn');
             const catalog: Catalog = {
                 ...(config.packages ? { packages: config.packages } : {}),
                 ...(config.named ? { named: config.named } : {}),

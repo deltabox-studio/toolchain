@@ -59,6 +59,7 @@ describe('projectSyncTask', () => {
         );
         const file = files?.find(f => f.path === 'package.json');
         expect(file).toBeDefined();
+        expect(file!.track).toBe(false);
         const pkg = JSON.parse(file!.content);
         expect(pkg.name).toBe('@deltabox/toolchain');
         expect(pkg.description).toBe('A toolchain');

@@ -124,9 +124,15 @@ export function generateProjectConfigs(
             name,
             ...(scope ? { scope } : {}),
             type,
+            ...(fromPkg?.description ? { description: fromPkg.description } : {}),
+            ...(fromPkg?.author ? { author: fromPkg.author } : {}),
+            ...(fromPkg?.license ? { license: fromPkg.license } : {}),
+            ...(fromPkg?.homepage ? { homepage: fromPkg.homepage } : {}),
+            ...(fromPkg?.repo ? { repo: fromPkg.repo } : {}),
+            ...(fromPkg?.nodeVersion ? { nodeVersion: fromPkg.nodeVersion } : {}),
             ...(fromPkg?.packageManager ? { packageManager: fromPkg.packageManager } : {}),
             ...(fromPkg?.packageManagerVersion
-                ? { yarnVersion: fromPkg.packageManagerVersion }
+                ? { packageManagerVersion: fromPkg.packageManagerVersion }
                 : {}),
         });
 

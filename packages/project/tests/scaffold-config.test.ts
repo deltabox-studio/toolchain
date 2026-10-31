@@ -11,7 +11,7 @@ describe('scaffolded dbx.config.ts', () => {
         const files = createRootProjectFiles({ name: 'acme', scope: '@acme' });
         const config = files.find(f => f.path === 'dbx.config.ts');
         expect(config?.content).toContain('defineConfig');
-        expect(config?.content).toContain('type: "project"');
+        expect(config?.content).toContain("type: 'project'");
     });
 
     it('is skipped when includeConfig is false', () => {
@@ -25,7 +25,7 @@ describe('scaffolded dbx.config.ts', () => {
             workspaces: [{ alias: 'core', dir: 'packages/core' }],
         });
         const config = files.find(f => f.path === 'dbx.config.ts');
-        expect(config?.content).toContain('type: "monorepo-root"');
+        expect(config?.content).toContain("type: 'monorepo-root'");
     });
 
     it('uses monorepo-workspace for workspace files', () => {
@@ -35,6 +35,6 @@ describe('scaffolded dbx.config.ts', () => {
             wsDir: 'packages/core',
         });
         const config = files.find(f => f.path === 'dbx.config.ts');
-        expect(config?.content).toContain('type: "monorepo-workspace"');
+        expect(config?.content).toContain("type: 'monorepo-workspace'");
     });
 });

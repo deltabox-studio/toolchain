@@ -11,7 +11,12 @@ import {
     setGlobalProviderRegistries,
     setProjectProviderRegistries,
 } from '@deltabox/toolchain-core';
-import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
+import {
+    logger,
+    type Replacements,
+    sectionConfig,
+    type ToolchainCommand,
+} from '@deltabox/toolchain-shared';
 
 import {
     addGlobalSource,
@@ -587,7 +592,7 @@ export function templateCommands(): ToolchainCommand[] {
                 const templates = await loadTemplates({
                     cwd: context.cwd,
                     config: context.config,
-                    online: true,
+                    online: Boolean(opts.online),
                 });
 
                 // Prompt for anything the flags left out (interactive terminals only).
@@ -653,9 +658,9 @@ export function templateCommands(): ToolchainCommand[] {
                 }
                 // A name of `.` means "use the directory I am being created in".
                 if (name === '.') name = path.basename(path.resolve(out));
-                const tokens = {
-                    ...context.config.project,
-                    name: name ?? context.config.project?.name ?? 'app',
+                const tokens: Replacements = {
+                    ...context.tokens,
+                    name: name ?? context.tokens.name ?? 'app',
                     ...(scope ? { scope } : {}),
                 };
                 const variables = parseVars(opts.var as string[] | undefined);
@@ -709,11 +714,29 @@ export function templateCommands(): ToolchainCommand[] {
                     }
                 }
 
+                // Non-interactive runs use the declared defaults too, so a bare
+                // `dbx create --template project` is the same as accepting every
+                // prompt default.
+                for (const variable of template.variables ?? []) {
+                    if (variable.name === 'name' || variable.name === 'scope') continue;
+                    if (
+                        variables[variable.name] === undefined &&
+                        tokens[variable.name] === undefined &&
+                        variable.default !== undefined
+                    ) {
+                        variables[variable.name] = variable.default;
+                    }
+                }
+
+                const tsconfig = sectionConfig(context.config.tsconfig) as
+                    | { rootFile?: string }
+                    | undefined;
                 const result = await scaffoldTemplate(template, {
                     cwd: out,
                     tokens,
                     variables,
                     actions: [...actions],
+                    tsconfigRootFile: tsconfig?.rootFile ?? 'tsconfig.workspaces.json',
                 });
 
                 if (opts.json) {

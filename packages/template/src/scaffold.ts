@@ -7,6 +7,9 @@ import {
     createMonorepoRootFiles,
     createRootProjectFiles,
     createWorkspaceFiles,
+    hasCatalog,
+    SCAFFOLD_CATALOG,
+    upsertWorkspaceTsconfig,
     writeGeneratedFiles,
 } from '@deltabox/toolchain-project';
 import {
@@ -42,6 +45,8 @@ export interface ScaffoldOptions {
     overwrite?: boolean;
     /** Action ids to run after writing the files (default: none). */
     actions?: string[];
+    /** The monorepo workspaces tsconfig name (workspace scaffolds). */
+    tsconfigRootFile?: string;
 }
 
 export interface ScaffoldResult {
@@ -65,13 +70,42 @@ function boolToken(value: unknown, fallback = true): boolean {
     return !['no', 'false', '0', 'off'].includes(String(value).toLowerCase());
 }
 
+/** The package metadata tokens a builtin scaffold passes to its generators. */
+function projectContext(tokens: Record<string, unknown>): Record<string, string> {
+    const text = (value: unknown): string | undefined =>
+        value === undefined || value === null || value === '' ? undefined : String(value);
+    const repo = text(tokens.repo) ?? text(tokens.repoUrl);
+    return {
+        ...(text(tokens.description) ? { description: text(tokens.description)! } : {}),
+        ...(text(tokens.author) ? { author: text(tokens.author)! } : {}),
+        ...(text(tokens.license) ? { license: text(tokens.license)! } : {}),
+        ...(text(tokens.homepage) ? { homepage: text(tokens.homepage)! } : {}),
+        ...(repo ? { repo } : {}),
+        ...(text(tokens.nodeVersion) ? { nodeVersion: text(tokens.nodeVersion)! } : {}),
+    };
+}
+
 /** Scaffold from one of the local generators (builtin templates). */
 function scaffoldBuiltin(template: Template, options: ScaffoldOptions): ScaffoldResult {
     const tokens = replacementMap(options);
+    const text = (value: unknown): string | undefined =>
+        value === undefined || value === null || value === '' ? undefined : String(value);
     const name = String(tokens.name ?? 'app');
     const scope = tokens.scope ? String(tokens.scope) : undefined;
     const includeConfig = boolToken(tokens.includeConfig);
-    const packageManager = tokens.packageManager ? String(tokens.packageManager) : undefined;
+    const packageManager = text(tokens.packageManager);
+    const configuredManager = text(options.tokens?.packageManager);
+    const configuredVersion =
+        text(options.tokens?.packageManagerVersion) ?? text(options.tokens?.yarnVersion);
+    const packageManagerVersion =
+        text(options.variables?.packageManagerVersion) ??
+        (packageManager && packageManager === configuredManager ? configuredVersion : undefined);
+    const metadata: Record<string, string> = {
+        ...projectContext(tokens),
+        ...(packageManagerVersion ? { packageManagerVersion } : {}),
+    };
+    // A workspace describes itself, not the root it is scaffolded from.
+    const { description: _description, ...workspaceMetadata } = metadata;
     const files: GeneratedFile[] = [];
 
     switch (template.builtin) {
@@ -79,6 +113,7 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
             const rootScope = scope ?? `@${name}`;
             files.push(
                 ...createMonorepoRootFiles({
+                    ...metadata,
                     name,
                     scope: rootScope,
                     type: 'monorepo-root',
@@ -93,6 +128,7 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
             const rootScope = scope ?? `@${name}`;
             files.push(
                 ...createMonorepoRootFiles({
+                    ...metadata,
                     name,
                     scope: rootScope,
                     type: 'monorepo-root',
@@ -103,6 +139,7 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
             );
             files.push(
                 ...createWorkspaceFiles({
+                    ...workspaceMetadata,
                     name,
                     scope: rootScope,
                     wsName: 'core',
@@ -119,12 +156,18 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
             const dir = `packages/${name}`;
             files.push(
                 ...createWorkspaceFiles({
+                    ...workspaceMetadata,
                     name,
                     ...(scope ? { scope } : {}),
                     wsName: name,
                     wsDir: dir,
                     type: 'monorepo-workspace',
                     includeConfig,
+                    useCatalog: hasCatalog(
+                        options.cwd,
+                        packageManager,
+                        Object.keys(SCAFFOLD_CATALOG)
+                    ),
                     ...(packageManager ? { packageManager } : {}),
                 }).map(file => ({ ...file, path: `${dir}/${file.path}` }))
             );
@@ -138,16 +181,27 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
             // `single` + `application`: a root package project.
             files.push(
                 ...createRootProjectFiles({
+                    ...metadata,
                     name,
                     ...(scope ? { scope } : {}),
                     type: 'project',
+                    kind: template.builtin === 'application' ? 'application' : 'project',
                     includeConfig,
                     ...(packageManager ? { packageManager } : {}),
                 })
             );
         }
     }
-    return { written: writeGeneratedFiles(files, options.cwd) };
+    const written = writeGeneratedFiles(files, options.cwd);
+    if (template.builtin === 'monorepo-workspace') {
+        upsertWorkspaceTsconfig(
+            options.cwd,
+            { alias: name, dir: `packages/${name}` },
+            scope,
+            options.tsconfigRootFile
+        );
+    }
+    return { written };
 }
 
 /** Copy a local template directory, resolving tokens in paths + contents. */
@@ -165,6 +219,7 @@ function scaffoldLocal(template: Template, options: ScaffoldOptions): ScaffoldRe
     const tokens = replacementMap(options);
     const overwrite = options.overwrite !== false;
     const pending: { target: string; content: string }[] = [];
+    const root = path.resolve(options.cwd);
 
     const walk = (relative: string): void => {
         const abs = path.join(dir, relative);
@@ -175,10 +230,18 @@ function scaffoldLocal(template: Template, options: ScaffoldOptions): ScaffoldRe
                 walk(childRelative);
                 continue;
             }
-            const target = path.join(
-                options.cwd,
+            const target = path.resolve(
+                root,
                 applyReplacements(childRelative, tokens, { open, close })
             );
+            const normalizedRoot = process.platform === 'win32' ? root.toLowerCase() : root;
+            const normalizedTarget = process.platform === 'win32' ? target.toLowerCase() : target;
+            if (
+                normalizedTarget !== normalizedRoot &&
+                !normalizedTarget.startsWith(`${normalizedRoot}${path.sep}`)
+            ) {
+                throw new Error(`refusing to write outside ${root}: ${target}`);
+            }
             if (!overwrite && fs.existsSync(target)) continue;
             const content = fs.readFileSync(path.join(dir, childRelative), 'utf-8');
             pending.push({ target, content: applyReplacements(content, tokens, { open, close }) });

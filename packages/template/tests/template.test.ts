@@ -178,6 +178,35 @@ describe('scaffolding', () => {
         expect(fs.existsSync(path.join(out, 'dbx.config.ts'))).toBe(true);
     });
 
+    it('does not reuse the configured version when packageManager is overridden', async () => {
+        const out = makeTmp();
+        const template = BUILTIN_TEMPLATES.find(candidate => candidate.id === 'project');
+        if (!template) throw new Error('missing builtin');
+        await scaffoldTemplate(template, {
+            cwd: out,
+            tokens: {
+                name: 'acme',
+                packageManager: 'yarn',
+                packageManagerVersion: '4.17.1',
+            },
+            variables: { packageManager: 'pnpm' },
+        });
+        const pkg = JSON.parse(fs.readFileSync(path.join(out, 'package.json'), 'utf-8'));
+        expect(pkg.packageManager).toBe('pnpm@10.11.1');
+    });
+
+    it('does not copy the root description into a workspace config', async () => {
+        const out = makeTmp();
+        const template = BUILTIN_TEMPLATES.find(candidate => candidate.id === 'workspace');
+        if (!template) throw new Error('missing builtin');
+        await scaffoldTemplate(template, {
+            cwd: out,
+            tokens: { name: 'web', description: 'The root project' },
+        });
+        const config = fs.readFileSync(path.join(out, 'packages/web/dbx.config.ts'), 'utf-8');
+        expect(config).not.toContain('The root project');
+    });
+
     it('copies a local template, resolving tokens in paths and contents', async () => {
         const root = makeTmp();
         const tpl = path.join(root, 'tpl');

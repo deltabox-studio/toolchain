@@ -8,5 +8,5 @@
         "types": ["node"]
     },
     "exclude": ["**/dist", "**/node_modules", "apps", "docs", "packages"],
-    "include": ["src", "{{envTypesFile}}", "scripts", ".oas/**/*", "package.json"]
+    "include": ["src", "tests", "{{envTypesFile}}", "scripts", ".oas/**/*", "package.json"]
 }

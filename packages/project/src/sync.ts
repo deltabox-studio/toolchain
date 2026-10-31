@@ -59,8 +59,14 @@ export function projectSyncTask(): SyncTask {
             if (Object.keys(updates).length === 0) return [];
 
             const next = { ...pkg, ...updates };
+            // `package.json` is user-owned: write the changed fields but never
+            // track it as a generated file (so reset never deletes it).
             const files: ManagedFile[] = [
-                { path: 'package.json', content: `${JSON.stringify(next, null, 4)}\n` },
+                {
+                    path: 'package.json',
+                    content: `${JSON.stringify(next, null, 4)}\n`,
+                    track: false,
+                },
             ];
             return files;
         },

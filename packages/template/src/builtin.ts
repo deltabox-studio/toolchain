@@ -64,7 +64,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
     {
         id: 'project',
         name: 'TypeScript project',
-        description: 'A single-package TypeScript project (tsconfig, tsdown, biome).',
+        description: 'A single-package TypeScript project (tsconfig, tsdown, Vite+).',
         kind: 'project',
         builtin: 'single',
         source: { type: 'builtin', locate: 'project' },
@@ -75,7 +75,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
     {
         id: 'application',
         name: 'Application',
-        description: 'A runnable application package (tsconfig, tsdown, biome).',
+        description: 'A runnable application package (tsconfig, Vite+).',
         kind: 'application',
         builtin: 'application',
         source: { type: 'builtin', locate: 'application' },

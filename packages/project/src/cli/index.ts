@@ -1,19 +1,24 @@
 import path from 'node:path';
 
+import { loadToolchainConfig } from '@deltabox/toolchain-core';
 import {
     logger,
     type ProjectType,
+    type Replacements,
     sectionConfig,
     type ToolchainCommand,
     type ToolchainCommandContext,
 } from '@deltabox/toolchain-shared';
-import type { TsconfigExtendsOptions } from '@deltabox/toolchain-tsconfig';
+import { tsconfigFileNames, type TsconfigExtendsOptions } from '@deltabox/toolchain-tsconfig';
 
+import { hasCatalog } from '../catalogs.js';
 import { generateProjectConfigs } from '../config.js';
 import {
     createMonorepoRootFiles,
     createRootProjectFiles,
     createWorkspaceFiles,
+    SCAFFOLD_CATALOG,
+    upsertWorkspaceTsconfig,
     writeGeneratedFiles,
 } from '../typescript.js';
 
@@ -23,6 +28,7 @@ const CONFIG_OPTIONS = [
         flags: '--type <type>',
         description: 'Project type: project | monorepo-root | monorepo-workspace.',
     },
+    { flags: '--force', description: 'Overwrite existing files in the output directory.' },
 ];
 
 /** The package manager to scaffold for (writes a catalog file when supported). */
@@ -33,6 +39,45 @@ const PACKAGE_MANAGER_OPTION = {
 
 /** The valid `project.type` values. */
 const PROJECT_TYPES: ProjectType[] = ['project', 'monorepo-root', 'monorepo-workspace'];
+
+/** Read a token as a non-empty string. */
+function tokenText(value: unknown): string | undefined {
+    if (value === undefined || value === null || value === '') return undefined;
+    return String(value);
+}
+
+/** The project metadata a scaffold inherits from the resolved tokens. */
+function projectDefaults(
+    tokens: Replacements,
+    options: { description?: boolean } = {}
+): Record<string, string> {
+    const description = tokenText(tokens.description);
+    return {
+        ...(options.description !== false && description ? { description } : {}),
+        ...(tokenText(tokens.author) ? { author: tokenText(tokens.author)! } : {}),
+        ...(tokenText(tokens.license) ? { license: tokenText(tokens.license)! } : {}),
+        ...(tokenText(tokens.homepage) ? { homepage: tokenText(tokens.homepage)! } : {}),
+        ...(tokenText(tokens.repo) ? { repo: tokenText(tokens.repo)! } : {}),
+        ...(tokenText(tokens.nodeVersion) ? { nodeVersion: tokenText(tokens.nodeVersion)! } : {}),
+    };
+}
+
+/** Resolve the scaffold's package manager (+ its matching version). */
+function scaffoldPackageManager(
+    opts: Record<string, unknown>,
+    tokens: Replacements
+): Record<string, string> {
+    const configured = tokenText(tokens.packageManager);
+    const packageManager = (opts.packageManager as string | undefined) ?? configured ?? 'yarn';
+    const version =
+        packageManager === configured
+            ? (tokenText(tokens.packageManagerVersion) ?? tokenText(tokens.yarnVersion))
+            : undefined;
+    return {
+        packageManager,
+        ...(version ? { packageManagerVersion: version } : {}),
+    };
+}
 
 /**
  * Resolve the project name for a scaffold. A name is **required**: it comes from
@@ -108,17 +153,19 @@ export function projectCommands(): ToolchainCommand[] {
                 const out = (opts.out as string) ?? context.cwd;
                 const name = resolveName(requireName(opts, context.config), out);
                 const tsconfigExtends = scaffoldTsconfigExtends(context.config);
+                const scope = (opts.scope as string | undefined) ?? tokenText(context.tokens.scope);
                 const files = createRootProjectFiles({
+                    ...projectDefaults(context.tokens),
                     name,
-                    ...(opts.scope ? { scope: opts.scope as string } : {}),
-                    ...(opts.packageManager
-                        ? { packageManager: opts.packageManager as string }
-                        : {}),
+                    ...(scope ? { scope } : {}),
+                    ...scaffoldPackageManager(opts, context.tokens),
                     type: resolveType(opts, 'project'),
-                    includeConfig: (opts.config as boolean | undefined) ?? true,
+                    includeConfig: context.noConfig
+                        ? false
+                        : ((opts.config as boolean | undefined) ?? true),
                     ...(tsconfigExtends ? { tsconfigExtends } : {}),
                 });
-                const written = writeGeneratedFiles(files, out);
+                const written = writeGeneratedFiles(files, out, { force: Boolean(opts.force) });
                 for (const file of written) logger.info(`Created ${file}`);
             },
         },
@@ -136,25 +183,32 @@ export function projectCommands(): ToolchainCommand[] {
             run: (opts, context) => {
                 const out = (opts.out as string) ?? context.cwd;
                 const name = resolveName(requireName(opts, context.config), out);
-                const scope = (opts.scope as string) ?? context.config.project?.scope ?? `@${name}`;
-                const includeConfig = (opts.config as boolean | undefined) ?? true;
+                const scope =
+                    (opts.scope as string | undefined) ??
+                    tokenText(context.tokens.scope) ??
+                    `@${name}`;
+                const includeConfig = context.noConfig
+                    ? false
+                    : ((opts.config as boolean | undefined) ?? true);
                 const rootType = resolveType(opts, 'monorepo-root');
                 const withExample = Boolean(opts.example);
-                const packageManager = opts.packageManager as string | undefined;
+                const packageManager = scaffoldPackageManager(opts, context.tokens);
                 const tsconfigExtends = scaffoldTsconfigExtends(context.config);
 
                 const files = createMonorepoRootFiles({
+                    ...projectDefaults(context.tokens),
                     name,
                     scope,
                     type: rootType,
                     includeConfig,
-                    ...(packageManager ? { packageManager } : {}),
+                    ...packageManager,
                     ...(tsconfigExtends ? { tsconfigExtends } : {}),
                     workspaces: withExample ? [{ alias: 'core', dir: 'packages/core' }] : [],
                 });
                 if (withExample) {
                     files.push(
                         ...createWorkspaceFiles({
+                            ...projectDefaults(context.tokens, { description: false }),
                             name,
                             scope,
                             wsName: 'core',
@@ -162,12 +216,12 @@ export function projectCommands(): ToolchainCommand[] {
                             type: 'monorepo-workspace',
                             includeConfig,
                             useCatalog: true,
-                            ...(packageManager ? { packageManager } : {}),
+                            ...packageManager,
                             ...(tsconfigExtends ? { tsconfigExtends } : {}),
                         }).map(f => ({ ...f, path: `packages/core/${f.path}` }))
                     );
                 }
-                const written = writeGeneratedFiles(files, out);
+                const written = writeGeneratedFiles(files, out, { force: Boolean(opts.force) });
                 for (const file of written) logger.info(`Created ${file}`);
             },
         },
@@ -185,33 +239,62 @@ export function projectCommands(): ToolchainCommand[] {
                 PACKAGE_MANAGER_OPTION,
                 ...CONFIG_OPTIONS,
             ],
-            run: (opts, context) => {
+            run: async (opts, context) => {
                 const root = (opts.root as string | undefined) ?? context.cwd;
-                const name = resolveName(requireName(opts, context.config), root);
+                // `--root` may point at a different monorepo than the cwd; use that
+                // root's config/tokens (scope, package manager, author, ...), not the cwd's.
+                const loaded =
+                    path.resolve(root) === path.resolve(context.cwd)
+                        ? { config: context.config, tokens: context.tokens }
+                        : await loadToolchainConfig(root, {
+                              tolerant: true,
+                              skipHooks: true,
+                              ...(context.noConfig ? { noConfig: true } : {}),
+                          });
+                const { config, tokens: rootTokens } = loaded;
+                const workspaceName = String(opts.name ?? '').trim();
+                if (!workspaceName) {
+                    throw new Error(
+                        'a workspace name is required: pass `--name <name>` (the root project name is not the workspace name).'
+                    );
+                }
+                const name = resolveName(workspaceName, root);
                 const scope =
-                    (opts.scope as string | undefined) ??
-                    context.config.project?.scope ??
-                    `@${name}`;
+                    (opts.scope as string | undefined) ?? tokenText(rootTokens.scope) ?? `@${name}`;
                 const wsDir = ((opts.dir as string | undefined) ?? `packages/${name}`)
                     .replace(/\\/g, '/')
                     .replace(/\/+$/, '');
-                const includeConfig = (opts.config as boolean | undefined) ?? true;
+                const includeConfig = context.noConfig
+                    ? false
+                    : ((opts.config as boolean | undefined) ?? true);
                 const type = resolveType(opts, 'monorepo-workspace');
-                const packageManager = opts.packageManager as string | undefined;
-                const tsconfigExtends = scaffoldTsconfigExtends(context.config);
+                const packageManager = scaffoldPackageManager(opts, rootTokens);
+                const tsconfigExtends = scaffoldTsconfigExtends(config);
 
                 const files = createWorkspaceFiles({
+                    ...projectDefaults(rootTokens, { description: false }),
                     name,
                     scope,
                     wsName: name,
                     wsDir,
                     type,
                     includeConfig,
-                    ...(packageManager ? { packageManager } : {}),
+                    useCatalog: hasCatalog(
+                        root,
+                        packageManager.packageManager,
+                        Object.keys(SCAFFOLD_CATALOG)
+                    ),
+                    ...packageManager,
                     ...(tsconfigExtends ? { tsconfigExtends } : {}),
                 }).map(file => ({ ...file, path: `${wsDir}/${file.path}` }));
 
-                const written = writeGeneratedFiles(files, root);
+                const written = writeGeneratedFiles(files, root, { force: Boolean(opts.force) });
+                upsertWorkspaceTsconfig(
+                    root,
+                    { alias: name, dir: wsDir },
+                    scope,
+                    tsconfigFileNames(config).rootFile
+                );
                 for (const file of written) logger.info(`Created ${file}`);
             },
         },

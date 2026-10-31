@@ -610,13 +610,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@deltabox/toolchain-project@workspace:packages/project"
   dependencies:
-    "@deltabox/toolchain-biome": "workspace:*"
     "@deltabox/toolchain-core": "workspace:*"
     "@deltabox/toolchain-migrate": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
     "@deltabox/toolchain-tsconfig": "workspace:*"
     "@deltabox/toolchain-tsdown": "workspace:*"
     "@types/node": "catalog:"
+    jsonc-parser: "npm:^3.3.1"
     tsdown: "catalog:"
     typescript: "catalog:"
     vitest: "catalog:"
@@ -713,6 +713,7 @@ __metadata:
     "@clack/prompts": "catalog:"
     commander: "npm:^14.0.0"
     glob: "catalog:"
+    jsonc-parser: "npm:^3.3.1"
     lodash: "catalog:"
     picocolors: "catalog:"
     tsdown: "catalog:"
@@ -756,6 +757,7 @@ __metadata:
     dotenv: "catalog:"
     glob: "catalog:"
     husky: "npm:^9.1.7"
+    jsonc-parser: "npm:^3.3.1"
     lodash: "catalog:"
     picocolors: "catalog:"
     publint: "npm:^0.3.24"
@@ -4289,6 +4291,13 @@ __metadata:
   version: 1.0.0
   resolution: "json-schema-traverse@npm:1.0.0"
   checksum: 10c0/71e30015d7f3d6dc1c316d6298047c8ef98a06d31ad064919976583eb61e1018a60a0067338f0f79cabc00d84af3fcc489bd48ce8a46ea165d9541ba17fb30c6
+  languageName: node
+  linkType: hard
+
+"jsonc-parser@npm:^3.3.1":
+  version: 3.3.1
+  resolution: "jsonc-parser@npm:3.3.1"
+  checksum: 10c0/269c3ae0a0e4f907a914bf334306c384aabb9929bd8c99f909275ebd5c2d3bc70b9bcd119ad794f339dec9f24b6a4ee9cd5a8ab2e6435e730ad4075388fc2ab6
   languageName: node
   linkType: hard
 
