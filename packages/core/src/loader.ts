@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -53,6 +54,11 @@ export interface LoadToolchainConfigOptions {
     noConfig?: boolean;
     /** Skip the config's `hooks.afterLoad` callback (metadata-only loads). */
     skipHooks?: boolean;
+    /**
+     * Bypass the ESM/CJS module cache. Long-running callers (eg. `dbx watch`)
+     * must set this so an edited config is actually re-evaluated.
+     */
+    fresh?: boolean;
 }
 
 /** A short, single-line description of a thrown config error. */
@@ -128,14 +134,28 @@ function unwrapDefault(mod: unknown): unknown {
     return value;
 }
 
+const require = createRequire(import.meta.url);
+let importNonce = 0;
+
 /** Import a config module: JSON natively, TS/JS via dynamic import (tsx fallback). */
-async function importModule(file: string): Promise<unknown> {
+async function importModule(file: string, fresh = false): Promise<unknown> {
     if (file.endsWith('.json')) {
         // Strip a UTF-8 BOM: editors/PowerShell often write one, and JSON.parse
         // rejects it (the other JSON readers in the toolchain strip it too).
         return JSON.parse(fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, ''));
     }
-    const url = pathToFileURL(file).href;
+    if (fresh) {
+        // A `.cjs` config is loaded through Node's require cache even from
+        // `import()`, so drop it before re-evaluating.
+        try {
+            delete require.cache[file];
+        } catch {
+            // not a require-cached module
+        }
+    }
+    const base = pathToFileURL(file).href;
+    // ESM caches by URL: a unique query is what makes `dbx watch` see an edit.
+    const url = fresh ? `${base}?dbx=${Date.now()}-${++importNonce}` : base;
     try {
         const mod = (await import(url)) as { default?: unknown };
         return mod.default ?? mod;
@@ -149,8 +169,8 @@ async function importModule(file: string): Promise<unknown> {
 }
 
 /** Read the `toolchain` section out of a config module. */
-async function readToolchainConfig(file: string): Promise<ToolchainConfig> {
-    const loaded = await resolveConfigExport(await importModule(file));
+async function readToolchainConfig(file: string, fresh = false): Promise<ToolchainConfig> {
+    const loaded = await resolveConfigExport(await importModule(file, fresh));
     const toolchain =
         loaded && typeof loaded === 'object' ? (loaded as DbxConfig).toolchain : undefined;
     return toolchain && typeof toolchain === 'object' ? toolchain : {};
@@ -257,6 +277,7 @@ export async function loadToolchainConfig(
           : findConfigFile(cwd);
     const parentFile = options.noConfig ? undefined : findParentConfigFile(cwd);
     const tolerant = options.tolerant ?? false;
+    const fresh = options.fresh ?? false;
 
     let config: ToolchainConfig = {};
     let ownConfig: ToolchainConfig = {};
@@ -264,7 +285,7 @@ export async function loadToolchainConfig(
     let error: string | undefined;
     if (parentFile) {
         try {
-            parentConfig = await readToolchainConfig(parentFile);
+            parentConfig = await readToolchainConfig(parentFile, fresh);
             config = parentConfig;
         } catch (cause) {
             if (!tolerant) throw cause;
@@ -273,7 +294,7 @@ export async function loadToolchainConfig(
     }
     if (file) {
         try {
-            const own = await readToolchainConfig(file);
+            const own = await readToolchainConfig(file, fresh);
             ownConfig = own;
             // Merge over the ancestor only when it actually loaded; otherwise the
             // project's own config stands alone.

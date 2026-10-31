@@ -80,6 +80,17 @@ describe('loadToolchainConfig', () => {
         expect((globalThis as Record<string, unknown>).__dbxHook).toBeUndefined();
     });
 
+    it('re-evaluates an edited code config with `fresh`', async () => {
+        const cwd = tmp();
+        const file = path.join(cwd, 'dbx.config.mjs');
+        fs.writeFileSync(file, `export default { toolchain: { project: { name: 'one' } } };\n`);
+        const first = await loadToolchainConfig(cwd);
+        fs.writeFileSync(file, `export default { toolchain: { project: { name: 'two' } } };\n`);
+        const second = await loadToolchainConfig(cwd, { fresh: true });
+        expect(first.config.project?.name).toBe('one');
+        expect(second.config.project?.name).toBe('two');
+    });
+
     it('resolves a config exported as an async callback', async () => {
         const cwd = tmp();
         fs.writeFileSync(

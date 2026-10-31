@@ -86,7 +86,7 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
         if (!file) return false;
         configFile = file;
         try {
-            const loaded = await loadToolchainConfig(cwd, { config: file });
+            const loaded = await loadToolchainConfig(cwd, { config: file, fresh: true });
             current = {
                 ...current,
                 config: loaded.config,
