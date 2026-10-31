@@ -98,9 +98,19 @@ export function discoverVersionPackages(workspaces?: string[], root = repoRoot()
     if (patterns === undefined && rootHasPackage) {
         try {
             const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as {
-                workspaces?: string[];
+                workspaces?: unknown;
             };
-            patterns = pkg.workspaces;
+            const value = pkg.workspaces;
+            // Yarn/npm use an array; Bun uses `{ packages, catalog }`.
+            patterns = Array.isArray(value)
+                ? value.filter((entry): entry is string => typeof entry === 'string')
+                : value &&
+                    typeof value === 'object' &&
+                    Array.isArray((value as { packages?: unknown }).packages)
+                  ? ((value as { packages: unknown[] }).packages.filter(
+                        (entry): entry is string => typeof entry === 'string'
+                    ) as string[])
+                  : undefined;
         } catch {
             patterns = undefined;
         }

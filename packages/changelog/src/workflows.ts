@@ -10,6 +10,7 @@
 
 import {
     applyReplacementsDeep,
+    DEFAULT_PACKAGE_MANAGER_VERSIONS,
     type Replacements,
     toYaml,
     type WorkflowOptions,
@@ -65,6 +66,45 @@ export const WORKFLOW_FILENAMES: Record<WorkflowId, string> = {
     issues: 'issues.yml',
 };
 
+/** The default directory for generated workflows. */
+export const DEFAULT_WORKFLOW_DIR = '.github/workflows';
+
+/** Normalize a workflow directory (no leading `./`, no trailing `/`). */
+function normalizeWorkflowDir(dir: string | undefined): string {
+    const value = (dir ?? DEFAULT_WORKFLOW_DIR)
+        .replace(/\\/g, '/')
+        .replace(/^\.?\//, '')
+        .replace(/\/+$/, '');
+    if (/^[a-zA-Z]:/.test(value) || value.split('/').includes('..')) {
+        throw new Error(`invalid workflow directory "${dir}" (must stay inside the project).`);
+    }
+    return value;
+}
+
+/** Validate a workflow file name (no separators, no parent traversal). */
+function workflowFilename(value: string | undefined, fallback: string): string {
+    const filename = (value ?? fallback).trim();
+    if (!filename || /[\\/]/.test(filename) || filename === '.' || filename === '..') {
+        throw new Error(`invalid workflow filename "${value}" (expected a file name).`);
+    }
+    return filename;
+}
+
+/**
+ * The path a workflow is written to. A setting may override the directory
+ * (`dir`) and file name (`filename`); custom ids default to `<id>.yml`.
+ */
+export function workflowFilePath(
+    id: string,
+    setting: WorkflowSetting | undefined,
+    defaultFilename: string = `${id}.yml`
+): string {
+    const options = setting && typeof setting === 'object' ? setting : undefined;
+    const dir = normalizeWorkflowDir(options?.dir);
+    const filename = workflowFilename(options?.filename, defaultFilename);
+    return dir ? `${dir}/${filename}` : filename;
+}
+
 /** Whether a workflow setting enables the workflow (opt-in: absent is disabled). */
 export function isEnabled(setting: WorkflowSetting | undefined): boolean {
     if (setting === undefined) return false;
@@ -74,13 +114,36 @@ export function isEnabled(setting: WorkflowSetting | undefined): boolean {
     return setting.enabled !== false;
 }
 
-function cli(tokens: Replacements): string {
-    return `${tokens.packageManager} ${tokens.tooling}`;
+function packageManagerVersion(tokens: Replacements): string {
+    const packageManager = String(tokens.packageManager ?? 'yarn');
+    return String(
+        tokens.packageManagerVersion ??
+            DEFAULT_PACKAGE_MANAGER_VERSIONS[packageManager] ??
+            tokens.yarnVersion ??
+            '4.17.1'
+    );
 }
 
-/** The checkout + node + corepack + install steps shared by every job. */
+/** The command that runs the toolchain CLI under the configured package manager. */
+function cli(tokens: Replacements): string {
+    const tooling = String(tokens.tooling ?? 'dbx');
+    switch (String(tokens.packageManager ?? 'yarn')) {
+        case 'pnpm':
+            return `pnpm exec ${tooling}`;
+        case 'npm':
+            return `npx ${tooling}`;
+        case 'bun':
+            return `bunx ${tooling}`;
+        default:
+            return `${tokens.packageManager ?? 'yarn'} ${tooling}`;
+    }
+}
+
+/** The checkout + package-manager setup/install steps shared by every job. */
 function setupSteps(tokens: Replacements): WorkflowStep[] {
-    return [
+    const packageManager = String(tokens.packageManager ?? 'yarn');
+    const version = packageManagerVersion(tokens);
+    const setup: WorkflowStep[] = [
         {
             name: 'Checkout',
             uses: 'actions/checkout@v4',
@@ -91,17 +154,49 @@ function setupSteps(tokens: Replacements): WorkflowStep[] {
             uses: 'actions/setup-node@v4',
             with: { 'node-version': String(tokens.nodeVersion) },
         },
+    ];
+
+    if (packageManager === 'bun') {
+        return [
+            ...setup,
+            {
+                name: 'Setup Bun',
+                uses: 'oven-sh/setup-bun@v2',
+                with: { 'bun-version': version },
+            },
+            { name: 'Install dependencies', run: 'bun install --frozen-lockfile' },
+        ];
+    }
+    if (packageManager === 'npm') {
+        return [
+            ...setup,
+            {
+                name: 'Install dependencies',
+                run: `npm install -g npm@${version}\nnpm ci`,
+            },
+        ];
+    }
+    return [
+        ...setup,
         {
             name: 'Enable Corepack',
-            run: `corepack enable\ncorepack prepare ${tokens.packageManager}@${tokens.yarnVersion} --activate`,
+            run: `corepack enable\ncorepack prepare ${packageManager}@${version} --activate`,
         },
-        { name: 'Install dependencies', run: `${tokens.packageManager} install --immutable` },
+        {
+            name: 'Install dependencies',
+            run:
+                packageManager === 'pnpm'
+                    ? 'pnpm install --frozen-lockfile'
+                    : 'yarn install --immutable',
+        },
     ];
 }
 
 export interface DefaultWorkflowOptions {
     /** Include commitlint in the CI workflow (default true). */
     commitlint?: boolean;
+    /** Config-defined workflows (enabled by presence; no boolean form). */
+    custom?: Record<string, string | WorkflowOptions>;
 }
 
 /** Build all default workflows for a set of tokens. */
@@ -353,6 +448,32 @@ export function renderWorkflow(id: WorkflowId, options: RenderWorkflowOptions): 
 }
 
 /**
+ * Build a custom workflow from an empty skeleton, merging the consumer's
+ * settings over it (`triggers` -> `on`, `jobs` -> jobs, `extra` -> top-level).
+ */
+export function renderCustomWorkflow(
+    id: string,
+    options: RenderWorkflowOptions
+): string | undefined {
+    const config = options.config ?? {};
+    if (config.enabled === false) return undefined;
+    const tokens = { ...DEFAULT_WORKFLOW_TOKENS, ...options.tokens, ...config.tokens };
+    const base: Workflow = { name: id, on: {}, jobs: {} };
+    const resolved = applyReplacementsDeep(applyWorkflowConfig(base, config), tokens);
+    const hasTriggers =
+        resolved.on && typeof resolved.on === 'object' && Object.keys(resolved.on).length > 0;
+    const hasJobs =
+        resolved.jobs && typeof resolved.jobs === 'object' && Object.keys(resolved.jobs).length > 0;
+    if (!hasTriggers || !hasJobs) {
+        throw new Error(
+            `custom workflow "${id}" must define at least one trigger and one job ` +
+                '(use `triggers` and `jobs`, or `extra`).'
+        );
+    }
+    return toYaml(resolved as unknown as Record<string, YamlValue>);
+}
+
+/**
  * Render every workflow, keyed by file name (disabled ones are omitted). A raw
  * string setting is used verbatim as the workflow content (no default merge and
  * no token replacement).
@@ -366,13 +487,26 @@ export function renderWorkflows(
     for (const id of Object.keys(WORKFLOW_FILENAMES) as WorkflowId[]) {
         const setting = workflows[id];
         if (!isEnabled(setting)) continue;
+        const file = workflowFilePath(id, setting, WORKFLOW_FILENAMES[id]);
+        const name = file.split('/').pop() ?? file;
         if (typeof setting === 'string') {
-            out[WORKFLOW_FILENAMES[id]] = setting;
+            out[name] = setting;
             continue;
         }
         const config = typeof setting === 'object' ? setting : {};
         const yaml = renderWorkflow(id, { tokens, config, ...options });
-        if (yaml) out[WORKFLOW_FILENAMES[id]] = yaml;
+        if (yaml) out[name] = yaml;
+    }
+    for (const [id, setting] of Object.entries(options.custom ?? {})) {
+        if (!isEnabled(setting)) continue;
+        const file = workflowFilePath(id, setting);
+        const name = file.split('/').pop() ?? file;
+        if (typeof setting === 'string') {
+            out[name] = setting;
+            continue;
+        }
+        const yaml = renderCustomWorkflow(id, { tokens, config: setting, ...options });
+        if (yaml) out[name] = yaml;
     }
     return out;
 }

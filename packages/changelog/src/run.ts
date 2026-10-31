@@ -155,6 +155,9 @@ export function runChangelog(
         const result = spawnSync('npx', ['--yes', 'changeset', 'version'], {
             cwd: repoRoot(),
             stdio: 'inherit',
+            // `npx` is a `.cmd` shim on Windows, which spawn cannot execute
+            // directly without a shell.
+            shell: process.platform === 'win32',
         });
         if (result.status !== 0) throw new Error('changesets provider failed.');
         logger.info('Ran the changesets provider; changesets owns the changelog/version output.');

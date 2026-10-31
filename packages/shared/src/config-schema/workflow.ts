@@ -59,6 +59,14 @@ export const workflowOptionsSchema = withEnabled(
             .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
             .describe('Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).')
             .optional(),
+        filename: z
+            .string()
+            .describe('Override the generated workflow file name (eg. `deploy.yml`).')
+            .optional(),
+        dir: z
+            .string()
+            .describe('Directory for the workflow file (default `.github/workflows`).')
+            .optional(),
     }),
     'Enable/disable this workflow (default: enabled when present).'
 )
@@ -78,6 +86,19 @@ export const workflowSettingSchema = z
     .meta({ id: 'WorkflowSetting' });
 
 /**
+ * A custom workflow is enabled by presence (no boolean): a raw YAML string is
+ * written verbatim, or an options object is merged over an empty workflow
+ * (`triggers`, `extra`, `jobs`, ... build the workflow).
+ */
+export const customWorkflowSettingsSchema = z
+    .union([z.string(), workflowOptionsSchema])
+    .describe(
+        'A custom workflow: a raw YAML string, or workflow settings merged over an empty ' +
+            'workflow (use `triggers`, `extra` and `jobs` to define it).'
+    )
+    .meta({ id: 'CustomWorkflowSettings' });
+
+/**
  * The opt-in CI workflows, keyed by workflow id. Each entry is opt-in: omit it
  * (or set it to `false`) to leave that workflow unmanaged.
  */
@@ -93,6 +114,13 @@ export const workflowConfigSchema = z
             .optional(),
         sync: workflowSettingSchema
             .describe('The toolchain sync workflow (`sync.yml`).')
+            .optional(),
+        custom: z
+            .record(z.string(), customWorkflowSettingsSchema)
+            .describe(
+                'Additional custom workflows, keyed by id (eg. `custom.my-workflow`). ' +
+                    'Each id writes `<dir>/<filename ?? id>.yml`.'
+            )
             .optional(),
     })
     .describe(

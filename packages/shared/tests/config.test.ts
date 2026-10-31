@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
     applyOverrides,
     type DbxConfig,
+    dbxConfigSchema,
     defineConfig,
     resolveChangelogConfig,
     resolveFmtTool,
@@ -64,6 +65,13 @@ describe('dbx.config model', () => {
                     release: false,
                     issues: true,
                     sync: true,
+                    custom: {
+                        deploy: {
+                            triggers: { workflow_dispatch: {} },
+                            filename: 'deploy.yml',
+                            dir: '.github/workflows',
+                        },
+                    },
                 },
                 biome: { vscode: true, overrides: { formatter: {} } },
                 tsconfig: {
@@ -85,9 +93,20 @@ describe('dbx.config model', () => {
         const toolchain = config.toolchain!;
         expect(sectionEnabled(toolchain.ci)).toBe(true);
         expect(sectionConfig(toolchain.ci)?.changelog).toBeDefined();
+        expect(sectionConfig(toolchain.ci)?.custom?.deploy).toBeDefined();
         expect(sectionEnabled(toolchain.tsconfig)).toBe(true);
         expect(sectionConfig(toolchain.vite)?.fmt).toEqual({ semi: true });
         expect(sectionConfig(toolchain.watch)?.debounce).toBe(100);
+    });
+
+    it('accepts custom workflows but not a boolean value', () => {
+        const custom = {
+            toolchain: { ci: { custom: { deploy: { jobs: { deploy: { steps: [] } } } } } },
+        };
+        expect(dbxConfigSchema.safeParse(custom).success).toBe(true);
+        expect(
+            dbxConfigSchema.safeParse({ toolchain: { ci: { custom: { deploy: true } } } }).success
+        ).toBe(false);
     });
 });
 
@@ -166,6 +185,12 @@ describe('formatter/linter precedence', () => {
     it('uses oxc when only vite.fmt/lint is set', () => {
         expect(resolveFmtTools({ vite: { fmt: true } })).toEqual(['oxc']);
         expect(resolveLintTools({ vite: { lint: true } })).toEqual(['oxc']);
+    });
+
+    it('treats an explicit false tool as disabled', () => {
+        expect(resolveFmtTools({ fmt: { biome: false } } as never)).toEqual([]);
+        expect(resolveLintTools({ lint: { eslint: false } } as never)).toEqual([]);
+        expect(resolveFmtTools({ fmt: { oxc: false, biome: false } } as never)).toEqual([]);
     });
 });
 

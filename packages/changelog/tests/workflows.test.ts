@@ -4,10 +4,13 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import {
+    DEFAULT_WORKFLOW_DIR,
     DEFAULT_WORKFLOW_TOKENS,
+    renderCustomWorkflow,
     renderWorkflow,
     renderWorkflows,
     WORKFLOW_FILENAMES,
+    workflowFilePath,
     type WorkflowId,
 } from '../src/workflows.js';
 
@@ -129,5 +132,69 @@ describe('workflow config', () => {
     it('only renders the workflows that are opted in', () => {
         expect(renderWorkflows({}, {})).toEqual({});
         expect(Object.keys(renderWorkflows({}, { ci: true }))).toEqual(['ci.yml']);
+    });
+
+    it('builds a custom workflow from its settings', () => {
+        const yaml = renderCustomWorkflow('deploy', {
+            tokens: {},
+            config: {
+                triggers: { workflow_dispatch: {} },
+                extra: { name: 'Deploy' },
+                jobs: {
+                    deploy: { 'runs-on': 'ubuntu-latest', steps: [{ run: 'echo deploy' }] },
+                },
+            },
+        });
+        expect(yaml).toContain('name: Deploy');
+        expect(yaml).toContain('workflow_dispatch:');
+        expect(yaml).toContain('deploy:');
+        expect(yaml).toContain('echo deploy');
+    });
+
+    it('resolves workflow file paths with filename/dir overrides', () => {
+        expect(workflowFilePath('ci', true, 'ci.yml')).toBe(`${DEFAULT_WORKFLOW_DIR}/ci.yml`);
+        expect(
+            workflowFilePath('ci', { filename: 'checks.yaml', dir: '.github/custom' }, 'ci.yml')
+        ).toBe('.github/custom/checks.yaml');
+        expect(workflowFilePath('my-workflow', undefined)).toBe(
+            `${DEFAULT_WORKFLOW_DIR}/my-workflow.yml`
+        );
+    });
+
+    it('rejects unsafe workflow paths', () => {
+        expect(() => workflowFilePath('ci', { filename: '../ci.yml' })).toThrow(
+            'invalid workflow filename'
+        );
+        expect(() => workflowFilePath('ci', { dir: '../outside' })).toThrow(
+            'invalid workflow directory'
+        );
+    });
+
+    it('renders custom workflows and filename/dir overrides in renderWorkflows', () => {
+        const files = renderWorkflows(
+            {},
+            { ci: { filename: 'checks.yaml', dir: '.github/custom' } },
+            {
+                custom: {
+                    deploy: {
+                        triggers: { workflow_dispatch: {} },
+                        jobs: {
+                            deploy: {
+                                'runs-on': 'ubuntu-latest',
+                                steps: [{ run: 'echo deploy' }],
+                            },
+                        },
+                    },
+                },
+            }
+        );
+        expect(Object.keys(files).sort()).toEqual(['checks.yaml', 'deploy.yml']);
+        expect(files['deploy.yml']).toContain('echo deploy');
+    });
+
+    it('rejects a custom workflow without triggers or jobs', () => {
+        expect(() => renderCustomWorkflow('deploy', { tokens: {}, config: {} })).toThrow(
+            'must define at least one trigger and one job'
+        );
     });
 });

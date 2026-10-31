@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import {
     changelogSectionEnabled,
     type ManagedFile,
@@ -14,9 +17,10 @@ import {
 import { renderCommitlintConfig } from './templates.js';
 import {
     isEnabled,
+    renderCustomWorkflow,
     renderWorkflow,
-    renderWorkflows,
     WORKFLOW_FILENAMES,
+    workflowFilePath,
     type WorkflowId,
 } from './workflows.js';
 
@@ -105,14 +109,25 @@ function normalizeDir(dir: string | undefined): string {
         .replace(/\/+$/, '');
 }
 
-/** The workflow file names produced for a config. */
+/** The workflow file paths produced for a config. */
+export function workflowFilePaths(config: ToolchainConfig): string[] {
+    const workflows = declaredWorkflows(config);
+    const files: string[] = [];
+    for (const [id, filename] of Object.entries(WORKFLOW_FILENAMES) as [WorkflowId, string][]) {
+        const setting = workflows[id];
+        if (isEnabled(setting)) files.push(workflowFilePath(id, setting, filename));
+    }
+    const custom = sectionConfig(config.ci)?.custom ?? {};
+    for (const [id, setting] of Object.entries(custom)) {
+        const value = setting as WorkflowSetting;
+        if (isEnabled(value)) files.push(workflowFilePath(id, value));
+    }
+    return [...new Set(files)];
+}
+
+/** The workflow file names (basenames) produced for a config. */
 export function workflowFilenames(config: ToolchainConfig): string[] {
-    const changelog = resolveChangelogConfig(config);
-    return Object.keys(
-        renderWorkflows({}, declaredWorkflows(config), {
-            commitlint: resolveCommitlintEnabled(changelog),
-        })
-    );
+    return [...new Set(workflowFilePaths(config).map(file => file.split('/').pop() ?? file))];
 }
 
 /**
@@ -136,6 +151,46 @@ export function changelogSyncTask(): SyncTask {
             // commitlint + the husky hook belong to the opted-in changelog pipeline.
             const commitlint = changelogSectionEnabled(ctx.config) && resolveCommitlintEnabled(ch);
             const files: ManagedFile[] = [];
+            const workflowPaths = new Set<string>();
+            const workflowConflicts: Record<string, string> = {};
+            const managed = new Set(ctx.managedFiles ?? []);
+            const isManagedWorkflow = (filePath: string): boolean => {
+                if (managed.has(filePath)) return true;
+                const abs = path.resolve(ctx.cwd, filePath);
+                if (!fs.existsSync(abs)) return true;
+                try {
+                    const current = fs.readFileSync(abs, 'utf-8').replace(/^\uFEFF/, '');
+                    // A generated header also proves dbx owns it (eg. a lost manifest).
+                    return current.startsWith(WORKFLOW_HEADER);
+                } catch {
+                    return false;
+                }
+            };
+            const addWorkflow = (
+                id: string,
+                filePath: string,
+                content: string,
+                custom = false
+            ): void => {
+                if (workflowPaths.has(filePath)) {
+                    ctx.warn(
+                        `changelog: workflow path "${filePath}" is declared more than once; skipping the duplicate.`
+                    );
+                    return;
+                }
+                if (!isManagedWorkflow(filePath)) {
+                    const key = custom ? `ci.custom.${id}` : `ci.${id}`;
+                    workflowConflicts[filePath] = key;
+                    ctx.warn(
+                        `changelog: ${filePath} already exists and is not managed by dbx; leaving it untouched. ` +
+                            `Set \`${key}: { enabled: false }\` in dbx.config to keep it explicit.`,
+                        'changelog.existing-workflow'
+                    );
+                    return;
+                }
+                workflowPaths.add(filePath);
+                files.push({ path: filePath, content });
+            };
 
             const commitlintDir = normalizeDir(commitlintConfig?.dir);
             const commitlintPath = commitlintDir
@@ -164,10 +219,34 @@ export function changelogSyncTask(): SyncTask {
                           commitlint,
                       });
                 if (!content) continue;
-                files.push({
-                    path: `.github/workflows/${filename}`,
-                    content: raw ? content : `${WORKFLOW_HEADER}\n${content}`,
-                });
+                addWorkflow(
+                    id,
+                    workflowFilePath(id, setting, filename),
+                    raw ? content : `${WORKFLOW_HEADER}\n${content}`
+                );
+            }
+
+            // Config-defined workflows (`ci.custom.<id>`): enabled by presence,
+            // starting from an empty skeleton or written verbatim when a string.
+            const custom = sectionConfig(ctx.config.ci)?.custom ?? {};
+            for (const [id, customSetting] of Object.entries(custom)) {
+                const setting = customSetting as WorkflowSetting;
+                if (!isEnabled(setting)) continue;
+                const raw = typeof setting === 'string';
+                const content = raw
+                    ? setting
+                    : renderCustomWorkflow(id, {
+                          tokens,
+                          config: typeof setting === 'object' ? setting : {},
+                          commitlint,
+                      });
+                if (!content) continue;
+                addWorkflow(
+                    id,
+                    workflowFilePath(id, setting),
+                    raw ? content : `${WORKFLOW_HEADER}\n${content}`,
+                    true
+                );
             }
 
             if (commitlint) {
@@ -186,6 +265,14 @@ export function changelogSyncTask(): SyncTask {
                     path: '.husky/commit-msg',
                     content: `${HOOK_HEADER}\n${commitMsgHook(commitlintDir ? commitlintPath : undefined)}\n`,
                 });
+            }
+
+            if (ctx.manifest) {
+                if (Object.keys(workflowConflicts).length > 0) {
+                    ctx.manifest.workflowConflicts = workflowConflicts;
+                } else {
+                    delete ctx.manifest.workflowConflicts;
+                }
             }
 
             return files;

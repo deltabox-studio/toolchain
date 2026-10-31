@@ -1,6 +1,6 @@
 import { logger, resolveChangelogConfig, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
-import { runWorkflows } from '../run-workflows.js';
+import { runWorkflows, workflowTargets } from '../run-workflows.js';
 import { runChangelog } from '../run.js';
 
 /** Build the changelog commands (`changelog`, `workflow`). */
@@ -12,7 +12,8 @@ export function changelogCommands(): ToolchainCommand[] {
             args: [
                 {
                     name: 'workflows',
-                    description: 'Workflow ids or file names (default: every enabled workflow).',
+                    description:
+                        'Workflow ids, custom ids, or file names (default: every enabled workflow).',
                     variadic: true,
                     required: false,
                 },
@@ -21,8 +22,28 @@ export function changelogCommands(): ToolchainCommand[] {
                 { flags: '--cwd <dir>', description: 'Project root (default: cwd).' },
                 { flags: '--ref <ref>', description: 'Git ref to run the workflow on.' },
                 { flags: '--gh <cmd>', description: 'The gh executable (default: gh).' },
+                {
+                    flags: '--list',
+                    description: 'List the enabled workflows (and where they are written).',
+                },
+                { flags: '--json', description: 'With --list: print the workflows as JSON.' },
             ],
             run: async (opts, context) => {
+                if (opts.list) {
+                    const targets = workflowTargets(context.config);
+                    if (opts.json) {
+                        logger.raw(JSON.stringify(targets, null, 4));
+                        return;
+                    }
+                    if (targets.length === 0) {
+                        logger.info('no workflows are enabled.');
+                        return;
+                    }
+                    for (const target of targets) {
+                        logger.info(`  ${target.id.padEnd(20)} ${target.path}`);
+                    }
+                    return;
+                }
                 const raw = opts.workflows;
                 const workflows = Array.isArray(raw)
                     ? (raw as string[])

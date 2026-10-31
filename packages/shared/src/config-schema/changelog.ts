@@ -70,7 +70,7 @@ export const changelogVersioningConfigSchema = z
             .optional(),
         bump: z
             .record(z.string(), z.unknown())
-            .describe('Custom bump rules for major/minor/patch/alpha (matchers or callbacks).')
+            .describe('Custom bump rules for major/minor/patch (matchers or callbacks).')
             .optional(),
         allowOverBump: z
             .boolean()

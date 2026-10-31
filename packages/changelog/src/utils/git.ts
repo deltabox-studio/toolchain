@@ -68,11 +68,16 @@ let ghAvailable: boolean | undefined;
 
 /** Probe `gh` auth once; skips every subsequent (doomed) gh API call when it's unavailable. */
 function isGhAvailable(): boolean {
+    if (process.env.DBX_NO_GH) {
+        ghAvailable = false;
+        return false;
+    }
     if (ghAvailable !== undefined) return ghAvailable;
     try {
         execFileSync('gh', ['auth', 'status'], {
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'pipe'],
+            timeout: 2000,
         });
         ghAvailable = true;
     } catch {
@@ -92,6 +97,7 @@ function ghApi(repo: string, path: string, jq: string): string | undefined {
         const out = execFileSync('gh', ['api', `repos/${repo}${path}`, '--jq', jq], {
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'pipe'],
+            timeout: 5000,
         }).trim();
         value = out && out !== 'null' ? out : undefined;
     } catch {
