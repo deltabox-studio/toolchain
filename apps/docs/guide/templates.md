@@ -56,11 +56,20 @@ prompts for the template, name and scope instead (Ctrl-C cancels).
 
 The offline builtins (`project`, `application`, `folder`, `monorepo`,
 `monorepo-example`, `workspace`) scaffold a generic, current project: a
-`dbx.config.ts` with only `project` metadata, a `package.json` that depends on
-`@deltabox/toolchain`, and no Turbo (Vite Task replaces it). They ask for a
-**package manager** (default `yarn`) and write that manager's catalog file (see
-[Catalogs](/guide/project#package-manager-and-catalogs)). The `vite-plus*` builtins
-delegate to `vp create` and need network access.
+`dbx.config.ts` with `project` metadata, a runnable `src/index.ts` + smoke test,
+and a `package.json` that depends on the same `@deltabox/toolchain` version as the
+CLI. There is no Turbo (Vite Task replaces it). They ask for a **package manager**
+(default `yarn`) and write that manager's catalog file (see
+[Catalogs](/guide/project#package-manager-and-catalogs)). The `vite-plus*`
+builtins delegate to `vp create` and need network access.
+
+The root-oriented builtins (`project`, `application`, `monorepo`,
+`monorepo-example`) also write `.oxfmtrc.json` / `.oxlintrc.json` and opt in with
+`fmt.oxc` / `lint.oxc`. A nested `project`/`application` scaffold instead detects
+an ancestor that already owns those files and omits both the local files and the
+config opt-ins, so it inherits the root formatting/linting. `folder` and
+`workspace` never create Oxc files. Existing files are never overwritten unless
+`dbx create --force` is passed.
 
 ## Inputs (variables)
 
@@ -179,18 +188,104 @@ export default defineConfig({
 });
 ```
 
+## Global templates
+
+A template registered with `template:init --add` or `template:add` is **also**
+stored in the global registry at `~/.dbx/toolchain/.registry/templates`, so it is
+available in every project (and in the VS Code extension). Pass `--no-global` to
+keep it project-only:
+
+```sh
+dbx template:init ./templates/acme --kind application --name "Acme" --add  # local + global
+dbx template:add ./templates --no-global                                  # project only
+```
+
+Global templates are merged with the project's own; a project template wins on an
+id clash. The global search paths default to
+`~/.dbx/toolchain/.registry/templates`, and each path may be a directory or an
+`http(s)` **remote registry** (a JSON `{ "sources": [...] }` or an array of
+sources):
+
+```sh
+dbx template:registry                         # list the resolved paths
+dbx template:registry --add ~/shared/templates --add https://acme.dev/templates.json
+dbx template:registry --set ~/shared/templates
+dbx template:registry --remove ~/shared/templates
+dbx template:registry --clear                 # reset to the default
+```
+
+The paths live in the CLI config `~/.dbx/toolchain/cli/config.json`
+(`registrySearchPaths`, a string or array) and are kept in sync with the VS Code
+setting `deltabox.registrySearchPaths`: the extension records the VS Code user
+dir in that config and mirrors setting changes into it, and the CLI writes the
+setting back when you change the paths. `vscodeDir` in the CLI config points at
+the VS Code user directory (the one containing `settings.json`).
+
+The project-scoped registries are stored in `.dbx/toolchain/registries.json` and
+default to `.dbx/toolchain/.registry/templates`. `dbx registry [--json]` lists
+the detected template/provider registries, and `dbx registry --add <path>
+--scope global|project` (or `--remove`) manages them. A remote (`http(s)`)
+registry is a JSON `{ "sources": [...] }` / array of sources. The VS Code
+**Registries** view (below **Templates**) shows the Providers/Templates roots
+with **New registry…** / **Remove registry…** actions; remote registries open in
+the browser. `dbx template:remove --global <id>` removes a stored global
+template.
+
 ## Online templates
 
-- **npm** — a published `@scope/create` package whose `package.json` has a
-  `createConfig.templates` (or `dbx.templates`) manifest. Individual templates
-  are listed and created through `vp create`.
-- **git** — a repository (optionally with a `subdir`) listed as a template and
-  created through `vp create`.
-- **Vite+** — set `create.defaultTemplate` in the `vite` section (the full Vite+
+Online sources are resolved with `--online` (or `dbx template:add`):
+
+- **npm** — a published create package whose `package.json` has a
+  `createConfig.templates` (or `dbx.templates`) manifest. Scoped
+  (`@acme/create`) and unscoped (`create-acme`, `acme-create`) packages are
+  supported; individual templates are listed and created through `vp create`.
+  The registry defaults to the project package manager's registry
+  (`.yarnrc.yml` `npmRegistryServer`, `.npmrc` `registry`, ...). Override it
+  per source with `--registry`:
+
+    ```sh
+    dbx template:add @acme/create
+    dbx template:add create-acme
+    dbx template:add create-acme --registry https://registry.example.com
+    ```
+
+- **git** — a repository (optionally with a `ref` and/or `subdir`) listed as a
+  template and created through `vp create`:
+
+    ```sh
+    dbx template:add git:https://github.com/acme/templates --ref v1.2.0 --subdir apps/web
+    ```
+
+- **remote** — an `http(s)` JSON source registry (`{ sources }`, `{ templates }`
+  or an array of sources). Its sources are merged into the registry; each is
+  then loaded by its own type:
+
+    ```sh
+    dbx template:add remote:https://example.com/dbx-templates.json
+    ```
+
+- **Vite+** — set `create.defaultTemplate` in the `dbx.config.*`'s `vite` section (the full Vite+
   config) to make a scope the default for `vp create`.
+
+Sources and registries can be restricted with host/path globs (checked for local
+paths and remote URLs, which also guards SSRF):
+
+```ts [dbx.config.ts]
+toolchain: {
+    registry: {
+        templates: {
+            allow: ['*.example.com', 'https://registry.example.com/**', '**/templates/**'],
+            deny: ['*.internal.example.com'],
+        },
+    },
+}
+```
 
 ## VS Code
 
 The extension drives the same CLI: **From template…** runs `template:list --json`
-then `create`; **Add template…** runs `template:init --add` on a folder you pick;
-and **Remove template…** runs `template:list --registry` then `template:remove`.
+then `create`; **Add template…** runs `template:init --add` on a folder you pick
+and asks whether to add it to the **global** registry (yes by default);
+**Remove template…** runs `template:list --registry` then `template:remove`. The
+`deltabox.registrySearchPaths` setting controls the global search paths (see
+[Global templates](#global-templates)).

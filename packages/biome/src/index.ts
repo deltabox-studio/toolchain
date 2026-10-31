@@ -3,6 +3,7 @@ import {
     isPlainObject,
     type Replacements,
     type SyncTask,
+    type ToolchainConfig,
     sectionConfig,
     sectionEnabled,
 } from '@deltabox/toolchain-shared';
@@ -34,6 +35,28 @@ export function mergeBiomeConfig(base: unknown, patch: unknown): unknown {
     return patch;
 }
 
+/** Scope-only import groups (eg. `@acme/**`) have no meaning without a scope. */
+function withoutUnscopedGroups(value: unknown, replacements: Replacements): unknown {
+    if (replacements.scope) return value;
+    if (Array.isArray(value)) {
+        return value
+            .filter(
+                entry =>
+                    entry !== '{{scope}}' && entry !== '{{scope}}/**' && entry !== '!{{scope}}/**'
+            )
+            .map(entry => withoutUnscopedGroups(entry, replacements));
+    }
+    if (isPlainObject(value)) {
+        return Object.fromEntries(
+            Object.entries(value).map(([key, entry]) => [
+                key,
+                withoutUnscopedGroups(entry, replacements),
+            ])
+        );
+    }
+    return value;
+}
+
 /**
  * Render the Biome config for a project by resolving its replacement tokens
  * (`{{name}}` = unscoped project name, `{{scope}}` = npm scope, eg. `@acme`)
@@ -43,8 +66,14 @@ export function renderBiomeConfig(
     replacements: Replacements = {},
     overrides: Record<string, unknown> = {}
 ): Record<string, unknown> {
-    const base = applyReplacementsDeep(biomeConfig, replacements);
-    const patch = applyReplacementsDeep(overrides, replacements);
+    const base = applyReplacementsDeep(
+        withoutUnscopedGroups(biomeConfig, replacements) as Record<string, unknown>,
+        replacements
+    );
+    const patch = applyReplacementsDeep(
+        withoutUnscopedGroups(overrides, replacements) as Record<string, unknown>,
+        replacements
+    );
     return mergeBiomeConfig(base, patch) as Record<string, unknown>;
 }
 
@@ -62,23 +91,57 @@ export function renderVscodeSettings(indent = 4): string {
     return `${JSON.stringify(biomeVscodeSettings, null, indent)}\n`;
 }
 
+/** Merge the deprecated `biome.overrides` with `fmt.biome` / `lint.biome`. */
+function biomeOverrides(config: ToolchainConfig): Record<string, unknown> {
+    const biome = sectionEnabled(config.biome) ? sectionConfig(config.biome) : undefined;
+    let out = (biome?.overrides ?? {}) as Record<string, unknown>;
+    const fmt = sectionEnabled(config.fmt) ? sectionConfig(config.fmt)?.biome : undefined;
+    const lint = sectionEnabled(config.lint) ? sectionConfig(config.lint)?.biome : undefined;
+    if (isPlainObject(fmt)) {
+        out = mergeBiomeConfig(out, fmt) as Record<string, unknown>;
+    }
+    if (isPlainObject(lint)) {
+        out = mergeBiomeConfig(out, lint) as Record<string, unknown>;
+    }
+    return out;
+}
+
 /**
  * The biome sync task: writes `biome.json` from the generic config, resolving
- * the `{{name}}` / `{{scope}}` tokens and merging `config.biome.overrides`.
+ * the `{{name}}` / `{{scope}}` tokens and merging `config.biome.overrides` /
+ * `fmt.biome` / `lint.biome`.
  */
 export function biomeSyncTask(): SyncTask {
     return {
         name: 'biome',
         projectTypes: ['monorepo-root', 'monorepo-workspace', 'project'],
-        enabled: config => sectionEnabled(config.biome),
-        run: ctx => [
-            {
-                path: 'biome.json',
-                content: renderBiomeJson(
-                    ctx.tokens,
-                    sectionConfig(ctx.config.biome)?.overrides ?? {}
-                ),
-            },
-        ],
+        enabled: config => {
+            const fmt = sectionEnabled(config.fmt) ? sectionConfig(config.fmt) : undefined;
+            const lint = sectionEnabled(config.lint) ? sectionConfig(config.lint) : undefined;
+            return (
+                sectionEnabled(config.biome) ||
+                (fmt?.biome !== undefined && fmt.biome !== false) ||
+                (lint?.biome !== undefined && lint.biome !== false)
+            );
+        },
+        run: ctx => {
+            const fmt = sectionEnabled(ctx.config.fmt) ? sectionConfig(ctx.config.fmt) : undefined;
+            const lint = sectionEnabled(ctx.config.lint)
+                ? sectionConfig(ctx.config.lint)
+                : undefined;
+            if (
+                !sectionEnabled(ctx.config.biome) &&
+                (fmt?.biome === undefined || fmt.biome === false) &&
+                (lint?.biome === undefined || lint.biome === false)
+            ) {
+                return [];
+            }
+            return [
+                {
+                    path: 'biome.json',
+                    content: renderBiomeJson(ctx.tokens, biomeOverrides(ctx.config)),
+                },
+            ];
+        },
     };
 }

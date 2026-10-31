@@ -7,22 +7,37 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type { Schema } from 'untyped';
-import { type ZodType, z } from 'zod';
 
 import { sanitizeText, titleCase } from '@deltabox/toolchain-shared';
 
-import { type CollectEnvVarsOptions, collectEnvVars, DEFAULT_ENV_PREFIX } from '../collect.js';
-import { splitBaseSchema, zodToJsonSchema } from '../schema.js';
-import type { ConfigScopes } from '../types.js';
+import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from '../collect.js';
+import {
+    isSchemaType,
+    isZodSchema,
+    metaOf,
+    normalizeConfigSchema,
+    splitBaseSchema,
+} from '../schema.js';
+import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
 import { type CliFlagOptions, cliFlagLabel } from './cli.js';
 
-export interface RenderMarkdownOptions {
-    /** Output directory. When omitted, nothing is written. */
-    outDir?: string;
+export interface RenderMarkdownFrontmatter {
+    options: GenerateMarkdownOptions;
+}
+
+export interface RenderMarkdownOptions extends Pick<ConfigEngineOptions, 'baseGroup'> {
+    /** Output directory. Set false (or omit it) to disable writing. */
+    outputDir?: string | false;
+    /** Frontmatter toggle, raw body, or callback. */
+    frontmatter?: boolean | string | ((ctx: RenderMarkdownFrontmatter) => string);
+    /** Render every scope into one file instead of one file per scope. */
+    combined?: boolean;
+    /** Show env var equivalents (default true). */
+    includeEnv?: boolean;
+    /** Show CLI flag equivalents (default true). */
+    includeCli?: boolean;
     /** Page outline (defaults to `[2, 3, 4]`). */
     outline?: number[];
-    /** The base group hoisted out of the nested groups (default `base`). */
-    baseGroup?: string;
     /** The scope whose env vars render as CLI flags (default `cli`). */
     cliScope?: string;
     /** Env-var prefix (default `APP_`). */
@@ -40,10 +55,30 @@ export interface RenderMarkdownOptions {
     /** Shorthand flags keyed by env var name (for the CLI scope). */
     shortFlags?: Record<string, string>;
     /** Custom env-name -> dotted-path derivation. */
-    envPathOf?: CollectEnvVarsOptions['envPathOf'];
+    envPathOf?: CollectVarsOptions['envPathOf'];
+    /** Emit `- **Required**` lines (default true). */
+    includeRequired?: boolean;
+    /** Emit `- **Deprecated**` lines (default true). */
+    includeDeprecated?: boolean;
+    /** Emit `**Example(s):**` blocks (default true). */
+    includeExamples?: boolean;
+    /** Emit `- **Since**` lines (default true). */
+    includeSince?: boolean;
+    /** Emit `- **See**` lines (default true). */
+    includeSee?: boolean;
+    /** Emit `**Remarks:**` blocks (default true). */
+    includeRemarks?: boolean;
+    /** Emit `- **Experimental**` lines (default true). */
+    includeExperimental?: boolean;
+    /** Emit `- **Alpha**` lines (default true). */
+    includeAlpha?: boolean;
+    /** Emit `- **Beta**` lines (default true). */
+    includeBeta?: boolean;
 }
 
 export interface GenerateMarkdownOptions extends RenderMarkdownOptions {
+    /** Document title (default `Configuration`). */
+    title?: string;
     /** Index file name (defaults to `index.md`). */
     indexFilename?: string;
 }
@@ -66,14 +101,120 @@ interface SchemaNode {
     envDefault?: unknown;
     description?: string;
     env?: string;
+    envName?: string;
+    envPath?: string;
+    cliFlag?: string;
+    cliFlagShort?: string;
     tsType?: string;
     secret?: boolean;
     public?: boolean;
+    deprecated?: boolean;
+    deprecationMessage?: string;
+    example?: string | string[];
+    since?: string;
+    see?: string | string[];
+    remarks?: string;
+    experimental?: boolean;
+    alpha?: boolean;
+    beta?: boolean;
 }
 
 interface RenderOptions extends CliFlagOptions {
     useFlags?: boolean;
     baseGroup: string;
+    includeEnv?: boolean;
+    includeCli?: boolean;
+    includeRequired?: boolean;
+    includeDeprecated?: boolean;
+    includeExamples?: boolean;
+    includeSince?: boolean;
+    includeSee?: boolean;
+    includeRemarks?: boolean;
+    includeExperimental?: boolean;
+    includeAlpha?: boolean;
+    includeBeta?: boolean;
+}
+
+/** Normalize `example` metadata into a list of strings. */
+function exampleList(example: unknown): string[] {
+    if (example === undefined || example === null) return [];
+    const values = Array.isArray(example) ? example : [example];
+    return values.map(value => sanitizeText(String(value))).filter(Boolean);
+}
+
+/** The `- **Deprecated**` list item, with an optional message. */
+function deprecatedLine(deprecated: unknown, message?: unknown): string | undefined {
+    if (deprecated === undefined || deprecated === false) return undefined;
+    const text = typeof message === 'string' ? sanitizeText(message.trim()) : '';
+    return text ? `- **Deprecated**: ${text}` : '- **Deprecated**';
+}
+
+/** The `**Example(s):**` block (each example on its own line). */
+function exampleLines(example: unknown): string[] {
+    const examples = exampleList(example);
+    if (examples.length === 0) return [];
+    return [
+        '',
+        '**Example(s):**',
+        '',
+        ...examples.flatMap((value, i) => (i ? ['', value] : [value])),
+    ];
+}
+
+interface NodeAnnotations {
+    deprecated?: boolean;
+    deprecationMessage?: string;
+    since?: string;
+    see?: string | string[];
+    remarks?: string;
+    experimental?: boolean;
+    alpha?: boolean;
+    beta?: boolean;
+}
+
+type AnnotationOptions = Pick<
+    RenderOptions,
+    | 'includeRequired'
+    | 'includeDeprecated'
+    | 'includeExamples'
+    | 'includeSince'
+    | 'includeSee'
+    | 'includeRemarks'
+    | 'includeExperimental'
+    | 'includeAlpha'
+    | 'includeBeta'
+>;
+
+/** The `- **Required**` item (rendered above `- **Type**`). */
+function requiredLine(required: boolean, opts: AnnotationOptions): string | undefined {
+    return opts.includeRequired !== false && required ? '- **Required**' : undefined;
+}
+
+/** The list items rendered between `- **Type**` and the description. */
+function annotationLines(meta: NodeAnnotations, opts: AnnotationOptions): string[] {
+    const lines: string[] = [];
+    if (opts.includeDeprecated !== false) {
+        const deprecated = deprecatedLine(meta.deprecated, meta.deprecationMessage);
+        if (deprecated) lines.push(deprecated);
+    }
+    if (opts.includeSince !== false && typeof meta.since === 'string' && meta.since.trim()) {
+        lines.push(`- **Since**: ${sanitizeText(meta.since.trim())}`);
+    }
+    if (opts.includeSee !== false) {
+        for (const link of exampleList(meta.see)) lines.push(`- **See**: ${link}`);
+    }
+    if (opts.includeExperimental !== false && meta.experimental) lines.push('- **Experimental**');
+    if (opts.includeAlpha !== false && meta.alpha) lines.push('- **Alpha**');
+    if (opts.includeBeta !== false && meta.beta) lines.push('- **Beta**');
+    return lines;
+}
+
+/** The `**Remarks:**` block (rendered after the description). */
+function remarksLines(remarks: unknown, opts: AnnotationOptions): string[] {
+    if (opts.includeRemarks === false) return [];
+    const text = typeof remarks === 'string' ? sanitizeText(remarks.trim()) : '';
+    if (!text) return [];
+    return ['', '**Remarks:**', '', ...text.split('\n')];
 }
 
 function renderNode(
@@ -87,7 +228,18 @@ function renderNode(
         lines.push(...renderFields(schema, `${level}#`, opts));
         return lines;
     }
-    if (schema.env) lines.push(`- **Env**: \`${schema.env}\``);
+    const envName =
+        typeof schema.envName === 'string'
+            ? schema.envName
+            : typeof schema.env === 'string'
+              ? schema.env
+              : undefined;
+    if (opts.includeEnv !== false && envName) lines.push(`- **Env**: \`${envName}\``);
+    if (opts.includeCli !== false && typeof schema.cliFlag === 'string') {
+        lines.push(`- **CLI**: \`${schema.cliFlag}\``);
+    }
+    const required = requiredLine(schema.required === true, opts);
+    if (required) lines.push(required);
     lines.push(
         `- **Type**: \`${
             schema.tsType ??
@@ -95,23 +247,43 @@ function renderNode(
             'any'
         }\``
     );
+    lines.push(...annotationLines(schema, opts));
     if (schema.default !== undefined)
         lines.push(`- **Default**: \`${JSON.stringify(schema.default)}\``);
     if (schema.description) lines.push('', sanitizeText(schema.description));
+    lines.push(...remarksLines(schema.remarks, opts));
+    if (opts.includeExamples !== false) lines.push(...exampleLines(schema.example));
     return lines;
 }
 
 function renderFields(schema: SchemaNode, level: string, opts: RenderOptions): string[] {
     const lines: string[] = [];
     for (const [key, child] of Object.entries(schema.properties ?? {})) {
-        const title = opts.useFlags && child.env ? cliFlagLabel(child.env, opts) : `\`${key}\``;
+        const flagEnv = child.cliFlag ?? child.envName ?? child.env;
+        const title = opts.useFlags && flagEnv ? cliFlagLabel(flagEnv, opts) : `\`${key}\``;
         lines.push('', ...renderNode(child, title, level, opts));
     }
     return lines;
 }
 
+function frontmatterLines(
+    options: RenderMarkdownOptions,
+    title: string,
+    outline: number[]
+): string[] {
+    const value = options.frontmatter;
+    if (value === false) return [];
+    const body =
+        typeof value === 'function'
+            ? value({ options: options as GenerateMarkdownOptions })
+            : typeof value === 'string'
+              ? value
+              : `title: ${title}\noutline: ${JSON.stringify(outline)}`;
+    return ['---', ...body.split('\n'), '---', ''];
+}
+
 /** Render the markdown reference for a single scope (base + grouped configs). */
-export function renderScopeMarkdown(
+function renderScopeMarkdown(
     scope: string,
     schema: Schema,
     options: RenderMarkdownOptions = {}
@@ -119,20 +291,36 @@ export function renderScopeMarkdown(
     const outline = options.outline ?? [2, 3, 4];
     const opts: RenderOptions = {
         useFlags: scope === (options.cliScope ?? 'cli'),
-        baseGroup: options.baseGroup ?? 'base',
+        baseGroup: Array.isArray(options.baseGroup)
+            ? String((options.baseGroup as unknown[])[0] ?? 'base')
+            : String(options.baseGroup ?? 'base'),
         ...(options.envPrefix ? { envPrefix: options.envPrefix } : {}),
         ...(options.shortFlags ? { shortFlags: options.shortFlags } : {}),
+        ...(options.includeRequired !== undefined
+            ? { includeRequired: options.includeRequired }
+            : {}),
+        ...(options.includeDeprecated !== undefined
+            ? { includeDeprecated: options.includeDeprecated }
+            : {}),
+        ...(options.includeExamples !== undefined
+            ? { includeExamples: options.includeExamples }
+            : {}),
+        ...(options.includeSince !== undefined ? { includeSince: options.includeSince } : {}),
+        ...(options.includeSee !== undefined ? { includeSee: options.includeSee } : {}),
+        ...(options.includeRemarks !== undefined ? { includeRemarks: options.includeRemarks } : {}),
+        ...(options.includeExperimental !== undefined
+            ? { includeExperimental: options.includeExperimental }
+            : {}),
+        ...(options.includeAlpha !== undefined ? { includeAlpha: options.includeAlpha } : {}),
+        ...(options.includeBeta !== undefined ? { includeBeta: options.includeBeta } : {}),
     };
     const { base, groups } = splitBaseSchema(schema, opts.baseGroup);
+    const title = `${titleCase(scope)} Configuration`;
     const parts: string[] = [
-        '---',
-        `title: ${titleCase(scope)} Configuration`,
-        `outline: ${JSON.stringify(outline)}`,
-        '---',
+        ...frontmatterLines(options, title, outline),
+        `# ${title}`,
         '',
-        `# ${titleCase(scope)} Configuration`,
-        '',
-        'Every setting below is configured through an environment variable.',
+        'Every setting below is configured through a config value.',
         '',
         '## Base',
         '',
@@ -179,24 +367,23 @@ function collectSchemaEnvVars(schema: Schema, scope: string, out: EnvVarRow[]): 
 }
 
 /** Render the index file: explains the env convention + lists required/core. */
-export function renderConfigIndex(
-    scopes: ConfigScopes,
-    options: RenderMarkdownOptions = {}
-): string {
+function renderConfigIndex(schema: ConfigSchema, options: RenderMarkdownOptions = {}): string {
     const outline = options.outline ?? [2, 3, 4];
-    const baseGroup = options.baseGroup ?? 'base';
+    const baseGroup = Array.isArray(options.baseGroup)
+        ? String((options.baseGroup as unknown[])[0] ?? 'base')
+        : String(options.baseGroup ?? 'base');
     const labels = options.labels ?? {};
     const required: EnvVarRow[] = [];
     const core: EnvVarRow[] = [];
+    const scopes = normalizeConfigSchema(schema);
 
-    for (const [scopeName, scope] of Object.entries(scopes)) {
-        const schema = (scope.jsonSchema ?? zodToJsonSchema(scope.zodSchema)) as Schema;
-        collectSchemaEnvVars(splitBaseSchema(schema, baseGroup).base, scopeName, core);
+    for (const [scopeName, scopeSchema] of Object.entries(scopes)) {
+        collectSchemaEnvVars(splitBaseSchema(scopeSchema, baseGroup).base, scopeName, core);
     }
-    for (const def of collectEnvVars(scopes, options.envPrefix ?? DEFAULT_ENV_PREFIX, {
+    for (const def of collectVars(schema, options.envPrefix ?? DEFAULT_ENV_PREFIX, {
         envPathOf: options.envPathOf,
     })) {
-        if (def.required) {
+        if (def.required && def.name) {
             required.push({
                 name: def.name,
                 scope: def.scope,
@@ -234,11 +421,7 @@ variable equivalent.`;
                   .join('\n')}\n`
             : '';
 
-    return `---
-title: ${title}
-outline: ${JSON.stringify(outline)}
----
-
+    return `${frontmatterLines(options, title, outline).join('\n')}
 # ${title}
 
 ${intro}
@@ -257,40 +440,69 @@ ${table(core)}
 ${references}`;
 }
 
-/** Generate the markdown reference (per-scope files + index) into `outDir`. */
-export function generateConfigMarkdown(
-    scopes: ConfigScopes,
-    options: GenerateMarkdownOptions & { outDir: string }
-): string[] {
-    const outline = options.outline ?? [2, 3, 4];
-    const files: [string, string][] = Object.entries(scopes).map(([scopeName, scope]) => [
-        path.resolve(options.outDir, `${scopeName}.md`),
-        renderScopeMarkdown(
-            scopeName,
-            (scope.jsonSchema ?? zodToJsonSchema(scope.zodSchema)) as Schema,
-            { ...options, outline }
-        ),
-    ]);
-    files.push([
-        path.resolve(options.outDir, options.indexFilename ?? 'index.md'),
-        renderConfigIndex(scopes, { ...options, outline }),
-    ]);
-
-    for (const [filePath, content] of files) {
-        fs.mkdirSync(path.dirname(filePath), { recursive: true });
-        fs.writeFileSync(filePath, content, 'utf-8');
+/**
+ * The scopes as JSON Schema for the combined reference. Zod scopes go through
+ * `toJSONSchema` (which keeps unions, enums, literals and `$defs`) instead of the
+ * untyped lowering, which collapses unions to `any` with a `{}` default.
+ */
+function jsonScopesOf(
+    schema: ConfigSchema,
+    scopes: Record<string, Schema>
+): Record<string, Schema> {
+    const toJson = (value: unknown): Schema | undefined =>
+        isZodSchema(value)
+            ? ((value as { toJSONSchema: (o?: object) => unknown }).toJSONSchema({
+                  target: 'draft-2020-12',
+              }) as Schema)
+            : undefined;
+    if (Array.isArray(schema)) return scopes;
+    const single = toJson(schema);
+    if (single) {
+        const [key] = Object.keys(scopes);
+        return key ? { [key]: single } : scopes;
     }
-    return files.map(([filePath]) => filePath);
+    if (isSchemaType(schema)) return scopes;
+    const out: Record<string, Schema> = {};
+    for (const [key, resolved] of Object.entries(scopes)) {
+        const value = (schema as Record<string, unknown>)[key];
+        out[key] = (!Array.isArray(value) && toJson(value)) || resolved;
+    }
+    return out;
 }
 
-/** A section of a config-file reference (its key + options schema). */
-export interface ConfigFileSection {
-    /** The config key, eg. `project`. */
-    key: string;
-    /** A short description shown under the heading. */
-    description?: string;
-    /** The section's options-object schema. */
-    schema: ZodType;
+/** Generate markdown file contents (and optionally write them). */
+export function generateConfigMarkdown(
+    schema: ConfigSchema,
+    options: GenerateMarkdownOptions = {}
+): Record<string, string> {
+    const outline = options.outline ?? [2, 3, 4];
+    const scopes = normalizeConfigSchema(schema);
+    const contents: Record<string, string> = {};
+    if (options.combined) {
+        const file = options.indexFilename ?? 'index.md';
+        contents[file] = renderConfigSectionsMarkdown(jsonScopesOf(schema, scopes), {
+            ...options,
+            outline,
+        });
+    } else {
+        for (const [scopeName, scopeSchema] of Object.entries(scopes)) {
+            contents[`${scopeName}.md`] = renderScopeMarkdown(scopeName, scopeSchema, {
+                ...options,
+                outline,
+            });
+        }
+        contents[options.indexFilename ?? 'index.md'] = renderConfigIndex(schema, {
+            ...options,
+            outline,
+        });
+    }
+    if (typeof options.outputDir === 'string') {
+        fs.mkdirSync(options.outputDir, { recursive: true });
+        for (const [file, content] of Object.entries(contents)) {
+            fs.writeFileSync(path.resolve(options.outputDir, file), content, 'utf-8');
+        }
+    }
+    return contents;
 }
 
 export interface RenderConfigFileOptions {
@@ -300,13 +512,31 @@ export interface RenderConfigFileOptions {
     intro?: string;
     /** Page outline (default `[2, 3, 4]`). */
     outline?: number[];
+    /** Emit `- **Required**` lines (default true). */
+    includeRequired?: boolean;
+    /** Emit `- **Deprecated**` lines (default true). */
+    includeDeprecated?: boolean;
+    /** Emit `**Example(s):**` blocks (default true). */
+    includeExamples?: boolean;
+    /** Emit `- **Since**` lines (default true). */
+    includeSince?: boolean;
+    /** Emit `- **See**` lines (default true). */
+    includeSee?: boolean;
+    /** Emit `**Remarks:**` blocks (default true). */
+    includeRemarks?: boolean;
+    /** Emit `- **Experimental**` lines (default true). */
+    includeExperimental?: boolean;
+    /** Emit `- **Alpha**` lines (default true). */
+    includeAlpha?: boolean;
+    /** Emit `- **Beta**` lines (default true). */
+    includeBeta?: boolean;
 }
 
 /** A JSON Schema (draft 2020-12) node as produced by `z.toJSONSchema`. */
 interface JsonSchemaJson {
     type?: string | string[];
     properties?: Record<string, JsonSchemaJson>;
-    required?: string[];
+    required?: string[] | boolean;
     default?: unknown;
     description?: string;
     enum?: unknown[];
@@ -317,6 +547,15 @@ interface JsonSchemaJson {
     items?: JsonSchemaJson;
     additionalProperties?: JsonSchemaJson | boolean;
     $defs?: Record<string, JsonSchemaJson>;
+    deprecated?: boolean;
+    deprecationMessage?: string;
+    example?: string | string[];
+    since?: string;
+    see?: string | string[];
+    remarks?: string;
+    experimental?: boolean;
+    alpha?: boolean;
+    beta?: boolean;
 }
 
 /** The `$defs` key a `$ref` points at. */
@@ -335,6 +574,64 @@ function resolveJsonRef(
 
 function jsonLiteral(value: unknown): string {
     return typeof value === 'string' ? `'${value}'` : String(value);
+}
+
+/** Resolve metadata from a node, its `$ref`, or its union members. */
+function jsonNodeMeta(
+    node: JsonSchemaJson,
+    defs: Record<string, JsonSchemaJson>
+): {
+    required?: boolean;
+    deprecated?: boolean;
+    deprecationMessage?: string;
+    example?: string | string[];
+    since?: string;
+    see?: string | string[];
+    remarks?: string;
+    experimental?: boolean;
+    alpha?: boolean;
+    beta?: boolean;
+} {
+    const resolved = resolveJsonRef(node, defs);
+    let required = node.required === true || resolved.required === true ? true : undefined;
+    let deprecated = node.deprecated ?? resolved.deprecated;
+    let deprecationMessage = node.deprecationMessage ?? resolved.deprecationMessage;
+    let example = node.example ?? resolved.example;
+    let since = node.since ?? resolved.since;
+    let see = node.see ?? resolved.see;
+    let remarks = node.remarks ?? resolved.remarks;
+    let experimental = node.experimental ?? resolved.experimental;
+    let alpha = node.alpha ?? resolved.alpha;
+    let beta = node.beta ?? resolved.beta;
+    const variants = [
+        ...(resolved.anyOf ?? node.anyOf ?? []),
+        ...(resolved.oneOf ?? node.oneOf ?? []),
+    ];
+    for (const variant of variants) {
+        const target = resolveJsonRef(variant, defs);
+        required ??= variant.required === true || target.required === true ? true : undefined;
+        deprecated ??= variant.deprecated ?? target.deprecated;
+        deprecationMessage ??= variant.deprecationMessage ?? target.deprecationMessage;
+        example ??= variant.example ?? target.example;
+        since ??= variant.since ?? target.since;
+        see ??= variant.see ?? target.see;
+        remarks ??= variant.remarks ?? target.remarks;
+        experimental ??= variant.experimental ?? target.experimental;
+        alpha ??= variant.alpha ?? target.alpha;
+        beta ??= variant.beta ?? target.beta;
+    }
+    return {
+        ...(required !== undefined ? { required } : {}),
+        ...(deprecated !== undefined ? { deprecated } : {}),
+        ...(deprecationMessage !== undefined ? { deprecationMessage } : {}),
+        ...(example !== undefined ? { example } : {}),
+        ...(since !== undefined ? { since } : {}),
+        ...(see !== undefined ? { see } : {}),
+        ...(remarks !== undefined ? { remarks } : {}),
+        ...(experimental !== undefined ? { experimental } : {}),
+        ...(alpha !== undefined ? { alpha } : {}),
+        ...(beta !== undefined ? { beta } : {}),
+    };
 }
 
 /**
@@ -360,7 +657,13 @@ function jsonTypeLabel(node: JsonSchemaJson, defs: Record<string, JsonSchemaJson
     if (node.properties) return 'object';
     const types = Array.isArray(node.type) ? node.type : node.type ? [node.type] : [];
     if (types.includes('array')) return `Array<${jsonTypeLabel(node.items ?? {}, defs)}>`;
-    if (types.includes('object')) return 'Record<string, unknown>';
+    if (types.includes('object')) {
+        const additional = node.additionalProperties;
+        if (additional && additional !== true) {
+            return `Record<string, ${jsonTypeLabel(additional, defs)}>`;
+        }
+        return 'Record<string, unknown>';
+    }
     if (types.length === 0) return 'unknown';
     return types.map(type => (type === 'integer' ? 'number' : type)).join(' | ');
 }
@@ -384,7 +687,10 @@ function jsonChildFields(
     }
     const resolved = resolveJsonRef(node, defs);
     if (resolved.properties) {
-        return { properties: resolved.properties, required: resolved.required ?? [] };
+        return {
+            properties: resolved.properties,
+            required: Array.isArray(resolved.required) ? resolved.required : [],
+        };
     }
     const variants = resolved.anyOf ?? resolved.oneOf;
     if (variants) {
@@ -413,16 +719,22 @@ function renderJsonField(
     level: string,
     defs: Record<string, JsonSchemaJson>,
     seen: Set<string>,
-    required: boolean
+    required: boolean,
+    options: RenderConfigFileOptions
 ): string[] {
     const resolved = resolveJsonRef(node, defs);
+    const meta = jsonNodeMeta(node, defs);
     const lines = [`${level} \`${key}\``];
+    const requiredLineText = requiredLine(required || meta.required === true, options);
+    if (requiredLineText) lines.push(requiredLineText);
     lines.push(`- **Type**: \`${jsonTypeLabel(node, defs)}\``);
-    if (required) lines.push('- **Required**');
+    lines.push(...annotationLines(meta, options));
     const fallback = node.default ?? resolved.default;
     if (fallback !== undefined) lines.push(`- **Default**: \`${JSON.stringify(fallback)}\``);
     const description = sanitizeText(node.description ?? resolved.description ?? '');
     if (description) lines.push('', description);
+    lines.push(...remarksLines(meta.remarks, options));
+    if (options.includeExamples !== false) lines.push(...exampleLines(meta.example));
     const children = jsonChildFields(node, defs, seen);
     // Markdown headings only go to `######` (h6); deeper nesting keeps h6 rather
     // than emitting a literal `#######`.
@@ -436,7 +748,8 @@ function renderJsonField(
                 childLevel,
                 defs,
                 seen,
-                children.required.includes(childKey)
+                children.required.includes(childKey),
+                options
             )
         );
     }
@@ -447,12 +760,16 @@ function renderJsonFields(
     node: JsonSchemaJson,
     level: string,
     defs: Record<string, JsonSchemaJson>,
-    seen: Set<string>
+    seen: Set<string>,
+    options: RenderConfigFileOptions
 ): string[] {
     const lines: string[] = [];
-    const required = node.required ?? [];
+    const required = Array.isArray(node.required) ? node.required : [];
     for (const [key, child] of Object.entries(node.properties ?? {})) {
-        lines.push('', ...renderJsonField(key, child, level, defs, seen, required.includes(key)));
+        lines.push(
+            '',
+            ...renderJsonField(key, child, level, defs, seen, required.includes(key), options)
+        );
     }
     return lines;
 }
@@ -461,31 +778,39 @@ function renderJsonFields(
  * Render a single markdown reference for a config **file** (no environment-var
  * language): one `## \`key\`` section per schema, with its fields, types,
  * defaults and descriptions. Named sub-schemas (`$defs`) are resolved and
- * expanded inline, so nested options (`changelog.versioning.target`, ...) are
+ * expanded inline, so nested options (`ci.changelog.versioning.target`, ...) are
  * documented too. This is what a `dbx.config.ts`-style reference is generated from.
  */
-export function renderConfigFileMarkdown(
-    sections: ConfigFileSection[],
-    options: RenderConfigFileOptions = {}
+function renderConfigSectionsMarkdown(
+    scopes: Record<string, Schema>,
+    options: RenderConfigFileOptions & RenderMarkdownOptions = {}
 ): string {
     const title = options.title ?? 'Configuration';
     const parts: string[] = [
-        '---',
-        `title: ${title}`,
-        `outline: ${JSON.stringify(options.outline ?? [2, 3, 4])}`,
-        '---',
-        '',
+        ...frontmatterLines(options, title, options.outline ?? [2, 3, 4]),
         `# ${title}`,
         '',
     ];
     if (options.intro) parts.push(options.intro, '');
-    for (const section of sections) {
-        parts.push(`## \`${section.key}\``, '');
-        if (section.description) parts.push(section.description, '');
-        const json = z.toJSONSchema(section.schema, { target: 'draft-2020-12' }) as JsonSchemaJson;
+    for (const [key, schema] of Object.entries(scopes)) {
+        const json = schema as unknown as JsonSchemaJson;
         const defs = json.$defs ?? {};
-        const root = json.$ref ? resolveJsonRef(json, defs) : json;
-        parts.push(...renderJsonFields(root, '###', defs, new Set<string>()), '');
+        // A Zod JSON Schema roots named objects at a `$ref` into `$defs`.
+        const node = resolveJsonRef(json, defs);
+        const meta = metaOf(node as unknown as Schema);
+        parts.push(`## \`${key}\``, '');
+        if (meta?.description) parts.push(meta.description, '');
+        const required = requiredLine(meta?.required === true, options);
+        if (required) parts.push(required, '');
+        const annotations = annotationLines(meta ?? {}, options);
+        if (annotations.length > 0) parts.push(...annotations, '');
+        const remarks = remarksLines(meta?.remarks, options);
+        if (remarks.length > 0) parts.push(...remarks, '');
+        if (options.includeExamples !== false) {
+            const examples = exampleLines(meta?.example);
+            if (examples.length > 0) parts.push(...examples, '');
+        }
+        parts.push(...renderJsonFields(node, '###', defs, new Set<string>(), options), '');
     }
     return `${parts.join('\n').trim()}\n`;
 }

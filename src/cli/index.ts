@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 
 import { changelogCommands } from '@deltabox/toolchain-changelog/cli';
+import { loadToolchainConfig } from '@deltabox/toolchain-core';
 import { migrateCommands } from '@deltabox/toolchain-migrate/cli';
 import { projectCommands } from '@deltabox/toolchain-project/cli';
 import {
@@ -24,6 +25,7 @@ import {
     stripAnsi,
     type LoggerOptions,
     type ToolchainCommand,
+    type ToolchainConfig,
 } from '@deltabox/toolchain-shared';
 import { templateCommands } from '@deltabox/toolchain-template/cli';
 import { tsconfigCommands } from '@deltabox/toolchain-tsconfig/cli';
@@ -32,15 +34,17 @@ import { resolveVpCommand, viteCommands } from '@deltabox/toolchain-vite/cli';
 
 import rootPkg from '../../package.json' with { type: 'json' };
 import { syncCommands } from './commands/index.js';
+import { extractConfigSelection, setConfigSelection } from './config-selection.js';
 import { isPassthroughCommand, registerToolchainCommands } from './register.js';
 import { runUpdateCheck } from './update-check.js';
 
+export { extractConfigSelection } from './config-selection.js';
 export { registerToolchainCommands } from './register.js';
 
 /** The commands built into the root CLI (config commands need a consumer engine). */
-export function builtinCommands(): ToolchainCommand[] {
+export function builtinCommands(config?: ToolchainConfig): ToolchainCommand[] {
     return [
-        ...syncCommands(),
+        ...syncCommands(config),
         ...tsconfigCommands(),
         ...cleanupCommands(),
         ...changelogCommands(),
@@ -52,8 +56,8 @@ export function builtinCommands(): ToolchainCommand[] {
 }
 
 /** Every built-in command name (a bare Vite+ command never shadows one). */
-function builtinCommandNames(): Set<string> {
-    return new Set(builtinCommands().map(command => command.name));
+function builtinCommandNames(commands: ToolchainCommand[] = builtinCommands()): Set<string> {
+    return new Set(commands.map(command => command.name));
 }
 
 /**
@@ -132,7 +136,7 @@ export function extractUpdateCheck(argv: string[]): { argv: string[]; updateChec
  * passthrough (`vite:*`) is the exception: it keeps commander's default output
  * so the spawned `vp` process keeps its own coloured logging.
  */
-export function createCli(): Command {
+export function createCli(commands: ToolchainCommand[] = builtinCommands()): Command {
     const program = new Command();
     // Capture commander's defaults before overriding them (used for passthrough).
     const defaults = program.configureOutput();
@@ -161,6 +165,8 @@ export function createCli(): Command {
         .option('--log-level <level>', `Minimum log level (${LOG_LEVELS.join('|')}).`)
         .option('--no-color', 'Disable coloured output.')
         .option('--no-update-check', 'Do not check for a newer dbx version.')
+        .option('--config <file>', 'Use a specific dbx config file.')
+        .option('--no-config', 'Ignore discovered config; use CLI flags/env only.')
         .showHelpAfterError();
     // Commander's built-in Help does not colourise; wire its style hooks to the
     // logger's colour set (identity when colours are off, so `--no-color` is plain).
@@ -174,20 +180,51 @@ export function createCli(): Command {
         styleArgumentText: str => logger.colors.yellow(str),
         styleArgumentTerm: str => logger.colors.yellow(str),
     });
-    registerToolchainCommands(program, builtinCommands());
+    registerToolchainCommands(program, commands);
     return program;
 }
 
 /** Parse and run the CLI. */
 export async function runCli(argv: string[] = process.argv): Promise<void> {
+    // A preliminary command set is enough to classify passthrough operands
+    // before the config selection is known; the final set is filtered by the
+    // provider registry policy below.
+    const baseCommands = builtinCommands();
+    const baseCommandNames = builtinCommandNames(baseCommands);
+    const basePassthroughNames = new Set(
+        baseCommands.filter(command => command.passthrough).map(command => command.name)
+    );
     const { argv: rest, options } = extractLogOptions(argv);
     const { argv: rest2, updateCheck } = extractUpdateCheck(rest);
+    const { argv: rest3, selection } = extractConfigSelection(
+        rest2,
+        // A bare Vite+ command is rewritten to `vite <command>` later, so it is
+        // a passthrough too unless a built-in command shadows it.
+        name =>
+            basePassthroughNames.has(name) ||
+            (!baseCommandNames.has(name) && resolveVpCommand(name) !== undefined)
+    );
+    setConfigSelection(selection);
     setLogOverrides(options);
+    // Register only the providers allowed by `toolchain.registry.providers`, so
+    // a denied provider cannot appear in help/completion. Hooks are skipped:
+    // this is a metadata-only load (the command action loads the real context).
+    const registration = await loadToolchainConfig(process.cwd(), {
+        tolerant: true,
+        skipHooks: true,
+        ...selection,
+    });
+    const commands = builtinCommands(registration.config);
+    const commandNames = builtinCommandNames(commands);
     const wantsHelp = argv.some(arg => arg === '--help' || arg === '-h' || arg === '--version');
-    // The notice is human output on stdout; never let it corrupt `--json`.
-    const wantsJson = rest2.some(arg => arg === '--json');
+    // The notice is human output on stdout; never let it corrupt machine output.
+    const machineCommands = new Set(['template:info']);
+    const machineFlags = new Set(['--json', '--alias', '--paths', '--references']);
+    const wantsJson =
+        rest3.some(arg => machineFlags.has(arg)) ||
+        (rest3[2] !== undefined && machineCommands.has(rest3[2]));
     if (!wantsHelp && !wantsJson) runUpdateCheck(rootPkg.version, updateCheck);
-    await createCli().parseAsync(withDefaultVite(rest2));
+    await createCli(commands).parseAsync(withDefaultVite(rest3, commandNames));
 }
 
 /** Whether this module is the process entry point (symlink-safe). */

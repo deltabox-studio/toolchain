@@ -27,6 +27,8 @@ export interface ToolchainOption {
     description: string;
     /** Optional default value (stringified). */
     default?: string;
+    /** Collect repeated occurrences into an array (eg. `--from a --from b`). */
+    multiple?: boolean;
 }
 
 /**
@@ -41,10 +43,14 @@ export interface ToolchainCommandContext {
     projectType: ProjectType;
     /** The loaded tooling config (empty object when none was found). */
     config: ToolchainConfig;
+    /** The project's own (unmerged) config, when loaded from a file. */
+    ownConfig?: ToolchainConfig;
     /** The resolved replacement tokens. */
     tokens: Replacements;
     /** The config file that was loaded, if any. */
     configPath?: string;
+    /** Whether config discovery was disabled (`dbx --no-config`). */
+    noConfig?: boolean;
     /**
      * Set when a `dbx.config.*` file failed to import (the CLI loads configs
      * tolerantly so unrelated commands still work). Commands that cannot operate

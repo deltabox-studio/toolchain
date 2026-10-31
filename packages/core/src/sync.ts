@@ -22,6 +22,8 @@ export interface RunSyncOptions {
     cwd: string;
     /** The loaded config. */
     config: ToolchainConfig;
+    /** The project's own (unmerged) config, when known. */
+    ownConfig?: ToolchainConfig;
     /** The resolved replacement tokens. */
     tokens: Replacements;
     /** The project kind (resolved from the config/cwd when omitted). */
@@ -34,6 +36,13 @@ export interface RunSyncOptions {
     log?: (message: string) => void;
 }
 
+export interface RemovedFile {
+    /** Repo-relative path. */
+    path: string;
+    /** The content before removal, so an editor can offer "Restore". */
+    content: string;
+}
+
 export interface SyncResult {
     /** Paths written (empty in check mode). */
     written: string[];
@@ -41,6 +50,8 @@ export interface SyncResult {
     changed: string[];
     /** Previously-managed paths removed because they are no longer generated. */
     removed: string[];
+    /** The removed files' previous content (for a Restore action). */
+    removedFiles: RemovedFile[];
     /** Whether disk already matched the generated output. */
     upToDate: boolean;
 }
@@ -56,11 +67,29 @@ function norm(relative: string): string {
  * reported instead (for CI).
  */
 export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
-    const { tasks, cwd, config, tokens } = options;
+    const { tasks, cwd, config, ownConfig, tokens } = options;
     const log = options.quiet ? () => {} : (options.log ?? ((m: string) => logger.info(m)));
-    const warn = options.quiet ? () => {} : (m: string) => logger.warn(m);
+    const warn = options.quiet ? () => {} : (m: string, id?: string) => logger.warn(m, id);
     const projectType = options.projectType ?? resolveProjectType(cwd, config);
-    const ctx: SyncContext = { cwd, projectType, config, tokens, log, warn };
+    const manifest = readManifest(cwd);
+    const ctx: SyncContext = {
+        cwd,
+        projectType,
+        config,
+        ownConfig: ownConfig ?? config,
+        tokens,
+        log,
+        warn,
+        check: options.check === true,
+        managedFiles: manifest.files,
+        manifest: {
+            ...manifest.extras,
+            ...(manifest.tsconfigOverrides
+                ? { tsconfigOverrides: manifest.tsconfigOverrides }
+                : {}),
+            ...(manifest.snapshots ? { snapshots: manifest.snapshots } : {}),
+        },
+    };
     const hooks = config.hooks ?? {};
     await hooks.beforeSync?.(ctx);
 
@@ -82,12 +111,19 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     }
 
     const desired = new Map(files.map(file => [norm(file.path), file.content]));
-    const manifest = readManifest(cwd);
+    // Untracked files are written + drift-checked but stay user-owned: they are
+    // kept out of the manifest, so they are never pruned or reset.
+    const untracked = new Set(
+        files.filter(file => file.track === false).map(file => norm(file.path))
+    );
 
     // Files a task declares as user-owned (`keep`): never deleted, dropped from
     // the manifest, so consumers can edit them (eg. `tsconfig.build.json`).
     const keep = new Set<string>();
-    for (const task of active) for (const pattern of task.keep ?? []) keep.add(pattern);
+    for (const task of active) {
+        const patterns = typeof task.keep === 'function' ? task.keep(config) : (task.keep ?? []);
+        for (const pattern of patterns) keep.add(pattern);
+    }
     const isKept = (relative: string): boolean => {
         for (const pattern of keep) {
             if (
@@ -106,12 +142,30 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
         const current = fs.existsSync(abs) ? fs.readFileSync(abs, 'utf-8') : undefined;
         if (current !== content) changed.push(relative);
     }
+    const existedBefore = new Map(
+        [...desired.keys()].map(relative => [relative, fs.existsSync(path.resolve(cwd, relative))])
+    );
+    // A file dbx never created (it existed before the first sync) is adopted:
+    // stop managing it, but never delete it when its section is removed.
+    const originOf = (relative: string): 'created' | 'adopted' =>
+        manifest.origins?.[relative] ??
+        (manifest.files.includes(relative)
+            ? 'created'
+            : existedBefore.get(relative)
+              ? 'adopted'
+              : 'created');
     const removed = manifest.files.filter(
         relative =>
             !desired.has(relative) &&
+            !untracked.has(relative) &&
             !isKept(relative) &&
-            fs.existsSync(path.resolve(cwd, relative))
+            fs.existsSync(path.resolve(cwd, relative)) &&
+            originOf(relative) === 'created'
     );
+    const removedFiles: RemovedFile[] = removed.map(relative => ({
+        path: relative,
+        content: fs.readFileSync(path.resolve(cwd, relative), 'utf-8'),
+    }));
     const upToDate = changed.length === 0 && removed.length === 0;
 
     if (options.check) {
@@ -123,7 +177,7 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
             for (const relative of removed) log(`  D ${relative}`);
             log('Run `dbx sync` to regenerate them.');
         }
-        const summary = { written: [], changed, removed, upToDate };
+        const summary = { written: [], changed, removed, removedFiles, upToDate };
         await hooks.afterSync?.({ cwd, config, result: summary });
         return summary;
     }
@@ -138,7 +192,12 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     for (const relative of removed) {
         fs.rmSync(path.resolve(cwd, relative), { force: true });
     }
-    writeManifest(cwd, [...desired.keys()]);
+    const tracked = [...desired.keys()].filter(relative => !untracked.has(relative));
+    const origins: Record<string, 'created' | 'adopted'> = {};
+    for (const relative of tracked) {
+        origins[relative] = originOf(relative);
+    }
+    writeManifest(cwd, tracked, undefined, origins, ctx.manifest);
     if (ensureDbxGitignore(cwd)) log('  I .gitignore (added the .dbx ignore block)');
 
     log(
@@ -146,7 +205,7 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
             changed.length ? `, updated ${changed.length}` : ''
         }.`
     );
-    const summary = { written, changed, removed, upToDate };
+    const summary = { written, changed, removed, removedFiles, upToDate };
     await hooks.afterSync?.({ cwd, config, result: summary });
     return summary;
 }

@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import * as vscode from 'vscode';
 
+import { DEFAULT_TSCONFIG_FILES, type TsconfigFileNames } from './watch-inputs.js';
+
 const CONFIG_PREFIX = 'dbx.config.';
 const PROJECT_GROUPS = ['packages', 'apps', 'sdk'];
 const MANIFEST = path.join('.dbx', 'toolchain', 'manifest.json');
@@ -58,7 +60,7 @@ interface ProjectGraphFile {
 
 function readJson<T>(file: string): T | undefined {
     try {
-        return JSON.parse(fs.readFileSync(file, 'utf-8')) as T;
+        return JSON.parse(fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, '')) as T;
     } catch {
         return undefined;
     }
@@ -73,16 +75,26 @@ export function readProjectGraph(root: string): ProjectGraphFile | undefined {
 export interface ProjectManifest {
     files: string[];
     syncedAt?: string;
+    /** Workflow paths dbx left untouched, mapped to the config key that owns them. */
+    workflowConflicts?: Record<string, string>;
 }
 
 /** Read the tracked/generated file manifest for a project dir, if present. */
 export function readManifest(dir: string): ProjectManifest {
-    const doc = readJson<{ files?: string[]; syncedAt?: string }>(path.join(dir, MANIFEST));
+    const doc = readJson<{
+        files?: string[];
+        syncedAt?: string;
+        workflowConflicts?: Record<string, string>;
+    }>(path.join(dir, MANIFEST));
     // The last-sync time lives in its own (gitignored) file; fall back to a
     // legacy inline `syncedAt` until the next sync migrates it.
     const timestamps = readJson<{ syncedAt?: string }>(path.join(dir, TIMESTAMPS));
     const syncedAt = timestamps?.syncedAt ?? doc?.syncedAt;
-    return { files: doc?.files ?? [], ...(syncedAt ? { syncedAt } : {}) };
+    return {
+        files: doc?.files ?? [],
+        ...(syncedAt ? { syncedAt } : {}),
+        ...(doc?.workflowConflicts ? { workflowConflicts: doc.workflowConflicts } : {}),
+    };
 }
 
 function hasToolchainConfig(dir: string): boolean {
@@ -113,9 +125,22 @@ function childDirs(dir: string): string[] {
     }
 }
 
+/** The tsconfig file names resolved from each root's config (see `dbx watch --list`). */
+const tsconfigNames = new Map<string, TsconfigFileNames>();
+
+/** Record the tsconfig file names a workspace root's config resolves to. */
+export function setTsconfigFileNames(root: string, names: TsconfigFileNames): void {
+    tsconfigNames.set(path.resolve(root), names);
+}
+
+/** The workspace default tsconfig name for a root (custom `defaultFile` honoured). */
+export function defaultTsconfigFile(root: string): string {
+    return tsconfigNames.get(path.resolve(root))?.defaultFile ?? DEFAULT_TSCONFIG_FILES.defaultFile;
+}
+
 function inferType(dir: string, root: string): Project['type'] {
     if (dir === root) return 'monorepo-root';
-    return fs.existsSync(path.join(dir, 'tsconfig.default.json'))
+    return fs.existsSync(path.join(dir, defaultTsconfigFile(root)))
         ? 'monorepo-workspace'
         : 'project';
 }
@@ -250,6 +275,10 @@ export interface TrackedFileNode {
     root: string;
     /** Repo-relative path (files only). */
     file?: string;
+    /** The config key owning a workflow conflict (conflict files only). */
+    conflict?: string;
+    /** Whether this group lists workflow conflicts instead of managed files. */
+    conflictGroup?: boolean;
     children?: TrackedFileNode[];
 }
 
@@ -273,8 +302,9 @@ export class TrackedFilesTreeProvider implements vscode.TreeDataProvider<Tracked
     private build(): TrackedFileNode[] {
         const groups: TrackedFileNode[] = [];
         for (const workspace of discoverProjectGroups()) {
-            const files = [...readManifest(workspace.dir).files].sort((a, b) => a.localeCompare(b));
-            if (files.length === 0) continue;
+            const manifest = readManifest(workspace.dir);
+            const files = [...manifest.files].sort((a, b) => a.localeCompare(b));
+            if (files.length === 0 && !manifest.workflowConflicts) continue;
             // Longest directory first, so `find` returns the deepest owner; the
             // shortest (the workspace root) is the fallback.
             const projects = [...workspace.projects].sort((a, b) => b.dir.length - a.dir.length);
@@ -300,6 +330,24 @@ export class TrackedFilesTreeProvider implements vscode.TreeDataProvider<Tracked
                 group.children?.push({ kind: 'file', label: file, root: workspace.dir, file });
             }
             groups.push(...buckets.values());
+            const conflicts = Object.entries(manifest.workflowConflicts ?? {}).sort(([a], [b]) =>
+                a.localeCompare(b)
+            );
+            if (conflicts.length > 0) {
+                groups.push({
+                    kind: 'fileGroup',
+                    label: 'Workflow conflicts',
+                    root: workspace.dir,
+                    conflictGroup: true,
+                    children: conflicts.map(([file, conflict]) => ({
+                        kind: 'file',
+                        label: file,
+                        root: workspace.dir,
+                        file,
+                        conflict,
+                    })),
+                });
+            }
         }
         return groups;
     }
@@ -319,9 +367,13 @@ export class TrackedFilesTreeProvider implements vscode.TreeDataProvider<Tracked
                     : vscode.TreeItemCollapsibleState.None
             );
             item.description = `${node.children?.length ?? 0}`;
-            item.tooltip = node.root;
-            item.iconPath = new vscode.ThemeIcon('file-directory');
-            item.contextValue = 'deltabox.fileGroup';
+            item.tooltip = node.conflictGroup
+                ? 'Hand-written workflows dbx left untouched. Set the listed config key to `{ enabled: false }` to make the opt-out explicit.'
+                : node.root;
+            item.iconPath = new vscode.ThemeIcon(node.conflictGroup ? 'warning' : 'file-directory');
+            item.contextValue = node.conflictGroup
+                ? 'deltabox.fileConflictGroup'
+                : 'deltabox.fileGroup';
             return item;
         }
 
@@ -330,10 +382,15 @@ export class TrackedFilesTreeProvider implements vscode.TreeDataProvider<Tracked
             path.basename(node.file ?? node.label),
             vscode.TreeItemCollapsibleState.None
         );
-        item.description = path.dirname(node.file ?? '');
+        item.description = node.conflict
+            ? `conflict: ${node.conflict}`
+            : path.dirname(node.file ?? '');
         item.resourceUri = vscode.Uri.file(absolute);
-        item.tooltip = node.file;
-        item.contextValue = 'deltabox.file';
+        item.tooltip = node.conflict
+            ? `${node.file}\nConflicts with ${node.conflict}; dbx left it untouched.`
+            : node.file;
+        item.contextValue = node.conflict ? 'deltabox.fileConflict' : 'deltabox.file';
+        if (node.conflict) item.iconPath = new vscode.ThemeIcon('warning');
         item.command = {
             command: 'vscode.open',
             title: 'Open',

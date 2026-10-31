@@ -2,11 +2,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
     addTemplateSource,
     BUILTIN_TEMPLATES,
+    detectNpmRegistry,
     loadLocalTemplates,
     loadTemplates,
     parseSourceSpec,
@@ -67,6 +68,34 @@ describe('template registry', () => {
         expect(found?.kind).toBe('project');
     });
 
+    it('loads a remote source registry recursively', async () => {
+        const root = makeTmp();
+        const tpl = path.join(root, 'remote-tpl');
+        writeTemplate(tpl, { name: 'Remote template' }, { 'README.md': '# {{name}}' });
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(
+                async () =>
+                    new Response(JSON.stringify({ sources: [{ type: 'local', locate: tpl }] }), {
+                        status: 200,
+                        headers: { 'content-type': 'application/json' },
+                    })
+            )
+        );
+        try {
+            const templates = await loadTemplates({
+                cwd: root,
+                online: true,
+                sources: [{ type: 'remote', locate: 'https://example.com/registry.json' }],
+            });
+            expect(templates.find(template => template.id === 'remote-tpl')?.name).toBe(
+                'Remote template'
+            );
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    });
+
     it('round-trips the on-disk source registry', () => {
         const root = makeTmp();
         addTemplateSource(root, { type: 'git', locate: 'https://github.com/acme/tpl.git' });
@@ -82,8 +111,21 @@ describe('source parsing', () => {
     it('infers the source type', () => {
         expect(parseSourceSpec('git:https://github.com/acme/x.git').type).toBe('git');
         expect(parseSourceSpec('@acme/create').type).toBe('npm');
+        expect(parseSourceSpec('create-acme').type).toBe('npm');
+        expect(parseSourceSpec('acme-create').type).toBe('npm');
+        expect(parseSourceSpec('remote:https://example.com/templates.json').type).toBe('remote');
         expect(parseSourceSpec('https://github.com/acme/x').type).toBe('git');
         expect(parseSourceSpec('./local-dir').type).toBe('local');
+    });
+
+    it('detects the package manager npm registry', () => {
+        const root = makeTmp();
+        fs.writeFileSync(path.join(root, '.yarnrc.yml'), 'npmRegistryServer: https://yarn.test\n');
+        expect(detectNpmRegistry(root)).toBe('https://yarn.test');
+
+        const npmrcRoot = makeTmp();
+        fs.writeFileSync(path.join(npmrcRoot, '.npmrc'), 'registry=https://npm.test/\n');
+        expect(detectNpmRegistry(npmrcRoot)).toBe('https://npm.test');
     });
 });
 
@@ -134,6 +176,35 @@ describe('scaffolding', () => {
         expect(result.written.length).toBeGreaterThan(0);
         expect(fs.existsSync(path.join(out, 'package.json'))).toBe(true);
         expect(fs.existsSync(path.join(out, 'dbx.config.ts'))).toBe(true);
+    });
+
+    it('does not reuse the configured version when packageManager is overridden', async () => {
+        const out = makeTmp();
+        const template = BUILTIN_TEMPLATES.find(candidate => candidate.id === 'project');
+        if (!template) throw new Error('missing builtin');
+        await scaffoldTemplate(template, {
+            cwd: out,
+            tokens: {
+                name: 'acme',
+                packageManager: 'yarn',
+                packageManagerVersion: '4.17.1',
+            },
+            variables: { packageManager: 'pnpm' },
+        });
+        const pkg = JSON.parse(fs.readFileSync(path.join(out, 'package.json'), 'utf-8'));
+        expect(pkg.packageManager).toBe('pnpm@10.11.1');
+    });
+
+    it('does not copy the root description into a workspace config', async () => {
+        const out = makeTmp();
+        const template = BUILTIN_TEMPLATES.find(candidate => candidate.id === 'workspace');
+        if (!template) throw new Error('missing builtin');
+        await scaffoldTemplate(template, {
+            cwd: out,
+            tokens: { name: 'web', description: 'The root project' },
+        });
+        const config = fs.readFileSync(path.join(out, 'packages/web/dbx.config.ts'), 'utf-8');
+        expect(config).not.toContain('The root project');
     });
 
     it('copies a local template, resolving tokens in paths and contents', async () => {

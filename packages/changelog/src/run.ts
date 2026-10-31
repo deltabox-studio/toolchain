@@ -65,14 +65,15 @@
  *   node scripts/dist/changelog/index.js --processing-method all --dry-run
  *   CHANGELOG_PROCESSING_METHOD=all node scripts/dist/changelog/index.js
  */
+import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { logger, type ToolchainChangelogConfig } from '@deltabox/toolchain-shared';
+import { type ChangelogConfig, logger, resolveCommitlintEnabled } from '@deltabox/toolchain-shared';
 
 import { parseArgsCli } from './utils/args.js';
-import { deriveBump, readCommits } from './utils/git.js';
+import { readCommits } from './utils/git.js';
 import { packageChangesForCurrent } from './utils/packages.js';
 import {
     formatExistingChangelogs,
@@ -81,20 +82,31 @@ import {
 } from './utils/reformat.js';
 import { changelogFiles, readRootVersion, repoRoot, writeVersion } from './utils/repo.js';
 import { buildSummary } from './utils/summary.js';
+import type {
+    ChangelogGroupsSetting,
+    ChangelogProvider,
+    CommitFormatOptions,
+} from './utils/types.js';
 import { insertNewEntry, renderChangelogEntry, retagChangelogs } from './utils/version.js';
-import { planVersions, resolveVersioning, writePackageVersion } from './utils/versioning.js';
+import {
+    deriveCustomBump,
+    planVersions,
+    resolveVersioning,
+    writePackageVersion,
+} from './utils/versioning.js';
 import { writeChangelogs } from './utils/write.js';
 
 /**
  * Run the changelog pipeline (bump versions + write changelogs). `changelog` is
- * the consumer's `toolchain.changelog` section (threaded from `dbx changelog`);
+ * the consumer's `toolchain.ci.changelog` config (threaded from `dbx changelog`);
  * the standalone bin runs with the defaults (`versioning: true`, uniform).
  */
 export function runChangelog(
     argv: string[] = process.argv.slice(2),
-    changelog?: ToolchainChangelogConfig
+    changelog?: ChangelogConfig
 ): void {
     const options = parseArgsCli(argv);
+    const groups = changelog?.groups as ChangelogGroupsSetting | undefined;
 
     // `--format-only` just regroups the existing changelog files (no bump, no
     // new entry); `--range`/`--dry-run` still apply.
@@ -104,7 +116,7 @@ export function runChangelog(
                 options.dryRun ? ' (dry run)' : ''
             }.`
         );
-        formatExistingChangelogs(options.dryRun, options.packageChanges);
+        formatExistingChangelogs(options.dryRun, options.packageChanges, groups);
         return;
     }
 
@@ -142,11 +154,50 @@ export function runChangelog(
     const range = method !== 'latest' && method !== 'all' ? method : options.range;
 
     const records = readCommits(range);
-    const type = deriveBump(records);
-    const summary = buildSummary(records);
-
     const versioning = resolveVersioning(changelog);
-    const plan = planVersions({ versioning, rootVersion: current, bump: type, range });
+    const provider = versioning.provider as ChangelogProvider | string | undefined;
+    if (!options.dryRun && provider === 'changesets') {
+        const result = spawnSync('npx', ['--yes', 'changeset', 'version'], {
+            cwd: repoRoot(),
+            stdio: 'inherit',
+            // `npx` is a `.cmd` shim on Windows, which spawn cannot execute
+            // directly without a shell.
+            shell: process.platform === 'win32',
+        });
+        if (result.status !== 0) throw new Error('changesets provider failed.');
+        logger.info('Ran the changesets provider; changesets owns the changelog/version output.');
+        return;
+    }
+    const type = deriveCustomBump(records, versioning.bump, versioning.allowOverBump);
+    const commitlint = resolveCommitlintEnabled(changelog);
+    let summary = buildSummary(records, {
+        commitlint,
+        range,
+        ...(groups ? { groups } : {}),
+        ...(versioning.commit ? { commit: versioning.commit as CommitFormatOptions } : {}),
+    });
+    if (provider && typeof provider === 'object' && typeof provider.run === 'function') {
+        const custom = provider.run({ cwd: repoRoot(), changelog, records });
+        if (typeof custom === 'string') summary = custom;
+    } else if (typeof provider === 'function') {
+        const custom = (
+            provider as (ctx: {
+                cwd: string;
+                changelog?: ChangelogConfig;
+                records: typeof records;
+            }) => string | void
+        )({ cwd: repoRoot(), changelog, records });
+        if (typeof custom === 'string') summary = custom;
+    }
+
+    const plan = planVersions({
+        versioning,
+        rootVersion: current,
+        bump: type,
+        range,
+        ...(versioning.bump ? { bumpRules: versioning.bump } : {}),
+        ...(versioning.allowOverBump ? { allowOverBump: true } : {}),
+    });
     const next = plan.rootVersion;
 
     if (options.dryRun) {
@@ -174,7 +225,7 @@ export function runChangelog(
         // Write the full proposed root CHANGELOG.md (existing content + new
         // entry, or the fully reformatted changelog for `all`) to
         // CHANGELOG.proposed.md, with the new entry inserted at the top.
-        const base = reformatAll ? reformatRootChangelog(options.packageChanges) : existing;
+        const base = reformatAll ? reformatRootChangelog(options.packageChanges, groups) : existing;
         const content = insertNewEntry(base, entry);
         const proposed = resolve(root, 'CHANGELOG.proposed.md');
         writeFileSync(proposed, content, 'utf8');
@@ -190,7 +241,9 @@ export function runChangelog(
         summary,
         reformatAll,
         options.packageChanges,
-        plan.entries
+        plan.entries,
+        commitlint,
+        groups
     );
     if (versioning.enabled) {
         logger.info(`Bumped ${current} -> ${next} (${type}) from ${records.length} commit(s).`);

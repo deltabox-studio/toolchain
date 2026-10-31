@@ -17,6 +17,7 @@ import {
     mapBiomeFormatter,
     mapPrettierToOxfmt,
     mergeViteConfig,
+    mergeViteObjects,
     migrateCommands,
     readJsonc,
     renderViteTarget,
@@ -210,6 +211,58 @@ describe('registry', () => {
         expect(ids).toContain('biome-to-oxc');
         expect(ids).toContain('prettier-to-oxc');
     });
+
+    it('detects a hand-written Oxc config', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, '.oxfmtrc.json'), '{}', 'utf-8');
+        expect(detectMigrations(dir).map(m => m.id)).toContain('oxc-to-toolchain');
+    });
+});
+
+describe('oxc -> toolchain', () => {
+    it('folds .oxfmtrc.json / .oxlintrc.json into toolchain.fmt/lint.oxc', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'dbx.config.ts'),
+            "import { defineConfig } from '@deltabox/toolchain';\n\nexport default defineConfig({ toolchain: {} });\n",
+            'utf-8'
+        );
+        fs.writeFileSync(
+            path.join(dir, '.oxfmtrc.json'),
+            JSON.stringify({ $schema: './schema.json', semi: false, printWidth: 90 }),
+            'utf-8'
+        );
+        fs.writeFileSync(
+            path.join(dir, '.oxlintrc.json'),
+            JSON.stringify({ rules: { eqeqeq: 'error' }, ignorePatterns: ['dist/**'] }),
+            'utf-8'
+        );
+
+        const result = await runMigration('oxc', { cwd: dir, write: true });
+        const config = fs.readFileSync(path.join(dir, 'dbx.config.ts'), 'utf-8');
+        expect(config).toContain('fmt:');
+        expect(config).toContain('oxc:');
+        expect(config).toContain('semi: false');
+        expect(config).toContain('lint:');
+        expect(config).toContain('eqeqeq');
+        expect(config).not.toContain('$schema');
+        expect(fs.existsSync(path.join(dir, '.oxfmtrc.json'))).toBe(false);
+        expect(fs.existsSync(path.join(dir, '.oxlintrc.json'))).toBe(false);
+        expect(result.from).toBe('oxc');
+        expect(result.to).toBe('toolchain');
+    });
+
+    it('accepts several --from values in the CLI', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
+        fs.writeFileSync(path.join(dir, '.prettierrc'), JSON.stringify({ semi: false }), 'utf-8');
+        await migrateCommand().run(
+            { from: ['biome', 'prettier'], write: true, ignoreManagedFiles: true },
+            cliContext(dir)
+        );
+        expect(fs.existsSync(path.join(dir, '.oxfmtrc.json'))).toBe(true);
+        expect(fs.existsSync(path.join(dir, '.oxlintrc.json'))).toBe(true);
+    });
 });
 
 describe('produced files + --target vite', () => {
@@ -300,18 +353,42 @@ describe('vite -> toolchain', () => {
         expect(scanLiteralObject('{ x: `a${b}` }').ok).toBe(false);
     });
 
-    it('splices a `vite` key into an existing toolchain (and replaces one)', () => {
+    it('splices a `vite` key into an existing toolchain', () => {
         const base = `export default defineConfig({\n    toolchain: {\n        project: { name: 'acme' },\n    },\n});\n`;
         const folded = foldViteIntoConfig(base, '{ fmt: { semi: true } }');
         expect('content' in folded && folded.content).toContain('vite: { fmt: { semi: true } },');
         expect('content' in folded && folded.content).toContain("project: { name: 'acme' }");
+    });
 
-        const withVite = `export default defineConfig({\n    toolchain: {\n        vite: { config: false },\n    },\n});\n`;
-        const replaced = foldViteIntoConfig(withVite, '{ fmt: { semi: true } }');
-        expect('content' in replaced && replaced.content).toContain(
-            'vite: { fmt: { semi: true } }'
+    it('deep-merges object literals (arrays/scalars replaced, objects combined)', () => {
+        const merged = mergeViteObjects(
+            '{ a: 1, list: [1, 2], nested: { x: true, y: false } }',
+            '{ list: [3], nested: { y: true } }'
         );
-        expect('content' in replaced && replaced.content).not.toContain('config: false');
+        expect(merged).toContain('a: 1');
+        expect(merged).toContain('list: [3]');
+        expect(merged).toContain('x: true');
+        expect(merged).toContain('y: true');
+        expect(merged).not.toContain('y: false');
+        expect(merged).not.toContain('[1, 2]');
+    });
+
+    it('deep-merges into an existing toolchain.vite and re-enables the managed shim', () => {
+        const source = `export default defineConfig({\n    toolchain: {\n        vite: {\n            config: false,\n            fmt: { semi: false, singleQuote: true },\n            test: { environment: 'node' },\n        },\n    },\n});\n`;
+        const folded = foldViteIntoConfig(
+            source,
+            '{\n    fmt: { semi: true },\n    build: { sourcemap: true },\n}'
+        );
+        const content = 'content' in folded ? folded.content : '';
+        // Existing settings are kept, `fmt` is merged, `build` is added.
+        expect(content).toContain("environment: 'node'");
+        expect(content).toContain('singleQuote: true');
+        expect(content).toContain('semi: true');
+        expect(content).toContain('sourcemap: true');
+        // The old opt-out is flipped so `dbx sync` writes the shim again.
+        expect(content).not.toContain('config: false');
+        expect(content).toContain('config: true');
+        expect((content.match(/fmt:/g) ?? []).length).toBe(1);
     });
 
     it('adds `/vite.config.ts` to fmt.ignorePatterns', () => {
@@ -390,6 +467,29 @@ describe('vite -> toolchain', () => {
         expect(result.unmapped?.length).toBe(1);
         expect(fs.readFileSync(path.join(dir, 'dbx.config.ts'), 'utf-8')).toBe(dbx);
     });
+
+    it('skips a dbx-generated vite.config.ts shim', async () => {
+        const dir = makeTmp();
+        const dbx = `import { defineConfig } from '@deltabox/toolchain';\n\nexport default defineConfig({ toolchain: {} });\n`;
+        const shim = [
+            '// Generated by @deltabox/toolchain — edit the vite section in dbx.config and run `dbx sync`.',
+            "import { resolveVite } from '@deltabox/toolchain/vite';",
+            "import { defineConfig, type ViteUserConfig } from 'vite-plus';",
+            '',
+            'export default defineConfig(resolveVite<ViteUserConfig>({ cwd: import.meta.dirname }));',
+            '',
+        ].join('\n');
+        fs.writeFileSync(path.join(dir, 'dbx.config.ts'), dbx, 'utf-8');
+        fs.writeFileSync(path.join(dir, 'vite.config.ts'), shim, 'utf-8');
+
+        // Not detected as a hand-written config, and `run` leaves it alone.
+        expect(detectMigrations(dir).map(m => m.id)).not.toContain('vite-to-toolchain');
+        const result = await runMigration('vite', { cwd: dir, write: true });
+        expect(result.written).toEqual([]);
+        expect(result.removed ?? []).toEqual([]);
+        expect(fs.existsSync(path.join(dir, 'vite.config.ts'))).toBe(true);
+        expect(fs.readFileSync(path.join(dir, 'dbx.config.ts'), 'utf-8')).toBe(dbx);
+    });
 });
 
 /** A spy sync task that records the dirs it ran in. */
@@ -414,6 +514,11 @@ function migrateCommand() {
 }
 
 describe('migrate CLI post-migration sync', () => {
+    it('accepts repeated --from values', () => {
+        const from = migrateCommand().options?.find(option => option.flags.includes('--from'));
+        expect(from?.multiple).toBe(true);
+    });
+
     it('regenerates managed files after --write', async () => {
         const dir = makeTmp();
         fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');

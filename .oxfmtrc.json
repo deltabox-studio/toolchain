@@ -1,0 +1,84 @@
+{
+    "$schema": "./node_modules/oxfmt/configuration_schema.json",
+    "useTabs": false,
+    "tabWidth": 4,
+    "printWidth": 100,
+    "endOfLine": "lf",
+    "insertFinalNewline": true,
+    "singleQuote": true,
+    "jsxSingleQuote": false,
+    "quoteProps": "as-needed",
+    "trailingComma": "es5",
+    "semi": true,
+    "arrowParens": "avoid",
+    "bracketSpacing": true,
+    "bracketSameLine": false,
+    "singleAttributePerLine": false,
+    "objectWrap": "preserve",
+    "proseWrap": "preserve",
+    "embeddedLanguageFormatting": "auto",
+    "htmlWhitespaceSensitivity": "css",
+    "vueIndentScriptAndStyle": false,
+    "sortPackageJson": false,
+    "ignorePatterns": [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/.turbo/**",
+        "**/.generated/**",
+        "*.json",
+        "packages/*/*.json",
+        "**/tsconfig*.json",
+        "biome.json",
+        "**/*.yml",
+        "**/*.yaml",
+        "**/CHANGELOG.md",
+        "CHANGELOG.proposed.md",
+        "**/vite.config.ts"
+    ],
+    "sortImports": {
+        "groups": [
+            "builtin",
+            "external",
+            [
+                "custom0",
+                "internal"
+            ],
+            [
+                "custom1",
+                "custom2"
+            ],
+            [
+                "parent",
+                "sibling",
+                "index"
+            ]
+        ],
+        "internalPattern": [
+            "~/",
+            "@/"
+        ],
+        "newlinesBetween": true,
+        "sortPackageJson": false,
+        "customGroups": [
+            {
+                "groupName": "custom0",
+                "elementNamePattern": [
+                    "deltabox",
+                    "@deltabox/**"
+                ]
+            },
+            {
+                "groupName": "custom1",
+                "elementNamePattern": [
+                    "lucide*"
+                ]
+            },
+            {
+                "groupName": "custom2",
+                "elementNamePattern": [
+                    "iconify*"
+                ]
+            }
+        ]
+    }
+}

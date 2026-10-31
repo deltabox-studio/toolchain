@@ -63,6 +63,22 @@ describe('versioning plans', () => {
         rmSync(root, { recursive: true, force: true });
     });
 
+    it('reads Bun object-form workspaces', () => {
+        writeFileSync(
+            join(root, 'package.json'),
+            JSON.stringify({
+                name: 'root',
+                version: '1.0.0',
+                workspaces: { packages: ['packages/*'], catalog: { react: '^19.0.0' } },
+            })
+        );
+        const packages = discoverVersionPackages(undefined, root);
+        expect(packages.workspaces.sort()).toEqual([
+            join(root, 'packages', 'a'),
+            join(root, 'packages', 'b'),
+        ]);
+    });
+
     it('uniform bumps the root and every workspace to one version', () => {
         const plan = planVersions({
             versioning: { enabled: true, target: 'uniform' },

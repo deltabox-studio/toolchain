@@ -7,6 +7,10 @@ import { baseTsdownConfig } from './packages/tsdown/src/config/node.js';
 /** Resolve a repo-relative path to an absolute one (rolldown needs absolutes). */
 const src = (p: string): string => fileURLToPath(new URL(p, import.meta.url));
 
+/** The base config's never-bundle list (`true` means "all dependencies"). */
+const baseNeverBundle = baseTsdownConfig.deps?.neverBundle;
+const neverBundle = [...(Array.isArray(baseNeverBundle) ? baseNeverBundle : []), /^tsx(\/|$)/];
+
 /**
  * `@deltabox/toolchain` is the single published package; the `packages/*`
  * workspaces are private and inlined here. Each workspace is aliased to its
@@ -19,6 +23,7 @@ export default defineConfig({
     unbundle: true,
     entry: {
         index: 'src/index.ts',
+        globals: 'src/globals.ts',
         'cli/index': 'src/cli/index.ts',
         shared: 'src/shared.ts',
         config: 'src/config.ts',
@@ -61,7 +66,7 @@ export default defineConfig({
         // Keep the optional `tsx` loader external: bundling a bare specifier
         // bakes the *build machine's* absolute path into `dist`, which breaks the
         // config loader's transpile fallback everywhere else.
-        neverBundle: [...(baseTsdownConfig.deps?.neverBundle ?? []), /^tsx(\/|$)/],
+        neverBundle,
     },
     // Keep the published CLI command name stable (`dbx`) instead of
     // deriving it from the package name.

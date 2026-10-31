@@ -4,7 +4,7 @@ layout: home
 hero:
     name: deltabox toolchain
     text: One toolchain for the whole repo
-    tagline: Scaffold projects, generate configs, manage tsconfigs, changelogs and CI, and run Vite+
+    tagline: Scaffold projects, generate configs, manage templates, tsconfigs, changelogs & CI, and run Vite+
     image:
         src: /logo/logo.svg
         alt: deltabox toolchain
@@ -43,7 +43,7 @@ features:
       details: Offline (builtin + local template.json dirs) and online (npm/git) templates.
     - icon: 🚚
       title: Migrations
-      details: Migrate Biome, Prettier, ESLint or Dprint onto Oxc (Oxfmt/Oxlint).
+      details: Migrate Biome, Prettier, ESLint, Dprint or Oxc configs into dbx.config (or onto Oxc).
     - icon: 💻
       title: Editor first
       details: A VS Code extension to sync, scaffold, run workflows, run commands and pick templates.

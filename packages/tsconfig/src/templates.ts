@@ -12,9 +12,33 @@ export const tsconfigBuildTemplate: Record<string, unknown> = buildTemplate;
 /** The default replacement values for the tsconfig templates. */
 export const DEFAULT_TSCONFIG_REPLACEMENTS: Replacements = { envTypesFile: 'src/env.d.ts' };
 
-export function renderTsconfigBase(replacements: Replacements = {}): string {
+/** The `extends` value to write into one generated template. */
+export type TsconfigExtends = string | string[] | false;
+
+/** Per-template `extends` overrides for {@link renderTsconfigTemplates}. */
+export interface TsconfigExtendsOptions {
+    base?: TsconfigExtends;
+    default?: TsconfigExtends;
+    build?: TsconfigExtends;
+}
+
+function withExtends(
+    template: Record<string, unknown>,
+    extendsValue: TsconfigExtends | undefined
+): Record<string, unknown> {
+    if (extendsValue === undefined) return template;
+    const next = { ...template };
+    if (extendsValue === false) delete next.extends;
+    else next.extends = extendsValue;
+    return next;
+}
+
+export function renderTsconfigBase(
+    replacements: Replacements = {},
+    extendsValue?: TsconfigExtends
+): string {
     return `${JSON.stringify(
-        applyReplacementsDeep(tsconfigBaseTemplate, {
+        applyReplacementsDeep(withExtends(tsconfigBaseTemplate, extendsValue), {
             ...DEFAULT_TSCONFIG_REPLACEMENTS,
             ...replacements,
         }),
@@ -23,9 +47,12 @@ export function renderTsconfigBase(replacements: Replacements = {}): string {
     )}\n`;
 }
 
-export function renderTsconfigDefault(replacements: Replacements = {}): string {
+export function renderTsconfigDefault(
+    replacements: Replacements = {},
+    extendsValue?: TsconfigExtends
+): string {
     return `${JSON.stringify(
-        applyReplacementsDeep(tsconfigDefaultTemplate, {
+        applyReplacementsDeep(withExtends(tsconfigDefaultTemplate, extendsValue), {
             ...DEFAULT_TSCONFIG_REPLACEMENTS,
             ...replacements,
         }),
@@ -34,9 +61,12 @@ export function renderTsconfigDefault(replacements: Replacements = {}): string {
     )}\n`;
 }
 
-export function renderTsconfigBuild(replacements: Replacements = {}): string {
+export function renderTsconfigBuild(
+    replacements: Replacements = {},
+    extendsValue?: TsconfigExtends
+): string {
     return `${JSON.stringify(
-        applyReplacementsDeep(tsconfigBuildTemplate, {
+        applyReplacementsDeep(withExtends(tsconfigBuildTemplate, extendsValue), {
             ...DEFAULT_TSCONFIG_REPLACEMENTS,
             ...replacements,
         }),
@@ -94,10 +124,13 @@ export function renderMonorepoTsconfig(options: MonorepoTsconfigOptions): string
 }
 
 /** Render every tsconfig template, keyed by file name. */
-export function renderTsconfigTemplates(replacements: Replacements = {}): Record<string, string> {
+export function renderTsconfigTemplates(
+    replacements: Replacements = {},
+    extendsOptions: TsconfigExtendsOptions = {}
+): Record<string, string> {
     return {
-        'tsconfig.base.json': renderTsconfigBase(replacements),
-        'tsconfig.default.json': renderTsconfigDefault(replacements),
-        'tsconfig.build.json': renderTsconfigBuild(replacements),
+        'tsconfig.base.json': renderTsconfigBase(replacements, extendsOptions.base),
+        'tsconfig.default.json': renderTsconfigDefault(replacements, extendsOptions.default),
+        'tsconfig.build.json': renderTsconfigBuild(replacements, extendsOptions.build),
     };
 }

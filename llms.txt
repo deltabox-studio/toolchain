@@ -12,7 +12,7 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - **Sync.** `dbx sync` runs each enabled section and writes the managed files, tracked in `.dbx/toolchain/manifest.json` (the last-sync time lives in the gitignored `.dbx/toolchain/timestamps.json`); `dbx sync --check` is the CI gate. `dbx sync --recursive` syncs every discovered project in dependency order.
 - **Nested configs.** A non-root `dbx.config.*` merges over the nearest ancestor config: objects merge, while scalars and arrays replace; `project.type` and `hooks` are never inherited.
 - **Project graph.** `dbx projects` writes `.dbx/toolchain/projects.json` (workspace dirs + dependencies), used by `sync --recursive`, the VS Code view and per-workspace changelogs.
-- **Sections.** `project`, `changelog`, `biome`, `tsconfig`, `templates`, `vite`, `watch`, `logger`, `providers`.
+- **Sections.** `project`, `ci` (workflows + changelog), `fmt`, `lint`, `biome`, `tsconfig`, `templates`, `vite`, `watch`, `logger`, `providers`; every workflow under `ci` is opt-in.
 - **Runtime.** Node ≥ 22.5 and Yarn 4 (corepack); Vite+ (`vp`) resolves at the repo root.
 
 ## Table of Contents
@@ -24,13 +24,25 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [VS Code Extension](https://toolchain.deltabox.studio/guide/vscode.md)
 - [LLMs](https://toolchain.deltabox.studio/llms.md)
 
+### CI
+
+- [CI](https://toolchain.deltabox.studio/guide/ci.md)
+- [Workflow settings](https://toolchain.deltabox.studio/guide/ci/settings.md)
+- [CI checks](https://toolchain.deltabox.studio/guide/ci/ci.md)
+- [Changelog workflow](https://toolchain.deltabox.studio/guide/ci/changelog.md)
+- [Issues](https://toolchain.deltabox.studio/guide/ci/issues.md)
+- [Sync](https://toolchain.deltabox.studio/guide/ci/sync.md)
+- [Releases](https://toolchain.deltabox.studio/guide/ci/releases.md)
+
 ### Toolchain
 
 - [CLI](https://toolchain.deltabox.studio/guide/cli.md)
 - [Configuration](https://toolchain.deltabox.studio/guide/config.md)
+- [TypeScript](https://toolchain.deltabox.studio/guide/typescript.md)
 - [Project](https://toolchain.deltabox.studio/guide/project.md)
-- [Changelog & versioning](https://toolchain.deltabox.studio/guide/changelog.md)
+- [Changelog](https://toolchain.deltabox.studio/guide/changelog.md)
 - [tsconfig](https://toolchain.deltabox.studio/guide/tsconfig.md)
+- [Formatting & linting](https://toolchain.deltabox.studio/guide/formatting.md)
 - [Biome](https://toolchain.deltabox.studio/guide/biome.md)
 - [Vite+](https://toolchain.deltabox.studio/guide/vite.md)
 - [Watch](https://toolchain.deltabox.studio/guide/watch.md)
@@ -40,9 +52,43 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [Package scripts](https://toolchain.deltabox.studio/guide/scripts.md)
 - [Templates](https://toolchain.deltabox.studio/guide/templates.md)
 - [Migrations](https://toolchain.deltabox.studio/guide/migrations.md)
+- [Migrating from v1 to v2](https://toolchain.deltabox.studio/guide/migration-v1-v2.md)
 - [Programmatic API](https://toolchain.deltabox.studio/guide/api.md)
 
 ### Reference
 
+- [Config types](https://toolchain.deltabox.studio/config.md)
 - [dbx.config](https://toolchain.deltabox.studio/config/reference.md)
+- [CLI reference](https://toolchain.deltabox.studio/config/cli.md)
+- [Environment variables](https://toolchain.deltabox.studio/config/env.md)
 
+### Other
+
+- [`defineConfig`](https://toolchain.deltabox.studio/guide/config/defineconfig.md)
+- [Branches](https://toolchain.deltabox.studio/guide/changelog/branches.md)
+- [CLI](https://toolchain.deltabox.studio/guide/changelog/cli.md)
+- [CLI commands](https://toolchain.deltabox.studio/guide/config-generator/cli-commands.md)
+- [commitlint](https://toolchain.deltabox.studio/guide/changelog/commitlint.md)
+- [Config file names](https://toolchain.deltabox.studio/guide/config/config-file-names.md)
+- [Create the engine](https://toolchain.deltabox.studio/guide/config-generator/create-the-engine.md)
+- [Describe a scope](https://toolchain.deltabox.studio/guide/config-generator/describe-a-scope.md)
+- [Examples](https://toolchain.deltabox.studio/guide/api/examples.md)
+- [Generate](https://toolchain.deltabox.studio/guide/config-generator/generate.md)
+- [Generated outputs](https://toolchain.deltabox.studio/guide/config-generator/generated-outputs.md)
+- [Hooks](https://toolchain.deltabox.studio/guide/config/hooks.md)
+- [Load the config at runtime](https://toolchain.deltabox.studio/guide/config-generator/load-the-config.md)
+- [Logging](https://toolchain.deltabox.studio/guide/api/logging.md)
+- [Logging](https://toolchain.deltabox.studio/guide/config/logging.md)
+- [Nested configs](https://toolchain.deltabox.studio/guide/config/nested-configs.md)
+- [Opt-in by presence](https://toolchain.deltabox.studio/guide/config/opt-in-by-presence.md)
+- [Package reference](https://toolchain.deltabox.studio/guide/api/package-reference.md)
+- [Programmatic API](https://toolchain.deltabox.studio/guide/config/programmatic-api.md)
+- [Providers](https://toolchain.deltabox.studio/guide/config/providers.md)
+- [Real-world shape](https://toolchain.deltabox.studio/guide/config-generator/real-world-shape.md)
+- [Registering commands](https://toolchain.deltabox.studio/guide/api/registering-commands.md)
+- [Subpath exports](https://toolchain.deltabox.studio/guide/api/subpath-exports.md)
+- [Troubleshooting](https://toolchain.deltabox.studio/guide/changelog/troubleshooting.md)
+- [Umbrella (`@deltabox/toolchain`)](https://toolchain.deltabox.studio/guide/api/umbrella.md)
+- [Versioning](https://toolchain.deltabox.studio/guide/changelog/versioning.md)
+- [Vite+](https://toolchain.deltabox.studio/guide/config/vite.md)
+- [Writing commit messages](https://toolchain.deltabox.studio/guide/changelog/writing-commit-messages.md)

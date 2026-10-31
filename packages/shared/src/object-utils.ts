@@ -49,3 +49,24 @@ export function mapValues<V, R>(
         R
     >;
 }
+
+/**
+ * Layer typed overrides over a base object (shallow per level, objects merge
+ * recursively). Later overrides win; `undefined` leaves the base value alone.
+ */
+export function applyOverrides<T extends object>(base: T, ...overrides: Partial<T>[]): T {
+    if (overrides.length === 0) return base;
+    const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
+    for (const override of overrides) {
+        if (!override) continue;
+        for (const [key, value] of Object.entries(override)) {
+            if (value === undefined) continue;
+            const current = out[key];
+            out[key] =
+                isPlainObject(current) && isPlainObject(value)
+                    ? applyOverrides(current, value)
+                    : value;
+        }
+    }
+    return out as T;
+}

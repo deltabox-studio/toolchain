@@ -4,10 +4,13 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import {
+    DEFAULT_WORKFLOW_DIR,
     DEFAULT_WORKFLOW_TOKENS,
+    renderCustomWorkflow,
     renderWorkflow,
     renderWorkflows,
     WORKFLOW_FILENAMES,
+    workflowFilePath,
     type WorkflowId,
 } from '../src/workflows.js';
 
@@ -106,6 +109,47 @@ describe('workflow config', () => {
         ).toBeUndefined();
     });
 
+    it('uses the overridden package manager version and legacy yarnVersion', () => {
+        const pnpm = renderWorkflow('ci', {
+            tokens: {
+                packageManager: 'yarn',
+                packageManagerVersion: '4.17.1',
+                yarnVersion: '4.17.1',
+            },
+            config: { tokens: { packageManager: 'pnpm' } },
+        })!;
+        expect(pnpm).toContain('corepack prepare pnpm@10.11.1 --activate');
+        expect(pnpm).toContain('pnpm install --frozen-lockfile');
+
+        const legacy = renderWorkflow('ci', {
+            tokens: {},
+            config: { tokens: { yarnVersion: '4.0.0' } },
+        })!;
+        expect(legacy).toContain('corepack prepare yarn@4.0.0 --activate');
+    });
+
+    it('sets up pnpm, npm and bun installs', () => {
+        const pnpm = renderWorkflow('ci', {
+            tokens: { packageManager: 'pnpm', packageManagerVersion: '10.11.1' },
+        })!;
+        expect(pnpm).toContain('pnpm install --frozen-lockfile');
+        expect(pnpm).toContain('pnpm exec dbx');
+
+        const npm = renderWorkflow('ci', {
+            tokens: { packageManager: 'npm', packageManagerVersion: '11.19.0' },
+        })!;
+        expect(npm).toContain('npm install -g npm@11.19.0');
+        expect(npm).toContain('npm ci');
+        expect(npm).toContain('npx dbx');
+
+        const bun = renderWorkflow('ci', {
+            tokens: { packageManager: 'bun', packageManagerVersion: '1.3.0' },
+        })!;
+        expect(bun).toContain('oven-sh/setup-bun@v2');
+        expect(bun).toContain('bun install --frozen-lockfile');
+        expect(bun).toContain('bunx dbx');
+    });
+
     it('renderWorkflows omits disabled workflows', () => {
         const files = renderWorkflows({}, { issues: false, ci: { pushBranches: ['main'] } });
         expect(files['ci.yml']).toBeDefined();
@@ -115,7 +159,7 @@ describe('workflow config', () => {
     it('writes a raw string workflow verbatim (no default merge)', () => {
         const raw =
             'name: Custom CI\non: [push]\njobs:\n  ci:\n    runs-on: ubuntu-latest\n    steps: []\n';
-        const files = renderWorkflows({}, { ci: raw, issues: false });
+        const files = renderWorkflows({}, { ci: raw, issues: false, sync: true });
         expect(files['ci.yml']).toBe(raw);
         expect(files['issues.yml']).toBeUndefined();
         // A non-string setting still renders from the default.
@@ -124,5 +168,74 @@ describe('workflow config', () => {
 
     it('treats an empty raw string as disabled', () => {
         expect(renderWorkflows({}, { ci: '' })['ci.yml']).toBeUndefined();
+    });
+
+    it('only renders the workflows that are opted in', () => {
+        expect(renderWorkflows({}, {})).toEqual({});
+        expect(Object.keys(renderWorkflows({}, { ci: true }))).toEqual(['ci.yml']);
+    });
+
+    it('builds a custom workflow from its settings', () => {
+        const yaml = renderCustomWorkflow('deploy', {
+            tokens: {},
+            config: {
+                triggers: { workflow_dispatch: {} },
+                extra: { name: 'Deploy' },
+                jobs: {
+                    deploy: { 'runs-on': 'ubuntu-latest', steps: [{ run: 'echo deploy' }] },
+                },
+            },
+        });
+        expect(yaml).toContain('name: Deploy');
+        expect(yaml).toContain('workflow_dispatch:');
+        expect(yaml).toContain('deploy:');
+        expect(yaml).toContain('echo deploy');
+    });
+
+    it('resolves workflow file paths with filename/dir overrides', () => {
+        expect(workflowFilePath('ci', true, 'ci.yml')).toBe(`${DEFAULT_WORKFLOW_DIR}/ci.yml`);
+        expect(
+            workflowFilePath('ci', { filename: 'checks.yaml', dir: '.github/custom' }, 'ci.yml')
+        ).toBe('.github/custom/checks.yaml');
+        expect(workflowFilePath('my-workflow', undefined)).toBe(
+            `${DEFAULT_WORKFLOW_DIR}/my-workflow.yml`
+        );
+    });
+
+    it('rejects unsafe workflow paths', () => {
+        expect(() => workflowFilePath('ci', { filename: '../ci.yml' })).toThrow(
+            'invalid workflow filename'
+        );
+        expect(() => workflowFilePath('ci', { dir: '../outside' })).toThrow(
+            'invalid workflow directory'
+        );
+    });
+
+    it('renders custom workflows and filename/dir overrides in renderWorkflows', () => {
+        const files = renderWorkflows(
+            {},
+            { ci: { filename: 'checks.yaml', dir: '.github/custom' } },
+            {
+                custom: {
+                    deploy: {
+                        triggers: { workflow_dispatch: {} },
+                        jobs: {
+                            deploy: {
+                                'runs-on': 'ubuntu-latest',
+                                steps: [{ run: 'echo deploy' }],
+                            },
+                        },
+                    },
+                },
+            }
+        );
+        expect(Object.keys(files).sort()).toEqual(['checks.yaml', 'deploy.yml']);
+        expect(files['deploy.yml']).toContain('echo deploy');
+    });
+
+    it('rejects a custom workflow without triggers or jobs', () => {
+        expect(() => renderCustomWorkflow('deploy', { tokens: {}, config: {} })).toThrow(
+            'must define at least one trigger and one job'
+        );
     });
 });

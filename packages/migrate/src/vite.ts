@@ -91,6 +91,126 @@ function indentBlock(text: string, indent: string): string {
         .join('\n');
 }
 
+/** Remove `indent` from the start of every line after the first (inverse of {@link indentBlock}). */
+function dedentBlock(text: string, indent: string): string {
+    if (!indent) return text;
+    return text
+        .split('\n')
+        .map((line, index) =>
+            index > 0 && line.startsWith(indent) ? line.slice(indent.length) : line
+        )
+        .join('\n');
+}
+
+/** The top-level keys of an object literal (bare identifiers only). */
+function topLevelKeys(source: string, open: number, close: number): string[] {
+    const keys: string[] = [];
+    let depth = 1;
+    for (let i = open + 1; i < close; i++) {
+        const skipped = skipTrivia(source, i);
+        if (skipped !== i) {
+            i = skipped - 1;
+            continue;
+        }
+        const ch = source[i] as string;
+        if (ch === '{' || ch === '[') {
+            depth++;
+            continue;
+        }
+        if (ch === '}' || ch === ']') {
+            depth--;
+            continue;
+        }
+        if (depth === 1 && /[A-Za-z_$]/.test(ch)) {
+            let end = i;
+            while (end < close && /[\w$]/.test(source[end] as string)) end++;
+            let colon = end;
+            while (colon < close && /\s/.test(source[colon] as string)) colon++;
+            if (colon < close && source[colon] === ':') keys.push(source.slice(i, end));
+            i = end - 1;
+        }
+    }
+    return keys;
+}
+
+/** Append `key: value,` entries before an object literal's closing brace. */
+function appendEntries(objectText: string, entries: { key: string; value: string }[]): string {
+    const open = objectText.indexOf('{');
+    const close = open === -1 ? -1 : matchBracket(objectText, open);
+    if (open === -1 || close === -1) return objectText;
+    const closeBrace = close - 1;
+    const before = objectText.slice(0, closeBrace);
+    const after = objectText.slice(closeBrace);
+    const trimmed = before.replace(/\s+$/, '');
+    const closingIndent = lineIndentAt(objectText, closeBrace);
+    const firstKey = topLevelKeys(objectText, open, close)[0];
+    const firstValue =
+        firstKey !== undefined ? findTopLevelValue(objectText, open, close, firstKey) : undefined;
+    const multiline = before.includes('\n');
+    const indent =
+        multiline && firstValue ? lineIndentAt(objectText, firstValue[0]) : `${closingIndent}    `;
+    const comma = trimmed.endsWith('{') || trimmed.endsWith(',') ? '' : ',';
+    const body = entries.map(({ key, value }) => `\n${indent}${key}: ${value},`).join('');
+    return `${trimmed}${comma}${body}\n${closingIndent}${after}`;
+}
+
+/**
+ * Deep-merge two object-literal texts: nested objects are merged recursively and
+ * every other value (arrays included) from `incoming` replaces the base's.
+ *
+ * Used when folding a hand-written `vite.config.*` into an existing
+ * `toolchain.vite`, so the settings already there are kept instead of replaced.
+ */
+export function mergeViteObjects(base: string, incoming: string): string {
+    const baseOpen = base.indexOf('{');
+    const incomingOpen = incoming.indexOf('{');
+    const baseClose = baseOpen === -1 ? -1 : matchBracket(base, baseOpen);
+    const incomingClose = incomingOpen === -1 ? -1 : matchBracket(incoming, incomingOpen);
+    if (baseOpen === -1 || baseClose === -1 || incomingOpen === -1 || incomingClose === -1)
+        return incoming;
+
+    const replacements: { start: number; end: number; text: string }[] = [];
+    const added: { key: string; value: string }[] = [];
+
+    for (const key of topLevelKeys(incoming, incomingOpen, incomingClose)) {
+        const incomingValue = findTopLevelValue(incoming, incomingOpen, incomingClose, key);
+        if (!incomingValue) continue;
+        const valueText = incoming.slice(incomingValue[0], incomingValue[1]);
+        const baseValue = findTopLevelValue(base, baseOpen, baseClose, key);
+        if (baseValue) {
+            const baseText = base.slice(baseValue[0], baseValue[1]);
+            const merged =
+                baseText.trimStart().startsWith('{') && valueText.trimStart().startsWith('{')
+                    ? mergeViteObjects(baseText, valueText)
+                    : valueText;
+            replacements.push({ start: baseValue[0], end: baseValue[1], text: merged });
+        } else {
+            added.push({ key, value: valueText });
+        }
+    }
+
+    let out = base;
+    for (const replacement of replacements.sort((a, b) => b.start - a.start)) {
+        out = `${out.slice(0, replacement.start)}${replacement.text}${out.slice(replacement.end)}`;
+    }
+    return added.length > 0 ? appendEntries(out, added) : out;
+}
+
+/**
+ * Force `config: true` in a folded `toolchain.vite` object. An existing
+ * `config: false` means "leave my hand-written vite.config alone", but the
+ * migration removes that file, so the shim must be managed again.
+ */
+function enableViteConfig(objectText: string): string {
+    const open = objectText.indexOf('{');
+    const close = open === -1 ? -1 : matchBracket(objectText, open);
+    if (open === -1 || close === -1) return objectText;
+    const range = findTopLevelValue(objectText, open, close, 'config');
+    if (!range) return objectText;
+    if (objectText.slice(range[0], range[1]).trim() !== 'false') return objectText;
+    return `${objectText.slice(0, range[0])}true${objectText.slice(range[1])}`;
+}
+
 /** The `{ ... }` range of the config root (its `defineConfig(...)` argument). */
 function findRootObject(source: string): [number, number] | undefined {
     const call = source.match(/\bdefineConfig\s*\(/);
@@ -169,9 +289,9 @@ export function scanLiteralObject(text: string): { ok: true } | { ok: false; rea
 
 /**
  * Fold `objectText` into the `toolchain.vite` of a `dbx.config.*` source by
- * text-splicing (inserting or replacing the `vite` value), never rewriting the
- * whole file. Returns the new source, or an error when the `toolchain` object
- * cannot be located.
+ * text-splicing (inserting the `vite` key, or deep-merging into an existing
+ * object), never rewriting the whole file. Returns the new source, or an error
+ * when the `toolchain` object cannot be located.
  */
 export function foldViteIntoConfig(
     source: string,
@@ -192,7 +312,14 @@ export function foldViteIntoConfig(
     if (vite) {
         const [valueStart, valueEnd] = vite;
         const indent = lineIndentAt(source, valueStart);
-        const text = indentBlock(objectText, indent);
+        // Deep-merge into an existing object literal (keeping its settings);
+        // anything else is replaced by the folded object.
+        const existing = dedentBlock(source.slice(valueStart, valueEnd), indent);
+        const merged =
+            existing.trimStart().startsWith('{') && objectText.trimStart().startsWith('{')
+                ? mergeViteObjects(existing, objectText)
+                : objectText;
+        const text = indentBlock(enableViteConfig(merged), indent);
         return { content: `${source.slice(0, valueStart)}${text}${source.slice(valueEnd)}` };
     }
 
@@ -205,12 +332,72 @@ export function foldViteIntoConfig(
     };
 }
 
+/**
+ * Fold an object literal into a top-level `toolchain.<section>` (or deep-merge
+ * into the existing object), without the Vite-specific `config: true` rewrite.
+ */
+export function foldToolchainSection(
+    source: string,
+    section: string,
+    objectText: string
+): { content: string } | { error: string } {
+    const root = findRootObject(source);
+    if (!root) return { error: 'could not locate the config root object' };
+    const [rootOpen, rootClose] = root;
+    const toolchain = findTopLevelValue(source, rootOpen, rootClose, 'toolchain');
+    if (!toolchain) {
+        return { error: `the config has no \`toolchain\` object to add \`${section}\` to` };
+    }
+    const [toolchainStart, toolchainEnd] = toolchain;
+    const existing = findTopLevelValue(source, toolchainStart, toolchainEnd, section);
+    if (existing) {
+        const [valueStart, valueEnd] = existing;
+        const indent = lineIndentAt(source, valueStart);
+        const current = dedentBlock(source.slice(valueStart, valueEnd), indent);
+        const merged =
+            current.trimStart().startsWith('{') && objectText.trimStart().startsWith('{')
+                ? mergeViteObjects(current, objectText)
+                : objectText;
+        return {
+            content: `${source.slice(0, valueStart)}${indentBlock(merged, indent)}${source.slice(valueEnd)}`,
+        };
+    }
+    const indent = `${lineIndentAt(source, toolchainStart)}    `;
+    return {
+        content: `${source.slice(0, toolchainStart + 1)}\n${indent}${section}: ${indentBlock(
+            objectText,
+            indent
+        )},${source.slice(toolchainStart + 1)}`,
+    };
+}
+
+/** Render a fresh `dbx.config.ts` with one or more folded toolchain sections. */
+export function renderFreshSectionsConfig(sections: { key: string; objectText: string }[]): string {
+    const body = sections
+        .map(({ key, objectText }) => `        ${key}: ${indentBlock(objectText, '        ')},`)
+        .join('\n');
+    return [
+        "import { defineConfig } from '@deltabox/toolchain';",
+        '',
+        'export default defineConfig({',
+        '    toolchain: {',
+        body,
+        '    },',
+        '});',
+        '',
+    ].join('\n');
+}
+
 /** The root file the generated shim lives in; excluded from Oxfmt via `fmt`. */
 const VITE_CONFIG_IGNORE = '/vite.config.ts';
 
 /** Whether `source` is the managed `vite.config.ts` shim (already migrated). */
 function isManagedShim(source: string): boolean {
-    return source.includes('resolveVite(') && source.includes('@deltabox/toolchain/vite');
+    // The shim calls `resolveVite(...)` (possibly with a generic type argument).
+    return (
+        /resolveVite\s*(?:<[^>]*>)?\s*\(/.test(source) &&
+        source.includes('@deltabox/toolchain/vite')
+    );
 }
 
 /**

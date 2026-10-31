@@ -36,15 +36,27 @@ dbx watch
 ```
 
 `dbx watch` runs one sync, then watches the config file plus every task's
-`watch` globs and re-runs on change. Writes made by the sync itself must not
-re-trigger a run, so a short quiet window follows each sync.
+`watch` globs and re-runs on change. A config change reloads the config (and
+rebuilds the watched inputs) before re-syncing. Writes made by the sync itself
+must not re-trigger a run, so a short quiet window follows each sync.
 
 Only **input** files are watched (eg. `dbx.config.*`, `tsconfig.default.json`,
 `tsconfig.workspaces.json`), never the generated outputs — so a sync can never
 loop on its own writes.
 
+Custom tsconfig names (`tsconfig.rootFile`, `tsconfig.defaultFile`) are watched
+instead of the defaults. `dbx watch --list` prints the resolved inputs without
+watching (`--json` adds the tsconfig file names; the VS Code extension reads it):
+
+```sh
+dbx watch --list --json
+# { "globs": ["**/dbx.config.*", "tsconfig.workspaces.json", "**/tsconfig.default.json"],
+#   "tsconfig": { "baseFile": "tsconfig.base.json", ... } }
+```
+
 `dbx watch --force` runs even when there is no `dbx.config.*`, and
-`watch: { enabled: false }` disables it (so a plain `dbx watch` warns and exits).
+`watch: false` / `watch: { enabled: false }` disables it (so a plain
+`dbx watch` warns and exits).
 
 ## VS Code
 

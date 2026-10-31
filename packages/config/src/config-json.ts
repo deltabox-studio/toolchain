@@ -3,8 +3,8 @@
  * tooling to list every available configuration variable.
  */
 
-import { type CollectEnvVarsOptions, collectEnvVars } from './collect.js';
-import type { ConfigScopes } from './types.js';
+import { type CollectVarsOptions, collectVars } from './collect.js';
+import type { ConfigSchema } from './types.js';
 
 /** A serialized env var entry in `config.json`. */
 export interface ConfigJsonEntry {
@@ -31,22 +31,24 @@ export interface BuildConfigJsonOptions {
     /** Override the `$comment` banner. */
     comment?: string;
     /** Custom env-name -> dotted-path derivation. */
-    envPathOf?: CollectEnvVarsOptions['envPathOf'];
+    envPathOf?: CollectVarsOptions['envPathOf'];
 }
 
 /** Build the config metadata JSON document. */
 export function buildConfigJson(
-    scopes: ConfigScopes,
+    schema: ConfigSchema,
     options: BuildConfigJsonOptions = {}
 ): ConfigJsonDoc {
-    const vars = collectEnvVars(scopes, options.envPrefix, { envPathOf: options.envPathOf });
+    const vars = collectVars(schema, options.envPrefix, { envPathOf: options.envPathOf }).filter(
+        def => def.name
+    );
     return {
         $comment:
             options.comment ??
             'Generated from the config engine — edit the config schemas instead.',
         version: 1,
         env: vars.map(def => ({
-            name: def.name,
+            name: def.name ?? '',
             path: def.path,
             scope: def.scope,
             ...(def.description ? { description: def.description } : {}),

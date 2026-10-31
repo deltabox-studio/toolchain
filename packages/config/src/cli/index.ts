@@ -111,7 +111,7 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
                     out as string | undefined,
                     d.docsDir ?? path.join(engine.root, 'docs/reference/configuration')
                 );
-                const written = engine.writeMarkdown({ outDir });
+                const written = engine.writeMarkdown({ outputDir: outDir });
                 for (const file of written)
                     logger.info(`Generated ${path.relative(process.cwd(), file)}`);
             },
@@ -141,7 +141,7 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
                     ...engine.writeConfigTypes({ outputDir: path.join(base, 'types') }),
                     ...engine.writeEnvTypes({ outputDir: path.join(base, 'types') }),
                     ...engine.writeMarkdown({
-                        outDir: path.join(base, 'docs/reference/configuration'),
+                        outputDir: path.join(base, 'docs/reference/configuration'),
                     })
                 );
                 written.push(

@@ -9,6 +9,7 @@ import type { SyncTask } from '@deltabox/toolchain-shared';
 import { readManifest } from '../src/manifest.js';
 import { runSync } from '../src/sync.js';
 import { vscodeSyncTask } from '../src/vscode.js';
+import { resolveWatchGlobs } from '../src/watch.js';
 
 function tmp(): string {
     return fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-sync-'));
@@ -42,6 +43,29 @@ describe('runSync', () => {
         });
         expect(result.removed).toEqual(['a.txt']);
         expect(fs.existsSync(path.join(cwd, 'a.txt'))).toBe(false);
+    });
+
+    it('never deletes a pre-existing (adopted) file', async () => {
+        const cwd = tmp();
+        fs.writeFileSync(path.join(cwd, 'a.txt'), 'hand-written');
+        await runSync({
+            tasks: [{ name: 'x', run: () => [{ path: 'a.txt', content: 'managed' }] }],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        const result = await runSync({
+            tasks: [{ name: 'x', run: () => [] }],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        expect(result.removed).toEqual([]);
+        expect(fs.existsSync(path.join(cwd, 'a.txt'))).toBe(true);
+        expect(fs.readFileSync(path.join(cwd, 'a.txt'), 'utf-8')).toBe('managed');
+        expect(readManifest(cwd).files).toEqual([]);
     });
 
     it('reports drift in check mode without writing', async () => {
@@ -154,5 +178,152 @@ describe('runSync', () => {
         ) as Record<string, unknown>;
         expect(settings['x.y']).toBe(true);
         expect(settings['biome.lsp.watcher.kind']).toBeUndefined();
+    });
+});
+
+describe('runSync untracked files and task metadata', () => {
+    it('writes untracked files without recording or pruning them', async () => {
+        const cwd = tmp();
+        fs.writeFileSync(path.join(cwd, 'user.json'), '{}\n');
+        const result = await runSync({
+            tasks: [
+                {
+                    name: 'x',
+                    run: () => [
+                        { path: 'a.txt', content: 'a' },
+                        { path: 'user.json', content: '{ "patched": true }\n', track: false },
+                    ],
+                },
+            ],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        expect(result.written.sort()).toEqual(['a.txt', 'user.json']);
+        expect(readManifest(cwd).files).toEqual(['a.txt']);
+        expect(readManifest(cwd).origins).toEqual({ 'a.txt': 'created' });
+
+        // A later sync that no longer patches it leaves the user file alone.
+        const next = await runSync({
+            tasks: [{ name: 'x', run: () => [] }],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        expect(next.removed).toEqual(['a.txt']);
+        expect(fs.readFileSync(path.join(cwd, 'user.json'), 'utf-8')).toBe('{ "patched": true }\n');
+    });
+
+    it('drift-checks untracked files', async () => {
+        const cwd = tmp();
+        fs.writeFileSync(path.join(cwd, 'user.json'), '{}\n');
+        const result = await runSync({
+            tasks: [
+                { name: 'x', run: () => [{ path: 'user.json', content: '[]\n', track: false }] },
+            ],
+            cwd,
+            config: {},
+            tokens: {},
+            check: true,
+            quiet: true,
+        });
+        expect(result.changed).toEqual(['user.json']);
+        expect(result.upToDate).toBe(false);
+    });
+
+    it('derives `keep` from the config', async () => {
+        const cwd = tmp();
+        await runSync({
+            tasks: [{ name: 'x', run: () => [{ path: 'custom.build.json', content: '{}' }] }],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        const result = await runSync({
+            tasks: [
+                {
+                    name: 'x',
+                    keep: config => [String((config as { keepName?: string }).keepName)],
+                    run: () => [],
+                },
+            ],
+            cwd,
+            config: { keepName: 'custom.build.json' } as never,
+            tokens: {},
+            quiet: true,
+        });
+        expect(result.removed).toEqual([]);
+        expect(fs.existsSync(path.join(cwd, 'custom.build.json'))).toBe(true);
+    });
+
+    it('persists task manifest metadata without clobbering the file list', async () => {
+        const cwd = tmp();
+        await runSync({
+            tasks: [
+                {
+                    name: 'x',
+                    run: ctx => {
+                        ctx.manifest!.snapshots = { 'a.json': { a: 1 } };
+                        ctx.manifest!.files = ['bogus'];
+                        ctx.manifest!.customState = { cursor: 7 };
+                        return [{ path: 'a.txt', content: 'a' }];
+                    },
+                },
+            ],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        const manifest = readManifest(cwd);
+        expect(manifest.files).toEqual(['a.txt']);
+        expect(manifest.snapshots).toEqual({ 'a.json': { a: 1 } });
+        expect(manifest.extras).toEqual({ customState: { cursor: 7 } });
+
+        // The extra survives into the next run's SyncContext.
+        let carried: unknown;
+        await runSync({
+            tasks: [
+                {
+                    name: 'y',
+                    run: ctx => {
+                        carried = ctx.manifest!.customState;
+                        return [];
+                    },
+                },
+            ],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        expect(carried).toEqual({ cursor: 7 });
+    });
+});
+
+describe('resolveWatchGlobs', () => {
+    it('resolves the active tasks globs, including config-derived ones', () => {
+        const tasks: SyncTask[] = [
+            { name: 'static', watch: ['a.json'], run: () => [] },
+            {
+                name: 'derived',
+                watch: config => [`**/${(config as { file?: string }).file ?? 'default.json'}`],
+                run: () => [],
+            },
+            { name: 'off', watch: ['off.json'], enabled: () => false, run: () => [] },
+            {
+                name: 'root-only',
+                watch: ['root.json'],
+                projectTypes: ['monorepo-root'],
+                run: () => [],
+            },
+        ];
+        expect(resolveWatchGlobs(tasks, {}, 'project')).toEqual(['a.json', '**/default.json']);
+        expect(resolveWatchGlobs(tasks, { file: 'custom.json' } as never, 'monorepo-root')).toEqual(
+            ['a.json', '**/custom.json', 'root.json']
+        );
     });
 });

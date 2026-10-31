@@ -89,6 +89,176 @@ describe('changelog formatting', () => {
         expect(rendered).toContain('### Chores');
     });
 
+    it('orders and renames CC groups', () => {
+        const item = (text: string) => {
+            const parsed = parseCcSubject(text);
+            return { parsed, text, bodyParagraphs: [] as string[][] };
+        };
+        const items = [item('feat: a'), item('fix: b'), item('chore: c')];
+        expect(groupItems(items, ['fix', 'feat']).map(group => group.title)).toEqual([
+            'Bug fixes',
+            'New features',
+            'Chores',
+        ]);
+        expect(
+            groupItems(items, {
+                fix: 'Bug Fixes',
+                feat: { title: 'New Features' },
+            }).map(group => group.title)
+        ).toEqual(['Bug Fixes', 'New Features', 'Chores']);
+    });
+
+    it('supports group callbacks and hides empty groups', () => {
+        const item = (text: string) => {
+            const parsed = parseCcSubject(text);
+            return { parsed, text, bodyParagraphs: [] as string[][] };
+        };
+        const contextTypesSeen: string[] = [];
+        const groups = groupItems([item('feat: a'), item('feat: b'), item('fix: c')], context => {
+            contextTypesSeen.push(...context.types);
+            return [
+                {
+                    type: 'feat',
+                    title: group => `Features (${group.groupItems.length})`,
+                    order: group => (group.type === 'feat' ? 0 : 1),
+                },
+                {
+                    type: 'fix',
+                    hidden: group => group.groupItems.length === 0,
+                },
+            ];
+        });
+        expect(groups.map(group => group.title)).toEqual(['Features (2)', 'Bug fixes']);
+        expect(contextTypesSeen).toEqual(['feat', 'fix']);
+    });
+
+    it('hides a group with a false record entry', () => {
+        const item = (text: string) => {
+            const parsed = parseCcSubject(text);
+            return { parsed, text, bodyParagraphs: [] as string[][] };
+        };
+        expect(
+            groupItems([item('feat: a'), item('fix: b')], { feat: false, fix: 'Fixes' }).map(
+                group => group.title
+            )
+        ).toEqual(['Fixes']);
+    });
+
+    it('falls back to major/minor/patch buckets when commitlint is disabled', () => {
+        const records = [
+            {
+                hash: 'a'.repeat(40),
+                subject: 'feat!: break',
+                body: '',
+                author: 'A',
+                authorEmail: '',
+            },
+            { hash: 'b'.repeat(40), subject: 'feat: add', body: '', author: 'A', authorEmail: '' },
+            {
+                hash: 'c'.repeat(40),
+                subject: 'fix: patch it',
+                body: '',
+                author: 'A',
+                authorEmail: '',
+            },
+            {
+                hash: 'd'.repeat(40),
+                subject: 'random change',
+                body: '',
+                author: 'A',
+                authorEmail: '',
+            },
+        ];
+        const summary = buildSummary(records, { commitlint: false });
+        expect(summary).toContain('### Major changes');
+        expect(summary).toContain('### Minor changes');
+        expect(summary).toContain('### Patch changes');
+        expect(summary).not.toContain('### New features');
+        expect(summary).toContain('- Add');
+        expect(summary).toContain('- Random change');
+    });
+
+    it('customizes commit credits and supports a custom formatter', () => {
+        const records = [
+            {
+                hash: 'a'.repeat(40),
+                subject: 'feat: add',
+                body: '',
+                author: 'A',
+                authorEmail: 'a@example.com',
+            },
+        ];
+        const plain = buildSummary(records, {
+            commit: { author: false, commitSha: false, issues: false },
+        });
+        expect(plain).toContain('- Add');
+        expect(plain).not.toContain(' by ');
+        expect(plain).not.toContain('#aaaaaaa');
+
+        const custom = buildSummary(records, {
+            commit: { format: ctx => `CUSTOM ${ctx.commit.subject}` },
+        });
+        expect(custom).toContain('- CUSTOM feat: add');
+    });
+
+    it('uses the configured group order in the summary', () => {
+        const records = [
+            { hash: 'a'.repeat(40), subject: 'feat: add', body: '', author: 'A', authorEmail: '' },
+            { hash: 'b'.repeat(40), subject: 'fix: fix', body: '', author: 'A', authorEmail: '' },
+        ];
+        const summary = buildSummary(records, {
+            groups: [
+                { type: 'fix', title: 'Bug Fixes' },
+                { type: 'feat', title: 'New Features' },
+            ],
+        });
+        expect(summary.indexOf('### Bug Fixes')).toBeLessThan(summary.indexOf('### New Features'));
+    });
+
+    it('adds a New contributors footer with their nested commit messages', () => {
+        const records = [
+            {
+                hash: 'a'.repeat(40),
+                subject: 'feat: first change',
+                body: '',
+                author: 'Ada',
+                authorEmail: 'ada@example.com',
+            },
+            {
+                hash: 'b'.repeat(40),
+                subject: 'fix: second change',
+                body: '',
+                author: 'Ada',
+                authorEmail: 'ada@example.com',
+            },
+            {
+                hash: 'c'.repeat(40),
+                subject: 'chore: old change',
+                body: '',
+                author: 'Old',
+                authorEmail: 'old@example.com',
+            },
+        ];
+        for (const commitlint of [true, false]) {
+            const summary = buildSummary(records, {
+                commitlint,
+                priorAuthors: ['old@example.com'],
+            });
+            const [before, contributors = ''] = summary.split('### New contributors');
+            expect(before).toMatch(/old change/i);
+            expect(contributors).toContain('- Ada');
+            expect(contributors).toContain('  - First change (');
+            expect(contributors).toContain('  - Second change (');
+            expect(contributors).not.toContain('- Old');
+            expect(
+                contributors
+                    .split('\n')
+                    .filter(line => line.startsWith('  - '))
+                    .every(line => !line.includes(' by '))
+            ).toBe(true);
+        }
+    });
+
     it('renders descriptions as nested bullets under the commit', () => {
         const item = {
             parsed: parseCcSubject('feat(server): add things'),
@@ -226,6 +396,24 @@ describe('reformatChangelogContent (--format-only)', () => {
         expect(out).not.toContain('**feat(server):**');
         // reformatted entries carry no release markers
         expect(out).not.toContain('<!-- release:');
+    });
+
+    it('uses the configured group order and titles when reformatting', () => {
+        const content = [
+            '# Changelog',
+            '',
+            '## 0.14.0',
+            '',
+            '- **feat(server):** add a thing ([#abcdef1](https://github.com/x/y/commit/abcdef1) by [T](https://github.com/T))',
+            '- **fix(frontend):** fix another ([#1234567](https://github.com/x/y/commit/1234567) by [T](https://github.com/T))',
+        ].join('\n');
+        const out = reformatChangelogContent(content, 'x/y', false, false, [
+            { type: 'fix', title: 'Bug Fixes' },
+            { type: 'feat', title: 'New Features' },
+        ]);
+        expect(out.indexOf('### Bug Fixes')).toBeLessThan(out.indexOf('### New Features'));
+        expect(out).toContain('#### Frontend');
+        expect(out).toContain('#### Server');
     });
 });
 

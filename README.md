@@ -10,11 +10,11 @@
 
 All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.
 
-- Save and use templates (local/remote) so you never have to scaffold the same projects over and over again.
-- Generate config types, env variables, cli flags, markdown and JSON schemas, so your codebase stays consistent, validated and well-documented.
-- Simply extend or setup CI for your changelogs, releases, issues etc.
-- Sync your entire project so workspaces, docs and CI are always up-to-date.
-- Plug it into Vite / Vite+ and streamline your DX for your existing Vite setup.
+- **Save and use templates (local/remote)** so you never have to scaffold the same projects over and over again.
+- **Generate** config types, env variables, cli flags, markdown and JSON schemas, so your codebase stays consistent, validated and well-documented.
+- **Extend or setup** CI for your changelogs, releases, issues etc.
+- **Sync** your entire project so workspaces, docs and CI are always up-to-date.
+- **Plug it into Vite / Vite+** and streamline your DX for your existing Vite setup.
 
 See the [list of features](#features).
 
@@ -238,24 +238,31 @@ See [packages/vscode/README.md](./packages/vscode/README.md) to learn more about
 
 ## Development
 
-This repo is a Yarn 4 workspace; Vite+ (`vp`) drives format, lint, test and the
-task runner from the root `vite.config.ts`.
+This repo is a Yarn 4 workspace. Vite+ (`vp`) drives format, lint, test and the
+task runner from the root `vite.config.ts`. The generated shims are dogfooded
+with `vite.shim: 'static'`, so `vp` loads them without a built package; Vite and
+Vitest resolve workspace imports through `resolve.tsconfigPaths`.
 
 ```sh
 yarn install        # fresh checkout
-yarn build          # packages via `vp run` + root tsdown
-yarn test           # package + root tests
+yarn dev            # run the CLI from src/ via tsx
 yarn typecheck      # packages + root
-yarn check          # Oxfmt + Oxlint (format + lint)
+yarn check          # Oxfmt + Oxlint check (no writes)
+yarn check:fix      # same, auto-fixing every workspace + the root
 yarn format         # `vp fmt`
 yarn lint           # `vp lint --fix`
+yarn build          # packages via `vp run` + root tsdown
+yarn test           # builds, then package + root tests
+yarn test:clean     # remove leftover emulation temp workspaces
 ```
 
-> `vp` resolves only at the repo root, so run these from the root. Package
-> typechecks/tests resolve workspace deps from their built `dist`, so run a full
-> `yarn build` after changing a package's public exports.
+> `vp` resolves only at the repo root, so run these from the root. A full
+> `yarn build` is only needed for the published `dist`/VSIX: typechecks,
+> `vp run`/`fmt`/`lint`/`test`, `yarn dev` and Vitest run from source. The
+> emulate suite spawns the built `dist/cli/index.js` and therefore needs a
+> build.
 
-Docs live in `apps/docs` (VitePress): `yarn workspace @deltabox/toolchain-docs build`.
+Docs live in `apps/docs` (VitePress): `yarn docs build`.
 
 ## Docs
 

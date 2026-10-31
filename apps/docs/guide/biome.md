@@ -1,5 +1,9 @@
 # Biome
 
+> **Deprecated:** prefer `toolchain.fmt.biome` / `toolchain.lint.biome` — see
+> [Formatting & linting](/guide/formatting). The top-level `biome` section still
+> works and still writes `biome.json`.
+
 The `biome` section generates a `biome.json` for consumers that still want a
 Biome config. The toolchain itself is built on **Oxc** (Oxfmt + Oxlint) through
 Vite+, but a repo that runs Biome directly can let the toolchain manage its
@@ -15,6 +19,11 @@ export default defineConfig({
 
 `dbx sync` writes `biome.json`, resolving the `{{name}}` / `{{scope}}`
 replacement tokens and merging your overrides over the defaults.
+
+If any other formatter/linter is also configured, sync still writes both the
+Biome and Oxc config files, but warns (`fmt.conflict` / `lint.conflict`) that the
+two tools may conflict. Silencing it is possible with
+`logger: { suppress: ['fmt.conflict'] }`; prefer one toolchain per repo.
 
 ## Options
 

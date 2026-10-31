@@ -13,6 +13,7 @@ export * from './check.js';
 export * from './cli/index.js';
 export * from './dprint.js';
 export * from './eslint.js';
+export * from './oxc.js';
 export * from './oxfmt-map.js';
 export * from './oxlint-map.js';
 export * from './prettier.js';

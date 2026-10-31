@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -6,6 +7,7 @@ import {
     CONFIG_FILE_NAMES,
     deepMerge,
     type DbxConfig,
+    isPlainObject,
     type PackageJson,
     type ProjectType,
     projectFromPackageJson,
@@ -13,6 +15,7 @@ import {
     type Replacements,
     resolveTokens,
     type ToolchainConfig,
+    type ToolchainViteConfig,
 } from '@deltabox/toolchain-shared';
 
 import { resolveProjectType } from './project-type.js';
@@ -20,6 +23,8 @@ import { resolveProjectType } from './project-type.js';
 /** A loaded tooling config plus its resolved path + replacement tokens. */
 export interface LoadedConfig {
     config: ToolchainConfig;
+    /** The config from this project's own file (not the inherited parent). */
+    ownConfig: ToolchainConfig;
     /** The config file that was loaded (undefined when none was found). */
     path?: string;
     /** The inherited ancestor config, when the loaded config overrides one. */
@@ -43,6 +48,17 @@ export interface LoadToolchainConfigOptions {
      * VS Code tree views that drive them). Default: `false` (throw).
      */
     tolerant?: boolean;
+    /** Load this config file instead of discovering `dbx.config.*`. */
+    config?: string;
+    /** Ignore every config file and use defaults / CLI flags only. */
+    noConfig?: boolean;
+    /** Skip the config's `hooks.afterLoad` callback (metadata-only loads). */
+    skipHooks?: boolean;
+    /**
+     * Bypass the ESM/CJS module cache. Long-running callers (eg. `dbx watch`)
+     * must set this so an edited config is actually re-evaluated.
+     */
+    fresh?: boolean;
 }
 
 /** A short, single-line description of a thrown config error. */
@@ -118,14 +134,28 @@ function unwrapDefault(mod: unknown): unknown {
     return value;
 }
 
+const require = createRequire(import.meta.url);
+let importNonce = 0;
+
 /** Import a config module: JSON natively, TS/JS via dynamic import (tsx fallback). */
-async function importModule(file: string): Promise<unknown> {
+async function importModule(file: string, fresh = false): Promise<unknown> {
     if (file.endsWith('.json')) {
         // Strip a UTF-8 BOM: editors/PowerShell often write one, and JSON.parse
         // rejects it (the other JSON readers in the toolchain strip it too).
         return JSON.parse(fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, ''));
     }
-    const url = pathToFileURL(file).href;
+    if (fresh) {
+        // A `.cjs` config is loaded through Node's require cache even from
+        // `import()`, so drop it before re-evaluating.
+        try {
+            delete require.cache[file];
+        } catch {
+            // not a require-cached module
+        }
+    }
+    const base = pathToFileURL(file).href;
+    // ESM caches by URL: a unique query is what makes `dbx watch` see an edit.
+    const url = fresh ? `${base}?dbx=${Date.now()}-${++importNonce}` : base;
     try {
         const mod = (await import(url)) as { default?: unknown };
         return mod.default ?? mod;
@@ -139,15 +169,42 @@ async function importModule(file: string): Promise<unknown> {
 }
 
 /** Read the `toolchain` section out of a config module. */
-async function readToolchainConfig(file: string): Promise<ToolchainConfig> {
-    const loaded = await importModule(file);
+async function readToolchainConfig(file: string, fresh = false): Promise<ToolchainConfig> {
+    const loaded = await resolveConfigExport(await importModule(file, fresh));
     const toolchain =
         loaded && typeof loaded === 'object' ? (loaded as DbxConfig).toolchain : undefined;
     return toolchain && typeof toolchain === 'object' ? toolchain : {};
 }
 
+/**
+ * Resolve a config module's export the way Vite does: await a promise, and call
+ * a callback (then await its return value). This lets `defineConfig` accept
+ * `{ ... }`, `Promise<{ ... }>` or `() => ({ ... }) | Promise<{ ... }>`.
+ */
+async function resolveConfigExport(value: unknown): Promise<unknown> {
+    let resolved = await value;
+    if (typeof resolved === 'function') resolved = await (resolved as () => unknown)();
+    return resolved;
+}
+
 /** `project` fields that are per-project identity and are never inherited. */
 const PROJECT_IDENTITY_KEYS = new Set(['name', 'scope', 'description', 'type']);
+
+/**
+ * `vite` keys that describe how a single workspace runs and are therefore not
+ * inherited: `test` (that workspace's test config) and `run` (its Vite Tasks).
+ * The rest of `vite` (`fmt`, `lint`, `plugins`, ...) is shared and flows down.
+ */
+const WORKSPACE_VITE_KEYS = new Set(['test', 'run']);
+
+/** The inheritable part of a parent `vite` section (drops the workspace keys). */
+function inheritedVite(vite: ToolchainConfig['vite']): ToolchainConfig['vite'] {
+    if (!isPlainObject(vite)) return vite;
+    const shared = Object.fromEntries(
+        Object.entries(vite).filter(([key]) => !WORKSPACE_VITE_KEYS.has(key))
+    );
+    return Object.keys(shared).length > 0 ? (shared as ToolchainViteConfig) : undefined;
+}
 
 /**
  * Merge an ancestor config under a project's own config. Nested objects are
@@ -155,26 +212,44 @@ const PROJECT_IDENTITY_KEYS = new Set(['name', 'scope', 'description', 'type']);
  * **replace** the ancestor's value — so a non-root `dbx.config` can override
  * individual options of the root config (and keep the rest).
  *
+ * Some sections are workspace-scoped and are **never inherited**:
+ * - `ci` / the `changelog` section: workflows are repository-level;
+ * - `tsconfig`: the root task expands every workspace tsconfig;
+ * - `vite.test` and `vite.run`: they describe how that workspace runs;
+ * - `hooks`: a parent's hooks are code and must not run for a nested sync.
+ *
  * `project` is inherited **except the identity fields** (`name`, `scope`,
  * `description`, `type`): a workspace keeps its own name/description (or falls
  * back to its `package.json`), and is still detected from its own files — so a
  * root `project` never renames a workspace. The shared fields (author, license,
  * homepage, `repo`, `packageManager`, ...) flow down. `project.inherit: false`
- * disables project inheritance entirely. `hooks` are **not** inherited either —
- * a parent's hooks are code and must not run for a nested project's sync.
+ * disables project inheritance entirely.
  */
 export function mergeToolchainConfig(
     parent: ToolchainConfig,
     child: ToolchainConfig
 ): ToolchainConfig {
-    const { hooks: _hooks, project: parentProject, ...parentRest } = parent;
+    const {
+        hooks: _hooks,
+        project: parentProject,
+        ci: _ci,
+        changelog: _changelog,
+        catalogs: _catalogs,
+        tsconfig: _tsconfig,
+        vite: parentVite,
+        ...parentRest
+    } = parent;
     let base = parentRest as ToolchainConfig;
+    const vite = inheritedVite(parentVite);
+    if (vite !== undefined) {
+        base = { ...base, vite };
+    }
     if (child.project?.inherit !== false && parentProject) {
         const shared = Object.fromEntries(
             Object.entries(parentProject).filter(([key]) => !PROJECT_IDENTITY_KEYS.has(key))
         );
         if (Object.keys(shared).length > 0) {
-            base = { ...parentRest, project: shared } as ToolchainConfig;
+            base = { ...base, project: shared };
         }
     }
     return deepMerge(base, child) as ToolchainConfig;
@@ -193,15 +268,25 @@ export async function loadToolchainConfig(
     cwd: string = process.cwd(),
     options: LoadToolchainConfigOptions = {}
 ): Promise<LoadedConfig> {
-    const file = findConfigFile(cwd);
-    const parentFile = findParentConfigFile(cwd);
+    const file = options.noConfig
+        ? undefined
+        : options.config
+          ? path.isAbsolute(options.config)
+              ? options.config
+              : path.resolve(cwd, options.config)
+          : findConfigFile(cwd);
+    const parentFile = options.noConfig ? undefined : findParentConfigFile(cwd);
     const tolerant = options.tolerant ?? false;
+    const fresh = options.fresh ?? false;
 
     let config: ToolchainConfig = {};
+    let ownConfig: ToolchainConfig = {};
+    let parentConfig: ToolchainConfig | undefined;
     let error: string | undefined;
     if (parentFile) {
         try {
-            config = await readToolchainConfig(parentFile);
+            parentConfig = await readToolchainConfig(parentFile, fresh);
+            config = parentConfig;
         } catch (cause) {
             if (!tolerant) throw cause;
             error = `failed to load ${parentFile}: ${errorMessage(cause)}`;
@@ -209,7 +294,8 @@ export async function loadToolchainConfig(
     }
     if (file) {
         try {
-            const own = await readToolchainConfig(file);
+            const own = await readToolchainConfig(file, fresh);
+            ownConfig = own;
             // Merge over the ancestor only when it actually loaded; otherwise the
             // project's own config stands alone.
             config = parentFile && !error ? mergeToolchainConfig(config, own) : own;
@@ -227,13 +313,23 @@ export async function loadToolchainConfig(
         ...(config.project ?? undefined),
     };
     const tokens = resolveTokens({ ...config, project });
-    await config.hooks?.afterLoad?.({ cwd, config, tokens, ...(file ? { path: file } : {}) });
+    if (!options.skipHooks) {
+        await config.hooks?.afterLoad?.({ cwd, config, tokens, ...(file ? { path: file } : {}) });
+    }
+    // `tsconfig` is repository-scoped and not inherited, but a workspace still
+    // needs the parent's custom `rootFile`/`defaultFile` names to be detected as
+    // a workspace rather than a standalone project.
+    const detectionConfig =
+        config.tsconfig === undefined && parentConfig?.tsconfig !== undefined
+            ? { ...config, tsconfig: parentConfig.tsconfig }
+            : config;
     return {
         config,
+        ownConfig,
         ...(file ? { path: file } : {}),
         ...(parentFile ? { parentPath: parentFile } : {}),
         ...(error ? { error } : {}),
         tokens,
-        projectType: resolveProjectType(cwd, config),
+        projectType: resolveProjectType(cwd, detectionConfig),
     };
 }

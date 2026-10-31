@@ -1,14 +1,9 @@
 #!/usr/bin/env node
 /**
  * Generate the `dbx.config` reference + editor JSON Schema from the Zod config
- * model (the single source of truth in
- * `packages/shared/src/config-schema.ts`).
+ * model (the single source of truth in `packages/shared/src/config-schema`).
  *
  *   yarn config:generate
- *
- * Outputs:
- *   - apps/docs/config/reference.md  (the docs reference)
- *   - config.schema.json             (editor autocomplete for the JSON config)
  */
 
 import fs from 'node:fs';
@@ -17,34 +12,25 @@ import { fileURLToPath } from 'node:url';
 
 import { z } from 'zod';
 
-import {
-    CONFIG_SECTION_DESCRIPTIONS,
-    CONFIG_SECTION_SCHEMAS,
-    dbxConfigSchema,
-    logger,
-} from '@deltabox/toolchain-shared';
-import { renderConfigFileMarkdown } from '@deltabox/toolchain/config';
+import { createConfigEngine, normalizeJsonSchemaMetadata } from '@deltabox/toolchain-config';
+import { configSchema, dbxConfigSchema, logger } from '@deltabox/toolchain-shared';
 
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
+const engine = createConfigEngine({ schema: configSchema });
 
-const sections = Object.entries(CONFIG_SECTION_SCHEMAS).map(([key, schema]) => ({
-    key,
-    description: CONFIG_SECTION_DESCRIPTIONS[key as keyof typeof CONFIG_SECTION_DESCRIPTIONS],
-    schema,
-}));
-
-const markdown = renderConfigFileMarkdown(sections, {
+const markdown = engine.generateConfigMarkdown({
+    combined: true,
     title: 'dbx.config',
     intro: [
         'A `dbx.config.ts` file exports `{ toolchain: { ...sections } }`: the',
         '`@deltabox/toolchain` settings live under the `toolchain` key. Every',
-        'section is **opt-in by presence** (see [Configuration](/guide/config)):',
+        'section is **opt-in by presence** (see [Configuration](/guide/config/opt-in-by-presence)):',
         'define it to enable it, omit it to leave that area untouched.',
         '',
         '> Generated from the Zod config schema — do not edit by hand.',
         '> Run `yarn config:generate`.',
     ].join('\n'),
-});
+})['index.md'];
 const docsPath = path.join(root, 'apps/docs/config/reference.md');
 fs.mkdirSync(path.dirname(docsPath), { recursive: true });
 const example = [
@@ -57,7 +43,7 @@ const example = [
     'export default defineConfig({',
     '    toolchain: {',
     "        project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },",
-    '        changelog: { workflows: { ci: true, release: true }, branches: { main: "main" } },',
+    '        ci: { ci: true, release: true, changelog: { branches: { main: "main" } } },',
     '        tsconfig: { refs: true },',
     "        templates: { sources: [{ type: 'local', locate: './templates', kind: 'application' }] },",
     "        vite: { fmt: { semi: true, singleQuote: true }, test: { include: ['src/**/*.test.ts'] } },",
@@ -67,12 +53,13 @@ const example = [
     '```',
     '',
 ].join('\n');
-fs.writeFileSync(docsPath, `${markdown.trimEnd()}\n${example}`, 'utf-8');
+fs.writeFileSync(docsPath, `${markdown?.trimEnd()}\n${example}`, 'utf-8');
 
 const jsonSchema = z.toJSONSchema(dbxConfigSchema, { target: 'draft-2020-12' }) as Record<
     string,
     unknown
 >;
+normalizeJsonSchemaMetadata(jsonSchema);
 jsonSchema.$id = 'https://deltabox.studio/schemas/dbx.config.json';
 jsonSchema.title = 'dbx.config';
 jsonSchema.description =

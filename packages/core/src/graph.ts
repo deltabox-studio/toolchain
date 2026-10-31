@@ -202,7 +202,9 @@ export function writeProjectGraph(root: string, graph?: ProjectGraph): string {
 /** Read the project graph for a root, or `undefined` when it does not exist. */
 export function readProjectGraph(root: string): ProjectGraph | undefined {
     try {
-        return JSON.parse(fs.readFileSync(projectGraphPath(root), 'utf-8')) as ProjectGraph;
+        return JSON.parse(
+            fs.readFileSync(projectGraphPath(root), 'utf-8').replace(/^\uFEFF/, '')
+        ) as ProjectGraph;
     } catch {
         return undefined;
     }

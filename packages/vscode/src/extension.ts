@@ -8,6 +8,7 @@ import {
     chooseDbxSource,
     cliInvocation,
     initDbxSource,
+    selectVersion,
     setExtensionInfo,
     spawnCli,
     workspaceRoots,
@@ -19,19 +20,31 @@ import {
     type Project,
     ProjectTreeProvider,
     readProjectGraph,
+    setTsconfigFileNames,
     TrackedFilesTreeProvider,
 } from './projects.js';
 import {
     loadProviders,
+    type Provider,
     type ProviderCommand,
     type ProviderCommandNode,
     type ProviderNode,
     ProviderTreeProvider,
+    readAllProviders,
+    readGlobalProviders,
     readProviderRegistry,
+    writeGlobalProviders,
     writeProviderRegistry,
 } from './providers.js';
+import { RegistryTreeProvider, type RegistryItemNode } from './registries.js';
 import { type SchedulerState, SyncScheduler } from './sync-scheduler.js';
 import { type Template, TemplateTreeProvider, loadTemplates } from './templates.js';
+import {
+    defaultWatchInputs,
+    parseWatchInputs,
+    planWatchTargets,
+    type WatchInputs,
+} from './watch-inputs.js';
 
 const SECTION = 'deltabox.toolchain';
 const OUTPUT_NAME = 'deltabox toolchain';
@@ -39,6 +52,7 @@ const PROJECTS_VIEW_ID = 'deltabox.projects';
 const FILES_VIEW_ID = 'deltabox.files';
 const PROVIDERS_VIEW_ID = 'deltabox.providers';
 const TEMPLATES_VIEW_ID = 'deltabox.templates';
+const REGISTRIES_VIEW_ID = 'deltabox.registries';
 
 /** The public documentation site (the Home "Need help?" link). */
 const DOCS_URL = 'https://toolchain.deltabox.studio';
@@ -46,18 +60,29 @@ const DOCS_URL = 'https://toolchain.deltabox.studio';
 /** The workflow ids the CLI understands. */
 const WORKFLOW_IDS = ['ci', 'changelog', 'release', 'sync', 'issues'];
 
-/** Input globs watched by default (never generated outputs). */
-const DEFAULT_WATCH = [
-    '**/dbx.config.*',
-    '**/tsconfig.default.json',
-    '**/tsconfig.workspaces.json',
-];
+/** How long to wait for `dbx watch --list` before falling back to the defaults. */
+const WATCH_INPUTS_TIMEOUT_MS = 30_000;
 
 /** Matches the tsconfig sync task's "no workspaces" warning in the CLI output. */
 const NO_WORKSPACES_WARNING = /no workspace tsconfig files found/i;
 
 function config(): vscode.WorkspaceConfiguration {
     return vscode.workspace.getConfiguration(SECTION);
+}
+
+/**
+ * The `deltabox.toolchain.watch` globs the user set explicitly (any scope), or
+ * `undefined` to watch the inputs resolved from each project's config.
+ */
+function userWatchGlobs(): string[] | undefined {
+    const inspected = config().inspect<string[]>('watch');
+    return inspected?.workspaceFolderValue ?? inspected?.workspaceValue ?? inspected?.globalValue;
+}
+
+/** Ask the CLI which inputs a root syncs from (custom tsconfig names resolved). */
+async function resolveWatchInputs(root: string): Promise<WatchInputs> {
+    const result = await captureCli(root, ['watch', '--list', '--json'], WATCH_INPUTS_TIMEOUT_MS);
+    return (result.code === 0 && parseWatchInputs(result.stdout)) || defaultWatchInputs();
 }
 
 function getEnabled(): boolean {
@@ -102,6 +127,12 @@ export function activate(context: vscode.ExtensionContext): void {
         showCollapseAll: true,
     });
 
+    const registries = new RegistryTreeProvider(() => workspaceRoots()[0]);
+    const registriesView = vscode.window.createTreeView(REGISTRIES_VIEW_ID, {
+        treeDataProvider: registries,
+        showCollapseAll: true,
+    });
+
     /** Set a `when`/`enablement` context key (drives command enablement). */
     const setContext = (key: string, value: boolean): void => {
         void vscode.commands.executeCommand('setContext', key, value);
@@ -133,8 +164,60 @@ export function activate(context: vscode.ExtensionContext): void {
     // runs on every watched change, so a notification each time would nag).
     let warnedNoWorkspaces = false;
 
+    interface RemovedFile {
+        path: string;
+        content: string;
+    }
+
+    /** Show the removed managed files with a Restore action. */
+    const notifyRemovedFiles = async (cwd: string, files: RemovedFile[]): Promise<void> => {
+        if (files.length === 0) return;
+        const choice = await vscode.window.showInformationMessage(
+            `deltabox: removed ${files.length} managed file(s).`,
+            {
+                modal: true,
+                detail: files.map(file => file.path).join('\n'),
+            },
+            'Restore',
+            'Close'
+        );
+        if (choice !== 'Restore') return;
+        for (const file of files) {
+            const uri = vscode.Uri.file(path.join(cwd, file.path));
+            await vscode.workspace.fs.createDirectory(vscode.Uri.file(path.dirname(uri.fsPath)));
+            await vscode.workspace.fs.writeFile(uri, new Uint8Array(Buffer.from(file.content)));
+        }
+        vscode.window.showInformationMessage(`deltabox: restored ${files.length} file(s).`);
+    };
+
+    /** Sync through the CLI's JSON output so removed files can be restored. */
+    const runSyncCli = async (cwd: string, args: string[]): Promise<number> => {
+        output.appendLine(`\n> ${cliInvocation(cwd)} ${args.join(' ')} --json  (${cwd})`);
+        const result = await captureCli(cwd, [...args, '--json']);
+        output.append(result.stdout || result.stderr);
+        let removed: RemovedFile[] = [];
+        if (result.code === 0) {
+            try {
+                const parsed = JSON.parse(result.stdout) as {
+                    removedFiles?: RemovedFile[];
+                    results?: { result?: { removedFiles?: RemovedFile[] } }[];
+                };
+                removed = parsed.results
+                    ? parsed.results.flatMap(entry => entry.result?.removedFiles ?? [])
+                    : (parsed.removedFiles ?? []);
+            } catch {
+                // non-JSON output; nothing to notify
+            }
+        }
+        await notifyRemovedFiles(cwd, removed);
+        return result.code;
+    };
+
     /** Run `dbx <args>` in `cwd`, streaming output to the channel. */
     const runCli = (cwd: string, args: string[]): Promise<number> => {
+        if (args[0] === 'sync' && !args.includes('--check') && !args.includes('--json')) {
+            return runSyncCli(cwd, args);
+        }
         output.appendLine(`\n> ${cliInvocation(cwd)} ${args.join(' ')}  (${cwd})`);
         return new Promise<number>(resolve => {
             let proc: ChildProcess;
@@ -224,6 +307,37 @@ export function activate(context: vscode.ExtensionContext): void {
         updateContextKeys();
         void providers.refresh();
         void templates.refresh();
+        void registries.refresh();
+    };
+
+    /**
+     * Mirror the `deltabox.registrySearchPaths` setting into the global CLI
+     * config (`~/.dbx/toolchain/cli/config.json`), and record the VS Code user
+     * dir there so the CLI can find the global `settings.json`.
+     */
+    const syncGlobalTemplatePaths = async (initial = false): Promise<void> => {
+        const vscodeDir = path.dirname(path.dirname(context.globalStorageUri.fsPath));
+        const paths = vscode.workspace
+            .getConfiguration('deltabox')
+            .get<string[]>('registrySearchPaths', [])
+            .filter(Boolean);
+        const args = ['template:registry', '--vscode-dir', vscodeDir];
+        if (paths.length > 0) args.push('--set', ...paths);
+        else if (!initial) args.push('--clear');
+        await captureCli(workspaceRoots()[0] ?? process.cwd(), args);
+    };
+
+    /** Mirror the provider search-path setting into the global CLI config. */
+    const syncGlobalProviderPaths = async (initial = false): Promise<void> => {
+        const paths = vscode.workspace
+            .getConfiguration('deltabox')
+            .get<string[]>('providerRegistrySearchPaths', [])
+            .filter(Boolean);
+        const args = ['registry', '--kind', 'providers', '--scope', 'global'];
+        if (paths.length > 0) args.push('--set', ...paths);
+        else if (!initial) args.push('--clear');
+        else return;
+        await captureCli(workspaceRoots()[0] ?? process.cwd(), args);
     };
 
     const refreshGraph = async (): Promise<void> => {
@@ -274,10 +388,29 @@ export function activate(context: vscode.ExtensionContext): void {
         return picks?.map(pick => pick.project);
     };
 
-    /** Prompt for one or more workflow ids (multi-select). */
-    const pickWorkflows = async (): Promise<string[] | undefined> => {
+    /** Prompt for one or more enabled workflow ids (multi-select). */
+    const pickWorkflows = async (cwd: string): Promise<string[] | undefined> => {
+        const result = await captureCli(cwd, ['workflow', '--list', '--json']);
+        let targets: { id: string; path: string }[] = [];
+        if (result.code === 0) {
+            try {
+                const parsed = JSON.parse(result.stdout) as unknown;
+                if (Array.isArray(parsed)) {
+                    targets = parsed.filter(
+                        (entry): entry is { id: string; path: string } =>
+                            Boolean(entry) &&
+                            typeof entry === 'object' &&
+                            typeof (entry as { id?: unknown }).id === 'string' &&
+                            typeof (entry as { path?: unknown }).path === 'string'
+                    );
+                }
+            } catch {
+                // fall through to the built-in ids
+            }
+        }
+        if (targets.length === 0) targets = WORKFLOW_IDS.map(id => ({ id, path: id }));
         const picks = await vscode.window.showQuickPick(
-            WORKFLOW_IDS.map(id => ({ label: id })),
+            targets.map(target => ({ label: target.id, description: target.path })),
             { canPickMany: true, placeHolder: 'Which workflows should run?' }
         );
         return picks?.map(pick => pick.label);
@@ -314,6 +447,7 @@ export function activate(context: vscode.ExtensionContext): void {
         let failed = 0;
         for (const project of selected) {
             if ((await runCli(project.dir, ['project:config'])) !== 0) failed += 1;
+            else await runCli(project.dir, ['sync']);
         }
         await refreshGraph();
         if (failed === 0) {
@@ -330,6 +464,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     const generateProjectConfig = async (dir: string, label: string): Promise<void> => {
         const code = await runCli(dir, ['project:config']);
+        if (code === 0) await runCli(dir, ['sync']);
         await refreshGraph();
         if (code === 0)
             vscode.window.showInformationMessage(`deltabox: config written for ${label}.`);
@@ -337,7 +472,7 @@ export function activate(context: vscode.ExtensionContext): void {
     };
 
     const runWorkflow = async (cwd: string): Promise<void> => {
-        const ids = await pickWorkflows();
+        const ids = await pickWorkflows(cwd);
         if (!ids || ids.length === 0) return;
         const code = await runCli(cwd, ['workflow', ...ids]);
         if (code === 0) {
@@ -465,7 +600,15 @@ export function activate(context: vscode.ExtensionContext): void {
             validateInput: value => (value.trim() ? undefined : 'Required'),
         });
         if (!name) return;
-        const code = await runCli(base, [
+        const scope = await vscode.window.showQuickPick(
+            [
+                { label: 'Yes', detail: 'Available in every project' },
+                { label: 'No', detail: 'Only in this project' },
+            ],
+            { placeHolder: 'Add this template to the global registry?' }
+        );
+        if (!scope) return;
+        const args = [
             'template:init',
             dir,
             '--kind',
@@ -475,7 +618,9 @@ export function activate(context: vscode.ExtensionContext): void {
             '--add',
             '--cwd',
             base,
-        ]);
+        ];
+        if (scope.label === 'No') args.push('--no-global');
+        const code = await runCli(base, args);
         if (code === 0) {
             vscode.window.showInformationMessage(`deltabox: added template "${name}".`);
         } else {
@@ -497,12 +642,9 @@ export function activate(context: vscode.ExtensionContext): void {
             id?: string;
             kind?: string;
         }
-        const listed = await captureCli(base, [
-            'template:list',
-            '--registry',
-            '--json',
-            '--cwd',
-            base,
+        const [listed, globals] = await Promise.all([
+            captureCli(base, ['template:list', '--registry', '--json', '--cwd', base]),
+            captureCli(base, ['template:list', '--global', '--json', '--cwd', base]),
         ]);
         let sources: RegistryEntry[] = [];
         if (listed.code === 0) {
@@ -512,23 +654,47 @@ export function activate(context: vscode.ExtensionContext): void {
                 sources = [];
             }
         }
-        if (sources.length === 0) {
-            vscode.window.showInformationMessage('deltabox: the template registry is empty.');
-            return;
+        let globalTemplates: { id: string; name?: string }[] = [];
+        if (globals.code === 0) {
+            try {
+                globalTemplates = JSON.parse(globals.stdout) as { id: string; name?: string }[];
+            } catch {
+                globalTemplates = [];
+            }
         }
-        const picked = await vscode.window.showQuickPick(
-            sources.map(source => ({
+        const items = [
+            ...sources.map(source => ({
                 label: source.name ?? source.id ?? source.key,
                 description: source.key,
                 detail: [source.kind, source.type].filter(Boolean).join(' \u00b7 '),
                 source,
+                global: false,
             })),
-            { placeHolder: 'Which template source should be removed?', matchOnDetail: true }
-        );
+            ...globalTemplates.map(template => ({
+                label: template.name ?? template.id,
+                description: template.id,
+                detail: 'global',
+                source: { key: template.id },
+                global: true,
+            })),
+        ];
+        if (items.length === 0) {
+            vscode.window.showInformationMessage('deltabox: the template registry is empty.');
+            return;
+        }
+        const picked = await vscode.window.showQuickPick(items, {
+            placeHolder: 'Which template should be removed?',
+            matchOnDetail: true,
+        });
         if (!picked) return;
-        const code = await runCli(base, ['template:remove', picked.source.key, '--cwd', base]);
+        const code = await runCli(
+            base,
+            picked.global
+                ? ['template:remove', picked.source.key, '--global', '--cwd', base]
+                : ['template:remove', picked.source.key, '--cwd', base]
+        );
         if (code === 0) {
-            vscode.window.showInformationMessage(`deltabox: removed ${picked.source.key}.`);
+            vscode.window.showInformationMessage(`deltabox: removed ${picked.label}.`);
         } else {
             output.show();
         }
@@ -582,26 +748,52 @@ export function activate(context: vscode.ExtensionContext): void {
             });
         }
 
-        const registry = readProviderRegistry(root);
-        if (registry.some(provider => provider.id === id)) {
-            vscode.window.showWarningMessage(`deltabox: provider "${id}" already exists.`);
-            return;
+        const existing = readAllProviders(root);
+        let providerId = id;
+        if (existing.some(provider => provider.id === providerId)) {
+            let index = 2;
+            while (existing.some(candidate => candidate.id === `${id}-${index}`)) index += 1;
+            const renamed = await vscode.window.showInputBox({
+                prompt: `Provider "${id}" already exists. New id`,
+                value: `${id}-${index}`,
+                validateInput: value =>
+                    /^[a-z0-9][a-z0-9-]*$/.test(value.trim())
+                        ? existing.some(candidate => candidate.id === value.trim())
+                            ? 'That id already exists.'
+                            : undefined
+                        : 'Use lowercase letters, numbers and dashes.',
+            });
+            if (!renamed) return;
+            providerId = renamed.trim();
+            for (const command of commands) command.name = `${providerId}:${command.subcommand}`;
         }
-        registry.push({
-            id,
+        const provider: Provider = {
+            id: providerId,
             name,
             ...(binary ? { binary } : {}),
             ...(description ? { description } : {}),
             ...(homepage ? { homepage } : {}),
             commands,
-        });
-        writeProviderRegistry(root, registry);
+        };
+        const scope = await vscode.window.showQuickPick(
+            [
+                { label: 'Yes', detail: 'Available in every project' },
+                { label: 'No', detail: 'Only in this project' },
+            ],
+            { placeHolder: 'Add this provider to the global registry?' }
+        );
+        if (!scope) return;
+        if (scope.label === 'Yes') {
+            writeGlobalProviders([...readGlobalProviders(), provider]);
+        } else {
+            writeProviderRegistry(root, [...readProviderRegistry(root), provider]);
+        }
         await providers.refresh();
         updateContextKeys();
         vscode.window.showInformationMessage(`deltabox: added provider "${name}".`);
     };
 
-    /** Remove a custom provider from the registry. */
+    /** Remove a custom provider from the (project and global) registries. */
     const removeProvider = async (node?: ProviderNode): Promise<void> => {
         if (!node || !node.custom) return;
         const confirm = await vscode.window.showWarningMessage(
@@ -610,12 +802,167 @@ export function activate(context: vscode.ExtensionContext): void {
             'Remove'
         );
         if (confirm !== 'Remove') return;
+        const id = node.provider.id;
         writeProviderRegistry(
             node.root,
-            readProviderRegistry(node.root).filter(provider => provider.id !== node.provider.id)
+            readProviderRegistry(node.root).filter(provider => provider.id !== id)
         );
+        writeGlobalProviders(readGlobalProviders().filter(provider => provider.id !== id));
         await providers.refresh();
         updateContextKeys();
+    };
+
+    /** Open a registry: the file/folder for locals, the website for remotes. */
+    const openRegistryItem = (node?: RegistryItemNode): void => {
+        if (!node) return;
+        if (node.entry.remote) void vscode.env.openExternal(vscode.Uri.parse(node.entry.path));
+        else
+            void vscode.commands.executeCommand(
+                'revealInExplorer',
+                vscode.Uri.file(node.entry.path)
+            );
+    };
+
+    /** Add a new registry search path (global or project). */
+    const newRegistry = async (): Promise<void> => {
+        const root = workspaceRoots()[0];
+        if (!root) {
+            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
+            return;
+        }
+        const category = await vscode.window.showQuickPick(
+            [
+                { label: 'Templates', value: 'templates' },
+                { label: 'Providers', value: 'providers' },
+            ],
+            { placeHolder: 'Which kind of registry?' }
+        );
+        if (!category) return;
+        const providersKind = category.value === 'providers';
+        const entry = await vscode.window.showInputBox({
+            prompt: 'Registry path or http(s) URL',
+            value: providersKind
+                ? '.dbx/toolchain/.registry/providers'
+                : '.dbx/toolchain/.registry/templates',
+            validateInput: value => (value.trim() ? undefined : 'Required'),
+        });
+        if (!entry) return;
+        const scope = await vscode.window.showQuickPick(
+            [
+                { label: 'Global', detail: 'Available in every project' },
+                { label: 'Project', detail: 'This project only' },
+            ],
+            { placeHolder: 'Where should this registry live?' }
+        );
+        if (!scope) return;
+        const args = [
+            'registry',
+            '--add',
+            entry,
+            '--scope',
+            scope.label === 'Project' ? 'project' : 'global',
+            '--cwd',
+            root,
+        ];
+        if (providersKind) args.push('--kind', 'providers');
+        const code = await runCli(root, args);
+        if (code === 0) {
+            await registries.refresh();
+            if (providersKind) await providers.refresh();
+            else await templates.refresh();
+            vscode.window.showInformationMessage(
+                `deltabox: added ${scope.label.toLowerCase()} ${category.label.toLowerCase()} registry.`
+            );
+        } else {
+            output.show();
+        }
+    };
+
+    /** Remove one or more template registry paths (keeps the files). */
+    const removeRegistry = async (): Promise<void> => {
+        const root = workspaceRoots()[0];
+        if (!root) {
+            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
+            return;
+        }
+        const result = await captureCli(root, ['registry', '--json', '--cwd', root]);
+        let entries: RegistryItemNode['entry'][] = [];
+        if (result.code === 0) {
+            try {
+                const parsed = JSON.parse(result.stdout) as {
+                    templates?: RegistryItemNode['entry'][];
+                    providers?: RegistryItemNode['entry'][];
+                };
+                entries = [...(parsed.templates ?? []), ...(parsed.providers ?? [])];
+            } catch {
+                entries = [];
+            }
+        }
+        if (entries.length === 0) {
+            vscode.window.showInformationMessage('deltabox: no registries.');
+            return;
+        }
+        const picked = await vscode.window.showQuickPick(
+            entries.map(entry => ({ label: entry.path, description: entry.scope, entry })),
+            { canPickMany: true, placeHolder: 'Which registries should be removed?' }
+        );
+        if (!picked || picked.length === 0) return;
+        const confirm = await vscode.window.showWarningMessage(
+            `Remove ${picked.length} registry path(s)? The files are kept.`,
+            { modal: true },
+            'Remove'
+        );
+        if (confirm !== 'Remove') return;
+        for (const item of picked) {
+            const args = [
+                'registry',
+                '--remove',
+                item.entry.path,
+                '--scope',
+                item.entry.scope,
+                '--cwd',
+                root,
+            ];
+            if (item.entry.kind === 'providers') args.push('--kind', 'providers');
+            await runCli(root, args);
+        }
+        await registries.refresh();
+    };
+
+    /** Remove one registry item from the view (template registries only). */
+    const removeRegistryEntry = async (node?: RegistryItemNode): Promise<void> => {
+        if (!node || node.category !== 'templates') return;
+        const root = workspaceRoots()[0];
+        if (!root) return;
+        const confirm = await vscode.window.showWarningMessage(
+            `Remove registry "${node.entry.path}"? The files are kept.`,
+            { modal: true },
+            'Remove'
+        );
+        if (confirm !== 'Remove') return;
+        await runCli(root, [
+            'registry',
+            '--remove',
+            node.entry.path,
+            '--scope',
+            node.entry.scope,
+            '--cwd',
+            root,
+        ]);
+        await registries.refresh();
+    };
+
+    /** Add an item (template/provider) through the category's flow. */
+    const addRegistryEntry = async (node?: RegistryItemNode): Promise<void> => {
+        if (!node) return;
+        if (node.category === 'providers') {
+            await addProvider();
+            await providers.refresh();
+        } else {
+            await addTemplate();
+            await templates.refresh();
+        }
+        await registries.refresh();
     };
 
     /** Run a provider command (`dbx <command.name>`) in a terminal. */
@@ -809,6 +1156,19 @@ export function activate(context: vscode.ExtensionContext): void {
                 case 'runVite':
                     await runVite();
                     break;
+                case 'addProvider':
+                    await addProvider();
+                    await providers.refresh();
+                    break;
+                case 'registryNew':
+                    await newRegistry();
+                    break;
+                case 'registryRemove':
+                    await removeRegistry();
+                    break;
+                case 'selectVersion':
+                    await selectVersion();
+                    break;
                 case 'runProjectVite':
                     await runVite(action.dir);
                     break;
@@ -821,19 +1181,52 @@ export function activate(context: vscode.ExtensionContext): void {
                 case 'openDocs':
                     void vscode.env.openExternal(vscode.Uri.parse(DOCS_URL));
                     break;
+                case 'openSettings':
+                    await vscode.commands.executeCommand(
+                        'workbench.action.openSettings',
+                        `@ext:${context.extension.id}`
+                    );
+                    break;
             }
         }
     );
 
-    const rebuildWatchers = (): void => {
+    // Each rebuild bumps the generation, so a slower, older resolve never
+    // replaces the watchers of a newer one.
+    let watchGeneration = 0;
+    let watchInputsTimer: NodeJS.Timeout | undefined;
+    const rebuildWatchers = async (): Promise<void> => {
+        const generation = ++watchGeneration;
+        const userGlobs = userWatchGlobs();
+        // Resolved even with explicit watch globs: the tsconfig names also drive
+        // project detection in the Projects view.
+        const roots = workspaceRoots();
+        const resolved = await Promise.all(
+            roots.map(async root => ({ root, inputs: await resolveWatchInputs(root) }))
+        );
+        if (generation !== watchGeneration) return;
+        for (const { root, inputs } of resolved) setTsconfigFileNames(root, inputs.tsconfig);
+        if (resolved.length > 0) tree.refresh();
+
         for (const watcher of watchers) watcher.dispose();
         watchers = [];
         if (!enabled) return;
-        for (const glob of config().get<string[]>('watch', DEFAULT_WATCH)) {
-            const watcher = vscode.workspace.createFileSystemWatcher(glob);
-            watcher.onDidChange(() => scheduler.notify());
-            watcher.onDidCreate(() => scheduler.notify());
-            watcher.onDidDelete(() => scheduler.notify());
+        for (const target of planWatchTargets(userGlobs, resolved)) {
+            const pattern = target.base
+                ? new vscode.RelativePattern(target.base, target.glob)
+                : target.glob;
+            const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+            const onEvent = (uri: vscode.Uri): void => {
+                scheduler.notify();
+                // A config change can rename the watched inputs: re-resolve them.
+                if (path.basename(uri.fsPath).startsWith('dbx.config.')) {
+                    clearTimeout(watchInputsTimer);
+                    watchInputsTimer = setTimeout(() => void rebuildWatchers(), 500);
+                }
+            };
+            watcher.onDidChange(onEvent);
+            watcher.onDidCreate(onEvent);
+            watcher.onDidDelete(onEvent);
             watchers.push(watcher);
         }
     };
@@ -913,6 +1306,7 @@ export function activate(context: vscode.ExtensionContext): void {
         }
 
         const baseArgs = ['create', '--template', template.id, '--name', name, '--cwd', base];
+        if (template.online) baseArgs.push('--online');
         if (scope) baseArgs.push('--scope', scope);
         if (varArgs.length > 0) baseArgs.push('--var', ...varArgs);
 
@@ -1123,6 +1517,7 @@ export function activate(context: vscode.ExtensionContext): void {
         filesView,
         providersView,
         templatesView,
+        registriesView,
         vscode.commands.registerCommand('deltabox.toolchain.sync', async () => {
             const root = workspaceRoots()[0];
             if (root) await runCli(root, ['sync']);
@@ -1156,6 +1551,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('deltabox.toolchain.chooseDbxSource', () =>
             chooseDbxSource(context)
         ),
+        vscode.commands.registerCommand('deltabox.toolchain.selectVersion', () => selectVersion()),
         vscode.commands.registerCommand('deltabox.toolchain.scaffold', scaffold),
         vscode.commands.registerCommand('deltabox.toolchain.refresh', refreshGraph),
         vscode.commands.registerCommand('deltabox.toolchain.refreshFiles', () => files.refresh()),
@@ -1230,6 +1626,25 @@ export function activate(context: vscode.ExtensionContext): void {
                 if (node) void vscode.env.clipboard.writeText(node.id);
             }
         ),
+        vscode.commands.registerCommand('deltabox.toolchain.registry.refresh', () =>
+            registries.refresh()
+        ),
+        vscode.commands.registerCommand(
+            'deltabox.toolchain.registry.open',
+            (node?: RegistryItemNode) => openRegistryItem(node)
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.registry.new', () => newRegistry()),
+        vscode.commands.registerCommand('deltabox.toolchain.registry.remove', () =>
+            removeRegistry()
+        ),
+        vscode.commands.registerCommand(
+            'deltabox.toolchain.registry.removeOne',
+            (node?: RegistryItemNode) => removeRegistryEntry(node)
+        ),
+        vscode.commands.registerCommand(
+            'deltabox.toolchain.registry.addItem',
+            (node?: RegistryItemNode) => addRegistryEntry(node)
+        ),
         vscode.commands.registerCommand(
             'deltabox.toolchain.resetToolchain',
             async (node?: Project) => {
@@ -1242,20 +1657,30 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('deltabox.toolchain.toggle', async () => {
             enabled = !enabled;
             await config().update('enabled', enabled, vscode.ConfigurationTarget.Workspace);
-            rebuildWatchers();
+            void rebuildWatchers();
             setStatus('idle');
             home.refresh();
             output.appendLine(`dbx: auto-sync ${enabled ? 'enabled' : 'disabled'}.`);
         }),
         vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('deltabox.registrySearchPaths')) {
+                void syncGlobalTemplatePaths().then(() => templates.refresh());
+            }
+            if (e.affectsConfiguration('deltabox.providerRegistrySearchPaths')) {
+                void syncGlobalProviderPaths().then(() => {
+                    void providers.refresh();
+                    void registries.refresh();
+                });
+            }
             if (!e.affectsConfiguration(SECTION)) return;
             enabled = getEnabled();
-            rebuildWatchers();
+            void rebuildWatchers();
             setStatus('idle');
             home.refresh();
         }),
         new vscode.Disposable(() => {
             child?.kill();
+            clearTimeout(watchInputsTimer);
             for (const watcher of watchers) watcher.dispose();
             scheduler.dispose();
         })
@@ -1273,11 +1698,12 @@ export function activate(context: vscode.ExtensionContext): void {
         })
     );
 
-    rebuildWatchers();
+    void rebuildWatchers();
     setStatus('idle');
     updateContextKeys();
     void providers.refresh();
-    void templates.refresh();
+    void syncGlobalTemplatePaths(true).then(() => templates.refresh());
+    void syncGlobalProviderPaths(true).then(() => providers.refresh());
     output.appendLine('dbx: extension activated.');
 }
 

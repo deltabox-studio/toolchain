@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
+    registrySourceAllowed,
+    type RegistryPolicy,
     sectionConfig,
     sectionEnabled,
     type ToolchainConfig,
@@ -9,8 +11,9 @@ import {
 } from '@deltabox/toolchain-shared';
 
 import { BUILTIN_TEMPLATES } from './builtin.js';
+import { loadGlobalTemplates } from './global.js';
 import { loadLocalTemplates } from './local.js';
-import { gitTemplate, loadNpmTemplates } from './online.js';
+import { detectNpmRegistry, gitTemplate, loadNpmTemplates } from './online.js';
 import type { Template } from './types.js';
 
 /** Where `template:add` records sources, relative to a project root. */
@@ -94,9 +97,53 @@ export function collectSources(options: LoadTemplatesOptions): ToolchainTemplate
     ];
 }
 
+/** The template registry policy from `toolchain.registry.templates`. */
+function templatePolicy(config?: ToolchainConfig): RegistryPolicy | undefined {
+    if (!config || !sectionEnabled(config.registry)) return undefined;
+    return sectionConfig(config.registry)?.templates;
+}
+
+/** Whether a template source is allowed by the policy (local paths resolved). */
+function sourceAllowed(
+    source: ToolchainTemplateSource,
+    cwd: string,
+    policy: RegistryPolicy | undefined
+): boolean {
+    if (!policy) return true;
+    if (source.type === 'local')
+        return registrySourceAllowed(path.resolve(cwd, source.locate), policy);
+    if (source.type === 'npm')
+        return registrySourceAllowed(source.registry ?? detectNpmRegistry(cwd), policy);
+    return registrySourceAllowed(source.locate, policy);
+}
+
+/** Fetch a remote source registry (`{ sources }`, `{ templates }` or an array). */
+async function loadRemoteSources(url: string): Promise<ToolchainTemplateSource[]> {
+    try {
+        const response = await fetch(url, { headers: { accept: 'application/json' } });
+        if (!response.ok) return [];
+        const parsed = (await response.json()) as unknown;
+        const list = Array.isArray(parsed)
+            ? parsed
+            : ((parsed as { sources?: unknown; templates?: unknown }).sources ??
+              (parsed as { templates?: unknown }).templates);
+        if (!Array.isArray(list)) return [];
+        return list.filter(
+            (item): item is ToolchainTemplateSource =>
+                Boolean(item) &&
+                typeof item === 'object' &&
+                typeof (item as { type?: unknown }).type === 'string' &&
+                typeof (item as { locate?: unknown }).locate === 'string'
+        );
+    } catch {
+        return [];
+    }
+}
+
 /**
  * Resolve every template: builtin, local directories (offline, always), and —
- * when `online` — npm `@scope/create` manifests + git repositories.
+ * when `online` — npm create packages, git repositories and remote source
+ * registries.
  */
 export async function loadTemplates(options: LoadTemplatesOptions): Promise<Template[]> {
     const seen = new Set<string>();
@@ -109,8 +156,33 @@ export async function loadTemplates(options: LoadTemplatesOptions): Promise<Temp
 
     if (options.builtin !== false) for (const template of BUILTIN_TEMPLATES) add(template);
 
-    for (const source of collectSources(options)) {
+    // Global templates/sources: local search paths (default
+    // `~/.dbx/toolchain/.registry/templates`) plus remote registry URLs. The
+    // project's own sources are loaded first, so a local template wins on an id
+    // clash.
+    const policy = templatePolicy(options.config);
+    const global = await loadGlobalTemplates(options.cwd, policy);
+    const sources = [...collectSources(options), ...global.sources].filter(source =>
+        sourceAllowed(source, options.cwd, policy)
+    );
+    const queue = [...sources];
+    const seenRemote = new Set<string>();
+
+    while (queue.length > 0) {
+        const source = queue.shift()!;
         switch (source.type) {
+            case 'remote': {
+                if (options.online && !seenRemote.has(source.locate)) {
+                    seenRemote.add(source.locate);
+                    const fetched = await loadRemoteSources(source.locate);
+                    queue.push(
+                        ...fetched.filter(candidate =>
+                            sourceAllowed(candidate, options.cwd, policy)
+                        )
+                    );
+                }
+                break;
+            }
             case 'builtin': {
                 const builtin = BUILTIN_TEMPLATES.find(candidate => candidate.id === source.locate);
                 if (builtin) add(source.id ? { ...builtin, id: source.id } : builtin);
@@ -126,7 +198,11 @@ export async function loadTemplates(options: LoadTemplatesOptions): Promise<Temp
             }
             case 'npm': {
                 if (options.online) {
-                    for (const template of await loadNpmTemplates(source.locate)) add(template);
+                    for (const template of await loadNpmTemplates(
+                        source.locate,
+                        source.registry ?? detectNpmRegistry(options.cwd)
+                    ))
+                        add(template);
                 }
                 break;
             }
@@ -144,5 +220,7 @@ export async function loadTemplates(options: LoadTemplatesOptions): Promise<Temp
             }
         }
     }
+
+    for (const template of global.templates) add(template);
     return out;
 }

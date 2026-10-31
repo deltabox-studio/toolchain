@@ -3,6 +3,13 @@ import path from 'node:path';
 
 import { detectProjectType, selectProjects } from '@deltabox/toolchain-core';
 import {
+    ensureViteFmtIgnore,
+    extractViteObject,
+    findViteConfig,
+    foldViteIntoConfig,
+    scanLiteralObject,
+} from '@deltabox/toolchain-migrate';
+import {
     type PackageJson,
     projectFromPackageJson,
     type ProjectType,
@@ -47,6 +54,8 @@ export interface GeneratedProjectConfig {
     created: boolean;
     /** Why the project was skipped, when it was. */
     skipped?: string;
+    /** How an existing hand-written `vite.config.*` was handled. */
+    vite?: { path: string; folded: boolean; error?: string };
 }
 
 export interface GenerateProjectConfigsResult {
@@ -115,13 +124,58 @@ export function generateProjectConfigs(
             name,
             ...(scope ? { scope } : {}),
             type,
+            ...(fromPkg?.description ? { description: fromPkg.description } : {}),
+            ...(fromPkg?.author ? { author: fromPkg.author } : {}),
+            ...(fromPkg?.license ? { license: fromPkg.license } : {}),
+            ...(fromPkg?.homepage ? { homepage: fromPkg.homepage } : {}),
+            ...(fromPkg?.repo ? { repo: fromPkg.repo } : {}),
+            ...(fromPkg?.nodeVersion ? { nodeVersion: fromPkg.nodeVersion } : {}),
             ...(fromPkg?.packageManager ? { packageManager: fromPkg.packageManager } : {}),
             ...(fromPkg?.packageManagerVersion
-                ? { yarnVersion: fromPkg.packageManagerVersion }
+                ? { packageManagerVersion: fromPkg.packageManagerVersion }
                 : {}),
         });
 
-        if (!dryRun) fs.writeFileSync(configPath, content, 'utf-8');
+        // Consider an existing hand-written vite.config.*: fold its props into
+        // `toolchain.vite` so the generated config already owns that setup.
+        let finalContent = content;
+        let vite: GeneratedProjectConfig['vite'];
+        const viteFile = findViteConfig(project.dir);
+        if (viteFile) {
+            try {
+                const source = fs.readFileSync(viteFile, 'utf-8').replace(/^\uFEFF/, '');
+                if (!source.includes('@deltabox/toolchain/vite')) {
+                    const extracted = extractViteObject(source);
+                    const literal =
+                        'error' in extracted ? undefined : scanLiteralObject(extracted.text);
+                    if ('error' in extracted || !literal?.ok) {
+                        vite = {
+                            path: viteFile,
+                            folded: false,
+                            error:
+                                'error' in extracted
+                                    ? extracted.error
+                                    : (literal as { reason: string }).reason,
+                        };
+                    } else {
+                        const folded = foldViteIntoConfig(
+                            content,
+                            ensureViteFmtIgnore(extracted.text)
+                        );
+                        if ('content' in folded) {
+                            finalContent = folded.content;
+                            vite = { path: viteFile, folded: true };
+                        } else {
+                            vite = { path: viteFile, folded: false, error: folded.error };
+                        }
+                    }
+                }
+            } catch (error) {
+                vite = { path: viteFile, folded: false, error: String(error) };
+            }
+        }
+
+        if (!dryRun) fs.writeFileSync(configPath, finalContent, 'utf-8');
         created.push(project.rel);
         configs.push({
             dir: project.dir,
@@ -130,6 +184,7 @@ export function generateProjectConfigs(
             type,
             configPath,
             created: true,
+            ...(vite ? { vite } : {}),
         });
     }
 

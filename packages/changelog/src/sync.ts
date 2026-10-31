@@ -1,9 +1,15 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import {
+    changelogSectionEnabled,
     type ManagedFile,
     resolveChangelogBranches,
-    type SyncTask,
+    resolveChangelogConfig,
+    resolveCommitlintEnabled,
     sectionConfig,
     sectionEnabled,
+    type SyncTask,
     type ToolchainConfig,
     type WorkflowSetting,
 } from '@deltabox/toolchain-shared';
@@ -11,16 +17,18 @@ import {
 import { renderCommitlintConfig } from './templates.js';
 import {
     isEnabled,
+    renderCustomWorkflow,
     renderWorkflow,
-    renderWorkflows,
     WORKFLOW_FILENAMES,
+    workflowFilePath,
     type WorkflowId,
 } from './workflows.js';
 
 /**
- * Apply the `changelog.branches` defaults to a workflow's config. An explicit
+ * Apply the `ci.changelog.branches` defaults to a workflow's config. An explicit
  * per-workflow `pushBranches` (or `false` to disable) still wins, and a raw
- * string setting is left untouched (it defines its own triggers).
+ * string setting is left untouched (it defines its own triggers). Only the
+ * workflows the consumer opted into are touched.
  */
 function withPushBranches(
     setting: WorkflowSetting | undefined,
@@ -32,22 +40,37 @@ function withPushBranches(
     return { pushBranches: branches, ...setting };
 }
 
+/** The workflow settings declared under `toolchain.ci` (all opt-in). */
+function declaredWorkflows(config: ToolchainConfig): Partial<Record<WorkflowId, WorkflowSetting>> {
+    const ci = sectionEnabled(config.ci) ? (sectionConfig(config.ci) ?? {}) : {};
+    return {
+        ci: ci.ci,
+        changelog: ci.changelog as WorkflowSetting | undefined,
+        release: ci.release,
+        issues: ci.issues,
+        sync: ci.sync,
+    };
+}
+
 /**
- * Map `changelog.branches` onto the workflows: `main` drives CI + release (and
- * the release PR base), `dev` drives the changelog workflow (reusing `main` when
- * omitted), and `sync` runs on both.
+ * Map `ci.changelog.branches` onto the declared workflows: `main` drives CI +
+ * release (and the release PR base), `dev` drives the changelog workflow
+ * (reusing `main` when omitted), and `sync` runs on both.
  */
 function withBranchDefaults(
     workflows: Partial<Record<WorkflowId, WorkflowSetting>>,
     branches: { main: string[]; dev: string[] }
 ): Partial<Record<WorkflowId, WorkflowSetting>> {
-    return {
-        ...workflows,
-        ci: withPushBranches(workflows.ci, branches.main),
-        release: withPushBranches(workflows.release, branches.main),
-        changelog: withPushBranches(workflows.changelog, branches.dev),
-        sync: withPushBranches(workflows.sync, [...new Set([...branches.main, ...branches.dev])]),
+    const next = { ...workflows };
+    const apply = (id: WorkflowId, list: string[]): void => {
+        if (next[id] === undefined) return;
+        next[id] = withPushBranches(next[id], list);
     };
+    apply('ci', branches.main);
+    apply('release', branches.main);
+    apply('changelog', branches.dev);
+    apply('sync', [...new Set([...branches.main, ...branches.dev])]);
+    return next;
 }
 
 /** The header prepended to every generated GitHub workflow. */
@@ -86,32 +109,98 @@ function normalizeDir(dir: string | undefined): string {
         .replace(/\/+$/, '');
 }
 
-/** The workflow file names produced for a config. */
+/** The workflow file paths produced for a config. */
+export function workflowFilePaths(config: ToolchainConfig): string[] {
+    const workflows = declaredWorkflows(config);
+    const files: string[] = [];
+    for (const [id, filename] of Object.entries(WORKFLOW_FILENAMES) as [WorkflowId, string][]) {
+        const setting = workflows[id];
+        if (isEnabled(setting)) files.push(workflowFilePath(id, setting, filename));
+    }
+    const custom = sectionEnabled(config.ci) ? (sectionConfig(config.ci)?.custom ?? {}) : {};
+    for (const [id, setting] of Object.entries(custom)) {
+        const value = setting as WorkflowSetting;
+        if (isEnabled(value)) files.push(workflowFilePath(id, value));
+    }
+    return [...new Set(files)];
+}
+
+/** The workflow file names (basenames) produced for a config. */
 export function workflowFilenames(config: ToolchainConfig): string[] {
-    return Object.keys(renderWorkflows({}, sectionConfig(config.changelog)?.workflows ?? {}));
+    return [...new Set(workflowFilePaths(config).map(file => file.split('/').pop() ?? file))];
 }
 
 /**
- * The changelog sync task: writes the GitHub workflows, the commitlint config
- * and the husky `commit-msg` hook from the loaded `dbx.config.*`. Branches,
- * triggers, steps, jobs and per-workflow tokens are all taken from the config.
+ * The CI/changelog sync task: writes the opted-in GitHub workflows, the
+ * commitlint config and the husky `commit-msg` hook from the loaded
+ * `dbx.config.*`. Branches, triggers, steps, jobs and per-workflow tokens are
+ * all taken from the config.
  */
 export function changelogSyncTask(): SyncTask {
     return {
         name: 'changelog',
         // Workflows + commitlint belong at a repo root (or a single project).
         projectTypes: ['monorepo-root', 'project'],
-        enabled: config => sectionEnabled(config.changelog),
+        // The task also writes release/issues/sync/ci workflows, so it runs
+        // whenever the `ci` section is enabled; the changelog-specific outputs
+        // (pipeline config, commitlint) still require `ci.changelog`.
+        enabled: config => sectionEnabled(config.ci),
         run: ctx => {
-            const ch = sectionConfig(ctx.config.changelog) ?? {};
+            const ch = resolveChangelogConfig(ctx.config) ?? {};
+            const commitlintConfig = sectionConfig(ch.commitlint);
+            // commitlint + the husky hook belong to the opted-in changelog pipeline.
+            const commitlint = changelogSectionEnabled(ctx.config) && resolveCommitlintEnabled(ch);
             const files: ManagedFile[] = [];
+            const workflowPaths = new Set<string>();
+            const workflowConflicts: Record<string, string> = {};
+            const managed = new Set(ctx.managedFiles ?? []);
+            const isManagedWorkflow = (filePath: string): boolean => {
+                if (managed.has(filePath)) return true;
+                const abs = path.resolve(ctx.cwd, filePath);
+                if (!fs.existsSync(abs)) return true;
+                try {
+                    const current = fs.readFileSync(abs, 'utf-8').replace(/^\uFEFF/, '');
+                    // A generated header also proves dbx owns it (eg. a lost manifest).
+                    return current.startsWith(WORKFLOW_HEADER);
+                } catch {
+                    return false;
+                }
+            };
+            const addWorkflow = (
+                id: string,
+                filePath: string,
+                content: string,
+                custom = false
+            ): void => {
+                if (workflowPaths.has(filePath)) {
+                    ctx.warn(
+                        `changelog: workflow path "${filePath}" is declared more than once; skipping the duplicate.`
+                    );
+                    return;
+                }
+                if (!isManagedWorkflow(filePath)) {
+                    const key = custom ? `ci.custom.${id}` : `ci.${id}`;
+                    workflowConflicts[filePath] = key;
+                    ctx.warn(
+                        `changelog: ${filePath} already exists and is not managed by dbx; leaving it untouched. ` +
+                            `Set \`${key}: { enabled: false }\` in dbx.config to keep it explicit.`,
+                        'changelog.existing-workflow'
+                    );
+                    return;
+                }
+                workflowPaths.add(filePath);
+                files.push({ path: filePath, content });
+            };
 
-            const commitlintDir = normalizeDir(ch.commitlint?.dir);
+            const commitlintDir = normalizeDir(commitlintConfig?.dir);
             const commitlintPath = commitlintDir
                 ? `${commitlintDir}/commitlint.config.mjs`
                 : 'commitlint.config.mjs';
 
-            const workflows = withBranchDefaults(ch.workflows ?? {}, resolveChangelogBranches(ch));
+            const workflows = withBranchDefaults(
+                declaredWorkflows(ctx.config),
+                resolveChangelogBranches(ch)
+            );
             const tokens = { ...ctx.tokens, commitlintConfig: commitlintPath };
 
             for (const [id, filename] of Object.entries(WORKFLOW_FILENAMES) as [
@@ -127,29 +216,66 @@ export function changelogSyncTask(): SyncTask {
                     : renderWorkflow(id, {
                           tokens,
                           config: typeof setting === 'object' ? setting : {},
+                          commitlint,
                       });
                 if (!content) continue;
+                addWorkflow(
+                    id,
+                    workflowFilePath(id, setting, filename),
+                    raw ? content : `${WORKFLOW_HEADER}\n${content}`
+                );
+            }
+
+            // Config-defined workflows (`ci.custom.<id>`): enabled by presence,
+            // starting from an empty skeleton or written verbatim when a string.
+            const custom = sectionEnabled(ctx.config.ci)
+                ? (sectionConfig(ctx.config.ci)?.custom ?? {})
+                : {};
+            for (const [id, customSetting] of Object.entries(custom)) {
+                const setting = customSetting as WorkflowSetting;
+                if (!isEnabled(setting)) continue;
+                const raw = typeof setting === 'string';
+                const content = raw
+                    ? setting
+                    : renderCustomWorkflow(id, {
+                          tokens,
+                          config: typeof setting === 'object' ? setting : {},
+                          commitlint,
+                      });
+                if (!content) continue;
+                addWorkflow(
+                    id,
+                    workflowFilePath(id, setting),
+                    raw ? content : `${WORKFLOW_HEADER}\n${content}`,
+                    true
+                );
+            }
+
+            if (commitlint) {
                 files.push({
-                    path: `.github/workflows/${filename}`,
-                    content: raw ? content : `${WORKFLOW_HEADER}\n${content}`,
+                    path: commitlintPath,
+                    content: `${COMMITLINT_HEADER}\n${renderCommitlintConfig({
+                        ...(commitlintConfig?.types ? { types: commitlintConfig.types } : {}),
+                        ...(commitlintConfig?.scopes ? { scopes: commitlintConfig.scopes } : {}),
+                    })}`,
+                });
+
+                // The local husky hook. `postinstall: husky` makes husky activate it
+                // (`.husky/_` + `core.hooksPath`), so commits are linted locally;
+                // the generated CI job lints the pushed range as the backstop.
+                files.push({
+                    path: '.husky/commit-msg',
+                    content: `${HOOK_HEADER}\n${commitMsgHook(commitlintDir ? commitlintPath : undefined)}\n`,
                 });
             }
 
-            files.push({
-                path: commitlintPath,
-                content: `${COMMITLINT_HEADER}\n${renderCommitlintConfig({
-                    ...(ch.types ? { types: ch.types } : {}),
-                    ...(ch.scopes ? { scopes: ch.scopes } : {}),
-                })}`,
-            });
-
-            // The local husky hook. `postinstall: husky` makes husky activate it
-            // (`.husky/_` + `core.hooksPath`), so commits are linted locally;
-            // the generated CI job lints the pushed range as the backstop.
-            files.push({
-                path: '.husky/commit-msg',
-                content: `${HOOK_HEADER}\n${commitMsgHook(commitlintDir ? commitlintPath : undefined)}\n`,
-            });
+            if (ctx.manifest) {
+                if (Object.keys(workflowConflicts).length > 0) {
+                    ctx.manifest.workflowConflicts = workflowConflicts;
+                } else {
+                    delete ctx.manifest.workflowConflicts;
+                }
+            }
 
             return files;
         },

@@ -13,14 +13,16 @@
  */
 
 import type {
+    ChangelogConfig,
     ProjectType,
-    ToolchainChangelogConfig,
+    ToolchainCiConfig,
     ToolchainConfigSections,
 } from './config-types.js';
+import { deepMerge, isPlainObject } from './object-utils.js';
 import type { Replacements } from './template.js';
 import type { Awaitable } from './types.js';
 
-export * from './config-schema.js';
+export * from './config-schema/index.js';
 export * from './config-types.js';
 
 /** A summary of a sync run, handed to {@link ToolchainHooks.afterSync}. */
@@ -82,11 +84,22 @@ export interface DbxConfig {
     toolchain?: ToolchainConfig;
 }
 
+/** A `dbx.config` callback: returns the config synchronously or as a promise. */
+export type DbxConfigFunction = () => DbxConfig | Promise<DbxConfig>;
+
+/** Everything {@link defineConfig} accepts: an object, a promise, or a callback. */
+export type DbxConfigInput = DbxConfig | Promise<DbxConfig> | DbxConfigFunction;
+
 /**
  * Identity helper that gives a config file full type-checking + autocomplete.
- * Mirrors Vite's `defineConfig`: `export default defineConfig({ toolchain: { ... } })`.
+ * Mirrors Vite's `defineConfig`: the argument may be an object, a promise, or a
+ * sync/async callback returning the config. The loader resolves it, so a config
+ * can do async work before returning `{ toolchain }`.
  */
-export function defineConfig(config: DbxConfig): DbxConfig {
+export function defineConfig(config: Promise<DbxConfig>): Promise<DbxConfig>;
+export function defineConfig(config: DbxConfigFunction): DbxConfigFunction;
+export function defineConfig(config: DbxConfig): DbxConfig;
+export function defineConfig(config: DbxConfigInput): DbxConfigInput {
     return config;
 }
 
@@ -146,11 +159,136 @@ function branchList(value: string | string[] | undefined): string[] {
 }
 
 /**
+ * The `ci` section's options, when the section is enabled. It is opt-in by
+ * presence, and `enabled: false` disables every nested workflow.
+ */
+export function resolveCiConfig(config: ToolchainConfig = {}): ToolchainCiConfig | undefined {
+    return sectionEnabled(config.ci) ? sectionConfig(config.ci) : undefined;
+}
+
+/**
+ * The changelog pipeline options, merging the manual `toolchain.changelog`
+ * section under `ci.changelog`. `ci.changelog` wins when it sets the same
+ * option; when it is enabled but not configured (`true`, a raw workflow string,
+ * or workflow-only options) the manual section's options still apply.
+ */
+export function resolveChangelogConfig(config: ToolchainConfig = {}): ChangelogConfig | undefined {
+    const legacy = sectionConfig(config.changelog);
+    const legacyOptions = legacy && sectionEnabled(legacy) ? legacy : undefined;
+    const setting = resolveCiConfig(config)?.changelog;
+    if (setting === undefined || setting === false || setting === true) return legacyOptions;
+    if (typeof setting === 'string') return legacyOptions;
+    if (!sectionEnabled(setting)) return legacyOptions;
+    return legacyOptions ? (deepMerge(legacyOptions, setting) as ChangelogConfig) : setting;
+}
+
+/** Default package-manager versions used when a config omits `packageManagerVersion`. */
+export const DEFAULT_PACKAGE_MANAGER_VERSIONS: Record<string, string> = {
+    yarn: '4.17.1',
+    pnpm: '10.11.1',
+    npm: '11.19.0',
+    bun: '1.3.0',
+};
+
+/** Formatter tools, highest priority first. */
+export const FORMATTER_PRECEDENCE = ['oxc', 'biome', 'prettier', 'dprint'] as const;
+/** Linter tools, highest priority first. */
+export const LINTER_PRECEDENCE = ['oxc', 'biome', 'eslint'] as const;
+
+export type FormatterTool = (typeof FORMATTER_PRECEDENCE)[number];
+export type LinterTool = (typeof LINTER_PRECEDENCE)[number];
+
+function sectionOptions(value: unknown): Record<string, unknown> | undefined {
+    return sectionEnabled(value as boolean | object | undefined)
+        ? (sectionConfig(value as never) as Record<string, unknown> | undefined)
+        : undefined;
+}
+
+/** The configured formatters, in precedence order (oxc includes `vite.fmt`). */
+export function resolveFmtTools(config: ToolchainConfig = {}): FormatterTool[] {
+    const fmt = sectionOptions(config.fmt) ?? {};
+    const vite = sectionOptions(config.vite);
+    const active = new Set<FormatterTool>();
+    if (vite?.fmt !== undefined && vite.fmt !== false) active.add('oxc');
+    if (fmt.oxc !== undefined && fmt.oxc !== false) active.add('oxc');
+    if (fmt.biome !== undefined && fmt.biome !== false) active.add('biome');
+    if (fmt.prettier !== undefined && fmt.prettier !== false) active.add('prettier');
+    if (fmt.dprint !== undefined && fmt.dprint !== false) active.add('dprint');
+    return FORMATTER_PRECEDENCE.filter(tool => active.has(tool));
+}
+
+/** The configured linters, in precedence order (oxc includes `vite.lint`). */
+export function resolveLintTools(config: ToolchainConfig = {}): LinterTool[] {
+    const lint = sectionOptions(config.lint) ?? {};
+    const vite = sectionOptions(config.vite);
+    const active = new Set<LinterTool>();
+    if (vite?.lint !== undefined && vite.lint !== false) active.add('oxc');
+    if (lint.oxc !== undefined && lint.oxc !== false) active.add('oxc');
+    if (lint.biome !== undefined && lint.biome !== false) active.add('biome');
+    if (lint.eslint !== undefined && lint.eslint !== false) active.add('eslint');
+    return LINTER_PRECEDENCE.filter(tool => active.has(tool));
+}
+
+/** The winning formatter for editor defaults. */
+export function resolveFmtTool(config: ToolchainConfig = {}): FormatterTool | undefined {
+    return resolveFmtTools(config)[0];
+}
+
+/** The winning linter for editor defaults. */
+export function resolveLintTool(config: ToolchainConfig = {}): LinterTool | undefined {
+    return resolveLintTools(config)[0];
+}
+
+/** Merge `vite.fmt` over `fmt.oxc` (leaves/arrays in `vite.fmt` win). */
+export function resolveOxcFmtConfig(config: ToolchainConfig = {}): unknown {
+    const fmt = sectionOptions(config.fmt)?.oxc;
+    const vite = sectionOptions(config.vite)?.fmt;
+    if (vite === undefined) return fmt;
+    if (vite === false) return false;
+    if (vite === true) return fmt ?? true;
+    if (fmt === undefined) return vite;
+    return isPlainObject(fmt) && isPlainObject(vite) ? deepMerge(fmt, vite) : vite;
+}
+
+/** Merge `vite.lint` over `lint.oxc` (leaves/arrays in `vite.lint` win). */
+export function resolveOxcLintConfig(config: ToolchainConfig = {}): unknown {
+    const lint = sectionOptions(config.lint)?.oxc;
+    const vite = sectionOptions(config.vite)?.lint;
+    if (vite === undefined) return lint;
+    if (vite === false) return false;
+    if (vite === true) return lint ?? true;
+    if (lint === undefined) return vite;
+    return isPlainObject(lint) && isPlainObject(vite) ? deepMerge(lint, vite) : vite;
+}
+
+/** Whether the changelog workflow/pipeline is enabled (`ci.changelog`). */
+export function changelogSectionEnabled(config: ToolchainConfig = {}): boolean {
+    const setting = resolveCiConfig(config)?.changelog;
+    if (setting === undefined) return false;
+    if (typeof setting === 'boolean') return setting;
+    // A raw YAML string is enabled when it has content (an empty string disables it).
+    if (typeof setting === 'string') return setting.trim().length > 0;
+    return sectionEnabled(setting);
+}
+
+/**
+ * Whether commitlint is enabled for the changelog pipeline. It defaults to
+ * `true`; set `ci.changelog.commitlint: false` (or `{ enabled: false }`) to
+ * generate changelogs without the Conventional-Commits rules.
+ */
+export function resolveCommitlintEnabled(changelog?: ChangelogConfig): boolean {
+    const commitlint = changelog?.commitlint;
+    if (commitlint === undefined) return true;
+    if (typeof commitlint === 'boolean') return commitlint;
+    return commitlint.enabled !== false;
+}
+
+/**
  * The resolved changelog branches. `main` defaults to `['main']`; `dev` has **no
  * default** and reuses `main` when omitted, so a single-branch repo needs no
  * `dev`. Each side accepts a glob or an array of globs.
  */
-export function resolveChangelogBranches(changelog?: ToolchainChangelogConfig): {
+export function resolveChangelogBranches(changelog?: ChangelogConfig): {
     main: string[];
     dev: string[];
 } {
@@ -167,9 +305,14 @@ export function resolveChangelogBranches(changelog?: ToolchainChangelogConfig): 
  */
 export function resolveTokens(config: ToolchainConfig = {}): Replacements {
     const project = config.project ?? {};
-    const changelog = sectionConfig(config.changelog) ?? {};
+    const changelog = resolveChangelogConfig(config) ?? {};
     const branches = resolveChangelogBranches(changelog);
     const name = project.name ?? 'app';
+    const packageManager = project.packageManager ?? 'yarn';
+    const packageManagerVersion =
+        project.packageManagerVersion ??
+        DEFAULT_PACKAGE_MANAGER_VERSIONS[packageManager] ??
+        '4.17.1';
     return {
         name,
         scope: project.scope ?? '',
@@ -180,9 +323,9 @@ export function resolveTokens(config: ToolchainConfig = {}): Replacements {
         repoSlug: repoSlugFromUrl(project.repo) ?? '',
         description: project.description ?? '',
         nodeVersion: project.nodeVersion ?? '22',
-        packageManager: project.packageManager ?? 'yarn',
-        yarnVersion: project.packageManagerVersion ?? '4.17.1',
-        packageManagerVersion: project.packageManagerVersion ?? '4.17.1',
+        packageManager,
+        yarnVersion: packageManagerVersion,
+        packageManagerVersion,
         mainBranch: branches.main[0] ?? 'main',
         devBranch: branches.dev[0] ?? 'main',
     };
@@ -199,6 +342,13 @@ export interface ManagedFile {
      * JSON files, which are tracked via the manifest instead).
      */
     header?: string;
+    /**
+     * Record the file in the manifest (default true). An untracked file is
+     * written and drift-checked like any other, but stays user-owned: it is
+     * never pruned by a later sync or removed by `dbx reset` (eg. a user
+     * tsconfig a `tsconfig.overrides` entry patches).
+     */
+    track?: boolean;
 }
 
 /** The context handed to every {@link SyncTask}. */
@@ -209,12 +359,20 @@ export interface SyncContext {
     projectType: ProjectType;
     /** The loaded config. */
     config: ToolchainConfig;
+    /** The project's own (unmerged) config, when loaded. */
+    ownConfig?: ToolchainConfig;
     /** The resolved replacement tokens. */
     tokens: Replacements;
     /** Log a line (respects `--quiet`). */
     log: (message: string) => void;
-    /** Emit a warning (respects `--quiet`, which suppresses warnings too). */
-    warn: (message: string) => void;
+    /** Emit a warning (respects `--quiet` and `logger.suppress`). */
+    warn: (message: string, id?: string) => void;
+    /** Dry run: report drift without writing files (including snapshots). */
+    check?: boolean;
+    /** Repo-relative files the previous sync managed (from the manifest). */
+    managedFiles?: string[];
+    /** Extra manifest metadata tasks can persist between syncs. */
+    manifest?: Record<string, unknown>;
 }
 
 /** A unit of sync work exposed by a package. */
@@ -223,16 +381,17 @@ export interface SyncTask {
     name: string;
     /**
      * Repo-relative globs to watch; a change re-runs this task. The config file
-     * itself is always watched, and re-runs every task.
+     * itself is always watched, and re-runs every task. A function derives the
+     * globs from the config (eg. custom tsconfig file names).
      */
-    watch?: string[];
+    watch?: string[] | ((config: ToolchainConfig) => string[]);
     /**
      * File names/suffixes the task does **not** own but that may appear in an
      * older manifest. They are never deleted (even though they are no longer
      * generated) and are dropped from the manifest, so a consumer can edit them
-     * freely — eg. `tsconfig.build.json`.
+     * freely — eg. `tsconfig.build.json`. A function derives them from the config.
      */
-    keep?: string[];
+    keep?: string[] | ((config: ToolchainConfig) => string[]);
     /** Whether the task runs for the given config (default: always). */
     enabled?: (config: ToolchainConfig) => boolean;
     /**

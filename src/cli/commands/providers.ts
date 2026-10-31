@@ -1,13 +1,14 @@
-import { readProviderRegistry } from '@deltabox/toolchain-core';
+import { readAllProvidersSync } from '@deltabox/toolchain-core';
 import {
     logger,
     spawnCross,
     type ToolchainCommand,
+    type ToolchainConfig,
     type ToolchainProvider,
     type ToolchainProviderCommand,
 } from '@deltabox/toolchain-shared';
 
-import { toolchainProviders } from '../../providers.js';
+import { loadToolchainProviders, providerPolicy } from '../../providers.js';
 
 const CWD_OPTION = { flags: '--cwd <dir>', description: 'Project root (default: cwd).' };
 
@@ -28,6 +29,17 @@ function providerPassthrough(
         run: async (opts, context) => {
             const raw = (opts.args as string[] | undefined) ?? [];
             const cwd = (opts.cwd as string | undefined) ?? context.cwd;
+            const policy = providerPolicy(context.config);
+            if (
+                policy &&
+                !readAllProvidersSync(cwd, policy).some(candidate => candidate.id === provider.id)
+            ) {
+                logger.error(
+                    `provider "${provider.id}" is not allowed by toolchain.registry.providers.`
+                );
+                process.exitCode = 1;
+                return;
+            }
             if (!provider.binary) {
                 logger.error(`provider "${provider.id}" has no binary to run.`);
                 process.exitCode = 1;
@@ -48,18 +60,21 @@ function providerPassthrough(
 }
 
 /** The passthrough commands for every command of the project's custom providers. */
-export function providerPassthroughCommands(cwd: string = process.cwd()): ToolchainCommand[] {
-    return readProviderRegistry(cwd).flatMap(provider =>
+export function providerPassthroughCommands(
+    cwd: string = process.cwd(),
+    config?: ToolchainConfig
+): ToolchainCommand[] {
+    return readAllProvidersSync(cwd, providerPolicy(config)).flatMap(provider =>
         provider.commands.map(command => providerPassthrough(provider, command))
     );
 }
 
 /**
- * `dbx providers` — list the registered providers and the CLI commands
+ * `dbx providers` - list the registered providers and the CLI commands
  * they contribute. `--json` is the machine-readable form the VS Code extension
  * consumes to build its menus.
  */
-export function providerCommands(): ToolchainCommand[] {
+export function providerCommands(config?: ToolchainConfig): ToolchainCommand[] {
     return [
         {
             name: 'providers',
@@ -67,8 +82,8 @@ export function providerCommands(): ToolchainCommand[] {
             options: [
                 { flags: '--json', description: 'Print the providers (with actions) as JSON.' },
             ],
-            run: opts => {
-                const providers = toolchainProviders();
+            run: async (opts, context) => {
+                const providers = await loadToolchainProviders(process.cwd(), context.config);
                 if (opts.json) {
                     logger.raw(JSON.stringify(providers, null, 4));
                     return;
@@ -83,6 +98,6 @@ export function providerCommands(): ToolchainCommand[] {
                 }
             },
         },
-        ...providerPassthroughCommands(),
+        ...providerPassthroughCommands(process.cwd(), config),
     ];
 }

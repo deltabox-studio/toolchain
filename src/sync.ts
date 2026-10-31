@@ -4,11 +4,19 @@ import {
     conventionalCommitsVscodeExtensions,
     conventionalCommitsVscodeSettings,
 } from '@deltabox/toolchain-changelog';
-import { vscodeSyncTask } from '@deltabox/toolchain-core';
+import { editorConfigSyncTask, toolingConfigTask, vscodeSyncTask } from '@deltabox/toolchain-core';
 import { catalogsSyncTask, projectSyncTask } from '@deltabox/toolchain-project';
-import { type SyncTask, sectionConfig, sectionEnabled } from '@deltabox/toolchain-shared';
+import {
+    changelogSectionEnabled,
+    resolveChangelogConfig,
+    type SyncTask,
+    sectionConfig,
+    sectionEnabled,
+} from '@deltabox/toolchain-shared';
 import { tsconfigSyncTask } from '@deltabox/toolchain-tsconfig';
 import { viteSyncTask } from '@deltabox/toolchain-vite';
+
+import { toolingDefaultsTask } from './tooling.js';
 
 /**
  * The default sync tasks run by `dbx sync` / `dbx watch`:
@@ -17,12 +25,15 @@ import { viteSyncTask } from '@deltabox/toolchain-vite';
  */
 export function defaultSyncTasks(): SyncTask[] {
     return [
+        toolingDefaultsTask(),
         projectSyncTask(),
         catalogsSyncTask(),
         changelogSyncTask(),
         biomeSyncTask(),
         tsconfigSyncTask(),
         viteSyncTask(),
+        toolingConfigTask(),
+        editorConfigSyncTask(),
         vscodeSyncTask({
             settings: config => [
                 ...(sectionEnabled(config.biome) ? [biomeVscodeSettings] : []),
@@ -30,8 +41,8 @@ export function defaultSyncTasks(): SyncTask[] {
             ],
             extensions: [...conventionalCommitsVscodeExtensions.recommendations],
             enabled: config =>
-                (sectionEnabled(config.changelog) &&
-                    sectionConfig(config.changelog)?.vscode !== false) ||
+                (changelogSectionEnabled(config) &&
+                    resolveChangelogConfig(config)?.vscode !== false) ||
                 (sectionEnabled(config.biome) && sectionConfig(config.biome)?.vscode !== false),
         }),
     ];

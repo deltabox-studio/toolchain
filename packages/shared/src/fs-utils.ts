@@ -6,7 +6,9 @@ import { deepMerge, isPlainObject } from './object-utils.js';
 /** Read + parse a JSON file, returning `undefined` when it is missing/invalid. */
 export function readJsonFile<T = Record<string, unknown>>(file: string): T | undefined {
     try {
-        return JSON.parse(fs.readFileSync(file, 'utf-8')) as T;
+        // Strip a UTF-8 BOM: editors/PowerShell often write one, and JSON.parse
+        // rejects it.
+        return JSON.parse(fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, '')) as T;
     } catch {
         return undefined;
     }

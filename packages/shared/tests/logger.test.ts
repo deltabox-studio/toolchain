@@ -120,4 +120,26 @@ describe('logger', () => {
         expect(isLogLevel('constructor')).toBe(false);
         expect(normalizeLogLevel('toString')).toBe('info');
     });
+
+    it('renders warning/error ids in uppercase', () => {
+        const log = createLogger({ name: 'dbx', color: false });
+        log.warn('careful', 'deprecated.section.biome');
+        expect(cap.all()).toContain('[DEPRECATED_SECTION_BIOME] careful');
+    });
+
+    it('suppresses warnings/errors by id, substring or regex', () => {
+        const log = createLogger({
+            name: 'dbx',
+            color: false,
+            suppress: ['fmt.conflict', 'deprecated', '/^boom/'],
+        });
+        log.warn('both are configured', 'fmt.conflict');
+        log.warn('a deprecated option');
+        log.error('boom!');
+        log.warn('keep this');
+        expect(cap.all()).not.toContain('both are configured');
+        expect(cap.all()).not.toContain('a deprecated option');
+        expect(cap.all()).not.toContain('boom!');
+        expect(cap.all()).toContain('keep this');
+    });
 });

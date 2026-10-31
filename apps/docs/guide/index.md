@@ -46,6 +46,21 @@ The published package exposes one binary, `dbx`:
 dbx --help
 ```
 
+## Interactive CLI
+
+Commands are flag-driven, but in an interactive terminal (a TTY) a few prompt for
+the values you omit:
+
+```sh
+dbx create                     # pick a template, project name, scope, inputs and actions
+dbx migrate --recursive        # pick which projects to migrate
+```
+
+`dbx migrate` without `--from` still detects the sources automatically; the
+prompt is only for the project selection with `--recursive`. Pass `--json`, pipe
+the command, or supply the flags to run non-interactively. `dbx template:init`
+also accepts flags (`--name`, `--kind`, ...) for scripted use.
+
 ## Create a config
 
 Scaffold a config for a project that does not have one yet:
@@ -88,15 +103,16 @@ need to add it by hand when the repo has no `.gitignore` yet.
 
 ## What gets managed
 
-| Area                                                                | Section in the config |
-| ------------------------------------------------------------------- | --------------------- |
-| GitHub workflows, commitlint, Conventional-Commits VS Code settings | `changelog`           |
-| `biome.json` (Biome consumers)                                      | `biome`               |
-| Workspace `tsconfig.json` files (aliases + references)              | `tsconfig`            |
-| `vite.config.ts` (Vite+ consumers)                                  | `vite`                |
-| Template sources / scaffolding                                      | `templates`           |
-| Package catalogs (`.yarnrc.yml` / `pnpm-workspace.yaml`)            | `catalogs`            |
-| Watch behaviour                                                     | `watch`               |
+| Area                                                                | Section in the config      |
+| ------------------------------------------------------------------- | -------------------------- |
+| GitHub workflows, commitlint, Conventional-Commits VS Code settings | `ci`                       |
+| `biome.json` (formatter/linter)                                     | `fmt.biome` / `lint.biome` |
+| `.oxfmtrc.json` / `.oxlintrc.json` (Oxc)                            | `fmt.oxc` / `lint.oxc`     |
+| Workspace `tsconfig.json` files (aliases + references)              | `tsconfig`                 |
+| `vite.config.ts` (Vite+ consumers)                                  | `vite`                     |
+| Template sources / scaffolding                                      | `templates`                |
+| Package catalogs (`.yarnrc.yml` / `pnpm-workspace.yaml`)            | `catalogs`                 |
+| Watch behaviour                                                     | `watch`                    |
 
 Every section is **opt-in by presence**: define it to enable it, omit it to leave
 that area untouched.
@@ -106,17 +122,20 @@ that area untouched.
 - [Monorepo guide](/guide/monorepo)
 - [CLI reference](/guide/cli)
 - [Configuration reference](/config/reference)
+- [TypeScript](/guide/typescript)
 - [Project](/guide/project)
-- [Changelog & versioning](/guide/changelog)
+- [CI](/guide/ci/)
+- [Changelog](/guide/changelog/)
 - [tsconfig](/guide/tsconfig)
+- [Formatting & linting](/guide/formatting)
 - [Biome](/guide/biome)
 - [Vite+](/guide/vite)
 - [Watch](/guide/watch)
 - [Logger](/guide/logger)
-- [Config generator](/guide/config-generator)
+- [Config generator](/guide/config-generator/)
 - [Providers (Vite+)](/guide/providers)
 - [Package scripts](/guide/scripts)
 - [Templates](/guide/templates)
 - [Migrations](/guide/migrations)
-- [Programmatic API](/guide/api)
+- [Programmatic API](/guide/api/)
 - [LLMs](/llms)

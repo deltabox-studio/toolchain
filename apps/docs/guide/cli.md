@@ -13,38 +13,57 @@ override them on the command line.
 | `--color`           | Force coloured output (the default).                           |
 | `--no-color`        | Disable coloured output.                                       |
 | `--no-update-check` | Do not check for a newer `dbx` version.                        |
+| `--config <file>`   | Use a specific config file instead of discovering one.         |
+| `--no-config`       | Ignore config files and use CLI flags/env defaults only.       |
 
-These override the [`logger` config](/guide/config#logging) and may appear
-before or after the subcommand.
+These override the [`logger` config](/guide/config/logging) and may appear
+before or after the subcommand. `--config` resolves relative to the current
+directory (absolute paths are used as-is); `--no-config` skips discovery
+entirely (including inherited parent configs).
 
 `dbx` checks the npm registry in the background (about once a day) and prints a
 short notice with a link to the release when a newer version is published. The
 check is skipped in CI and when `NO_UPDATE_NOTIFIER` or `DBX_NO_UPDATE_CHECK` is
 set, and can be turned off with `--no-update-check`.
 
+## Interactive CLI
+
+The CLI is scriptable first: every prompt has a flag equivalent. In a TTY,
+however, some commands prompt when the flags are omitted:
+
+```sh
+dbx create                     # template + name + scope + template inputs/actions
+dbx migrate --recursive        # choose the projects to migrate
+```
+
+`dbx migrate` detects migrations automatically without `--from`; the prompt is
+only the project picker for `--recursive`. `--json`, a piped stdin, or the
+explicit flags disable prompts. See [Scaffolding](#scaffolding) and
+[Migrations](#migrations) for the flag forms.
+
 ## Output
 
-Colour is on by default and follows `--no-color` / the [`logger` config](/guide/config#logging).
+Colour is on by default and follows `--no-color` / the [`logger` config](/guide/config/logging).
 
 ## Core
 
-| Command     | Description                                                                      |
-| ----------- | -------------------------------------------------------------------------------- |
-| `projects`  | Discover projects and write `.dbx/toolchain/projects.json`.                      |
-| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`).  |
-| `watch`     | Sync once, then watch key inputs and re-sync.                                    |
-| `reset`     | Remove generated files, the manifest and/or the config (`--all`, `--recursive`). |
-| `providers` | List registered providers + their commands (`--json`).                           |
+| Command     | Description                                                                                                          |
+| ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| `projects`  | Discover projects and write `.dbx/toolchain/projects.json`.                                                          |
+| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`, `--json`).                            |
+| `watch`     | Sync once, then watch key inputs and re-sync.                                                                        |
+| `reset`     | Remove generated files, the manifest and/or the config (`--all`, `--recursive`); reverts `tsconfig.overrides` first. |
+| `providers` | List registered providers + their commands (`--json`).                                                               |
 
 ## Scaffolding
 
-| Command                  | Description                                                                     |
-| ------------------------ | ------------------------------------------------------------------------------- |
-| `project:init`           | A single-package TypeScript project (`--package-manager`).                      |
-| `project:init:monorepo`  | A monorepo root (add `--example` for one example workspace).                    |
-| `project:init:workspace` | A workspace package into an existing monorepo root.                             |
-| `project:config`         | Generate `dbx.config.ts` for projects missing one.                              |
-| `create`                 | Scaffold from a template (`--template`/`--kind`, `--name`, `--scope`, `--out`). |
+| Command                  | Description                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `project:init`           | A single-package TypeScript project (`--package-manager`).                                                   |
+| `project:init:monorepo`  | A monorepo root (add `--example` for one example workspace).                                                 |
+| `project:init:workspace` | A workspace package into an existing monorepo root.                                                          |
+| `project:config`         | Generate `dbx.config.ts` for projects missing one (folds an existing `vite.config.*` into `toolchain.vite`). |
+| `create`                 | Scaffold from a template (`--template`/`--kind`, `--name`, `--scope`, `--out`).                              |
 
 Templates that declare inputs/actions are prompted for them (`--var key=value`,
 `--action <id>`), see [Templates](/guide/templates).
@@ -55,13 +74,15 @@ prompts for the template, name and scope with clack; Ctrl-C cancels. See
 
 ## Templates
 
-| Command           | Description                                                            |
-| ----------------- | ---------------------------------------------------------------------- |
-| `template:list`   | List templates (`--kind`, `--registry`, `--online`, `--json`).         |
-| `template:init`   | Write a `template.json` to a directory (`--kind`, `--name`, `--add`).  |
-| `template:add`    | Record a source in `.dbx/toolchain/templates.json` (auto-inits local). |
-| `template:remove` | Remove a source by id or `type:locate`.                                |
-| `template:info`   | Show one template.                                                     |
+| Command             | Description                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------ |
+| `template:list`     | List templates (`--kind`, `--registry`, `--online`, `--json`).                       |
+| `template:init`     | Write a `template.json` to a directory (`--kind`, `--name`, `--add`, `--no-global`). |
+| `template:add`      | Record a source (auto-inits local; `--no-global` keeps it project-only).             |
+| `template:remove`   | Remove a source by id or `type:locate`.                                              |
+| `template:registry` | List/add/remove the global template search paths (`--vscode-dir`, `--clear`).        |
+| `registry`          | List/add/remove/set template **or provider** registries (`--kind`, `--scope`).       |
+| `template:info`     | Show one template.                                                                   |
 
 See [Templates](/guide/templates).
 
@@ -69,9 +90,12 @@ See [Templates](/guide/templates).
 
 ```sh
 dbx migrate --from biome --write           # .oxfmtrc.json + .oxlintrc.json
+dbx migrate --from biome --from prettier --write  # several sources
 dbx migrate --from biome --target vite --write
+dbx migrate --from oxc --write             # .oxfmtrc/.oxlintrc -> dbx.config
 dbx migrate --from all                     # every detected source
 dbx migrate --from vite --recursive --write  # migrate every detected project
+dbx migrate --recursive                    # interactive project picker
 dbx migrate --check                        # CI: exit 1 when stale
 dbx migrate:list
 ```
@@ -80,12 +104,12 @@ See [Migrations](/guide/migrations).
 
 ## Tsconfig / cleanup / changelog / workflows
 
-| Command                     | Description                                               |
-| --------------------------- | --------------------------------------------------------- |
-| `tsconfig`                  | Regenerate workspace `tsconfig.json` files.               |
-| `cleanup` / `cleanup:turbo` | Remove build artifacts / the turbo cache.                 |
-| `changelog`                 | Derive the semver bump and update CHANGELOG + versions.   |
-| `workflow`                  | Trigger generated GitHub workflows via `gh workflow run`. |
+| Command                     | Description                                                                        |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| `tsconfig`                  | Regenerate workspace `tsconfig.json` files (`--restore [kind]` reverts overrides). |
+| `cleanup` / `cleanup:turbo` | Remove build artifacts / the turbo cache.                                          |
+| `changelog`                 | Derive the semver bump and update CHANGELOG + versions.                            |
+| `workflow`                  | Trigger generated GitHub workflows via `gh workflow run`.                          |
 
 ## Providers
 
@@ -116,6 +140,7 @@ import {
     builtinCommands,
     registerToolchainCommands,
     withDefaultVite,
+    extractConfigSelection,
     extractLogOptions,
 } from '@deltabox/toolchain/cli';
 ```
@@ -128,6 +153,7 @@ import {
 | `registerToolchainCommands(program, commands)` | Wire `ToolchainCommand[]` descriptors onto a commander program.        |
 | `withDefaultVite(argv, commandNames?)`         | Insert `vite` before a bare Vite+ command (built-ins win).             |
 | `extractLogOptions(argv)`                      | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
+| `extractConfigSelection(argv)`                 | Pull `--config <file>` / `--no-config` out of argv.                    |
 
 `extractLogOptions` makes the logger flags work before _or_ after the
 subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.
@@ -145,4 +171,4 @@ withDefaultVite(['node', 'dbx', 'fmt', '--check']);
 
 The generic Zod/env config engine is not a `dbx` command: a consumer
 builds an engine with `createConfigEngine` and registers the `config:*` commands
-on its **own** CLI. See [Config Generator](/guide/config-generator).
+on its **own** CLI. See [Config Generator](/guide/config-generator/).

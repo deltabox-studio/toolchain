@@ -3,19 +3,19 @@ import { z } from 'zod';
 
 import {
     buildConfigJson,
-    collectEnvVars,
+    collectVars,
     createCliArgsParser,
     createConfigEngine,
     envBool,
     envInt,
+    envPathOf,
     envString,
     generateCliOptions,
+    generateConfigMarkdown,
+    generateConfigTypes,
     generateEnvFile,
+    metaOf,
     parseEnvTree,
-    renderConfigTypes,
-    resolveScopeSchema,
-    splitBaseSchema,
-    zodToJsonSchema,
 } from '../src/index.js';
 
 const envMeta = (env: string, extra: Record<string, unknown> = {}) => ({ env, ...extra });
@@ -49,11 +49,13 @@ const cliSchema = z.object({
     baseUrl: z
         .string()
         .default('http://localhost:8080')
-        .meta(envMeta('MYAPP_CLI_BASE_URL', { scope: 'cli' })),
-    token: z.string().meta(envMeta('MYAPP_CLI_TOKEN', { scope: 'cli', secret: true })),
+        .meta({ envName: 'MYAPP_CLI_BASE_URL', scope: 'cli', cliFlag: '--base-url' }),
+    token: z
+        .string()
+        .meta({ envName: 'MYAPP_CLI_TOKEN', scope: 'cli', secret: true, cliFlagShort: 'k' }),
 });
 
-const scopes = { server: { zodSchema: serverSchema }, cli: { zodSchema: cliSchema } };
+const scopes = { server: serverSchema, cli: cliSchema };
 
 describe('env tree', () => {
     it('parses prefixed env vars into a nested tree', () => {
@@ -62,88 +64,111 @@ describe('env tree', () => {
         expect(envString(tree, 'auth.password')).toBe('x');
     });
 
-    it('reads typed values', () => {
+    it('reads typed values and derives dotted paths', () => {
         const tree = parseEnvTree({ MYAPP_PORT: '3000', MYAPP_AUTH_ENABLED: 'no' }, 'MYAPP_');
         expect(envInt(tree, 'port', 8080)).toBe(3000);
         expect(envBool(tree, 'auth.enabled', true)).toBe(false);
+        expect(envPathOf('MYAPP_AUTH_TOKEN_TTL', 'MYAPP_')).toBe('auth.token.ttl');
+        expect(metaOf(z.string().meta({ env: 'MYAPP_HOST' }))).toEqual({ env: 'MYAPP_HOST' });
     });
 });
 
-describe('collectEnvVars', () => {
-    it('collects prefixed leaves with scope metadata', () => {
-        const vars = collectEnvVars(scopes, 'MYAPP_');
-        const names = vars.map(v => v.name);
-        expect(names).toContain('MYAPP_HOST');
-        expect(names).toContain('MYAPP_AUTH_PASSWORD');
+describe('collectVars', () => {
+    it('collects scoped leaves with env metadata', () => {
+        const vars = collectVars(scopes, 'MYAPP_');
+        expect(vars.map(v => v.name)).toContain('MYAPP_HOST');
         const password = vars.find(v => v.name === 'MYAPP_AUTH_PASSWORD');
         expect(password?.secret).toBe(true);
         expect(password?.required).toBe(true);
         expect(password?.path).toBe('auth.password');
-        // scope defaults to the registered scope name
         expect(password?.scope).toBe('server');
     });
 });
 
-describe('generateEnvFile', () => {
-    it('renders assignments, commenting secrets out', () => {
-        const content = generateEnvFile(scopes, { envPrefix: 'MYAPP_' });
-        expect(content).toContain('MYAPP_HOST=localhost');
-        expect(content).toContain('# MYAPP_AUTH_PASSWORD=');
-    });
-});
+describe('generators', () => {
+    it('generates env files, types, markdown and CLI definitions', () => {
+        expect(generateEnvFile(scopes, { envPrefix: 'MYAPP_' })).toContain('MYAPP_HOST=localhost');
 
-describe('schema bridge', () => {
-    it('splits the base group and resolves a schema', () => {
-        const schema = zodToJsonSchema(serverSchema);
-        const { base, groups, hasBase } = splitBaseSchema(schema);
-        expect(hasBase).toBe(true);
-        expect(base.properties?.host).toBeDefined();
-        expect(groups.properties?.auth).toBeDefined();
-    });
-});
+        const types = generateConfigTypes(scopes);
+        expect(Object.keys(types)).toEqual(['server', 'cli']);
+        expect(types.server).toContain('export interface ServerConfig');
 
-describe('config json / cli options', () => {
-    it('builds the metadata doc', () => {
-        const doc = buildConfigJson(scopes, { envPrefix: 'MYAPP_' });
-        expect(doc.env.length).toBeGreaterThan(3);
-        expect(doc.version).toBe(1);
-    });
+        const markdown = generateConfigMarkdown(scopes);
+        expect(markdown['server.md']).toContain('---');
+        expect(markdown['server.md']).toContain('title: Server Configuration');
+        expect(generateConfigMarkdown(scopes, { frontmatter: false })['server.md']).not.toContain(
+            '---'
+        );
 
-    it('generates CLI options for the cli scope', () => {
-        const defs = generateCliOptions(scopes, {
-            envPrefix: 'MYAPP_',
-            shortFlags: { MYAPP_CLI_TOKEN: 'k' },
-        });
+        const defs = generateCliOptions(scopes, { envPrefix: 'MYAPP_' });
         const token = defs.find(d => d.env === 'MYAPP_CLI_TOKEN');
         expect(token?.flag).toBe('--cli-token');
         expect(token?.short).toBe('-k');
         expect(token?.secret).toBe(true);
-        // parser round-trips
         const parser = createCliArgsParser(defs);
-        const parsed = parser.parse(['--cli-base-url', 'http://x']);
-        expect(parsed.values['cli-base-url']).toBe('http://x');
+        expect(parser.parse(['--base-url', 'http://x']).values['base-url']).toBe('http://x');
+    });
+
+    it('supports custom frontmatter strings and callbacks', () => {
+        const custom = generateConfigMarkdown(scopes, {
+            frontmatter: ctx => `title: ${ctx.options.title ?? 'Custom'}`,
+            title: 'Custom',
+        });
+        expect(custom['server.md']).toContain('title: Custom');
+        const raw = generateConfigMarkdown(scopes, { frontmatter: 'draft: true' });
+        expect(raw['server.md']).toContain('draft: true');
+    });
+
+    it('shows env/cli equivalents in types and markdown', () => {
+        const types = generateConfigTypes(cliSchema);
+        expect(Object.values(types)[0]).toContain('@env MYAPP_CLI_BASE_URL');
+        expect(Object.values(types)[0]).toContain('@cli --base-url');
+        const markdown = generateConfigMarkdown(cliSchema);
+        const cliMarkdown = Object.values(markdown)[0] ?? '';
+        expect(cliMarkdown).toContain('- **Env**: `MYAPP_CLI_BASE_URL`');
+        expect(cliMarkdown).toContain('- **CLI**: `--base-url`');
+    });
+
+    it('keeps union, enum and nested types in the combined reference', () => {
+        const section = z
+            .object({
+                kind: z.enum(['a', 'b']).describe('The kind.').optional(),
+                glob: z
+                    .union([z.string(), z.array(z.string())])
+                    .describe('Glob(s).')
+                    .optional(),
+                nested: z
+                    .union([
+                        z.boolean(),
+                        z.object({ depth: z.number().describe('Depth.').optional() }),
+                    ])
+                    .describe('Nested settings.')
+                    .optional(),
+            })
+            .describe('A section.')
+            .meta({ id: 'SectionConfig' });
+        const markdown = generateConfigMarkdown({ section }, { combined: true })['index.md']!;
+        expect(markdown).toContain('A section.');
+        expect(markdown).toContain("- **Type**: `'a' | 'b'`");
+        expect(markdown).toContain('- **Type**: `string | Array<string>`');
+        expect(markdown).toContain('#### `depth`');
+        expect(markdown).not.toContain('`any`');
+        expect(markdown).not.toContain('- **Default**: `{}`');
+    });
+
+    it('builds config metadata', () => {
+        const doc = buildConfigJson(scopes, { envPrefix: 'MYAPP_' });
+        expect(doc.env.length).toBeGreaterThan(3);
+        expect(doc.version).toBe(1);
     });
 });
 
 describe('createConfigEngine', () => {
-    it('binds scopes and generates', async () => {
-        const engine = createConfigEngine({ scopes, envPrefix: 'MYAPP_', root: process.cwd() });
-        expect(engine.collectEnvVars().length).toBeGreaterThan(0);
+    it('binds a schema and generates', async () => {
+        const engine = createConfigEngine({ schema: scopes, envPrefix: 'MYAPP_' });
+        expect(engine.collectVars().length).toBeGreaterThan(0);
         const schema = await engine.generateJsonSchema();
         expect(schema.$id).toBeDefined();
-        const types = engine.renderConfigTypes();
-        expect(Object.keys(types)).toEqual(['server', 'cli']);
-    });
-});
-
-describe('renderConfigTypes', () => {
-    it('strips the blank line untyped inserts between members', () => {
-        const out = renderConfigTypes('cli', resolveScopeSchema(undefined, cliSchema), {
-            interfaceNames: { cli: 'CliConfig' },
-        });
-        expect(out).toContain('export interface CliConfig {');
-        // No empty line between members (or right after the opening brace).
-        expect(out).not.toMatch(/;\n\n/);
-        expect(out).not.toMatch(/\{\n\n/);
+        expect(Object.keys(engine.generateConfigTypes())).toEqual(['server', 'cli']);
     });
 });

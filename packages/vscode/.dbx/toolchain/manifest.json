@@ -2,5 +2,9 @@
     "files": [
         "package.json",
         "vite.config.ts"
-    ]
+    ],
+    "origins": {
+        "package.json": "created",
+        "vite.config.ts": "created"
+    }
 }

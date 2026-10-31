@@ -1,5 +1,13 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
+import { addProjectProviderRegistry } from '@deltabox/toolchain-core';
+
+import { providerPassthroughCommands } from '../src/cli/commands/providers.js';
+import { extractConfigSelection } from '../src/cli/config-selection.js';
 import {
     builtinCommands,
     createCli,
@@ -77,6 +85,28 @@ describe('dbx CLI', () => {
     });
 });
 
+describe('config selection flags', () => {
+    it('extracts --config / --no-config and respects `--`', () => {
+        const argv = (value: string): string[] => ['node', 'dbx', ...value.split(' ')];
+        expect(extractConfigSelection(argv('--config dbx.config.test.ts sync'))).toEqual({
+            argv: ['node', 'dbx', 'sync'],
+            selection: { config: 'dbx.config.test.ts' },
+        });
+        expect(extractConfigSelection(argv('sync --no-config'))).toEqual({
+            argv: ['node', 'dbx', 'sync'],
+            selection: { noConfig: true },
+        });
+        expect(extractConfigSelection(argv('--config=dbx.config.test.ts sync'))).toEqual({
+            argv: ['node', 'dbx', 'sync'],
+            selection: { config: 'dbx.config.test.ts' },
+        });
+        expect(extractConfigSelection(argv('run -- --config x --no-config'))).toEqual({
+            argv: ['node', 'dbx', 'run', '--', '--config', 'x', '--no-config'],
+            selection: {},
+        });
+    });
+});
+
 describe('default Vite+ command', () => {
     const argv = (...args: string[]) => ['node', 'dbx', ...args];
 
@@ -151,5 +181,38 @@ describe('update check', () => {
             argv: ['node', 'dbx', 'run', '--', '--no-update-check'],
             updateCheck: true,
         });
+    });
+});
+
+describe('provider registration policy', () => {
+    it('does not register commands from a denied provider', () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-provider-policy-'));
+        try {
+            const registry = path.join(cwd, 'providers');
+            fs.mkdirSync(registry, { recursive: true });
+            fs.writeFileSync(
+                path.join(registry, 'providers.json'),
+                JSON.stringify([
+                    {
+                        id: 'acme',
+                        name: 'Acme',
+                        binary: 'echo',
+                        commands: [{ name: 'acme:run', subcommand: 'run', description: 'Run it' }],
+                    },
+                ])
+            );
+            addProjectProviderRegistry(cwd, './providers');
+
+            expect(providerPassthroughCommands(cwd).map(command => command.name)).toContain(
+                'acme:run'
+            );
+            expect(
+                providerPassthroughCommands(cwd, {
+                    registry: { providers: { deny: [registry] } },
+                }).map(command => command.name)
+            ).not.toContain('acme:run');
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
     });
 });

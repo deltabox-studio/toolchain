@@ -3,6 +3,18 @@
     "compilerOptions": {
         "composite": false,
         "paths": {
+            "@deltabox/toolchain": [
+                "../../src/index.ts"
+            ],
+            "@deltabox/toolchain/*": [
+                "../../src/*"
+            ],
+            "@deltabox/toolchain/cli": [
+                "../../src/cli/index.ts"
+            ],
+            "@deltabox/toolchain/package.json": [
+                "../../package.json"
+            ],
             "@deltabox/toolchain-shared": [
                 "../shared/src/index.ts"
             ],

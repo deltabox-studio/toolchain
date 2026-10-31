@@ -3,8 +3,40 @@ import path from 'node:path';
 
 import { cancel, confirm, isCancel, select, text } from '@clack/prompts';
 
-import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
+import {
+    addGlobalProviderRegistry,
+    addProjectProviderRegistry,
+    removeGlobalProviderRegistry,
+    removeProjectProviderRegistry,
+    setGlobalProviderRegistries,
+    setProjectProviderRegistries,
+} from '@deltabox/toolchain-core';
+import {
+    logger,
+    type Replacements,
+    sectionConfig,
+    type ToolchainCommand,
+} from '@deltabox/toolchain-shared';
 
+import {
+    addGlobalSource,
+    addGlobalTemplate,
+    addProjectRegistry,
+    defaultGlobalTemplatesDir,
+    existingTemplateIds,
+    expandHome,
+    listRegistries,
+    loadGlobalTemplates,
+    normalizeSearchPaths,
+    readGlobalCliConfig,
+    removeGlobalTemplate,
+    removeProjectRegistry,
+    resolveTemplateSearchPaths,
+    uniqueTemplateId,
+    writeGlobalCliConfig,
+    writeProjectRegistries,
+    writeVscodeSearchPaths,
+} from '../global.js';
 import { TEMPLATE_MANIFEST, writeTemplateManifest } from '../local.js';
 import { parseSourceSpec } from '../online.js';
 import {
@@ -78,6 +110,7 @@ export function templateCommands(): ToolchainCommand[] {
                 CWD_OPTION,
                 { flags: '--online', description: 'Resolve online sources (npm/git).' },
                 { flags: '--offline', description: 'Force offline (skip npm/git).' },
+                { flags: '--global', description: 'Only the global registry templates.' },
                 KIND_OPTION,
                 {
                     flags: '--registry',
@@ -87,6 +120,20 @@ export function templateCommands(): ToolchainCommand[] {
             ],
             run: async (opts, context) => {
                 const cwd = (opts.cwd as string | undefined) ?? context.cwd;
+                if (opts.global) {
+                    const global = await loadGlobalTemplates(cwd);
+                    if (opts.json) {
+                        logger.raw(JSON.stringify(global.templates.map(toJson), null, 4));
+                        return;
+                    }
+                    if (global.templates.length === 0) {
+                        logger.info('no global templates found.');
+                        return;
+                    }
+                    for (const template of global.templates)
+                        logger.info(`  ${template.id.padEnd(24)} ${template.name}`);
+                    return;
+                }
                 if (opts.registry) {
                     const sources = readTemplateRegistry(cwd).sources;
                     if (opts.json) {
@@ -146,6 +193,7 @@ export function templateCommands(): ToolchainCommand[] {
                 CWD_OPTION,
                 KIND_OPTION,
                 { flags: '--name <name>', description: 'Display name (default: folder name).' },
+                { flags: '--id <id>', description: 'Stable template id (default: folder name).' },
                 { flags: '--description <text>', description: 'Description.' },
                 {
                     flags: '--var <pair...>',
@@ -157,9 +205,13 @@ export function templateCommands(): ToolchainCommand[] {
                     flags: '--add',
                     description: 'Also record the folder in .dbx/toolchain/templates.json.',
                 },
+                {
+                    flags: '--no-global',
+                    description: 'Do not also store the template in the global registry.',
+                },
                 { flags: '--json', description: 'Print the manifest as JSON.' },
             ],
-            run: (opts, context) => {
+            run: async (opts, context) => {
                 const dir = path.resolve(context.cwd, String(opts.dir ?? '.'));
                 const file = path.join(dir, TEMPLATE_MANIFEST);
                 if (fs.existsSync(file) && !opts.force) {
@@ -175,11 +227,41 @@ export function templateCommands(): ToolchainCommand[] {
                 };
                 writeTemplateManifest(dir, manifest);
                 if (opts.add) {
+                    let id = String(opts.id ?? path.basename(dir));
+                    const taken = new Set([
+                        ...(await existingTemplateIds(context.cwd, { global: false })),
+                        ...readTemplateRegistry(context.cwd)
+                            .sources.map(existing => existing.id)
+                            .filter((value): value is string => Boolean(value)),
+                    ]);
+                    if (taken.has(id)) {
+                        if (canPrompt(opts as Record<string, unknown>)) {
+                            const answer = await text({
+                                message: `Template id "${id}" already exists. New id:`,
+                                placeholder: uniqueTemplateId(id, taken),
+                                defaultValue: uniqueTemplateId(id, taken),
+                            });
+                            if (isCancel(answer)) return abortPrompt();
+                            id = String(answer);
+                        } else {
+                            throw new Error(
+                                `template id "${id}" already exists; pass --id <id> to rename it.`
+                            );
+                        }
+                    }
                     addTemplateSource(context.cwd, {
                         type: 'local',
                         locate: dir,
+                        id,
                         kind: manifest.kind,
                     });
+                    if (opts.global !== false) {
+                        try {
+                            addGlobalTemplate(dir, id);
+                        } catch (error) {
+                            logger.warn(`could not add the template globally: ${String(error)}`);
+                        }
+                    }
                 }
                 if (opts.json) {
                     logger.raw(JSON.stringify(manifest, null, 4));
@@ -202,21 +284,68 @@ export function templateCommands(): ToolchainCommand[] {
                 CWD_OPTION,
                 {
                     flags: '--type <type>',
-                    description: 'Force: builtin | local | npm | git | vite-plus.',
+                    description: 'Force: builtin | local | npm | git | vite-plus | remote.',
                 },
                 { flags: '--name <name>', description: 'Display name.' },
+                { flags: '--id <id>', description: 'Stable template id (default: inferred).' },
                 KIND_OPTION,
                 { flags: '--ref <ref>', description: 'Git branch/tag/commit.' },
+                {
+                    flags: '--registry <url>',
+                    description: 'Custom npm registry (default: the project package manager).',
+                },
                 { flags: '--subdir <dir>', description: 'Subdirectory within the source.' },
+                {
+                    flags: '--no-global',
+                    description: 'Do not also register the source in the global registry.',
+                },
                 { flags: '--json', description: 'Print the updated registry as JSON.' },
             ],
-            run: (opts, context) => {
+            run: async (opts, context) => {
                 const source = parseSourceSpec(String(opts.source), context.cwd);
                 if (opts.type) source.type = opts.type as typeof source.type;
                 if (opts.name) source.name = String(opts.name);
+                if (opts.id) source.id = String(opts.id);
                 if (opts.kind) source.kind = opts.kind as NonNullable<typeof source.kind>;
                 if (opts.ref) source.ref = String(opts.ref);
+                if (opts.registry) source.registry = String(opts.registry);
                 if (opts.subdir) source.subdir = String(opts.subdir);
+
+                const inferred =
+                    source.id ??
+                    (source.type === 'builtin'
+                        ? source.locate
+                        : source.type === 'npm'
+                          ? (source.locate.split('/').pop() ?? source.locate)
+                          : path
+                                .basename(
+                                    source.locate.replace(/[\\/]+$/, '').replace(/\.git$/, '')
+                                )
+                                .replace(/[^a-z0-9-_]/gi, '-'));
+                const taken = new Set([
+                    ...(await existingTemplateIds(context.cwd, { global: false })),
+                    ...readTemplateRegistry(context.cwd)
+                        .sources.map(existing => existing.id)
+                        .filter((id): id is string => Boolean(id)),
+                ]);
+                if (inferred && taken.has(inferred)) {
+                    if (canPrompt(opts as Record<string, unknown>)) {
+                        const answer = await text({
+                            message: `Template id "${inferred}" already exists. New id:`,
+                            placeholder: uniqueTemplateId(inferred, taken),
+                            defaultValue: uniqueTemplateId(inferred, taken),
+                        });
+                        if (isCancel(answer)) return abortPrompt();
+                        source.id = String(answer);
+                    } else {
+                        throw new Error(
+                            `template id "${inferred}" already exists; pass --id <id> to rename it.`
+                        );
+                    }
+                } else if (source.id === undefined && inferred) {
+                    source.id = inferred;
+                }
+
                 // A local folder without a template.json is initialised first, so
                 // `template:add ./dir` "just works".
                 if (
@@ -229,6 +358,18 @@ export function templateCommands(): ToolchainCommand[] {
                     });
                 }
                 const registry = addTemplateSource(context.cwd, source);
+                if (opts.global !== false) {
+                    try {
+                        if (source.type === 'local')
+                            addGlobalTemplate(
+                                source.locate,
+                                source.id ?? path.basename(source.locate)
+                            );
+                        else addGlobalSource(source);
+                    } catch (error) {
+                        logger.warn(`could not register the source globally: ${String(error)}`);
+                    }
+                }
                 if (opts.json) {
                     logger.raw(JSON.stringify(registry, null, 4));
                     return;
@@ -242,8 +383,26 @@ export function templateCommands(): ToolchainCommand[] {
             name: 'template:remove',
             description: 'Remove a source from .dbx/toolchain/templates.json.',
             args: [{ name: 'id', description: 'Source id or type:locate.' }],
-            options: [CWD_OPTION, { flags: '--json', description: 'Print the registry as JSON.' }],
+            options: [
+                CWD_OPTION,
+                { flags: '--global', description: 'Remove the template from the global registry.' },
+                { flags: '--json', description: 'Print the registry as JSON.' },
+            ],
             run: (opts, context) => {
+                if (opts.global) {
+                    const removed = removeGlobalTemplate(String(opts.id));
+                    if (opts.json) {
+                        logger.raw(JSON.stringify({ removed }, null, 4));
+                        return;
+                    }
+                    if (!removed) {
+                        logger.error(`no global template matching "${opts.id}".`);
+                        process.exitCode = 1;
+                        return;
+                    }
+                    logger.info(`removed global template "${opts.id}".`);
+                    return;
+                }
                 const { registry, removed } = removeTemplateSource(context.cwd, String(opts.id));
                 if (opts.json) {
                     logger.raw(JSON.stringify(registry, null, 4));
@@ -255,6 +414,130 @@ export function templateCommands(): ToolchainCommand[] {
                     return;
                 }
                 logger.info(`removed ${removed} source(s) (${registry.sources.length} left).`);
+            },
+        },
+        {
+            name: 'template:registry',
+            description:
+                'Manage the global template search paths (and sync them to the VS Code setting).',
+            options: [
+                { flags: '--list', description: 'List the resolved search paths (default).' },
+                { flags: '--add <path...>', description: 'Add global search path(s).' },
+                { flags: '--remove <path...>', description: 'Remove global search path(s).' },
+                { flags: '--set <path...>', description: 'Replace the global search paths.' },
+                { flags: '--clear', description: 'Reset the global search paths to the default.' },
+                {
+                    flags: '--vscode-dir <dir>',
+                    description: 'Record the VS Code user dir (its settings.json holds the paths).',
+                },
+                { flags: '--json', description: 'Print the resolved config as JSON.' },
+            ],
+            run: opts => {
+                let cli = readGlobalCliConfig();
+                if (opts.vscodeDir) {
+                    cli = writeGlobalCliConfig({ vscodeDir: String(opts.vscodeDir) });
+                }
+
+                const current = resolveTemplateSearchPaths();
+                let paths = current.paths;
+                if (opts.clear) paths = [defaultGlobalTemplatesDir()];
+                if (opts.set) paths = normalizeSearchPaths(opts.set as string[]);
+                if (opts.add) paths = normalizeSearchPaths([...paths, ...(opts.add as string[])]);
+                if (opts.remove) {
+                    const removed = new Set(normalizeSearchPaths(opts.remove as string[]));
+                    paths = paths.filter(entry => !removed.has(entry));
+                }
+                const changed = Boolean(opts.clear || opts.set || opts.add || opts.remove);
+                if (changed) {
+                    cli = writeGlobalCliConfig({ registrySearchPaths: paths });
+                    if ((opts.set || opts.add || opts.remove) && cli.vscodeDir)
+                        writeVscodeSearchPaths(cli.vscodeDir, paths);
+                }
+
+                const result = {
+                    paths,
+                    source: changed ? 'cli' : current.source,
+                    defaultDir: defaultGlobalTemplatesDir(),
+                    ...(cli.vscodeDir ? { vscodeDir: cli.vscodeDir } : {}),
+                };
+                if (opts.json) {
+                    logger.raw(JSON.stringify(result, null, 4));
+                    return;
+                }
+                logger.info(`global templates dir: ${defaultGlobalTemplatesDir()}`);
+                for (const entry of paths) logger.info(`  ${entry}`);
+                if (cli.vscodeDir) logger.info(`VS Code user dir: ${cli.vscodeDir}`);
+                if (changed) logger.info('updated the CLI config and VS Code setting.');
+            },
+        },
+        {
+            name: 'registry',
+            description: 'List or manage the template/provider registries.',
+            options: [
+                CWD_OPTION,
+                {
+                    flags: '--kind <kind>',
+                    description: 'What --add/--remove manages: templates | providers.',
+                },
+                { flags: '--add <path>', description: 'Add a registry path (or remote URL).' },
+                { flags: '--remove <path>', description: 'Remove a registry path.' },
+                { flags: '--set <path...>', description: 'Replace the registry search paths.' },
+                { flags: '--clear', description: 'Clear the registry search paths.' },
+                { flags: '--scope <scope>', description: 'project | global (default: global).' },
+                { flags: '--json', description: 'Print the registries as JSON.' },
+            ],
+            run: (opts, context) => {
+                const cwd = (opts.cwd as string | undefined) ?? context.cwd;
+                const scope = (opts.scope as string | undefined) ?? 'global';
+                const kind = (opts.kind as string | undefined) ?? 'templates';
+                const change = (opts.add ?? opts.remove) as string | undefined;
+                if (opts.set || opts.clear) {
+                    const next = opts.clear ? [] : normalizeSearchPaths(opts.set as string[]);
+                    if (kind === 'providers') {
+                        if (scope === 'global') setGlobalProviderRegistries(next);
+                        else setProjectProviderRegistries(cwd, next);
+                    } else if (scope === 'global') {
+                        writeGlobalCliConfig({ registrySearchPaths: next });
+                    } else {
+                        writeProjectRegistries(cwd, next);
+                    }
+                } else if (change) {
+                    if (kind === 'providers') {
+                        if (scope === 'global') {
+                            if (opts.add) addGlobalProviderRegistry(change);
+                            else removeGlobalProviderRegistry(change);
+                        } else if (opts.add) {
+                            addProjectProviderRegistry(cwd, change);
+                        } else {
+                            removeProjectProviderRegistry(cwd, change);
+                        }
+                    } else if (scope === 'global') {
+                        const cli = readGlobalCliConfig();
+                        const target = expandHome(change);
+                        const paths = normalizeSearchPaths(cli.registrySearchPaths);
+                        const next = opts.add
+                            ? [...new Set([...paths, target])]
+                            : paths.filter(entry => entry !== target);
+                        writeGlobalCliConfig({ registrySearchPaths: next });
+                    } else if (opts.add) {
+                        addProjectRegistry(cwd, change);
+                    } else {
+                        removeProjectRegistry(cwd, change);
+                    }
+                }
+
+                const result = listRegistries(cwd);
+                if (opts.json) {
+                    logger.raw(JSON.stringify(result, null, 4));
+                    return;
+                }
+                for (const [kind, entries] of Object.entries(result)) {
+                    logger.info(kind);
+                    for (const entry of entries)
+                        logger.info(
+                            `  [${entry.scope}${entry.remote ? ', remote' : ''}] ${entry.path}`
+                        );
+                }
             },
         },
         {
@@ -301,6 +584,10 @@ export function templateCommands(): ToolchainCommand[] {
                     description: 'Action id to run after scaffolding (repeatable).',
                 },
                 { flags: '--online', description: 'Resolve online templates too.' },
+                {
+                    flags: '--force',
+                    description: 'Overwrite existing files in the output directory.',
+                },
                 { flags: '--json', description: 'Print the result as JSON.' },
             ],
             run: async (opts, context) => {
@@ -309,7 +596,7 @@ export function templateCommands(): ToolchainCommand[] {
                 const templates = await loadTemplates({
                     cwd: context.cwd,
                     config: context.config,
-                    online: true,
+                    online: Boolean(opts.online),
                 });
 
                 // Prompt for anything the flags left out (interactive terminals only).
@@ -375,9 +662,9 @@ export function templateCommands(): ToolchainCommand[] {
                 }
                 // A name of `.` means "use the directory I am being created in".
                 if (name === '.') name = path.basename(path.resolve(out));
-                const tokens = {
-                    ...context.config.project,
-                    name: name ?? context.config.project?.name ?? 'app',
+                const tokens: Replacements = {
+                    ...context.tokens,
+                    name: name ?? context.tokens.name ?? 'app',
                     ...(scope ? { scope } : {}),
                 };
                 const variables = parseVars(opts.var as string[] | undefined);
@@ -431,11 +718,31 @@ export function templateCommands(): ToolchainCommand[] {
                     }
                 }
 
+                // Non-interactive runs use the declared defaults too, so a bare
+                // `dbx create --template project` is the same as accepting every
+                // prompt default.
+                for (const variable of template.variables ?? []) {
+                    if (variable.name === 'name' || variable.name === 'scope') continue;
+                    const current = tokens[variable.name];
+                    if (
+                        variables[variable.name] === undefined &&
+                        (current === undefined || current === null || current === '') &&
+                        variable.default !== undefined
+                    ) {
+                        variables[variable.name] = variable.default;
+                    }
+                }
+
+                const tsconfig = sectionConfig(context.config.tsconfig) as
+                    | { rootFile?: string }
+                    | undefined;
                 const result = await scaffoldTemplate(template, {
                     cwd: out,
                     tokens,
                     variables,
                     actions: [...actions],
+                    force: Boolean(opts.force),
+                    tsconfigRootFile: tsconfig?.rootFile ?? 'tsconfig.workspaces.json',
                 });
 
                 if (opts.json) {

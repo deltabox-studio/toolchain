@@ -1,7 +1,7 @@
 /**
  * Low-level configuration helpers: env-tree parsing, typed accessors and
- * override merging. Free of Node builtins so browser consumers can import the
- * frontend resolver without pulling `node:path` / `node:url` into a bundle.
+ * dotted-path derivation. Free of Node builtins so browser consumers can import
+ * the frontend resolver without pulling `node:path` / `node:url` into a bundle.
  */
 
 /** A flat env source (process.env, import.meta.env or a plain object). */
@@ -85,30 +85,10 @@ export function envMap(tree: EnvTree, path: string): Record<string, string> {
     return out;
 }
 
-/** Recursively merge typed overrides over a base object (shallow per level). */
-export function applyOverrides<T extends object>(base: T, overrides?: Partial<T>): T {
-    if (!overrides) return base;
-    const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
-    for (const [key, value] of Object.entries(overrides)) {
-        if (value === undefined) continue;
-        const baseValue = (base as Record<string, unknown>)[key];
-        if (
-            baseValue &&
-            typeof baseValue === 'object' &&
-            !Array.isArray(baseValue) &&
-            value &&
-            typeof value === 'object' &&
-            !Array.isArray(value)
-        ) {
-            out[key] = applyOverrides(baseValue as object, value as object);
-        } else {
-            out[key] = value;
-        }
-    }
-    return out as T;
-}
-
-/** Trim trailing slashes from a URL-ish string. */
-export function trimTrailingSlashes(value: string): string {
-    return value.replace(/\/+$/, '');
+/** Derive the dotted config path from an env var name + prefix. */
+export function envPathOf(env: string, prefix = 'APP_'): string {
+    return env
+        .slice(env.startsWith(prefix) ? prefix.length : 0)
+        .toLowerCase()
+        .replace(/_/g, '.');
 }

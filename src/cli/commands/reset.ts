@@ -1,5 +1,6 @@
 import { resetProjects } from '@deltabox/toolchain-core';
 import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
+import { restoreTsconfigOverrides } from '@deltabox/toolchain-tsconfig';
 
 /** `dbx reset` — remove a project's generated files, manifest and/or config. */
 export function resetCommand(): ToolchainCommand {
@@ -39,6 +40,13 @@ export function resetCommand(): ToolchainCommand {
                 root,
                 recursive: Boolean(opts.recursive),
                 dryRun: Boolean(opts.dryRun),
+                // Revert `tsconfig.overrides` while the manifest snapshots still exist.
+                restore: (cwd, { dryRun }) =>
+                    restoreTsconfigOverrides({
+                        cwd,
+                        dryRun,
+                        warn: (message, id) => logger.warn(message, id),
+                    }).restored,
                 ...selectors,
                 ...(opts.include ? { include: opts.include as string[] } : {}),
                 ...(opts.exclude ? { exclude: opts.exclude as string[] } : {}),
@@ -52,9 +60,10 @@ export function resetCommand(): ToolchainCommand {
             const verb = result.dryRun ? 'would remove' : 'removed';
             let total = 0;
             for (const entry of result.results) {
-                if (entry.removed.length === 0) continue;
+                if (entry.removed.length === 0 && entry.restored.length === 0) continue;
                 total += entry.removed.length;
                 logger.info(`${entry.rel === '.' ? root : entry.rel}`);
+                for (const file of entry.restored) logger.info(`  ~ ${file} (overrides reverted)`);
                 for (const file of entry.removed) logger.info(`  - ${file}`);
             }
             logger.info(`${verb} ${total} item(s) across ${result.results.length} project(s).`);

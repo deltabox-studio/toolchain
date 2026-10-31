@@ -1,7 +1,8 @@
 # Migrations
 
 `dbx migrate` converts a project's tooling config from another tool to
-**Oxc** (Oxfmt + Oxlint). Migrations are pluggable — adding a source tool is a
+**Oxc** (Oxfmt + Oxlint), or folds an existing Oxc/Vite config into
+`dbx.config.*`. Migrations are pluggable — adding a source tool is a
 matter of implementing one interface.
 
 ```sh
@@ -9,12 +10,15 @@ dbx migrate:list                       # what's available + detected
 dbx migrate --from biome               # dry-run
 dbx migrate --from biome --write       # writes the oxc config
 dbx migrate --from biome --target vite --write
+dbx migrate --from biome --from prettier --write  # several sources
+dbx migrate --from oxc --write         # fold .oxfmtrc/.oxlintrc into dbx.config
 dbx migrate --from all                 # every detected source
 dbx migrate --check                    # CI: exit 1 when the oxc config is stale
 dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
 ```
 
-`dbx migrate` is a dry-run unless you pass `--write` (or `--check`).
+`dbx migrate` is a dry-run unless you pass `--write` (or `--check`). `--from`
+is repeatable; `--from all` (or omitting it) selects every detected source.
 
 ## Sources
 
@@ -24,13 +28,16 @@ dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
 | `prettier` | Prettier-compatible options transfer directly; Tailwind/PackageJson plugins detected; `.prettierignore` → `ignorePatterns`.                                  |
 | `eslint`   | JSON configs map rule names + severities (`@typescript-eslint/*` → `typescript/*`); JS/flat configs use `@oxlint/migrate` with `--online --write`.           |
 | `dprint`   | `dprint.json` layout + TypeScript options → Oxfmt.                                                                                                           |
-| `vite`     | Folds a hand-written root `vite.config.*` into `dbx.config.*`'s `toolchain.vite` (see below).                                                                |
+| `oxc`      | Folds `.oxfmtrc.json` / `.oxlintrc.json` into `dbx.config.*`'s `toolchain.fmt.oxc` / `toolchain.lint.oxc`; `dbx sync` manages them again.                    |
+| `vite`     | Folds a hand-written `vite.config.*` into `dbx.config.*`'s `toolchain.vite` (see below).                                                                     |
 
 ## Targets
 
 - `--target files` (default) — writes `.oxfmtrc.json` and `.oxlintrc.json`.
 - `--target vite` — folds the result into an existing `vite.config.ts`
   (inserting/replacing `fmt` and `lint`), which is what Vite+ reads.
+- The `oxc` source always targets `dbx.config.*` (`toolchain.fmt.oxc` /
+  `toolchain.lint.oxc`); `--target` does not apply.
 
 ## Recursive migration
 
@@ -39,7 +46,7 @@ directory). `--recursive` walks the discovered projects under the root and
 migrates each one that has a **detected source**:
 
 ```sh
-dbx migrate --from biome --recursive --write
+dbx migrate --from biome --from prettier --recursive --write
 ```
 
 On an interactive terminal it first asks which projects to migrate with a
@@ -52,10 +59,9 @@ a candidate when a migration matching `--from` (or any migration, for `all`/no
 
 ## `vite.config`
 
-The `vite` source moves a hand-written root `vite.config.*` into
-`dbx.config.*`'s `toolchain.vite`, so the whole Vite+ config lives in the one
-hand-authored config and `dbx sync` writes a thin `vite.config.ts` shim that
-resolves it at load time:
+The `vite` source moves a hand-written `vite.config.*` into `dbx.config.*`'s
+`toolchain.vite`, so the whole Vite+ config lives in the one hand-authored config
+and `dbx sync` writes a thin `vite.config.ts` shim that resolves it at load time:
 
 ```sh
 dbx migrate --from vite          # dry-run: shows what would fold in
@@ -69,8 +75,11 @@ leaves the generated shim alone (otherwise `vp fmt` would rewrite it and
 
 It extracts the object literal passed to `defineConfig(...)` (or the
 default-exported object) with a string-aware, balanced-paren scanner and
-text-splices it into the nearest `dbx.config.*` (inserting `vite: { ... }`, or
-replacing an existing `vite` value). When the config references imports, plugins
+text-splices it into the nearest `dbx.config.*`: it inserts `vite: { ... }`, or
+**deep-merges** into an existing `toolchain.vite` (nested objects are combined;
+arrays and scalars from the vite config win), so its settings are kept. A
+previous `config: false` opt-out is flipped to `config: true`, since the
+hand-written file is being removed. When the config references imports, plugins
 or any non-literal expression it is reported as **unmapped** and nothing is
 written, rather than emitting broken output. A JSON `dbx.config.json` is also
 left alone (the object is folded by hand).
@@ -81,8 +90,27 @@ folded `toolchain.vite`, wrapped in `defineConfig` from `@deltabox/toolchain`
 (like the scaffold). A workspace resolves that import through the root's
 installed dependency — in a self-hosted repo, via a root `portal:.` self-link.
 
-The now-redundant `vite.config.*` is removed (it is recreated by `dbx sync`).
-Pass `--ignore-vite-config-file` to keep it.
+The now-redundant `vite.config.*` is removed and recreated by `dbx sync` as a
+shim that imports `defineConfig` from the project's own Vite package (`vite` or
+`vite-plus`, detected from `package.json`). Pass `--ignore-vite-config-file` to
+keep the original file.
+
+### Nested configs
+
+In a monorepo, pass `--recursive` to fold **each workspace's** own
+`vite.config.*` into that workspace's `dbx.config.*` (creating one when it is
+missing) instead of the root's:
+
+```sh
+dbx migrate --from vite --recursive --write
+```
+
+Without `--recursive`, only the root's `vite.config.*` is migrated and nested
+ones are left alone. Detection is per project root (a directory with a
+`package.json` or `dbx.config.*`, up to five levels deep), so a `vite.config.*`
+in a deeper subdirectory of a project is not discovered. A workspace with no
+`dbx.config.*` gets a fresh one holding just its `toolchain.vite`; it inherits
+the rest of the config from the nearest ancestor at load time.
 
 ## Post-migration sync
 
@@ -156,3 +184,7 @@ console.log(result.unmapped);
 `oxfmt --migrate biome`-style tools cover formatter options only; the pieces the
 upstream tools skip (Biome `organizeImports`, Biome linter rules, Dprint) are
 handled here.
+
+## Upgrading from v1
+
+See the [v1 → v2 migration guide](/guide/migration-v1-v2).

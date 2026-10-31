@@ -15,16 +15,27 @@ export interface ResetSelectors {
     config?: boolean;
 }
 
+/**
+ * Undo the state a sync applied to user-owned files before the manifest that
+ * records it is removed (eg. `tsconfig.overrides`). Returns the repo-relative
+ * files it restored (or would restore on a dry run).
+ */
+export type ResetRestore = (cwd: string, options: { dryRun: boolean }) => string[];
+
 export interface ResetToolchainOptions extends ResetSelectors {
     /** The project directory to reset. */
     cwd: string;
     /** Report what would be removed without deleting anything. */
     dryRun?: boolean;
+    /** Run before the manifest is removed, while its recorded state still exists. */
+    restore?: ResetRestore;
 }
 
 export interface ResetToolchainResult {
     /** Repo-relative paths removed (or that would be removed). */
     removed: string[];
+    /** User-owned files restored before the manifest was removed. */
+    restored: string[];
     /** Whether this was a dry run. */
     dryRun: boolean;
 }
@@ -66,7 +77,11 @@ export function resetToolchain(options: ResetToolchainOptions): ResetToolchainRe
     };
 
     if (selectors.generated) {
-        for (const rel of readManifest(cwd).files) {
+        const manifest = readManifest(cwd);
+        for (const rel of manifest.files) {
+            // Adopted files existed before dbx first managed them. A sync never
+            // deletes them when their section goes away, so reset must not either.
+            if (manifest.origins?.[rel] === 'adopted') continue;
             removeFile(path.resolve(cwd, rel), rel);
         }
     }
@@ -74,6 +89,11 @@ export function resetToolchain(options: ResetToolchainOptions): ResetToolchainRe
     if (selectors.config) {
         const config = findConfigFile(cwd);
         if (config) removeFile(config, norm(path.relative(cwd, config)));
+    }
+
+    const restored: string[] = [];
+    if (selectors.manifest && options.restore) {
+        restored.push(...options.restore(cwd, { dryRun }));
     }
 
     if (selectors.manifest) {
@@ -84,17 +104,19 @@ export function resetToolchain(options: ResetToolchainOptions): ResetToolchainRe
         }
     }
 
-    return { removed, dryRun };
+    return { removed, restored, dryRun };
 }
 
 export interface ResetProjectsOptions extends ResetSelectors, Omit<SelectProjectsOptions, 'kind'> {
     /** Apply to every discovered project under `root` (not just `root`). */
     recursive?: boolean;
     dryRun?: boolean;
+    /** Run per project before its manifest is removed (see {@link ResetRestore}). */
+    restore?: ResetRestore;
 }
 
 export interface ResetProjectsResult {
-    results: { dir: string; rel: string; removed: string[] }[];
+    results: { dir: string; rel: string; removed: string[]; restored: string[] }[];
     dryRun: boolean;
 }
 
@@ -113,17 +135,17 @@ export function resetProjects(options: ResetProjectsOptions): ResetProjectsResul
           })
         : [{ dir: options.root, rel: '.', hasConfig: Boolean(findConfigFile(options.root)) }];
 
-    const results = targets.map(target => ({
-        dir: target.dir,
-        rel: target.rel,
-        removed: resetToolchain({
+    const results = targets.map(target => {
+        const { removed, restored } = resetToolchain({
             cwd: target.dir,
             ...(options.generated !== undefined ? { generated: options.generated } : {}),
             ...(options.manifest !== undefined ? { manifest: options.manifest } : {}),
             ...(options.config !== undefined ? { config: options.config } : {}),
+            ...(options.restore ? { restore: options.restore } : {}),
             dryRun,
-        }).removed,
-    }));
+        });
+        return { dir: target.dir, rel: target.rel, removed, restored };
+    });
 
     return { results, dryRun };
 }

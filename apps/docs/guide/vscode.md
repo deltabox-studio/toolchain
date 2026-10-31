@@ -29,13 +29,13 @@ code --install-extension deltabox.toolchain-vscode
 | Sync all / active / selected | Run `dbx sync` (`--recursive` / per project).                                           |
 | Check sync                   | `sync --check` across the workspace.                                                    |
 | Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**. |
-| Add template…                | `template:init --add` on a folder you pick (any kind).                                  |
+| Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.       |
 | Remove template…             | `template:list --registry` then `template:remove`.                                      |
 | Generate configs             | `project:config` for projects missing a config.                                         |
 | Run workflow                 | Trigger generated GitHub workflows.                                                     |
 | Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                          |
 | Create Vite+ project…        | `vp create` in a terminal.                                                              |
-| Add provider...              | Register a custom provider in `.dbx/toolchain/providers.json`.                          |
+| Add provider...              | Register a custom provider (project or global registry).                                |
 | Run command...               | Run a provider command (`dbx <command>`) in a terminal.                                 |
 | Create from template...      | `dbx create --template <id>` (terminal for online templates).                           |
 | Reset tooling                | Remove generated files / manifest / config.                                             |
@@ -62,11 +62,31 @@ actions, scoped to that project:
 
 The **Providers** and **Templates** views read `dbx providers --json` and `dbx template:list --json`, so adding one surfaces it in the UI automatically.
 
-**Add provider...** writes a custom provider to `.dbx/toolchain/providers.json`, which `toolchainProviders()` merges with the built-ins, so a registered provider's commands also become `dbx` commands (`dbx <command>`), runnable from the view.
+**Add provider...** writes a custom provider to the default project registry
+(`.dbx/toolchain/.registry/providers/providers.json`) or the global
+`~/.dbx/toolchain/.registry/providers/` when you choose the global scope, which
+`toolchainProviders()` merges with the built-ins, so a registered provider's
+commands also become `dbx` commands (`dbx <command>`), runnable from the view.
+Provider search paths can also be added with the **Registries** view; the
+`deltabox.providerRegistrySearchPaths` setting mirrors them globally.
 
-**Add template...** runs `template:init --add`.
+**Add template...** runs `template:init --add` and asks whether to add the
+template to the **global** registry (yes by default), so it is available in every
+project. See [Global templates](/guide/templates#global-templates). The
+`deltabox.registrySearchPaths` setting controls the global search paths and is
+kept in sync with the CLI config.
 
 **Remove template source...** runs `template:list --registry` + `template:remove`.
+
+The **Registries** view (below **Templates**) shows the detected provider and
+template registries as **Providers** / **Templates** roots. Each item has **Open
+registry** (the folder in the explorer, or the website for remote URLs), **Add new
+registry** and **Remove registry** (it only drops the path, keeping the files).
+The title bar's **New registry…** / **Remove registry…** actions add or remove
+search paths for either kind, asking whether they are global or project-scoped.
+Remote registries are `http(s)` JSON registries: template registries accept
+`{ sources }` or an array of sources; provider registries accept
+`{ providers }` or an array of provider descriptors.
 
 **Create from template…** prompts for the template's inputs and actions (see
 [Templates](/guide/templates)) before running `dbx create`. Scaffolding also asks
@@ -76,20 +96,44 @@ The Home view links to this documentation with **Need help? Go to documentation*
 
 ## Auto-sync
 
-Auto-sync watches input files only: `dbx.config.*`, `tsconfig.default.json`, and `tsconfig.workspaces.json`.
+Auto-sync watches input files only: `dbx.config.*` plus the inputs each
+project's config resolves to (by default `tsconfig.workspaces.json` and every
+`tsconfig.default.json`). The extension asks the CLI for them
+(`dbx watch --list --json`), so custom `tsconfig.rootFile` / `tsconfig.defaultFile`
+names are watched instead of the defaults, and the list is refreshed whenever a
+`dbx.config.*` changes. Setting `deltabox.toolchain.watch` explicitly replaces
+the resolved inputs.
 
 Generated outputs are never watched. The scheduler debounces bursts, allows one sync at a time, queues at most one follow-up, and suppresses events briefly after a run.
 
 When a sync finds no workspace tsconfig files while `tsconfig.refs`/`tsconfig.composite` are on (or a `tsconfig.workspaces.json` is present), the extension surfaces the CLI's warning as a notification (once per session) with a **Show output** action.
 
+When removing a section stops managing a file that dbx created, the sync
+notification lists the removed relative paths and offers **Restore** (write the
+previous content back) or **Close**. A file that existed before dbx first managed
+it is **adopted**: it is unmanaged but never deleted.
+
+The **Managed Files** view also shows a **Workflow conflicts** group for
+hand-written workflows dbx left untouched (the manifest's `workflowConflicts`).
+Each item names the config key to opt out with, and opens the existing file.
+
 ## Settings
 
-| Setting                       | Default                 | Description                   |
-| ----------------------------- | ----------------------- | ----------------------------- |
-| `deltabox.toolchain.enabled`  | `true`                  | Auto sync on watched changes. |
-| `deltabox.toolchain.debounce` | `300`                   | Debounce (ms) before a sync.  |
-| `deltabox.toolchain.command`  | `sync`                  | The command to run on change. |
-| `deltabox.toolchain.watch`    | config + tsconfig globs | Inputs that trigger a sync.   |
+| Setting                                | Default         | Description                                                    |
+| -------------------------------------- | --------------- | -------------------------------------------------------------- |
+| `deltabox.toolchain.enabled`           | `true`          | Auto sync on watched changes.                                  |
+| `deltabox.toolchain.debounce`          | `300`           | Debounce (ms) before a sync.                                   |
+| `deltabox.toolchain.command`           | `sync`          | The command to run on change.                                  |
+| `deltabox.toolchain.watch`             | `[]` (resolved) | Inputs that trigger a sync (empty = resolved from the config). |
+| `deltabox.toolchain.version`           | `""` (auto)     | Pin the `@deltabox/toolchain` version this workspace runs.     |
+| `deltabox.registrySearchPaths`         | `[]`            | Template registry search paths (dirs or `http(s)` URLs).       |
+| `deltabox.providerRegistrySearchPaths` | `[]`            | Provider registry search paths (JSON files/dirs/URLs).         |
+
+When a workspace has its own `@deltabox/toolchain` whose version differs from the
+extension's bundled CLI, the extension asks which to run and shows both detected
+versions. **Select dbx version…** pins a version in the project's
+`.vscode/settings.json` (like TypeScript's version picker); it runs that version
+via `npx` unless the project already installs it.
 
 ## Command palette
 
@@ -113,4 +157,7 @@ Search for `deltabox:` to find:
 - **Create Vite+ project…**
 - **Reset tooling…**
 - **Refresh projects**
+- **Select dbx version…**
+- **New registry…**
+- **Remove registry…**
 - **Toggle auto-sync**

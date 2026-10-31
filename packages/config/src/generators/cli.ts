@@ -9,8 +9,8 @@ import { type ParseArgsOptionsConfig, parseArgs } from 'node:util';
 
 import { formatCliFlag } from '@deltabox/toolchain-shared';
 
-import { type CollectEnvVarsOptions, collectEnvVars, DEFAULT_ENV_PREFIX } from '../collect.js';
-import type { ConfigScopes } from '../types.js';
+import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from '../collect.js';
+import type { ConfigSchema } from '../types.js';
 
 /** Flag-shaping options shared by every CLI helper. */
 export interface CliFlagOptions {
@@ -19,10 +19,10 @@ export interface CliFlagOptions {
     /** Shorthand flags keyed by env var name (eg. `{ APP_TOKEN: 't' }`). */
     shortFlags?: Record<string, string>;
     /** Custom env-name -> dotted-path derivation. */
-    envPathOf?: CollectEnvVarsOptions['envPathOf'];
+    envPathOf?: CollectVarsOptions['envPathOf'];
 }
 
-/** A generated CLI option definition for one env var. */
+/** A generated CLI option definition. */
 export interface CliOptionDef {
     /** CLI flag, e.g. `--base-url`. */
     flag: string;
@@ -67,24 +67,26 @@ export interface GenerateCliOptionsOptions extends CliFlagOptions {
     /** The scope whose env vars become flags (default `cli`). */
     scope?: string;
     /** Output file path to write the options as JSON. */
-    output?: string;
+    output?: string | false;
 }
 
 /** Generate the CLI option definitions for a scope's env vars. */
 export function generateCliOptions(
-    scopes: ConfigScopes,
+    schema: ConfigSchema,
     options: GenerateCliOptionsOptions = {}
 ): CliOptionDef[] {
     const scope = options.scope ?? 'cli';
     const defs: CliOptionDef[] = [];
-    for (const def of collectEnvVars(scopes, options.envPrefix, {
+    for (const def of collectVars(schema, options.envPrefix, {
         envPathOf: options.envPathOf,
-    }).filter(v => v.scope === scope)) {
-        const short = cliShortOf(def.name, options);
+    }).filter(v => v.scope === scope && (v.name || v.cliFlag))) {
+        const short = def.meta?.cliFlagShort
+            ? `-${def.meta.cliFlagShort.replace(/^-/, '')}`
+            : cliShortOf(def.name ?? '', options);
         defs.push({
-            flag: cliFlagOf(def.name, options),
-            env: def.name,
-            type: def.envType ?? 'string',
+            flag: def.cliFlag ?? cliFlagOf(def.name ?? '', options),
+            env: def.name ?? '',
+            type: def.type ?? 'string',
             ...(short ? { short } : {}),
             ...(def.description ? { description: def.description } : {}),
             ...(def.secret ? { secret: true } : {}),
@@ -93,7 +95,7 @@ export function generateCliOptions(
         });
     }
 
-    if (options.output) {
+    if (typeof options.output === 'string') {
         fs.writeFileSync(options.output, `${JSON.stringify(defs, null, 4)}\n`, 'utf-8');
     }
 

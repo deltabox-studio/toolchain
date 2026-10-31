@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import * as vscode from 'vscode';
@@ -43,21 +44,40 @@ export async function loadProviders(cwd: string): Promise<Provider[]> {
     }
 }
 
-const REGISTRY = path.join('.dbx', 'toolchain', 'providers.json');
+const REGISTRY = path.join('.dbx', 'toolchain', '.registry', 'providers', 'providers.json');
+const LEGACY_REGISTRY = path.join('.dbx', 'toolchain', 'providers.json');
 
 /** The absolute path of a project's custom provider registry. */
 export function providerRegistryPath(root: string): string {
     return path.join(root, REGISTRY);
 }
 
-/** Read a project's custom providers (empty when the registry is absent/invalid). */
-export function readProviderRegistry(root: string): Provider[] {
+function readProvidersFile(file: string): Provider[] {
     try {
-        const parsed = JSON.parse(fs.readFileSync(providerRegistryPath(root), 'utf-8')) as unknown;
+        const parsed = JSON.parse(fs.readFileSync(file, 'utf-8')) as unknown;
         return Array.isArray(parsed) ? (parsed as Provider[]) : [];
     } catch {
         return [];
     }
+}
+
+function dedupe(providers: Provider[]): Provider[] {
+    const seen = new Set<string>();
+    const out: Provider[] = [];
+    for (const provider of providers) {
+        if (seen.has(provider.id)) continue;
+        seen.add(provider.id);
+        out.push(provider);
+    }
+    return out;
+}
+
+/** Read a project's custom providers (new default + legacy file). */
+export function readProviderRegistry(root: string): Provider[] {
+    return dedupe([
+        ...readProvidersFile(providerRegistryPath(root)),
+        ...readProvidersFile(path.join(root, LEGACY_REGISTRY)),
+    ]);
 }
 
 /** Write a project's custom providers (removing the file when the list is empty). */
@@ -69,6 +89,46 @@ export function writeProviderRegistry(root: string, providers: Provider[]): void
     }
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, `${JSON.stringify(providers, null, 4)}\n`, 'utf-8');
+}
+
+/** The global (`~/.dbx/toolchain/.registry/providers/providers.json`) file. */
+export function globalProviderRegistryPath(): string {
+    return path.join(os.homedir(), '.dbx', 'toolchain', '.registry', 'providers', 'providers.json');
+}
+
+function legacyGlobalProviderRegistryPath(): string {
+    return path.join(os.homedir(), '.dbx', 'toolchain', '.registry', 'providers.json');
+}
+
+/** Read the global providers (new default + legacy file). */
+export function readGlobalProviders(): Provider[] {
+    return dedupe([
+        ...readProvidersFile(globalProviderRegistryPath()),
+        ...readProvidersFile(legacyGlobalProviderRegistryPath()),
+    ]);
+}
+
+/** Write the global providers (removing the file when the list is empty). */
+export function writeGlobalProviders(providers: Provider[]): void {
+    const file = globalProviderRegistryPath();
+    if (providers.length === 0) {
+        fs.rmSync(file, { force: true });
+        return;
+    }
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, `${JSON.stringify(providers, null, 4)}\n`, 'utf-8');
+}
+
+/** The project + global providers (project wins on an id clash). */
+export function readAllProviders(root: string): Provider[] {
+    const seen = new Set<string>();
+    const providers: Provider[] = [];
+    for (const provider of [...readProviderRegistry(root), ...readGlobalProviders()]) {
+        if (seen.has(provider.id)) continue;
+        seen.add(provider.id);
+        providers.push(provider);
+    }
+    return providers;
 }
 
 /** A provider tree node (a provider, or one of its commands). */
@@ -113,7 +173,7 @@ export class ProviderTreeProvider implements vscode.TreeDataProvider<ProviderTre
             return;
         }
         const listed = await loadProviders(root);
-        const customIds = new Set(readProviderRegistry(root).map(provider => provider.id));
+        const customIds = new Set(readAllProviders(root).map(provider => provider.id));
         this.roots = listed.map(provider => ({
             kind: 'provider' as const,
             provider,
@@ -144,9 +204,11 @@ export class ProviderTreeProvider implements vscode.TreeDataProvider<ProviderTre
         if (node.kind === 'provider') {
             const item = new vscode.TreeItem(
                 node.provider.name,
-                node.provider.commands.length
-                    ? vscode.TreeItemCollapsibleState.Collapsed
-                    : vscode.TreeItemCollapsibleState.None
+                node.provider.commands.length === 0
+                    ? vscode.TreeItemCollapsibleState.None
+                    : node.provider.id === 'vite-plus'
+                      ? vscode.TreeItemCollapsibleState.Expanded
+                      : vscode.TreeItemCollapsibleState.Collapsed
             );
             item.description = node.provider.binary ?? node.provider.id;
             item.tooltip = [

@@ -10,6 +10,7 @@ import {
 import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import { defaultSyncTasks } from '../../sync.js';
+import { getConfigSelection } from '../config-selection.js';
 import { baseOptions, watchOptions } from './shared.js';
 
 /** `dbx sync` — regenerate managed files (single, recursive, or watch). */
@@ -29,9 +30,14 @@ export function syncCommand(): ToolchainCommand {
                 flags: '--force',
                 description: 'Run even when no dbx.config.* is present.',
             },
+            {
+                flags: '--json',
+                description: 'Print the sync result (including removed files) as JSON.',
+            },
         ],
         run: async (opts, context) => {
-            const quiet = Boolean(opts.quiet);
+            const json = Boolean(opts.json);
+            const quiet = Boolean(opts.quiet) || json;
             const check = Boolean(opts.check);
 
             if (context.configError) {
@@ -43,9 +49,11 @@ export function syncCommand(): ToolchainCommand {
             if (opts.recursive) {
                 const graph = buildProjectGraph(context.cwd);
                 if (!check) writeProjectGraph(context.cwd, graph);
+                const results: { dir: string; result: Awaited<ReturnType<typeof runSync>> }[] = [];
+                const selection = getConfigSelection();
                 for (const relDir of graph.order) {
                     const dir = path.resolve(context.cwd, relDir);
-                    const loaded = await loadToolchainConfig(dir, { tolerant: true });
+                    const loaded = await loadToolchainConfig(dir, { tolerant: true, ...selection });
                     if (loaded.error) {
                         logger.error(loaded.error);
                         process.exitCode = 1;
@@ -56,16 +64,19 @@ export function syncCommand(): ToolchainCommand {
                         cwd: dir,
                         projectType: loaded.projectType,
                         config: loaded.config,
+                        ownConfig: loaded.ownConfig,
                         tokens: loaded.tokens,
                         check,
                         quiet,
                     });
+                    results.push({ dir: relDir, result });
                     if (check && !result.upToDate) process.exitCode = 1;
                 }
+                if (json) logger.raw(JSON.stringify({ results }, null, 4));
                 return;
             }
 
-            if (!context.configPath && !opts.force) {
+            if (!context.configPath && !opts.force && !context.noConfig) {
                 logger.warn(
                     'no dbx.config.* found here; nothing to sync (use --force to run anyway).'
                 );
@@ -89,6 +100,7 @@ export function syncCommand(): ToolchainCommand {
                     // best-effort
                 }
             }
+            if (json) logger.raw(JSON.stringify(result, null, 4));
         },
     };
 }
