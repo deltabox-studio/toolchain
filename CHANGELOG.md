@@ -1,8 +1,32 @@
 # Changelog
 
-## 2.0.0 (October 2026)
+## 2.0.1 (October 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Vscode
+- Always show builtin providers and templates ([#d67c2ad](https://github.com/deltabox-studio/toolchain/commit/d67c2ad) by [T0chi](https://github.com/T0chi))
+#### Changelog
+- Make release notes first-release safe ([#25e39ef](https://github.com/deltabox-studio/toolchain/commit/25e39ef) by [T0chi](https://github.com/T0chi))
+  - Extract release bodies through a tested CLI helper that only uses tag versions present in CHANGELOG.md, skips the current version, and falls back to the newest entry when there is no prior release.
+- Group breaking changes first ([#c30d212](https://github.com/deltabox-studio/toolchain/commit/c30d212) by [T0chi](https://github.com/T0chi))
+  - Detect subject and footer breaks, group them under the breaking section ahead of feat/fix, and keep the grouping with custom commit formatters and --format-only.
+### Documentation
+- Auto-generate sidebar and reorganize guides ([#3485f53](https://github.com/deltabox-studio/toolchain/commit/3485f53) by [T0chi](https://github.com/T0chi))
+- Document release-notes extraction ([#fcac0b8](https://github.com/deltabox-studio/toolchain/commit/fcac0b8) by [T0chi](https://github.com/T0chi))
+  - Document dbx changelog --release-notes, the last-released-version matching and the first-release fallback.
+- Document breaking changes group order ([#5aa2397](https://github.com/deltabox-studio/toolchain/commit/5aa2397) by [T0chi](https://github.com/T0chi))
+  - Note the default order (breaking, feat, fix) and that breaking grouping works with custom commit formatters.
+
+### Package changes
+#### Added
+- `vite-plugin-vitepress-auto-sidebar` `^1.7.1`
+
+<!-- release:end -->
+
+
+## 2.0.0 (October 2026)
 
 ### New features
 #### Changelog
@@ -305,9 +329,6 @@
 ### Package changes
 #### Added
 - `jsonc-parser` `^3.3.1`
-
-<!-- release:end -->
-
 
 ## 1.11.4 (October 2026)
 
