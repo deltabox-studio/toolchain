@@ -77,7 +77,11 @@ export function resetToolchain(options: ResetToolchainOptions): ResetToolchainRe
     };
 
     if (selectors.generated) {
-        for (const rel of readManifest(cwd).files) {
+        const manifest = readManifest(cwd);
+        for (const rel of manifest.files) {
+            // Adopted files existed before dbx first managed them. A sync never
+            // deletes them when their section goes away, so reset must not either.
+            if (manifest.origins?.[rel] === 'adopted') continue;
             removeFile(path.resolve(cwd, rel), rel);
         }
     }

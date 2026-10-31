@@ -144,13 +144,21 @@ export function editorConfigSyncTask(): SyncTask {
         name: 'editor-config',
         projectTypes: ['monorepo-root', 'project'],
         enabled: (config: ToolchainConfig) =>
-            vscodeEnabled(sectionConfig(config.fmt)?.vscode) ||
-            vscodeEnabled(sectionConfig(config.lint)?.vscode),
+            vscodeEnabled(
+                sectionEnabled(config.fmt) ? sectionConfig(config.fmt)?.vscode : undefined
+            ) ||
+            vscodeEnabled(
+                sectionEnabled(config.lint) ? sectionConfig(config.lint)?.vscode : undefined
+            ),
         run: ctx => {
             const fmt = resolveFmtTool(ctx.config);
             const lint = resolveLintTool(ctx.config);
-            const fmtVscode = sectionConfig(ctx.config.fmt)?.vscode;
-            const lintVscode = sectionConfig(ctx.config.lint)?.vscode;
+            const fmtVscode = sectionEnabled(ctx.config.fmt)
+                ? sectionConfig(ctx.config.fmt)?.vscode
+                : undefined;
+            const lintVscode = sectionEnabled(ctx.config.lint)
+                ? sectionConfig(ctx.config.lint)?.vscode
+                : undefined;
             const patch: Record<string, unknown> = {};
             if (vscodeEnabled(fmtVscode) && fmt) {
                 Object.assign(patch, applyVscodeOptions(formatterSettings(fmt), fmtVscode));
@@ -189,6 +197,10 @@ export function editorConfigSyncTask(): SyncTask {
                     return [];
                 }
             }
+
+            // `--check` is read-only: report nothing (the file is intentionally
+            // unmanaged) and never write the generated defaults.
+            if (ctx.check) return [];
 
             const before = JSON.stringify(settings);
             addMissing(settings, patch);

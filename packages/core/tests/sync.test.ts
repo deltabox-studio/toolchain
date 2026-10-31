@@ -268,6 +268,7 @@ describe('runSync untracked files and task metadata', () => {
                     run: ctx => {
                         ctx.manifest!.snapshots = { 'a.json': { a: 1 } };
                         ctx.manifest!.files = ['bogus'];
+                        ctx.manifest!.customState = { cursor: 7 };
                         return [{ path: 'a.txt', content: 'a' }];
                     },
                 },
@@ -280,6 +281,26 @@ describe('runSync untracked files and task metadata', () => {
         const manifest = readManifest(cwd);
         expect(manifest.files).toEqual(['a.txt']);
         expect(manifest.snapshots).toEqual({ 'a.json': { a: 1 } });
+        expect(manifest.extras).toEqual({ customState: { cursor: 7 } });
+
+        // The extra survives into the next run's SyncContext.
+        let carried: unknown;
+        await runSync({
+            tasks: [
+                {
+                    name: 'y',
+                    run: ctx => {
+                        carried = ctx.manifest!.customState;
+                        return [];
+                    },
+                },
+            ],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        expect(carried).toEqual({ cursor: 7 });
     });
 });
 

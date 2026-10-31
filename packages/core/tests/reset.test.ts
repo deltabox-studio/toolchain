@@ -31,6 +31,20 @@ describe('resetToolchain', () => {
         expect(fs.existsSync(path.join(cwd, MANIFEST_DIR))).toBe(false);
     });
 
+    it('keeps adopted files that predate dbx', () => {
+        const cwd = tmp();
+        fs.writeFileSync(path.join(cwd, 'package.json'), '{"name":"x"}\n');
+        fs.writeFileSync(path.join(cwd, 'a.txt'), 'a');
+        writeManifest(cwd, ['package.json', 'a.txt'], undefined, {
+            'package.json': 'adopted',
+            'a.txt': 'created',
+        });
+        const result = resetToolchain({ cwd });
+        expect(result.removed).toEqual(['a.txt', `${MANIFEST_DIR}/`]);
+        expect(fs.existsSync(path.join(cwd, 'package.json'))).toBe(true);
+        expect(fs.existsSync(path.join(cwd, 'a.txt'))).toBe(false);
+    });
+
     it('skips the restore hook when the manifest is kept', () => {
         const cwd = tmp();
         writeManifest(cwd, []);

@@ -78,6 +78,15 @@ describe('editorConfigSyncTask', () => {
         expect(settings['oxc.disableNestedConfig']).toBeUndefined();
     });
 
+    it('does not write in check mode', async () => {
+        const cwd = makeTmp();
+        await editorConfigSyncTask().run({
+            ...context(cwd, { fmt: { oxc: {}, vscode: true } }),
+            check: true,
+        });
+        expect(fs.existsSync(path.join(cwd, '.vscode/settings.json'))).toBe(false);
+    });
+
     it('supports overrides and exclusions on an options object', async () => {
         const cwd = makeTmp();
         await editorConfigSyncTask().run(

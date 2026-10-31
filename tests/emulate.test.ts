@@ -322,6 +322,376 @@ describe('emulate: CLI + templates', () => {
     );
 
     it(
+        'scaffolds runnable Vite+/Oxc projects and wires the monorepo',
+        async () => {
+            const ws = scratch('scaffold-current');
+
+            // A single project: runnable src/test, Vite+ deps, no Biome.
+            const single = path.join(ws, 'single');
+            const singleResult = await dbx(ws, [
+                'project:init',
+                '--name',
+                'demo',
+                '--scope',
+                '@acme',
+                '--out',
+                single,
+            ]);
+            expect(singleResult.code, singleResult.stderr).toBe(0);
+            expect(fs.existsSync(path.join(single, 'src/index.ts'))).toBe(true);
+            expect(fs.existsSync(path.join(single, 'tests/index.test.ts'))).toBe(true);
+            expect(fs.existsSync(path.join(single, 'biome.json'))).toBe(false);
+            const singlePkg = readJson<{
+                scripts: Record<string, string>;
+                devDependencies: Record<string, string>;
+                packageManager?: string;
+            }>(path.join(single, 'package.json'));
+            expect(singlePkg.devDependencies['@types/node']).toBe('catalog:');
+            expect(singlePkg.devDependencies['vite-plus']).toBe('catalog:');
+            expect(singlePkg.devDependencies['@biomejs/biome']).toBeUndefined();
+            expect(singlePkg.scripts.format).toBe('dbx fmt');
+            expect(singlePkg.scripts.lint).toBe('dbx lint --fix');
+            expect(singlePkg.packageManager).toMatch(/^yarn@\d/);
+            expect(fs.existsSync(path.join(single, '.oxfmtrc.json'))).toBe(true);
+            expect(fs.existsSync(path.join(single, '.oxlintrc.json'))).toBe(true);
+            const singleConfig = fs.readFileSync(path.join(single, 'dbx.config.ts'), 'utf-8');
+            expect(singleConfig).toContain('fmt:');
+            expect(singleConfig).toContain('lint:');
+            expect(singleConfig).toContain('oxc:');
+
+            // The Oxc files are managed: `dbx sync` regenerates them from the config.
+            fs.rmSync(path.join(single, '.oxfmtrc.json'));
+            fs.rmSync(path.join(single, '.oxlintrc.json'));
+            const sync = await dbx(single, ['sync']);
+            expect(sync.code, sync.stderr).toBe(0);
+            expect(fs.existsSync(path.join(single, '.oxfmtrc.json'))).toBe(true);
+            expect(fs.existsSync(path.join(single, '.oxlintrc.json'))).toBe(true);
+            // `oxc: true` resolves the shared defaults (not a bare `$schema`).
+            const oxfmt = readJson<{ useTabs: boolean; ignorePatterns: string[] }>(
+                path.join(single, '.oxfmtrc.json')
+            );
+            expect(oxfmt.useTabs).toBe(false);
+            expect(oxfmt.ignorePatterns.length).toBeGreaterThan(0);
+            const oxlint = readJson<{ rules: Record<string, string> }>(
+                path.join(single, '.oxlintrc.json')
+            );
+            expect(oxlint.rules.eqeqeq).toBe('warn');
+
+            // A monorepo example: root tsconfig/scripts, workspace named after itself.
+            const mono = path.join(ws, 'mono');
+            const monoResult = await dbx(ws, [
+                'project:init:monorepo',
+                '--name',
+                'mono',
+                '--scope',
+                '@mono',
+                '--example',
+                '--out',
+                mono,
+            ]);
+            expect(monoResult.code, monoResult.stderr).toBe(0);
+            expect(fs.existsSync(path.join(mono, 'tsconfig.json'))).toBe(true);
+            expect(fs.existsSync(path.join(mono, '.oxfmtrc.json'))).toBe(true);
+            expect(fs.existsSync(path.join(mono, '.oxlintrc.json'))).toBe(true);
+            const monoPkg = readJson<{ scripts: Record<string, string> }>(
+                path.join(mono, 'package.json')
+            );
+            expect(monoPkg.scripts.build).toContain('dbx run');
+            const coreConfig = fs.readFileSync(
+                path.join(mono, 'packages/core/dbx.config.ts'),
+                'utf-8'
+            );
+            expect(coreConfig).toContain("name: 'core'");
+            const corePkg = readJson<{ exports: Record<string, unknown> }>(
+                path.join(mono, 'packages/core/package.json')
+            );
+            expect(corePkg.exports['.']).toEqual({
+                types: './dist/index.d.ts',
+                import: './dist/index.js',
+            });
+
+            // Adding a workspace updates the root references and uses its catalog.
+            const addWorkspace = await dbx(mono, [
+                'project:init:workspace',
+                '--name',
+                'web',
+                '--dir',
+                'packages/web',
+            ]);
+            expect(addWorkspace.code, addWorkspace.stderr).toBe(0);
+            const workspaces = readJson<{
+                compilerOptions: { paths: Record<string, string[]> };
+                references: { path: string }[];
+            }>(path.join(mono, 'tsconfig.workspaces.json'));
+            expect(workspaces.compilerOptions.paths['@mono/web']).toEqual([
+                './packages/web/src/index.ts',
+            ]);
+            expect(workspaces.references).toContainEqual({ path: './packages/web/tsconfig.json' });
+            const webPkg = readJson<{ devDependencies: Record<string, string> }>(
+                path.join(mono, 'packages/web/package.json')
+            );
+            expect(webPkg.devDependencies['@deltabox/toolchain']).toBe('catalog:');
+
+            // The application builtin actually produces a Vite app.
+            const app = path.join(ws, 'app');
+            const appResult = await dbx(ws, [
+                'create',
+                '--template',
+                'application',
+                '--name',
+                'app',
+                '--scope',
+                '@acme',
+                '--var',
+                'packageManager=yarn',
+                '--out',
+                app,
+            ]);
+            expect(appResult.code, appResult.stderr).toBe(0);
+            expect(fs.existsSync(path.join(app, 'index.html'))).toBe(true);
+            expect(fs.existsSync(path.join(app, 'src/main.ts'))).toBe(true);
+            const appPkg = readJson<{
+                scripts: Record<string, string>;
+                devDependencies: Record<string, string>;
+            }>(path.join(app, 'package.json'));
+            expect(appPkg.scripts.dev).toBe('vite');
+            expect(appPkg.scripts.build).toBe('vite build');
+            expect(appPkg.devDependencies.tsdown).toBeUndefined();
+        },
+        TIMEOUT
+    );
+
+    it(
+        'uses the target --root config for workspace scaffolds',
+        async () => {
+            const ws = scratch('workspace-root-config');
+            const root = path.join(ws, 'root');
+            const init = await dbx(ws, [
+                'project:init:monorepo',
+                '--name',
+                'root',
+                '--scope',
+                '@target',
+                '--out',
+                root,
+            ]);
+            expect(init.code, init.stderr).toBe(0);
+
+            // The command runs from `ws`, so the old fallback picked the *cwd*
+            // config (none here) instead of the target root's `@target` scope.
+            const add = await dbx(ws, [
+                'project:init:workspace',
+                '--name',
+                'web',
+                '--root',
+                root,
+                '--dir',
+                'packages/web',
+            ]);
+            expect(add.code, add.stderr).toBe(0);
+            expect(
+                readJson<{ name: string }>(path.join(root, 'packages/web/package.json')).name
+            ).toBe('@target/web');
+            const config = fs.readFileSync(path.join(root, 'packages/web/dbx.config.ts'), 'utf-8');
+            expect(config).toContain("scope: '@target'");
+        },
+        TIMEOUT
+    );
+
+    it(
+        'honours --no-config when the workspace root differs from cwd',
+        async () => {
+            const ws = scratch('workspace-root-no-config');
+            const root = path.join(ws, 'root');
+            const init = await dbx(ws, [
+                'project:init:monorepo',
+                '--name',
+                'root',
+                '--scope',
+                '@target',
+                '--out',
+                root,
+            ]);
+            expect(init.code, init.stderr).toBe(0);
+
+            const add = await dbx(ws, [
+                'project:init:workspace',
+                '--name',
+                'web',
+                '--root',
+                root,
+                '--dir',
+                'packages/web',
+                '--no-config',
+            ]);
+            expect(add.code, add.stderr).toBe(0);
+            expect(
+                readJson<{ name: string }>(path.join(root, 'packages/web/package.json')).name
+            ).toBe('@web/web');
+            expect(fs.existsSync(path.join(root, 'packages/web/dbx.config.ts'))).toBe(false);
+        },
+        TIMEOUT
+    );
+
+    it(
+        'skips the config and Oxc files with project:init --no-config',
+        async () => {
+            const ws = scratch('scaffold-no-config');
+            const out = path.join(ws, 'app');
+            const result = await dbx(ws, [
+                'project:init',
+                '--name',
+                'demo',
+                '--out',
+                out,
+                '--no-config',
+            ]);
+            expect(result.code, result.stderr).toBe(0);
+            expect(fs.existsSync(path.join(out, 'package.json'))).toBe(true);
+            expect(fs.existsSync(path.join(out, 'dbx.config.ts'))).toBe(false);
+            expect(fs.existsSync(path.join(out, '.oxfmtrc.json'))).toBe(false);
+            expect(fs.existsSync(path.join(out, '.oxlintrc.json'))).toBe(false);
+        },
+        TIMEOUT
+    );
+
+    it(
+        'inherits package.json metadata and applies non-interactive template defaults',
+        async () => {
+            const ws = scratch('package-json-defaults');
+            writeJson(path.join(ws, 'package.json'), {
+                name: '@pkgroot/app',
+                packageManager: 'pnpm@10.11.1',
+            });
+
+            const init = path.join(ws, 'init');
+            const initResult = await dbx(ws, ['project:init', '--name', 'demo', '--out', init]);
+            expect(initResult.code, initResult.stderr).toBe(0);
+            const initPkg = readJson<{ name: string; packageManager: string }>(
+                path.join(init, 'package.json')
+            );
+            expect(initPkg.name).toBe('@pkgroot/demo');
+            expect(initPkg.packageManager).toBe('pnpm@10.11.1');
+
+            const create = path.join(ws, 'create');
+            const createResult = await dbx(ws, [
+                'create',
+                '--template',
+                'project',
+                '--name',
+                'demo',
+                '--out',
+                create,
+            ]);
+            expect(createResult.code, createResult.stderr).toBe(0);
+            const createPkg = readJson<{ packageManager?: string }>(
+                path.join(create, 'package.json')
+            );
+            expect(createPkg.packageManager).toBe('pnpm@10.11.1');
+
+            // With no package.json/config metadata, the template default applies.
+            const empty = scratch('package-json-defaults-empty');
+            const defaultResult = await dbx(empty, [
+                'create',
+                '--template',
+                'project',
+                '--name',
+                'demo',
+                '--out',
+                path.join(empty, 'app'),
+            ]);
+            expect(defaultResult.code, defaultResult.stderr).toBe(0);
+            const defaultPkg = readJson<{ packageManager?: string }>(
+                path.join(empty, 'app/package.json')
+            );
+            expect(defaultPkg.packageManager).toMatch(/^yarn@\d/);
+        },
+        TIMEOUT
+    );
+
+    it(
+        'does not overwrite existing consumer workflows and keeps them after opt-out',
+        async () => {
+            const ws = scratch('workflow-guard');
+            const existing = path.join(ws, '.github/workflows/ci.yml');
+            const content = 'name: Existing CI\non: [push]\n';
+            write(existing, content);
+            writeConfig(ws, {
+                project: { name: 'root' },
+                ci: { ci: true },
+            });
+
+            const sync = await dbx(ws, ['sync']);
+            expect(sync.code, sync.stderr).toBe(0);
+            expect(fs.readFileSync(existing, 'utf-8')).toBe(content);
+            expect(sync.stderr).toContain('leaving it untouched');
+            const check = await dbx(ws, ['sync', '--check']);
+            expect(check.code, check.stderr).toBe(0);
+
+            // Turning the workflow off must not delete the pre-existing file.
+            writeConfig(ws, {
+                project: { name: 'root' },
+                ci: { ci: false },
+            });
+            const off = await dbx(ws, ['sync']);
+            expect(off.code, off.stderr).toBe(0);
+            expect(fs.readFileSync(existing, 'utf-8')).toBe(content);
+        },
+        TIMEOUT
+    );
+
+    it(
+        'guards custom workflow paths too',
+        async () => {
+            const ws = scratch('workflow-guard-custom');
+            const existing = path.join(ws, '.github/custom/checks.yaml');
+            const content = 'name: Existing checks\non: [push]\n';
+            write(existing, content);
+            writeConfig(ws, {
+                ci: { ci: { filename: 'checks.yaml', dir: '.github/custom' } },
+            });
+            const sync = await dbx(ws, ['sync']);
+            expect(sync.code, sync.stderr).toBe(0);
+            expect(fs.readFileSync(existing, 'utf-8')).toBe(content);
+        },
+        TIMEOUT
+    );
+
+    it(
+        'generates ci.custom workflows with filename/dir overrides',
+        async () => {
+            const ws = scratch('custom-workflows');
+            writeConfig(ws, {
+                project: { name: 'root' },
+                ci: {
+                    custom: {
+                        deploy: {
+                            triggers: { workflow_dispatch: {} },
+                            filename: 'deploy.yaml',
+                            dir: '.github/custom',
+                            jobs: {
+                                deploy: {
+                                    'runs-on': 'ubuntu-latest',
+                                    steps: [{ run: 'echo deploy' }],
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+            const sync = await dbx(ws, ['sync']);
+            expect(sync.code, sync.stderr).toBe(0);
+            const file = path.join(ws, '.github/custom/deploy.yaml');
+            expect(fs.existsSync(file)).toBe(true);
+            expect(fs.readFileSync(file, 'utf-8')).toContain('echo deploy');
+            expect(fs.existsSync(path.join(ws, '.github/workflows/deploy.yml'))).toBe(false);
+            const check = await dbx(ws, ['sync', '--check']);
+            expect(check.code, check.stderr).toBe(0);
+        },
+        TIMEOUT
+    );
+
+    it(
         'resolves a `.` scaffold name to the target directory basename',
         async () => {
             const ws = scratch('dot-name');
@@ -716,7 +1086,7 @@ describe('emulate: CLI + templates', () => {
             // The generated config tags the folder a workspace, not the root's
             // `monorepo-root` (which would generate CI/husky/vscode inside it).
             expect(fs.readFileSync(path.join(pkg, 'dbx.config.ts'), 'utf-8')).toContain(
-                'type: "monorepo-workspace"'
+                "type: 'monorepo-workspace'"
             );
 
             const sync = await dbx(pkg, ['sync']);
@@ -749,7 +1119,10 @@ describe('emulate: CLI + templates', () => {
             const manifest = readJson<{ files: string[]; syncedAt?: string }>(
                 path.join(out, '.dbx/toolchain/manifest.json')
             );
-            expect(manifest.files).toContain('package.json');
+            // package.json is user-owned: the project task writes it but never
+            // tracks it (so `dbx reset` cannot delete it).
+            expect(manifest.files).not.toContain('package.json');
+            expect(fs.existsSync(path.join(out, 'package.json'))).toBe(true);
             // The last-sync timestamp is split into its own (gitignored) file.
             expect(manifest.syncedAt).toBeUndefined();
             expect(fs.existsSync(path.join(out, '.dbx/toolchain/timestamps.json'))).toBe(true);

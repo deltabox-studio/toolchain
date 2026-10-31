@@ -36,6 +36,11 @@ export interface Manifest {
      * path (`{ packages: { core: { "tsconfig.build.json": { ... } } } }`).
      */
     snapshots?: Record<string, unknown>;
+    /**
+     * Task-defined metadata persisted across syncs (everything a task writes to
+     * `SyncContext.manifest` that is not one of the reserved keys).
+     */
+    extras?: Record<string, unknown>;
 }
 
 /** Absolute path to a file in the manifest directory. */
@@ -46,7 +51,9 @@ function manifestDir(cwd: string): string {
 /** Read + parse a JSON file in the manifest directory (`undefined` on failure). */
 function readManifestJson<T>(cwd: string, name: string): T | undefined {
     try {
-        return JSON.parse(fs.readFileSync(path.join(manifestDir(cwd), name), 'utf-8')) as T;
+        return JSON.parse(
+            fs.readFileSync(path.join(manifestDir(cwd), name), 'utf-8').replace(/^\uFEFF/, '')
+        ) as T;
     } catch {
         return undefined;
     }
@@ -76,11 +83,18 @@ export function readManifest(cwd: string): Manifest {
             : undefined;
     const snapshots =
         parsed?.snapshots && typeof parsed.snapshots === 'object' ? parsed.snapshots : undefined;
+    const reserved = new Set(['files', 'origins', 'syncedAt', 'tsconfigOverrides', 'snapshots']);
+    const extras = Object.fromEntries(
+        Object.entries((parsed ?? {}) as Record<string, unknown>).filter(
+            ([key]) => !reserved.has(key)
+        )
+    );
     return {
         files: Array.isArray(parsed?.files) ? parsed.files : [],
         ...(origins ? { origins } : {}),
         ...(tsconfigOverrides ? { tsconfigOverrides } : {}),
         ...(snapshots ? { snapshots } : {}),
+        ...(Object.keys(extras).length > 0 ? { extras } : {}),
         ...(syncedAt ? { syncedAt } : {}),
     };
 }

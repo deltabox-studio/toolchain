@@ -81,7 +81,9 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
         log,
         warn,
         check: options.check === true,
+        managedFiles: manifest.files,
         manifest: {
+            ...manifest.extras,
             ...(manifest.tsconfigOverrides
                 ? { tsconfigOverrides: manifest.tsconfigOverrides }
                 : {}),
