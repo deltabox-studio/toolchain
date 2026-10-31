@@ -584,6 +584,10 @@ export function templateCommands(): ToolchainCommand[] {
                     description: 'Action id to run after scaffolding (repeatable).',
                 },
                 { flags: '--online', description: 'Resolve online templates too.' },
+                {
+                    flags: '--force',
+                    description: 'Overwrite existing files in the output directory.',
+                },
                 { flags: '--json', description: 'Print the result as JSON.' },
             ],
             run: async (opts, context) => {
@@ -719,9 +723,10 @@ export function templateCommands(): ToolchainCommand[] {
                 // prompt default.
                 for (const variable of template.variables ?? []) {
                     if (variable.name === 'name' || variable.name === 'scope') continue;
+                    const current = tokens[variable.name];
                     if (
                         variables[variable.name] === undefined &&
-                        tokens[variable.name] === undefined &&
+                        (current === undefined || current === null || current === '') &&
                         variable.default !== undefined
                     ) {
                         variables[variable.name] = variable.default;
@@ -736,6 +741,7 @@ export function templateCommands(): ToolchainCommand[] {
                     tokens,
                     variables,
                     actions: [...actions],
+                    force: Boolean(opts.force),
                     tsconfigRootFile: tsconfig?.rootFile ?? 'tsconfig.workspaces.json',
                 });
 

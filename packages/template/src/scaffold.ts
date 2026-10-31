@@ -7,6 +7,7 @@ import {
     createMonorepoRootFiles,
     createRootProjectFiles,
     createWorkspaceFiles,
+    findRootOxcFiles,
     hasCatalog,
     SCAFFOLD_CATALOG,
     upsertWorkspaceTsconfig,
@@ -41,8 +42,10 @@ export interface ScaffoldOptions {
     tokens?: Replacements;
     /** Per-template variable values (merged over `tokens`). */
     variables?: Record<string, string>;
-    /** Overwrite existing files (local templates; default true). */
+    /** Overwrite existing files (local templates; default false). */
     overwrite?: boolean;
+    /** Overwrite existing files (builtin + local templates). */
+    force?: boolean;
     /** Action ids to run after writing the files (default: none). */
     actions?: string[];
     /** The monorepo workspaces tsconfig name (workspace scaffolds). */
@@ -187,12 +190,13 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
                     type: 'project',
                     kind: template.builtin === 'application' ? 'application' : 'project',
                     includeConfig,
+                    rootOxc: findRootOxcFiles(options.cwd),
                     ...(packageManager ? { packageManager } : {}),
                 })
             );
         }
     }
-    const written = writeGeneratedFiles(files, options.cwd);
+    const written = writeGeneratedFiles(files, options.cwd, { force: options.force === true });
     if (template.builtin === 'monorepo-workspace') {
         upsertWorkspaceTsconfig(
             options.cwd,
@@ -217,7 +221,7 @@ function scaffoldLocal(template: Template, options: ScaffoldOptions): ScaffoldRe
     const open = template.tokens?.open ?? '{{';
     const close = template.tokens?.close ?? '}}';
     const tokens = replacementMap(options);
-    const overwrite = options.overwrite !== false;
+    const overwrite = options.force === true || options.overwrite === true;
     const pending: { target: string; content: string }[] = [];
     const root = path.resolve(options.cwd);
 

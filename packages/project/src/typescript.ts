@@ -151,15 +151,48 @@ export interface ProjectContext {
     kind?: 'project' | 'application';
     /** Write `fmt.oxc` / `lint.oxc` defaults (and the Oxc config files). */
     oxc?: boolean;
+    /**
+     * Oxc config files already present above the scaffold root. The matching
+     * local file + `dbx.config.ts` opt-in are omitted so the root owns them.
+     */
+    rootOxc?: RootOxcFiles;
     /** Write a `dbx.config.ts` (default true). */
     includeConfig?: boolean;
     /** Per-file `extends` overrides for the scaffolded tsconfig templates. */
     tsconfigExtends?: TsconfigExtendsOptions;
 }
 
+/** Oxc config files found in an ancestor of a scaffold output directory. */
+export interface RootOxcFiles {
+    fmt: boolean;
+    lint: boolean;
+}
+
+/**
+ * Find the nearest ancestor that owns Oxc config files. The walk stops at the
+ * repository boundary (`.git`) so a nested project cannot inherit files from an
+ * unrelated checkout above it.
+ */
+export function findRootOxcFiles(start: string): RootOxcFiles {
+    const root = path.resolve(start);
+    // The output itself is a repository root: it owns its own Oxc setup.
+    if (fs.existsSync(path.join(root, '.git'))) return { fmt: false, lint: false };
+    let dir = path.dirname(root);
+    for (;;) {
+        const fmt = fs.existsSync(path.join(dir, '.oxfmtrc.json'));
+        const lint = fs.existsSync(path.join(dir, '.oxlintrc.json'));
+        if (fmt || lint) return { fmt, lint };
+        if (fs.existsSync(path.join(dir, '.git'))) break;
+        const parent = path.dirname(dir);
+        if (parent === dir) break;
+        dir = parent;
+    }
+    return { fmt: false, lint: false };
+}
+
 /** The token replacements derived from a {@link ProjectContext}. */
 function tokens(ctx: ProjectContext): Replacements {
-    const { tsconfigExtends: _tsconfigExtends, ...tokens } = ctx;
+    const { tsconfigExtends: _tsconfigExtends, rootOxc: _rootOxc, ...tokens } = ctx;
     return tokens;
 }
 
@@ -267,7 +300,9 @@ export function renderSourceTest(): string {
  * `project.type` lets the sync know whether the folder is a monorepo root, a
  * workspace, or a single project.
  */
-export function renderToolchainConfig(ctx: ProjectContext & { type: ProjectType }): string {
+export function renderToolchainConfig(
+    ctx: ProjectContext & { type: ProjectType; fmtOxc?: boolean; lintOxc?: boolean }
+): string {
     const entries: [string, string][] = [
         ['type', ctx.type],
         ['name', ctx.name],
@@ -297,9 +332,12 @@ export function renderToolchainConfig(ctx: ProjectContext & { type: ProjectType 
     // Sections are opt-in by presence. Every scaffold declares its `project`
     // identity; the Oxc defaults are opt-out and drive the managed `.oxfmtrc.json`
     // / `.oxlintrc.json` files on `dbx sync`.
+    const fmtOxc = ctx.fmtOxc ?? ctx.oxc === true;
+    const lintOxc = ctx.lintOxc ?? ctx.oxc === true;
     const sections = [
         `        project: {\n${project}\n        },`,
-        ...(ctx.oxc ? ['        fmt: { oxc: true },', '        lint: { oxc: true },'] : []),
+        ...(fmtOxc ? ['        fmt: { oxc: true },'] : []),
+        ...(lintOxc ? ['        lint: { oxc: true },'] : []),
     ];
     return `import { defineConfig } from '@deltabox/toolchain';
 
@@ -326,7 +364,11 @@ export function renderWorkspaceTsconfig(
 export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
     const application = ctx.kind === 'application';
     // `--no-config` means nothing manages the Oxc files, so don't create them.
-    const withOxc = ctx.oxc !== false && ctx.includeConfig !== false;
+    // A nested project inside a root that already owns the matching Oxc file
+    // inherits the root config instead of shadowing it.
+    const allowOxc = ctx.oxc !== false && ctx.includeConfig !== false;
+    const withFmt = allowOxc && ctx.rootOxc?.fmt !== true;
+    const withLint = allowOxc && ctx.rootOxc?.lint !== true;
     const pkg = {
         name: ctx.scope ? `${ctx.scope}/${ctx.name}` : ctx.name,
         version: '0.1.0',
@@ -375,7 +417,8 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
                       content: renderToolchainConfig({
                           ...ctx,
                           type: ctx.type ?? 'project',
-                          oxc: withOxc,
+                          fmtOxc: withFmt,
+                          lintOxc: withLint,
                       }),
                   },
               ]),
@@ -401,12 +444,16 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
             content: renderTsconfigBuild(tokens(ctx), ctx.tsconfigExtends?.build),
         },
         { path: 'tsconfig.json', content: renderWorkspaceTsconfig() },
-        ...(withOxc
+        ...(withFmt
             ? [
                   {
                       path: '.oxfmtrc.json',
                       content: renderOxcConfig(OXC_FMT_SCHEMA, DEFAULT_FMT_RULES),
                   },
+              ]
+            : []),
+        ...(withLint
+            ? [
                   {
                       path: '.oxlintrc.json',
                       content: renderOxcConfig(OXC_LINT_SCHEMA, DEFAULT_LINT_RULES),
@@ -817,10 +864,19 @@ export function writeGeneratedFiles(
 ): string[] {
     const root = path.resolve(cwd);
     const targets = files.map(file => path.resolve(root, file.path));
+    const seen = new Map<string, string>();
     for (const target of targets) {
         if (!isInside(root, target)) {
             throw new Error(`refusing to write outside ${root}: ${target}`);
         }
+        const key = process.platform === 'win32' ? target.toLowerCase() : target;
+        const previous = seen.get(key);
+        if (previous !== undefined) {
+            throw new Error(
+                `refusing to write duplicate file(s): ${previous} and ${path.relative(root, target)}`
+            );
+        }
+        seen.set(key, path.relative(root, target));
     }
     if (options.force !== true) {
         const existing = targets.filter(target => fs.existsSync(target));
@@ -834,9 +890,9 @@ export function writeGeneratedFiles(
     }
 
     const written: string[] = [];
-    for (const target of targets) {
+    for (const [index, target] of targets.entries()) {
         fs.mkdirSync(path.dirname(target), { recursive: true });
-        fs.writeFileSync(target, files[written.length]!.content, 'utf-8');
+        fs.writeFileSync(target, files[index]!.content, 'utf-8');
         written.push(target);
     }
     return written;

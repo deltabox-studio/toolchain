@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import {
     type ManagedFile,
+    readJsonFile,
     type SyncTask,
     sectionConfig,
     sectionEnabled,
@@ -68,20 +69,18 @@ export function hasCatalog(
         required.length === 0 ? keys.length > 0 : required.every(name => keys.includes(name));
 
     if (pm === 'bun') {
-        try {
-            const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf-8')) as {
-                workspaces?: { catalog?: Record<string, string> };
-            };
-            return covers(Object.keys(pkg.workspaces?.catalog ?? {}));
-        } catch {
-            return false;
-        }
+        const pkg = readJsonFile<{ workspaces?: { catalog?: Record<string, string> } }>(
+            path.join(root, 'package.json')
+        );
+        if (!pkg) return false;
+        return covers(Object.keys(pkg.workspaces?.catalog ?? {}));
     }
 
     const file = catalogFileFor(pm);
     if (!file) return false;
     try {
-        return covers(defaultCatalogKeys(fs.readFileSync(path.join(root, file), 'utf-8')));
+        const content = fs.readFileSync(path.join(root, file), 'utf-8').replace(/^\uFEFF/, '');
+        return covers(defaultCatalogKeys(content));
     } catch {
         return false;
     }

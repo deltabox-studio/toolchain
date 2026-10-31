@@ -359,6 +359,7 @@ Scaffold a project from a template (builtin, local or Vite+).
 - `--var ‹pair...›` — Template variables as key=value (repeatable).
 - `--action ‹id...›` — Action id to run after scaffolding (repeatable).
 - `--online` — Resolve online templates too.
+- `--force` — Overwrite existing files in the output directory.
 - `--json` — Print the result as JSON.
 
 ## `dbx vite`

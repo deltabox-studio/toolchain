@@ -462,6 +462,65 @@ describe('emulate: CLI + templates', () => {
     );
 
     it(
+        'inherits root Oxc files for nested project scaffolds',
+        async () => {
+            const ws = scratch('nested-oxc');
+            writeJson(path.join(ws, 'package.json'), { name: 'root', private: true });
+            write(path.join(ws, '.oxfmtrc.json'), '{}\n');
+            write(path.join(ws, '.oxlintrc.json'), '{}\n');
+            const out = path.join(ws, 'packages/app');
+            const result = await dbx(ws, [
+                'project:init',
+                '--name',
+                'app',
+                '--scope',
+                '@root',
+                '--out',
+                out,
+            ]);
+            expect(result.code, result.stderr).toBe(0);
+            expect(fs.existsSync(path.join(out, '.oxfmtrc.json'))).toBe(false);
+            expect(fs.existsSync(path.join(out, '.oxlintrc.json'))).toBe(false);
+            const config = fs.readFileSync(path.join(out, 'dbx.config.ts'), 'utf-8');
+            expect(config).not.toContain('fmt:');
+            expect(config).not.toContain('lint:');
+        },
+        TIMEOUT
+    );
+
+    it(
+        'requires --force to overwrite template files',
+        async () => {
+            const ws = scratch('template-force');
+            const out = path.join(ws, 'app');
+            write(path.join(out, 'README.md'), '# existing\n');
+            const refused = await dbx(ws, [
+                'create',
+                '--template',
+                'project',
+                '--name',
+                'app',
+                '--out',
+                out,
+            ]);
+            expect(refused.code).not.toBe(0);
+            const forced = await dbx(ws, [
+                'create',
+                '--template',
+                'project',
+                '--name',
+                'app',
+                '--out',
+                out,
+                '--force',
+            ]);
+            expect(forced.code, forced.stderr).toBe(0);
+            expect(fs.readFileSync(path.join(out, 'README.md'), 'utf-8')).toBe('# app\n');
+        },
+        TIMEOUT
+    );
+
+    it(
         'uses the target --root config for workspace scaffolds',
         async () => {
             const ws = scratch('workspace-root-config');
@@ -527,7 +586,7 @@ describe('emulate: CLI + templates', () => {
             expect(add.code, add.stderr).toBe(0);
             expect(
                 readJson<{ name: string }>(path.join(root, 'packages/web/package.json')).name
-            ).toBe('@web/web');
+            ).toBe('@root/web');
             expect(fs.existsSync(path.join(root, 'packages/web/dbx.config.ts'))).toBe(false);
         },
         TIMEOUT

@@ -17,6 +17,7 @@ import {
     createMonorepoRootFiles,
     createRootProjectFiles,
     createWorkspaceFiles,
+    findRootOxcFiles,
     SCAFFOLD_CATALOG,
     upsertWorkspaceTsconfig,
     writeGeneratedFiles,
@@ -163,6 +164,7 @@ export function projectCommands(): ToolchainCommand[] {
                     includeConfig: context.noConfig
                         ? false
                         : ((opts.config as boolean | undefined) ?? true),
+                    rootOxc: findRootOxcFiles(out),
                     ...(tsconfigExtends ? { tsconfigExtends } : {}),
                 });
                 const written = writeGeneratedFiles(files, out, { force: Boolean(opts.force) });
@@ -259,8 +261,11 @@ export function projectCommands(): ToolchainCommand[] {
                     );
                 }
                 const name = resolveName(workspaceName, root);
+                const rootName = tokenText(rootTokens.name) ?? path.basename(path.resolve(root));
                 const scope =
-                    (opts.scope as string | undefined) ?? tokenText(rootTokens.scope) ?? `@${name}`;
+                    (opts.scope as string | undefined) ??
+                    tokenText(rootTokens.scope) ??
+                    `@${rootName}`;
                 const wsDir = ((opts.dir as string | undefined) ?? `packages/${name}`)
                     .replace(/\\/g, '/')
                     .replace(/\/+$/, '');

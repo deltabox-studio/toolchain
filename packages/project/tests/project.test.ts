@@ -11,6 +11,7 @@ import {
     createMonorepoRootFiles,
     createRootProjectFiles,
     createWorkspaceFiles,
+    findRootOxcFiles,
     generateProjectConfigs,
     hasCatalog,
     projectSyncTask,
@@ -18,6 +19,7 @@ import {
     renderYarnrc,
     SCAFFOLD_CATALOG,
     upsertWorkspaceTsconfig,
+    writeGeneratedFiles,
 } from '../src/index.js';
 
 const tmpDirs: string[] = [];
@@ -66,6 +68,42 @@ describe('project scaffolding', () => {
         expect(config).toContain('fmt:');
         expect(config).toContain('lint:');
         expect(config).toContain('oxc:');
+    });
+
+    it('inherits root Oxc files for a nested project', () => {
+        const files = createRootProjectFiles({
+            name: 'app',
+            rootOxc: { fmt: true, lint: true },
+        });
+        const paths = files.map(file => file.path);
+        expect(paths).not.toContain('.oxfmtrc.json');
+        expect(paths).not.toContain('.oxlintrc.json');
+        const config = files.find(f => f.path === 'dbx.config.ts')!.content;
+        expect(config).not.toContain('fmt:');
+        expect(config).not.toContain('lint:');
+    });
+
+    it('omits only the Oxc tool a nested root already owns', () => {
+        const files = createRootProjectFiles({
+            name: 'app',
+            rootOxc: { fmt: true, lint: false },
+        });
+        const paths = files.map(file => file.path);
+        expect(paths).not.toContain('.oxfmtrc.json');
+        expect(paths).toContain('.oxlintrc.json');
+        const config = files.find(f => f.path === 'dbx.config.ts')!.content;
+        expect(config).not.toContain('fmt:');
+        expect(config).toContain('lint:');
+    });
+
+    it('finds root Oxc files above a nested scaffold', () => {
+        const root = makeTmp();
+        fs.writeFileSync(path.join(root, '.oxfmtrc.json'), '{}');
+        fs.writeFileSync(path.join(root, '.oxlintrc.json'), '{}');
+        const nested = path.join(root, 'packages', 'app');
+        fs.mkdirSync(nested, { recursive: true });
+        expect(findRootOxcFiles(nested)).toEqual({ fmt: true, lint: true });
+        expect(findRootOxcFiles(root)).toEqual({ fmt: false, lint: false });
     });
 
     it('creates a Vite app entry for the application flavour', () => {
@@ -384,6 +422,39 @@ describe('project scaffolding', () => {
         expect(gitignore).not.toContain('.turbo/');
     });
 
+    it('writes each generated file once and refuses duplicates', () => {
+        const dir = makeTmp();
+        const written = writeGeneratedFiles(
+            [
+                { path: 'a.txt', content: 'a' },
+                { path: 'b.txt', content: 'b' },
+            ],
+            dir
+        );
+        expect(written).toEqual([path.join(dir, 'a.txt'), path.join(dir, 'b.txt')]);
+        expect(fs.readFileSync(path.join(dir, 'a.txt'), 'utf-8')).toBe('a');
+        expect(fs.readFileSync(path.join(dir, 'b.txt'), 'utf-8')).toBe('b');
+        expect(() =>
+            writeGeneratedFiles(
+                [
+                    { path: 'c.txt', content: 'c' },
+                    { path: './c.txt', content: 'd' },
+                ],
+                dir
+            )
+        ).toThrow(/duplicate/);
+    });
+
+    it('refuses to overwrite unless forced', () => {
+        const dir = makeTmp();
+        writeGeneratedFiles([{ path: 'a.txt', content: 'a' }], dir);
+        expect(() => writeGeneratedFiles([{ path: 'a.txt', content: 'b' }], dir)).toThrow(
+            /overwrite/
+        );
+        writeGeneratedFiles([{ path: 'a.txt', content: 'b' }], dir, { force: true });
+        expect(fs.readFileSync(path.join(dir, 'a.txt'), 'utf-8')).toBe('b');
+    });
+
     it('keeps the scoped package name when the config omits scope', async () => {
         const dir = makeTmp();
         fs.writeFileSync(
@@ -419,6 +490,20 @@ describe('project scaffolding', () => {
             'catalogs:\n  legacy:\n    react: ^18.0.0\n'
         );
         expect(hasCatalog(namedOnly, 'pnpm')).toBe(false);
+
+        const bomYarn = makeTmp();
+        fs.writeFileSync(path.join(bomYarn, '.yarnrc.yml'), '\uFEFFcatalog:\n  react: ^19.0.0\n');
+        expect(hasCatalog(bomYarn, 'yarn', ['react'])).toBe(true);
+
+        const bun = makeTmp();
+        fs.writeFileSync(
+            path.join(bun, 'package.json'),
+            `\uFEFF${JSON.stringify({
+                name: 'bun-root',
+                workspaces: { packages: ['packages/*'], catalog: { react: '^19.0.0' } },
+            })}`
+        );
+        expect(hasCatalog(bun, 'bun', ['react'])).toBe(true);
 
         const none = makeTmp();
         expect(hasCatalog(none, 'yarn')).toBe(false);
