@@ -3,6 +3,8 @@
 import type { TsConfigJson } from 'type-fest';
 import type { ViteUserConfig } from 'vite-plus';
 
+import type { ToolchainLogger } from './logger.js';
+
 export interface DbxConfigSections {
     /** The `@deltabox/toolchain` settings (every section is opt-in by presence). */
     toolchain?: ToolchainConfigSections;
@@ -37,8 +39,8 @@ export interface ToolchainProjectConfig {
     /** One-line description (`package.json` `description`). */
     description?: string;
     /**
-     * Inherit the parent project metadata (default true). Set false to keep this project entirely
-     * independent of the root config.
+     * Inherit the parent project metadata (default true). Set false to keep this project metadata
+     * independent of the root config (other sections still merge normally).
      */
     inherit?: boolean;
 }
@@ -57,6 +59,11 @@ export interface ToolchainCiConfig {
     issues?: WorkflowSetting;
     /** The toolchain sync workflow (`sync.yml`). */
     sync?: WorkflowSetting;
+    /**
+     * Additional custom workflows, keyed by id (eg. `custom.my-workflow`). Each id writes
+     * `<dir>/<filename ?? id>.yml`.
+     */
+    custom?: Record<string, CustomWorkflowSettings>;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
 }
@@ -76,6 +83,10 @@ export interface WorkflowOptions {
     jobs?: Record<string, unknown>;
     /** Per-workflow token overrides (`nodeVersion`, `packageManager`, ...). */
     tokens?: Record<string, string | number | boolean>;
+    /** Override the generated workflow file name (eg. `deploy.yml`). */
+    filename?: string;
+    /** Directory for the workflow file (default `.github/workflows`). */
+    dir?: string;
     /** Enable/disable this workflow (default: enabled when present). */
     enabled?: boolean;
 }
@@ -127,6 +138,10 @@ export interface ChangelogConfig {
     jobs?: Record<string, unknown>;
     /** Per-workflow token overrides (`nodeVersion`, `packageManager`, ...). */
     tokens?: Record<string, string | number | boolean>;
+    /** Override the generated workflow file name (eg. `deploy.yml`). */
+    filename?: string;
+    /** Directory for the workflow file (default `.github/workflows`). */
+    dir?: string;
     /** Enable/disable the changelog workflow and pipeline (default: enabled when present). */
     enabled?: boolean;
     /** Branches the generated workflows target. */
@@ -178,7 +193,7 @@ export interface ChangelogVersioningConfig {
      * own.
      */
     workspaces?: Array<string>;
-    /** Custom bump rules for major/minor/patch/alpha (matchers or callbacks). */
+    /** Custom bump rules for major/minor/patch (matchers or callbacks). */
     bump?: Record<string, unknown>;
     /** Apply a bump once per matching change instead of once per run (default false). */
     allowOverBump?: boolean;
@@ -193,6 +208,8 @@ export type ChangelogVersioningTarget = 'uniform' | 'root-only' | 'individual';
 export type ChangelogVersioning = boolean | ChangelogVersioningConfig;
 
 export type ChangelogWorkflowSetting = boolean | string | ChangelogConfig;
+
+export type CustomWorkflowSettings = string | WorkflowOptions;
 
 export interface ToolchainChangelogConfig {
     /** Commitlint config; set `false` to disable the Conventional-Commits pipeline. */
@@ -448,6 +465,8 @@ export interface ToolchainLoggerConfig {
     name?: string;
     /** Warning/error id, message substring, or `/regex/` to silence (single value or array). */
     suppress?: string | Array<string>;
+    /** Custom logger implementation (TS/JS configs only). */
+    logger?: ToolchainLogger;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
 }

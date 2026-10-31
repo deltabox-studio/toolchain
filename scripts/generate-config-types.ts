@@ -32,6 +32,21 @@ const overrides = {
     /** Oxlint options; \`true\` uses the toolchain defaults. */
     lint?: boolean | NonNullable<ViteUserConfig['lint']>;
 };`,
+    // The custom logger carries functions, so it needs the hand-written type.
+    ToolchainLoggerConfig: `export interface ToolchainLoggerConfig {
+    /** Minimum level to print (default \`info\`). */
+    level?: 'debug' | 'info' | 'warn' | 'error' | 'silent';
+    /** Force colours on/off (default: on; \`--no-color\` disables). */
+    color?: boolean;
+    /** Prefix non-indented lines with \`<name>:\` (default \`dbx\`). */
+    name?: string;
+    /** Warning/error id, message substring, or \`/regex/\` to silence (single value or array). */
+    suppress?: string | Array<string>;
+    /** Custom logger implementation (TS/JS configs only). */
+    logger?: ToolchainLogger;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
+}`,
     // Type the override bodies as real tsconfigs (the schema keeps them open records).
     ToolchainTsconfigOverrides: `export interface ToolchainTsconfigOverrides {
     /** Deep-merged into the root base tsconfig (\`baseFile\`) during sync. */
@@ -48,6 +63,7 @@ const overrides = {
 const imports = [
     "import type { TsConfigJson } from 'type-fest';",
     "import type { ViteUserConfig } from 'vite-plus';",
+    "import type { ToolchainLogger } from './logger.js';",
 ];
 const engine = createConfigEngine({ schema: dbxConfigSchema });
 const types = engine.generateConfigTypes({ overrides, imports });

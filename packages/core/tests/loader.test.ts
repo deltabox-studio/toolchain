@@ -69,6 +69,17 @@ describe('loadToolchainConfig', () => {
         expect((globalThis as Record<string, unknown>).__dbxHook).toBe(true);
     });
 
+    it('can skip the afterLoad hook for metadata-only loads', async () => {
+        const cwd = tmp();
+        (globalThis as Record<string, unknown>).__dbxHook = undefined;
+        fs.writeFileSync(
+            path.join(cwd, 'dbx.config.mjs'),
+            `export default { toolchain: { hooks: { afterLoad: () => { globalThis.__dbxHook = true; } } } };\n`
+        );
+        await loadToolchainConfig(cwd, { skipHooks: true });
+        expect((globalThis as Record<string, unknown>).__dbxHook).toBeUndefined();
+    });
+
     it('resolves a config exported as an async callback', async () => {
         const cwd = tmp();
         fs.writeFileSync(

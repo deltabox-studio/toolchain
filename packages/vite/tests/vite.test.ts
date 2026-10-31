@@ -179,10 +179,18 @@ describe('vite.config.ts shim', () => {
         expect((importLine.match(/ViteUserConfig/g) ?? []).length).toBe(1);
     });
 
-    it('strips the toolchain opt-out (`config`) and `shim` from the resolved object', () => {
-        const resolved = viteConfigObject({ config: false, shim: 'static', fmt: { semi: true } });
+    it('strips toolchain-only keys from the resolved object', () => {
+        const resolved = viteConfigObject({
+            config: false,
+            shim: 'static',
+            shimImport: './resolver.ts',
+            enabled: false,
+            fmt: { semi: true },
+        } as never);
         expect(resolved).not.toHaveProperty('config');
         expect(resolved).not.toHaveProperty('shim');
+        expect(resolved).not.toHaveProperty('shimImport');
+        expect(resolved).not.toHaveProperty('enabled');
         expect(resolved.fmt).toMatchObject({ semi: true });
     });
 

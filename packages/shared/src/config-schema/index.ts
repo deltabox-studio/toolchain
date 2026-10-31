@@ -111,6 +111,7 @@ export const dbxConfigSchema = z
 export const configSchema = {
     project: projectConfigSchema,
     ci: ciConfigSchema,
+    changelog: legacyChangelogConfigSchema,
     fmt: fmtConfigSchema,
     lint: lintConfigSchema,
     biome: biomeConfigSchema,

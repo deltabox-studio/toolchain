@@ -51,6 +51,8 @@ export interface LoadToolchainConfigOptions {
     config?: string;
     /** Ignore every config file and use defaults / CLI flags only. */
     noConfig?: boolean;
+    /** Skip the config's `hooks.afterLoad` callback (metadata-only loads). */
+    skipHooks?: boolean;
 }
 
 /** A short, single-line description of a thrown config error. */
@@ -212,6 +214,7 @@ export function mergeToolchainConfig(
         project: parentProject,
         ci: _ci,
         changelog: _changelog,
+        catalogs: _catalogs,
         tsconfig: _tsconfig,
         vite: parentVite,
         ...parentRest
@@ -289,7 +292,9 @@ export async function loadToolchainConfig(
         ...(config.project ?? undefined),
     };
     const tokens = resolveTokens({ ...config, project });
-    await config.hooks?.afterLoad?.({ cwd, config, tokens, ...(file ? { path: file } : {}) });
+    if (!options.skipHooks) {
+        await config.hooks?.afterLoad?.({ cwd, config, tokens, ...(file ? { path: file } : {}) });
+    }
     // `tsconfig` is repository-scoped and not inherited, but a workspace still
     // needs the parent's custom `rootFile`/`defaultFile` names to be detected as
     // a workspace rather than a standalone project.

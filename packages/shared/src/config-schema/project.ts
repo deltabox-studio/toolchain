@@ -50,7 +50,8 @@ export const projectConfigSchema = z
             .boolean()
             .describe(
                 'Inherit the parent project metadata (default true). Set false to keep ' +
-                    'this project entirely independent of the root config.'
+                    'this project metadata independent of the root config (other sections ' +
+                    'still merge normally).'
             )
             .optional(),
     })

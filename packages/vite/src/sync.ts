@@ -40,6 +40,7 @@ export function viteConfigObject(config: ToolchainViteConfig = {}): Record<strin
         config: _config,
         shim: _shim,
         shimImport: _shimImport,
+        enabled: _enabled,
         fmt,
         lint,
         ...vite
@@ -425,16 +426,20 @@ export function viteSyncTask(): SyncTask {
         enabled: config =>
             sectionEnabled(config.vite) ||
             sectionEnabled(config.fmt) ||
-            sectionEnabled(config.lint) ||
-            sectionConfig(config.fmt)?.oxc !== undefined ||
-            sectionConfig(config.lint)?.oxc !== undefined,
+            sectionEnabled(config.lint),
         run: ctx => {
             const hasVite = sectionEnabled(ctx.config.vite);
             const section = sectionConfig(ctx.config.vite) ?? {};
             const ownConfig = ctx.ownConfig ?? ctx.config;
-            const ownVite = sectionConfig(ownConfig.vite) ?? {};
-            const ownFmt = sectionConfig(ownConfig.fmt)?.oxc;
-            const ownLint = sectionConfig(ownConfig.lint)?.oxc;
+            const ownVite = sectionEnabled(ownConfig.vite)
+                ? (sectionConfig(ownConfig.vite) ?? {})
+                : {};
+            const ownFmt = sectionEnabled(ownConfig.fmt)
+                ? sectionConfig(ownConfig.fmt)?.oxc
+                : undefined;
+            const ownLint = sectionEnabled(ownConfig.lint)
+                ? sectionConfig(ownConfig.lint)?.oxc
+                : undefined;
             const effective: Record<string, unknown> = { ...section };
             const fmt = resolveOxcFmtConfig(ctx.config);
             const lint = resolveOxcLintConfig(ctx.config);

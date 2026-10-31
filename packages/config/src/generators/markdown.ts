@@ -657,7 +657,13 @@ function jsonTypeLabel(node: JsonSchemaJson, defs: Record<string, JsonSchemaJson
     if (node.properties) return 'object';
     const types = Array.isArray(node.type) ? node.type : node.type ? [node.type] : [];
     if (types.includes('array')) return `Array<${jsonTypeLabel(node.items ?? {}, defs)}>`;
-    if (types.includes('object')) return 'Record<string, unknown>';
+    if (types.includes('object')) {
+        const additional = node.additionalProperties;
+        if (additional && additional !== true) {
+            return `Record<string, ${jsonTypeLabel(additional, defs)}>`;
+        }
+        return 'Record<string, unknown>';
+    }
     if (types.length === 0) return 'unknown';
     return types.map(type => (type === 'integer' ? 'number' : type)).join(' | ');
 }

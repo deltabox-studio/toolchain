@@ -35,6 +35,28 @@ export function mergeBiomeConfig(base: unknown, patch: unknown): unknown {
     return patch;
 }
 
+/** Scope-only import groups (eg. `@acme/**`) have no meaning without a scope. */
+function withoutUnscopedGroups(value: unknown, replacements: Replacements): unknown {
+    if (replacements.scope) return value;
+    if (Array.isArray(value)) {
+        return value
+            .filter(
+                entry =>
+                    entry !== '{{scope}}' && entry !== '{{scope}}/**' && entry !== '!{{scope}}/**'
+            )
+            .map(entry => withoutUnscopedGroups(entry, replacements));
+    }
+    if (isPlainObject(value)) {
+        return Object.fromEntries(
+            Object.entries(value).map(([key, entry]) => [
+                key,
+                withoutUnscopedGroups(entry, replacements),
+            ])
+        );
+    }
+    return value;
+}
+
 /**
  * Render the Biome config for a project by resolving its replacement tokens
  * (`{{name}}` = unscoped project name, `{{scope}}` = npm scope, eg. `@acme`)
@@ -44,8 +66,14 @@ export function renderBiomeConfig(
     replacements: Replacements = {},
     overrides: Record<string, unknown> = {}
 ): Record<string, unknown> {
-    const base = applyReplacementsDeep(biomeConfig, replacements);
-    const patch = applyReplacementsDeep(overrides, replacements);
+    const base = applyReplacementsDeep(
+        withoutUnscopedGroups(biomeConfig, replacements) as Record<string, unknown>,
+        replacements
+    );
+    const patch = applyReplacementsDeep(
+        withoutUnscopedGroups(overrides, replacements) as Record<string, unknown>,
+        replacements
+    );
     return mergeBiomeConfig(base, patch) as Record<string, unknown>;
 }
 
@@ -66,10 +94,24 @@ export function renderVscodeSettings(indent = 4): string {
 /** Merge the deprecated `biome.overrides` with `fmt.biome` / `lint.biome`. */
 function biomeOverrides(config: ToolchainConfig): Record<string, unknown> {
     let out = (sectionConfig(config.biome)?.overrides ?? {}) as Record<string, unknown>;
-    const fmt = sectionConfig(config.fmt)?.biome;
-    const lint = sectionConfig(config.lint)?.biome;
-    if (fmt) out = mergeBiomeConfig(out, fmt) as Record<string, unknown>;
-    if (lint) out = mergeBiomeConfig(out, lint) as Record<string, unknown>;
+    const fmt = sectionEnabled(config.fmt)
+        ? (sectionConfig(config.fmt)?.biome as unknown as
+              | Record<string, unknown>
+              | false
+              | undefined)
+        : undefined;
+    const lint = sectionEnabled(config.lint)
+        ? (sectionConfig(config.lint)?.biome as unknown as
+              | Record<string, unknown>
+              | false
+              | undefined)
+        : undefined;
+    if (fmt !== undefined && fmt !== false) {
+        out = mergeBiomeConfig(out, fmt) as Record<string, unknown>;
+    }
+    if (lint !== undefined && lint !== false) {
+        out = mergeBiomeConfig(out, lint) as Record<string, unknown>;
+    }
     return out;
 }
 
@@ -82,17 +124,24 @@ export function biomeSyncTask(): SyncTask {
     return {
         name: 'biome',
         projectTypes: ['monorepo-root', 'monorepo-workspace', 'project'],
-        enabled: config =>
-            sectionEnabled(config.biome) ||
-            sectionConfig(config.fmt)?.biome !== undefined ||
-            sectionConfig(config.lint)?.biome !== undefined ||
-            sectionEnabled(config.fmt) ||
-            sectionEnabled(config.lint),
+        enabled: config => {
+            const fmt = sectionEnabled(config.fmt) ? sectionConfig(config.fmt) : undefined;
+            const lint = sectionEnabled(config.lint) ? sectionConfig(config.lint) : undefined;
+            return (
+                sectionEnabled(config.biome) ||
+                fmt?.biome !== undefined ||
+                lint?.biome !== undefined
+            );
+        },
         run: ctx => {
+            const fmt = sectionEnabled(ctx.config.fmt) ? sectionConfig(ctx.config.fmt) : undefined;
+            const lint = sectionEnabled(ctx.config.lint)
+                ? sectionConfig(ctx.config.lint)
+                : undefined;
             if (
                 !sectionEnabled(ctx.config.biome) &&
-                sectionConfig(ctx.config.fmt)?.biome === undefined &&
-                sectionConfig(ctx.config.lint)?.biome === undefined
+                fmt?.biome === undefined &&
+                lint?.biome === undefined
             ) {
                 return [];
             }

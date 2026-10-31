@@ -234,6 +234,7 @@ export function createLogger(options: LoggerOptions = {}): Logger {
 
 /** A `dbx.config.*` `logger` section value. */
 export interface LoggerConfig {
+    enabled?: boolean;
     level?: LogLevel;
     color?: boolean;
     name?: string;
@@ -247,6 +248,7 @@ let overrideOptions: LoggerOptions = {};
 
 function pick(options: LoggerConfig | boolean | undefined): LoggerOptions {
     if (!options || typeof options !== 'object') return {};
+    if (options.enabled === false) return { level: 'silent' };
     return {
         ...(isLogLevel(options.level) ? { level: options.level } : {}),
         ...(typeof options.color === 'boolean' ? { color: options.color } : {}),

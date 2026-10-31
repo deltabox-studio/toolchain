@@ -23,6 +23,12 @@ export const loggerConfigSchema = withEnabled(
                 'Warning/error id, message substring, or `/regex/` to silence (single value or array).'
             )
             .optional(),
+        logger: z
+            .unknown()
+            .describe(
+                'Custom `ToolchainLogger` implementation (TS/JS configs only; JSON cannot carry functions).'
+            )
+            .optional(),
     })
 )
     .describe('Logging level, colours and prefix for toolchain output.')

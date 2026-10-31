@@ -24,6 +24,16 @@ describe('biome templates', () => {
         expect(flat).not.toContain('{{');
     });
 
+    it('drops scope-only import groups when no scope is set', () => {
+        const rendered = renderBiomeConfig({ name: 'acme' });
+        const groups = (rendered.assist as any).actions.source.organizeImports.options.groups;
+        const flat = JSON.stringify(groups);
+        expect(flat).not.toContain('{{');
+        expect(flat).not.toContain('!/**');
+        expect(flat).not.toContain('"/**"');
+        expect(flat).toContain('acme');
+    });
+
     it('serializes to JSON', () => {
         const json = renderBiomeJson({ name: 'acme', scope: '@acme' }, {}, 2);
         expect(() => JSON.parse(json)).not.toThrow();

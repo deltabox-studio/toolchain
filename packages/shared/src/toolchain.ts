@@ -182,6 +182,14 @@ export function resolveChangelogConfig(config: ToolchainConfig = {}): ChangelogC
     return legacyOptions ? (deepMerge(legacyOptions, setting) as ChangelogConfig) : setting;
 }
 
+/** Default package-manager versions used when a config omits `packageManagerVersion`. */
+export const DEFAULT_PACKAGE_MANAGER_VERSIONS: Record<string, string> = {
+    yarn: '4.17.1',
+    pnpm: '10.11.1',
+    npm: '11.19.0',
+    bun: '1.3.0',
+};
+
 /** Formatter tools, highest priority first. */
 export const FORMATTER_PRECEDENCE = ['oxc', 'biome', 'prettier', 'dprint'] as const;
 /** Linter tools, highest priority first. */
@@ -203,9 +211,9 @@ export function resolveFmtTools(config: ToolchainConfig = {}): FormatterTool[] {
     const active = new Set<FormatterTool>();
     if (vite?.fmt !== undefined && vite.fmt !== false) active.add('oxc');
     if (fmt.oxc !== undefined && fmt.oxc !== false) active.add('oxc');
-    if (fmt.biome !== undefined) active.add('biome');
-    if (fmt.prettier !== undefined) active.add('prettier');
-    if (fmt.dprint !== undefined) active.add('dprint');
+    if (fmt.biome !== undefined && fmt.biome !== false) active.add('biome');
+    if (fmt.prettier !== undefined && fmt.prettier !== false) active.add('prettier');
+    if (fmt.dprint !== undefined && fmt.dprint !== false) active.add('dprint');
     return FORMATTER_PRECEDENCE.filter(tool => active.has(tool));
 }
 
@@ -216,8 +224,8 @@ export function resolveLintTools(config: ToolchainConfig = {}): LinterTool[] {
     const active = new Set<LinterTool>();
     if (vite?.lint !== undefined && vite.lint !== false) active.add('oxc');
     if (lint.oxc !== undefined && lint.oxc !== false) active.add('oxc');
-    if (lint.biome !== undefined) active.add('biome');
-    if (lint.eslint !== undefined) active.add('eslint');
+    if (lint.biome !== undefined && lint.biome !== false) active.add('biome');
+    if (lint.eslint !== undefined && lint.eslint !== false) active.add('eslint');
     return LINTER_PRECEDENCE.filter(tool => active.has(tool));
 }
 
@@ -300,6 +308,11 @@ export function resolveTokens(config: ToolchainConfig = {}): Replacements {
     const changelog = resolveChangelogConfig(config) ?? {};
     const branches = resolveChangelogBranches(changelog);
     const name = project.name ?? 'app';
+    const packageManager = project.packageManager ?? 'yarn';
+    const packageManagerVersion =
+        project.packageManagerVersion ??
+        DEFAULT_PACKAGE_MANAGER_VERSIONS[packageManager] ??
+        '4.17.1';
     return {
         name,
         scope: project.scope ?? '',
@@ -310,9 +323,9 @@ export function resolveTokens(config: ToolchainConfig = {}): Replacements {
         repoSlug: repoSlugFromUrl(project.repo) ?? '',
         description: project.description ?? '',
         nodeVersion: project.nodeVersion ?? '22',
-        packageManager: project.packageManager ?? 'yarn',
-        yarnVersion: project.packageManagerVersion ?? '4.17.1',
-        packageManagerVersion: project.packageManagerVersion ?? '4.17.1',
+        packageManager,
+        yarnVersion: packageManagerVersion,
+        packageManagerVersion,
         mainBranch: branches.main[0] ?? 'main',
         devBranch: branches.dev[0] ?? 'main',
     };
@@ -356,6 +369,8 @@ export interface SyncContext {
     warn: (message: string, id?: string) => void;
     /** Dry run: report drift without writing files (including snapshots). */
     check?: boolean;
+    /** Repo-relative files the previous sync managed (from the manifest). */
+    managedFiles?: string[];
     /** Extra manifest metadata tasks can persist between syncs. */
     manifest?: Record<string, unknown>;
 }
