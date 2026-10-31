@@ -80,6 +80,56 @@ describe('biome templates', () => {
         expect(biome.linter.rules.suspicious.noDoubleEquals).toBe('error');
     });
 
+    it('honours an explicit fmt.biome / lint.biome opt-out', async () => {
+        const task = biomeSyncTask();
+        expect(task.enabled?.({ fmt: { biome: false } })).toBe(false);
+        expect(task.enabled?.({ lint: { biome: false } })).toBe(false);
+        expect(
+            await task.run({
+                cwd: '/repo',
+                projectType: 'project',
+                config: { fmt: { biome: false }, lint: { biome: false } },
+                tokens: { name: 'acme' },
+                log: () => {},
+                warn: () => {},
+            })
+        ).toEqual([]);
+    });
+
+    it('treats fmt.biome: true as the defaults', async () => {
+        const task = biomeSyncTask();
+        expect(task.enabled?.({ fmt: { biome: true } })).toBe(true);
+        const files = await task.run({
+            cwd: '/repo',
+            projectType: 'project',
+            config: { fmt: { biome: true } },
+            tokens: { name: 'acme' },
+            log: () => {},
+            warn: () => {},
+        });
+        const biome = JSON.parse(files?.[0]?.content ?? '{}');
+        expect(biome).toHaveProperty('$schema');
+        expect(biome.formatter).toBeDefined();
+    });
+
+    it('ignores a disabled biome section overrides', async () => {
+        const task = biomeSyncTask();
+        const files = await task.run({
+            cwd: '/repo',
+            projectType: 'project',
+            config: {
+                biome: { enabled: false, overrides: { formatter: { indentWidth: 2 } } },
+                fmt: { biome: { formatter: { lineWidth: 80 } } },
+            },
+            tokens: { name: 'acme' },
+            log: () => {},
+            warn: () => {},
+        });
+        const biome = JSON.parse(files?.[0]?.content ?? '{}');
+        expect(biome.formatter.lineWidth).toBe(80);
+        expect(biome.formatter.indentWidth).toBe(4);
+    });
+
     it('merges overrides (arrays union, objects deep-merge)', () => {
         const rendered = renderBiomeConfig(
             { name: 'acme', scope: '@acme' },

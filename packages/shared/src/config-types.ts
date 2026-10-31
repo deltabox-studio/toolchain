@@ -228,14 +228,20 @@ export interface ToolchainFmtConfig {
      * existing keys are kept).
      */
     vscode?: boolean | ToolchainVscodeSettings;
-    /** Oxfmt options. `toolchain.vite.fmt` overrides these (deep merge). */
-    oxc?: Record<string, unknown>;
-    /** Biome formatter options (merged into the generated `biome.json`). */
-    biome?: Record<string, unknown>;
-    /** Prettier options (editor defaults/migrations). */
-    prettier?: Record<string, unknown>;
-    /** Dprint options (editor defaults/migrations). */
-    dprint?: Record<string, unknown>;
+    /**
+     * Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` overrides these
+     * (deep merge).
+     */
+    oxc?: boolean | Record<string, unknown>;
+    /**
+     * Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated
+     * `biome.json`.
+     */
+    biome?: boolean | Record<string, unknown>;
+    /** Prettier options (`true` = defaults, `false` = disabled). */
+    prettier?: boolean | Record<string, unknown>;
+    /** Dprint options (`true` = defaults, `false` = disabled). */
+    dprint?: boolean | Record<string, unknown>;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
 }
@@ -253,12 +259,18 @@ export interface ToolchainLintConfig {
      * existing keys are kept).
      */
     vscode?: boolean | ToolchainVscodeSettings;
-    /** Oxlint options. `toolchain.vite.lint` overrides these (deep merge). */
-    oxc?: Record<string, unknown>;
-    /** Biome linter options (merged into the generated `biome.json`). */
-    biome?: Record<string, unknown>;
-    /** ESLint options (editor defaults/migrations). */
-    eslint?: Record<string, unknown>;
+    /**
+     * Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` overrides these
+     * (deep merge).
+     */
+    oxc?: boolean | Record<string, unknown>;
+    /**
+     * Biome linter options (`true` = defaults, `false` = disabled); merged into the generated
+     * `biome.json`.
+     */
+    biome?: boolean | Record<string, unknown>;
+    /** ESLint options (`true` = defaults, `false` = disabled). */
+    eslint?: boolean | Record<string, unknown>;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
 }

@@ -535,27 +535,27 @@ Exact setting keys (eg. `editor.defaultFormatter`) to omit.
 
 ### `oxc`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `boolean | Record<string, unknown>`
 
-Oxfmt options. `toolchain.vite.fmt` overrides these (deep merge).
+Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` overrides these (deep merge).
 
 ### `biome`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `boolean | Record<string, unknown>`
 
-Biome formatter options (merged into the generated `biome.json`).
+Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`.
 
 ### `prettier`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `boolean | Record<string, unknown>`
 
-Prettier options (editor defaults/migrations).
+Prettier options (`true` = defaults, `false` = disabled).
 
 ### `dprint`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `boolean | Record<string, unknown>`
 
-Dprint options (editor defaults/migrations).
+Dprint options (`true` = defaults, `false` = disabled).
 
 ### `enabled`
 
@@ -587,21 +587,21 @@ Exact setting keys (eg. `editor.defaultFormatter`) to omit.
 
 ### `oxc`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `boolean | Record<string, unknown>`
 
-Oxlint options. `toolchain.vite.lint` overrides these (deep merge).
+Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` overrides these (deep merge).
 
 ### `biome`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `boolean | Record<string, unknown>`
 
-Biome linter options (merged into the generated `biome.json`).
+Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`.
 
 ### `eslint`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `boolean | Record<string, unknown>`
 
-ESLint options (editor defaults/migrations).
+ESLint options (`true` = defaults, `false` = disabled).
 
 ### `enabled`
 

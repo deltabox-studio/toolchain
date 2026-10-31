@@ -2,8 +2,11 @@ import { z } from 'zod';
 
 import { withEnabled } from './meta.js';
 
-/** A formatter/linter tool's raw options (the tool's own config shape). */
-const toolOptions = z.record(z.string(), z.unknown());
+/**
+ * A formatter/linter tool's raw options (the tool's own config shape), or
+ * `true` for the defaults / `false` to disable the tool.
+ */
+const toolOptions = z.union([z.boolean(), z.record(z.string(), z.unknown())]);
 
 /**
  * Overrides/exclusions for the project-scoped VS Code settings added by
@@ -40,13 +43,23 @@ export const fmtConfigSchema = withEnabled(
     z.object({
         vscode: vscodeSetting,
         oxc: toolOptions
-            .describe('Oxfmt options. `toolchain.vite.fmt` overrides these (deep merge).')
+            .describe(
+                'Oxfmt options (`true` = defaults, `false` = disabled). ' +
+                    '`toolchain.vite.fmt` overrides these (deep merge).'
+            )
             .optional(),
         biome: toolOptions
-            .describe('Biome formatter options (merged into the generated `biome.json`).')
+            .describe(
+                'Biome formatter options (`true` = defaults, `false` = disabled); ' +
+                    'merged into the generated `biome.json`.'
+            )
             .optional(),
-        prettier: toolOptions.describe('Prettier options (editor defaults/migrations).').optional(),
-        dprint: toolOptions.describe('Dprint options (editor defaults/migrations).').optional(),
+        prettier: toolOptions
+            .describe('Prettier options (`true` = defaults, `false` = disabled).')
+            .optional(),
+        dprint: toolOptions
+            .describe('Dprint options (`true` = defaults, `false` = disabled).')
+            .optional(),
     })
 )
     .describe(
@@ -59,12 +72,20 @@ export const lintConfigSchema = withEnabled(
     z.object({
         vscode: vscodeSetting,
         oxc: toolOptions
-            .describe('Oxlint options. `toolchain.vite.lint` overrides these (deep merge).')
+            .describe(
+                'Oxlint options (`true` = defaults, `false` = disabled). ' +
+                    '`toolchain.vite.lint` overrides these (deep merge).'
+            )
             .optional(),
         biome: toolOptions
-            .describe('Biome linter options (merged into the generated `biome.json`).')
+            .describe(
+                'Biome linter options (`true` = defaults, `false` = disabled); ' +
+                    'merged into the generated `biome.json`.'
+            )
             .optional(),
-        eslint: toolOptions.describe('ESLint options (editor defaults/migrations).').optional(),
+        eslint: toolOptions
+            .describe('ESLint options (`true` = defaults, `false` = disabled).')
+            .optional(),
     })
 )
     .describe('Linter configuration: Oxc/Biome configs, editor defaults and ESLint options.')

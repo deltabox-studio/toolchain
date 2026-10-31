@@ -93,23 +93,14 @@ export function renderVscodeSettings(indent = 4): string {
 
 /** Merge the deprecated `biome.overrides` with `fmt.biome` / `lint.biome`. */
 function biomeOverrides(config: ToolchainConfig): Record<string, unknown> {
-    let out = (sectionConfig(config.biome)?.overrides ?? {}) as Record<string, unknown>;
-    const fmt = sectionEnabled(config.fmt)
-        ? (sectionConfig(config.fmt)?.biome as unknown as
-              | Record<string, unknown>
-              | false
-              | undefined)
-        : undefined;
-    const lint = sectionEnabled(config.lint)
-        ? (sectionConfig(config.lint)?.biome as unknown as
-              | Record<string, unknown>
-              | false
-              | undefined)
-        : undefined;
-    if (fmt !== undefined && fmt !== false) {
+    const biome = sectionEnabled(config.biome) ? sectionConfig(config.biome) : undefined;
+    let out = (biome?.overrides ?? {}) as Record<string, unknown>;
+    const fmt = sectionEnabled(config.fmt) ? sectionConfig(config.fmt)?.biome : undefined;
+    const lint = sectionEnabled(config.lint) ? sectionConfig(config.lint)?.biome : undefined;
+    if (isPlainObject(fmt)) {
         out = mergeBiomeConfig(out, fmt) as Record<string, unknown>;
     }
-    if (lint !== undefined && lint !== false) {
+    if (isPlainObject(lint)) {
         out = mergeBiomeConfig(out, lint) as Record<string, unknown>;
     }
     return out;
@@ -129,8 +120,8 @@ export function biomeSyncTask(): SyncTask {
             const lint = sectionEnabled(config.lint) ? sectionConfig(config.lint) : undefined;
             return (
                 sectionEnabled(config.biome) ||
-                fmt?.biome !== undefined ||
-                lint?.biome !== undefined
+                (fmt?.biome !== undefined && fmt.biome !== false) ||
+                (lint?.biome !== undefined && lint.biome !== false)
             );
         },
         run: ctx => {
@@ -140,8 +131,8 @@ export function biomeSyncTask(): SyncTask {
                 : undefined;
             if (
                 !sectionEnabled(ctx.config.biome) &&
-                fmt?.biome === undefined &&
-                lint?.biome === undefined
+                (fmt?.biome === undefined || fmt.biome === false) &&
+                (lint?.biome === undefined || lint.biome === false)
             ) {
                 return [];
             }

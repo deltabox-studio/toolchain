@@ -596,36 +596,64 @@
                     "description": "Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false; existing keys are kept)."
                 },
                 "oxc": {
-                    "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
-                    "additionalProperties": {},
-                    "description": "Oxfmt options. `toolchain.vite.fmt` overrides these (deep merge)."
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "object",
+                            "propertyNames": {
+                                "type": "string"
+                            },
+                            "additionalProperties": {}
+                        }
+                    ],
+                    "description": "Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` overrides these (deep merge)."
                 },
                 "biome": {
-                    "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
-                    "additionalProperties": {},
-                    "description": "Biome formatter options (merged into the generated `biome.json`)."
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "object",
+                            "propertyNames": {
+                                "type": "string"
+                            },
+                            "additionalProperties": {}
+                        }
+                    ],
+                    "description": "Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`."
                 },
                 "prettier": {
-                    "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
-                    "additionalProperties": {},
-                    "description": "Prettier options (editor defaults/migrations)."
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "object",
+                            "propertyNames": {
+                                "type": "string"
+                            },
+                            "additionalProperties": {}
+                        }
+                    ],
+                    "description": "Prettier options (`true` = defaults, `false` = disabled)."
                 },
                 "dprint": {
-                    "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
-                    "additionalProperties": {},
-                    "description": "Dprint options (editor defaults/migrations)."
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "object",
+                            "propertyNames": {
+                                "type": "string"
+                            },
+                            "additionalProperties": {}
+                        }
+                    ],
+                    "description": "Dprint options (`true` = defaults, `false` = disabled)."
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
@@ -671,28 +699,49 @@
                     "description": "Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false; existing keys are kept)."
                 },
                 "oxc": {
-                    "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
-                    "additionalProperties": {},
-                    "description": "Oxlint options. `toolchain.vite.lint` overrides these (deep merge)."
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "object",
+                            "propertyNames": {
+                                "type": "string"
+                            },
+                            "additionalProperties": {}
+                        }
+                    ],
+                    "description": "Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` overrides these (deep merge)."
                 },
                 "biome": {
-                    "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
-                    "additionalProperties": {},
-                    "description": "Biome linter options (merged into the generated `biome.json`)."
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "object",
+                            "propertyNames": {
+                                "type": "string"
+                            },
+                            "additionalProperties": {}
+                        }
+                    ],
+                    "description": "Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`."
                 },
                 "eslint": {
-                    "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
-                    "additionalProperties": {},
-                    "description": "ESLint options (editor defaults/migrations)."
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "object",
+                            "propertyNames": {
+                                "type": "string"
+                            },
+                            "additionalProperties": {}
+                        }
+                    ],
+                    "description": "ESLint options (`true` = defaults, `false` = disabled)."
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
