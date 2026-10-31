@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 
 import { changelogCommands } from '@deltabox/toolchain-changelog/cli';
+import { loadToolchainConfig } from '@deltabox/toolchain-core';
 import { migrateCommands } from '@deltabox/toolchain-migrate/cli';
 import { projectCommands } from '@deltabox/toolchain-project/cli';
 import {
@@ -24,6 +25,7 @@ import {
     stripAnsi,
     type LoggerOptions,
     type ToolchainCommand,
+    type ToolchainConfig,
 } from '@deltabox/toolchain-shared';
 import { templateCommands } from '@deltabox/toolchain-template/cli';
 import { tsconfigCommands } from '@deltabox/toolchain-tsconfig/cli';
@@ -40,9 +42,9 @@ export { extractConfigSelection } from './config-selection.js';
 export { registerToolchainCommands } from './register.js';
 
 /** The commands built into the root CLI (config commands need a consumer engine). */
-export function builtinCommands(): ToolchainCommand[] {
+export function builtinCommands(config?: ToolchainConfig): ToolchainCommand[] {
     return [
-        ...syncCommands(),
+        ...syncCommands(config),
         ...tsconfigCommands(),
         ...cleanupCommands(),
         ...changelogCommands(),
@@ -184,10 +186,13 @@ export function createCli(commands: ToolchainCommand[] = builtinCommands()): Com
 
 /** Parse and run the CLI. */
 export async function runCli(argv: string[] = process.argv): Promise<void> {
-    const commands = builtinCommands();
-    const commandNames = builtinCommandNames(commands);
-    const passthroughNames = new Set(
-        commands.filter(command => command.passthrough).map(command => command.name)
+    // A preliminary command set is enough to classify passthrough operands
+    // before the config selection is known; the final set is filtered by the
+    // provider registry policy below.
+    const baseCommands = builtinCommands();
+    const baseCommandNames = builtinCommandNames(baseCommands);
+    const basePassthroughNames = new Set(
+        baseCommands.filter(command => command.passthrough).map(command => command.name)
     );
     const { argv: rest, options } = extractLogOptions(argv);
     const { argv: rest2, updateCheck } = extractUpdateCheck(rest);
@@ -196,11 +201,21 @@ export async function runCli(argv: string[] = process.argv): Promise<void> {
         // A bare Vite+ command is rewritten to `vite <command>` later, so it is
         // a passthrough too unless a built-in command shadows it.
         name =>
-            passthroughNames.has(name) ||
-            (!commandNames.has(name) && resolveVpCommand(name) !== undefined)
+            basePassthroughNames.has(name) ||
+            (!baseCommandNames.has(name) && resolveVpCommand(name) !== undefined)
     );
     setConfigSelection(selection);
     setLogOverrides(options);
+    // Register only the providers allowed by `toolchain.registry.providers`, so
+    // a denied provider cannot appear in help/completion. Hooks are skipped:
+    // this is a metadata-only load (the command action loads the real context).
+    const registration = await loadToolchainConfig(process.cwd(), {
+        tolerant: true,
+        skipHooks: true,
+        ...selection,
+    });
+    const commands = builtinCommands(registration.config);
+    const commandNames = builtinCommandNames(commands);
     const wantsHelp = argv.some(arg => arg === '--help' || arg === '-h' || arg === '--version');
     // The notice is human output on stdout; never let it corrupt machine output.
     const machineCommands = new Set(['template:info']);

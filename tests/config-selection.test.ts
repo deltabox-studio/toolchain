@@ -43,4 +43,15 @@ describe('extractConfigSelection', () => {
             selection: {},
         });
     });
+
+    it('works when argv has no node/script prefix', () => {
+        expect(extractConfigSelection(['sync', '--no-config'])).toEqual({
+            argv: ['sync'],
+            selection: { noConfig: true },
+        });
+        expect(extractConfigSelection(['vite', 'build', '--config', 'x'], passthrough)).toEqual({
+            argv: ['vite', 'build', '--config', 'x'],
+            selection: {},
+        });
+    });
 });

@@ -18,6 +18,13 @@ export function getConfigSelection(): ConfigSelection {
     return selection;
 }
 
+/** The first operand index (skip the runtime + script when present). */
+function commandStartIndex(argv: string[]): number {
+    return /(?:^|[\\/])(?:node|node\.exe|bun|bun\.exe|deno|deno\.exe)$/i.test(argv[0] ?? '')
+        ? 2
+        : 0;
+}
+
 /**
  * Pull `--no-config` / `--config <file>` out of `argv` so they work before or
  * after a subcommand. Everything after `--` is left untouched.
@@ -35,6 +42,7 @@ export function extractConfigSelection(
 } {
     const found: ConfigSelection = {};
     const rest: string[] = [];
+    const start = commandStartIndex(argv);
     let command: string | undefined;
     let passthrough = false;
     for (let index = 0; index < argv.length; index++) {
@@ -45,7 +53,7 @@ export function extractConfigSelection(
         }
         // The first non-flag operand after node + script is the subcommand.
         // Only a passthrough command owns the rest of its argv verbatim.
-        if (index >= 2 && command === undefined && !arg.startsWith('-')) {
+        if (index >= start && command === undefined && !arg.startsWith('-')) {
             command = arg;
             passthrough = isPassthrough?.(arg) === true;
         }

@@ -3,6 +3,7 @@ import {
     logger,
     spawnCross,
     type ToolchainCommand,
+    type ToolchainConfig,
     type ToolchainProvider,
     type ToolchainProviderCommand,
 } from '@deltabox/toolchain-shared';
@@ -59,18 +60,21 @@ function providerPassthrough(
 }
 
 /** The passthrough commands for every command of the project's custom providers. */
-export function providerPassthroughCommands(cwd: string = process.cwd()): ToolchainCommand[] {
-    return readAllProvidersSync(cwd).flatMap(provider =>
+export function providerPassthroughCommands(
+    cwd: string = process.cwd(),
+    config?: ToolchainConfig
+): ToolchainCommand[] {
+    return readAllProvidersSync(cwd, providerPolicy(config)).flatMap(provider =>
         provider.commands.map(command => providerPassthrough(provider, command))
     );
 }
 
 /**
- * `dbx providers` — list the registered providers and the CLI commands
+ * `dbx providers` - list the registered providers and the CLI commands
  * they contribute. `--json` is the machine-readable form the VS Code extension
  * consumes to build its menus.
  */
-export function providerCommands(): ToolchainCommand[] {
+export function providerCommands(config?: ToolchainConfig): ToolchainCommand[] {
     return [
         {
             name: 'providers',
@@ -94,6 +98,6 @@ export function providerCommands(): ToolchainCommand[] {
                 }
             },
         },
-        ...providerPassthroughCommands(),
+        ...providerPassthroughCommands(process.cwd(), config),
     ];
 }
