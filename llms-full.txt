@@ -738,10 +738,14 @@ url: https://toolchain.deltabox.studio/guide/ci/releases.md
 # Releases
 
 The generated `ci.release` workflow (`release.yml`) opens a release PR whose body
-is the **aggregated changelog**: every entry from the last tag
-(`git describe --tags --abbrev=0`) up to the latest version, not just the newest
-one. So a release that skips versions (eg. `v1.7.0` → `v1.7.8`) still
-documents `1.7.1`–`1.7.8` in one place.
+is the **aggregated changelog**: every entry from the last released version up to
+the latest one, not just the newest entry. So a release that skips versions
+(eg. `v1.7.0` → `v1.7.8`) still documents `1.7.1`–`1.7.8` in one place.
+
+The body is produced by `dbx changelog --release-notes <version>`, which only
+considers tags whose version actually appears in `CHANGELOG.md` (so unrelated
+CI/calendar tags are ignored). For a first release, when there is no prior
+version, it falls back to the newest changelog entry instead of the whole file.
 
 ```ts [dbx.config.ts]
 toolchain: {
@@ -4951,6 +4955,7 @@ Scan commits, derive the semver bump and update the CHANGELOG.md files + version
 * `--dry-run` — Print the proposed entry without writing.
 * `--version ‹semver›` — Override the version.
 * `--base-version ‹semver›` — Bump from this version instead.
+* `--release-notes ‹semver›` — Print the release body for this version and exit.
 * `--processing-method ‹method›` — `latest` (default), `all`, or a git range.
 * `--format-only` — Only regroup existing changelogs.
 * `--no-package-changes-section` — Skip the package-changes footer.
@@ -5430,6 +5435,7 @@ dbx changelog --dry-run             # preview the root entry
 dbx changelog --range v1.2.0..HEAD  # scan a specific range
 dbx changelog --version 2.0.0       # force a version (retags the changelogs)
 dbx changelog --format-only         # regroup existing changelogs, no bump
+dbx changelog --release-notes 2.0.0 # print the release PR body for a version
 ```
 
 The command reads `ci.changelog` and falls back to the manual
