@@ -82,6 +82,10 @@ export function changelogCommands(): ToolchainCommand[] {
                     description: 'Bump from this version instead.',
                 },
                 {
+                    flags: '--release-notes <semver>',
+                    description: 'Print the release body for this version and exit.',
+                },
+                {
                     flags: '--processing-method <method>',
                     description: '`latest` (default), `all`, or a git range.',
                 },
@@ -97,6 +101,9 @@ export function changelogCommands(): ToolchainCommand[] {
                 if (opts.dryRun) argv.push('--dry-run');
                 if (opts.version) argv.push('--version', String(opts.version));
                 if (opts.baseVersion) argv.push('--base-version', String(opts.baseVersion));
+                if (opts.releaseNotes) {
+                    argv.push('--release-notes', String(opts.releaseNotes));
+                }
                 if (opts.processingMethod) {
                     argv.push('--processing-method', String(opts.processingMethod));
                 }

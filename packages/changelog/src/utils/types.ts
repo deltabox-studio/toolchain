@@ -52,6 +52,8 @@ export interface CliOptions {
     dryRun: boolean;
     version?: string;
     baseVersion?: string;
+    /** Print the release body for this version (and exit). */
+    releaseNotes?: string;
     processingMethod: ProcessingMethod;
     formatOnly: boolean;
     /** Include the `### Package changes` footer (disable with --no-package-changes-section). */

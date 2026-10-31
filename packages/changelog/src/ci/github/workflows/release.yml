@@ -47,12 +47,6 @@ jobs:
           git add -A
           git commit -m "chore: version packages ($version)" || true
           git push origin "$branch"
-          last_tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
-          if [ -n "$last_tag" ]; then
-            last_version="${last_tag#v}"
-            notes="$(awk -v v="$last_version" '/^## / { if ($2 == v) exit; started = 1 } started { print }' CHANGELOG.md 2>/dev/null || true)"
-          else
-            notes="$(cat CHANGELOG.md 2>/dev/null || true)"
-          fi
+          notes="$(yarn dbx changelog --release-notes "$version")"
           [ -n "$notes" ] || notes="Release $version"
           gh pr create --base main --head "$branch" --title "release: $version" --body "$notes"
