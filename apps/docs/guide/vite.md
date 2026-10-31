@@ -82,7 +82,7 @@ In a monorepo, put `**/vite.config.ts` on the **root** config so every
 workspace shim is covered (workspace `fmt` settings are inherited, but an
 `ignorePatterns` array in a workspace replaces the root's list). `dbx migrate
 --from vite` adds the ignore for you (see
-[Migrations](/guide/migrations#vite-config)).
+[Migrations](/guide/migrations/#vite-config)).
 
 When `fmt` / `lint` are defined, `dbx sync` also writes `.oxfmtrc.json` /
 `.oxlintrc.json` for the Oxc VS Code extension. They are root-only unless a

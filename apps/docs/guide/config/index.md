@@ -35,7 +35,7 @@ The `@deltabox/toolchain` settings live under the `toolchain` key, so a
 
 Each section has its own guide: [Project](/guide/project), [CI +
 Changelog](/guide/changelog/), [tsconfig](/guide/tsconfig),
-[Formatting & linting](/guide/formatting), [Biome](/guide/biome),
+[Formatting & linting](/guide/formatting),
 [Vite+](/guide/vite), [Watch](/guide/watch), [Logger](/guide/logger) and
 [Providers](/guide/providers).
 
