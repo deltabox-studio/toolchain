@@ -134,16 +134,11 @@ export default defineConfig({
                                 name: 'Extract release notes',
                                 if: "steps.release.outputs.skip == 'false'",
                                 run: [
-                                    // Aggregate every changelog entry from the last
-                                    // tag up to the latest, so a release that skips
-                                    // versions includes them all.
-                                    'last_tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"',
-                                    'if [ -n "$last_tag" ]; then',
-                                    '  last_version="${last_tag#v}"',
-                                    '  notes="$(awk -v v="$last_version" \'/^## / { if ($2 == v) exit; started = 1 } started { print }\' CHANGELOG.md 2>/dev/null || true)"',
-                                    'else',
-                                    '  notes="$(cat CHANGELOG.md 2>/dev/null || true)"',
-                                    'fi',
+                                    // Aggregate every changelog entry since the last
+                                    // released version. The CLI helper only considers
+                                    // tags whose versions exist in CHANGELOG.md, so
+                                    // calendar/CI tags cannot leak the whole file.
+                                    'notes="$({{packageManager}} dbx changelog --release-notes "${{ steps.release.outputs.version }}")"',
                                     '[ -n "$notes" ] || notes="Release v${{ steps.release.outputs.version }}"',
                                     'printf \'%s\\n\' "$notes" > RELEASE_NOTES.md',
                                 ].join('\n'),

@@ -55,6 +55,38 @@ describe('release notes', () => {
         expect(notes).not.toContain('## 1.11.4');
     });
 
+    it('accepts a v-prefixed current version', () => {
+        const notes = buildReleaseNotes(CHANGELOG, ['v2.0.0'], 'v2.0.0');
+        expect(notes.startsWith('## 2.0.0')).toBe(true);
+        expect(notes).not.toContain('## 1.11.4');
+    });
+
+    it('aggregates entries above the last released version', () => {
+        const changelog = [
+            '# Changelog',
+            '',
+            '## 2.1.0 (October 2026)',
+            '',
+            '- New thing',
+            '',
+            '## 2.0.1 (October 2026)',
+            '',
+            '- Fix thing',
+            '',
+            '## 2.0.0 (October 2026)',
+            '',
+            '- Old thing',
+            '',
+        ].join('\n');
+        const notes = buildReleaseNotes(changelog, ['v2.0.0'], '2.1.0');
+        expect(notes).toContain('## 2.1.0');
+        expect(notes).toContain('- New thing');
+        expect(notes).toContain('## 2.0.1');
+        expect(notes).toContain('- Fix thing');
+        expect(notes).not.toContain('## 2.0.0');
+        expect(notes).not.toContain('- Old thing');
+    });
+
     it('returns an empty body when there are no version headings', () => {
         expect(buildReleaseNotes('# Changelog\n\nNo releases yet.\n', ['v1.0.0'], '1.0.0')).toBe(
             ''
