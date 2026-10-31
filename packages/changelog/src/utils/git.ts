@@ -2,8 +2,9 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { sanitizeText } from '@deltabox/toolchain-shared';
+import { type ChangelogBreakingSetting, sanitizeText } from '@deltabox/toolchain-shared';
 
+import { isBreakingCommit } from './breaking.js';
 import type { AuthorInfo, BumpType, CommitRecord, IssueInfo } from './types.js';
 
 /** Read the commits in a git range (optionally limited to path(s)), newest first. */
@@ -306,16 +307,12 @@ export function readCommit(hash: string): { subject: string; body: string } | un
 }
 
 /** Derive the semver bump from the commits (major > minor > patch). */
-export function deriveBump(records: CommitRecord[]): BumpType {
+export function deriveBump(records: CommitRecord[], breaking?: ChangelogBreakingSetting): BumpType {
     let type: BumpType = 'patch';
     for (const record of records) {
-        const message = `${record.subject}\n${record.body}`;
-        // Conventional Commits: fix -> patch, feat -> minor, `!` or BREAKING CHANGE
-        // footer -> major. Types are case-insensitive (spec section 15).
-        if (
-            /\bBREAKING CHANGE\b/.test(message) ||
-            /^[a-zA-Z]+(\([^)]*\))?!:/.test(record.subject)
-        ) {
+        // Conventional Commits: fix -> patch, feat -> minor, `!` or a
+        // BREAKING CHANGE footer -> major. `breaking` can override detection.
+        if (isBreakingCommit(record, breaking)) {
             type = 'major';
         } else if (type !== 'major' && /^feat(\([^)]*\))?:/i.test(record.subject)) {
             type = 'minor';

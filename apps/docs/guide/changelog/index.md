@@ -66,13 +66,10 @@ groups: {
 ```
 
 The default order is **Breaking Changes**, `feat`, `fix`, then the remaining
-types (`perf`, `refactor`, `docs`, ...). Breaking commits are detected from a
-`!` in the CC subject or a `BREAKING CHANGE:` footer, and are grouped separately
-even when a custom commit formatter is used. Types you do not mention are
-appended in the default order. `order` overrides the array/record position, and
-every title/order/hidden value accepts a callback. The whole `groups` value can
-also be a callback, so it can be computed from the types/items in the current
-run:
+types (`perf`, `refactor`, `docs`, ...). Types you do not mention are appended in
+the default order. `order` overrides the array/record position, and every
+title/order/hidden value accepts a callback. The whole `groups` value can also be
+a callback, so it can be computed from the types/items in the current run:
 
 ```ts
 groups: context => [
@@ -88,6 +85,25 @@ groups: context => [
 
 Callbacks are TS/JS-config-only. `dbx changelog --format-only` also uses the
 configured order/titles when regrouping existing entries.
+
+## Breaking-change detection
+
+Breaking commits are detected by Conventional Commits rules by default: a `!`
+before the subject colon (`feat!:`, `feat(scope)!:`) or a `BREAKING CHANGE:` /
+`BREAKING-CHANGE:` footer line. Configure `breaking` on either
+`toolchain.changelog` or `ci.changelog` to override it:
+
+```ts
+breaking: 'conventional', // default
+// breaking: 'any',       // legacy loose match anywhere in the subject/body
+// breaking: false,       // disable breaking detection
+// breaking: { pattern: '^feat!:' },
+// breaking: { match: 'BREAKING CHANGE' },
+// breaking: ({ subject, body }) => subject.includes('!'),
+```
+
+The same setting is used for version bumps, changelog grouping and
+`--format-only` regrouping.
 
 ## Manual `toolchain.changelog`
 

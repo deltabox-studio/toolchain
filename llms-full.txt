@@ -1023,6 +1023,12 @@ Write the Conventional-Commits VS Code settings (default true).
 
 Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback. Titles/order/hidden also accept callbacks (TS/JS configs only).
 
+#### `breaking`
+
+* **Type**: `unknown`
+
+How breaking changes are detected: `conventional` (default: a `!` in the CC subject or a `BREAKING CHANGE:` footer), `any` (legacy loose match), `false` (disable), `{ pattern }` / `{ match }`, or a callback (TS/JS configs only).
+
 ### `release`
 
 * **Type**: `WorkflowSetting`
@@ -1140,6 +1146,12 @@ Write the Conventional-Commits VS Code settings (default true).
 * **Type**: `unknown`
 
 Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback. Titles/order/hidden also accept callbacks (TS/JS configs only).
+
+### `breaking`
+
+* **Type**: `unknown`
+
+How breaking changes are detected: `conventional` (default: a `!` in the CC subject or a `BREAKING CHANGE:` footer), `any` (legacy loose match), `false` (disable), `{ pattern }` / `{ match }`, or a callback (TS/JS configs only).
 
 ### `enabled`
 
@@ -2571,13 +2583,10 @@ groups: {
 ```
 
 The default order is **Breaking Changes**, `feat`, `fix`, then the remaining
-types (`perf`, `refactor`, `docs`, ...). Breaking commits are detected from a
-`!` in the CC subject or a `BREAKING CHANGE:` footer, and are grouped separately
-even when a custom commit formatter is used. Types you do not mention are
-appended in the default order. `order` overrides the array/record position, and
-every title/order/hidden value accepts a callback. The whole `groups` value can
-also be a callback, so it can be computed from the types/items in the current
-run:
+types (`perf`, `refactor`, `docs`, ...). Types you do not mention are appended in
+the default order. `order` overrides the array/record position, and every
+title/order/hidden value accepts a callback. The whole `groups` value can also be
+a callback, so it can be computed from the types/items in the current run:
 
 ```ts
 groups: context => [
@@ -2593,6 +2602,25 @@ groups: context => [
 
 Callbacks are TS/JS-config-only. `dbx changelog --format-only` also uses the
 configured order/titles when regrouping existing entries.
+
+## Breaking-change detection
+
+Breaking commits are detected by Conventional Commits rules by default: a `!`
+before the subject colon (`feat!:`, `feat(scope)!:`) or a `BREAKING CHANGE:` /
+`BREAKING-CHANGE:` footer line. Configure `breaking` on either
+`toolchain.changelog` or `ci.changelog` to override it:
+
+```ts
+breaking: 'conventional', // default
+// breaking: 'any',       // legacy loose match anywhere in the subject/body
+// breaking: false,       // disable breaking detection
+// breaking: { pattern: '^feat!:' },
+// breaking: { match: 'BREAKING CHANGE' },
+// breaking: ({ subject, body }) => subject.includes('!'),
+```
+
+The same setting is used for version bumps, changelog grouping and
+`--format-only` regrouping.
 
 ## Manual `toolchain.changelog`
 

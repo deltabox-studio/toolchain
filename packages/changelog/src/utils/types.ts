@@ -1,6 +1,8 @@
 /** Shared types for the changelog pipeline. */
 
 import type {
+    ChangelogBreakingCommit,
+    ChangelogBreakingSetting,
     ChangelogGroupConfig,
     ChangelogGroupContext,
     ChangelogGroupEntry,
@@ -13,6 +15,8 @@ import type {
 } from '@deltabox/toolchain-shared';
 
 export type {
+    ChangelogBreakingCommit,
+    ChangelogBreakingSetting,
     ChangelogGroupConfig,
     ChangelogGroupContext,
     ChangelogGroupEntry,

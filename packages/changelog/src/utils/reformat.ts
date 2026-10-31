@@ -1,8 +1,9 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { logger } from '@deltabox/toolchain-shared';
+import { type ChangelogBreakingSetting, logger } from '@deltabox/toolchain-shared';
 
+import { isBreakingCommit } from './breaking.js';
 import {
     capitalize,
     formatBody,
@@ -52,7 +53,8 @@ function reformatEntry(
     repo: string | undefined,
     withMarkers = false,
     packageChanges = '',
-    groups?: ChangelogGroupsSetting
+    groups?: ChangelogGroupsSetting,
+    breakingSetting?: ChangelogBreakingSetting
 ): string {
     const items: GroupedItem[] = [];
     for (const line of entry.bullets) {
@@ -67,11 +69,10 @@ function reformatEntry(
         const subject = formatLine(capitalize(parsed.rest), repo);
         const text = `- ${[subject, suffix].filter(Boolean).join(' ')}`;
         const bodyParagraphs = original ? formatBody(original.body) : [];
-        const breaking =
-            parsed.breaking ||
-            (original
-                ? /BREAKING[ -]CHANGE/i.test(original.body)
-                : bodyParagraphs.some(paragraph => paragraph.join(' ').includes('BREAKING')));
+        const breaking = isBreakingCommit(
+            { subject: rawSubject, body: original?.body ?? '' },
+            breakingSetting
+        );
         items.push({ parsed, breaking, text, bodyParagraphs });
     }
     const date = deriveVersionDate(entry.version, entry.bullets);
@@ -90,7 +91,8 @@ export function reformatChangelogContent(
     repo: string | undefined,
     markersOnNewest = false,
     includePackageChanges = false,
-    groups?: ChangelogGroupsSetting
+    groups?: ChangelogGroupsSetting,
+    breaking?: ChangelogBreakingSetting
 ): string {
     const entries = parseExistingChangelog(content);
     if (entries.length === 0) return content;
@@ -103,7 +105,14 @@ export function reformatChangelogContent(
                 includePackageChanges && previous
                     ? packageChangesForVersion(entry.version, previous.version)
                     : '';
-            return reformatEntry(entry, repo, markersOnNewest && index === 0, changes, groups);
+            return reformatEntry(
+                entry,
+                repo,
+                markersOnNewest && index === 0,
+                changes,
+                groups,
+                breaking
+            );
         })
         .filter(Boolean)
         .join('\n\n\n');
@@ -113,7 +122,8 @@ export function reformatChangelogContent(
 /** Backward-reformat the entire root changelog (all versions). */
 export function reformatRootChangelog(
     includePackageChanges = false,
-    groups?: ChangelogGroupsSetting
+    groups?: ChangelogGroupsSetting,
+    breaking?: ChangelogBreakingSetting
 ): string {
     const root = repoRoot();
     const file = resolve(root, 'CHANGELOG.md');
@@ -123,7 +133,8 @@ export function reformatRootChangelog(
         repoSlug(),
         false,
         includePackageChanges,
-        groups
+        groups,
+        breaking
     );
 }
 
@@ -135,7 +146,8 @@ export function reformatRootChangelog(
 export function formatExistingChangelogs(
     dryRun: boolean,
     packageChanges = false,
-    groups?: ChangelogGroupsSetting
+    groups?: ChangelogGroupsSetting,
+    breaking?: ChangelogBreakingSetting
 ): void {
     const rootFile = resolve(repoRoot(), 'CHANGELOG.md');
     for (const file of changelogFiles()) {
@@ -147,7 +159,8 @@ export function formatExistingChangelogs(
             repoSlug(),
             true,
             packageChanges && file === rootFile,
-            groups
+            groups,
+            breaking
         );
         if (dryRun) {
             const proposed = file.replace(/CHANGELOG\.md$/, 'CHANGELOG.proposed.md');

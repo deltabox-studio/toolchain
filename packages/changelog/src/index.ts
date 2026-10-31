@@ -3,6 +3,7 @@ export * from './run-workflows.js';
 export * from './sync.js';
 export * from './templates.js';
 export { parseArgsCli } from './utils/args.js';
+export { isBreakingCommit } from './utils/breaking.js';
 export {
     formatBody,
     groupItems,

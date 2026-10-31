@@ -70,7 +70,12 @@ import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { type ChangelogConfig, logger, resolveCommitlintEnabled } from '@deltabox/toolchain-shared';
+import {
+    type ChangelogBreakingSetting,
+    type ChangelogConfig,
+    logger,
+    resolveCommitlintEnabled,
+} from '@deltabox/toolchain-shared';
 
 import { parseArgsCli } from './utils/args.js';
 import { readCommits } from './utils/git.js';
@@ -108,6 +113,7 @@ export function runChangelog(
 ): void {
     const options = parseArgsCli(argv);
     const groups = changelog?.groups as ChangelogGroupsSetting | undefined;
+    const breaking = changelog?.breaking as ChangelogBreakingSetting | undefined;
 
     // Machine-readable release body (used by the generated release workflow).
     if (options.releaseNotes) {
@@ -123,7 +129,7 @@ export function runChangelog(
                 options.dryRun ? ' (dry run)' : ''
             }.`
         );
-        formatExistingChangelogs(options.dryRun, options.packageChanges, groups);
+        formatExistingChangelogs(options.dryRun, options.packageChanges, groups, breaking);
         return;
     }
 
@@ -175,12 +181,17 @@ export function runChangelog(
         logger.info('Ran the changesets provider; changesets owns the changelog/version output.');
         return;
     }
-    const type = deriveCustomBump(records, versioning.bump, versioning.allowOverBump);
+    const type = deriveCustomBump(records, versioning.bump, versioning.allowOverBump, {
+        env: process.env,
+        logger,
+        ...(breaking !== undefined ? { breaking } : {}),
+    });
     const commitlint = resolveCommitlintEnabled(changelog);
     let summary = buildSummary(records, {
         commitlint,
         range,
         ...(groups ? { groups } : {}),
+        ...(breaking !== undefined ? { breaking } : {}),
         ...(versioning.commit ? { commit: versioning.commit as CommitFormatOptions } : {}),
     });
     if (provider && typeof provider === 'object' && typeof provider.run === 'function') {
@@ -204,6 +215,7 @@ export function runChangelog(
         range,
         ...(versioning.bump ? { bumpRules: versioning.bump } : {}),
         ...(versioning.allowOverBump ? { allowOverBump: true } : {}),
+        ...(breaking !== undefined ? { breaking } : {}),
     });
     const next = plan.rootVersion;
 
@@ -232,7 +244,9 @@ export function runChangelog(
         // Write the full proposed root CHANGELOG.md (existing content + new
         // entry, or the fully reformatted changelog for `all`) to
         // CHANGELOG.proposed.md, with the new entry inserted at the top.
-        const base = reformatAll ? reformatRootChangelog(options.packageChanges, groups) : existing;
+        const base = reformatAll
+            ? reformatRootChangelog(options.packageChanges, groups, breaking)
+            : existing;
         const content = insertNewEntry(base, entry);
         const proposed = resolve(root, 'CHANGELOG.proposed.md');
         writeFileSync(proposed, content, 'utf8');
@@ -250,7 +264,8 @@ export function runChangelog(
         options.packageChanges,
         plan.entries,
         commitlint,
-        groups
+        groups,
+        breaking
     );
     if (versioning.enabled) {
         logger.info(`Bumped ${current} -> ${next} (${type}) from ${records.length} commit(s).`);
@@ -263,6 +278,7 @@ export function runChangelog(
 
 // Exported so tests can dry-run the pipeline (grouping/rendering) directly.
 export { parseArgsCli } from './utils/args.js';
+export { isBreakingCommit } from './utils/breaking.js';
 export {
     formatBody,
     groupItems,

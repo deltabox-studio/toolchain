@@ -1,8 +1,13 @@
 import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { type ChangelogConfig, logger } from '@deltabox/toolchain-shared';
+import {
+    type ChangelogBreakingSetting,
+    type ChangelogConfig,
+    logger,
+} from '@deltabox/toolchain-shared';
 
+import { isBreakingCommit } from './breaking.js';
 import { parseCcSubject } from './format.js';
 import { deriveBump, readCommits } from './git.js';
 import { relatedWorkspacePaths } from './graph.js';
@@ -142,6 +147,8 @@ export interface BumpRuleContext {
     env: NodeJS.ProcessEnv;
     logger: typeof logger;
     packageJson?: Record<string, unknown>;
+    /** How breaking changes are detected (default: Conventional Commits). */
+    breaking?: ChangelogBreakingSetting;
 }
 
 /** Whether a bump rule matches a commit. */
@@ -173,12 +180,7 @@ function bumpRuleMatches(rule: unknown, record: CommitRecord, context: BumpRuleC
     if (typeof rule === 'object') {
         const source = rule as Record<string, unknown>;
         const parsed = parseCcSubject(record.subject);
-        if (
-            source.breaking === true &&
-            !parsed.breaking &&
-            !/BREAKING[ -]CHANGE/i.test(record.body)
-        )
-            return false;
+        if (source.breaking === true && !isBreakingCommit(record, context.breaking)) return false;
         if (typeof source.type === 'string' && parsed.type !== source.type) return false;
         if (Array.isArray(source.types) && !source.types.includes(parsed.type)) return false;
         if (typeof source.scope === 'string' && parsed.scope !== source.scope) return false;
@@ -207,7 +209,7 @@ export function deriveCustomBump(
     allowOverBump = false,
     context: BumpRuleContext = { env: process.env, logger }
 ): BumpType {
-    if (!rules || Object.keys(rules).length === 0) return deriveBump(records);
+    if (!rules || Object.keys(rules).length === 0) return deriveBump(records, context.breaking);
     let result: BumpType = 'patch';
     let matches = 0;
     for (const level of BUMP_ORDER) {
@@ -261,6 +263,8 @@ export interface PlanVersionsOptions {
     bumpRules?: Record<string, unknown>;
     /** Allow over-bumping (default false). */
     allowOverBump?: boolean;
+    /** How breaking changes are detected (default: Conventional Commits). */
+    breaking?: ChangelogBreakingSetting;
     /** The git revision range the commits were read from. */
     range: string;
     /** The repository root (default: resolved from cwd). */
@@ -304,7 +308,11 @@ export function planVersions(options: PlanVersionsOptions): VersionPlan {
             if (commits.length === 0) continue;
             const next = bumpVersion(
                 readPackageVersion(dir) ?? '0.0.0',
-                deriveCustomBump(commits, options.bumpRules, options.allowOverBump)
+                deriveCustomBump(commits, options.bumpRules, options.allowOverBump, {
+                    env: process.env,
+                    logger,
+                    ...(options.breaking !== undefined ? { breaking: options.breaking } : {}),
+                })
             );
             entries.set(dir, next);
             if (versioning.enabled) writes.set(dir, next);

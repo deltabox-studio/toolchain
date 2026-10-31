@@ -120,6 +120,15 @@ const changelogPipelineShape = {
                 'callback. Titles/order/hidden also accept callbacks (TS/JS configs only).'
         )
         .optional(),
+    breaking: z
+        .unknown()
+        .describe(
+            'How breaking changes are detected: `conventional` (default: a `!` in the ' +
+                'CC subject or a `BREAKING CHANGE:` footer), `any` (legacy loose match), ' +
+                '`false` (disable), `{ pattern }` / `{ match }`, or a callback (TS/JS ' +
+                'configs only).'
+        )
+        .optional(),
 };
 
 /**

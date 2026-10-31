@@ -3,6 +3,7 @@
 import type { TsConfigJson } from 'type-fest';
 import type { ViteUserConfig } from 'vite-plus';
 
+import type { ChangelogBreakingSetting } from './changelog-breaking.js';
 import type { ChangelogGroupsSetting } from './changelog-groups.js';
 import type { ToolchainLogger } from './logger.js';
 
@@ -135,6 +136,8 @@ export interface ChangelogConfig extends WorkflowOptions {
     vscode?: boolean;
     /** Conventional-Commits group order/titles/hiding (strings, records or callbacks). */
     groups?: ChangelogGroupsSetting;
+    /** How breaking changes are detected (default: Conventional Commits). */
+    breaking?: ChangelogBreakingSetting;
 }
 
 export interface ChangelogBranchesConfig {
@@ -203,6 +206,8 @@ export interface ToolchainChangelogConfig {
     vscode?: boolean;
     /** Conventional-Commits group order/titles/hiding (strings, records or callbacks). */
     groups?: ChangelogGroupsSetting;
+    /** How breaking changes are detected (default: Conventional Commits). */
+    breaking?: ChangelogBreakingSetting;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
 }
