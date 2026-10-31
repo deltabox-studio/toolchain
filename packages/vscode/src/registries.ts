@@ -36,19 +36,15 @@ export class RegistryTreeProvider implements vscode.TreeDataProvider<RegistryTre
 
     async refresh(): Promise<void> {
         const root = this.root();
-        if (!root) {
-            this.roots = [];
-            this.loaded = true;
-            this.emitter.fire(undefined);
-            return;
-        }
-        const result = await captureCli(root, ['registry', '--json', '--cwd', root]);
         let model: { templates?: RegistryEntry[]; providers?: RegistryEntry[] } = {};
-        if (result.code === 0) {
-            try {
-                model = JSON.parse(result.stdout) as typeof model;
-            } catch {
-                model = {};
+        if (root) {
+            const result = await captureCli(root, ['registry', '--json', '--cwd', root]);
+            if (result.code === 0) {
+                try {
+                    model = JSON.parse(result.stdout) as typeof model;
+                } catch {
+                    model = {};
+                }
             }
         }
         this.roots = [
