@@ -4,7 +4,6 @@ import path from 'node:path';
 
 import * as vscode from 'vscode';
 
-import { withBuiltinProviders } from './builtins.js';
 import { captureCli } from './cli.js';
 
 /**
@@ -33,18 +32,15 @@ export interface Provider {
     commands: ProviderCommand[];
 }
 
-/**
- * Load the providers via `dbx providers --json`, always including the builtins.
- * The builtins are the fallback when the CLI cannot be resolved or fails.
- */
+/** Load the providers via `dbx providers --json` (empty on failure). */
 export async function loadProviders(cwd: string): Promise<Provider[]> {
     const result = await captureCli(cwd, ['providers', '--json']);
-    if (result.code !== 0) return withBuiltinProviders([]);
+    if (result.code !== 0) return [];
     try {
         const parsed = JSON.parse(result.stdout) as unknown;
-        return withBuiltinProviders(Array.isArray(parsed) ? (parsed as Provider[]) : []);
+        return Array.isArray(parsed) ? (parsed as Provider[]) : [];
     } catch {
-        return withBuiltinProviders([]);
+        return [];
     }
 }
 
@@ -167,18 +163,22 @@ export class ProviderTreeProvider implements vscode.TreeDataProvider<ProviderTre
         return this.roots.map(node => node.provider);
     }
 
-    /** Reload the providers (CLI list + builtins + the custom registry) and repaint. */
+    /** Reload the providers (CLI list + the custom registry) and repaint. */
     async refresh(): Promise<void> {
         const root = this.root();
-        const listed = root ? await loadProviders(root) : [];
-        const custom = root ? readAllProviders(root) : readGlobalProviders();
-        const customIds = new Set(custom.map(provider => provider.id));
-        const providers = withBuiltinProviders([...listed, ...custom]);
-        this.roots = providers.map(provider => ({
+        if (!root) {
+            this.roots = [];
+            this.loaded = true;
+            this.emitter.fire(undefined);
+            return;
+        }
+        const listed = await loadProviders(root);
+        const customIds = new Set(readAllProviders(root).map(provider => provider.id));
+        this.roots = listed.map(provider => ({
             kind: 'provider' as const,
             provider,
             custom: customIds.has(provider.id),
-            root: root ?? '',
+            root,
         }));
         this.loaded = true;
         this.emitter.fire(undefined);

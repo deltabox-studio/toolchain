@@ -125,7 +125,7 @@ the same configuration. Only the root gets them by default; a nested
 itself (an inherited root config does not create per-workspace files).
 
 To adopt an existing hand-written `vite.config.ts`, fold it in with the
-migration (see [Migrations](/guide/migrations/#vite-config)):
+migration (see [Migrations](/guide/migrations#vite-config)):
 
 ```sh
 dbx migrate --from vite --write   # folds the object into toolchain.vite (+ the fmt ignore)

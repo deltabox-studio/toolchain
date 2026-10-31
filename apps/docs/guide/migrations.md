@@ -187,4 +187,4 @@ handled here.
 
 ## Upgrading from v1
 
-See the [v1 → v2 migration guide](/guide/migrations/v1-v2).
+See the [v1 → v2 migration guide](/guide/migration-v1-v2).

@@ -1,14 +1,10 @@
 # Releases
 
 The generated `ci.release` workflow (`release.yml`) opens a release PR whose body
-is the **aggregated changelog**: every entry from the last released version up to
-the latest one, not just the newest entry. So a release that skips versions
-(eg. `v1.7.0` → `v1.7.8`) still documents `1.7.1`–`1.7.8` in one place.
-
-The body is produced by `dbx changelog --release-notes <version>`, which only
-considers tags whose version actually appears in `CHANGELOG.md` (so unrelated
-CI/calendar tags are ignored). For a first release, when there is no prior
-version, it falls back to the newest changelog entry instead of the whole file.
+is the **aggregated changelog**: every entry from the last tag
+(`git describe --tags --abbrev=0`) up to the latest version, not just the newest
+one. So a release that skips versions (eg. `v1.7.0` → `v1.7.8`) still
+documents `1.7.1`–`1.7.8` in one place.
 
 ```ts [dbx.config.ts]
 toolchain: {

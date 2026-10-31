@@ -67,12 +67,7 @@ function reformatEntry(
         const subject = formatLine(capitalize(parsed.rest), repo);
         const text = `- ${[subject, suffix].filter(Boolean).join(' ')}`;
         const bodyParagraphs = original ? formatBody(original.body) : [];
-        const breaking =
-            parsed.breaking ||
-            (original
-                ? /BREAKING[ -]CHANGE/i.test(original.body)
-                : bodyParagraphs.some(paragraph => paragraph.join(' ').includes('BREAKING')));
-        items.push({ parsed, breaking, text, bodyParagraphs });
+        items.push({ parsed, text, bodyParagraphs });
     }
     const date = deriveVersionDate(entry.version, entry.bullets);
     return renderChangelogEntry(
