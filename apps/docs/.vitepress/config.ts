@@ -1,7 +1,6 @@
 import { copyFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import AutoSidebar from 'vite-plugin-vitepress-auto-sidebar';
 import { defineConfig } from 'vitepress';
 import carbonThemeBaseConfig from 'vitepress-carbon/config';
 import { groupIconMdPlugin, groupIconVitePlugin } from 'vitepress-plugin-group-icons';
@@ -33,42 +32,6 @@ const LLMS_DETAILS = [
     '- **Runtime.** Node ≥ 22.5 and Yarn 4 (corepack); Vite+ (`vp`) resolves at the repo root.',
 ].join('\n');
 
-/** The hand-picked entries kept at the top of the generated guide sidebar. */
-const INTRODUCTION = {
-    text: 'Introduction',
-    items: [
-        { text: 'Getting Started', link: '/guide/' },
-        { text: 'Monorepo Guide', link: '/guide/monorepo' },
-        { text: 'VS Code Extension', link: '/guide/vscode' },
-        { text: 'LLMs', link: '/llms' },
-    ],
-};
-
-/** Generated sidebar links that the hand-picked Introduction already covers. */
-const INTRODUCTION_LINKS = new Set([
-    '/guide/index.html',
-    '/guide/monorepo.html',
-    '/guide/vscode.html',
-    '/llms',
-    '/llms.html',
-]);
-
-/**
- * VitePress 1.6 deep-merges a plugin's `config` hook result into the existing
- * config. The auto-sidebar plugin mutates the config and returns the whole
- * object, which duplicates the plugin + sidebar arrays. Keep the in-place
- * mutation but return nothing so Vite does not merge the config into itself.
- */
-function autoSidebar(options: Parameters<typeof AutoSidebar>[0]) {
-    const plugin = AutoSidebar(options) as any;
-    const configure = plugin.config;
-    plugin.config = async function (config: any, env: any) {
-        const handler = typeof configure === 'function' ? configure : configure?.handler;
-        await handler?.call(this, config, env);
-    };
-    return plugin;
-}
-
 /** Icons for language labels the plugin's built-in map does not know. */
 const CODE_ICONS = {
     TypeScript: 'vscode-icons:file-type-typescript',
@@ -97,46 +60,6 @@ export default defineConfig({
     vite: {
         ...carbonThemeBaseConfig.vite,
         plugins: [
-            // Generate the sidebar from the docs tree so nested pages (eg.
-            // `/guide/config-generator/create-the-engine`) are always listed.
-            // The manual sidebar must stay removed for the plugin to work.
-            autoSidebar({
-                path: '.',
-                scanRootMdFiles: false,
-                ignoreList: ['node_modules', 'public'],
-                titleFromFile: true,
-                // Nested sections start collapsed; the guide itself stays open.
-                collapsed: true,
-                // Put `index.md` first so each section's overview leads its group.
-                beforeCreateSideBarItems(files) {
-                    const index = files.filter(file => file.toLowerCase() === 'index.md');
-                    const rest = files
-                        .filter(file => file.toLowerCase() !== 'index.md')
-                        .sort((a, b) => a.localeCompare(b));
-                    return [...index, ...rest];
-                },
-                // Drop the entries the Introduction already covers and strip
-                // markdown backticks (eg. `defineConfig`) from generated titles.
-                sideBarItemsResolved(items) {
-                    return items
-                        .filter(item => !INTRODUCTION_LINKS.has(item.link ?? ''))
-                        .map(item => {
-                            const text = item.text?.replaceAll('`', '');
-                            const nextText =
-                                item.link && /(^|\/)index\.html$/.test(item.link)
-                                    ? 'Overview'
-                                    : text;
-                            return nextText !== undefined && nextText !== item.text
-                                ? { ...item, text: nextText }
-                                : item;
-                        });
-                },
-                sideBarResolved(data) {
-                    const guide = Array.isArray(data['/guide/']) ? data['/guide/'] : [];
-                    data['/guide/'] = [INTRODUCTION, ...guide];
-                    return data;
-                },
-            }) as any,
             // `llmstxt()` / `groupIconVitePlugin()` are typed against the repo's
             // `vite` (v8), while VitePress ships its own `vite` (v5); the `Plugin`
             // types don't unify, so cast to the option VitePress expects.
@@ -189,7 +112,7 @@ export default defineConfig({
             { text: 'Guide', link: '/guide/' },
             { text: 'Config', link: '/config/reference' },
             { text: 'Providers', link: '/guide/providers' },
-            { text: 'Migrations', link: '/guide/migrations/' },
+            { text: 'Migrations', link: '/guide/migrations' },
             {
                 text: `v${pkg.version}`,
                 items: [
@@ -209,6 +132,65 @@ export default defineConfig({
             },
         ],
         socialLinks: [{ icon: 'github', link: 'https://github.com/deltabox-studio/toolchain' }],
+        sidebar: {
+            '/guide/': [
+                {
+                    text: 'Introduction',
+                    items: [
+                        { text: 'Getting Started', link: '/guide/' },
+                        { text: 'Monorepo Guide', link: '/guide/monorepo' },
+                        { text: 'VS Code Extension', link: '/guide/vscode' },
+                        { text: 'LLMs', link: '/llms' },
+                    ],
+                },
+                {
+                    text: 'CI',
+                    items: [
+                        { text: 'Overview', link: '/guide/ci/' },
+                        { text: 'Workflow settings', link: '/guide/ci/settings' },
+                        { text: 'CI checks', link: '/guide/ci/ci' },
+                        { text: 'Changelog workflow', link: '/guide/ci/changelog' },
+                        { text: 'Issues', link: '/guide/ci/issues' },
+                        { text: 'Sync', link: '/guide/ci/sync' },
+                        { text: 'Releases', link: '/guide/ci/releases' },
+                    ],
+                },
+                {
+                    text: 'Toolchain',
+                    items: [
+                        { text: 'CLI', link: '/guide/cli' },
+                        { text: 'Configuration', link: '/guide/config/' },
+                        { text: 'TypeScript', link: '/guide/typescript' },
+                        { text: 'Project', link: '/guide/project' },
+                        { text: 'Changelog', link: '/guide/changelog/' },
+                        { text: 'tsconfig', link: '/guide/tsconfig' },
+                        { text: 'Formatting & linting', link: '/guide/formatting' },
+                        { text: 'Biome', link: '/guide/biome' },
+                        { text: 'Vite+', link: '/guide/vite' },
+                        { text: 'Watch', link: '/guide/watch' },
+                        { text: 'Logger', link: '/guide/logger' },
+                        { text: 'Providers (Vite+)', link: '/guide/providers' },
+                        { text: 'Config Generator', link: '/guide/config-generator/' },
+                        { text: 'Package Scripts', link: '/guide/scripts' },
+                        { text: 'Templates', link: '/guide/templates' },
+                        { text: 'Migrations', link: '/guide/migrations' },
+                        { text: 'v1 → v2 migration', link: '/guide/migration-v1-v2' },
+                        { text: 'Programmatic API', link: '/guide/api/' },
+                    ],
+                },
+            ],
+            '/config/': [
+                {
+                    text: 'Reference',
+                    items: [
+                        { text: 'Config types', link: '/config/' },
+                        { text: 'dbx.config', link: '/config/reference' },
+                        { text: 'CLI', link: '/config/cli' },
+                        { text: 'Environment variables', link: '/config/env' },
+                    ],
+                },
+            ],
+        },
         outline: { level: [2, 3] },
         search: { provider: 'local' },
         editLink: {

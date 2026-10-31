@@ -37,13 +37,12 @@ describe('default workflows', () => {
         expect(release).not.toContain('binaries');
     });
 
-    it('aggregates every changelog entry since the last released version', () => {
+    it('aggregates every changelog entry since the last tag in the release notes', () => {
         const release = renderWorkflow('release', { tokens: {} })!;
         // Not the marker-only extraction (which only ever yields the latest entry).
         expect(release).not.toContain('<!-- release:start -->');
-        // The CLI resolves the last released version and guards first releases.
-        expect(release).toContain('changelog --release-notes');
-        expect(release).not.toContain('cat CHANGELOG.md');
+        expect(release).toContain('git describe --tags --abbrev=0');
+        expect(release).toContain('last_version');
     });
 });
 

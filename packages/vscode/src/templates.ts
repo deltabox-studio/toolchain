@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 
-import { withBuiltinTemplates } from './builtins.js';
 import { captureCli } from './cli.js';
 
 /**
@@ -38,11 +37,7 @@ export interface Template {
     actions?: TemplateAction[];
 }
 
-/**
- * Load the templates via `dbx template:list --json`, always including the
- * builtins. The builtins are the fallback when the CLI cannot be resolved or
- * fails.
- */
+/** Load the templates via `dbx template:list --json` (empty on failure). */
 export async function loadTemplates(
     cwd: string,
     options: { online?: boolean } = {}
@@ -52,12 +47,12 @@ export async function loadTemplates(
     const args = ['template:list', '--json', '--cwd', cwd];
     if (options.online !== false) args.push('--online');
     const result = await captureCli(cwd, args);
-    if (result.code !== 0) return withBuiltinTemplates([]);
+    if (result.code !== 0) return [];
     try {
         const parsed = JSON.parse(result.stdout) as unknown;
-        return withBuiltinTemplates(Array.isArray(parsed) ? (parsed as Template[]) : []);
+        return Array.isArray(parsed) ? (parsed as Template[]) : [];
     } catch {
-        return withBuiltinTemplates([]);
+        return [];
     }
 }
 
@@ -70,10 +65,10 @@ export class TemplateTreeProvider implements vscode.TreeDataProvider<Template> {
 
     constructor(private readonly root: () => string | undefined) {}
 
-    /** Reload the templates (including the builtins) and repaint. */
+    /** Reload the templates and repaint. */
     async refresh(): Promise<void> {
         const root = this.root();
-        this.templates = root ? await loadTemplates(root) : withBuiltinTemplates([]);
+        this.templates = root ? await loadTemplates(root) : [];
         this.loaded = true;
         this.emitter.fire(undefined);
     }

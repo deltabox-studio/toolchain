@@ -339,11 +339,16 @@ export function defaultWorkflows(
                                 'git add -A',
                                 'git commit -m "chore: version packages ($version)" || true',
                                 'git push origin "$branch"',
-                                // The CLI extracts entries since the last released
-                                // version and falls back to the newest entry on a
-                                // first release, so unrelated tags cannot leak the
-                                // whole changelog into the PR body.
-                                `notes="$(${engine} changelog --release-notes "$version")"`,
+                                // Release notes aggregate every changelog entry from the
+                                // last tag up to the latest version (not just the latest),
+                                // so a release that skips versions includes them all.
+                                'last_tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"',
+                                'if [ -n "$last_tag" ]; then',
+                                '  last_version="${last_tag#v}"',
+                                '  notes="$(awk -v v="$last_version" \'/^## / { if ($2 == v) exit; started = 1 } started { print }\' CHANGELOG.md 2>/dev/null || true)"',
+                                'else',
+                                '  notes="$(cat CHANGELOG.md 2>/dev/null || true)"',
+                                'fi',
                                 '[ -n "$notes" ] || notes="Release $version"',
                                 `gh pr create --base ${main} --head "$branch" --title "release: $version" --body "$notes"`,
                             ].join('\n'),

@@ -80,7 +80,6 @@ import {
     parseExistingChangelog,
     reformatRootChangelog,
 } from './utils/reformat.js';
-import { releaseNotesFromGit } from './utils/release-notes.js';
 import { changelogFiles, readRootVersion, repoRoot, writeVersion } from './utils/repo.js';
 import { buildSummary } from './utils/summary.js';
 import type {
@@ -108,12 +107,6 @@ export function runChangelog(
 ): void {
     const options = parseArgsCli(argv);
     const groups = changelog?.groups as ChangelogGroupsSetting | undefined;
-
-    // Machine-readable release body (used by the generated release workflow).
-    if (options.releaseNotes) {
-        logger.raw(releaseNotesFromGit(options.releaseNotes));
-        return;
-    }
 
     // `--format-only` just regroups the existing changelog files (no bump, no
     // new entry); `--range`/`--dry-run` still apply.
