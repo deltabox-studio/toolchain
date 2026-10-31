@@ -48,8 +48,12 @@ export function buildReleaseNotes(
             .map(normalizeReleaseVersion)
             .filter((version): version is string => version !== undefined)
     );
+    // Accept both `2.0.0` and `v2.0.0` as the version being released.
+    const current = currentVersion
+        ? (normalizeReleaseVersion(currentVersion) ?? currentVersion)
+        : undefined;
     const previous = headings.find(
-        heading => heading.version !== currentVersion && versions.has(heading.version)
+        heading => heading.version !== current && versions.has(heading.version)
     );
     const end = previous ? previous.index : (headings[1]?.index ?? changelog.length);
     if (end <= start) return '';

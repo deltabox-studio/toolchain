@@ -94,7 +94,8 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                 provided.json === true ||
                 provided.alias === true ||
                 provided.paths === true ||
-                provided.references === true;
+                provided.references === true ||
+                provided.releaseNotes !== undefined;
             const framed = !cmd.passthrough && !machine && provided.quiet !== true;
             const label = `${command.parent?.name() ?? ''} ${cmd.name}`.trim();
             if (framed) intro(label);

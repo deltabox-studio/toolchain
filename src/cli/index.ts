@@ -219,7 +219,13 @@ export async function runCli(argv: string[] = process.argv): Promise<void> {
     const wantsHelp = argv.some(arg => arg === '--help' || arg === '-h' || arg === '--version');
     // The notice is human output on stdout; never let it corrupt machine output.
     const machineCommands = new Set(['template:info']);
-    const machineFlags = new Set(['--json', '--alias', '--paths', '--references']);
+    const machineFlags = new Set([
+        '--json',
+        '--alias',
+        '--paths',
+        '--references',
+        '--release-notes',
+    ]);
     const wantsJson =
         rest3.some(arg => machineFlags.has(arg)) ||
         (rest3[2] !== undefined && machineCommands.has(rest3[2]));
