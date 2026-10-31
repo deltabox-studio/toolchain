@@ -388,10 +388,29 @@ export function activate(context: vscode.ExtensionContext): void {
         return picks?.map(pick => pick.project);
     };
 
-    /** Prompt for one or more workflow ids (multi-select). */
-    const pickWorkflows = async (): Promise<string[] | undefined> => {
+    /** Prompt for one or more enabled workflow ids (multi-select). */
+    const pickWorkflows = async (cwd: string): Promise<string[] | undefined> => {
+        const result = await captureCli(cwd, ['workflow', '--list', '--json']);
+        let targets: { id: string; path: string }[] = [];
+        if (result.code === 0) {
+            try {
+                const parsed = JSON.parse(result.stdout) as unknown;
+                if (Array.isArray(parsed)) {
+                    targets = parsed.filter(
+                        (entry): entry is { id: string; path: string } =>
+                            Boolean(entry) &&
+                            typeof entry === 'object' &&
+                            typeof (entry as { id?: unknown }).id === 'string' &&
+                            typeof (entry as { path?: unknown }).path === 'string'
+                    );
+                }
+            } catch {
+                // fall through to the built-in ids
+            }
+        }
+        if (targets.length === 0) targets = WORKFLOW_IDS.map(id => ({ id, path: id }));
         const picks = await vscode.window.showQuickPick(
-            WORKFLOW_IDS.map(id => ({ label: id })),
+            targets.map(target => ({ label: target.id, description: target.path })),
             { canPickMany: true, placeHolder: 'Which workflows should run?' }
         );
         return picks?.map(pick => pick.label);
@@ -453,7 +472,7 @@ export function activate(context: vscode.ExtensionContext): void {
     };
 
     const runWorkflow = async (cwd: string): Promise<void> => {
-        const ids = await pickWorkflows();
+        const ids = await pickWorkflows(cwd);
         if (!ids || ids.length === 0) return;
         const code = await runCli(cwd, ['workflow', ...ids]);
         if (code === 0) {
@@ -1287,6 +1306,7 @@ export function activate(context: vscode.ExtensionContext): void {
         }
 
         const baseArgs = ['create', '--template', template.id, '--name', name, '--cwd', base];
+        if (template.online) baseArgs.push('--online');
         if (scope) baseArgs.push('--scope', scope);
         if (varArgs.length > 0) baseArgs.push('--var', ...varArgs);
 

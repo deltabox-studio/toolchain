@@ -60,7 +60,7 @@ interface ProjectGraphFile {
 
 function readJson<T>(file: string): T | undefined {
     try {
-        return JSON.parse(fs.readFileSync(file, 'utf-8')) as T;
+        return JSON.parse(fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, '')) as T;
     } catch {
         return undefined;
     }
