@@ -112,6 +112,14 @@ const changelogPipelineShape = {
         .boolean()
         .describe('Write the Conventional-Commits VS Code settings (default true).')
         .optional(),
+    groups: z
+        .unknown()
+        .describe(
+            'Conventional-Commits group order/titles: an ordered array of CC types or ' +
+                '`{ type, title, order, hidden }`, a type->title/options record, or a ' +
+                'callback. Titles/order/hidden also accept callbacks (TS/JS configs only).'
+        )
+        .optional(),
 };
 
 /**

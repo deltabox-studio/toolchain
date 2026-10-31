@@ -393,6 +393,12 @@ Commit message formatting/credit options or callback.
 
 Write the Conventional-Commits VS Code settings (default true).
 
+#### `groups`
+
+- **Type**: `unknown`
+
+Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback. Titles/order/hidden also accept callbacks (TS/JS configs only).
+
 ### `release`
 
 - **Type**: `WorkflowSetting`
@@ -504,6 +510,12 @@ Commit message formatting/credit options or callback.
 - **Type**: `boolean`
 
 Write the Conventional-Commits VS Code settings (default true).
+
+### `groups`
+
+- **Type**: `unknown`
+
+Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback. Titles/order/hidden also accept callbacks (TS/JS configs only).
 
 ### `enabled`
 

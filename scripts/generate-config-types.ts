@@ -58,11 +58,37 @@ const overrides = {
     /** Deep-merged into the root workspaces tsconfig (\`rootFile\`) during sync. */
     root?: TsConfigJson;
 }`,
+    // The group callbacks live in a hand-written shared type.
+    ChangelogConfig: `export interface ChangelogConfig extends WorkflowOptions {
+    /** Branches the generated workflows target. */
+    branches?: ChangelogBranchesConfig;
+    /** Commitlint config; set \`false\` to disable the Conventional-Commits pipeline. */
+    commitlint?: boolean | ChangelogCommitlintConfig;
+    /** Automatic version bumping on changelog generation (default \`true\`). */
+    versioning?: ChangelogVersioning;
+    /** Write the Conventional-Commits VS Code settings (default true). */
+    vscode?: boolean;
+    /** Conventional-Commits group order/titles/hiding (strings, records or callbacks). */
+    groups?: ChangelogGroupsSetting;
+}`,
+    ToolchainChangelogConfig: `export interface ToolchainChangelogConfig {
+    /** Commitlint config; set \`false\` to disable the Conventional-Commits pipeline. */
+    commitlint?: boolean | ChangelogCommitlintConfig;
+    /** Automatic version bumping on changelog generation (default \`true\`). */
+    versioning?: ChangelogVersioning;
+    /** Write the Conventional-Commits VS Code settings (default true). */
+    vscode?: boolean;
+    /** Conventional-Commits group order/titles/hiding (strings, records or callbacks). */
+    groups?: ChangelogGroupsSetting;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
+}`,
 } satisfies GenerateTypesOptions['overrides'];
 
 const imports = [
     "import type { TsConfigJson } from 'type-fest';",
     "import type { ViteUserConfig } from 'vite-plus';",
+    "import type { ChangelogGroupsSetting } from './changelog-groups.js';",
     "import type { ToolchainLogger } from './logger.js';",
 ];
 const engine = createConfigEngine({ schema: dbxConfigSchema });

@@ -3,6 +3,7 @@
 import type { TsConfigJson } from 'type-fest';
 import type { ViteUserConfig } from 'vite-plus';
 
+import type { ChangelogGroupsSetting } from './changelog-groups.js';
 import type { ToolchainLogger } from './logger.js';
 
 export interface DbxConfigSections {
@@ -123,27 +124,7 @@ export interface WorkflowStep {
 
 export type WorkflowSetting = boolean | string | WorkflowOptions;
 
-export interface ChangelogConfig {
-    /** Replace `on.push.branches`. */
-    pushBranches?: Array<string>;
-    /** Replace `on.pull_request.branches`. */
-    pullRequestBranches?: Array<string>;
-    /** Extra `on.*` triggers. */
-    triggers?: Record<string, unknown>;
-    /** Extra top-level keys (`permissions`, `concurrency`, `env`, ...). */
-    extra?: Record<string, unknown>;
-    /** Extra steps for a job (one group, or per-job groups). */
-    steps?: WorkflowStepsConfig | Array<WorkflowStepsConfig>;
-    /** Extra complete jobs merged in. */
-    jobs?: Record<string, unknown>;
-    /** Per-workflow token overrides (`nodeVersion`, `packageManager`, ...). */
-    tokens?: Record<string, string | number | boolean>;
-    /** Override the generated workflow file name (eg. `deploy.yml`). */
-    filename?: string;
-    /** Directory for the workflow file (default `.github/workflows`). */
-    dir?: string;
-    /** Enable/disable the changelog workflow and pipeline (default: enabled when present). */
-    enabled?: boolean;
+export interface ChangelogConfig extends WorkflowOptions {
     /** Branches the generated workflows target. */
     branches?: ChangelogBranchesConfig;
     /** Commitlint config; set `false` to disable the Conventional-Commits pipeline. */
@@ -152,6 +133,8 @@ export interface ChangelogConfig {
     versioning?: ChangelogVersioning;
     /** Write the Conventional-Commits VS Code settings (default true). */
     vscode?: boolean;
+    /** Conventional-Commits group order/titles/hiding (strings, records or callbacks). */
+    groups?: ChangelogGroupsSetting;
 }
 
 export interface ChangelogBranchesConfig {
@@ -218,6 +201,8 @@ export interface ToolchainChangelogConfig {
     versioning?: ChangelogVersioning;
     /** Write the Conventional-Commits VS Code settings (default true). */
     vscode?: boolean;
+    /** Conventional-Commits group order/titles/hiding (strings, records or callbacks). */
+    groups?: ChangelogGroupsSetting;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
 }

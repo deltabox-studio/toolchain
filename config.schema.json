@@ -401,6 +401,9 @@
                 "vscode": {
                     "type": "boolean",
                     "description": "Write the Conventional-Commits VS Code settings (default true)."
+                },
+                "groups": {
+                    "description": "Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback. Titles/order/hidden also accept callbacks (TS/JS configs only)."
                 }
             },
             "additionalProperties": false,
@@ -572,6 +575,9 @@
                 "vscode": {
                     "type": "boolean",
                     "description": "Write the Conventional-Commits VS Code settings (default true)."
+                },
+                "groups": {
+                    "description": "Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback. Titles/order/hidden also accept callbacks (TS/JS configs only)."
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",

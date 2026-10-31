@@ -61,6 +61,15 @@ describe('dbx.config model', () => {
                         commitlint: { types: ['feat', 'fix'], scopes: ['core'] },
                         versioning: { target: 'individual' },
                         vscode: true,
+                        groups: context => [
+                            {
+                                type: 'feat',
+                                title: group => `New Features (${group.groupItems.length})`,
+                                order: 0,
+                            },
+                            { type: 'fix', hidden: group => group.groupItems.length === 0 },
+                            ...context.types.filter(type => !['feat', 'fix'].includes(type)),
+                        ],
                     },
                     release: false,
                     issues: true,
@@ -107,6 +116,26 @@ describe('dbx.config model', () => {
         expect(
             dbxConfigSchema.safeParse({ toolchain: { ci: { custom: { deploy: true } } } }).success
         ).toBe(false);
+    });
+
+    it('accepts changelog groups in both the manual and ci sections', () => {
+        const groups = [
+            { type: 'feat', title: 'New Features' },
+            { type: 'fix', title: 'Bug Fixes' },
+        ];
+        expect(
+            dbxConfigSchema.safeParse({
+                toolchain: {
+                    changelog: { groups },
+                    ci: {
+                        changelog: {
+                            groups: (context: { types: string[] }) =>
+                                context.types.map((type: string) => type),
+                        },
+                    },
+                },
+            }).success
+        ).toBe(true);
     });
 });
 
