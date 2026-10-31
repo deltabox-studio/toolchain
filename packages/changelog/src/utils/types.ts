@@ -76,6 +76,8 @@ export interface GroupedRule {
 
 export interface GroupedItem {
     parsed: ParsedCommit;
+    /** Whether this commit is breaking (subject `!` or a BREAKING CHANGE footer). */
+    breaking?: boolean;
     text: string;
     /** Description paragraphs; each becomes one nested bullet with wrapped continuations. */
     bodyParagraphs: string[][];
