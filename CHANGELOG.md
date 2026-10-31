@@ -1,8 +1,18 @@
 # Changelog
 
-## 2.0.1 (October 2026)
+## 2.1.0 (October 2026)
 
 <!-- release:start -->
+
+### New features
+#### Changelog
+- Configure breaking-change detection ([#f80634f](https://github.com/deltabox-studio/toolchain/commit/f80634f) by [T0chi](https://github.com/T0chi))
+  - Detect breaking changes by Conventional Commits rules by default (! in the subject or a BREAKING CHANGE: footer) and add a changelog.breaking / ci.changelog.breaking override (conventional, ny, alse, pattern/match, or a callback).
+
+<!-- release:end -->
+
+
+## 2.0.1 (October 2026)
 
 ### Bug fixes
 #### Vscode
@@ -22,9 +32,6 @@
 ### Package changes
 #### Added
 - `vite-plugin-vitepress-auto-sidebar` `^1.7.1`
-
-<!-- release:end -->
-
 
 ## 2.0.0 (October 2026)
 
