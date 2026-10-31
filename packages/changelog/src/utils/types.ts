@@ -1,5 +1,29 @@
 /** Shared types for the changelog pipeline. */
 
+import type {
+    ChangelogGroupConfig,
+    ChangelogGroupContext,
+    ChangelogGroupEntry,
+    ChangelogGroupHidden,
+    ChangelogGroupItem,
+    ChangelogGroupOrder,
+    ChangelogGroupsContext,
+    ChangelogGroupsSetting,
+    ChangelogGroupTitle,
+} from '@deltabox/toolchain-shared';
+
+export type {
+    ChangelogGroupConfig,
+    ChangelogGroupContext,
+    ChangelogGroupEntry,
+    ChangelogGroupHidden,
+    ChangelogGroupItem,
+    ChangelogGroupOrder,
+    ChangelogGroupsContext,
+    ChangelogGroupsSetting,
+    ChangelogGroupTitle,
+};
+
 export type BumpType = 'major' | 'minor' | 'patch';
 
 export type ProcessingMethod = 'latest' | 'all' | string;

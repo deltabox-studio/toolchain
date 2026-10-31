@@ -7,7 +7,13 @@ import {
     repoSlug,
     resolveAuthorInfo,
 } from './git.js';
-import type { AuthorInfo, CommitFormatOptions, CommitRecord, GroupedItem } from './types.js';
+import type {
+    AuthorInfo,
+    ChangelogGroupsSetting,
+    CommitFormatOptions,
+    CommitRecord,
+    GroupedItem,
+} from './types.js';
 
 /**
  * Render a commit reference for a changelog bullet. With a resolvable repo slug
@@ -39,6 +45,8 @@ export interface BuildSummaryOptions {
     priorAuthors?: Iterable<string>;
     /** Commit line formatting/credit options. */
     commit?: CommitFormatOptions;
+    /** Conventional-Commits group order/titles/hiding. */
+    groups?: ChangelogGroupsSetting;
 }
 
 type BumpGroup = 'major' | 'minor' | 'patch';
@@ -221,7 +229,8 @@ export function buildSummary(records: CommitRecord[], options: BuildSummaryOptio
                           // The CC rule + scope live in the nested group headings, so the
                           // commit line carries just the (capitalized) subject + credit.
                           return commitItem(record, repo, options.commit ?? {});
-                      })
+                      }),
+                      options.groups
                   )
               );
     const contributors = renderNewContributors(records, repo, options);

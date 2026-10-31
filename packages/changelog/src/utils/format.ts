@@ -2,7 +2,18 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 import { logger, sanitizeText } from '@deltabox/toolchain-shared';
 
-import type { GroupedItem, GroupedRule, ParsedCommit } from './types.js';
+import type {
+    ChangelogGroupConfig,
+    ChangelogGroupContext,
+    ChangelogGroupHidden,
+    ChangelogGroupOrder,
+    ChangelogGroupsContext,
+    ChangelogGroupsSetting,
+    ChangelogGroupTitle,
+    GroupedItem,
+    GroupedRule,
+    ParsedCommit,
+} from './types.js';
 
 const RULE_TITLES: Record<string, string> = {
     feat: 'New features',
@@ -50,8 +61,103 @@ export function parseCcSubject(subject: string): ParsedCommit {
     };
 }
 
+interface GroupSpec {
+    type: string;
+    title?: ChangelogGroupTitle;
+    order?: ChangelogGroupOrder;
+    hidden?: ChangelogGroupHidden;
+    index: number;
+}
+
+function resolveGroupsSetting(
+    setting: ChangelogGroupsSetting | undefined,
+    context: ChangelogGroupsContext
+): Exclude<ChangelogGroupsSetting, (...args: never[]) => unknown> | undefined {
+    if (typeof setting === 'function') {
+        const next = setting(context);
+        return typeof next === 'function' ? undefined : next;
+    }
+    return setting;
+}
+
+function groupSpecs(
+    setting: Exclude<ChangelogGroupsSetting, (...args: never[]) => unknown> | undefined
+): GroupSpec[] {
+    if (!setting) return [];
+    if (Array.isArray(setting)) {
+        const specs: GroupSpec[] = [];
+        for (const [index, entry] of setting.entries()) {
+            if (typeof entry === 'string') {
+                specs.push({ type: entry.toLowerCase(), index });
+                continue;
+            }
+            if (!entry || typeof entry !== 'object' || !entry.type) continue;
+            specs.push({
+                type: entry.type.toLowerCase(),
+                ...(entry.title !== undefined ? { title: entry.title } : {}),
+                ...(entry.order !== undefined ? { order: entry.order } : {}),
+                ...(entry.hidden !== undefined ? { hidden: entry.hidden } : {}),
+                index,
+            });
+        }
+        return specs;
+    }
+    if (typeof setting !== 'object') return [];
+    const specs: GroupSpec[] = [];
+    for (const [index, [type, value]] of Object.entries(setting).entries()) {
+        const config: ChangelogGroupConfig =
+            value === false
+                ? { hidden: true }
+                : value === true || value === undefined || value === null
+                  ? {}
+                  : typeof value === 'string'
+                    ? { title: value }
+                    : value;
+        specs.push({
+            type: type.toLowerCase(),
+            ...(config.title !== undefined ? { title: config.title } : {}),
+            ...(config.order !== undefined ? { order: config.order } : {}),
+            ...(config.hidden !== undefined ? { hidden: config.hidden } : {}),
+            index,
+        });
+    }
+    return specs;
+}
+
+function resolveTitle(
+    value: ChangelogGroupTitle | undefined,
+    context: ChangelogGroupContext
+): string {
+    if (typeof value === 'function') {
+        const title = value(context);
+        return typeof title === 'string' && title.length > 0 ? title : context.defaultTitle;
+    }
+    return value ?? context.defaultTitle;
+}
+
+function resolveOrder(
+    value: ChangelogGroupOrder | undefined,
+    fallback: number,
+    context: ChangelogGroupContext
+): number {
+    const order = typeof value === 'function' ? value(context) : value;
+    return typeof order === 'number' && Number.isFinite(order) ? order : fallback;
+}
+
+function resolveHidden(
+    value: ChangelogGroupHidden | undefined,
+    context: ChangelogGroupContext
+): boolean {
+    return typeof value === 'function' ? Boolean(value(context)) : value === true;
+}
+
+function defaultOrder(type: string): number {
+    const index = RULE_ORDER.indexOf(type);
+    return index === -1 ? RULE_ORDER.length : index;
+}
+
 /** Group a list of parsed commits by CC rule, then by scope. */
-export function groupItems(items: GroupedItem[]): GroupedRule[] {
+export function groupItems(items: GroupedItem[], setting?: ChangelogGroupsSetting): GroupedRule[] {
     const rules = new Map<string, GroupedRule>();
     for (const item of items) {
         const { parsed } = item;
@@ -67,13 +173,49 @@ export function groupItems(items: GroupedItem[]): GroupedRule[] {
         }
         rules.set(parsed.type, rule);
     }
-    return [...rules.entries()]
-        .sort((a, b) => {
-            const ai = RULE_ORDER.indexOf(a[0]);
-            const bi = RULE_ORDER.indexOf(b[0]);
-            return (ai === -1 ? RULE_ORDER.length : ai) - (bi === -1 ? RULE_ORDER.length : bi);
-        })
-        .map(([, rule]) => rule);
+
+    const types = [...rules.keys()];
+    const context = { types, items };
+    const specs = groupSpecs(resolveGroupsSetting(setting, context));
+    const entries: { rule: GroupedRule; order: number; seq: number }[] = [];
+    const configured = new Set<string>();
+    let maxOrder = -1;
+    for (const spec of specs) {
+        if (configured.has(spec.type)) continue;
+        const rule = rules.get(spec.type);
+        if (!rule) continue;
+        configured.add(spec.type);
+        const groupItemsList = [...rule.ungrouped, ...[...rule.scopes.values()].flat()];
+        const groupContext: ChangelogGroupContext = {
+            ...context,
+            type: spec.type,
+            defaultTitle: ruleTitle(spec.type),
+            index: spec.index,
+            groupItems: groupItemsList,
+        };
+        const order = resolveOrder(spec.order, spec.index, groupContext);
+        maxOrder = Math.max(maxOrder, order);
+        if (resolveHidden(spec.hidden, groupContext)) continue;
+        entries.push({
+            rule: { ...rule, title: resolveTitle(spec.title, groupContext) },
+            order,
+            seq: spec.index,
+        });
+    }
+
+    const remaining = types
+        .filter(type => !configured.has(type))
+        .sort((a, b) => defaultOrder(a) - defaultOrder(b));
+    for (const [index, type] of remaining.entries()) {
+        const rule = rules.get(type)!;
+        entries.push({
+            rule,
+            order: maxOrder + 1 + defaultOrder(type),
+            seq: specs.length + index,
+        });
+    }
+
+    return entries.sort((a, b) => a.order - b.order || a.seq - b.seq).map(entry => entry.rule);
 }
 
 export function renderGroups(groups: GroupedRule[]): string {

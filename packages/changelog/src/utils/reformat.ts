@@ -14,7 +14,7 @@ import {
 import { bulletHash, deriveVersionDate, readCommit, repoSlug } from './git.js';
 import { packageChangesForVersion } from './packages.js';
 import { changelogFiles, repoRoot } from './repo.js';
-import type { ExistingEntry, GroupedItem } from './types.js';
+import type { ChangelogGroupsSetting, ExistingEntry, GroupedItem } from './types.js';
 import { renderChangelogEntry } from './version.js';
 
 /** Split a changelog into `## <version>` sections with their bullet lines. */
@@ -51,7 +51,8 @@ function reformatEntry(
     entry: ExistingEntry,
     repo: string | undefined,
     withMarkers = false,
-    packageChanges = ''
+    packageChanges = '',
+    groups?: ChangelogGroupsSetting
 ): string {
     const items: GroupedItem[] = [];
     for (const line of entry.bullets) {
@@ -71,7 +72,7 @@ function reformatEntry(
     const date = deriveVersionDate(entry.version, entry.bullets);
     return renderChangelogEntry(
         entry.version,
-        renderGroups(groupItems(items)),
+        renderGroups(groupItems(items, groups)),
         date,
         withMarkers,
         packageChanges
@@ -83,7 +84,8 @@ export function reformatChangelogContent(
     content: string,
     repo: string | undefined,
     markersOnNewest = false,
-    includePackageChanges = false
+    includePackageChanges = false,
+    groups?: ChangelogGroupsSetting
 ): string {
     const entries = parseExistingChangelog(content);
     if (entries.length === 0) return content;
@@ -96,7 +98,7 @@ export function reformatChangelogContent(
                 includePackageChanges && previous
                     ? packageChangesForVersion(entry.version, previous.version)
                     : '';
-            return reformatEntry(entry, repo, markersOnNewest && index === 0, changes);
+            return reformatEntry(entry, repo, markersOnNewest && index === 0, changes, groups);
         })
         .filter(Boolean)
         .join('\n\n\n');
@@ -104,7 +106,10 @@ export function reformatChangelogContent(
 }
 
 /** Backward-reformat the entire root changelog (all versions). */
-export function reformatRootChangelog(includePackageChanges = false): string {
+export function reformatRootChangelog(
+    includePackageChanges = false,
+    groups?: ChangelogGroupsSetting
+): string {
     const root = repoRoot();
     const file = resolve(root, 'CHANGELOG.md');
     if (!existsSync(file)) return '';
@@ -112,7 +117,8 @@ export function reformatRootChangelog(includePackageChanges = false): string {
         readFileSync(file, 'utf8'),
         repoSlug(),
         false,
-        includePackageChanges
+        includePackageChanges,
+        groups
     );
 }
 
@@ -121,7 +127,11 @@ export function reformatRootChangelog(includePackageChanges = false): string {
  * (grouped rules/scopes, `(Month Year)` suffix, nested bullets) without bumping
  * a version or adding a new entry. Honours `--dry-run`.
  */
-export function formatExistingChangelogs(dryRun: boolean, packageChanges = false): void {
+export function formatExistingChangelogs(
+    dryRun: boolean,
+    packageChanges = false,
+    groups?: ChangelogGroupsSetting
+): void {
     const rootFile = resolve(repoRoot(), 'CHANGELOG.md');
     for (const file of changelogFiles()) {
         // Keep the release markers on the newest entry so release tooling still
@@ -131,7 +141,8 @@ export function formatExistingChangelogs(dryRun: boolean, packageChanges = false
             readFileSync(file, 'utf8'),
             repoSlug(),
             true,
-            packageChanges && file === rootFile
+            packageChanges && file === rootFile,
+            groups
         );
         if (dryRun) {
             const proposed = file.replace(/CHANGELOG\.md$/, 'CHANGELOG.proposed.md');

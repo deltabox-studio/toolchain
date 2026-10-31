@@ -82,7 +82,11 @@ import {
 } from './utils/reformat.js';
 import { changelogFiles, readRootVersion, repoRoot, writeVersion } from './utils/repo.js';
 import { buildSummary } from './utils/summary.js';
-import type { ChangelogProvider, CommitFormatOptions } from './utils/types.js';
+import type {
+    ChangelogGroupsSetting,
+    ChangelogProvider,
+    CommitFormatOptions,
+} from './utils/types.js';
 import { insertNewEntry, renderChangelogEntry, retagChangelogs } from './utils/version.js';
 import {
     deriveCustomBump,
@@ -102,6 +106,7 @@ export function runChangelog(
     changelog?: ChangelogConfig
 ): void {
     const options = parseArgsCli(argv);
+    const groups = changelog?.groups as ChangelogGroupsSetting | undefined;
 
     // `--format-only` just regroups the existing changelog files (no bump, no
     // new entry); `--range`/`--dry-run` still apply.
@@ -111,7 +116,7 @@ export function runChangelog(
                 options.dryRun ? ' (dry run)' : ''
             }.`
         );
-        formatExistingChangelogs(options.dryRun, options.packageChanges);
+        formatExistingChangelogs(options.dryRun, options.packageChanges, groups);
         return;
     }
 
@@ -168,6 +173,7 @@ export function runChangelog(
     let summary = buildSummary(records, {
         commitlint,
         range,
+        ...(groups ? { groups } : {}),
         ...(versioning.commit ? { commit: versioning.commit as CommitFormatOptions } : {}),
     });
     if (provider && typeof provider === 'object' && typeof provider.run === 'function') {
@@ -219,7 +225,7 @@ export function runChangelog(
         // Write the full proposed root CHANGELOG.md (existing content + new
         // entry, or the fully reformatted changelog for `all`) to
         // CHANGELOG.proposed.md, with the new entry inserted at the top.
-        const base = reformatAll ? reformatRootChangelog(options.packageChanges) : existing;
+        const base = reformatAll ? reformatRootChangelog(options.packageChanges, groups) : existing;
         const content = insertNewEntry(base, entry);
         const proposed = resolve(root, 'CHANGELOG.proposed.md');
         writeFileSync(proposed, content, 'utf8');
@@ -236,7 +242,8 @@ export function runChangelog(
         reformatAll,
         options.packageChanges,
         plan.entries,
-        commitlint
+        commitlint,
+        groups
     );
     if (versioning.enabled) {
         logger.info(`Bumped ${current} -> ${next} (${type}) from ${records.length} commit(s).`);

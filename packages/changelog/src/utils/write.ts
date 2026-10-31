@@ -10,7 +10,7 @@ import { packageChangesForCurrent } from './packages.js';
 import { parseExistingChangelog, reformatRootChangelog } from './reformat.js';
 import { discoverWorkspaceDirs, repoRoot } from './repo.js';
 import { buildSummary } from './summary.js';
-import type { CommitRecord } from './types.js';
+import type { ChangelogGroupsSetting, CommitRecord } from './types.js';
 import { prependChangelogEntry, renderChangelogEntry } from './version.js';
 
 /** Prepend the new entry to the root + workspace changelogs and normalize links. */
@@ -22,7 +22,8 @@ export function writeChangelogs(
     reformatAll: boolean,
     packageChanges = false,
     workspaceEntries?: Map<string, string>,
-    commitlint = true
+    commitlint = true,
+    groups?: ChangelogGroupsSetting
 ): void {
     const root = repoRoot();
     const repo = repoSlug();
@@ -38,7 +39,7 @@ export function writeChangelogs(
 
     if (reformatAll) {
         // Rewrite the whole root changelog cohesively, then prepend the new entry.
-        const reformatted = reformatRootChangelog(packageChanges);
+        const reformatted = reformatRootChangelog(packageChanges, groups);
         if (reformatted) {
             writeFileSync(rootChangelog, reformatted, 'utf8');
             logger.info(`  reformatted ${rootChangelog}`);
@@ -68,7 +69,7 @@ export function writeChangelogs(
             continue;
         }
         const created = !existsSync(file);
-        const wsSummary = buildSummary(filtered, { commitlint, range });
+        const wsSummary = buildSummary(filtered, { commitlint, range, groups });
         prependChangelogEntry(file, renderChangelogEntry(workspaceVersion, wsSummary, new Date()));
         logger.info(`  ${created ? 'created' : 'updated'} ${file}`);
     }
