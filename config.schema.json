@@ -69,7 +69,7 @@
                 },
                 "inherit": {
                     "type": "boolean",
-                    "description": "Inherit the parent project metadata (default true). Set false to keep this project entirely independent of the root config."
+                    "description": "Inherit the parent project metadata (default true). Set false to keep this project metadata independent of the root config (other sections still merge normally)."
                 }
             },
             "additionalProperties": false,
@@ -97,6 +97,16 @@
                 "sync": {
                     "description": "The toolchain sync workflow (`sync.yml`).",
                     "$ref": "#/$defs/WorkflowSetting"
+                },
+                "custom": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "$ref": "#/$defs/CustomWorkflowSettings"
+                    },
+                    "description": "Additional custom workflows, keyed by id (eg. `custom.my-workflow`). Each id writes `<dir>/<filename ?? id>.yml`."
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
@@ -174,6 +184,14 @@
                         ]
                     },
                     "description": "Per-workflow token overrides (`nodeVersion`, `packageManager`, ...)."
+                },
+                "filename": {
+                    "type": "string",
+                    "description": "Override the generated workflow file name (eg. `deploy.yml`)."
+                },
+                "dir": {
+                    "type": "string",
+                    "description": "Directory for the workflow file (default `.github/workflows`)."
                 },
                 "enabled": {
                     "description": "Enable/disable this workflow (default: enabled when present).",
@@ -350,6 +368,14 @@
                     },
                     "description": "Per-workflow token overrides (`nodeVersion`, `packageManager`, ...)."
                 },
+                "filename": {
+                    "type": "string",
+                    "description": "Override the generated workflow file name (eg. `deploy.yml`)."
+                },
+                "dir": {
+                    "type": "string",
+                    "description": "Directory for the workflow file (default `.github/workflows`)."
+                },
                 "enabled": {
                     "description": "Enable/disable the changelog workflow and pipeline (default: enabled when present).",
                     "type": "boolean"
@@ -464,7 +490,7 @@
                         "type": "string"
                     },
                     "additionalProperties": {},
-                    "description": "Custom bump rules for major/minor/patch/alpha (matchers or callbacks)."
+                    "description": "Custom bump rules for major/minor/patch (matchers or callbacks)."
                 },
                 "allowOverBump": {
                     "type": "boolean",
@@ -513,6 +539,17 @@
                 }
             ],
             "description": "`true`/`false` to enable/disable, the changelog pipeline config object, or a raw YAML string written verbatim as the changelog workflow file."
+        },
+        "CustomWorkflowSettings": {
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "$ref": "#/$defs/WorkflowOptions"
+                }
+            ],
+            "description": "A custom workflow: a raw YAML string, or workflow settings merged over an empty workflow (use `triggers`, `extra` and `jobs` to define it)."
         },
         "ToolchainChangelogConfig": {
             "type": "object",
@@ -1171,6 +1208,9 @@
                         }
                     ],
                     "description": "Warning/error id, message substring, or `/regex/` to silence (single value or array)."
+                },
+                "logger": {
+                    "description": "Custom `ToolchainLogger` implementation (TS/JS configs only; JSON cannot carry functions)."
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",

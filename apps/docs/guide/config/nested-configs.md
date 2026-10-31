@@ -11,8 +11,8 @@ The merge is recursive:
   mention.
 - **Leaves** — booleans, strings, numbers and **arrays** — in the child
   **replace** the root's value (arrays are not concatenated).
-- **Repository-scoped sections are not inherited**: `ci` and the top-level
-  `changelog`, `tsconfig`, `vite.test` and `vite.run`. A workflow,
+- **Repository-scoped sections are not inherited**: `ci`, `catalogs` and the
+  top-level `changelog`, `tsconfig`, `vite.test` and `vite.run`. A workflow,
   workspace tsconfig tree, test config or task list describes the repository or
   one workspace, so a child starts without the parent's values for them. In
   particular, the root `tsconfig` task already expands every workspace

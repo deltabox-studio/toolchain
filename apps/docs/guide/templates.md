@@ -56,11 +56,13 @@ prompts for the template, name and scope instead (Ctrl-C cancels).
 
 The offline builtins (`project`, `application`, `folder`, `monorepo`,
 `monorepo-example`, `workspace`) scaffold a generic, current project: a
-`dbx.config.ts` with only `project` metadata, a `package.json` that depends on
-`@deltabox/toolchain`, and no Turbo (Vite Task replaces it). They ask for a
-**package manager** (default `yarn`) and write that manager's catalog file (see
-[Catalogs](/guide/project#package-manager-and-catalogs)). The `vite-plus*` builtins
-delegate to `vp create` and need network access.
+`dbx.config.ts` with `project` metadata and the default `fmt.oxc` / `lint.oxc`
+sections, a runnable `src/index.ts` + smoke test, `.oxfmtrc.json` /
+`.oxlintrc.json`, and a `package.json` that depends on the same
+`@deltabox/toolchain` version as the CLI. There is no Turbo (Vite Task replaces
+it). They ask for a **package manager** (default `yarn`) and write that manager's
+catalog file (see [Catalogs](/guide/project#package-manager-and-catalogs)). The
+`vite-plus*` builtins delegate to `vp create` and need network access.
 
 ## Inputs (variables)
 

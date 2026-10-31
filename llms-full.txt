@@ -473,6 +473,10 @@ disable the whole section (and every nested workflow) at once.
 | Issues    | `issues.yml`    | [Issues](/guide/ci/issues)                |
 | Toolchain | `sync.yml`      | [Sync](/guide/ci/sync)                    |
 
+Extra workflows can be defined under `toolchain.ci.custom.<id>` (for example
+`ci.custom.deploy` writes `.github/workflows/deploy.yml`). Each accepts the same
+workflow options, plus `filename` and `dir` overrides.
+
 See [Workflow settings](/guide/ci/settings) for the shared object options and the
 [Changelog](/guide/changelog/) guide for the versioning/commitlint pipeline.
 
@@ -522,6 +526,8 @@ toolchain: {
 | `steps`               | Inject steps before/after a job's generated steps (one group or per-job).       |
 | `jobs`                | Merge extra complete jobs.                                                      |
 | `tokens`              | Override workflow tokens (`nodeVersion`, `packageManager`, `yarnVersion`, ...). |
+| `filename`            | Override the generated file name (default `ci.yml`, `release.yml`, ...).        |
+| `dir`                 | Override the output directory (default `.github/workflows`).                    |
 
 ## Steps
 
@@ -546,6 +552,51 @@ package manager without changing `project`.
 
 A string is used as the workflow file's exact content. It is not merged, not
 token-replaced and gets no generated header; an empty string disables it.
+
+## Custom workflows
+
+Add any number of extra workflows with `toolchain.ci.custom`, keyed by workflow
+id. A custom workflow is enabled by **presence** (there is no boolean form): a
+string is written verbatim, or an object is merged over an empty workflow —
+build it with `triggers`, `extra` and `jobs` (plus `filename` / `dir`):
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        custom: {
+            deploy: {
+                triggers: { workflow_dispatch: {}, push: { branches: ['main'] } },
+                filename: 'deploy.yml', // default: deploy.yml
+                dir: '.github/workflows', // default
+                jobs: {
+                    deploy: {
+                        'runs-on': 'ubuntu-latest',
+                        steps: [
+                            { uses: 'actions/checkout@v4' },
+                            { run: 'yarn deploy' },
+                        ],
+                    },
+                },
+            },
+        },
+    },
+}
+```
+
+This writes `.github/workflows/deploy.yml` and manages it like any built-in
+workflow (the generated header is prepended, and `dbx sync --check` tracks it).
+
+## Existing workflows
+
+If a generated workflow path already contains a hand-written workflow that dbx has
+never managed (no manifest entry and no generated header), `dbx sync` leaves it
+untouched, warns, and records the conflict in `.dbx/toolchain/manifest.json`.
+Set `ci.<id>: { enabled: false }` (or, for a custom workflow,
+`ci.custom.<id>: { enabled: false }`) to make the opt-out explicit. The file is
+also never deleted when the workflow is later disabled, because dbx did not
+create it. Use `dbx workflow --list` (or `--list --json`) to see the enabled
+workflows and their exact paths; `dbx workflow <id|file>` honours `filename` and
+`dir` overrides.
 
 ---
 
@@ -1187,10 +1238,14 @@ section still generates correct tokens from its existing metadata.
 `dbx project:init`, `dbx project:init:monorepo` and
 `dbx project:init:workspace` read `project` as their defaults, and:
 
-* **`name` is required** (from `--name` or `project.name`) — a scaffold fails
-  with a clear error when it is missing.
-* **`type` must be valid** (`project`, `monorepo-root` or `monorepo-workspace`)
-  when passed explicitly or set in the config; an invalid value is rejected.
+* **`name` is required** (from `--name` or `project.name`) — a
+  scaffold fails with a clear error when it is missing. A workspace always needs
+  an explicit `--name` (the root's name is not the workspace name).
+* **`--type` must be valid** (`project`, `monorepo-root` or `monorepo-workspace`)
+  when passed explicitly; an invalid value is rejected. A `project.type` in the
+  config still drives `dbx sync` detection, but scaffolding deliberately ignores
+  it (a scaffold launched from a monorepo root must not tag a workspace with the
+  root's type).
 
 ```sh
 dbx project:init --name my-app --scope @acme --type project --out ./my-app
@@ -1200,7 +1255,9 @@ dbx project:init:workspace --name web --root . --dir packages/web
 ```
 
 The scaffolded `dbx.config.ts` spells the resolved `project` fields out, so a
-generated project is self-describing from day one.
+generated project is self-describing from day one. Existing files in the output
+directory are never overwritten (pass `--force` to replace them), and a scaffold
+refuses to write outside its output directory.
 
 Pass `--package-manager <pm>` (`yarn` default, or `pnpm` / `npm` / `bun`) to
 choose the manager the scaffold targets.
@@ -1996,9 +2053,10 @@ toolchain: {
 }
 ```
 
-The settings file is **not managed**: existing keys are never overridden, and
-`dbx sync` never rewrites or removes it. Remove or change the generated keys
-freely. Setting `vscode: false` (or omitting it) adds nothing.
+These editor defaults are **not tracked** and existing keys are never
+overridden. (The separate Conventional Commits/Biome VS Code sync may track
+`.vscode/settings.json` when those sections are enabled.) Remove or change the
+generated keys freely. Setting `vscode: false` (or omitting it) adds nothing.
 
 ## Migrating
 
@@ -2271,8 +2329,9 @@ dbx watch
 ```
 
 `dbx watch` runs one sync, then watches the config file plus every task's
-`watch` globs and re-runs on change. Writes made by the sync itself must not
-re-trigger a run, so a short quiet window follows each sync.
+`watch` globs and re-runs on change. A config change reloads the config (and
+rebuilds the watched inputs) before re-syncing. Writes made by the sync itself
+must not re-trigger a run, so a short quiet window follows each sync.
 
 Only **input** files are watched (eg. `dbx.config.*`, `tsconfig.default.json`,
 `tsconfig.workspaces.json`), never the generated outputs — so a sync can never
@@ -2289,7 +2348,8 @@ dbx watch --list --json
 ```
 
 `dbx watch --force` runs even when there is no `dbx.config.*`, and
-`watch: { enabled: false }` disables it (so a plain `dbx watch` warns and exits).
+`watch: false` / `watch: { enabled: false }` disables it (so a plain
+`dbx watch` warns and exits).
 
 ## VS Code
 
@@ -2865,11 +2925,13 @@ prompts for the template, name and scope instead (Ctrl-C cancels).
 
 The offline builtins (`project`, `application`, `folder`, `monorepo`,
 `monorepo-example`, `workspace`) scaffold a generic, current project: a
-`dbx.config.ts` with only `project` metadata, a `package.json` that depends on
-`@deltabox/toolchain`, and no Turbo (Vite Task replaces it). They ask for a
-**package manager** (default `yarn`) and write that manager's catalog file (see
-[Catalogs](/guide/project#package-manager-and-catalogs)). The `vite-plus*` builtins
-delegate to `vp create` and need network access.
+`dbx.config.ts` with `project` metadata and the default `fmt.oxc` / `lint.oxc`
+sections, a runnable `src/index.ts` + smoke test, `.oxfmtrc.json` /
+`.oxlintrc.json`, and a `package.json` that depends on the same
+`@deltabox/toolchain` version as the CLI. There is no Turbo (Vite Task replaces
+it). They ask for a **package manager** (default `yarn`) and write that manager's
+catalog file (see [Catalogs](/guide/project#package-manager-and-catalogs)). The
+`vite-plus*` builtins delegate to `vp create` and need network access.
 
 ## Inputs (variables)
 
@@ -3661,7 +3723,7 @@ One-line description (`package.json` `description`).
 
 * **Type**: `boolean`
 
-Inherit the parent project metadata (default true). Set false to keep this project entirely independent of the root config.
+Inherit the parent project metadata (default true). Set false to keep this project metadata independent of the root config (other sections still merge normally).
 
 ## `ci`
 
@@ -3759,13 +3821,13 @@ Directory the step runs in.
 
 ###### `with`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `Record<string, string | number | boolean>`
 
 Inputs for a `uses` action.
 
 ###### `env`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `Record<string, string>`
 
 Environment variables for the step.
 
@@ -3783,9 +3845,21 @@ Extra complete jobs merged in.
 
 #### `tokens`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `Record<string, string | number | boolean>`
 
 Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
+
+#### `filename`
+
+* **Type**: `string`
+
+Override the generated workflow file name (eg. `deploy.yml`).
+
+#### `dir`
+
+* **Type**: `string`
+
+Directory for the workflow file (default `.github/workflows`).
 
 #### `enabled`
 
@@ -3837,9 +3911,21 @@ Extra complete jobs merged in.
 
 #### `tokens`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `Record<string, string | number | boolean>`
 
 Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
+
+#### `filename`
+
+* **Type**: `string`
+
+Override the generated workflow file name (eg. `deploy.yml`).
+
+#### `dir`
+
+* **Type**: `string`
+
+Directory for the workflow file (default `.github/workflows`).
 
 #### `enabled`
 
@@ -3917,7 +4003,7 @@ Glob patterns selecting the workspaces to version (relative to the root). Defaul
 
 * **Type**: `Record<string, unknown>`
 
-Custom bump rules for major/minor/patch/alpha (matchers or callbacks).
+Custom bump rules for major/minor/patch (matchers or callbacks).
 
 ##### `allowOverBump`
 
@@ -3960,6 +4046,100 @@ The issue-title workflow (`issues.yml`).
 * **Type**: `WorkflowSetting`
 
 The toolchain sync workflow (`sync.yml`).
+
+### `custom`
+
+* **Type**: `Record<string, CustomWorkflowSettings>`
+
+Additional custom workflows, keyed by id (eg. `custom.my-workflow`). Each id writes `<dir>/<filename ?? id>.yml`.
+
+### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
+## `changelog`
+
+Manual `toolchain.changelog` pipeline config for `dbx changelog`, the VS Code actions and the API; `ci.changelog` inherits these options.
+
+### `commitlint`
+
+* **Type**: `boolean | ChangelogCommitlintConfig`
+
+commitlint config; set `false` to disable the Conventional-Commits pipeline.
+
+#### `dir`
+
+* **Type**: `string`
+
+Directory the generated `commitlint.config.mjs` is written to (default: the project root). The husky hook and CI use `--config` to point at it.
+
+#### `types`
+
+* **Type**: `Array<string>`
+
+Allowed commit types (commitlint).
+
+#### `scopes`
+
+* **Type**: `Array<string>`
+
+Allowed commit scopes (commitlint).
+
+#### `enabled`
+
+* **Type**: `boolean`
+
+Enable commitlint (default true when the changelog is enabled). Set false to generate changelogs without the Conventional-Commits pipeline.
+
+### `versioning`
+
+* **Type**: `ChangelogVersioning`
+
+Automatic version bumping on changelog generation (default `true`).
+
+#### `target`
+
+* **Type**: `'uniform' | 'root-only' | 'individual'`
+
+`uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently (default `uniform`).
+
+#### `workspaces`
+
+* **Type**: `Array<string>`
+
+Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own.
+
+#### `bump`
+
+* **Type**: `Record<string, unknown>`
+
+Custom bump rules for major/minor/patch (matchers or callbacks).
+
+#### `allowOverBump`
+
+* **Type**: `boolean`
+
+Apply a bump once per matching change instead of once per run (default false).
+
+#### `commit`
+
+* **Type**: `unknown`
+
+Commit message formatting/credit options or callback.
+
+#### `provider`
+
+* **Type**: `unknown`
+
+`default`, `changesets`, a provider id, or a custom provider/callback.
+
+### `vscode`
+
+* **Type**: `boolean`
+
+Write the Conventional-Commits VS Code settings (default true).
 
 ### `enabled`
 
@@ -4343,13 +4523,13 @@ Package catalogs written to the package manager catalog file (`catalog:`).
 
 ### `packages`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `Record<string, string>`
 
 The default catalog: package name -> version range.
 
 ### `named`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `Record<string, Record<string, string>>`
 
 Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages.
 
@@ -4454,6 +4634,12 @@ Prefix non-indented lines with `<name>:` (default `dbx`).
 * **Type**: `string | Array<string>`
 
 Warning/error id, message substring, or `/regex/` to silence (single value or array).
+
+### `logger`
+
+* **Type**: `unknown`
+
+Custom `ToolchainLogger` implementation (TS/JS configs only; JSON cannot carry functions).
 
 ### `enabled`
 
@@ -4661,10 +4847,12 @@ Remove the turbo cache (.turbo/).
 
 Trigger one or more generated GitHub workflows (via `gh workflow run`).
 
-* `[workflows]` — Workflow ids or file names (default: every enabled workflow).
+* `[workflows]` — Workflow ids, custom ids, or file names (default: every enabled workflow).
 * `--cwd ‹dir›` — Project root (default: cwd).
 * `--ref ‹ref›` — Git ref to run the workflow on.
 * `--gh ‹cmd›` — The gh executable (default: gh).
+* `--list` — List the enabled workflows (and where they are written).
+* `--json` — With --list: print the workflows as JSON.
 
 ## `dbx changelog`
 
@@ -4713,6 +4901,7 @@ Scaffold a single-package TypeScript project.
 * `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
 * `--no-config` — Skip the dbx.config.ts file.
 * `--type ‹type›` — Project type: project | monorepo-root | monorepo-workspace.
+* `--force` — Overwrite existing files in the output directory.
 
 ## `dbx project:init:monorepo`
 
@@ -4725,6 +4914,7 @@ Scaffold a monorepo root (add --example for one example workspace).
 * `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
 * `--no-config` — Skip the dbx.config.ts file.
 * `--type ‹type›` — Project type: project | monorepo-root | monorepo-workspace.
+* `--force` — Overwrite existing files in the output directory.
 
 ## `dbx project:init:workspace`
 
@@ -4737,6 +4927,7 @@ Scaffold a monorepo workspace package into an existing monorepo root.
 * `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
 * `--no-config` — Skip the dbx.config.ts file.
 * `--type ‹type›` — Project type: project | monorepo-root | monorepo-workspace.
+* `--force` — Overwrite existing files in the output directory.
 
 ## `dbx project:config`
 
@@ -5761,8 +5952,8 @@ The merge is recursive:
   mention.
 * **Leaves** — booleans, strings, numbers and **arrays** — in the child
   **replace** the root's value (arrays are not concatenated).
-* **Repository-scoped sections are not inherited**: `ci` and the top-level
-  `changelog`, `tsconfig`, `vite.test` and `vite.run`. A workflow,
+* **Repository-scoped sections are not inherited**: `ci`, `catalogs` and the
+  top-level `changelog`, `tsconfig`, `vite.test` and `vite.run`. A workflow,
   workspace tsconfig tree, test config or task list describes the repository or
   one workspace, so a child starts without the parent's values for them. In
   particular, the root `tsconfig` task already expands every workspace
@@ -6343,7 +6534,7 @@ skipped (no empty entry, no file created).
 
 ## Custom bump rules
 
-`versioning.bump` maps `major`, `minor`, `patch` (and `alpha`) to a matcher.
+`versioning.bump` maps `major`, `minor` and `patch` to a matcher.
 Matchers can be booleans, substrings, `/regex/` strings, arrays, objects
 (`{ type, types, scope, scopes, pattern, match, breaking }`) or callbacks.
 

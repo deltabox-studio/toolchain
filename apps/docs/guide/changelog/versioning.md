@@ -81,7 +81,7 @@ skipped (no empty entry, no file created).
 
 ## Custom bump rules
 
-`versioning.bump` maps `major`, `minor`, `patch` (and `alpha`) to a matcher.
+`versioning.bump` maps `major`, `minor` and `patch` to a matcher.
 Matchers can be booleans, substrings, `/regex/` strings, arrays, objects
 (`{ type, types, scope, scopes, pattern, match, breaking }`) or callbacks.
 

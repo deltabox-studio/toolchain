@@ -105,10 +105,14 @@ section still generates correct tokens from its existing metadata.
 `dbx project:init`, `dbx project:init:monorepo` and
 `dbx project:init:workspace` read `project` as their defaults, and:
 
-- **`name` is required** (from `--name` or `project.name`) — a scaffold fails
-  with a clear error when it is missing.
-- **`type` must be valid** (`project`, `monorepo-root` or `monorepo-workspace`)
-  when passed explicitly or set in the config; an invalid value is rejected.
+- **`name` is required** (from `--name` or `project.name`) — a
+  scaffold fails with a clear error when it is missing. A workspace always needs
+  an explicit `--name` (the root's name is not the workspace name).
+- **`--type` must be valid** (`project`, `monorepo-root` or `monorepo-workspace`)
+  when passed explicitly; an invalid value is rejected. A `project.type` in the
+  config still drives `dbx sync` detection, but scaffolding deliberately ignores
+  it (a scaffold launched from a monorepo root must not tag a workspace with the
+  root's type).
 
 ```sh
 dbx project:init --name my-app --scope @acme --type project --out ./my-app
@@ -118,7 +122,9 @@ dbx project:init:workspace --name web --root . --dir packages/web
 ```
 
 The scaffolded `dbx.config.ts` spells the resolved `project` fields out, so a
-generated project is self-describing from day one.
+generated project is self-describing from day one. Existing files in the output
+directory are never overwritten (pass `--force` to replace them), and a scaffold
+refuses to write outside its output directory.
 
 Pass `--package-manager <pm>` (`yarn` default, or `pnpm` / `npm` / `bun`) to
 choose the manager the scaffold targets.

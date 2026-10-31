@@ -105,9 +105,10 @@ toolchain: {
 }
 ```
 
-The settings file is **not managed**: existing keys are never overridden, and
-`dbx sync` never rewrites or removes it. Remove or change the generated keys
-freely. Setting `vscode: false` (or omitting it) adds nothing.
+These editor defaults are **not tracked** and existing keys are never
+overridden. (The separate Conventional Commits/Biome VS Code sync may track
+`.vscode/settings.json` when those sections are enabled.) Remove or change the
+generated keys freely. Setting `vscode: false` (or omitting it) adds nothing.
 
 ## Migrating
 

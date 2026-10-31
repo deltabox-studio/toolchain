@@ -164,10 +164,12 @@ Remove the turbo cache (.turbo/).
 
 Trigger one or more generated GitHub workflows (via `gh workflow run`).
 
-- `[workflows]` — Workflow ids or file names (default: every enabled workflow).
+- `[workflows]` — Workflow ids, custom ids, or file names (default: every enabled workflow).
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--ref ‹ref›` — Git ref to run the workflow on.
 - `--gh ‹cmd›` — The gh executable (default: gh).
+- `--list` — List the enabled workflows (and where they are written).
+- `--json` — With --list: print the workflows as JSON.
 
 ## `dbx changelog`
 
@@ -216,6 +218,7 @@ Scaffold a single-package TypeScript project.
 - `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
 - `--no-config` — Skip the dbx.config.ts file.
 - `--type ‹type›` — Project type: project | monorepo-root | monorepo-workspace.
+- `--force` — Overwrite existing files in the output directory.
 
 ## `dbx project:init:monorepo`
 
@@ -228,6 +231,7 @@ Scaffold a monorepo root (add --example for one example workspace).
 - `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
 - `--no-config` — Skip the dbx.config.ts file.
 - `--type ‹type›` — Project type: project | monorepo-root | monorepo-workspace.
+- `--force` — Overwrite existing files in the output directory.
 
 ## `dbx project:init:workspace`
 
@@ -240,6 +244,7 @@ Scaffold a monorepo workspace package into an existing monorepo root.
 - `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
 - `--no-config` — Skip the dbx.config.ts file.
 - `--type ‹type›` — Project type: project | monorepo-root | monorepo-workspace.
+- `--force` — Overwrite existing files in the output directory.
 
 ## `dbx project:config`
 

@@ -87,7 +87,7 @@ One-line description (`package.json` `description`).
 
 - **Type**: `boolean`
 
-Inherit the parent project metadata (default true). Set false to keep this project entirely independent of the root config.
+Inherit the parent project metadata (default true). Set false to keep this project metadata independent of the root config (other sections still merge normally).
 
 ## `ci`
 
@@ -185,13 +185,13 @@ Directory the step runs in.
 
 ###### `with`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `Record<string, string | number | boolean>`
 
 Inputs for a `uses` action.
 
 ###### `env`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `Record<string, string>`
 
 Environment variables for the step.
 
@@ -209,9 +209,21 @@ Extra complete jobs merged in.
 
 #### `tokens`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `Record<string, string | number | boolean>`
 
 Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
+
+#### `filename`
+
+- **Type**: `string`
+
+Override the generated workflow file name (eg. `deploy.yml`).
+
+#### `dir`
+
+- **Type**: `string`
+
+Directory for the workflow file (default `.github/workflows`).
 
 #### `enabled`
 
@@ -263,9 +275,21 @@ Extra complete jobs merged in.
 
 #### `tokens`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `Record<string, string | number | boolean>`
 
 Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
+
+#### `filename`
+
+- **Type**: `string`
+
+Override the generated workflow file name (eg. `deploy.yml`).
+
+#### `dir`
+
+- **Type**: `string`
+
+Directory for the workflow file (default `.github/workflows`).
 
 #### `enabled`
 
@@ -343,7 +367,7 @@ Glob patterns selecting the workspaces to version (relative to the root). Defaul
 
 - **Type**: `Record<string, unknown>`
 
-Custom bump rules for major/minor/patch/alpha (matchers or callbacks).
+Custom bump rules for major/minor/patch (matchers or callbacks).
 
 ##### `allowOverBump`
 
@@ -386,6 +410,100 @@ The issue-title workflow (`issues.yml`).
 - **Type**: `WorkflowSetting`
 
 The toolchain sync workflow (`sync.yml`).
+
+### `custom`
+
+- **Type**: `Record<string, CustomWorkflowSettings>`
+
+Additional custom workflows, keyed by id (eg. `custom.my-workflow`). Each id writes `<dir>/<filename ?? id>.yml`.
+
+### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
+## `changelog`
+
+Manual `toolchain.changelog` pipeline config for `dbx changelog`, the VS Code actions and the API; `ci.changelog` inherits these options.
+
+### `commitlint`
+
+- **Type**: `boolean | ChangelogCommitlintConfig`
+
+commitlint config; set `false` to disable the Conventional-Commits pipeline.
+
+#### `dir`
+
+- **Type**: `string`
+
+Directory the generated `commitlint.config.mjs` is written to (default: the project root). The husky hook and CI use `--config` to point at it.
+
+#### `types`
+
+- **Type**: `Array<string>`
+
+Allowed commit types (commitlint).
+
+#### `scopes`
+
+- **Type**: `Array<string>`
+
+Allowed commit scopes (commitlint).
+
+#### `enabled`
+
+- **Type**: `boolean`
+
+Enable commitlint (default true when the changelog is enabled). Set false to generate changelogs without the Conventional-Commits pipeline.
+
+### `versioning`
+
+- **Type**: `ChangelogVersioning`
+
+Automatic version bumping on changelog generation (default `true`).
+
+#### `target`
+
+- **Type**: `'uniform' | 'root-only' | 'individual'`
+
+`uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently (default `uniform`).
+
+#### `workspaces`
+
+- **Type**: `Array<string>`
+
+Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own.
+
+#### `bump`
+
+- **Type**: `Record<string, unknown>`
+
+Custom bump rules for major/minor/patch (matchers or callbacks).
+
+#### `allowOverBump`
+
+- **Type**: `boolean`
+
+Apply a bump once per matching change instead of once per run (default false).
+
+#### `commit`
+
+- **Type**: `unknown`
+
+Commit message formatting/credit options or callback.
+
+#### `provider`
+
+- **Type**: `unknown`
+
+`default`, `changesets`, a provider id, or a custom provider/callback.
+
+### `vscode`
+
+- **Type**: `boolean`
+
+Write the Conventional-Commits VS Code settings (default true).
 
 ### `enabled`
 
@@ -769,13 +887,13 @@ Package catalogs written to the package manager catalog file (`catalog:`).
 
 ### `packages`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `Record<string, string>`
 
 The default catalog: package name -> version range.
 
 ### `named`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `Record<string, Record<string, string>>`
 
 Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages.
 
@@ -880,6 +998,12 @@ Prefix non-indented lines with `<name>:` (default `dbx`).
 - **Type**: `string | Array<string>`
 
 Warning/error id, message substring, or `/regex/` to silence (single value or array).
+
+### `logger`
+
+- **Type**: `unknown`
+
+Custom `ToolchainLogger` implementation (TS/JS configs only; JSON cannot carry functions).
 
 ### `enabled`
 

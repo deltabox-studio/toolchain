@@ -39,6 +39,8 @@ toolchain: {
 | `steps`               | Inject steps before/after a job's generated steps (one group or per-job).       |
 | `jobs`                | Merge extra complete jobs.                                                      |
 | `tokens`              | Override workflow tokens (`nodeVersion`, `packageManager`, `yarnVersion`, ...). |
+| `filename`            | Override the generated file name (default `ci.yml`, `release.yml`, ...).        |
+| `dir`                 | Override the output directory (default `.github/workflows`).                    |
 
 ## Steps
 
@@ -63,3 +65,48 @@ package manager without changing `project`.
 
 A string is used as the workflow file's exact content. It is not merged, not
 token-replaced and gets no generated header; an empty string disables it.
+
+## Custom workflows
+
+Add any number of extra workflows with `toolchain.ci.custom`, keyed by workflow
+id. A custom workflow is enabled by **presence** (there is no boolean form): a
+string is written verbatim, or an object is merged over an empty workflow —
+build it with `triggers`, `extra` and `jobs` (plus `filename` / `dir`):
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        custom: {
+            deploy: {
+                triggers: { workflow_dispatch: {}, push: { branches: ['main'] } },
+                filename: 'deploy.yml', // default: deploy.yml
+                dir: '.github/workflows', // default
+                jobs: {
+                    deploy: {
+                        'runs-on': 'ubuntu-latest',
+                        steps: [
+                            { uses: 'actions/checkout@v4' },
+                            { run: 'yarn deploy' },
+                        ],
+                    },
+                },
+            },
+        },
+    },
+}
+```
+
+This writes `.github/workflows/deploy.yml` and manages it like any built-in
+workflow (the generated header is prepended, and `dbx sync --check` tracks it).
+
+## Existing workflows
+
+If a generated workflow path already contains a hand-written workflow that dbx has
+never managed (no manifest entry and no generated header), `dbx sync` leaves it
+untouched, warns, and records the conflict in `.dbx/toolchain/manifest.json`.
+Set `ci.<id>: { enabled: false }` (or, for a custom workflow,
+`ci.custom.<id>: { enabled: false }`) to make the opt-out explicit. The file is
+also never deleted when the workflow is later disabled, because dbx did not
+create it. Use `dbx workflow --list` (or `--list --json`) to see the enabled
+workflows and their exact paths; `dbx workflow <id|file>` honours `filename` and
+`dir` overrides.

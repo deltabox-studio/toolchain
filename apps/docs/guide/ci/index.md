@@ -53,5 +53,9 @@ disable the whole section (and every nested workflow) at once.
 | Issues    | `issues.yml`    | [Issues](/guide/ci/issues)                |
 | Toolchain | `sync.yml`      | [Sync](/guide/ci/sync)                    |
 
+Extra workflows can be defined under `toolchain.ci.custom.<id>` (for example
+`ci.custom.deploy` writes `.github/workflows/deploy.yml`). Each accepts the same
+workflow options, plus `filename` and `dir` overrides.
+
 See [Workflow settings](/guide/ci/settings) for the shared object options and the
 [Changelog](/guide/changelog/) guide for the versioning/commitlint pipeline.
