@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-template",
-    "version": "1.11.4",
+    "version": "2.0.0",
     "description": "Custom project/tooling/pipeline template registry: builtin, local and online (npm/git/Vite+) sources.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
