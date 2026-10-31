@@ -179,6 +179,7 @@ Scan commits, derive the semver bump and update the CHANGELOG.md files + version
 - `--dry-run` — Print the proposed entry without writing.
 - `--version ‹semver›` — Override the version.
 - `--base-version ‹semver›` — Bump from this version instead.
+- `--release-notes ‹semver›` — Print the release body for this version and exit.
 - `--processing-method ‹method›` — `latest` (default), `all`, or a git range.
 - `--format-only` — Only regroup existing changelogs.
 - `--no-package-changes-section` — Skip the package-changes footer.

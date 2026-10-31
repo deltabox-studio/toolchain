@@ -149,5 +149,5 @@ export default defineConfig({
 ```
 
 See the [Monorepo guide](/guide/monorepo) for the full task setup,
-[Migrations](/guide/migrations) for the `dbx migrate` reference, and
+[Migrations](/guide/migrations/) for the `dbx migrate` reference, and
 [Providers (Vite+)](/guide/providers) for the `dbx vite` passthrough.

@@ -100,7 +100,7 @@ dbx migrate --check                        # CI: exit 1 when stale
 dbx migrate:list
 ```
 
-See [Migrations](/guide/migrations).
+See [Migrations](/guide/migrations/).
 
 ## Tsconfig / cleanup / changelog / workflows
 

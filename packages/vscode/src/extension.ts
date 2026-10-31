@@ -968,6 +968,10 @@ export function activate(context: vscode.ExtensionContext): void {
     /** Run a provider command (`dbx <command.name>`) in a terminal. */
     const runProviderCommand = async (node?: ProviderNode | ProviderCommandNode): Promise<void> => {
         if (!node) return;
+        if (!node.root) {
+            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
+            return;
+        }
         let command = node.kind === 'command' ? node.command : undefined;
         if (!command) {
             if (node.provider.commands.length === 0) {

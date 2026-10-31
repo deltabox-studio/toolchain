@@ -1,8 +1,34 @@
 # Changelog
 
-## 2.0.0 (October 2026)
+## 3.0.0 (October 2026)
 
 <!-- release:start -->
+
+### Breaking Changes
+- Document breaking changes group order ([#56c214e](https://github.com/deltabox-studio/toolchain/commit/56c214e) by [T0chi](https://github.com/T0chi))
+  - Note the default Breaking Changes -> feat -> fix order and that breaking grouping works with custom commit formatters.
+#### Changelog
+- Group breaking changes first ([#24dcb98](https://github.com/deltabox-studio/toolchain/commit/24dcb98) by [T0chi](https://github.com/T0chi))
+  - Detect subject and BREAKING CHANGE footer breaks, group them under Breaking Changes ahead of feat/fix, and keep the grouping with custom commit formatters and --format-only.
+### Bug fixes
+#### Vscode
+- Always show builtin providers and templates ([#c6dd01a](https://github.com/deltabox-studio/toolchain/commit/c6dd01a) by [T0chi](https://github.com/T0chi))
+#### Changelog
+- Make release notes first-release safe ([#6071e4d](https://github.com/deltabox-studio/toolchain/commit/6071e4d) by [T0chi](https://github.com/T0chi))
+  - Extract release bodies through a tested CLI helper that only uses tag versions present in CHANGELOG.md, skips the current version, and falls back to the newest entry when there is no prior release.
+### Documentation
+- Auto-generate sidebar and reorganize guides ([#887e703](https://github.com/deltabox-studio/toolchain/commit/887e703) by [T0chi](https://github.com/T0chi))
+- Document release-notes extraction ([#1367353](https://github.com/deltabox-studio/toolchain/issues/1367353) by [T0chi](https://github.com/T0chi))
+  - Document dbx changelog --release-notes, the last-released-version matching and the first-release fallback.
+
+### Package changes
+#### Added
+- `vite-plugin-vitepress-auto-sidebar` `^1.7.1`
+
+<!-- release:end -->
+
+
+## 2.0.0 (October 2026)
 
 ### New features
 #### Changelog
@@ -305,9 +331,6 @@
 ### Package changes
 #### Added
 - `jsonc-parser` `^3.3.1`
-
-<!-- release:end -->
-
 
 ## 1.11.4 (October 2026)
 

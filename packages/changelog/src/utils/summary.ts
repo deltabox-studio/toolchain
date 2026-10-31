@@ -104,6 +104,7 @@ function commitItem(
     }
     return {
         parsed,
+        breaking: parsed.breaking || /BREAKING[ -]CHANGE/i.test(record.body),
         text,
         bodyParagraphs: options.body === false ? [] : formatBody(record.body),
     };

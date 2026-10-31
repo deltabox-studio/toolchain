@@ -14,6 +14,11 @@ export {
 export { deriveBump, readCommits } from './utils/git.js';
 export { type ProjectGraphNode, readProjectGraph, relatedWorkspacePaths } from './utils/graph.js';
 export { parseExistingChangelog, reformatChangelogContent } from './utils/reformat.js';
+export {
+    buildReleaseNotes,
+    normalizeReleaseVersion,
+    releaseNotesFromGit,
+} from './utils/release-notes.js';
 export { buildSummary, renderCommitRef } from './utils/summary.js';
 export * from './utils/types.js';
 export { renderChangelogEntry } from './utils/version.js';
