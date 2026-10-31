@@ -42,7 +42,7 @@ function withPushBranches(
 
 /** The workflow settings declared under `toolchain.ci` (all opt-in). */
 function declaredWorkflows(config: ToolchainConfig): Partial<Record<WorkflowId, WorkflowSetting>> {
-    const ci = sectionConfig(config.ci) ?? {};
+    const ci = sectionEnabled(config.ci) ? (sectionConfig(config.ci) ?? {}) : {};
     return {
         ci: ci.ci,
         changelog: ci.changelog as WorkflowSetting | undefined,
@@ -117,7 +117,7 @@ export function workflowFilePaths(config: ToolchainConfig): string[] {
         const setting = workflows[id];
         if (isEnabled(setting)) files.push(workflowFilePath(id, setting, filename));
     }
-    const custom = sectionConfig(config.ci)?.custom ?? {};
+    const custom = sectionEnabled(config.ci) ? (sectionConfig(config.ci)?.custom ?? {}) : {};
     for (const [id, setting] of Object.entries(custom)) {
         const value = setting as WorkflowSetting;
         if (isEnabled(value)) files.push(workflowFilePath(id, value));
@@ -228,7 +228,9 @@ export function changelogSyncTask(): SyncTask {
 
             // Config-defined workflows (`ci.custom.<id>`): enabled by presence,
             // starting from an empty skeleton or written verbatim when a string.
-            const custom = sectionConfig(ctx.config.ci)?.custom ?? {};
+            const custom = sectionEnabled(ctx.config.ci)
+                ? (sectionConfig(ctx.config.ci)?.custom ?? {})
+                : {};
             for (const [id, customSetting] of Object.entries(custom)) {
                 const setting = customSetting as WorkflowSetting;
                 if (!isEnabled(setting)) continue;

@@ -118,10 +118,38 @@ function packageManagerVersion(tokens: Replacements): string {
     const packageManager = String(tokens.packageManager ?? 'yarn');
     return String(
         tokens.packageManagerVersion ??
-            DEFAULT_PACKAGE_MANAGER_VERSIONS[packageManager] ??
             tokens.yarnVersion ??
+            DEFAULT_PACKAGE_MANAGER_VERSIONS[packageManager] ??
             '4.17.1'
     );
+}
+
+/**
+ * Merge the default, base and per-workflow tokens. A workflow that switches
+ * `packageManager` without a matching version must not keep the inherited
+ * manager's version (eg. `pnpm` with yarn's `4.17.1`), so the stale version
+ * tokens are dropped and the new manager's default applies.
+ */
+function workflowTokens(options: RenderWorkflowOptions): Replacements {
+    const configTokens = options.config?.tokens ?? {};
+    const tokens = { ...DEFAULT_WORKFLOW_TOKENS, ...options.tokens, ...configTokens };
+    const manager = configTokens.packageManager;
+    if (manager !== undefined && manager !== options.tokens.packageManager) {
+        if (
+            configTokens.packageManagerVersion === undefined &&
+            configTokens.yarnVersion === undefined
+        ) {
+            delete tokens.packageManagerVersion;
+            delete tokens.yarnVersion;
+        }
+    }
+    if (
+        configTokens.packageManagerVersion === undefined &&
+        configTokens.yarnVersion !== undefined
+    ) {
+        tokens.packageManagerVersion = configTokens.yarnVersion;
+    }
+    return tokens;
 }
 
 /** The command that runs the toolchain CLI under the configured package manager. */
@@ -440,7 +468,7 @@ export interface RenderWorkflowOptions {
 export function renderWorkflow(id: WorkflowId, options: RenderWorkflowOptions): string | undefined {
     const config = options.config ?? {};
     if (config.enabled === false) return undefined;
-    const tokens = { ...DEFAULT_WORKFLOW_TOKENS, ...options.tokens, ...config.tokens };
+    const tokens = workflowTokens(options);
     const base = defaultWorkflows(tokens, { commitlint: options.commitlint !== false })[id];
     // Resolve any `{{ }}` tokens that survived into the object (eg. extra steps).
     const resolved = applyReplacementsDeep(applyWorkflowConfig(base, config), tokens);
@@ -457,7 +485,7 @@ export function renderCustomWorkflow(
 ): string | undefined {
     const config = options.config ?? {};
     if (config.enabled === false) return undefined;
-    const tokens = { ...DEFAULT_WORKFLOW_TOKENS, ...options.tokens, ...config.tokens };
+    const tokens = workflowTokens(options);
     const base: Workflow = { name: id, on: {}, jobs: {} };
     const resolved = applyReplacementsDeep(applyWorkflowConfig(base, config), tokens);
     const hasTriggers =

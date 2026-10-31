@@ -109,6 +109,47 @@ describe('workflow config', () => {
         ).toBeUndefined();
     });
 
+    it('uses the overridden package manager version and legacy yarnVersion', () => {
+        const pnpm = renderWorkflow('ci', {
+            tokens: {
+                packageManager: 'yarn',
+                packageManagerVersion: '4.17.1',
+                yarnVersion: '4.17.1',
+            },
+            config: { tokens: { packageManager: 'pnpm' } },
+        })!;
+        expect(pnpm).toContain('corepack prepare pnpm@10.11.1 --activate');
+        expect(pnpm).toContain('pnpm install --frozen-lockfile');
+
+        const legacy = renderWorkflow('ci', {
+            tokens: {},
+            config: { tokens: { yarnVersion: '4.0.0' } },
+        })!;
+        expect(legacy).toContain('corepack prepare yarn@4.0.0 --activate');
+    });
+
+    it('sets up pnpm, npm and bun installs', () => {
+        const pnpm = renderWorkflow('ci', {
+            tokens: { packageManager: 'pnpm', packageManagerVersion: '10.11.1' },
+        })!;
+        expect(pnpm).toContain('pnpm install --frozen-lockfile');
+        expect(pnpm).toContain('pnpm exec dbx');
+
+        const npm = renderWorkflow('ci', {
+            tokens: { packageManager: 'npm', packageManagerVersion: '11.19.0' },
+        })!;
+        expect(npm).toContain('npm install -g npm@11.19.0');
+        expect(npm).toContain('npm ci');
+        expect(npm).toContain('npx dbx');
+
+        const bun = renderWorkflow('ci', {
+            tokens: { packageManager: 'bun', packageManagerVersion: '1.3.0' },
+        })!;
+        expect(bun).toContain('oven-sh/setup-bun@v2');
+        expect(bun).toContain('bun install --frozen-lockfile');
+        expect(bun).toContain('bunx dbx');
+    });
+
     it('renderWorkflows omits disabled workflows', () => {
         const files = renderWorkflows({}, { issues: false, ci: { pushBranches: ['main'] } });
         expect(files['ci.yml']).toBeDefined();

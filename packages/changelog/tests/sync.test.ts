@@ -176,6 +176,11 @@ describe('changelogSyncTask', () => {
         expect(workflowFilenames(config)).toEqual(['checks.yaml', 'deploy.yaml']);
     });
 
+    it('reports no workflow paths when the ci section is disabled', () => {
+        expect(workflowFilePaths({ ci: { enabled: false, ci: true } })).toEqual([]);
+        expect(workflowFilenames({ ci: { enabled: false, ci: true } })).toEqual([]);
+    });
+
     it('warns and skips duplicate workflow paths', async () => {
         const warnings: string[] = [];
         const files = await changelogSyncTask().run({
