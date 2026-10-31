@@ -52,7 +52,10 @@ export function watchCommand(): ToolchainCommand {
                 );
                 return;
             }
-            if (sectionConfig(context.config.watch)?.enabled === false) {
+            if (
+                context.config.watch === false ||
+                sectionConfig(context.config.watch)?.enabled === false
+            ) {
                 logger.warn('watch is disabled in the config.');
                 return;
             }

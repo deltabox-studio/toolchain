@@ -7,7 +7,7 @@ import {
     type ToolchainProviderCommand,
 } from '@deltabox/toolchain-shared';
 
-import { loadToolchainProviders } from '../../providers.js';
+import { loadToolchainProviders, providerPolicy } from '../../providers.js';
 
 const CWD_OPTION = { flags: '--cwd <dir>', description: 'Project root (default: cwd).' };
 
@@ -28,6 +28,17 @@ function providerPassthrough(
         run: async (opts, context) => {
             const raw = (opts.args as string[] | undefined) ?? [];
             const cwd = (opts.cwd as string | undefined) ?? context.cwd;
+            const policy = providerPolicy(context.config);
+            if (
+                policy &&
+                !readAllProvidersSync(cwd, policy).some(candidate => candidate.id === provider.id)
+            ) {
+                logger.error(
+                    `provider "${provider.id}" is not allowed by toolchain.registry.providers.`
+                );
+                process.exitCode = 1;
+                return;
+            }
             if (!provider.binary) {
                 logger.error(`provider "${provider.id}" has no binary to run.`);
                 process.exitCode = 1;

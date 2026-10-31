@@ -21,18 +21,37 @@ export function getConfigSelection(): ConfigSelection {
 /**
  * Pull `--no-config` / `--config <file>` out of `argv` so they work before or
  * after a subcommand. Everything after `--` is left untouched.
+ *
+ * A provider passthrough (`vite`, `vite:*`, or a custom provider command)
+ * receives its operands verbatim, so config flags after that command are left
+ * alone (`dbx vite build --config vite.custom.ts` must reach `vp`).
  */
-export function extractConfigSelection(argv: string[]): {
+export function extractConfigSelection(
+    argv: string[],
+    isPassthrough?: (name: string) => boolean
+): {
     argv: string[];
     selection: ConfigSelection;
 } {
     const found: ConfigSelection = {};
     const rest: string[] = [];
+    let command: string | undefined;
+    let passthrough = false;
     for (let index = 0; index < argv.length; index++) {
         const arg = argv[index] as string;
         if (arg === '--') {
             rest.push(...argv.slice(index));
             break;
+        }
+        // The first non-flag operand after node + script is the subcommand.
+        // Only a passthrough command owns the rest of its argv verbatim.
+        if (index >= 2 && command === undefined && !arg.startsWith('-')) {
+            command = arg;
+            passthrough = isPassthrough?.(arg) === true;
+        }
+        if (command !== undefined && passthrough) {
+            rest.push(arg);
+            continue;
         }
         if (arg === '--no-config') {
             found.noConfig = true;

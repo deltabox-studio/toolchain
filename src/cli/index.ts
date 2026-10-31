@@ -54,8 +54,8 @@ export function builtinCommands(): ToolchainCommand[] {
 }
 
 /** Every built-in command name (a bare Vite+ command never shadows one). */
-function builtinCommandNames(): Set<string> {
-    return new Set(builtinCommands().map(command => command.name));
+function builtinCommandNames(commands: ToolchainCommand[] = builtinCommands()): Set<string> {
+    return new Set(commands.map(command => command.name));
 }
 
 /**
@@ -134,7 +134,7 @@ export function extractUpdateCheck(argv: string[]): { argv: string[]; updateChec
  * passthrough (`vite:*`) is the exception: it keeps commander's default output
  * so the spawned `vp` process keeps its own coloured logging.
  */
-export function createCli(): Command {
+export function createCli(commands: ToolchainCommand[] = builtinCommands()): Command {
     const program = new Command();
     // Capture commander's defaults before overriding them (used for passthrough).
     const defaults = program.configureOutput();
@@ -178,22 +178,38 @@ export function createCli(): Command {
         styleArgumentText: str => logger.colors.yellow(str),
         styleArgumentTerm: str => logger.colors.yellow(str),
     });
-    registerToolchainCommands(program, builtinCommands());
+    registerToolchainCommands(program, commands);
     return program;
 }
 
 /** Parse and run the CLI. */
 export async function runCli(argv: string[] = process.argv): Promise<void> {
+    const commands = builtinCommands();
+    const commandNames = builtinCommandNames(commands);
+    const passthroughNames = new Set(
+        commands.filter(command => command.passthrough).map(command => command.name)
+    );
     const { argv: rest, options } = extractLogOptions(argv);
     const { argv: rest2, updateCheck } = extractUpdateCheck(rest);
-    const { argv: rest3, selection } = extractConfigSelection(rest2);
+    const { argv: rest3, selection } = extractConfigSelection(
+        rest2,
+        // A bare Vite+ command is rewritten to `vite <command>` later, so it is
+        // a passthrough too unless a built-in command shadows it.
+        name =>
+            passthroughNames.has(name) ||
+            (!commandNames.has(name) && resolveVpCommand(name) !== undefined)
+    );
     setConfigSelection(selection);
     setLogOverrides(options);
     const wantsHelp = argv.some(arg => arg === '--help' || arg === '-h' || arg === '--version');
-    // The notice is human output on stdout; never let it corrupt `--json`.
-    const wantsJson = rest3.some(arg => arg === '--json');
+    // The notice is human output on stdout; never let it corrupt machine output.
+    const machineCommands = new Set(['template:info']);
+    const machineFlags = new Set(['--json', '--alias', '--paths', '--references']);
+    const wantsJson =
+        rest3.some(arg => machineFlags.has(arg)) ||
+        (rest3[2] !== undefined && machineCommands.has(rest3[2]));
     if (!wantsHelp && !wantsJson) runUpdateCheck(rootPkg.version, updateCheck);
-    await createCli().parseAsync(withDefaultVite(rest3));
+    await createCli(commands).parseAsync(withDefaultVite(rest3, commandNames));
 }
 
 /** Whether this module is the process entry point (symlink-safe). */

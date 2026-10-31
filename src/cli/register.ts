@@ -90,6 +90,7 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
             // Bracket the run with clack's `intro`/`outro` for a human-facing
             // command (not a provider passthrough, and not machine/quiet output).
             const machine =
+                cmd.name === 'template:info' ||
                 provided.json === true ||
                 provided.alias === true ||
                 provided.paths === true ||
