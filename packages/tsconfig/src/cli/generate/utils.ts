@@ -24,6 +24,8 @@ export function generateTsconfig(options: {
     disableComposite?: boolean;
     /** Write the generated files to disk (default true). */
     write?: boolean;
+    /** Log sink (default: the shared info logger). Pass a no-op to stay quiet. */
+    log?: (message: string) => void;
     /** Managed file overrides applied before generating. */
     overrides?: TsconfigOverrides;
 }) {
@@ -40,6 +42,7 @@ export function generateTsconfig(options: {
         ignoreAliases,
         ignoreReferences,
         write = true,
+        log = (message: string) => logger.info(message),
         overrides,
     } = options;
 
@@ -54,7 +57,7 @@ export function generateTsconfig(options: {
             throw new Error(`options.monorepoTsconfigPath not set for ${tsconfigPath}`);
         }
 
-        logger.info(`  - ${dirnameRelative}`);
+        log(`  - ${dirnameRelative}`);
 
         const tsconfigFilename = path.basename(tsconfigPath);
 
@@ -167,9 +170,14 @@ export function generateTsconfig(options: {
             tsconfigMonorepo,
             tsconfigBuild,
         };
-    } catch (e: any) {
-        logger.error(`  Failed to extend tsconfig for ${dirnameRelative} due to: ${e}`);
-        process.exit(1);
+    } catch (e: unknown) {
+        // Never exit the host process from library code: a CLI caller can log
+        // the error, while `dbx sync` can report it through its normal runner.
+        throw new Error(
+            `Failed to extend tsconfig for ${dirnameRelative}: ${
+                e instanceof Error ? e.message : String(e)
+            }`
+        );
     }
 }
 

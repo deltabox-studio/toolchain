@@ -65,6 +65,20 @@ describe('generateTsconfigs', () => {
         expect(core.newTsconfig.references).toEqual([{ path: '../cli/tsconfig.json' }]);
     });
 
+    it('wires references on the first dry run (generated targets may not exist yet)', () => {
+        const cwd = tmp();
+        writeMonorepo(cwd);
+        const results = generateTsconfigs({
+            cwd,
+            refs: true,
+            composite: true,
+            log: false,
+            write: false,
+        });
+        const core = results.find(r => r.dirnameRelative === 'packages/core')!;
+        expect(core.newTsconfig.references).toEqual([{ path: '../cli/tsconfig.json' }]);
+    });
+
     it('generates tsconfig.json even without a workspaces tsconfig', () => {
         const cwd = tmp();
         writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {});

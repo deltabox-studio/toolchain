@@ -122,6 +122,7 @@ export function generateTsconfigs(
                 ignoreAliases: !enableAliases,
                 ignoreReferences: !enableReferences,
                 write,
+                log: say,
                 ...(options.overrides ? { overrides: options.overrides } : {}),
             })
         );
@@ -130,6 +131,12 @@ export function generateTsconfigs(
     if (!enableReferences) return results;
 
     say('Checking for additional tsconfig changes...');
+    // A reference may point at a workspace whose generated tsconfig does not
+    // exist yet (a fresh checkout, or a workspace just added). Its in-memory
+    // result is authoritative for this run, so one sync converges.
+    const generatedByPath = new Map(
+        results.map(result => [path.resolve(result.targetTsconfigPath), result] as const)
+    );
     for (const result of results) {
         const { dirname, dirnameRelative, targetTsconfigPath, config } = result;
         say(`  - ${dirnameRelative}`);
@@ -137,17 +144,21 @@ export function generateTsconfigs(
         if (config.references?.length) {
             config.references = config.references.filter(ref => {
                 const refTsconfigPath = path.resolve(dirname, ref.path);
-                if (!fs.existsSync(refTsconfigPath)) {
+                const generated = generatedByPath.get(refTsconfigPath);
+                let composite: unknown;
+                if (generated) {
+                    composite = generated.config.compilerOptions?.composite;
+                } else if (fs.existsSync(refTsconfigPath)) {
+                    const refTsconfig = JSON.parse(
+                        fs.readFileSync(refTsconfigPath, 'utf-8')
+                    ) as TsConfigJson;
+                    composite = refTsconfig.compilerOptions?.composite;
+                } else {
                     say(`    tsconfig not found for ${ref.path}, skipping.`);
                     return false;
                 }
-                const refTsconfig = JSON.parse(
-                    fs.readFileSync(refTsconfigPath, 'utf-8')
-                ) as TsConfigJson;
-                const composite = refTsconfig.compilerOptions?.composite;
                 const hasCompositeOption = composite !== null && composite !== undefined;
-                const compositeDisabled = !hasCompositeOption || composite === false;
-                return !compositeDisabled;
+                return hasCompositeOption && composite !== false;
             });
         }
 
