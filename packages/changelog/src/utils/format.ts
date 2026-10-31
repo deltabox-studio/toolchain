@@ -27,7 +27,7 @@ const RULE_TITLES: Record<string, string> = {
     build: 'Build system',
     ci: 'CI',
     revert: 'Reverts',
-    breaking: 'Breaking changes',
+    breaking: 'Breaking Changes',
 };
 
 const RULE_ORDER = [
@@ -161,9 +161,10 @@ export function groupItems(items: GroupedItem[], setting?: ChangelogGroupsSettin
     const rules = new Map<string, GroupedRule>();
     for (const item of items) {
         const { parsed } = item;
+        const type = item.breaking || parsed.breaking ? 'breaking' : parsed.type;
         const rule =
-            rules.get(parsed.type) ??
-            ({ title: ruleTitle(parsed.type), ungrouped: [], scopes: new Map() } as GroupedRule);
+            rules.get(type) ??
+            ({ title: ruleTitle(type), ungrouped: [], scopes: new Map() } as GroupedRule);
         if (parsed.scope) {
             const bucket = rule.scopes.get(parsed.scope) ?? [];
             bucket.push(item);
@@ -171,7 +172,7 @@ export function groupItems(items: GroupedItem[], setting?: ChangelogGroupsSettin
         } else {
             rule.ungrouped.push(item);
         }
-        rules.set(parsed.type, rule);
+        rules.set(type, rule);
     }
 
     const types = [...rules.keys()];

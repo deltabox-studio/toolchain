@@ -89,6 +89,51 @@ describe('changelog formatting', () => {
         expect(rendered).toContain('### Chores');
     });
 
+    it('groups breaking commits first by default', () => {
+        const item = (text: string) => {
+            const parsed = parseCcSubject(text);
+            return { parsed, text, bodyParagraphs: [] as string[][] };
+        };
+        expect(
+            groupItems([item('feat!: break'), item('feat: add'), item('fix: patch')]).map(
+                group => group.title
+            )
+        ).toEqual(['Breaking Changes', 'New features', 'Bug fixes']);
+    });
+
+    it('keeps breaking grouping with a custom commit formatter', () => {
+        const records = [
+            {
+                hash: 'a'.repeat(40),
+                subject: 'feat!: break',
+                body: '',
+                author: 'A',
+                authorEmail: '',
+            },
+            { hash: 'b'.repeat(40), subject: 'feat: add', body: '', author: 'A', authorEmail: '' },
+        ];
+        const summary = buildSummary(records, {
+            commit: { format: ctx => `CUSTOM ${ctx.commit.subject}` },
+        });
+        expect(summary.indexOf('### Breaking Changes')).toBeLessThan(
+            summary.indexOf('### New features')
+        );
+        expect(summary).toContain('- CUSTOM feat!: break');
+    });
+
+    it('detects a BREAKING CHANGE footer in the body', () => {
+        const records = [
+            {
+                hash: 'a'.repeat(40),
+                subject: 'feat: add',
+                body: 'BREAKING CHANGE: the API changed',
+                author: 'A',
+                authorEmail: '',
+            },
+        ];
+        expect(buildSummary(records)).toContain('### Breaking Changes');
+    });
+
     it('orders and renames CC groups', () => {
         const item = (text: string) => {
             const parsed = parseCcSubject(text);
