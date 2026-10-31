@@ -36,12 +36,61 @@ the hook with a `postinstall` script (Yarn Berry never runs `prepare`):
 
 See [Package scripts](/guide/scripts) for the full recommended script set.
 
+## Group order and titles
+
+`groups` customizes the Conventional-Commits sections. It works on both
+`toolchain.changelog.groups` (manual runs) and `ci.changelog.groups` (CI + manual
+when inherited). An array sets the order and optionally the titles:
+
+```ts
+ci: {
+    changelog: {
+        groups: [
+            { type: 'feat', title: 'New Features' },
+            { type: 'fix', title: 'Bug Fixes' },
+            'perf',
+        ],
+    },
+}
+```
+
+A record is a shorthand for the same thing, ordered by its keys. Use `false` to
+hide a group:
+
+```ts
+groups: {
+    feat: 'New Features',
+    fix: 'Bug Fixes',
+    chore: false,
+}
+```
+
+Types you do not mention are appended in the default order (`feat`, `fix`,
+`perf`, ...). `order` overrides the array/record position, and every
+title/order/hidden value accepts a callback. The whole `groups` value can also be
+a callback, so it can be computed from the types/items in the current run:
+
+```ts
+groups: context => [
+    {
+        type: 'feat',
+        title: group => `New Features (${group.groupItems.length})`,
+        order: 0,
+    },
+    { type: 'fix', hidden: group => group.groupItems.length === 0 },
+    ...context.types.filter(type => !['feat', 'fix'].includes(type)),
+];
+```
+
+Callbacks are TS/JS-config-only. `dbx changelog --format-only` also uses the
+configured order/titles when regrouping existing entries.
+
 ## Manual `toolchain.changelog`
 
 The top-level `changelog` section configures manual runs for `dbx changelog`, the
 VS Code actions and the programmatic API. It accepts the pipeline options
-(commitlint, versioning, VS Code settings), but not the CI-only workflow options
-or `branches`:
+(commitlint, versioning, groups, VS Code settings), but not the CI-only workflow
+options or `branches`:
 
 ```ts [manual pipeline]
 toolchain: {
