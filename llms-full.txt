@@ -342,6 +342,10 @@ notification lists the removed relative paths and offers **Restore** (write the
 previous content back) or **Close**. A file that existed before dbx first managed
 it is **adopted**: it is unmanaged but never deleted.
 
+The **Managed Files** view also shows a **Workflow conflicts** group for
+hand-written workflows dbx left untouched (the manifest's `workflowConflicts`).
+Each item names the config key to opt out with, and opens the existing file.
+
 ## Settings
 
 | Setting                                | Default         | Description                                                    |
@@ -546,7 +550,9 @@ steps: [
 
 The default workflow templates use `{{ token }}` replacements. `tokens` merges
 over the project-wide values, so one workflow can use a different Node version or
-package manager without changing `project`.
+package manager without changing `project`. Overriding `packageManager` switches
+to that manager's default version unless you also set `packageManagerVersion`
+(or the legacy `yarnVersion` alias).
 
 ## Raw YAML
 
@@ -1258,6 +1264,10 @@ The scaffolded `dbx.config.ts` spells the resolved `project` fields out, so a
 generated project is self-describing from day one. Existing files in the output
 directory are never overwritten (pass `--force` to replace them), and a scaffold
 refuses to write outside its output directory.
+
+A nested `project:init` below a root that already has `.oxfmtrc.json` /
+`.oxlintrc.json` skips its own Oxc files and `fmt.oxc` / `lint.oxc` opt-ins, so it
+uses the root formatting/linting setup.
 
 Pass `--package-manager <pm>` (`yarn` default, or `pnpm` / `npm` / `bun`) to
 choose the manager the scaffold targets.
@@ -1973,6 +1983,9 @@ The supported tools are:
 * `fmt`: `oxc` (Oxfmt), `biome`, `prettier`, `dprint`.
 * `lint`: `oxc` (Oxlint), `biome`, `eslint`.
 
+Each tool accepts `true` (use the defaults) or `false` (disable that tool), in
+addition to its options object.
+
 ## Shorthand opt-in
 
 `fmt: true` / `lint: true` (or an options object with only `vscode`) picks a tool
@@ -2057,6 +2070,10 @@ These editor defaults are **not tracked** and existing keys are never
 overridden. (The separate Conventional Commits/Biome VS Code sync may track
 `.vscode/settings.json` when those sections are enabled.) Remove or change the
 generated keys freely. Setting `vscode: false` (or omitting it) adds nothing.
+
+A nested project scaffolded below a root that already has `.oxfmtrc.json` /
+`.oxlintrc.json` omits its own Oxc files and `fmt.oxc` / `lint.oxc` opt-ins, so
+`dbx fmt` / `dbx lint` keep using the root configuration.
 
 ## Migrating
 
@@ -2925,13 +2942,20 @@ prompts for the template, name and scope instead (Ctrl-C cancels).
 
 The offline builtins (`project`, `application`, `folder`, `monorepo`,
 `monorepo-example`, `workspace`) scaffold a generic, current project: a
-`dbx.config.ts` with `project` metadata and the default `fmt.oxc` / `lint.oxc`
-sections, a runnable `src/index.ts` + smoke test, `.oxfmtrc.json` /
-`.oxlintrc.json`, and a `package.json` that depends on the same
-`@deltabox/toolchain` version as the CLI. There is no Turbo (Vite Task replaces
-it). They ask for a **package manager** (default `yarn`) and write that manager's
-catalog file (see [Catalogs](/guide/project#package-manager-and-catalogs)). The
-`vite-plus*` builtins delegate to `vp create` and need network access.
+`dbx.config.ts` with `project` metadata, a runnable `src/index.ts` + smoke test,
+and a `package.json` that depends on the same `@deltabox/toolchain` version as the
+CLI. There is no Turbo (Vite Task replaces it). They ask for a **package manager**
+(default `yarn`) and write that manager's catalog file (see
+[Catalogs](/guide/project#package-manager-and-catalogs)). The `vite-plus*`
+builtins delegate to `vp create` and need network access.
+
+The root-oriented builtins (`project`, `application`, `monorepo`,
+`monorepo-example`) also write `.oxfmtrc.json` / `.oxlintrc.json` and opt in with
+`fmt.oxc` / `lint.oxc`. A nested `project`/`application` scaffold instead detects
+an ancestor that already owns those files and omits both the local files and the
+config opt-ins, so it inherits the root formatting/linting. `folder` and
+`workspace` never create Oxc files. Existing files are never overwritten unless
+`dbx create --force` is passed.
 
 ## Inputs (variables)
 
@@ -4171,27 +4195,27 @@ Exact setting keys (eg. `editor.defaultFormatter`) to omit.
 
 ### `oxc`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `boolean | Record<string, unknown>`
 
-Oxfmt options. `toolchain.vite.fmt` overrides these (deep merge).
+Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` overrides these (deep merge).
 
 ### `biome`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `boolean | Record<string, unknown>`
 
-Biome formatter options (merged into the generated `biome.json`).
+Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`.
 
 ### `prettier`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `boolean | Record<string, unknown>`
 
-Prettier options (editor defaults/migrations).
+Prettier options (`true` = defaults, `false` = disabled).
 
 ### `dprint`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `boolean | Record<string, unknown>`
 
-Dprint options (editor defaults/migrations).
+Dprint options (`true` = defaults, `false` = disabled).
 
 ### `enabled`
 
@@ -4223,21 +4247,21 @@ Exact setting keys (eg. `editor.defaultFormatter`) to omit.
 
 ### `oxc`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `boolean | Record<string, unknown>`
 
-Oxlint options. `toolchain.vite.lint` overrides these (deep merge).
+Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` overrides these (deep merge).
 
 ### `biome`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `boolean | Record<string, unknown>`
 
-Biome linter options (merged into the generated `biome.json`).
+Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`.
 
 ### `eslint`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `boolean | Record<string, unknown>`
 
-ESLint options (editor defaults/migrations).
+ESLint options (`true` = defaults, `false` = disabled).
 
 ### `enabled`
 
@@ -5042,6 +5066,7 @@ Scaffold a project from a template (builtin, local or Vite+).
 * `--var ‹pair...›` — Template variables as key=value (repeatable).
 * `--action ‹id...›` — Action id to run after scaffolding (repeatable).
 * `--online` — Resolve online templates too.
+* `--force` — Overwrite existing files in the output directory.
 * `--json` — Print the result as JSON.
 
 ## `dbx vite`

@@ -25,6 +25,9 @@ The supported tools are:
 - `fmt`: `oxc` (Oxfmt), `biome`, `prettier`, `dprint`.
 - `lint`: `oxc` (Oxlint), `biome`, `eslint`.
 
+Each tool accepts `true` (use the defaults) or `false` (disable that tool), in
+addition to its options object.
+
 ## Shorthand opt-in
 
 `fmt: true` / `lint: true` (or an options object with only `vscode`) picks a tool
@@ -109,6 +112,10 @@ These editor defaults are **not tracked** and existing keys are never
 overridden. (The separate Conventional Commits/Biome VS Code sync may track
 `.vscode/settings.json` when those sections are enabled.) Remove or change the
 generated keys freely. Setting `vscode: false` (or omitting it) adds nothing.
+
+A nested project scaffolded below a root that already has `.oxfmtrc.json` /
+`.oxlintrc.json` omits its own Oxc files and `fmt.oxc` / `lint.oxc` opt-ins, so
+`dbx fmt` / `dbx lint` keep using the root configuration.
 
 ## Migrating
 

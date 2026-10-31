@@ -59,7 +59,9 @@ steps: [
 
 The default workflow templates use `{{ token }}` replacements. `tokens` merges
 over the project-wide values, so one workflow can use a different Node version or
-package manager without changing `project`.
+package manager without changing `project`. Overriding `packageManager` switches
+to that manager's default version unless you also set `packageManagerVersion`
+(or the legacy `yarnVersion` alias).
 
 ## Raw YAML
 

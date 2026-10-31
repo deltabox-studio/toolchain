@@ -56,13 +56,20 @@ prompts for the template, name and scope instead (Ctrl-C cancels).
 
 The offline builtins (`project`, `application`, `folder`, `monorepo`,
 `monorepo-example`, `workspace`) scaffold a generic, current project: a
-`dbx.config.ts` with `project` metadata and the default `fmt.oxc` / `lint.oxc`
-sections, a runnable `src/index.ts` + smoke test, `.oxfmtrc.json` /
-`.oxlintrc.json`, and a `package.json` that depends on the same
-`@deltabox/toolchain` version as the CLI. There is no Turbo (Vite Task replaces
-it). They ask for a **package manager** (default `yarn`) and write that manager's
-catalog file (see [Catalogs](/guide/project#package-manager-and-catalogs)). The
-`vite-plus*` builtins delegate to `vp create` and need network access.
+`dbx.config.ts` with `project` metadata, a runnable `src/index.ts` + smoke test,
+and a `package.json` that depends on the same `@deltabox/toolchain` version as the
+CLI. There is no Turbo (Vite Task replaces it). They ask for a **package manager**
+(default `yarn`) and write that manager's catalog file (see
+[Catalogs](/guide/project#package-manager-and-catalogs)). The `vite-plus*`
+builtins delegate to `vp create` and need network access.
+
+The root-oriented builtins (`project`, `application`, `monorepo`,
+`monorepo-example`) also write `.oxfmtrc.json` / `.oxlintrc.json` and opt in with
+`fmt.oxc` / `lint.oxc`. A nested `project`/`application` scaffold instead detects
+an ancestor that already owns those files and omits both the local files and the
+config opt-ins, so it inherits the root formatting/linting. `folder` and
+`workspace` never create Oxc files. Existing files are never overwritten unless
+`dbx create --force` is passed.
 
 ## Inputs (variables)
 

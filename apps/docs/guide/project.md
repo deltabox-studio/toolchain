@@ -126,6 +126,10 @@ generated project is self-describing from day one. Existing files in the output
 directory are never overwritten (pass `--force` to replace them), and a scaffold
 refuses to write outside its output directory.
 
+A nested `project:init` below a root that already has `.oxfmtrc.json` /
+`.oxlintrc.json` skips its own Oxc files and `fmt.oxc` / `lint.oxc` opt-ins, so it
+uses the root formatting/linting setup.
+
 Pass `--package-manager <pm>` (`yarn` default, or `pnpm` / `npm` / `bun`) to
 choose the manager the scaffold targets.
 
