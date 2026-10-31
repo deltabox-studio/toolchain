@@ -1400,10 +1400,14 @@ groups: {
 }
 ```
 
-Types you do not mention are appended in the default order (`feat`, `fix`,
-`perf`, ...). `order` overrides the array/record position, and every
-title/order/hidden value accepts a callback. The whole `groups` value can also be
-a callback, so it can be computed from the types/items in the current run:
+The default order is **Breaking Changes**, `feat`, `fix`, then the remaining
+types (`perf`, `refactor`, `docs`, ...). Breaking commits are detected from a
+`!` in the CC subject or a `BREAKING CHANGE:` footer, and are grouped separately
+even when a custom commit formatter is used. Types you do not mention are
+appended in the default order. `order` overrides the array/record position, and
+every title/order/hidden value accepts a callback. The whole `groups` value can
+also be a callback, so it can be computed from the types/items in the current
+run:
 
 ```ts
 groups: context => [
