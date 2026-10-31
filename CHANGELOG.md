@@ -1,16 +1,23 @@
 # Changelog
 
-## 2.1.0 (October 2026)
+## 2.1.1 (October 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Changelog
+- Use the release-notes helper for releases ([#36616f0](https://github.com/deltabox-studio/toolchain/commit/36616f0) by [T0chi](https://github.com/T0chi))
+  - Replace the custom release workflow's awk/git-describe extraction with dbx changelog --release-notes, treat --release-notes as machine output, and normalize v-prefixed current versions.
+
+<!-- release:end -->
+
+
+## 2.1.0 (October 2026)
 
 ### New features
 #### Changelog
 - Configure breaking-change detection ([#f80634f](https://github.com/deltabox-studio/toolchain/commit/f80634f) by [T0chi](https://github.com/T0chi))
   - Detect breaking changes by Conventional Commits rules by default (! in the subject or a BREAKING CHANGE: footer) and add a changelog.breaking / ci.changelog.breaking override (conventional, ny, alse, pattern/match, or a callback).
-
-<!-- release:end -->
-
 
 ## 2.0.1 (October 2026)
 
