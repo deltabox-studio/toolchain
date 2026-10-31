@@ -3,6 +3,7 @@ export * from './run-workflows.js';
 export * from './sync.js';
 export * from './templates.js';
 export { parseArgsCli } from './utils/args.js';
+export { isBreakingCommit } from './utils/breaking.js';
 export {
     formatBody,
     groupItems,
@@ -14,6 +15,11 @@ export {
 export { deriveBump, readCommits } from './utils/git.js';
 export { type ProjectGraphNode, readProjectGraph, relatedWorkspacePaths } from './utils/graph.js';
 export { parseExistingChangelog, reformatChangelogContent } from './utils/reformat.js';
+export {
+    buildReleaseNotes,
+    normalizeReleaseVersion,
+    releaseNotesFromGit,
+} from './utils/release-notes.js';
 export { buildSummary, renderCommitRef } from './utils/summary.js';
 export * from './utils/types.js';
 export { renderChangelogEntry } from './utils/version.js';

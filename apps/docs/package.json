@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-docs",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "private": true,
     "type": "module",
     "description": "Documentation site for @deltabox/toolchain (VitePress).",
@@ -10,6 +10,7 @@
         "preview": "vitepress preview"
     },
     "devDependencies": {
+        "vite-plugin-vitepress-auto-sidebar": "^1.7.1",
         "vitepress": "^1.6.4",
         "vitepress-carbon": "^1.7.0",
         "vitepress-plugin-group-icons": "^1.8.1",

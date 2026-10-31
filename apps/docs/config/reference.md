@@ -399,6 +399,12 @@ Write the Conventional-Commits VS Code settings (default true).
 
 Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback. Titles/order/hidden also accept callbacks (TS/JS configs only).
 
+#### `breaking`
+
+- **Type**: `unknown`
+
+How breaking changes are detected: `conventional` (default: a `!` in the CC subject or a `BREAKING CHANGE:` footer), `any` (legacy loose match), `false` (disable), `{ pattern }` / `{ match }`, or a callback (TS/JS configs only).
+
 ### `release`
 
 - **Type**: `WorkflowSetting`
@@ -516,6 +522,12 @@ Write the Conventional-Commits VS Code settings (default true).
 - **Type**: `unknown`
 
 Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback. Titles/order/hidden also accept callbacks (TS/JS configs only).
+
+### `breaking`
+
+- **Type**: `unknown`
+
+How breaking changes are detected: `conventional` (default: a `!` in the CC subject or a `BREAKING CHANGE:` footer), `any` (legacy loose match), `false` (disable), `{ pattern }` / `{ match }`, or a callback (TS/JS configs only).
 
 ### `enabled`
 

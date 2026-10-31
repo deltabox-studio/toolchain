@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { logger } from '@deltabox/toolchain-shared';
+import { type ChangelogBreakingSetting, logger } from '@deltabox/toolchain-shared';
 
 import { formatChangelogFile } from './format.js';
 import { readCommits, repoSlug } from './git.js';
@@ -23,7 +23,8 @@ export function writeChangelogs(
     packageChanges = false,
     workspaceEntries?: Map<string, string>,
     commitlint = true,
-    groups?: ChangelogGroupsSetting
+    groups?: ChangelogGroupsSetting,
+    breaking?: ChangelogBreakingSetting
 ): void {
     const root = repoRoot();
     const repo = repoSlug();
@@ -39,7 +40,7 @@ export function writeChangelogs(
 
     if (reformatAll) {
         // Rewrite the whole root changelog cohesively, then prepend the new entry.
-        const reformatted = reformatRootChangelog(packageChanges, groups);
+        const reformatted = reformatRootChangelog(packageChanges, groups, breaking);
         if (reformatted) {
             writeFileSync(rootChangelog, reformatted, 'utf8');
             logger.info(`  reformatted ${rootChangelog}`);
@@ -69,7 +70,12 @@ export function writeChangelogs(
             continue;
         }
         const created = !existsSync(file);
-        const wsSummary = buildSummary(filtered, { commitlint, range, groups });
+        const wsSummary = buildSummary(filtered, {
+            commitlint,
+            range,
+            ...(groups ? { groups } : {}),
+            ...(breaking !== undefined ? { breaking } : {}),
+        });
         prependChangelogEntry(file, renderChangelogEntry(workspaceVersion, wsSummary, new Date()));
         logger.info(`  ${created ? 'created' : 'updated'} ${file}`);
     }

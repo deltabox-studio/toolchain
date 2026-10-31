@@ -1,6 +1,8 @@
 /** Shared types for the changelog pipeline. */
 
 import type {
+    ChangelogBreakingCommit,
+    ChangelogBreakingSetting,
     ChangelogGroupConfig,
     ChangelogGroupContext,
     ChangelogGroupEntry,
@@ -13,6 +15,8 @@ import type {
 } from '@deltabox/toolchain-shared';
 
 export type {
+    ChangelogBreakingCommit,
+    ChangelogBreakingSetting,
     ChangelogGroupConfig,
     ChangelogGroupContext,
     ChangelogGroupEntry,
@@ -52,6 +56,8 @@ export interface CliOptions {
     dryRun: boolean;
     version?: string;
     baseVersion?: string;
+    /** Print the release body for this version (and exit). */
+    releaseNotes?: string;
     processingMethod: ProcessingMethod;
     formatOnly: boolean;
     /** Include the `### Package changes` footer (disable with --no-package-changes-section). */
@@ -76,6 +82,8 @@ export interface GroupedRule {
 
 export interface GroupedItem {
     parsed: ParsedCommit;
+    /** Whether this commit is breaking (subject `!` or a BREAKING CHANGE footer). */
+    breaking?: boolean;
     text: string;
     /** Description paragraphs; each becomes one nested bullet with wrapped continuations. */
     bodyParagraphs: string[][];

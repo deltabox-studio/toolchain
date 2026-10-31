@@ -1,3 +1,6 @@
+import type { ChangelogBreakingSetting } from '@deltabox/toolchain-shared';
+
+import { isBreakingCommit } from './breaking.js';
 import { capitalize, formatBody, groupItems, parseCcSubject, renderGroups } from './format.js';
 import {
     readPriorAuthors,
@@ -47,6 +50,8 @@ export interface BuildSummaryOptions {
     commit?: CommitFormatOptions;
     /** Conventional-Commits group order/titles/hiding. */
     groups?: ChangelogGroupsSetting;
+    /** How breaking changes are detected (default: Conventional Commits). */
+    breaking?: ChangelogBreakingSetting;
 }
 
 type BumpGroup = 'major' | 'minor' | 'patch';
@@ -59,15 +64,9 @@ const BUMP_TITLES: Record<BumpGroup, string> = {
 };
 
 /** Which coarse bump bucket a commit belongs to (no commitlint required). */
-function bumpGroupOf(record: CommitRecord): BumpGroup {
+function bumpGroupOf(record: CommitRecord, breaking?: ChangelogBreakingSetting): BumpGroup {
     const parsed = parseCcSubject(record.subject);
-    if (
-        parsed.breaking ||
-        /BREAKING[ -]CHANGE/i.test(record.body) ||
-        /^[a-zA-Z][a-zA-Z0-9]*(\([^)]*\))?!:\s/.test(record.subject)
-    ) {
-        return 'major';
-    }
+    if (isBreakingCommit(record, breaking)) return 'major';
     return parsed.type === 'feat' ? 'minor' : 'patch';
 }
 
@@ -76,6 +75,8 @@ interface CommitItemOptions {
     author?: boolean;
     /** Include the commit body as nested bullets (default true). */
     body?: boolean;
+    /** How breaking changes are detected (default: Conventional Commits). */
+    breaking?: ChangelogBreakingSetting;
 }
 
 /** Build a commit bullet, shared by the grouped and fallback summaries. */
@@ -104,6 +105,7 @@ function commitItem(
     }
     return {
         parsed,
+        breaking: isBreakingCommit(record, options.breaking),
         text,
         bodyParagraphs: options.body === false ? [] : formatBody(record.body),
     };
@@ -121,13 +123,17 @@ function renderItem(item: GroupedItem): string[] {
 }
 
 /** The coarse fallback summary used when commitlint is disabled. */
-function buildFallbackSummary(records: CommitRecord[], commit?: CommitFormatOptions): string {
+function buildFallbackSummary(
+    records: CommitRecord[],
+    commit?: CommitFormatOptions,
+    breaking?: ChangelogBreakingSetting
+): string {
     const repo = repoSlug();
     const groups = new Map<BumpGroup, GroupedItem[]>();
     for (const record of records) {
-        const group = bumpGroupOf(record);
+        const group = bumpGroupOf(record, breaking);
         const bucket = groups.get(group) ?? [];
-        bucket.push(commitItem(record, repo, commit ?? {}));
+        bucket.push(commitItem(record, repo, { ...commit, breaking }));
         groups.set(group, bucket);
     }
     if (groups.size === 0) return '- No description provided.';
@@ -222,13 +228,18 @@ export function buildSummary(records: CommitRecord[], options: BuildSummaryOptio
     const repo = repoSlug();
     const summary =
         options.commitlint === false
-            ? buildFallbackSummary(records, options.commit)
+            ? buildFallbackSummary(records, options.commit, options.breaking)
             : renderGroups(
                   groupItems(
                       records.map(record => {
                           // The CC rule + scope live in the nested group headings, so the
                           // commit line carries just the (capitalized) subject + credit.
-                          return commitItem(record, repo, options.commit ?? {});
+                          return commitItem(record, repo, {
+                              ...options.commit,
+                              ...(options.breaking !== undefined
+                                  ? { breaking: options.breaking }
+                                  : {}),
+                          });
                       }),
                       options.groups
                   )
