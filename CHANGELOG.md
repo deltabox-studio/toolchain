@@ -1,16 +1,22 @@
 # Changelog
 
-## 2.1.1 (October 2026)
+## 2.1.2 (November 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Vscode
+- Align Home action icons with provider commands ([#05fd6c8](https://github.com/deltabox-studio/toolchain/commit/05fd6c8) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 2.1.1 (October 2026)
 
 ### Bug fixes
 #### Changelog
 - Use the release-notes helper for releases ([#36616f0](https://github.com/deltabox-studio/toolchain/commit/36616f0) by [T0chi](https://github.com/T0chi))
   - Replace the custom release workflow's awk/git-describe extraction with dbx changelog --release-notes, treat --release-notes as machine output, and normalize v-prefixed current versions.
-
-<!-- release:end -->
-
 
 ## 2.1.0 (October 2026)
 
