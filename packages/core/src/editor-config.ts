@@ -16,6 +16,7 @@ import {
     FORMATTER_PRECEDENCE,
     isPlainObject,
     LINTER_PRECEDENCE,
+    readJsoncFile,
     resolveFmtTool,
     resolveFmtTools,
     resolveLintTool,
@@ -177,25 +178,15 @@ export function editorConfigSyncTask(): SyncTask {
             const file = path.join(ctx.cwd, '.vscode', 'settings.json');
             let settings: Record<string, unknown> = {};
             if (fs.existsSync(file)) {
-                try {
-                    const parsed = JSON.parse(
-                        fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, '')
-                    ) as unknown;
-                    if (!isPlainObject(parsed)) {
-                        ctx.warn(
-                            `cannot add editor defaults: ${file} is not a JSON object.`,
-                            'vscode.settings-invalid'
-                        );
-                        return [];
-                    }
-                    settings = parsed;
-                } catch {
+                const parsed = readJsoncFile(file);
+                if (!isPlainObject(parsed)) {
                     ctx.warn(
-                        `cannot add editor defaults: ${file} is not valid JSON.`,
+                        `cannot add editor defaults: ${file} is not a JSON object.`,
                         'vscode.settings-invalid'
                     );
                     return [];
                 }
+                settings = parsed;
             }
 
             // `--check` is read-only: report nothing (the file is intentionally

@@ -179,6 +179,28 @@ describe('runSync', () => {
         expect(settings['x.y']).toBe(true);
         expect(settings['biome.lsp.watcher.kind']).toBeUndefined();
     });
+
+    it('merges settings into an existing JSONC file', async () => {
+        const cwd = tmp();
+        fs.mkdirSync(path.join(cwd, '.vscode'));
+        fs.writeFileSync(
+            path.join(cwd, '.vscode/settings.json'),
+            '{\n    // keep this\n    "editor.formatOnSave": true,\n}\n'
+        );
+        await runSync({
+            tasks: [vscodeSyncTask({ settings: [{ 'x.y': true }] })],
+            cwd,
+            config: {},
+            tokens: {},
+            projectType: 'monorepo-root',
+            quiet: true,
+        });
+        const settings = JSON.parse(
+            fs.readFileSync(path.join(cwd, '.vscode/settings.json'), 'utf-8')
+        ) as Record<string, unknown>;
+        expect(settings['editor.formatOnSave']).toBe(true);
+        expect(settings['x.y']).toBe(true);
+    });
 });
 
 describe('runSync untracked files and task metadata', () => {

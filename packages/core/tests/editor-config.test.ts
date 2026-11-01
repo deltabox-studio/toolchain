@@ -65,6 +65,27 @@ describe('editorConfigSyncTask', () => {
         });
     });
 
+    it('adds defaults to a JSONC settings file with comments and trailing commas', async () => {
+        const cwd = makeTmp();
+        fs.mkdirSync(path.join(cwd, '.vscode'));
+        fs.writeFileSync(
+            path.join(cwd, '.vscode/settings.json'),
+            '{\n    // keep this\n    "editor.formatOnSave": true,\n}\n'
+        );
+
+        await editorConfigSyncTask().run(
+            context(cwd, { fmt: { oxc: {}, vscode: true }, lint: { oxc: {}, vscode: true } })
+        );
+        const settings = JSON.parse(
+            fs.readFileSync(path.join(cwd, '.vscode/settings.json'), 'utf-8')
+        );
+        expect(settings['editor.formatOnSave']).toBe(true);
+        expect(settings['editor.defaultFormatter']).toBe('oxc.oxc-vscode');
+        expect(settings['editor.codeActionsOnSave']).toEqual({
+            'source.fixAll.oxc': 'explicit',
+        });
+    });
+
     it('creates .vscode/settings.json when enabled and absent', async () => {
         const cwd = makeTmp();
         await editorConfigSyncTask().run(context(cwd, { fmt: { biome: {}, vscode: true } }));

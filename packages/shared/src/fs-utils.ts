@@ -22,6 +22,65 @@ export function readJsonAt<T = Record<string, unknown>>(
     return readJsonFile<T>(path.resolve(cwd, relative));
 }
 
+/** Strip JSONC comments and trailing commas so `JSON.parse` can read the file. */
+function stripJsonc(text: string): string {
+    let out = '';
+    let inString = false;
+    let escaped = false;
+    for (let index = 0; index < text.length; index += 1) {
+        const char = text[index];
+        if (inString) {
+            out += char;
+            if (escaped) escaped = false;
+            else if (char === '\\') escaped = true;
+            else if (char === '"') inString = false;
+            continue;
+        }
+        if (char === '"') {
+            inString = true;
+            out += char;
+            continue;
+        }
+        if (char === '/' && text[index + 1] === '/') {
+            while (index < text.length && text[index] !== '\n') index += 1;
+            out += '\n';
+            continue;
+        }
+        if (char === '/' && text[index + 1] === '*') {
+            index += 2;
+            while (index < text.length && !(text[index] === '*' && text[index + 1] === '/')) {
+                index += 1;
+            }
+            index += 1;
+            continue;
+        }
+        if (char === ',') {
+            let next = index + 1;
+            while (next < text.length && /\s/.test(text[next]!)) next += 1;
+            if (text[next] === '}' || text[next] === ']') continue;
+        }
+        out += char;
+    }
+    return out;
+}
+
+/** Read + parse a JSONC file (comments and trailing commas allowed). */
+export function readJsoncFile<T = Record<string, unknown>>(file: string): T | undefined {
+    try {
+        return JSON.parse(stripJsonc(fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, ''))) as T;
+    } catch {
+        return undefined;
+    }
+}
+
+/** Read + parse a JSONC file relative to `cwd`. */
+export function readJsoncAt<T = Record<string, unknown>>(
+    cwd: string,
+    relative: string
+): T | undefined {
+    return readJsoncFile<T>(path.resolve(cwd, relative));
+}
+
 /** Serialize a value to JSON text (trailing newline included). */
 export function toJson(value: unknown, indent = 4): string {
     return `${JSON.stringify(value, null, indent)}\n`;
@@ -44,7 +103,7 @@ export function mergeJsonAt(
     patch: Record<string, unknown>,
     indent = 4
 ): string {
-    const existing = readJsonAt<Record<string, unknown>>(cwd, relative) ?? {};
+    const existing = readJsoncAt<Record<string, unknown>>(cwd, relative) ?? {};
     const merged = mergeWithArrays(existing, patch);
     return toJson(merged, indent);
 }
