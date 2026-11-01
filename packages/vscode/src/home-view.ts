@@ -163,11 +163,12 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     .accordion .chev { transition:transform .12s ease; }
     .accordion.open .chev { transform:rotate(180deg); }
     .moreActions { display:flex; flex-direction:column; gap:6px; margin-top:7px; }
-    .moreActions button { width:100%; text-align:left; }
-    /* Prefix action buttons with a play glyph (like the Providers command items)
-       so they read as actions, not as the header card. */
+    .moreActions button { width:100%; text-align:left; display:flex; align-items:center; gap:7px; }
+    /* Prefix action buttons with an outline play glyph (like the Providers
+       command items) so they read as actions, not as the header card. */
     .moreActions button::before {
-      content:'\u25B6'; margin-right:7px; font-size:9px; opacity:.75; vertical-align:middle;
+      content:'\u25B7'; flex:none; width:1em; display:inline-flex; align-items:center;
+      justify-content:center; font-size:12px; line-height:1; opacity:.9;
     }
     .projectList { display:flex; flex-direction:column; gap:6px; }
     .project {
