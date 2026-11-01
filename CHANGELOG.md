@@ -1,15 +1,22 @@
 # Changelog
 
-## 2.1.2 (November 2026)
+## 2.1.3 (November 2026)
 
 <!-- release:start -->
 
 ### Bug fixes
-#### Vscode
-- Align Home action icons with provider commands ([#05fd6c8](https://github.com/deltabox-studio/toolchain/commit/05fd6c8) by [T0chi](https://github.com/T0chi))
+#### Core
+- Read JSONC VS Code settings and bundle jsonc-parser ([#57d908d](https://github.com/deltabox-studio/toolchain/commit/57d908d) by [T0chi](https://github.com/T0chi))
+  - Parse .vscode/settings.json as JSONC so comments/trailing commas don't block editor defaults, and resolve jsonc-parser's ESM entry in the bundled dbx CLI to avoid the missing ./impl/format module.
 
 <!-- release:end -->
 
+
+## 2.1.2 (November 2026)
+
+### Bug fixes
+#### Vscode
+- Align Home action icons with provider commands ([#05fd6c8](https://github.com/deltabox-studio/toolchain/commit/05fd6c8) by [T0chi](https://github.com/T0chi))
 
 ## 2.1.1 (October 2026)
 
