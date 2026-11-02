@@ -159,6 +159,24 @@ function escapeSlash(slash: string): string {
 }
 
 /**
+ * PowerShell backtick escapes leave a control character where the escaped
+ * letter used to be. Map the control back to the letter the shell consumed
+ * (`` `a `` -> BEL, `` `b `` -> backspace, `` `f `` -> form feed, ...), so words
+ * like `any`, `false` and `bin` are restored instead of losing a letter.
+ */
+const CONTROL_CHAR_REPLACEMENTS: Record<number, string> = {
+    0x00: '0',
+    0x07: 'a',
+    0x08: 'b',
+    0x09: 't',
+    0x0a: 'n',
+    0x0b: 'v',
+    0x0c: 'f',
+    0x0d: 'r',
+    0x1b: 'e',
+};
+
+/**
  * Bare C0 control characters that are never intended in generated text, keeping
  * tab (`\t`), line feed (`\n`) and carriage return (`\r`). These are what a
  * shell can leave behind when it interprets `\`` escapes (backspace, form feed,
@@ -170,31 +188,42 @@ const BARE_CONTROL_CHARS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g;
  * A backslash immediately followed by a control character — the predictable
  * shape of an escaped backtick a **shell** interpreted before writing the text
  * (`` \`t `` becomes `\` + TAB, `` \`n `` becomes `\` + LF, ...). The backslash
- * and the control character are both removed.
+ * is dropped and the control character is restored to the letter it replaced.
  */
-const ESCAPED_CONTROL_CHARS = /\\[\u0000-\u001f]/g;
+const ESCAPED_CONTROL_CHARS = /\\([\u0000-\u001f])/g;
 
-/** Strip bare control characters, keeping `\t`, `\n` and `\r`. */
+function replacementFor(control: string): string {
+    return CONTROL_CHAR_REPLACEMENTS[control.charCodeAt(0)] ?? '';
+}
+
+/** Restore/strip bare control characters, keeping `\t`, `\n` and `\r`. */
 export function stripControlChars(text: string): string {
-    return text.replace(BARE_CONTROL_CHARS, '');
+    return text.replace(BARE_CONTROL_CHARS, replacementFor);
 }
 
 /**
  * Strip the predictable shell-escape artifacts: a backslash that precedes a
  * control character. Ordinary backslashes (Windows paths, regular expressions,
  * Markdown hard breaks that use two trailing spaces) are left untouched — only
- * a backslash directly before a control character is removed.
+ * a backslash directly before a control character is handled.
  */
 export function stripEscapeArtifacts(text: string): string {
-    return text.replace(ESCAPED_CONTROL_CHARS, '');
+    return text.replace(ESCAPED_CONTROL_CHARS, (_match, control: string) =>
+        replacementFor(control)
+    );
+}
+
+/** Whether text contains shell-escape artifacts that {@link sanitizeText} repairs. */
+export function hasEscapeArtifacts(text: string): boolean {
+    return /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]|\\[\u0000-\u001f]/.test(text);
 }
 
 /**
  * Sanitize text that may have passed through a shell (commit bodies, generated
- * descriptions) before it is rendered to markdown: normalize CRLF to LF, then
- * strip shell-escape artifacts followed by any remaining bare control
- * characters. Conservative by design — it never removes an ordinary backslash.
+ * descriptions) before it is rendered to markdown: restore shell-escape
+ * artifacts, strip any remaining bare control characters, then normalize CRLF
+ * to LF. Conservative by design — it never removes an ordinary backslash.
  */
 export function sanitizeText(text: string): string {
-    return stripControlChars(stripEscapeArtifacts(text.replace(/\r\n?/g, '\n')));
+    return stripControlChars(stripEscapeArtifacts(text)).replace(/\r\n?/g, '\n');
 }
