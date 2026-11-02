@@ -216,7 +216,7 @@ export default defineConfig({
                             name: 'Verify generated config artifacts are up to date',
                             run: [
                                 'yarn format',
-                                'git diff --exit-code -- apps/docs/config/reference.md apps/docs/config/index.md apps/docs/config/cli.md apps/docs/config/env.md config.schema.json',
+                                'git diff --exit-code -- apps/docs/config/reference.md apps/docs/config/index.md apps/docs/config/cli.md apps/docs/config/env.md config.schema.json packages/shared/src/config-types.ts packages/shared/src/config-schema/generated/biome-config.ts',
                             ].join('\n'),
                         },
                         {
@@ -224,6 +224,42 @@ export default defineConfig({
                             run: 'yarn docs build',
                         },
                     ],
+                },
+                // The extension host tests need a display on Linux, so they run
+                // in their own job under Xvfb after the regular checks pass.
+                jobs: {
+                    'vscode-integration': {
+                        name: 'VS Code integration',
+                        'runs-on': 'ubuntu-latest',
+                        needs: 'ci',
+                        steps: [
+                            {
+                                name: 'Checkout',
+                                uses: 'actions/checkout@v4',
+                                with: {
+                                    'fetch-depth': 0,
+                                    token: '${{ secrets.GITHUB_TOKEN }}',
+                                },
+                            },
+                            {
+                                name: 'Setup Node',
+                                uses: 'actions/setup-node@v4',
+                                with: { 'node-version': '{{nodeVersion}}' },
+                            },
+                            {
+                                name: 'Enable Corepack',
+                                run: 'corepack enable\ncorepack prepare {{packageManager}}@{{yarnVersion}} --activate',
+                            },
+                            {
+                                name: 'Install dependencies',
+                                run: '{{packageManager}} install --immutable',
+                            },
+                            {
+                                name: 'Run VS Code extension integration tests',
+                                run: 'xvfb-run -a {{packageManager}} workspace toolchain-vscode test:integration',
+                            },
+                        ],
+                    },
                 },
             },
             issues: true,
