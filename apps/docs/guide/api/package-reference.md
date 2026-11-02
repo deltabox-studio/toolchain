@@ -176,6 +176,12 @@ console.log(toolchainProviders().map(p => p.id));
 | `renderCommitlintConfig(options?)` / `changelogSyncTask()`             | Commitlint config + the changelog sync task.         |
 | `readCommits(range)` / `deriveBump(records)` / `buildSummary(records)` | Git commit reading, bump derivation and summaries.   |
 | `renderChangelogEntry(...)` / `parseExistingChangelog(content)`        | Changelog entry rendering/parsing.                   |
+| `formatBody(body)` / `formatLine(line, repo)`                          | Description + changelog-line normalization.          |
+
+`formatLine(line, repo)` normalizes a changelog line in place: numeric-only
+short hashes (eg. `#4033009`) stay commit links, genuine issue numbers stay
+issue links, and a bare `BREAKING CHANGE:` marker is bolded unless it is already
+bold.
 
 ## `@deltabox/toolchain/biome`
 
