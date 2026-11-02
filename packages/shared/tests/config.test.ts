@@ -187,6 +187,33 @@ describe('dbx.config model', () => {
         expect(dbxConfigSchema.safeParse(callbackProvider).success).toBe(true);
     });
 
+    it('accepts complete GitHub/GitLab/Azure workflow settings', () => {
+        const config = {
+            toolchain: {
+                ci: {
+                    ci: {
+                        provider: 'gitlab',
+                        workflow: {
+                            stages: ['test'],
+                            test: { stage: 'test', script: ['yarn test'] },
+                        },
+                    },
+                    release: {
+                        provider: 'azure',
+                        workflow: { steps: [{ script: 'yarn build' }] },
+                    },
+                    custom: {
+                        deploy: {
+                            provider: 'github',
+                            workflow: { name: 'Deploy', on: ['push'], jobs: {} },
+                        },
+                    },
+                },
+            },
+        };
+        expect(dbxConfigSchema.safeParse(config).success).toBe(true);
+    });
+
     it('implements function schemas with .implement()/.implementAsync()', async () => {
         const sync = changelogBreakingCallbackSchema.implement(commit =>
             commit.subject.includes('!')

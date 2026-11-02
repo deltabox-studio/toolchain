@@ -12,6 +12,7 @@
  * `config-types.ts`. Only `hooks` (functions) is hand-written.
  */
 
+import { isVendorWorkflowConfig } from './config-schema/workflow.js';
 import type {
     ChangelogConfig,
     CiChangelogConfig,
@@ -181,8 +182,11 @@ export function resolveChangelogConfig(
     const setting = resolveCiConfig(config)?.changelog;
     if (setting === undefined || setting === false || setting === true) return legacyOptions;
     if (typeof setting === 'string') return legacyOptions;
-    if (!sectionEnabled(setting)) return legacyOptions;
-    return legacyOptions ? (deepMerge(legacyOptions, setting) as CiChangelogConfig) : setting;
+    // A complete vendor workflow is a workflow setting, not changelog pipeline config.
+    if (isVendorWorkflowConfig(setting)) return legacyOptions;
+    const changelog = setting as CiChangelogConfig;
+    if (!sectionEnabled(changelog)) return legacyOptions;
+    return legacyOptions ? (deepMerge(legacyOptions, changelog) as CiChangelogConfig) : changelog;
 }
 
 /** Default package-manager versions used when a config omits `packageManagerVersion`. */

@@ -3,7 +3,12 @@ import { z } from 'zod';
 
 import { externalConfigSchema } from './external.js';
 import { section, withEnabled } from './meta.js';
-import { workflowOptionsSchema } from './workflow.js';
+import {
+    azureWorkflowSettingSchema,
+    githubWorkflowSettingSchema,
+    gitlabWorkflowSettingSchema,
+    workflowOptionsSchema,
+} from './workflow.js';
 
 /** Branch globs the generated changelog/CI workflows target. */
 export const changelogBranchesConfigSchema = z
@@ -417,12 +422,23 @@ export const ciChangelogConfigSchema = withEnabled(
     .describe('Changelog workflow + pipeline: versioning, VS Code settings and commitlint.')
     .meta({ id: 'CiChangelogConfig' });
 
-/** A changelog workflow setting: a toggle, raw YAML, or the pipeline config. */
+/**
+ * A changelog workflow setting: a toggle, raw YAML, a complete vendor workflow,
+ * or the GitHub changelog pipeline config.
+ */
 export const changelogWorkflowSettingSchema = z
-    .union([z.boolean(), z.string(), ciChangelogConfigSchema])
+    .union([
+        z.boolean(),
+        z.string(),
+        githubWorkflowSettingSchema,
+        gitlabWorkflowSettingSchema,
+        azureWorkflowSettingSchema,
+        ciChangelogConfigSchema,
+    ])
     .describe(
-        '`true`/`false` to enable/disable, the changelog pipeline config object, or a ' +
-            'raw YAML string written verbatim as the changelog workflow file.'
+        '`true`/`false` to enable/disable, a complete GitHub/GitLab/Azure workflow ' +
+            '(with `provider`), the changelog pipeline config object, or a raw YAML string ' +
+            'written verbatim as the changelog workflow file.'
     )
     .meta({ id: 'ChangelogWorkflowSetting' });
 

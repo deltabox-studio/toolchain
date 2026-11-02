@@ -11,13 +11,16 @@ import {
     sectionEnabled,
     type SyncTask,
     type ToolchainConfig,
+    type WorkflowOptions,
     type WorkflowSetting,
 } from '@deltabox/toolchain-shared';
 
 import { renderCommitlintConfig } from './templates.js';
 import {
     isEnabled,
+    isVendorWorkflowSetting,
     renderCustomWorkflow,
+    renderVendorWorkflow,
     renderWorkflow,
     WORKFLOW_FILENAMES,
     workflowFilePath,
@@ -36,8 +39,10 @@ function withPushBranches(
 ): WorkflowSetting {
     if (setting === false) return { enabled: false };
     if (typeof setting === 'string') return setting;
+    // A complete vendor workflow defines its own triggers.
+    if (isVendorWorkflowSetting(setting)) return setting;
     if (setting === true || setting === undefined) return { pushBranches: branches };
-    return { pushBranches: branches, ...setting };
+    return { pushBranches: branches, ...(setting as WorkflowOptions) };
 }
 
 /** The workflow settings declared under `toolchain.ci` (all opt-in). */
@@ -213,11 +218,13 @@ export function changelogSyncTask(): SyncTask {
                 const raw = typeof setting === 'string';
                 const content = raw
                     ? setting
-                    : renderWorkflow(id, {
-                          tokens,
-                          config: typeof setting === 'object' ? setting : {},
-                          commitlint,
-                      });
+                    : isVendorWorkflowSetting(setting)
+                      ? renderVendorWorkflow(setting, tokens)
+                      : renderWorkflow(id, {
+                            tokens,
+                            config: typeof setting === 'object' ? (setting as WorkflowOptions) : {},
+                            commitlint,
+                        });
                 if (!content) continue;
                 addWorkflow(
                     id,
@@ -237,11 +244,13 @@ export function changelogSyncTask(): SyncTask {
                 const raw = typeof setting === 'string';
                 const content = raw
                     ? setting
-                    : renderCustomWorkflow(id, {
-                          tokens,
-                          config: typeof setting === 'object' ? setting : {},
-                          commitlint,
-                      });
+                    : isVendorWorkflowSetting(setting)
+                      ? renderVendorWorkflow(setting, tokens)
+                      : renderCustomWorkflow(id, {
+                            tokens,
+                            config: typeof setting === 'object' ? (setting as WorkflowOptions) : {},
+                            commitlint,
+                        });
                 if (!content) continue;
                 addWorkflow(
                     id,

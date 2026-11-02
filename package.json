@@ -52,7 +52,7 @@
         "test:clean": "node scripts/clean-emulate.mjs",
         "vp:test": "vp test --run --config vite.config.ts",
         "vp:toolchain": "vp toolchain",
-        "config:generate": "tsx scripts/generate-tool-config-types.ts && tsx scripts/generate-config-types.ts && tsx scripts/generate-config.ts && tsx scripts/generate-config-docs.ts",
+        "config:generate": "tsx scripts/generate-tool-config-types.ts && tsx scripts/generate-workflow-types.ts && tsx scripts/generate-config-types.ts && tsx scripts/generate-config.ts && tsx scripts/generate-config-docs.ts",
         "config:docs": "tsx scripts/generate-config-docs.ts",
         "config:types": "tsx scripts/generate-config-types.ts",
         "dbx": "tsx src/cli/index.ts",

@@ -18,7 +18,13 @@ import {
     type WorkflowSetting,
 } from '@deltabox/toolchain-shared';
 
-import { isEnabled, WORKFLOW_FILENAMES, workflowFilePath, type WorkflowId } from './workflows.js';
+import {
+    isEnabled,
+    isVendorWorkflowSetting,
+    WORKFLOW_FILENAMES,
+    workflowFilePath,
+    type WorkflowId,
+} from './workflows.js';
 
 export interface RunWorkflowsOptions {
     /** The project root the workflows live under. */
@@ -73,6 +79,11 @@ export function workflowTargets(config?: ToolchainConfig): WorkflowTarget[] {
     for (const id of Object.keys(WORKFLOW_FILENAMES) as WorkflowId[]) {
         const setting = ci[id] as WorkflowSetting | undefined;
         if (!isEnabled(setting)) continue;
+        // `gh workflow run` only works for GitHub Actions.
+        if (isVendorWorkflowSetting(setting)) {
+            const provider: string = setting.provider;
+            if (provider !== 'github') continue;
+        }
         const relative = workflowFilePath(id, setting, WORKFLOW_FILENAMES[id]);
         targets.push({
             id,
@@ -83,6 +94,10 @@ export function workflowTargets(config?: ToolchainConfig): WorkflowTarget[] {
     }
     for (const [id, setting] of Object.entries(ci.custom ?? {})) {
         if (!isEnabled(setting)) continue;
+        if (isVendorWorkflowSetting(setting)) {
+            const provider: string = setting.provider;
+            if (provider !== 'github') continue;
+        }
         const relative = workflowFilePath(id, setting);
         targets.push({
             id,

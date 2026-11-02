@@ -176,6 +176,43 @@ describe('changelogSyncTask', () => {
         expect(workflowFilenames(config)).toEqual(['checks.yaml', 'deploy.yaml']);
     });
 
+    it('writes complete GitLab/Azure/GitHub workflows to vendor paths', async () => {
+        const config: ToolchainConfig = {
+            ci: {
+                ci: {
+                    provider: 'gitlab',
+                    workflow: {
+                        stages: ['test'],
+                        test: { stage: 'test', script: ['yarn test'] },
+                    },
+                },
+                release: {
+                    provider: 'azure',
+                    workflow: { steps: [{ script: 'yarn build' }] },
+                },
+                custom: {
+                    deploy: {
+                        provider: 'github',
+                        workflow: { name: 'Deploy', on: ['push'], jobs: {} },
+                    },
+                },
+            },
+        };
+        const files = await changelogSyncTask().run(makeContext(config));
+        expect(files?.find(file => file.path === '.gitlab-ci.yml')?.content).toContain('yarn test');
+        expect(files?.find(file => file.path === 'azure-pipelines.yml')?.content).toContain(
+            'yarn build'
+        );
+        expect(
+            files?.find(file => file.path === '.github/workflows/deploy.yml')?.content
+        ).toContain('name: Deploy');
+        expect(workflowFilePaths(config)).toEqual([
+            '.gitlab-ci.yml',
+            'azure-pipelines.yml',
+            '.github/workflows/deploy.yml',
+        ]);
+    });
+
     it('reports no workflow paths when the ci section is disabled', () => {
         expect(workflowFilePaths({ ci: { enabled: false, ci: true } })).toEqual([]);
         expect(workflowFilenames({ ci: { enabled: false, ci: true } })).toEqual([]);
