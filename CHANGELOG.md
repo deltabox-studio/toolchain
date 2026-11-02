@@ -30,7 +30,7 @@
 ### New features
 #### Changelog
 - Configure breaking-change detection ([#f80634f](https://github.com/deltabox-studio/toolchain/commit/f80634f) by [T0chi](https://github.com/T0chi))
-  - Detect breaking changes by Conventional Commits rules by default (! in the subject or a BREAKING CHANGE: footer) and add a changelog.breaking / ci.changelog.breaking override (conventional, any, false, pattern/match, or a callback).
+  - Detect breaking changes by Conventional Commits rules by default (! in the subject or a **BREAKING CHANGE:** footer) and add a changelog.breaking / ci.changelog.breaking override (conventional, any, false, pattern/match, or a callback).
 
 ## 2.0.1 (October 2026)
 
@@ -120,7 +120,7 @@
 - Inherit root Oxc config and harden scaffolds ([#56a1895](https://github.com/deltabox-studio/toolchain/commit/56a1895) by [T0chi](https://github.com/T0chi))
   - Nested projects omit local Oxc files/opt-ins when the root owns them, template create gains --force, and scaffold writes now reject duplicates, BOM catalogs and root scope fallbacks are handled.
 - Make scaffolds runnable and safer ([#eab297b](https://github.com/deltabox-studio/toolchain/commit/eab297b) by [T0chi](https://github.com/T0chi))
-- Fold an existing vite config when generating a config ([#5891154](https://github.com/deltabox-studio/toolchain/issues/5891154) by [T0chi](https://github.com/T0chi))
+- Fold an existing vite config when generating a config ([#5891154](https://github.com/deltabox-studio/toolchain/commit/5891154) by [T0chi](https://github.com/T0chi))
   - `project:config` now checks for a hand-written `vite.config.*` and folds its literal props into the generated `dbx.config.ts`'s `toolchain.vite` (using the vite migration's extract/scan/fold helpers), adding the `/vite.config.ts` fmt ignore. A non-foldable config is reported and left alone. The VS Code "Generate config" actions run `dbx sync` afterwards so the managed shim is written.
 #### Core
 - Resolve watched inputs from the config and add `dbx watch --list` ([#0ab08a9](https://github.com/deltabox-studio/toolchain/commit/0ab08a9) by [T0chi](https://github.com/T0chi))
@@ -132,7 +132,7 @@
   - `SyncTask.watch` / `SyncTask.keep` accept `config => string[]`, so globs can follow configured file names
   - `SyncContext.manifest` persists task metadata in the manifest between syncs (written before `files`/`origins`, which it can never clobber), and `SyncContext.check` flags `dbx sync --check`
   - `resetToolchain` / `resetProjects` take a `restore` hook that runs before the manifest is removed and report the `restored` files
-- Provider registry search paths and safer managed-file sync ([#4033009](https://github.com/deltabox-studio/toolchain/issues/4033009) by [T0chi](https://github.com/T0chi))
+- Provider registry search paths and safer managed-file sync ([#4033009](https://github.com/deltabox-studio/toolchain/commit/4033009) by [T0chi](https://github.com/T0chi))
   - Load providers from project/global search paths (JSON files, dirs or http(s) URLs), keeping the legacy provider files for compatibility.
   - Add provider search-path management to `dbx registry` (`--kind providers`, `--set`, `--clear`), the CLI config and the VS Code `deltabox.providerRegistrySearchPaths` setting; the Registries view now manages both kinds and the Providers view can fetch remote registries through `loadToolchainProviders()`.
   - Track whether a managed file was created by dbx or adopted from a pre-existing file. Adopted files are unmanaged, never deleted.
@@ -226,7 +226,7 @@
   - note the override revert in the `dbx reset` / `dbx tsconfig` CLI docs and the package reference
   - regenerate `config/reference.md`, `config/cli.md`, `config.schema.json` and `llms-full.txt`
 - Document v2 generators, custom logger and changelog customization ([#f0f7f5d](https://github.com/deltabox-studio/toolchain/commit/f0f7f5d) by [T0chi](https://github.com/T0chi))
-- Update README highlights and regenerate LLM docs ([#6380770](https://github.com/deltabox-studio/toolchain/issues/6380770) by [T0chi](https://github.com/T0chi))
+- Update README highlights and regenerate LLM docs ([#6380770](https://github.com/deltabox-studio/toolchain/commit/6380770) by [T0chi](https://github.com/T0chi))
 - Add the CI guide, TypeScript page and interactive CLI sections ([#fc6099a](https://github.com/deltabox-studio/toolchain/commit/fc6099a) by [T0chi](https://github.com/T0chi))
   - Move the workflow/release pages from the Changelog guide into a new `guide/ci/` section (overview + settings + ci/issues/changelog/sync/ releases) and retitle the overview to "CI".
   - Add `guide/typescript.md` (defineConfig, config types, ambient Zod metadata, programmatic API, Vite+ generics).
@@ -278,7 +278,7 @@
 - Updated misleading docs ([#5a5e44c](https://github.com/deltabox-studio/toolchain/commit/5a5e44c) by [T0chi](https://github.com/T0chi))
 ### Chores
 #### Vscode
-- Rearranged views order ([#0620097](https://github.com/deltabox-studio/toolchain/issues/0620097) by [T0chi](https://github.com/T0chi))
+- Rearranged views order ([#0620097](https://github.com/deltabox-studio/toolchain/commit/0620097) by [T0chi](https://github.com/T0chi))
 
 ## 1.11.3 (October 2026)
 
@@ -524,7 +524,7 @@
 
 ### CI
 #### Vscode
-- Upload `release-vscode.yml` pipeline ([#3080357](https://github.com/deltabox-studio/toolchain/issues/3080357) by [T0chi](https://github.com/T0chi))
+- Upload `release-vscode.yml` pipeline ([#3080357](https://github.com/deltabox-studio/toolchain/commit/3080357) by [T0chi](https://github.com/T0chi))
 
 ## 1.7.6 (October 2026)
 
@@ -561,7 +561,7 @@
 - Set up ci with `Azure Pipelines` ([#5bc736f](https://github.com/deltabox-studio/toolchain/commit/5bc736f) by [T0chi](https://github.com/T0chi))
   - [skip ci]
 ### Chores
-- Remove `azure-pipelines.yml` ([#7965965](https://github.com/deltabox-studio/toolchain/issues/7965965) by [T0chi](https://github.com/T0chi))
+- Remove `azure-pipelines.yml` ([#7965965](https://github.com/deltabox-studio/toolchain/commit/7965965) by [T0chi](https://github.com/T0chi))
 
 ## 1.7.1 (October 2026)
 
@@ -580,7 +580,7 @@
   - Add stripControlChars/stripEscapeArtifacts/sanitizeText to the shared string utils: they strip the predictable shell-escape artifacts (a backslash before a control character) and any remaining bare control characters, while leaving ordinary backslashes and normal whitespace alone. Apply them to the config markdown generator's descriptions and the changelog commit reader/formatter, and cap generated headings at h6 (VitePress dropped the literal #######).
 ### Chores
 #### Changelog
-- Repair escaped commit text and label code refs ([#1425419](https://github.com/deltabox-studio/toolchain/issues/1425419) by [T0chi](https://github.com/T0chi))
+- Repair escaped commit text and label code refs ([#1425419](https://github.com/deltabox-studio/toolchain/commit/1425419) by [T0chi](https://github.com/T0chi))
   - PowerShell interpreted the escaped backticks in the commit bodies as control-character escapes, so the changelog carried backslash+control artifacts (TAB/CR/LF/BS/FF/VT) and mojibake. Repair the affected 1.4.1-1.6.1 entries and add backticks around commands, paths, flags, types and identifiers throughout the file.
 
 ## 1.6.1 (October 2026)
@@ -620,7 +620,7 @@
 
 ### New features
 #### Changelog
-- Emit the husky `commit-msg` hook for consumers ([#6898386](https://github.com/deltabox-studio/toolchain/issues/6898386) by [T0chi](https://github.com/T0chi))
+- Emit the husky `commit-msg` hook for consumers ([#6898386](https://github.com/deltabox-studio/toolchain/commit/6898386) by [T0chi](https://github.com/T0chi))
   - `dbx sync` now writes `.husky/commit-msg` (running `commitlint`) alongside the workflows and `commitlint.config.mjs`, so consumers using the Conventional-Commits CI lint commits locally too. The docs recommend `postinstall: husky` (Yarn Berry never runs `prepare`) and `.husky/* text eol=lf` (a trailing CR breaks the hook).
 
 ## 1.4.1 (October 2026)
@@ -652,7 +652,7 @@
   - The Vite/Vite+ integration is now the `dbx()` plugin plus spreading `DBX_TASKS` into `run.tasks`, so the consumer's own `vite` config stays the config:
   - `export default defineConfig({` `plugins: [dbx()],` `run: { tasks: { ...DBX_TASKS } },` `});`
   - Remove the `defineDbxConfig` wrapper (and `DbxViteConfig`) and update the README, the Providers guide and the API reference.
-- Author the Vite+ config in `dbx.config`, generate `vite.config.ts` ([#9885225](https://github.com/deltabox-studio/toolchain/issues/9885225) by [T0chi](https://github.com/T0chi))
+- Author the Vite+ config in `dbx.config`, generate `vite.config.ts` ([#9885225](https://github.com/deltabox-studio/toolchain/commit/9885225) by [T0chi](https://github.com/T0chi))
   - `toolchain.vite` now holds the whole Vite+ config (a loose object) with a `config: false` opt-out, and `dbx sync` generates the managed root `vite.config.ts` from it, so `dbx.config.*` is the only hand-authored root config.
   - Add `dbx migrate --from vite` (auto-detected): it extracts the object passed to `defineConfig` in an existing root `vite.config.ts` and folds it into `dbx.config.*`'s `toolchain.vite`, refusing configs it cannot migrate faithfully.
   - The config-types generator now honors `.catchall`, emitting an index signature.
@@ -889,7 +889,7 @@
 ## 1.1.14 (October 2026)
 
 ### Documentation
-- Highlight the Vite/Vite+ plugin in the README and docs ([#8218179](https://github.com/deltabox-studio/toolchain/issues/8218179) by [T0chi](https://github.com/T0chi))
+- Highlight the Vite/Vite+ plugin in the README and docs ([#8218179](https://github.com/deltabox-studio/toolchain/commit/8218179) by [T0chi](https://github.com/T0chi))
 
 ## 1.1.13 (October 2026)
 
@@ -920,7 +920,7 @@
 
 ### Documentation
 - Reindent the README lists ([#1d41d68](https://github.com/deltabox-studio/toolchain/commit/1d41d68) by [T0chi](https://github.com/T0chi))
-- Mirror the VS Code extension installation guide from the README ([#1889832](https://github.com/deltabox-studio/toolchain/issues/1889832) by [T0chi](https://github.com/T0chi))
+- Mirror the VS Code extension installation guide from the README ([#1889832](https://github.com/deltabox-studio/toolchain/commit/1889832) by [T0chi](https://github.com/T0chi))
 ### Chores
 - Update VS Code extension installation guide in `README.md` ([#aab06d5](https://github.com/deltabox-studio/toolchain/commit/aab06d5) by [T0chi](https://github.com/T0chi))
 
