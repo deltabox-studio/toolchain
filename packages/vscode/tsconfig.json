@@ -2,6 +2,7 @@
     "extends": "./tsconfig.default.json",
     "compilerOptions": {
         "composite": false,
+        "types": ["node", "mocha"],
         "paths": {
             "@deltabox/toolchain": [
                 "../../src/index.ts"

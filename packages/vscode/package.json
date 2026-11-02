@@ -610,12 +610,17 @@
         }
     },
     "scripts": {
-        "package:vsix": "tsdown --config ../../tsdown.bin.config.ts --config-loader unrun && tsdown --no-clean --config-loader unrun && npx --yes @vscode/vsce package --no-dependencies --out deltabox-toolchain.vsix"
+        "build:extension": "tsdown --config ../../tsdown.bin.config.ts --config-loader unrun && tsdown --no-clean --config-loader unrun",
+        "package:vsix": "yarn build:extension && npx --yes @vscode/vsce package --no-dependencies --out deltabox-toolchain.vsix",
+        "test:integration": "yarn build:extension && tsc -p tsconfig.test.json && vscode-test"
     },
     "devDependencies": {
         "@deltabox/toolchain-tsdown": "workspace:*",
+        "@types/mocha": "^10.0.10",
         "@types/node": "catalog:",
         "@types/vscode": "^1.85.0",
+        "@vscode/test-cli": "^0.0.15",
+        "@vscode/test-electron": "^3.1.0",
         "tsdown": "catalog:",
         "typescript": "catalog:",
         "vitest": "catalog:"

@@ -132,6 +132,29 @@ Search for `deltabox:` to find:
 - **Refresh projects**
 - **Toggle auto-sync**
 
+## Development
+
+Build the extension and the bundled `dbx` CLI:
+
+```sh
+yarn build:extension
+```
+
+Run the extension with **F5** (`Run deltabox toolchain extension`). The launch
+configuration builds first, opens `test-fixtures/workspace`, and uses source
+maps so breakpoints work in `src/`.
+
+Run the VS Code integration tests (downloads a stable VS Code build on the first
+run):
+
+```sh
+yarn test:integration
+```
+
+The tests live in `tests/integration` and are compiled to `out/test`. To debug
+them, install the [Extension Test Runner](https://marketplace.visualstudio.com/items?itemName=ms-vscode.extension-test-runner)
+and use **Test: Debug All Tests**.
+
 <div align="center">
   <img src="https://toolchain.deltabox.studio/logo/outline_colored.png" width="150" />
 </div>

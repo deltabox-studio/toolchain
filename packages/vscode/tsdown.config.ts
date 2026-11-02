@@ -13,6 +13,7 @@ export default defineConfig({
     fixedExtension: true,
     dts: false,
     minify: false,
+    sourcemap: true,
     publint: false,
     exports: false,
     deps: {
