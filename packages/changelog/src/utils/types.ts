@@ -105,4 +105,6 @@ export type CommitFormatContext = ChangelogCommitFormatContext;
 export interface ExistingEntry {
     version: string;
     bullets: string[];
+    /** Nested description lines for each bullet (parallel to `bullets`). */
+    bodies?: string[][];
 }

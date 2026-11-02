@@ -492,6 +492,12 @@ describe('formatLine', () => {
         );
     });
 
+    it('leaves a numeric link that is not a commit as an issue', () => {
+        expect(formatLine('[#999999](https://github.com/o/r/issues/999999)', 'o/r')).toBe(
+            '[#999999](https://github.com/o/r/issues/999999)'
+        );
+    });
+
     it('bolds a bare BREAKING CHANGE marker', () => {
         expect(formatLine('BREAKING CHANGE: the API changed', 'o/r')).toBe(
             '**BREAKING CHANGE:** the API changed'
@@ -559,6 +565,22 @@ describe('reformatChangelogContent (--format-only)', () => {
         expect(out.indexOf('### Bug Fixes')).toBeLessThan(out.indexOf('### New Features'));
         expect(out).toContain('#### Frontend');
         expect(out).toContain('#### Server');
+    });
+
+    it('keeps an existing description when the commit body has escape artifacts', () => {
+        // `f80634f`'s body has BEL/FF where `a`/`f` were (`` `a `` / `` `f ``),
+        // so a re-format must not overwrite the corrected changelog text.
+        const content = [
+            '# Changelog',
+            '',
+            '## 2.1.0 (October 2026)',
+            '',
+            '- Configure breaking-change detection ([#f80634f](https://github.com/x/y/commit/f80634f) by [T](https://github.com/T))',
+            '  - The corrected description with any, false.',
+        ].join('\n');
+        const out = reformatChangelogContent(content, 'x/y');
+        expect(out).toContain('The corrected description with any, false.');
+        expect(out).not.toContain('ny, alse');
     });
 });
 

@@ -1,7 +1,11 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { type ChangelogBreakingSetting, logger } from '@deltabox/toolchain-shared';
+import {
+    type ChangelogBreakingSetting,
+    hasEscapeArtifacts,
+    logger,
+} from '@deltabox/toolchain-shared';
 
 import { isBreakingCommit } from './breaking.js';
 import {
@@ -18,35 +22,54 @@ import { changelogFiles, repoRoot } from './repo.js';
 import type { ChangelogGroupsSetting, ExistingEntry, GroupedItem } from './types.js';
 import { renderChangelogEntry } from './version.js';
 
-/** Split a changelog into `## <version>` sections with their commit bullets. */
+/**
+ * Split a changelog into `## <version>` sections with their commit bullets and
+ * nested description lines. The bodies are kept so a re-format can preserve a
+ * hand-corrected description when the original commit body is unusable (eg. it
+ * contains shell-escape artifacts).
+ */
 export function parseExistingChangelog(content: string): ExistingEntry[] {
     const entries: ExistingEntry[] = [];
     let current: ExistingEntry | undefined;
     // Dependency bullets under `### Package changes` are not commits; the footer
     // is regenerated from the package manifests, not re-parsed as changelog items.
     let inPackageChanges = false;
+    let collectingBody = false;
     for (const line of content.split('\n')) {
         const heading = /^##\s+([0-9]+\.[0-9]+\.[0-9]+)(?:\s*\(.*\))?\s*$/.exec(line);
         if (heading) {
-            current = { version: heading[1]!, bullets: [] };
+            current = { version: heading[1]!, bullets: [], bodies: [] };
             entries.push(current);
             inPackageChanges = false;
+            collectingBody = false;
             continue;
         }
         if (!current) continue;
-        // Skip the release markers and every non-bullet (description) line: the
-        // commit bodies are re-read from git, not reverse-engineered here.
         if (line.includes('<!-- release:')) continue;
         if (/^###\s+Package changes\s*$/.test(line)) {
             inPackageChanges = true;
+            collectingBody = false;
             continue;
         }
         if (/^###\s+/.test(line)) {
             inPackageChanges = false;
+            collectingBody = false;
             continue;
         }
         if (inPackageChanges) continue;
-        if (line.startsWith('- ')) current.bullets.push(line);
+        if (line.startsWith('- ')) {
+            current.bullets.push(line);
+            current.bodies!.push([]);
+            collectingBody = true;
+            continue;
+        }
+        if (!line.trim()) {
+            collectingBody = false;
+            continue;
+        }
+        if (collectingBody && (line.startsWith('  - ') || line.startsWith('    '))) {
+            current.bodies![current.bodies!.length - 1]!.push(line);
+        }
     }
     return entries;
 }
@@ -60,6 +83,22 @@ function creditSuffix(text: string): string {
     return match?.[0] ?? '';
 }
 
+/** Convert an entry's nested description lines into unwrapped paragraphs. */
+function parseExistingBody(lines: string[]): string[][] {
+    const paragraphs: string[][] = [];
+    let current: string[] = [];
+    for (const line of lines) {
+        if (line.startsWith('  - ')) {
+            if (current.length > 0) paragraphs.push([current.join(' ')]);
+            current = [line.slice(4).trim()];
+        } else if (line.startsWith('    ')) {
+            current.push(line.slice(4).trim());
+        }
+    }
+    if (current.length > 0) paragraphs.push([current.join(' ')]);
+    return paragraphs;
+}
+
 /** Regroup an existing (flat) entry's bullets into the grouped format. */
 function reformatEntry(
     entry: ExistingEntry,
@@ -70,7 +109,7 @@ function reformatEntry(
     breakingSetting?: ChangelogBreakingSetting
 ): string {
     const items: GroupedItem[] = [];
-    for (const line of entry.bullets) {
+    for (const [index, line] of entry.bullets.entries()) {
         const stripped = line.replace(/^-\s+/, '');
         const hash = bulletHash(line);
         // Parse the ORIGINAL commit message when available: the changelog line
@@ -81,7 +120,15 @@ function reformatEntry(
         const suffix = creditSuffix(stripped);
         const subject = formatLine(capitalize(parsed.rest), repo);
         const text = `- ${[subject, suffix].filter(Boolean).join(' ')}`;
-        const bodyParagraphs = original ? formatBody(original.body) : [];
+        // A body mangled by a shell loses characters that cannot be recovered;
+        // keep the existing (already corrected) description in that case.
+        const existing = entry.bodies?.[index] ?? [];
+        const bodyParagraphs =
+            original && hasEscapeArtifacts(original.body) && existing.length > 0
+                ? parseExistingBody(existing)
+                : original
+                  ? formatBody(original.body)
+                  : [];
         const breaking = isBreakingCommit(
             { subject: rawSubject, body: original?.body ?? '' },
             breakingSetting

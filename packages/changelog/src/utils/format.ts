@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 import { logger, sanitizeText } from '@deltabox/toolchain-shared';
 
+import { readCommit } from './git.js';
 import type {
     ChangelogGroupConfig,
     ChangelogGroupContext,
@@ -370,15 +371,30 @@ function canonicalIssueUrl(repo: string, number: string): string {
     return `https://github.com/${repo}/issues/${number}`;
 }
 
-/** Normalize `[#hash](url)` and raw `#hash` refs to the canonical commit link. */
+/** Whether a hex ref resolves to a commit in this repository. */
+function isCommitHash(hash: string): boolean {
+    return Boolean(readCommit(hash) ?? readCommit(hash.slice(0, 7)));
+}
+
+/**
+ * Normalize `[#hash](url)` and raw `#hash` refs to the canonical commit link.
+ * A hex link that does not resolve to a commit is left alone: a 6+ digit issue
+ * number (`#123456`) is also valid hex and must stay an issue link.
+ */
 function formatHashLinks(line: string, repo: string): string {
-    const linked = line.replace(/\[(#[0-9a-fA-F]{6,40})\]\(([^)]*)\)/g, (_match, text: string) => {
-        const short = text.replace('#', '').slice(0, 7);
-        return `[#${short}](${canonicalCommitUrl(repo, short)})`;
-    });
+    const linked = line.replace(
+        /\[(#[0-9a-fA-F]{6,40})\]\(([^)]*)\)/g,
+        (match, text: string, url: string) => {
+            const hash = text.replace('#', '');
+            if (!url.includes('/commit/') && !isCommitHash(hash)) return match;
+            const short = hash.slice(0, 7);
+            return `[#${short}](${canonicalCommitUrl(repo, short)})`;
+        }
+    );
     return linked.replace(
         /(^|[^\w[])#([0-9a-fA-F]{7,40})(?![0-9a-fA-F])(?=[)\].,;:\s]|$)/g,
-        (_match, pre: string, hash: string) => {
+        (match, pre: string, hash: string) => {
+            if (!isCommitHash(hash)) return match;
             const short = hash.slice(0, 7);
             return `${pre}[#${short}](${canonicalCommitUrl(repo, short)})`;
         }
