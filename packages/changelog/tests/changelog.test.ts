@@ -321,33 +321,91 @@ describe('changelog formatting', () => {
         expect(rendered).toContain('- Add things ([#abcdef1]');
     });
 
-    it('extracts conventional footers and skips list/issue-only body lines', () => {
+    it('extracts conventional footers, keeps list items and skips issue-only lines', () => {
         const body = [
             'Real description line.',
             'wrapped continuation',
             '',
             'BREAKING CHANGE: the API shape changed',
-            '- a bullet to skip',
+            '- a bullet to keep',
             'fixes #12',
             'Reviewed-by: Someone',
         ].join('\n');
         expect(formatBody(body)).toEqual([
-            ['Real description line.', 'wrapped continuation'],
+            ['Real description line. wrapped continuation'],
             ['**BREAKING CHANGE:** the API shape changed'],
+            ['a bullet to keep'],
             ['**Reviewed-by:** Someone'],
         ]);
     });
 
-    it('does not treat a sentence with a colon as a footer', () => {
+    it('keeps a multi-line conventional footer together', () => {
+        const body = [
+            '- a list item',
+            '',
+            'BREAKING CHANGE: ConfigScopes and CONFIG_SECTION_SCHEMAS,',
+            'CONFIG_TYPE_SCHEMAS and CONFIG_SECTION_DESCRIPTIONS are removed.',
+            'Consumers should use ConfigSchema instead.',
+            'Reviewed-by: Someone',
+        ].join('\n');
+        expect(formatBody(body)).toEqual([
+            ['a list item'],
+            [
+                '**BREAKING CHANGE:** ConfigScopes and CONFIG_SECTION_SCHEMAS, CONFIG_TYPE_SCHEMAS and CONFIG_SECTION_DESCRIPTIONS are removed. Consumers should use ConfigSchema instead.',
+            ],
+            ['**Reviewed-by:** Someone'],
+        ]);
+    });
+
+    it('unwraps hard-wrapped lines into sentences', () => {
         expect(
             formatBody(
                 'Revamp the js SDK around modular clients: ProxifiedClient now returns a proxy\nthat exposes the SDK resource members.'
             )
         ).toEqual([
             [
-                'Revamp the js SDK around modular clients: ProxifiedClient now returns a proxy',
-                'that exposes the SDK resource members.',
+                'Revamp the js SDK around modular clients: ProxifiedClient now returns a proxy that exposes the SDK resource members.',
             ],
+        ]);
+    });
+
+    it('keeps every list item, including wrapped continuations', () => {
+        const body = [
+            '- Load providers from project/global search paths (JSON files, dirs or',
+            '  http(s) URLs), keeping the legacy provider files for compatibility.',
+            '- Add provider search-path management to `dbx registry` (`--kind',
+            '  providers`, `--set`, `--clear`).',
+            '',
+            '* a star bullet',
+            '1. a numbered item',
+        ].join('\n');
+        expect(formatBody(body)).toEqual([
+            [
+                'Load providers from project/global search paths (JSON files, dirs or http(s) URLs), keeping the legacy provider files for compatibility.',
+            ],
+            [
+                'Add provider search-path management to `dbx registry` (`--kind providers`, `--set`, `--clear`).',
+            ],
+            ['a star bullet'],
+            ['a numbered item'],
+        ]);
+    });
+
+    it('preserves fenced code blocks verbatim', () => {
+        const body = [
+            'Before.',
+            '',
+            '```ts',
+            'const a = 1;',
+            'const b = 2;',
+            '```',
+            '',
+            'After.',
+        ].join('\n');
+        expect(formatBody(body)).toEqual([
+            ['Before.'],
+            ['```ts', 'const a = 1;', 'const b = 2;', '```'],
+            ['After.'],
         ]);
     });
 
@@ -394,17 +452,23 @@ describe('changelog formatting', () => {
             '',
             '<!-- release:end -->',
             '',
+            '### Package changes',
+            '#### Added',
+            '- `some-dep` `^1.0.0`',
+            '',
             '## 0.14.0',
             '',
             '- **feat(server):** add thing ([#1234567](https://github.com/x/y/commit/1234567) by [T](https://github.com/T))',
         ].join('\n');
         const entries = parseExistingChangelog(content);
         expect(entries.map(e => e.version)).toEqual(['0.15.0', '0.14.0']);
-        // only bullet lines are collected; markers + description lines are skipped
+        // only commit bullet lines are collected; markers, descriptions and the
+        // package-changes footer are skipped
         expect(entries[0]!.bullets).toHaveLength(1);
         expect(entries[0]!.bullets[0]).toContain('- **chore(scripts):** tidy');
         expect(entries[0]!.bullets.join('\n')).not.toContain('release:');
         expect(entries[0]!.bullets.join('\n')).not.toContain('A nested description line.');
+        expect(entries[0]!.bullets.join('\n')).not.toContain('some-dep');
     });
 });
 

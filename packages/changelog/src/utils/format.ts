@@ -278,25 +278,50 @@ export function splitInlineDescription(rest: string): { main: string; inline: st
     };
 }
 
+const LIST_ITEM = /^(?:[-*+]|\d+[.)])\s+(.*)$/;
+const FENCE = /^(```|~~~)/;
+
 /**
  * Split a commit body into description paragraphs and conventional footers
- * (`KEY: value` lines), skipping bullet/numbered lists and issue-only lines so
- * each commit's details are rendered as nested bullets rather than one long
- * line. Blank lines separate paragraphs.
+ * (`KEY: value` lines), skipping issue-only lines. Each list item becomes its
+ * own paragraph and hard-wrapped lines are unwrapped, so the rendered
+ * description reads as sentences instead of being cut off mid-line. Blank lines
+ * separate paragraphs; fenced code blocks are preserved verbatim.
  */
 export function formatBody(body: string): string[][] {
     const paragraphs: string[][] = [];
     let current: string[] = [];
+    let fence: string[] | undefined;
+    // A footer (`BREAKING CHANGE: ...`) can wrap over several lines; keep
+    // appending until the next blank line instead of splitting it mid-sentence.
+    let inFooter = false;
+
+    const flush = (): void => {
+        if (current.length === 0) return;
+        paragraphs.push([current.join(' ')]);
+        current = [];
+    };
+
     for (const raw of body.split('\n')) {
         const trimmed = sanitizeText(raw.trim());
-        if (!trimmed) {
-            if (current.length > 0) {
-                paragraphs.push(current);
-                current = [];
+
+        if (fence) {
+            fence.push(raw.replace(/\s+$/, ''));
+            if (FENCE.test(trimmed)) {
+                paragraphs.push(fence);
+                fence = undefined;
             }
             continue;
         }
-        if (trimmed.startsWith('-') || trimmed.startsWith('*') || /^[0-9]+[.)]/.test(trimmed)) {
+        if (!trimmed) {
+            flush();
+            inFooter = false;
+            continue;
+        }
+        if (FENCE.test(trimmed)) {
+            flush();
+            inFooter = false;
+            fence = [raw.replace(/\s+$/, '')];
             continue;
         }
         // Issue-only lines (already captured in the commit's "(fixes ...)" suffix).
@@ -313,16 +338,27 @@ export function formatBody(body: string): string[][] {
                 trimmed
             );
         if (footer && !/^(http|https)\b/.test(trimmed)) {
-            if (current.length > 0) {
-                paragraphs.push(current);
-                current = [];
-            }
-            paragraphs.push([`**${(footer[1] ?? '').trim()}:** ${(footer[2] ?? '').trim()}`]);
+            flush();
+            current = [`**${(footer[1] ?? '').trim()}:** ${(footer[2] ?? '').trim()}`];
+            inFooter = true;
+            continue;
+        }
+        const listItem = LIST_ITEM.exec(trimmed);
+        if (listItem) {
+            flush();
+            inFooter = false;
+            const text = (listItem[1] ?? '').trim();
+            if (text) current = [text];
+            continue;
+        }
+        if (inFooter) {
+            current.push(trimmed);
             continue;
         }
         current.push(trimmed);
     }
-    if (current.length > 0) paragraphs.push(current);
+    if (fence) paragraphs.push(fence);
+    flush();
     return paragraphs;
 }
 

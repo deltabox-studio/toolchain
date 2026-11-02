@@ -18,21 +18,34 @@ import { changelogFiles, repoRoot } from './repo.js';
 import type { ChangelogGroupsSetting, ExistingEntry, GroupedItem } from './types.js';
 import { renderChangelogEntry } from './version.js';
 
-/** Split a changelog into `## <version>` sections with their bullet lines. */
+/** Split a changelog into `## <version>` sections with their commit bullets. */
 export function parseExistingChangelog(content: string): ExistingEntry[] {
     const entries: ExistingEntry[] = [];
     let current: ExistingEntry | undefined;
+    // Dependency bullets under `### Package changes` are not commits; the footer
+    // is regenerated from the package manifests, not re-parsed as changelog items.
+    let inPackageChanges = false;
     for (const line of content.split('\n')) {
         const heading = /^##\s+([0-9]+\.[0-9]+\.[0-9]+)(?:\s*\(.*\))?\s*$/.exec(line);
         if (heading) {
             current = { version: heading[1]!, bullets: [] };
             entries.push(current);
+            inPackageChanges = false;
             continue;
         }
         if (!current) continue;
         // Skip the release markers and every non-bullet (description) line: the
         // commit bodies are re-read from git, not reverse-engineered here.
         if (line.includes('<!-- release:')) continue;
+        if (/^###\s+Package changes\s*$/.test(line)) {
+            inPackageChanges = true;
+            continue;
+        }
+        if (/^###\s+/.test(line)) {
+            inPackageChanges = false;
+            continue;
+        }
+        if (inPackageChanges) continue;
         if (line.startsWith('- ')) current.bullets.push(line);
     }
     return entries;
