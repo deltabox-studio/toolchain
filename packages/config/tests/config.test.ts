@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
+import { dbxConfigSchema } from '@deltabox/toolchain-shared';
+
 import {
     buildConfigJson,
     collectVars,
@@ -170,5 +172,13 @@ describe('createConfigEngine', () => {
         const schema = await engine.generateJsonSchema();
         expect(schema.$id).toBeDefined();
         expect(Object.keys(engine.generateConfigTypes())).toEqual(['server', 'cli']);
+    });
+});
+
+describe('dbx config schema', () => {
+    it('can be lowered to JSON Schema and generated types', async () => {
+        const engine = createConfigEngine({ schema: dbxConfigSchema });
+        await expect(engine.generateJsonSchema()).resolves.toBeDefined();
+        expect(() => engine.generateConfigTypes()).not.toThrow();
     });
 });

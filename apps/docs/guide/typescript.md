@@ -32,7 +32,7 @@ it (see [`defineConfig`](/guide/config/defineconfig)).
 ## Config types
 
 The `toolchain` shape is exported as `ToolchainConfig` (and the individual
-sections as `ToolchainCiConfig`, `ToolchainChangelogConfig`, ...):
+sections as `ToolchainCiConfig`, `ChangelogConfig`, ...):
 
 ```ts
 import type { ToolchainConfig, ToolchainCiConfig } from '@deltabox/toolchain';

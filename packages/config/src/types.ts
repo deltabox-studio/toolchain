@@ -22,6 +22,11 @@ export interface ConfigBaseMeta {
     example?: string[] | string;
     /** Version or date this option was introduced (`@since`). */
     since?: string;
+    /**
+     * A hand-written TypeScript type for values JSON Schema cannot express
+     * (functions/callbacks). Emitted in generated types and markdown.
+     */
+    tsType?: string;
     /** Related link(s) for the option (`@see`). */
     see?: string[] | string;
     /** Extra notes shown after the description (`@remarks`). */

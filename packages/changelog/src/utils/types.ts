@@ -1,8 +1,14 @@
 /** Shared types for the changelog pipeline. */
 
 import type {
+    ChangelogAuthorInfo,
     ChangelogBreakingCommit,
     ChangelogBreakingSetting,
+    ChangelogBumpRuleCallbackContext,
+    ChangelogBumpRuleContext,
+    ChangelogCommitFormatContext,
+    ChangelogCommitFormatOptions,
+    ChangelogCommitRecord,
     ChangelogGroupConfig,
     ChangelogGroupContext,
     ChangelogGroupEntry,
@@ -12,11 +18,21 @@ import type {
     ChangelogGroupsContext,
     ChangelogGroupsSetting,
     ChangelogGroupTitle,
+    ChangelogIssueInfo,
+    ChangelogProvider,
+    ChangelogProviderContext,
+    ChangelogProviderSetting,
 } from '@deltabox/toolchain-shared';
 
 export type {
+    ChangelogAuthorInfo,
     ChangelogBreakingCommit,
     ChangelogBreakingSetting,
+    ChangelogBumpRuleCallbackContext,
+    ChangelogBumpRuleContext,
+    ChangelogCommitFormatContext,
+    ChangelogCommitFormatOptions,
+    ChangelogCommitRecord,
     ChangelogGroupConfig,
     ChangelogGroupContext,
     ChangelogGroupEntry,
@@ -26,30 +42,21 @@ export type {
     ChangelogGroupsContext,
     ChangelogGroupsSetting,
     ChangelogGroupTitle,
+    ChangelogIssueInfo,
+    ChangelogProvider,
+    ChangelogProviderContext,
+    ChangelogProviderSetting,
 };
 
 export type BumpType = 'major' | 'minor' | 'patch';
 
 export type ProcessingMethod = 'latest' | 'all' | string;
 
-export interface CommitRecord {
-    hash: string;
-    subject: string;
-    body: string;
-    author: string;
-    authorEmail: string;
-}
+export type CommitRecord = ChangelogCommitRecord;
 
-export interface AuthorInfo {
-    name: string;
-    url?: string;
-}
+export type AuthorInfo = ChangelogAuthorInfo;
 
-export interface IssueInfo {
-    number: number;
-    title?: string;
-    url?: string;
-}
+export type IssueInfo = ChangelogIssueInfo;
 
 export interface CliOptions {
     range: string;
@@ -90,38 +97,9 @@ export interface GroupedItem {
 }
 
 /** Options for rendering a commit bullet/credit line. */
-export interface CommitFormatOptions {
-    /** Include the `by <author>` credit (default true). */
-    author?: boolean;
-    /** Include the commit hash link (default true). */
-    commitSha?: boolean;
-    /** Include issue/fixes links (default true). */
-    issues?: boolean;
-    /** Prefix the author with their GitHub avatar (default false). */
-    authorAvatar?: boolean;
-    /** Fully custom commit line formatter. */
-    format?: (ctx: CommitFormatContext) => string;
-}
+export type CommitFormatOptions = ChangelogCommitFormatOptions;
 
-export interface CommitFormatContext {
-    commit: CommitRecord;
-    repo?: string;
-    author: AuthorInfo;
-    issues: IssueInfo[];
-    options: CommitFormatOptions;
-}
-
-/** A custom changelog provider. */
-export interface ChangelogProviderContext {
-    cwd: string;
-    changelog?: unknown;
-    records: CommitRecord[];
-}
-
-export interface ChangelogProvider {
-    id: string;
-    run: (ctx: ChangelogProviderContext) => string | void;
-}
+export type CommitFormatContext = ChangelogCommitFormatContext;
 
 /** A `## <version>` section parsed out of an existing changelog. */
 export interface ExistingEntry {

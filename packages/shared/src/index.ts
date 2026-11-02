@@ -1,5 +1,6 @@
 export * from './bin.js';
 export * from './changelog-breaking.js';
+export * from './changelog-callbacks.js';
 export * from './changelog-groups.js';
 export * from './fs-utils.js';
 export * from './ignore.js';

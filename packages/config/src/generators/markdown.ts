@@ -17,6 +17,7 @@ import {
     metaOf,
     normalizeConfigSchema,
     splitBaseSchema,
+    toJsonSchemaSafe,
 } from '../schema.js';
 import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
 import { type CliFlagOptions, cliFlagLabel } from './cli.js';
@@ -451,9 +452,7 @@ function jsonScopesOf(
 ): Record<string, Schema> {
     const toJson = (value: unknown): Schema | undefined =>
         isZodSchema(value)
-            ? ((value as { toJSONSchema: (o?: object) => unknown }).toJSONSchema({
-                  target: 'draft-2020-12',
-              }) as Schema)
+            ? (toJsonSchemaSafe(value, { target: 'draft-2020-12' }) as Schema)
             : undefined;
     if (Array.isArray(schema)) return scopes;
     const single = toJson(schema);
@@ -556,6 +555,8 @@ interface JsonSchemaJson {
     experimental?: boolean;
     alpha?: boolean;
     beta?: boolean;
+    /** A hand-written TypeScript type for values JSON Schema cannot express. */
+    tsType?: string;
 }
 
 /** The `$defs` key a `$ref` points at. */
@@ -640,6 +641,7 @@ function jsonNodeMeta(
  * rendered structurally so nested options are readable without the type table.
  */
 function jsonTypeLabel(node: JsonSchemaJson, defs: Record<string, JsonSchemaJson>): string {
+    if (typeof node.tsType === 'string' && node.tsType.trim()) return node.tsType;
     if (node.$ref) {
         const resolved = resolveJsonRef(node, defs);
         if (resolved.properties || resolved.anyOf || resolved.oneOf) return refNameOf(node)!;
@@ -686,6 +688,9 @@ function jsonChildFields(
         seen.add(name);
     }
     const resolved = resolveJsonRef(node, defs);
+    // An external type (eg. a tool's own config type) is rendered by name; do
+    // not expand its internal fields in the reference docs.
+    if (node.tsType || resolved.tsType) return { properties: {}, required: [] };
     if (resolved.properties) {
         return {
             properties: resolved.properties,

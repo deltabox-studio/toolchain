@@ -21,6 +21,7 @@ import {
     FORMATTER_PRECEDENCE,
     isPlainObject,
     LINTER_PRECEDENCE,
+    type ConfigJsonValue,
     type PackageJson,
     readJsonAt,
     readJsoncAt,
@@ -374,7 +375,7 @@ export async function normalizeToolingConfig(
             const migrated = await migratedFmtOptions(options.cwd);
             const merged = deepMerge<Json>(DEFAULT_FMT_RULES as Json, migrated ?? {});
             mergeIgnorePatterns(merged, migrated ?? {});
-            next.oxc = merged;
+            next.oxc = merged as Record<string, ConfigJsonValue>;
         } else {
             (next as Record<string, unknown>)[selected] =
                 existingConfigOptions(options.cwd, selected) ?? {};
@@ -396,7 +397,7 @@ export async function normalizeToolingConfig(
             const migrated = await migratedLintOptions(options.cwd);
             const merged = deepMerge<Json>(DEFAULT_LINT_RULES as Json, migrated ?? {});
             mergeIgnorePatterns(merged, migrated ?? {});
-            next.oxc = merged;
+            next.oxc = merged as Record<string, ConfigJsonValue>;
         } else {
             (next as Record<string, unknown>)[selected] =
                 existingConfigOptions(options.cwd, selected) ?? {};

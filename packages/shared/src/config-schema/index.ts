@@ -16,7 +16,7 @@ import { z } from 'zod';
 
 import { biomeConfigSchema } from './biome.js';
 import { catalogsConfigSchema } from './catalogs.js';
-import { legacyChangelogConfigSchema } from './changelog.js';
+import { changelogConfigSchema } from './changelog.js';
 import { ciConfigSchema } from './ci.js';
 import { fmtConfigSchema, lintConfigSchema } from './format.js';
 import { loggerConfigSchema } from './logger.js';
@@ -34,6 +34,8 @@ export * from './catalogs.js';
 export * from './changelog.js';
 export * from './ci.js';
 export * from './format.js';
+export * from './generated/biome-config.js';
+export * from './json.js';
 export * from './logger.js';
 export * from './meta.js';
 export * from './project.js';
@@ -59,7 +61,7 @@ export const toolchainConfigSchema = z
                 'GitHub Actions workflows to generate (CI, release, issues, changelog, sync).'
             )
             .optional(),
-        changelog: section(legacyChangelogConfigSchema)
+        changelog: section(changelogConfigSchema)
             .describe(
                 'Manual changelog pipeline options for `dbx changelog`, the VS Code ' +
                     'actions and the API. `ci.changelog` inherits these options.'
@@ -111,7 +113,7 @@ export const dbxConfigSchema = z
 export const configSchema = {
     project: projectConfigSchema,
     ci: ciConfigSchema,
-    changelog: legacyChangelogConfigSchema,
+    changelog: changelogConfigSchema,
     fmt: fmtConfigSchema,
     lint: lintConfigSchema,
     biome: biomeConfigSchema,

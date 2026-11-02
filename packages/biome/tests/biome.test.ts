@@ -64,7 +64,9 @@ describe('biome templates', () => {
         const task = biomeSyncTask();
         const config = {
             fmt: { biome: { formatter: { indentWidth: 2 } } },
-            lint: { biome: { linter: { rules: { suspicious: { noDoubleEquals: 'error' } } } } },
+            lint: {
+                biome: { linter: { rules: { suspicious: { noDoubleEquals: 'error' as const } } } },
+            },
         };
         expect(task.enabled?.(config)).toBe(true);
         const files = await task.run({

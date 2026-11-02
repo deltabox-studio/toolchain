@@ -3,7 +3,9 @@ import { resolve } from 'node:path';
 
 import {
     type ChangelogBreakingSetting,
+    type ChangelogBumpRuleContext,
     type ChangelogConfig,
+    type ChangelogVersioningConfig,
     logger,
 } from '@deltabox/toolchain-shared';
 
@@ -14,6 +16,9 @@ import { relatedWorkspacePaths } from './graph.js';
 import { repoRoot } from './repo.js';
 import type { BumpType, CommitRecord } from './types.js';
 import { bumpVersion } from './version.js';
+
+/** The configured custom bump rules (major/minor/patch only). */
+type BumpRules = NonNullable<ChangelogVersioningConfig['bump']>;
 
 /** How/where a changelog run applies its version bump. */
 export type VersioningTarget = 'uniform' | 'root-only' | 'individual';
@@ -27,7 +32,7 @@ export interface ResolvedVersioning {
     /** Explicit workspace globs (when configured). */
     workspaces?: string[];
     /** Custom bump rules keyed by version index. */
-    bump?: Record<string, unknown>;
+    bump?: BumpRules;
     /** Apply a bump per matching change instead of once. */
     allowOverBump?: boolean;
     /** Changelog provider id, callback, or custom provider object. */
@@ -143,13 +148,7 @@ export function discoverVersionPackages(workspaces?: string[], root = repoRoot()
 }
 
 /** Context handed to custom bump callbacks. */
-export interface BumpRuleContext {
-    env: NodeJS.ProcessEnv;
-    logger: typeof logger;
-    packageJson?: Record<string, unknown>;
-    /** How breaking changes are detected (default: Conventional Commits). */
-    breaking?: ChangelogBreakingSetting;
-}
+export type BumpRuleContext = ChangelogBumpRuleContext;
 
 /** Whether a bump rule matches a commit. */
 function bumpRuleMatches(rule: unknown, record: CommitRecord, context: BumpRuleContext): boolean {
@@ -205,7 +204,7 @@ const BUMP_ORDER: BumpType[] = ['patch', 'minor', 'major'];
 /** Resolve a bump from custom rules, falling back to Conventional Commits. */
 export function deriveCustomBump(
     records: CommitRecord[],
-    rules?: Record<string, unknown>,
+    rules?: BumpRules,
     allowOverBump = false,
     context: BumpRuleContext = { env: process.env, logger }
 ): BumpType {
@@ -260,7 +259,7 @@ export interface PlanVersionsOptions {
     /** The bump derived from all scanned commits. */
     bump: BumpType;
     /** Custom bump rules (used for per-workspace derivation). */
-    bumpRules?: Record<string, unknown>;
+    bumpRules?: BumpRules;
     /** Allow over-bumping (default false). */
     allowOverBump?: boolean;
     /** How breaking changes are detected (default: Conventional Commits). */

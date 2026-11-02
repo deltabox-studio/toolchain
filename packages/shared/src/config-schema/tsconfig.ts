@@ -1,6 +1,11 @@
+import type { TsConfigJson } from 'type-fest';
 import { z } from 'zod';
 
+import { externalConfigSchema } from './external.js';
 import { withEnabled } from './meta.js';
+
+const tsconfigOverride = (description: string) =>
+    externalConfigSchema<TsConfigJson>(description, 'TsConfigJson');
 
 /** Workspace tsconfig generation (aliases + project references). */
 export const tsconfigConfigSchema = withEnabled(
@@ -82,28 +87,18 @@ export const tsconfigConfigSchema = withEnabled(
             .optional(),
         overrides: z
             .object({
-                base: z
-                    .record(z.string(), z.unknown())
-                    .describe('Deep-merged into the root base tsconfig (`baseFile`) during sync.')
-                    .optional(),
-                default: z
-                    .record(z.string(), z.unknown())
-                    .describe(
-                        'Deep-merged into every workspace default tsconfig (`defaultFile`) during sync.'
-                    )
-                    .optional(),
-                build: z
-                    .record(z.string(), z.unknown())
-                    .describe(
-                        'Deep-merged into every workspace build tsconfig (`buildFile`) during sync.'
-                    )
-                    .optional(),
-                root: z
-                    .record(z.string(), z.unknown())
-                    .describe(
-                        'Deep-merged into the root workspaces tsconfig (`rootFile`) during sync.'
-                    )
-                    .optional(),
+                base: tsconfigOverride(
+                    'Deep-merged into the root base tsconfig (`baseFile`) during sync.'
+                ).optional(),
+                default: tsconfigOverride(
+                    'Deep-merged into every workspace default tsconfig (`defaultFile`) during sync.'
+                ).optional(),
+                build: tsconfigOverride(
+                    'Deep-merged into every workspace build tsconfig (`buildFile`) during sync.'
+                ).optional(),
+                root: tsconfigOverride(
+                    'Deep-merged into the root workspaces tsconfig (`rootFile`) during sync.'
+                ).optional(),
             })
             .describe(
                 'Managed overrides deep-merged into the base/root/default/build tsconfig files ' +

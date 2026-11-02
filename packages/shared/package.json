@@ -20,7 +20,10 @@
         "zod": "catalog:"
     },
     "devDependencies": {
+        "@dprint/types": "catalog:",
         "@types/node": "catalog:",
+        "eslint": "catalog:",
+        "prettier": "catalog:",
         "tsdown": "catalog:",
         "type-fest": "catalog:",
         "typescript": "catalog:",

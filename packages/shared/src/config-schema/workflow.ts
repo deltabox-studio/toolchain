@@ -1,6 +1,12 @@
+import type { JsonObject } from 'type-fest';
 import { z } from 'zod';
 
+import { externalConfigSchema } from './external.js';
+import { configJsonValueSchema } from './json.js';
 import { withEnabled } from './meta.js';
+
+const jsonObjectSchema = (description: string) =>
+    externalConfigSchema<JsonObject>(description, 'JsonObject');
 
 /** A GitHub Actions step (the subset the workflow builder understands). */
 export const workflowStepSchema = z
@@ -34,6 +40,30 @@ export const workflowStepsConfigSchema = z
     .describe('Extra steps to inject into a workflow job.')
     .meta({ id: 'WorkflowStepsConfig' });
 
+/** A complete GitHub Actions job (the subset the workflow builder understands). */
+export const workflowJobSchema = z
+    .object({
+        name: z.string().describe('Job display name.').optional(),
+        'runs-on': z.string().describe('The runner label or expression.'),
+        if: z.string().describe('Conditional expression (`if:`).').optional(),
+        needs: z
+            .union([z.string(), z.array(z.string())])
+            .describe('Job id(s) this job depends on.')
+            .optional(),
+        environment: z.string().describe('A GitHub environment name.').optional(),
+        permissions: z.record(z.string(), z.string()).describe('Job permissions.').optional(),
+        env: z.record(z.string(), z.string()).describe('Environment variables.').optional(),
+        outputs: z.record(z.string(), z.string()).describe('Job outputs.').optional(),
+        concurrency: jsonObjectSchema('Job concurrency settings.').optional(),
+        'timeout-minutes': z.number().describe('The job timeout in minutes.').optional(),
+        strategy: jsonObjectSchema('A build matrix / strategy.').optional(),
+        services: jsonObjectSchema('Service containers.').optional(),
+        steps: z.array(workflowStepSchema).describe('The job steps.'),
+    })
+    .catchall(configJsonValueSchema)
+    .describe('A complete GitHub Actions workflow job.')
+    .meta({ id: 'WorkflowJob' });
+
 /** Per-workflow overrides merged over the default workflow. */
 export const workflowOptionsSchema = withEnabled(
     z.object({
@@ -42,17 +72,16 @@ export const workflowOptionsSchema = withEnabled(
             .array(z.string())
             .describe('Replace `on.pull_request.branches`.')
             .optional(),
-        triggers: z.record(z.string(), z.unknown()).describe('Extra `on.*` triggers.').optional(),
-        extra: z
-            .record(z.string(), z.unknown())
-            .describe('Extra top-level keys (`permissions`, `concurrency`, `env`, ...).')
-            .optional(),
+        triggers: jsonObjectSchema('Extra `on.*` triggers.').optional(),
+        extra: jsonObjectSchema(
+            'Extra top-level keys (`permissions`, `concurrency`, `env`, ...).'
+        ).optional(),
         steps: z
             .union([workflowStepsConfigSchema, z.array(workflowStepsConfigSchema)])
             .describe('Extra steps for a job (one group, or per-job groups).')
             .optional(),
         jobs: z
-            .record(z.string(), z.unknown())
+            .record(z.string(), workflowJobSchema)
             .describe('Extra complete jobs merged in.')
             .optional(),
         tokens: z
