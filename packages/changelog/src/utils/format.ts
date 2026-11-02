@@ -385,11 +385,16 @@ function formatHashLinks(line: string, repo: string): string {
     );
 }
 
-/** Normalize `[#N …](url)` and raw `#N` issue refs to the canonical issue link. */
+/**
+ * Normalize `[#N …](url)` and raw `#N` issue refs to the canonical issue link.
+ * A commit URL is left alone: a numeric-only short hash (`#4033009`) is a valid
+ * issue number, but it was already resolved as a commit by {@link formatHashLinks}.
+ */
 function formatIssueLinks(line: string, repo: string): string {
     const linked = line.replace(
-        /\[#(\d+)(?=[ \]])(?:[^\]]*)\]\([^)]*\)/g,
-        (_match, number: string) => `[#${number}](${canonicalIssueUrl(repo, number)})`
+        /\[#(\d+)(?=[ \]])(?:[^\]]*)\]\(([^)]*)\)/g,
+        (match, number: string, url: string) =>
+            url.includes('/commit/') ? match : `[#${number}](${canonicalIssueUrl(repo, number)})`
     );
     return linked.replace(
         /(^|[^\w[])#(\d+)(?=[)\].,;:\s]|$)/g,
@@ -398,16 +403,25 @@ function formatIssueLinks(line: string, repo: string): string {
     );
 }
 
+/** Bold the `BREAKING CHANGE:` marker unless it is already bold. */
+function formatBreakingLabel(line: string): string {
+    return line.replace(
+        /(\*\*)?\b(BREAKING[ -]CHANGE):(\*\*)?/g,
+        (match, open: string | undefined, label: string, close: string | undefined) =>
+            open && close ? match : `**${label}:**`
+    );
+}
+
 export function formatLine(line: string, repo: string | undefined): string {
-    if (!repo) return line;
-    let out = formatHashLinks(line, repo);
+    const withBreaking = formatBreakingLabel(line);
+    if (!repo) return withBreaking;
+    let out = formatHashLinks(withBreaking, repo);
     out = formatIssueLinks(out, repo);
     return out;
 }
 
 /** Format every commit line in a changelog file (all versions, in place). */
 export function formatChangelogFile(file: string, repo: string | undefined): void {
-    if (!repo) return;
     const content = readFileSync(file, 'utf8');
     const formatted = content
         .split('\n')

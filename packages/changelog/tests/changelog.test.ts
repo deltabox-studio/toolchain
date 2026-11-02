@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
     buildSummary,
     formatBody,
+    formatLine,
     groupItems,
     parseCcSubject,
     parseExistingChangelog,
@@ -469,6 +470,41 @@ describe('changelog formatting', () => {
         expect(entries[0]!.bullets.join('\n')).not.toContain('release:');
         expect(entries[0]!.bullets.join('\n')).not.toContain('A nested description line.');
         expect(entries[0]!.bullets.join('\n')).not.toContain('some-dep');
+    });
+});
+
+describe('formatLine', () => {
+    it('keeps a numeric-only short hash as a commit link', () => {
+        expect(
+            formatLine('- A change ([#4033009](https://github.com/o/r/commit/4033009) by T)', 'o/r')
+        ).toBe('- A change ([#4033009](https://github.com/o/r/commit/4033009) by T)');
+    });
+
+    it('repairs a numeric-only hash that was linked as an issue', () => {
+        expect(formatLine('[#4033009](https://github.com/o/r/issues/4033009) by T', 'o/r')).toBe(
+            '[#4033009](https://github.com/o/r/commit/4033009) by T'
+        );
+    });
+
+    it('still links a real issue number', () => {
+        expect(formatLine('fixes #12', 'o/r')).toBe(
+            'fixes [#12](https://github.com/o/r/issues/12)'
+        );
+    });
+
+    it('bolds a bare BREAKING CHANGE marker', () => {
+        expect(formatLine('BREAKING CHANGE: the API changed', 'o/r')).toBe(
+            '**BREAKING CHANGE:** the API changed'
+        );
+        expect(formatLine('BREAKING-CHANGE: the API changed', undefined)).toBe(
+            '**BREAKING-CHANGE:** the API changed'
+        );
+    });
+
+    it('does not double-wrap an already bold BREAKING CHANGE marker', () => {
+        expect(formatLine('**BREAKING CHANGE:** the API changed', 'o/r')).toBe(
+            '**BREAKING CHANGE:** the API changed'
+        );
     });
 });
 
