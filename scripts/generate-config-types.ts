@@ -64,12 +64,16 @@ const imports = [
     "import type { Options as PrettierConfig } from 'prettier';",
     "import type { JsonObject, TsConfigJson } from 'type-fest';",
     "import type { ViteUserConfig } from 'vite-plus';",
+    "import type { AzurePipelines } from './config-schema/generated/azure-pipelines.js';",
     "import type { BiomeConfig } from './config-schema/generated/biome-config.js';",
+    "import type { GitHubWorkflow } from './config-schema/generated/github-workflow.js';",
+    "import type { GitLabCi } from './config-schema/generated/gitlab-ci.js';",
+    "import type { OxfmtConfig } from './config-schema/generated/oxfmt-config.js';",
+    "import type { OxlintConfig } from './config-schema/generated/oxlint-config.js';",
     "import type { ChangelogBreakingCommit } from './changelog-breaking.js';",
     "import type { ChangelogGroupContext, ChangelogGroupsContext, ChangelogGroupsSetting } from './changelog-groups.js';",
     "import type { ChangelogBumpRuleCallbackContext, ChangelogCommitFormatContext, ChangelogProviderContext } from './changelog-callbacks.js';",
     "import type { ToolchainLogger } from './logger.js';",
-    "import type { ToolchainOxfmtConfig, ToolchainOxlintConfig } from './vite-defaults.js';",
 ];
 const engine = createConfigEngine({ schema: dbxConfigSchema });
 const types = engine.generateConfigTypes({ overrides, imports });

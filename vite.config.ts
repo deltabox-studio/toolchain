@@ -160,7 +160,9 @@ export default defineConfig<ViteUserConfig>({
             "**/CHANGELOG.md",
             "CHANGELOG.proposed.md",
             "**/vite.config.ts",
-            "packages/shared/src/config-schema/generated/biome-config.ts"
+            "packages/shared/src/config-schema/generated/biome-config.ts",
+            "packages/shared/src/config-schema/generated/azure-pipelines.ts",
+            "packages/shared/src/config-schema/generated/oxlint-config.ts"
         ],
         "sortImports": {
             "groups": [
@@ -222,7 +224,7 @@ export default defineConfig<ViteUserConfig>({
             "jsx-a11y/click-events-have-key-events": "off",
             "react/button-has-type": "off",
             "react/react-in-jsx-scope": "off",
-            "react-hooks/exhaustive-deps": "off",
+            "react/exhaustive-deps": "off",
             "typescript/no-empty-object-type": "off",
             "typescript/no-explicit-any": "off",
             "typescript/no-non-null-assertion": "off",
@@ -242,7 +244,8 @@ export default defineConfig<ViteUserConfig>({
             "no-var": "warn",
             "prefer-const": "warn",
             "prefer-exponentiation-operator": "off",
-            "prefer-template": "off"
+            "prefer-template": "off",
+            "react-hooks/exhaustive-deps": "off"
         }
     }
 });

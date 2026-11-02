@@ -1,12 +1,12 @@
-import type { ViteUserConfig } from 'vite-plus';
-
+import type { OxfmtConfig } from './config-schema/generated/oxfmt-config.js';
+import type { OxlintConfig } from './config-schema/generated/oxlint-config.js';
 import { DEFAULT_IGNORE_PATTERNS } from './ignore.js';
 
 /** The Oxfmt options accepted by Vite+ (`toolchain.vite.fmt`). */
-export type ToolchainOxfmtConfig = NonNullable<ViteUserConfig['fmt']>;
+export type ToolchainOxfmtConfig = OxfmtConfig;
 
 /** The Oxlint options accepted by Vite+ (`toolchain.vite.lint`). */
-export type ToolchainOxlintConfig = NonNullable<ViteUserConfig['lint']>;
+export type ToolchainOxlintConfig = OxlintConfig;
 
 /**
  * Common paths Oxfmt should leave alone. Starts from the shared build/cache
@@ -82,7 +82,7 @@ export const DEFAULT_LINT_RULES: ToolchainOxlintConfig = {
         'jsx-a11y/click-events-have-key-events': 'off',
         'react/button-has-type': 'off',
         'react/react-in-jsx-scope': 'off',
-        'react-hooks/exhaustive-deps': 'off',
+        'react/exhaustive-deps': 'off',
         'typescript/no-empty-object-type': 'off',
         'typescript/no-explicit-any': 'off',
         'typescript/no-non-null-assertion': 'off',

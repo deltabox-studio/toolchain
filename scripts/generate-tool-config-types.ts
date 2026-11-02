@@ -15,30 +15,74 @@ import { z } from 'zod';
 import { createConfigEngine, formatGenerated } from '@deltabox/toolchain-config';
 import { logger } from '@deltabox/toolchain-shared';
 
+import { sanitizeJsonSchema } from './lib/sanitize-json-schema.js';
+
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
-const schemaPath = path.join(root, 'packages/shared/src/config-schema/schemas/biome.json');
-const outPath = path.join(root, 'packages/shared/src/config-schema/generated/biome-config.ts');
+const schemasDir = path.join(root, 'packages/shared/src/config-schema/schemas');
+const outDir = path.join(root, 'packages/shared/src/config-schema/generated');
 
-const schema = z
-    .fromJSONSchema(JSON.parse(fs.readFileSync(schemaPath, 'utf8')))
-    .meta({ id: 'BiomeConfig' });
-const engine = createConfigEngine({ schema });
-const types = engine.generateConfigTypes();
-const biome = types.BiomeConfig;
-if (!biome) throw new Error('biome schema did not generate a BiomeConfig type.');
+interface ToolTypeSpec {
+    /** Schema file in `packages/shared/src/config-schema/schemas`. */
+    schema: string;
+    /** Generated type name. */
+    id: string;
+    /** Output file in `packages/shared/src/config-schema/generated`. */
+    out: string;
+    /** Wider widths keep the huge schemas from being reformatted into MBs. */
+    printWidth: number;
+    /** Human-readable schema source for the generated header. */
+    source: string;
+}
 
-const header =
-    "// Generated from Biome's configuration_schema.json \u2014 do not edit.\n" +
-    '// Run `yarn config:generate` to refresh.';
-const content = `${header}\n\n${biome.trimEnd()}\n`;
-fs.mkdirSync(path.dirname(outPath), { recursive: true });
-// Biome's schema is huge; wrapping it at the repo's 100 columns more than
-// doubles the file (556 KB vs 260 KB). Keep a wider width and exclude the
-// generated file from the repo formatter (see `dbx.config.ts`).
-fs.writeFileSync(
-    outPath,
-    await formatGenerated(content, { fileName: outPath, options: { printWidth: 300 } }),
-    'utf-8'
-);
+const specs: ToolTypeSpec[] = [
+    {
+        schema: 'biome.json',
+        id: 'BiomeConfig',
+        out: 'biome-config.ts',
+        printWidth: 300,
+        source: "Biome's configuration_schema.json",
+    },
+    {
+        schema: 'oxfmt.json',
+        id: 'OxfmtConfig',
+        out: 'oxfmt-config.ts',
+        printWidth: 100,
+        source: "Oxfmt's configuration_schema.json",
+    },
+    {
+        schema: 'oxlint.json',
+        id: 'OxlintConfig',
+        out: 'oxlint-config.ts',
+        printWidth: 300,
+        source: "Oxlint's configuration_schema.json",
+    },
+];
 
-logger.info(`Generated ${path.relative(root, outPath)}`);
+for (const spec of specs) {
+    const schemaPath = path.join(schemasDir, spec.schema);
+    const outPath = path.join(outDir, spec.out);
+    const raw = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+    const sanitized = sanitizeJsonSchema(raw) as Parameters<typeof z.fromJSONSchema>[0];
+    const schema = z.fromJSONSchema(sanitized).meta({ id: spec.id });
+    const engine = createConfigEngine({ schema });
+    const types = engine.generateConfigTypes();
+    const generated = types[spec.id];
+    if (!generated) throw new Error(`${spec.schema} did not generate a ${spec.id} type.`);
+    const helpers = Object.entries(types)
+        .filter(([name]) => name !== spec.id)
+        .map(([, value]) => value.trimEnd());
+    const header =
+        `// Generated from ${spec.source} \u2014 do not edit.\n` +
+        '// Run `yarn config:generate` to refresh.';
+    const content = `${header}\n\n${[generated.trimEnd(), ...helpers].join('\n\n')}\n`;
+    fs.mkdirSync(outDir, { recursive: true });
+    fs.writeFileSync(
+        outPath,
+        await formatGenerated(content, {
+            fileName: outPath,
+            options: { printWidth: spec.printWidth },
+        }),
+        'utf-8'
+    );
+    logger.info(`Generated ${path.relative(root, outPath)}`);
+}

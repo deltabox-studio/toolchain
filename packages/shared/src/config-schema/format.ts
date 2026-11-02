@@ -4,22 +4,23 @@ import type { Options as PrettierConfig } from 'prettier';
 import type { JsonObject } from 'type-fest';
 import { z } from 'zod';
 
-import type { ToolchainOxfmtConfig, ToolchainOxlintConfig } from '../vite-defaults.js';
 import { biomeConfigOptionsSchema } from './biome.js';
 import { externalConfigSchema } from './external.js';
+import type { OxfmtConfig } from './generated/oxfmt-config.js';
+import type { OxlintConfig } from './generated/oxlint-config.js';
 import { withEnabled } from './meta.js';
 
 /** A tool config: `true` for the defaults, `false` to disable, or its options. */
 const toolOptions = <T>(schema: z.ZodType<T>) => z.union([z.boolean(), schema]);
 
-const oxfmtOptions = externalConfigSchema<ToolchainOxfmtConfig>(
+const oxfmtOptions = externalConfigSchema<OxfmtConfig>(
     'Oxfmt configuration options.',
-    'ToolchainOxfmtConfig'
+    'OxfmtConfig'
 );
 
-const oxlintOptions = externalConfigSchema<ToolchainOxlintConfig>(
+const oxlintOptions = externalConfigSchema<OxlintConfig>(
     'Oxlint configuration options.',
-    'ToolchainOxlintConfig'
+    'OxlintConfig'
 );
 
 const prettierOptions = externalConfigSchema<PrettierConfig>(

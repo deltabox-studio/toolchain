@@ -1,17 +1,18 @@
 import { z } from 'zod';
 
-import type { ToolchainOxfmtConfig, ToolchainOxlintConfig } from '../vite-defaults.js';
 import { externalConfigSchema } from './external.js';
+import type { OxfmtConfig } from './generated/oxfmt-config.js';
+import type { OxlintConfig } from './generated/oxlint-config.js';
 import { withEnabled } from './meta.js';
 
-const oxfmtOptions = externalConfigSchema<ToolchainOxfmtConfig>(
+const oxfmtOptions = externalConfigSchema<OxfmtConfig>(
     'Oxfmt configuration options.',
-    'ToolchainOxfmtConfig'
+    'OxfmtConfig'
 );
 
-const oxlintOptions = externalConfigSchema<ToolchainOxlintConfig>(
+const oxlintOptions = externalConfigSchema<OxlintConfig>(
     'Oxlint configuration options.',
-    'ToolchainOxlintConfig'
+    'OxlintConfig'
 );
 
 /**
