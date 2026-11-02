@@ -23,6 +23,7 @@ import {
     LINTER_PRECEDENCE,
     type PackageJson,
     readJsonAt,
+    readJsoncAt,
     resolveFmtTools,
     resolveLintTools,
     sectionConfig,
@@ -74,38 +75,86 @@ export interface NormalizedTooling {
     warnings: WarningId[];
 }
 
-function packageNames(cwd: string): Set<string> {
-    const names = new Set<string>();
+/** Directories from `cwd` up to the repo root (`.git`) or filesystem root. */
+function directoryChain(cwd: string): string[] {
+    const dirs: string[] = [];
     let dir = path.resolve(cwd);
     for (;;) {
-        const pkg = readJsonAt<PackageJson>(dir, 'package.json');
-        if (pkg) {
-            for (const field of [
-                'dependencies',
-                'devDependencies',
-                'peerDependencies',
-                'optionalDependencies',
-            ] as const) {
-                for (const name of Object.keys(pkg[field] ?? {})) names.add(name);
-            }
-        }
+        dirs.push(dir);
         if (fs.existsSync(path.join(dir, '.git'))) break;
         const parent = path.dirname(dir);
         if (parent === dir) break;
         dir = parent;
     }
+    return dirs;
+}
+
+function packageNamesAt(dir: string): Set<string> {
+    const names = new Set<string>();
+    const pkg = readJsonAt<PackageJson>(dir, 'package.json');
+    if (pkg) {
+        for (const field of [
+            'dependencies',
+            'devDependencies',
+            'peerDependencies',
+            'optionalDependencies',
+        ] as const) {
+            for (const name of Object.keys(pkg[field] ?? {})) names.add(name);
+        }
+    }
     return names;
 }
 
-function installedTool<T extends string>(
-    cwd: string,
+function installedToolAt<T extends string>(
+    dir: string,
     precedence: readonly T[],
     disabled: ReadonlySet<T>
 ): T | undefined {
-    const names = packageNames(cwd);
+    const names = packageNamesAt(dir);
     return precedence.find(
         tool => !disabled.has(tool) && (PACKAGE_TOOLS[tool] ?? []).some(name => names.has(name))
     );
+}
+
+/** Which tool owns a config file in this directory (if any). */
+function configFileToolAt<T extends string>(
+    dir: string,
+    kind: 'fmt' | 'lint',
+    precedence: readonly T[],
+    disabled: ReadonlySet<T>
+): T | undefined {
+    const active = new Set<string>();
+    if (kind === 'fmt') {
+        if (findOxcConfigs(dir).fmt) active.add('oxc');
+        if (findBiomeConfig(dir)) active.add('biome');
+        if (findPrettierConfig(dir)) active.add('prettier');
+        if (findDprintConfig(dir)) active.add('dprint');
+    } else {
+        if (findOxcConfigs(dir).lint) active.add('oxc');
+        if (findBiomeConfig(dir)) active.add('biome');
+        if (findEslintConfig(dir)) active.add('eslint');
+    }
+    return precedence.find(tool => !disabled.has(tool) && active.has(tool));
+}
+
+/**
+ * Resolve the workspace tool from the nearest directory first. A tool's own
+ * config file is a stronger signal than a dependency, so both are checked at
+ * each level before walking to the parent.
+ */
+function workspaceTool<T extends string>(
+    cwd: string,
+    kind: 'fmt' | 'lint',
+    precedence: readonly T[],
+    disabled: ReadonlySet<T>
+): T | undefined {
+    for (const dir of directoryChain(cwd)) {
+        const configured = configFileToolAt(dir, kind, precedence, disabled);
+        if (configured) return configured;
+        const installed = installedToolAt(dir, precedence, disabled);
+        if (installed) return installed;
+    }
+    return undefined;
 }
 
 function vscodeSettingsPaths(): string[] {
@@ -159,7 +208,8 @@ function readSettings(customPath?: string): Json | undefined {
 function editorTool<T extends string>(
     settings: Json | undefined,
     precedence: readonly T[],
-    kind: 'fmt' | 'lint'
+    kind: 'fmt' | 'lint',
+    disabled: ReadonlySet<T> = new Set()
 ): T | undefined {
     if (!settings) return undefined;
     const active = new Set<string>();
@@ -187,7 +237,7 @@ function editorTool<T extends string>(
         if (settings['biome.enabled'] === true) active.add('biome');
         if (settings['oxc.enable'] === true) active.add('oxc');
     }
-    return precedence.find(tool => active.has(tool));
+    return precedence.find(tool => !disabled.has(tool) && active.has(tool));
 }
 
 function disabledTools<T extends string>(section: unknown, precedence: readonly T[]): Set<T> {
@@ -211,67 +261,89 @@ function mergeIgnorePatterns(base: Json, overrides: Json): void {
 }
 
 async function migratedFmtOptions(cwd: string): Promise<Json | undefined> {
-    const direct = findOxcConfigs(cwd).fmt;
-    if (direct) return withoutSchema(readJsonc(direct));
+    for (const dir of directoryChain(cwd)) {
+        const direct = findOxcConfigs(dir).fmt;
+        if (direct) return withoutSchema(readJsonc(direct));
+    }
 
-    const layers: Json[] = [];
-    if (findDprintConfig(cwd)) {
-        const result = await dprintToOx.run({ cwd });
-        if (result.oxfmt) layers.push(result.oxfmt);
+    for (const dir of directoryChain(cwd)) {
+        const layers: Json[] = [];
+        if (findDprintConfig(dir)) {
+            const result = await dprintToOx.run({ cwd: dir });
+            if (result.oxfmt) layers.push(result.oxfmt);
+        }
+        if (findPrettierConfig(dir)) {
+            const result = await prettierToOx.run({ cwd: dir });
+            if (result.oxfmt) layers.push(result.oxfmt);
+        }
+        if (findBiomeConfig(dir)) {
+            const result = await biomeToOx.run({ cwd: dir });
+            if (result.oxfmt) layers.push(result.oxfmt);
+        }
+        if (layers.length > 0)
+            return layers.reduce<Json>((acc, layer) => deepMerge(acc, layer), {});
     }
-    if (findPrettierConfig(cwd)) {
-        const result = await prettierToOx.run({ cwd });
-        if (result.oxfmt) layers.push(result.oxfmt);
-    }
-    if (findBiomeConfig(cwd)) {
-        const result = await biomeToOx.run({ cwd });
-        if (result.oxfmt) layers.push(result.oxfmt);
-    }
-    if (layers.length === 0) return undefined;
-    return layers.reduce<Json>((acc, layer) => deepMerge(acc, layer), {});
+    return undefined;
 }
 
 async function migratedLintOptions(cwd: string): Promise<Json | undefined> {
-    const direct = findOxcConfigs(cwd).lint;
-    if (direct) return withoutSchema(readJsonc(direct));
+    for (const dir of directoryChain(cwd)) {
+        const direct = findOxcConfigs(dir).lint;
+        if (direct) return withoutSchema(readJsonc(direct));
+    }
 
-    const layers: Json[] = [];
-    if (findEslintConfig(cwd)) {
-        const result = await eslintToOx.run({ cwd });
-        if (result.oxlint) layers.push(withoutSchema(result.oxlint));
+    for (const dir of directoryChain(cwd)) {
+        const layers: Json[] = [];
+        if (findEslintConfig(dir)) {
+            const result = await eslintToOx.run({ cwd: dir });
+            if (result.oxlint) layers.push(withoutSchema(result.oxlint));
+        }
+        if (findBiomeConfig(dir)) {
+            const result = await biomeToOx.run({ cwd: dir });
+            if (result.oxlint) layers.push(withoutSchema(result.oxlint));
+        }
+        if (layers.length > 0)
+            return layers.reduce<Json>((acc, layer) => deepMerge(acc, layer), {});
     }
-    if (findBiomeConfig(cwd)) {
-        const result = await biomeToOx.run({ cwd });
-        if (result.oxlint) layers.push(withoutSchema(result.oxlint));
+    return undefined;
+}
+
+function hasUserConfigAt(dir: string, kind: 'fmt' | 'lint'): boolean {
+    const oxc = findOxcConfigs(dir);
+    if (kind === 'fmt') {
+        return Boolean(
+            oxc.fmt || findBiomeConfig(dir) || findPrettierConfig(dir) || findDprintConfig(dir)
+        );
     }
-    if (layers.length === 0) return undefined;
-    return layers.reduce<Json>((acc, layer) => deepMerge(acc, layer), {});
+    return Boolean(oxc.lint || findBiomeConfig(dir) || findEslintConfig(dir));
 }
 
 function hasUserConfig(cwd: string, kind: 'fmt' | 'lint'): boolean {
-    const oxc = findOxcConfigs(cwd);
-    if (kind === 'fmt') {
-        return Boolean(
-            oxc.fmt || findBiomeConfig(cwd) || findPrettierConfig(cwd) || findDprintConfig(cwd)
-        );
-    }
-    return Boolean(oxc.lint || findBiomeConfig(cwd) || findEslintConfig(cwd));
+    return directoryChain(cwd).some(dir => hasUserConfigAt(dir, kind));
 }
 
-function existingConfigOptions(cwd: string, tool: string): Json | undefined {
+function existingConfigOptionsAt(dir: string, tool: string): Json | undefined {
     try {
         if (tool === 'biome') {
-            const file = findBiomeConfig(cwd);
+            const file = findBiomeConfig(dir);
             if (file) return withoutSchema(readJsonc(file));
         }
-        if (tool === 'prettier') return findPrettierConfig(cwd)?.config;
-        if (tool === 'dprint') return findDprintConfig(cwd)?.config;
+        if (tool === 'prettier') return findPrettierConfig(dir)?.config;
+        if (tool === 'dprint') return findDprintConfig(dir)?.config;
         if (tool === 'eslint') {
-            const found = findEslintConfig(cwd);
+            const found = findEslintConfig(dir);
             if (found?.json) return withoutSchema(readJsonc(found.file));
         }
     } catch {
         return undefined;
+    }
+    return undefined;
+}
+
+function existingConfigOptions(cwd: string, tool: string): Json | undefined {
+    for (const dir of directoryChain(cwd)) {
+        const options = existingConfigOptionsAt(dir, tool);
+        if (options !== undefined) return options;
     }
     return undefined;
 }
@@ -283,15 +355,17 @@ export async function normalizeToolingConfig(
     const warnings: WarningId[] = [];
     let fmt = sectionConfig(config.fmt) as ToolchainFmtConfig | undefined;
     let lint = sectionConfig(config.lint) as ToolchainLintConfig | undefined;
-    const settings = readSettings(options.vscodeSettingsPath);
+    const projectSettings = readJsoncAt<Json>(options.cwd, '.vscode/settings.json');
+    const userSettings = readSettings(options.vscodeSettingsPath);
     const names = hasUserConfig(options.cwd, 'fmt');
     const lintNames = hasUserConfig(options.cwd, 'lint');
 
     if (sectionEnabled(config.fmt) && resolveFmtTools(config).length === 0) {
         const disabled = disabledTools(config.fmt, FORMATTER_PRECEDENCE);
         const tool =
-            installedTool(options.cwd, FORMATTER_PRECEDENCE, disabled) ??
-            editorTool(settings, FORMATTER_PRECEDENCE, 'fmt');
+            editorTool(projectSettings, FORMATTER_PRECEDENCE, 'fmt', disabled) ??
+            workspaceTool(options.cwd, 'fmt', FORMATTER_PRECEDENCE, disabled) ??
+            editorTool(userSettings, FORMATTER_PRECEDENCE, 'fmt', disabled);
         const fallback = !tool && !names;
         if (fallback) warnings.push('fmt.no-tool');
         const selected = tool ?? 'oxc';
@@ -311,8 +385,9 @@ export async function normalizeToolingConfig(
     if (sectionEnabled(config.lint) && resolveLintTools(config).length === 0) {
         const disabled = disabledTools(config.lint, LINTER_PRECEDENCE);
         const tool =
-            installedTool(options.cwd, LINTER_PRECEDENCE, disabled) ??
-            editorTool(settings, LINTER_PRECEDENCE, 'lint');
+            editorTool(projectSettings, LINTER_PRECEDENCE, 'lint', disabled) ??
+            workspaceTool(options.cwd, 'lint', LINTER_PRECEDENCE, disabled) ??
+            editorTool(userSettings, LINTER_PRECEDENCE, 'lint', disabled);
         const fallback = !tool && !lintNames;
         if (fallback) warnings.push('lint.no-tool');
         const selected = tool ?? 'oxc';
