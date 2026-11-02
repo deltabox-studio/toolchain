@@ -60,6 +60,10 @@ export const workflowJobSchema = z
         services: jsonObjectSchema('Service containers.').optional(),
         steps: z.array(workflowStepSchema).describe('The job steps.'),
     })
+    // Extra job keys (eg. `container`, `defaults`) pass through as JSON values.
+    // There is no canonical GitHub Actions workflow typings package; the
+    // generated interface keeps an `unknown` index signature (see
+    // `generators/types.ts`).
     .catchall(configJsonValueSchema)
     .describe('A complete GitHub Actions workflow job.')
     .meta({ id: 'WorkflowJob' });
