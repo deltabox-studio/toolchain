@@ -17,9 +17,13 @@ import type {
     ChangelogGroupsContext,
     ChangelogGroupsSetting,
 } from './changelog-groups.js';
+import type { AzurePipelines } from './config-schema/generated/azure-pipelines.js';
 import type { BiomeConfig } from './config-schema/generated/biome-config.js';
+import type { GitHubWorkflow } from './config-schema/generated/github-workflow.js';
+import type { GitLabCi } from './config-schema/generated/gitlab-ci.js';
+import type { OxfmtConfig } from './config-schema/generated/oxfmt-config.js';
+import type { OxlintConfig } from './config-schema/generated/oxlint-config.js';
 import type { ToolchainLogger } from './logger.js';
-import type { ToolchainOxfmtConfig, ToolchainOxlintConfig } from './vite-defaults.js';
 
 export interface DbxConfigSections {
     /** The `@deltabox/toolchain` settings (every section is opt-in by presence). */
@@ -84,7 +88,72 @@ export interface ToolchainCiConfig {
     enabled?: boolean;
 }
 
+export interface GitHubWorkflowSetting {
+    /**
+     * Use a complete GitHub Actions workflow.
+     *
+     * @required
+     */
+    provider: 'github';
+    /**
+     * The complete workflow object.
+     *
+     * @required
+     */
+    workflow: GitHubWorkflow;
+    /** Override the generated file name. */
+    filename?: string;
+    /** Directory for the generated file. */
+    dir?: string;
+    /** Enable/disable this workflow (default: enabled when present). */
+    enabled?: boolean;
+}
+
+export interface GitLabWorkflowSetting {
+    /**
+     * Use a GitLab CI pipeline.
+     *
+     * @required
+     */
+    provider: 'gitlab';
+    /**
+     * The complete pipeline object.
+     *
+     * @required
+     */
+    workflow: GitLabCi;
+    /** Override the generated file name. */
+    filename?: string;
+    /** Directory for the generated file. */
+    dir?: string;
+    /** Enable/disable this workflow (default: enabled when present). */
+    enabled?: boolean;
+}
+
+export interface AzureWorkflowSetting {
+    /**
+     * Use an Azure Pipelines pipeline.
+     *
+     * @required
+     */
+    provider: 'azure';
+    /**
+     * The complete pipeline object.
+     *
+     * @required
+     */
+    workflow: AzurePipelines;
+    /** Override the generated file name. */
+    filename?: string;
+    /** Directory for the generated file. */
+    dir?: string;
+    /** Enable/disable this workflow (default: enabled when present). */
+    enabled?: boolean;
+}
+
 export interface WorkflowOptions {
+    /** Workflow vendor for a full `workflow` object (default `github`). */
+    provider?: 'github';
     /** Replace `on.push.branches`. */
     pushBranches?: Array<string>;
     /** Replace `on.pull_request.branches`. */
@@ -183,9 +252,17 @@ export type ConfigJsonValue =
     | ConfigJsonValue[]
     | { [key: string]: ConfigJsonValue };
 
-export type WorkflowSetting = boolean | string | WorkflowOptions;
+export type WorkflowSetting =
+    | boolean
+    | string
+    | GitHubWorkflowSetting
+    | GitLabWorkflowSetting
+    | AzureWorkflowSetting
+    | WorkflowOptions;
 
 export interface CiChangelogConfig {
+    /** Workflow vendor for a full `workflow` object (default `github`). */
+    provider?: 'github';
     /** Replace `on.push.branches`. */
     pushBranches?: Array<string>;
     /** Replace `on.pull_request.branches`. */
@@ -373,9 +450,20 @@ export interface ChangelogProviderConfig {
 
 export type ChangelogVersioning = boolean | ChangelogVersioningConfig;
 
-export type ChangelogWorkflowSetting = boolean | string | CiChangelogConfig;
+export type ChangelogWorkflowSetting =
+    | boolean
+    | string
+    | GitHubWorkflowSetting
+    | GitLabWorkflowSetting
+    | AzureWorkflowSetting
+    | CiChangelogConfig;
 
-export type CustomWorkflowSettings = string | WorkflowOptions;
+export type CustomWorkflowSettings =
+    | string
+    | GitHubWorkflowSetting
+    | GitLabWorkflowSetting
+    | AzureWorkflowSetting
+    | WorkflowOptions;
 
 export interface ChangelogConfig {
     /** Commitlint config; set `false` to disable the Conventional-Commits pipeline. */
@@ -435,7 +523,7 @@ export interface ToolchainFmtConfig {
      * Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` overrides these
      * (deep merge).
      */
-    oxc?: boolean | ToolchainOxfmtConfig;
+    oxc?: boolean | OxfmtConfig;
     /**
      * Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated
      * `biome.json`.
@@ -466,7 +554,7 @@ export interface ToolchainLintConfig {
      * Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` overrides these
      * (deep merge).
      */
-    oxc?: boolean | ToolchainOxlintConfig;
+    oxc?: boolean | OxlintConfig;
     /**
      * Biome linter options (`true` = defaults, `false` = disabled); merged into the generated
      * `biome.json`.

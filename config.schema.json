@@ -116,9 +116,116 @@
             "additionalProperties": false,
             "description": "GitHub Actions workflows to generate (CI, release, issues, changelog, sync)."
         },
+        "GitHubWorkflowSetting": {
+            "type": "object",
+            "properties": {
+                "provider": {
+                    "type": "string",
+                    "const": "github",
+                    "description": "Use a complete GitHub Actions workflow."
+                },
+                "workflow": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "The complete workflow object."
+                },
+                "filename": {
+                    "type": "string",
+                    "description": "Override the generated file name."
+                },
+                "dir": {
+                    "type": "string",
+                    "description": "Directory for the generated file."
+                },
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable/disable this workflow (default: enabled when present)."
+                }
+            },
+            "required": [
+                "provider",
+                "workflow"
+            ],
+            "additionalProperties": false,
+            "description": "A complete GitHub Actions workflow written to `.github/workflows/<id>.yml` (or `filename`/`dir`)."
+        },
+        "GitLabWorkflowSetting": {
+            "type": "object",
+            "properties": {
+                "provider": {
+                    "type": "string",
+                    "const": "gitlab",
+                    "description": "Use a GitLab CI pipeline."
+                },
+                "workflow": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "The complete pipeline object."
+                },
+                "filename": {
+                    "type": "string",
+                    "description": "Override the generated file name."
+                },
+                "dir": {
+                    "type": "string",
+                    "description": "Directory for the generated file."
+                },
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable/disable this workflow (default: enabled when present)."
+                }
+            },
+            "required": [
+                "provider",
+                "workflow"
+            ],
+            "additionalProperties": false,
+            "description": "A complete GitLab CI pipeline written to `.gitlab-ci.yml` (or `filename`/`dir`)."
+        },
+        "AzureWorkflowSetting": {
+            "type": "object",
+            "properties": {
+                "provider": {
+                    "type": "string",
+                    "const": "azure",
+                    "description": "Use an Azure Pipelines pipeline."
+                },
+                "workflow": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "The complete pipeline object."
+                },
+                "filename": {
+                    "type": "string",
+                    "description": "Override the generated file name."
+                },
+                "dir": {
+                    "type": "string",
+                    "description": "Directory for the generated file."
+                },
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable/disable this workflow (default: enabled when present)."
+                }
+            },
+            "required": [
+                "provider",
+                "workflow"
+            ],
+            "additionalProperties": false,
+            "description": "A complete Azure Pipelines pipeline written to `azure-pipelines.yml` (or `filename`/`dir`)."
+        },
         "WorkflowOptions": {
             "type": "object",
             "properties": {
+                "provider": {
+                    "type": "string",
+                    "const": "github",
+                    "description": "Workflow vendor for a full `workflow` object (default `github`)."
+                },
                 "pushBranches": {
                     "type": "array",
                     "items": {
@@ -426,14 +533,28 @@
                     "type": "string"
                 },
                 {
+                    "$ref": "#/$defs/GitHubWorkflowSetting"
+                },
+                {
+                    "$ref": "#/$defs/GitLabWorkflowSetting"
+                },
+                {
+                    "$ref": "#/$defs/AzureWorkflowSetting"
+                },
+                {
                     "$ref": "#/$defs/WorkflowOptions"
                 }
             ],
-            "description": "`true`/`false` to enable/disable, an object to override parts of the default, or a raw YAML string written verbatim as the workflow file."
+            "description": "`true`/`false` to enable/disable, an object to override parts of the default, a complete GitHub/GitLab/Azure workflow (with `provider`), or a raw YAML string written verbatim as the workflow file."
         },
         "CiChangelogConfig": {
             "type": "object",
             "properties": {
+                "provider": {
+                    "type": "string",
+                    "const": "github",
+                    "description": "Workflow vendor for a full `workflow` object (default `github`)."
+                },
                 "pushBranches": {
                     "type": "array",
                     "items": {
@@ -964,10 +1085,19 @@
                     "type": "string"
                 },
                 {
+                    "$ref": "#/$defs/GitHubWorkflowSetting"
+                },
+                {
+                    "$ref": "#/$defs/GitLabWorkflowSetting"
+                },
+                {
+                    "$ref": "#/$defs/AzureWorkflowSetting"
+                },
+                {
                     "$ref": "#/$defs/CiChangelogConfig"
                 }
             ],
-            "description": "`true`/`false` to enable/disable, the changelog pipeline config object, or a raw YAML string written verbatim as the changelog workflow file."
+            "description": "`true`/`false` to enable/disable, a complete GitHub/GitLab/Azure workflow (with `provider`), the changelog pipeline config object, or a raw YAML string written verbatim as the changelog workflow file."
         },
         "CustomWorkflowSettings": {
             "anyOf": [
@@ -975,10 +1105,19 @@
                     "type": "string"
                 },
                 {
+                    "$ref": "#/$defs/GitHubWorkflowSetting"
+                },
+                {
+                    "$ref": "#/$defs/GitLabWorkflowSetting"
+                },
+                {
+                    "$ref": "#/$defs/AzureWorkflowSetting"
+                },
+                {
                     "$ref": "#/$defs/WorkflowOptions"
                 }
             ],
-            "description": "A custom workflow: a raw YAML string, or workflow settings merged over an empty workflow (use `triggers`, `extra` and `jobs` to define it)."
+            "description": "A custom workflow: a raw YAML string, a complete GitHub/GitLab/Azure workflow (with `provider`), or GitHub settings merged over an empty workflow (use `triggers`, `extra` and `jobs` to define it)."
         },
         "ChangelogConfig": {
             "type": "object",

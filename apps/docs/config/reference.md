@@ -99,6 +99,38 @@ GitHub Actions workflows to generate (CI, release, issues, changelog, sync).
 
 The CI checks workflow (`ci.yml`).
 
+#### `provider`
+
+- **Required**
+- **Type**: `'github'`
+
+Workflow vendor for a full `workflow` object (default `github`).
+
+#### `workflow`
+
+- **Required**
+- **Type**: `AzurePipelines`
+
+The complete pipeline object.
+
+#### `filename`
+
+- **Type**: `string`
+
+Override the generated workflow file name (eg. `deploy.yml`).
+
+#### `dir`
+
+- **Type**: `string`
+
+Directory for the workflow file (default `.github/workflows`).
+
+#### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this workflow (default: enabled when present).
+
 #### `pushBranches`
 
 - **Type**: `Array<string>`
@@ -213,29 +245,17 @@ Extra complete jobs merged in.
 
 Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
 
-#### `filename`
-
-- **Type**: `string`
-
-Override the generated workflow file name (eg. `deploy.yml`).
-
-#### `dir`
-
-- **Type**: `string`
-
-Directory for the workflow file (default `.github/workflows`).
-
-#### `enabled`
-
-- **Type**: `boolean`
-
-Enable/disable this workflow (default: enabled when present).
-
 ### `changelog`
 
 - **Type**: `ChangelogWorkflowSetting`
 
 The changelog/version workflow (`changelog.yml`) plus the changelog pipeline config (versioning, VS Code settings, commitlint).
+
+#### `provider`
+
+- **Type**: `'github'`
+
+Workflow vendor for a full `workflow` object (default `github`).
 
 #### `pushBranches`
 
@@ -839,7 +859,7 @@ Exact setting keys (eg. `editor.defaultFormatter`) to omit.
 
 ### `oxc`
 
-- **Type**: `boolean | ToolchainOxfmtConfig`
+- **Type**: `boolean | OxfmtConfig`
 
 Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` overrides these (deep merge).
 
@@ -891,7 +911,7 @@ Exact setting keys (eg. `editor.defaultFormatter`) to omit.
 
 ### `oxc`
 
-- **Type**: `boolean | ToolchainOxlintConfig`
+- **Type**: `boolean | OxlintConfig`
 
 Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` overrides these (deep merge).
 
@@ -1231,13 +1251,13 @@ Module specifier used to import `resolveVite` in runtime shims (default `@deltab
 
 ### `fmt`
 
-- **Type**: `boolean | ToolchainOxfmtConfig`
+- **Type**: `boolean | OxfmtConfig`
 
 Oxfmt options; `true` uses the toolchain defaults.
 
 ### `lint`
 
-- **Type**: `boolean | ToolchainOxlintConfig`
+- **Type**: `boolean | OxlintConfig`
 
 Oxlint options; `true` uses the toolchain defaults.
 

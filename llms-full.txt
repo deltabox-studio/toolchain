@@ -723,6 +723,38 @@ GitHub Actions workflows to generate (CI, release, issues, changelog, sync).
 
 The CI checks workflow (`ci.yml`).
 
+#### `provider`
+
+* **Required**
+* **Type**: `'github'`
+
+Workflow vendor for a full `workflow` object (default `github`).
+
+#### `workflow`
+
+* **Required**
+* **Type**: `AzurePipelines`
+
+The complete pipeline object.
+
+#### `filename`
+
+* **Type**: `string`
+
+Override the generated workflow file name (eg. `deploy.yml`).
+
+#### `dir`
+
+* **Type**: `string`
+
+Directory for the workflow file (default `.github/workflows`).
+
+#### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable this workflow (default: enabled when present).
+
 #### `pushBranches`
 
 * **Type**: `Array<string>`
@@ -837,29 +869,17 @@ Extra complete jobs merged in.
 
 Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
 
-#### `filename`
-
-* **Type**: `string`
-
-Override the generated workflow file name (eg. `deploy.yml`).
-
-#### `dir`
-
-* **Type**: `string`
-
-Directory for the workflow file (default `.github/workflows`).
-
-#### `enabled`
-
-* **Type**: `boolean`
-
-Enable/disable this workflow (default: enabled when present).
-
 ### `changelog`
 
 * **Type**: `ChangelogWorkflowSetting`
 
 The changelog/version workflow (`changelog.yml`) plus the changelog pipeline config (versioning, VS Code settings, commitlint).
+
+#### `provider`
+
+* **Type**: `'github'`
+
+Workflow vendor for a full `workflow` object (default `github`).
 
 #### `pushBranches`
 
@@ -1463,7 +1483,7 @@ Exact setting keys (eg. `editor.defaultFormatter`) to omit.
 
 ### `oxc`
 
-* **Type**: `boolean | ToolchainOxfmtConfig`
+* **Type**: `boolean | OxfmtConfig`
 
 Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` overrides these (deep merge).
 
@@ -1515,7 +1535,7 @@ Exact setting keys (eg. `editor.defaultFormatter`) to omit.
 
 ### `oxc`
 
-* **Type**: `boolean | ToolchainOxlintConfig`
+* **Type**: `boolean | OxlintConfig`
 
 Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` overrides these (deep merge).
 
@@ -1855,13 +1875,13 @@ Module specifier used to import `resolveVite` in runtime shims (default `@deltab
 
 ### `fmt`
 
-* **Type**: `boolean | ToolchainOxfmtConfig`
+* **Type**: `boolean | OxfmtConfig`
 
 Oxfmt options; `true` uses the toolchain defaults.
 
 ### `lint`
 
-* **Type**: `boolean | ToolchainOxlintConfig`
+* **Type**: `boolean | OxlintConfig`
 
 Oxlint options; `true` uses the toolchain defaults.
 
@@ -2733,6 +2753,12 @@ console.log(toolchainProviders().map(p => p.id));
 | `renderCommitlintConfig(options?)` / `changelogSyncTask()`             | Commitlint config + the changelog sync task.         |
 | `readCommits(range)` / `deriveBump(records)` / `buildSummary(records)` | Git commit reading, bump derivation and summaries.   |
 | `renderChangelogEntry(...)` / `parseExistingChangelog(content)`        | Changelog entry rendering/parsing.                   |
+| `formatBody(body)` / `formatLine(line, repo)`                          | Description + changelog-line normalization.          |
+
+`formatLine(line, repo)` normalizes a changelog line in place: numeric-only
+short hashes (eg. `#4033009`) stay commit links, genuine issue numbers stay
+issue links, and a bare `BREAKING CHANGE:` marker is bolded unless it is already
+bold.
 
 ## `@deltabox/toolchain/biome`
 
@@ -3330,10 +3356,12 @@ especially when a message is drafted by an **AI/LLM** and committed through
 * **bash** runs an unquoted `` `…` `` as command substitution, and `$(…)` / `${…}`
   expand before `git` ever sees them.
 
-The result is invisible control characters, stray `\` and dropped letters. The
-toolchain strips the predictable artifacts
-(`stripControlChars`/`sanitizeText`) but **cannot restore a character the shell
-already consumed**.
+The result is invisible control characters, stray `\` and dropped letters.
+`sanitizeText` maps the common control characters back to the letter they
+replaced (`BEL`→`a`, `BS`→`b`, `FF`→`f`, `VT`→`v`, `TAB`→`t`, `LF`→`n`,
+`CR`→`r`, `ESC`→`e`, `NUL`→`0`) and drops the stray `\`, so words like `any`,
+`false` and `bin` are restored. A character the shell consumed without leaving a
+trace still cannot be recovered.
 
 ## Authoring safely
 
