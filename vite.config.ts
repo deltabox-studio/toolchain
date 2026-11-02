@@ -159,7 +159,8 @@ export default defineConfig<ViteUserConfig>({
             "**/*.yaml",
             "**/CHANGELOG.md",
             "CHANGELOG.proposed.md",
-            "**/vite.config.ts"
+            "**/vite.config.ts",
+            "packages/shared/src/config-schema/generated/biome-config.ts"
         ],
         "sortImports": {
             "groups": [

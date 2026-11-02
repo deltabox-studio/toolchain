@@ -32,6 +32,13 @@ const header =
     '// Run `yarn config:generate` to refresh.';
 const content = `${header}\n\n${biome.trimEnd()}\n`;
 fs.mkdirSync(path.dirname(outPath), { recursive: true });
-fs.writeFileSync(outPath, await formatGenerated(content, { fileName: outPath }), 'utf-8');
+// Biome's schema is huge; wrapping it at the repo's 100 columns more than
+// doubles the file (556 KB vs 260 KB). Keep a wider width and exclude the
+// generated file from the repo formatter (see `dbx.config.ts`).
+fs.writeFileSync(
+    outPath,
+    await formatGenerated(content, { fileName: outPath, options: { printWidth: 300 } }),
+    'utf-8'
+);
 
 logger.info(`Generated ${path.relative(root, outPath)}`);
