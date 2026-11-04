@@ -1,7 +1,16 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import { cleanup } from '../src/cleanup.js';
-import { baseTsdownConfig, createPostBanner, createTsdownConfig } from '../src/config/node.js';
+import {
+    baseTsdownConfig,
+    createPostBanner,
+    createTsdownConfig,
+    sortPackageExports,
+} from '../src/config/node.js';
 
 describe('cleanup', () => {
     it('returns [] when no patterns are given', () => {
@@ -49,5 +58,40 @@ describe('tsdown config helpers', () => {
 
     it('vi is available for future spies', () => {
         expect(vi.isMockFunction(vi.fn())).toBe(true);
+    });
+});
+
+describe('sortPackageExports', () => {
+    it('writes the sorted exports back to package.json', () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-tsdown-'));
+        const file = path.join(dir, 'package.json');
+        fs.writeFileSync(
+            file,
+            JSON.stringify({
+                name: 'x',
+                exports: {
+                    './package.json': './package.json',
+                    './z': './dist/z.js',
+                    '.': './dist/index.js',
+                    './types': './dist/index.d.ts',
+                    './a': './dist/a.js',
+                },
+            })
+        );
+        try {
+            expect(sortPackageExports(file)).toBe(true);
+            const pkg = JSON.parse(fs.readFileSync(file, 'utf8')) as {
+                exports: Record<string, string>;
+            };
+            expect(Object.keys(pkg.exports)).toEqual([
+                '.',
+                './types',
+                './a',
+                './z',
+                './package.json',
+            ]);
+        } finally {
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
     });
 });

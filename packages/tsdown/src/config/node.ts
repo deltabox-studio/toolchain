@@ -1,6 +1,35 @@
+import fs from 'node:fs';
+
 import { globalLogger, type UserConfig } from 'tsdown';
 
 import { sort } from '@deltabox/toolchain-shared';
+
+/**
+ * Sort a package.json's `exports` keys in place (`./types` after the root,
+ * `./package.json` last). Returns whether the file was rewritten.
+ */
+export function sortPackageExports(packageJsonPath: string): boolean {
+    const raw = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')) as {
+        exports?: unknown;
+    };
+    if (!raw.exports || typeof raw.exports !== 'object') return false;
+    const sorted = sort(raw.exports as Record<string, unknown>);
+    const {
+        '.': indexField,
+        './': rootField = indexField,
+        './types': typesField,
+        './package.json': pkgField,
+        ...rest
+    } = sorted as Record<string, unknown>;
+    raw.exports = {
+        ...(rootField ? { '.': rootField } : {}),
+        ...(typesField ? { './types': typesField } : {}),
+        ...rest,
+        ...(pkgField ? { './package.json': pkgField } : {}),
+    };
+    fs.writeFileSync(packageJsonPath, `${JSON.stringify(raw, null, 4)}\n`, 'utf-8');
+    return true;
+}
 
 /**
  * The shared tsdown base configuration. Kept project-agnostic: the ASCII/banner
@@ -27,29 +56,11 @@ export const baseTsdownConfig: UserConfig = {
         'build:done': ctx => {
             try {
                 if (process.env.NODE_ENV === 'development') return;
-                if (!ctx.options.pkg?.exports) return;
-                if (typeof ctx.options.pkg.exports !== 'object') return;
-
-                const { packageJsonPath: _packageJsonPath, ...pkgJson } = ctx.options.pkg;
-
-                const sorted = sort(pkgJson.exports as Record<string, unknown>);
-
-                const {
-                    '.': indexField,
-                    './': rootField = indexField,
-                    './types': typesField,
-                    './package.json': pkgField,
-                    ...rest
-                } = sorted as Record<string, unknown>;
-
-                pkgJson.exports = {
-                    ...(rootField ? { '.': rootField } : {}),
-                    ...(typesField ? { './types': typesField } : {}),
-                    ...rest,
-                    ...(pkgField ? { './package.json': pkgField } : {}),
-                };
-
-                globalLogger.success('package.json exports keys sorted!');
+                const packageJsonPath = ctx.options.pkg?.packageJsonPath;
+                if (!packageJsonPath) return;
+                if (sortPackageExports(packageJsonPath)) {
+                    globalLogger.success('package.json exports keys sorted!');
+                }
             } catch (e) {
                 globalLogger.error('Failed to sort package.json exports keys:', e);
             }
