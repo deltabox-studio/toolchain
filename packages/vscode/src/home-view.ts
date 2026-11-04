@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+
 import type * as vscode from 'vscode';
 
 export interface HomeProject {
@@ -56,6 +58,58 @@ export type HomeAction =
     | { type: 'runProjectVite'; dir: string }
     | { type: 'goToProject'; dir: string };
 
+/** Actions that carry a project directory. */
+const DIR_ACTIONS = new Set<HomeAction['type']>([
+    'syncProject',
+    'checkProject',
+    'generateProjectConfig',
+    'resetProject',
+    'runProjectWorkflow',
+    'runProjectVite',
+    'goToProject',
+]);
+
+/** Actions that carry no payload. */
+const SIMPLE_ACTIONS = new Set<HomeAction['type']>([
+    'ready',
+    'syncAll',
+    'syncActive',
+    'syncSelected',
+    'syncCheck',
+    'scaffold',
+    'refresh',
+    'generateConfigs',
+    'runWorkflow',
+    'resetToolchain',
+    'toggle',
+    'runVite',
+    'addProvider',
+    'registryNew',
+    'registryRemove',
+    'selectVersion',
+    'templateAdd',
+    'templateRemove',
+    'openDocs',
+    'openSettings',
+]);
+
+/** Validate a message from the webview before acting on it. */
+export function parseHomeAction(value: unknown): HomeAction | undefined {
+    if (typeof value !== 'object' || value === null) return undefined;
+    const record = value as Record<string, unknown>;
+    const type = record.type;
+    if (typeof type !== 'string') return undefined;
+    if (SIMPLE_ACTIONS.has(type as HomeAction['type'])) {
+        return { type } as HomeAction;
+    }
+    if (DIR_ACTIONS.has(type as HomeAction['type'])) {
+        const dir = record.dir;
+        if (typeof dir !== 'string' || !dir) return undefined;
+        return { type, dir } as HomeAction;
+    }
+    return undefined;
+}
+
 /** A compact, theme-aware Home dashboard shown above the Projects tree. */
 export class HomeViewProvider implements vscode.WebviewViewProvider {
     private view?: vscode.WebviewView;
@@ -70,13 +124,22 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         this.view = view;
         view.webview.options = { enableScripts: true, localResourceRoots: [this.extensionUri] };
         view.webview.html = this.html(view.webview);
-        view.webview.onDidReceiveMessage(async (message: HomeAction) => {
-            if (message.type === 'ready') {
+        view.webview.onDidReceiveMessage(async (message: unknown) => {
+            const action = parseHomeAction(message);
+            if (!action) return;
+            if (action.type === 'ready') {
                 this.refresh();
                 return;
             }
+            // Only act on a project the dashboard actually listed.
+            if (
+                'dir' in action &&
+                !this.getModel().projects.some(project => project.dir === action.dir)
+            ) {
+                return;
+            }
             try {
-                await this.onAction(message);
+                await this.onAction(action);
             } finally {
                 void view.webview.postMessage({ type: 'done' });
             }
@@ -444,8 +507,5 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
 }
 
 function getNonce(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    return Array.from({ length: 32 }, () => chars[Math.floor(Math.random() * chars.length)]).join(
-        ''
-    );
+    return randomBytes(16).toString('hex');
 }
