@@ -1,8 +1,86 @@
 # Changelog
 
-## 2.2.0 (November 2026)
+## 2.3.0 (November 2026)
 
 <!-- release:start -->
+
+### New features
+#### Vscode
+- Show the workflow provider in the run picker ([#af4cc3f](https://github.com/deltabox-studio/toolchain/commit/af4cc3f) by [T0chi](https://github.com/T0chi))
+#### Changelog
+- Dispatch workflows with their vendor CLI ([#eea38ae](https://github.com/deltabox-studio/toolchain/commit/eea38ae) by [T0chi](https://github.com/T0chi))
+#### Config
+- Generate Oxfmt and Oxlint types from vendored schemas ([#8ff5e90](https://github.com/deltabox-studio/toolchain/commit/8ff5e90) by [T0chi](https://github.com/T0chi))
+- Accept complete GitHub, GitLab and Azure workflows ([#070a7f2](https://github.com/deltabox-studio/toolchain/commit/070a7f2) by [T0chi](https://github.com/T0chi))
+- Type tool options and changelog callbacks ([#10bd933](https://github.com/deltabox-studio/toolchain/commit/10bd933) by [T0chi](https://github.com/T0chi))
+### Bug fixes
+#### Config
+- Escape CLI reference tables and fail on missing output ([#15978be](https://github.com/deltabox-studio/toolchain/commit/15978be) by [T0chi](https://github.com/T0chi))
+- Respect secret defaults, `envPathOf` and changelog disabling ([#5cabab8](https://github.com/deltabox-studio/toolchain/commit/5cabab8) by [T0chi](https://github.com/T0chi))
+- Keep named `$ref` schema properties ([#0aa03a1](https://github.com/deltabox-studio/toolchain/commit/0aa03a1) by [T0chi](https://github.com/T0chi))
+#### Vscode
+- Prefer CLI descriptors and sync all workspace roots ([#e68301a](https://github.com/deltabox-studio/toolchain/commit/e68301a) by [T0chi](https://github.com/T0chi))
+- Report signal and timeout exits as failures ([#b7b1ad5](https://github.com/deltabox-studio/toolchain/commit/b7b1ad5) by [T0chi](https://github.com/T0chi))
+#### Cli
+- Forward passthrough flags and validate the update cache ([#a36d586](https://github.com/deltabox-studio/toolchain/commit/a36d586) by [T0chi](https://github.com/T0chi))
+- Leave `reset --config` to the reset command ([#8a3fbec](https://github.com/deltabox-studio/toolchain/commit/8a3fbec) by [T0chi](https://github.com/T0chi))
+#### Vite
+- Surface sync failures and preserve config values ([#93ee933](https://github.com/deltabox-studio/toolchain/commit/93ee933) by [T0chi](https://github.com/T0chi))
+#### Tsdown
+- Write sorted package exports ([#3886a56](https://github.com/deltabox-studio/toolchain/commit/3886a56) by [T0chi](https://github.com/T0chi))
+#### Tsconfig
+- Read referenced configs as JSONC ([#49ded19](https://github.com/deltabox-studio/toolchain/commit/49ded19) by [T0chi](https://github.com/T0chi))
+#### Migrate
+- Surface unsupported and incomplete migrations ([#f50a5d2](https://github.com/deltabox-studio/toolchain/commit/f50a5d2) by [T0chi](https://github.com/T0chi))
+#### Core
+- Keep VS Code files user-owned and guard registry cycles ([#9ef027a](https://github.com/deltabox-studio/toolchain/commit/9ef027a) by [T0chi](https://github.com/T0chi))
+- Keep watch sessions alive and re-sync config edits ([#2849757](https://github.com/deltabox-studio/toolchain/commit/2849757) by [T0chi](https://github.com/T0chi))
+- Reject conflicting `--config` flags ([#1044f2a](https://github.com/deltabox-studio/toolchain/commit/1044f2a) by [T0chi](https://github.com/T0chi))
+- Skip parent hooks for config-less workspaces ([#9658c36](https://github.com/deltabox-studio/toolchain/commit/9658c36) by [T0chi](https://github.com/T0chi))
+- Keep managed paths inside the project root ([#2496bee](https://github.com/deltabox-studio/toolchain/commit/2496bee) by [T0chi](https://github.com/T0chi))
+#### Shared
+- Harden URL policy, merges and token replacement ([#bae1dc8](https://github.com/deltabox-studio/toolchain/commit/bae1dc8) by [T0chi](https://github.com/T0chi))
+- Detect relative Windows `.cmd` shims ([#058430c](https://github.com/deltabox-studio/toolchain/commit/058430c) by [T0chi](https://github.com/T0chi))
+- Restore `PowerShell`-escaped letters ([#4d2be6a](https://github.com/deltabox-studio/toolchain/commit/4d2be6a) by [T0chi](https://github.com/T0chi))
+#### Changelog
+- Fix workflow staging, `commitlint` and YAML escaping ([#1bb19ad](https://github.com/deltabox-studio/toolchain/commit/1bb19ad) by [T0chi](https://github.com/T0chi))
+- Preserve formatting, links and workspace history ([#af5c5dc](https://github.com/deltabox-studio/toolchain/commit/af5c5dc) by [T0chi](https://github.com/T0chi))
+- Restore the standalone bin and `--dry-run` handling ([#97ecef2](https://github.com/deltabox-studio/toolchain/commit/97ecef2) by [T0chi](https://github.com/T0chi))
+- Preserve hand-corrected text in `--format-only` ([#2041e5f](https://github.com/deltabox-studio/toolchain/commit/2041e5f) by [T0chi](https://github.com/T0chi))
+- Resolve hash links and preserve descriptions ([#7633d24](https://github.com/deltabox-studio/toolchain/commit/7633d24) by [T0chi](https://github.com/T0chi))
+- Keep numeric hashes as commits and bold breaking markers ([#0521aee](https://github.com/deltabox-studio/toolchain/commit/0521aee) by [T0chi](https://github.com/T0chi))
+- Unwrap descriptions and keep list items ([#0dc4bda](https://github.com/deltabox-studio/toolchain/commit/0dc4bda) by [T0chi](https://github.com/T0chi))
+#### Project
+- Validate workspace paths before writing ([#0ef515e](https://github.com/deltabox-studio/toolchain/commit/0ef515e) by [T0chi](https://github.com/T0chi))
+### Documentation
+- Document vendor workflows, typed builders and `--format-only` ([#eb66982](https://github.com/deltabox-studio/toolchain/commit/eb66982) by [T0chi](https://github.com/T0chi))
+- Normalize changelog links and breaking markers ([#c3875e4](https://github.com/deltabox-studio/toolchain/commit/c3875e4) by [T0chi](https://github.com/T0chi))
+- Reflow changelog descriptions ([#bc6a40c](https://github.com/deltabox-studio/toolchain/commit/bc6a40c) by [T0chi](https://github.com/T0chi))
+#### Config
+- Document the open `WorkflowJob` type ([#779566b](https://github.com/deltabox-studio/toolchain/commit/779566b) by [T0chi](https://github.com/T0chi))
+#### Changelog
+- Document `formatLine` ([#61e28ec](https://github.com/deltabox-studio/toolchain/commit/61e28ec) by [T0chi](https://github.com/T0chi))
+### CI
+- Add VS Code integration job ([#18b2b7b](https://github.com/deltabox-studio/toolchain/commit/18b2b7b) by [T0chi](https://github.com/T0chi))
+### Chores
+#### Changelog
+- Update the lockfile bin entry ([#f946648](https://github.com/deltabox-studio/toolchain/commit/f946648) by [T0chi](https://github.com/T0chi))
+#### Config
+- Regenerate config-types, schema and docs ([#0b0ca20](https://github.com/deltabox-studio/toolchain/commit/0b0ca20) by [T0chi](https://github.com/T0chi))
+- Shrink the generated `BiomeConfig` type ([#0522932](https://github.com/deltabox-studio/toolchain/commit/0522932) by [T0chi](https://github.com/T0chi))
+#### Vscode
+- Move mocha types to the default tsconfig ([#b604811](https://github.com/deltabox-studio/toolchain/commit/b604811) by [T0chi](https://github.com/T0chi))
+
+### Package changes
+#### Added
+- `@dprint/types` `^0.4.0`
+- `eslint` `^10.14.0`
+- `prettier` `^3.6.2`
+
+<!-- release:end -->
+
+
+## 2.2.0 (November 2026)
 
 ### New features
 #### Core
@@ -18,9 +96,6 @@
 - `@types/mocha` `^10.0.10`
 - `@vscode/test-cli` `^0.0.15`
 - `@vscode/test-electron` `^3.1.0`
-
-<!-- release:end -->
-
 
 ## 2.1.3 (November 2026)
 
