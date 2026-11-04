@@ -7,6 +7,7 @@ import {
     captureCli,
     chooseDbxSource,
     cliInvocation,
+    exitCodeOf,
     initDbxSource,
     selectVersion,
     setExtensionInfo,
@@ -243,7 +244,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 child = undefined;
                 resolve(1);
             });
-            proc.on('exit', code => {
+            proc.on('close', (code, signal) => {
                 child = undefined;
                 if (!warnedNoWorkspaces && NO_WORKSPACES_WARNING.test(captured)) {
                     warnedNoWorkspaces = true;
@@ -256,7 +257,7 @@ export function activate(context: vscode.ExtensionContext): void {
                             if (choice === 'Show output') output.show();
                         });
                 }
-                resolve(code ?? 0);
+                resolve(exitCodeOf(code, signal));
             });
         });
     };
