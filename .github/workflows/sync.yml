@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: "22"
       - name: Enable Corepack
-        run: |
+        run: |-
           corepack enable
           corepack prepare yarn@4.17.1 --activate
       - name: Install dependencies

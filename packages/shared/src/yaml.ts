@@ -22,21 +22,30 @@ function quotable(s: string): boolean {
     if (/\s$/.test(s)) return true;
     if (s.includes(': ') || s.includes(' #') || s.includes('\t')) return true;
     if (s.includes('${{')) return true;
-    if (/["\\]/.test(s)) return true;
+    if (/["\\\r\n]/.test(s)) return true;
     return false;
+}
+
+function escapeQuoted(value: string): string {
+    return value
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"')
+        .replace(/\r/g, '\\r')
+        .replace(/\n/g, '\\n');
 }
 
 function scalar(value: string | number | boolean | null): string {
     if (value === null) return 'null';
     if (typeof value === 'boolean') return value ? 'true' : 'false';
     if (typeof value === 'number') return String(value);
-    if (quotable(value)) return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+    if (quotable(value)) return `"${escapeQuoted(value)}"`;
     return value;
 }
 
 function keyName(key: string): string {
-    if (quotable(key) && !BOOLEAN_LIKE.test(key)) return `"${key}"`;
     // `on` is a valid Actions key but a YAML 1.1 boolean; leave it unquoted.
+    if (key === 'on') return key;
+    if (quotable(key)) return `"${escapeQuoted(key)}"`;
     return key;
 }
 
@@ -81,8 +90,9 @@ function emitArray(values: YamlValue[], indent: number): string[] {
 }
 
 function emitStringBlock(value: string, indent: number, pad: string, key: string): string[] {
-    const body = value.endsWith('\n') ? value.slice(0, -1) : value;
-    const lines = [`${pad}${key}: |`];
+    const trailingNewline = value.endsWith('\n');
+    const body = trailingNewline ? value.slice(0, -1) : value;
+    const lines = [`${pad}${key}: ${trailingNewline ? '|' : '|-'}`];
     for (const line of body.split('\n'))
         lines.push(line === '' ? '' : `${' '.repeat(indent + 2)}${line}`);
     return lines;

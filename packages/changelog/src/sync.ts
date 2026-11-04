@@ -99,7 +99,7 @@ export const HOOK_HEADER =
  */
 export function commitMsgHook(commitlintPath?: string): string {
     const base = 'npx --no -- commitlint --edit "$1"';
-    return commitlintPath ? `${base} --config ${commitlintPath}` : base;
+    return commitlintPath ? `${base} --config "${commitlintPath}"` : base;
 }
 
 /** The default husky `commit-msg` hook body (config at the project root). */
@@ -108,10 +108,14 @@ export const COMMIT_MSG_HOOK = commitMsgHook();
 /** Normalize a commitlint output directory (no leading `./`, no trailing `/`). */
 function normalizeDir(dir: string | undefined): string {
     if (!dir) return '';
-    return dir
+    const value = dir
         .replace(/\\/g, '/')
         .replace(/^\.?\//, '')
         .replace(/\/+$/, '');
+    if (/^[a-zA-Z]:/.test(value) || value.split('/').includes('..')) {
+        throw new Error(`invalid commitlint directory "${dir}" (must stay inside the project).`);
+    }
+    return value;
 }
 
 /** The workflow file paths produced for a config. */

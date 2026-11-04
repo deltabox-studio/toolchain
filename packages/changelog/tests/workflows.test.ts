@@ -304,3 +304,20 @@ describe('workflow config', () => {
         );
     });
 });
+
+describe('workflow command fixes', () => {
+    it('uses the package-manager runner for commitlint and quotes the config path', () => {
+        const files = renderWorkflows(
+            { packageManager: 'npm', commitlintConfig: 'my config.mjs' },
+            { ci: true }
+        );
+        expect(files['ci.yml']).toContain('npx commitlint');
+        expect(files['ci.yml']).toContain('--config "my config.mjs"');
+    });
+
+    it('stages newly created workspace changelogs', () => {
+        const files = renderWorkflows({ packageManager: 'yarn' }, { changelog: true });
+        expect(files['changelog.yml']).toContain('git add -- "*package.json" "*CHANGELOG.md"');
+        expect(files['changelog.yml']).not.toContain('git add -u');
+    });
+});

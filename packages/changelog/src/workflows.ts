@@ -180,9 +180,9 @@ function workflowTokens(options: RenderWorkflowOptions): Replacements {
     return tokens;
 }
 
-/** The command that runs the toolchain CLI under the configured package manager. */
-function cli(tokens: Replacements): string {
-    const tooling = String(tokens.tooling ?? 'dbx');
+/** The command that runs a binary under the configured package manager. */
+function cli(tokens: Replacements, bin?: string): string {
+    const tooling = bin ?? String(tokens.tooling ?? 'dbx');
     switch (String(tokens.packageManager ?? 'yarn')) {
         case 'pnpm':
             return `pnpm exec ${tooling}`;
@@ -284,7 +284,7 @@ export function defaultWorkflows(
                                   {
                                       name: 'Commitlint (Conventional Commits)',
                                       if: "${{ github.event_name == 'pull_request' || github.event.before != '0000000000000000000000000000000000000000' }}",
-                                      run: `set -euo pipefail\nbase="\${{ github.event.pull_request.base.sha || github.event.before }}"\nhead="\${{ github.event.pull_request.head.sha || github.event.after }}"\n${tokens.packageManager} commitlint --from "$base" --to "$head" --config ${tokens.commitlintConfig}`,
+                                      run: `set -euo pipefail\nbase="\${{ github.event.pull_request.base.sha || github.event.before }}"\nhead="\${{ github.event.pull_request.head.sha || github.event.after }}"\n${cli(tokens, 'commitlint')} --from "$base" --to "$head" --config "${tokens.commitlintConfig}"`,
                                   } satisfies WorkflowStep,
                               ]
                             : []),
@@ -330,7 +330,7 @@ export function defaultWorkflows(
                                 'git config user.email "41898282+github-actions[bot]@users.noreply.github.com"',
                                 // Stage only the files this pipeline owns, so a
                                 // stray working-tree change is never committed.
-                                'git add -u -- "*package.json" "*CHANGELOG.md"',
+                                'git add -- "*package.json" "*CHANGELOG.md"',
                                 'git commit -m "chore: version packages ($(node -p "require(\'./package.json\').version"))"',
                                 `git push origin ${dev}`,
                             ].join('\n'),

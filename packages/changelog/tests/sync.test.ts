@@ -8,6 +8,8 @@ import type { SyncContext, ToolchainConfig } from '@deltabox/toolchain-shared';
 
 import {
     changelogSyncTask,
+    commitMsgHook,
+    renderCommitlintConfig,
     WORKFLOW_HEADER,
     workflowFilePaths,
     workflowFilenames,
@@ -79,9 +81,9 @@ describe('changelogSyncTask', () => {
         );
         expect(files?.some(file => file.path === '.config/commitlint.config.mjs')).toBe(true);
         const hook = files?.find(file => file.path === '.husky/commit-msg');
-        expect(hook?.content).toContain('--config .config/commitlint.config.mjs');
+        expect(hook?.content).toContain('--config ".config/commitlint.config.mjs"');
         const ci = files?.find(file => file.path === '.github/workflows/ci.yml');
-        expect(ci?.content).toContain('--config .config/commitlint.config.mjs');
+        expect(ci?.content).toContain('--config ".config/commitlint.config.mjs"');
     });
 
     it('can disable commitlint while still generating the changelog workflow', async () => {
@@ -293,5 +295,19 @@ describe('changelogSyncTask', () => {
         } finally {
             fs.rmSync(cwd, { recursive: true, force: true });
         }
+    });
+});
+
+describe('commitlint path handling', () => {
+    it('quotes a custom commitlint directory in the husky hook', () => {
+        expect(commitMsgHook('.config dir/commitlint.config.mjs')).toContain(
+            '--config ".config dir/commitlint.config.mjs"'
+        );
+    });
+
+    it('escapes commitlint type/scope values', () => {
+        const config = renderCommitlintConfig({ types: ["feat'x"], scopes: ['a\\b'] });
+        expect(config).toContain("'feat\\'x'");
+        expect(config).toContain("'a\\\\b'");
     });
 });

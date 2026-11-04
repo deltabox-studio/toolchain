@@ -12,7 +12,7 @@ jobs:
         env:
           GH_TOKEN: "${{ github.token }}"
           ISSUE_NUMBER: "${{ github.event.issue.number }}"
-        run: |
+        run: |-
           set -euo pipefail
           labels=$(gh issue view "$ISSUE_NUMBER" --json labels -q '.labels[].name' || true)
           title=$(gh issue view "$ISSUE_NUMBER" --json title -q '.title')

@@ -10,6 +10,7 @@ import {
     providerCli,
     resolveWorkflowTarget,
     runWorkflows,
+    splitCommand,
     workflowRunCommand,
     workflowTargets,
 } from '../src/run-workflows.js';
@@ -200,5 +201,28 @@ describe('runWorkflows', () => {
         expect(result.ran[0]?.provider).toBe('gitlab');
         expect(result.ran[0]?.code).toBe(1);
         expect(result.ran[0]?.error).toContain('`glab` CLI');
+    });
+});
+
+describe('workflow command splitting', () => {
+    it('splits a multi-word executable into exe + prefix args', () => {
+        expect(splitCommand('yarn glab')).toEqual({ exe: 'yarn', prefix: ['glab'] });
+        expect(splitCommand('az.cmd')).toEqual({ exe: 'az.cmd', prefix: [] });
+    });
+
+    it('rejects a GitHub workflow outside .github/workflows', async () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-workflow-'));
+        try {
+            fs.mkdirSync(path.join(cwd, '.github/custom'), { recursive: true });
+            fs.writeFileSync(path.join(cwd, '.github/custom/ci.yml'), 'name: CI\n');
+            const result = await runWorkflows({
+                cwd,
+                config: { ci: { ci: { dir: '.github/custom' } } },
+                gh: 'node',
+            });
+            expect(result.ran[0]?.error).toContain('.github/workflows');
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
     });
 });

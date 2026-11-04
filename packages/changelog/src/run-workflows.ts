@@ -205,16 +205,26 @@ interface CommandResult {
     missing?: boolean;
 }
 
+/** Split a command string (`yarn glab`, `az.cmd`) into an executable + prefix args. */
+export function splitCommand(command: string): { exe: string; prefix: string[] } {
+    const [exe = command, ...prefix] = command.trim().split(/\s+/);
+    return { exe, prefix };
+}
+
 /** Whether a command resolves on `PATH` (or is an existing path under `cwd`). */
 function commandAvailable(command: string, cwd: string): boolean {
     if (command.includes('/') || command.includes('\\')) {
         return fs.existsSync(path.resolve(cwd, command));
     }
+    const dirs = (process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
+    // An explicit extension (`az.cmd`) must match the PATH entry exactly.
+    if (/\.[A-Za-z0-9]+$/.test(command)) {
+        return dirs.some(dir => fs.existsSync(path.join(dir, command)));
+    }
     const exts =
         process.platform === 'win32'
             ? (process.env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean)
             : [''];
-    const dirs = (process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
     return dirs.some(dir => exts.some(ext => fs.existsSync(path.join(dir, `${command}${ext}`))));
 }
 
@@ -292,7 +302,21 @@ export async function runWorkflows(options: RunWorkflowsOptions): Promise<RunWor
             ...(options.az ? { az: options.az } : {}),
         });
         const cli = providerCli(target.provider);
-        if (!commandAvailable(command.command, cwd)) {
+        if (
+            target.provider === 'github' &&
+            !target.path.replace(/\\/g, '/').startsWith('.github/workflows/')
+        ) {
+            ran.push({
+                id: target.id,
+                file: target.file,
+                provider: target.provider,
+                code: 1,
+                error: `\`gh workflow run\` only runs workflows under .github/workflows (got ${target.path}).`,
+            });
+            continue;
+        }
+        const { exe, prefix } = splitCommand(command.command);
+        if (!commandAvailable(exe, cwd)) {
             ran.push({
                 id: target.id,
                 file: target.file,
@@ -304,7 +328,7 @@ export async function runWorkflows(options: RunWorkflowsOptions): Promise<RunWor
             });
             continue;
         }
-        const result = await runCommand(command.command, command.args, cwd);
+        const result = await runCommand(exe, [...prefix, ...command.args], cwd);
         ran.push({
             id: target.id,
             file: target.file,
