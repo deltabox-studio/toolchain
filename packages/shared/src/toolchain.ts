@@ -180,12 +180,13 @@ export function resolveChangelogConfig(
     const legacy = sectionConfig(config.changelog);
     const legacyOptions = legacy && sectionEnabled(legacy) ? legacy : undefined;
     const setting = resolveCiConfig(config)?.changelog;
-    if (setting === undefined || setting === false || setting === true) return legacyOptions;
+    if (setting === false) return undefined;
+    if (setting === undefined || setting === true) return legacyOptions;
     if (typeof setting === 'string') return legacyOptions;
     // A complete vendor workflow is a workflow setting, not changelog pipeline config.
     if (isVendorWorkflowConfig(setting)) return legacyOptions;
     const changelog = setting as CiChangelogConfig;
-    if (!sectionEnabled(changelog)) return legacyOptions;
+    if (!sectionEnabled(changelog)) return undefined;
     return legacyOptions ? (deepMerge(legacyOptions, changelog) as CiChangelogConfig) : changelog;
 }
 

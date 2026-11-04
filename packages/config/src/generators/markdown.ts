@@ -249,7 +249,7 @@ function renderNode(
         }\``
     );
     lines.push(...annotationLines(schema, opts));
-    if (schema.default !== undefined)
+    if (schema.default !== undefined && !schema.secret)
         lines.push(`- **Default**: \`${JSON.stringify(schema.default)}\``);
     if (schema.description) lines.push('', sanitizeText(schema.description));
     lines.push(...remarksLines(schema.remarks, opts));
@@ -352,13 +352,16 @@ function collectSchemaEnvVars(schema: Schema, scope: string, out: EnvVarRow[]): 
         const child = raw as unknown as SchemaNode;
         if (child.type === 'object' && child.properties) {
             collectSchemaEnvVars(raw, scope, out);
-        } else if (child.env) {
+            continue;
+        }
+        const envName = child.envName ?? child.env;
+        if (envName) {
             const envDefault = child.envDefault ?? child.default;
             out.push({
-                name: child.env,
+                name: envName,
                 scope,
                 ...(child.description ? { description: child.description } : {}),
-                ...(envDefault !== undefined ? { default: envDefault } : {}),
+                ...(envDefault !== undefined && !child.secret ? { default: envDefault } : {}),
                 ...(child.required === true ? { required: true } : {}),
                 ...(child.secret ? { secret: true } : {}),
                 ...(child.public ? { public: true } : {}),
@@ -389,7 +392,7 @@ function renderConfigIndex(schema: ConfigSchema, options: RenderMarkdownOptions 
                 name: def.name,
                 scope: def.scope,
                 ...(def.description ? { description: def.description } : {}),
-                ...(def.default !== undefined ? { default: def.default } : {}),
+                ...(def.default !== undefined && !def.secret ? { default: def.default } : {}),
             });
         }
     }

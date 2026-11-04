@@ -208,3 +208,49 @@ describe('named nested schemas', () => {
         expect(auth?.properties?.token).toBeDefined();
     });
 });
+
+describe('secret defaults and envPathOf', () => {
+    const secretSchema = z.object({
+        token: z.string().default('s3cret').meta({ envName: 'APP_TOKEN', secret: true }),
+    });
+
+    it('does not serialize a secret default', () => {
+        const doc = buildConfigJson({ server: secretSchema }, { envPrefix: 'APP_' });
+        expect(doc.env.find(entry => entry.name === 'APP_TOKEN')?.default).toBeUndefined();
+    });
+
+    it('does not render a secret default in markdown', () => {
+        const markdown = generateConfigMarkdown({ server: secretSchema });
+        expect(markdown['server.md']).not.toContain('s3cret');
+    });
+
+    it('uses envPathOf for the dotted path', () => {
+        const schema = z.object({
+            baseUrl: z.string().meta({ envName: 'APP_CLI_BASE_URL' }),
+        });
+        const vars = collectVars({ server: schema }, 'APP_', {
+            envPathOf: () => 'cli.base.url',
+        });
+        expect(vars.find(variable => variable.name === 'APP_CLI_BASE_URL')?.path).toBe(
+            'cli.base.url'
+        );
+    });
+
+    it('shows envName-backed core variables in the index', () => {
+        const schema = z.object({
+            host: z.string().meta({ envName: 'APP_HOST' }),
+        });
+        expect(generateConfigMarkdown({ server: schema })['index.md']).toContain('APP_HOST');
+    });
+});
+
+describe('duplicate env names', () => {
+    it('keeps the first declaration', () => {
+        const schema = z.object({
+            a: z.string().meta({ envName: 'APP_TOKEN' }),
+            b: z.string().meta({ envName: 'APP_TOKEN' }),
+        });
+        const vars = collectVars({ server: schema }, 'APP_');
+        expect(vars.filter(variable => variable.name === 'APP_TOKEN')).toHaveLength(1);
+    });
+});

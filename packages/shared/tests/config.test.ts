@@ -266,6 +266,18 @@ describe('resolveChangelogConfig', () => {
         expect(resolved?.versioning).toEqual({ target: 'individual' });
         expect(resolved?.branches).toEqual({ main: 'main' });
     });
+
+    it('disables the pipeline when `ci.changelog` is false', () => {
+        expect(resolveChangelogConfig({ changelog: legacy, ci: { changelog: false } })).toBe(
+            undefined
+        );
+        expect(
+            resolveChangelogConfig({
+                changelog: legacy,
+                ci: { changelog: { enabled: false } },
+            })
+        ).toBe(undefined);
+    });
 });
 
 describe('formatter/linter precedence', () => {

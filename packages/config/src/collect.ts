@@ -77,11 +77,14 @@ function walkSchema(
     options: CollectVarsOptions,
     pathParts: string[] = []
 ): void {
-    void options;
     const meta = metaOf(schema);
     const children = schemaChildren(schema);
-    const path = meta?.envPath ?? meta?.path ?? pathParts.join('.');
     const envName = meta?.envName ?? meta?.env;
+    const path =
+        meta?.envPath ??
+        meta?.path ??
+        (envName ? options.envPathOf?.(envName) : undefined) ??
+        pathParts.join('.');
     const cliFlag =
         meta?.cliFlag ??
         (envName
@@ -133,7 +136,15 @@ export function collectVars(
             if (!out[i]!.scope || out[i]!.scope === 'default') out[i]!.scope = scopeName;
         }
     }
-    return out;
+    // Two leaves may declare the same env name; keep the first so generated
+    // interfaces/env files do not contain duplicate members.
+    const seen = new Set<string>();
+    return out.filter(def => {
+        if (!def.name) return true;
+        if (seen.has(def.name)) return false;
+        seen.add(def.name);
+        return true;
+    });
 }
 
 /** Collect the config paths marked `required` for a scope. */
