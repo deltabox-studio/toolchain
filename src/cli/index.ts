@@ -81,14 +81,30 @@ export function withDefaultVite(
  * Pull the global logger flags out of `argv` (so they work before *or* after a
  * subcommand) and turn them into logger overrides.
  */
-export function extractLogOptions(argv: string[]): { argv: string[]; options: LoggerOptions } {
+export function extractLogOptions(
+    argv: string[],
+    isPassthrough?: (name: string) => boolean
+): { argv: string[]; options: LoggerOptions } {
     const options: LoggerOptions = {};
     const rest: string[] = [];
+    const start = /(?:^|[\\/])(?:node|node\.exe|bun|bun\.exe|deno|deno\.exe)$/i.test(argv[0] ?? '')
+        ? 2
+        : 0;
+    let command: string | undefined;
+    let passthrough = false;
     for (let index = 0; index < argv.length; index++) {
         const arg = argv[index] as string;
         if (arg === '--') {
             // Everything after `--` is an operand for the subcommand (or the
             // wrapped binary): never treat a logger flag there as our own.
+            rest.push(...argv.slice(index));
+            break;
+        }
+        if (index >= start && command === undefined && !arg.startsWith('-')) {
+            command = arg;
+            passthrough = isPassthrough?.(arg) === true;
+        }
+        if (command !== undefined && passthrough) {
             rest.push(...argv.slice(index));
             break;
         }
@@ -112,12 +128,28 @@ export function extractLogOptions(argv: string[]): { argv: string[]; options: Lo
  * Pull the update-check flags out of `argv` (so `--no-update-check` works before
  * or after a subcommand) and report whether the check is enabled.
  */
-export function extractUpdateCheck(argv: string[]): { argv: string[]; updateCheck: boolean } {
+export function extractUpdateCheck(
+    argv: string[],
+    isPassthrough?: (name: string) => boolean
+): { argv: string[]; updateCheck: boolean } {
     let updateCheck = true;
     const rest: string[] = [];
+    const start = /(?:^|[\\/])(?:node|node\.exe|bun|bun\.exe|deno|deno\.exe)$/i.test(argv[0] ?? '')
+        ? 2
+        : 0;
+    let command: string | undefined;
+    let passthrough = false;
     for (let index = 0; index < argv.length; index++) {
         const arg = argv[index] as string;
         if (arg === '--') {
+            rest.push(...argv.slice(index));
+            break;
+        }
+        if (index >= start && command === undefined && !arg.startsWith('-')) {
+            command = arg;
+            passthrough = isPassthrough?.(arg) === true;
+        }
+        if (command !== undefined && passthrough) {
             rest.push(...argv.slice(index));
             break;
         }
@@ -194,15 +226,16 @@ export async function runCli(argv: string[] = process.argv): Promise<void> {
     const basePassthroughNames = new Set(
         baseCommands.filter(command => command.passthrough).map(command => command.name)
     );
-    const { argv: rest, options } = extractLogOptions(argv);
-    const { argv: rest2, updateCheck } = extractUpdateCheck(rest);
+    const isPassthrough = (name: string): boolean =>
+        basePassthroughNames.has(name) ||
+        (!baseCommandNames.has(name) && resolveVpCommand(name) !== undefined);
+    const { argv: rest, options } = extractLogOptions(argv, isPassthrough);
+    const { argv: rest2, updateCheck } = extractUpdateCheck(rest, isPassthrough);
     const { argv: rest3, selection } = extractConfigSelection(
         rest2,
         // A bare Vite+ command is rewritten to `vite <command>` later, so it is
         // a passthrough too unless a built-in command shadows it.
-        name =>
-            basePassthroughNames.has(name) ||
-            (!baseCommandNames.has(name) && resolveVpCommand(name) !== undefined)
+        isPassthrough
     );
     setConfigSelection(selection);
     setLogOverrides(options);

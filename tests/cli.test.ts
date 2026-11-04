@@ -216,3 +216,24 @@ describe('provider registration policy', () => {
         }
     });
 });
+
+describe('passthrough pre-scan', () => {
+    const argv = (...args: string[]) => ['node', 'dbx', ...args];
+    const passthrough = (name: string) => name === 'vite';
+
+    it('leaves logger flags after a passthrough command untouched', () => {
+        expect(
+            extractLogOptions(argv('vite', 'run', 'build', '--log-level', 'debug'), passthrough)
+        ).toEqual({
+            argv: ['node', 'dbx', 'vite', 'run', 'build', '--log-level', 'debug'],
+            options: {},
+        });
+    });
+
+    it('leaves update-check flags after a passthrough command untouched', () => {
+        expect(extractUpdateCheck(argv('vite', '--no-update-check'), passthrough)).toEqual({
+            argv: ['node', 'dbx', 'vite', '--no-update-check'],
+            updateCheck: true,
+        });
+    });
+});

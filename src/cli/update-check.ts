@@ -32,7 +32,16 @@ function cacheFile(): string {
 
 function readCache(): UpdateCache | undefined {
     try {
-        return JSON.parse(fs.readFileSync(cacheFile(), 'utf-8')) as UpdateCache;
+        const parsed = JSON.parse(fs.readFileSync(cacheFile(), 'utf-8')) as Partial<UpdateCache>;
+        if (
+            !parsed ||
+            typeof parsed !== 'object' ||
+            typeof parsed.checkedAt !== 'number' ||
+            typeof parsed.latest !== 'string'
+        ) {
+            return undefined;
+        }
+        return { checkedAt: parsed.checkedAt, latest: parsed.latest };
     } catch {
         return undefined;
     }
