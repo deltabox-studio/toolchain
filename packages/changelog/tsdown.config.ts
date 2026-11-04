@@ -4,7 +4,12 @@ import { baseTsdownConfig } from '@deltabox/toolchain-tsdown';
 
 export default defineConfig({
     ...baseTsdownConfig,
-    entry: { index: 'src/index.ts', run: 'src/run.ts', 'cli/index': 'src/cli/index.ts' },
+    entry: {
+        index: 'src/index.ts',
+        bin: 'src/bin.ts',
+        run: 'src/run.ts',
+        'cli/index': 'src/cli/index.ts',
+    },
     deps: { ...baseTsdownConfig.deps, alwaysBundle: [/^@deltabox\/toolchain-shared/] },
     // Yarn normalises a single-entry `bin` object to a plain string on install,
     // so let Yarn own the field: `bin: false` stops tsdown from writing the
