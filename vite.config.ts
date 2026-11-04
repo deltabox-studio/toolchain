@@ -244,8 +244,7 @@ export default defineConfig<ViteUserConfig>({
             "no-var": "warn",
             "prefer-const": "warn",
             "prefer-exponentiation-operator": "off",
-            "prefer-template": "off",
-            "react-hooks/exhaustive-deps": "off"
+            "prefer-template": "off"
         }
     }
 });

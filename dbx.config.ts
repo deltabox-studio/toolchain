@@ -357,7 +357,7 @@ export default defineConfig({
                     'no-inner-declarations': 'off',
                     'no-unused-vars': 'warn',
                     'no-case-declarations': 'off',
-                    'react-hooks/exhaustive-deps': 'off',
+                    'react/exhaustive-deps': 'off',
                     'prefer-exponentiation-operator': 'off',
                     'typescript/no-non-null-assertion': 'off',
                     'prefer-template': 'off',
