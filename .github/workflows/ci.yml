@@ -40,7 +40,7 @@ jobs:
           head="${{ github.event.pull_request.head.sha || github.event.after }}"
           yarn commitlint --from "$base" --to "$head" --config "commitlint.config.mjs"
       - name: Verify generated files are in sync
-        run: yarn dbx sync --check
+        run: yarn dbx sync --check --recursive
       - name: Build
         run: yarn build
       - name: Format + lint (auto-fix)

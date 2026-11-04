@@ -290,7 +290,7 @@ export function defaultWorkflows(
                             : []),
                         {
                             name: 'Verify generated files are in sync',
-                            run: `${engine} sync --check`,
+                            run: `${engine} sync --check --recursive`,
                         },
                         { name: 'Build', run: `${tokens.packageManager} build` },
                     ],
@@ -390,7 +390,7 @@ export function defaultWorkflows(
                         ...setupSteps(tokens),
                         {
                             name: 'Verify generated files are in sync',
-                            run: `${engine} sync --check`,
+                            run: `${engine} sync --check --recursive`,
                         },
                     ],
                 },

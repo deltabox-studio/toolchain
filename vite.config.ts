@@ -160,9 +160,9 @@ export default defineConfig<ViteUserConfig>({
             "**/CHANGELOG.md",
             "CHANGELOG.proposed.md",
             "**/vite.config.ts",
-            "packages/shared/src/config-schema/generated/biome-config.ts",
-            "packages/shared/src/config-schema/generated/azure-pipelines.ts",
-            "packages/shared/src/config-schema/generated/oxlint-config.ts"
+            "**/config-schema/generated/biome-config.ts",
+            "**/config-schema/generated/azure-pipelines.ts",
+            "**/config-schema/generated/oxlint-config.ts"
         ],
         "sortImports": {
             "groups": [

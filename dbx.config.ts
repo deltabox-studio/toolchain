@@ -189,7 +189,7 @@ export default defineConfig({
                 },
             },
             // Keep the hand-written CI checks on top of the generated
-            // workflow (commitlint + `sync --check` + build come first).
+            // workflow (commitlint + `sync --check --recursive` + build come first).
             ci: {
                 pullRequestBranches: [
                     'main',
@@ -312,10 +312,11 @@ export default defineConfig({
                     // byte-stable for `sync --check`.
                     '**/vite.config.ts',
                     // Generated at a wider width from a vendor schema; formatting
-                    // them at 100 columns would more than double their size.
-                    'packages/shared/src/config-schema/generated/biome-config.ts',
-                    'packages/shared/src/config-schema/generated/azure-pipelines.ts',
-                    'packages/shared/src/config-schema/generated/oxlint-config.ts',
+                    // them at 100 columns would more than double their size. Use
+                    // `**/` so the patterns also match from each workspace root.
+                    '**/config-schema/generated/biome-config.ts',
+                    '**/config-schema/generated/azure-pipelines.ts',
+                    '**/config-schema/generated/oxlint-config.ts',
                 ],
                 // Biome `assist.actions.source.organizeImports.groups`.
                 sortImports: {

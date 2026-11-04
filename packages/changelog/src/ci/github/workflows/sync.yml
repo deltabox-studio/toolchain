@@ -23,4 +23,4 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
       - name: Verify generated files are in sync
-        run: yarn dbx sync --check
+        run: yarn dbx sync --check --recursive
