@@ -55,3 +55,25 @@ describe('extractConfigSelection', () => {
         });
     });
 });
+
+describe('extractConfigSelection reset flags', () => {
+    it('leaves `reset --config` and `--all` for the reset command', () => {
+        expect(extractConfigSelection(['node', 'dbx', 'reset', '--config'])).toEqual({
+            argv: ['node', 'dbx', 'reset', '--config'],
+            selection: {},
+        });
+        expect(extractConfigSelection(['node', 'dbx', 'reset', '--config', '--all'])).toEqual({
+            argv: ['node', 'dbx', 'reset', '--config', '--all'],
+            selection: {},
+        });
+    });
+
+    it('still treats a global --config before reset as a file selector', () => {
+        expect(
+            extractConfigSelection(['node', 'dbx', '--config', 'dbx.custom.ts', 'reset'])
+        ).toEqual({
+            argv: ['node', 'dbx', 'reset'],
+            selection: { config: 'dbx.custom.ts' },
+        });
+    });
+});

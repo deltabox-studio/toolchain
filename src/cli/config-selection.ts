@@ -64,6 +64,12 @@ export function extractConfigSelection(
         if (arg === '--no-config') {
             found.noConfig = true;
         } else if (arg === '--config') {
+            // `dbx reset --config` is the reset command's boolean "also remove
+            // the config" flag, not the global `--config <file>` selector.
+            if (command === 'reset') {
+                rest.push(arg);
+                continue;
+            }
             const value = argv[++index];
             if (value !== undefined) found.config = value;
         } else if (arg.startsWith('--config=')) {
