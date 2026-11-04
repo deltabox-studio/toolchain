@@ -570,7 +570,7 @@ __metadata:
     typescript: "catalog:"
     vitest: "catalog:"
   bin:
-    toolchain-changelog: ./dist/run.js
+    toolchain-changelog: ./dist/bin.js
   languageName: unknown
   linkType: soft
 
