@@ -211,11 +211,11 @@ export function dbx(options: DbxPluginOptions = {}): Plugin {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let busy = false;
 
-    const syncNow = async (): Promise<void> => {
-        if (busy) return;
+    const syncNow = async (): Promise<number> => {
+        if (busy) return 0;
         busy = true;
         try {
-            await runDbx(['sync'], root);
+            return await runDbx(['sync'], root);
         } finally {
             busy = false;
         }
@@ -224,7 +224,9 @@ export function dbx(options: DbxPluginOptions = {}): Plugin {
     const schedule = (): void => {
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => {
-            void syncNow();
+            void syncNow().then(code => {
+                if (code !== 0) logger.warn('dbx sync failed; continuing with stale files.');
+            });
         }, debounce);
     };
 
@@ -244,7 +246,12 @@ export function dbx(options: DbxPluginOptions = {}): Plugin {
                 }
                 return;
             }
-            if (sync) await syncNow();
+            if (sync) {
+                const code = await syncNow();
+                if (code !== 0) {
+                    this.error('deltabox-toolchain: `dbx sync` failed; generated files are stale.');
+                }
+            }
         },
         watchChange(id) {
             if (!watch || !sync) return;

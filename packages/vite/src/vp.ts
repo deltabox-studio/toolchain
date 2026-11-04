@@ -31,8 +31,18 @@ export interface ResolvedVp {
 
 /** The `.bin/vp` shim candidates inside a project (Windows variants first). */
 function localCandidates(cwd: string): string[] {
-    const base = path.join(cwd, 'node_modules', '.bin', 'vp');
-    return IS_WINDOWS ? [`${base}.cmd`, `${base}.exe`, `${base}.ps1`, base] : [base];
+    const candidates: string[] = [];
+    let dir = path.resolve(cwd);
+    for (;;) {
+        const base = path.join(dir, 'node_modules', '.bin', 'vp');
+        candidates.push(
+            ...(IS_WINDOWS ? [`${base}.cmd`, `${base}.exe`, `${base}.ps1`, base] : [base])
+        );
+        const parent = path.dirname(dir);
+        if (parent === dir) break;
+        dir = parent;
+    }
+    return candidates;
 }
 
 /** Whether the missing-`PATH` warning has already been emitted. */
