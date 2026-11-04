@@ -195,7 +195,7 @@ export function run(cmd: string, args: string[], options?: RunOptions): ChildPro
     });
 
     if (!exitWithMainProc) return proc;
-    proc.on('exit', process.exit);
+    proc.on('exit', (code, signal) => process.exit(code ?? (signal ? 1 : 0)));
 
     return proc;
 }

@@ -34,12 +34,14 @@ export * from './catalogs.js';
 export * from './changelog.js';
 export * from './ci.js';
 export * from './format.js';
-export * from './generated/azure-pipelines.js';
-export * from './generated/biome-config.js';
-export * from './generated/github-workflow.js';
-export * from './generated/gitlab-ci.js';
-export * from './generated/oxfmt-config.js';
-export * from './generated/oxlint-config.js';
+// Re-export only the public generated types: their internal helper types
+// (`__schemaN`) collide across vendor schemas.
+export type { AzurePipelines } from './generated/azure-pipelines.js';
+export type { BiomeConfig } from './generated/biome-config.js';
+export type { GitHubWorkflow } from './generated/github-workflow.js';
+export type { GitLabCi } from './generated/gitlab-ci.js';
+export type { OxfmtConfig } from './generated/oxfmt-config.js';
+export type { OxlintConfig } from './generated/oxlint-config.js';
 export * from './json.js';
 export * from './logger.js';
 export * from './meta.js';

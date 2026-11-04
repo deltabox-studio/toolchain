@@ -19,6 +19,11 @@ export function isPlainObject(value: unknown): value is Record<string, unknown> 
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** Whether a key could mutate an object's prototype when assigned. */
+export function isUnsafeKey(key: string): boolean {
+    return key === '__proto__' || key === 'constructor' || key === 'prototype';
+}
+
 /** Recursively merge `sources` over `target` (arrays and scalars are replaced). */
 export function deepMerge<T extends Record<string, any>>(
     target: T,
@@ -28,6 +33,7 @@ export function deepMerge<T extends Record<string, any>>(
     for (const source of sources) {
         if (!source) continue;
         for (const [key, value] of Object.entries(source)) {
+            if (isUnsafeKey(key)) continue;
             const current = out[key];
             if (isPlainObject(current) && isPlainObject(value)) {
                 out[key] = deepMerge(current, value);
@@ -60,7 +66,7 @@ export function applyOverrides<T extends object>(base: T, ...overrides: Partial<
     for (const override of overrides) {
         if (!override) continue;
         for (const [key, value] of Object.entries(override)) {
-            if (value === undefined) continue;
+            if (value === undefined || isUnsafeKey(key)) continue;
             const current = out[key];
             out[key] =
                 isPlainObject(current) && isPlainObject(value)

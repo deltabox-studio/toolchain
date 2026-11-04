@@ -1,7 +1,10 @@
-import fs from 'node:fs';
+﻿import fs from 'node:fs';
 import path from 'node:path';
 
-import { deepMerge, isPlainObject } from './object-utils.js';
+import { deepMerge, isPlainObject, isUnsafeKey } from './object-utils.js';
+
+/** VS Code arrays that are additive rather than replaced. */
+const UNION_ARRAY_KEYS = new Set(['recommendations', 'extensions']);
 
 /** Read + parse a JSON file, returning `undefined` when it is missing/invalid. */
 export function readJsonFile<T = Record<string, unknown>>(file: string): T | undefined {
@@ -103,8 +106,19 @@ export function mergeJsonAt(
     patch: Record<string, unknown>,
     indent = 4
 ): string {
-    const existing = readJsoncAt<Record<string, unknown>>(cwd, relative) ?? {};
+    const file = path.resolve(cwd, relative);
+    const original = fs.existsSync(file) ? fs.readFileSync(file, 'utf-8') : undefined;
+    const existing =
+        original === undefined ? {} : readJsoncAt<Record<string, unknown>>(cwd, relative);
+    if (existing === undefined || !isPlainObject(existing)) {
+        // Never replace a malformed/JSON-array settings file with only the patch.
+        throw new Error(`cannot merge ${relative}: expected a valid JSON object.`);
+    }
     const merged = mergeWithArrays(existing, patch);
+    // Preserve the original file (including comments) when nothing changed.
+    if (original !== undefined && JSON.stringify(merged) === JSON.stringify(existing)) {
+        return original;
+    }
     return toJson(merged, indent);
 }
 
@@ -114,9 +128,10 @@ function mergeWithArrays(
 ): Record<string, unknown> {
     const out = deepMerge(base, patch);
     for (const key of Object.keys(patch)) {
+        if (isUnsafeKey(key)) continue;
         const a = base[key];
         const b = patch[key];
-        if (Array.isArray(a) && Array.isArray(b)) {
+        if (Array.isArray(a) && Array.isArray(b) && UNION_ARRAY_KEYS.has(key)) {
             out[key] = [...new Set([...a, ...b])];
         } else if (isPlainObject(a) && isPlainObject(b)) {
             out[key] = mergeWithArrays(a as Record<string, unknown>, b as Record<string, unknown>);
