@@ -117,6 +117,8 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
                 if (await reloadConfig()) replan = true;
             }
             await runSync(current);
+        } catch (error) {
+            logger.error(`sync failed: ${error instanceof Error ? error.message : String(error)}`);
         } finally {
             running = false;
             // Ignore the fs events caused by our own writes.
@@ -134,18 +136,32 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
 
     const schedule = () => {
         clearTimeout(timer);
-        timer = setTimeout(sync, debounceMs());
+        timer = setTimeout(() => {
+            void sync();
+        }, debounceMs());
     };
 
     const onChange = (changedAbs?: string) => {
-        if (Date.now() < ignoreUntil) return;
+        let isConfig = false;
         if (changedAbs) {
             const rel = path.relative(cwd, changedAbs).replace(/\\/g, '/');
             if (isIgnoredPath(rel, ignore)) return;
-            if (path.basename(changedAbs).startsWith('dbx.config.')) configDirty = true;
+            isConfig = path.basename(changedAbs).startsWith('dbx.config.');
+            if (isConfig) configDirty = true;
         }
+        // A config edit inside the post-sync quiet window must still re-sync;
+        // only generated-file events are suppressed.
+        if (Date.now() < ignoreUntil && !isConfig) return;
         void current.config?.hooks?.onChange?.(changedAbs ? { path: changedAbs } : {});
         schedule();
+    };
+
+    /** Track a watcher and never let its async `error` crash the process. */
+    const addWatcher = (watcher: fs.FSWatcher): void => {
+        watcher.on('error', error => {
+            logger.error(`watch error: ${error instanceof Error ? error.message : String(error)}`);
+        });
+        watchers.push(watcher);
     };
 
     /** Recompute the input directories/watchers from the current config. */
@@ -178,7 +194,7 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
 
         if (configFile) {
             try {
-                watchers.push(
+                addWatcher(
                     fs.watch(configFile, () => {
                         log('config changed; re-syncing');
                         configDirty = true;
@@ -193,12 +209,12 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
             const emit = (filename: string | null): void =>
                 onChange(path.join(dir, filename ?? ''));
             try {
-                watchers.push(
+                addWatcher(
                     fs.watch(dir, { recursive: true }, (_event, filename) => emit(filename))
                 );
             } catch {
                 try {
-                    watchers.push(fs.watch(dir, (_event, filename) => emit(filename)));
+                    addWatcher(fs.watch(dir, (_event, filename) => emit(filename)));
                 } catch {
                     // directory may not exist
                 }
