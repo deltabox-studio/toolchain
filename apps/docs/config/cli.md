@@ -145,7 +145,7 @@ Generate workspace tsconfig.json files from the default tsconfig (aliases + refe
 - `--paths` — Print only the resolved compilerOptions.paths.
 - `--references` — Print only the resolved project references.
 - `--no-extends` — Do not follow the tsconfig extends chain.
-- `--restore [kind]` — Remove the applied tsconfig overrides (all, or base|root|default|build) using the manifest snapshots.
+- `--restore [kind]` — Remove the applied tsconfig overrides (all, or base\|root\|default\|build) using the manifest snapshots.
 
 ## `dbx cleanup`
 
@@ -190,14 +190,14 @@ Scan commits, derive the semver bump and update the CHANGELOG.md files + version
 
 Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.* into dbx.config.
 
-- `--from ‹tool›` — Source tool (repeatable): biome | eslint | prettier | dprint | oxc | vite | all.
+- `--from ‹tool›` — Source tool (repeatable): biome \| eslint \| prettier \| dprint \| oxc \| vite \| all.
 - `--to ‹tool›` — Target tool (default: oxc). (default: `oxc`)
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--recursive` — Also migrate the discovered projects under the root (default: root only).
 - `--write` — Write the files (default: dry-run).
 - `--dry-run` — Do not write anything (default).
 - `--check` — CI: exit non-zero when the oxc config is stale.
-- `--target ‹target›` — files (default) | vite.
+- `--target ‹target›` — files (default) \| vite.
 - `--online` — Allow network (e.g. @oxlint/migrate).
 - `--ignore-vite-config-file` — Do not remove the folded `vite.config.*`.
 - `--ignore-managed-files` — Skip the post-migration sync (leave the toolchain-managed files as-is).
@@ -218,9 +218,9 @@ Scaffold a single-package TypeScript project.
 - `-n, --name ‹name›` — Project name.
 - `-s, --scope ‹scope›` — npm scope, eg. @acme.
 - `-o, --out ‹dir›` — Output directory (default: cwd).
-- `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
+- `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
 - `--no-config` — Skip the dbx.config.ts file.
-- `--type ‹type›` — Project type: project | monorepo-root | monorepo-workspace.
+- `--type ‹type›` — Project type: project \| monorepo-root \| monorepo-workspace.
 - `--force` — Overwrite existing files in the output directory.
 
 ## `dbx project:init:monorepo`
@@ -231,9 +231,9 @@ Scaffold a monorepo root (add --example for one example workspace).
 - `-s, --scope ‹scope›` — npm scope, eg. @acme.
 - `-o, --out ‹dir›` — Output directory (default: cwd).
 - `--example` — Also scaffold one example workspace package.
-- `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
+- `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
 - `--no-config` — Skip the dbx.config.ts file.
-- `--type ‹type›` — Project type: project | monorepo-root | monorepo-workspace.
+- `--type ‹type›` — Project type: project \| monorepo-root \| monorepo-workspace.
 - `--force` — Overwrite existing files in the output directory.
 
 ## `dbx project:init:workspace`
@@ -244,9 +244,9 @@ Scaffold a monorepo workspace package into an existing monorepo root.
 - `-s, --scope ‹scope›` — npm scope, eg. @acme.
 - `-r, --root ‹dir›` — Monorepo root (default: cwd).
 - `-d, --dir ‹dir›` — Workspace dir relative to the root (default: packages/&lt;name&gt;).
-- `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
+- `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
 - `--no-config` — Skip the dbx.config.ts file.
-- `--type ‹type›` — Project type: project | monorepo-root | monorepo-workspace.
+- `--type ‹type›` — Project type: project \| monorepo-root \| monorepo-workspace.
 - `--force` — Overwrite existing files in the output directory.
 
 ## `dbx project:config`
@@ -269,7 +269,7 @@ List templates (builtin + local + opted-in online sources).
 - `--online` — Resolve online sources (npm/git).
 - `--offline` — Force offline (skip npm/git).
 - `--global` — Only the global registry templates.
-- `--kind ‹kind›` — project | workspace | application | folder | tooling | pipeline.
+- `--kind ‹kind›` — project \| workspace \| application \| folder \| tooling \| pipeline.
 - `--registry` — List only the .dbx/toolchain/templates.json sources.
 - `--json` — Print the templates as JSON.
 
@@ -279,7 +279,7 @@ Write a template.json to a directory, making it a local template.
 
 - `[dir]` — Directory (default: cwd).
 - `--cwd ‹dir›` — Project root (default: cwd).
-- `--kind ‹kind›` — project | workspace | application | folder | tooling | pipeline.
+- `--kind ‹kind›` — project \| workspace \| application \| folder \| tooling \| pipeline.
 - `--name ‹name›` — Display name (default: folder name).
 - `--id ‹id›` — Stable template id (default: folder name).
 - `--description ‹text›` — Description.
@@ -294,12 +294,12 @@ Write a template.json to a directory, making it a local template.
 
 Record a template source in .dbx/toolchain/templates.json.
 
-- `‹source›` — local path | git URL | @scope/create | type:locate
+- `‹source›` — local path \| git URL \| @scope/create \| type:locate
 - `--cwd ‹dir›` — Project root (default: cwd).
-- `--type ‹type›` — Force: builtin | local | npm | git | vite-plus | remote.
+- `--type ‹type›` — Force: builtin \| local \| npm \| git \| vite-plus \| remote.
 - `--name ‹name›` — Display name.
 - `--id ‹id›` — Stable template id (default: inferred).
-- `--kind ‹kind›` — project | workspace | application | folder | tooling | pipeline.
+- `--kind ‹kind›` — project \| workspace \| application \| folder \| tooling \| pipeline.
 - `--ref ‹ref›` — Git branch/tag/commit.
 - `--registry ‹url›` — Custom npm registry (default: the project package manager).
 - `--subdir ‹dir›` — Subdirectory within the source.
@@ -332,12 +332,12 @@ Manage the global template search paths (and sync them to the VS Code setting).
 List or manage the template/provider registries.
 
 - `--cwd ‹dir›` — Project root (default: cwd).
-- `--kind ‹kind›` — What --add/--remove manages: templates | providers.
+- `--kind ‹kind›` — What --add/--remove manages: templates \| providers.
 - `--add ‹path›` — Add a registry path (or remote URL).
 - `--remove ‹path›` — Remove a registry path.
 - `--set ‹path...›` — Replace the registry search paths.
 - `--clear` — Clear the registry search paths.
-- `--scope ‹scope›` — project | global (default: global).
+- `--scope ‹scope›` — project \| global (default: global).
 - `--json` — Print the registries as JSON.
 
 ## `dbx template:info`
@@ -354,7 +354,7 @@ Show one template by id.
 Scaffold a project from a template (builtin, local or Vite+).
 
 - `-t, --template ‹id›` — Template id (see template:list).
-- `--kind ‹kind›` — project | workspace | application | folder | tooling | pipeline.
+- `--kind ‹kind›` — project \| workspace \| application \| folder \| tooling \| pipeline.
 - `-n, --name ‹name›` — Project / package name.
 - `-s, --scope ‹scope›` — npm scope, eg. @acme.
 - `-o, --out ‹dir›` — Output directory (default: cwd).

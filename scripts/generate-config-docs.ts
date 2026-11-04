@@ -34,7 +34,11 @@ const docsDir = path.join(root, 'apps', 'docs', 'config');
 
 /** Escape raw `<`/`>` so Vue does not parse option placeholders as tags. */
 function esc(value: string): string {
-    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\|/g, '\\|');
 }
 
 /** Use typographic angles inside code spans (entities render literally there). */

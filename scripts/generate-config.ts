@@ -55,7 +55,11 @@ const example = [
     '```',
     '',
 ].join('\n');
-fs.writeFileSync(docsPath, `${markdown?.trimEnd()}\n${example}`, 'utf-8');
+const markdownIndex = markdown;
+if (!markdownIndex) {
+    throw new Error('generateConfigMarkdown did not produce an index.md entry.');
+}
+fs.writeFileSync(docsPath, `${markdownIndex.trimEnd()}\n${example}`, 'utf-8');
 
 const jsonSchema = toJsonSchemaSafe(dbxConfigSchema, {
     unrepresentable: 'any',
