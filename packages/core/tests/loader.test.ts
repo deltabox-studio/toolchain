@@ -349,3 +349,11 @@ describe('nested config inheritance', () => {
         expect(loaded.config.tsconfig).toBeUndefined();
     });
 });
+
+describe('loadToolchainConfig conflicting flags', () => {
+    it('rejects --config together with --no-config', async () => {
+        await expect(
+            loadToolchainConfig(tmp(), { config: 'dbx.config.json', noConfig: true })
+        ).rejects.toThrow(/cannot be used together/);
+    });
+});

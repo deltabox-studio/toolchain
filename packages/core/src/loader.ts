@@ -268,6 +268,9 @@ export async function loadToolchainConfig(
     cwd: string = process.cwd(),
     options: LoadToolchainConfigOptions = {}
 ): Promise<LoadedConfig> {
+    if (options.config && options.noConfig) {
+        throw new Error('`--config` and `--no-config` cannot be used together.');
+    }
     const file = options.noConfig
         ? undefined
         : options.config
