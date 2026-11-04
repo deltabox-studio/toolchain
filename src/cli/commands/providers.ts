@@ -25,6 +25,7 @@ function providerPassthrough(
         name: command.name,
         description: `${provider.name}: ${command.description}`,
         passthrough: true,
+        hidden: true,
         options: [CWD_OPTION],
         run: async (opts, context) => {
             const raw = (opts.args as string[] | undefined) ?? [];

@@ -203,9 +203,11 @@ describe('provider registration policy', () => {
             );
             addProjectProviderRegistry(cwd, './providers');
 
-            expect(providerPassthroughCommands(cwd).map(command => command.name)).toContain(
-                'acme:run'
-            );
+            const passthroughs = providerPassthroughCommands(cwd);
+            expect(passthroughs.map(command => command.name)).toContain('acme:run');
+            // Provider passthroughs are registry-dependent, so the generated CLI
+            // reference omits them.
+            expect(passthroughs.every(command => command.hidden)).toBe(true);
             expect(
                 providerPassthroughCommands(cwd, {
                     registry: { providers: { deny: [registry] } },
