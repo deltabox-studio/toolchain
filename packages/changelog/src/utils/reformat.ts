@@ -1,11 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import {
-    type ChangelogBreakingSetting,
-    hasEscapeArtifacts,
-    logger,
-} from '@deltabox/toolchain-shared';
+import { type ChangelogBreakingSetting, logger } from '@deltabox/toolchain-shared';
 
 import { isBreakingCommit } from './breaking.js';
 import {
@@ -115,22 +111,26 @@ function reformatEntry(
         // Parse the ORIGINAL commit message when available: the changelog line
         // has bold/markdown applied that would otherwise corrupt CC parsing.
         const original = hash ? readCommit(hash) : undefined;
-        const rawSubject = original?.subject ?? stripped.replace(/\*\*/g, '');
-        const parsed = parseCcSubject(rawSubject);
         const suffix = creditSuffix(stripped);
-        const subject = formatLine(capitalize(parsed.rest), repo);
+        const withoutSuffix = suffix
+            ? stripped.slice(0, stripped.length - suffix.length)
+            : stripped;
+        // The existing bullet is the source of truth for the displayed subject:
+        // a hand-corrected description must survive `--format-only`. The
+        // original commit is only used for grouping/breaking detection (and as
+        // a fallback when the bullet has no subject of its own).
+        const existing = parseCcSubject(withoutSuffix.replace(/\*\*/g, ''));
+        const parsed = original ? parseCcSubject(original.subject) : existing;
+        const subject = formatLine(capitalize(existing.rest.trim() || parsed.rest), repo);
         const text = `- ${[subject, suffix].filter(Boolean).join(' ')}`;
-        // A body mangled by a shell loses characters that cannot be recovered;
-        // keep the existing (already corrected) description in that case.
-        const existing = entry.bodies?.[index] ?? [];
+        // An existing description is never replaced: it may contain hand
+        // corrections (eg. backticks the shell ate) that the git body cannot
+        // reproduce. Only fill in a description when the entry has none.
+        const body = entry.bodies?.[index] ?? [];
         const bodyParagraphs =
-            original && hasEscapeArtifacts(original.body) && existing.length > 0
-                ? parseExistingBody(existing)
-                : original
-                  ? formatBody(original.body)
-                  : [];
+            body.length > 0 ? parseExistingBody(body) : original ? formatBody(original.body) : [];
         const breaking = isBreakingCommit(
-            { subject: rawSubject, body: original?.body ?? '' },
+            { subject: original?.subject ?? withoutSuffix, body: original?.body ?? '' },
             breakingSetting
         );
         items.push({ parsed, breaking, text, bodyParagraphs });

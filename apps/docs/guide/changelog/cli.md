@@ -28,6 +28,7 @@ from CI as well as locally.
 list items, unwraps hard-wrapped lines, keeps multi-line `BREAKING CHANGE:`
 footers together and preserves fenced code blocks. Numeric-only short hashes
 (eg. `#4033009`) are resolved against git, so they stay commit links while real
-issue numbers stay issue links. When the git body contains shell escape artifacts
-(see [Writing commit messages](/guide/changelog/writing-commit-messages)),
-`--format-only` keeps an already-corrected description instead of overwriting it.
+issue numbers stay issue links. Existing subjects and descriptions are never
+re-rendered from git: hand corrections (including backtick fixes) survive, and a
+description is only filled in when the entry has none. See
+[Writing commit messages](/guide/changelog/writing-commit-messages).
