@@ -18,6 +18,16 @@ The generated `changelog` workflow runs `dbx changelog --range …` on every pus
 to the `dev` branches (or `main` when `dev` is unset), so versioning is applied
 from CI as well as locally.
 
-`dbx workflow [id…]` triggers the generated GitHub workflows through
-`gh workflow run`; with no ids it triggers every workflow you declared under
-`toolchain.ci`.
+`dbx workflow [id…]` triggers the generated workflows with their vendor CLI
+(`gh`, `glab` or `az`); with no ids it triggers every workflow you declared under
+`toolchain.ci`. See [Workflows](/guide/cli#workflows).
+
+## Formatting
+
+`--format-only` regroups the existing entries without bumping versions. It keeps
+list items, unwraps hard-wrapped lines, keeps multi-line `BREAKING CHANGE:`
+footers together and preserves fenced code blocks. Numeric-only short hashes
+(eg. `#4033009`) are resolved against git, so they stay commit links while real
+issue numbers stay issue links. When the git body contains shell escape artifacts
+(see [Writing commit messages](/guide/changelog/writing-commit-messages)),
+`--format-only` keeps an already-corrected description instead of overwriting it.

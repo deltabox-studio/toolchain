@@ -19,4 +19,5 @@ toolchain: {
 ```
 
 The workflow is opt-in. Use [Workflow settings](/guide/ci/settings) to override
-the job's extra steps/jobs or supply a fully hand-authored workflow.
+the job's extra steps/jobs or supply a fully hand-authored workflow. It can also
+be a complete GitLab/Azure pipeline via `{ provider, workflow }`.

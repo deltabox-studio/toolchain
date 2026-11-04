@@ -171,7 +171,8 @@ console.log(toolchainProviders().map(p => p.id));
 | Export                                                                 | Description                                          |
 | ---------------------------------------------------------------------- | ---------------------------------------------------- |
 | `runChangelog(argv?)` / `main`                                         | Derive the bump and update the changelog + versions. |
-| `runWorkflows(options)` / `resolveWorkflowId(name)`                    | Trigger generated GitHub workflows.                  |
+| `runWorkflows(options)` / `resolveWorkflowId(name)`                    | Trigger generated workflows with the vendor CLI.     |
+| `workflowTargets(config)` / `workflowRunCommand(target, options)`      | List enabled workflows / build a vendor CLI command. |
 | `renderWorkflow(id, options)` / `renderWorkflows(...)`                 | Render workflow YAML.                                |
 | `renderCommitlintConfig(options?)` / `changelogSyncTask()`             | Commitlint config + the changelog sync task.         |
 | `readCommits(range)` / `deriveBump(records)` / `buildSummary(records)` | Git commit reading, bump derivation and summaries.   |

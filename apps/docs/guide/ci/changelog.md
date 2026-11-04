@@ -32,3 +32,8 @@ workflow but skips commitlint, its config and the local hook.
 it does not set them itself (for example `ci.changelog: true` or an
 object that only sets workflow options like `pushBranches`). Explicit
 `ci.changelog` options win; `branches` only exists on `ci.changelog`.
+
+The workflow itself can target another vendor with `{ provider, workflow }`
+(GitLab/Azure); the versioning/commitlint pipeline still lives in
+`toolchain.changelog` (or the `ci.changelog` object options), not in the vendor
+workflow. See [Workflow settings](/guide/ci/settings#vendor-workflows).

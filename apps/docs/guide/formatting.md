@@ -26,7 +26,9 @@ The supported tools are:
 - `lint`: `oxc` (Oxlint), `biome`, `eslint`.
 
 Each tool accepts `true` (use the defaults) or `false` (disable that tool), in
-addition to its options object.
+addition to its options object. The Oxfmt/Oxlint option types are generated from
+the tools' official JSON schemas (vendored in the package), so editor completion
+and the generated config reference match the tool.
 
 ## Shorthand opt-in
 

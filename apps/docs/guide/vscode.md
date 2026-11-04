@@ -32,7 +32,7 @@ code --install-extension deltabox.toolchain-vscode
 | Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.       |
 | Remove template…             | `template:list --registry` then `template:remove`.                                      |
 | Generate configs             | `project:config` for projects missing a config.                                         |
-| Run workflow                 | Trigger generated GitHub workflows.                                                     |
+| Run workflow                 | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                   |
 | Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                          |
 | Create Vite+ project…        | `vp create` in a terminal.                                                              |
 | Add provider...              | Register a custom provider (project or global registry).                                |
@@ -52,7 +52,9 @@ actions, scoped to that project:
 
 - **Sync** / **Check sync** — regenerate / verify the project's managed files.
 - **Generate config** — write a `dbx.config.ts`.
-- **Run workflow…** — trigger one of the project's generated GitHub workflows.
+- **Run workflow…** — trigger one of the project's generated workflows. The picker
+  lists every enabled workflow with its provider and path, and dispatches it
+  through the matching vendor CLI (`gh`, `glab` or `az`).
 - **Run Vite+ command…** — run a `vp` command in that project.
 - **Reset tooling…** — remove the generated files + manifest, or everything
   including the config.

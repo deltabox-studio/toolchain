@@ -45,7 +45,7 @@ See all the [commands](#commands) below.
 | Add template…                | `template:init --add` on a folder you pick (any kind).           |
 | Remove template…             | `template:list --registry` then `template:remove`.               |
 | Generate configs             | `project:config` for projects missing a config.                  |
-| Run workflow                 | Trigger generated GitHub workflows.                              |
+| Run workflow                 | Trigger workflows with their vendor CLI (`gh`/`glab`/`az`).      |
 | Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.   |
 | Create Vite+ project…        | `vp create` in a terminal.                                       |
 | Add provider...              | Register a custom provider in `.dbx/toolchain/providers.json`.   |
@@ -65,7 +65,8 @@ actions, scoped to that project:
 
 - **Sync** / **Check sync** — regenerate / verify the project's managed files.
 - **Generate config** — write a `dbx.config.ts`.
-- **Run workflow…** — trigger one of the project's generated GitHub workflows.
+- **Run workflow…** — trigger one of the project's generated workflows; the
+  picker shows its provider (`github`, `gitlab` or `azure`).
 - **Run Vite+ command…** — run a `vp` command in that project.
 - **Reset tooling…** — remove the generated files + manifest, or everything
   including the config.

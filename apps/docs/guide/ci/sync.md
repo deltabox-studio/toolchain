@@ -15,4 +15,5 @@ toolchain: {
 
 The workflow is opt-in. The `ci` check workflow also runs `dbx sync --check`, so
 `sync.yml` is useful when you want the check to run on pull requests without the
-full build. See [Workflow settings](/guide/ci/settings) for trigger overrides.
+full build. See [Workflow settings](/guide/ci/settings) for trigger overrides, or
+set `provider` with a complete GitLab/Azure `workflow` to target another vendor.

@@ -1,9 +1,10 @@
 # Workflow settings
 
-A workflow can be a boolean, a raw YAML string, or a `WorkflowOptions` object.
-The object is merged over the generated default, so you only describe what
-changes. These options apply to every workflow (`ci`, `changelog`, `release`,
-`issues`, `sync`).
+A workflow can be a boolean, a raw YAML string, a complete vendor workflow
+(`{ provider, workflow }`), or a `WorkflowOptions` object. The object is merged
+over the generated GitHub default, so you only describe what changes. These
+options apply to every GitHub workflow (`ci`, `changelog`, `release`, `issues`,
+`sync`).
 
 ```ts [dbx.config.ts]
 toolchain: {
@@ -32,6 +33,7 @@ toolchain: {
 | Option                | What it does                                                                    |
 | --------------------- | ------------------------------------------------------------------------------- |
 | `enabled`             | Enable/disable this workflow (default: enabled when present).                   |
+| `provider`            | Vendor for a complete `workflow` object (default `github`).                     |
 | `pushBranches`        | Replace `on.push.branches`.                                                     |
 | `pullRequestBranches` | Replace `on.pull_request.branches`.                                             |
 | `triggers`            | Merge extra `on.*` triggers.                                                    |
@@ -68,12 +70,52 @@ to that manager's default version unless you also set `packageManagerVersion`
 A string is used as the workflow file's exact content. It is not merged, not
 token-replaced and gets no generated header; an empty string disables it.
 
+## Vendor workflows
+
+Set `provider` (`github`, `gitlab` or `azure`) with a complete `workflow` object
+to write another CI vendor's pipeline instead of the generated GitHub default.
+The object is written as-is (with the toolchain's `{{ token }}` replacements
+applied), so it must be a complete pipeline:
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        ci: {
+            provider: 'gitlab',
+            workflow: {
+                stages: ['test'],
+                test: { stage: 'test', script: ['yarn test'] },
+            },
+        },
+        release: {
+            provider: 'azure',
+            workflow: {
+                trigger: ['main'],
+                pool: { vmImage: 'ubuntu-latest' },
+                steps: [{ script: 'yarn build' }],
+            },
+        },
+    },
+}
+```
+
+The default paths are `.gitlab-ci.yml` and `azure-pipelines.yml` (GitHub keeps
+`.github/workflows/<id>.yml`); `filename` and `dir` override them. A complete
+vendor workflow defines its own triggers, so the `ci.changelog.branches` defaults
+do not rewrite them. `dbx workflow` runs each workflow with its vendor CLI
+(`glab ci run`, `az pipelines run --name <pipeline>`, or `gh workflow run`).
+
+If a hand-written `.gitlab-ci.yml` / `azure-pipelines.yml` already exists, sync
+leaves it untouched and records a workflow conflict, exactly like a GitHub
+workflow. Set `ci.<id>: { enabled: false }` to opt out explicitly.
+
 ## Custom workflows
 
 Add any number of extra workflows with `toolchain.ci.custom`, keyed by workflow
 id. A custom workflow is enabled by **presence** (there is no boolean form): a
-string is written verbatim, or an object is merged over an empty workflow —
-build it with `triggers`, `extra` and `jobs` (plus `filename` / `dir`):
+string is written verbatim, a complete vendor workflow (`{ provider, workflow }`)
+is written as-is, or an object is merged over an empty GitHub workflow — build it
+with `triggers`, `extra` and `jobs` (plus `filename` / `dir`):
 
 ```ts [dbx.config.ts]
 toolchain: {

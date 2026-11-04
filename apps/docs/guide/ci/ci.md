@@ -28,4 +28,5 @@ toolchain: {
 
 Use [Workflow settings](/guide/ci/settings) for the shared options. The workflow
 is opt-in: `ci: { ci: true }` writes it; omitting `ci.ci` (or setting it to
-`false`) leaves the file unmanaged.
+`false`) leaves the file unmanaged. Set `provider` (`gitlab`/`azure`) with a
+complete `workflow` object to write that vendor's pipeline instead.

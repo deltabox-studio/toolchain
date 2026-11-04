@@ -109,7 +109,27 @@ See [Migrations](/guide/migrations/).
 | `tsconfig`                  | Regenerate workspace `tsconfig.json` files (`--restore [kind]` reverts overrides). |
 | `cleanup` / `cleanup:turbo` | Remove build artifacts / the turbo cache.                                          |
 | `changelog`                 | Derive the semver bump and update CHANGELOG + versions.                            |
-| `workflow`                  | Trigger generated GitHub workflows via `gh workflow run`.                          |
+| `workflow`                  | Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).          |
+
+### Workflows
+
+`dbx workflow [id…]` runs every enabled workflow (or the named ids/custom ids/file
+names) with the CLI for its provider:
+
+```sh
+dbx workflow                    # every enabled workflow
+dbx workflow ci release         # by id
+dbx workflow deploy.yml         # by file name
+dbx workflow --list --json      # ids, paths and providers
+dbx workflow ci --ref main      # pass a branch/ref
+dbx workflow ci --gh /path/to/gh --glab glab --az az
+```
+
+GitHub uses `gh workflow run <file>`, GitLab `glab ci run` (the project's
+configured CI file), and Azure `az pipelines run --name <pipeline>` (the file
+stem by default). When the matching CLI is not installed the command reports it
+and continues with the other workflows. See [CI](/guide/ci/) for the vendor
+workflow config.
 
 ## Providers
 

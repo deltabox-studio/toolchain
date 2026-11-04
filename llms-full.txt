@@ -46,7 +46,7 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx tsconfig`](#tsconfig)                             | Generate workspace tsconfig.json files from the default tsconfig (aliases + references).        |
 | [`dbx cleanup`](#cleanup)                               | Remove build artifacts (*.tsbuildinfo, dist/).                                                  |
 | [`dbx cleanup:turbo`](#cleanup-turbo)                   | Remove the turbo cache (.turbo/).                                                               |
-| [`dbx workflow`](#workflow)                             | Trigger one or more generated GitHub workflows (via `gh workflow run`).                         |
+| [`dbx workflow`](#workflow)                             | Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).                       |
 | [`dbx changelog`](#changelog)                           | Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.              |
 | [`dbx migrate`](#migrate)                               | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.\* into dbx.config. |
 | [`dbx migrate:list`](#migrate-list)                     | List the registered migrations and whether each is detected.                                    |
@@ -190,12 +190,14 @@ Remove the turbo cache (.turbo/).
 
 ## `dbx workflow`
 
-Trigger one or more generated GitHub workflows (via `gh workflow run`).
+Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).
 
 * `[workflows]` — Workflow ids, custom ids, or file names (default: every enabled workflow).
 * `--cwd ‹dir›` — Project root (default: cwd).
 * `--ref ‹ref›` — Git ref to run the workflow on.
 * `--gh ‹cmd›` — The gh executable (default: gh).
+* `--glab ‹cmd›` — The glab executable (default: glab).
+* `--az ‹cmd›` — The az executable (default: az).
 * `--list` — List the enabled workflows (and where they are written).
 * `--json` — With --list: print the workflows as JSON.
 
@@ -2312,7 +2314,7 @@ code --install-extension deltabox.toolchain-vscode
 | Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.       |
 | Remove template…             | `template:list --registry` then `template:remove`.                                      |
 | Generate configs             | `project:config` for projects missing a config.                                         |
-| Run workflow                 | Trigger generated GitHub workflows.                                                     |
+| Run workflow                 | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                   |
 | Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                          |
 | Create Vite+ project…        | `vp create` in a terminal.                                                              |
 | Add provider...              | Register a custom provider (project or global registry).                                |
@@ -2332,7 +2334,9 @@ actions, scoped to that project:
 
 * **Sync** / **Check sync** — regenerate / verify the project's managed files.
 * **Generate config** — write a `dbx.config.ts`.
-* **Run workflow…** — trigger one of the project's generated GitHub workflows.
+* **Run workflow…** — trigger one of the project's generated workflows. The picker
+  lists every enabled workflow with its provider and path, and dispatches it
+  through the matching vendor CLI (`gh`, `glab` or `az`).
 * **Run Vite+ command…** — run a `vp` command in that project.
 * **Reset tooling…** — remove the generated files + manifest, or everything
   including the config.
@@ -2748,7 +2752,8 @@ console.log(toolchainProviders().map(p => p.id));
 | Export                                                                 | Description                                          |
 | ---------------------------------------------------------------------- | ---------------------------------------------------- |
 | `runChangelog(argv?)` / `main`                                         | Derive the bump and update the changelog + versions. |
-| `runWorkflows(options)` / `resolveWorkflowId(name)`                    | Trigger generated GitHub workflows.                  |
+| `runWorkflows(options)` / `resolveWorkflowId(name)`                    | Trigger generated workflows with the vendor CLI.     |
+| `workflowTargets(config)` / `workflowRunCommand(target, options)`      | List enabled workflows / build a vendor CLI command. |
 | `renderWorkflow(id, options)` / `renderWorkflows(...)`                 | Render workflow YAML.                                |
 | `renderCommitlintConfig(options?)` / `changelogSyncTask()`             | Commitlint config + the changelog sync task.         |
 | `readCommits(range)` / `deriveBump(records)` / `buildSummary(records)` | Git commit reading, bump derivation and summaries.   |
@@ -3093,9 +3098,19 @@ The generated `changelog` workflow runs `dbx changelog --range …` on every pus
 to the `dev` branches (or `main` when `dev` is unset), so versioning is applied
 from CI as well as locally.
 
-`dbx workflow [id…]` triggers the generated GitHub workflows through
-`gh workflow run`; with no ids it triggers every workflow you declared under
-`toolchain.ci`.
+`dbx workflow [id…]` triggers the generated workflows with their vendor CLI
+(`gh`, `glab` or `az`); with no ids it triggers every workflow you declared under
+`toolchain.ci`. See [Workflows](/guide/cli#workflows).
+
+## Formatting
+
+`--format-only` regroups the existing entries without bumping versions. It keeps
+list items, unwraps hard-wrapped lines, keeps multi-line `BREAKING CHANGE:`
+footers together and preserves fenced code blocks. Numeric-only short hashes
+(eg. `#4033009`) are resolved against git, so they stay commit links while real
+issue numbers stay issue links. When the git body contains shell escape artifacts
+(see [Writing commit messages](/guide/changelog/writing-commit-messages)),
+`--format-only` keeps an already-corrected description instead of overwriting it.
 
 ---
 
@@ -3382,14 +3397,17 @@ url: https://toolchain.deltabox.studio/guide/ci.md
 ---
 # CI
 
-`dbx sync` writes the opted-in GitHub workflows into `.github/workflows`. Every
-workflow is **opt-in**: declare it under `toolchain.ci` to write it; omit it (or
-set it to `false`) and the toolchain leaves that file unmanaged. Every id (`ci`,
-`changelog`, `release`, `issues`, `sync`) accepts one of three forms:
+`dbx sync` writes the opted-in workflows for **GitHub Actions**, **GitLab CI**
+and **Azure Pipelines**. Every workflow is **opt-in**: declare it under
+`toolchain.ci` to write it; omit it (or set it to `false`) and the toolchain
+leaves that file unmanaged. Every id (`ci`, `changelog`, `release`, `issues`,
+`sync`) accepts one of four forms:
 
-* `true` / `false` — write the generated default, or skip it;
-* a **`WorkflowOptions` object** — override parts of the default (branches,
-  triggers, extra top-level keys, extra steps/jobs, token overrides);
+* `true` / `false` — write the generated GitHub default, or skip it;
+* a **`WorkflowOptions` object** — override parts of the GitHub default
+  (branches, triggers, extra top-level keys, extra steps/jobs, token overrides);
+* a **complete vendor workflow** — `{ provider, workflow }` for `github`,
+  `gitlab` or `azure`, written as-is;
 * a **raw YAML string** — written **verbatim** as the workflow file, for a
   workflow the object model can't express.
 
@@ -3397,20 +3415,18 @@ set it to `false`) and the toolchain leaves that file unmanaged. Every id (`ci`,
 export default defineConfig({
     toolchain: {
         ci: {
-            ci: true, // the generated CI checks
+            ci: true, // the generated GitHub CI checks
             issues: false, // don't write issues.yml
-            release: { pushBranches: ['main'] }, // override the default
+            release: { pushBranches: ['main'] }, // override the GitHub default
             changelog: { branches: { main: 'main', dev: 'dev' } },
-            // A fully hand-authored workflow, written as-is:
-            sync: `name: Toolchain sync
-on: [push, pull_request]
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: yarn dbx sync --check
-`,
+            // A complete GitLab pipeline, written to `.gitlab-ci.yml`:
+            sync: {
+                provider: 'gitlab',
+                workflow: {
+                    stages: ['check'],
+                    check: { stage: 'check', script: ['yarn dbx sync --check'] },
+                },
+            },
         },
     },
 });
@@ -3425,9 +3441,96 @@ The `ci` key doubles as the CI-checks workflow (`ci.yml`) and the section name, 
 `toolchain.ci.ci` is the checks workflow. Set `toolchain.ci.enabled` to `false` to
 disable the whole section (and every nested workflow) at once.
 
+## Vendor workflows
+
+A complete vendor workflow always has `provider` and `workflow`; `filename`,
+`dir` and `enabled` are optional:
+
+| `provider` | Default file          | Run with           |
+| ---------- | --------------------- | ------------------ |
+| `github`   | `.github/workflows/`  | `gh workflow run`  |
+| `gitlab`   | `.gitlab-ci.yml`      | `glab ci run`      |
+| `azure`    | `azure-pipelines.yml` | `az pipelines run` |
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        // .gitlab-ci.yml (the default GitLab path)
+        ci: {
+            provider: 'gitlab',
+            workflow: { stages: ['test'], test: { stage: 'test', script: ['yarn test'] } },
+        },
+        // azure-pipelines.yml (the default Azure path)
+        release: {
+            provider: 'azure',
+            workflow: { trigger: ['main'], pool: { vmImage: 'ubuntu-latest' }, steps: [] },
+        },
+        // A complete GitHub workflow, written to the default `.github/workflows/deploy.yml`
+        custom: {
+            deploy: {
+                provider: 'github',
+                workflow: {
+                    name: 'Deploy',
+                    on: { push: { branches: ['main'] } },
+                    jobs: { deploy: { 'runs-on': 'ubuntu-latest', steps: [] } },
+                },
+            },
+        },
+    },
+}
+```
+
+`filename` and `dir` override the generated path for any provider. The workflow
+object is written as-is (only the toolchain's `{{ token }}` replacements are
+applied), so it must be a complete pipeline. `dbx workflow` dispatches each
+workflow with its vendor CLI — see [CLI](/guide/cli#tsconfig-cleanup-changelog-workflows).
+
+## Typed GitHub workflows
+
+If you prefer a typed builder over hand-writing YAML, use
+[`@github-actions-workflow-ts/lib`](https://github.com/emmanuelnk/github-actions-workflow-ts)
+(and its `@github-actions-workflow-ts/actions` catalog). The builder produces a
+plain workflow object in `.workflow`, which the `github` vendor form accepts:
+
+```ts [dbx.config.ts]
+import { ActionsCheckoutV4, ActionsSetupNodeV4 } from '@github-actions-workflow-ts/actions';
+import { NormalJob, Step, Workflow } from '@github-actions-workflow-ts/lib';
+
+import { defineConfig, type GitHubWorkflow } from '@deltabox/toolchain';
+
+const test = new NormalJob('test', { 'runs-on': 'ubuntu-latest' });
+test.addStep(new ActionsCheckoutV4({ name: 'Checkout' }));
+test.addStep(new ActionsSetupNodeV4({ name: 'Setup Node', with: { 'node-version': '22' } }));
+test.addStep(new Step({ name: 'Test', run: 'yarn test' }));
+
+const ci = new Workflow('ci.yml', {
+    name: 'CI',
+    on: { push: { branches: ['main'] } },
+});
+ci.addJob(test);
+
+export default defineConfig({
+    toolchain: {
+        ci: {
+            ci: {
+                provider: 'github',
+                workflow: ci.workflow as unknown as GitHubWorkflow,
+            },
+        },
+    },
+});
+```
+
+The toolchain does not depend on the builder, so the `workflow` field is typed
+from its own vendored GitHub schema. The two schemas can drift slightly (for
+example the builder's `Partial<Workflow>` makes `on` optional, and its
+`permissions` allows `id-token: read`), so cast the object when TypeScript
+rejects it. At runtime the workflow is validated by GitHub, exactly like a
+hand-written object.
+
 ## Workflows
 
-| Workflow  | File            | Page                                      |
+| Workflow  | GitHub file     | Page                                      |
 | --------- | --------------- | ----------------------------------------- |
 | CI checks | `ci.yml`        | [CI checks](/guide/ci/ci)                 |
 | Changelog | `changelog.yml` | [Changelog workflow](/guide/ci/changelog) |
@@ -3436,8 +3539,9 @@ disable the whole section (and every nested workflow) at once.
 | Toolchain | `sync.yml`      | [Sync](/guide/ci/sync)                    |
 
 Extra workflows can be defined under `toolchain.ci.custom.<id>` (for example
-`ci.custom.deploy` writes `.github/workflows/deploy.yml`). Each accepts the same
-workflow options, plus `filename` and `dir` overrides.
+`ci.custom.deploy` writes `.github/workflows/deploy.yml`, or the vendor default
+when it sets `provider`). Each accepts the same workflow forms, plus `filename`
+and `dir` overrides.
 
 See [Workflow settings](/guide/ci/settings) for the shared object options and the
 [Changelog](/guide/changelog/) guide for the versioning/commitlint pipeline.
@@ -3482,6 +3586,11 @@ it does not set them itself (for example `ci.changelog: true` or an
 object that only sets workflow options like `pushBranches`). Explicit
 `ci.changelog` options win; `branches` only exists on `ci.changelog`.
 
+The workflow itself can target another vendor with `{ provider, workflow }`
+(GitLab/Azure); the versioning/commitlint pipeline still lives in
+`toolchain.changelog` (or the `ci.changelog` object options), not in the vendor
+workflow. See [Workflow settings](/guide/ci/settings#vendor-workflows).
+
 ---
 
 ---
@@ -3517,7 +3626,8 @@ toolchain: {
 
 Use [Workflow settings](/guide/ci/settings) for the shared options. The workflow
 is opt-in: `ci: { ci: true }` writes it; omitting `ci.ci` (or setting it to
-`false`) leaves the file unmanaged.
+`false`) leaves the file unmanaged. Set `provider` (`gitlab`/`azure`) with a
+complete `workflow` object to write that vendor's pipeline instead.
 
 ---
 
@@ -3542,7 +3652,9 @@ toolchain: {
 The workflow is opt-in and only runs on `issues: opened`. It needs the
 `issues: write` permission, which the generated default declares.
 
-Use [Workflow settings](/guide/ci/settings) to change its triggers or add jobs.
+Use [Workflow settings](/guide/ci/settings) to change its triggers or add jobs,
+or set `provider` with a complete GitLab/Azure `workflow` to target another
+vendor.
 
 ---
 
@@ -3570,7 +3682,8 @@ toolchain: {
 ```
 
 The workflow is opt-in. Use [Workflow settings](/guide/ci/settings) to override
-the job's extra steps/jobs or supply a fully hand-authored workflow.
+the job's extra steps/jobs or supply a fully hand-authored workflow. It can also
+be a complete GitLab/Azure pipeline via `{ provider, workflow }`.
 
 ---
 
@@ -3579,10 +3692,11 @@ url: https://toolchain.deltabox.studio/guide/ci/settings.md
 ---
 # Workflow settings
 
-A workflow can be a boolean, a raw YAML string, or a `WorkflowOptions` object.
-The object is merged over the generated default, so you only describe what
-changes. These options apply to every workflow (`ci`, `changelog`, `release`,
-`issues`, `sync`).
+A workflow can be a boolean, a raw YAML string, a complete vendor workflow
+(`{ provider, workflow }`), or a `WorkflowOptions` object. The object is merged
+over the generated GitHub default, so you only describe what changes. These
+options apply to every GitHub workflow (`ci`, `changelog`, `release`, `issues`,
+`sync`).
 
 ```ts [dbx.config.ts]
 toolchain: {
@@ -3611,6 +3725,7 @@ toolchain: {
 | Option                | What it does                                                                    |
 | --------------------- | ------------------------------------------------------------------------------- |
 | `enabled`             | Enable/disable this workflow (default: enabled when present).                   |
+| `provider`            | Vendor for a complete `workflow` object (default `github`).                     |
 | `pushBranches`        | Replace `on.push.branches`.                                                     |
 | `pullRequestBranches` | Replace `on.pull_request.branches`.                                             |
 | `triggers`            | Merge extra `on.*` triggers.                                                    |
@@ -3647,12 +3762,52 @@ to that manager's default version unless you also set `packageManagerVersion`
 A string is used as the workflow file's exact content. It is not merged, not
 token-replaced and gets no generated header; an empty string disables it.
 
+## Vendor workflows
+
+Set `provider` (`github`, `gitlab` or `azure`) with a complete `workflow` object
+to write another CI vendor's pipeline instead of the generated GitHub default.
+The object is written as-is (with the toolchain's `{{ token }}` replacements
+applied), so it must be a complete pipeline:
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        ci: {
+            provider: 'gitlab',
+            workflow: {
+                stages: ['test'],
+                test: { stage: 'test', script: ['yarn test'] },
+            },
+        },
+        release: {
+            provider: 'azure',
+            workflow: {
+                trigger: ['main'],
+                pool: { vmImage: 'ubuntu-latest' },
+                steps: [{ script: 'yarn build' }],
+            },
+        },
+    },
+}
+```
+
+The default paths are `.gitlab-ci.yml` and `azure-pipelines.yml` (GitHub keeps
+`.github/workflows/<id>.yml`); `filename` and `dir` override them. A complete
+vendor workflow defines its own triggers, so the `ci.changelog.branches` defaults
+do not rewrite them. `dbx workflow` runs each workflow with its vendor CLI
+(`glab ci run`, `az pipelines run --name <pipeline>`, or `gh workflow run`).
+
+If a hand-written `.gitlab-ci.yml` / `azure-pipelines.yml` already exists, sync
+leaves it untouched and records a workflow conflict, exactly like a GitHub
+workflow. Set `ci.<id>: { enabled: false }` to opt out explicitly.
+
 ## Custom workflows
 
 Add any number of extra workflows with `toolchain.ci.custom`, keyed by workflow
 id. A custom workflow is enabled by **presence** (there is no boolean form): a
-string is written verbatim, or an object is merged over an empty workflow —
-build it with `triggers`, `extra` and `jobs` (plus `filename` / `dir`):
+string is written verbatim, a complete vendor workflow (`{ provider, workflow }`)
+is written as-is, or an object is merged over an empty GitHub workflow — build it
+with `triggers`, `extra` and `jobs` (plus `filename` / `dir`):
 
 ```ts [dbx.config.ts]
 toolchain: {
@@ -3714,7 +3869,8 @@ toolchain: {
 
 The workflow is opt-in. The `ci` check workflow also runs `dbx sync --check`, so
 `sync.yml` is useful when you want the check to run on pull requests without the
-full build. See [Workflow settings](/guide/ci/settings) for trigger overrides.
+full build. See [Workflow settings](/guide/ci/settings) for trigger overrides, or
+set `provider` with a complete GitLab/Azure `workflow` to target another vendor.
 
 ---
 
@@ -3832,7 +3988,27 @@ See [Migrations](/guide/migrations/).
 | `tsconfig`                  | Regenerate workspace `tsconfig.json` files (`--restore [kind]` reverts overrides). |
 | `cleanup` / `cleanup:turbo` | Remove build artifacts / the turbo cache.                                          |
 | `changelog`                 | Derive the semver bump and update CHANGELOG + versions.                            |
-| `workflow`                  | Trigger generated GitHub workflows via `gh workflow run`.                          |
+| `workflow`                  | Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).          |
+
+### Workflows
+
+`dbx workflow [id…]` runs every enabled workflow (or the named ids/custom ids/file
+names) with the CLI for its provider:
+
+```sh
+dbx workflow                    # every enabled workflow
+dbx workflow ci release         # by id
+dbx workflow deploy.yml         # by file name
+dbx workflow --list --json      # ids, paths and providers
+dbx workflow ci --ref main      # pass a branch/ref
+dbx workflow ci --gh /path/to/gh --glab glab --az az
+```
+
+GitHub uses `gh workflow run <file>`, GitLab `glab ci run` (the project's
+configured CI file), and Azure `az pipelines run --name <pipeline>` (the file
+stem by default). When the matching CLI is not installed the command reports it
+and continues with the other workflows. See [CI](/guide/ci/) for the vendor
+workflow config.
 
 ## Providers
 
@@ -4819,7 +4995,9 @@ The supported tools are:
 * `lint`: `oxc` (Oxlint), `biome`, `eslint`.
 
 Each tool accepts `true` (use the defaults) or `false` (disable that tool), in
-addition to its options object.
+addition to its options object. The Oxfmt/Oxlint option types are generated from
+the tools' official JSON schemas (vendored in the package), so editor completion
+and the generated config reference match the tool.
 
 ## Shorthand opt-in
 
