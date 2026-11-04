@@ -13,6 +13,7 @@ import {
     envPathOf,
     envString,
     generateCliOptions,
+    generateConfigJsonSchema,
     generateConfigMarkdown,
     generateConfigTypes,
     generateEnvFile,
@@ -180,5 +181,30 @@ describe('dbx config schema', () => {
         const engine = createConfigEngine({ schema: dbxConfigSchema });
         await expect(engine.generateJsonSchema()).resolves.toBeDefined();
         expect(() => engine.generateConfigTypes()).not.toThrow();
+    });
+});
+
+describe('named nested schemas', () => {
+    const schema = z.object({
+        auth: z
+            .object({
+                token: z.string().meta({ envName: 'APP_TOKEN', scope: 'server' }),
+            })
+            .meta({ id: 'Auth' }),
+    });
+
+    it('collects env vars below a named `$ref`', () => {
+        const vars = collectVars({ server: schema }, 'APP_');
+        expect(vars.map(variable => variable.name)).toContain('APP_TOKEN');
+        expect(vars.find(variable => variable.name === 'APP_TOKEN')?.path).toBe('auth.token');
+    });
+
+    it('keeps the named properties in the generated JSON Schema', async () => {
+        const doc = await generateConfigJsonSchema({ server: schema });
+        const server = doc.properties as Record<string, { properties?: Record<string, unknown> }>;
+        const auth = server.server?.properties?.auth as
+            | { properties?: Record<string, unknown> }
+            | undefined;
+        expect(auth?.properties?.token).toBeDefined();
     });
 });

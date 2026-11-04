@@ -387,6 +387,27 @@ function jsonNodeToDefinition(
         const name = node.$ref.split('/').pop() ?? 'unknown';
         const resolved = defs[name];
         const description = node.description ?? resolved?.description;
+        // A named object keeps its children so env/CLI collection and the JSON
+        // Schema generator can see them, while `tsType` preserves the named
+        // reference for type generation.
+        if (resolved?.properties) {
+            const expanded = jsonNodeToDefinition(resolved, fieldRequired, defs) as Record<
+                string,
+                unknown
+            >;
+            expanded.$schema = {
+                ...(expanded.$schema as object | undefined),
+                type: 'object',
+                tsType:
+                    typeof resolved.tsType === 'string' && resolved.tsType.trim()
+                        ? resolved.tsType
+                        : name,
+                ...(fieldRequired ? { tags: ['@required'] } : {}),
+                ...(description ? { description } : {}),
+                ...nodeMeta(node, defs),
+            };
+            return expanded;
+        }
         return {
             $schema: {
                 type: 'any',
