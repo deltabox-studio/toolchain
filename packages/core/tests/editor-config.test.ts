@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { SyncContext } from '@deltabox/toolchain-shared';
+import { readJsoncFile, type SyncContext } from '@deltabox/toolchain-shared';
 
 import { editorConfigSyncTask, toolingConfigTask } from '../src/index.js';
 
@@ -76,9 +76,11 @@ describe('editorConfigSyncTask', () => {
         await editorConfigSyncTask().run(
             context(cwd, { fmt: { oxc: {}, vscode: true }, lint: { oxc: {}, vscode: true } })
         );
-        const settings = JSON.parse(
-            fs.readFileSync(path.join(cwd, '.vscode/settings.json'), 'utf-8')
-        );
+        const written = fs.readFileSync(path.join(cwd, '.vscode/settings.json'), 'utf-8');
+        expect(written).toContain('// keep this');
+        const settings = readJsoncFile<Record<string, unknown>>(
+            path.join(cwd, '.vscode/settings.json')
+        )!;
         expect(settings['editor.formatOnSave']).toBe(true);
         expect(settings['editor.defaultFormatter']).toBe('oxc.oxc-vscode');
         expect(settings['editor.codeActionsOnSave']).toEqual({

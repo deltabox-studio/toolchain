@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import type { SyncTask } from '@deltabox/toolchain-shared';
+import { readJsoncFile, type SyncTask } from '@deltabox/toolchain-shared';
 
 import { readManifest, writeManifest } from '../src/manifest.js';
 import { runSync } from '../src/sync.js';
@@ -281,9 +281,11 @@ describe('runSync', () => {
             projectType: 'monorepo-root',
             quiet: true,
         });
-        const settings = JSON.parse(
-            fs.readFileSync(path.join(cwd, '.vscode/settings.json'), 'utf-8')
-        ) as Record<string, unknown>;
+        const written = fs.readFileSync(path.join(cwd, '.vscode/settings.json'), 'utf-8');
+        expect(written).toContain('// keep this');
+        const settings = readJsoncFile<Record<string, unknown>>(
+            path.join(cwd, '.vscode/settings.json')
+        )!;
         expect(settings['editor.formatOnSave']).toBe(true);
         expect(settings['x.y']).toBe(true);
     });
