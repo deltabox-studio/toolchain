@@ -84,15 +84,22 @@ export function readProviderRegistry(root: string): Provider[] {
     ]);
 }
 
-/** Write a project's custom providers (removing the file when the list is empty). */
-export function writeProviderRegistry(root: string, providers: Provider[]): void {
-    const file = providerRegistryPath(root);
+/** Write a provider list to `file` (removing it when the list is empty). */
+function writeProvidersFileAt(file: string, providers: Provider[]): void {
     if (providers.length === 0) {
         fs.rmSync(file, { force: true });
         return;
     }
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, `${JSON.stringify(providers, null, 4)}\n`, 'utf-8');
+}
+
+/** Write a project's custom providers (removing the file when the list is empty). */
+export function writeProviderRegistry(root: string, providers: Provider[]): void {
+    writeProvidersFileAt(providerRegistryPath(root), providers);
+    // Keep a legacy file in sync so a removed provider does not reappear.
+    const legacy = path.join(root, LEGACY_REGISTRY);
+    if (fs.existsSync(legacy)) writeProvidersFileAt(legacy, providers);
 }
 
 /** The global (`~/.dbx/toolchain/.registry/providers/providers.json`) file. */
@@ -114,13 +121,9 @@ export function readGlobalProviders(): Provider[] {
 
 /** Write the global providers (removing the file when the list is empty). */
 export function writeGlobalProviders(providers: Provider[]): void {
-    const file = globalProviderRegistryPath();
-    if (providers.length === 0) {
-        fs.rmSync(file, { force: true });
-        return;
-    }
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, `${JSON.stringify(providers, null, 4)}\n`, 'utf-8');
+    writeProvidersFileAt(globalProviderRegistryPath(), providers);
+    const legacy = legacyGlobalProviderRegistryPath();
+    if (fs.existsSync(legacy)) writeProvidersFileAt(legacy, providers);
 }
 
 /** The project + global providers (project wins on an id clash). */

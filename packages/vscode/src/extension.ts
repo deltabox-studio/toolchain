@@ -292,12 +292,13 @@ export function activate(context: vscode.ExtensionContext): void {
     const scheduler = new SyncScheduler({
         debounceMs: () => config().get<number>('debounce', 300),
         run: async () => {
-            const root = workspaceRoots()[0];
-            if (!root) {
+            const roots = workspaceRoots();
+            if (roots.length === 0) {
                 output.appendLine('dbx: no workspace folder open.');
                 return;
             }
-            await runCli(root, [config().get<string>('command', 'sync')]);
+            const command = config().get<string>('command', 'sync');
+            for (const root of roots) await runCli(root, [command]);
         },
         onStateChange: setStatus,
     });
