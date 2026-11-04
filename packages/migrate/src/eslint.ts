@@ -116,9 +116,16 @@ export const eslintToOx: ToolchainMigration = {
         const notes = [`Source: ${path.basename(found.file)}.`];
 
         if (found.json) {
-            const raw = JSON.parse(
-                fs.readFileSync(found.file, 'utf-8').replace(/^\uFEFF/, '')
-            ) as Json;
+            let raw: Json;
+            try {
+                raw = JSON.parse(
+                    fs.readFileSync(found.file, 'utf-8').replace(/^\uFEFF/, '')
+                ) as Json;
+            } catch {
+                throw new Error(
+                    `cannot parse ${path.basename(found.file)}: only JSON ESLint configs are supported; use --online for JS/flat configs.`
+                );
+            }
             collectRules(raw.rules, rules, unmapped);
         } else if (ctx.online && ctx.write) {
             const generated = await runOxlintMigrate(ctx.cwd);

@@ -46,6 +46,19 @@ const OPTION_MAP = [
     'vueIndentScriptAndStyle',
 ] as const;
 
+/** Whether a Prettier config file/field exists (without parsing it). */
+export function hasPrettierConfig(cwd: string): boolean {
+    if (PRETTIER_FILES.some(name => fs.existsSync(path.join(cwd, name)))) return true;
+    const pkgFile = path.join(cwd, 'package.json');
+    if (!fs.existsSync(pkgFile)) return false;
+    try {
+        const pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf-8')) as Json;
+        return Boolean(pkg.prettier && typeof pkg.prettier === 'object');
+    } catch {
+        return false;
+    }
+}
+
 /** Locate a Prettier config (JSON files or the `prettier` package.json field). */
 export function findPrettierConfig(cwd: string): { file: string; config: Json } | undefined {
     for (const name of PRETTIER_FILES) {
@@ -55,7 +68,9 @@ export function findPrettierConfig(cwd: string): { file: string; config: Json } 
             try {
                 return { file, config: JSON.parse(raw) as Json };
             } catch {
-                // fall through
+                throw new Error(
+                    `cannot parse ${path.basename(file)}: only JSON Prettier configs are supported.`
+                );
             }
         }
     }
@@ -114,7 +129,7 @@ export const prettierToOx: ToolchainMigration = {
     from: 'prettier',
     to: 'oxfmt',
     description: 'Migrate a Prettier config to Oxfmt (.oxfmtrc.json).',
-    detect: cwd => Boolean(findPrettierConfig(cwd)),
+    detect: cwd => hasPrettierConfig(cwd),
     run: async (ctx: MigrationContext): Promise<MigrationResult> => {
         const found = findPrettierConfig(ctx.cwd);
         if (!found) throw new Error('prettier-to-oxc: no Prettier config found.');

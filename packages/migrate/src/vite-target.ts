@@ -161,7 +161,11 @@ export function mergeViteConfig(
 
     let out = existing;
     const callMatch = out.match(/defineConfig\s*\(\s*\{/);
-    if (!callMatch || callMatch.index === undefined) return out;
+    if (!callMatch || callMatch.index === undefined) {
+        throw new Error(
+            'cannot merge into a function/async vite config; add `fmt`/`lint` manually.'
+        );
+    }
     for (const [key, value] of props) {
         const call = out.match(/defineConfig\s*\(\s*\{/);
         if (!call || call.index === undefined) break;
