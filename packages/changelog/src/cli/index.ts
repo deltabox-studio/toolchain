@@ -8,7 +8,8 @@ export function changelogCommands(): ToolchainCommand[] {
     return [
         {
             name: 'workflow',
-            description: 'Trigger one or more generated GitHub workflows (via `gh workflow run`).',
+            description:
+                'Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).',
             args: [
                 {
                     name: 'workflows',
@@ -22,6 +23,8 @@ export function changelogCommands(): ToolchainCommand[] {
                 { flags: '--cwd <dir>', description: 'Project root (default: cwd).' },
                 { flags: '--ref <ref>', description: 'Git ref to run the workflow on.' },
                 { flags: '--gh <cmd>', description: 'The gh executable (default: gh).' },
+                { flags: '--glab <cmd>', description: 'The glab executable (default: glab).' },
+                { flags: '--az <cmd>', description: 'The az executable (default: az).' },
                 {
                     flags: '--list',
                     description: 'List the enabled workflows (and where they are written).',
@@ -40,7 +43,9 @@ export function changelogCommands(): ToolchainCommand[] {
                         return;
                     }
                     for (const target of targets) {
-                        logger.info(`  ${target.id.padEnd(20)} ${target.path}`);
+                        logger.info(
+                            `  ${target.id.padEnd(20)} ${target.path} [${target.provider}]`
+                        );
                     }
                     return;
                 }
@@ -56,11 +61,16 @@ export function changelogCommands(): ToolchainCommand[] {
                     ...(workflows ? { workflows } : {}),
                     ...(opts.ref ? { ref: opts.ref as string } : {}),
                     ...(opts.gh ? { gh: opts.gh as string } : {}),
+                    ...(opts.glab ? { glab: opts.glab as string } : {}),
+                    ...(opts.az ? { az: opts.az as string } : {}),
                 });
                 let failed = false;
                 for (const workflow of result.ran) {
-                    if (workflow.code === 0) {
-                        logger.info(`triggered ${workflow.file}`);
+                    if (workflow.error) {
+                        failed = true;
+                        logger.error(`${workflow.file}: ${workflow.error}`);
+                    } else if (workflow.code === 0) {
+                        logger.info(`triggered ${workflow.file} [${workflow.provider}]`);
                     } else {
                         failed = true;
                         logger.error(`${workflow.file} exited ${workflow.code}`);

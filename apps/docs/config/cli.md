@@ -18,7 +18,7 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx tsconfig`](#tsconfig)                             | Generate workspace tsconfig.json files from the default tsconfig (aliases + references).        |
 | [`dbx cleanup`](#cleanup)                               | Remove build artifacts (*.tsbuildinfo, dist/).                                                  |
 | [`dbx cleanup:turbo`](#cleanup-turbo)                   | Remove the turbo cache (.turbo/).                                                               |
-| [`dbx workflow`](#workflow)                             | Trigger one or more generated GitHub workflows (via `gh workflow run`).                         |
+| [`dbx workflow`](#workflow)                             | Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).                       |
 | [`dbx changelog`](#changelog)                           | Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.              |
 | [`dbx migrate`](#migrate)                               | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.* into dbx.config. |
 | [`dbx migrate:list`](#migrate-list)                     | List the registered migrations and whether each is detected.                                    |
@@ -162,12 +162,14 @@ Remove the turbo cache (.turbo/).
 
 ## `dbx workflow`
 
-Trigger one or more generated GitHub workflows (via `gh workflow run`).
+Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).
 
 - `[workflows]` — Workflow ids, custom ids, or file names (default: every enabled workflow).
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--ref ‹ref›` — Git ref to run the workflow on.
 - `--gh ‹cmd›` — The gh executable (default: gh).
+- `--glab ‹cmd›` — The glab executable (default: glab).
+- `--az ‹cmd›` — The az executable (default: az).
 - `--list` — List the enabled workflows (and where they are written).
 - `--json` — With --list: print the workflows as JSON.
 

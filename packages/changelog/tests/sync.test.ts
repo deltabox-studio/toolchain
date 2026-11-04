@@ -211,6 +211,11 @@ describe('changelogSyncTask', () => {
             'azure-pipelines.yml',
             '.github/workflows/deploy.yml',
         ]);
+        expect(workflowFilenames(config)).toEqual([
+            '.gitlab-ci.yml',
+            'azure-pipelines.yml',
+            'deploy.yml',
+        ]);
     });
 
     it('reports no workflow paths when the ci section is disabled', () => {
