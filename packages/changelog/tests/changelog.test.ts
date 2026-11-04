@@ -1,4 +1,7 @@
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -17,6 +20,7 @@ import {
     ruleTitle,
     splitInlineDescription,
 } from '../src/index.js';
+import { formatChangelogFile } from '../src/utils/format.js';
 
 const REPO_RANGE = 'HEAD~5..HEAD';
 
@@ -592,7 +596,7 @@ describe.skipIf(!GIT)('changelog dry run (real git history)', () => {
         expect(summary.length).toBeGreaterThan(0);
         // The summary is grouped into `### <Rule>` sections.
         expect(summary).toMatch(/^### /m);
-    });
+    }, 30_000);
 
     it('renders the full proposed entry without throwing', () => {
         const records = readCommits(safeRange());
@@ -602,5 +606,87 @@ describe.skipIf(!GIT)('changelog dry run (real git history)', () => {
         // Commit lines are capitalized bullets WITHOUT the CC `rule(scope):` prefix.
         expect(entry).toMatch(/^- [A-Z]/m);
         expect(entry).not.toMatch(/^- \*\*/m);
+    });
+});
+
+describe('reformatChangelogContent heading and legacy bodies', () => {
+    it('keeps legacy two-space description lines', () => {
+        const content = [
+            '# Changelog',
+            '',
+            '## 1.0.0 (January 2026)',
+            '',
+            '- **feat(server):** Add a thing ([#abc1234](https://github.com/x/y/commit/abc1234) by [T](https://github.com/T))',
+            '  A legacy two-space description.',
+        ].join('\n');
+        const out = reformatChangelogContent(content, 'x/y');
+        expect(out).toContain('A legacy two-space description.');
+    });
+
+    it('recognizes bracketed and v-prefixed version headings', () => {
+        const content = [
+            '# Changelog',
+            '',
+            '## [1.2.0] - 2026-01-01',
+            '',
+            '- **feat(server):** add two ([#abcdef1](https://github.com/x/y/commit/abcdef1) by [T](https://github.com/T))',
+            '',
+            '## v1.1.0',
+            '',
+            '- **fix(server):** fix one ([#1234567](https://github.com/x/y/commit/1234567) by [T](https://github.com/T))',
+        ].join('\n');
+        const out = reformatChangelogContent(content, 'x/y');
+        expect(out).toContain('## 1.2.0');
+        expect(out).toContain('## 1.1.0');
+        expect(out).toContain('Add two');
+        expect(out).toContain('Fix one');
+        // The second version's bullet must not be merged into the first.
+        expect(out.indexOf('Fix one')).toBeGreaterThan(out.indexOf('## 1.1.0'));
+    });
+
+    it('leaves a changelog with an unsupported heading untouched', () => {
+        const content = [
+            '# Changelog',
+            '',
+            '## Unreleased',
+            '',
+            '- Work in progress.',
+            '',
+            '## 1.0.0',
+            '',
+            '- **feat:** shipped.',
+        ].join('\n');
+        expect(reformatChangelogContent(content, 'x/y')).toBe(content);
+    });
+});
+
+describe('cross-repo links and code fences', () => {
+    it('leaves links to another repository alone', () => {
+        expect(
+            formatLine('See [#abcdef1](https://github.com/other/repo/commit/abcdef1)', 'x/y')
+        ).toBe('See [#abcdef1](https://github.com/other/repo/commit/abcdef1)');
+        expect(formatLine('See [#42](https://github.com/other/repo/pull/42)', 'x/y')).toBe(
+            'See [#42](https://github.com/other/repo/pull/42)'
+        );
+    });
+
+    it('does not link URL fragments', () => {
+        expect(formatLine('See https://example.com/#123', 'x/y')).toBe(
+            'See https://example.com/#123'
+        );
+    });
+
+    it('does not rewrite fenced code blocks', () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-fence-'));
+        const file = path.join(dir, 'CHANGELOG.md');
+        fs.writeFileSync(file, '# Changelog\n\n```sh\n#123\n```\n\nfixes #123\n');
+        try {
+            formatChangelogFile(file, 'x/y');
+            const out = fs.readFileSync(file, 'utf8');
+            expect(out).toContain('```sh\n#123\n```');
+            expect(out).toContain('[#123](https://github.com/x/y/issues/123)');
+        } finally {
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
     });
 });

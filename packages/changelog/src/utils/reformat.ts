@@ -18,6 +18,18 @@ import { changelogFiles, repoRoot } from './repo.js';
 import type { ChangelogGroupsSetting, ExistingEntry, GroupedItem } from './types.js';
 import { renderChangelogEntry } from './version.js';
 
+/** A version heading: `## 1.2.3`, `## [1.2.3]`, `## v1.2.3`, prereleases, dates. */
+const VERSION_HEADING =
+    /^##\s+\[?v?(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)\]?\s*(?:\([^)]*\))?\s*(?:-\s+.*)?\s*$/;
+
+/** Whether the changelog has a `## ` section that is not a version heading. */
+function hasUnsupportedHeading(content: string): boolean {
+    for (const line of content.split('\n')) {
+        if (/^##\s+/.test(line) && !VERSION_HEADING.test(line)) return true;
+    }
+    return false;
+}
+
 /**
  * Split a changelog into `## <version>` sections with their commit bullets and
  * nested description lines. The bodies are kept so a re-format can preserve a
@@ -32,10 +44,18 @@ export function parseExistingChangelog(content: string): ExistingEntry[] {
     let inPackageChanges = false;
     let collectingBody = false;
     for (const line of content.split('\n')) {
-        const heading = /^##\s+([0-9]+\.[0-9]+\.[0-9]+)(?:\s*\(.*\))?\s*$/.exec(line);
+        const heading = VERSION_HEADING.exec(line);
         if (heading) {
             current = { version: heading[1]!, bullets: [], bodies: [] };
             entries.push(current);
+            inPackageChanges = false;
+            collectingBody = false;
+            continue;
+        }
+        if (/^##\s+/.test(line)) {
+            // An unsupported section (`## Unreleased`, ...): do not fold its
+            // bullets into the previous version entry.
+            current = undefined;
             inPackageChanges = false;
             collectingBody = false;
             continue;
@@ -60,10 +80,10 @@ export function parseExistingChangelog(content: string): ExistingEntry[] {
             continue;
         }
         if (!line.trim()) {
-            collectingBody = false;
+            // A blank line may separate description paragraphs; keep collecting.
             continue;
         }
-        if (collectingBody && (line.startsWith('  - ') || line.startsWith('    '))) {
+        if (collectingBody && line.startsWith('  ')) {
             current.bodies![current.bodies!.length - 1]!.push(line);
         }
     }
@@ -89,6 +109,9 @@ function parseExistingBody(lines: string[]): string[][] {
             current = [line.slice(4).trim()];
         } else if (line.startsWith('    ')) {
             current.push(line.slice(4).trim());
+        } else if (line.startsWith('  ')) {
+            // Legacy two-space continuation lines.
+            current.push(line.slice(2).trim());
         }
     }
     if (current.length > 0) paragraphs.push([current.join(' ')]);
@@ -154,6 +177,15 @@ export function reformatChangelogContent(
     groups?: ChangelogGroupsSetting,
     breaking?: ChangelogBreakingSetting
 ): string {
+    // An unsupported `##` section (eg. `## Unreleased`) cannot be rendered by the
+    // version-based reformatter; leave the file untouched instead of merging its
+    // bullets into the previous release or dropping the section.
+    if (hasUnsupportedHeading(content)) {
+        logger.warn(
+            'changelog: skipping reformat because the file has a non-version `##` heading.'
+        );
+        return content;
+    }
     const entries = parseExistingChangelog(content);
     if (entries.length === 0) return content;
     const firstLine = content.split('\n')[0] ?? '# Changelog';

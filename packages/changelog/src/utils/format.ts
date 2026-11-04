@@ -376,15 +376,30 @@ function isCommitHash(hash: string): boolean {
     return Boolean(readCommit(hash) ?? readCommit(hash.slice(0, 7)));
 }
 
+/** Whether a link points at the current repository (not an upstream/other repo). */
+function isCurrentRepoUrl(url: string, repo: string): boolean {
+    try {
+        const parsed = new URL(url, 'https://github.com');
+        if (parsed.hostname.toLowerCase() !== 'github.com') return false;
+        const path = parsed.pathname.toLowerCase();
+        const prefix = `/${repo.toLowerCase()}`;
+        return path === prefix || path.startsWith(`${prefix}/`);
+    } catch {
+        return false;
+    }
+}
+
 /**
  * Normalize `[#hash](url)` and raw `#hash` refs to the canonical commit link.
  * A hex link that does not resolve to a commit is left alone: a 6+ digit issue
- * number (`#123456`) is also valid hex and must stay an issue link.
+ * number (`#123456`) is also valid hex and must stay an issue link. Links to
+ * another repository are never rewritten.
  */
 function formatHashLinks(line: string, repo: string): string {
     const linked = line.replace(
         /\[(#[0-9a-fA-F]{6,40})\]\(([^)]*)\)/g,
         (match, text: string, url: string) => {
+            if (!isCurrentRepoUrl(url, repo)) return match;
             const hash = text.replace('#', '');
             if (!url.includes('/commit/') && !isCommitHash(hash)) return match;
             const short = hash.slice(0, 7);
@@ -392,7 +407,7 @@ function formatHashLinks(line: string, repo: string): string {
         }
     );
     return linked.replace(
-        /(^|[^\w[])#([0-9a-fA-F]{7,40})(?![0-9a-fA-F])(?=[)\].,;:\s]|$)/g,
+        /(^|[^\w[/=&#])#([0-9a-fA-F]{7,40})(?![0-9a-fA-F])(?=[)\].,;:\s]|$)/g,
         (match, pre: string, hash: string) => {
             if (!isCommitHash(hash)) return match;
             const short = hash.slice(0, 7);
@@ -409,11 +424,13 @@ function formatHashLinks(line: string, repo: string): string {
 function formatIssueLinks(line: string, repo: string): string {
     const linked = line.replace(
         /\[#(\d+)(?=[ \]])(?:[^\]]*)\]\(([^)]*)\)/g,
-        (match, number: string, url: string) =>
-            url.includes('/commit/') ? match : `[#${number}](${canonicalIssueUrl(repo, number)})`
+        (match, number: string, url: string) => {
+            if (url.includes('/commit/') || !isCurrentRepoUrl(url, repo)) return match;
+            return `[#${number}](${canonicalIssueUrl(repo, number)})`;
+        }
     );
     return linked.replace(
-        /(^|[^\w[])#(\d+)(?=[)\].,;:\s]|$)/g,
+        /(^|[^\w[/=&#])#(\d+)(?=[)\].,;:\s]|$)/g,
         (_match, pre: string, number: string) =>
             `${pre}[#${number}](${canonicalIssueUrl(repo, number)})`
     );
@@ -439,9 +456,22 @@ export function formatLine(line: string, repo: string | undefined): string {
 /** Format every commit line in a changelog file (all versions, in place). */
 export function formatChangelogFile(file: string, repo: string | undefined): void {
     const content = readFileSync(file, 'utf8');
+    let fence: string | undefined;
     const formatted = content
         .split('\n')
-        .map(line => formatLine(line, repo))
+        .map(line => {
+            const trimmed = line.trim();
+            if (fence) {
+                if (trimmed.startsWith(fence)) fence = undefined;
+                return line;
+            }
+            const open = /^(```|~~~)/.exec(trimmed);
+            if (open) {
+                fence = open[1];
+                return line;
+            }
+            return formatLine(line, repo);
+        })
         .join('\n');
     if (formatted !== content) {
         writeFileSync(file, formatted, 'utf8');

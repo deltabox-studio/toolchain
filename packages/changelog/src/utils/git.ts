@@ -13,7 +13,12 @@ export function readCommits(range: string, path?: string | string[]): CommitReco
     const paths = path === undefined ? [] : Array.isArray(path) ? path : [path];
     const args = ['log', '--no-merges', `--pretty=format:${format}`, range];
     if (paths.length > 0) args.push('--', ...paths);
-    const log = execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    const log = execFileSync('git', args, {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+        // Large ranges (or verbose bodies) can exceed Node's 1 MiB default.
+        maxBuffer: 128 * 1024 * 1024,
+    });
     return log
         .split('\x1e')
         .filter(record => record.length > 0)

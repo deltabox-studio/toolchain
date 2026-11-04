@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { type ChangelogBreakingSetting, logger } from '@deltabox/toolchain-shared';
@@ -7,7 +7,7 @@ import { formatChangelogFile } from './format.js';
 import { readCommits, repoSlug } from './git.js';
 import { relatedWorkspacePaths } from './graph.js';
 import { packageChangesForCurrent } from './packages.js';
-import { parseExistingChangelog, reformatRootChangelog } from './reformat.js';
+import { formatExistingChangelogs, parseExistingChangelog } from './reformat.js';
 import { discoverWorkspaceDirs, repoRoot } from './repo.js';
 import { buildSummary } from './summary.js';
 import type { ChangelogGroupsSetting, CommitRecord } from './types.js';
@@ -39,12 +39,9 @@ export function writeChangelogs(
     }
 
     if (reformatAll) {
-        // Rewrite the whole root changelog cohesively, then prepend the new entry.
-        const reformatted = reformatRootChangelog(packageChanges, groups, breaking);
-        if (reformatted) {
-            writeFileSync(rootChangelog, reformatted, 'utf8');
-            logger.info(`  reformatted ${rootChangelog}`);
-        }
+        // Rewrite every changelog cohesively (root + workspaces), then prepend
+        // the new entries below.
+        formatExistingChangelogs(false, packageChanges, groups, breaking);
     }
 
     // The root changelog lists every pushed commit.

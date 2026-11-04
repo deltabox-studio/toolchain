@@ -21,13 +21,15 @@ export function repoRoot(): string {
 }
 
 /** Every workspace directory declared by the root `workspaces` globs (+ root). */
-export function discoverWorkspaceDirs(): string[] {
-    const root = repoRoot();
+export function discoverWorkspaceDirs(root = repoRoot()): string[] {
     const rootPkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as {
-        workspaces?: string[];
+        workspaces?: string[] | { packages?: string[] };
     };
+    const patterns = Array.isArray(rootPkg.workspaces)
+        ? rootPkg.workspaces
+        : (rootPkg.workspaces?.packages ?? []);
     const dirs = new Set<string>([root]);
-    for (const pattern of rootPkg.workspaces ?? []) {
+    for (const pattern of patterns) {
         if (pattern === '.') continue;
         for (const match of globSync(pattern, { cwd: root })) {
             const dir = resolve(root, match);
