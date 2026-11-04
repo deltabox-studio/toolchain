@@ -557,13 +557,14 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
 }
 
 /** Normalize + validate a workspace directory (relative, inside the root). */
-function workspaceDirForTsconfig(dir: string): string {
+export function workspaceDirForTsconfig(dir: string): string {
     const normalized = dir
         .replace(/\\/g, '/')
         .replace(/^\.?\//, '')
         .replace(/\/+$/, '');
     if (
         !normalized ||
+        normalized === '.' ||
         path.isAbsolute(dir) ||
         /^[a-zA-Z]:/.test(dir) ||
         normalized.split('/').includes('..')

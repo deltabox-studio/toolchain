@@ -20,6 +20,7 @@ import {
     findRootOxcFiles,
     SCAFFOLD_CATALOG,
     upsertWorkspaceTsconfig,
+    workspaceDirForTsconfig,
     writeGeneratedFiles,
 } from '../typescript.js';
 
@@ -269,6 +270,9 @@ export function projectCommands(): ToolchainCommand[] {
                 const wsDir = ((opts.dir as string | undefined) ?? `packages/${name}`)
                     .replace(/\\/g, '/')
                     .replace(/\/+$/, '');
+                // Validate before writing anything: `--dir .` / `..` must never
+                // overwrite the monorepo root (or another package) with `--force`.
+                workspaceDirForTsconfig(wsDir);
                 const includeConfig = context.noConfig
                     ? false
                     : ((opts.config as boolean | undefined) ?? true);
