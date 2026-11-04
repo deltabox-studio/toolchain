@@ -303,6 +303,12 @@ export async function loadToolchainConfig(
             if (!tolerant) throw cause;
             error = `failed to load ${file}: ${errorMessage(cause)}`;
         }
+    } else if (parentConfig) {
+        // Hooks are code and are not inherited by a nested project. When the
+        // project has no config of its own, the parent still supplies sections
+        // and tokens, but its lifecycle hooks must not run here.
+        const { hooks: _hooks, ...rest } = config;
+        config = rest;
     }
 
     // When a `project` field is not defined, fall back to the project's own
