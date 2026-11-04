@@ -1,16 +1,33 @@
 # Changelog
 
-## 2.1.3 (November 2026)
+## 2.2.0 (November 2026)
 
 <!-- release:start -->
+
+### New features
+#### Core
+- Improve formatter/linter auto-detection ([#8324e9a](https://github.com/deltabox-studio/toolchain/commit/8324e9a) by [T0chi](https://github.com/T0chi))
+  - Prefer the project .vscode/settings.json, then the nearest workspace package.json/config file before walking to the root, and include tooling config files as detection candidates.
+### Tests
+#### Vscode
+- Add extension host test setup ([#66aeda6](https://github.com/deltabox-studio/toolchain/commit/66aeda6) by [T0chi](https://github.com/T0chi))
+  - Add @vscode/test-cli/test-electron integration tests, a fixture workspace, build/debug launch tasks, source maps, and documented local test commands.
+
+### Package changes
+#### Added
+- `@types/mocha` `^10.0.10`
+- `@vscode/test-cli` `^0.0.15`
+- `@vscode/test-electron` `^3.1.0`
+
+<!-- release:end -->
+
+
+## 2.1.3 (November 2026)
 
 ### Bug fixes
 #### Core
 - Read JSONC VS Code settings and bundle jsonc-parser ([#57d908d](https://github.com/deltabox-studio/toolchain/commit/57d908d) by [T0chi](https://github.com/T0chi))
   - Parse .vscode/settings.json as JSONC so comments/trailing commas don't block editor defaults, and resolve jsonc-parser's ESM entry in the bundled dbx CLI to avoid the missing ./impl/format module.
-
-<!-- release:end -->
-
 
 ## 2.1.2 (November 2026)
 
