@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { spawnCross } from '../src/index.js';
+import { isCmdShim, spawnCross } from '../src/index.js';
 
 describe('spawnCross command path with spaces', () => {
     // The bug is Windows-only: `spawnCross` goes through `cmd.exe`, which splits
@@ -57,4 +57,38 @@ describe('spawnCross timeout', () => {
         expect(Date.now() - start).toBeLessThan(10_000);
         expect(signal === 'SIGKILL' || (code ?? 1) !== 0).toBe(true);
     }, 15_000);
+});
+
+describe('isCmdShim', () => {
+    it.runIf(process.platform === 'win32')(
+        'detects a relative/absolute extensionless path that resolves to a .cmd shim',
+        () => {
+            const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-shim-'));
+            const shim = path.join(dir, 'tool.cmd');
+            fs.writeFileSync(shim, '@echo off\r\n');
+            try {
+                // No extension and no PATH entry: only the local `.cmd` exists.
+                expect(isCmdShim(path.join(dir, 'tool'))).toBe(true);
+            } finally {
+                fs.rmSync(dir, { recursive: true, force: true });
+            }
+        }
+    );
+
+    it.runIf(process.platform === 'win32')(
+        'detects an explicit .cmd command even without a separator',
+        () => {
+            const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-shim-'));
+            const shim = path.join(dir, 'tool.cmd');
+            fs.writeFileSync(shim, '@echo off\r\n');
+            const oldPath = process.env.PATH;
+            process.env.PATH = `${dir}${path.delimiter}${oldPath ?? ''}`;
+            try {
+                expect(isCmdShim('tool.cmd')).toBe(true);
+            } finally {
+                process.env.PATH = oldPath;
+                fs.rmSync(dir, { recursive: true, force: true });
+            }
+        }
+    );
 });
