@@ -22,6 +22,7 @@ import {
     zodToSchemaMap,
 } from '../schema.js';
 import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
+import { resolveGeneratedFile } from './output.js';
 
 /** The `generateTypes` options shared by every interface. */
 const GENERATE_OPTIONS = { addExport: true, partial: true } as const;
@@ -401,7 +402,7 @@ export function generateConfigTypes(
     const contents = renderAllConfigTypes(schema, options);
     if (typeof options.outputDir === 'string') {
         for (const [scopeName, content] of Object.entries(contents)) {
-            const file = path.join(options.outputDir, `${scopeName}.${extension}`);
+            const file = resolveGeneratedFile(options.outputDir, `${scopeName}.${extension}`);
             fs.mkdirSync(path.dirname(file), { recursive: true });
             fs.writeFileSync(file, content, 'utf-8');
         }

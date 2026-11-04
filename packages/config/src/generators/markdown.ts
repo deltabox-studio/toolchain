@@ -4,7 +4,6 @@
  */
 
 import fs from 'node:fs';
-import path from 'node:path';
 
 import type { Schema } from 'untyped';
 
@@ -21,6 +20,7 @@ import {
 } from '../schema.js';
 import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
 import { type CliFlagOptions, cliFlagLabel } from './cli.js';
+import { resolveGeneratedFile } from './output.js';
 
 export interface RenderMarkdownFrontmatter {
     options: GenerateMarkdownOptions;
@@ -225,10 +225,6 @@ function renderNode(
     opts: RenderOptions
 ): string[] {
     const lines = [`${level} ${title}`];
-    if (schema.type === 'object' && schema.properties) {
-        lines.push(...renderFields(schema, `${level}#`, opts));
-        return lines;
-    }
     const envName =
         typeof schema.envName === 'string'
             ? schema.envName
@@ -254,6 +250,11 @@ function renderNode(
     if (schema.description) lines.push('', sanitizeText(schema.description));
     lines.push(...remarksLines(schema.remarks, opts));
     if (opts.includeExamples !== false) lines.push(...exampleLines(schema.example));
+    // Objects carry their own description/annotations too; render them before
+    // the child fields (matching the JSON-Schema reference renderer).
+    if (schema.type === 'object' && schema.properties) {
+        lines.push(...renderFields(schema, `${level}#`, opts));
+    }
     return lines;
 }
 
@@ -501,7 +502,7 @@ export function generateConfigMarkdown(
     if (typeof options.outputDir === 'string') {
         fs.mkdirSync(options.outputDir, { recursive: true });
         for (const [file, content] of Object.entries(contents)) {
-            fs.writeFileSync(path.resolve(options.outputDir, file), content, 'utf-8');
+            fs.writeFileSync(resolveGeneratedFile(options.outputDir, file), content, 'utf-8');
         }
     }
     return contents;

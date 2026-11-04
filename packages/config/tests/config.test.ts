@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
@@ -13,6 +17,7 @@ import {
     envPathOf,
     envString,
     generateCliOptions,
+    generateConfigEnv,
     generateConfigJsonSchema,
     generateConfigMarkdown,
     generateConfigTypes,
@@ -163,6 +168,33 @@ describe('generators', () => {
         const doc = buildConfigJson(scopes, { envPrefix: 'MYAPP_' });
         expect(doc.env.length).toBeGreaterThan(3);
         expect(doc.version).toBe(1);
+    });
+
+    it('renders object-level metadata in per-scope markdown', () => {
+        const schema = z.object({
+            section: z
+                .object({
+                    nested: z.object({ value: z.string().optional() }).describe('Nested settings.'),
+                })
+                .describe('A section.'),
+        });
+        const markdown = generateConfigMarkdown({ config: schema })['config.md']!;
+        expect(markdown).toContain('A section.');
+        expect(markdown).toContain('Nested settings.');
+    });
+
+    it('rejects generated paths that escape the output directory', () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-config-out-'));
+        try {
+            const escaping = { '../escape': z.object({ value: z.string().optional() }) };
+            expect(() => generateConfigTypes(escaping, { outputDir: cwd })).toThrow(/outside/);
+            expect(() => generateConfigMarkdown(escaping, { outputDir: cwd })).toThrow(/outside/);
+            expect(() => generateConfigEnv({}, { outputDir: cwd, envFile: '../env.ts' })).toThrow(
+                /outside/
+            );
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
     });
 });
 
