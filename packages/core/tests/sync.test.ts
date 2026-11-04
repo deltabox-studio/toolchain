@@ -462,3 +462,19 @@ describe('resolveWatchGlobs', () => {
         );
     });
 });
+
+describe('vscodeSyncTask ownership', () => {
+    it('does not track the merged VS Code files in the manifest', async () => {
+        const cwd = tmp();
+        await runSync({
+            tasks: [vscodeSyncTask({ settings: [{ 'x.y': true }] })],
+            cwd,
+            config: {},
+            tokens: {},
+            projectType: 'monorepo-root',
+            quiet: true,
+        });
+        expect(readManifest(cwd).files).toEqual([]);
+        expect(fs.existsSync(path.join(cwd, '.vscode/settings.json'))).toBe(true);
+    });
+});

@@ -286,13 +286,21 @@ function parseProviders(value: unknown): ToolchainProvider[] {
     return list.filter(isProvider);
 }
 
-function readProvidersTarget(target: string): ToolchainProvider[] {
+function readProvidersTarget(
+    target: string,
+    visited: Set<string> = new Set()
+): ToolchainProvider[] {
     try {
         if (fs.statSync(target).isDirectory()) {
+            // Follow a directory symlink/junction at most once, so a cycle
+            // (`x.json -> .`) cannot recurse forever.
+            const real = fs.realpathSync(target);
+            if (visited.has(real)) return [];
+            visited.add(real);
             const providers: ToolchainProvider[] = [];
             for (const file of fs.readdirSync(target)) {
                 if (!file.toLowerCase().endsWith('.json')) continue;
-                providers.push(...readProvidersTarget(path.join(target, file)));
+                providers.push(...readProvidersTarget(path.join(target, file), visited));
             }
             return providers;
         }

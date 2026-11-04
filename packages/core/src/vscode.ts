@@ -46,6 +46,9 @@ export function vscodeSyncTask(options: VscodeSyncOptions = {}): SyncTask {
                 files.push({
                     path: '.vscode/settings.json',
                     content: mergeJsonAt(ctx.cwd, '.vscode/settings.json', patch),
+                    // The merged file is user-owned: never prune it (or the
+                    // user's additions) when this task is later disabled.
+                    track: false,
                 });
             }
             if (options.extensions?.length) {
@@ -54,6 +57,7 @@ export function vscodeSyncTask(options: VscodeSyncOptions = {}): SyncTask {
                     content: mergeJsonAt(ctx.cwd, '.vscode/extensions.json', {
                         recommendations: options.extensions,
                     }),
+                    track: false,
                 });
             }
             return files;
