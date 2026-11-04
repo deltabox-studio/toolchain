@@ -45,6 +45,7 @@ import {
     planWatchTargets,
     type WatchInputs,
 } from './watch-inputs.js';
+import { parseWorkflowTargets, type WorkflowTarget, workflowQuickPickItems } from './workflows.js';
 
 const SECTION = 'deltabox.toolchain';
 const OUTPUT_NAME = 'deltabox toolchain';
@@ -388,31 +389,18 @@ export function activate(context: vscode.ExtensionContext): void {
         return picks?.map(pick => pick.project);
     };
 
-    /** Prompt for one or more enabled workflow ids (multi-select). */
+    /** Prompt for one or more enabled workflows (multi-select). */
     const pickWorkflows = async (cwd: string): Promise<string[] | undefined> => {
         const result = await captureCli(cwd, ['workflow', '--list', '--json']);
-        let targets: { id: string; path: string }[] = [];
-        if (result.code === 0) {
-            try {
-                const parsed = JSON.parse(result.stdout) as unknown;
-                if (Array.isArray(parsed)) {
-                    targets = parsed.filter(
-                        (entry): entry is { id: string; path: string } =>
-                            Boolean(entry) &&
-                            typeof entry === 'object' &&
-                            typeof (entry as { id?: unknown }).id === 'string' &&
-                            typeof (entry as { path?: unknown }).path === 'string'
-                    );
-                }
-            } catch {
-                // fall through to the built-in ids
-            }
+        let targets: WorkflowTarget[] = [];
+        if (result.code === 0) targets = parseWorkflowTargets(result.stdout);
+        if (targets.length === 0) {
+            targets = WORKFLOW_IDS.map(id => ({ id, path: id, provider: 'github' }));
         }
-        if (targets.length === 0) targets = WORKFLOW_IDS.map(id => ({ id, path: id }));
-        const picks = await vscode.window.showQuickPick(
-            targets.map(target => ({ label: target.id, description: target.path })),
-            { canPickMany: true, placeHolder: 'Which workflows should run?' }
-        );
+        const picks = await vscode.window.showQuickPick(workflowQuickPickItems(targets), {
+            canPickMany: true,
+            placeHolder: 'Which workflows should run?',
+        });
         return picks?.map(pick => pick.label);
     };
 
