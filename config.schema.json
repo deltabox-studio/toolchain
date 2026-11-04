@@ -1836,7 +1836,7 @@
             "type": "object",
             "properties": {
                 "config": {
-                    "description": "Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or absolute).",
+                    "description": "Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or an absolute path inside it).",
                     "type": [
                         "boolean",
                         "string"

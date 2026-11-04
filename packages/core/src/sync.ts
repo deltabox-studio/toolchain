@@ -13,6 +13,7 @@ import {
 
 import { ensureDbxGitignore } from './gitignore.js';
 import { readManifest, writeManifest } from './manifest.js';
+import { resolveManagedPath } from './paths.js';
 import { resolveProjectType } from './project-type.js';
 
 export interface RunSyncOptions {
@@ -110,7 +111,16 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
         await hooks.afterTask?.({ task, ctx, ...(produced ? { files: produced } : {}) });
     }
 
-    const desired = new Map(files.map(file => [norm(file.path), file.content]));
+    // A task must never write outside the project root (eg. `..` or an absolute
+    // path from a custom generator/provider).
+    for (const file of files) resolveManagedPath(cwd, file.path);
+
+    const desired = new Map(
+        files.map(file => {
+            const abs = resolveManagedPath(cwd, file.path);
+            return [norm(path.relative(cwd, abs)), file.content] as const;
+        })
+    );
     // Untracked files are written + drift-checked but stay user-owned: they are
     // kept out of the manifest, so they are never pruned or reset.
     const untracked = new Set(
@@ -119,8 +129,12 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
 
     // Files a task declares as user-owned (`keep`): never deleted, dropped from
     // the manifest, so consumers can edit them (eg. `tsconfig.build.json`).
+    // Collect from every task that applies to this project type, even when it is
+    // currently disabled: disabling a section must not make its kept files
+    // deletable.
     const keep = new Set<string>();
-    for (const task of active) {
+    for (const task of tasks) {
+        if (task.projectTypes && !task.projectTypes.includes(projectType)) continue;
         const patterns = typeof task.keep === 'function' ? task.keep(config) : (task.keep ?? []);
         for (const pattern of patterns) keep.add(pattern);
     }
@@ -147,25 +161,45 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     );
     // A file dbx never created (it existed before the first sync) is adopted:
     // stop managing it, but never delete it when its section is removed.
-    const originOf = (relative: string): 'created' | 'adopted' =>
-        manifest.origins?.[relative] ??
-        (manifest.files.includes(relative)
-            ? 'created'
-            : existedBefore.get(relative)
-              ? 'adopted'
-              : 'created');
-    const removed = manifest.files.filter(
-        relative =>
-            !desired.has(relative) &&
-            !untracked.has(relative) &&
-            !isKept(relative) &&
-            fs.existsSync(path.resolve(cwd, relative)) &&
-            originOf(relative) === 'created'
-    );
-    const removedFiles: RemovedFile[] = removed.map(relative => ({
-        path: relative,
-        content: fs.readFileSync(path.resolve(cwd, relative), 'utf-8'),
-    }));
+    const originOf = (relative: string): 'created' | 'adopted' => {
+        const recorded = manifest.origins?.[relative];
+        if (recorded) return recorded;
+        if (!manifest.files.includes(relative)) {
+            return existedBefore.get(relative) ? 'adopted' : 'created';
+        }
+        // A legacy manifest (before `origins`) cannot tell us who created an
+        // already-managed file. Treat it as adopted so a sync/reset can never
+        // delete a pre-existing user file.
+        return 'adopted';
+    };
+    const removed: string[] = [];
+    const removedFiles: RemovedFile[] = [];
+    for (const relative of manifest.files) {
+        if (
+            desired.has(relative) ||
+            untracked.has(relative) ||
+            isKept(relative) ||
+            originOf(relative) !== 'created'
+        ) {
+            continue;
+        }
+        let abs: string;
+        try {
+            abs = resolveManagedPath(cwd, relative);
+        } catch (cause) {
+            // A tampered/invalid manifest entry must never delete outside the
+            // project root.
+            warn(
+                `sync: ignoring unsafe manifest path "${relative}": ${
+                    cause instanceof Error ? cause.message : String(cause)
+                }`
+            );
+            continue;
+        }
+        if (!fs.existsSync(abs)) continue;
+        removed.push(relative);
+        removedFiles.push({ path: relative, content: fs.readFileSync(abs, 'utf-8') });
+    }
     const upToDate = changed.length === 0 && removed.length === 0;
 
     if (options.check) {

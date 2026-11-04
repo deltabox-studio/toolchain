@@ -71,12 +71,21 @@ export function readSyncedAt(cwd: string): string | undefined {
     return typeof legacy?.syncedAt === 'string' ? legacy.syncedAt : undefined;
 }
 
+/** Normalize a repo-relative path to forward slashes. */
+function norm(relative: string): string {
+    return relative.replace(/\\/g, '/');
+}
+
 /** Read the manifest (`{ files: [] }` when missing/invalid). */
 export function readManifest(cwd: string): Manifest {
     const parsed = readManifestJson<Partial<Manifest>>(cwd, MANIFEST_FILE);
     const syncedAt = readSyncedAt(cwd);
     const origins =
-        parsed?.origins && typeof parsed.origins === 'object' ? parsed.origins : undefined;
+        parsed?.origins && typeof parsed.origins === 'object'
+            ? Object.fromEntries(
+                  Object.entries(parsed.origins).map(([key, value]) => [norm(key), value])
+              )
+            : undefined;
     const tsconfigOverrides =
         parsed?.tsconfigOverrides && typeof parsed.tsconfigOverrides === 'object'
             ? parsed.tsconfigOverrides
@@ -90,7 +99,9 @@ export function readManifest(cwd: string): Manifest {
         )
     );
     return {
-        files: Array.isArray(parsed?.files) ? parsed.files : [],
+        // Older manifests (and tasks on Windows) may store backslashes; normalize
+        // so path comparisons against generated output stay stable.
+        files: Array.isArray(parsed?.files) ? parsed.files.map(norm) : [],
         ...(origins ? { origins } : {}),
         ...(tsconfigOverrides ? { tsconfigOverrides } : {}),
         ...(snapshots ? { snapshots } : {}),

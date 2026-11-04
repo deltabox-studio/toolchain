@@ -1235,7 +1235,7 @@ The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.
 
 - **Type**: `boolean | string`
 
-Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or absolute).
+Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or an absolute path inside it).
 
 ### `shim`
 

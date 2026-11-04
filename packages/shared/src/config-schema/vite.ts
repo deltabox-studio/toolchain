@@ -32,7 +32,7 @@ export const viteConfigSchema = withEnabled(
             .union([z.boolean(), z.string()])
             .describe(
                 'Write the managed Vite config (default true). A string sets its file name/path ' +
-                    '(relative to the project, or absolute).'
+                    '(relative to the project, or an absolute path inside it).'
             )
             .optional(),
         shim: z

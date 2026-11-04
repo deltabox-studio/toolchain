@@ -63,7 +63,7 @@ Everything else under `vite` is Vite+ config (plugins, `test`, `lint`, `fmt`,
 them. Set `vite: { config: false }` to leave a hand-written
 `vite.config.ts` alone (the section is still read for provider colouring and the
 `dbx` provider passthrough). `config: 'config/vite.custom.ts'` writes the shim
-there instead (relative to the project, or absolute).
+there instead (relative to the project, or an absolute path inside it).
 
 ## Keep the shim out of Oxfmt
 

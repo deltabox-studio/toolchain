@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { SyncTask } from '@deltabox/toolchain-shared';
 
-import { readManifest } from '../src/manifest.js';
+import { readManifest, writeManifest } from '../src/manifest.js';
 import { runSync } from '../src/sync.js';
 import { vscodeSyncTask } from '../src/vscode.js';
 import { resolveWatchGlobs } from '../src/watch.js';
@@ -180,6 +180,92 @@ describe('runSync', () => {
         expect(settings['biome.lsp.watcher.kind']).toBeUndefined();
     });
 
+    it('rejects a task output path that escapes the project root', async () => {
+        const parent = tmp();
+        const cwd = path.join(parent, 'project');
+        fs.mkdirSync(cwd);
+        await expect(
+            runSync({
+                tasks: [{ name: 'x', run: () => [{ path: '../outside.txt', content: 'bad' }] }],
+                cwd,
+                config: {},
+                tokens: {},
+                quiet: true,
+            })
+        ).rejects.toThrow(/outside the project root/);
+        expect(fs.existsSync(path.join(parent, 'outside.txt'))).toBe(false);
+    });
+
+    it('allows an absolute managed path inside the project root', async () => {
+        const cwd = tmp();
+        const absolute = path.join(cwd, 'absolute.txt');
+        const result = await runSync({
+            tasks: [{ name: 'x', run: () => [{ path: absolute, content: 'ok' }] }],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        expect(result.written).toEqual(['absolute.txt']);
+        expect(fs.readFileSync(absolute, 'utf-8')).toBe('ok');
+        expect(readManifest(cwd).files).toEqual(['absolute.txt']);
+    });
+
+    it('never deletes a manifest entry that escapes the project root', async () => {
+        const parent = tmp();
+        const cwd = path.join(parent, 'project');
+        fs.mkdirSync(cwd);
+        fs.writeFileSync(path.join(parent, 'outside.txt'), 'keep me');
+        writeManifest(cwd, ['../outside.txt'], undefined, { '../outside.txt': 'created' });
+        const result = await runSync({
+            tasks: [],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        expect(result.removed).toEqual([]);
+        expect(fs.readFileSync(path.join(parent, 'outside.txt'), 'utf-8')).toBe('keep me');
+    });
+
+    it('normalizes backslash paths in a legacy manifest', async () => {
+        const cwd = tmp();
+        fs.mkdirSync(path.join(cwd, 'a'));
+        fs.writeFileSync(path.join(cwd, 'a/b.txt'), 'b');
+        writeManifest(cwd, ['a/b.txt'], undefined, { 'a/b.txt': 'created' });
+        // Simulate an older Windows manifest.
+        fs.writeFileSync(
+            path.join(cwd, '.dbx/toolchain/manifest.json'),
+            JSON.stringify({ files: ['a\\b.txt'], origins: { 'a\\b.txt': 'created' } })
+        );
+        const result = await runSync({
+            tasks: [],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        expect(result.removed).toEqual(['a/b.txt']);
+        expect(fs.existsSync(path.join(cwd, 'a/b.txt'))).toBe(false);
+    });
+
+    it('treats files in a legacy manifest without origins as adopted', async () => {
+        const cwd = tmp();
+        fs.writeFileSync(path.join(cwd, 'package.json'), '{"name":"x"}\n');
+        // Pre-`origins` manifest: writeManifest with no origin map.
+        writeManifest(cwd, ['package.json']);
+        const result = await runSync({
+            tasks: [],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        expect(result.removed).toEqual([]);
+        expect(fs.existsSync(path.join(cwd, 'package.json'))).toBe(true);
+        expect(readManifest(cwd).files).toEqual([]);
+    });
+
     it('merges settings into an existing JSONC file', async () => {
         const cwd = tmp();
         fs.mkdirSync(path.join(cwd, '.vscode'));
@@ -279,6 +365,33 @@ describe('runSync untracked files and task metadata', () => {
         });
         expect(result.removed).toEqual([]);
         expect(fs.existsSync(path.join(cwd, 'custom.build.json'))).toBe(true);
+    });
+
+    it("keeps a disabled task's `keep` files", async () => {
+        const cwd = tmp();
+        await runSync({
+            tasks: [{ name: 'x', run: () => [{ path: 'catalog.yml', content: 'x' }] }],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        const result = await runSync({
+            tasks: [
+                {
+                    name: 'catalogs',
+                    enabled: () => false,
+                    keep: ['catalog.yml'],
+                    run: () => [],
+                },
+            ],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        expect(result.removed).toEqual([]);
+        expect(fs.existsSync(path.join(cwd, 'catalog.yml'))).toBe(true);
     });
 
     it('persists task manifest metadata without clobbering the file list', async () => {

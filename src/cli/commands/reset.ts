@@ -65,6 +65,9 @@ export function resetCommand(): ToolchainCommand {
                 logger.info(`${entry.rel === '.' ? root : entry.rel}`);
                 for (const file of entry.restored) logger.info(`  ~ ${file} (overrides reverted)`);
                 for (const file of entry.removed) logger.info(`  - ${file}`);
+                for (const file of entry.skipped) {
+                    logger.warn(`  ! ${file} (outside the project root; skipped)`);
+                }
             }
             logger.info(`${verb} ${total} item(s) across ${result.results.length} project(s).`);
         },

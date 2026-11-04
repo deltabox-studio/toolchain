@@ -53,6 +53,55 @@ describe('resetToolchain', () => {
         expect(calls).toEqual([]);
     });
 
+    it('keeps files listed in a legacy manifest without origins', () => {
+        const cwd = tmp();
+        fs.writeFileSync(path.join(cwd, 'package.json'), '{"name":"x"}\n');
+        // Pre-`origins` manifest: writeManifest with no origin map.
+        writeManifest(cwd, ['package.json']);
+        const result = resetToolchain({ cwd });
+        expect(result.removed).toEqual([`${MANIFEST_DIR}/`]);
+        expect(fs.existsSync(path.join(cwd, 'package.json'))).toBe(true);
+    });
+
+    it('never removes a manifest entry that escapes the project root', () => {
+        const parent = tmp();
+        const cwd = path.join(parent, 'project');
+        fs.mkdirSync(cwd);
+        fs.writeFileSync(path.join(parent, 'outside.txt'), 'keep me');
+        writeManifest(cwd, ['../outside.txt'], undefined, { '../outside.txt': 'created' });
+        const result = resetToolchain({ cwd });
+        expect(result.removed).toEqual([`${MANIFEST_DIR}/`]);
+        expect(result.skipped).toEqual(['../outside.txt']);
+        expect(fs.readFileSync(path.join(parent, 'outside.txt'), 'utf-8')).toBe('keep me');
+    });
+
+    it('preserves project registries while removing generated manifest state', () => {
+        const cwd = tmp();
+        writeManifest(cwd, []);
+        fs.writeFileSync(
+            path.join(cwd, MANIFEST_DIR, 'registries.json'),
+            '{"providers":["./providers"]}\n'
+        );
+        fs.mkdirSync(path.join(cwd, MANIFEST_DIR, '.registry/providers'), { recursive: true });
+        fs.writeFileSync(
+            path.join(cwd, MANIFEST_DIR, '.registry/providers/providers.json'),
+            '[]\n'
+        );
+        const result = resetToolchain({ cwd });
+        expect(result.removed).toEqual([
+            `${MANIFEST_DIR}/manifest.json`,
+            `${MANIFEST_DIR}/timestamps.json`,
+        ]);
+        expect(fs.existsSync(path.join(cwd, MANIFEST_DIR, 'manifest.json'))).toBe(false);
+        expect(fs.existsSync(path.join(cwd, MANIFEST_DIR, 'timestamps.json'))).toBe(false);
+        expect(fs.readFileSync(path.join(cwd, MANIFEST_DIR, 'registries.json'), 'utf-8')).toBe(
+            '{"providers":["./providers"]}\n'
+        );
+        expect(
+            fs.existsSync(path.join(cwd, MANIFEST_DIR, '.registry/providers/providers.json'))
+        ).toBe(true);
+    });
+
     it('forwards the hook and dry-run flag per project', () => {
         const cwd = tmp();
         writeManifest(cwd, []);
