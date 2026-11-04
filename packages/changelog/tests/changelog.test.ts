@@ -3,7 +3,23 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// Keep the hash-link tests independent of the checkout's git history (a
+// shallow clone would not contain these commits).
+const gitState = vi.hoisted(() => ({ complete: true }));
+
+vi.mock('../src/utils/git.js', async importOriginal => {
+    const actual = await importOriginal<typeof import('../src/utils/git.js')>();
+    const known: Record<string, { subject: string; body: string }> = {
+        '4033009': { subject: 'fix: numeric hash', body: '' },
+    };
+    return {
+        ...actual,
+        readCommit: (hash: string) => known[hash] ?? actual.readCommit(hash),
+        hasCompleteGitHistory: () => gitState.complete,
+    };
+});
 
 import {
     buildSummary,
@@ -500,6 +516,21 @@ describe('formatLine', () => {
         expect(formatLine('[#999999](https://github.com/o/r/issues/999999)', 'o/r')).toBe(
             '[#999999](https://github.com/o/r/issues/999999)'
         );
+    });
+
+    it('links letter-containing hashes when git history is incomplete', () => {
+        gitState.complete = false;
+        try {
+            expect(formatLine('See #deadbee', 'o/r')).toBe(
+                'See [#deadbee](https://github.com/o/r/commit/deadbee)'
+            );
+            // Numeric-only refs stay ambiguous without complete history.
+            expect(formatLine('fixes #1234567', 'o/r')).toBe(
+                'fixes [#1234567](https://github.com/o/r/issues/1234567)'
+            );
+        } finally {
+            gitState.complete = true;
+        }
     });
 
     it('bolds a bare BREAKING CHANGE marker', () => {

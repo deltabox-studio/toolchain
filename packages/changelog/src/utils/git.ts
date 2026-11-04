@@ -311,6 +311,28 @@ export function readCommit(hash: string): { subject: string; body: string } | un
     return loadCommitIndex().get(hash);
 }
 
+let completeHistory: boolean | undefined;
+
+/**
+ * Whether `git log --all` can resolve every commit the changelog may reference.
+ * A shallow clone (or a missing git history) cannot, so callers should fall
+ * back to a heuristic instead of treating every unresolved hash as an issue.
+ */
+export function hasCompleteGitHistory(): boolean {
+    if (completeHistory === undefined) {
+        try {
+            const out = execFileSync('git', ['rev-parse', '--is-shallow-repository'], {
+                encoding: 'utf8',
+                stdio: ['ignore', 'pipe', 'ignore'],
+            }).trim();
+            completeHistory = out !== 'true';
+        } catch {
+            completeHistory = false;
+        }
+    }
+    return completeHistory;
+}
+
 /** Derive the semver bump from the commits (major > minor > patch). */
 export function deriveBump(records: CommitRecord[], breaking?: ChangelogBreakingSetting): BumpType {
     let type: BumpType = 'patch';

@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 import { logger, sanitizeText } from '@deltabox/toolchain-shared';
 
-import { readCommit } from './git.js';
+import { hasCompleteGitHistory, readCommit } from './git.js';
 import type {
     ChangelogGroupConfig,
     ChangelogGroupContext,
@@ -373,7 +373,11 @@ function canonicalIssueUrl(repo: string, number: string): string {
 
 /** Whether a hex ref resolves to a commit in this repository. */
 function isCommitHash(hash: string): boolean {
-    return Boolean(readCommit(hash) ?? readCommit(hash.slice(0, 7)));
+    if (readCommit(hash) ?? readCommit(hash.slice(0, 7))) return true;
+    // A shallow clone (or a missing git history) cannot resolve every commit a
+    // changelog references. A ref containing a hex letter is never an issue
+    // number, so keep it as a commit instead of leaving it unlinked.
+    return !hasCompleteGitHistory() && /[a-f]/i.test(hash);
 }
 
 /** Whether a link points at the current repository (not an upstream/other repo). */
