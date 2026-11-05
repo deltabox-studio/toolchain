@@ -31,7 +31,9 @@ code --install-extension deltabox.toolchain-vscode
 | Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**. |
 | Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.       |
 | Remove template…             | `template:list --registry` then `template:remove`.                                      |
-| Generate configs             | `project:config` for projects missing a config.                                         |
+| Generate configs             | `project:config` for missing configs, or refresh the project graph only; picks TS/JS.   |
+| Generate config              | Per-project `project:config` (also works from the Command Palette).                     |
+| Migrate tooling…             | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).  |
 | Run workflow                 | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                   |
 | Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                          |
 | Create Vite+ project…        | `vp create` in a terminal.                                                              |
@@ -51,7 +53,7 @@ Every project card (and every project in the **Projects** tree) exposes the same
 actions, scoped to that project:
 
 - **Sync** / **Check sync** — regenerate / verify the project's managed files.
-- **Generate config** — write a `dbx.config.ts`.
+- **Generate config** — write a `dbx.config.*` (TS/JS), or refresh only the project graph.
 - **Run workflow…** — trigger one of the project's generated workflows. The picker
   lists every enabled workflow with its provider and path, and dispatches it
   through the matching vendor CLI (`gh`, `glab` or `az`).
@@ -121,15 +123,23 @@ Each item names the config key to opt out with, and opens the existing file.
 
 ## Settings
 
-| Setting                                | Default         | Description                                                    |
-| -------------------------------------- | --------------- | -------------------------------------------------------------- |
-| `deltabox.toolchain.enabled`           | `true`          | Auto sync on watched changes.                                  |
-| `deltabox.toolchain.debounce`          | `300`           | Debounce (ms) before a sync.                                   |
-| `deltabox.toolchain.command`           | `sync`          | The command to run on change.                                  |
-| `deltabox.toolchain.watch`             | `[]` (resolved) | Inputs that trigger a sync (empty = resolved from the config). |
-| `deltabox.toolchain.version`           | `""` (auto)     | Pin the `@deltabox/toolchain` version this workspace runs.     |
-| `deltabox.registrySearchPaths`         | `[]`            | Template registry search paths (dirs or `http(s)` URLs).       |
-| `deltabox.providerRegistrySearchPaths` | `[]`            | Provider registry search paths (JSON files/dirs/URLs).         |
+| Setting                                              | Default         | Description                                                                                                |
+| ---------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------- |
+| `deltabox.toolchain.enabled`                         | `true`          | Auto sync on watched changes.                                                                              |
+| `deltabox.toolchain.debounce`                        | `300`           | Debounce (ms) before a sync.                                                                               |
+| `deltabox.toolchain.command`                         | `sync`          | The command to run on change.                                                                              |
+| `deltabox.toolchain.enableFormatImportGroupDefaults` | `true`          | Add the resolved workspace `sortImports` custom group when syncing; set `false` to manage groups yourself. |
+| `deltabox.toolchain.watch`                           | `[]` (resolved) | Inputs that trigger a sync (empty = resolved from the config).                                             |
+| `deltabox.toolchain.version`                         | `""` (auto)     | Pin the `@deltabox/toolchain` version this workspace runs.                                                 |
+| `deltabox.registrySearchPaths`                       | `[]`            | Template registry search paths (dirs or `http(s)` URLs).                                                   |
+| `deltabox.providerRegistrySearchPaths`               | `[]`            | Provider registry search paths (JSON files/dirs/URLs).                                                     |
+
+`deltabox.toolchain.enableFormatImportGroupDefaults` (default `true`) adds the
+resolved `workspace` group to Oxfmt's `sortImports.customGroups` when the
+extension syncs or generates configs. Set it to `false` in user or workspace
+settings to keep full control of the import groups. The extension passes the
+effective value to the CLI; direct CLI runs and Vite+ configs also honour the
+workspace-scoped `.vscode/settings.json` value.
 
 When a workspace has its own `@deltabox/toolchain` whose version differs from the
 extension's bundled CLI, the extension asks which to run and shows both detected
@@ -154,11 +164,15 @@ Search for `deltabox:` to find:
 - **Remove template source...**
 - **Refresh templates**
 - **Generate configs…**
+- **Migrate tooling…**
 - **Run workflow…**
 - **Run Vite+ command…**
+- **Run command...**
 - **Create Vite+ project…**
+- **Choose dbx source…**
 - **Reset tooling…**
 - **Refresh projects**
+- **Refresh tracked files**
 - **Select dbx version…**
 - **New registry…**
 - **Remove registry…**

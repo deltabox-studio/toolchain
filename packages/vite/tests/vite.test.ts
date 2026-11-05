@@ -199,7 +199,10 @@ describe('vite.config.ts shim', () => {
             fmt: DEFAULT_FMT_RULES,
             lint: DEFAULT_LINT_RULES,
         });
-        expect(DEFAULT_FMT_RULES).not.toHaveProperty('sortImports');
+        expect(DEFAULT_FMT_RULES.sortImports).toMatchObject({
+            groups: expect.arrayContaining(['builtin', 'external']),
+            customGroups: [],
+        });
     });
 
     it('merges fmt/lint options over the shared defaults', () => {
@@ -218,7 +221,7 @@ describe('vite.config.ts shim', () => {
         expect(resolved.fmt.semi).toBe(false);
         expect(resolved.fmt.printWidth).toBe(DEFAULT_FMT_RULES.printWidth);
         expect(resolved.fmt.ignorePatterns).toEqual(['custom/**']);
-        expect(resolved.fmt.sortImports).toBeUndefined();
+        expect(resolved.fmt.sortImports).toEqual(DEFAULT_FMT_RULES.sortImports);
         expect(resolved.lint.rules.eqeqeq).toBe('error');
         expect(resolved.lint.rules['no-var']).toBe('warn');
         expect(resolved.lint.ignorePatterns).toEqual(DEFAULT_LINT_RULES.ignorePatterns);
@@ -476,6 +479,30 @@ describe('resolveVite', () => {
             test: { environment: 'node' },
             build: { sourcemap: true },
         });
+    });
+
+    it('adds the resolved workspace group to sortImports', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: '@acme/root' }));
+        fs.writeFileSync(
+            path.join(dir, 'dbx.config.json'),
+            JSON.stringify({ toolchain: { vite: { fmt: true } } })
+        );
+        const app = path.join(dir, 'packages', 'app');
+        fs.mkdirSync(app, { recursive: true });
+        fs.writeFileSync(path.join(app, 'package.json'), JSON.stringify({ name: '@acme/app' }));
+        fs.writeFileSync(path.join(app, 'dbx.config.json'), '{}');
+
+        const config = (await resolveVite({ cwd: dir })) as {
+            fmt: { sortImports: { groups: unknown[]; customGroups: unknown[] } };
+        };
+        expect(config.fmt.sortImports.groups).toContain('workspace');
+        expect(config.fmt.sortImports.customGroups).toEqual([
+            {
+                groupName: 'workspace',
+                elementNamePattern: ['@acme/**', 'app', 'app/**', 'root', 'root/**'],
+            },
+        ]);
     });
 
     it('throws when no dbx.config.* exists', async () => {

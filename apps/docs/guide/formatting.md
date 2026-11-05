@@ -30,6 +30,17 @@ addition to its options object. The Oxfmt/Oxlint option types are generated from
 the tools' official JSON schemas (vendored in the package), so editor completion
 and the generated config reference match the tool.
 
+The shared ignore lists are exported from `@deltabox/toolchain` and
+`@deltabox/toolchain/shared`: `DEFAULT_IGNORE_PATTERNS` (build/cache dirs), and
+`DEFAULT_FMT_IGNORE_PATTERNS` / `DEFAULT_LINT_IGNORE_PATTERNS` (the Oxc defaults,
+layered over `DEFAULT_IGNORE_PATTERNS`). Import them to extend the defaults
+rather than re-listing them.
+
+Oxfmt import sorting is enabled in the defaults as well. `sortImports` includes
+a `workspace` group built from every `dbx.config.*` project's scope/name;
+`resolveFmtCustomGroups()` returns that group so you can reuse it in a custom
+`sortImports` config. Set `sortImports: false` to opt out.
+
 ## Shorthand opt-in
 
 `fmt: true` / `lint: true` (or an options object with only `vscode`) picks a tool
@@ -134,7 +145,10 @@ dbx migrate --from biome --from prettier --write
 dbx migrate --from all --write
 ```
 
-See [Migrations](/guide/migrations/).
+Unless `--target` is given, the migrated formatter/linter options go to
+`toolchain.vite.fmt`/`toolchain.vite.lint` when the existing Vite config already
+defines `fmt`/`lint`; otherwise they go to the top-level
+`toolchain.fmt.oxc`/`toolchain.lint.oxc`. See [Migrations](/guide/migrations/).
 
 ## Biome
 

@@ -350,6 +350,68 @@ describe('project scaffolding', () => {
         expect(config).toContain("packageManagerVersion: '10.11.1'");
     });
 
+    it('writes the project graph before generating a config', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'acme' }));
+
+        const result = generateProjectConfigs({ root: dir });
+        const graphPath = path.join(dir, '.dbx', 'toolchain', 'projects.json');
+        expect(result.graphPath).toBe(graphPath);
+        const graph = JSON.parse(fs.readFileSync(graphPath, 'utf-8'));
+        expect(graph.projects[0]).toMatchObject({
+            dir: '.',
+            hasConfig: true,
+            config: 'dbx.config.ts',
+        });
+    });
+
+    it('writes only the project graph when skipConfig is set', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'acme' }));
+
+        const result = generateProjectConfigs({ root: dir, skipConfig: true });
+        expect(result.created).toEqual([]);
+        expect(result.skipped).toContain('.');
+        expect(fs.existsSync(path.join(dir, 'dbx.config.ts'))).toBe(false);
+        expect(fs.existsSync(path.join(dir, '.dbx', 'toolchain', 'projects.json'))).toBe(true);
+    });
+
+    it('generates a module-aware JavaScript config', () => {
+        const esm = makeTmp();
+        fs.writeFileSync(
+            path.join(esm, 'package.json'),
+            JSON.stringify({ name: 'esm', type: 'module' })
+        );
+        expect(generateProjectConfigs({ root: esm, language: 'js' }).created).toContain('.');
+        expect(fs.existsSync(path.join(esm, 'dbx.config.mjs'))).toBe(true);
+        expect(fs.readFileSync(path.join(esm, 'dbx.config.mjs'), 'utf-8')).toContain(
+            'export default defineConfig'
+        );
+
+        const cjs = makeTmp();
+        fs.writeFileSync(
+            path.join(cjs, 'package.json'),
+            JSON.stringify({ name: 'cjs', type: 'commonjs' })
+        );
+        expect(generateProjectConfigs({ root: cjs, language: 'js' }).created).toContain('.');
+        const content = fs.readFileSync(path.join(cjs, 'dbx.config.cjs'), 'utf-8');
+        expect(content).toContain('module.exports');
+        expect(content).not.toContain('import { defineConfig }');
+    });
+
+    it('honours an explicit config extension', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'package.json'),
+            JSON.stringify({ name: 'acme', type: 'module' })
+        );
+        generateProjectConfigs({ root: dir, language: 'js', extension: 'js' });
+        expect(fs.existsSync(path.join(dir, 'dbx.config.js'))).toBe(true);
+        expect(fs.readFileSync(path.join(dir, 'dbx.config.js'), 'utf-8')).toContain(
+            'export default defineConfig'
+        );
+    });
+
     it('names the workspace config after the workspace, not the root', () => {
         const files = createWorkspaceFiles({
             name: 'root',

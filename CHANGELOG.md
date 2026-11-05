@@ -1,23 +1,54 @@
 # Changelog
 
-## 2.3.4 (November 2026)
+## 2.4.0 (November 2026)
 
 <!-- release:start -->
+
+### New features
+#### Shared
+- Improve workflow config autocomplete ([#5babd18](https://github.com/deltabox-studio/toolchain/commit/5babd18) by [T0chi](https://github.com/T0chi))
+  - Add typed WorkflowTriggers, WorkflowExtra and WorkflowTokens shapes so known workflow keys are suggested, and regenerate the config types, schema and reference.
+- Expose formatter and linter ignore defaults ([#5f2c8b1](https://github.com/deltabox-studio/toolchain/commit/5f2c8b1) by [T0chi](https://github.com/T0chi))
+  - Export DEFAULT_FMT_IGNORE_PATTERNS and DEFAULT_LINT_IGNORE_PATTERNS alongside DEFAULT_IGNORE_PATTERNS, and document how to extend them.
+#### Project
+- Add config generation options and migration routing ([#c658b0d](https://github.com/deltabox-studio/toolchain/commit/c658b0d) by [T0chi](https://github.com/T0chi))
+  - Support --skip-config, --language and --config-extension, write the project graph before configs, generate TS/JS configs, and route migrated fmt/lint into toolchain.vite only when the existing Vite config owns them.
+#### Vscode
+- Add tooling actions and config generation ([#31da418](https://github.com/deltabox-studio/toolchain/commit/31da418) by [T0chi](https://github.com/T0chi))
+  - Add the format import-group setting, migrate/global Home actions, and config generation prompts (TS/JS, graph-only) that also work from the Command Palette.
+#### Core
+- Add import sorting defaults and workspace groups ([#1c5f5a3](https://github.com/deltabox-studio/toolchain/commit/1c5f5a3) by [T0chi](https://github.com/T0chi))
+  - Enable sortImports by default, resolve a workspace custom group from the project graph, and inject it into resolveVite, vite sync and tooling normalization.
+### Bug fixes
+#### Shared
+- Repair PowerShell backtick artifacts in changelogs ([#61ced92](https://github.com/deltabox-studio/toolchain/commit/61ced92) by [T0chi](https://github.com/T0chi))
+  - Repair paired \\code\\ and lone trailing identifier backslashes back to inline code while leaving paths and regexes alone, and correct the affected 2.3.1-2.3.3 entries.
+### Documentation
+- Regenerate llms docs ([#9b5869d](https://github.com/deltabox-studio/toolchain/commit/9b5869d) by [T0chi](https://github.com/T0chi))
+  - Refresh the generated llms.txt and llms-full.txt bundles after the documentation changes.
+### Chores
+- Regenerate managed configs for import sorting ([#ce7a2e6](https://github.com/deltabox-studio/toolchain/commit/ce7a2e6) by [T0chi](https://github.com/T0chi))
+  - Regenerate .oxfmtrc.json and every workspace vite.config.ts with the resolved sortImports workspace group.
+#### Deps
+- Update lockfile for @clack/prompts ([#52c08df](https://github.com/deltabox-studio/toolchain/commit/52c08df) by [T0chi](https://github.com/T0chi))
+  - Record the new project workspace dependency so immutable CI installs no longer fail.
+
+<!-- release:end -->
+
+
+## 2.3.4 (November 2026)
 
 ### Bug fixes
 #### Ci
 - Cache the VS Code integration test download ([#4941b90](https://github.com/deltabox-studio/toolchain/commit/4941b90) by [T0chi](https://github.com/T0chi))
   - The integration job downloaded the ~361 MB VS Code stable build on every run. Resolve the exact stable version, cache only that version's unpacked directory, and key the cache by it so a new stable release is downloaded and saved under a fresh key.
 
-<!-- release:end -->
-
-
 ## 2.3.3 (November 2026)
 
 ### Bug fixes
 #### Ci
 - Disable setup-node auto-cache so Corepack can enable Yarn ([#571f896](https://github.com/deltabox-studio/toolchain/commit/571f896) by [T0chi](https://github.com/T0chi))
-  - actions/setup-node@v5 now auto-caches from the packageManager field and runs \yarn cache dir\ before the Enable Corepack step, so every job failed with the global Yarn 1.22.22 error. Set package-manager-cache: false on every setup-node step; Corepack still enables the pinned Yarn/pnpm before install.
+  - actions/setup-node@v5 now auto-caches from the packageManager field and runs `yarn cache dir` before the Enable Corepack step, so every job failed with the global Yarn 1.22.22 error. Set package-manager-cache: false on every setup-node step; Corepack still enables the pinned Yarn/pnpm before install.
 ### Chores
 #### Ci
 - Bump checkout and setup-node actions to v5 ([#485f29d](https://github.com/deltabox-studio/toolchain/commit/485f29d) by [T0chi](https://github.com/T0chi))
@@ -28,7 +59,7 @@
 ### Bug fixes
 #### Vscode
 - Load the tsdown base config from source ([#0537c62](https://github.com/deltabox-studio/toolchain/commit/0537c62) by [T0chi](https://github.com/T0chi))
-  - The VS Code integration job builds the extension after only \yarn install\, so the private \@deltabox/toolchain-tsdown\ dist does not exist and unrun failed to load the config. Import baseTsdownConfig\ from the workspace source instead (as the root tsdown config already does).
+  - The VS Code integration job builds the extension after only `yarn install`, so the private `@deltabox/toolchain-tsdown` dist does not exist and unrun failed to load the config. Import `baseTsdownConfig` from the workspace source instead (as the root tsdown config already does).
 
 ## 2.3.1 (November 2026)
 
@@ -44,9 +75,9 @@
   - A shallow clone or no-git checkout cannot resolve every referenced commit, so valid hashes were left unlinked. Fall back to treating letter-containing refs as commits when history is incomplete, and mock the numeric-hash fixture so the tests do not depend on the checkout's history.
 #### Config
 - Contain generator output paths and render object metadata ([#fe94053](https://github.com/deltabox-studio/toolchain/commit/fe94053) by [T0chi](https://github.com/T0chi))
-  - Scope names and file options were used as paths directly, so a \../\ value could write outside the output directory. Resolve every generated file through a containment check. Also render an object node's own description/annotations before its child fields in per-scope markdown.
+  - Scope names and file options were used as paths directly, so a `../` value could write outside the output directory. Resolve every generated file through a containment check. Also render an object node's own description/annotations before its child fields in per-scope markdown.
 - Derive the CLI reference from the registered commands ([#95dc39f](https://github.com/deltabox-studio/toolchain/commit/95dc39f) by [T0chi](https://github.com/T0chi))
-  - The docs generator kept its own command list, so a new builtin could be missing from the generated reference. Use builtinCommands\ (the CLI's source of truth) and mark registry-dependent provider passthroughs as hidden.
+  - The docs generator kept its own command list, so a new builtin could be missing from the generated reference. Use `builtinCommands` (the CLI's source of truth) and mark registry-dependent provider passthroughs as hidden.
 #### Core
 - Preserve .vscode settings comments when adding keys ([#9b4a105](https://github.com/deltabox-studio/toolchain/commit/9b4a105) by [T0chi](https://github.com/T0chi))
   - Merging VS Code settings parsed and reserialized the file, dropping its JSONC comments. Insert missing keys in place (preserving layout) and fall back to a full rewrite only when an existing value or array must change.

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { resolveFmtCustomGroups } from '@deltabox/toolchain-core';
 import {
     biomeToOx,
     dprintToOx,
@@ -15,6 +16,7 @@ import {
     readJsonc,
 } from '@deltabox/toolchain-migrate';
 import {
+    applyFmtCustomGroups,
     DEFAULT_FMT_RULES,
     DEFAULT_LINT_RULES,
     deepMerge,
@@ -33,6 +35,7 @@ import {
     type ToolchainConfig,
     type ToolchainFmtConfig,
     type ToolchainLintConfig,
+    type ToolchainOxfmtConfig,
     warningMessage,
     type WarningId,
 } from '@deltabox/toolchain-shared';
@@ -381,6 +384,13 @@ export async function normalizeToolingConfig(
                 existingConfigOptions(options.cwd, selected) ?? {};
         }
         fmt = next;
+    }
+    if (fmt && isPlainObject(fmt.oxc)) {
+        const customGroups = await resolveFmtCustomGroups({ cwd: options.cwd });
+        fmt = {
+            ...fmt,
+            oxc: applyFmtCustomGroups(fmt.oxc as ToolchainOxfmtConfig, customGroups),
+        };
     }
 
     if (sectionEnabled(config.lint) && resolveLintTools(config).length === 0) {

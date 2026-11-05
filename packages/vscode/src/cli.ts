@@ -89,6 +89,21 @@ function configuredVersion(): string {
     return vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('version')?.trim() ?? '';
 }
 
+/** The env var the CLI reads to toggle the resolved `sortImports` groups. */
+const FORMAT_IMPORT_GROUP_DEFAULTS_ENV = 'DBX_ENABLE_FORMAT_IMPORT_GROUP_DEFAULTS';
+
+/**
+ * Mirror `deltabox.toolchain.enableFormatImportGroupDefaults` into the CLI's
+ * environment so its sync/generate actions (and the generated configs) honour
+ * the VS Code user/workspace setting.
+ */
+function formatImportGroupDefaultsEnv(): NodeJS.ProcessEnv {
+    const enabled = vscode.workspace
+        .getConfiguration(SETTINGS_SECTION)
+        .get<boolean>('enableFormatImportGroupDefaults', true);
+    return { [FORMAT_IMPORT_GROUP_DEFAULTS_ENV]: enabled ? '1' : '0' };
+}
+
 /** The `@deltabox/toolchain` version installed in the project (if any). */
 export function projectToolchainVersion(cwd: string = process.cwd()): string | undefined {
     for (const dir of [cwd, ...workspaceRoots()]) {
@@ -301,16 +316,18 @@ export function resolveCliCommand(cwd: string): CliCommand {
 export function spawnCli(cwd: string, args: string[], options: SpawnOptions = {}): ChildProcess {
     const resolved = resolveCliCommand(cwd);
     const fullArgs = [...resolved.args, ...args];
+    const env = { ...process.env, ...formatImportGroupDefaultsEnv(), ...options.env };
     if (IS_WINDOWS && isCmdShim(resolved.exe)) {
         const command = windowsShimCommand(resolved.exe, fullArgs);
         return spawn(process.env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', `"${command}"`], {
             cwd,
             ...options,
+            env,
             shell: false,
             windowsVerbatimArguments: true,
         });
     }
-    return spawn(resolved.exe, fullArgs, { cwd, ...options, shell: false });
+    return spawn(resolved.exe, fullArgs, { cwd, ...options, env, shell: false });
 }
 
 /**

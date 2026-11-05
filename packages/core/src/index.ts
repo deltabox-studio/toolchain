@@ -5,6 +5,7 @@
  */
 
 export * from './editor-config.js';
+export * from './fmt-groups.js';
 export * from './gitignore.js';
 export * from './graph.js';
 export * from './loader.js';

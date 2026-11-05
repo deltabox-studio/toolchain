@@ -1,8 +1,17 @@
 # Changelog
 
-## 2.3.3 (November 2026)
+## 2.4.0 (November 2026)
 
 <!-- release:start -->
+
+### Chores
+- Regenerate managed configs for import sorting ([#ce7a2e6](https://github.com/deltabox-studio/toolchain/commit/ce7a2e6) by [T0chi](https://github.com/T0chi))
+  - Regenerate .oxfmtrc.json and every workspace vite.config.ts with the resolved sortImports workspace group.
+
+<!-- release:end -->
+
+
+## 2.3.3 (November 2026)
 
 ### Bug fixes
 #### Ci
@@ -12,9 +21,6 @@
 #### Ci
 - Bump checkout and setup-node actions to v5 ([#485f29d](https://github.com/deltabox-studio/toolchain/commit/485f29d) by [T0chi](https://github.com/T0chi))
   - The runner warns that actions/checkout@v4 and actions/setup-node@v4 target Node 20 and are forced onto Node 24. Bump the generated workflows (and the dogfood config) to v5.
-
-<!-- release:end -->
-
 
 ## 2.3.1 (November 2026)
 

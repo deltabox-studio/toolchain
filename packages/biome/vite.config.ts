@@ -135,6 +135,63 @@ export default defineConfig<ViteUserConfig>({
         "htmlWhitespaceSensitivity": "css",
         "vueIndentScriptAndStyle": false,
         "sortPackageJson": false,
+        "sortImports": {
+            "groups": [
+                "builtin",
+                "external",
+                "workspace",
+                [
+                    "internal",
+                    "subpath"
+                ],
+                [
+                    "parent",
+                    "sibling",
+                    "index"
+                ],
+                "style",
+                "unknown"
+            ],
+            "customGroups": [
+                {
+                    "groupName": "workspace",
+                    "elementNamePattern": [
+                        "@deltabox/**",
+                        "toolchain",
+                        "toolchain/**",
+                        "toolchain-biome",
+                        "toolchain-biome/**",
+                        "toolchain-changelog",
+                        "toolchain-changelog/**",
+                        "toolchain-config",
+                        "toolchain-config/**",
+                        "toolchain-core",
+                        "toolchain-core/**",
+                        "toolchain-migrate",
+                        "toolchain-migrate/**",
+                        "toolchain-project",
+                        "toolchain-project/**",
+                        "toolchain-shared",
+                        "toolchain-shared/**",
+                        "toolchain-template",
+                        "toolchain-template/**",
+                        "toolchain-tsconfig",
+                        "toolchain-tsconfig/**",
+                        "toolchain-tsdown",
+                        "toolchain-tsdown/**",
+                        "toolchain-vite",
+                        "toolchain-vite/**",
+                        "toolchain-vscode",
+                        "toolchain-vscode/**"
+                    ]
+                }
+            ],
+            "internalPattern": [
+                "~/",
+                "@/"
+            ],
+            "newlinesBetween": true
+        },
         "ignorePatterns": [
             "**/node_modules/**",
             "**/dist/**",
@@ -152,53 +209,7 @@ export default defineConfig<ViteUserConfig>({
             "**/config-schema/generated/biome-config.ts",
             "**/config-schema/generated/azure-pipelines.ts",
             "**/config-schema/generated/oxlint-config.ts"
-        ],
-        "sortImports": {
-            "groups": [
-                "builtin",
-                "external",
-                [
-                    "custom0",
-                    "internal"
-                ],
-                [
-                    "custom1",
-                    "custom2"
-                ],
-                [
-                    "parent",
-                    "sibling",
-                    "index"
-                ]
-            ],
-            "internalPattern": [
-                "~/",
-                "@/"
-            ],
-            "newlinesBetween": true,
-            "sortPackageJson": false,
-            "customGroups": [
-                {
-                    "groupName": "custom0",
-                    "elementNamePattern": [
-                        "deltabox",
-                        "@deltabox/**"
-                    ]
-                },
-                {
-                    "groupName": "custom1",
-                    "elementNamePattern": [
-                        "lucide*"
-                    ]
-                },
-                {
-                    "groupName": "custom2",
-                    "elementNamePattern": [
-                        "iconify*"
-                    ]
-                }
-            ]
-        }
+        ]
     },
     "lint": {
         "ignorePatterns": [

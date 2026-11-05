@@ -1,5 +1,7 @@
 import path from 'node:path';
 
+import { cancel, confirm, isCancel, select } from '@clack/prompts';
+
 import { loadToolchainConfig } from '@deltabox/toolchain-core';
 import {
     logger,
@@ -14,10 +16,13 @@ import { tsconfigFileNames, type TsconfigExtendsOptions } from '@deltabox/toolch
 import { hasCatalog } from '../catalogs.js';
 import { generateProjectConfigs } from '../config.js';
 import {
+    type ConfigExtension,
+    type ConfigLanguage,
     createMonorepoRootFiles,
     createRootProjectFiles,
     createWorkspaceFiles,
     findRootOxcFiles,
+    isConfigExtension,
     SCAFFOLD_CATALOG,
     upsertWorkspaceTsconfig,
     workspaceDirForTsconfig,
@@ -41,6 +46,38 @@ const PACKAGE_MANAGER_OPTION = {
 
 /** The valid `project.type` values. */
 const PROJECT_TYPES: ProjectType[] = ['project', 'monorepo-root', 'monorepo-workspace'];
+
+/** Whether the CLI may prompt (an interactive terminal, and not machine output). */
+function canPrompt(opts: Record<string, unknown>): boolean {
+    return Boolean(process.stdin.isTTY && process.stdout.isTTY) && opts.json !== true;
+}
+
+/** Print a clack cancel line and mark the run as failed. */
+function abortPrompt(): void {
+    cancel('Cancelled.');
+    process.exitCode = 1;
+}
+
+/** Parse `--language` (`ts`/`typescript`, `js`/`javascript`). */
+function configLanguageOption(value: unknown): ConfigLanguage | undefined {
+    if (value === undefined || value === null || value === '') return undefined;
+    const normalized = String(value).toLowerCase();
+    if (normalized === 'ts' || normalized === 'typescript') return 'ts';
+    if (normalized === 'js' || normalized === 'javascript') return 'js';
+    throw new Error(`invalid config language "${value}" (expected: ts | js).`);
+}
+
+/** Parse `--config-extension`. */
+function configExtensionOption(value: unknown): ConfigExtension | undefined {
+    if (value === undefined || value === null || value === '') return undefined;
+    const normalized = String(value).toLowerCase().replace(/^\./, '');
+    if (!isConfigExtension(normalized)) {
+        throw new Error(
+            `invalid config extension "${value}" (expected: ts | mts | js | mjs | cjs).`
+        );
+    }
+    return normalized;
+}
 
 /** Read a token as a non-empty string. */
 function tokenText(value: unknown): string | undefined {
@@ -309,7 +346,7 @@ export function projectCommands(): ToolchainCommand[] {
         },
         {
             name: 'project:config',
-            description: 'Generate dbx.config.ts for existing projects that are missing one.',
+            description: 'Generate dbx.config.* for existing projects that are missing one.',
             options: [
                 { flags: '--cwd <dir>', description: 'Root to scan (default: cwd).' },
                 {
@@ -321,6 +358,20 @@ export function projectCommands(): ToolchainCommand[] {
                     description: 'Skip projects matching these patterns (glob or substring).',
                 },
                 { flags: '--type <type>', description: 'Force a project type for every config.' },
+                {
+                    flags: '--language <language>',
+                    description: 'Config language: ts (default) | js.',
+                },
+                {
+                    flags: '--config-extension <ext>',
+                    description:
+                        'Config extension: ts | mts | js | mjs | cjs (default inferred from the language and package type).',
+                },
+                {
+                    flags: '--skip-config',
+                    description:
+                        'Only write .dbx/toolchain/projects.json; do not create dbx.config.* files.',
+                },
                 { flags: '--force', description: 'Overwrite configs that already exist.' },
                 {
                     flags: '--dry-run',
@@ -328,8 +379,42 @@ export function projectCommands(): ToolchainCommand[] {
                 },
                 { flags: '--json', description: 'Print the result as JSON.' },
             ],
-            run: (opts, context) => {
+            run: async (opts, context) => {
                 const root = (opts.cwd as string | undefined) ?? context.cwd;
+                let language = configLanguageOption(opts.language);
+                const extension = configExtensionOption(opts.configExtension);
+                let skipConfig = Boolean(opts.skipConfig);
+
+                if (
+                    canPrompt(opts as Record<string, unknown>) &&
+                    opts.skipConfig === undefined &&
+                    opts.language === undefined &&
+                    opts.configExtension === undefined
+                ) {
+                    const create = await confirm({
+                        message: 'Create dbx.config.* files for projects missing one?',
+                        initialValue: true,
+                    });
+                    if (isCancel(create)) return abortPrompt();
+                    if (!create) {
+                        skipConfig = true;
+                    } else {
+                        const picked = await select({
+                            message: 'Config language',
+                            options: [
+                                { value: 'ts', label: 'TypeScript', hint: 'dbx.config.ts' },
+                                {
+                                    value: 'js',
+                                    label: 'JavaScript',
+                                    hint: 'dbx.config.js / .mjs / .cjs',
+                                },
+                            ],
+                        });
+                        if (isCancel(picked)) return abortPrompt();
+                        language = picked as ConfigLanguage;
+                    }
+                }
+
                 const result = generateProjectConfigs({
                     root,
                     ...(opts.include ? { include: opts.include as string[] } : {}),
@@ -337,10 +422,19 @@ export function projectCommands(): ToolchainCommand[] {
                     ...(opts.type ? { type: opts.type as ProjectType } : {}),
                     force: Boolean(opts.force),
                     dryRun: Boolean(opts.dryRun),
+                    ...(skipConfig ? { skipConfig: true } : {}),
+                    ...(language ? { language } : {}),
+                    ...(extension ? { extension } : {}),
                 });
 
                 if (opts.json) {
                     logger.raw(JSON.stringify(result, null, 4));
+                    return;
+                }
+                if (skipConfig) {
+                    logger.info(
+                        `wrote the project graph for ${result.configs.length} project(s); skipped config generation.`
+                    );
                     return;
                 }
                 const verb = result.dryRun ? 'would create' : 'created';
@@ -349,9 +443,13 @@ export function projectCommands(): ToolchainCommand[] {
                 );
                 for (const config of result.configs) {
                     if (!config.created) continue;
+                    const name = path.basename(config.configPath);
                     logger.info(
-                        `  + ${config.rel === '.' ? 'dbx.config.ts' : `${config.rel}/dbx.config.ts`}  [${config.type}]`
+                        `  + ${config.rel === '.' ? name : `${config.rel}/${name}`}  [${config.type}]`
                     );
+                    if (config.removed) {
+                        logger.info(`    removed old ${path.basename(config.removed)}`);
+                    }
                     if (config.vite) {
                         logger.info(
                             config.vite.folded

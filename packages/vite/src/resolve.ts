@@ -10,15 +10,18 @@
 
 import type { ViteUserConfig } from 'vite-plus';
 
-import { loadToolchainConfig } from '@deltabox/toolchain-core';
+import { loadToolchainConfig, resolveFmtCustomGroups } from '@deltabox/toolchain-core';
 import {
+    applyFmtCustomGroups,
     applyReplacementsDeep,
     type DbxConfig,
     deepMerge,
+    isPlainObject,
     resolveTokens,
     sectionConfig,
     type ToolchainConfig,
     type ToolchainConfigSections,
+    type ToolchainOxfmtConfig,
 } from '@deltabox/toolchain-shared';
 
 import { viteConfigObject } from './sync.js';
@@ -71,5 +74,13 @@ export async function resolveVite<T extends object = ViteUserConfig>(
         viteOverride === undefined
             ? baseVite
             : deepMerge(baseVite, sectionConfig(viteOverride) ?? {});
-    return applyReplacementsDeep(viteConfigObject(vite), resolveTokens(toolchain)) as T;
+    const resolved = applyReplacementsDeep(
+        viteConfigObject(vite),
+        resolveTokens(toolchain)
+    ) as Record<string, unknown>;
+    if (isPlainObject(resolved.fmt)) {
+        const customGroups = await resolveFmtCustomGroups({ cwd: cwd ?? process.cwd() });
+        resolved.fmt = applyFmtCustomGroups(resolved.fmt as ToolchainOxfmtConfig, customGroups);
+    }
+    return resolved as T;
 }

@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-project",
-    "version": "2.3.4",
+    "version": "2.4.0",
     "description": "Project scaffolding generators (TypeScript root, monorepo root and workspace files).",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
@@ -15,6 +15,7 @@
     ],
     "private": true,
     "dependencies": {
+        "@clack/prompts": "catalog:",
         "@deltabox/toolchain-core": "workspace:*",
         "@deltabox/toolchain-migrate": "workspace:*",
         "@deltabox/toolchain-shared": "workspace:*",

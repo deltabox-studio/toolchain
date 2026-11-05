@@ -24,7 +24,7 @@ import type {
     ToolchainMigration,
     UnmappedItem,
 } from './types.js';
-import { findTopLevelValue, matchBracket } from './vite-target.js';
+import { findTopLevelValue, findViteMergeObject, matchBracket } from './vite-target.js';
 
 /** The root Vite config file names, in priority order. */
 export const VITE_CONFIG_FILES = [
@@ -217,7 +217,8 @@ function findRootObject(source: string): [number, number] | undefined {
     let searchFrom = 0;
     if (call && call.index !== undefined) searchFrom = call.index + call[0].length;
     else {
-        const exported = source.match(/export\s+default\s*/);
+        const exported =
+            source.match(/export\s+default\s*/) ?? source.match(/\bmodule\.exports\s*=\s*/);
         if (!exported || exported.index === undefined) return undefined;
         searchFrom = exported.index + exported[0].length;
     }
@@ -237,7 +238,8 @@ export function extractViteObject(source: string): { text: string } | { error: s
     let start = -1;
     if (call && call.index !== undefined) start = call.index + call[0].length;
     else {
-        const exported = source.match(/export\s+default\s*/);
+        const exported =
+            source.match(/export\s+default\s*/) ?? source.match(/\bmodule\.exports\s*=\s*/);
         if (exported && exported.index !== undefined) start = exported.index + exported[0].length;
     }
     if (start === -1)
@@ -250,6 +252,73 @@ export function extractViteObject(source: string): { text: string } | { error: s
     const end = matchBracket(source, start);
     if (end === -1) return { error: 'unbalanced braces in the config object' };
     return { text: source.slice(start, end) };
+}
+
+/** The top-level `fmt`/`lint` keys present in an object literal. */
+export function objectHasSections(objectText: string): { fmt: boolean; lint: boolean } {
+    const open = objectText.indexOf('{');
+    if (open === -1) return { fmt: false, lint: false };
+    const close = matchBracket(objectText, open);
+    if (close === -1) return { fmt: false, lint: false };
+    return {
+        fmt: Boolean(findTopLevelValue(objectText, open, close, 'fmt')),
+        lint: Boolean(findTopLevelValue(objectText, open, close, 'lint')),
+    };
+}
+
+/** The `toolchain.vite` object literal of a `dbx.config.*` source, if present. */
+function toolchainViteObject(source: string): string | undefined {
+    const root = findRootObject(source);
+    if (!root) return undefined;
+    const toolchain = findTopLevelValue(source, root[0], root[1], 'toolchain');
+    if (!toolchain) return undefined;
+    const vite = findTopLevelValue(source, toolchain[0], toolchain[1], 'vite');
+    if (!vite) return undefined;
+    const text = source.slice(vite[0], vite[1]);
+    return text.trimStart().startsWith('{') ? text : undefined;
+}
+
+/**
+ * Whether an existing hand-written `vite.config.*` or an existing
+ * `dbx.config.*`'s `toolchain.vite` already defines `fmt`/`lint`.
+ *
+ * This decides where a formatter/linter migration lands: when Vite already owns
+ * `fmt`/`lint`, the migrated options belong in `toolchain.vite`; otherwise they
+ * belong in the top-level `toolchain.fmt`/`toolchain.lint`.
+ */
+export function viteConfigHasFmtLint(cwd: string): { fmt: boolean; lint: boolean } | undefined {
+    let fromVite: { fmt: boolean; lint: boolean } | undefined;
+    const viteFile = findViteConfig(cwd);
+    if (viteFile) {
+        try {
+            const source = fs.readFileSync(viteFile, 'utf-8').replace(/^\uFEFF/, '');
+            // Only route to Vite when the config is mergeable (not a
+            // function/async config that `mergeViteConfig` cannot splice).
+            if (!isManagedShim(source) && findViteMergeObject(source) !== undefined) {
+                const extracted = extractViteObject(source);
+                if (!('error' in extracted)) fromVite = objectHasSections(extracted.text);
+            }
+        } catch {
+            // Fall through to the dbx config.
+        }
+    }
+
+    let fromDbx: { fmt: boolean; lint: boolean } | undefined;
+    const configFile = findDbxConfig(cwd);
+    if (configFile && !configFile.endsWith('.json')) {
+        try {
+            const source = fs.readFileSync(configFile, 'utf-8').replace(/^\uFEFF/, '');
+            const text = toolchainViteObject(source);
+            if (text) fromDbx = objectHasSections(text);
+        } catch {
+            // No usable dbx config.
+        }
+    }
+
+    if (fromVite && fromDbx) {
+        return { fmt: fromVite.fmt || fromDbx.fmt, lint: fromVite.lint || fromDbx.lint };
+    }
+    return fromVite ?? fromDbx;
 }
 
 /**
@@ -406,7 +475,7 @@ function isManagedShim(source: string): boolean {
  * scaffold, it wraps the config in `defineConfig` from `@deltabox/toolchain` (a
  * workspace resolves it through the root's installed dependency).
  */
-function renderFreshConfig(objectText: string): string {
+export function renderFreshViteConfig(objectText: string): string {
     const text = indentBlock(objectText, '        ');
     return [
         "import { defineConfig } from '@deltabox/toolchain';",
@@ -425,8 +494,13 @@ function renderFreshConfig(objectText: string): string {
  * object literal, so Oxfmt does not reformat the generated root `vite.config.ts`
  * shim (which would make `dbx sync --check` drift). Works on the object text
  * (braces included) with the same balanced scanner used to fold it in.
+ *
+ * `create` (default true) adds a `fmt` object when the literal has none. Pass
+ * `false` when `fmt` belongs in the top-level `toolchain.fmt` instead: the
+ * default fmt ignores already cover the generated shim, and adding `vite.fmt`
+ * here would make Vite own formatting even though the original config did not.
  */
-export function ensureViteFmtIgnore(objectText: string): string {
+export function ensureViteFmtIgnore(objectText: string, create = true): string {
     const open = objectText.indexOf('{');
     if (open === -1) return objectText;
     const close = matchBracket(objectText, open);
@@ -441,7 +515,9 @@ export function ensureViteFmtIgnore(objectText: string): string {
             const [ipStart, ipEnd] = ignore;
             if (objectText.slice(ipStart, ipEnd).includes(VITE_CONFIG_IGNORE)) return objectText;
             if (objectText[ipStart] === '[') {
-                return `${objectText.slice(0, ipStart + 1)}${entry}, ${objectText.slice(ipStart + 1)}`;
+                const rest = objectText.slice(ipStart + 1);
+                const separator = rest.startsWith('\n') || rest.startsWith('\r\n') ? ',' : ', ';
+                return `${objectText.slice(0, ipStart + 1)}${entry}${separator}${rest}`;
             }
             return `${objectText.slice(0, ipStart)}[${entry}]${objectText.slice(ipEnd)}`;
         }
@@ -450,6 +526,7 @@ export function ensureViteFmtIgnore(objectText: string): string {
     if (fmt) {
         return `${objectText.slice(0, fmt[0])}{ ignorePatterns: [${entry}] }${objectText.slice(fmt[1])}`;
     }
+    if (!create) return objectText;
     return `${objectText.slice(0, open + 1)} fmt: { ignorePatterns: [${entry}] },${objectText.slice(open + 1)}`;
 }
 
@@ -510,8 +587,14 @@ export const viteToToolchain: ToolchainMigration = {
             return empty();
         }
 
-        const objectText = ensureViteFmtIgnore(extracted.text);
-        const tail = `added \`${VITE_CONFIG_IGNORE}\` to \`fmt.ignorePatterns\`; run \`dbx sync\` to regenerate vite.config.ts.`;
+        const sections = objectHasSections(extracted.text);
+        // Only create `vite.fmt` when Vite already owned formatting. Otherwise
+        // formatting belongs in the top-level `toolchain.fmt` (and the default
+        // fmt ignores already cover the generated shim).
+        const objectText = ensureViteFmtIgnore(extracted.text, sections.fmt);
+        const tail = sections.fmt
+            ? `added \`${VITE_CONFIG_IGNORE}\` to \`fmt.ignorePatterns\`; run \`dbx sync\` to regenerate vite.config.ts.`
+            : `left \`fmt\` out of \`toolchain.vite\` (the default fmt ignores cover the generated \`vite.config.ts\`); run \`dbx sync\` to regenerate it.`;
         const configFile = findDbxConfig(ctx.cwd);
 
         // The hand-written `vite.config.*` is now redundant (managed by
@@ -538,7 +621,10 @@ export const viteToToolchain: ToolchainMigration = {
         // No config yet: create one (eg. a workspace that only had vite.config.*).
         if (!configFile) {
             const target = path.join(ctx.cwd, 'dbx.config.ts');
-            const file: MigrationFile = { path: target, content: renderFreshConfig(objectText) };
+            const file: MigrationFile = {
+                path: target,
+                content: renderFreshViteConfig(objectText),
+            };
             if (ctx.write) fs.writeFileSync(target, file.content, 'utf-8');
             const removed = cleanupSource();
             notes.push(

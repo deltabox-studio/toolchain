@@ -85,6 +85,104 @@ export const workflowJobSchema = z
     .describe('A complete GitHub Actions workflow job.')
     .meta({ id: 'WorkflowJob' });
 
+/** Extra `on.*` triggers, with the common events suggested. */
+export const workflowTriggersSchema = z
+    .object({
+        push: jsonObjectSchema('Push trigger (`on.push`).').optional(),
+        pull_request: jsonObjectSchema('Pull-request trigger (`on.pull_request`).').optional(),
+        pull_request_target: jsonObjectSchema(
+            'Pull-request-target trigger (`on.pull_request_target`).'
+        ).optional(),
+        workflow_dispatch: jsonObjectSchema('Manual trigger (`on.workflow_dispatch`).').optional(),
+        workflow_call: jsonObjectSchema(
+            'Reusable workflow trigger (`on.workflow_call`).'
+        ).optional(),
+        workflow_run: jsonObjectSchema(
+            'Triggered by another workflow (`on.workflow_run`).'
+        ).optional(),
+        schedule: z
+            .array(jsonObjectSchema('Scheduled trigger (`on.schedule`).'))
+            .describe('Scheduled trigger list (`on.schedule`).')
+            .optional(),
+        release: jsonObjectSchema('Release trigger (`on.release`).').optional(),
+    })
+    .catchall(configJsonValueSchema)
+    .describe('Extra `on.*` workflow triggers.')
+    .meta({ id: 'WorkflowTriggers' });
+
+/** Extra top-level workflow keys, with the common ones suggested. */
+export const workflowExtraSchema = z
+    .object({
+        permissions: z.record(z.string(), z.string()).describe('Workflow permissions.').optional(),
+        concurrency: z
+            .union([
+                z.string(),
+                z
+                    .object({
+                        group: z.string().describe('Concurrency group.'),
+                        'cancel-in-progress': z
+                            .union([z.boolean(), z.string()])
+                            .describe('Cancel in-progress runs (boolean or expression).')
+                            .optional(),
+                    })
+                    .catchall(configJsonValueSchema),
+            ])
+            .describe('Workflow concurrency.')
+            .optional(),
+        env: z
+            .record(z.string(), z.string())
+            .describe('Workflow environment variables.')
+            .optional(),
+        defaults: z
+            .object({
+                run: z
+                    .object({
+                        shell: z.string().describe('Default shell.').optional(),
+                        'working-directory': z
+                            .string()
+                            .describe('Default working directory.')
+                            .optional(),
+                    })
+                    .catchall(configJsonValueSchema)
+                    .optional(),
+            })
+            .catchall(configJsonValueSchema)
+            .describe('Default settings for `run` steps.')
+            .optional(),
+        name: z.string().describe('Workflow name.').optional(),
+        'run-name': z.string().describe('Workflow run name.').optional(),
+        'timeout-minutes': z.number().describe('Job timeout in minutes.').optional(),
+        container: jsonObjectSchema('Container for the job.').optional(),
+        strategy: jsonObjectSchema('Build matrix / strategy.').optional(),
+    })
+    .catchall(configJsonValueSchema)
+    .describe('Extra top-level workflow keys (`permissions`, `concurrency`, `env`, ...).')
+    .meta({ id: 'WorkflowExtra' });
+
+/** Per-workflow token overrides, with the known tokens suggested. */
+export const workflowTokensSchema = z
+    .object({
+        name: z.string().describe('Project name (`{{name}}`).').optional(),
+        scope: z.string().describe('Package scope (`{{scope}}`).').optional(),
+        author: z.string().describe('Author (`{{author}}`).').optional(),
+        license: z.string().describe('License (`{{license}}`).').optional(),
+        homepage: z.string().describe('Homepage (`{{homepage}}`).').optional(),
+        repo: z.string().describe('Repository URL (`{{repo}}`).').optional(),
+        description: z.string().describe('Description (`{{description}}`).').optional(),
+        nodeVersion: z.string().describe('Node version (`{{nodeVersion}}`).').optional(),
+        packageManager: z.string().describe('Package manager (`{{packageManager}}`).').optional(),
+        yarnVersion: z.string().describe('Yarn version (`{{yarnVersion}}`).').optional(),
+        packageManagerVersion: z
+            .string()
+            .describe('Package manager version (`{{packageManagerVersion}}`).')
+            .optional(),
+        mainBranch: z.string().describe('Main branch (`{{mainBranch}}`).').optional(),
+        devBranch: z.string().describe('Dev branch (`{{devBranch}}`).').optional(),
+    })
+    .catchall(z.union([z.string(), z.number(), z.boolean()]))
+    .describe('Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).')
+    .meta({ id: 'WorkflowTokens' });
+
 /** Per-workflow overrides merged over the default workflow. */
 export const workflowOptionsSchema = withEnabled(
     z.object({
@@ -97,10 +195,8 @@ export const workflowOptionsSchema = withEnabled(
             .array(z.string())
             .describe('Replace `on.pull_request.branches`.')
             .optional(),
-        triggers: jsonObjectSchema('Extra `on.*` triggers.').optional(),
-        extra: jsonObjectSchema(
-            'Extra top-level keys (`permissions`, `concurrency`, `env`, ...).'
-        ).optional(),
+        triggers: workflowTriggersSchema.optional(),
+        extra: workflowExtraSchema.optional(),
         steps: z
             .union([workflowStepsConfigSchema, z.array(workflowStepsConfigSchema)])
             .describe('Extra steps for a job (one group, or per-job groups).')
@@ -109,10 +205,7 @@ export const workflowOptionsSchema = withEnabled(
             .record(z.string(), workflowJobSchema)
             .describe('Extra complete jobs merged in.')
             .optional(),
-        tokens: z
-            .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
-            .describe('Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).')
-            .optional(),
+        tokens: workflowTokensSchema.optional(),
         filename: z
             .string()
             .describe('Override the generated workflow file name (eg. `deploy.yml`).')

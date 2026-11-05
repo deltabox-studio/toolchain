@@ -340,24 +340,8 @@ export default defineConfig({
                     '**/config-schema/generated/azure-pipelines.ts',
                     '**/config-schema/generated/oxlint-config.ts',
                 ],
-                // Biome `assist.actions.source.organizeImports.groups`.
-                sortImports: {
-                    groups: [
-                        'builtin',
-                        'external',
-                        ['custom0', 'internal'],
-                        ['custom1', 'custom2'],
-                        ['parent', 'sibling', 'index'],
-                    ],
-                    internalPattern: ['~/', '@/'],
-                    newlinesBetween: true,
-                    sortPackageJson: false,
-                    customGroups: [
-                        { groupName: 'custom0', elementNamePattern: ['deltabox', '@deltabox/**'] },
-                        { groupName: 'custom1', elementNamePattern: ['lucide*'] },
-                        { groupName: 'custom2', elementNamePattern: ['iconify*'] },
-                    ],
-                },
+                // Import sorting comes from the toolchain defaults; the
+                // `workspace` group is resolved from the project graph.
             },
 
             // Oxlint (from `biome.json` linter.rules; `info` -> `off`, no Oxlint level).

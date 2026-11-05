@@ -168,6 +168,58 @@ export interface RootOxcFiles {
     lint: boolean;
 }
 
+/** The language a generated `dbx.config.*` uses. */
+export type ConfigLanguage = 'ts' | 'js';
+
+/** The extensions a generated `dbx.config.*` can use. */
+export type ConfigExtension = 'ts' | 'mts' | 'js' | 'mjs' | 'cjs';
+
+/** Every supported generated config extension. */
+export const CONFIG_EXTENSIONS: readonly ConfigExtension[] = ['ts', 'mts', 'js', 'mjs', 'cjs'];
+
+/** The default generated config extension. */
+export const DEFAULT_CONFIG_EXTENSION: ConfigExtension = 'ts';
+
+/** Whether a string is a supported generated config extension. */
+export function isConfigExtension(value: string): value is ConfigExtension {
+    return (CONFIG_EXTENSIONS as readonly string[]).includes(value);
+}
+
+/** The generated config file name for an extension. */
+export function configFileName(extension: ConfigExtension = DEFAULT_CONFIG_EXTENSION): string {
+    return `dbx.config.${extension}`;
+}
+
+/** The language a config extension belongs to. */
+export function configLanguage(extension: ConfigExtension): ConfigLanguage {
+    return extension === 'ts' || extension === 'mts' ? 'ts' : 'js';
+}
+
+/**
+ * Pick the extension for a language. TypeScript defaults to `.ts`; JavaScript
+ * follows the package's module kind (`.mjs` for ESM, `.cjs` for CJS, `.js` when
+ * `type` is unset).
+ */
+export function resolveConfigExtension(
+    language: ConfigLanguage,
+    packageType?: string,
+    explicit?: ConfigExtension
+): ConfigExtension {
+    if (explicit) return explicit;
+    if (language === 'ts') return 'ts';
+    if (packageType === 'module') return 'mjs';
+    if (packageType === 'commonjs') return 'cjs';
+    return 'js';
+}
+
+/** Whether a generated config uses ESM syntax (import/export vs `module.exports`). */
+export function configUsesEsm(extension: ConfigExtension, packageType?: string): boolean {
+    if (extension === 'cjs') return false;
+    if (extension === 'mjs' || extension === 'mts') return true;
+    if (extension === 'js') return packageType === 'module';
+    return true;
+}
+
 /**
  * Find the nearest ancestor that owns Oxc config files. The walk stops at the
  * repository boundary (`.git`) so a nested project cannot inherit files from an
@@ -301,7 +353,15 @@ export function renderSourceTest(): string {
  * workspace, or a single project.
  */
 export function renderToolchainConfig(
-    ctx: ProjectContext & { type: ProjectType; fmtOxc?: boolean; lintOxc?: boolean }
+    ctx: ProjectContext & {
+        type: ProjectType;
+        fmtOxc?: boolean;
+        lintOxc?: boolean;
+        /** The generated file extension (default `ts`). */
+        configExtension?: ConfigExtension;
+        /** The package's `type` (`module`/`commonjs`), used for `.js` syntax. */
+        packageType?: string;
+    }
 ): string {
     const entries: [string, string][] = [
         ['type', ctx.type],
@@ -339,13 +399,25 @@ export function renderToolchainConfig(
         ...(fmtOxc ? ['        fmt: { oxc: true },'] : []),
         ...(lintOxc ? ['        lint: { oxc: true },'] : []),
     ];
-    return `import { defineConfig } from '@deltabox/toolchain';
+    const extension = ctx.configExtension ?? DEFAULT_CONFIG_EXTENSION;
+    if (configUsesEsm(extension, ctx.packageType)) {
+        return `import { defineConfig } from '@deltabox/toolchain';
 
 export default defineConfig({
     toolchain: {
 ${sections.join('\n')}
     },
 });
+`;
+    }
+    // CommonJS: no import, so the config loads without requiring the ESM
+    // toolchain package. The JSDoc keeps editor type-checking + autocomplete.
+    return `/** @type {import('@deltabox/toolchain').DbxConfig} */
+module.exports = {
+    toolchain: {
+${sections.join('\n')}
+    },
+};
 `;
 }
 

@@ -6,6 +6,11 @@
  * manages a `vite.config.ts` when the `vite` config section is enabled.
  */
 
+export {
+    resolveFmtCustomGroups,
+    type ResolveFmtCustomGroupsInput,
+    type ResolveFmtCustomGroupsOptions,
+} from '@deltabox/toolchain-core';
 export * from './cli/index.js';
 export * from './commands.js';
 export * from './plugin.js';

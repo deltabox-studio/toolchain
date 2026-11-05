@@ -13,7 +13,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { resolveFmtCustomGroups } from '@deltabox/toolchain-core';
 import {
+    applyFmtCustomGroups,
     applyReplacementsDeep,
     DEFAULT_FMT_RULES,
     DEFAULT_LINT_RULES,
@@ -27,6 +29,7 @@ import {
     type SyncTask,
     sectionConfig,
     sectionEnabled,
+    type ToolchainOxfmtConfig,
     type ToolchainViteConfig,
 } from '@deltabox/toolchain-shared';
 
@@ -427,7 +430,7 @@ export function viteSyncTask(): SyncTask {
             sectionEnabled(config.vite) ||
             sectionEnabled(config.fmt) ||
             sectionEnabled(config.lint),
-        run: ctx => {
+        run: async ctx => {
             const hasVite = sectionEnabled(ctx.config.vite);
             const section = sectionConfig(ctx.config.vite) ?? {};
             const ownConfig = ctx.ownConfig ?? ctx.config;
@@ -449,6 +452,13 @@ export function viteSyncTask(): SyncTask {
                 fmt?: unknown;
                 lint?: unknown;
             };
+            if (isPlainObject(resolved.fmt)) {
+                const customGroups = await resolveFmtCustomGroups({ cwd: ctx.cwd });
+                resolved.fmt = applyFmtCustomGroups(
+                    resolved.fmt as ToolchainOxfmtConfig,
+                    customGroups
+                );
+            }
             const files: ManagedFile[] = [];
 
             const configuredPath = section.config;
