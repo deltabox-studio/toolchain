@@ -53,7 +53,7 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx project:init`](#project-init)                     | Scaffold a single-package TypeScript project.                                                   |
 | [`dbx project:init:monorepo`](#project-init-monorepo)   | Scaffold a monorepo root (add --example for one example workspace).                             |
 | [`dbx project:init:workspace`](#project-init-workspace) | Scaffold a monorepo workspace package into an existing monorepo root.                           |
-| [`dbx project:config`](#project-config)                 | Generate dbx.config.ts for existing projects that are missing one.                              |
+| [`dbx project:config`](#project-config)                 | Generate dbx.config.\* for existing projects that are missing one.                               |
 | [`dbx template:list`](#template-list)                   | List templates (builtin + local + opted-in online sources).                                     |
 | [`dbx template:init`](#template-init)                   | Write a template.json to a directory, making it a local template.                               |
 | [`dbx template:add`](#template-add)                     | Record a template source in .dbx/toolchain/templates.json.                                      |
@@ -279,12 +279,15 @@ Scaffold a monorepo workspace package into an existing monorepo root.
 
 ## `dbx project:config`
 
-Generate dbx.config.ts for existing projects that are missing one.
+Generate dbx.config.\* for existing projects that are missing one.
 
 * `--cwd ‹dir›` — Root to scan (default: cwd).
 * `--include ‹pattern...›` — Only projects matching these patterns (glob or substring).
 * `--exclude ‹pattern...›` — Skip projects matching these patterns (glob or substring).
 * `--type ‹type›` — Force a project type for every config.
+* `--language ‹language›` — Config language: ts (default) | js.
+* `--config-extension ‹ext›` — Config extension: ts | mts | js | mjs | cjs (default inferred from the language and package type).
+* `--skip-config` — Only write .dbx/toolchain/projects.json; do not create dbx.config.\* files.
 * `--force` — Overwrite configs that already exist.
 * `--dry-run` — Report what would be written without writing.
 * `--json` — Print the result as JSON.
@@ -771,15 +774,146 @@ Replace `on.pull_request.branches`.
 
 #### `triggers`
 
+* **Type**: `WorkflowTriggers`
+
+Extra `on.*` workflow triggers.
+
+##### `push`
+
 * **Type**: `JsonObject`
 
-Extra `on.*` triggers.
+Push trigger (`on.push`).
+
+##### `pull_request`
+
+* **Type**: `JsonObject`
+
+Pull-request trigger (`on.pull_request`).
+
+##### `pull_request_target`
+
+* **Type**: `JsonObject`
+
+Pull-request-target trigger (`on.pull_request_target`).
+
+##### `workflow_dispatch`
+
+* **Type**: `JsonObject`
+
+Manual trigger (`on.workflow_dispatch`).
+
+##### `workflow_call`
+
+* **Type**: `JsonObject`
+
+Reusable workflow trigger (`on.workflow_call`).
+
+##### `workflow_run`
+
+* **Type**: `JsonObject`
+
+Triggered by another workflow (`on.workflow_run`).
+
+##### `schedule`
+
+* **Type**: `Array<JsonObject>`
+
+Scheduled trigger list (`on.schedule`).
+
+##### `release`
+
+* **Type**: `JsonObject`
+
+Release trigger (`on.release`).
 
 #### `extra`
 
+* **Type**: `WorkflowExtra`
+
+Extra top-level workflow keys (`permissions`, `concurrency`, `env`, ...).
+
+##### `permissions`
+
+* **Type**: `Record<string, string>`
+
+Workflow permissions.
+
+##### `concurrency`
+
+* **Type**: `string | object`
+
+Workflow concurrency.
+
+###### `group`
+
+* **Required**
+* **Type**: `string`
+
+Concurrency group.
+
+###### `cancel-in-progress`
+
+* **Type**: `boolean | string`
+
+Cancel in-progress runs (boolean or expression).
+
+##### `env`
+
+* **Type**: `Record<string, string>`
+
+Workflow environment variables.
+
+##### `defaults`
+
+* **Type**: `object`
+
+Default settings for `run` steps.
+
+###### `run`
+
+* **Type**: `object`
+
+###### `shell`
+
+* **Type**: `string`
+
+Default shell.
+
+###### `working-directory`
+
+* **Type**: `string`
+
+Default working directory.
+
+##### `name`
+
+* **Type**: `string`
+
+Workflow name.
+
+##### `run-name`
+
+* **Type**: `string`
+
+Workflow run name.
+
+##### `timeout-minutes`
+
+* **Type**: `number`
+
+Job timeout in minutes.
+
+##### `container`
+
 * **Type**: `JsonObject`
 
-Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
+Container for the job.
+
+##### `strategy`
+
+* **Type**: `JsonObject`
+
+Build matrix / strategy.
 
 #### `steps`
 
@@ -867,9 +1001,87 @@ Extra complete jobs merged in.
 
 #### `tokens`
 
-* **Type**: `Record<string, string | number | boolean>`
+* **Type**: `WorkflowTokens`
 
 Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
+
+##### `name`
+
+* **Type**: `string`
+
+Project name (`{{name}}`).
+
+##### `scope`
+
+* **Type**: `string`
+
+Package scope (`{{scope}}`).
+
+##### `author`
+
+* **Type**: `string`
+
+Author (`{{author}}`).
+
+##### `license`
+
+* **Type**: `string`
+
+License (`{{license}}`).
+
+##### `homepage`
+
+* **Type**: `string`
+
+Homepage (`{{homepage}}`).
+
+##### `repo`
+
+* **Type**: `string`
+
+Repository URL (`{{repo}}`).
+
+##### `description`
+
+* **Type**: `string`
+
+Description (`{{description}}`).
+
+##### `nodeVersion`
+
+* **Type**: `string`
+
+Node version (`{{nodeVersion}}`).
+
+##### `packageManager`
+
+* **Type**: `string`
+
+Package manager (`{{packageManager}}`).
+
+##### `yarnVersion`
+
+* **Type**: `string`
+
+Yarn version (`{{yarnVersion}}`).
+
+##### `packageManagerVersion`
+
+* **Type**: `string`
+
+Package manager version (`{{packageManagerVersion}}`).
+
+##### `mainBranch`
+
+* **Type**: `string`
+
+Main branch (`{{mainBranch}}`).
+
+##### `devBranch`
+
+* **Type**: `string`
+
+Dev branch (`{{devBranch}}`).
 
 ### `changelog`
 
@@ -897,15 +1109,15 @@ Replace `on.pull_request.branches`.
 
 #### `triggers`
 
-* **Type**: `JsonObject`
+* **Type**: `WorkflowTriggers`
 
-Extra `on.*` triggers.
+Extra `on.*` workflow triggers.
 
 #### `extra`
 
-* **Type**: `JsonObject`
+* **Type**: `WorkflowExtra`
 
-Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
+Extra top-level workflow keys (`permissions`, `concurrency`, `env`, ...).
 
 #### `steps`
 
@@ -921,7 +1133,7 @@ Extra complete jobs merged in.
 
 #### `tokens`
 
-* **Type**: `Record<string, string | number | boolean>`
+* **Type**: `WorkflowTokens`
 
 Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
 
@@ -2313,7 +2525,9 @@ code --install-extension deltabox.toolchain-vscode
 | Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**. |
 | Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.       |
 | Remove template…             | `template:list --registry` then `template:remove`.                                      |
-| Generate configs             | `project:config` for projects missing a config.                                         |
+| Generate configs             | `project:config` for missing configs, or refresh the project graph only; picks TS/JS.   |
+| Generate config              | Per-project `project:config` (also works from the Command Palette).                     |
+| Migrate tooling…             | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).  |
 | Run workflow                 | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                   |
 | Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                          |
 | Create Vite+ project…        | `vp create` in a terminal.                                                              |
@@ -2333,7 +2547,7 @@ Every project card (and every project in the **Projects** tree) exposes the same
 actions, scoped to that project:
 
 * **Sync** / **Check sync** — regenerate / verify the project's managed files.
-* **Generate config** — write a `dbx.config.ts`.
+* **Generate config** — write a `dbx.config.*` (TS/JS), or refresh only the project graph.
 * **Run workflow…** — trigger one of the project's generated workflows. The picker
   lists every enabled workflow with its provider and path, and dispatches it
   through the matching vendor CLI (`gh`, `glab` or `az`).
@@ -2403,15 +2617,23 @@ Each item names the config key to opt out with, and opens the existing file.
 
 ## Settings
 
-| Setting                                | Default         | Description                                                    |
-| -------------------------------------- | --------------- | -------------------------------------------------------------- |
-| `deltabox.toolchain.enabled`           | `true`          | Auto sync on watched changes.                                  |
-| `deltabox.toolchain.debounce`          | `300`           | Debounce (ms) before a sync.                                   |
-| `deltabox.toolchain.command`           | `sync`          | The command to run on change.                                  |
-| `deltabox.toolchain.watch`             | `[]` (resolved) | Inputs that trigger a sync (empty = resolved from the config). |
-| `deltabox.toolchain.version`           | `""` (auto)     | Pin the `@deltabox/toolchain` version this workspace runs.     |
-| `deltabox.registrySearchPaths`         | `[]`            | Template registry search paths (dirs or `http(s)` URLs).       |
-| `deltabox.providerRegistrySearchPaths` | `[]`            | Provider registry search paths (JSON files/dirs/URLs).         |
+| Setting                                              | Default         | Description                                                                                                |
+| ---------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------- |
+| `deltabox.toolchain.enabled`                         | `true`          | Auto sync on watched changes.                                                                              |
+| `deltabox.toolchain.debounce`                        | `300`           | Debounce (ms) before a sync.                                                                               |
+| `deltabox.toolchain.command`                         | `sync`          | The command to run on change.                                                                              |
+| `deltabox.toolchain.enableFormatImportGroupDefaults` | `true`          | Add the resolved workspace `sortImports` custom group when syncing; set `false` to manage groups yourself. |
+| `deltabox.toolchain.watch`                           | `[]` (resolved) | Inputs that trigger a sync (empty = resolved from the config).                                             |
+| `deltabox.toolchain.version`                         | `""` (auto)     | Pin the `@deltabox/toolchain` version this workspace runs.                                                 |
+| `deltabox.registrySearchPaths`                       | `[]`            | Template registry search paths (dirs or `http(s)` URLs).                                                   |
+| `deltabox.providerRegistrySearchPaths`               | `[]`            | Provider registry search paths (JSON files/dirs/URLs).                                                     |
+
+`deltabox.toolchain.enableFormatImportGroupDefaults` (default `true`) adds the
+resolved `workspace` group to Oxfmt's `sortImports.customGroups` when the
+extension syncs or generates configs. Set it to `false` in user or workspace
+settings to keep full control of the import groups. The extension passes the
+effective value to the CLI; direct CLI runs and Vite+ configs also honour the
+workspace-scoped `.vscode/settings.json` value.
 
 When a workspace has its own `@deltabox/toolchain` whose version differs from the
 extension's bundled CLI, the extension asks which to run and shows both detected
@@ -2436,11 +2658,15 @@ Search for `deltabox:` to find:
 * **Remove template source...**
 * **Refresh templates**
 * **Generate configs…**
+* **Migrate tooling…**
 * **Run workflow…**
 * **Run Vite+ command…**
+* **Run command...**
 * **Create Vite+ project…**
+* **Choose dbx source…**
 * **Reset tooling…**
 * **Refresh projects**
+* **Refresh tracked files**
 * **Select dbx version…**
 * **New registry…**
 * **Remove registry…**
@@ -2586,23 +2812,25 @@ url: https://toolchain.deltabox.studio/guide/api/package-reference.md
 The base layer: the config model, logging, process/string/object utilities and
 the template engine.
 
-| Export                                                                        | Description                                                                              |
-| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `defineConfig(config)`                                                        | Identity helper for a typed `dbx.config.*` (object, promise, or sync/async callback).    |
-| `sectionEnabled(section)` / `sectionConfig(section)`                          | Opt-in-by-presence helpers for a config section.                                         |
-| `resolveTokens(config)`                                                       | Flatten a config into `{{ token }}` replacements.                                        |
-| `CONFIG_FILE_NAMES`                                                           | The config file names the loader probes, in priority order.                              |
-| `repoSlugFromUrl(url)`                                                        | Derive an `owner/name` slug from a repository URL.                                       |
-| `findOwnCliEntry(cwd?)` / `localToolchainVersion(cwd?)` / `TOOLCHAIN_PACKAGE` | Locate a project's own toolchain bin + pinned version (prefer them over a global `dbx`). |
-| `createLogger(options)` / `logger`                                            | The shared logger (see [Logging](/guide/api/logging)).                                   |
-| `WARNING_MAP` / `ERROR_MAP` / `warningMessage(id, values?)`                   | Central messages keyed by stable logger/suppression ids.                                 |
-| `spawnCross(cmd, args, options)` / `run(cmd, args, options)`                  | Cross-platform, shell-free spawning; `timeoutMs` kills the child tree.                   |
-| `killProcessTree(child)`                                                      | Kill a child process and its descendants (Windows `taskkill /t`).                        |
-| `readJsonFile` / `readJsonAt` / `toJson` / `writeJsonFile`                    | Small JSON file helpers.                                                                 |
-| `mergeJsonAt(cwd, relative, patch)`                                           | Deep-merge a patch over an existing JSON file.                                           |
-| `deepMerge` / `applyOverrides` / `isPlainObject` / `sort` / `mapValues`       | Object utilities (including layered typed overrides).                                    |
-| `applyReplacements` / `applyReplacementsDeep` / `createReplacer`              | The `{{ token }}` template engine (also `tokenPattern`, `extractTokens`).                |
-| `toYaml(value)`                                                               | A tiny YAML emitter for the GitHub Actions subset.                                       |
+| Export                                                                                     | Description                                                                                 |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `defineConfig(config)`                                                                     | Identity helper for a typed `dbx.config.*` (object, promise, or sync/async callback).       |
+| `sectionEnabled(section)` / `sectionConfig(section)`                                       | Opt-in-by-presence helpers for a config section.                                            |
+| `resolveTokens(config)`                                                                    | Flatten a config into `{{ token }}` replacements.                                           |
+| `CONFIG_FILE_NAMES`                                                                        | The config file names the loader probes, in priority order.                                 |
+| `repoSlugFromUrl(url)`                                                                     | Derive an `owner/name` slug from a repository URL.                                          |
+| `findOwnCliEntry(cwd?)` / `localToolchainVersion(cwd?)` / `TOOLCHAIN_PACKAGE`              | Locate a project's own toolchain bin + pinned version (prefer them over a global `dbx`).    |
+| `createLogger(options)` / `logger`                                                         | The shared logger (see [Logging](/guide/api/logging)).                                      |
+| `WARNING_MAP` / `ERROR_MAP` / `warningMessage(id, values?)`                                | Central messages keyed by stable logger/suppression ids.                                    |
+| `spawnCross(cmd, args, options)` / `run(cmd, args, options)`                               | Cross-platform, shell-free spawning; `timeoutMs` kills the child tree.                      |
+| `killProcessTree(child)`                                                                   | Kill a child process and its descendants (Windows `taskkill /t`).                           |
+| `readJsonFile` / `readJsonAt` / `toJson` / `writeJsonFile`                                 | Small JSON file helpers.                                                                    |
+| `mergeJsonAt(cwd, relative, patch)`                                                        | Deep-merge a patch over an existing JSON file.                                              |
+| `deepMerge` / `applyOverrides` / `isPlainObject` / `sort` / `mapValues`                    | Object utilities (including layered typed overrides).                                       |
+| `applyReplacements` / `applyReplacementsDeep` / `createReplacer`                           | The `{{ token }}` template engine (also `tokenPattern`, `extractTokens`).                   |
+| `DEFAULT_IGNORE_PATTERNS` / `DEFAULT_FMT_IGNORE_PATTERNS` / `DEFAULT_LINT_IGNORE_PATTERNS` | The shared build/cache ignores and the Oxfmt/Oxlint extensions.                             |
+| `resolveIgnorePatterns(cwd?, options?)` / `collectGitignorePatterns(cwd?)`                 | Defaults + `exclude` + `.gitignore` resolution, and the matching helpers (`isIgnoredPath`). |
+| `toYaml(value)`                                                                            | A tiny YAML emitter for the GitHub Actions subset.                                          |
 
 The config **types** and **schemas** also live here: `ToolchainConfig`, `DbxConfig`,
 `SyncTask`, `SyncContext`, `ManagedFile`, `ToolchainCommand`, `ToolchainOption`,
@@ -2633,6 +2861,7 @@ Loads `dbx.config.*`, builds the project graph and runs the sync tasks.
 | `vscodeSyncTask(options?)`                                    | The VS Code settings/extensions sync task.                                          |
 | `resolveProjectType(cwd, config?)` / `detectProjectType(cwd)` | The project kind (`monorepo-root` / `monorepo-workspace` / `project`).              |
 | `readManifest(cwd)` / `writeManifest(cwd, files)`             | The `.dbx/toolchain/manifest.json` helpers.                                         |
+| `resolveFmtCustomGroups(input?)`                              | Build the `sortImports` workspace group from every dbx project (graph-based).       |
 
 ## `@deltabox/toolchain/config`
 
@@ -2673,6 +2902,7 @@ sync task (see the [Providers](/guide/providers) guide).
 | `detectViteSpecifier(cwd)`                                         | Which package (`vite` / `vite-plus`) the project has, for the shim import.                          |
 | `renderViteConfig(specifier?)` / `viteConfigObject(config?)`       | The managed `vite.config.ts` shim (per specifier) + the section minus `config`.                     |
 | `viteSyncTask()`                                                   | The `vite` sync task that writes the shim.                                                          |
+| `resolveFmtCustomGroups(input?)`                                   | Re-exported from core: the `sortImports` workspace group resolver.                                  |
 
 ## `@deltabox/toolchain/cli`
 
@@ -2815,21 +3045,21 @@ url: https://toolchain.deltabox.studio/guide/api/subpath-exports.md
 ---
 # Subpath exports
 
-| Import                          | What it provides                                                               |
-| ------------------------------- | ------------------------------------------------------------------------------ |
-| `@deltabox/toolchain/cli`       | Build/register the `dbx` commander program + bare-command routing.             |
-| `@deltabox/toolchain/core`      | Load `dbx.config.*`, run/watch sync, the project graph, manifest, reset.       |
-| `@deltabox/toolchain/config`    | The Zod/env config engine, generators and the `config:*` commands.             |
-| `@deltabox/toolchain/vite`      | Resolve/run `vp`, the Vite+ provider, the `dbx()` plugin and `vite` sync.      |
-| `@deltabox/toolchain/migrate`   | Pluggable migrations to Oxfmt/Oxlint (Biome, ESLint, Prettier, Dprint).        |
-| `@deltabox/toolchain/template`  | The builtin/local/online template registry, loading and scaffolding.           |
-| `@deltabox/toolchain/providers` | The provider registry (`toolchainProviders`) the editor reads.                 |
-| `@deltabox/toolchain/tsdown`    | The tsdown base config, `createTsdownConfig`, post banner and cleanup.         |
-| `@deltabox/toolchain/tsconfig`  | The tsconfig sync task, templates and the tsconfig generator.                  |
-| `@deltabox/toolchain/changelog` | The changelog runner, workflows, commitlint and the changelog sync task.       |
-| `@deltabox/toolchain/biome`     | The generic Biome config, rendering helpers and the biome sync task.           |
-| `@deltabox/toolchain/project`   | Project/monorepo/workspace file generation and `dbx.config.ts` scaffolding.    |
-| `@deltabox/toolchain/shared`    | The config model, logger, provider model, template engine, `run`/`spawnCross`. |
+| Import                          | What it provides                                                                                |
+| ------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `@deltabox/toolchain/cli`       | Build/register the `dbx` commander program + bare-command routing.                              |
+| `@deltabox/toolchain/core`      | Load `dbx.config.*`, run/watch sync, the project graph, manifest, reset.                        |
+| `@deltabox/toolchain/config`    | The Zod/env config engine, generators and the `config:*` commands.                              |
+| `@deltabox/toolchain/vite`      | Resolve/run `vp`, the Vite+ provider, the `dbx()` plugin and `vite` sync.                       |
+| `@deltabox/toolchain/migrate`   | Pluggable migrations to Oxfmt/Oxlint (Biome, ESLint, Prettier, Dprint).                         |
+| `@deltabox/toolchain/template`  | The builtin/local/online template registry, loading and scaffolding.                            |
+| `@deltabox/toolchain/providers` | The provider registry (`toolchainProviders`) the editor reads.                                  |
+| `@deltabox/toolchain/tsdown`    | The tsdown base config, `createTsdownConfig`, post banner and cleanup.                          |
+| `@deltabox/toolchain/tsconfig`  | The tsconfig sync task, templates and the tsconfig generator.                                   |
+| `@deltabox/toolchain/changelog` | The changelog runner, workflows, commitlint and the changelog sync task.                        |
+| `@deltabox/toolchain/biome`     | The generic Biome config, rendering helpers and the biome sync task.                            |
+| `@deltabox/toolchain/project`   | Project/monorepo/workspace file generation and `dbx.config.ts` scaffolding.                     |
+| `@deltabox/toolchain/shared`    | The config model, logger, provider model, template engine, ignore defaults, `run`/`spawnCross`. |
 
 ---
 
@@ -2858,6 +3088,10 @@ import {
     // logging
     logger,
     createLogger,
+    // ignore-list defaults
+    DEFAULT_IGNORE_PATTERNS,
+    DEFAULT_FMT_IGNORE_PATTERNS,
+    DEFAULT_LINT_IGNORE_PATTERNS,
 } from '@deltabox/toolchain';
 // The other packages are namespaced:
 import {
@@ -3376,8 +3610,10 @@ The result is invisible control characters, stray `\` and dropped letters.
 `sanitizeText` maps the common control characters back to the letter they
 replaced (`BEL`→`a`, `BS`→`b`, `FF`→`f`, `VT`→`v`, `TAB`→`t`, `LF`→`n`,
 `CR`→`r`, `ESC`→`e`, `NUL`→`0`) and drops the stray `\`, so words like `any`,
-`false` and `bin` are restored. A character the shell consumed without leaving a
-trace still cannot be recovered.
+`false` and `bin` are restored. It also repairs the common backtick-to-backslash
+artifacts (a paired `\yarn cache dir\` or a lone trailing `baseTsdownConfig\`)
+back to inline code, while leaving Windows paths and regexes alone. A character
+the shell consumed without leaving a trace still cannot be recovered.
 
 ## Authoring safely
 
@@ -3937,13 +4173,13 @@ Colour is on by default and follows `--no-color` / the [`logger` config](/guide/
 
 ## Scaffolding
 
-| Command                  | Description                                                                                                  |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `project:init`           | A single-package TypeScript project (`--package-manager`).                                                   |
-| `project:init:monorepo`  | A monorepo root (add `--example` for one example workspace).                                                 |
-| `project:init:workspace` | A workspace package into an existing monorepo root.                                                          |
-| `project:config`         | Generate `dbx.config.ts` for projects missing one (folds an existing `vite.config.*` into `toolchain.vite`). |
-| `create`                 | Scaffold from a template (`--template`/`--kind`, `--name`, `--scope`, `--out`).                              |
+| Command                  | Description                                                                                                      |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `project:init`           | A single-package TypeScript project (`--package-manager`).                                                       |
+| `project:init:monorepo`  | A monorepo root (add `--example` for one example workspace).                                                     |
+| `project:init:workspace` | A workspace package into an existing monorepo root.                                                              |
+| `project:config`         | Generate `dbx.config.*` for projects missing one (TS/JS, `--skip-config` for graph only; folds `vite.config.*`). |
+| `create`                 | Scaffold from a template (`--template`/`--kind`, `--name`, `--scope`, `--out`).                                  |
 
 Templates that declare inputs/actions are prompted for them (`--var key=value`,
 `--action <id>`), see [Templates](/guide/templates).
@@ -4530,7 +4766,9 @@ Add the shim to `vite.fmt.ignorePatterns` so Oxfmt leaves the generated file
 alone - without it `vp fmt` would rewrite the shim and `dbx sync --check` would
 report drift. In a monorepo put `**/vite.config.ts` on the root config: workspace
 `fmt` settings are inherited, but a workspace's `ignorePatterns` array replaces
-the root's list. `dbx migrate --from vite` adds it for you.
+the root's list. The default fmt ignores already include `**/vite.config.ts`;
+`dbx migrate --from vite` adds `/vite.config.ts` to `vite.fmt` only when the
+folded config already owns `fmt`.
 
 ## Format and lint defaults
 
@@ -4539,8 +4777,50 @@ defaults (`DEFAULT_FMT_RULES` / `DEFAULT_LINT_RULES`, exported from
 `@deltabox/toolchain`). An options object is merged over those defaults, so
 `fmt: { semi: false }` keeps the shared ignores and print width and only changes
 `semi`. Shared ignore lists live in `DEFAULT_FMT_IGNORE_PATTERNS` /
-`DEFAULT_LINT_IGNORE_PATTERNS`. `sortImports` is never included by default:
-import ordering is project-specific, so opt in with your own groups.
+`DEFAULT_LINT_IGNORE_PATTERNS`, both layered over `DEFAULT_IGNORE_PATTERNS`.
+All three are exported (readonly) from `@deltabox/toolchain` and
+`@deltabox/toolchain/shared`, so you can compose your own list instead of
+repeating the defaults:
+
+```ts [dbx.config.ts]
+import { DEFAULT_FMT_IGNORE_PATTERNS, defineConfig } from '@deltabox/toolchain';
+
+export default defineConfig({
+    toolchain: {
+        vite: {
+            fmt: {
+                ignorePatterns: [...DEFAULT_FMT_IGNORE_PATTERNS, '**/fixtures/**'],
+            },
+        },
+    },
+});
+```
+
+Import sorting is enabled by default too. `sortImports` uses the usual groups
+(`builtin`, `external`, `internal`/`subpath`, relatives, styles) plus a
+`workspace` group whose patterns come from every `dbx.config.*` project in the
+repository, so consumer packages sort together without a hand-written
+`customGroups` entry. Override `sortImports: false` to disable it, or set your
+own groups — the resolved workspace group is still appended (and listed in
+`groups`) unless you disable sorting.
+
+To reuse the workspace group in your own `sortImports`, import the resolver:
+
+```ts
+import { resolveFmtCustomGroups } from '@deltabox/toolchain';
+
+const customGroups = await resolveFmtCustomGroups();
+// [{ groupName: 'workspace', elementNamePattern: ['@acme/**', 'app', 'app/**', ...] }]
+```
+
+`resolveFmtCustomGroups()` reads the project graph, so it is safe to call from
+inside `dbx.config.*`. Pass `{ config: 'path/to/dbx.config.ts' }` to resolve a
+specific config instead of the discovered one, or an inline `project` to add a
+project the graph does not know about.
+
+In VS Code, set `deltabox.toolchain.enableFormatImportGroupDefaults` to `false`
+(user or workspace settings) to stop the extension from adding the workspace
+group.
 
 ## Oxc config files
 
@@ -4555,7 +4835,7 @@ To adopt an existing hand-written `vite.config.ts`, fold it in with the
 migration (see [Migrations](/guide/migrations/#vite-config)):
 
 ```sh
-dbx migrate --from vite --write   # folds the object into toolchain.vite (+ the fmt ignore)
+dbx migrate --from vite --write   # folds the object into toolchain.vite (routes fmt/lint)
 dbx sync                          # writes the managed vite.config.ts shim
 ```
 
@@ -5000,6 +5280,17 @@ addition to its options object. The Oxfmt/Oxlint option types are generated from
 the tools' official JSON schemas (vendored in the package), so editor completion
 and the generated config reference match the tool.
 
+The shared ignore lists are exported from `@deltabox/toolchain` and
+`@deltabox/toolchain/shared`: `DEFAULT_IGNORE_PATTERNS` (build/cache dirs), and
+`DEFAULT_FMT_IGNORE_PATTERNS` / `DEFAULT_LINT_IGNORE_PATTERNS` (the Oxc defaults,
+layered over `DEFAULT_IGNORE_PATTERNS`). Import them to extend the defaults
+rather than re-listing them.
+
+Oxfmt import sorting is enabled in the defaults as well. `sortImports` includes
+a `workspace` group built from every `dbx.config.*` project's scope/name;
+`resolveFmtCustomGroups()` returns that group so you can reuse it in a custom
+`sortImports` config. Set `sortImports: false` to opt out.
+
 ## Shorthand opt-in
 
 `fmt: true` / `lint: true` (or an options object with only `vscode`) picks a tool
@@ -5104,7 +5395,10 @@ dbx migrate --from biome --from prettier --write
 dbx migrate --from all --write
 ```
 
-See [Migrations](/guide/migrations/).
+Unless `--target` is given, the migrated formatter/linter options go to
+`toolchain.vite.fmt`/`toolchain.vite.lint` when the existing Vite config already
+defines `fmt`/`lint`; otherwise they go to the top-level
+`toolchain.fmt.oxc`/`toolchain.lint.oxc`. See [Migrations](/guide/migrations/).
 
 ## Biome
 
@@ -5335,8 +5629,17 @@ is repeatable; `--from all` (or omitting it) selects every detected source.
 * `--target files` (default) — writes `.oxfmtrc.json` and `.oxlintrc.json`.
 * `--target vite` — folds the result into an existing `vite.config.ts`
   (inserting/replacing `fmt` and `lint`), which is what Vite+ reads.
-* The `oxc` source always targets `dbx.config.*` (`toolchain.fmt.oxc` /
-  `toolchain.lint.oxc`); `--target` does not apply.
+* The `oxc` source targets `dbx.config.*` (`toolchain.fmt.oxc` /
+  `toolchain.lint.oxc`, or `toolchain.vite.fmt/lint` when `--target vite`).
+
+Unless `--target` is given, formatter/linter migrations route by what the
+existing Vite config already owns:
+
+* If `vite.config.*` (or an existing `toolchain.vite`) defines `fmt`/`lint`, the
+  migrated options are merged into `toolchain.vite.fmt`/`toolchain.vite.lint`,
+  and no top-level `toolchain.fmt`/`toolchain.lint` is created.
+* Otherwise they are folded into the top-level `toolchain.fmt.oxc` /
+  `toolchain.lint.oxc`, and `vite.fmt`/`vite.lint` are left undefined.
 
 ## Recursive migration
 
@@ -5368,9 +5671,11 @@ dbx migrate --from vite --write  # folds the object into toolchain.vite
 dbx sync                         # writes the managed vite.config.ts shim
 ```
 
-It also adds `/vite.config.ts` to `toolchain.vite.fmt.ignorePatterns`, so Oxfmt
-leaves the generated shim alone (otherwise `vp fmt` would rewrite it and
-`dbx sync --check` would report drift).
+When the folded config already owns `fmt`, it adds `/vite.config.ts` to
+`toolchain.vite.fmt.ignorePatterns`, so Oxfmt leaves the generated shim alone
+(otherwise `vp fmt` would rewrite it and `dbx sync --check` would report drift).
+When it does not, `vite.fmt` stays undefined; the default fmt ignores already
+cover `**/vite.config.ts`.
 
 It extracts the object literal passed to `defineConfig(...)` (or the
 default-exported object) with a string-aware, balanced-paren scanner and
@@ -6760,7 +7065,9 @@ tsconfig: {
 }
 ```
 
-Set `gitignore: false` to scan ignored paths anyway.
+Set `gitignore: false` to scan ignored paths anyway. The base list is exported as
+`DEFAULT_IGNORE_PATTERNS` from `@deltabox/toolchain` and
+`@deltabox/toolchain/shared`, so you can compose your own excludes from it.
 
 ### Renaming the files
 
@@ -7297,7 +7604,13 @@ Everything else under `vite` is Vite+ config (plugins, `test`, `lint`, `fmt`,
 `run.tasks`, ...). `vite.fmt` / `vite.lint` override `toolchain.fmt.oxc` /
 `toolchain.lint.oxc` (deep merge). `fmt: true` / `lint: true` use the shared
 `DEFAULT_FMT_RULES` / `DEFAULT_LINT_RULES`; an options object is merged over
-them. Set `vite: { config: false }` to leave a hand-written
+them. Their ignore lists are exported as `DEFAULT_FMT_IGNORE_PATTERNS` /
+`DEFAULT_LINT_IGNORE_PATTERNS` (both layered over `DEFAULT_IGNORE_PATTERNS`)
+from `@deltabox/toolchain` and `@deltabox/toolchain/shared`, so you can extend
+them instead of repeating the defaults. Import sorting is part of those defaults:
+`sortImports` gets a `workspace` custom group resolved from every dbx project
+(see `resolveFmtCustomGroups`), so workspace packages do not need manual groups.
+Set `vite: { config: false }` to leave a hand-written
 `vite.config.ts` alone (the section is still read for provider colouring and the
 `dbx` provider passthrough). `config: 'config/vite.custom.ts'` writes the shim
 there instead (relative to the project, or an absolute path inside it).
@@ -7394,7 +7707,9 @@ export default defineConfig({
 `exclude` adds to the common ignored paths (`node_modules`, `.dbx`, `dist`,
 `build`, ...), and `gitignore` also honours the repo's `.gitignore` files (root
 and nested, each scoped to its own directory) so ignored directories are never
-watched. Set `gitignore: false` to watch them anyway.
+watched. Set `gitignore: false` to watch them anyway. The common list is
+exported as `DEFAULT_IGNORE_PATTERNS` from `@deltabox/toolchain` and
+`@deltabox/toolchain/shared` if you need to build on it.
 
 ```ts
 watch: { exclude: ['**/fixtures/**'], gitignore: true }
@@ -7434,3 +7749,54 @@ dbx watch --list --json
 The VS Code extension has its own debounced scheduler that mirrors this
 behaviour (see [VS Code Extension](/guide/vscode#auto-sync)); the `watch` section
 configures the **CLI** `dbx watch` command.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/CHANGELOG.md
+---
+# Changelog
+
+## 2.3.0 (November 2026)
+
+### New features
+
+#### Changelog
+
+* Dispatch workflows with their vendor CLI ([#eea38ae](https://github.com/deltabox-studio/toolchain/commit/eea38ae) by [T0chi](https://github.com/T0chi))
+
+#### Config
+
+* Type tool options and changelog callbacks ([#10bd933](https://github.com/deltabox-studio/toolchain/commit/10bd933) by [T0chi](https://github.com/T0chi))
+
+### Bug fixes
+
+#### Config
+
+* Escape CLI reference tables and fail on missing output ([#15978be](https://github.com/deltabox-studio/toolchain/commit/15978be) by [T0chi](https://github.com/T0chi))
+
+#### Core
+
+* Keep managed paths inside the project root ([#2496bee](https://github.com/deltabox-studio/toolchain/commit/2496bee) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+
+* Preserve hand-corrected text in `--format-only` ([#2041e5f](https://github.com/deltabox-studio/toolchain/commit/2041e5f) by [T0chi](https://github.com/T0chi))
+
+#### Shared
+
+* Restore `PowerShell`-escaped letters ([#4d2be6a](https://github.com/deltabox-studio/toolchain/commit/4d2be6a) by [T0chi](https://github.com/T0chi))
+
+### Documentation
+
+* Document vendor workflows, typed builders and `--format-only` ([#eb66982](https://github.com/deltabox-studio/toolchain/commit/eb66982) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+
+* Document `formatLine` ([#61e28ec](https://github.com/deltabox-studio/toolchain/commit/61e28ec) by [T0chi](https://github.com/T0chi))
+
+### Chores
+
+#### Config
+
+* Regenerate config-types, schema and docs ([#0b0ca20](https://github.com/deltabox-studio/toolchain/commit/0b0ca20) by [T0chi](https://github.com/T0chi))
