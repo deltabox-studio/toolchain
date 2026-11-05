@@ -1,16 +1,47 @@
 # Changelog
 
-## 2.3.4 (November 2026)
+## 2.4.0 (November 2026)
 
 <!-- release:start -->
+
+### New features
+#### Shared
+- Improve workflow config autocomplete ([#5babd18](https://github.com/deltabox-studio/toolchain/commit/5babd18) by [T0chi](https://github.com/T0chi))
+  - Add typed WorkflowTriggers, WorkflowExtra and WorkflowTokens shapes so known workflow keys are suggested, and regenerate the config types, schema and reference.
+- Expose formatter and linter ignore defaults ([#5f2c8b1](https://github.com/deltabox-studio/toolchain/commit/5f2c8b1) by [T0chi](https://github.com/T0chi))
+  - Export DEFAULT_FMT_IGNORE_PATTERNS and DEFAULT_LINT_IGNORE_PATTERNS alongside DEFAULT_IGNORE_PATTERNS, and document how to extend them.
+#### Project
+- Add config generation options and migration routing ([#c658b0d](https://github.com/deltabox-studio/toolchain/commit/c658b0d) by [T0chi](https://github.com/T0chi))
+  - Support --skip-config, --language and --config-extension, write the project graph before configs, generate TS/JS configs, and route migrated fmt/lint into toolchain.vite only when the existing Vite config owns them.
+#### Vscode
+- Add tooling actions and config generation ([#31da418](https://github.com/deltabox-studio/toolchain/commit/31da418) by [T0chi](https://github.com/T0chi))
+  - Add the format import-group setting, migrate/global Home actions, and config generation prompts (TS/JS, graph-only) that also work from the Command Palette.
+#### Core
+- Add import sorting defaults and workspace groups ([#1c5f5a3](https://github.com/deltabox-studio/toolchain/commit/1c5f5a3) by [T0chi](https://github.com/T0chi))
+  - Enable sortImports by default, resolve a workspace custom group from the project graph, and inject it into resolveVite, vite sync and tooling normalization.
+### Bug fixes
+#### Shared
+- Repair PowerShell backtick artifacts in changelogs ([#61ced92](https://github.com/deltabox-studio/toolchain/commit/61ced92) by [T0chi](https://github.com/T0chi))
+  - Repair paired \\code\\ and lone trailing identifier backslashes back to inline code while leaving paths and regexes alone, and correct the affected 2.3.1-2.3.3 entries.
+### Documentation
+- Regenerate llms docs ([#9b5869d](https://github.com/deltabox-studio/toolchain/commit/9b5869d) by [T0chi](https://github.com/T0chi))
+  - Refresh the generated llms.txt and llms-full.txt bundles after the documentation changes.
+### Chores
+- Regenerate managed configs for import sorting ([#ce7a2e6](https://github.com/deltabox-studio/toolchain/commit/ce7a2e6) by [T0chi](https://github.com/T0chi))
+  - Regenerate .oxfmtrc.json and every workspace vite.config.ts with the resolved sortImports workspace group.
+#### Deps
+- Update lockfile for @clack/prompts ([#52c08df](https://github.com/deltabox-studio/toolchain/commit/52c08df) by [T0chi](https://github.com/T0chi))
+  - Record the new project workspace dependency so immutable CI installs no longer fail.
+
+<!-- release:end -->
+
+
+## 2.3.4 (November 2026)
 
 ### Bug fixes
 #### Ci
 - Cache the VS Code integration test download ([#4941b90](https://github.com/deltabox-studio/toolchain/commit/4941b90) by [T0chi](https://github.com/T0chi))
   - The integration job downloaded the ~361 MB VS Code stable build on every run. Resolve the exact stable version, cache only that version's unpacked directory, and key the cache by it so a new stable release is downloaded and saved under a fresh key.
-
-<!-- release:end -->
-
 
 ## 2.3.3 (November 2026)
 

@@ -1,16 +1,26 @@
 # Changelog
 
-## 2.3.2 (November 2026)
+## 2.4.0 (November 2026)
 
 <!-- release:start -->
+
+### New features
+#### Vscode
+- Add tooling actions and config generation ([#31da418](https://github.com/deltabox-studio/toolchain/commit/31da418) by [T0chi](https://github.com/T0chi))
+  - Add the format import-group setting, migrate/global Home actions, and config generation prompts (TS/JS, graph-only) that also work from the Command Palette.
+### Chores
+- Regenerate managed configs for import sorting ([#ce7a2e6](https://github.com/deltabox-studio/toolchain/commit/ce7a2e6) by [T0chi](https://github.com/T0chi))
+  - Regenerate .oxfmtrc.json and every workspace vite.config.ts with the resolved sortImports workspace group.
+
+<!-- release:end -->
+
+
+## 2.3.2 (November 2026)
 
 ### Bug fixes
 #### Vscode
 - Load the tsdown base config from source ([#0537c62](https://github.com/deltabox-studio/toolchain/commit/0537c62) by [T0chi](https://github.com/T0chi))
   - The VS Code integration job builds the extension after only \yarn install\, so the private \@deltabox/toolchain-tsdown\ dist does not exist and unrun failed to load the config. Import baseTsdownConfig\ from the workspace source instead (as the root tsdown config already does).
-
-<!-- release:end -->
-
 
 ## 2.3.1 (November 2026)
 
