@@ -79,5 +79,15 @@ jobs:
           corepack prepare yarn@4.17.1 --activate
       - name: Install dependencies
         run: yarn install --immutable
+      - name: Resolve VS Code version
+        id: vscode
+        run: |-
+          version="$(curl -fsSL "https://update.code.visualstudio.com/api/releases/stable?released=true" | jq -r '.[0]' || true)"
+          echo "version=${version:-unknown}" >> "$GITHUB_OUTPUT"
+      - name: Cache VS Code
+        uses: actions/cache@v6
+        with:
+          path: "packages/vscode/.vscode-test/vscode-linux-x64-${{ steps.vscode.outputs.version }}"
+          key: "${{ runner.os }}-vscode-${{ steps.vscode.outputs.version }}"
       - name: Run VS Code extension integration tests
         run: xvfb-run -a yarn workspace toolchain-vscode test:integration

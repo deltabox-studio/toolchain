@@ -261,6 +261,22 @@ export default defineConfig({
                                 run: '{{packageManager}} install --immutable',
                             },
                             {
+                                // Cache the VS Code download by the exact stable
+                                // version, so a new release is fetched and saved
+                                // under a fresh key instead of reused.
+                                name: 'Resolve VS Code version',
+                                id: 'vscode',
+                                run: 'version="$(curl -fsSL "https://update.code.visualstudio.com/api/releases/stable?released=true" | jq -r \'.[0]\' || true)"\necho "version=${version:-unknown}" >> "$GITHUB_OUTPUT"',
+                            },
+                            {
+                                name: 'Cache VS Code',
+                                uses: 'actions/cache@v6',
+                                with: {
+                                    path: 'packages/vscode/.vscode-test/vscode-linux-x64-${{ steps.vscode.outputs.version }}',
+                                    key: '${{ runner.os }}-vscode-${{ steps.vscode.outputs.version }}',
+                                },
+                            },
+                            {
                                 name: 'Run VS Code extension integration tests',
                                 run: 'xvfb-run -a {{packageManager}} workspace toolchain-vscode test:integration',
                             },
