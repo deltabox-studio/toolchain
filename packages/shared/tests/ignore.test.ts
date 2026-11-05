@@ -6,7 +6,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
     collectGitignorePatterns,
+    DEFAULT_FMT_IGNORE_PATTERNS,
     DEFAULT_IGNORE_PATTERNS,
+    DEFAULT_LINT_IGNORE_PATTERNS,
     isIgnoredPath,
     resolveIgnorePatterns,
 } from '../src/ignore.js';
@@ -27,6 +29,22 @@ describe('isIgnoredPath', () => {
     it('matches an explicit exclude glob', () => {
         expect(isIgnoredPath('packages/legacy/index.ts', ['**/legacy/**'])).toBe(true);
         expect(isIgnoredPath('packages/app/index.ts', ['**/legacy/**'])).toBe(false);
+    });
+});
+
+describe('tool defaults', () => {
+    it('extends the shared build/cache ignores', () => {
+        for (const pattern of DEFAULT_IGNORE_PATTERNS) {
+            expect(DEFAULT_FMT_IGNORE_PATTERNS).toContain(pattern);
+            expect(DEFAULT_LINT_IGNORE_PATTERNS).toContain(pattern);
+        }
+    });
+
+    it('adds the formatter-specific paths', () => {
+        expect(DEFAULT_FMT_IGNORE_PATTERNS).toContain('**/vite.config.ts');
+        expect(DEFAULT_FMT_IGNORE_PATTERNS).toContain('**/*.json');
+        expect(DEFAULT_LINT_IGNORE_PATTERNS).toContain('**/vendor/**');
+        expect(DEFAULT_LINT_IGNORE_PATTERNS).not.toContain('**/vite.config.ts');
     });
 });
 

@@ -29,6 +29,38 @@ export const DEFAULT_IGNORE_PATTERNS: readonly string[] = [
     '**/*.tsbuildinfo',
 ];
 
+/**
+ * Common paths Oxfmt should leave alone. Starts from the shared build/cache
+ * ignores and adds generated JSON/YAML, lockfiles, changelogs and the managed
+ * `vite.config.ts` shim.
+ */
+export const DEFAULT_FMT_IGNORE_PATTERNS: readonly string[] = [
+    ...DEFAULT_IGNORE_PATTERNS,
+    '**/.nuxt/**',
+    '**/.svelte-kit/**',
+    '**/.generated/**',
+    '**/generated/**',
+    '**/*.json',
+    '**/*.yml',
+    '**/*.yaml',
+    '**/*.lock',
+    '**/*.min.*',
+    '**/CHANGELOG.md',
+    'CHANGELOG.proposed.md',
+    '**/vite.config.ts',
+];
+
+/** Common paths Oxlint should leave alone. */
+export const DEFAULT_LINT_IGNORE_PATTERNS: readonly string[] = [
+    ...DEFAULT_IGNORE_PATTERNS,
+    '**/.nuxt/**',
+    '**/.svelte-kit/**',
+    '**/.generated/**',
+    '**/generated/**',
+    '**/*.min.*',
+    '**/vendor/**',
+];
+
 /** Directory names skipped when scanning for nested `.gitignore` files. */
 const IGNORED_DIR_NAMES = new Set([
     'node_modules',

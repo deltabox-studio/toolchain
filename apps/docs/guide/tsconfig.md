@@ -182,7 +182,9 @@ tsconfig: {
 }
 ```
 
-Set `gitignore: false` to scan ignored paths anyway.
+Set `gitignore: false` to scan ignored paths anyway. The base list is exported as
+`DEFAULT_IGNORE_PATTERNS` from `@deltabox/toolchain` and
+`@deltabox/toolchain/shared`, so you can compose your own excludes from it.
 
 ### Renaming the files
 

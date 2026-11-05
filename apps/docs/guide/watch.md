@@ -23,7 +23,9 @@ export default defineConfig({
 `exclude` adds to the common ignored paths (`node_modules`, `.dbx`, `dist`,
 `build`, ...), and `gitignore` also honours the repo's `.gitignore` files (root
 and nested, each scoped to its own directory) so ignored directories are never
-watched. Set `gitignore: false` to watch them anyway.
+watched. Set `gitignore: false` to watch them anyway. The common list is
+exported as `DEFAULT_IGNORE_PATTERNS` from `@deltabox/toolchain` and
+`@deltabox/toolchain/shared` if you need to build on it.
 
 ```ts
 watch: { exclude: ['**/fixtures/**'], gitignore: true }
