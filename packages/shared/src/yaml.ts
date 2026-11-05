@@ -6,12 +6,12 @@
  * double-quoted.
  */
 
-type YamlValue = string | number | boolean | null | YamlValue[] | { [key: string]: YamlValue };
+type YamlValue = string | number | boolean | null | YamlValue[] | { [key: string & {}]: YamlValue };
 
 const BOOLEAN_LIKE = /^(?:true|false|yes|no|on|off|null|~)$/i;
 const NUMBER_LIKE = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/;
 
-function isMap(value: unknown): value is Record<string, YamlValue> {
+function isMap(value: unknown): value is Record<string & {}, YamlValue> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 

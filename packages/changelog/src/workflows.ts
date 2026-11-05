@@ -11,7 +11,7 @@
 import {
     applyReplacementsDeep,
     type CustomWorkflowSettings,
-    DEFAULT_PACKAGE_MANAGER_VERSIONS,
+    defaultPackageManagerVersion,
     isVendorWorkflowConfig,
     type Replacements,
     toYaml,
@@ -42,11 +42,11 @@ export interface Workflow {
     concurrency?: unknown;
     env?: Record<string, string>;
     jobs: Record<string, WorkflowJob>;
-    [key: string]: unknown;
+    [key: string & {}]: unknown;
 }
 
 /** The default replacement values for the workflow templates. */
-export const DEFAULT_WORKFLOW_TOKENS: Replacements = {
+export const DEFAULT_WORKFLOW_TOKENS = {
     nodeVersion: '22',
     yarnVersion: '4.17.1',
     packageManager: 'yarn',
@@ -55,19 +55,19 @@ export const DEFAULT_WORKFLOW_TOKENS: Replacements = {
     devBranch: 'main',
     tooling: 'dbx',
     commitlintConfig: 'commitlint.config.mjs',
-};
-
-/** The workflow ids the builder knows about. */
-export type WorkflowId = 'ci' | 'changelog' | 'release' | 'sync' | 'issues';
+} as const;
 
 /** Default file name per workflow id. */
-export const WORKFLOW_FILENAMES: Record<WorkflowId, string> = {
+export const WORKFLOW_FILENAMES = {
     ci: 'ci.yml',
     changelog: 'changelog.yml',
     release: 'release.yml',
     sync: 'sync.yml',
     issues: 'issues.yml',
-};
+} as const;
+
+/** The workflow ids the builder knows about. */
+export type WorkflowId = keyof typeof WORKFLOW_FILENAMES;
 
 /** The default directory for generated workflows. */
 export const DEFAULT_WORKFLOW_DIR = '.github/workflows';
@@ -147,7 +147,7 @@ function packageManagerVersion(tokens: Replacements): string {
     return String(
         tokens.packageManagerVersion ??
             tokens.yarnVersion ??
-            DEFAULT_PACKAGE_MANAGER_VERSIONS[packageManager] ??
+            defaultPackageManagerVersion(packageManager) ??
             '4.17.1'
     );
 }
@@ -160,7 +160,11 @@ function packageManagerVersion(tokens: Replacements): string {
  */
 function workflowTokens(options: RenderWorkflowOptions): Replacements {
     const configTokens = options.config?.tokens ?? {};
-    const tokens = { ...DEFAULT_WORKFLOW_TOKENS, ...options.tokens, ...configTokens };
+    const tokens: Replacements = {
+        ...DEFAULT_WORKFLOW_TOKENS,
+        ...options.tokens,
+        ...configTokens,
+    };
     const manager = configTokens.packageManager;
     if (manager !== undefined && manager !== options.tokens.packageManager) {
         if (

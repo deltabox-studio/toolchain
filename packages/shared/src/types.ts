@@ -17,7 +17,7 @@ export type JsonValue =
     | boolean
     | null
     | JsonValue[]
-    | { [key: string]: JsonValue };
+    | { [key: string & {}]: JsonValue };
 
 /** A CLI option a tooling command exposes (framework-agnostic). */
 export interface ToolchainOption {
@@ -125,5 +125,5 @@ export interface PackageJson {
     workspaces?: string[] | { packages?: string[] };
     exports?: Record<string, unknown> | string;
     files?: string[];
-    [key: string]: unknown;
+    [key: string & {}]: unknown;
 }

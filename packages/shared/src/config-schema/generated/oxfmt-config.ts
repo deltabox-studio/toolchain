@@ -459,5 +459,5 @@ export interface OxfmtConfig {
      * - Default: `false`
      */
     vueIndentScriptAndStyle?: boolean;
-    [key: string]: unknown;
+    [key: string & {}]: unknown;
 }

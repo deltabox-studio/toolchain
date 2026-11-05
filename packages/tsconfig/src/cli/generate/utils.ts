@@ -113,7 +113,10 @@ export function generateTsconfig(options: {
         const references: TsConfigJson.References[] = [];
         if (!ignoreReferences) {
             const seen = new Set<string>();
-            const add = (absolute: string, reference: { path: string; [key: string]: unknown }) => {
+            const add = (
+                absolute: string,
+                reference: { path: string; [key: string & {}]: unknown }
+            ) => {
                 const relative = toWorkspacePath(absolute, dirname, dirnameRelative);
                 if (relative === undefined || seen.has(relative)) return;
                 seen.add(relative);

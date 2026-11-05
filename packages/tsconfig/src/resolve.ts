@@ -22,7 +22,7 @@ export interface TsconfigAlias {
 export interface TsconfigReference {
     /** Absolute path to the referenced tsconfig file. */
     path: string;
-    [key: string]: unknown;
+    [key: string & {}]: unknown;
 }
 
 /** The result of {@link resolveTsconfig}. */
@@ -54,7 +54,7 @@ export interface TsconfigJson {
         baseUrl?: string;
         paths?: Record<string, string[] | string>;
     };
-    references?: { path: string; [key: string]: unknown }[];
+    references?: { path: string; [key: string & {}]: unknown }[];
 }
 
 interface LoadedTsconfig {

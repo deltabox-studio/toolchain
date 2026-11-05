@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** A JSON value, recursively. */
-type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string & {}]: JsonValue };
 
 /**
  * Any JSON value (string, number, boolean, null, array or object), recursively.

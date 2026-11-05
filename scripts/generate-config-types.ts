@@ -28,7 +28,7 @@ const overrides = {
     | boolean
     | null
     | ConfigJsonValue[]
-    | { [key: string]: ConfigJsonValue };`,
+    | { [key: string & {}]: ConfigJsonValue };`,
     ToolchainViteConfig: `export type ToolchainViteConfig = Omit<ViteUserConfig, 'fmt' | 'lint'> & {
     /** Write the managed Vite config (default true); a string sets its file name/path. */
     config?: boolean | string;
@@ -70,7 +70,7 @@ const overrides = {
     mainBranch?: string;
     /** Dev branch (\`{{devBranch}}\`). */
     devBranch?: string;
-    [key: string]: string | number | boolean | undefined;
+    [key: string & {}]: string | number | boolean | undefined;
 }`,
     // The custom logger carries functions, so it needs the hand-written type.
     ToolchainLoggerConfig: `export interface ToolchainLoggerConfig {

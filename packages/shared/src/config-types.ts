@@ -83,7 +83,7 @@ export interface ToolchainCiConfig {
      * Additional custom workflows, keyed by id (eg. `custom.my-workflow`). Each id writes
      * `<dir>/<filename ?? id>.yml`.
      */
-    custom?: Record<string, CustomWorkflowSettings>;
+    custom?: Record<string & {}, CustomWorkflowSettings>;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
 }
@@ -173,7 +173,7 @@ export interface WorkflowOptions {
     /** Extra steps for a job (one group, or per-job groups). */
     steps?: WorkflowStepsConfig | Array<WorkflowStepsConfig>;
     /** Extra complete jobs merged in. */
-    jobs?: Record<string, WorkflowJob>;
+    jobs?: Record<string & {}, WorkflowJob>;
     /**
      * Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
      *
@@ -205,7 +205,7 @@ export interface WorkflowTriggers {
     schedule?: Array<JsonObject>;
     /** Release trigger (`on.release`). */
     release?: JsonObject;
-    [key: string]: unknown;
+    [key: string & {}]: unknown;
 }
 
 export type ConfigJsonValue =
@@ -214,15 +214,15 @@ export type ConfigJsonValue =
     | boolean
     | null
     | ConfigJsonValue[]
-    | { [key: string]: ConfigJsonValue };
+    | { [key: string & {}]: ConfigJsonValue };
 
 export interface WorkflowExtra {
     /** Workflow permissions. */
-    permissions?: Record<string, string>;
+    permissions?: Record<string & {}, string>;
     /** Workflow concurrency. */
     concurrency?: string | { group: string; 'cancel-in-progress'?: boolean | string };
     /** Workflow environment variables. */
-    env?: Record<string, string>;
+    env?: Record<string & {}, string>;
     /**
      * Default settings for `run` steps.
      *
@@ -247,7 +247,7 @@ export interface WorkflowExtra {
     container?: JsonObject;
     /** Build matrix / strategy. */
     strategy?: JsonObject;
-    [key: string]: unknown;
+    [key: string & {}]: unknown;
 }
 
 export interface WorkflowStepsConfig {
@@ -275,9 +275,9 @@ export interface WorkflowStep {
     /** Directory the step runs in. */
     'working-directory'?: string;
     /** Inputs for a `uses` action. */
-    with?: Record<string, string | number | boolean>;
+    with?: Record<string & {}, string | number | boolean>;
     /** Environment variables for the step. */
-    env?: Record<string, string>;
+    env?: Record<string & {}, string>;
 }
 
 export interface WorkflowJob {
@@ -296,11 +296,11 @@ export interface WorkflowJob {
     /** A GitHub environment name. */
     environment?: string;
     /** Job permissions. */
-    permissions?: Record<string, string>;
+    permissions?: Record<string & {}, string>;
     /** Environment variables. */
-    env?: Record<string, string>;
+    env?: Record<string & {}, string>;
     /** Job outputs. */
-    outputs?: Record<string, string>;
+    outputs?: Record<string & {}, string>;
     /** Job concurrency settings. */
     concurrency?: JsonObject;
     /** The job timeout in minutes. */
@@ -315,7 +315,7 @@ export interface WorkflowJob {
      * @required
      */
     steps: Array<WorkflowStep>;
-    [key: string]: unknown;
+    [key: string & {}]: unknown;
 }
 
 export interface WorkflowTokens {
@@ -345,7 +345,7 @@ export interface WorkflowTokens {
     mainBranch?: string;
     /** Dev branch (`{{devBranch}}`). */
     devBranch?: string;
-    [key: string]: string | number | boolean | undefined;
+    [key: string & {}]: string | number | boolean | undefined;
 }
 
 export type WorkflowSetting =
@@ -378,7 +378,7 @@ export interface CiChangelogConfig {
     /** Extra steps for a job (one group, or per-job groups). */
     steps?: WorkflowStepsConfig | Array<WorkflowStepsConfig>;
     /** Extra complete jobs merged in. */
-    jobs?: Record<string, WorkflowJob>;
+    jobs?: Record<string & {}, WorkflowJob>;
     /**
      * Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
      *
@@ -414,7 +414,7 @@ export interface CiChangelogConfig {
                 }
           >
         | Record<
-              string,
+              string & {},
               | string
               | {
                     type?: string;
@@ -595,7 +595,7 @@ export interface ChangelogConfig {
                 }
           >
         | Record<
-              string,
+              string & {},
               | string
               | {
                     type?: string;
@@ -833,9 +833,9 @@ export interface ToolchainRegistryPolicy {
 
 export interface ToolchainCatalogsConfig {
     /** The default catalog: package name -> version range. */
-    packages?: Record<string, string>;
+    packages?: Record<string & {}, string>;
     /** Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages. */
-    named?: Record<string, Record<string, string>>;
+    named?: Record<string & {}, Record<string & {}, string>>;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
 }
