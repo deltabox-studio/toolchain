@@ -145,15 +145,146 @@ Replace `on.pull_request.branches`.
 
 #### `triggers`
 
+- **Type**: `WorkflowTriggers`
+
+Extra `on.*` workflow triggers.
+
+##### `push`
+
 - **Type**: `JsonObject`
 
-Extra `on.*` triggers.
+Push trigger (`on.push`).
+
+##### `pull_request`
+
+- **Type**: `JsonObject`
+
+Pull-request trigger (`on.pull_request`).
+
+##### `pull_request_target`
+
+- **Type**: `JsonObject`
+
+Pull-request-target trigger (`on.pull_request_target`).
+
+##### `workflow_dispatch`
+
+- **Type**: `JsonObject`
+
+Manual trigger (`on.workflow_dispatch`).
+
+##### `workflow_call`
+
+- **Type**: `JsonObject`
+
+Reusable workflow trigger (`on.workflow_call`).
+
+##### `workflow_run`
+
+- **Type**: `JsonObject`
+
+Triggered by another workflow (`on.workflow_run`).
+
+##### `schedule`
+
+- **Type**: `Array<JsonObject>`
+
+Scheduled trigger list (`on.schedule`).
+
+##### `release`
+
+- **Type**: `JsonObject`
+
+Release trigger (`on.release`).
 
 #### `extra`
 
+- **Type**: `WorkflowExtra`
+
+Extra top-level workflow keys (`permissions`, `concurrency`, `env`, ...).
+
+##### `permissions`
+
+- **Type**: `Record<string, string>`
+
+Workflow permissions.
+
+##### `concurrency`
+
+- **Type**: `string | object`
+
+Workflow concurrency.
+
+###### `group`
+
+- **Required**
+- **Type**: `string`
+
+Concurrency group.
+
+###### `cancel-in-progress`
+
+- **Type**: `boolean | string`
+
+Cancel in-progress runs (boolean or expression).
+
+##### `env`
+
+- **Type**: `Record<string, string>`
+
+Workflow environment variables.
+
+##### `defaults`
+
+- **Type**: `object`
+
+Default settings for `run` steps.
+
+###### `run`
+
+- **Type**: `object`
+
+###### `shell`
+
+- **Type**: `string`
+
+Default shell.
+
+###### `working-directory`
+
+- **Type**: `string`
+
+Default working directory.
+
+##### `name`
+
+- **Type**: `string`
+
+Workflow name.
+
+##### `run-name`
+
+- **Type**: `string`
+
+Workflow run name.
+
+##### `timeout-minutes`
+
+- **Type**: `number`
+
+Job timeout in minutes.
+
+##### `container`
+
 - **Type**: `JsonObject`
 
-Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
+Container for the job.
+
+##### `strategy`
+
+- **Type**: `JsonObject`
+
+Build matrix / strategy.
 
 #### `steps`
 
@@ -241,9 +372,87 @@ Extra complete jobs merged in.
 
 #### `tokens`
 
-- **Type**: `Record<string, string | number | boolean>`
+- **Type**: `WorkflowTokens`
 
 Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
+
+##### `name`
+
+- **Type**: `string`
+
+Project name (`{{name}}`).
+
+##### `scope`
+
+- **Type**: `string`
+
+Package scope (`{{scope}}`).
+
+##### `author`
+
+- **Type**: `string`
+
+Author (`{{author}}`).
+
+##### `license`
+
+- **Type**: `string`
+
+License (`{{license}}`).
+
+##### `homepage`
+
+- **Type**: `string`
+
+Homepage (`{{homepage}}`).
+
+##### `repo`
+
+- **Type**: `string`
+
+Repository URL (`{{repo}}`).
+
+##### `description`
+
+- **Type**: `string`
+
+Description (`{{description}}`).
+
+##### `nodeVersion`
+
+- **Type**: `string`
+
+Node version (`{{nodeVersion}}`).
+
+##### `packageManager`
+
+- **Type**: `string`
+
+Package manager (`{{packageManager}}`).
+
+##### `yarnVersion`
+
+- **Type**: `string`
+
+Yarn version (`{{yarnVersion}}`).
+
+##### `packageManagerVersion`
+
+- **Type**: `string`
+
+Package manager version (`{{packageManagerVersion}}`).
+
+##### `mainBranch`
+
+- **Type**: `string`
+
+Main branch (`{{mainBranch}}`).
+
+##### `devBranch`
+
+- **Type**: `string`
+
+Dev branch (`{{devBranch}}`).
 
 ### `changelog`
 
@@ -271,15 +480,15 @@ Replace `on.pull_request.branches`.
 
 #### `triggers`
 
-- **Type**: `JsonObject`
+- **Type**: `WorkflowTriggers`
 
-Extra `on.*` triggers.
+Extra `on.*` workflow triggers.
 
 #### `extra`
 
-- **Type**: `JsonObject`
+- **Type**: `WorkflowExtra`
 
-Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
+Extra top-level workflow keys (`permissions`, `concurrency`, `env`, ...).
 
 #### `steps`
 
@@ -295,7 +504,7 @@ Extra complete jobs merged in.
 
 #### `tokens`
 
-- **Type**: `Record<string, string | number | boolean>`
+- **Type**: `WorkflowTokens`
 
 Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
 

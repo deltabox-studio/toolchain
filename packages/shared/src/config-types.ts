@@ -158,22 +158,96 @@ export interface WorkflowOptions {
     pushBranches?: Array<string>;
     /** Replace `on.pull_request.branches`. */
     pullRequestBranches?: Array<string>;
-    /** Extra `on.*` triggers. */
-    triggers?: JsonObject;
-    /** Extra top-level keys (`permissions`, `concurrency`, `env`, ...). */
-    extra?: JsonObject;
+    /**
+     * Extra `on.*` workflow triggers.
+     *
+     * @allowExtraKeys true
+     */
+    triggers?: WorkflowTriggers;
+    /**
+     * Extra top-level workflow keys (`permissions`, `concurrency`, `env`, ...).
+     *
+     * @allowExtraKeys true
+     */
+    extra?: WorkflowExtra;
     /** Extra steps for a job (one group, or per-job groups). */
     steps?: WorkflowStepsConfig | Array<WorkflowStepsConfig>;
     /** Extra complete jobs merged in. */
     jobs?: Record<string, WorkflowJob>;
-    /** Per-workflow token overrides (`nodeVersion`, `packageManager`, ...). */
-    tokens?: Record<string, string | number | boolean>;
+    /**
+     * Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
+     *
+     * @allowExtraKeys true
+     */
+    tokens?: WorkflowTokens;
     /** Override the generated workflow file name (eg. `deploy.yml`). */
     filename?: string;
     /** Directory for the workflow file (default `.github/workflows`). */
     dir?: string;
     /** Enable/disable this workflow (default: enabled when present). */
     enabled?: boolean;
+}
+
+export interface WorkflowTriggers {
+    /** Push trigger (`on.push`). */
+    push?: JsonObject;
+    /** Pull-request trigger (`on.pull_request`). */
+    pull_request?: JsonObject;
+    /** Pull-request-target trigger (`on.pull_request_target`). */
+    pull_request_target?: JsonObject;
+    /** Manual trigger (`on.workflow_dispatch`). */
+    workflow_dispatch?: JsonObject;
+    /** Reusable workflow trigger (`on.workflow_call`). */
+    workflow_call?: JsonObject;
+    /** Triggered by another workflow (`on.workflow_run`). */
+    workflow_run?: JsonObject;
+    /** Scheduled trigger list (`on.schedule`). */
+    schedule?: Array<JsonObject>;
+    /** Release trigger (`on.release`). */
+    release?: JsonObject;
+    [key: string]: unknown;
+}
+
+export type ConfigJsonValue =
+    | string
+    | number
+    | boolean
+    | null
+    | ConfigJsonValue[]
+    | { [key: string]: ConfigJsonValue };
+
+export interface WorkflowExtra {
+    /** Workflow permissions. */
+    permissions?: Record<string, string>;
+    /** Workflow concurrency. */
+    concurrency?: string | { group: string; 'cancel-in-progress'?: boolean | string };
+    /** Workflow environment variables. */
+    env?: Record<string, string>;
+    /**
+     * Default settings for `run` steps.
+     *
+     * @allowExtraKeys true
+     */
+    defaults?: {
+        /** @allowExtraKeys true */
+        run?: {
+            /** Default shell. */
+            shell?: string;
+            /** Default working directory. */
+            'working-directory'?: string;
+        };
+    };
+    /** Workflow name. */
+    name?: string;
+    /** Workflow run name. */
+    'run-name'?: string;
+    /** Job timeout in minutes. */
+    'timeout-minutes'?: number;
+    /** Container for the job. */
+    container?: JsonObject;
+    /** Build matrix / strategy. */
+    strategy?: JsonObject;
+    [key: string]: unknown;
 }
 
 export interface WorkflowStepsConfig {
@@ -244,13 +318,35 @@ export interface WorkflowJob {
     [key: string]: unknown;
 }
 
-export type ConfigJsonValue =
-    | string
-    | number
-    | boolean
-    | null
-    | ConfigJsonValue[]
-    | { [key: string]: ConfigJsonValue };
+export interface WorkflowTokens {
+    /** Project name (`{{name}}`). */
+    name?: string;
+    /** Package scope (`{{scope}}`). */
+    scope?: string;
+    /** Author (`{{author}}`). */
+    author?: string;
+    /** License (`{{license}}`). */
+    license?: string;
+    /** Homepage (`{{homepage}}`). */
+    homepage?: string;
+    /** Repository URL (`{{repo}}`). */
+    repo?: string;
+    /** Description (`{{description}}`). */
+    description?: string;
+    /** Node version (`{{nodeVersion}}`). */
+    nodeVersion?: string;
+    /** Package manager (`{{packageManager}}`). */
+    packageManager?: string;
+    /** Yarn version (`{{yarnVersion}}`). */
+    yarnVersion?: string;
+    /** Package manager version (`{{packageManagerVersion}}`). */
+    packageManagerVersion?: string;
+    /** Main branch (`{{mainBranch}}`). */
+    mainBranch?: string;
+    /** Dev branch (`{{devBranch}}`). */
+    devBranch?: string;
+    [key: string]: string | number | boolean | undefined;
+}
 
 export type WorkflowSetting =
     | boolean
@@ -267,16 +363,28 @@ export interface CiChangelogConfig {
     pushBranches?: Array<string>;
     /** Replace `on.pull_request.branches`. */
     pullRequestBranches?: Array<string>;
-    /** Extra `on.*` triggers. */
-    triggers?: JsonObject;
-    /** Extra top-level keys (`permissions`, `concurrency`, `env`, ...). */
-    extra?: JsonObject;
+    /**
+     * Extra `on.*` workflow triggers.
+     *
+     * @allowExtraKeys true
+     */
+    triggers?: WorkflowTriggers;
+    /**
+     * Extra top-level workflow keys (`permissions`, `concurrency`, `env`, ...).
+     *
+     * @allowExtraKeys true
+     */
+    extra?: WorkflowExtra;
     /** Extra steps for a job (one group, or per-job groups). */
     steps?: WorkflowStepsConfig | Array<WorkflowStepsConfig>;
     /** Extra complete jobs merged in. */
     jobs?: Record<string, WorkflowJob>;
-    /** Per-workflow token overrides (`nodeVersion`, `packageManager`, ...). */
-    tokens?: Record<string, string | number | boolean>;
+    /**
+     * Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
+     *
+     * @allowExtraKeys true
+     */
+    tokens?: WorkflowTokens;
     /** Override the generated workflow file name (eg. `deploy.yml`). */
     filename?: string;
     /** Directory for the workflow file (default `.github/workflows`). */

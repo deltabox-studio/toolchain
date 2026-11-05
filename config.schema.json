@@ -241,16 +241,10 @@
                     "description": "Replace `on.pull_request.branches`."
                 },
                 "triggers": {
-                    "type": "object",
-                    "properties": {},
-                    "additionalProperties": {},
-                    "description": "Extra `on.*` triggers."
+                    "$ref": "#/$defs/WorkflowTriggers"
                 },
                 "extra": {
-                    "type": "object",
-                    "properties": {},
-                    "additionalProperties": {},
-                    "description": "Extra top-level keys (`permissions`, `concurrency`, `env`, ...)."
+                    "$ref": "#/$defs/WorkflowExtra"
                 },
                 "steps": {
                     "anyOf": [
@@ -277,18 +271,7 @@
                     "description": "Extra complete jobs merged in."
                 },
                 "tokens": {
-                    "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
-                    "additionalProperties": {
-                        "type": [
-                            "string",
-                            "number",
-                            "boolean"
-                        ]
-                    },
-                    "description": "Per-workflow token overrides (`nodeVersion`, `packageManager`, ...)."
+                    "$ref": "#/$defs/WorkflowTokens"
                 },
                 "filename": {
                     "type": "string",
@@ -305,6 +288,207 @@
             },
             "additionalProperties": false,
             "description": "Per-workflow overrides merged over the generated default."
+        },
+        "WorkflowTriggers": {
+            "type": "object",
+            "properties": {
+                "push": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "Push trigger (`on.push`)."
+                },
+                "pull_request": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "Pull-request trigger (`on.pull_request`)."
+                },
+                "pull_request_target": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "Pull-request-target trigger (`on.pull_request_target`)."
+                },
+                "workflow_dispatch": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "Manual trigger (`on.workflow_dispatch`)."
+                },
+                "workflow_call": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "Reusable workflow trigger (`on.workflow_call`)."
+                },
+                "workflow_run": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "Triggered by another workflow (`on.workflow_run`)."
+                },
+                "schedule": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": {},
+                        "description": "Scheduled trigger (`on.schedule`)."
+                    },
+                    "description": "Scheduled trigger list (`on.schedule`)."
+                },
+                "release": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "Release trigger (`on.release`)."
+                }
+            },
+            "additionalProperties": {
+                "$ref": "#/$defs/ConfigJsonValue"
+            },
+            "description": "Extra `on.*` workflow triggers."
+        },
+        "ConfigJsonValue": {
+            "description": "Any JSON value.",
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "number"
+                },
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "null"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/ConfigJsonValue"
+                    }
+                },
+                {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "$ref": "#/$defs/ConfigJsonValue"
+                    }
+                }
+            ]
+        },
+        "WorkflowExtra": {
+            "type": "object",
+            "properties": {
+                "permissions": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "description": "Workflow permissions."
+                },
+                "concurrency": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "group": {
+                                    "type": "string",
+                                    "description": "Concurrency group."
+                                },
+                                "cancel-in-progress": {
+                                    "description": "Cancel in-progress runs (boolean or expression).",
+                                    "type": [
+                                        "boolean",
+                                        "string"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "group"
+                            ],
+                            "additionalProperties": {
+                                "$ref": "#/$defs/ConfigJsonValue"
+                            }
+                        }
+                    ],
+                    "description": "Workflow concurrency."
+                },
+                "env": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "description": "Workflow environment variables."
+                },
+                "defaults": {
+                    "type": "object",
+                    "properties": {
+                        "run": {
+                            "type": "object",
+                            "properties": {
+                                "shell": {
+                                    "type": "string",
+                                    "description": "Default shell."
+                                },
+                                "working-directory": {
+                                    "type": "string",
+                                    "description": "Default working directory."
+                                }
+                            },
+                            "additionalProperties": {
+                                "$ref": "#/$defs/ConfigJsonValue"
+                            }
+                        }
+                    },
+                    "additionalProperties": {
+                        "$ref": "#/$defs/ConfigJsonValue"
+                    },
+                    "description": "Default settings for `run` steps."
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Workflow name."
+                },
+                "run-name": {
+                    "type": "string",
+                    "description": "Workflow run name."
+                },
+                "timeout-minutes": {
+                    "type": "number",
+                    "description": "Job timeout in minutes."
+                },
+                "container": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "Container for the job."
+                },
+                "strategy": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "Build matrix / strategy."
+                }
+            },
+            "additionalProperties": {
+                "$ref": "#/$defs/ConfigJsonValue"
+            },
+            "description": "Extra top-level workflow keys (`permissions`, `concurrency`, `env`, ...)."
         },
         "WorkflowStepsConfig": {
             "type": "object",
@@ -492,37 +676,70 @@
             },
             "description": "A complete GitHub Actions workflow job."
         },
-        "ConfigJsonValue": {
-            "description": "Any JSON value.",
-            "anyOf": [
-                {
-                    "type": "string"
+        "WorkflowTokens": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Project name (`{{name}}`)."
                 },
-                {
-                    "type": "number"
+                "scope": {
+                    "type": "string",
+                    "description": "Package scope (`{{scope}}`)."
                 },
-                {
-                    "type": "boolean"
+                "author": {
+                    "type": "string",
+                    "description": "Author (`{{author}}`)."
                 },
-                {
-                    "type": "null"
+                "license": {
+                    "type": "string",
+                    "description": "License (`{{license}}`)."
                 },
-                {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/$defs/ConfigJsonValue"
-                    }
+                "homepage": {
+                    "type": "string",
+                    "description": "Homepage (`{{homepage}}`)."
                 },
-                {
-                    "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
-                    "additionalProperties": {
-                        "$ref": "#/$defs/ConfigJsonValue"
-                    }
+                "repo": {
+                    "type": "string",
+                    "description": "Repository URL (`{{repo}}`)."
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Description (`{{description}}`)."
+                },
+                "nodeVersion": {
+                    "type": "string",
+                    "description": "Node version (`{{nodeVersion}}`)."
+                },
+                "packageManager": {
+                    "type": "string",
+                    "description": "Package manager (`{{packageManager}}`)."
+                },
+                "yarnVersion": {
+                    "type": "string",
+                    "description": "Yarn version (`{{yarnVersion}}`)."
+                },
+                "packageManagerVersion": {
+                    "type": "string",
+                    "description": "Package manager version (`{{packageManagerVersion}}`)."
+                },
+                "mainBranch": {
+                    "type": "string",
+                    "description": "Main branch (`{{mainBranch}}`)."
+                },
+                "devBranch": {
+                    "type": "string",
+                    "description": "Dev branch (`{{devBranch}}`)."
                 }
-            ]
+            },
+            "additionalProperties": {
+                "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                ]
+            },
+            "description": "Per-workflow token overrides (`nodeVersion`, `packageManager`, ...)."
         },
         "WorkflowSetting": {
             "anyOf": [
@@ -570,16 +787,10 @@
                     "description": "Replace `on.pull_request.branches`."
                 },
                 "triggers": {
-                    "type": "object",
-                    "properties": {},
-                    "additionalProperties": {},
-                    "description": "Extra `on.*` triggers."
+                    "$ref": "#/$defs/WorkflowTriggers"
                 },
                 "extra": {
-                    "type": "object",
-                    "properties": {},
-                    "additionalProperties": {},
-                    "description": "Extra top-level keys (`permissions`, `concurrency`, `env`, ...)."
+                    "$ref": "#/$defs/WorkflowExtra"
                 },
                 "steps": {
                     "anyOf": [
@@ -606,18 +817,7 @@
                     "description": "Extra complete jobs merged in."
                 },
                 "tokens": {
-                    "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
-                    "additionalProperties": {
-                        "type": [
-                            "string",
-                            "number",
-                            "boolean"
-                        ]
-                    },
-                    "description": "Per-workflow token overrides (`nodeVersion`, `packageManager`, ...)."
+                    "$ref": "#/$defs/WorkflowTokens"
                 },
                 "filename": {
                     "type": "string",

@@ -41,6 +41,37 @@ const overrides = {
     /** Oxlint options; \`true\` uses the toolchain defaults. */
     lint?: boolean | NonNullable<ViteUserConfig['lint']>;
 };`,
+    // Workflow token values are template replacements (primitives), so the
+    // index signature can stay assignable to `Replacements`.
+    WorkflowTokens: `export interface WorkflowTokens {
+    /** Project name (\`{{name}}\`). */
+    name?: string;
+    /** Package scope (\`{{scope}}\`). */
+    scope?: string;
+    /** Author (\`{{author}}\`). */
+    author?: string;
+    /** License (\`{{license}}\`). */
+    license?: string;
+    /** Homepage (\`{{homepage}}\`). */
+    homepage?: string;
+    /** Repository URL (\`{{repo}}\`). */
+    repo?: string;
+    /** Description (\`{{description}}\`). */
+    description?: string;
+    /** Node version (\`{{nodeVersion}}\`). */
+    nodeVersion?: string;
+    /** Package manager (\`{{packageManager}}\`). */
+    packageManager?: string;
+    /** Yarn version (\`{{yarnVersion}}\`). */
+    yarnVersion?: string;
+    /** Package manager version (\`{{packageManagerVersion}}\`). */
+    packageManagerVersion?: string;
+    /** Main branch (\`{{mainBranch}}\`). */
+    mainBranch?: string;
+    /** Dev branch (\`{{devBranch}}\`). */
+    devBranch?: string;
+    [key: string]: string | number | boolean | undefined;
+}`,
     // The custom logger carries functions, so it needs the hand-written type.
     ToolchainLoggerConfig: `export interface ToolchainLoggerConfig {
     /** Minimum level to print (default \`info\`). */
