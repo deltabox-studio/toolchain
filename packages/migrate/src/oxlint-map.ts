@@ -16,7 +16,7 @@ type Json = Record<string, any>;
  * Biome rule path -> Oxlint rule name. `null` means "no known equivalent".
  * Bare names are core ESLint rules; prefixed names use an Oxlint plugin.
  */
-export const RULE_MAP: Record<string, string | null> = {
+export const RULE_MAP = {
     'a11y.useAltText': 'jsx-a11y/alt-text',
     'a11y.useButtonType': 'react/button-has-type',
     'a11y.useKeyWithClickEvents': 'jsx-a11y/click-events-have-key-events',
@@ -49,7 +49,7 @@ export const RULE_MAP: Record<string, string | null> = {
     'suspicious.noImplicitAnyLet': null,
     'suspicious.noUnknownAtRules': null,
     'performance.noAccumulatingSpread': 'oxc/no-accumulating-spread',
-};
+} as const;
 
 interface RuleSetting {
     level?: string;
@@ -101,7 +101,7 @@ export function mapBiomeToOxlint(biome: Json, ignorePatterns: string[]): OxlintM
     for (const [path, setting] of flattenRules(biome.linter?.rules ?? {})) {
         const level = toOxlintLevel(levelOf(setting));
         if (!level) continue;
-        const target = RULE_MAP[path];
+        const target = RULE_MAP[path as keyof typeof RULE_MAP];
         if (target === undefined) {
             unmapped.push({
                 source: `linter.rules.${path}`,

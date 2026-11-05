@@ -7,6 +7,7 @@ import {
     DEFAULT_FMT_RULES,
     DEFAULT_LINT_RULES,
     DEFAULT_PACKAGE_MANAGER_VERSIONS,
+    defaultPackageManagerVersion,
     type GeneratedFile,
     projectToPackageJson,
     type ProjectType,
@@ -53,7 +54,7 @@ function packageManagerField(
     version: string | undefined
 ): string | undefined {
     if (!packageManager) return undefined;
-    const resolved = version ?? DEFAULT_PACKAGE_MANAGER_VERSIONS[packageManager];
+    const resolved = version ?? defaultPackageManagerVersion(packageManager);
     return resolved ? `${packageManager}@${resolved}` : packageManager;
 }
 
@@ -171,14 +172,14 @@ export interface RootOxcFiles {
 /** The language a generated `dbx.config.*` uses. */
 export type ConfigLanguage = 'ts' | 'js';
 
-/** The extensions a generated `dbx.config.*` can use. */
-export type ConfigExtension = 'ts' | 'mts' | 'js' | 'mjs' | 'cjs';
-
 /** Every supported generated config extension. */
-export const CONFIG_EXTENSIONS: readonly ConfigExtension[] = ['ts', 'mts', 'js', 'mjs', 'cjs'];
+export const CONFIG_EXTENSIONS = ['ts', 'mts', 'js', 'mjs', 'cjs'] as const;
+
+/** The extensions a generated `dbx.config.*` can use. */
+export type ConfigExtension = (typeof CONFIG_EXTENSIONS)[number];
 
 /** The default generated config extension. */
-export const DEFAULT_CONFIG_EXTENSION: ConfigExtension = 'ts';
+export const DEFAULT_CONFIG_EXTENSION = 'ts' as const;
 
 /** Whether a string is a supported generated config extension. */
 export function isConfigExtension(value: string): value is ConfigExtension {
@@ -382,7 +383,7 @@ export function renderToolchainConfig(
     const pmVersion =
         ctx.packageManagerVersion ??
         ctx.yarnVersion ??
-        DEFAULT_PACKAGE_MANAGER_VERSIONS[packageManager];
+        defaultPackageManagerVersion(packageManager);
     if (pmVersion) entries.push(['packageManagerVersion', pmVersion]);
 
     const project = entries

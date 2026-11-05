@@ -12,10 +12,10 @@ import biomeConfigJson from './config.json' with { type: 'json' };
 import vscodeSettingsJson from './vscode-settings.json' with { type: 'json' };
 
 /** The generic Biome configuration (with `{{name}}` / `{{scope}}` tokens). */
-export const biomeConfig: Record<string, unknown> = biomeConfigJson;
+export const biomeConfig = biomeConfigJson;
 
 /** The recommended Biome VS Code settings. */
-export const biomeVscodeSettings: Record<string, unknown> = vscodeSettingsJson;
+export const biomeVscodeSettings = vscodeSettingsJson;
 
 /**
  * Merge an override over a base config: object keys merge recursively and

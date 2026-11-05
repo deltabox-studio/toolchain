@@ -26,18 +26,25 @@ export const DEFAULT_FMT_SORT_GROUP = 'workspace';
  * aliases, relatives, styles and unknowns. The `workspace` group is inserted
  * after `external` by {@link applyFmtCustomGroups}.
  */
-export const DEFAULT_FMT_SORT_GROUPS: FmtSortGroup[] = [
+export const DEFAULT_FMT_SORT_GROUPS = [
     'builtin',
     'external',
     ['internal', 'subpath'],
     ['parent', 'sibling', 'index'],
     'style',
     'unknown',
-];
+] as const;
+
+/** A mutable copy of the default groups (the exported constant is readonly). */
+function defaultFmtSortGroups(): FmtSortGroup[] {
+    return DEFAULT_FMT_SORT_GROUPS.map(group =>
+        Array.isArray(group) ? [...group] : group
+    ) as FmtSortGroup[];
+}
 
 /** The default Oxfmt `sortImports` options (without resolved custom groups). */
 export const DEFAULT_FMT_SORT_IMPORTS: FmtSortImports = {
-    groups: [...DEFAULT_FMT_SORT_GROUPS],
+    groups: defaultFmtSortGroups(),
     customGroups: [],
     internalPattern: ['~/', '@/'],
     newlinesBetween: true,
@@ -71,7 +78,7 @@ export const DEFAULT_FMT_RULES: ToolchainOxfmtConfig = {
     sortPackageJson: false,
     sortImports: {
         ...DEFAULT_FMT_SORT_IMPORTS,
-        groups: [...DEFAULT_FMT_SORT_GROUPS],
+        groups: defaultFmtSortGroups(),
         customGroups: [],
     },
     ignorePatterns: [...DEFAULT_FMT_IGNORE_PATTERNS],
@@ -137,13 +144,13 @@ export function applyFmtCustomGroups(
         fmt.sortImports === true || !isPlainObject(fmt.sortImports)
             ? {
                   ...DEFAULT_FMT_SORT_IMPORTS,
-                  groups: [...DEFAULT_FMT_SORT_GROUPS],
+                  groups: defaultFmtSortGroups(),
                   customGroups: [],
               }
             : { ...fmt.sortImports };
     const groups: FmtSortGroup[] = Array.isArray(base.groups)
         ? [...base.groups]
-        : [...DEFAULT_FMT_SORT_GROUPS];
+        : defaultFmtSortGroups();
     const existing: FmtCustomGroup[] = Array.isArray(base.customGroups)
         ? base.customGroups.map(group => ({ ...group }))
         : [];
