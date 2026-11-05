@@ -1,8 +1,18 @@
 # Changelog
 
-## 2.3.3 (November 2026)
+## 2.3.4 (November 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Ci
+- Cache the VS Code integration test download ([#4941b90](https://github.com/deltabox-studio/toolchain/commit/4941b90) by [T0chi](https://github.com/T0chi))
+  - The integration job downloaded the ~361 MB VS Code stable build on every run. Resolve the exact stable version, cache only that version's unpacked directory, and key the cache by it so a new stable release is downloaded and saved under a fresh key.
+
+<!-- release:end -->
+
+
+## 2.3.3 (November 2026)
 
 ### Bug fixes
 #### Ci
@@ -12,9 +22,6 @@
 #### Ci
 - Bump checkout and setup-node actions to v5 ([#485f29d](https://github.com/deltabox-studio/toolchain/commit/485f29d) by [T0chi](https://github.com/T0chi))
   - The runner warns that actions/checkout@v4 and actions/setup-node@v4 target Node 20 and are forced onto Node 24. Bump the generated workflows (and the dogfood config) to v5.
-
-<!-- release:end -->
-
 
 ## 2.3.2 (November 2026)
 
