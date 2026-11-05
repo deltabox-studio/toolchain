@@ -640,6 +640,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@deltabox/toolchain-project@workspace:packages/project"
   dependencies:
+    "@clack/prompts": "catalog:"
     "@deltabox/toolchain-core": "workspace:*"
     "@deltabox/toolchain-migrate": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
