@@ -1,8 +1,18 @@
 # Changelog
 
-## 2.3.1 (November 2026)
+## 2.3.2 (November 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Vscode
+- Load the tsdown base config from source ([#0537c62](https://github.com/deltabox-studio/toolchain/commit/0537c62) by [T0chi](https://github.com/T0chi))
+  - The VS Code integration job builds the extension after only \yarn install\, so the private \@deltabox/toolchain-tsdown\ dist does not exist and unrun failed to load the config. Import baseTsdownConfig\ from the workspace source instead (as the root tsdown config already does).
+
+<!-- release:end -->
+
+
+## 2.3.1 (November 2026)
 
 ### Bug fixes
 #### Vscode
@@ -25,9 +35,6 @@
 #### Ci
 - Check and regenerate nested workspace configs recursively ([#711c7b4](https://github.com/deltabox-studio/toolchain/commit/711c7b4) by [T0chi](https://github.com/T0chi))
   - The generated schema types are formatted at printWidth 300 and excluded from the formatter, but the ignore patterns were repo-root-relative. Per-workspace vp fmt resolves them from each package directory, so yarn format reformatted biome-config.ts and failed the artifact check. Use **/ globs and make the generated CI/sync workflows run dbx sync --check --recursive so stale workspace configs are caught and regenerated.
-
-<!-- release:end -->
-
 
 ## 2.3.0 (November 2026)
 
