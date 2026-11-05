@@ -202,13 +202,18 @@ function setupSteps(tokens: Replacements): WorkflowStep[] {
     const setup: WorkflowStep[] = [
         {
             name: 'Checkout',
-            uses: 'actions/checkout@v4',
+            uses: 'actions/checkout@v5',
             with: { 'fetch-depth': 0, token: '${{ secrets.GITHUB_TOKEN }}' },
         },
         {
             name: 'Setup Node',
-            uses: 'actions/setup-node@v4',
-            with: { 'node-version': String(tokens.nodeVersion) },
+            uses: 'actions/setup-node@v5',
+            with: {
+                'node-version': String(tokens.nodeVersion),
+                // v5 auto-caches from `packageManager` before Corepack is
+                // enabled, so `yarn cache dir` fails on a Yarn 1 runner.
+                'package-manager-cache': false,
+            },
         },
     ];
 

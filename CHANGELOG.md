@@ -1,16 +1,34 @@
 # Changelog
 
-## 2.3.2 (November 2026)
+## 2.3.4 (November 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Ci
+- Cache the VS Code integration test download ([#4941b90](https://github.com/deltabox-studio/toolchain/commit/4941b90) by [T0chi](https://github.com/T0chi))
+  - The integration job downloaded the ~361 MB VS Code stable build on every run. Resolve the exact stable version, cache only that version's unpacked directory, and key the cache by it so a new stable release is downloaded and saved under a fresh key.
+
+<!-- release:end -->
+
+
+## 2.3.3 (November 2026)
+
+### Bug fixes
+#### Ci
+- Disable setup-node auto-cache so Corepack can enable Yarn ([#571f896](https://github.com/deltabox-studio/toolchain/commit/571f896) by [T0chi](https://github.com/T0chi))
+  - actions/setup-node@v5 now auto-caches from the packageManager field and runs \yarn cache dir\ before the Enable Corepack step, so every job failed with the global Yarn 1.22.22 error. Set package-manager-cache: false on every setup-node step; Corepack still enables the pinned Yarn/pnpm before install.
+### Chores
+#### Ci
+- Bump checkout and setup-node actions to v5 ([#485f29d](https://github.com/deltabox-studio/toolchain/commit/485f29d) by [T0chi](https://github.com/T0chi))
+  - The runner warns that actions/checkout@v4 and actions/setup-node@v4 target Node 20 and are forced onto Node 24. Bump the generated workflows (and the dogfood config) to v5.
+
+## 2.3.2 (November 2026)
 
 ### Bug fixes
 #### Vscode
 - Load the tsdown base config from source ([#0537c62](https://github.com/deltabox-studio/toolchain/commit/0537c62) by [T0chi](https://github.com/T0chi))
   - The VS Code integration job builds the extension after only \yarn install\, so the private \@deltabox/toolchain-tsdown\ dist does not exist and unrun failed to load the config. Import baseTsdownConfig\ from the workspace source instead (as the root tsdown config already does).
-
-<!-- release:end -->
-
 
 ## 2.3.1 (November 2026)
 

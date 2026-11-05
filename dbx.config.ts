@@ -88,7 +88,7 @@ export default defineConfig({
                         steps: [
                             {
                                 name: 'Checkout',
-                                uses: 'actions/checkout@v4',
+                                uses: 'actions/checkout@v5',
                                 with: {
                                     'fetch-depth': 0,
                                     token: '${{ secrets.GITHUB_TOKEN }}',
@@ -96,10 +96,12 @@ export default defineConfig({
                             },
                             {
                                 name: 'Setup Node',
-                                uses: 'actions/setup-node@v4',
+                                uses: 'actions/setup-node@v5',
                                 with: {
                                     'node-version': '{{nodeVersion}}',
                                     'registry-url': 'https://registry.npmjs.org',
+                                    // v5 auto-caches before Corepack is enabled.
+                                    'package-manager-cache': false,
                                 },
                             },
                             {
@@ -235,7 +237,7 @@ export default defineConfig({
                         steps: [
                             {
                                 name: 'Checkout',
-                                uses: 'actions/checkout@v4',
+                                uses: 'actions/checkout@v5',
                                 with: {
                                     'fetch-depth': 0,
                                     token: '${{ secrets.GITHUB_TOKEN }}',
@@ -243,8 +245,12 @@ export default defineConfig({
                             },
                             {
                                 name: 'Setup Node',
-                                uses: 'actions/setup-node@v4',
-                                with: { 'node-version': '{{nodeVersion}}' },
+                                uses: 'actions/setup-node@v5',
+                                with: {
+                                    'node-version': '{{nodeVersion}}',
+                                    // v5 auto-caches before Corepack is enabled.
+                                    'package-manager-cache': false,
+                                },
                             },
                             {
                                 name: 'Enable Corepack',
@@ -253,6 +259,22 @@ export default defineConfig({
                             {
                                 name: 'Install dependencies',
                                 run: '{{packageManager}} install --immutable',
+                            },
+                            {
+                                // Cache the VS Code download by the exact stable
+                                // version, so a new release is fetched and saved
+                                // under a fresh key instead of reused.
+                                name: 'Resolve VS Code version',
+                                id: 'vscode',
+                                run: 'version="$(curl -fsSL "https://update.code.visualstudio.com/api/releases/stable?released=true" | jq -r \'.[0]\' || true)"\necho "version=${version:-unknown}" >> "$GITHUB_OUTPUT"',
+                            },
+                            {
+                                name: 'Cache VS Code',
+                                uses: 'actions/cache@v6',
+                                with: {
+                                    path: 'packages/vscode/.vscode-test/vscode-linux-x64-${{ steps.vscode.outputs.version }}',
+                                    key: '${{ runner.os }}-vscode-${{ steps.vscode.outputs.version }}',
+                                },
                             },
                             {
                                 name: 'Run VS Code extension integration tests',
