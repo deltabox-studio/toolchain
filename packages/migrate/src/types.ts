@@ -26,8 +26,9 @@ export interface MigrationContext {
     /** The project root. */
     cwd: string;
     /**
-     * `files` (default) writes `.oxfmtrc.json` / `.oxlintrc.json`; `vite` is
-     * reserved for folding the config into `vite.config.ts`.
+     * `files` (default) writes `.oxfmtrc.json` / `.oxlintrc.json`; `vite` merges
+     * `fmt`/`lint` into `vite.config.ts` (or into `toolchain.vite` for the
+     * `oxc` source).
      */
     target?: MigrateTarget;
     /** Write the result (default false = dry-run). */

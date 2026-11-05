@@ -25,7 +25,7 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx project:init`](#project-init)                     | Scaffold a single-package TypeScript project.                                                   |
 | [`dbx project:init:monorepo`](#project-init-monorepo)   | Scaffold a monorepo root (add --example for one example workspace).                             |
 | [`dbx project:init:workspace`](#project-init-workspace) | Scaffold a monorepo workspace package into an existing monorepo root.                           |
-| [`dbx project:config`](#project-config)                 | Generate dbx.config.ts for existing projects that are missing one.                              |
+| [`dbx project:config`](#project-config)                 | Generate dbx.config.* for existing projects that are missing one.                               |
 | [`dbx template:list`](#template-list)                   | List templates (builtin + local + opted-in online sources).                                     |
 | [`dbx template:init`](#template-init)                   | Write a template.json to a directory, making it a local template.                               |
 | [`dbx template:add`](#template-add)                     | Record a template source in .dbx/toolchain/templates.json.                                      |
@@ -251,12 +251,15 @@ Scaffold a monorepo workspace package into an existing monorepo root.
 
 ## `dbx project:config`
 
-Generate dbx.config.ts for existing projects that are missing one.
+Generate dbx.config.* for existing projects that are missing one.
 
 - `--cwd ‹dir›` — Root to scan (default: cwd).
 - `--include ‹pattern...›` — Only projects matching these patterns (glob or substring).
 - `--exclude ‹pattern...›` — Skip projects matching these patterns (glob or substring).
 - `--type ‹type›` — Force a project type for every config.
+- `--language ‹language›` — Config language: ts (default) \| js.
+- `--config-extension ‹ext›` — Config extension: ts \| mts \| js \| mjs \| cjs (default inferred from the language and package type).
+- `--skip-config` — Only write .dbx/toolchain/projects.json; do not create dbx.config.* files.
 - `--force` — Overwrite configs that already exist.
 - `--dry-run` — Report what would be written without writing.
 - `--json` — Print the result as JSON.

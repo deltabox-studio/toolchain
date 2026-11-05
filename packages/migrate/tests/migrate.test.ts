@@ -19,10 +19,12 @@ import {
     mergeViteConfig,
     mergeViteObjects,
     migrateCommands,
+    objectHasSections,
     readJsonc,
     renderViteTarget,
     runMigration,
     scanLiteralObject,
+    viteConfigHasFmtLint,
 } from '../src/index.js';
 
 const tmpDirs: string[] = [];
@@ -191,6 +193,14 @@ describe('migrate --target vite', () => {
         expect(out).toContain('semi: true');
         expect(out).not.toContain('semi: false');
         expect(out).toContain('lint: {');
+    });
+
+    it('inserts fmt/lint into a default-exported object', () => {
+        const out = mergeViteConfig(`export default {\n    test: {},\n};\n`, {
+            fmt: { semi: false },
+        });
+        expect(out).toContain('test: {}');
+        expect(out).toContain('fmt: {');
     });
 });
 
@@ -405,6 +415,56 @@ describe('vite -> toolchain', () => {
         expect(ensureViteFmtIgnore(once)).toBe(once);
     });
 
+    it('detects fmt/lint in a hand-written vite config', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'vite.config.ts'),
+            `export default { fmt: { semi: true } };\n`,
+            'utf-8'
+        );
+        expect(viteConfigHasFmtLint(dir)).toEqual({ fmt: true, lint: false });
+    });
+
+    it('detects fmt/lint in an existing toolchain.vite', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'dbx.config.ts'),
+            `export default { toolchain: { vite: { lint: { rules: {} } } } };\n`,
+            'utf-8'
+        );
+        expect(viteConfigHasFmtLint(dir)).toEqual({ fmt: false, lint: true });
+    });
+
+    it('combines fmt/lint from the vite config and toolchain.vite', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'vite.config.ts'),
+            `export default { fmt: {} };\n`,
+            'utf-8'
+        );
+        fs.writeFileSync(
+            path.join(dir, 'dbx.config.ts'),
+            `export default { toolchain: { vite: { lint: {} } } };\n`,
+            'utf-8'
+        );
+        expect(viteConfigHasFmtLint(dir)).toEqual({ fmt: true, lint: true });
+    });
+
+    it('does not create vite.fmt when asked not to', () => {
+        expect(ensureViteFmtIgnore('{ test: {} }', false)).toBe('{ test: {} }');
+        expect(ensureViteFmtIgnore('{ fmt: { semi: true } }', false)).toContain(
+            "ignorePatterns: ['/vite.config.ts']"
+        );
+    });
+
+    it('reports the fmt/lint keys of an object literal', () => {
+        expect(objectHasSections('{ fmt: { semi: true }, lint: { rules: {} } }')).toEqual({
+            fmt: true,
+            lint: true,
+        });
+        expect(objectHasSections('{ test: {} }')).toEqual({ fmt: false, lint: false });
+    });
+
     it('folds a hand-written vite.config.ts into dbx.config.ts', async () => {
         const dir = makeTmp();
         fs.writeFileSync(
@@ -570,5 +630,67 @@ describe('migrate --target vite function configs', () => {
     it('rejects a function-form config instead of silently doing nothing', () => {
         const existing = `import { defineConfig } from 'vite-plus';\nexport default defineConfig(({ mode }) => ({ test: {} }));\n`;
         expect(() => mergeViteConfig(existing, { fmt: { semi: true } })).toThrow(/function/);
+    });
+});
+
+describe('migrate fmt/lint routing', () => {
+    const DBX = `import { defineConfig } from '@deltabox/toolchain';\n\nexport default defineConfig({\n    toolchain: {\n        project: { name: 'probe' },\n    },\n});\n`;
+
+    it('uses top-level fmt/lint.oxc when the vite config has neither', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'package.json'),
+            JSON.stringify({ name: 'probe', type: 'module' }),
+            'utf-8'
+        );
+        fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
+        fs.writeFileSync(path.join(dir, 'dbx.config.ts'), DBX, 'utf-8');
+        fs.writeFileSync(
+            path.join(dir, 'vite.config.ts'),
+            `import { defineConfig } from 'vite-plus';\n\nexport default defineConfig({\n    test: { environment: 'node' },\n});\n`,
+            'utf-8'
+        );
+
+        await migrateCommand().run({ cwd: dir, write: true }, cliContext(dir));
+
+        const content = fs.readFileSync(path.join(dir, 'dbx.config.ts'), 'utf-8');
+        expect(content).toContain('fmt: {\n            oxc:');
+        expect(content).toContain('lint: {\n            oxc:');
+        expect(content).not.toContain('vite: {\n            fmt:');
+        expect(content).not.toContain('vite: {\n            lint:');
+        expect(content).toContain("test: { environment: 'node' }");
+        expect(fs.existsSync(path.join(dir, '.oxfmtrc.json'))).toBe(false);
+        expect(fs.existsSync(path.join(dir, '.oxlintrc.json'))).toBe(false);
+        expect(fs.existsSync(path.join(dir, 'vite.config.ts'))).toBe(false);
+    });
+
+    it('uses toolchain.vite.fmt/lint only when the vite config already has them', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'package.json'),
+            JSON.stringify({ name: 'probe', type: 'module' }),
+            'utf-8'
+        );
+        fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
+        fs.writeFileSync(path.join(dir, 'dbx.config.ts'), DBX, 'utf-8');
+        fs.writeFileSync(
+            path.join(dir, 'vite.config.ts'),
+            `import { defineConfig } from 'vite-plus';\n\nexport default defineConfig({\n    fmt: { semi: false },\n    lint: { rules: { eqeqeq: 'warn' } },\n});\n`,
+            'utf-8'
+        );
+
+        await migrateCommand().run({ cwd: dir, write: true }, cliContext(dir));
+
+        const content = fs.readFileSync(path.join(dir, 'dbx.config.ts'), 'utf-8');
+        expect(content).toContain('vite: {');
+        expect(content).toContain('\n            fmt: {');
+        expect(content).toContain('\n            lint: {');
+        expect(content).not.toContain('fmt: {\n            oxc:');
+        expect(content).not.toContain('lint: {\n            oxc:');
+        expect(content).toContain('tabWidth: 4');
+        expect(content).toContain('no-unused-vars');
+        expect(fs.existsSync(path.join(dir, '.oxfmtrc.json'))).toBe(false);
+        expect(fs.existsSync(path.join(dir, '.oxlintrc.json'))).toBe(false);
+        expect(fs.existsSync(path.join(dir, 'vite.config.ts'))).toBe(false);
     });
 });

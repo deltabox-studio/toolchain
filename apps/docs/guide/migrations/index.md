@@ -36,8 +36,17 @@ is repeatable; `--from all` (or omitting it) selects every detected source.
 - `--target files` (default) — writes `.oxfmtrc.json` and `.oxlintrc.json`.
 - `--target vite` — folds the result into an existing `vite.config.ts`
   (inserting/replacing `fmt` and `lint`), which is what Vite+ reads.
-- The `oxc` source always targets `dbx.config.*` (`toolchain.fmt.oxc` /
-  `toolchain.lint.oxc`); `--target` does not apply.
+- The `oxc` source targets `dbx.config.*` (`toolchain.fmt.oxc` /
+  `toolchain.lint.oxc`, or `toolchain.vite.fmt/lint` when `--target vite`).
+
+Unless `--target` is given, formatter/linter migrations route by what the
+existing Vite config already owns:
+
+- If `vite.config.*` (or an existing `toolchain.vite`) defines `fmt`/`lint`, the
+  migrated options are merged into `toolchain.vite.fmt`/`toolchain.vite.lint`,
+  and no top-level `toolchain.fmt`/`toolchain.lint` is created.
+- Otherwise they are folded into the top-level `toolchain.fmt.oxc` /
+  `toolchain.lint.oxc`, and `vite.fmt`/`vite.lint` are left undefined.
 
 ## Recursive migration
 
@@ -69,9 +78,11 @@ dbx migrate --from vite --write  # folds the object into toolchain.vite
 dbx sync                         # writes the managed vite.config.ts shim
 ```
 
-It also adds `/vite.config.ts` to `toolchain.vite.fmt.ignorePatterns`, so Oxfmt
-leaves the generated shim alone (otherwise `vp fmt` would rewrite it and
-`dbx sync --check` would report drift).
+When the folded config already owns `fmt`, it adds `/vite.config.ts` to
+`toolchain.vite.fmt.ignorePatterns`, so Oxfmt leaves the generated shim alone
+(otherwise `vp fmt` would rewrite it and `dbx sync --check` would report drift).
+When it does not, `vite.fmt` stays undefined; the default fmt ignores already
+cover `**/vite.config.ts`.
 
 It extracts the object literal passed to `defineConfig(...)` (or the
 default-exported object) with a string-aware, balanced-paren scanner and

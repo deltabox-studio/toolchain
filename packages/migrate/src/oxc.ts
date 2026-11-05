@@ -2,8 +2,10 @@
  * Oxc -> `dbx.config.*` migration.
  *
  * Folds a hand-written `.oxfmtrc.json` / `.oxlintrc.json` into
- * `toolchain.fmt.oxc` / `toolchain.lint.oxc`, so `dbx sync` manages the files
- * from the one hand-authored config (after migration they are regenerated).
+ * `toolchain.fmt.oxc` / `toolchain.lint.oxc` (or into
+ * `toolchain.vite.fmt`/`toolchain.vite.lint` with `--target vite`), so
+ * `dbx sync` manages the files from the one hand-authored config (after
+ * migration they are regenerated).
  */
 
 import fs from 'node:fs';
@@ -19,7 +21,12 @@ import type {
     ToolchainMigration,
 } from './types.js';
 import { serializeTs } from './vite-target.js';
-import { foldToolchainSection, renderFreshSectionsConfig } from './vite.js';
+import {
+    foldToolchainSection,
+    foldViteIntoConfig,
+    renderFreshSectionsConfig,
+    renderFreshViteConfig,
+} from './vite.js';
 
 type Json = Record<string, unknown>;
 
@@ -81,17 +88,26 @@ export const oxcToToolchain: ToolchainMigration = {
             ...(found.fmt ? [`Source: ${path.basename(found.fmt)} (Oxfmt).`] : []),
             ...(found.lint ? [`Source: ${path.basename(found.lint)} (Oxlint).`] : []),
         ];
+        const viteTarget = (ctx.target ?? 'files') === 'vite';
         const sections = [
             ...(fmt ? [{ key: 'fmt', objectText: serializeTs({ oxc: fmt }) }] : []),
             ...(lint ? [{ key: 'lint', objectText: serializeTs({ oxc: lint }) }] : []),
         ];
+        const viteObject = viteTarget
+            ? serializeTs({
+                  ...(fmt ? { fmt } : {}),
+                  ...(lint ? { lint } : {}),
+              })
+            : undefined;
 
         const configFile = findConfig(ctx.cwd);
         let target: string;
         let content: string;
         if (!configFile) {
             target = path.join(ctx.cwd, 'dbx.config.ts');
-            content = renderFreshSectionsConfig(sections);
+            content = viteTarget
+                ? renderFreshViteConfig(viteObject as string)
+                : renderFreshSectionsConfig(sections);
         } else if (configFile.endsWith('.json')) {
             return {
                 id: oxcToToolchain.id,
@@ -109,6 +125,24 @@ export const oxcToToolchain: ToolchainMigration = {
                 ],
                 notes: [...notes, 'Fold into the JSON config by hand.'],
             };
+        } else if (viteTarget) {
+            const source = fs.readFileSync(configFile, 'utf-8').replace(/^\uFEFF/, '');
+            const folded = foldViteIntoConfig(source, viteObject as string);
+            if ('error' in folded) {
+                return {
+                    id: oxcToToolchain.id,
+                    from: 'oxc',
+                    to: 'toolchain',
+                    written: [],
+                    files: [],
+                    oxfmt: fmt,
+                    oxlint: lint,
+                    unmapped: [{ source: path.basename(configFile), reason: folded.error }],
+                    notes: [...notes, 'Left dbx.config.* unchanged; fold it by hand.'],
+                };
+            }
+            target = configFile;
+            content = folded.content;
         } else {
             let source = fs.readFileSync(configFile, 'utf-8').replace(/^\uFEFF/, '');
             for (const section of sections) {
@@ -157,7 +191,12 @@ export const oxcToToolchain: ToolchainMigration = {
             files: [file],
             oxfmt: fmt,
             oxlint: lint,
-            notes: [...notes, 'Folded into `toolchain.fmt.oxc` / `toolchain.lint.oxc`.'],
+            notes: [
+                ...notes,
+                viteTarget
+                    ? 'Folded into `toolchain.vite.fmt` / `toolchain.vite.lint`.'
+                    : 'Folded into `toolchain.fmt.oxc` / `toolchain.lint.oxc`.',
+            ],
         };
     },
 };

@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { buildProjectGraph, type ProjectNode } from './graph.js';
+import { buildProjectGraph, type ProjectGraph, type ProjectNode } from './graph.js';
 
 /** A project selected by {@link selectProjects}. */
 export interface SelectedProject {
@@ -28,6 +28,8 @@ export interface SelectProjectsOptions {
     kind?: 'all' | 'configured' | 'unconfigured';
     /** Maximum directory depth to scan (default 5). */
     maxDepth?: number;
+    /** Use an already-built graph instead of scanning the filesystem again. */
+    graph?: ProjectGraph;
 }
 
 const GLOB_CHARS = /[*?[\]{}]/;
@@ -57,10 +59,12 @@ function matches(project: SelectedProject, pattern: string): boolean {
 
 /** Discover projects under a root, applying include/exclude + kind filters. */
 export function selectProjects(options: SelectProjectsOptions): SelectedProject[] {
-    const graph = buildProjectGraph(
-        options.root,
-        options.maxDepth !== undefined ? { maxDepth: options.maxDepth } : {}
-    );
+    const graph =
+        options.graph ??
+        buildProjectGraph(
+            options.root,
+            options.maxDepth !== undefined ? { maxDepth: options.maxDepth } : {}
+        );
     const projects: SelectedProject[] = graph.projects.map((node: ProjectNode) => ({
         dir: path.resolve(options.root, node.dir),
         rel: node.dir,

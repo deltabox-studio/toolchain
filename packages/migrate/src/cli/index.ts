@@ -8,7 +8,8 @@ import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
 
 import { diffFiles, hasPending } from '../check.js';
 import { listMigrations, migrations } from '../registry.js';
-import type { MigrationResult, MigrateTarget } from '../types.js';
+import type { MigrationResult, MigrateTarget, ToolchainMigration } from '../types.js';
+import { viteConfigHasFmtLint } from '../vite.js';
 
 /** Whether we may prompt (an interactive terminal, not `--json`). */
 function canPrompt(opts: Record<string, unknown>): boolean {
@@ -164,21 +165,64 @@ export function migrateCommands(): ToolchainCommand[] {
                     dirs = chosen.map(project => project.dir);
                 }
 
+                const explicitTarget = opts.target !== undefined;
+                const autoFold = (tool: string): boolean =>
+                    fromList.length === 0 || fromAll || selectedFrom.includes(tool);
+
                 const results: { dir: string; result: MigrationResult }[] = [];
                 for (const dir of dirs) {
-                    for (const migration of pickFor(dir))
+                    // When the existing Vite config already owns `fmt`/`lint`,
+                    // migrated formatter/linter options belong in
+                    // `toolchain.vite`; otherwise they belong in the top-level
+                    // `toolchain.fmt`/`toolchain.lint`. An explicit `--target`
+                    // always wins.
+                    const viteSections = explicitTarget ? undefined : viteConfigHasFmtLint(dir);
+                    const routeToVite =
+                        !explicitTarget &&
+                        autoFold('vite') &&
+                        target === 'files' &&
+                        Boolean(viteSections && (viteSections.fmt || viteSections.lint));
+                    const dirTarget: MigrateTarget = routeToVite ? 'vite' : target;
+
+                    const run = async (migration: ToolchainMigration): Promise<void> => {
                         results.push({
                             dir,
                             result: await migration.run({
                                 cwd: dir,
                                 write,
                                 online,
-                                target,
+                                target: dirTarget,
                                 ignoreViteConfigFile: Boolean(opts.ignoreViteConfigFile),
                                 ignoreManagedFiles: Boolean(opts.ignoreManagedFiles),
                                 ignoreChangelog: Boolean(opts.ignoreChangelog),
                             }),
                         });
+                    };
+
+                    // Formatter/linter sources first. The fold steps run after
+                    // them so a freshly written `.oxfmtrc.json` /
+                    // `.oxlintrc.json` or `vite.config.*` is folded in the same
+                    // run instead of needing a second `dbx migrate`.
+                    const picked = pickFor(dir);
+                    for (const migration of picked) {
+                        if (
+                            migration.id === 'oxc-to-toolchain' ||
+                            migration.id === 'vite-to-toolchain'
+                        ) {
+                            continue;
+                        }
+                        await run(migration);
+                    }
+
+                    const oxc = autoFold('oxc')
+                        ? migrations().find(migration => migration.id === 'oxc-to-toolchain')
+                        : undefined;
+                    if (oxc && oxc.detect(dir)) await run(oxc);
+
+                    const vite = autoFold('vite')
+                        ? migrations().find(migration => migration.id === 'vite-to-toolchain')
+                        : undefined;
+                    if (vite && vite.detect(dir)) await run(vite);
                 }
 
                 if (results.length === 0) {

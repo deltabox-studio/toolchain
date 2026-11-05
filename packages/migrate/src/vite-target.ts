@@ -4,8 +4,9 @@
  * Vite+ reads `fmt`/`lint` from `vite.config.ts` (not from
  * `.oxfmtrc.json`/`.oxlintrc.json`), so a Vite+ consumer wants the migration
  * written there. {@link mergeViteConfig} inserts or replaces the `fmt`/`lint`
- * properties inside the `defineConfig({ ... })` object, using a small
- * string-aware scanner (so braces/strings in the existing file are respected).
+ * properties inside the `defineConfig({ ... })` (or default-exported) object,
+ * using a small string-aware scanner (so braces/strings in the existing file
+ * are respected).
  */
 
 import fs from 'node:fs';
@@ -140,6 +141,21 @@ export function findTopLevelValue(
 }
 
 /**
+ * The index of the object literal `fmt`/`lint` can be merged into: the argument
+ * of `defineConfig({ ... })`, or an `export default { ... }` /
+ * `module.exports = { ... }` object. Returns `undefined` for function/async
+ * configs (which cannot be safely text-spliced).
+ */
+export function findViteMergeObject(source: string): number | undefined {
+    const call = source.match(/\bdefineConfig\s*\(\s*\{/);
+    if (call?.index !== undefined) return source.indexOf('{', call.index);
+    const exported =
+        source.match(/\bexport\s+default\s*\{/) ?? source.match(/\bmodule\.exports\s*=\s*\{/);
+    if (exported?.index !== undefined) return source.indexOf('{', exported.index);
+    return undefined;
+}
+
+/**
  * Insert or replace `fmt`/`lint` inside an existing `vite.config.ts`, or render
  * a fresh one when none exists.
  */
@@ -160,16 +176,14 @@ export function mergeViteConfig(
     }
 
     let out = existing;
-    const callMatch = out.match(/defineConfig\s*\(\s*\{/);
-    if (!callMatch || callMatch.index === undefined) {
+    if (findViteMergeObject(out) === undefined) {
         throw new Error(
             'cannot merge into a function/async vite config; add `fmt`/`lint` manually.'
         );
     }
     for (const [key, value] of props) {
-        const call = out.match(/defineConfig\s*\(\s*\{/);
-        if (!call || call.index === undefined) break;
-        const open = out.indexOf('{', call.index);
+        const open = findViteMergeObject(out);
+        if (open === undefined) break;
         const close = matchBracket(out, open);
         if (close === -1) break;
         const valueText = serializeTs(value, 1);
@@ -186,7 +200,9 @@ export function renderViteTarget(
     sections: { fmt?: Json; lint?: Json }
 ): MigrationFile {
     const file = path.join(cwd, 'vite.config.ts');
-    const existing = fs.existsSync(file) ? fs.readFileSync(file, 'utf-8') : undefined;
+    const existing = fs.existsSync(file)
+        ? fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, '')
+        : undefined;
     return { path: file, content: mergeViteConfig(existing, sections) };
 }
 
