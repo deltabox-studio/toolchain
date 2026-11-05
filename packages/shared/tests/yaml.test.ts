@@ -41,3 +41,28 @@ describe('toYaml', () => {
         expect(toYaml({ on: { push: null } })).toContain('on:');
     });
 });
+
+describe('toYaml escaping edge cases', () => {
+    it('quotes and escapes newlines inside arrays', () => {
+        const yaml = toYaml({ a: ['x\ny'] });
+        expect(yaml).toContain('a: ["x\\ny"]');
+    });
+
+    it('escapes quotes and backslashes in keys', () => {
+        const yaml = toYaml({ 'a"b': 'v', 'a\\b': 'w' });
+        expect(yaml).toContain('"a\\"b": v');
+        expect(yaml).toContain('"a\\\\b": w');
+    });
+
+    it('quotes boolean-like keys other than `on`', () => {
+        const yaml = toYaml({ true: 'v', null: 'n', on: { push: null } });
+        expect(yaml).toContain('"true": v');
+        expect(yaml).toContain('"null": n');
+        expect(yaml).toContain('on:');
+    });
+
+    it('uses |- when a block scalar has no trailing newline', () => {
+        expect(toYaml({ run: 'echo one\necho two' })).toContain('run: |-');
+        expect(toYaml({ run: 'echo one\necho two\n' })).toContain('run: |');
+    });
+});

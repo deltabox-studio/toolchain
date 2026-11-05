@@ -8,6 +8,8 @@ import type { SyncContext, ToolchainConfig } from '@deltabox/toolchain-shared';
 
 import {
     changelogSyncTask,
+    commitMsgHook,
+    renderCommitlintConfig,
     WORKFLOW_HEADER,
     workflowFilePaths,
     workflowFilenames,
@@ -79,9 +81,9 @@ describe('changelogSyncTask', () => {
         );
         expect(files?.some(file => file.path === '.config/commitlint.config.mjs')).toBe(true);
         const hook = files?.find(file => file.path === '.husky/commit-msg');
-        expect(hook?.content).toContain('--config .config/commitlint.config.mjs');
+        expect(hook?.content).toContain('--config ".config/commitlint.config.mjs"');
         const ci = files?.find(file => file.path === '.github/workflows/ci.yml');
-        expect(ci?.content).toContain('--config .config/commitlint.config.mjs');
+        expect(ci?.content).toContain('--config ".config/commitlint.config.mjs"');
     });
 
     it('can disable commitlint while still generating the changelog workflow', async () => {
@@ -176,6 +178,48 @@ describe('changelogSyncTask', () => {
         expect(workflowFilenames(config)).toEqual(['checks.yaml', 'deploy.yaml']);
     });
 
+    it('writes complete GitLab/Azure/GitHub workflows to vendor paths', async () => {
+        const config: ToolchainConfig = {
+            ci: {
+                ci: {
+                    provider: 'gitlab',
+                    workflow: {
+                        stages: ['test'],
+                        test: { stage: 'test', script: ['yarn test'] },
+                    },
+                },
+                release: {
+                    provider: 'azure',
+                    workflow: { steps: [{ script: 'yarn build' }] },
+                },
+                custom: {
+                    deploy: {
+                        provider: 'github',
+                        workflow: { name: 'Deploy', on: ['push'], jobs: {} },
+                    },
+                },
+            },
+        };
+        const files = await changelogSyncTask().run(makeContext(config));
+        expect(files?.find(file => file.path === '.gitlab-ci.yml')?.content).toContain('yarn test');
+        expect(files?.find(file => file.path === 'azure-pipelines.yml')?.content).toContain(
+            'yarn build'
+        );
+        expect(
+            files?.find(file => file.path === '.github/workflows/deploy.yml')?.content
+        ).toContain('name: Deploy');
+        expect(workflowFilePaths(config)).toEqual([
+            '.gitlab-ci.yml',
+            'azure-pipelines.yml',
+            '.github/workflows/deploy.yml',
+        ]);
+        expect(workflowFilenames(config)).toEqual([
+            '.gitlab-ci.yml',
+            'azure-pipelines.yml',
+            'deploy.yml',
+        ]);
+    });
+
     it('reports no workflow paths when the ci section is disabled', () => {
         expect(workflowFilePaths({ ci: { enabled: false, ci: true } })).toEqual([]);
         expect(workflowFilenames({ ci: { enabled: false, ci: true } })).toEqual([]);
@@ -251,5 +295,19 @@ describe('changelogSyncTask', () => {
         } finally {
             fs.rmSync(cwd, { recursive: true, force: true });
         }
+    });
+});
+
+describe('commitlint path handling', () => {
+    it('quotes a custom commitlint directory in the husky hook', () => {
+        expect(commitMsgHook('.config dir/commitlint.config.mjs')).toContain(
+            '--config ".config dir/commitlint.config.mjs"'
+        );
+    });
+
+    it('escapes commitlint type/scope values', () => {
+        const config = renderCommitlintConfig({ types: ["feat'x"], scopes: ['a\\b'] });
+        expect(config).toContain("'feat\\'x'");
+        expect(config).toContain("'a\\\\b'");
     });
 });

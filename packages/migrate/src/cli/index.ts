@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 
 import { cancel, isCancel, multiselect } from '@clack/prompts';
@@ -89,14 +90,41 @@ export function migrateCommands(): ToolchainCommand[] {
                 const matchesFrom = (migration: { from: string }): boolean =>
                     fromList.length === 0 || fromAll || selectedFrom.includes(migration.from);
                 const target = (opts.target as MigrateTarget | undefined) ?? 'files';
+                const to = String(opts.to ?? 'oxc');
+                if (to !== 'oxc') {
+                    throw new Error(`--to ${to} is not supported (only 'oxc').`);
+                }
                 const recursive = Boolean(opts.recursive);
 
                 // The migrations that both match `--from` (or every migration for
                 // `all`/none) **and** are detected in `dir`.
-                const pickFor = (dir: string) =>
-                    migrations().filter(
+                const pickFor = (dir: string) => {
+                    const detected = migrations().filter(
                         migration => matchesFrom(migration) && migration.detect(dir)
                     );
+                    // With no explicit source, run one formatter + one linter so
+                    // two migrations never overwrite the same `.oxfmtrc.json` /
+                    // `.oxlintrc.json`. Biome already covers both.
+                    if (fromList.length > 0) return detected;
+                    const byId = new Map(detected.map(migration => [migration.id, migration]));
+                    const picks: ReturnType<typeof migrations> = [];
+                    const biome = byId.get('biome-to-oxc');
+                    if (biome) {
+                        picks.push(biome);
+                    } else {
+                        const formatter = ['prettier-to-oxc', 'dprint-to-oxc']
+                            .map(id => byId.get(id))
+                            .find(Boolean);
+                        if (formatter) picks.push(formatter);
+                        const eslint = byId.get('eslint-to-oxc');
+                        if (eslint) picks.push(eslint);
+                    }
+                    for (const id of ['oxc-to-toolchain', 'vite-to-toolchain']) {
+                        const migration = byId.get(id);
+                        if (migration) picks.push(migration);
+                    }
+                    return picks;
+                };
 
                 // The project dirs to migrate. Without `--recursive` that is the
                 // root only; with it, every discovered project that has a
@@ -185,6 +213,9 @@ export function migrateCommands(): ToolchainCommand[] {
                 if (check) {
                     const diffs = results.flatMap(({ result }) => diffFiles(result.files ?? []));
                     const pending = diffs.filter(diff => diff.status !== 'same');
+                    const removed = results
+                        .flatMap(({ result }) => result.removed ?? [])
+                        .filter(file => fs.existsSync(file));
                     if (opts.json) {
                         logger.raw(
                             JSON.stringify(
@@ -193,18 +224,20 @@ export function migrateCommands(): ToolchainCommand[] {
                                 4
                             )
                         );
-                    } else if (pending.length) {
+                    } else if (pending.length || removed.length) {
                         for (const diff of pending)
                             logger.info(
                                 `${diff.status}  ${path.relative(root, diff.path) || diff.path}`
                             );
+                        for (const file of removed)
+                            logger.info(`D  ${path.relative(root, file) || file}`);
                         logger.info(
-                            `${pending.length} file(s) out of date — run \`migrate --write\` to apply.`
+                            `${pending.length + removed.length} file(s) out of date — run \`migrate --write\` to apply.`
                         );
                     } else {
                         logger.info('up to date.');
                     }
-                    if (hasPending(diffs)) process.exitCode = 1;
+                    if (hasPending(diffs) || removed.length > 0) process.exitCode = 1;
                     return;
                 }
 

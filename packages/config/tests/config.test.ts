@@ -1,5 +1,11 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
+
+import { dbxConfigSchema } from '@deltabox/toolchain-shared';
 
 import {
     buildConfigJson,
@@ -11,6 +17,8 @@ import {
     envPathOf,
     envString,
     generateCliOptions,
+    generateConfigEnv,
+    generateConfigJsonSchema,
     generateConfigMarkdown,
     generateConfigTypes,
     generateEnvFile,
@@ -161,6 +169,33 @@ describe('generators', () => {
         expect(doc.env.length).toBeGreaterThan(3);
         expect(doc.version).toBe(1);
     });
+
+    it('renders object-level metadata in per-scope markdown', () => {
+        const schema = z.object({
+            section: z
+                .object({
+                    nested: z.object({ value: z.string().optional() }).describe('Nested settings.'),
+                })
+                .describe('A section.'),
+        });
+        const markdown = generateConfigMarkdown({ config: schema })['config.md']!;
+        expect(markdown).toContain('A section.');
+        expect(markdown).toContain('Nested settings.');
+    });
+
+    it('rejects generated paths that escape the output directory', () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-config-out-'));
+        try {
+            const escaping = { '../escape': z.object({ value: z.string().optional() }) };
+            expect(() => generateConfigTypes(escaping, { outputDir: cwd })).toThrow(/outside/);
+            expect(() => generateConfigMarkdown(escaping, { outputDir: cwd })).toThrow(/outside/);
+            expect(() => generateConfigEnv({}, { outputDir: cwd, envFile: '../env.ts' })).toThrow(
+                /outside/
+            );
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
+    });
 });
 
 describe('createConfigEngine', () => {
@@ -170,5 +205,84 @@ describe('createConfigEngine', () => {
         const schema = await engine.generateJsonSchema();
         expect(schema.$id).toBeDefined();
         expect(Object.keys(engine.generateConfigTypes())).toEqual(['server', 'cli']);
+    });
+});
+
+describe('dbx config schema', () => {
+    it('can be lowered to JSON Schema and generated types', async () => {
+        const engine = createConfigEngine({ schema: dbxConfigSchema });
+        await expect(engine.generateJsonSchema()).resolves.toBeDefined();
+        expect(() => engine.generateConfigTypes()).not.toThrow();
+    });
+});
+
+describe('named nested schemas', () => {
+    const schema = z.object({
+        auth: z
+            .object({
+                token: z.string().meta({ envName: 'APP_TOKEN', scope: 'server' }),
+            })
+            .meta({ id: 'Auth' }),
+    });
+
+    it('collects env vars below a named `$ref`', () => {
+        const vars = collectVars({ server: schema }, 'APP_');
+        expect(vars.map(variable => variable.name)).toContain('APP_TOKEN');
+        expect(vars.find(variable => variable.name === 'APP_TOKEN')?.path).toBe('auth.token');
+    });
+
+    it('keeps the named properties in the generated JSON Schema', async () => {
+        const doc = await generateConfigJsonSchema({ server: schema });
+        const server = doc.properties as Record<string, { properties?: Record<string, unknown> }>;
+        const auth = server.server?.properties?.auth as
+            | { properties?: Record<string, unknown> }
+            | undefined;
+        expect(auth?.properties?.token).toBeDefined();
+    });
+});
+
+describe('secret defaults and envPathOf', () => {
+    const secretSchema = z.object({
+        token: z.string().default('s3cret').meta({ envName: 'APP_TOKEN', secret: true }),
+    });
+
+    it('does not serialize a secret default', () => {
+        const doc = buildConfigJson({ server: secretSchema }, { envPrefix: 'APP_' });
+        expect(doc.env.find(entry => entry.name === 'APP_TOKEN')?.default).toBeUndefined();
+    });
+
+    it('does not render a secret default in markdown', () => {
+        const markdown = generateConfigMarkdown({ server: secretSchema });
+        expect(markdown['server.md']).not.toContain('s3cret');
+    });
+
+    it('uses envPathOf for the dotted path', () => {
+        const schema = z.object({
+            baseUrl: z.string().meta({ envName: 'APP_CLI_BASE_URL' }),
+        });
+        const vars = collectVars({ server: schema }, 'APP_', {
+            envPathOf: () => 'cli.base.url',
+        });
+        expect(vars.find(variable => variable.name === 'APP_CLI_BASE_URL')?.path).toBe(
+            'cli.base.url'
+        );
+    });
+
+    it('shows envName-backed core variables in the index', () => {
+        const schema = z.object({
+            host: z.string().meta({ envName: 'APP_HOST' }),
+        });
+        expect(generateConfigMarkdown({ server: schema })['index.md']).toContain('APP_HOST');
+    });
+});
+
+describe('duplicate env names', () => {
+    it('keeps the first declaration', () => {
+        const schema = z.object({
+            a: z.string().meta({ envName: 'APP_TOKEN' }),
+            b: z.string().meta({ envName: 'APP_TOKEN' }),
+        });
+        const vars = collectVars({ server: schema }, 'APP_');
+        expect(vars.filter(variable => variable.name === 'APP_TOKEN')).toHaveLength(1);
     });
 });

@@ -4,7 +4,6 @@
  */
 
 import fs from 'node:fs';
-import path from 'node:path';
 
 import type { Schema } from 'untyped';
 
@@ -17,9 +16,11 @@ import {
     metaOf,
     normalizeConfigSchema,
     splitBaseSchema,
+    toJsonSchemaSafe,
 } from '../schema.js';
 import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
 import { type CliFlagOptions, cliFlagLabel } from './cli.js';
+import { resolveGeneratedFile } from './output.js';
 
 export interface RenderMarkdownFrontmatter {
     options: GenerateMarkdownOptions;
@@ -224,10 +225,6 @@ function renderNode(
     opts: RenderOptions
 ): string[] {
     const lines = [`${level} ${title}`];
-    if (schema.type === 'object' && schema.properties) {
-        lines.push(...renderFields(schema, `${level}#`, opts));
-        return lines;
-    }
     const envName =
         typeof schema.envName === 'string'
             ? schema.envName
@@ -248,11 +245,16 @@ function renderNode(
         }\``
     );
     lines.push(...annotationLines(schema, opts));
-    if (schema.default !== undefined)
+    if (schema.default !== undefined && !schema.secret)
         lines.push(`- **Default**: \`${JSON.stringify(schema.default)}\``);
     if (schema.description) lines.push('', sanitizeText(schema.description));
     lines.push(...remarksLines(schema.remarks, opts));
     if (opts.includeExamples !== false) lines.push(...exampleLines(schema.example));
+    // Objects carry their own description/annotations too; render them before
+    // the child fields (matching the JSON-Schema reference renderer).
+    if (schema.type === 'object' && schema.properties) {
+        lines.push(...renderFields(schema, `${level}#`, opts));
+    }
     return lines;
 }
 
@@ -351,13 +353,16 @@ function collectSchemaEnvVars(schema: Schema, scope: string, out: EnvVarRow[]): 
         const child = raw as unknown as SchemaNode;
         if (child.type === 'object' && child.properties) {
             collectSchemaEnvVars(raw, scope, out);
-        } else if (child.env) {
+            continue;
+        }
+        const envName = child.envName ?? child.env;
+        if (envName) {
             const envDefault = child.envDefault ?? child.default;
             out.push({
-                name: child.env,
+                name: envName,
                 scope,
                 ...(child.description ? { description: child.description } : {}),
-                ...(envDefault !== undefined ? { default: envDefault } : {}),
+                ...(envDefault !== undefined && !child.secret ? { default: envDefault } : {}),
                 ...(child.required === true ? { required: true } : {}),
                 ...(child.secret ? { secret: true } : {}),
                 ...(child.public ? { public: true } : {}),
@@ -388,7 +393,7 @@ function renderConfigIndex(schema: ConfigSchema, options: RenderMarkdownOptions 
                 name: def.name,
                 scope: def.scope,
                 ...(def.description ? { description: def.description } : {}),
-                ...(def.default !== undefined ? { default: def.default } : {}),
+                ...(def.default !== undefined && !def.secret ? { default: def.default } : {}),
             });
         }
     }
@@ -451,9 +456,7 @@ function jsonScopesOf(
 ): Record<string, Schema> {
     const toJson = (value: unknown): Schema | undefined =>
         isZodSchema(value)
-            ? ((value as { toJSONSchema: (o?: object) => unknown }).toJSONSchema({
-                  target: 'draft-2020-12',
-              }) as Schema)
+            ? (toJsonSchemaSafe(value, { target: 'draft-2020-12' }) as Schema)
             : undefined;
     if (Array.isArray(schema)) return scopes;
     const single = toJson(schema);
@@ -499,7 +502,7 @@ export function generateConfigMarkdown(
     if (typeof options.outputDir === 'string') {
         fs.mkdirSync(options.outputDir, { recursive: true });
         for (const [file, content] of Object.entries(contents)) {
-            fs.writeFileSync(path.resolve(options.outputDir, file), content, 'utf-8');
+            fs.writeFileSync(resolveGeneratedFile(options.outputDir, file), content, 'utf-8');
         }
     }
     return contents;
@@ -556,6 +559,8 @@ interface JsonSchemaJson {
     experimental?: boolean;
     alpha?: boolean;
     beta?: boolean;
+    /** A hand-written TypeScript type for values JSON Schema cannot express. */
+    tsType?: string;
 }
 
 /** The `$defs` key a `$ref` points at. */
@@ -640,6 +645,7 @@ function jsonNodeMeta(
  * rendered structurally so nested options are readable without the type table.
  */
 function jsonTypeLabel(node: JsonSchemaJson, defs: Record<string, JsonSchemaJson>): string {
+    if (typeof node.tsType === 'string' && node.tsType.trim()) return node.tsType;
     if (node.$ref) {
         const resolved = resolveJsonRef(node, defs);
         if (resolved.properties || resolved.anyOf || resolved.oneOf) return refNameOf(node)!;
@@ -686,6 +692,9 @@ function jsonChildFields(
         seen.add(name);
     }
     const resolved = resolveJsonRef(node, defs);
+    // An external type (eg. a tool's own config type) is rendered by name; do
+    // not expand its internal fields in the reference docs.
+    if (node.tsType || resolved.tsType) return { properties: {}, required: [] };
     if (resolved.properties) {
         return {
             properties: resolved.properties,

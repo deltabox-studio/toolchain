@@ -11,13 +11,16 @@ import {
     sectionEnabled,
     type SyncTask,
     type ToolchainConfig,
+    type WorkflowOptions,
     type WorkflowSetting,
 } from '@deltabox/toolchain-shared';
 
 import { renderCommitlintConfig } from './templates.js';
 import {
     isEnabled,
+    isVendorWorkflowSetting,
     renderCustomWorkflow,
+    renderVendorWorkflow,
     renderWorkflow,
     WORKFLOW_FILENAMES,
     workflowFilePath,
@@ -36,8 +39,10 @@ function withPushBranches(
 ): WorkflowSetting {
     if (setting === false) return { enabled: false };
     if (typeof setting === 'string') return setting;
+    // A complete vendor workflow defines its own triggers.
+    if (isVendorWorkflowSetting(setting)) return setting;
     if (setting === true || setting === undefined) return { pushBranches: branches };
-    return { pushBranches: branches, ...setting };
+    return { pushBranches: branches, ...(setting as WorkflowOptions) };
 }
 
 /** The workflow settings declared under `toolchain.ci` (all opt-in). */
@@ -94,7 +99,7 @@ export const HOOK_HEADER =
  */
 export function commitMsgHook(commitlintPath?: string): string {
     const base = 'npx --no -- commitlint --edit "$1"';
-    return commitlintPath ? `${base} --config ${commitlintPath}` : base;
+    return commitlintPath ? `${base} --config "${commitlintPath}"` : base;
 }
 
 /** The default husky `commit-msg` hook body (config at the project root). */
@@ -103,10 +108,14 @@ export const COMMIT_MSG_HOOK = commitMsgHook();
 /** Normalize a commitlint output directory (no leading `./`, no trailing `/`). */
 function normalizeDir(dir: string | undefined): string {
     if (!dir) return '';
-    return dir
+    const value = dir
         .replace(/\\/g, '/')
         .replace(/^\.?\//, '')
         .replace(/\/+$/, '');
+    if (/^[a-zA-Z]:/.test(value) || value.split('/').includes('..')) {
+        throw new Error(`invalid commitlint directory "${dir}" (must stay inside the project).`);
+    }
+    return value;
 }
 
 /** The workflow file paths produced for a config. */
@@ -213,11 +222,13 @@ export function changelogSyncTask(): SyncTask {
                 const raw = typeof setting === 'string';
                 const content = raw
                     ? setting
-                    : renderWorkflow(id, {
-                          tokens,
-                          config: typeof setting === 'object' ? setting : {},
-                          commitlint,
-                      });
+                    : isVendorWorkflowSetting(setting)
+                      ? renderVendorWorkflow(setting, tokens)
+                      : renderWorkflow(id, {
+                            tokens,
+                            config: typeof setting === 'object' ? (setting as WorkflowOptions) : {},
+                            commitlint,
+                        });
                 if (!content) continue;
                 addWorkflow(
                     id,
@@ -237,11 +248,13 @@ export function changelogSyncTask(): SyncTask {
                 const raw = typeof setting === 'string';
                 const content = raw
                     ? setting
-                    : renderCustomWorkflow(id, {
-                          tokens,
-                          config: typeof setting === 'object' ? setting : {},
-                          commitlint,
-                      });
+                    : isVendorWorkflowSetting(setting)
+                      ? renderVendorWorkflow(setting, tokens)
+                      : renderCustomWorkflow(id, {
+                            tokens,
+                            config: typeof setting === 'object' ? (setting as WorkflowOptions) : {},
+                            commitlint,
+                        });
                 if (!content) continue;
                 addWorkflow(
                     id,

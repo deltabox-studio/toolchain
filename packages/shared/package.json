@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-shared",
-    "version": "2.1.1",
+    "version": "2.3.2",
     "description": "Shared helpers and the replacement/template engine used by the @deltabox/toolchain packages.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
@@ -20,7 +20,10 @@
         "zod": "catalog:"
     },
     "devDependencies": {
+        "@dprint/types": "catalog:",
         "@types/node": "catalog:",
+        "eslint": "catalog:",
+        "prettier": "catalog:",
         "tsdown": "catalog:",
         "type-fest": "catalog:",
         "typescript": "catalog:",

@@ -56,6 +56,8 @@ interface JsonSchemaNode {
     experimental?: boolean;
     alpha?: boolean;
     beta?: boolean;
+    /** A hand-written TypeScript type for values JSON Schema cannot express. */
+    tsType?: string;
 }
 
 const TS_TYPE_MAP: Record<string, string> = {
@@ -102,7 +104,65 @@ const CONFIG_META_KEYS: (keyof ConfigMeta)[] = [
     'typeName',
     'cliFlag',
     'cliFlagShort',
+    'tsType',
 ];
+
+/** Whether a schema validates a function value. */
+export function isZodFunctionSchema(value: unknown): boolean {
+    return (
+        isZodSchema(value) &&
+        (value as { _zod?: { def?: { type?: string } } })._zod?.def?.type === 'function'
+    );
+}
+
+/**
+ * The handler passed to Zod's `toJSONSchema` for values JSON Schema cannot
+ * represent. Functions carry a hand-written `tsType` (or fall back to `any`) so
+ * the generated types/markdown stay useful while the editor JSON Schema remains
+ * valid.
+ */
+function unrepresentableValue(ctx: {
+    zodSchema: ZodType;
+    path: (string | number)[];
+    message: string;
+}): Record<string, unknown> | 'any' {
+    if (isZodFunctionSchema(ctx.zodSchema)) {
+        const meta = metaOf(ctx.zodSchema);
+        if (typeof meta?.tsType === 'string' && meta.tsType.trim()) {
+            return {
+                tsType: meta.tsType,
+                ...(typeof meta.description === 'string' ? { description: meta.description } : {}),
+            };
+        }
+    }
+    return 'any';
+}
+
+/** Options for {@link toJsonSchemaSafe}. */
+export interface ToJsonSchemaSafeOptions {
+    target?: 'draft-2020-12' | 'draft-07' | 'draft-04' | 'openapi-3.0' | (string & {});
+    /** Use `'any'`/`'throw'` to skip the function-aware default handler. */
+    unrepresentable?: 'throw' | 'any';
+}
+
+/**
+ * `z.toJSONSchema` with the function-aware `unrepresentable` handler. Zod
+ * functions cannot be represented in JSON Schema, so their `.meta({ tsType })`
+ * is emitted instead of throwing.
+ */
+export function toJsonSchemaSafe(
+    schema: ZodType,
+    options: ToJsonSchemaSafeOptions = {}
+): JsonSchemaNode {
+    const params = {
+        target: 'draft-2020-12',
+        ...options,
+        ...(options.unrepresentable
+            ? { unrepresentable: options.unrepresentable }
+            : { unrepresentable: unrepresentableValue }),
+    } as Parameters<typeof z.toJSONSchema>[1];
+    return z.toJSONSchema(schema, params) as JsonSchemaNode;
+}
 
 /** Read the config metadata attached to a Zod leaf or an untyped schema node. */
 export function metaOf(schema: ZodType | Schema): ConfigMeta | undefined {
@@ -182,6 +242,7 @@ export function renderTsType(
     defs: Record<string, JsonSchemaNode> = {}
 ): string {
     if (!node || isEmptySchema(node)) return 'unknown';
+    if (typeof node.tsType === 'string' && node.tsType.trim()) return node.tsType;
     if (node.$ref) {
         const name = node.$ref.split('/').pop() ?? 'unknown';
         return defs[name] ? name : 'unknown';
@@ -198,10 +259,10 @@ export function renderTsType(
     }
     if (node.properties) {
         const required = Array.isArray(node.required) ? node.required : [];
-        const members = Object.entries(node.properties).map(
-            ([key, child]) =>
-                `${key}${required.includes(key) ? '' : '?'}: ${renderTsType(child, defs)}`
-        );
+        const members = Object.entries(node.properties).map(([key, child]) => {
+            const propertyKey = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key) ? key : JSON.stringify(key);
+            return `${propertyKey}${required.includes(key) ? '' : '?'}: ${renderTsType(child, defs)}`;
+        });
         return `{ ${members.join('; ')} }`;
     }
     const types = Array.isArray(node.type) ? node.type : node.type ? [node.type] : [];
@@ -326,12 +387,52 @@ function jsonNodeToDefinition(
         const name = node.$ref.split('/').pop() ?? 'unknown';
         const resolved = defs[name];
         const description = node.description ?? resolved?.description;
+        // A named object keeps its children so env/CLI collection and the JSON
+        // Schema generator can see them, while `tsType` preserves the named
+        // reference for type generation.
+        if (resolved?.properties) {
+            const expanded = jsonNodeToDefinition(resolved, fieldRequired, defs) as Record<
+                string,
+                unknown
+            >;
+            expanded.$schema = {
+                ...(expanded.$schema as object | undefined),
+                type: 'object',
+                tsType:
+                    typeof resolved.tsType === 'string' && resolved.tsType.trim()
+                        ? resolved.tsType
+                        : name,
+                ...(fieldRequired ? { tags: ['@required'] } : {}),
+                ...(description ? { description } : {}),
+                ...nodeMeta(node, defs),
+            };
+            return expanded;
+        }
         return {
             $schema: {
                 type: 'any',
-                tsType: name,
+                tsType:
+                    typeof resolved?.tsType === 'string' && resolved.tsType.trim()
+                        ? resolved.tsType
+                        : name,
                 ...(fieldRequired ? { tags: ['@required'] } : {}),
                 ...(description ? { description } : {}),
+                ...nodeMeta(node, defs),
+            },
+        };
+    }
+
+    if (
+        typeof node.tsType === 'string' &&
+        node.tsType.trim() &&
+        (!node.properties || Object.keys(node.properties).length === 0)
+    ) {
+        return {
+            $schema: {
+                type: 'any',
+                tsType: node.tsType,
+                ...(fieldRequired ? { tags: ['@required'] } : {}),
+                ...(node.description ? { description: node.description } : {}),
                 ...nodeMeta(node, defs),
             },
         };
@@ -390,9 +491,7 @@ function jsonNodeToDefinition(
 
 /** Lower a Zod config schema into an untyped definition object. */
 export function zodToUntypedDefinition(zodSchema: ZodType): Record<string, unknown> {
-    const jsonSchema = (zodSchema as ZodType & { toJSONSchema: () => unknown }).toJSONSchema() as
-        | JsonSchemaNode
-        | undefined;
+    const jsonSchema = toJsonSchemaSafe(zodSchema);
     if (!jsonSchema) return {};
     const defs = jsonSchema.$defs ?? {};
     const refName = jsonSchema.$ref?.split('/').pop();
@@ -523,6 +622,9 @@ export function resolveUntypedSchema(input: Record<string, unknown>): Schema {
 export function normalizeJsonSchemaMetadata(node: unknown): void {
     if (!node || typeof node !== 'object' || Array.isArray(node)) return;
     const record = node as Record<string, unknown>;
+    // `tsType` is a generation-only marker (for types/markdown); it is not a
+    // JSON Schema keyword, so keep the editor schema clean.
+    delete record.tsType;
     if (typeof record.deprecated === 'string') {
         record.deprecationMessage = record.deprecated;
         record.deprecated = true;
@@ -549,9 +651,7 @@ export function normalizeJsonSchemaMetadata(node: unknown): void {
 
 /** Lower a Zod schema and every named `$defs` entry into resolved schemas. */
 export function zodToSchemaMap(zodSchema: ZodType): Record<string, ConfigSchemaType> {
-    const jsonSchema = (zodSchema as ZodType & { toJSONSchema: () => unknown }).toJSONSchema() as
-        | JsonSchemaNode
-        | undefined;
+    const jsonSchema = toJsonSchemaSafe(zodSchema);
     if (!jsonSchema) return {};
     const defs = jsonSchema.$defs ?? {};
     const out: Record<string, ConfigSchemaType> = {};

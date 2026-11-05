@@ -18,10 +18,10 @@ jobs:
         with:
           node-version: "22"
       - name: Enable Corepack
-        run: |
+        run: |-
           corepack enable
           corepack prepare yarn@4.17.1 --activate
       - name: Install dependencies
         run: yarn install --immutable
       - name: Verify generated files are in sync
-        run: yarn dbx sync --check
+        run: yarn dbx sync --check --recursive

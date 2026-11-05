@@ -10,9 +10,12 @@
 
 import {
     applyReplacementsDeep,
+    type CustomWorkflowSettings,
     DEFAULT_PACKAGE_MANAGER_VERSIONS,
+    isVendorWorkflowConfig,
     type Replacements,
     toYaml,
+    type VendorWorkflowConfig,
     type WorkflowOptions,
     type WorkflowSetting,
     type WorkflowStep,
@@ -69,9 +72,15 @@ export const WORKFLOW_FILENAMES: Record<WorkflowId, string> = {
 /** The default directory for generated workflows. */
 export const DEFAULT_WORKFLOW_DIR = '.github/workflows';
 
+/** A complete vendor workflow (GitHub, GitLab or Azure), written as-is. */
+export type VendorWorkflowSetting = VendorWorkflowConfig;
+
+/** Whether a setting carries a complete vendor workflow. */
+export const isVendorWorkflowSetting = isVendorWorkflowConfig;
+
 /** Normalize a workflow directory (no leading `./`, no trailing `/`). */
-function normalizeWorkflowDir(dir: string | undefined): string {
-    const value = (dir ?? DEFAULT_WORKFLOW_DIR)
+function normalizeWorkflowDir(dir: string | undefined, fallback = DEFAULT_WORKFLOW_DIR): string {
+    const value = (dir ?? fallback)
         .replace(/\\/g, '/')
         .replace(/^\.?\//, '')
         .replace(/\/+$/, '');
@@ -90,9 +99,26 @@ function workflowFilename(value: string | undefined, fallback: string): string {
     return filename;
 }
 
+/** The default directory/file for a vendor's workflow. */
+function vendorWorkflowDefaults(
+    provider: VendorWorkflowSetting['provider'],
+    id: string,
+    defaultFilename: string
+): { dir: string; filename: string } {
+    switch (provider) {
+        case 'gitlab':
+            return { dir: '', filename: '.gitlab-ci.yml' };
+        case 'azure':
+            return { dir: '', filename: 'azure-pipelines.yml' };
+        default:
+            return { dir: DEFAULT_WORKFLOW_DIR, filename: defaultFilename ?? `${id}.yml` };
+    }
+}
+
 /**
  * The path a workflow is written to. A setting may override the directory
- * (`dir`) and file name (`filename`); custom ids default to `<id>.yml`.
+ * (`dir`) and file name (`filename`); custom ids default to `<id>.yml`, while
+ * GitLab/Azure default to their conventional root files.
  */
 export function workflowFilePath(
     id: string,
@@ -100,8 +126,10 @@ export function workflowFilePath(
     defaultFilename: string = `${id}.yml`
 ): string {
     const options = setting && typeof setting === 'object' ? setting : undefined;
-    const dir = normalizeWorkflowDir(options?.dir);
-    const filename = workflowFilename(options?.filename, defaultFilename);
+    const provider = isVendorWorkflowSetting(options) ? options.provider : 'github';
+    const defaults = vendorWorkflowDefaults(provider, id, defaultFilename);
+    const dir = normalizeWorkflowDir(options?.dir, defaults.dir);
+    const filename = workflowFilename(options?.filename, defaults.filename);
     return dir ? `${dir}/${filename}` : filename;
 }
 
@@ -152,9 +180,9 @@ function workflowTokens(options: RenderWorkflowOptions): Replacements {
     return tokens;
 }
 
-/** The command that runs the toolchain CLI under the configured package manager. */
-function cli(tokens: Replacements): string {
-    const tooling = String(tokens.tooling ?? 'dbx');
+/** The command that runs a binary under the configured package manager. */
+function cli(tokens: Replacements, bin?: string): string {
+    const tooling = bin ?? String(tokens.tooling ?? 'dbx');
     switch (String(tokens.packageManager ?? 'yarn')) {
         case 'pnpm':
             return `pnpm exec ${tooling}`;
@@ -224,7 +252,7 @@ export interface DefaultWorkflowOptions {
     /** Include commitlint in the CI workflow (default true). */
     commitlint?: boolean;
     /** Config-defined workflows (enabled by presence; no boolean form). */
-    custom?: Record<string, string | WorkflowOptions>;
+    custom?: Record<string, CustomWorkflowSettings>;
 }
 
 /** Build all default workflows for a set of tokens. */
@@ -256,13 +284,13 @@ export function defaultWorkflows(
                                   {
                                       name: 'Commitlint (Conventional Commits)',
                                       if: "${{ github.event_name == 'pull_request' || github.event.before != '0000000000000000000000000000000000000000' }}",
-                                      run: `set -euo pipefail\nbase="\${{ github.event.pull_request.base.sha || github.event.before }}"\nhead="\${{ github.event.pull_request.head.sha || github.event.after }}"\n${tokens.packageManager} commitlint --from "$base" --to "$head" --config ${tokens.commitlintConfig}`,
+                                      run: `set -euo pipefail\nbase="\${{ github.event.pull_request.base.sha || github.event.before }}"\nhead="\${{ github.event.pull_request.head.sha || github.event.after }}"\n${cli(tokens, 'commitlint')} --from "$base" --to "$head" --config "${tokens.commitlintConfig}"`,
                                   } satisfies WorkflowStep,
                               ]
                             : []),
                         {
                             name: 'Verify generated files are in sync',
-                            run: `${engine} sync --check`,
+                            run: `${engine} sync --check --recursive`,
                         },
                         { name: 'Build', run: `${tokens.packageManager} build` },
                     ],
@@ -302,7 +330,7 @@ export function defaultWorkflows(
                                 'git config user.email "41898282+github-actions[bot]@users.noreply.github.com"',
                                 // Stage only the files this pipeline owns, so a
                                 // stray working-tree change is never committed.
-                                'git add -u -- "*package.json" "*CHANGELOG.md"',
+                                'git add -- "*package.json" "*CHANGELOG.md"',
                                 'git commit -m "chore: version packages ($(node -p "require(\'./package.json\').version"))"',
                                 `git push origin ${dev}`,
                             ].join('\n'),
@@ -362,7 +390,7 @@ export function defaultWorkflows(
                         ...setupSteps(tokens),
                         {
                             name: 'Verify generated files are in sync',
-                            run: `${engine} sync --check`,
+                            run: `${engine} sync --check --recursive`,
                         },
                     ],
                 },
@@ -496,6 +524,12 @@ export function renderCustomWorkflow(
     return toYaml(resolved as unknown as Record<string, YamlValue>);
 }
 
+/** Render a complete vendor workflow (GitHub/GitLab/Azure) as YAML. */
+export function renderVendorWorkflow(setting: VendorWorkflowSetting, tokens: Replacements): string {
+    const resolved = applyReplacementsDeep(setting.workflow, tokens);
+    return toYaml(resolved as unknown as Record<string, YamlValue>);
+}
+
 /**
  * Render every workflow, keyed by file name (disabled ones are omitted). A raw
  * string setting is used verbatim as the workflow content (no default merge and
@@ -516,7 +550,11 @@ export function renderWorkflows(
             out[name] = setting;
             continue;
         }
-        const config = typeof setting === 'object' ? setting : {};
+        if (isVendorWorkflowSetting(setting)) {
+            out[name] = renderVendorWorkflow(setting, tokens);
+            continue;
+        }
+        const config = typeof setting === 'object' ? (setting as WorkflowOptions) : {};
         const yaml = renderWorkflow(id, { tokens, config, ...options });
         if (yaml) out[name] = yaml;
     }
@@ -528,7 +566,15 @@ export function renderWorkflows(
             out[name] = setting;
             continue;
         }
-        const yaml = renderCustomWorkflow(id, { tokens, config: setting, ...options });
+        if (isVendorWorkflowSetting(setting)) {
+            out[name] = renderVendorWorkflow(setting, tokens);
+            continue;
+        }
+        const yaml = renderCustomWorkflow(id, {
+            tokens,
+            config: setting as WorkflowOptions,
+            ...options,
+        });
         if (yaml) out[name] = yaml;
     }
     return out;

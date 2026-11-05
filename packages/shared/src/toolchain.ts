@@ -12,8 +12,10 @@
  * `config-types.ts`. Only `hooks` (functions) is hand-written.
  */
 
+import { isVendorWorkflowConfig } from './config-schema/workflow.js';
 import type {
     ChangelogConfig,
+    CiChangelogConfig,
     ProjectType,
     ToolchainCiConfig,
     ToolchainConfigSections,
@@ -172,14 +174,20 @@ export function resolveCiConfig(config: ToolchainConfig = {}): ToolchainCiConfig
  * option; when it is enabled but not configured (`true`, a raw workflow string,
  * or workflow-only options) the manual section's options still apply.
  */
-export function resolveChangelogConfig(config: ToolchainConfig = {}): ChangelogConfig | undefined {
+export function resolveChangelogConfig(
+    config: ToolchainConfig = {}
+): CiChangelogConfig | undefined {
     const legacy = sectionConfig(config.changelog);
     const legacyOptions = legacy && sectionEnabled(legacy) ? legacy : undefined;
     const setting = resolveCiConfig(config)?.changelog;
-    if (setting === undefined || setting === false || setting === true) return legacyOptions;
+    if (setting === false) return undefined;
+    if (setting === undefined || setting === true) return legacyOptions;
     if (typeof setting === 'string') return legacyOptions;
-    if (!sectionEnabled(setting)) return legacyOptions;
-    return legacyOptions ? (deepMerge(legacyOptions, setting) as ChangelogConfig) : setting;
+    // A complete vendor workflow is a workflow setting, not changelog pipeline config.
+    if (isVendorWorkflowConfig(setting)) return legacyOptions;
+    const changelog = setting as CiChangelogConfig;
+    if (!sectionEnabled(changelog)) return undefined;
+    return legacyOptions ? (deepMerge(legacyOptions, changelog) as CiChangelogConfig) : changelog;
 }
 
 /** Default package-manager versions used when a config omits `packageManagerVersion`. */
@@ -288,7 +296,7 @@ export function resolveCommitlintEnabled(changelog?: ChangelogConfig): boolean {
  * default** and reuses `main` when omitted, so a single-branch repo needs no
  * `dev`. Each side accepts a glob or an array of globs.
  */
-export function resolveChangelogBranches(changelog?: ChangelogConfig): {
+export function resolveChangelogBranches(changelog?: CiChangelogConfig): {
     main: string[];
     dev: string[];
 } {

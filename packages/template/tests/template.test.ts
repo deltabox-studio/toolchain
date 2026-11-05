@@ -227,3 +227,15 @@ describe('scaffolding', () => {
         expect(fs.existsSync(path.join(out, 'template.json'))).toBe(false);
     });
 });
+
+describe('workspace scaffold path validation', () => {
+    it('rejects a workspace name that escapes the root before writing', async () => {
+        const out = makeTmp();
+        const template = BUILTIN_TEMPLATES.find(candidate => candidate.id === 'workspace');
+        if (!template) throw new Error('missing builtin');
+        await expect(
+            scaffoldTemplate(template, { cwd: out, tokens: { name: '../..' } })
+        ).rejects.toThrow(/relative to the root/);
+        expect(fs.readdirSync(out)).toEqual([]);
+    });
+});

@@ -351,6 +351,17 @@ export interface CapturedResult {
 /** Default deadline for a captured `dbx` command — a stall is killed, not left hanging. */
 export const CLI_TIMEOUT_MS = 5 * 60 * 1000;
 
+/**
+ * A child's exit code. Node reports `code === null` when a process was killed by
+ * a signal (including our own timeout kill), which must not look like success.
+ */
+export function exitCodeOf(
+    code: number | null | undefined,
+    signal: NodeJS.Signals | null | undefined
+): number {
+    return code ?? (signal ? 1 : 0);
+}
+
 /** Kill the child and its descendants (a Windows `cmd.exe` wrapper needs `taskkill /t`). */
 function killTree(child: ChildProcess): void {
     const pid = child.pid;
@@ -393,17 +404,19 @@ export function captureCli(
             resolve(result);
         };
 
+        child.stdout?.setEncoding('utf8');
+        child.stderr?.setEncoding('utf8');
         child.stdout?.on('data', chunk => {
-            stdout += chunk.toString();
+            stdout += chunk;
         });
         child.stderr?.on('data', chunk => {
-            stderr += chunk.toString();
+            stderr += chunk;
         });
         child.on('error', error => {
             done({ code: 1, stdout, stderr: `${stderr}${String(error)}` });
         });
-        child.on('exit', code => {
-            done({ code: code ?? 0, stdout, stderr });
+        child.on('close', (code, signal) => {
+            done({ code: exitCodeOf(code, signal), stdout, stderr });
         });
 
         if (timeoutMs > 0) {

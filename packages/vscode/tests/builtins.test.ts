@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { captureCli } = vi.hoisted(() => ({ captureCli: vi.fn() }));
 
@@ -24,13 +24,13 @@ describe('builtin providers', () => {
         expect(vite?.commands.map(command => command.name)).toContain('vite:dev');
     });
 
-    it('prepends the builtins and dedupes by id', () => {
+    it('lets CLI descriptors win and fills missing builtins', () => {
         const merged = withBuiltinProviders([
             { id: 'vite-plus', name: 'Override', commands: [] },
             { id: 'custom', name: 'Custom', commands: [] },
         ]);
         expect(merged[0]?.id).toBe('vite-plus');
-        expect(merged[0]?.name).toBe('Vite+');
+        expect(merged[0]?.name).toBe('Override');
         expect(merged.some(provider => provider.id === 'custom')).toBe(true);
         expect(merged.filter(provider => provider.id === 'vite-plus')).toHaveLength(1);
     });
@@ -48,7 +48,7 @@ describe('builtin providers', () => {
             stderr: '',
         });
         const providers = await loadProviders('C:/project');
-        expect(providers.map(provider => provider.id)).toEqual(['vite-plus', 'custom']);
+        expect(providers.map(provider => provider.id)).toEqual(['custom', 'vite-plus']);
     });
 });
 
@@ -67,12 +67,12 @@ describe('builtin templates', () => {
         );
     });
 
-    it('prepends the builtins and dedupes by id', () => {
+    it('lets CLI descriptors win and fills missing builtins', () => {
         const merged = withBuiltinTemplates([
             { id: 'project', name: 'Override' },
             { id: 'local', name: 'Local' },
         ]);
-        expect(merged[0]?.name).toBe('TypeScript project');
+        expect(merged[0]?.name).toBe('Override');
         expect(merged.some(template => template.id === 'local')).toBe(true);
         expect(merged.filter(template => template.id === 'project')).toHaveLength(1);
     });
@@ -90,7 +90,7 @@ describe('builtin templates', () => {
             stderr: '',
         });
         const templates = await loadTemplates('C:/project');
-        expect(templates[0]?.id).toBe('project');
+        expect(templates[0]?.id).toBe('local');
         expect(templates.some(template => template.id === 'local')).toBe(true);
     });
 });

@@ -203,9 +203,11 @@ describe('provider registration policy', () => {
             );
             addProjectProviderRegistry(cwd, './providers');
 
-            expect(providerPassthroughCommands(cwd).map(command => command.name)).toContain(
-                'acme:run'
-            );
+            const passthroughs = providerPassthroughCommands(cwd);
+            expect(passthroughs.map(command => command.name)).toContain('acme:run');
+            // Provider passthroughs are registry-dependent, so the generated CLI
+            // reference omits them.
+            expect(passthroughs.every(command => command.hidden)).toBe(true);
             expect(
                 providerPassthroughCommands(cwd, {
                     registry: { providers: { deny: [registry] } },
@@ -214,5 +216,26 @@ describe('provider registration policy', () => {
         } finally {
             fs.rmSync(cwd, { recursive: true, force: true });
         }
+    });
+});
+
+describe('passthrough pre-scan', () => {
+    const argv = (...args: string[]) => ['node', 'dbx', ...args];
+    const passthrough = (name: string) => name === 'vite';
+
+    it('leaves logger flags after a passthrough command untouched', () => {
+        expect(
+            extractLogOptions(argv('vite', 'run', 'build', '--log-level', 'debug'), passthrough)
+        ).toEqual({
+            argv: ['node', 'dbx', 'vite', 'run', 'build', '--log-level', 'debug'],
+            options: {},
+        });
+    });
+
+    it('leaves update-check flags after a passthrough command untouched', () => {
+        expect(extractUpdateCheck(argv('vite', '--no-update-check'), passthrough)).toEqual({
+            argv: ['node', 'dbx', 'vite', '--no-update-check'],
+            updateCheck: true,
+        });
     });
 });

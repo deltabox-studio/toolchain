@@ -116,9 +116,116 @@
             "additionalProperties": false,
             "description": "GitHub Actions workflows to generate (CI, release, issues, changelog, sync)."
         },
+        "GitHubWorkflowSetting": {
+            "type": "object",
+            "properties": {
+                "provider": {
+                    "type": "string",
+                    "const": "github",
+                    "description": "Use a complete GitHub Actions workflow."
+                },
+                "workflow": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "The complete workflow object."
+                },
+                "filename": {
+                    "type": "string",
+                    "description": "Override the generated file name."
+                },
+                "dir": {
+                    "type": "string",
+                    "description": "Directory for the generated file."
+                },
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable/disable this workflow (default: enabled when present)."
+                }
+            },
+            "required": [
+                "provider",
+                "workflow"
+            ],
+            "additionalProperties": false,
+            "description": "A complete GitHub Actions workflow written to `.github/workflows/<id>.yml` (or `filename`/`dir`)."
+        },
+        "GitLabWorkflowSetting": {
+            "type": "object",
+            "properties": {
+                "provider": {
+                    "type": "string",
+                    "const": "gitlab",
+                    "description": "Use a GitLab CI pipeline."
+                },
+                "workflow": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "The complete pipeline object."
+                },
+                "filename": {
+                    "type": "string",
+                    "description": "Override the generated file name."
+                },
+                "dir": {
+                    "type": "string",
+                    "description": "Directory for the generated file."
+                },
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable/disable this workflow (default: enabled when present)."
+                }
+            },
+            "required": [
+                "provider",
+                "workflow"
+            ],
+            "additionalProperties": false,
+            "description": "A complete GitLab CI pipeline written to `.gitlab-ci.yml` (or `filename`/`dir`)."
+        },
+        "AzureWorkflowSetting": {
+            "type": "object",
+            "properties": {
+                "provider": {
+                    "type": "string",
+                    "const": "azure",
+                    "description": "Use an Azure Pipelines pipeline."
+                },
+                "workflow": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "The complete pipeline object."
+                },
+                "filename": {
+                    "type": "string",
+                    "description": "Override the generated file name."
+                },
+                "dir": {
+                    "type": "string",
+                    "description": "Directory for the generated file."
+                },
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable/disable this workflow (default: enabled when present)."
+                }
+            },
+            "required": [
+                "provider",
+                "workflow"
+            ],
+            "additionalProperties": false,
+            "description": "A complete Azure Pipelines pipeline written to `azure-pipelines.yml` (or `filename`/`dir`)."
+        },
         "WorkflowOptions": {
             "type": "object",
             "properties": {
+                "provider": {
+                    "type": "string",
+                    "const": "github",
+                    "description": "Workflow vendor for a full `workflow` object (default `github`)."
+                },
                 "pushBranches": {
                     "type": "array",
                     "items": {
@@ -135,17 +242,13 @@
                 },
                 "triggers": {
                     "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
+                    "properties": {},
                     "additionalProperties": {},
                     "description": "Extra `on.*` triggers."
                 },
                 "extra": {
                     "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
+                    "properties": {},
                     "additionalProperties": {},
                     "description": "Extra top-level keys (`permissions`, `concurrency`, `env`, ...)."
                 },
@@ -168,7 +271,9 @@
                     "propertyNames": {
                         "type": "string"
                     },
-                    "additionalProperties": {},
+                    "additionalProperties": {
+                        "$ref": "#/$defs/WorkflowJob"
+                    },
                     "description": "Extra complete jobs merged in."
                 },
                 "tokens": {
@@ -285,6 +390,140 @@
             "additionalProperties": false,
             "description": "A GitHub Actions workflow step."
         },
+        "WorkflowJob": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Job display name."
+                },
+                "runs-on": {
+                    "type": "string",
+                    "description": "The runner label or expression."
+                },
+                "if": {
+                    "type": "string",
+                    "description": "Conditional expression (`if:`)."
+                },
+                "needs": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Job id(s) this job depends on."
+                },
+                "environment": {
+                    "type": "string",
+                    "description": "A GitHub environment name."
+                },
+                "permissions": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "description": "Job permissions."
+                },
+                "env": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "description": "Environment variables."
+                },
+                "outputs": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "description": "Job outputs."
+                },
+                "concurrency": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "Job concurrency settings."
+                },
+                "timeout-minutes": {
+                    "type": "number",
+                    "description": "The job timeout in minutes."
+                },
+                "strategy": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "A build matrix / strategy."
+                },
+                "services": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": {},
+                    "description": "Service containers."
+                },
+                "steps": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/WorkflowStep"
+                    },
+                    "description": "The job steps."
+                }
+            },
+            "required": [
+                "runs-on",
+                "steps"
+            ],
+            "additionalProperties": {
+                "$ref": "#/$defs/ConfigJsonValue"
+            },
+            "description": "A complete GitHub Actions workflow job."
+        },
+        "ConfigJsonValue": {
+            "description": "Any JSON value.",
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "number"
+                },
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "null"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/ConfigJsonValue"
+                    }
+                },
+                {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "$ref": "#/$defs/ConfigJsonValue"
+                    }
+                }
+            ]
+        },
         "WorkflowSetting": {
             "anyOf": [
                 {
@@ -294,14 +533,28 @@
                     "type": "string"
                 },
                 {
+                    "$ref": "#/$defs/GitHubWorkflowSetting"
+                },
+                {
+                    "$ref": "#/$defs/GitLabWorkflowSetting"
+                },
+                {
+                    "$ref": "#/$defs/AzureWorkflowSetting"
+                },
+                {
                     "$ref": "#/$defs/WorkflowOptions"
                 }
             ],
-            "description": "`true`/`false` to enable/disable, an object to override parts of the default, or a raw YAML string written verbatim as the workflow file."
+            "description": "`true`/`false` to enable/disable, an object to override parts of the default, a complete GitHub/GitLab/Azure workflow (with `provider`), or a raw YAML string written verbatim as the workflow file."
         },
-        "ChangelogConfig": {
+        "CiChangelogConfig": {
             "type": "object",
             "properties": {
+                "provider": {
+                    "type": "string",
+                    "const": "github",
+                    "description": "Workflow vendor for a full `workflow` object (default `github`)."
+                },
                 "pushBranches": {
                     "type": "array",
                     "items": {
@@ -318,17 +571,13 @@
                 },
                 "triggers": {
                     "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
+                    "properties": {},
                     "additionalProperties": {},
                     "description": "Extra `on.*` triggers."
                 },
                 "extra": {
                     "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
+                    "properties": {},
                     "additionalProperties": {},
                     "description": "Extra top-level keys (`permissions`, `concurrency`, `env`, ...)."
                 },
@@ -351,7 +600,9 @@
                     "propertyNames": {
                         "type": "string"
                     },
-                    "additionalProperties": {},
+                    "additionalProperties": {
+                        "$ref": "#/$defs/WorkflowJob"
+                    },
                     "description": "Extra complete jobs merged in."
                 },
                 "tokens": {
@@ -403,9 +654,157 @@
                     "description": "Write the Conventional-Commits VS Code settings (default true)."
                 },
                 "groups": {
-                    "description": "Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback. Titles/order/hidden also accept callbacks (TS/JS configs only)."
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "description": "The CC type (required for object entries in an array)."
+                                            },
+                                            "title": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "string"
+                                                    },
+                                                    {
+                                                        "description": "A custom group title callback (TS/JS configs only)."
+                                                    }
+                                                ],
+                                                "description": "Custom heading title (or callback; TS/JS configs only)."
+                                            },
+                                            "order": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "number"
+                                                    },
+                                                    {
+                                                        "description": "A custom group order callback (TS/JS configs only)."
+                                                    }
+                                                ],
+                                                "description": "Sort position; lower comes first (or callback; TS/JS configs only)."
+                                            },
+                                            "hidden": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "boolean"
+                                                    },
+                                                    {
+                                                        "description": "A custom group hidden callback (TS/JS configs only)."
+                                                    }
+                                                ],
+                                                "description": "Omit this group from the rendered changelog (or callback; TS/JS only)."
+                                            }
+                                        },
+                                        "additionalProperties": false,
+                                        "description": "One Conventional-Commits group."
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "type": "object",
+                            "propertyNames": {
+                                "type": "string"
+                            },
+                            "additionalProperties": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "description": "The CC type (required for object entries in an array)."
+                                            },
+                                            "title": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "string"
+                                                    },
+                                                    {
+                                                        "description": "A custom group title callback (TS/JS configs only)."
+                                                    }
+                                                ],
+                                                "description": "Custom heading title (or callback; TS/JS configs only)."
+                                            },
+                                            "order": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "number"
+                                                    },
+                                                    {
+                                                        "description": "A custom group order callback (TS/JS configs only)."
+                                                    }
+                                                ],
+                                                "description": "Sort position; lower comes first (or callback; TS/JS configs only)."
+                                            },
+                                            "hidden": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "boolean"
+                                                    },
+                                                    {
+                                                        "description": "A custom group hidden callback (TS/JS configs only)."
+                                                    }
+                                                ],
+                                                "description": "Omit this group from the rendered changelog (or callback; TS/JS only)."
+                                            }
+                                        },
+                                        "additionalProperties": false,
+                                        "description": "One Conventional-Commits group."
+                                    },
+                                    {
+                                        "type": "boolean"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "description": "A custom group builder (TS/JS configs only)."
+                        }
+                    ],
+                    "description": "Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback (TS/JS configs only)."
                 },
                 "breaking": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "string",
+                            "enum": [
+                                "conventional",
+                                "any"
+                            ]
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "pattern": {
+                                    "type": "string",
+                                    "description": "A regular expression matched against the subject and body."
+                                },
+                                "match": {
+                                    "type": "string",
+                                    "description": "A substring matched against the subject and body."
+                                }
+                            },
+                            "additionalProperties": false
+                        },
+                        {
+                            "description": "A custom breaking-change predicate (TS/JS configs only)."
+                        }
+                    ],
                     "description": "How breaking changes are detected: `conventional` (default: a `!` in the CC subject or a `BREAKING CHANGE:` footer), `any` (legacy loose match), `false` (disable), `{ pattern }` / `{ match }`, or a callback (TS/JS configs only)."
                 }
             },
@@ -492,10 +891,18 @@
                 },
                 "bump": {
                     "type": "object",
-                    "propertyNames": {
-                        "type": "string"
+                    "properties": {
+                        "major": {
+                            "$ref": "#/$defs/ChangelogBumpRule"
+                        },
+                        "minor": {
+                            "$ref": "#/$defs/ChangelogBumpRule"
+                        },
+                        "patch": {
+                            "$ref": "#/$defs/ChangelogBumpRule"
+                        }
                     },
-                    "additionalProperties": {},
+                    "additionalProperties": false,
                     "description": "Custom bump rules for major/minor/patch (matchers or callbacks)."
                 },
                 "allowOverBump": {
@@ -503,9 +910,21 @@
                     "description": "Apply a bump once per matching change instead of once per run (default false)."
                 },
                 "commit": {
-                    "description": "Commit message formatting/credit options or callback."
+                    "description": "Commit message formatting/credit options (with an optional formatter callback).",
+                    "$ref": "#/$defs/ChangelogCommitFormatConfig"
                 },
                 "provider": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "$ref": "#/$defs/ChangelogProviderConfig"
+                        },
+                        {
+                            "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
+                        }
+                    ],
                     "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
                 }
             },
@@ -520,6 +939,131 @@
                 "individual"
             ],
             "description": "Where the changelog version bump is applied."
+        },
+        "ChangelogBumpRule": {
+            "anyOf": [
+                {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "$ref": "#/$defs/ChangelogBumpRuleMatch"
+                        },
+                        {
+                            "description": "A custom bump matcher (TS/JS configs only)."
+                        }
+                    ]
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "$ref": "#/$defs/ChangelogBumpRuleMatch"
+                            },
+                            {
+                                "description": "A custom bump matcher (TS/JS configs only)."
+                            }
+                        ]
+                    }
+                }
+            ],
+            "description": "A bump rule: a matcher/callback or a list of matchers/callbacks."
+        },
+        "ChangelogBumpRuleMatch": {
+            "type": "object",
+            "properties": {
+                "breaking": {
+                    "type": "boolean",
+                    "description": "Match only commits whose breaking state equals this value."
+                },
+                "type": {
+                    "type": "string",
+                    "description": "Match this Conventional-Commits type."
+                },
+                "types": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Match any of these CC types."
+                },
+                "scope": {
+                    "type": "string",
+                    "description": "Match this Conventional-Commits scope."
+                },
+                "scopes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Match any of these CC scopes."
+                },
+                "pattern": {
+                    "type": "string",
+                    "description": "Match this regular expression."
+                },
+                "match": {
+                    "type": "string",
+                    "description": "Match this substring."
+                }
+            },
+            "additionalProperties": false,
+            "description": "A declarative bump matcher."
+        },
+        "ChangelogCommitFormatConfig": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "boolean",
+                    "description": "Include the `by <author>` credit (default true)."
+                },
+                "commitSha": {
+                    "type": "boolean",
+                    "description": "Include the commit hash link (default true)."
+                },
+                "issues": {
+                    "type": "boolean",
+                    "description": "Include issue/fixes links (default true)."
+                },
+                "authorAvatar": {
+                    "type": "boolean",
+                    "description": "Prefix the author with their GitHub avatar (default false)."
+                },
+                "format": {
+                    "description": "Fully custom commit line formatter (TS/JS configs only; return the bullet body)."
+                }
+            },
+            "additionalProperties": false,
+            "description": "Commit message formatting/credit options."
+        },
+        "ChangelogProviderConfig": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "The provider id."
+                },
+                "run": {
+                    "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
+                }
+            },
+            "required": [
+                "id",
+                "run"
+            ],
+            "additionalProperties": false,
+            "description": "A custom changelog provider object."
         },
         "ChangelogVersioning": {
             "anyOf": [
@@ -541,10 +1085,19 @@
                     "type": "string"
                 },
                 {
-                    "$ref": "#/$defs/ChangelogConfig"
+                    "$ref": "#/$defs/GitHubWorkflowSetting"
+                },
+                {
+                    "$ref": "#/$defs/GitLabWorkflowSetting"
+                },
+                {
+                    "$ref": "#/$defs/AzureWorkflowSetting"
+                },
+                {
+                    "$ref": "#/$defs/CiChangelogConfig"
                 }
             ],
-            "description": "`true`/`false` to enable/disable, the changelog pipeline config object, or a raw YAML string written verbatim as the changelog workflow file."
+            "description": "`true`/`false` to enable/disable, a complete GitHub/GitLab/Azure workflow (with `provider`), the changelog pipeline config object, or a raw YAML string written verbatim as the changelog workflow file."
         },
         "CustomWorkflowSettings": {
             "anyOf": [
@@ -552,12 +1105,21 @@
                     "type": "string"
                 },
                 {
+                    "$ref": "#/$defs/GitHubWorkflowSetting"
+                },
+                {
+                    "$ref": "#/$defs/GitLabWorkflowSetting"
+                },
+                {
+                    "$ref": "#/$defs/AzureWorkflowSetting"
+                },
+                {
                     "$ref": "#/$defs/WorkflowOptions"
                 }
             ],
-            "description": "A custom workflow: a raw YAML string, or workflow settings merged over an empty workflow (use `triggers`, `extra` and `jobs` to define it)."
+            "description": "A custom workflow: a raw YAML string, a complete GitHub/GitLab/Azure workflow (with `provider`), or GitHub settings merged over an empty workflow (use `triggers`, `extra` and `jobs` to define it)."
         },
-        "ToolchainChangelogConfig": {
+        "ChangelogConfig": {
             "type": "object",
             "properties": {
                 "commitlint": {
@@ -580,9 +1142,157 @@
                     "description": "Write the Conventional-Commits VS Code settings (default true)."
                 },
                 "groups": {
-                    "description": "Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback. Titles/order/hidden also accept callbacks (TS/JS configs only)."
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "description": "The CC type (required for object entries in an array)."
+                                            },
+                                            "title": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "string"
+                                                    },
+                                                    {
+                                                        "description": "A custom group title callback (TS/JS configs only)."
+                                                    }
+                                                ],
+                                                "description": "Custom heading title (or callback; TS/JS configs only)."
+                                            },
+                                            "order": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "number"
+                                                    },
+                                                    {
+                                                        "description": "A custom group order callback (TS/JS configs only)."
+                                                    }
+                                                ],
+                                                "description": "Sort position; lower comes first (or callback; TS/JS configs only)."
+                                            },
+                                            "hidden": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "boolean"
+                                                    },
+                                                    {
+                                                        "description": "A custom group hidden callback (TS/JS configs only)."
+                                                    }
+                                                ],
+                                                "description": "Omit this group from the rendered changelog (or callback; TS/JS only)."
+                                            }
+                                        },
+                                        "additionalProperties": false,
+                                        "description": "One Conventional-Commits group."
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "type": "object",
+                            "propertyNames": {
+                                "type": "string"
+                            },
+                            "additionalProperties": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "description": "The CC type (required for object entries in an array)."
+                                            },
+                                            "title": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "string"
+                                                    },
+                                                    {
+                                                        "description": "A custom group title callback (TS/JS configs only)."
+                                                    }
+                                                ],
+                                                "description": "Custom heading title (or callback; TS/JS configs only)."
+                                            },
+                                            "order": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "number"
+                                                    },
+                                                    {
+                                                        "description": "A custom group order callback (TS/JS configs only)."
+                                                    }
+                                                ],
+                                                "description": "Sort position; lower comes first (or callback; TS/JS configs only)."
+                                            },
+                                            "hidden": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "boolean"
+                                                    },
+                                                    {
+                                                        "description": "A custom group hidden callback (TS/JS configs only)."
+                                                    }
+                                                ],
+                                                "description": "Omit this group from the rendered changelog (or callback; TS/JS only)."
+                                            }
+                                        },
+                                        "additionalProperties": false,
+                                        "description": "One Conventional-Commits group."
+                                    },
+                                    {
+                                        "type": "boolean"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "description": "A custom group builder (TS/JS configs only)."
+                        }
+                    ],
+                    "description": "Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback (TS/JS configs only)."
                 },
                 "breaking": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "string",
+                            "enum": [
+                                "conventional",
+                                "any"
+                            ]
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "pattern": {
+                                    "type": "string",
+                                    "description": "A regular expression matched against the subject and body."
+                                },
+                                "match": {
+                                    "type": "string",
+                                    "description": "A substring matched against the subject and body."
+                                }
+                            },
+                            "additionalProperties": false
+                        },
+                        {
+                            "description": "A custom breaking-change predicate (TS/JS configs only)."
+                        }
+                    ],
                     "description": "How breaking changes are detected: `conventional` (default: a `!` in the CC subject or a `BREAKING CHANGE:` footer), `any` (legacy loose match), `false` (disable), `{ pattern }` / `{ match }`, or a callback (TS/JS configs only)."
                 },
                 "enabled": {
@@ -614,10 +1324,9 @@
                         },
                         {
                             "type": "object",
-                            "propertyNames": {
-                                "type": "string"
-                            },
-                            "additionalProperties": {}
+                            "properties": {},
+                            "additionalProperties": {},
+                            "description": "Oxfmt configuration options."
                         }
                     ],
                     "description": "Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` overrides these (deep merge)."
@@ -629,10 +1338,9 @@
                         },
                         {
                             "type": "object",
-                            "propertyNames": {
-                                "type": "string"
-                            },
-                            "additionalProperties": {}
+                            "properties": {},
+                            "additionalProperties": {},
+                            "description": "Biome configuration options."
                         }
                     ],
                     "description": "Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`."
@@ -644,10 +1352,9 @@
                         },
                         {
                             "type": "object",
-                            "propertyNames": {
-                                "type": "string"
-                            },
-                            "additionalProperties": {}
+                            "properties": {},
+                            "additionalProperties": {},
+                            "description": "Prettier configuration options."
                         }
                     ],
                     "description": "Prettier options (`true` = defaults, `false` = disabled)."
@@ -659,10 +1366,9 @@
                         },
                         {
                             "type": "object",
-                            "propertyNames": {
-                                "type": "string"
-                            },
-                            "additionalProperties": {}
+                            "properties": {},
+                            "additionalProperties": {},
+                            "description": "Dprint configuration options."
                         }
                     ],
                     "description": "Dprint options (`true` = defaults, `false` = disabled)."
@@ -680,9 +1386,7 @@
             "properties": {
                 "overrides": {
                     "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
+                    "properties": {},
                     "additionalProperties": {},
                     "description": "Settings deep-merged over the generated editor defaults."
                 },
@@ -717,10 +1421,9 @@
                         },
                         {
                             "type": "object",
-                            "propertyNames": {
-                                "type": "string"
-                            },
-                            "additionalProperties": {}
+                            "properties": {},
+                            "additionalProperties": {},
+                            "description": "Oxlint configuration options."
                         }
                     ],
                     "description": "Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` overrides these (deep merge)."
@@ -732,10 +1435,9 @@
                         },
                         {
                             "type": "object",
-                            "propertyNames": {
-                                "type": "string"
-                            },
-                            "additionalProperties": {}
+                            "properties": {},
+                            "additionalProperties": {},
+                            "description": "Biome configuration options."
                         }
                     ],
                     "description": "Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`."
@@ -747,10 +1449,9 @@
                         },
                         {
                             "type": "object",
-                            "propertyNames": {
-                                "type": "string"
-                            },
-                            "additionalProperties": {}
+                            "properties": {},
+                            "additionalProperties": {},
+                            "description": "ESLint configuration options."
                         }
                     ],
                     "description": "ESLint options (`true` = defaults, `false` = disabled)."
@@ -772,9 +1473,7 @@
                 },
                 "overrides": {
                     "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
+                    "properties": {},
                     "additionalProperties": {},
                     "description": "Deep-merged over the generated `biome.json` (arrays union)."
                 },
@@ -932,33 +1631,25 @@
             "properties": {
                 "base": {
                     "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
+                    "properties": {},
                     "additionalProperties": {},
                     "description": "Deep-merged into the root base tsconfig (`baseFile`) during sync."
                 },
                 "default": {
                     "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
+                    "properties": {},
                     "additionalProperties": {},
                     "description": "Deep-merged into every workspace default tsconfig (`defaultFile`) during sync."
                 },
                 "build": {
                     "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
+                    "properties": {},
                     "additionalProperties": {},
                     "description": "Deep-merged into every workspace build tsconfig (`buildFile`) during sync."
                 },
                 "root": {
                     "type": "object",
-                    "propertyNames": {
-                        "type": "string"
-                    },
+                    "properties": {},
                     "additionalProperties": {},
                     "description": "Deep-merged into the root workspaces tsconfig (`rootFile`) during sync."
                 }
@@ -1145,7 +1836,7 @@
             "type": "object",
             "properties": {
                 "config": {
-                    "description": "Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or absolute).",
+                    "description": "Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or an absolute path inside it).",
                     "type": [
                         "boolean",
                         "string"
@@ -1170,10 +1861,9 @@
                         },
                         {
                             "type": "object",
-                            "propertyNames": {
-                                "type": "string"
-                            },
-                            "additionalProperties": {}
+                            "properties": {},
+                            "additionalProperties": {},
+                            "description": "Oxfmt configuration options."
                         }
                     ],
                     "description": "Oxfmt options; `true` uses the toolchain defaults."
@@ -1185,10 +1875,9 @@
                         },
                         {
                             "type": "object",
-                            "propertyNames": {
-                                "type": "string"
-                            },
-                            "additionalProperties": {}
+                            "properties": {},
+                            "additionalProperties": {},
+                            "description": "Oxlint configuration options."
                         }
                     ],
                     "description": "Oxlint options; `true` uses the toolchain defaults."
@@ -1271,6 +1960,44 @@
                     "description": "Warning/error id, message substring, or `/regex/` to silence (single value or array)."
                 },
                 "logger": {
+                    "type": "object",
+                    "properties": {
+                        "raw": {
+                            "description": "Write raw stdout."
+                        },
+                        "rawError": {
+                            "description": "Write raw stderr."
+                        },
+                        "write": {
+                            "description": "Write to a specific output channel."
+                        },
+                        "debug": {
+                            "description": "Print a debug message."
+                        },
+                        "info": {
+                            "description": "Print an info message."
+                        },
+                        "success": {
+                            "description": "Print a success message."
+                        },
+                        "warn": {
+                            "description": "Print a warning."
+                        },
+                        "error": {
+                            "description": "Print an error."
+                        }
+                    },
+                    "required": [
+                        "raw",
+                        "rawError",
+                        "write",
+                        "debug",
+                        "info",
+                        "success",
+                        "warn",
+                        "error"
+                    ],
+                    "additionalProperties": false,
                     "description": "Custom `ToolchainLogger` implementation (TS/JS configs only; JSON cannot carry functions)."
                 },
                 "enabled": {
@@ -1320,7 +2047,7 @@
                             "type": "boolean"
                         },
                         {
-                            "$ref": "#/$defs/ToolchainChangelogConfig"
+                            "$ref": "#/$defs/ChangelogConfig"
                         }
                     ],
                     "description": "Manual changelog pipeline options for `dbx changelog`, the VS Code actions and the API. `ci.changelog` inherits these options."

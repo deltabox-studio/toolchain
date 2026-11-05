@@ -482,3 +482,17 @@ describe('resolveVite', () => {
         await expect(resolveVite({ cwd: makeTmp() })).rejects.toThrow(/dbx\.config/);
     });
 });
+
+describe('vp resolution in a workspace', () => {
+    it('finds a hoisted shim in an ancestor node_modules', () => {
+        const root = makeTmp();
+        const bin = path.join(root, 'node_modules', '.bin');
+        fs.mkdirSync(bin, { recursive: true });
+        for (const name of ['vp', 'vp.cmd', 'vp.exe']) {
+            fs.writeFileSync(path.join(bin, name), '');
+        }
+        const child = path.join(root, 'packages', 'app');
+        fs.mkdirSync(child, { recursive: true });
+        expect(resolveVp(child).source).toBe('local');
+    });
+});

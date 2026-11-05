@@ -103,3 +103,12 @@ describe('release notes', () => {
         expect(parseArgsCli(['--release-notes', '2.0.0']).releaseNotes).toBe('2.0.0');
     });
 });
+
+describe('release notes for a version without a heading', () => {
+    it('uses the newest entry instead of returning an empty body', () => {
+        const notes = buildReleaseNotes(CHANGELOG, ['v2.0.0'], '2.1.0');
+        expect(notes).toContain('## 2.0.0');
+        expect(notes).toContain('- New thing');
+        expect(notes).not.toContain('## 1.11.4');
+    });
+});

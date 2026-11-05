@@ -106,19 +106,69 @@ describe('normalizeToolingConfig', () => {
         expect(warnings).toEqual(['fmt.no-tool', 'lint.no-tool']);
     });
 
-    it('folds a user-owned Prettier config into Oxc options', async () => {
+    it('detects Prettier from a user-owned config file', async () => {
         const cwd = tmp();
         writeJson(path.join(cwd, '.prettierrc'), { singleQuote: false, printWidth: 90 });
         const { config, warnings } = await normalizeToolingConfig(
             { fmt: true },
             { cwd, vscodeSettingsPath: missingSettings(cwd) }
         );
-        expect(fmtOf(config)?.oxc).toMatchObject({
-            singleQuote: false,
-            printWidth: 90,
-            tabWidth: DEFAULT_FMT_RULES.tabWidth,
-        });
+        expect(fmtOf(config)?.prettier).toEqual({ singleQuote: false, printWidth: 90 });
+        expect(fmtOf(config)?.oxc).toBeUndefined();
         expect(warnings).toEqual([]);
+    });
+
+    it('prefers the nearest package.json tool over a root-installed one', async () => {
+        const root = tmp();
+        packageJson(root, { 'vite-plus': '^1' });
+        const cwd = path.join(root, 'packages/app');
+        fs.mkdirSync(cwd, { recursive: true });
+        packageJson(cwd, { prettier: '^3' });
+        const { config } = await normalizeToolingConfig(
+            { fmt: true },
+            { cwd, vscodeSettingsPath: missingSettings(cwd) }
+        );
+        expect(fmtOf(config)?.prettier).toEqual({});
+        expect(fmtOf(config)?.oxc).toBeUndefined();
+    });
+
+    it('uses the project .vscode/settings.json before installed tools', async () => {
+        const cwd = tmp();
+        packageJson(cwd, { 'vite-plus': '^1' });
+        writeJson(path.join(cwd, '.vscode/settings.json'), {
+            'editor.defaultFormatter': 'esbenp.prettier-vscode',
+            'editor.codeActionsOnSave': { 'source.fixAll.eslint': 'explicit' },
+        });
+        const { config } = await normalizeToolingConfig(
+            { fmt: true, lint: true },
+            { cwd, vscodeSettingsPath: missingSettings(cwd) }
+        );
+        expect(fmtOf(config)?.prettier).toEqual({});
+        expect(lintOf(config)?.eslint).toEqual({});
+        expect(fmtOf(config)?.oxc).toBeUndefined();
+        expect(lintOf(config)?.oxc).toBeUndefined();
+    });
+
+    it('detects a tool from an ancestor config file', async () => {
+        const root = tmp();
+        writeJson(path.join(root, '.prettierrc'), { singleQuote: true });
+        const cwd = path.join(root, 'packages/app');
+        fs.mkdirSync(cwd, { recursive: true });
+        const { config } = await normalizeToolingConfig(
+            { fmt: true },
+            { cwd, vscodeSettingsPath: missingSettings(cwd) }
+        );
+        expect(fmtOf(config)?.prettier).toEqual({ singleQuote: true });
+    });
+
+    it('detects a linter from a config file', async () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, '.eslintrc.json'), { rules: { eqeqeq: 'warn' } });
+        const { config } = await normalizeToolingConfig(
+            { lint: true },
+            { cwd, vscodeSettingsPath: missingSettings(cwd) }
+        );
+        expect(lintOf(config)?.eslint).toEqual({ rules: { eqeqeq: 'warn' } });
     });
 
     it('folds a user-owned Oxc config into the defaults', async () => {

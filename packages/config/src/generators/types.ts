@@ -22,6 +22,7 @@ import {
     zodToSchemaMap,
 } from '../schema.js';
 import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
+import { resolveGeneratedFile } from './output.js';
 
 /** The `generateTypes` options shared by every interface. */
 const GENERATE_OPTIONS = { addExport: true, partial: true } as const;
@@ -114,6 +115,10 @@ function tidyInterface(schema: Schema, interfaceName: string): string {
  * Insert a `[key: string]: unknown` index signature before the closing brace of
  * a generated interface. Used for schemas that accept arbitrary keys
  * (`.catchall` / `.passthrough`), so the generated type stays open.
+ *
+ * The value stays `unknown` rather than the catchall's own type: a nested
+ * interface (eg. `WorkflowStep[]`) is not assignable to an index signature
+ * unless it declares one, and the extra keys are genuinely open-ended.
  */
 function withIndexSignature(body: string): string {
     const close = body.lastIndexOf('}');
@@ -397,7 +402,7 @@ export function generateConfigTypes(
     const contents = renderAllConfigTypes(schema, options);
     if (typeof options.outputDir === 'string') {
         for (const [scopeName, content] of Object.entries(contents)) {
-            const file = path.join(options.outputDir, `${scopeName}.${extension}`);
+            const file = resolveGeneratedFile(options.outputDir, `${scopeName}.${extension}`);
             fs.mkdirSync(path.dirname(file), { recursive: true });
             fs.writeFileSync(file, content, 'utf-8');
         }

@@ -5,9 +5,12 @@
             "name": "Run deltabox toolchain extension",
             "type": "extensionHost",
             "request": "launch",
-            "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}",
+                "${workspaceFolder}/test-fixtures/workspace"
+            ],
             "outFiles": ["${workspaceFolder}/dist/**/*.cjs"],
-            "preLaunchTask": "npm: build"
+            "preLaunchTask": "build extension"
         }
     ]
 }

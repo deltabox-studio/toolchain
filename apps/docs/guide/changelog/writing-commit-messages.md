@@ -14,10 +14,12 @@ especially when a message is drafted by an **AI/LLM** and committed through
 - **bash** runs an unquoted `` `…` `` as command substitution, and `$(…)` / `${…}`
   expand before `git` ever sees them.
 
-The result is invisible control characters, stray `\` and dropped letters. The
-toolchain strips the predictable artifacts
-(`stripControlChars`/`sanitizeText`) but **cannot restore a character the shell
-already consumed**.
+The result is invisible control characters, stray `\` and dropped letters.
+`sanitizeText` maps the common control characters back to the letter they
+replaced (`BEL`→`a`, `BS`→`b`, `FF`→`f`, `VT`→`v`, `TAB`→`t`, `LF`→`n`,
+`CR`→`r`, `ESC`→`e`, `NUL`→`0`) and drops the stray `\`, so words like `any`,
+`false` and `bin` are restored. A character the shell consumed without leaving a
+trace still cannot be recovered.
 
 ## Authoring safely
 

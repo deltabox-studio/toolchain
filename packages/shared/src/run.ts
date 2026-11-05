@@ -40,13 +40,27 @@ function escapeCmdArgument(value: string, doubleEscapeMetaChars: boolean): strin
     return arg;
 }
 
-/** The first `cmd` + PATHEXT candidate that exists on PATH (Windows only). */
+/** The first `cmd` + PATHEXT candidate that exists (Windows only). */
 function resolveWindowsCommand(cmd: string): string | undefined {
-    if (path.extname(cmd)) return fs.existsSync(cmd) ? cmd : undefined;
-    const exts = (process.env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';');
-    const dirs = (process.env.PATH ?? '').split(path.delimiter);
-    for (const ext of exts) {
-        for (const dir of dirs) {
+    const exts = (process.env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean);
+    const hasExtension = Boolean(path.extname(cmd));
+    const hasSeparator = cmd.includes('/') || cmd.includes('\\') || path.isAbsolute(cmd);
+    if (hasSeparator) {
+        if (hasExtension) return fs.existsSync(cmd) ? cmd : undefined;
+        for (const ext of exts) {
+            const candidate = `${cmd}${ext.toLowerCase()}`;
+            if (fs.existsSync(candidate)) return candidate;
+        }
+        return undefined;
+    }
+    const dirs = (process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
+    for (const dir of dirs) {
+        if (hasExtension) {
+            const candidate = path.join(dir, cmd);
+            if (fs.existsSync(candidate)) return candidate;
+            continue;
+        }
+        for (const ext of exts) {
             const candidate = path.join(dir, `${cmd}${ext.toLowerCase()}`);
             if (fs.existsSync(candidate)) return candidate;
         }
@@ -55,7 +69,7 @@ function resolveWindowsCommand(cmd: string): string | undefined {
 }
 
 /** Whether running `cmd` on Windows goes through a `.cmd`/`.bat` shim. */
-function isCmdShim(cmd: string): boolean {
+export function isCmdShim(cmd: string): boolean {
     const resolved = resolveWindowsCommand(cmd) ?? cmd;
     return /\.(cmd|bat)$/i.test(resolved);
 }
@@ -181,7 +195,7 @@ export function run(cmd: string, args: string[], options?: RunOptions): ChildPro
     });
 
     if (!exitWithMainProc) return proc;
-    proc.on('exit', process.exit);
+    proc.on('exit', (code, signal) => process.exit(code ?? (signal ? 1 : 0)));
 
     return proc;
 }

@@ -11,6 +11,7 @@ import {
     hasCatalog,
     SCAFFOLD_CATALOG,
     upsertWorkspaceTsconfig,
+    workspaceDirForTsconfig,
     writeGeneratedFiles,
 } from '@deltabox/toolchain-project';
 import {
@@ -156,7 +157,9 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
             break;
         }
         case 'monorepo-workspace': {
-            const dir = `packages/${name}`;
+            // Validate before writing: a name like `../..` must never target the
+            // monorepo root (or another package) with `--force`.
+            const dir = workspaceDirForTsconfig(`packages/${name}`);
             files.push(
                 ...createWorkspaceFiles({
                     ...workspaceMetadata,
@@ -200,7 +203,7 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
     if (template.builtin === 'monorepo-workspace') {
         upsertWorkspaceTsconfig(
             options.cwd,
-            { alias: name, dir: `packages/${name}` },
+            { alias: name, dir: workspaceDirForTsconfig(`packages/${name}`) },
             scope,
             options.tsconfigRootFile
         );

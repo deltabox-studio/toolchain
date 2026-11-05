@@ -235,3 +235,32 @@ describe('tsconfigSyncTask', () => {
         ]);
     });
 });
+
+describe('generateTsconfigs referenced JSONC', () => {
+    it('reads a referenced tsconfig with comments', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'tsconfig.workspaces.json'), {
+            compilerOptions: { composite: true },
+            references: [{ path: './packages/core/tsconfig.json' }],
+        });
+        writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {});
+        fs.mkdirSync(path.join(cwd, 'vendor'), { recursive: true });
+        fs.writeFileSync(
+            path.join(cwd, 'vendor/tsconfig.json'),
+            '{\n    // referenced\n    "compilerOptions": { "composite": true },\n}\n'
+        );
+        fs.writeFileSync(
+            path.join(cwd, 'tsconfig.workspaces.json'),
+            JSON.stringify({
+                compilerOptions: { composite: true },
+                references: [
+                    { path: './packages/core/tsconfig.json' },
+                    { path: './vendor/tsconfig.json' },
+                ],
+            })
+        );
+        expect(() =>
+            generateTsconfigs({ cwd, refs: true, composite: true, log: false })
+        ).not.toThrow();
+    });
+});

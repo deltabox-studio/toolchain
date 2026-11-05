@@ -565,3 +565,10 @@ describe('migrate CLI post-migration sync', () => {
         expect(ran).toEqual(['other']);
     });
 });
+
+describe('migrate --target vite function configs', () => {
+    it('rejects a function-form config instead of silently doing nothing', () => {
+        const existing = `import { defineConfig } from 'vite-plus';\nexport default defineConfig(({ mode }) => ({ test: {} }));\n`;
+        expect(() => mergeViteConfig(existing, { fmt: { semi: true } })).toThrow(/function/);
+    });
+});

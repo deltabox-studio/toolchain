@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { findConfigFile } from './loader.js';
 import { MANIFEST_DIR, readManifest } from './manifest.js';
+import { resolveManagedPath } from './paths.js';
 import { type SelectProjectsOptions, selectProjects } from './select.js';
 
 /** What parts of the tooling to remove for a project. */
@@ -36,6 +37,8 @@ export interface ResetToolchainResult {
     removed: string[];
     /** User-owned files restored before the manifest was removed. */
     restored: string[];
+    /** Manifest paths ignored because they resolve outside the project root. */
+    skipped: string[];
     /** Whether this was a dry run. */
     dryRun: boolean;
 }
@@ -69,6 +72,7 @@ export function resetToolchain(options: ResetToolchainOptions): ResetToolchainRe
     const dryRun = options.dryRun ?? false;
     const selectors = resolveSelectors(options);
     const removed: string[] = [];
+    const skipped: string[] = [];
 
     const removeFile = (abs: string, rel: string): void => {
         if (!fs.existsSync(abs)) return;
@@ -81,8 +85,19 @@ export function resetToolchain(options: ResetToolchainOptions): ResetToolchainRe
         for (const rel of manifest.files) {
             // Adopted files existed before dbx first managed them. A sync never
             // deletes them when their section goes away, so reset must not either.
-            if (manifest.origins?.[rel] === 'adopted') continue;
-            removeFile(path.resolve(cwd, rel), rel);
+            // A legacy manifest without `origins` cannot distinguish created from
+            // adopted files, so leave them alone too: only an explicit `created`
+            // origin is deletable.
+            if (manifest.origins?.[rel] !== 'created') continue;
+            let abs: string;
+            try {
+                abs = resolveManagedPath(cwd, rel);
+            } catch {
+                // Never follow a tampered/invalid manifest entry outside the root.
+                skipped.push(rel);
+                continue;
+            }
+            removeFile(abs, rel);
         }
     }
 
@@ -99,12 +114,28 @@ export function resetToolchain(options: ResetToolchainOptions): ResetToolchainRe
     if (selectors.manifest) {
         const dir = path.resolve(cwd, MANIFEST_DIR);
         if (fs.existsSync(dir)) {
-            if (!dryRun) fs.rmSync(dir, { recursive: true, force: true });
-            removed.push(`${MANIFEST_DIR}/`);
+            // `.dbx/toolchain` also holds user configuration (project registries,
+            // local templates, provider files). Only remove the generated state;
+            // keep the directory when any user data remains.
+            const generated = new Set(['manifest.json', 'timestamps.json', 'projects.json']);
+            const entries = fs.readdirSync(dir);
+            const generatedEntries = entries.filter(entry => generated.has(entry)).sort();
+            const remaining = entries.filter(entry => !generated.has(entry));
+            if (!dryRun) {
+                for (const entry of generatedEntries) {
+                    fs.rmSync(path.join(dir, entry), { force: true });
+                }
+                if (remaining.length === 0) fs.rmSync(dir, { recursive: true, force: true });
+            }
+            if (remaining.length === 0) {
+                removed.push(`${MANIFEST_DIR}/`);
+            } else {
+                removed.push(...generatedEntries.map(entry => `${MANIFEST_DIR}/${entry}`));
+            }
         }
     }
 
-    return { removed, restored, dryRun };
+    return { removed, restored, skipped, dryRun };
 }
 
 export interface ResetProjectsOptions extends ResetSelectors, Omit<SelectProjectsOptions, 'kind'> {
@@ -116,7 +147,13 @@ export interface ResetProjectsOptions extends ResetSelectors, Omit<SelectProject
 }
 
 export interface ResetProjectsResult {
-    results: { dir: string; rel: string; removed: string[]; restored: string[] }[];
+    results: {
+        dir: string;
+        rel: string;
+        removed: string[];
+        restored: string[];
+        skipped: string[];
+    }[];
     dryRun: boolean;
 }
 
@@ -136,7 +173,7 @@ export function resetProjects(options: ResetProjectsOptions): ResetProjectsResul
         : [{ dir: options.root, rel: '.', hasConfig: Boolean(findConfigFile(options.root)) }];
 
     const results = targets.map(target => {
-        const { removed, restored } = resetToolchain({
+        const { removed, restored, skipped } = resetToolchain({
             cwd: target.dir,
             ...(options.generated !== undefined ? { generated: options.generated } : {}),
             ...(options.manifest !== undefined ? { manifest: options.manifest } : {}),
@@ -144,7 +181,7 @@ export function resetProjects(options: ResetProjectsOptions): ResetProjectsResul
             ...(options.restore ? { restore: options.restore } : {}),
             dryRun,
         });
-        return { dir: target.dir, rel: target.rel, removed, restored };
+        return { dir: target.dir, rel: target.rel, removed, restored, skipped };
     });
 
     return { results, dryRun };

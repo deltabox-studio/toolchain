@@ -27,7 +27,7 @@ jobs:
           node-version: "22"
           registry-url: https://registry.npmjs.org
       - name: Enable Corepack
-        run: |
+        run: |-
           corepack enable
           corepack prepare yarn@4.17.1 --activate
       - name: Install dependencies
@@ -36,7 +36,7 @@ jobs:
         run: yarn build
       - name: Resolve version + release state
         id: release
-        run: |
+        run: |-
           version="$(node -p "require('./package.json').version")"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           if git ls-remote --exit-code --tags origin "v$version" >/dev/null 2>&1; then
@@ -50,7 +50,7 @@ jobs:
         run: yarn workspace toolchain-vscode package:vsix
       - name: Extract release notes
         if: steps.release.outputs.skip == 'false'
-        run: |
+        run: |-
           notes="$(yarn dbx changelog --release-notes "${{ steps.release.outputs.version }}")"
           [ -n "$notes" ] || notes="Release v${{ steps.release.outputs.version }}"
           printf '%s\n' "$notes" > RELEASE_NOTES.md
@@ -58,7 +58,7 @@ jobs:
         if: steps.release.outputs.skip == 'false'
         env:
           GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-        run: |
+        run: |-
           gh release create "v${{ steps.release.outputs.version }}" \
             --title "v${{ steps.release.outputs.version }}" \
             --notes-file RELEASE_NOTES.md \
@@ -68,7 +68,7 @@ jobs:
         run: npm install -g npm@^11.15.1
       - name: "Publish to npm (fallback: staged)"
         if: steps.release.outputs.skip == 'false'
-        run: |
+        run: |-
           yarn pack --out toolchain.tgz
           if npm publish toolchain.tgz --access public; then
             echo "Published to npm."

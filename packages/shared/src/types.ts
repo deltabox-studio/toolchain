@@ -101,6 +101,11 @@ export interface ToolchainCommand<Args extends Record<string, unknown> = Record<
      * the `args` key of the run argument (typed `string[]`).
      */
     passthrough?: boolean;
+    /**
+     * Omit the command from generated documentation. Used by provider
+     * passthroughs, whose names depend on the consumer's registry.
+     */
+    hidden?: boolean;
     /** Run the command with the CLI-provided options + the loaded config. */
     run: (args: Args, context: ToolchainCommandContext) => Awaitable<void>;
 }

@@ -16,4 +16,6 @@ toolchain: {
 The workflow is opt-in and only runs on `issues: opened`. It needs the
 `issues: write` permission, which the generated default declares.
 
-Use [Workflow settings](/guide/ci/settings) to change its triggers or add jobs.
+Use [Workflow settings](/guide/ci/settings) to change its triggers or add jobs,
+or set `provider` with a complete GitLab/Azure `workflow` to target another
+vendor.

@@ -14,8 +14,10 @@ import {
     deepMerge,
     errorMessage,
     FORMATTER_PRECEDENCE,
+    insertMissingJsonc,
     isPlainObject,
     LINTER_PRECEDENCE,
+    readJsoncFile,
     resolveFmtTool,
     resolveFmtTools,
     resolveLintTool,
@@ -175,38 +177,40 @@ export function editorConfigSyncTask(): SyncTask {
             if (Object.keys(patch).length === 0) return [];
 
             const file = path.join(ctx.cwd, '.vscode', 'settings.json');
+            let original: string | undefined;
             let settings: Record<string, unknown> = {};
             if (fs.existsSync(file)) {
-                try {
-                    const parsed = JSON.parse(
-                        fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, '')
-                    ) as unknown;
-                    if (!isPlainObject(parsed)) {
-                        ctx.warn(
-                            `cannot add editor defaults: ${file} is not a JSON object.`,
-                            'vscode.settings-invalid'
-                        );
-                        return [];
-                    }
-                    settings = parsed;
-                } catch {
+                original = fs.readFileSync(file, 'utf-8');
+                const parsed = readJsoncFile(file);
+                if (!isPlainObject(parsed)) {
                     ctx.warn(
-                        `cannot add editor defaults: ${file} is not valid JSON.`,
+                        `cannot add editor defaults: ${file} is not a JSON object.`,
                         'vscode.settings-invalid'
                     );
                     return [];
                 }
+                settings = parsed;
             }
 
             // `--check` is read-only: report nothing (the file is intentionally
             // unmanaged) and never write the generated defaults.
             if (ctx.check) return [];
 
-            const before = JSON.stringify(settings);
-            addMissing(settings, patch);
-            if (JSON.stringify(settings) !== before) {
+            // Insert the missing keys in place so the consumer's comments and
+            // layout survive; rewrite only when the patch is not purely additive.
+            let next =
+                original === undefined
+                    ? undefined
+                    : insertMissingJsonc(original, settings, patch, { ignoreExisting: true });
+            if (next === undefined) {
+                const before = JSON.stringify(settings);
+                addMissing(settings, patch);
+                if (JSON.stringify(settings) === before) return [];
+                next = `${JSON.stringify(settings, null, 4)}\n`;
+            }
+            if (next !== original) {
                 fs.mkdirSync(path.dirname(file), { recursive: true });
-                fs.writeFileSync(file, `${JSON.stringify(settings, null, 4)}\n`, 'utf-8');
+                fs.writeFileSync(file, next, 'utf-8');
             }
             return [];
         },

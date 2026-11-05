@@ -16,7 +16,7 @@ import { z } from 'zod';
 
 import { biomeConfigSchema } from './biome.js';
 import { catalogsConfigSchema } from './catalogs.js';
-import { legacyChangelogConfigSchema } from './changelog.js';
+import { changelogConfigSchema } from './changelog.js';
 import { ciConfigSchema } from './ci.js';
 import { fmtConfigSchema, lintConfigSchema } from './format.js';
 import { loggerConfigSchema } from './logger.js';
@@ -34,6 +34,15 @@ export * from './catalogs.js';
 export * from './changelog.js';
 export * from './ci.js';
 export * from './format.js';
+// Re-export only the public generated types: their internal helper types
+// (`__schemaN`) collide across vendor schemas.
+export type { AzurePipelines } from './generated/azure-pipelines.js';
+export type { BiomeConfig } from './generated/biome-config.js';
+export type { GitHubWorkflow } from './generated/github-workflow.js';
+export type { GitLabCi } from './generated/gitlab-ci.js';
+export type { OxfmtConfig } from './generated/oxfmt-config.js';
+export type { OxlintConfig } from './generated/oxlint-config.js';
+export * from './json.js';
 export * from './logger.js';
 export * from './meta.js';
 export * from './project.js';
@@ -59,7 +68,7 @@ export const toolchainConfigSchema = z
                 'GitHub Actions workflows to generate (CI, release, issues, changelog, sync).'
             )
             .optional(),
-        changelog: section(legacyChangelogConfigSchema)
+        changelog: section(changelogConfigSchema)
             .describe(
                 'Manual changelog pipeline options for `dbx changelog`, the VS Code ' +
                     'actions and the API. `ci.changelog` inherits these options.'
@@ -111,7 +120,7 @@ export const dbxConfigSchema = z
 export const configSchema = {
     project: projectConfigSchema,
     ci: ciConfigSchema,
-    changelog: legacyChangelogConfigSchema,
+    changelog: changelogConfigSchema,
     fmt: fmtConfigSchema,
     lint: lintConfigSchema,
     biome: biomeConfigSchema,

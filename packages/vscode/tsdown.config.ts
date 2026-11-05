@@ -1,6 +1,9 @@
 import { defineConfig } from 'tsdown';
 
-import { baseTsdownConfig } from '@deltabox/toolchain-tsdown';
+// Import the base config from source: the integration job builds the extension
+// without a prior workspace build, so the `@deltabox/toolchain-tsdown` dist may
+// not exist yet.
+import { baseTsdownConfig } from '../tsdown/src/config/node.js';
 
 /**
  * The VS Code extension host loads a CommonJS entry (`main`), and the `vscode`
@@ -13,6 +16,7 @@ export default defineConfig({
     fixedExtension: true,
     dts: false,
     minify: false,
+    sourcemap: true,
     publint: false,
     exports: false,
     deps: {

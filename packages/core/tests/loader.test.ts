@@ -255,6 +255,31 @@ describe('nested config inheritance', () => {
         expect(merged.hooks).toBeUndefined();
     });
 
+    it('does not run parent hooks for a nested project without its own config', async () => {
+        const root = tmp();
+        const child = path.join(root, 'packages', 'web');
+        fs.mkdirSync(child, { recursive: true });
+        fs.writeFileSync(
+            path.join(root, 'dbx.config.mjs'),
+            [
+                'export default {',
+                '    toolchain: {',
+                "        project: { name: 'acme' },",
+                '        hooks: { afterLoad: () => { globalThis.__dbxParentHook = true; } },',
+                '    },',
+                '};',
+                '',
+            ].join('\n')
+        );
+        delete (globalThis as { __dbxParentHook?: boolean }).__dbxParentHook;
+
+        const loaded = await loadToolchainConfig(child);
+
+        expect(loaded.config.project?.name).toBe('acme');
+        expect(loaded.config.hooks).toBeUndefined();
+        expect((globalThis as { __dbxParentHook?: boolean }).__dbxParentHook).toBeUndefined();
+    });
+
     it('finds the nearest ancestor config and loads it under the child', async () => {
         const root = tmp();
         const child = path.join(root, 'packages', 'web');
@@ -322,5 +347,13 @@ describe('nested config inheritance', () => {
         expect(loaded.projectType).toBe('monorepo-workspace');
         // Detection sees the file name, but the generation options stay at the root.
         expect(loaded.config.tsconfig).toBeUndefined();
+    });
+});
+
+describe('loadToolchainConfig conflicting flags', () => {
+    it('rejects --config together with --no-config', async () => {
+        await expect(
+            loadToolchainConfig(tmp(), { config: 'dbx.config.json', noConfig: true })
+        ).rejects.toThrow(/cannot be used together/);
     });
 });

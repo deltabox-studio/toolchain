@@ -26,21 +26,30 @@ The supported tools are:
 - `lint`: `oxc` (Oxlint), `biome`, `eslint`.
 
 Each tool accepts `true` (use the defaults) or `false` (disable that tool), in
-addition to its options object.
+addition to its options object. The Oxfmt/Oxlint option types are generated from
+the tools' official JSON schemas (vendored in the package), so editor completion
+and the generated config reference match the tool.
 
 ## Shorthand opt-in
 
 `fmt: true` / `lint: true` (or an options object with only `vscode`) picks a tool
-automatically. `dbx sync` first checks the project/workspace dependencies for an
-installed tool (in precedence order), then the VS Code user settings language
-blocks, and finally falls back to Oxc. If nothing is found, sync warns
-(`fmt.no-tool` / `lint.no-tool`) and still applies the Oxc defaults.
+automatically. `dbx sync` resolves it in this order:
 
-Existing user-owned config files are not overwritten blindly: the shorthand
-folds them into the matching `toolchain.fmt.*` / `toolchain.lint.*` options
-using the same mapping as [`dbx migrate`](/guide/migrations/). When the mapped
-options are already the dbx defaults, the shorthand simply enables those
-defaults.
+1. the project's `.vscode/settings.json`;
+2. the nearest `package.json` or tooling config file, walking up to the repo
+   root (a workspace-specific tool beats a root-installed one);
+3. the VS Code user settings language blocks;
+4. the Oxc defaults.
+
+Each level prefers a tool's own config file (`.oxfmtrc.json`, `biome.json`,
+`.prettierrc`, `dprint.json`, `.eslintrc.*`, ...) before its `package.json`
+dependency, and honours the formatter/linter precedence. If nothing is found,
+sync warns (`fmt.no-tool` / `lint.no-tool`) and still applies the Oxc defaults.
+
+Existing user-owned config files are not overwritten blindly: the detected
+tool's options are read into the matching `toolchain.fmt.*` /
+`toolchain.lint.*` entry. Oxc options are merged over the toolchain defaults
+using the same mapping as [`dbx migrate`](/guide/migrations/).
 
 ## Precedence
 

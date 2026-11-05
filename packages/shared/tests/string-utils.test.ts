@@ -1,17 +1,34 @@
 import { describe, expect, it } from 'vitest';
 
-import { sanitizeText, stripControlChars, stripEscapeArtifacts } from '../src/index.js';
+import {
+    hasEscapeArtifacts,
+    sanitizeText,
+    stripControlChars,
+    stripEscapeArtifacts,
+} from '../src/index.js';
 
 describe('sanitizeText', () => {
-    it('removes a backslash left before a control character (shell escape artifact)', () => {
-        // `\` + TAB and `\` + LF, as a shell produces for an escaped backtick.
-        expect(sanitizeText('a \\\tb')).toBe('a b');
-        expect(sanitizeText('run\\\nDbx')).toBe('runDbx');
+    it('restores the letter an escaped backtick consumed', () => {
+        // PowerShell turns `` `t `` into TAB, `` `n `` into LF, `` `r `` into CR,
+        // `` `b `` into backspace, ... and leaves the stray `\` behind.
+        expect(sanitizeText('a \\\tb')).toBe('a tb');
+        expect(sanitizeText('\\\npx dbx')).toBe('npx dbx');
+        expect(sanitizeText('\\\resolveVite')).toBe('resolveVite');
+        expect(sanitizeText('\\\bootstrap')).toBe('bootstrap');
+        expect(sanitizeText('\\\u000bp run')).toBe('vp run');
     });
 
-    it('strips bare control characters but keeps tab/newline/CR', () => {
-        expect(stripControlChars('a\u0008b\u000bc\u000cd')).toBe('abcd');
+    it('restores bare control characters but keeps tab/newline/CR', () => {
+        expect(stripControlChars('\u0007ny, \u000calse')).toBe('any, false');
         expect(stripControlChars('a\tb\nc\rd')).toBe('a\tb\nc\rd');
+        expect(stripControlChars('a\u0001b')).toBe('ab');
+    });
+
+    it('detects shell-escape artifacts', () => {
+        expect(hasEscapeArtifacts('\u0007ny')).toBe(true);
+        expect(hasEscapeArtifacts('\\\tb')).toBe(true);
+        expect(hasEscapeArtifacts('clean text')).toBe(false);
+        expect(hasEscapeArtifacts('a\tb\nc')).toBe(false);
     });
 
     it('leaves ordinary backslashes alone (paths, regex)', () => {

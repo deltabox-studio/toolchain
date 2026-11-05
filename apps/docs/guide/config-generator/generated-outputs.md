@@ -25,10 +25,10 @@ export interface ServerConfig {
 }
 ```
 
-An object schema that also accepts arbitrary keys (Zod `.catchall(...)` /
-`.passthrough()`, ie. `additionalProperties` in the JSON Schema) generates an
-open interface with an index signature, so the extra keys stay typed as
-`unknown` instead of being rejected:
+An object schema that also accepts arbitrary keys (Zod `.catchall(...)`,
+`.loose()` or `z.looseObject(...)`, ie. `additionalProperties` in the JSON
+Schema) generates an open interface with an index signature, so the extra keys
+stay typed as `unknown` instead of being rejected:
 
 ```ts
 export interface ServerConfig {

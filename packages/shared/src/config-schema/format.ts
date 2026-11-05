@@ -1,12 +1,47 @@
+import type { Configuration as DprintConfig } from '@dprint/types';
+import type { Linter } from 'eslint';
+import type { Options as PrettierConfig } from 'prettier';
+import type { JsonObject } from 'type-fest';
 import { z } from 'zod';
 
+import { biomeConfigOptionsSchema } from './biome.js';
+import { externalConfigSchema } from './external.js';
+import type { OxfmtConfig } from './generated/oxfmt-config.js';
+import type { OxlintConfig } from './generated/oxlint-config.js';
 import { withEnabled } from './meta.js';
 
-/**
- * A formatter/linter tool's raw options (the tool's own config shape), or
- * `true` for the defaults / `false` to disable the tool.
- */
-const toolOptions = z.union([z.boolean(), z.record(z.string(), z.unknown())]);
+/** A tool config: `true` for the defaults, `false` to disable, or its options. */
+const toolOptions = <T>(schema: z.ZodType<T>) => z.union([z.boolean(), schema]);
+
+const oxfmtOptions = externalConfigSchema<OxfmtConfig>(
+    'Oxfmt configuration options.',
+    'OxfmtConfig'
+);
+
+const oxlintOptions = externalConfigSchema<OxlintConfig>(
+    'Oxlint configuration options.',
+    'OxlintConfig'
+);
+
+const prettierOptions = externalConfigSchema<PrettierConfig>(
+    'Prettier configuration options.',
+    'PrettierConfig'
+);
+
+const dprintOptions = externalConfigSchema<DprintConfig>(
+    'Dprint configuration options.',
+    'DprintConfig'
+);
+
+const eslintOptions = externalConfigSchema<Linter.Config>(
+    'ESLint configuration options.',
+    'Linter.Config'
+);
+
+const jsonObjectOptions = externalConfigSchema<JsonObject>(
+    'Settings deep-merged over the generated editor defaults.',
+    'JsonObject'
+);
 
 /**
  * Overrides/exclusions for the project-scoped VS Code settings added by
@@ -14,8 +49,7 @@ const toolOptions = z.union([z.boolean(), z.record(z.string(), z.unknown())]);
  */
 export const vscodeSettingsSchema = z
     .object({
-        overrides: z
-            .record(z.string(), z.unknown())
+        overrides: jsonObjectOptions
             .describe('Settings deep-merged over the generated editor defaults.')
             .optional(),
         exclude: z
@@ -42,22 +76,22 @@ const vscodeSetting = z
 export const fmtConfigSchema = withEnabled(
     z.object({
         vscode: vscodeSetting,
-        oxc: toolOptions
+        oxc: toolOptions(oxfmtOptions)
             .describe(
                 'Oxfmt options (`true` = defaults, `false` = disabled). ' +
                     '`toolchain.vite.fmt` overrides these (deep merge).'
             )
             .optional(),
-        biome: toolOptions
+        biome: toolOptions(biomeConfigOptionsSchema)
             .describe(
                 'Biome formatter options (`true` = defaults, `false` = disabled); ' +
                     'merged into the generated `biome.json`.'
             )
             .optional(),
-        prettier: toolOptions
+        prettier: toolOptions(prettierOptions)
             .describe('Prettier options (`true` = defaults, `false` = disabled).')
             .optional(),
-        dprint: toolOptions
+        dprint: toolOptions(dprintOptions)
             .describe('Dprint options (`true` = defaults, `false` = disabled).')
             .optional(),
     })
@@ -71,19 +105,19 @@ export const fmtConfigSchema = withEnabled(
 export const lintConfigSchema = withEnabled(
     z.object({
         vscode: vscodeSetting,
-        oxc: toolOptions
+        oxc: toolOptions(oxlintOptions)
             .describe(
                 'Oxlint options (`true` = defaults, `false` = disabled). ' +
                     '`toolchain.vite.lint` overrides these (deep merge).'
             )
             .optional(),
-        biome: toolOptions
+        biome: toolOptions(biomeConfigOptionsSchema)
             .describe(
                 'Biome linter options (`true` = defaults, `false` = disabled); ' +
                     'merged into the generated `biome.json`.'
             )
             .optional(),
-        eslint: toolOptions
+        eslint: toolOptions(eslintOptions)
             .describe('ESLint options (`true` = defaults, `false` = disabled).')
             .optional(),
     })

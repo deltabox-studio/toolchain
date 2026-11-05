@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+
 import type * as vscode from 'vscode';
 
 export interface HomeProject {
@@ -56,6 +58,58 @@ export type HomeAction =
     | { type: 'runProjectVite'; dir: string }
     | { type: 'goToProject'; dir: string };
 
+/** Actions that carry a project directory. */
+const DIR_ACTIONS = new Set<HomeAction['type']>([
+    'syncProject',
+    'checkProject',
+    'generateProjectConfig',
+    'resetProject',
+    'runProjectWorkflow',
+    'runProjectVite',
+    'goToProject',
+]);
+
+/** Actions that carry no payload. */
+const SIMPLE_ACTIONS = new Set<HomeAction['type']>([
+    'ready',
+    'syncAll',
+    'syncActive',
+    'syncSelected',
+    'syncCheck',
+    'scaffold',
+    'refresh',
+    'generateConfigs',
+    'runWorkflow',
+    'resetToolchain',
+    'toggle',
+    'runVite',
+    'addProvider',
+    'registryNew',
+    'registryRemove',
+    'selectVersion',
+    'templateAdd',
+    'templateRemove',
+    'openDocs',
+    'openSettings',
+]);
+
+/** Validate a message from the webview before acting on it. */
+export function parseHomeAction(value: unknown): HomeAction | undefined {
+    if (typeof value !== 'object' || value === null) return undefined;
+    const record = value as Record<string, unknown>;
+    const type = record.type;
+    if (typeof type !== 'string') return undefined;
+    if (SIMPLE_ACTIONS.has(type as HomeAction['type'])) {
+        return { type } as HomeAction;
+    }
+    if (DIR_ACTIONS.has(type as HomeAction['type'])) {
+        const dir = record.dir;
+        if (typeof dir !== 'string' || !dir) return undefined;
+        return { type, dir } as HomeAction;
+    }
+    return undefined;
+}
+
 /** A compact, theme-aware Home dashboard shown above the Projects tree. */
 export class HomeViewProvider implements vscode.WebviewViewProvider {
     private view?: vscode.WebviewView;
@@ -70,13 +124,22 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         this.view = view;
         view.webview.options = { enableScripts: true, localResourceRoots: [this.extensionUri] };
         view.webview.html = this.html(view.webview);
-        view.webview.onDidReceiveMessage(async (message: HomeAction) => {
-            if (message.type === 'ready') {
+        view.webview.onDidReceiveMessage(async (message: unknown) => {
+            const action = parseHomeAction(message);
+            if (!action) return;
+            if (action.type === 'ready') {
                 this.refresh();
                 return;
             }
+            // Only act on a project the dashboard actually listed.
+            if (
+                'dir' in action &&
+                !this.getModel().projects.some(project => project.dir === action.dir)
+            ) {
+                return;
+            }
             try {
-                await this.onAction(message);
+                await this.onAction(action);
             } finally {
                 void view.webview.postMessage({ type: 'done' });
             }
@@ -163,11 +226,12 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     .accordion .chev { transition:transform .12s ease; }
     .accordion.open .chev { transform:rotate(180deg); }
     .moreActions { display:flex; flex-direction:column; gap:6px; margin-top:7px; }
-    .moreActions button { width:100%; text-align:left; }
-    /* Prefix action buttons with a play glyph (like the Providers command items)
-       so they read as actions, not as the header card. */
+    .moreActions button { width:100%; text-align:left; display:flex; align-items:center; gap:7px; }
+    /* Prefix action buttons with an outline play glyph (like the Providers
+       command items) so they read as actions, not as the header card. */
     .moreActions button::before {
-      content:'\u25B6'; margin-right:7px; font-size:9px; opacity:.75; vertical-align:middle;
+      content:'\u25B7'; flex:none; width:1em; display:inline-flex; align-items:center;
+      justify-content:center; font-size:12px; line-height:1; opacity:.9;
     }
     .projectList { display:flex; flex-direction:column; gap:6px; }
     .project {
@@ -443,8 +507,5 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
 }
 
 function getNonce(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    return Array.from({ length: 32 }, () => chars[Math.floor(Math.random() * chars.length)]).join(
-        ''
-    );
+    return randomBytes(16).toString('hex');
 }

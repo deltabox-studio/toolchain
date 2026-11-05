@@ -13,7 +13,12 @@ export function readCommits(range: string, path?: string | string[]): CommitReco
     const paths = path === undefined ? [] : Array.isArray(path) ? path : [path];
     const args = ['log', '--no-merges', `--pretty=format:${format}`, range];
     if (paths.length > 0) args.push('--', ...paths);
-    const log = execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    const log = execFileSync('git', args, {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+        // Large ranges (or verbose bodies) can exceed Node's 1 MiB default.
+        maxBuffer: 128 * 1024 * 1024,
+    });
     return log
         .split('\x1e')
         .filter(record => record.length > 0)
@@ -304,6 +309,28 @@ function loadCommitIndex(): Map<string, { subject: string; body: string }> {
 /** Read a commit's original subject + body by hash (for correct CC parsing). */
 export function readCommit(hash: string): { subject: string; body: string } | undefined {
     return loadCommitIndex().get(hash);
+}
+
+let completeHistory: boolean | undefined;
+
+/**
+ * Whether `git log --all` can resolve every commit the changelog may reference.
+ * A shallow clone (or a missing git history) cannot, so callers should fall
+ * back to a heuristic instead of treating every unresolved hash as an issue.
+ */
+export function hasCompleteGitHistory(): boolean {
+    if (completeHistory === undefined) {
+        try {
+            const out = execFileSync('git', ['rev-parse', '--is-shallow-repository'], {
+                encoding: 'utf8',
+                stdio: ['ignore', 'pipe', 'ignore'],
+            }).trim();
+            completeHistory = out !== 'true';
+        } catch {
+            completeHistory = false;
+        }
+    }
+    return completeHistory;
 }
 
 /** Derive the semver bump from the commits (major > minor > patch). */

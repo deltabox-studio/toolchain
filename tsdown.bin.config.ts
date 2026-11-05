@@ -36,6 +36,10 @@ export default defineConfig({
     publint: false,
     sourcemap: false,
     alias: {
+        // `jsonc-parser`'s UMD entry keeps relative `require('./impl/*')`
+        // calls that a single-file CJS bundle cannot resolve. Use its ESM
+        // entry so rolldown can inline the statically imported modules.
+        'jsonc-parser': src('node_modules/jsonc-parser/lib/esm/main.js'),
         '@deltabox/toolchain-shared': src('packages/shared/src/index.ts'),
         '@deltabox/toolchain-config/cli': src('packages/config/src/cli/index.ts'),
         '@deltabox/toolchain-config': src('packages/config/src/index.ts'),

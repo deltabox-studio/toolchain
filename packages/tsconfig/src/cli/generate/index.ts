@@ -6,11 +6,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 
 import { Glob } from 'glob';
-import type { TsConfigJson } from 'type-fest';
 
 import { logger, resolveIgnorePatterns } from '@deltabox/toolchain-shared';
 
 import type { TsconfigOverrides } from '../../overrides.js';
+import { readTsconfig } from '../../resolve.js';
 import { type GeneratedTsconfigResult, generateTsconfig } from './utils.js';
 
 export interface GenerateTsconfigsOptions {
@@ -149,10 +149,9 @@ export function generateTsconfigs(
                 if (generated) {
                     composite = generated.config.compilerOptions?.composite;
                 } else if (fs.existsSync(refTsconfigPath)) {
-                    const refTsconfig = JSON.parse(
-                        fs.readFileSync(refTsconfigPath, 'utf-8')
-                    ) as TsConfigJson;
-                    composite = refTsconfig.compilerOptions?.composite;
+                    const refTsconfig = readTsconfig(refTsconfigPath);
+                    composite = (refTsconfig.compilerOptions as { composite?: unknown } | undefined)
+                        ?.composite;
                 } else {
                     say(`    tsconfig not found for ${ref.path}, skipping.`);
                     return false;

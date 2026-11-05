@@ -99,6 +99,38 @@ GitHub Actions workflows to generate (CI, release, issues, changelog, sync).
 
 The CI checks workflow (`ci.yml`).
 
+#### `provider`
+
+- **Required**
+- **Type**: `'github'`
+
+Workflow vendor for a full `workflow` object (default `github`).
+
+#### `workflow`
+
+- **Required**
+- **Type**: `AzurePipelines`
+
+The complete pipeline object.
+
+#### `filename`
+
+- **Type**: `string`
+
+Override the generated workflow file name (eg. `deploy.yml`).
+
+#### `dir`
+
+- **Type**: `string`
+
+Directory for the workflow file (default `.github/workflows`).
+
+#### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this workflow (default: enabled when present).
+
 #### `pushBranches`
 
 - **Type**: `Array<string>`
@@ -113,13 +145,13 @@ Replace `on.pull_request.branches`.
 
 #### `triggers`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `JsonObject`
 
 Extra `on.*` triggers.
 
 #### `extra`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `JsonObject`
 
 Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
 
@@ -203,7 +235,7 @@ Steps appended at the end.
 
 #### `jobs`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `Record<string, WorkflowJob>`
 
 Extra complete jobs merged in.
 
@@ -213,29 +245,17 @@ Extra complete jobs merged in.
 
 Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
 
-#### `filename`
-
-- **Type**: `string`
-
-Override the generated workflow file name (eg. `deploy.yml`).
-
-#### `dir`
-
-- **Type**: `string`
-
-Directory for the workflow file (default `.github/workflows`).
-
-#### `enabled`
-
-- **Type**: `boolean`
-
-Enable/disable this workflow (default: enabled when present).
-
 ### `changelog`
 
 - **Type**: `ChangelogWorkflowSetting`
 
 The changelog/version workflow (`changelog.yml`) plus the changelog pipeline config (versioning, VS Code settings, commitlint).
+
+#### `provider`
+
+- **Type**: `'github'`
+
+Workflow vendor for a full `workflow` object (default `github`).
 
 #### `pushBranches`
 
@@ -251,13 +271,13 @@ Replace `on.pull_request.branches`.
 
 #### `triggers`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `JsonObject`
 
 Extra `on.*` triggers.
 
 #### `extra`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `JsonObject`
 
 Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
 
@@ -269,7 +289,7 @@ Extra steps for a job (one group, or per-job groups).
 
 #### `jobs`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `Record<string, WorkflowJob>`
 
 Extra complete jobs merged in.
 
@@ -365,9 +385,69 @@ Glob patterns selecting the workspaces to version (relative to the root). Defaul
 
 ##### `bump`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `object`
 
 Custom bump rules for major/minor/patch (matchers or callbacks).
+
+###### `major`
+
+- **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
+
+###### `breaking`
+
+- **Type**: `boolean`
+
+Match only commits whose breaking state equals this value.
+
+###### `type`
+
+- **Type**: `string`
+
+Match this Conventional-Commits type.
+
+###### `types`
+
+- **Type**: `Array<string>`
+
+Match any of these CC types.
+
+###### `scope`
+
+- **Type**: `string`
+
+Match this Conventional-Commits scope.
+
+###### `scopes`
+
+- **Type**: `Array<string>`
+
+Match any of these CC scopes.
+
+###### `pattern`
+
+- **Type**: `string`
+
+Match this regular expression.
+
+###### `match`
+
+- **Type**: `string`
+
+Match this substring.
+
+###### `minor`
+
+- **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
+
+###### `patch`
+
+- **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
 
 ##### `allowOverBump`
 
@@ -377,15 +457,59 @@ Apply a bump once per matching change instead of once per run (default false).
 
 ##### `commit`
 
-- **Type**: `unknown`
+- **Type**: `ChangelogCommitFormatConfig`
 
-Commit message formatting/credit options or callback.
+Commit message formatting/credit options (with an optional formatter callback).
+
+###### `author`
+
+- **Type**: `boolean`
+
+Include the `by <author>` credit (default true).
+
+###### `commitSha`
+
+- **Type**: `boolean`
+
+Include the commit hash link (default true).
+
+###### `issues`
+
+- **Type**: `boolean`
+
+Include issue/fixes links (default true).
+
+###### `authorAvatar`
+
+- **Type**: `boolean`
+
+Prefix the author with their GitHub avatar (default false).
+
+###### `format`
+
+- **Type**: `((ctx: ChangelogCommitFormatContext) => string)`
+
+Fully custom commit line formatter (TS/JS configs only; return the bullet body).
 
 ##### `provider`
 
-- **Type**: `unknown`
+- **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
 
 `default`, `changesets`, a provider id, or a custom provider/callback.
+
+###### `id`
+
+- **Required**
+- **Type**: `string`
+
+The provider id.
+
+###### `run`
+
+- **Required**
+- **Type**: `((ctx: ChangelogProviderContext) => string | void)`
+
+A custom provider callback returning the changelog body (TS/JS configs only).
 
 #### `vscode`
 
@@ -395,15 +519,51 @@ Write the Conventional-Commits VS Code settings (default true).
 
 #### `groups`
 
-- **Type**: `unknown`
+- **Type**: `Array<string | object> | Record<string, string | object | boolean> | ((ctx: ChangelogGroupsContext) => ChangelogGroupsSetting)`
 
-Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback. Titles/order/hidden also accept callbacks (TS/JS configs only).
+Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback (TS/JS configs only).
+
+##### `type`
+
+- **Type**: `string`
+
+The CC type (required for object entries in an array).
+
+##### `title`
+
+- **Type**: `string | ((ctx: ChangelogGroupContext) => string)`
+
+Custom heading title (or callback; TS/JS configs only).
+
+##### `order`
+
+- **Type**: `number | ((ctx: ChangelogGroupContext) => number)`
+
+Sort position; lower comes first (or callback; TS/JS configs only).
+
+##### `hidden`
+
+- **Type**: `boolean | ((ctx: ChangelogGroupContext) => boolean)`
+
+Omit this group from the rendered changelog (or callback; TS/JS only).
 
 #### `breaking`
 
-- **Type**: `unknown`
+- **Type**: `boolean | 'conventional' | 'any' | object | ((commit: ChangelogBreakingCommit) => boolean)`
 
 How breaking changes are detected: `conventional` (default: a `!` in the CC subject or a `BREAKING CHANGE:` footer), `any` (legacy loose match), `false` (disable), `{ pattern }` / `{ match }`, or a callback (TS/JS configs only).
+
+##### `pattern`
+
+- **Type**: `string`
+
+A regular expression matched against the subject and body.
+
+##### `match`
+
+- **Type**: `string`
+
+A substring matched against the subject and body.
 
 ### `release`
 
@@ -489,9 +649,69 @@ Glob patterns selecting the workspaces to version (relative to the root). Defaul
 
 #### `bump`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `object`
 
 Custom bump rules for major/minor/patch (matchers or callbacks).
+
+##### `major`
+
+- **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
+
+###### `breaking`
+
+- **Type**: `boolean`
+
+Match only commits whose breaking state equals this value.
+
+###### `type`
+
+- **Type**: `string`
+
+Match this Conventional-Commits type.
+
+###### `types`
+
+- **Type**: `Array<string>`
+
+Match any of these CC types.
+
+###### `scope`
+
+- **Type**: `string`
+
+Match this Conventional-Commits scope.
+
+###### `scopes`
+
+- **Type**: `Array<string>`
+
+Match any of these CC scopes.
+
+###### `pattern`
+
+- **Type**: `string`
+
+Match this regular expression.
+
+###### `match`
+
+- **Type**: `string`
+
+Match this substring.
+
+##### `minor`
+
+- **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
+
+##### `patch`
+
+- **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
 
 #### `allowOverBump`
 
@@ -501,15 +721,59 @@ Apply a bump once per matching change instead of once per run (default false).
 
 #### `commit`
 
-- **Type**: `unknown`
+- **Type**: `ChangelogCommitFormatConfig`
 
-Commit message formatting/credit options or callback.
+Commit message formatting/credit options (with an optional formatter callback).
+
+##### `author`
+
+- **Type**: `boolean`
+
+Include the `by <author>` credit (default true).
+
+##### `commitSha`
+
+- **Type**: `boolean`
+
+Include the commit hash link (default true).
+
+##### `issues`
+
+- **Type**: `boolean`
+
+Include issue/fixes links (default true).
+
+##### `authorAvatar`
+
+- **Type**: `boolean`
+
+Prefix the author with their GitHub avatar (default false).
+
+##### `format`
+
+- **Type**: `((ctx: ChangelogCommitFormatContext) => string)`
+
+Fully custom commit line formatter (TS/JS configs only; return the bullet body).
 
 #### `provider`
 
-- **Type**: `unknown`
+- **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
 
 `default`, `changesets`, a provider id, or a custom provider/callback.
+
+##### `id`
+
+- **Required**
+- **Type**: `string`
+
+The provider id.
+
+##### `run`
+
+- **Required**
+- **Type**: `((ctx: ChangelogProviderContext) => string | void)`
+
+A custom provider callback returning the changelog body (TS/JS configs only).
 
 ### `vscode`
 
@@ -519,15 +783,51 @@ Write the Conventional-Commits VS Code settings (default true).
 
 ### `groups`
 
-- **Type**: `unknown`
+- **Type**: `Array<string | object> | Record<string, string | object | boolean> | ((ctx: ChangelogGroupsContext) => ChangelogGroupsSetting)`
 
-Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback. Titles/order/hidden also accept callbacks (TS/JS configs only).
+Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback (TS/JS configs only).
+
+#### `type`
+
+- **Type**: `string`
+
+The CC type (required for object entries in an array).
+
+#### `title`
+
+- **Type**: `string | ((ctx: ChangelogGroupContext) => string)`
+
+Custom heading title (or callback; TS/JS configs only).
+
+#### `order`
+
+- **Type**: `number | ((ctx: ChangelogGroupContext) => number)`
+
+Sort position; lower comes first (or callback; TS/JS configs only).
+
+#### `hidden`
+
+- **Type**: `boolean | ((ctx: ChangelogGroupContext) => boolean)`
+
+Omit this group from the rendered changelog (or callback; TS/JS only).
 
 ### `breaking`
 
-- **Type**: `unknown`
+- **Type**: `boolean | 'conventional' | 'any' | object | ((commit: ChangelogBreakingCommit) => boolean)`
 
 How breaking changes are detected: `conventional` (default: a `!` in the CC subject or a `BREAKING CHANGE:` footer), `any` (legacy loose match), `false` (disable), `{ pattern }` / `{ match }`, or a callback (TS/JS configs only).
+
+#### `pattern`
+
+- **Type**: `string`
+
+A regular expression matched against the subject and body.
+
+#### `match`
+
+- **Type**: `string`
+
+A substring matched against the subject and body.
 
 ### `enabled`
 
@@ -547,7 +847,7 @@ Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` 
 
 #### `overrides`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `JsonObject`
 
 Settings deep-merged over the generated editor defaults.
 
@@ -559,25 +859,25 @@ Exact setting keys (eg. `editor.defaultFormatter`) to omit.
 
 ### `oxc`
 
-- **Type**: `boolean | Record<string, unknown>`
+- **Type**: `boolean | OxfmtConfig`
 
 Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` overrides these (deep merge).
 
 ### `biome`
 
-- **Type**: `boolean | Record<string, unknown>`
+- **Type**: `boolean | BiomeConfig`
 
 Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`.
 
 ### `prettier`
 
-- **Type**: `boolean | Record<string, unknown>`
+- **Type**: `boolean | PrettierConfig`
 
 Prettier options (`true` = defaults, `false` = disabled).
 
 ### `dprint`
 
-- **Type**: `boolean | Record<string, unknown>`
+- **Type**: `boolean | DprintConfig`
 
 Dprint options (`true` = defaults, `false` = disabled).
 
@@ -599,7 +899,7 @@ Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` 
 
 #### `overrides`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `JsonObject`
 
 Settings deep-merged over the generated editor defaults.
 
@@ -611,19 +911,19 @@ Exact setting keys (eg. `editor.defaultFormatter`) to omit.
 
 ### `oxc`
 
-- **Type**: `boolean | Record<string, unknown>`
+- **Type**: `boolean | OxlintConfig`
 
 Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` overrides these (deep merge).
 
 ### `biome`
 
-- **Type**: `boolean | Record<string, unknown>`
+- **Type**: `boolean | BiomeConfig`
 
 Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`.
 
 ### `eslint`
 
-- **Type**: `boolean | Record<string, unknown>`
+- **Type**: `boolean | Linter.Config`
 
 ESLint options (`true` = defaults, `false` = disabled).
 
@@ -647,7 +947,7 @@ Write the Biome VS Code settings (default true).
 
 ### `overrides`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `BiomeConfig`
 
 Deep-merged over the generated `biome.json` (arrays union).
 
@@ -759,25 +1059,25 @@ Managed overrides deep-merged into the base/root/default/build tsconfig files du
 
 #### `base`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `TsConfigJson`
 
 Deep-merged into the root base tsconfig (`baseFile`) during sync.
 
 #### `default`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `TsConfigJson`
 
 Deep-merged into every workspace default tsconfig (`defaultFile`) during sync.
 
 #### `build`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `TsConfigJson`
 
 Deep-merged into every workspace build tsconfig (`buildFile`) during sync.
 
 #### `root`
 
-- **Type**: `Record<string, unknown>`
+- **Type**: `TsConfigJson`
 
 Deep-merged into the root workspaces tsconfig (`rootFile`) during sync.
 
@@ -935,7 +1235,7 @@ The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.
 
 - **Type**: `boolean | string`
 
-Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or absolute).
+Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or an absolute path inside it).
 
 ### `shim`
 
@@ -951,13 +1251,13 @@ Module specifier used to import `resolveVite` in runtime shims (default `@deltab
 
 ### `fmt`
 
-- **Type**: `boolean | Record<string, unknown>`
+- **Type**: `boolean | OxfmtConfig`
 
 Oxfmt options; `true` uses the toolchain defaults.
 
 ### `lint`
 
-- **Type**: `boolean | Record<string, unknown>`
+- **Type**: `boolean | OxlintConfig`
 
 Oxlint options; `true` uses the toolchain defaults.
 
@@ -1025,9 +1325,65 @@ Warning/error id, message substring, or `/regex/` to silence (single value or ar
 
 ### `logger`
 
-- **Type**: `unknown`
+- **Type**: `object`
 
 Custom `ToolchainLogger` implementation (TS/JS configs only; JSON cannot carry functions).
+
+#### `raw`
+
+- **Required**
+- **Type**: `(message?: string) => void`
+
+Write raw stdout.
+
+#### `rawError`
+
+- **Required**
+- **Type**: `(message?: string) => void`
+
+Write raw stderr.
+
+#### `write`
+
+- **Required**
+- **Type**: `(channel: 'out' | 'err', text: string) => void`
+
+Write to a specific output channel.
+
+#### `debug`
+
+- **Required**
+- **Type**: `(message?: string) => void`
+
+Print a debug message.
+
+#### `info`
+
+- **Required**
+- **Type**: `(message?: string) => void`
+
+Print an info message.
+
+#### `success`
+
+- **Required**
+- **Type**: `(message?: string) => void`
+
+Print a success message.
+
+#### `warn`
+
+- **Required**
+- **Type**: `(message?: string, id?: string) => void`
+
+Print a warning.
+
+#### `error`
+
+- **Required**
+- **Type**: `(message?: string, id?: string) => void`
+
+Print an error.
 
 ### `enabled`
 

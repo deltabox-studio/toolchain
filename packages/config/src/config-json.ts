@@ -52,7 +52,7 @@ export function buildConfigJson(
             path: def.path,
             scope: def.scope,
             ...(def.description ? { description: def.description } : {}),
-            ...(def.default !== undefined ? { default: def.default } : {}),
+            ...(def.default !== undefined && !def.secret ? { default: def.default } : {}),
             ...(def.required ? { required: true } : {}),
             ...(def.secret ? { secret: true } : {}),
             ...(def.public ? { public: true } : {}),

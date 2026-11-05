@@ -262,6 +262,12 @@ yarn test:clean     # remove leftover emulation temp workspaces
 > emulate suite spawns the built `dist/cli/index.js` and therefore needs a
 > build.
 
+The VS Code extension's unit tests run with the root Vitest suite. Its
+integration suite launches a real extension host
+(`yarn workspace toolchain-vscode test:integration`); CI runs it under Xvfb in
+the `vscode-integration` job after `ci`. On Windows it cannot run while VS Code
+stable is open.
+
 Docs live in `apps/docs` (VitePress): `yarn docs build`.
 
 ## Docs

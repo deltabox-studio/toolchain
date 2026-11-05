@@ -8,7 +8,7 @@ vi.mock('vscode', () => ({}));
 
 import type * as vscode from 'vscode';
 
-import { bundledCliEntry, pinnedToolchainSpec, setExtensionInfo } from '../src/cli.js';
+import { bundledCliEntry, exitCodeOf, pinnedToolchainSpec, setExtensionInfo } from '../src/cli.js';
 
 /** A minimal fake extension (only the fields `setExtensionInfo` reads). */
 function fakeExtension(extensionPath: string, version?: string): vscode.Extension<unknown> {
@@ -60,5 +60,21 @@ describe('pinnedToolchainSpec', () => {
     it('falls back to the unpinned name without a version', () => {
         setExtensionInfo(fakeExtension('/ext'));
         expect(pinnedToolchainSpec()).toBe('@deltabox/toolchain');
+    });
+});
+
+describe('exitCodeOf', () => {
+    it('preserves a normal exit code', () => {
+        expect(exitCodeOf(0, null)).toBe(0);
+        expect(exitCodeOf(2, null)).toBe(2);
+    });
+
+    it('reports a signal kill as failure, not success', () => {
+        expect(exitCodeOf(null, 'SIGKILL')).toBe(1);
+        expect(exitCodeOf(undefined, 'SIGTERM')).toBe(1);
+    });
+
+    it('only treats a missing code without a signal as success', () => {
+        expect(exitCodeOf(null, null)).toBe(0);
     });
 });

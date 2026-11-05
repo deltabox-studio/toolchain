@@ -10,9 +10,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { z } from 'zod';
-
-import { createConfigEngine, normalizeJsonSchemaMetadata } from '@deltabox/toolchain-config';
+import {
+    createConfigEngine,
+    normalizeJsonSchemaMetadata,
+    toJsonSchemaSafe,
+} from '@deltabox/toolchain-config';
 import { configSchema, dbxConfigSchema, logger } from '@deltabox/toolchain-shared';
 
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -53,12 +55,15 @@ const example = [
     '```',
     '',
 ].join('\n');
-fs.writeFileSync(docsPath, `${markdown?.trimEnd()}\n${example}`, 'utf-8');
+const markdownIndex = markdown;
+if (!markdownIndex) {
+    throw new Error('generateConfigMarkdown did not produce an index.md entry.');
+}
+fs.writeFileSync(docsPath, `${markdownIndex.trimEnd()}\n${example}`, 'utf-8');
 
-const jsonSchema = z.toJSONSchema(dbxConfigSchema, { target: 'draft-2020-12' }) as Record<
-    string,
-    unknown
->;
+const jsonSchema = toJsonSchemaSafe(dbxConfigSchema, {
+    unrepresentable: 'any',
+}) as Record<string, unknown>;
 normalizeJsonSchemaMetadata(jsonSchema);
 jsonSchema.$id = 'https://deltabox.studio/schemas/dbx.config.json';
 jsonSchema.title = 'dbx.config';

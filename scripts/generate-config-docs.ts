@@ -16,25 +16,18 @@ import { collectVars } from '@deltabox/toolchain-config';
 import type { ToolchainCommand } from '@deltabox/toolchain-shared';
 import { toolchainConfigSchema } from '@deltabox/toolchain-shared';
 
-import { changelogCommands } from '../packages/changelog/src/cli/index.js';
-import { migrateCommands } from '../packages/migrate/src/cli/index.js';
-import { projectCommands } from '../packages/project/src/cli/index.js';
-import { templateCommands } from '../packages/template/src/cli/index.js';
-import { tsconfigCommands } from '../packages/tsconfig/src/cli/index.js';
-import { cleanupCommands } from '../packages/tsdown/src/cli/index.js';
-import { viteCommands } from '../packages/vite/src/cli/index.js';
-import { projectsCommand } from '../src/cli/commands/projects.js';
-import { providerCommands } from '../src/cli/commands/providers.js';
-import { resetCommand } from '../src/cli/commands/reset.js';
-import { syncCommand } from '../src/cli/commands/sync.js';
-import { watchCommand } from '../src/cli/commands/watch.js';
+import { builtinCommands } from '../src/cli/index.js';
 
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const docsDir = path.join(root, 'apps', 'docs', 'config');
 
 /** Escape raw `<`/`>` so Vue does not parse option placeholders as tags. */
 function esc(value: string): string {
-    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\|/g, '\\|');
 }
 
 /** Use typographic angles inside code spans (entities render literally there). */
@@ -43,20 +36,10 @@ function code(value: string): string {
 }
 
 function commands(): ToolchainCommand[] {
-    const all = [
-        projectsCommand(),
-        syncCommand(),
-        watchCommand(),
-        resetCommand(),
-        ...providerCommands().filter(command => command.name === 'providers'),
-        ...tsconfigCommands(),
-        ...cleanupCommands(),
-        ...changelogCommands(),
-        ...migrateCommands(),
-        ...projectCommands(),
-        ...templateCommands(),
-        ...viteCommands(),
-    ];
+    // `builtinCommands` is the CLI's single source of truth, so a newly added
+    // builtin cannot be missed here. Provider passthroughs are marked hidden:
+    // their names depend on the consumer's registry, not on the toolchain.
+    const all = builtinCommands().filter(command => !command.hidden);
     const seen = new Set<string>();
     return all.filter(command => {
         if (seen.has(command.name)) return false;

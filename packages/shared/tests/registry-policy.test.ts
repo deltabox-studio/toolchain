@@ -27,3 +27,26 @@ describe('registrySourceAllowed', () => {
         expect(registrySourceAllowed('https://public.example.com/a', policy)).toBe(true);
     });
 });
+
+describe('registrySourceAllowed URL edge cases', () => {
+    it('matches scp-style git URLs by host', () => {
+        expect(registrySourceAllowed('git@evil.com:user/repo.git', { deny: ['evil.com'] })).toBe(
+            false
+        );
+        expect(
+            registrySourceAllowed('git@example.com:user/repo.git', { allow: ['example.com'] })
+        ).toBe(true);
+    });
+
+    it('matches hosts regardless of the port', () => {
+        expect(
+            registrySourceAllowed('https://example.com:8443/a.json', {
+                deny: ['example.com/**'],
+            })
+        ).toBe(false);
+    });
+
+    it('matches protocol-relative URLs', () => {
+        expect(registrySourceAllowed('//evil.com/a.json', { deny: ['evil.com/**'] })).toBe(false);
+    });
+});

@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 import { logger, sanitizeText } from '@deltabox/toolchain-shared';
 
+import { hasCompleteGitHistory, readCommit } from './git.js';
 import type {
     ChangelogGroupConfig,
     ChangelogGroupContext,
@@ -278,25 +279,50 @@ export function splitInlineDescription(rest: string): { main: string; inline: st
     };
 }
 
+const LIST_ITEM = /^(?:[-*+]|\d+[.)])\s+(.*)$/;
+const FENCE = /^(```|~~~)/;
+
 /**
  * Split a commit body into description paragraphs and conventional footers
- * (`KEY: value` lines), skipping bullet/numbered lists and issue-only lines so
- * each commit's details are rendered as nested bullets rather than one long
- * line. Blank lines separate paragraphs.
+ * (`KEY: value` lines), skipping issue-only lines. Each list item becomes its
+ * own paragraph and hard-wrapped lines are unwrapped, so the rendered
+ * description reads as sentences instead of being cut off mid-line. Blank lines
+ * separate paragraphs; fenced code blocks are preserved verbatim.
  */
 export function formatBody(body: string): string[][] {
     const paragraphs: string[][] = [];
     let current: string[] = [];
+    let fence: string[] | undefined;
+    // A footer (`BREAKING CHANGE: ...`) can wrap over several lines; keep
+    // appending until the next blank line instead of splitting it mid-sentence.
+    let inFooter = false;
+
+    const flush = (): void => {
+        if (current.length === 0) return;
+        paragraphs.push([current.join(' ')]);
+        current = [];
+    };
+
     for (const raw of body.split('\n')) {
         const trimmed = sanitizeText(raw.trim());
-        if (!trimmed) {
-            if (current.length > 0) {
-                paragraphs.push(current);
-                current = [];
+
+        if (fence) {
+            fence.push(raw.replace(/\s+$/, ''));
+            if (FENCE.test(trimmed)) {
+                paragraphs.push(fence);
+                fence = undefined;
             }
             continue;
         }
-        if (trimmed.startsWith('-') || trimmed.startsWith('*') || /^[0-9]+[.)]/.test(trimmed)) {
+        if (!trimmed) {
+            flush();
+            inFooter = false;
+            continue;
+        }
+        if (FENCE.test(trimmed)) {
+            flush();
+            inFooter = false;
+            fence = [raw.replace(/\s+$/, '')];
             continue;
         }
         // Issue-only lines (already captured in the commit's "(fixes ...)" suffix).
@@ -313,16 +339,27 @@ export function formatBody(body: string): string[][] {
                 trimmed
             );
         if (footer && !/^(http|https)\b/.test(trimmed)) {
-            if (current.length > 0) {
-                paragraphs.push(current);
-                current = [];
-            }
-            paragraphs.push([`**${(footer[1] ?? '').trim()}:** ${(footer[2] ?? '').trim()}`]);
+            flush();
+            current = [`**${(footer[1] ?? '').trim()}:** ${(footer[2] ?? '').trim()}`];
+            inFooter = true;
+            continue;
+        }
+        const listItem = LIST_ITEM.exec(trimmed);
+        if (listItem) {
+            flush();
+            inFooter = false;
+            const text = (listItem[1] ?? '').trim();
+            if (text) current = [text];
+            continue;
+        }
+        if (inFooter) {
+            current.push(trimmed);
             continue;
         }
         current.push(trimmed);
     }
-    if (current.length > 0) paragraphs.push(current);
+    if (fence) paragraphs.push(fence);
+    flush();
     return paragraphs;
 }
 
@@ -334,48 +371,111 @@ function canonicalIssueUrl(repo: string, number: string): string {
     return `https://github.com/${repo}/issues/${number}`;
 }
 
-/** Normalize `[#hash](url)` and raw `#hash` refs to the canonical commit link. */
+/** Whether a hex ref resolves to a commit in this repository. */
+function isCommitHash(hash: string): boolean {
+    if (readCommit(hash) ?? readCommit(hash.slice(0, 7))) return true;
+    // A shallow clone (or a missing git history) cannot resolve every commit a
+    // changelog references. A ref containing a hex letter is never an issue
+    // number, so keep it as a commit instead of leaving it unlinked.
+    return !hasCompleteGitHistory() && /[a-f]/i.test(hash);
+}
+
+/** Whether a link points at the current repository (not an upstream/other repo). */
+function isCurrentRepoUrl(url: string, repo: string): boolean {
+    try {
+        const parsed = new URL(url, 'https://github.com');
+        if (parsed.hostname.toLowerCase() !== 'github.com') return false;
+        const path = parsed.pathname.toLowerCase();
+        const prefix = `/${repo.toLowerCase()}`;
+        return path === prefix || path.startsWith(`${prefix}/`);
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Normalize `[#hash](url)` and raw `#hash` refs to the canonical commit link.
+ * A hex link that does not resolve to a commit is left alone: a 6+ digit issue
+ * number (`#123456`) is also valid hex and must stay an issue link. Links to
+ * another repository are never rewritten.
+ */
 function formatHashLinks(line: string, repo: string): string {
-    const linked = line.replace(/\[(#[0-9a-fA-F]{6,40})\]\(([^)]*)\)/g, (_match, text: string) => {
-        const short = text.replace('#', '').slice(0, 7);
-        return `[#${short}](${canonicalCommitUrl(repo, short)})`;
-    });
+    const linked = line.replace(
+        /\[(#[0-9a-fA-F]{6,40})\]\(([^)]*)\)/g,
+        (match, text: string, url: string) => {
+            if (!isCurrentRepoUrl(url, repo)) return match;
+            const hash = text.replace('#', '');
+            if (!url.includes('/commit/') && !isCommitHash(hash)) return match;
+            const short = hash.slice(0, 7);
+            return `[#${short}](${canonicalCommitUrl(repo, short)})`;
+        }
+    );
     return linked.replace(
-        /(^|[^\w[])#([0-9a-fA-F]{7,40})(?![0-9a-fA-F])(?=[)\].,;:\s]|$)/g,
-        (_match, pre: string, hash: string) => {
+        /(^|[^\w[/=&#])#([0-9a-fA-F]{7,40})(?![0-9a-fA-F])(?=[)\].,;:\s]|$)/g,
+        (match, pre: string, hash: string) => {
+            if (!isCommitHash(hash)) return match;
             const short = hash.slice(0, 7);
             return `${pre}[#${short}](${canonicalCommitUrl(repo, short)})`;
         }
     );
 }
 
-/** Normalize `[#N …](url)` and raw `#N` issue refs to the canonical issue link. */
+/**
+ * Normalize `[#N …](url)` and raw `#N` issue refs to the canonical issue link.
+ * A commit URL is left alone: a numeric-only short hash (`#4033009`) is a valid
+ * issue number, but it was already resolved as a commit by {@link formatHashLinks}.
+ */
 function formatIssueLinks(line: string, repo: string): string {
     const linked = line.replace(
-        /\[#(\d+)(?=[ \]])(?:[^\]]*)\]\([^)]*\)/g,
-        (_match, number: string) => `[#${number}](${canonicalIssueUrl(repo, number)})`
+        /\[#(\d+)(?=[ \]])(?:[^\]]*)\]\(([^)]*)\)/g,
+        (match, number: string, url: string) => {
+            if (url.includes('/commit/') || !isCurrentRepoUrl(url, repo)) return match;
+            return `[#${number}](${canonicalIssueUrl(repo, number)})`;
+        }
     );
     return linked.replace(
-        /(^|[^\w[])#(\d+)(?=[)\].,;:\s]|$)/g,
+        /(^|[^\w[/=&#])#(\d+)(?=[)\].,;:\s]|$)/g,
         (_match, pre: string, number: string) =>
             `${pre}[#${number}](${canonicalIssueUrl(repo, number)})`
     );
 }
 
+/** Bold the `BREAKING CHANGE:` marker unless it is already bold. */
+function formatBreakingLabel(line: string): string {
+    return line.replace(
+        /(\*\*)?\b(BREAKING[ -]CHANGE):(\*\*)?/g,
+        (match, open: string | undefined, label: string, close: string | undefined) =>
+            open && close ? match : `**${label}:**`
+    );
+}
+
 export function formatLine(line: string, repo: string | undefined): string {
-    if (!repo) return line;
-    let out = formatHashLinks(line, repo);
+    const withBreaking = formatBreakingLabel(line);
+    if (!repo) return withBreaking;
+    let out = formatHashLinks(withBreaking, repo);
     out = formatIssueLinks(out, repo);
     return out;
 }
 
 /** Format every commit line in a changelog file (all versions, in place). */
 export function formatChangelogFile(file: string, repo: string | undefined): void {
-    if (!repo) return;
     const content = readFileSync(file, 'utf8');
+    let fence: string | undefined;
     const formatted = content
         .split('\n')
-        .map(line => formatLine(line, repo))
+        .map(line => {
+            const trimmed = line.trim();
+            if (fence) {
+                if (trimmed.startsWith(fence)) fence = undefined;
+                return line;
+            }
+            const open = /^(```|~~~)/.exec(trimmed);
+            if (open) {
+                fence = open[1];
+                return line;
+            }
+            return formatLine(line, repo);
+        })
         .join('\n');
     if (formatted !== content) {
         writeFileSync(file, formatted, 'utf8');

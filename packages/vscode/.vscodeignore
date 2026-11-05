@@ -1,6 +1,8 @@
 # Only ship what the extension host needs (deps are bundled into dist).
 src/**
 tests/**
+test-fixtures/**
+out/**
 scripts/**
 .turbo/**
 .vscode/**
@@ -10,6 +12,8 @@ dbx.config.ts
 tsconfig.json
 tsconfig.default.json
 tsconfig.build.json
+tsconfig.test.json
+.vscode-test.mjs
 tsdown.config.ts
 vite.config.ts
 vitest.config.ts

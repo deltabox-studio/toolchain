@@ -55,7 +55,14 @@ export function buildReleaseNotes(
     const previous = headings.find(
         heading => heading.version !== current && versions.has(heading.version)
     );
-    const end = previous ? previous.index : (headings[1]?.index ?? changelog.length);
+    // When the version being released is not a heading yet, the newest tagged
+    // heading is not "previous": include the newest entry instead of returning
+    // an empty body.
+    const currentIsHeading = headings.some(heading => heading.version === current);
+    const end =
+        previous && (currentIsHeading || previous !== headings[0])
+            ? previous.index
+            : (headings[1]?.index ?? changelog.length);
     if (end <= start) return '';
     return changelog.slice(start, end).trimEnd();
 }

@@ -45,7 +45,7 @@ See all the [commands](#commands) below.
 | Add template…                | `template:init --add` on a folder you pick (any kind).           |
 | Remove template…             | `template:list --registry` then `template:remove`.               |
 | Generate configs             | `project:config` for projects missing a config.                  |
-| Run workflow                 | Trigger generated GitHub workflows.                              |
+| Run workflow                 | Trigger workflows with their vendor CLI (`gh`/`glab`/`az`).      |
 | Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.   |
 | Create Vite+ project…        | `vp create` in a terminal.                                       |
 | Add provider...              | Register a custom provider in `.dbx/toolchain/providers.json`.   |
@@ -65,7 +65,8 @@ actions, scoped to that project:
 
 - **Sync** / **Check sync** — regenerate / verify the project's managed files.
 - **Generate config** — write a `dbx.config.ts`.
-- **Run workflow…** — trigger one of the project's generated GitHub workflows.
+- **Run workflow…** — trigger one of the project's generated workflows; the
+  picker shows its provider (`github`, `gitlab` or `azure`).
 - **Run Vite+ command…** — run a `vp` command in that project.
 - **Reset tooling…** — remove the generated files + manifest, or everything
   including the config.
@@ -131,6 +132,29 @@ Search for `deltabox:` to find:
 - **Reset tooling…**
 - **Refresh projects**
 - **Toggle auto-sync**
+
+## Development
+
+Build the extension and the bundled `dbx` CLI:
+
+```sh
+yarn build:extension
+```
+
+Run the extension with **F5** (`Run deltabox toolchain extension`). The launch
+configuration builds first, opens `test-fixtures/workspace`, and uses source
+maps so breakpoints work in `src/`.
+
+Run the VS Code integration tests (downloads a stable VS Code build on the first
+run):
+
+```sh
+yarn test:integration
+```
+
+The tests live in `tests/integration` and are compiled to `out/test`. To debug
+them, install the [Extension Test Runner](https://marketplace.visualstudio.com/items?itemName=ms-vscode.extension-test-runner)
+and use **Test: Debug All Tests**.
 
 <div align="center">
   <img src="https://toolchain.deltabox.studio/logo/outline_colored.png" width="150" />

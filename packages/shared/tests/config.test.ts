@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     applyOverrides,
+    changelogBreakingCallbackSchema,
     type DbxConfig,
     dbxConfigSchema,
     defineConfig,
@@ -110,7 +111,17 @@ describe('dbx.config model', () => {
 
     it('accepts custom workflows but not a boolean value', () => {
         const custom = {
-            toolchain: { ci: { custom: { deploy: { jobs: { deploy: { steps: [] } } } } } },
+            toolchain: {
+                ci: {
+                    custom: {
+                        deploy: {
+                            jobs: {
+                                deploy: { 'runs-on': 'ubuntu-latest', steps: [] },
+                            },
+                        },
+                    },
+                },
+            },
         };
         expect(dbxConfigSchema.safeParse(custom).success).toBe(true);
         expect(
@@ -136,6 +147,83 @@ describe('dbx.config model', () => {
                 },
             }).success
         ).toBe(true);
+    });
+
+    it('accepts changelog versioning callbacks and serializable forms', () => {
+        const config = defineConfig({
+            toolchain: {
+                ci: {
+                    changelog: {
+                        versioning: {
+                            bump: {
+                                major: context => context.commit.subject.includes('!'),
+                                minor: 'feat',
+                                patch: '/^fix/',
+                            },
+                            commit: {
+                                author: false,
+                                format: context => `- ${context.commit.subject}`,
+                            },
+                            provider: 'changesets',
+                        },
+                    },
+                },
+            },
+        });
+        expect(dbxConfigSchema.safeParse(config).success).toBe(true);
+
+        const callbackProvider = defineConfig({
+            toolchain: {
+                ci: {
+                    changelog: {
+                        versioning: {
+                            provider: context =>
+                                context.records.map(record => record.subject).join('\n'),
+                        },
+                    },
+                },
+            },
+        });
+        expect(dbxConfigSchema.safeParse(callbackProvider).success).toBe(true);
+    });
+
+    it('accepts complete GitHub/GitLab/Azure workflow settings', () => {
+        const config = {
+            toolchain: {
+                ci: {
+                    ci: {
+                        provider: 'gitlab',
+                        workflow: {
+                            stages: ['test'],
+                            test: { stage: 'test', script: ['yarn test'] },
+                        },
+                    },
+                    release: {
+                        provider: 'azure',
+                        workflow: { steps: [{ script: 'yarn build' }] },
+                    },
+                    custom: {
+                        deploy: {
+                            provider: 'github',
+                            workflow: { name: 'Deploy', on: ['push'], jobs: {} },
+                        },
+                    },
+                },
+            },
+        };
+        expect(dbxConfigSchema.safeParse(config).success).toBe(true);
+    });
+
+    it('implements function schemas with .implement()/.implementAsync()', async () => {
+        const sync = changelogBreakingCallbackSchema.implement(commit =>
+            commit.subject.includes('!')
+        );
+        expect(sync({ subject: 'feat!: change', body: '' })).toBe(true);
+
+        const asyncImpl = changelogBreakingCallbackSchema.implementAsync(async commit =>
+            commit.subject.includes('!')
+        );
+        await expect(asyncImpl({ subject: 'fix: change', body: '' })).resolves.toBe(false);
     });
 });
 
@@ -178,6 +266,18 @@ describe('resolveChangelogConfig', () => {
         expect(resolved?.versioning).toEqual({ target: 'individual' });
         expect(resolved?.branches).toEqual({ main: 'main' });
     });
+
+    it('disables the pipeline when `ci.changelog` is false', () => {
+        expect(resolveChangelogConfig({ changelog: legacy, ci: { changelog: false } })).toBe(
+            undefined
+        );
+        expect(
+            resolveChangelogConfig({
+                changelog: legacy,
+                ci: { changelog: { enabled: false } },
+            })
+        ).toBe(undefined);
+    });
 });
 
 describe('formatter/linter precedence', () => {
@@ -186,7 +286,7 @@ describe('formatter/linter precedence', () => {
             oxc: { semi: false, singleQuote: true },
             biome: {},
             prettier: {},
-            dprint: {},
+            dprint: true,
         },
         lint: {
             oxc: { rules: {} },

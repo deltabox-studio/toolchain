@@ -3,7 +3,7 @@
     "compilerOptions": {
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
-        "types": ["node"]
+        "types": ["node", "mocha"]
     },
     "include": ["src", "tests", "tsdown.config.ts", "vitest.config.ts", "../../package.json"]
 }

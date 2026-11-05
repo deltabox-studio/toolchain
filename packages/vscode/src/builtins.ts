@@ -354,12 +354,12 @@ function dedupeById<T extends { id: string }>(items: T[]): T[] {
     return out;
 }
 
-/** Prepend the builtin providers, keeping the first entry for a duplicate id. */
+/** Merge the builtin providers, letting CLI-provided descriptors win on an id clash. */
 export function withBuiltinProviders(providers: Provider[]): Provider[] {
-    return dedupeById([...BUILTIN_PROVIDERS, ...providers]);
+    return dedupeById([...providers, ...BUILTIN_PROVIDERS]);
 }
 
-/** Prepend the builtin templates, keeping the first entry for a duplicate id. */
+/** Merge the builtin templates, letting CLI-provided descriptors win on an id clash. */
 export function withBuiltinTemplates(templates: Template[]): Template[] {
-    return dedupeById([...BUILTIN_TEMPLATES, ...templates]);
+    return dedupeById([...templates, ...BUILTIN_TEMPLATES]);
 }

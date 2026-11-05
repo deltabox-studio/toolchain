@@ -46,7 +46,7 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx tsconfig`](#tsconfig)                             | Generate workspace tsconfig.json files from the default tsconfig (aliases + references).        |
 | [`dbx cleanup`](#cleanup)                               | Remove build artifacts (*.tsbuildinfo, dist/).                                                  |
 | [`dbx cleanup:turbo`](#cleanup-turbo)                   | Remove the turbo cache (.turbo/).                                                               |
-| [`dbx workflow`](#workflow)                             | Trigger one or more generated GitHub workflows (via `gh workflow run`).                         |
+| [`dbx workflow`](#workflow)                             | Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).                       |
 | [`dbx changelog`](#changelog)                           | Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.              |
 | [`dbx migrate`](#migrate)                               | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.\* into dbx.config. |
 | [`dbx migrate:list`](#migrate-list)                     | List the registered migrations and whether each is detected.                                    |
@@ -190,12 +190,14 @@ Remove the turbo cache (.turbo/).
 
 ## `dbx workflow`
 
-Trigger one or more generated GitHub workflows (via `gh workflow run`).
+Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).
 
 * `[workflows]` — Workflow ids, custom ids, or file names (default: every enabled workflow).
 * `--cwd ‹dir›` — Project root (default: cwd).
 * `--ref ‹ref›` — Git ref to run the workflow on.
 * `--gh ‹cmd›` — The gh executable (default: gh).
+* `--glab ‹cmd›` — The glab executable (default: glab).
+* `--az ‹cmd›` — The az executable (default: az).
 * `--list` — List the enabled workflows (and where they are written).
 * `--json` — With --list: print the workflows as JSON.
 
@@ -723,6 +725,38 @@ GitHub Actions workflows to generate (CI, release, issues, changelog, sync).
 
 The CI checks workflow (`ci.yml`).
 
+#### `provider`
+
+* **Required**
+* **Type**: `'github'`
+
+Workflow vendor for a full `workflow` object (default `github`).
+
+#### `workflow`
+
+* **Required**
+* **Type**: `AzurePipelines`
+
+The complete pipeline object.
+
+#### `filename`
+
+* **Type**: `string`
+
+Override the generated workflow file name (eg. `deploy.yml`).
+
+#### `dir`
+
+* **Type**: `string`
+
+Directory for the workflow file (default `.github/workflows`).
+
+#### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable this workflow (default: enabled when present).
+
 #### `pushBranches`
 
 * **Type**: `Array<string>`
@@ -737,13 +771,13 @@ Replace `on.pull_request.branches`.
 
 #### `triggers`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `JsonObject`
 
 Extra `on.*` triggers.
 
 #### `extra`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `JsonObject`
 
 Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
 
@@ -827,7 +861,7 @@ Steps appended at the end.
 
 #### `jobs`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `Record<string, WorkflowJob>`
 
 Extra complete jobs merged in.
 
@@ -837,29 +871,17 @@ Extra complete jobs merged in.
 
 Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
 
-#### `filename`
-
-* **Type**: `string`
-
-Override the generated workflow file name (eg. `deploy.yml`).
-
-#### `dir`
-
-* **Type**: `string`
-
-Directory for the workflow file (default `.github/workflows`).
-
-#### `enabled`
-
-* **Type**: `boolean`
-
-Enable/disable this workflow (default: enabled when present).
-
 ### `changelog`
 
 * **Type**: `ChangelogWorkflowSetting`
 
 The changelog/version workflow (`changelog.yml`) plus the changelog pipeline config (versioning, VS Code settings, commitlint).
+
+#### `provider`
+
+* **Type**: `'github'`
+
+Workflow vendor for a full `workflow` object (default `github`).
 
 #### `pushBranches`
 
@@ -875,13 +897,13 @@ Replace `on.pull_request.branches`.
 
 #### `triggers`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `JsonObject`
 
 Extra `on.*` triggers.
 
 #### `extra`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `JsonObject`
 
 Extra top-level keys (`permissions`, `concurrency`, `env`, ...).
 
@@ -893,7 +915,7 @@ Extra steps for a job (one group, or per-job groups).
 
 #### `jobs`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `Record<string, WorkflowJob>`
 
 Extra complete jobs merged in.
 
@@ -989,9 +1011,69 @@ Glob patterns selecting the workspaces to version (relative to the root). Defaul
 
 ##### `bump`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `object`
 
 Custom bump rules for major/minor/patch (matchers or callbacks).
+
+###### `major`
+
+* **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
+
+###### `breaking`
+
+* **Type**: `boolean`
+
+Match only commits whose breaking state equals this value.
+
+###### `type`
+
+* **Type**: `string`
+
+Match this Conventional-Commits type.
+
+###### `types`
+
+* **Type**: `Array<string>`
+
+Match any of these CC types.
+
+###### `scope`
+
+* **Type**: `string`
+
+Match this Conventional-Commits scope.
+
+###### `scopes`
+
+* **Type**: `Array<string>`
+
+Match any of these CC scopes.
+
+###### `pattern`
+
+* **Type**: `string`
+
+Match this regular expression.
+
+###### `match`
+
+* **Type**: `string`
+
+Match this substring.
+
+###### `minor`
+
+* **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
+
+###### `patch`
+
+* **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
 
 ##### `allowOverBump`
 
@@ -1001,15 +1083,59 @@ Apply a bump once per matching change instead of once per run (default false).
 
 ##### `commit`
 
-* **Type**: `unknown`
+* **Type**: `ChangelogCommitFormatConfig`
 
-Commit message formatting/credit options or callback.
+Commit message formatting/credit options (with an optional formatter callback).
+
+###### `author`
+
+* **Type**: `boolean`
+
+Include the `by <author>` credit (default true).
+
+###### `commitSha`
+
+* **Type**: `boolean`
+
+Include the commit hash link (default true).
+
+###### `issues`
+
+* **Type**: `boolean`
+
+Include issue/fixes links (default true).
+
+###### `authorAvatar`
+
+* **Type**: `boolean`
+
+Prefix the author with their GitHub avatar (default false).
+
+###### `format`
+
+* **Type**: `((ctx: ChangelogCommitFormatContext) => string)`
+
+Fully custom commit line formatter (TS/JS configs only; return the bullet body).
 
 ##### `provider`
 
-* **Type**: `unknown`
+* **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
 
 `default`, `changesets`, a provider id, or a custom provider/callback.
+
+###### `id`
+
+* **Required**
+* **Type**: `string`
+
+The provider id.
+
+###### `run`
+
+* **Required**
+* **Type**: `((ctx: ChangelogProviderContext) => string | void)`
+
+A custom provider callback returning the changelog body (TS/JS configs only).
 
 #### `vscode`
 
@@ -1019,15 +1145,51 @@ Write the Conventional-Commits VS Code settings (default true).
 
 #### `groups`
 
-* **Type**: `unknown`
+* **Type**: `Array<string | object> | Record<string, string | object | boolean> | ((ctx: ChangelogGroupsContext) => ChangelogGroupsSetting)`
 
-Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback. Titles/order/hidden also accept callbacks (TS/JS configs only).
+Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback (TS/JS configs only).
+
+##### `type`
+
+* **Type**: `string`
+
+The CC type (required for object entries in an array).
+
+##### `title`
+
+* **Type**: `string | ((ctx: ChangelogGroupContext) => string)`
+
+Custom heading title (or callback; TS/JS configs only).
+
+##### `order`
+
+* **Type**: `number | ((ctx: ChangelogGroupContext) => number)`
+
+Sort position; lower comes first (or callback; TS/JS configs only).
+
+##### `hidden`
+
+* **Type**: `boolean | ((ctx: ChangelogGroupContext) => boolean)`
+
+Omit this group from the rendered changelog (or callback; TS/JS only).
 
 #### `breaking`
 
-* **Type**: `unknown`
+* **Type**: `boolean | 'conventional' | 'any' | object | ((commit: ChangelogBreakingCommit) => boolean)`
 
 How breaking changes are detected: `conventional` (default: a `!` in the CC subject or a `BREAKING CHANGE:` footer), `any` (legacy loose match), `false` (disable), `{ pattern }` / `{ match }`, or a callback (TS/JS configs only).
+
+##### `pattern`
+
+* **Type**: `string`
+
+A regular expression matched against the subject and body.
+
+##### `match`
+
+* **Type**: `string`
+
+A substring matched against the subject and body.
 
 ### `release`
 
@@ -1113,9 +1275,69 @@ Glob patterns selecting the workspaces to version (relative to the root). Defaul
 
 #### `bump`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `object`
 
 Custom bump rules for major/minor/patch (matchers or callbacks).
+
+##### `major`
+
+* **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
+
+###### `breaking`
+
+* **Type**: `boolean`
+
+Match only commits whose breaking state equals this value.
+
+###### `type`
+
+* **Type**: `string`
+
+Match this Conventional-Commits type.
+
+###### `types`
+
+* **Type**: `Array<string>`
+
+Match any of these CC types.
+
+###### `scope`
+
+* **Type**: `string`
+
+Match this Conventional-Commits scope.
+
+###### `scopes`
+
+* **Type**: `Array<string>`
+
+Match any of these CC scopes.
+
+###### `pattern`
+
+* **Type**: `string`
+
+Match this regular expression.
+
+###### `match`
+
+* **Type**: `string`
+
+Match this substring.
+
+##### `minor`
+
+* **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
+
+##### `patch`
+
+* **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
 
 #### `allowOverBump`
 
@@ -1125,15 +1347,59 @@ Apply a bump once per matching change instead of once per run (default false).
 
 #### `commit`
 
-* **Type**: `unknown`
+* **Type**: `ChangelogCommitFormatConfig`
 
-Commit message formatting/credit options or callback.
+Commit message formatting/credit options (with an optional formatter callback).
+
+##### `author`
+
+* **Type**: `boolean`
+
+Include the `by <author>` credit (default true).
+
+##### `commitSha`
+
+* **Type**: `boolean`
+
+Include the commit hash link (default true).
+
+##### `issues`
+
+* **Type**: `boolean`
+
+Include issue/fixes links (default true).
+
+##### `authorAvatar`
+
+* **Type**: `boolean`
+
+Prefix the author with their GitHub avatar (default false).
+
+##### `format`
+
+* **Type**: `((ctx: ChangelogCommitFormatContext) => string)`
+
+Fully custom commit line formatter (TS/JS configs only; return the bullet body).
 
 #### `provider`
 
-* **Type**: `unknown`
+* **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
 
 `default`, `changesets`, a provider id, or a custom provider/callback.
+
+##### `id`
+
+* **Required**
+* **Type**: `string`
+
+The provider id.
+
+##### `run`
+
+* **Required**
+* **Type**: `((ctx: ChangelogProviderContext) => string | void)`
+
+A custom provider callback returning the changelog body (TS/JS configs only).
 
 ### `vscode`
 
@@ -1143,15 +1409,51 @@ Write the Conventional-Commits VS Code settings (default true).
 
 ### `groups`
 
-* **Type**: `unknown`
+* **Type**: `Array<string | object> | Record<string, string | object | boolean> | ((ctx: ChangelogGroupsContext) => ChangelogGroupsSetting)`
 
-Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback. Titles/order/hidden also accept callbacks (TS/JS configs only).
+Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback (TS/JS configs only).
+
+#### `type`
+
+* **Type**: `string`
+
+The CC type (required for object entries in an array).
+
+#### `title`
+
+* **Type**: `string | ((ctx: ChangelogGroupContext) => string)`
+
+Custom heading title (or callback; TS/JS configs only).
+
+#### `order`
+
+* **Type**: `number | ((ctx: ChangelogGroupContext) => number)`
+
+Sort position; lower comes first (or callback; TS/JS configs only).
+
+#### `hidden`
+
+* **Type**: `boolean | ((ctx: ChangelogGroupContext) => boolean)`
+
+Omit this group from the rendered changelog (or callback; TS/JS only).
 
 ### `breaking`
 
-* **Type**: `unknown`
+* **Type**: `boolean | 'conventional' | 'any' | object | ((commit: ChangelogBreakingCommit) => boolean)`
 
 How breaking changes are detected: `conventional` (default: a `!` in the CC subject or a `BREAKING CHANGE:` footer), `any` (legacy loose match), `false` (disable), `{ pattern }` / `{ match }`, or a callback (TS/JS configs only).
+
+#### `pattern`
+
+* **Type**: `string`
+
+A regular expression matched against the subject and body.
+
+#### `match`
+
+* **Type**: `string`
+
+A substring matched against the subject and body.
 
 ### `enabled`
 
@@ -1171,7 +1473,7 @@ Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` 
 
 #### `overrides`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `JsonObject`
 
 Settings deep-merged over the generated editor defaults.
 
@@ -1183,25 +1485,25 @@ Exact setting keys (eg. `editor.defaultFormatter`) to omit.
 
 ### `oxc`
 
-* **Type**: `boolean | Record<string, unknown>`
+* **Type**: `boolean | OxfmtConfig`
 
 Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` overrides these (deep merge).
 
 ### `biome`
 
-* **Type**: `boolean | Record<string, unknown>`
+* **Type**: `boolean | BiomeConfig`
 
 Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`.
 
 ### `prettier`
 
-* **Type**: `boolean | Record<string, unknown>`
+* **Type**: `boolean | PrettierConfig`
 
 Prettier options (`true` = defaults, `false` = disabled).
 
 ### `dprint`
 
-* **Type**: `boolean | Record<string, unknown>`
+* **Type**: `boolean | DprintConfig`
 
 Dprint options (`true` = defaults, `false` = disabled).
 
@@ -1223,7 +1525,7 @@ Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` 
 
 #### `overrides`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `JsonObject`
 
 Settings deep-merged over the generated editor defaults.
 
@@ -1235,19 +1537,19 @@ Exact setting keys (eg. `editor.defaultFormatter`) to omit.
 
 ### `oxc`
 
-* **Type**: `boolean | Record<string, unknown>`
+* **Type**: `boolean | OxlintConfig`
 
 Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` overrides these (deep merge).
 
 ### `biome`
 
-* **Type**: `boolean | Record<string, unknown>`
+* **Type**: `boolean | BiomeConfig`
 
 Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`.
 
 ### `eslint`
 
-* **Type**: `boolean | Record<string, unknown>`
+* **Type**: `boolean | Linter.Config`
 
 ESLint options (`true` = defaults, `false` = disabled).
 
@@ -1271,7 +1573,7 @@ Write the Biome VS Code settings (default true).
 
 ### `overrides`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `BiomeConfig`
 
 Deep-merged over the generated `biome.json` (arrays union).
 
@@ -1383,25 +1685,25 @@ Managed overrides deep-merged into the base/root/default/build tsconfig files du
 
 #### `base`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `TsConfigJson`
 
 Deep-merged into the root base tsconfig (`baseFile`) during sync.
 
 #### `default`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `TsConfigJson`
 
 Deep-merged into every workspace default tsconfig (`defaultFile`) during sync.
 
 #### `build`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `TsConfigJson`
 
 Deep-merged into every workspace build tsconfig (`buildFile`) during sync.
 
 #### `root`
 
-* **Type**: `Record<string, unknown>`
+* **Type**: `TsConfigJson`
 
 Deep-merged into the root workspaces tsconfig (`rootFile`) during sync.
 
@@ -1559,7 +1861,7 @@ The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.
 
 * **Type**: `boolean | string`
 
-Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or absolute).
+Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or an absolute path inside it).
 
 ### `shim`
 
@@ -1575,13 +1877,13 @@ Module specifier used to import `resolveVite` in runtime shims (default `@deltab
 
 ### `fmt`
 
-* **Type**: `boolean | Record<string, unknown>`
+* **Type**: `boolean | OxfmtConfig`
 
 Oxfmt options; `true` uses the toolchain defaults.
 
 ### `lint`
 
-* **Type**: `boolean | Record<string, unknown>`
+* **Type**: `boolean | OxlintConfig`
 
 Oxlint options; `true` uses the toolchain defaults.
 
@@ -1649,9 +1951,65 @@ Warning/error id, message substring, or `/regex/` to silence (single value or ar
 
 ### `logger`
 
-* **Type**: `unknown`
+* **Type**: `object`
 
 Custom `ToolchainLogger` implementation (TS/JS configs only; JSON cannot carry functions).
+
+#### `raw`
+
+* **Required**
+* **Type**: `(message?: string) => void`
+
+Write raw stdout.
+
+#### `rawError`
+
+* **Required**
+* **Type**: `(message?: string) => void`
+
+Write raw stderr.
+
+#### `write`
+
+* **Required**
+* **Type**: `(channel: 'out' | 'err', text: string) => void`
+
+Write to a specific output channel.
+
+#### `debug`
+
+* **Required**
+* **Type**: `(message?: string) => void`
+
+Print a debug message.
+
+#### `info`
+
+* **Required**
+* **Type**: `(message?: string) => void`
+
+Print an info message.
+
+#### `success`
+
+* **Required**
+* **Type**: `(message?: string) => void`
+
+Print a success message.
+
+#### `warn`
+
+* **Required**
+* **Type**: `(message?: string, id?: string) => void`
+
+Print a warning.
+
+#### `error`
+
+* **Required**
+* **Type**: `(message?: string, id?: string) => void`
+
+Print an error.
 
 ### `enabled`
 
@@ -1956,7 +2314,7 @@ code --install-extension deltabox.toolchain-vscode
 | Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.       |
 | Remove template…             | `template:list --registry` then `template:remove`.                                      |
 | Generate configs             | `project:config` for projects missing a config.                                         |
-| Run workflow                 | Trigger generated GitHub workflows.                                                     |
+| Run workflow                 | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                   |
 | Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                          |
 | Create Vite+ project…        | `vp create` in a terminal.                                                              |
 | Add provider...              | Register a custom provider (project or global registry).                                |
@@ -1976,7 +2334,9 @@ actions, scoped to that project:
 
 * **Sync** / **Check sync** — regenerate / verify the project's managed files.
 * **Generate config** — write a `dbx.config.ts`.
-* **Run workflow…** — trigger one of the project's generated GitHub workflows.
+* **Run workflow…** — trigger one of the project's generated workflows. The picker
+  lists every enabled workflow with its provider and path, and dispatches it
+  through the matching vendor CLI (`gh`, `glab` or `az`).
 * **Run Vite+ command…** — run a `vp` command in that project.
 * **Reset tooling…** — remove the generated files + manifest, or everything
   including the config.
@@ -2392,11 +2752,18 @@ console.log(toolchainProviders().map(p => p.id));
 | Export                                                                 | Description                                          |
 | ---------------------------------------------------------------------- | ---------------------------------------------------- |
 | `runChangelog(argv?)` / `main`                                         | Derive the bump and update the changelog + versions. |
-| `runWorkflows(options)` / `resolveWorkflowId(name)`                    | Trigger generated GitHub workflows.                  |
+| `runWorkflows(options)` / `resolveWorkflowId(name)`                    | Trigger generated workflows with the vendor CLI.     |
+| `workflowTargets(config)` / `workflowRunCommand(target, options)`      | List enabled workflows / build a vendor CLI command. |
 | `renderWorkflow(id, options)` / `renderWorkflows(...)`                 | Render workflow YAML.                                |
 | `renderCommitlintConfig(options?)` / `changelogSyncTask()`             | Commitlint config + the changelog sync task.         |
 | `readCommits(range)` / `deriveBump(records)` / `buildSummary(records)` | Git commit reading, bump derivation and summaries.   |
 | `renderChangelogEntry(...)` / `parseExistingChangelog(content)`        | Changelog entry rendering/parsing.                   |
+| `formatBody(body)` / `formatLine(line, repo)`                          | Description + changelog-line normalization.          |
+
+`formatLine(line, repo)` normalizes a changelog line in place: numeric-only
+short hashes (eg. `#4033009`) stay commit links, genuine issue numbers stay
+issue links, and a bare `BREAKING CHANGE:` marker is bolded unless it is already
+bold.
 
 ## `@deltabox/toolchain/biome`
 
@@ -2731,9 +3098,20 @@ The generated `changelog` workflow runs `dbx changelog --range …` on every pus
 to the `dev` branches (or `main` when `dev` is unset), so versioning is applied
 from CI as well as locally.
 
-`dbx workflow [id…]` triggers the generated GitHub workflows through
-`gh workflow run`; with no ids it triggers every workflow you declared under
-`toolchain.ci`.
+`dbx workflow [id…]` triggers the generated workflows with their vendor CLI
+(`gh`, `glab` or `az`); with no ids it triggers every workflow you declared under
+`toolchain.ci`. See [Workflows](/guide/cli#workflows).
+
+## Formatting
+
+`--format-only` regroups the existing entries without bumping versions. It keeps
+list items, unwraps hard-wrapped lines, keeps multi-line `BREAKING CHANGE:`
+footers together and preserves fenced code blocks. Numeric-only short hashes
+(eg. `#4033009`) are resolved against git, so they stay commit links while real
+issue numbers stay issue links. Existing subjects and descriptions are never
+re-rendered from git: hand corrections (including backtick fixes) survive, and a
+description is only filled in when the entry has none. See
+[Writing commit messages](/guide/changelog/writing-commit-messages).
 
 ---
 
@@ -2994,10 +3372,12 @@ especially when a message is drafted by an **AI/LLM** and committed through
 * **bash** runs an unquoted `` `…` `` as command substitution, and `$(…)` / `${…}`
   expand before `git` ever sees them.
 
-The result is invisible control characters, stray `\` and dropped letters. The
-toolchain strips the predictable artifacts
-(`stripControlChars`/`sanitizeText`) but **cannot restore a character the shell
-already consumed**.
+The result is invisible control characters, stray `\` and dropped letters.
+`sanitizeText` maps the common control characters back to the letter they
+replaced (`BEL`→`a`, `BS`→`b`, `FF`→`f`, `VT`→`v`, `TAB`→`t`, `LF`→`n`,
+`CR`→`r`, `ESC`→`e`, `NUL`→`0`) and drops the stray `\`, so words like `any`,
+`false` and `bin` are restored. A character the shell consumed without leaving a
+trace still cannot be recovered.
 
 ## Authoring safely
 
@@ -3018,14 +3398,17 @@ url: https://toolchain.deltabox.studio/guide/ci.md
 ---
 # CI
 
-`dbx sync` writes the opted-in GitHub workflows into `.github/workflows`. Every
-workflow is **opt-in**: declare it under `toolchain.ci` to write it; omit it (or
-set it to `false`) and the toolchain leaves that file unmanaged. Every id (`ci`,
-`changelog`, `release`, `issues`, `sync`) accepts one of three forms:
+`dbx sync` writes the opted-in workflows for **GitHub Actions**, **GitLab CI**
+and **Azure Pipelines**. Every workflow is **opt-in**: declare it under
+`toolchain.ci` to write it; omit it (or set it to `false`) and the toolchain
+leaves that file unmanaged. Every id (`ci`, `changelog`, `release`, `issues`,
+`sync`) accepts one of four forms:
 
-* `true` / `false` — write the generated default, or skip it;
-* a **`WorkflowOptions` object** — override parts of the default (branches,
-  triggers, extra top-level keys, extra steps/jobs, token overrides);
+* `true` / `false` — write the generated GitHub default, or skip it;
+* a **`WorkflowOptions` object** — override parts of the GitHub default
+  (branches, triggers, extra top-level keys, extra steps/jobs, token overrides);
+* a **complete vendor workflow** — `{ provider, workflow }` for `github`,
+  `gitlab` or `azure`, written as-is;
 * a **raw YAML string** — written **verbatim** as the workflow file, for a
   workflow the object model can't express.
 
@@ -3033,20 +3416,18 @@ set it to `false`) and the toolchain leaves that file unmanaged. Every id (`ci`,
 export default defineConfig({
     toolchain: {
         ci: {
-            ci: true, // the generated CI checks
+            ci: true, // the generated GitHub CI checks
             issues: false, // don't write issues.yml
-            release: { pushBranches: ['main'] }, // override the default
+            release: { pushBranches: ['main'] }, // override the GitHub default
             changelog: { branches: { main: 'main', dev: 'dev' } },
-            // A fully hand-authored workflow, written as-is:
-            sync: `name: Toolchain sync
-on: [push, pull_request]
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: yarn dbx sync --check
-`,
+            // A complete GitLab pipeline, written to `.gitlab-ci.yml`:
+            sync: {
+                provider: 'gitlab',
+                workflow: {
+                    stages: ['check'],
+                    check: { stage: 'check', script: ['yarn dbx sync --check'] },
+                },
+            },
         },
     },
 });
@@ -3061,9 +3442,96 @@ The `ci` key doubles as the CI-checks workflow (`ci.yml`) and the section name, 
 `toolchain.ci.ci` is the checks workflow. Set `toolchain.ci.enabled` to `false` to
 disable the whole section (and every nested workflow) at once.
 
+## Vendor workflows
+
+A complete vendor workflow always has `provider` and `workflow`; `filename`,
+`dir` and `enabled` are optional:
+
+| `provider` | Default file          | Run with           |
+| ---------- | --------------------- | ------------------ |
+| `github`   | `.github/workflows/`  | `gh workflow run`  |
+| `gitlab`   | `.gitlab-ci.yml`      | `glab ci run`      |
+| `azure`    | `azure-pipelines.yml` | `az pipelines run` |
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        // .gitlab-ci.yml (the default GitLab path)
+        ci: {
+            provider: 'gitlab',
+            workflow: { stages: ['test'], test: { stage: 'test', script: ['yarn test'] } },
+        },
+        // azure-pipelines.yml (the default Azure path)
+        release: {
+            provider: 'azure',
+            workflow: { trigger: ['main'], pool: { vmImage: 'ubuntu-latest' }, steps: [] },
+        },
+        // A complete GitHub workflow, written to the default `.github/workflows/deploy.yml`
+        custom: {
+            deploy: {
+                provider: 'github',
+                workflow: {
+                    name: 'Deploy',
+                    on: { push: { branches: ['main'] } },
+                    jobs: { deploy: { 'runs-on': 'ubuntu-latest', steps: [] } },
+                },
+            },
+        },
+    },
+}
+```
+
+`filename` and `dir` override the generated path for any provider. The workflow
+object is written as-is (only the toolchain's `{{ token }}` replacements are
+applied), so it must be a complete pipeline. `dbx workflow` dispatches each
+workflow with its vendor CLI — see [CLI](/guide/cli#tsconfig-cleanup-changelog-workflows).
+
+## Typed GitHub workflows
+
+If you prefer a typed builder over hand-writing YAML, use
+[`@github-actions-workflow-ts/lib`](https://github.com/emmanuelnk/github-actions-workflow-ts)
+(and its `@github-actions-workflow-ts/actions` catalog). The builder produces a
+plain workflow object in `.workflow`, which the `github` vendor form accepts:
+
+```ts [dbx.config.ts]
+import { ActionsCheckoutV4, ActionsSetupNodeV4 } from '@github-actions-workflow-ts/actions';
+import { NormalJob, Step, Workflow } from '@github-actions-workflow-ts/lib';
+
+import { defineConfig, type GitHubWorkflow } from '@deltabox/toolchain';
+
+const test = new NormalJob('test', { 'runs-on': 'ubuntu-latest' });
+test.addStep(new ActionsCheckoutV4({ name: 'Checkout' }));
+test.addStep(new ActionsSetupNodeV4({ name: 'Setup Node', with: { 'node-version': '22' } }));
+test.addStep(new Step({ name: 'Test', run: 'yarn test' }));
+
+const ci = new Workflow('ci.yml', {
+    name: 'CI',
+    on: { push: { branches: ['main'] } },
+});
+ci.addJob(test);
+
+export default defineConfig({
+    toolchain: {
+        ci: {
+            ci: {
+                provider: 'github',
+                workflow: ci.workflow as unknown as GitHubWorkflow,
+            },
+        },
+    },
+});
+```
+
+The toolchain does not depend on the builder, so the `workflow` field is typed
+from its own vendored GitHub schema. The two schemas can drift slightly (for
+example the builder's `Partial<Workflow>` makes `on` optional, and its
+`permissions` allows `id-token: read`), so cast the object when TypeScript
+rejects it. At runtime the workflow is validated by GitHub, exactly like a
+hand-written object.
+
 ## Workflows
 
-| Workflow  | File            | Page                                      |
+| Workflow  | GitHub file     | Page                                      |
 | --------- | --------------- | ----------------------------------------- |
 | CI checks | `ci.yml`        | [CI checks](/guide/ci/ci)                 |
 | Changelog | `changelog.yml` | [Changelog workflow](/guide/ci/changelog) |
@@ -3072,8 +3540,9 @@ disable the whole section (and every nested workflow) at once.
 | Toolchain | `sync.yml`      | [Sync](/guide/ci/sync)                    |
 
 Extra workflows can be defined under `toolchain.ci.custom.<id>` (for example
-`ci.custom.deploy` writes `.github/workflows/deploy.yml`). Each accepts the same
-workflow options, plus `filename` and `dir` overrides.
+`ci.custom.deploy` writes `.github/workflows/deploy.yml`, or the vendor default
+when it sets `provider`). Each accepts the same workflow forms, plus `filename`
+and `dir` overrides.
 
 See [Workflow settings](/guide/ci/settings) for the shared object options and the
 [Changelog](/guide/changelog/) guide for the versioning/commitlint pipeline.
@@ -3118,6 +3587,11 @@ it does not set them itself (for example `ci.changelog: true` or an
 object that only sets workflow options like `pushBranches`). Explicit
 `ci.changelog` options win; `branches` only exists on `ci.changelog`.
 
+The workflow itself can target another vendor with `{ provider, workflow }`
+(GitLab/Azure); the versioning/commitlint pipeline still lives in
+`toolchain.changelog` (or the `ci.changelog` object options), not in the vendor
+workflow. See [Workflow settings](/guide/ci/settings#vendor-workflows).
+
 ---
 
 ---
@@ -3153,7 +3627,8 @@ toolchain: {
 
 Use [Workflow settings](/guide/ci/settings) for the shared options. The workflow
 is opt-in: `ci: { ci: true }` writes it; omitting `ci.ci` (or setting it to
-`false`) leaves the file unmanaged.
+`false`) leaves the file unmanaged. Set `provider` (`gitlab`/`azure`) with a
+complete `workflow` object to write that vendor's pipeline instead.
 
 ---
 
@@ -3178,7 +3653,9 @@ toolchain: {
 The workflow is opt-in and only runs on `issues: opened`. It needs the
 `issues: write` permission, which the generated default declares.
 
-Use [Workflow settings](/guide/ci/settings) to change its triggers or add jobs.
+Use [Workflow settings](/guide/ci/settings) to change its triggers or add jobs,
+or set `provider` with a complete GitLab/Azure `workflow` to target another
+vendor.
 
 ---
 
@@ -3206,7 +3683,8 @@ toolchain: {
 ```
 
 The workflow is opt-in. Use [Workflow settings](/guide/ci/settings) to override
-the job's extra steps/jobs or supply a fully hand-authored workflow.
+the job's extra steps/jobs or supply a fully hand-authored workflow. It can also
+be a complete GitLab/Azure pipeline via `{ provider, workflow }`.
 
 ---
 
@@ -3215,10 +3693,11 @@ url: https://toolchain.deltabox.studio/guide/ci/settings.md
 ---
 # Workflow settings
 
-A workflow can be a boolean, a raw YAML string, or a `WorkflowOptions` object.
-The object is merged over the generated default, so you only describe what
-changes. These options apply to every workflow (`ci`, `changelog`, `release`,
-`issues`, `sync`).
+A workflow can be a boolean, a raw YAML string, a complete vendor workflow
+(`{ provider, workflow }`), or a `WorkflowOptions` object. The object is merged
+over the generated GitHub default, so you only describe what changes. These
+options apply to every GitHub workflow (`ci`, `changelog`, `release`, `issues`,
+`sync`).
 
 ```ts [dbx.config.ts]
 toolchain: {
@@ -3247,6 +3726,7 @@ toolchain: {
 | Option                | What it does                                                                    |
 | --------------------- | ------------------------------------------------------------------------------- |
 | `enabled`             | Enable/disable this workflow (default: enabled when present).                   |
+| `provider`            | Vendor for a complete `workflow` object (default `github`).                     |
 | `pushBranches`        | Replace `on.push.branches`.                                                     |
 | `pullRequestBranches` | Replace `on.pull_request.branches`.                                             |
 | `triggers`            | Merge extra `on.*` triggers.                                                    |
@@ -3283,12 +3763,52 @@ to that manager's default version unless you also set `packageManagerVersion`
 A string is used as the workflow file's exact content. It is not merged, not
 token-replaced and gets no generated header; an empty string disables it.
 
+## Vendor workflows
+
+Set `provider` (`github`, `gitlab` or `azure`) with a complete `workflow` object
+to write another CI vendor's pipeline instead of the generated GitHub default.
+The object is written as-is (with the toolchain's `{{ token }}` replacements
+applied), so it must be a complete pipeline:
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        ci: {
+            provider: 'gitlab',
+            workflow: {
+                stages: ['test'],
+                test: { stage: 'test', script: ['yarn test'] },
+            },
+        },
+        release: {
+            provider: 'azure',
+            workflow: {
+                trigger: ['main'],
+                pool: { vmImage: 'ubuntu-latest' },
+                steps: [{ script: 'yarn build' }],
+            },
+        },
+    },
+}
+```
+
+The default paths are `.gitlab-ci.yml` and `azure-pipelines.yml` (GitHub keeps
+`.github/workflows/<id>.yml`); `filename` and `dir` override them. A complete
+vendor workflow defines its own triggers, so the `ci.changelog.branches` defaults
+do not rewrite them. `dbx workflow` runs each workflow with its vendor CLI
+(`glab ci run`, `az pipelines run --name <pipeline>`, or `gh workflow run`).
+
+If a hand-written `.gitlab-ci.yml` / `azure-pipelines.yml` already exists, sync
+leaves it untouched and records a workflow conflict, exactly like a GitHub
+workflow. Set `ci.<id>: { enabled: false }` to opt out explicitly.
+
 ## Custom workflows
 
 Add any number of extra workflows with `toolchain.ci.custom`, keyed by workflow
 id. A custom workflow is enabled by **presence** (there is no boolean form): a
-string is written verbatim, or an object is merged over an empty workflow —
-build it with `triggers`, `extra` and `jobs` (plus `filename` / `dir`):
+string is written verbatim, a complete vendor workflow (`{ provider, workflow }`)
+is written as-is, or an object is merged over an empty GitHub workflow — build it
+with `triggers`, `extra` and `jobs` (plus `filename` / `dir`):
 
 ```ts [dbx.config.ts]
 toolchain: {
@@ -3350,7 +3870,8 @@ toolchain: {
 
 The workflow is opt-in. The `ci` check workflow also runs `dbx sync --check`, so
 `sync.yml` is useful when you want the check to run on pull requests without the
-full build. See [Workflow settings](/guide/ci/settings) for trigger overrides.
+full build. See [Workflow settings](/guide/ci/settings) for trigger overrides, or
+set `provider` with a complete GitLab/Azure `workflow` to target another vendor.
 
 ---
 
@@ -3468,7 +3989,27 @@ See [Migrations](/guide/migrations/).
 | `tsconfig`                  | Regenerate workspace `tsconfig.json` files (`--restore [kind]` reverts overrides). |
 | `cleanup` / `cleanup:turbo` | Remove build artifacts / the turbo cache.                                          |
 | `changelog`                 | Derive the semver bump and update CHANGELOG + versions.                            |
-| `workflow`                  | Trigger generated GitHub workflows via `gh workflow run`.                          |
+| `workflow`                  | Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).          |
+
+### Workflows
+
+`dbx workflow [id…]` runs every enabled workflow (or the named ids/custom ids/file
+names) with the CLI for its provider:
+
+```sh
+dbx workflow                    # every enabled workflow
+dbx workflow ci release         # by id
+dbx workflow deploy.yml         # by file name
+dbx workflow --list --json      # ids, paths and providers
+dbx workflow ci --ref main      # pass a branch/ref
+dbx workflow ci --gh /path/to/gh --glab glab --az az
+```
+
+GitHub uses `gh workflow run <file>`, GitLab `glab ci run` (the project's
+configured CI file), and Azure `az pipelines run --name <pipeline>` (the file
+stem by default). When the matching CLI is not installed the command reports it
+and continues with the other workflows. See [CI](/guide/ci/) for the vendor
+workflow config.
 
 ## Providers
 
@@ -4229,10 +4770,10 @@ export interface ServerConfig {
 }
 ```
 
-An object schema that also accepts arbitrary keys (Zod `.catchall(...)` /
-`.passthrough()`, ie. `additionalProperties` in the JSON Schema) generates an
-open interface with an index signature, so the extra keys stay typed as
-`unknown` instead of being rejected:
+An object schema that also accepts arbitrary keys (Zod `.catchall(...)`,
+`.loose()` or `z.looseObject(...)`, ie. `additionalProperties` in the JSON
+Schema) generates an open interface with an index signature, so the extra keys
+stay typed as `unknown` instead of being rejected:
 
 ```ts
 export interface ServerConfig {
@@ -4455,21 +4996,30 @@ The supported tools are:
 * `lint`: `oxc` (Oxlint), `biome`, `eslint`.
 
 Each tool accepts `true` (use the defaults) or `false` (disable that tool), in
-addition to its options object.
+addition to its options object. The Oxfmt/Oxlint option types are generated from
+the tools' official JSON schemas (vendored in the package), so editor completion
+and the generated config reference match the tool.
 
 ## Shorthand opt-in
 
 `fmt: true` / `lint: true` (or an options object with only `vscode`) picks a tool
-automatically. `dbx sync` first checks the project/workspace dependencies for an
-installed tool (in precedence order), then the VS Code user settings language
-blocks, and finally falls back to Oxc. If nothing is found, sync warns
-(`fmt.no-tool` / `lint.no-tool`) and still applies the Oxc defaults.
+automatically. `dbx sync` resolves it in this order:
 
-Existing user-owned config files are not overwritten blindly: the shorthand
-folds them into the matching `toolchain.fmt.*` / `toolchain.lint.*` options
-using the same mapping as [`dbx migrate`](/guide/migrations/). When the mapped
-options are already the dbx defaults, the shorthand simply enables those
-defaults.
+1. the project's `.vscode/settings.json`;
+2. the nearest `package.json` or tooling config file, walking up to the repo
+   root (a workspace-specific tool beats a root-installed one);
+3. the VS Code user settings language blocks;
+4. the Oxc defaults.
+
+Each level prefers a tool's own config file (`.oxfmtrc.json`, `biome.json`,
+`.prettierrc`, `dprint.json`, `.eslintrc.*`, ...) before its `package.json`
+dependency, and honours the formatter/linter precedence. If nothing is found,
+sync warns (`fmt.no-tool` / `lint.no-tool`) and still applies the Oxc defaults.
+
+Existing user-owned config files are not overwritten blindly: the detected
+tool's options are read into the matching `toolchain.fmt.*` /
+`toolchain.lint.*` entry. Oxc options are merged over the toolchain defaults
+using the same mapping as [`dbx migrate`](/guide/migrations/).
 
 ## Precedence
 
@@ -6584,7 +7134,7 @@ it (see [`defineConfig`](/guide/config/defineconfig)).
 ## Config types
 
 The `toolchain` shape is exported as `ToolchainConfig` (and the individual
-sections as `ToolchainCiConfig`, `ToolchainChangelogConfig`, ...):
+sections as `ToolchainCiConfig`, `ChangelogConfig`, ...):
 
 ```ts
 import type { ToolchainConfig, ToolchainCiConfig } from '@deltabox/toolchain';
@@ -6750,7 +7300,7 @@ Everything else under `vite` is Vite+ config (plugins, `test`, `lint`, `fmt`,
 them. Set `vite: { config: false }` to leave a hand-written
 `vite.config.ts` alone (the section is still read for provider colouring and the
 `dbx` provider passthrough). `config: 'config/vite.custom.ts'` writes the shim
-there instead (relative to the project, or absolute).
+there instead (relative to the project, or an absolute path inside it).
 
 ## Keep the shim out of Oxfmt
 

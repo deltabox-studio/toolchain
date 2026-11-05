@@ -7,6 +7,7 @@ import {
     captureCli,
     chooseDbxSource,
     cliInvocation,
+    exitCodeOf,
     initDbxSource,
     selectVersion,
     setExtensionInfo,
@@ -45,6 +46,7 @@ import {
     planWatchTargets,
     type WatchInputs,
 } from './watch-inputs.js';
+import { parseWorkflowTargets, type WorkflowTarget, workflowQuickPickItems } from './workflows.js';
 
 const SECTION = 'deltabox.toolchain';
 const OUTPUT_NAME = 'deltabox toolchain';
@@ -242,7 +244,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 child = undefined;
                 resolve(1);
             });
-            proc.on('exit', code => {
+            proc.on('close', (code, signal) => {
                 child = undefined;
                 if (!warnedNoWorkspaces && NO_WORKSPACES_WARNING.test(captured)) {
                     warnedNoWorkspaces = true;
@@ -255,7 +257,7 @@ export function activate(context: vscode.ExtensionContext): void {
                             if (choice === 'Show output') output.show();
                         });
                 }
-                resolve(code ?? 0);
+                resolve(exitCodeOf(code, signal));
             });
         });
     };
@@ -290,12 +292,13 @@ export function activate(context: vscode.ExtensionContext): void {
     const scheduler = new SyncScheduler({
         debounceMs: () => config().get<number>('debounce', 300),
         run: async () => {
-            const root = workspaceRoots()[0];
-            if (!root) {
+            const roots = workspaceRoots();
+            if (roots.length === 0) {
                 output.appendLine('dbx: no workspace folder open.');
                 return;
             }
-            await runCli(root, [config().get<string>('command', 'sync')]);
+            const command = config().get<string>('command', 'sync');
+            for (const root of roots) await runCli(root, [command]);
         },
         onStateChange: setStatus,
     });
@@ -388,31 +391,18 @@ export function activate(context: vscode.ExtensionContext): void {
         return picks?.map(pick => pick.project);
     };
 
-    /** Prompt for one or more enabled workflow ids (multi-select). */
+    /** Prompt for one or more enabled workflows (multi-select). */
     const pickWorkflows = async (cwd: string): Promise<string[] | undefined> => {
         const result = await captureCli(cwd, ['workflow', '--list', '--json']);
-        let targets: { id: string; path: string }[] = [];
-        if (result.code === 0) {
-            try {
-                const parsed = JSON.parse(result.stdout) as unknown;
-                if (Array.isArray(parsed)) {
-                    targets = parsed.filter(
-                        (entry): entry is { id: string; path: string } =>
-                            Boolean(entry) &&
-                            typeof entry === 'object' &&
-                            typeof (entry as { id?: unknown }).id === 'string' &&
-                            typeof (entry as { path?: unknown }).path === 'string'
-                    );
-                }
-            } catch {
-                // fall through to the built-in ids
-            }
+        let targets: WorkflowTarget[] = [];
+        if (result.code === 0) targets = parseWorkflowTargets(result.stdout);
+        if (targets.length === 0) {
+            targets = WORKFLOW_IDS.map(id => ({ id, path: id, provider: 'github' }));
         }
-        if (targets.length === 0) targets = WORKFLOW_IDS.map(id => ({ id, path: id }));
-        const picks = await vscode.window.showQuickPick(
-            targets.map(target => ({ label: target.id, description: target.path })),
-            { canPickMany: true, placeHolder: 'Which workflows should run?' }
-        );
+        const picks = await vscode.window.showQuickPick(workflowQuickPickItems(targets), {
+            canPickMany: true,
+            placeHolder: 'Which workflows should run?',
+        });
         return picks?.map(pick => pick.label);
     };
 

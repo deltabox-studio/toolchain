@@ -1,0 +1,13 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "noEmit": false,
+        "outDir": "out/test",
+        "rootDir": "tests/integration",
+        "types": ["node", "mocha"],
+        "sourceMap": true,
+        "declaration": false,
+        "composite": false
+    },
+    "include": ["tests/integration/**/*.ts"]
+}

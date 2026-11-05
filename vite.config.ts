@@ -159,7 +159,10 @@ export default defineConfig<ViteUserConfig>({
             "**/*.yaml",
             "**/CHANGELOG.md",
             "CHANGELOG.proposed.md",
-            "**/vite.config.ts"
+            "**/vite.config.ts",
+            "**/config-schema/generated/biome-config.ts",
+            "**/config-schema/generated/azure-pipelines.ts",
+            "**/config-schema/generated/oxlint-config.ts"
         ],
         "sortImports": {
             "groups": [
@@ -221,7 +224,7 @@ export default defineConfig<ViteUserConfig>({
             "jsx-a11y/click-events-have-key-events": "off",
             "react/button-has-type": "off",
             "react/react-in-jsx-scope": "off",
-            "react-hooks/exhaustive-deps": "off",
+            "react/exhaustive-deps": "off",
             "typescript/no-empty-object-type": "off",
             "typescript/no-explicit-any": "off",
             "typescript/no-non-null-assertion": "off",

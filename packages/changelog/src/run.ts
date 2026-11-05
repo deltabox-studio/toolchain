@@ -66,9 +66,8 @@
  *   CHANGELOG_PROCESSING_METHOD=all node scripts/dist/changelog/index.js
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import {
     type ChangelogBreakingSetting,
@@ -141,6 +140,10 @@ export function runChangelog(
         if (!/^\d+\.\d+\.\d+$/.test(next)) throw new Error(`Invalid version: ${next}`);
         if (next === localCurrent) {
             logger.info(`Version is already ${next}; nothing to do.`);
+            return;
+        }
+        if (options.dryRun) {
+            logger.info(`[DRY-RUN] Would retag versions ${localCurrent} -> ${next}.`);
             return;
         }
         writeVersion(next);
@@ -294,23 +297,3 @@ export { renderChangelogEntry } from './utils/version.js';
 
 /** Alias kept for backwards compatibility. */
 export const main = runChangelog;
-
-// Run only when executed directly (not when imported by tests/tooling, and not
-// when this module is inlined into a single-file bundle where `import.meta.url`
-// resolves to the bundle rather than to this file).
-const modulePath = fileURLToPath(import.meta.url);
-if (
-    process.argv[1] &&
-    /[\\/]run\.[cm]?[jt]s$/.test(modulePath) &&
-    safeRealpath(process.argv[1]) === modulePath
-) {
-    runChangelog();
-}
-
-function safeRealpath(file: string): string {
-    try {
-        return realpathSync(file);
-    } catch {
-        return file;
-    }
-}

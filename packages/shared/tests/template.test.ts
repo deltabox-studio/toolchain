@@ -56,3 +56,18 @@ describe('createReplacer / deep / tokens', () => {
         expect(hasUnresolvedTokens('plain')).toBe(false);
     });
 });
+
+describe('applyReplacementsDeep non-plain values', () => {
+    it('preserves RegExp/Date/URL instances', () => {
+        const regex = /^@\//;
+        const date = new Date('2026-01-01T00:00:00Z');
+        const url = new URL('https://example.com/{{name}}');
+        const out = applyReplacementsDeep(
+            { alias: [{ find: regex, replacement: 'src/' }], date, url },
+            { name: 'app' }
+        ) as { alias: { find: RegExp }[]; date: Date; url: URL };
+        expect(out.alias[0]?.find).toBe(regex);
+        expect(out.date).toBe(date);
+        expect(out.url).toBe(url);
+    });
+});

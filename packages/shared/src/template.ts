@@ -80,9 +80,15 @@ export function createReplacer(
     return (input: string) => applyReplacements(input, replacements, options);
 }
 
+function isPlainRecord(value: object): boolean {
+    const proto = Object.getPrototypeOf(value);
+    return proto === Object.prototype || proto === null;
+}
+
 /**
  * Recursively apply replacements to an arbitrary value. Strings are rendered;
- * arrays and plain objects are walked; everything else is returned as-is.
+ * arrays and plain objects are walked; everything else (RegExp, Date, URL, ...)
+ * is returned as-is.
  */
 export function applyReplacementsDeep<T>(
     value: T,
@@ -97,7 +103,7 @@ export function applyReplacementsDeep<T>(
             applyReplacementsDeep(item, replacements, options)
         ) as unknown as T;
     }
-    if (value && typeof value === 'object') {
+    if (value && typeof value === 'object' && isPlainRecord(value)) {
         const out: Record<string, unknown> = {};
         for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
             out[key] = applyReplacementsDeep(child, replacements, options);

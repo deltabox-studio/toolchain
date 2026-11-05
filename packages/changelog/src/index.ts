@@ -6,6 +6,7 @@ export { parseArgsCli } from './utils/args.js';
 export { isBreakingCommit } from './utils/breaking.js';
 export {
     formatBody,
+    formatLine,
     groupItems,
     parseCcSubject,
     renderGroups,

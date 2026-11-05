@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { SyncContext } from '@deltabox/toolchain-shared';
+import { readJsoncFile, type SyncContext } from '@deltabox/toolchain-shared';
 
 import { editorConfigSyncTask, toolingConfigTask } from '../src/index.js';
 
@@ -61,6 +61,29 @@ describe('editorConfigSyncTask', () => {
         expect(settings['[typescript]']['editor.defaultFormatter']).toBe('oxc.oxc-vscode');
         expect(settings['editor.codeActionsOnSave']).toEqual({
             'source.fixAll.eslint': 'explicit',
+            'source.fixAll.oxc': 'explicit',
+        });
+    });
+
+    it('adds defaults to a JSONC settings file with comments and trailing commas', async () => {
+        const cwd = makeTmp();
+        fs.mkdirSync(path.join(cwd, '.vscode'));
+        fs.writeFileSync(
+            path.join(cwd, '.vscode/settings.json'),
+            '{\n    // keep this\n    "editor.formatOnSave": true,\n}\n'
+        );
+
+        await editorConfigSyncTask().run(
+            context(cwd, { fmt: { oxc: {}, vscode: true }, lint: { oxc: {}, vscode: true } })
+        );
+        const written = fs.readFileSync(path.join(cwd, '.vscode/settings.json'), 'utf-8');
+        expect(written).toContain('// keep this');
+        const settings = readJsoncFile<Record<string, unknown>>(
+            path.join(cwd, '.vscode/settings.json')
+        )!;
+        expect(settings['editor.formatOnSave']).toBe(true);
+        expect(settings['editor.defaultFormatter']).toBe('oxc.oxc-vscode');
+        expect(settings['editor.codeActionsOnSave']).toEqual({
             'source.fixAll.oxc': 'explicit',
         });
     });

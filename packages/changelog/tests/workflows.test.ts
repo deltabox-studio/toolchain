@@ -234,9 +234,90 @@ describe('workflow config', () => {
         expect(files['deploy.yml']).toContain('echo deploy');
     });
 
+    it('renders complete vendor workflows at their conventional paths', () => {
+        const files = renderWorkflows(
+            {},
+            {
+                ci: {
+                    provider: 'gitlab',
+                    workflow: {
+                        stages: ['test'],
+                        test: { stage: 'test', script: ['yarn test'] },
+                    },
+                },
+                release: {
+                    provider: 'azure',
+                    workflow: {
+                        trigger: ['main'],
+                        pool: { vmImage: 'ubuntu-latest' },
+                        steps: [{ script: 'yarn build' }],
+                    },
+                },
+            }
+        );
+        expect(files['.gitlab-ci.yml']).toContain('yarn test');
+        expect(files['azure-pipelines.yml']).toContain('vmImage: ubuntu-latest');
+        expect(files['azure-pipelines.yml']).toContain('yarn build');
+    });
+
+    it('renders a complete GitHub workflow as-is', () => {
+        const files = renderWorkflows(
+            {},
+            {
+                ci: {
+                    provider: 'github',
+                    workflow: {
+                        name: 'CI',
+                        on: ['push'],
+                        jobs: {
+                            ci: {
+                                'runs-on': 'ubuntu-latest',
+                                steps: [{ run: 'echo ok' }],
+                            },
+                        },
+                    },
+                },
+            }
+        );
+        expect(files['ci.yml']).toContain('name: CI');
+        expect(files['ci.yml']).toContain('echo ok');
+    });
+
+    it('resolves vendor workflow paths and filename/dir overrides', () => {
+        expect(workflowFilePath('ci', { provider: 'gitlab', workflow: {} })).toBe('.gitlab-ci.yml');
+        expect(workflowFilePath('ci', { provider: 'azure', workflow: { steps: [] } })).toBe(
+            'azure-pipelines.yml'
+        );
+        expect(
+            workflowFilePath('ci', {
+                provider: 'gitlab',
+                workflow: {},
+                filename: 'pipeline.yml',
+                dir: 'ci',
+            })
+        ).toBe('ci/pipeline.yml');
+    });
+
     it('rejects a custom workflow without triggers or jobs', () => {
         expect(() => renderCustomWorkflow('deploy', { tokens: {}, config: {} })).toThrow(
             'must define at least one trigger and one job'
         );
+    });
+});
+
+describe('workflow command fixes', () => {
+    it('uses the package-manager runner for commitlint and quotes the config path', () => {
+        const files = renderWorkflows(
+            { packageManager: 'npm', commitlintConfig: 'my config.mjs' },
+            { ci: true }
+        );
+        expect(files['ci.yml']).toContain('npx commitlint');
+        expect(files['ci.yml']).toContain('--config "my config.mjs"');
+    });
+
+    it('stages newly created workspace changelogs', () => {
+        const files = renderWorkflows({ packageManager: 'yarn' }, { changelog: true });
+        expect(files['changelog.yml']).toContain('git add -- "*package.json" "*CHANGELOG.md"');
+        expect(files['changelog.yml']).not.toContain('git add -u');
     });
 });

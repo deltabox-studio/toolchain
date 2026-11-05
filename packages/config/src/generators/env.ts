@@ -5,10 +5,10 @@
  */
 
 import fs from 'node:fs';
-import path from 'node:path';
 
 import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from '../collect.js';
 import type { ConfigSchema } from '../types.js';
+import { resolveGeneratedFile } from './output.js';
 
 export interface GenerateEnvTypesOptions {
     /** Output directory. When omitted, nothing is written. */
@@ -127,7 +127,7 @@ export function generateConfigEnv(
     if (typeof options.outputDir === 'string') {
         fs.mkdirSync(options.outputDir, { recursive: true });
         for (const [file, content] of Object.entries(contents)) {
-            fs.writeFileSync(path.join(options.outputDir, file), content, 'utf-8');
+            fs.writeFileSync(resolveGeneratedFile(options.outputDir, file), content, 'utf-8');
         }
     }
     return contents;
