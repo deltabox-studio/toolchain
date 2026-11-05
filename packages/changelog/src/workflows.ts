@@ -202,12 +202,12 @@ function setupSteps(tokens: Replacements): WorkflowStep[] {
     const setup: WorkflowStep[] = [
         {
             name: 'Checkout',
-            uses: 'actions/checkout@v4',
+            uses: 'actions/checkout@v5',
             with: { 'fetch-depth': 0, token: '${{ secrets.GITHUB_TOKEN }}' },
         },
         {
             name: 'Setup Node',
-            uses: 'actions/setup-node@v4',
+            uses: 'actions/setup-node@v5',
             with: { 'node-version': String(tokens.nodeVersion) },
         },
     ];
