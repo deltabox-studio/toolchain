@@ -5,23 +5,25 @@
 The base layer: the config model, logging, process/string/object utilities and
 the template engine.
 
-| Export                                                                        | Description                                                                              |
-| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `defineConfig(config)`                                                        | Identity helper for a typed `dbx.config.*` (object, promise, or sync/async callback).    |
-| `sectionEnabled(section)` / `sectionConfig(section)`                          | Opt-in-by-presence helpers for a config section.                                         |
-| `resolveTokens(config)`                                                       | Flatten a config into `{{ token }}` replacements.                                        |
-| `CONFIG_FILE_NAMES`                                                           | The config file names the loader probes, in priority order.                              |
-| `repoSlugFromUrl(url)`                                                        | Derive an `owner/name` slug from a repository URL.                                       |
-| `findOwnCliEntry(cwd?)` / `localToolchainVersion(cwd?)` / `TOOLCHAIN_PACKAGE` | Locate a project's own toolchain bin + pinned version (prefer them over a global `dbx`). |
-| `createLogger(options)` / `logger`                                            | The shared logger (see [Logging](/guide/api/logging)).                                   |
-| `WARNING_MAP` / `ERROR_MAP` / `warningMessage(id, values?)`                   | Central messages keyed by stable logger/suppression ids.                                 |
-| `spawnCross(cmd, args, options)` / `run(cmd, args, options)`                  | Cross-platform, shell-free spawning; `timeoutMs` kills the child tree.                   |
-| `killProcessTree(child)`                                                      | Kill a child process and its descendants (Windows `taskkill /t`).                        |
-| `readJsonFile` / `readJsonAt` / `toJson` / `writeJsonFile`                    | Small JSON file helpers.                                                                 |
-| `mergeJsonAt(cwd, relative, patch)`                                           | Deep-merge a patch over an existing JSON file.                                           |
-| `deepMerge` / `applyOverrides` / `isPlainObject` / `sort` / `mapValues`       | Object utilities (including layered typed overrides).                                    |
-| `applyReplacements` / `applyReplacementsDeep` / `createReplacer`              | The `{{ token }}` template engine (also `tokenPattern`, `extractTokens`).                |
-| `toYaml(value)`                                                               | A tiny YAML emitter for the GitHub Actions subset.                                       |
+| Export                                                                                     | Description                                                                                 |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `defineConfig(config)`                                                                     | Identity helper for a typed `dbx.config.*` (object, promise, or sync/async callback).       |
+| `sectionEnabled(section)` / `sectionConfig(section)`                                       | Opt-in-by-presence helpers for a config section.                                            |
+| `resolveTokens(config)`                                                                    | Flatten a config into `{{ token }}` replacements.                                           |
+| `CONFIG_FILE_NAMES`                                                                        | The config file names the loader probes, in priority order.                                 |
+| `repoSlugFromUrl(url)`                                                                     | Derive an `owner/name` slug from a repository URL.                                          |
+| `findOwnCliEntry(cwd?)` / `localToolchainVersion(cwd?)` / `TOOLCHAIN_PACKAGE`              | Locate a project's own toolchain bin + pinned version (prefer them over a global `dbx`).    |
+| `createLogger(options)` / `logger`                                                         | The shared logger (see [Logging](/guide/api/logging)).                                      |
+| `WARNING_MAP` / `ERROR_MAP` / `warningMessage(id, values?)`                                | Central messages keyed by stable logger/suppression ids.                                    |
+| `spawnCross(cmd, args, options)` / `run(cmd, args, options)`                               | Cross-platform, shell-free spawning; `timeoutMs` kills the child tree.                      |
+| `killProcessTree(child)`                                                                   | Kill a child process and its descendants (Windows `taskkill /t`).                           |
+| `readJsonFile` / `readJsonAt` / `toJson` / `writeJsonFile`                                 | Small JSON file helpers.                                                                    |
+| `mergeJsonAt(cwd, relative, patch)`                                                        | Deep-merge a patch over an existing JSON file.                                              |
+| `deepMerge` / `applyOverrides` / `isPlainObject` / `sort` / `mapValues`                    | Object utilities (including layered typed overrides).                                       |
+| `applyReplacements` / `applyReplacementsDeep` / `createReplacer`                           | The `{{ token }}` template engine (also `tokenPattern`, `extractTokens`).                   |
+| `DEFAULT_IGNORE_PATTERNS` / `DEFAULT_FMT_IGNORE_PATTERNS` / `DEFAULT_LINT_IGNORE_PATTERNS` | The shared build/cache ignores and the Oxfmt/Oxlint extensions.                             |
+| `resolveIgnorePatterns(cwd?, options?)` / `collectGitignorePatterns(cwd?)`                 | Defaults + `exclude` + `.gitignore` resolution, and the matching helpers (`isIgnoredPath`). |
+| `toYaml(value)`                                                                            | A tiny YAML emitter for the GitHub Actions subset.                                          |
 
 The config **types** and **schemas** also live here: `ToolchainConfig`, `DbxConfig`,
 `SyncTask`, `SyncContext`, `ManagedFile`, `ToolchainCommand`, `ToolchainOption`,
@@ -52,6 +54,7 @@ Loads `dbx.config.*`, builds the project graph and runs the sync tasks.
 | `vscodeSyncTask(options?)`                                    | The VS Code settings/extensions sync task.                                          |
 | `resolveProjectType(cwd, config?)` / `detectProjectType(cwd)` | The project kind (`monorepo-root` / `monorepo-workspace` / `project`).              |
 | `readManifest(cwd)` / `writeManifest(cwd, files)`             | The `.dbx/toolchain/manifest.json` helpers.                                         |
+| `resolveFmtCustomGroups(input?)`                              | Build the `sortImports` workspace group from every dbx project (graph-based).       |
 
 ## `@deltabox/toolchain/config`
 
@@ -92,6 +95,7 @@ sync task (see the [Providers](/guide/providers) guide).
 | `detectViteSpecifier(cwd)`                                         | Which package (`vite` / `vite-plus`) the project has, for the shim import.                          |
 | `renderViteConfig(specifier?)` / `viteConfigObject(config?)`       | The managed `vite.config.ts` shim (per specifier) + the section minus `config`.                     |
 | `viteSyncTask()`                                                   | The `vite` sync task that writes the shim.                                                          |
+| `resolveFmtCustomGroups(input?)`                                   | Re-exported from core: the `sortImports` workspace group resolver.                                  |
 
 ## `@deltabox/toolchain/cli`
 

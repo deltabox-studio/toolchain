@@ -60,7 +60,13 @@ Everything else under `vite` is Vite+ config (plugins, `test`, `lint`, `fmt`,
 `run.tasks`, ...). `vite.fmt` / `vite.lint` override `toolchain.fmt.oxc` /
 `toolchain.lint.oxc` (deep merge). `fmt: true` / `lint: true` use the shared
 `DEFAULT_FMT_RULES` / `DEFAULT_LINT_RULES`; an options object is merged over
-them. Set `vite: { config: false }` to leave a hand-written
+them. Their ignore lists are exported as `DEFAULT_FMT_IGNORE_PATTERNS` /
+`DEFAULT_LINT_IGNORE_PATTERNS` (both layered over `DEFAULT_IGNORE_PATTERNS`)
+from `@deltabox/toolchain` and `@deltabox/toolchain/shared`, so you can extend
+them instead of repeating the defaults. Import sorting is part of those defaults:
+`sortImports` gets a `workspace` custom group resolved from every dbx project
+(see `resolveFmtCustomGroups`), so workspace packages do not need manual groups.
+Set `vite: { config: false }` to leave a hand-written
 `vite.config.ts` alone (the section is still read for provider colouring and the
 `dbx` provider passthrough). `config: 'config/vite.custom.ts'` writes the shim
 there instead (relative to the project, or an absolute path inside it).

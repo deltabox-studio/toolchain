@@ -103,7 +103,9 @@ Add the shim to `vite.fmt.ignorePatterns` so Oxfmt leaves the generated file
 alone - without it `vp fmt` would rewrite the shim and `dbx sync --check` would
 report drift. In a monorepo put `**/vite.config.ts` on the root config: workspace
 `fmt` settings are inherited, but a workspace's `ignorePatterns` array replaces
-the root's list. `dbx migrate --from vite` adds it for you.
+the root's list. The default fmt ignores already include `**/vite.config.ts`;
+`dbx migrate --from vite` adds `/vite.config.ts` to `vite.fmt` only when the
+folded config already owns `fmt`.
 
 ## Format and lint defaults
 
@@ -112,8 +114,50 @@ defaults (`DEFAULT_FMT_RULES` / `DEFAULT_LINT_RULES`, exported from
 `@deltabox/toolchain`). An options object is merged over those defaults, so
 `fmt: { semi: false }` keeps the shared ignores and print width and only changes
 `semi`. Shared ignore lists live in `DEFAULT_FMT_IGNORE_PATTERNS` /
-`DEFAULT_LINT_IGNORE_PATTERNS`. `sortImports` is never included by default:
-import ordering is project-specific, so opt in with your own groups.
+`DEFAULT_LINT_IGNORE_PATTERNS`, both layered over `DEFAULT_IGNORE_PATTERNS`.
+All three are exported (readonly) from `@deltabox/toolchain` and
+`@deltabox/toolchain/shared`, so you can compose your own list instead of
+repeating the defaults:
+
+```ts [dbx.config.ts]
+import { DEFAULT_FMT_IGNORE_PATTERNS, defineConfig } from '@deltabox/toolchain';
+
+export default defineConfig({
+    toolchain: {
+        vite: {
+            fmt: {
+                ignorePatterns: [...DEFAULT_FMT_IGNORE_PATTERNS, '**/fixtures/**'],
+            },
+        },
+    },
+});
+```
+
+Import sorting is enabled by default too. `sortImports` uses the usual groups
+(`builtin`, `external`, `internal`/`subpath`, relatives, styles) plus a
+`workspace` group whose patterns come from every `dbx.config.*` project in the
+repository, so consumer packages sort together without a hand-written
+`customGroups` entry. Override `sortImports: false` to disable it, or set your
+own groups — the resolved workspace group is still appended (and listed in
+`groups`) unless you disable sorting.
+
+To reuse the workspace group in your own `sortImports`, import the resolver:
+
+```ts
+import { resolveFmtCustomGroups } from '@deltabox/toolchain';
+
+const customGroups = await resolveFmtCustomGroups();
+// [{ groupName: 'workspace', elementNamePattern: ['@acme/**', 'app', 'app/**', ...] }]
+```
+
+`resolveFmtCustomGroups()` reads the project graph, so it is safe to call from
+inside `dbx.config.*`. Pass `{ config: 'path/to/dbx.config.ts' }` to resolve a
+specific config instead of the discovered one, or an inline `project` to add a
+project the graph does not know about.
+
+In VS Code, set `deltabox.toolchain.enableFormatImportGroupDefaults` to `false`
+(user or workspace settings) to stop the extension from adding the workspace
+group.
 
 ## Oxc config files
 
@@ -128,6 +172,6 @@ To adopt an existing hand-written `vite.config.ts`, fold it in with the
 migration (see [Migrations](/guide/migrations/#vite-config)):
 
 ```sh
-dbx migrate --from vite --write   # folds the object into toolchain.vite (+ the fmt ignore)
+dbx migrate --from vite --write   # folds the object into toolchain.vite (routes fmt/lint)
 dbx sync                          # writes the managed vite.config.ts shim
 ```
