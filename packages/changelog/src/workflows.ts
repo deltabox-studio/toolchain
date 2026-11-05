@@ -208,7 +208,12 @@ function setupSteps(tokens: Replacements): WorkflowStep[] {
         {
             name: 'Setup Node',
             uses: 'actions/setup-node@v5',
-            with: { 'node-version': String(tokens.nodeVersion) },
+            with: {
+                'node-version': String(tokens.nodeVersion),
+                // v5 auto-caches from `packageManager` before Corepack is
+                // enabled, so `yarn cache dir` fails on a Yarn 1 runner.
+                'package-manager-cache': false,
+            },
         },
     ];
 

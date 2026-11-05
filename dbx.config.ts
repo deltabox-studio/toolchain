@@ -100,6 +100,8 @@ export default defineConfig({
                                 with: {
                                     'node-version': '{{nodeVersion}}',
                                     'registry-url': 'https://registry.npmjs.org',
+                                    // v5 auto-caches before Corepack is enabled.
+                                    'package-manager-cache': false,
                                 },
                             },
                             {
@@ -244,7 +246,11 @@ export default defineConfig({
                             {
                                 name: 'Setup Node',
                                 uses: 'actions/setup-node@v5',
-                                with: { 'node-version': '{{nodeVersion}}' },
+                                with: {
+                                    'node-version': '{{nodeVersion}}',
+                                    // v5 auto-caches before Corepack is enabled.
+                                    'package-manager-cache': false,
+                                },
                             },
                             {
                                 name: 'Enable Corepack',
