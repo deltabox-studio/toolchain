@@ -37,22 +37,23 @@ See all the [commands](#commands) below.
 
 ## Commands
 
-| Command                      | What it does                                                     |
-| ---------------------------- | ---------------------------------------------------------------- |
-| Sync all / active / selected | Run `dbx sync` (`--recursive` / per project).                    |
-| Check sync                   | `sync --check` across the workspace.                             |
-| Scaffold project             | Single project, monorepo root, workspace, or **From template…**. |
-| Add template…                | `template:init --add` on a folder you pick (any kind).           |
-| Remove template…             | `template:list --registry` then `template:remove`.               |
-| Generate configs             | `project:config` for projects missing a config.                  |
-| Run workflow                 | Trigger workflows with their vendor CLI (`gh`/`glab`/`az`).      |
-| Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.   |
-| Create Vite+ project…        | `vp create` in a terminal.                                       |
-| Add provider...              | Register a custom provider in `.dbx/toolchain/providers.json`.   |
-| Run command...               | Run a provider command (`dbx <command>`) in a terminal.          |
-| Create from template...      | `dbx create --template <id>` (terminal for online templates).    |
-| Reset tooling                | Remove generated files / manifest / config.                      |
-| Toggle auto-sync             | Enable/disable sync-on-change.                                   |
+| Command                      | What it does                                                               |
+| ---------------------------- | -------------------------------------------------------------------------- |
+| Sync all / active / selected | Run `dbx sync` (`--recursive` / per project).                              |
+| Check sync                   | `sync --check` across the workspace.                                       |
+| Scaffold project             | Single project, monorepo root, workspace, or **From template…**.           |
+| Add template…                | `template:init --add` on a folder you pick (any kind).                     |
+| Remove template…             | `template:list --registry` then `template:remove`.                         |
+| Generate configs             | `project:config` for missing configs or a graph-only refresh; picks TS/JS. |
+| Migrate tooling…             | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain.     |
+| Run workflow                 | Trigger workflows with their vendor CLI (`gh`/`glab`/`az`).                |
+| Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.             |
+| Create Vite+ project…        | `vp create` in a terminal.                                                 |
+| Add provider...              | Register a custom provider in `.dbx/toolchain/providers.json`.             |
+| Run command...               | Run a provider command (`dbx <command>`) in a terminal.                    |
+| Create from template...      | `dbx create --template <id>` (terminal for online templates).              |
+| Reset tooling                | Remove generated files / manifest / config.                                |
+| Toggle auto-sync             | Enable/disable sync-on-change.                                             |
 
 Interactive commands (the dev server, `vp create`, online scaffolding) run in an
 integrated terminal at the project root; everything else runs in the output
@@ -64,7 +65,7 @@ Every project card (and every project in the **Projects** tree) exposes the same
 actions, scoped to that project:
 
 - **Sync** / **Check sync** — regenerate / verify the project's managed files.
-- **Generate config** — write a `dbx.config.ts`.
+- **Generate config** — write a `dbx.config.*` (TS/JS), or refresh only the project graph.
 - **Run workflow…** — trigger one of the project's generated workflows; the
   picker shows its provider (`github`, `gitlab` or `azure`).
 - **Run Vite+ command…** — run a `vp` command in that project.
@@ -102,12 +103,13 @@ Generated outputs are never watched. The scheduler debounces bursts, allows one 
 
 ## Settings
 
-| Setting                       | Default         | Description                                                    |
-| ----------------------------- | --------------- | -------------------------------------------------------------- |
-| `deltabox.toolchain.enabled`  | `true`          | Auto sync on watched changes.                                  |
-| `deltabox.toolchain.debounce` | `300`           | Debounce (ms) before a sync.                                   |
-| `deltabox.toolchain.command`  | `sync`          | The command to run on change.                                  |
-| `deltabox.toolchain.watch`    | `[]` (resolved) | Inputs that trigger a sync (empty = resolved from the config). |
+| Setting                                              | Default         | Description                                                         |
+| ---------------------------------------------------- | --------------- | ------------------------------------------------------------------- |
+| `deltabox.toolchain.enabled`                         | `true`          | Auto sync on watched changes.                                       |
+| `deltabox.toolchain.debounce`                        | `300`           | Debounce (ms) before a sync.                                        |
+| `deltabox.toolchain.command`                         | `sync`          | The command to run on change.                                       |
+| `deltabox.toolchain.enableFormatImportGroupDefaults` | `true`          | Add the resolved workspace `sortImports` custom group when syncing. |
+| `deltabox.toolchain.watch`                           | `[]` (resolved) | Inputs that trigger a sync (empty = resolved from the config).      |
 
 ## Command palette
 
@@ -126,11 +128,15 @@ Search for `deltabox:` to find:
 - **Remove template source...**
 - **Refresh templates**
 - **Generate configs…**
+- **Migrate tooling…**
 - **Run workflow…**
 - **Run Vite+ command…**
+- **Run command...**
 - **Create Vite+ project…**
+- **Choose dbx source…**
 - **Reset tooling…**
 - **Refresh projects**
+- **Refresh tracked files**
 - **Toggle auto-sync**
 
 ## Development

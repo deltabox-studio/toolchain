@@ -90,8 +90,14 @@
                 "icon": "$(new-file)"
             },
             {
+                "command": "deltabox.toolchain.migrate",
+                "title": "Migrate tooling…",
+                "category": "deltabox",
+                "icon": "$(arrow-swap)"
+            },
+            {
                 "command": "deltabox.toolchain.generateConfig",
-                "title": "Generate config",
+                "title": "Generate config…",
                 "category": "deltabox",
                 "icon": "$(new-file)"
             },
@@ -484,10 +490,6 @@
                     "when": "false"
                 },
                 {
-                    "command": "deltabox.toolchain.generateConfig",
-                    "when": "false"
-                },
-                {
                     "command": "deltabox.toolchain.goToProject",
                     "when": "false"
                 },
@@ -576,6 +578,11 @@
                     "type": "string",
                     "default": "sync",
                     "description": "The dbx command to run on change."
+                },
+                "deltabox.toolchain.enableFormatImportGroupDefaults": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Add the resolved workspace custom group to Oxfmt `sortImports` when syncing or generating configs. Set to false to manage import groups yourself."
                 },
                 "deltabox.toolchain.version": {
                     "type": "string",

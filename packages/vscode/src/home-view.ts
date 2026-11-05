@@ -39,10 +39,17 @@ export type HomeAction =
     | { type: 'refresh' }
     | { type: 'generateConfigs' }
     | { type: 'runWorkflow' }
+    | { type: 'migrate' }
     | { type: 'resetToolchain' }
     | { type: 'toggle' }
     | { type: 'runVite' }
+    | { type: 'runProviderCommand' }
+    | { type: 'createVite' }
+    | { type: 'chooseDbxSource' }
+    | { type: 'refreshFiles' }
     | { type: 'addProvider' }
+    | { type: 'refreshProviders' }
+    | { type: 'refreshTemplates' }
     | { type: 'registryNew' }
     | { type: 'registryRemove' }
     | { type: 'selectVersion' }
@@ -80,10 +87,17 @@ const SIMPLE_ACTIONS = new Set<HomeAction['type']>([
     'refresh',
     'generateConfigs',
     'runWorkflow',
+    'migrate',
     'resetToolchain',
     'toggle',
     'runVite',
+    'runProviderCommand',
+    'createVite',
+    'chooseDbxSource',
+    'refreshFiles',
     'addProvider',
+    'refreshProviders',
+    'refreshTemplates',
     'registryNew',
     'registryRemove',
     'selectVersion',
@@ -295,16 +309,23 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
       <button class="secondary" data-action="syncCheck">Check sync</button>
       <button class="secondary" data-action="scaffold">Scaffold project\u2026</button>
       <button class="secondary" data-action="generateConfigs">Generate configs\u2026</button>
+      <button class="secondary" data-action="migrate">Migrate tooling\u2026</button>
       <button class="secondary" data-action="runWorkflow">Run workflow\u2026</button>
       <button class="secondary" data-action="runVite">Run Vite+ command\u2026</button>
+      <button class="secondary" data-action="runProviderCommand">Run provider command\u2026</button>
+      <button class="secondary" data-action="createVite">Create Vite+ project\u2026</button>
       <button class="secondary" data-action="addProvider">Add provider\u2026</button>
+      <button class="secondary" data-action="refreshProviders">Refresh providers</button>
+      <button class="secondary" data-action="refreshTemplates">Refresh templates</button>
       <button class="secondary" data-action="registryNew">New registry\u2026</button>
       <button class="secondary" data-action="registryRemove">Remove registry\u2026</button>
       <button class="secondary" data-action="selectVersion">Select dbx version\u2026</button>
+      <button class="secondary" data-action="chooseDbxSource">Choose dbx source\u2026</button>
       <button class="secondary" data-action="templateAdd">Add template\u2026</button>
       <button class="secondary" data-action="templateRemove">Remove template\u2026</button>
       <button class="secondary" data-action="resetToolchain">Reset tooling\u2026</button>
       <button class="secondary" data-action="refresh">Refresh projects</button>
+      <button class="secondary" data-action="refreshFiles">Refresh tracked files</button>
       <button class="secondary" data-action="toggle">Toggle auto-sync</button>
     </div>
   </section>
