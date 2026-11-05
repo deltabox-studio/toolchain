@@ -1,8 +1,35 @@
 # Changelog
 
-## 2.3.0 (November 2026)
+## 2.3.1 (November 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Vscode
+- Validate webview messages and use a secure nonce ([#94bed68](https://github.com/deltabox-studio/toolchain/commit/94bed68) by [T0chi](https://github.com/T0chi))
+  - The Home webview handler trusted the incoming shape and acted on arbitrary project paths, and the CSP nonce came from Math.random. Validate every message, only act on projects the dashboard listed, and generate the nonce from crypto.randomBytes.
+#### Vite
+- Use the Oxlint rule name react/exhaustive-deps ([#ea02ef7](https://github.com/deltabox-studio/toolchain/commit/ea02ef7) by [T0chi](https://github.com/T0chi))
+  - The dogfood config used the legacy ESLint name, so the generated Oxc configs carried both spellings. Rename it to the name in the vendored Oxlint schema and add a guard that every default rule exists there.
+#### Changelog
+- Keep hash links when git history is incomplete ([#182b68a](https://github.com/deltabox-studio/toolchain/commit/182b68a) by [T0chi](https://github.com/T0chi))
+  - A shallow clone or no-git checkout cannot resolve every referenced commit, so valid hashes were left unlinked. Fall back to treating letter-containing refs as commits when history is incomplete, and mock the numeric-hash fixture so the tests do not depend on the checkout's history.
+#### Config
+- Contain generator output paths and render object metadata ([#fe94053](https://github.com/deltabox-studio/toolchain/commit/fe94053) by [T0chi](https://github.com/T0chi))
+  - Scope names and file options were used as paths directly, so a \../\ value could write outside the output directory. Resolve every generated file through a containment check. Also render an object node's own description/annotations before its child fields in per-scope markdown.
+- Derive the CLI reference from the registered commands ([#95dc39f](https://github.com/deltabox-studio/toolchain/commit/95dc39f) by [T0chi](https://github.com/T0chi))
+  - The docs generator kept its own command list, so a new builtin could be missing from the generated reference. Use builtinCommands\ (the CLI's source of truth) and mark registry-dependent provider passthroughs as hidden.
+#### Core
+- Preserve .vscode settings comments when adding keys ([#9b4a105](https://github.com/deltabox-studio/toolchain/commit/9b4a105) by [T0chi](https://github.com/T0chi))
+  - Merging VS Code settings parsed and reserialized the file, dropping its JSONC comments. Insert missing keys in place (preserving layout) and fall back to a full rewrite only when an existing value or array must change.
+#### Ci
+- Check and regenerate nested workspace configs recursively ([#711c7b4](https://github.com/deltabox-studio/toolchain/commit/711c7b4) by [T0chi](https://github.com/T0chi))
+  - The generated schema types are formatted at printWidth 300 and excluded from the formatter, but the ignore patterns were repo-root-relative. Per-workspace vp fmt resolves them from each package directory, so yarn format reformatted biome-config.ts and failed the artifact check. Use **/ globs and make the generated CI/sync workflows run dbx sync --check --recursive so stale workspace configs are caught and regenerated.
+
+<!-- release:end -->
+
+
+## 2.3.0 (November 2026)
 
 ### New features
 #### Vscode
@@ -76,9 +103,6 @@
 - `@dprint/types` `^0.4.0`
 - `eslint` `^10.14.0`
 - `prettier` `^3.6.2`
-
-<!-- release:end -->
-
 
 ## 2.2.0 (November 2026)
 
