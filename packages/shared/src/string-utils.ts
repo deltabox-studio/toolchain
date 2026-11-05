@@ -215,15 +215,64 @@ export function stripEscapeArtifacts(text: string): string {
 
 /** Whether text contains shell-escape artifacts that {@link sanitizeText} repairs. */
 export function hasEscapeArtifacts(text: string): boolean {
-    return /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]|\\[\u0000-\u001f]/.test(text);
+    return (
+        /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]|\\[\u0000-\u001f]/.test(text) ||
+        new RegExp(BACKTICK_PAIR.source).test(text) ||
+        new RegExp(BACKTICK_TAIL.source).test(text)
+    );
+}
+
+/**
+ * A paired `\code\` left by a shell/LLM that turned Markdown backticks into
+ * backslashes. The boundaries require whitespace/opening punctuation and the
+ * content cannot contain a backslash or `:`, so Windows paths such as
+ * `C:\Users\me\file` are left alone.
+ */
+const BACKTICK_PAIR = /(^|[\s([{>"'])\\([^\s\\](?:[^\\\n:]*[^\s\\])?)\\(?=[\s)\]}>.,;:!?"'`]|$)/g;
+
+/**
+ * A lone trailing `\` after an identifier (`baseTsdownConfig\`), the shape left
+ * when the opening backtick was consumed. Only identifier-like, code-ish tokens
+ * are wrapped; ordinary prose and path segments are left alone.
+ */
+const BACKTICK_TAIL =
+    /(^|[\s([{>"'])([A-Za-z_$][\w$]*(?:[./@-][\w$./@-]*)*)\\(?=[\s)\]}>.,;:!?"'`]|$)/g;
+
+/** Whether a token inside `\...\` looks like inline code rather than prose. */
+function looksLikeCode(content: string): boolean {
+    return /[./@_$-]/.test(content) || !/[A-Z]/.test(content) || content === content.toUpperCase();
+}
+
+/** Whether a lone trailing token looks like an identifier rather than prose. */
+function looksLikeIdentifierCode(token: string): boolean {
+    return /[a-z][A-Z]|[./@_$-]/.test(token) || token === token.toUpperCase();
+}
+
+/**
+ * Repair the common backtick-to-backslash artifacts left by a shell. This is a
+ * heuristic: it only rewrites paired `\code\` spans and lone trailing `\` after
+ * an identifier, and never touches a backslash that is part of a path or regex.
+ */
+export function repairBacktickArtifacts(text: string): string {
+    return text
+        .replace(BACKTICK_PAIR, (match, pre: string, content: string) =>
+            looksLikeCode(content) ? `${pre}\`${content}\`` : match
+        )
+        .replace(BACKTICK_TAIL, (match, pre: string, token: string) =>
+            looksLikeIdentifierCode(token) ? `${pre}\`${token}\`` : match
+        );
 }
 
 /**
  * Sanitize text that may have passed through a shell (commit bodies, generated
  * descriptions) before it is rendered to markdown: restore shell-escape
- * artifacts, strip any remaining bare control characters, then normalize CRLF
- * to LF. Conservative by design — it never removes an ordinary backslash.
+ * artifacts, repair backtick-to-backslash artifacts, strip any remaining bare
+ * control characters, then normalize CRLF to LF. Conservative by design — it
+ * never removes an ordinary backslash.
  */
 export function sanitizeText(text: string): string {
-    return stripControlChars(stripEscapeArtifacts(text)).replace(/\r\n?/g, '\n');
+    return stripControlChars(repairBacktickArtifacts(stripEscapeArtifacts(text))).replace(
+        /\r\n?/g,
+        '\n'
+    );
 }

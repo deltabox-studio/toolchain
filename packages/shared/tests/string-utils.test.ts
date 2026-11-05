@@ -36,6 +36,33 @@ describe('sanitizeText', () => {
         expect(sanitizeText('match \\d+ or \\w')).toBe('match \\d+ or \\w');
     });
 
+    it('repairs backtick-to-backslash artifacts', () => {
+        expect(sanitizeText('runs \\yarn cache dir\\ before')).toBe('runs `yarn cache dir` before');
+        expect(sanitizeText('the private \\@deltabox/toolchain-tsdown\\ dist')).toBe(
+            'the private `@deltabox/toolchain-tsdown` dist'
+        );
+        expect(sanitizeText('a \\../\\ value')).toBe('a `../` value');
+        expect(sanitizeText('Import baseTsdownConfig\\ from')).toBe(
+            'Import `baseTsdownConfig` from'
+        );
+        expect(sanitizeText('Use builtinCommands\\ (the CLI')).toBe(
+            'Use `builtinCommands` (the CLI'
+        );
+        expect(sanitizeText('Import \\\u0008aseTsdownConfig\\ from')).toBe(
+            'Import `baseTsdownConfig` from'
+        );
+        expect(sanitizeText('Use \\\u0008uiltinCommands\\ (the CLI')).toBe(
+            'Use `builtinCommands` (the CLI'
+        );
+    });
+
+    it('does not wrap prose or Windows paths in backticks', () => {
+        expect(sanitizeText('a path C:\\Users\\me\\file.txt')).toBe(
+            'a path C:\\Users\\me\\file.txt'
+        );
+        expect(sanitizeText('a \\Program Files\\ path')).toBe('a \\Program Files\\ path');
+    });
+
     it('normalizes CRLF and lone CR to LF', () => {
         expect(sanitizeText('a\r\nb\rc')).toBe('a\nb\nc');
     });

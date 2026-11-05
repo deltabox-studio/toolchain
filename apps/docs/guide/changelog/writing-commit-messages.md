@@ -18,8 +18,10 @@ The result is invisible control characters, stray `\` and dropped letters.
 `sanitizeText` maps the common control characters back to the letter they
 replaced (`BEL`→`a`, `BS`→`b`, `FF`→`f`, `VT`→`v`, `TAB`→`t`, `LF`→`n`,
 `CR`→`r`, `ESC`→`e`, `NUL`→`0`) and drops the stray `\`, so words like `any`,
-`false` and `bin` are restored. A character the shell consumed without leaving a
-trace still cannot be recovered.
+`false` and `bin` are restored. It also repairs the common backtick-to-backslash
+artifacts (a paired `\yarn cache dir\` or a lone trailing `baseTsdownConfig\`)
+back to inline code, while leaving Windows paths and regexes alone. A character
+the shell consumed without leaving a trace still cannot be recovered.
 
 ## Authoring safely
 
