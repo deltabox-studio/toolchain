@@ -49,6 +49,8 @@ export interface ToolchainCommandContext {
     tokens: Replacements;
     /** The config file that was loaded, if any. */
     configPath?: string;
+    /** The inherited ancestor config file, when this project has no config of its own. */
+    parentPath?: string;
     /** Whether config discovery was disabled (`dbx --no-config`). */
     noConfig?: boolean;
     /**

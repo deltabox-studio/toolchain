@@ -120,6 +120,7 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                     tokens: loaded.tokens,
                     syncTasks: defaultSyncTasks(),
                     ...(loaded.path ? { configPath: loaded.path } : {}),
+                    ...(loaded.parentPath ? { parentPath: loaded.parentPath } : {}),
                     ...(selection.noConfig ? { noConfig: true } : {}),
                     ...(loaded.error ? { configError: loaded.error } : {}),
                 };

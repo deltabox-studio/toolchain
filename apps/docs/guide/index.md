@@ -84,7 +84,7 @@ dbx create --template project --name my-app --out ./my-app
 ```sh
 dbx sync              # write managed files
 dbx sync --check      # CI: fail if files are out of date
-dbx sync --recursive  # every discovered project, in dependency order
+dbx sync --recursive  # every project with its own dbx.config.*, in dependency order
 dbx sync --only tsconfig  # only refresh tsconfig aliases/references
 dbx watch             # re-sync on change
 ```

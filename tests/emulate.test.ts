@@ -972,6 +972,48 @@ describe('emulate: CLI + templates', () => {
     );
 
     it(
+        'syncs a configless workspace with the inherited config',
+        async () => {
+            const ws = scratch('configless-sync');
+            const root = path.join(ws, 'root');
+            writeJson(path.join(root, 'package.json'), {
+                name: '@acme/root',
+                version: '0.1.0',
+                private: true,
+                type: 'module',
+                workspaces: ['packages/*'],
+            });
+            writeJson(path.join(root, 'dbx.config.json'), {
+                toolchain: {
+                    project: {
+                        type: 'monorepo-root',
+                        name: 'root',
+                        scope: '@acme',
+                        author: 'Acme',
+                    },
+                },
+            });
+            const child = path.join(root, 'packages/a');
+            writeJson(path.join(child, 'package.json'), {
+                name: '@acme/a',
+                version: '0.1.0',
+                type: 'module',
+            });
+            // No child config: `dbx sync` must use the inherited root config.
+            const sync = await dbx(child, ['sync']);
+            expect(sync.code, sync.stderr).toBe(0);
+            const childPkg = readJson<{ name: string; author?: string }>(
+                path.join(child, 'package.json')
+            );
+            expect(childPkg.name).toBe('@acme/a');
+            expect(childPkg.author).toBe('Acme');
+            const check = await dbx(child, ['sync', '--check']);
+            expect(check.code, check.stderr).toBe(0);
+        },
+        TIMEOUT
+    );
+
+    it(
         'accepts `template:info --json`',
         async () => {
             const ws = scratch('template-info');

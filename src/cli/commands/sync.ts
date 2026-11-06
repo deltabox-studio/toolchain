@@ -24,7 +24,8 @@ export function syncCommand(): ToolchainCommand {
             { flags: '--watch', description: 'Keep running and re-sync on change.' },
             {
                 flags: '--recursive',
-                description: 'Sync every discovered dbx project in dependency order.',
+                description:
+                    'Sync every project that has its own dbx.config.* in dependency order.',
             },
             {
                 flags: '--force',
@@ -88,7 +89,7 @@ export function syncCommand(): ToolchainCommand {
                 return;
             }
 
-            if (!context.configPath && !opts.force && !context.noConfig) {
+            if (!context.configPath && !context.parentPath && !opts.force && !context.noConfig) {
                 logger.warn(
                     'no dbx.config.* found here; nothing to sync (use --force to run anyway).'
                 );

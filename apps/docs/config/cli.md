@@ -88,7 +88,7 @@ Regenerate every managed file from dbx.config.*.
 - `-q, --quiet` — Only log errors.
 - `--check` — Do not write; fail if files are out of date.
 - `--watch` — Keep running and re-sync on change.
-- `--recursive` — Sync every discovered dbx project in dependency order.
+- `--recursive` — Sync every project that has its own dbx.config.* in dependency order.
 - `--force` — Run even when no dbx.config.* is present.
 - `--only ‹tasks›` — Only run the named sync task(s), comma-separated (eg. `tsconfig`).
 - `--json` — Print the sync result (including removed files) as JSON.
