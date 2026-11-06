@@ -1,22 +1,24 @@
-import { biomeSyncTask, biomeVscodeSettings } from '@deltabox/toolchain-biome';
+import { biomeSyncTask, biomeVscodeSettings } from '@deltabox/toolchain/biome';
 import {
     changelogSyncTask,
     conventionalCommitsVscodeExtensions,
     conventionalCommitsVscodeSettings,
-} from '@deltabox/toolchain-changelog';
-import { editorConfigSyncTask, toolingConfigTask, vscodeSyncTask } from '@deltabox/toolchain-core';
-import { catalogsSyncTask, projectSyncTask } from '@deltabox/toolchain-project';
+} from '@deltabox/toolchain/changelog';
+import { editorConfigSyncTask, toolingConfigTask, vscodeSyncTask } from '@deltabox/toolchain/core';
+import { catalogsSyncTask, projectSyncTask } from '@deltabox/toolchain/project';
 import {
     changelogSectionEnabled,
     resolveChangelogConfig,
     type SyncTask,
     sectionConfig,
     sectionEnabled,
-} from '@deltabox/toolchain-shared';
-import { tsconfigSyncTask } from '@deltabox/toolchain-tsconfig';
-import { viteSyncTask } from '@deltabox/toolchain-vite';
+} from '@deltabox/toolchain/shared';
+import { tsconfigSyncTask } from '@deltabox/toolchain/tsconfig';
+import { viteSyncTask } from '@deltabox/toolchain/vite';
 
 import { toolingDefaultsTask } from './tooling.js';
+
+export { selectSyncTasks } from '@deltabox/toolchain/core';
 
 /**
  * The default sync tasks run by `dbx sync` / `dbx watch`:

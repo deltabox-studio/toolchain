@@ -6,8 +6,8 @@ import {
     runSync,
     runWatch,
     writeProjectGraph,
-} from '@deltabox/toolchain-core';
-import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/core';
+import { logger, type ToolchainCommand } from '@deltabox/toolchain/shared';
 
 import { defaultSyncTasks } from '../../sync.js';
 import { getConfigSelection } from '../config-selection.js';
@@ -31,6 +31,10 @@ export function syncCommand(): ToolchainCommand {
                 description: 'Run even when no dbx.config.* is present.',
             },
             {
+                flags: '--only <tasks>',
+                description: 'Only run the named sync task(s), comma-separated (eg. `tsconfig`).',
+            },
+            {
                 flags: '--json',
                 description: 'Print the sync result (including removed files) as JSON.',
             },
@@ -39,6 +43,13 @@ export function syncCommand(): ToolchainCommand {
             const json = Boolean(opts.json);
             const quiet = Boolean(opts.quiet) || json;
             const check = Boolean(opts.check);
+            const only =
+                typeof opts.only === 'string'
+                    ? opts.only
+                          .split(',')
+                          .map(name => name.trim())
+                          .filter(Boolean)
+                    : undefined;
 
             if (context.configError) {
                 logger.error(context.configError);
@@ -61,6 +72,7 @@ export function syncCommand(): ToolchainCommand {
                     }
                     const result = await runSync({
                         tasks: defaultSyncTasks(),
+                        only,
                         cwd: dir,
                         projectType: loaded.projectType,
                         config: loaded.config,
@@ -84,11 +96,11 @@ export function syncCommand(): ToolchainCommand {
             }
 
             if (opts.watch) {
-                await runWatch({ ...watchOptions(context), quiet });
+                await runWatch({ ...watchOptions(context), only, quiet });
                 return;
             }
 
-            const result = await runSync({ ...watchOptions(context), check, quiet });
+            const result = await runSync({ ...watchOptions(context), only, check, quiet });
             if (check && !result.upToDate) process.exitCode = 1;
 
             // Keep the project graph fresh for the IDE/other tools (`--check`

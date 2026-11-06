@@ -44,8 +44,9 @@ Loads `dbx.config.*`, builds the project graph and runs the sync tasks.
 | ------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `loadToolchainConfig(cwd?)`                                   | Find + load the config, resolve tokens and the project type.                        |
 | `findConfigFile(cwd?)`                                        | The config file path, if any.                                                       |
-| `runSync(options)`                                            | Run the given `SyncTask[]` and return the summary.                                  |
-| `runWatch(options)`                                           | Sync once, then watch inputs and re-sync.                                           |
+| `runSync(options)`                                            | Run the given `SyncTask[]` (or `only` a named subset) and return the summary.       |
+| `runWatch(options)`                                           | Sync once, then watch inputs and re-sync (honours `only`).                          |
+| `selectSyncTasks(tasks, only)`                                | Select tasks by name; throws on unknown names.                                      |
 | `buildProjectGraph(root, options?)`                           | Discover workspace packages and their dependencies.                                 |
 | `orderProjects(nodes)` / `detectPackageManager(root)`         | Dependency ordering and package-manager detection.                                  |
 | `writeProjectGraph` / `readProjectGraph`                      | Persist/read `.dbx/toolchain/projects.json`.                                        |
@@ -55,6 +56,24 @@ Loads `dbx.config.*`, builds the project graph and runs the sync tasks.
 | `resolveProjectType(cwd, config?)` / `detectProjectType(cwd)` | The project kind (`monorepo-root` / `monorepo-workspace` / `project`).              |
 | `readManifest(cwd)` / `writeManifest(cwd, files)`             | The `.dbx/toolchain/manifest.json` helpers.                                         |
 | `resolveFmtCustomGroups(input?)`                              | Build the `sortImports` workspace group from every dbx project (graph-based).       |
+
+```ts
+import { defaultSyncTasks, runSync, selectSyncTasks } from '@deltabox/toolchain';
+
+await runSync({
+    tasks: defaultSyncTasks(),
+    only: ['tsconfig'],
+    cwd,
+    config,
+    tokens,
+});
+
+// Or select explicitly:
+const tasks = selectSyncTasks(defaultSyncTasks(), ['tsconfig']);
+```
+
+`only` implies `prune: false`, so a task subset never deletes files owned by the
+tasks it skipped. Unknown task names throw.
 
 ## `@deltabox/toolchain/config`
 

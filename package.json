@@ -38,7 +38,7 @@
     ],
     "scripts": {
         "dev": "tsx src/cli/index.ts",
-        "build": "vp run --filter \"./packages/*\" build && vp run -w build:root && yarn build:vscode",
+        "build": "vp run --filter \"./packages/*\" build && vp run -w build:root && yarn build:vscode && yarn dbx sync --only tsconfig",
         "build:vscode": "yarn workspace toolchain-vscode package:vsix",
         "docs": "vp run --filter \"./apps/docs\"",
         "format": "vp run --filter \"./packages/*\" format && vp run -w format:root",

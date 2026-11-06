@@ -19,6 +19,17 @@ if (template) await scaffoldTemplate(template, { cwd: './out', tokens: { name: '
 import { toolchainProviders } from '@deltabox/toolchain/providers';
 console.log(toolchainProviders().map(p => p.id));
 
+// Sync only the tsconfig task (eg. after a build changed package exports)
+import { defaultSyncTasks, loadToolchainConfig, runSync } from '@deltabox/toolchain';
 // Config engine
 import { createConfigEngine } from '@deltabox/toolchain/config';
+const loaded = await loadToolchainConfig(process.cwd());
+await runSync({
+    tasks: defaultSyncTasks(),
+    only: ['tsconfig'],
+    cwd: process.cwd(),
+    config: loaded.config,
+    tokens: loaded.tokens,
+    projectType: loaded.projectType,
+});
 ```
