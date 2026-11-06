@@ -109,6 +109,30 @@ describe('dbx.config model', () => {
         expect(sectionConfig(toolchain.watch)?.debounce).toBe(100);
     });
 
+    it('accepts external formatter/linter options without their packages installed', () => {
+        const config: DbxConfig = {
+            toolchain: {
+                fmt: {
+                    prettier: {
+                        semi: false,
+                        singleQuote: true,
+                        plugins: ['prettier-plugin-tailwindcss'],
+                    },
+                    dprint: { lineWidth: 100, typescript: { semiColons: 'always' } },
+                },
+                lint: {
+                    eslint: {
+                        files: ['src/**/*.ts', ['*.test.ts']],
+                        languageOptions: { ecmaVersion: 2022, globals: { window: 'readonly' } },
+                        rules: { eqeqeq: 'error' },
+                    },
+                },
+            },
+        };
+        expect(config.toolchain?.fmt).toBeDefined();
+        expect(config.toolchain?.lint).toBeDefined();
+    });
+
     it('accepts custom workflows but not a boolean value', () => {
         const custom = {
             toolchain: {

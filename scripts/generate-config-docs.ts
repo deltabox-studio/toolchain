@@ -12,9 +12,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { collectVars } from '@deltabox/toolchain-config';
-import type { ToolchainCommand } from '@deltabox/toolchain-shared';
-import { toolchainConfigSchema } from '@deltabox/toolchain-shared';
+import { collectVars } from '@deltabox/toolchain/config';
+import type { ToolchainCommand } from '@deltabox/toolchain/shared';
+import { toolchainConfigSchema } from '@deltabox/toolchain/shared';
 
 import { builtinCommands } from '../src/cli/index.js';
 

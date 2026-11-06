@@ -1734,6 +1734,43 @@
                     "type": "boolean",
                     "description": "Inject path aliases (default true)."
                 },
+                "auto": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainTsconfigAliasAutoSetting"
+                        }
+                    ],
+                    "description": "Auto-generate the root workspaces tsconfig paths/references from the project graph (default false). Set true to derive them from the project graph; set false to only use the entries you define yourself."
+                },
+                "aliasAuto": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainTsconfigAliasAutoSetting"
+                        }
+                    ],
+                    "description": "Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). Accepts the same `include`/`exclude`/`rewriteAlias` object as `auto`."
+                },
+                "refsAuto": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainTsconfigAutoSetting"
+                        }
+                    ],
+                    "description": "Auto-generate project references (defaults to `auto`; `refs` must also be enabled)."
+                },
+                "autoSrcDir": {
+                    "type": "string",
+                    "description": "Source directory used to resolve workspace entry points when `package.json` does not declare `exports`/`main`/`types` (default: the workspace's final tsconfig `rootDir`/`baseUrl`, falling back to `src`)."
+                },
                 "indent": {
                     "type": "number",
                     "description": "JSON indentation (default 4)."
@@ -1825,6 +1862,89 @@
             },
             "additionalProperties": false,
             "description": "Workspace tsconfig generation (path aliases + project references)."
+        },
+        "ToolchainTsconfigAliasAutoSetting": {
+            "type": "object",
+            "properties": {
+                "include": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Only auto-wire entries matching these globs (`auto`: workspace dirs; `aliasAuto`: rewritten alias keys; `refsAuto`: reference paths)."
+                },
+                "exclude": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Skip entries matching these globs (same targets as `include`)."
+                },
+                "rewriteAlias": {
+                    "anyOf": [
+                        {
+                            "type": "object",
+                            "propertyNames": {
+                                "type": "string"
+                            },
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "pattern": {
+                                        "anyOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "replacement": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "pattern",
+                                    "replacement"
+                                ],
+                                "additionalProperties": false
+                            }
+                        }
+                    ],
+                    "description": "Rewrite the alias keys auto-wiring generates (custom keys are preserved). Patterns are URL-rewrite style: a string is a regular-expression source and replacements support `$1`, `$2`, ... capture groups. Examples: `{ \"^@acme/(.+)$\": \"@acme/pkg/$1\" }` (string patterns), `[{ pattern: /^@acme\\/(.+)$/, replacement: \"@acme/pkg/$1\" }]` (RegExp patterns), `[{ pattern: [\"^@acme/a$\", \"^@acme/b$\"], replacement: \"@acme/x\" }]` (an array of keys), and an array of such rules (applied in order; the first matching rule wins). `RegExp` patterns are only available from TS/JS configs; JSON configs use string patterns."
+                }
+            },
+            "additionalProperties": false
+        },
+        "ToolchainTsconfigAutoSetting": {
+            "type": "object",
+            "properties": {
+                "include": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Only auto-wire entries matching these globs (`auto`: workspace dirs; `aliasAuto`: rewritten alias keys; `refsAuto`: reference paths)."
+                },
+                "exclude": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Skip entries matching these globs (same targets as `include`)."
+                }
+            },
+            "additionalProperties": false
         },
         "ToolchainTsconfigOverrides": {
             "type": "object",

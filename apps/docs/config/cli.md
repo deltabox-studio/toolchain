@@ -90,6 +90,7 @@ Regenerate every managed file from dbx.config.*.
 - `--watch` — Keep running and re-sync on change.
 - `--recursive` — Sync every discovered dbx project in dependency order.
 - `--force` — Run even when no dbx.config.* is present.
+- `--only ‹tasks›` — Only run the named sync task(s), comma-separated (eg. `tsconfig`).
 - `--json` — Print the sync result (including removed files) as JSON.
 
 ## `dbx watch`
@@ -131,6 +132,13 @@ Generate workspace tsconfig.json files from the default tsconfig (aliases + refe
 - `--no-aliases` — Skip path aliases.
 - `--composite` — Emit composite + references.
 - `--refs` — Wire project references.
+- `--auto` — Auto-wire the root workspaces tsconfig paths/references from the project graph (default false).
+- `--no-auto` — Only use the paths/references already in the root workspaces tsconfig.
+- `--auto-aliases` — Auto-wire path aliases (defaults to --auto).
+- `--no-auto-aliases` — Do not auto-wire path aliases.
+- `--auto-refs` — Auto-wire project references (defaults to --auto).
+- `--no-auto-refs` — Do not auto-wire project references.
+- `--auto-src-dir ‹dir›` — Source directory for auto entry points (default: the workspace tsconfig rootDir/baseUrl, then src).
 - `-i, --indent ‹n›` — JSON indentation.
 - `--glob ‹glob...›` — Glob(s) for the default tsconfig files.
 - `--exclude ‹glob...›` — Glob(s) to exclude (on top of the common ignored paths).
