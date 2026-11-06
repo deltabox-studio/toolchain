@@ -62,6 +62,7 @@
 - Expand the extension guide and README ([#942aa55](https://github.com/deltabox-studio/toolchain/commit/942aa55) by [T0chi](https://github.com/T0chi))
   - Restore the updated provider/template sections, settings and auto-sync documentation in both the guide and the extension README.
 
+
 ## 2.4.0 (November 2026)
 
 ### New features
@@ -83,6 +84,7 @@
 #### Shared
 - Repair PowerShell backtick artifacts in changelogs ([#61ced92](https://github.com/deltabox-studio/toolchain/commit/61ced92) by [T0chi](https://github.com/T0chi))
   - Repair paired \\code\\ and lone trailing identifier backslashes back to inline code while leaving paths and regexes alone, and correct the affected 2.3.1-2.3.3 entries.
+
 
 ## 2.3.0 (November 2026)
 

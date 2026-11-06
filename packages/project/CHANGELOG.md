@@ -40,6 +40,7 @@
 - Use as const for exported defaults ([#5b37c08](https://github.com/deltabox-studio/toolchain/commit/5b37c08) by [T0chi](https://github.com/T0chi))
   - Prefer literal tuples/objects over broad annotations, derive the related union types, and keep dynamic lookups/mutable copies behind small helpers.
 
+
 ## 2.4.0 (November 2026)
 
 ### New features
@@ -50,6 +51,7 @@
 - Regenerate managed configs for import sorting ([#ce7a2e6](https://github.com/deltabox-studio/toolchain/commit/ce7a2e6) by [T0chi](https://github.com/T0chi))
   - Regenerate .oxfmtrc.json and every workspace vite.config.ts with the resolved sortImports workspace group.
 
+
 ## 2.3.1 (November 2026)
 
 ### Bug fixes
@@ -59,6 +61,7 @@
 #### Ci
 - Check and regenerate nested workspace configs recursively ([#711c7b4](https://github.com/deltabox-studio/toolchain/commit/711c7b4) by [T0chi](https://github.com/T0chi))
   - The generated schema types are formatted at printWidth 300 and excluded from the formatter, but the ignore patterns were repo-root-relative. Per-workspace vp fmt resolves them from each package directory, so yarn format reformatted biome-config.ts and failed the artifact check. Use **/ globs and make the generated CI/sync workflows run dbx sync --check --recursive so stale workspace configs are caught and regenerated.
+
 
 ## 2.3.0 (November 2026)
 
