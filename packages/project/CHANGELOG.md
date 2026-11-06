@@ -1,17 +1,26 @@
 # Changelog
 
-## 2.6.0 (November 2026)
+## 2.6.1 (November 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Changelog
+- Scope package changes by package name ([#0ee9b9e](https://github.com/deltabox-studio/toolchain/commit/0ee9b9e) by [T0chi](https://github.com/T0chi))
+  - key dependency changes by the declaring package.json name so workspace-specific pins (eg. the docs site's Vite 5) are reported under that workspace
+  - scope the catalog to the root package name; keep workspace catalog: refs unresolved so a catalog bump is reported once
+  - add regression tests and regenerate every CHANGELOG.md with the scoped footer
+
+<!-- release:end -->
+
+
+## 2.6.0 (November 2026)
 
 ### New features
 - Route fmt/lint to the active tool and opt scaffolds into catalogs ([#76df575](https://github.com/deltabox-studio/toolchain/commit/76df575) by [T0chi](https://github.com/T0chi))
   - dbx fmt/lint resolve the configured/discovered formatter or linter (oxc > biome > prettier > dprint; oxc > biome > eslint) and run it, falling back to the vp/Oxc passthrough
   - project:init/create scaffolds add the catalogs section for the catalog file they write, so dbx sync owns it instead of leaving the managed file orphaned
   - document the active-tool routing and add the dedicated package catalogs guide
-
-<!-- release:end -->
-
 
 ## 2.5.0 (November 2026)
 
@@ -40,7 +49,6 @@
 - Use as const for exported defaults ([#5b37c08](https://github.com/deltabox-studio/toolchain/commit/5b37c08) by [T0chi](https://github.com/T0chi))
   - Prefer literal tuples/objects over broad annotations, derive the related union types, and keep dynamic lookups/mutable copies behind small helpers.
 
-
 ## 2.4.0 (November 2026)
 
 ### New features
@@ -51,7 +59,6 @@
 - Regenerate managed configs for import sorting ([#ce7a2e6](https://github.com/deltabox-studio/toolchain/commit/ce7a2e6) by [T0chi](https://github.com/T0chi))
   - Regenerate .oxfmtrc.json and every workspace vite.config.ts with the resolved sortImports workspace group.
 
-
 ## 2.3.1 (November 2026)
 
 ### Bug fixes
@@ -61,7 +68,6 @@
 #### Ci
 - Check and regenerate nested workspace configs recursively ([#711c7b4](https://github.com/deltabox-studio/toolchain/commit/711c7b4) by [T0chi](https://github.com/T0chi))
   - The generated schema types are formatted at printWidth 300 and excluded from the formatter, but the ignore patterns were repo-root-relative. Per-workspace vp fmt resolves them from each package directory, so yarn format reformatted biome-config.ts and failed the artifact check. Use **/ globs and make the generated CI/sync workflows run dbx sync --check --recursive so stale workspace configs are caught and regenerated.
-
 
 ## 2.3.0 (November 2026)
 

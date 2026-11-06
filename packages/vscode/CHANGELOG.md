@@ -1,8 +1,20 @@
 # Changelog
 
-## 2.5.0 (November 2026)
+## 2.6.1 (November 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Changelog
+- Scope package changes by package name ([#0ee9b9e](https://github.com/deltabox-studio/toolchain/commit/0ee9b9e) by [T0chi](https://github.com/T0chi))
+  - key dependency changes by the declaring package.json name so workspace-specific pins (eg. the docs site's Vite 5) are reported under that workspace
+  - scope the catalog to the root package name; keep workspace catalog: refs unresolved so a catalog bump is reported once
+  - add regression tests and regenerate every CHANGELOG.md with the scoped footer
+
+<!-- release:end -->
+
+
+## 2.5.0 (November 2026)
 
 ### New features
 #### Biome
@@ -37,9 +49,6 @@
 - Expand the extension guide and README ([#942aa55](https://github.com/deltabox-studio/toolchain/commit/942aa55) by [T0chi](https://github.com/T0chi))
   - Restore the updated provider/template sections, settings and auto-sync documentation in both the guide and the extension README.
 
-<!-- release:end -->
-
-
 ## 2.4.0 (November 2026)
 
 ### New features
@@ -50,14 +59,12 @@
 - Regenerate managed configs for import sorting ([#ce7a2e6](https://github.com/deltabox-studio/toolchain/commit/ce7a2e6) by [T0chi](https://github.com/T0chi))
   - Regenerate .oxfmtrc.json and every workspace vite.config.ts with the resolved sortImports workspace group.
 
-
 ## 2.3.2 (November 2026)
 
 ### Bug fixes
 #### Vscode
 - Load the tsdown base config from source ([#0537c62](https://github.com/deltabox-studio/toolchain/commit/0537c62) by [T0chi](https://github.com/T0chi))
   - The VS Code integration job builds the extension after only \yarn install\, so the private \@deltabox/toolchain-tsdown\ dist does not exist and unrun failed to load the config. Import baseTsdownConfig\ from the workspace source instead (as the root tsdown config already does).
-
 
 ## 2.3.1 (November 2026)
 
@@ -71,7 +78,6 @@
 #### Ci
 - Check and regenerate nested workspace configs recursively ([#711c7b4](https://github.com/deltabox-studio/toolchain/commit/711c7b4) by [T0chi](https://github.com/T0chi))
   - The generated schema types are formatted at printWidth 300 and excluded from the formatter, but the ignore patterns were repo-root-relative. Per-workspace vp fmt resolves them from each package directory, so yarn format reformatted biome-config.ts and failed the artifact check. Use **/ globs and make the generated CI/sync workflows run dbx sync --check --recursive so stale workspace configs are caught and regenerated.
-
 
 ## 2.3.0 (November 2026)
 

@@ -1,17 +1,26 @@
 # Changelog
 
-## 2.6.0 (November 2026)
+## 2.6.1 (November 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Changelog
+- Scope package changes by package name ([#0ee9b9e](https://github.com/deltabox-studio/toolchain/commit/0ee9b9e) by [T0chi](https://github.com/T0chi))
+  - key dependency changes by the declaring package.json name so workspace-specific pins (eg. the docs site's Vite 5) are reported under that workspace
+  - scope the catalog to the root package name; keep workspace catalog: refs unresolved so a catalog bump is reported once
+  - add regression tests and regenerate every CHANGELOG.md with the scoped footer
+
+<!-- release:end -->
+
+
+## 2.6.0 (November 2026)
 
 ### New features
 - Route fmt/lint to the active tool and opt scaffolds into catalogs ([#76df575](https://github.com/deltabox-studio/toolchain/commit/76df575) by [T0chi](https://github.com/T0chi))
   - dbx fmt/lint resolve the configured/discovered formatter or linter (oxc > biome > prettier > dprint; oxc > biome > eslint) and run it, falling back to the vp/Oxc passthrough
   - project:init/create scaffolds add the catalogs section for the catalog file they write, so dbx sync owns it instead of leaving the managed file orphaned
   - document the active-tool routing and add the dedicated package catalogs guide
-
-<!-- release:end -->
-
 
 ## 2.5.0 (November 2026)
 
@@ -62,7 +71,6 @@
 - Expand the extension guide and README ([#942aa55](https://github.com/deltabox-studio/toolchain/commit/942aa55) by [T0chi](https://github.com/T0chi))
   - Restore the updated provider/template sections, settings and auto-sync documentation in both the guide and the extension README.
 
-
 ## 2.4.0 (November 2026)
 
 ### New features
@@ -84,7 +92,6 @@
 #### Shared
 - Repair PowerShell backtick artifacts in changelogs ([#61ced92](https://github.com/deltabox-studio/toolchain/commit/61ced92) by [T0chi](https://github.com/T0chi))
   - Repair paired \\code\\ and lone trailing identifier backslashes back to inline code while leaving paths and regexes alone, and correct the affected 2.3.1-2.3.3 entries.
-
 
 ## 2.3.0 (November 2026)
 

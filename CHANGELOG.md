@@ -1,17 +1,26 @@
 # Changelog
 
-## 2.6.0 (November 2026)
+## 2.6.1 (November 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Changelog
+- Scope package changes by package name ([#0ee9b9e](https://github.com/deltabox-studio/toolchain/commit/0ee9b9e) by [T0chi](https://github.com/T0chi))
+  - key dependency changes by the declaring package.json name so workspace-specific pins (eg. the docs site's Vite 5) are reported under that workspace
+  - scope the catalog to the root package name; keep workspace catalog: refs unresolved so a catalog bump is reported once
+  - add regression tests and regenerate every CHANGELOG.md with the scoped footer
+
+<!-- release:end -->
+
+
+## 2.6.0 (November 2026)
 
 ### New features
 - Route fmt/lint to the active tool and opt scaffolds into catalogs ([#76df575](https://github.com/deltabox-studio/toolchain/commit/76df575) by [T0chi](https://github.com/T0chi))
   - dbx fmt/lint resolve the configured/discovered formatter or linter (oxc > biome > prettier > dprint; oxc > biome > eslint) and run it, falling back to the vp/Oxc passthrough
   - project:init/create scaffolds add the catalogs section for the catalog file they write, so dbx sync owns it instead of leaving the managed file orphaned
   - document the active-tool routing and add the dedicated package catalogs guide
-
-<!-- release:end -->
-
 
 ## 2.5.0 (November 2026)
 
@@ -115,7 +124,6 @@
 - `@deltabox/toolchain-tsdown` › `vite` `catalog:`
 - `toolchain-vscode` › `vite` `catalog:`
 
-
 ## 2.4.0 (November 2026)
 
 ### New features
@@ -151,14 +159,12 @@
 #### Added
 - `@deltabox/toolchain-project` › `@clack/prompts` `catalog:`
 
-
 ## 2.3.4 (November 2026)
 
 ### Bug fixes
 #### Ci
 - Cache the VS Code integration test download ([#4941b90](https://github.com/deltabox-studio/toolchain/commit/4941b90) by [T0chi](https://github.com/T0chi))
   - The integration job downloaded the ~361 MB VS Code stable build on every run. Resolve the exact stable version, cache only that version's unpacked directory, and key the cache by it so a new stable release is downloaded and saved under a fresh key.
-
 
 ## 2.3.3 (November 2026)
 
@@ -171,14 +177,12 @@
 - Bump checkout and setup-node actions to v5 ([#485f29d](https://github.com/deltabox-studio/toolchain/commit/485f29d) by [T0chi](https://github.com/T0chi))
   - The runner warns that actions/checkout@v4 and actions/setup-node@v4 target Node 20 and are forced onto Node 24. Bump the generated workflows (and the dogfood config) to v5.
 
-
 ## 2.3.2 (November 2026)
 
 ### Bug fixes
 #### Vscode
 - Load the tsdown base config from source ([#0537c62](https://github.com/deltabox-studio/toolchain/commit/0537c62) by [T0chi](https://github.com/T0chi))
   - The VS Code integration job builds the extension after only `yarn install`, so the private `@deltabox/toolchain-tsdown` dist does not exist and unrun failed to load the config. Import `baseTsdownConfig` from the workspace source instead (as the root tsdown config already does).
-
 
 ## 2.3.1 (November 2026)
 
@@ -203,7 +207,6 @@
 #### Ci
 - Check and regenerate nested workspace configs recursively ([#711c7b4](https://github.com/deltabox-studio/toolchain/commit/711c7b4) by [T0chi](https://github.com/T0chi))
   - The generated schema types are formatted at printWidth 300 and excluded from the formatter, but the ignore patterns were repo-root-relative. Per-workspace vp fmt resolves them from each package directory, so yarn format reformatted biome-config.ts and failed the artifact check. Use **/ globs and make the generated CI/sync workflows run dbx sync --check --recursive so stale workspace configs are caught and regenerated.
-
 
 ## 2.3.0 (November 2026)
 
@@ -283,7 +286,6 @@
 - `@deltabox/toolchain-shared` › `eslint` `catalog:`
 - `@deltabox/toolchain-shared` › `prettier` `catalog:`
 
-
 ## 2.2.0 (November 2026)
 
 ### New features
@@ -301,7 +303,6 @@
 - `toolchain-vscode` › `@vscode/test-cli` `^0.0.15`
 - `toolchain-vscode` › `@vscode/test-electron` `^3.1.0`
 
-
 ## 2.1.3 (November 2026)
 
 ### Bug fixes
@@ -309,13 +310,11 @@
 - Read JSONC VS Code settings and bundle jsonc-parser ([#57d908d](https://github.com/deltabox-studio/toolchain/commit/57d908d) by [T0chi](https://github.com/T0chi))
   - Parse .vscode/settings.json as JSONC so comments/trailing commas don't block editor defaults, and resolve jsonc-parser's ESM entry in the bundled dbx CLI to avoid the missing ./impl/format module.
 
-
 ## 2.1.2 (November 2026)
 
 ### Bug fixes
 #### Vscode
 - Align Home action icons with provider commands ([#05fd6c8](https://github.com/deltabox-studio/toolchain/commit/05fd6c8) by [T0chi](https://github.com/T0chi))
-
 
 ## 2.1.1 (October 2026)
 
@@ -324,14 +323,12 @@
 - Use the release-notes helper for releases ([#36616f0](https://github.com/deltabox-studio/toolchain/commit/36616f0) by [T0chi](https://github.com/T0chi))
   - Replace the custom release workflow's awk/git-describe extraction with dbx changelog --release-notes, treat --release-notes as machine output, and normalize v-prefixed current versions.
 
-
 ## 2.1.0 (October 2026)
 
 ### New features
 #### Changelog
 - Configure breaking-change detection ([#f80634f](https://github.com/deltabox-studio/toolchain/commit/f80634f) by [T0chi](https://github.com/T0chi))
   - Detect breaking changes by Conventional Commits rules by default (! in the subject or a **BREAKING CHANGE:** footer) and add a changelog.breaking / ci.changelog.breaking override (conventional, any, false, pattern/match, or a callback).
-
 
 ## 2.0.1 (October 2026)
 
@@ -353,7 +350,6 @@
 ### Package changes
 #### Added
 - `@deltabox/toolchain-docs` › `vite-plugin-vitepress-auto-sidebar` `^1.7.1`
-
 
 ## 2.0.0 (October 2026)
 
@@ -633,7 +629,6 @@
 #### Removed
 - `@deltabox/toolchain-project` › `@deltabox/toolchain-biome` `workspace:*`
 
-
 ## 1.11.4 (October 2026)
 
 ### Documentation
@@ -641,7 +636,6 @@
 ### Chores
 #### Vscode
 - Rearranged views order ([#0620097](https://github.com/deltabox-studio/toolchain/commit/0620097) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.11.3 (October 2026)
 
@@ -653,12 +647,10 @@
 - Format the docs brand stylesheet ([#fb3a711](https://github.com/deltabox-studio/toolchain/commit/fb3a711) by [T0chi](https://github.com/T0chi))
   - Run the formatter over `apps/docs/.vitepress/theme/style.css` (trailing whitespace, indentation, numeric normalization) so `yarn format` no longer dirties the tree.
 
-
 ## 1.11.2 (October 2026)
 
 ### Chores
 - Update `README.md` ([#3e7f4e1](https://github.com/deltabox-studio/toolchain/commit/3e7f4e1) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.11.1 (October 2026)
 
@@ -693,7 +685,6 @@
 - `@deltabox/toolchain-docs` › `vitepress-carbon` `^1.7.0`
 - `@deltabox/toolchain-docs` › `vitepress-plugin-group-icons` `^1.8.1`
 
-
 ## 1.11.0 (October 2026)
 
 ### New features
@@ -719,12 +710,10 @@
 #### Vscode
 - Rename the Home "All actions" section to "More actions" ([#b8a2137](https://github.com/deltabox-studio/toolchain/commit/b8a2137) by [T0chi](https://github.com/T0chi))
 
-
 ## 1.10.4 (October 2026)
 
 ### Documentation
 - Removed video preview dimensions ([#322b4b1](https://github.com/deltabox-studio/toolchain/commit/322b4b1) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.10.3 (October 2026)
 
@@ -742,13 +731,11 @@
 ### Documentation
 - Added a video preview of the extension ([#6b0ca40](https://github.com/deltabox-studio/toolchain/commit/6b0ca40) by [T0chi](https://github.com/T0chi))
 
-
 ## 1.10.2 (October 2026)
 
 ### Documentation
 #### Vscode
 - Updated extension description & more ([#48993f0](https://github.com/deltabox-studio/toolchain/commit/48993f0) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.10.1 (October 2026)
 
@@ -759,7 +746,6 @@
   - Only use the `tsx` fallback for errors that mean Node cannot load TS itself (`ERR_UNKNOWN_FILE_EXTENSION`, `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`); let genuine errors (module-not-found, syntax errors, throws) propagate.
   - Unwrap tsx's possibly-nested default export.
   - Keep `tsx` external in the root bundle so `dist` keeps the portable bare `import('tsx/esm/api')` instead of a build-machine path, and promote `tsx` to a runtime dependency so the config-loader fallback works for consumers.
-
 
 ## 1.10.0 (October 2026)
 
@@ -802,12 +788,10 @@
   - root `test` script now runs `vp run build:root` first, so the emulation tests always execute against a fresh CLI bundle.
   - fix(project): a single Bun project now pins its dependencies instead of emitting a dangling `catalog:` — Bun's catalog lives in `package.json` `workspaces.catalog`, which only a monorepo root writes. Regression tests added.
 
-
 ## 1.9.2 (October 2026)
 
 ### Documentation
 - Added `llms` entry to the sidebar ([#098cc7e](https://github.com/deltabox-studio/toolchain/commit/098cc7e) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.9.1 (October 2026)
 
@@ -815,7 +799,6 @@
 #### Vscode
 - Target the release environment by name (drop resourceType) ([#2bbd25a](https://github.com/deltabox-studio/toolchain/commit/2bbd25a) by [T0chi](https://github.com/T0chi))
   - `resourceType` only accepts `virtualMachine`/`Kubernetes`. `resourceType: none` made the deployment job look for a resource of type `none`, so it failed with "No resource were found in the environment ... ResourceType Undefined". Use the string form `environment: 'release'`, which records the deployment against the resource-less environment and still applies its approvals/checks.
-
 
 ## 1.9.0 (October 2026)
 
@@ -832,7 +815,6 @@
 #### Changelog
 - Repair escaped text in the 1.8.0 entry ([#587e47d](https://github.com/deltabox-studio/toolchain/commit/587e47d) by [T0chi](https://github.com/T0chi))
   - The shared/core/project/tsconfig/vite commits were authored with PowerShell `\``-escaped backticks, so their bodies carried `\` + control-character artifacts (e.g. `` `r `` -> `\`+CR, `` `b `` -> backspace). The changelog sanitizer stripped the control characters but left the stray backslashes and dropped letters, so the 1.8.0 entry read `esolveVite`, `\{ ... }\`, `epo\`, etc. Restore the intended text (backticked code, `resolveVite`, `repo`/`repository`, `name`/`scope`/`description`/`type`, `rootFile`/`defaultFile`/`buildFile`).
-
 
 ## 1.8.0 (October 2026)
 
@@ -892,7 +874,6 @@
 - `@deltabox/toolchain-migrate` › `@deltabox/toolchain-core` `workspace:*`
 - `@deltabox/toolchain-migrate` › `glob` `catalog:`
 
-
 ## 1.7.8 (October 2026)
 
 ### Bug fixes
@@ -915,13 +896,11 @@
 - `toolchain` › `typescript` `catalog:`
 - `toolchain` › `vitest` `catalog:`
 
-
 ## 1.7.7 (October 2026)
 
 ### CI
 #### Vscode
 - Upload `release-vscode.yml` pipeline ([#3080357](https://github.com/deltabox-studio/toolchain/commit/3080357) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.7.6 (October 2026)
 
@@ -930,19 +909,16 @@
 - Fixed failed build in `release-vscode.yml` for Azure Pipelines ([#f6f4b14](https://github.com/deltabox-studio/toolchain/commit/f6f4b14) by [T0chi](https://github.com/T0chi))
   - The build failed due to missing workspace builds, specifically from `@deltabox/toolchain-tsdown`
 
-
 ## 1.7.5 (October 2026)
 
 ### Chores
 - Revert `extend` value to `tsconfig.base.json` for vscode workspace's `tsconfig.default.json` ([#96e021e](https://github.com/deltabox-studio/toolchain/commit/96e021e) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.7.4 (October 2026)
 
 ### Bug fixes
 #### Vscode
 - Extending root `tsconfig.json` instead of root `tsconfig.base.json` ([#9aa9669](https://github.com/deltabox-studio/toolchain/commit/9aa9669) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.7.3 (October 2026)
 
@@ -954,7 +930,6 @@
 #### Ci
 - Remove `azure-pipelines-setup.yml` ([#03a4196](https://github.com/deltabox-studio/toolchain/commit/03a4196) by [T0chi](https://github.com/T0chi))
 
-
 ## 1.7.2 (October 2026)
 
 ### CI
@@ -963,7 +938,6 @@
   - [skip ci]
 ### Chores
 - Remove `azure-pipelines.yml` ([#7965965](https://github.com/deltabox-studio/toolchain/commit/7965965) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.7.1 (October 2026)
 
@@ -987,7 +961,6 @@
 - `toolchain-vscode` › `typescript` `catalog:`
 - `toolchain-vscode` › `vitest` `catalog:`
 
-
 ## 1.7.0 (October 2026)
 
 ### New features
@@ -1002,14 +975,12 @@
 - Repair escaped commit text and label code refs ([#1425419](https://github.com/deltabox-studio/toolchain/commit/1425419) by [T0chi](https://github.com/T0chi))
   - PowerShell interpreted the escaped backticks in the commit bodies as control-character escapes, so the changelog carried backslash+control artifacts (TAB/CR/LF/BS/FF/VT) and mojibake. Repair the affected 1.4.1-1.6.1 entries and add backticks around commands, paths, flags, types and identifiers throughout the file.
 
-
 ## 1.6.1 (October 2026)
 
 ### Documentation
 #### Config
 - Inline nested sub-schemas in the generated reference ([#5a9a9e3](https://github.com/deltabox-studio/toolchain/commit/5a9a9e3) by [T0chi](https://github.com/T0chi))
   - `renderConfigFileMarkdown` only recursed into inline objects, so named sub-schemas (`changelog.workflows`, `changelog.versioning.target/workspaces`, `templates.sources[]`, `project.type`) rendered as a bare type name. It now resolves the JSON Schema `$defs` and expands objects, object unions and array items inline (each named type once per section), so the reference documents every option with types, required markers, defaults and descriptions.
-
 
 ## 1.6.0 (October 2026)
 
@@ -1037,14 +1008,12 @@
 - Re-apply the explicit changelog and tsconfig bins ([#192a2d3](https://github.com/deltabox-studio/toolchain/commit/192a2d3) by [T0chi](https://github.com/T0chi))
   - The generated version bump commit dropped the explicit `bin` mapping (object form) from both `package.json`s; regenerate it from the pinned tsdown `exports.bin` so `yarn build` stays idempotent.
 
-
 ## 1.5.0 (October 2026)
 
 ### New features
 #### Changelog
 - Emit the husky `commit-msg` hook for consumers ([#6898386](https://github.com/deltabox-studio/toolchain/commit/6898386) by [T0chi](https://github.com/T0chi))
   - `dbx sync` now writes `.husky/commit-msg` (running `commitlint`) alongside the workflows and `commitlint.config.mjs`, so consumers using the Conventional-Commits CI lint commits locally too. The docs recommend `postinstall: husky` (Yarn Berry never runs `prepare`) and `.husky/* text eol=lf` (a trailing CR breaks the hook).
-
 
 ## 1.4.1 (October 2026)
 
@@ -1055,7 +1024,6 @@
 #### Ci
 - Bootstrap the `dist` the vite shim needs before build ([#b96b89a](https://github.com/deltabox-studio/toolchain/commit/b96b89a) by [T0chi](https://github.com/T0chi))
   - `prepare` never runs on `yarn install` under Yarn Berry, so `scripts/bootstrap.mjs` never built `dist/vite.js` and `yarn build` failed to load the generated `vite.config.ts` shim on a fresh CI checkout. Run the bootstrap from a root `postinstall` and at the start of `build`/`typecheck`/`test` (all begin with `vp run`, which loads the shim); it is a no-op once `dist/vite.js` exists.
-
 
 ## 1.4.0 (October 2026)
 
@@ -1115,14 +1083,12 @@
 #### Updated
 - `@deltabox/toolchain` › `vite-plus` `^1.2.0` → `>=1`
 
-
 ## 1.3.1 (October 2026)
 
 ### Documentation
 - Update config generator documentation ([#0dfbf88](https://github.com/deltabox-studio/toolchain/commit/0dfbf88) by [T0chi](https://github.com/T0chi))
 - Update config generator reference link ([#2f0adde](https://github.com/deltabox-studio/toolchain/commit/2f0adde) by [T0chi](https://github.com/T0chi))
 - Update features descriptions ([#e9c0a6d](https://github.com/deltabox-studio/toolchain/commit/e9c0a6d) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.3.0 (October 2026)
 
@@ -1180,20 +1146,17 @@
 - `@deltabox/toolchain` › `picocolors` `^1.1.1`
 - `@deltabox/toolchain-shared` › `picocolors` `catalog:`
 
-
 ## 1.2.8 (October 2026)
 
 ### Documentation
 - Drive Vite+ from `dbx` in the recommended package scripts ([#6131c59](https://github.com/deltabox-studio/toolchain/commit/6131c59) by [T0chi](https://github.com/T0chi))
   - Use `dbx vite <command>` (the Vite+ passthrough) instead of calling `vp` directly in the Package scripts, Migrations and Monorepo guides, so a project only needs the one `dbx` command.
 
-
 ## 1.2.7 (October 2026)
 
 ### Documentation
 - Link package script migrations from the Migrations page ([#036ebf5](https://github.com/deltabox-studio/toolchain/commit/036ebf5) by [T0chi](https://github.com/T0chi))
   - Add a "Package scripts" section to the Migrations guide with the Biome/Turbo script swaps and a link to the full Package scripts page.
-
 
 ## 1.2.6 (October 2026)
 
@@ -1206,7 +1169,6 @@
 - Add Package scripts guide and a navbar version ([#b279739](https://github.com/deltabox-studio/toolchain/commit/b279739) by [T0chi](https://github.com/T0chi))
   - Add a guide page covering the recommended root scripts (Vite+ format/lint and Vite Task) and how to migrate an existing Biome + Turbo project onto them, and surface it in the sidebar and Getting Started list. Also show the current version in the navbar (linked to the changelog, releases and npm), like the Proxified docs.
 
-
 ## 1.2.5 (October 2026)
 
 ### Bug fixes
@@ -1214,24 +1176,20 @@
 - Keep generated commitlint enums expanded ([#a6ad600](https://github.com/deltabox-studio/toolchain/commit/a6ad600) by [T0chi](https://github.com/T0chi))
   - Oxfmt collapses an array onto one line when it fits the print width, so a generated `commitlint.config.mjs` whose type/scope enum is short was reformatted by `vp fmt` and then failed `dbx sync --check`. An inert leading line comment inside each enum keeps the list expanded regardless of the consumer's print width, so the generated file is now Oxfmt-idempotent and consumers no longer need to exclude it from formatting.
 
-
 ## 1.2.4 (October 2026)
 
 ### Documentation
 - Update documentation ([#3880aaa](https://github.com/deltabox-studio/toolchain/commit/3880aaa) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.2.3 (October 2026)
 
 ### Documentation
 - Update vscode extension screenshot ([#e3e189d](https://github.com/deltabox-studio/toolchain/commit/e3e189d) by [T0chi](https://github.com/T0chi))
 
-
 ## 1.2.2 (October 2026)
 
 ### Documentation
 - Update config generator documentation ([#8305ef8](https://github.com/deltabox-studio/toolchain/commit/8305ef8) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.2.1 (October 2026)
 
@@ -1239,7 +1197,6 @@
 - Show how to load the generated config ([#0f4d0d1](https://github.com/deltabox-studio/toolchain/commit/0f4d0d1) by [T0chi](https://github.com/T0chi))
   - Add a "Load the config at runtime" section to the config generator guide (`parseEnvTree`, the typed accessors, `applyOverrides`, and schema validation via `compileZodSchema`) plus a short loading example in the README.
 - Update description and tags ([#64b64aa](https://github.com/deltabox-studio/toolchain/commit/64b64aa) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.2.0 (October 2026)
 
@@ -1257,18 +1214,15 @@
   - Show a short example of each generated output (config types, markdown, env, JSON schema) in the config generator guide and the README.
 - Update vscode extension preview ([#fd90dda](https://github.com/deltabox-studio/toolchain/commit/fd90dda) by [T0chi](https://github.com/T0chi))
 
-
 ## 1.1.24 (October 2026)
 
 ### Documentation
 - Update features ([#071006e](https://github.com/deltabox-studio/toolchain/commit/071006e) by [T0chi](https://github.com/T0chi))
 
-
 ## 1.1.23 (October 2026)
 
 ### Documentation
 - Using different logo for the hero ([#552172d](https://github.com/deltabox-studio/toolchain/commit/552172d) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.1.22 (October 2026)
 
@@ -1277,7 +1231,6 @@
 - Skip the Marketplace publish when `VSCE_PAT` is unset ([#fe4b3ad](https://github.com/deltabox-studio/toolchain/commit/fe4b3ad) by [T0chi](https://github.com/T0chi))
   - The VS Code Marketplace publish was the only failing release step (no `VSCE_PAT` set). Make it a no-op while the secret is unset and publish automatically once it is added to the `toolchain / release` environment.
   - Also remove the temporary OIDC diagnostic step now that the release publishes.
-
 
 ## 1.1.21 (October 2026)
 
@@ -1289,7 +1242,6 @@
 - Show the published npm version in the README badge ([#5f83ca2](https://github.com/deltabox-studio/toolchain/commit/5f83ca2) by [T0chi](https://github.com/T0chi))
   - Replace the static npm-name badge with a shields.io npm/v badge so the README shows the currently published version.
 
-
 ## 1.1.20 (October 2026)
 
 ### Bug fixes
@@ -1297,14 +1249,12 @@
 - Stage npm releases via OIDC instead of publishing directly ([#53d1f52](https://github.com/deltabox-studio/toolchain/commit/53d1f52) by [T0chi](https://github.com/T0chi))
   - Default to `npm stage publish` for OIDC trusted publishing: it always stages the version and defers the maintainer's 2FA approval, and is always permitted for a trusted publisher (unlike direct `npm publish`, which the package's 2FA policy rejects). Drop the automation-token fallback and require npm >= 11.15.1 (the first with `npm stage`).
 
-
 ## 1.1.19 (October 2026)
 
 ### Chores
 #### Ci
 - Add a temporary OIDC diagnostic to the release workflow ([#7b42e33](https://github.com/deltabox-studio/toolchain/commit/7b42e33) by [T0chi](https://github.com/T0chi))
   - The publish still fails after binding the environment, and npm falls back to the (automation) token and 403s. Add a temporary step that decodes the OIDC claims and calls the token-exchange endpoint directly so the exact trusted-publisher mismatch is visible in the log. Removed once fixed.
-
 
 ## 1.1.18 (October 2026)
 
@@ -1318,7 +1268,6 @@
   - `spawn('npx.cmd', ...)` throws EINVAL synchronously on Windows, and `captureCli`/`runCli` call spawn inside a Promise executor, so the throw rejected the promise and the command aborted with no UI ("nothing happens"). This fired whenever the CLI resolved to the `npx.cmd` fallback (a workspace without a local `@deltabox/toolchain`), e.g. "From template..." which round-trips `template:list --json` through `captureCli`.
   - Add a pure `win-spawn` module (ported from the shared `spawnCross`) that escapes the command + args and runs a `.cmd` shim through `cmd.exe`; use it from `spawnCli`. `captureCli`/`runCli` no longer reject on a spawn failure. Also fix `cliInvocation` for the integrated terminal: `process.execPath` is the VS Code binary in the extension host, so it now uses `npx dbx` / `npx --yes @deltabox/toolchain`.
 
-
 ## 1.1.17 (October 2026)
 
 ### Bug fixes
@@ -1326,37 +1275,31 @@
 - Upgrade npm before publishing for OIDC trusted publishing ([#657d4b9](https://github.com/deltabox-studio/toolchain/commit/657d4b9) by [T0chi](https://github.com/T0chi))
   - Node 22 bundles npm 10.x, but npm OIDC trusted publishing requires npm >= 11.5.1. Without it `npm publish` fell back to token auth and the registry answered a misleading 404, so every release since 1.0.7 failed at the publish step. Add an explicit npm upgrade step before the publish step in the generated release workflow.
 
-
 ## 1.1.16 (October 2026)
 
 ### Documentation
 - Reindent the README table of contents ([#5646bcc](https://github.com/deltabox-studio/toolchain/commit/5646bcc) by [T0chi](https://github.com/T0chi))
 - Theme-aware logo (light/dark) + invert the home hero logo in dark mode ([#fd3691f](https://github.com/deltabox-studio/toolchain/commit/fd3691f) by [T0chi](https://github.com/T0chi))
 
-
 ## 1.1.15 (October 2026)
 
 ### Chores
 - Formatted `README.md` ([#4485c48](https://github.com/deltabox-studio/toolchain/commit/4485c48) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.1.14 (October 2026)
 
 ### Documentation
 - Highlight the Vite/Vite+ plugin in the README and docs ([#8218179](https://github.com/deltabox-studio/toolchain/commit/8218179) by [T0chi](https://github.com/T0chi))
 
-
 ## 1.1.13 (October 2026)
 
 ### Chores
 - Re-enable npm provenance (repo is public) ([#71ed60d](https://github.com/deltabox-studio/toolchain/commit/71ed60d) by [T0chi](https://github.com/T0chi))
 
-
 ## 1.1.12 (October 2026)
 
 ### Chores
 - Disable npm provenance (unsupported from a private repo) ([#f118193](https://github.com/deltabox-studio/toolchain/commit/f118193) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.1.11 (October 2026)
 
@@ -1368,12 +1311,10 @@
 ### CI
 - Auto-fix format + lint in the CI check step ([#9da9797](https://github.com/deltabox-studio/toolchain/commit/9da9797) by [T0chi](https://github.com/T0chi))
 
-
 ## 1.1.10 (October 2026)
 
 ### Chores
 - Removed unnecessary shields ([#1efbe68](https://github.com/deltabox-studio/toolchain/commit/1efbe68) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.1.9 (October 2026)
 
@@ -1383,31 +1324,26 @@
 ### Chores
 - Update VS Code extension installation guide in `README.md` ([#aab06d5](https://github.com/deltabox-studio/toolchain/commit/aab06d5) by [T0chi](https://github.com/T0chi))
 
-
 ## 1.1.8 (October 2026)
 
 ### Documentation
 - Hide the site title next to the navbar logo ([#c7935ec](https://github.com/deltabox-studio/toolchain/commit/c7935ec) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.1.7 (October 2026)
 
 ### Chores
 - Revise CLI commands and VS Code extension details ([#7f043f9](https://github.com/deltabox-studio/toolchain/commit/7f043f9) by [T0chi](https://github.com/T0chi))
 
-
 ## 1.1.6 (October 2026)
 
 ### Documentation
 - Use `box2d.svg` for the navbar/hero logo and `box2d_bg.svg` for the favicon ([#2c7a094](https://github.com/deltabox-studio/toolchain/commit/2c7a094) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.1.5 (October 2026)
 
 ### Bug fixes
 #### Changelog
 - Bump only the version field and stage only owned files ([#8b14cc9](https://github.com/deltabox-studio/toolchain/commit/8b14cc9) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.1.4 (October 2026)
 
@@ -1416,20 +1352,17 @@
 ### Chores
 - Name the changelog and tsconfig bins explicitly ([#50144cd](https://github.com/deltabox-studio/toolchain/commit/50144cd) by [T0chi](https://github.com/T0chi))
 
-
 ## 1.1.3 (October 2026)
 
 ### Chores
 #### Changelog
 - Title the CI section "CI" instead of "Continuous integration" ([#09deb7f](https://github.com/deltabox-studio/toolchain/commit/09deb7f) by [T0chi](https://github.com/T0chi))
 
-
 ## 1.1.2 (October 2026)
 
 ### Documentation
 - Add a tests badge to the README ([#01513ee](https://github.com/deltabox-studio/toolchain/commit/01513ee) by [T0chi](https://github.com/T0chi))
 - Fix `CHANGELOG.md` mojibake and add backticks to code refs ([#6b721eb](https://github.com/deltabox-studio/toolchain/commit/6b721eb) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.1.1 (October 2026)
 
@@ -1440,7 +1373,6 @@
 #### Release
 - Publish to npm via trusted publishing (OIDC) ([#41be869](https://github.com/deltabox-studio/toolchain/commit/41be869) by [T0chi](https://github.com/T0chi))
   - - Drop the `NPM_TOKEN`-based `yarn npm publish` (which also staged). Use npm trusted publishing: `id-token: write`, setup-node `registry-url`, `yarn pack` (resolves `catalog:`/`workspace:`) + `npm publish <tarball>` — provenance is generated automatically. Re-enable `publishConfig.provenance`.
-
 
 ## 1.1.0 (October 2026)
 
@@ -1455,14 +1387,12 @@
 #### Added
 - `@deltabox/toolchain-vite` › `vite` `>=5`
 
-
 ## 1.0.8 (October 2026)
 
 ### CI
 #### Release
 - Manage the release workflow from `dbx.config.ts` ([#bf55b70](https://github.com/deltabox-studio/toolchain/commit/bf55b70) by [T0chi](https://github.com/T0chi))
   - - Drop the hand-written `.github/workflows/release.yml`; the release flow (tag + GitHub Release with the VSIX + notes, `npm publish`, Marketplace publish) is now defined under `changelog.workflows.release` in the config and generated by `dbx sync`. Removes the need to hand-write CI.
-
 
 ## 1.0.7 (October 2026)
 
@@ -1474,7 +1404,6 @@
 - Release on push to `main` (tag + GitHub Release + npm + Marketplace) ([#4714b1a](https://github.com/deltabox-studio/toolchain/commit/4714b1a) by [T0chi](https://github.com/T0chi))
   - - Replaces the generated release-PR workflow with a hand-written one that, on each push to `main`, packages the VS Code extension, creates the `v<version>` tag and a GitHub Release (notes from `CHANGELOG.md` + the `.vsix` asset), publishes `@deltabox/toolchain` to npm, and publishes the extension to the VS Code Marketplace. Idempotent: skipped when the tag already exists.
 
-
 ## 1.0.6 (October 2026)
 
 ### Documentation
@@ -1482,12 +1411,10 @@
 ### Chores
 - Name the `changelog`/`tsconfig` bins explicitly and disable publish provenance ([#ba2737d](https://github.com/deltabox-studio/toolchain/commit/ba2737d) by [T0chi](https://github.com/T0chi))
 
-
 ## 1.0.5 (October 2026)
 
 ### Documentation
 - Update tagline ([#e1fa86e](https://github.com/deltabox-studio/toolchain/commit/e1fa86e) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.0.4 (October 2026)
 
@@ -1495,7 +1422,6 @@
 - Add a table of contents to the `README` ([#b2702e8](https://github.com/deltabox-studio/toolchain/commit/b2702e8) by [T0chi](https://github.com/T0chi))
 ### Chores
 - Fix grammar in the package description ([#8a199b8](https://github.com/deltabox-studio/toolchain/commit/8a199b8) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.0.3 (October 2026)
 
@@ -1505,13 +1431,11 @@
 - Exclude `CHANGELOG.md` from Oxfmt (the changelog pipeline owns its format) ([#f6ad3c0](https://github.com/deltabox-studio/toolchain/commit/f6ad3c0) by [T0chi](https://github.com/T0chi))
 - Add `MPL-2.0` `LICENSE` and the project homepage ([#cea0fb5](https://github.com/deltabox-studio/toolchain/commit/cea0fb5) by [T0chi](https://github.com/T0chi))
 
-
 ## 1.0.2 (October 2026)
 
 ### Tests
 #### Changelog
 - Update the release workflow reference fixture ([#e7efe0a](https://github.com/deltabox-studio/toolchain/commit/e7efe0a) by [T0chi](https://github.com/T0chi))
-
 
 ## 1.0.1 (October 2026)
 
