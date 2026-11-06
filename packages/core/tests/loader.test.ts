@@ -319,6 +319,41 @@ describe('nested config inheritance', () => {
         expect(loaded.projectType).toBe('monorepo-workspace');
     });
 
+    it('does not inherit workspace-scoped sections for a configless project', async () => {
+        const root = tmp();
+        const child = path.join(root, 'packages', 'web');
+        fs.mkdirSync(child, { recursive: true });
+        writeJson(path.join(root, 'dbx.config.json'), {
+            toolchain: {
+                project: { name: 'acme', author: 'Acme' },
+                ci: { ci: true },
+                changelog: { versioning: true },
+                catalogs: { react: '^19' },
+                tsconfig: { refs: true },
+                vite: {
+                    fmt: { printWidth: 100 },
+                    test: { include: ['tests/**'] },
+                    run: { tasks: { build: { command: 'tsdown' } } },
+                },
+                logger: { level: 'debug' },
+            },
+        });
+        writeJson(path.join(child, 'package.json'), { name: 'web' });
+
+        const loaded = await loadToolchainConfig(child);
+
+        // Shared sections flow down; repository/workspace-scoped ones do not.
+        expect(loaded.config.project).toEqual({ author: 'Acme' });
+        expect(sectionConfig(loaded.config.logger)).toEqual({ level: 'debug' });
+        expect(sectionConfig(loaded.config.vite)?.fmt).toEqual({ printWidth: 100 });
+        expect(sectionConfig(loaded.config.vite)?.test).toBeUndefined();
+        expect(sectionConfig(loaded.config.vite)?.run).toBeUndefined();
+        expect(loaded.config.ci).toBeUndefined();
+        expect(loaded.config.changelog).toBeUndefined();
+        expect(loaded.config.catalogs).toBeUndefined();
+        expect(loaded.config.tsconfig).toBeUndefined();
+    });
+
     it('detects a configless standalone project without inheriting the root type', async () => {
         const root = tmp();
         const child = path.join(root, 'apps', 'web');

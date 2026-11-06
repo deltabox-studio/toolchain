@@ -320,14 +320,12 @@ export async function loadToolchainConfig(
             error = `failed to load ${file}: ${errorMessage(cause)}`;
         }
     } else if (parentConfig) {
-        // Hooks are code and are not inherited by a nested project. When the
-        // project has no config of its own, the parent still supplies sections
-        // and tokens, but its lifecycle hooks must not run here and its identity
-        // must not rename the workspace (so detection uses this project's own
-        // files and `package.json` supplies `name`/`scope`/`description`).
-        const { hooks: _hooks, project: parentProject, ...rest } = config;
-        const project = inheritedProject(parentProject);
-        config = project ? { ...rest, project } : rest;
+        // A configless project inherits the ancestor config exactly like a child
+        // config with no sections: workspace-scoped sections (`ci`, `changelog`,
+        // `catalogs`, `tsconfig`, `vite.test`/`vite.run`) and hooks are dropped,
+        // and the parent's project identity is stripped (so detection uses this
+        // project's own files and `package.json` supplies `name`/`scope`/`description`).
+        config = mergeToolchainConfig(parentConfig, {});
     }
 
     // When a `project` field is not defined, fall back to the project's own
