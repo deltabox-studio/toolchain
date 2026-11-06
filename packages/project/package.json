@@ -27,6 +27,7 @@
         "@types/node": "catalog:",
         "tsdown": "catalog:",
         "typescript": "catalog:",
+        "vite": "catalog:",
         "vitest": "catalog:"
     },
     "exports": {

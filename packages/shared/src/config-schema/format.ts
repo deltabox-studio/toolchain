@@ -83,7 +83,8 @@ export const fmtConfigSchema = withEnabled(
         biome: toolOptions(biomeConfigOptionsSchema)
             .describe(
                 'Biome formatter options (`true` = defaults, `false` = disabled); ' +
-                    'merged into the generated `biome.json`.'
+                    'merged into the generated `biome.json` (arrays union; ' +
+                    '`$remove:`/`$reset` prune or replace them).'
             )
             .optional(),
         prettier: toolOptions(prettierOptions)
@@ -112,7 +113,8 @@ export const lintConfigSchema = withEnabled(
         biome: toolOptions(biomeConfigOptionsSchema)
             .describe(
                 'Biome linter options (`true` = defaults, `false` = disabled); ' +
-                    'merged into the generated `biome.json`.'
+                    'merged into the generated `biome.json` (arrays union; ' +
+                    '`$remove:`/`$reset` prune or replace them).'
             )
             .optional(),
         eslint: toolOptions(eslintOptions)

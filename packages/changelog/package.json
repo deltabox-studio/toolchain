@@ -27,6 +27,7 @@
         "tsx": "catalog:",
         "type-fest": "catalog:",
         "typescript": "catalog:",
+        "vite": "catalog:",
         "vitest": "catalog:"
     },
     "exports": {

@@ -19,7 +19,10 @@ export const biomeConfigSchema = withEnabled(
     z.object({
         vscode: z.boolean().describe('Write the Biome VS Code settings (default true).').optional(),
         overrides: biomeConfigOptionsSchema
-            .describe('Deep-merged over the generated `biome.json` (arrays union).')
+            .describe(
+                'Deep-merged over the generated `biome.json` (arrays union; ' +
+                    '`$remove:`/`$reset` prune or replace them).'
+            )
             .optional(),
     })
 )

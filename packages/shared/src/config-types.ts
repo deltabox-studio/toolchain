@@ -633,7 +633,7 @@ export interface ToolchainFmtConfig {
     oxc?: boolean | OxfmtConfig;
     /**
      * Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated
-     * `biome.json`.
+     * `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
      */
     biome?: boolean | BiomeConfig;
     /** Prettier options (`true` = defaults, `false` = disabled). */
@@ -664,7 +664,7 @@ export interface ToolchainLintConfig {
     oxc?: boolean | OxlintConfig;
     /**
      * Biome linter options (`true` = defaults, `false` = disabled); merged into the generated
-     * `biome.json`.
+     * `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
      */
     biome?: boolean | BiomeConfig;
     /** ESLint options (`true` = defaults, `false` = disabled). */
@@ -677,7 +677,10 @@ export interface ToolchainLintConfig {
 export interface ToolchainBiomeConfig {
     /** Write the Biome VS Code settings (default true). */
     vscode?: boolean;
-    /** Deep-merged over the generated `biome.json` (arrays union). */
+    /**
+     * Deep-merged over the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace
+     * them).
+     */
     overrides?: BiomeConfig;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;

@@ -1543,7 +1543,7 @@
                             "description": "Biome configuration options."
                         }
                     ],
-                    "description": "Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`."
+                    "description": "Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them)."
                 },
                 "prettier": {
                     "anyOf": [
@@ -1640,7 +1640,7 @@
                             "description": "Biome configuration options."
                         }
                     ],
-                    "description": "Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`."
+                    "description": "Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them)."
                 },
                 "eslint": {
                     "anyOf": [
@@ -1675,7 +1675,7 @@
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "Deep-merged over the generated `biome.json` (arrays union)."
+                    "description": "Deep-merged over the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them)."
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",

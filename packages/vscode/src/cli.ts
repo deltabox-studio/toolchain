@@ -97,7 +97,7 @@ const FORMAT_IMPORT_GROUP_DEFAULTS_ENV = 'DBX_ENABLE_FORMAT_IMPORT_GROUP_DEFAULT
  * environment so its sync/generate actions (and the generated configs) honour
  * the VS Code user/workspace setting.
  */
-function formatImportGroupDefaultsEnv(): NodeJS.ProcessEnv {
+export function formatImportGroupDefaultsEnv(): NodeJS.ProcessEnv {
     const enabled = vscode.workspace
         .getConfiguration(SETTINGS_SECTION)
         .get<boolean>('enableFormatImportGroupDefaults', true);

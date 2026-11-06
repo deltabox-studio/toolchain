@@ -56,6 +56,11 @@ interface RuleSetting {
     options?: unknown;
 }
 
+/** Whether a Biome rule path is present in the curated map. */
+function isMappedRule(path: string): path is keyof typeof RULE_MAP {
+    return Object.hasOwn(RULE_MAP, path);
+}
+
 /** Normalize a Biome rule value to a level string. */
 function levelOf(value: unknown): string | undefined {
     if (typeof value === 'string') return value;
@@ -101,7 +106,7 @@ export function mapBiomeToOxlint(biome: Json, ignorePatterns: string[]): OxlintM
     for (const [path, setting] of flattenRules(biome.linter?.rules ?? {})) {
         const level = toOxlintLevel(levelOf(setting));
         if (!level) continue;
-        const target = RULE_MAP[path as keyof typeof RULE_MAP];
+        const target = isMappedRule(path) ? RULE_MAP[path] : undefined;
         if (target === undefined) {
             unmapped.push({
                 source: `linter.rules.${path}`,

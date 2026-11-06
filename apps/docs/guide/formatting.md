@@ -199,6 +199,37 @@ biome: {
 }
 ```
 
+Default array entries can be pruned with a `$remove:` entry (its value is JSON,
+or a raw string when it is not valid JSON) or replaced wholesale with `$reset`:
+
+```ts
+import { BIOME_RESET, removeBiomeEntry } from '@deltabox/toolchain/biome';
+
+biome: {
+    overrides: {
+        files: {
+            includes: [
+                removeBiomeEntry('!**/.generated'), // drop a default
+                '!**/generated/**',
+            ],
+        },
+        assist: {
+            actions: {
+                source: {
+                    organizeImports: {
+                        options: { groups: [BIOME_RESET, ['@/lib/**']] },
+                    },
+                },
+            },
+        },
+    },
+}
+```
+
+`removeBiomeEntry(entry)` builds the directive, and nested arrays (eg. import
+groups) are matched deeply. The same directives work in `fmt.biome` /
+`lint.biome`; sources are applied in order, so later ones see earlier results.
+
 #### `vscode`
 
 When on (the default), the sync also writes the recommended Biome VS Code
@@ -209,22 +240,27 @@ settings and the Biome extension recommendation (see
 
 ```ts
 import {
+    BIOME_RESET,
     biomeConfig,
     biomeSyncTask,
     biomeVscodeSettings,
     mergeBiomeConfig,
+    removeBiomeEntry,
     renderBiomeConfig,
     renderBiomeJson,
+    resolveBiomeArray,
 } from '@deltabox/toolchain/biome';
 ```
 
-| Export                                  | Description                                              |
-| --------------------------------------- | -------------------------------------------------------- |
-| `biomeSyncTask()`                       | The sync task (writes `biome.json`).                     |
-| `biomeConfig` / `biomeVscodeSettings`   | The generic Biome config / recommended VS Code settings. |
-| `renderBiomeConfig(tokens, overrides?)` | Resolve tokens + merge overrides into an object.         |
-| `renderBiomeJson(tokens, overrides?)`   | Serialize the rendered config.                           |
-| `mergeBiomeConfig(base, patch)`         | The recursive/array-union merge used above.              |
+| Export                                    | Description                                              |
+| ----------------------------------------- | -------------------------------------------------------- |
+| `biomeSyncTask()`                         | The sync task (writes `biome.json`).                     |
+| `biomeConfig` / `biomeVscodeSettings`     | The generic Biome config / recommended VS Code settings. |
+| `renderBiomeConfig(tokens, overrides?)`   | Resolve tokens + merge overrides into an object.         |
+| `renderBiomeJson(tokens, overrides?)`     | Serialize the rendered config.                           |
+| `mergeBiomeConfig(base, patch)`           | The recursive/array-union merge used above.              |
+| `resolveBiomeArray(base, patch)`          | Resolve `$remove:`/`$reset` directives for one array.    |
+| `removeBiomeEntry(entry)` / `BIOME_RESET` | Build the array-pruning / array-reset directives.        |
 
 > Migrating **from** Biome to Oxc is a different concern — see
 > [Migrations](/guide/migrations/).

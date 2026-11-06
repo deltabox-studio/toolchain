@@ -1076,7 +1076,7 @@ Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` over
 
 - **Type**: `boolean | BiomeConfig`
 
-Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`.
+Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
 
 ### `prettier`
 
@@ -1128,7 +1128,7 @@ Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` ov
 
 - **Type**: `boolean | BiomeConfig`
 
-Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`.
+Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
 
 ### `eslint`
 
@@ -1158,7 +1158,7 @@ Write the Biome VS Code settings (default true).
 
 - **Type**: `BiomeConfig`
 
-Deep-merged over the generated `biome.json` (arrays union).
+Deep-merged over the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
 
 ### `enabled`
 

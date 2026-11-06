@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    BIOME_RESET,
     biomeConfig,
     biomeSyncTask,
     biomeVscodeSettings,
+    removeBiomeEntry,
     renderBiomeConfig,
     renderBiomeJson,
     renderVscodeSettings,
+    resolveBiomeArray,
 } from '../src/index.js';
 
 describe('biome templates', () => {
@@ -147,5 +150,78 @@ describe('biome templates', () => {
         expect((rendered.linter as any).rules.suspicious.noExplicitAny).toBe('error');
         // untouched default rule survives the deep merge
         expect((rendered.linter as any).rules.suspicious.noDoubleEquals).toBe('warn');
+    });
+
+    it('removes default array entries with the $remove directive', () => {
+        const rendered = renderBiomeConfig(
+            { name: 'acme', scope: '@acme' },
+            { files: { includes: [removeBiomeEntry('!**/.generated'), '!**/gen/**'] } }
+        );
+        const includes = (rendered.files as any).includes as string[];
+        expect(includes).not.toContain('!**/.generated');
+        expect(includes).toContain('!**/gen/**');
+        // unrelated defaults survive
+        expect(includes).toContain('!*.json');
+    });
+
+    it('replaces an array with the $reset directive', () => {
+        const rendered = renderBiomeConfig(
+            { name: 'acme', scope: '@acme' },
+            { files: { includes: [BIOME_RESET, 'src/**'] } }
+        );
+        expect((rendered.files as any).includes).toEqual(['src/**']);
+    });
+
+    it('removes nested array entries with the $remove directive', () => {
+        const rendered = renderBiomeConfig(
+            { name: 'acme', scope: '@acme' },
+            {
+                assist: {
+                    actions: {
+                        source: {
+                            organizeImports: {
+                                options: {
+                                    groups: [removeBiomeEntry(['@/lib/**', '@/utils/**'])],
+                                },
+                            },
+                        },
+                    },
+                },
+            }
+        );
+        const groups = (rendered.assist as any).actions.source.organizeImports.options
+            .groups as string[][];
+        expect(groups).not.toContainEqual(['@/lib/**', '@/utils/**']);
+        expect(groups).toContainEqual(['@/pages/**']);
+    });
+
+    it('resolves override sources in order', async () => {
+        const task = biomeSyncTask();
+        const files = await task.run({
+            cwd: '/repo',
+            projectType: 'project',
+            config: {
+                biome: { overrides: { files: { includes: ['!packages/x/**'] } } },
+                fmt: {
+                    biome: {
+                        files: { includes: [removeBiomeEntry('!packages/x/**'), '!packages/y/**'] },
+                    },
+                },
+            },
+            tokens: { name: 'acme', scope: '@acme' },
+            log: () => {},
+            warn: () => {},
+        });
+        const includes = JSON.parse(files?.[0]?.content ?? '{}').files.includes as string[];
+        expect(includes).not.toContain('!packages/x/**');
+        expect(includes).toContain('!packages/y/**');
+        expect(includes).toContain('!**/.generated');
+    });
+
+    it('resolveBiomeArray applies reset, removals and additions', () => {
+        expect(resolveBiomeArray(['a', 'b'], [BIOME_RESET, 'c'])).toEqual(['c']);
+        expect(resolveBiomeArray(['a', 'b'], [removeBiomeEntry('a'), 'c'])).toEqual(['b', 'c']);
+        // raw (non-JSON) removal values also work
+        expect(resolveBiomeArray(['a', 'b'], ['$remove:a'])).toEqual(['b']);
     });
 });

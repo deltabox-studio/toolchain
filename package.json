@@ -34,7 +34,8 @@
         "environment",
         "variables",
         "configuration",
-        "settings"
+        "settings",
+        "dbx"
     ],
     "scripts": {
         "dev": "tsx src/cli/index.ts",

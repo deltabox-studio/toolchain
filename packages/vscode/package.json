@@ -644,6 +644,7 @@
         "@vscode/test-electron": "^3.1.0",
         "tsdown": "catalog:",
         "typescript": "catalog:",
+        "vite": "catalog:",
         "vitest": "catalog:"
     },
     "author": "Victor Sango <victor@deltabox.studio>",

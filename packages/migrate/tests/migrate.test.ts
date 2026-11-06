@@ -15,6 +15,7 @@ import {
     hasPending,
     listMigrations,
     mapBiomeFormatter,
+    mapBiomeToOxlint,
     mapPrettierToOxfmt,
     mergeViteConfig,
     mergeViteObjects,
@@ -134,6 +135,31 @@ describe('biome -> oxc unmapped', () => {
         expect(mapBiomeFormatter({ formatter: { jsxQuoteStyle: 'double' } }).unmapped).toHaveLength(
             0
         );
+    });
+});
+
+describe('biome -> oxc rule map', () => {
+    it('maps known rules and reports unknown paths', () => {
+        const mapped = mapBiomeToOxlint(
+            {
+                linter: {
+                    rules: {
+                        suspicious: { noDoubleEquals: 'warn', notARealRule: 'error' },
+                        custom: { unknownRule: 'error' },
+                    },
+                },
+            },
+            []
+        );
+        expect(mapped.oxlint.rules.eqeqeq).toBe('warn');
+        expect(mapped.unmapped).toContainEqual({
+            source: 'linter.rules.suspicious.notARealRule',
+            reason: 'not in the Biome->Oxlint map',
+        });
+        expect(mapped.unmapped).toContainEqual({
+            source: 'linter.rules.custom.unknownRule',
+            reason: 'not in the Biome->Oxlint map',
+        });
     });
 });
 
