@@ -105,6 +105,11 @@ vendor workflow defines its own triggers, so the `ci.changelog.branches` default
 do not rewrite them. `dbx workflow` runs each workflow with its vendor CLI
 (`glab ci run`, `az pipelines run --name <pipeline>`, or `gh workflow run`).
 
+Set `setup: true` to inject the provider-specific setup before the pipeline's own
+steps: GitHub gets the checkout/Node/Corepack/install steps, GitLab gets a
+`node:<version>` image plus a `before_script`, and Azure gets `UseNode@1` plus an
+install script. It defaults to `false`, so the workflow is written as-is.
+
 If a hand-written `.gitlab-ci.yml` / `azure-pipelines.yml` already exists, sync
 leaves it untouched and records a workflow conflict, exactly like a GitHub
 workflow. Set `ci.<id>: { enabled: false }` to opt out explicitly.
@@ -142,6 +147,8 @@ toolchain: {
 
 This writes `.github/workflows/deploy.yml` and manages it like any built-in
 workflow (the generated header is prepended, and `dbx sync --check` tracks it).
+Set `setup: true` to inject the shared checkout/Node/Corepack/install steps into
+each job; steps the job already defines are not duplicated.
 
 ## Existing workflows
 

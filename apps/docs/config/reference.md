@@ -125,6 +125,12 @@ Override the generated workflow file name (eg. `deploy.yml`).
 
 Directory for the workflow file (default `.github/workflows`).
 
+#### `setup`
+
+- **Type**: `boolean`
+
+Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false; built-in workflows already include them).
+
 #### `enabled`
 
 - **Type**: `boolean`
@@ -519,6 +525,12 @@ Override the generated workflow file name (eg. `deploy.yml`).
 - **Type**: `string`
 
 Directory for the workflow file (default `.github/workflows`).
+
+#### `setup`
+
+- **Type**: `boolean`
+
+Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false; built-in workflows already include them).
 
 #### `enabled`
 

@@ -104,6 +104,11 @@ export interface GitHubWorkflowSetting {
     filename?: string;
     /** Directory for the generated file. */
     dir?: string;
+    /**
+     * Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow
+     * is written as-is).
+     */
+    setup?: boolean;
     /** Enable/disable this workflow (default: enabled when present). */
     enabled?: boolean;
 }
@@ -125,6 +130,11 @@ export interface GitLabWorkflowSetting {
     filename?: string;
     /** Directory for the generated file. */
     dir?: string;
+    /**
+     * Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow
+     * is written as-is).
+     */
+    setup?: boolean;
     /** Enable/disable this workflow (default: enabled when present). */
     enabled?: boolean;
 }
@@ -146,6 +156,11 @@ export interface AzureWorkflowSetting {
     filename?: string;
     /** Directory for the generated file. */
     dir?: string;
+    /**
+     * Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow
+     * is written as-is).
+     */
+    setup?: boolean;
     /** Enable/disable this workflow (default: enabled when present). */
     enabled?: boolean;
 }
@@ -183,6 +198,11 @@ export interface WorkflowOptions {
     filename?: string;
     /** Directory for the workflow file (default `.github/workflows`). */
     dir?: string;
+    /**
+     * Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false;
+     * built-in workflows already include them).
+     */
+    setup?: boolean;
     /** Enable/disable this workflow (default: enabled when present). */
     enabled?: boolean;
 }
@@ -388,6 +408,11 @@ export interface CiChangelogConfig {
     filename?: string;
     /** Directory for the workflow file (default `.github/workflows`). */
     dir?: string;
+    /**
+     * Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false;
+     * built-in workflows already include them).
+     */
+    setup?: boolean;
     /** Enable/disable the changelog workflow and pipeline (default: enabled when present). */
     enabled?: boolean;
     /** Branches the generated workflows target. */

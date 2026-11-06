@@ -214,6 +214,13 @@ export const workflowOptionsSchema = withEnabled(
             .string()
             .describe('Directory for the workflow file (default `.github/workflows`).')
             .optional(),
+        setup: z
+            .boolean()
+            .describe(
+                'Inject the shared checkout/Node/Corepack/install steps into custom workflow ' +
+                    'jobs (default false; built-in workflows already include them).'
+            )
+            .optional(),
     }),
     'Enable/disable this workflow (default: enabled when present).'
 )
@@ -224,6 +231,13 @@ export const workflowOptionsSchema = withEnabled(
 const vendorWorkflowFields = {
     filename: z.string().describe('Override the generated file name.').optional(),
     dir: z.string().describe('Directory for the generated file.').optional(),
+    setup: z
+        .boolean()
+        .describe(
+            'Inject the provider-specific checkout/Node/Corepack/install setup ' +
+                '(default false: the workflow is written as-is).'
+        )
+        .optional(),
     enabled: z
         .boolean()
         .describe('Enable/disable this workflow (default: enabled when present).')
@@ -236,6 +250,7 @@ export interface VendorWorkflowConfig {
     workflow: Record<string, unknown>;
     filename?: string;
     dir?: string;
+    setup?: boolean;
     enabled?: boolean;
 }
 

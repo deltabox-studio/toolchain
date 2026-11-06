@@ -193,6 +193,48 @@ describe('workflow config', () => {
         expect(yaml).toContain('echo deploy');
     });
 
+    it('injects setup into a custom workflow when asked', () => {
+        const yaml = renderCustomWorkflow('deploy', {
+            tokens: {},
+            config: {
+                setup: true,
+                triggers: { workflow_dispatch: {} },
+                jobs: {
+                    deploy: { 'runs-on': 'ubuntu-latest', steps: [{ run: 'yarn deploy' }] },
+                },
+            },
+        });
+        expect(yaml).toContain('uses: actions/checkout@v5');
+        expect(yaml).toContain('uses: actions/setup-node@v5');
+        expect(yaml).toContain('corepack prepare yarn@4.17.1 --activate');
+        expect(yaml).toContain('yarn install --immutable');
+        expect(yaml).toContain('yarn deploy');
+    });
+
+    it('does not duplicate setup a custom workflow already has', () => {
+        const yaml = renderCustomWorkflow('deploy', {
+            tokens: {},
+            config: {
+                setup: true,
+                triggers: { workflow_dispatch: {} },
+                jobs: {
+                    deploy: {
+                        'runs-on': 'ubuntu-latest',
+                        steps: [
+                            { uses: 'actions/checkout@v4' },
+                            { uses: 'actions/setup-node@v4', with: { 'node-version': '22' } },
+                            { run: 'corepack enable\nyarn install --immutable' },
+                            { run: 'yarn deploy' },
+                        ],
+                    },
+                },
+            },
+        })!;
+        expect((yaml.match(/actions\/checkout/g) ?? []).length).toBe(1);
+        expect((yaml.match(/actions\/setup-node/g) ?? []).length).toBe(1);
+        expect((yaml.match(/corepack enable/g) ?? []).length).toBe(1);
+    });
+
     it('resolves workflow file paths with filename/dir overrides', () => {
         expect(workflowFilePath('ci', true, 'ci.yml')).toBe(`${DEFAULT_WORKFLOW_DIR}/ci.yml`);
         expect(
@@ -281,6 +323,102 @@ describe('workflow config', () => {
         );
         expect(files['ci.yml']).toContain('name: CI');
         expect(files['ci.yml']).toContain('echo ok');
+    });
+
+    it('injects the GitHub setup into a vendor workflow when asked', () => {
+        const files = renderWorkflows(
+            {},
+            {
+                ci: {
+                    provider: 'github',
+                    setup: true,
+                    workflow: {
+                        name: 'CI',
+                        on: ['push'],
+                        jobs: {
+                            ci: {
+                                'runs-on': 'ubuntu-latest',
+                                steps: [{ run: 'echo ok' }],
+                            },
+                        },
+                    },
+                },
+            }
+        );
+        expect(files['ci.yml']).toContain('uses: actions/checkout@v5');
+        expect(files['ci.yml']).toContain('corepack prepare yarn@4.17.1 --activate');
+    });
+
+    it('injects the GitLab setup into a vendor pipeline when asked', () => {
+        const files = renderWorkflows(
+            {},
+            {
+                ci: {
+                    provider: 'gitlab',
+                    setup: true,
+                    workflow: {
+                        stages: ['test'],
+                        test: { stage: 'test', script: ['yarn test'] },
+                    },
+                },
+            }
+        );
+        expect(files['.gitlab-ci.yml']).toContain('image: node:22');
+        expect(files['.gitlab-ci.yml']).toContain('before_script:');
+        expect(files['.gitlab-ci.yml']).toContain('corepack prepare yarn@4.17.1 --activate');
+        expect(files['.gitlab-ci.yml']).toContain('yarn install --immutable');
+    });
+
+    it('injects the Azure setup into a vendor pipeline when asked', () => {
+        const files = renderWorkflows(
+            {},
+            {
+                ci: {
+                    provider: 'azure',
+                    setup: true,
+                    workflow: {
+                        trigger: ['main'],
+                        pool: { vmImage: 'ubuntu-latest' },
+                        steps: [{ script: 'yarn build' }],
+                    },
+                },
+            }
+        );
+        expect(files['azure-pipelines.yml']).toContain('task: UseNode@1');
+        expect(files['azure-pipelines.yml']).toContain('corepack prepare yarn@4.17.1 --activate');
+        expect(files['azure-pipelines.yml']).toContain('yarn build');
+    });
+
+    it('keeps vendor workflows as-is without setup', () => {
+        const files = renderWorkflows(
+            {},
+            {
+                ci: {
+                    provider: 'gitlab',
+                    workflow: {
+                        stages: ['test'],
+                        test: { stage: 'test', script: ['yarn test'] },
+                    },
+                },
+            }
+        );
+        expect(files['.gitlab-ci.yml']).not.toContain('before_script');
+        expect(files['.gitlab-ci.yml']).not.toContain('image:');
+    });
+
+    it('uses the configured package manager for vendor setup', () => {
+        const files = renderWorkflows(
+            { packageManager: 'pnpm', packageManagerVersion: '10.11.1' },
+            {
+                ci: {
+                    provider: 'gitlab',
+                    setup: true,
+                    workflow: { test: { script: ['pnpm test'] } },
+                },
+            }
+        );
+        expect(files['.gitlab-ci.yml']).toContain('corepack prepare pnpm@10.11.1 --activate');
+        expect(files['.gitlab-ci.yml']).toContain('pnpm install --frozen-lockfile');
     });
 
     it('resolves vendor workflow paths and filename/dir overrides', () => {

@@ -138,6 +138,10 @@
                     "type": "string",
                     "description": "Directory for the generated file."
                 },
+                "setup": {
+                    "type": "boolean",
+                    "description": "Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow is written as-is)."
+                },
                 "enabled": {
                     "type": "boolean",
                     "description": "Enable/disable this workflow (default: enabled when present)."
@@ -172,6 +176,10 @@
                     "type": "string",
                     "description": "Directory for the generated file."
                 },
+                "setup": {
+                    "type": "boolean",
+                    "description": "Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow is written as-is)."
+                },
                 "enabled": {
                     "type": "boolean",
                     "description": "Enable/disable this workflow (default: enabled when present)."
@@ -205,6 +213,10 @@
                 "dir": {
                     "type": "string",
                     "description": "Directory for the generated file."
+                },
+                "setup": {
+                    "type": "boolean",
+                    "description": "Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow is written as-is)."
                 },
                 "enabled": {
                     "type": "boolean",
@@ -280,6 +292,10 @@
                 "dir": {
                     "type": "string",
                     "description": "Directory for the workflow file (default `.github/workflows`)."
+                },
+                "setup": {
+                    "type": "boolean",
+                    "description": "Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false; built-in workflows already include them)."
                 },
                 "enabled": {
                     "description": "Enable/disable this workflow (default: enabled when present).",
@@ -826,6 +842,10 @@
                 "dir": {
                     "type": "string",
                     "description": "Directory for the workflow file (default `.github/workflows`)."
+                },
+                "setup": {
+                    "type": "boolean",
+                    "description": "Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false; built-in workflows already include them)."
                 },
                 "enabled": {
                     "description": "Enable/disable the changelog workflow and pipeline (default: enabled when present).",
