@@ -28,6 +28,8 @@ code --install-extension deltabox.toolchain-vscode
 | ---------------------------- | --------------------------------------------------------------------------------------- |
 | Sync all / active / selected | Run `dbx sync` (`--recursive` / per project).                                           |
 | Check sync                   | `sync --check` across the workspace.                                                    |
+| Sync tsconfig                | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).               |
+| Manage tsconfig…             | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).               |
 | Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**. |
 | Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.       |
 | Remove template…             | `template:list --registry` then `template:remove`.                                      |
@@ -113,13 +115,18 @@ The Home view links to this documentation with **Need help? Go to documentation*
 
 ## Auto-sync
 
-Auto-sync watches input files only: `dbx.config.*` plus the inputs each
-project's config resolves to (by default `tsconfig.workspaces.json` and every
-`tsconfig.default.json`). The extension asks the CLI for them
-(`dbx watch --list --json`), so custom `tsconfig.rootFile` / `tsconfig.defaultFile`
-names are watched instead of the defaults, and the list is refreshed whenever a
-`dbx.config.*` changes. Setting `deltabox.toolchain.watch` explicitly replaces
-the resolved inputs.
+Auto-sync watches input files only. The extension asks the CLI
+(`dbx watch --list --json`) for the concrete, project-graph-resolved files:
+every `dbx.config.*` plus each enabled project's `tsconfig.baseFile`,
+`tsconfig.defaultFile` and the root `tsconfig.rootFile`. Custom file names are
+honoured, nested configs can disable or override their own tsconfig section, and
+the list is refreshed whenever a `dbx.config.*` changes (and after each sync).
+
+The resolved patterns are workspace-relative and non-recursive by default, so
+VS Code reuses its workspace watcher instead of installing extra recursive
+watchers (which can hold `node_modules` handles during a package-manager link
+step on Windows). Setting `deltabox.toolchain.watch` explicitly replaces the
+resolved inputs; an empty list disables watching.
 
 Generated outputs are never watched. The scheduler debounces bursts, allows one sync at a time, queues at most one follow-up, and suppresses events briefly after a run.
 
@@ -168,6 +175,7 @@ Search for `deltabox:` to find:
 - **Sync selected projects**
 - **Sync all projects**
 - **Check sync**
+- **Manage tsconfig…**
 - **Scaffold project…**
 - **Add template…**
 - **Remove template…**

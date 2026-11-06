@@ -6,6 +6,7 @@ describe('parseHomeAction', () => {
     it('accepts known payload-free actions', () => {
         expect(parseHomeAction({ type: 'ready' })).toEqual({ type: 'ready' });
         expect(parseHomeAction({ type: 'syncAll' })).toEqual({ type: 'syncAll' });
+        expect(parseHomeAction({ type: 'syncTsconfig' })).toEqual({ type: 'syncTsconfig' });
         expect(parseHomeAction({ type: 'migrate' })).toEqual({ type: 'migrate' });
         expect(parseHomeAction({ type: 'runProviderCommand' })).toEqual({
             type: 'runProviderCommand',
