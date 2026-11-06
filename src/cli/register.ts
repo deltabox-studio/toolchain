@@ -8,7 +8,7 @@ import {
     setLogOverrides,
     type ToolchainCommand,
     type ToolchainCommandContext,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import { defaultSyncTasks } from '../sync.js';
 import { getConfigSelection } from './config-selection.js';

@@ -1,1 +1,1 @@
-export * from '@deltabox/toolchain-shared';
+export * from '@deltabox/toolchain/shared';

@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { logger } from '@deltabox/toolchain-shared';
+import { logger } from '@deltabox/toolchain/shared';
 
 /** The published package whose latest version is checked. */
 export const UPDATE_PACKAGE = '@deltabox/toolchain';

@@ -10,13 +10,13 @@ import {
     removeProjectProviderRegistry,
     setGlobalProviderRegistries,
     setProjectProviderRegistries,
-} from '@deltabox/toolchain-core';
+} from '@deltabox/toolchain/core';
 import {
     logger,
     type Replacements,
     sectionConfig,
     type ToolchainCommand,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import {
     addGlobalSource,

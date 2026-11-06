@@ -2,7 +2,7 @@ import type {
     Replacements,
     ToolchainTemplateKind,
     ToolchainTemplateSource,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 /** What a template produces (shared with the registry source model). */
 export type TemplateKind = ToolchainTemplateKind;

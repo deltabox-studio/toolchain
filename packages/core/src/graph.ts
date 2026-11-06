@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { type PackageJson, readJsonAt, toJson } from '@deltabox/toolchain-shared';
+import { type PackageJson, readJsonAt, toJson } from '@deltabox/toolchain/shared';
 
 import { findConfigFile } from './loader.js';
 

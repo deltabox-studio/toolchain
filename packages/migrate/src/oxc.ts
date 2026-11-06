@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { readManifest } from '@deltabox/toolchain-core';
+import { readManifest } from '@deltabox/toolchain/core';
 
 import { readJsonc } from './biome.js';
 import type {

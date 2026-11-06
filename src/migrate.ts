@@ -1,2 +1,2 @@
-export * from '@deltabox/toolchain-migrate';
-export * from '@deltabox/toolchain-migrate/cli';
+export * from '@deltabox/toolchain/migrate';
+export * from '@deltabox/toolchain/migrate/cli';

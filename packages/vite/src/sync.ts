@@ -13,7 +13,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { resolveFmtCustomGroups } from '@deltabox/toolchain-core';
+import { resolveFmtCustomGroups } from '@deltabox/toolchain/core';
 import {
     applyFmtCustomGroups,
     applyReplacementsDeep,
@@ -31,7 +31,7 @@ import {
     sectionEnabled,
     type ToolchainOxfmtConfig,
     type ToolchainViteConfig,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 /**
  * The `vite` section with the toolchain opt-out (`config`) removed. `fmt` and

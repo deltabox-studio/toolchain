@@ -1,4 +1,4 @@
-import type { ChangelogBreakingSetting } from '@deltabox/toolchain-shared';
+import type { ChangelogBreakingSetting } from '@deltabox/toolchain/shared';
 
 import { isBreakingCommit } from './breaking.js';
 import { capitalize, formatBody, groupItems, parseCcSubject, renderGroups } from './format.js';

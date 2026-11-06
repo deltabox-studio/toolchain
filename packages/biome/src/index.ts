@@ -6,7 +6,7 @@ import {
     type ToolchainConfig,
     sectionConfig,
     sectionEnabled,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import biomeConfigJson from './config.json' with { type: 'json' };
 import vscodeSettingsJson from './vscode-settings.json' with { type: 'json' };

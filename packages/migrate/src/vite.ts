@@ -15,7 +15,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { CONFIG_FILE_NAMES } from '@deltabox/toolchain-shared';
+import { CONFIG_FILE_NAMES } from '@deltabox/toolchain/shared';
 
 import type {
     MigrationContext,

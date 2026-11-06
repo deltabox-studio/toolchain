@@ -5,7 +5,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import { dbxConfigSchema } from '@deltabox/toolchain-shared';
+import { dbxConfigSchema } from '@deltabox/toolchain/shared';
 
 import {
     buildConfigJson,

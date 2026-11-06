@@ -1,1 +1,1 @@
-/// <reference types="@deltabox/toolchain-config/types.ts" />
+/// <reference types="@deltabox/toolchain/config/types.ts" />

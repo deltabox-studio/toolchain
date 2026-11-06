@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { resolveFmtCustomGroups } from '@deltabox/toolchain-core';
+import { resolveFmtCustomGroups } from '@deltabox/toolchain/core';
 import {
     biomeToOx,
     dprintToOx,
@@ -14,7 +14,7 @@ import {
     findPrettierConfig,
     prettierToOx,
     readJsonc,
-} from '@deltabox/toolchain-migrate';
+} from '@deltabox/toolchain/migrate';
 import {
     applyFmtCustomGroups,
     DEFAULT_FMT_RULES,
@@ -38,7 +38,7 @@ import {
     type ToolchainOxfmtConfig,
     warningMessage,
     type WarningId,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 type Json = Record<string, unknown>;
 

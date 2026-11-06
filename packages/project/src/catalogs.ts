@@ -9,7 +9,7 @@ import {
     sectionEnabled,
     toYaml,
     type YamlValue,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 /**
  * The catalogs feature: a package catalog (`package -> version range`) written

@@ -10,7 +10,7 @@ export {
     resolveFmtCustomGroups,
     type ResolveFmtCustomGroupsInput,
     type ResolveFmtCustomGroupsOptions,
-} from '@deltabox/toolchain-core';
+} from '@deltabox/toolchain/core';
 export * from './cli/index.js';
 export * from './commands.js';
 export * from './plugin.js';

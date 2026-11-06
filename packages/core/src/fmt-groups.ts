@@ -23,7 +23,7 @@ import {
     splitPackageName,
     type ToolchainConfigSections,
     type ToolchainProjectConfig,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import { buildProjectGraph } from './graph.js';
 import { loadToolchainConfig } from './loader.js';

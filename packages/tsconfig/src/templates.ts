@@ -1,4 +1,4 @@
-import { applyReplacementsDeep, type Replacements } from '@deltabox/toolchain-shared';
+import { applyReplacementsDeep, type Replacements } from '@deltabox/toolchain/shared';
 
 import baseTemplate from './templates/tsconfig.base.json' with { type: 'json' };
 import buildTemplate from './templates/tsconfig.build.json' with { type: 'json' };

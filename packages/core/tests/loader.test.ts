@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { sectionConfig } from '@deltabox/toolchain-shared';
+import { sectionConfig } from '@deltabox/toolchain/shared';
 
 import {
     findConfigFile,

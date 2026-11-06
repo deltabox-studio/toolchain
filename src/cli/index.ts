@@ -13,10 +13,10 @@ import { fileURLToPath } from 'node:url';
 
 import { Command } from 'commander';
 
-import { changelogCommands } from '@deltabox/toolchain-changelog/cli';
-import { loadToolchainConfig } from '@deltabox/toolchain-core';
-import { migrateCommands } from '@deltabox/toolchain-migrate/cli';
-import { projectCommands } from '@deltabox/toolchain-project/cli';
+import { changelogCommands } from '@deltabox/toolchain/changelog/cli';
+import { loadToolchainConfig } from '@deltabox/toolchain/core';
+import { migrateCommands } from '@deltabox/toolchain/migrate/cli';
+import { projectCommands } from '@deltabox/toolchain/project/cli';
 import {
     LOG_LEVELS,
     logger,
@@ -26,11 +26,11 @@ import {
     type LoggerOptions,
     type ToolchainCommand,
     type ToolchainConfig,
-} from '@deltabox/toolchain-shared';
-import { templateCommands } from '@deltabox/toolchain-template/cli';
-import { tsconfigCommands } from '@deltabox/toolchain-tsconfig/cli';
-import { cleanupCommands } from '@deltabox/toolchain-tsdown/cli';
-import { resolveVpCommand, viteCommands } from '@deltabox/toolchain-vite/cli';
+} from '@deltabox/toolchain/shared';
+import { templateCommands } from '@deltabox/toolchain/template/cli';
+import { tsconfigCommands } from '@deltabox/toolchain/tsconfig/cli';
+import { cleanupCommands } from '@deltabox/toolchain/tsdown/cli';
+import { resolveVpCommand, viteCommands } from '@deltabox/toolchain/vite/cli';
 
 import rootPkg from '../../package.json' with { type: 'json' };
 import { syncCommands } from './commands/index.js';

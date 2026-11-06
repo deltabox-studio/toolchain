@@ -2,6 +2,8 @@ import { fileURLToPath } from 'node:url';
 
 import { defineConfig } from 'tsdown';
 
+import { workspaceSourceAliases } from './packages/tsdown/src/config/workspace.js';
+
 /** Repo root (this config lives at the root); relative paths resolve from here. */
 const root = fileURLToPath(new URL('.', import.meta.url));
 
@@ -40,26 +42,7 @@ export default defineConfig({
         // calls that a single-file CJS bundle cannot resolve. Use its ESM
         // entry so rolldown can inline the statically imported modules.
         'jsonc-parser': src('node_modules/jsonc-parser/lib/esm/main.js'),
-        '@deltabox/toolchain-shared': src('packages/shared/src/index.ts'),
-        '@deltabox/toolchain-config/cli': src('packages/config/src/cli/index.ts'),
-        '@deltabox/toolchain-config': src('packages/config/src/index.ts'),
-        '@deltabox/toolchain-core': src('packages/core/src/index.ts'),
-        '@deltabox/toolchain-changelog/cli': src('packages/changelog/src/cli/index.ts'),
-        '@deltabox/toolchain-changelog': src('packages/changelog/src/index.ts'),
-        '@deltabox/toolchain-tsconfig/cli': src('packages/tsconfig/src/cli/index.ts'),
-        '@deltabox/toolchain-tsconfig': src('packages/tsconfig/src/index.ts'),
-        '@deltabox/toolchain-tsdown/cli': src('packages/tsdown/src/cli/index.ts'),
-        '@deltabox/toolchain-tsdown/config/node': src('packages/tsdown/src/config/node.ts'),
-        '@deltabox/toolchain-tsdown': src('packages/tsdown/src/index.ts'),
-        '@deltabox/toolchain-biome': src('packages/biome/src/index.ts'),
-        '@deltabox/toolchain-project/cli': src('packages/project/src/cli/index.ts'),
-        '@deltabox/toolchain-project': src('packages/project/src/index.ts'),
-        '@deltabox/toolchain-migrate/cli': src('packages/migrate/src/cli/index.ts'),
-        '@deltabox/toolchain-migrate': src('packages/migrate/src/index.ts'),
-        '@deltabox/toolchain-template/cli': src('packages/template/src/cli/index.ts'),
-        '@deltabox/toolchain-template': src('packages/template/src/index.ts'),
-        '@deltabox/toolchain-vite/cli': src('packages/vite/src/cli/index.ts'),
-        '@deltabox/toolchain-vite': src('packages/vite/src/index.ts'),
+        ...workspaceSourceAliases(),
     },
     deps: {
         alwaysBundle: id => !id.startsWith('node:') && !/^tsx(\/|$)/.test(id),

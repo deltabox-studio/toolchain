@@ -12,7 +12,7 @@ import {
     projectToPackageJson,
     type ProjectType,
     type Replacements,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 import {
     type MonorepoWorkspace,
     parseTsconfig,
@@ -21,7 +21,7 @@ import {
     renderTsconfigBuild,
     renderTsconfigDefault,
     type TsconfigExtendsOptions,
-} from '@deltabox/toolchain-tsconfig';
+} from '@deltabox/toolchain/tsconfig';
 
 import rootPkg from '../../../package.json' with { type: 'json' };
 import { renderPnpmWorkspace, renderYarnrc, supportsCatalogs } from './catalogs.js';

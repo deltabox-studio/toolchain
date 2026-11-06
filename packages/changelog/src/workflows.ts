@@ -20,7 +20,7 @@ import {
     type WorkflowSetting,
     type WorkflowStep,
     type YamlValue,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 export interface WorkflowJob {
     name?: string;

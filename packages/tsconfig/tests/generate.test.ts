@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import type { SyncContext, ToolchainConfig } from '@deltabox/toolchain-shared';
+import type { SyncContext, ToolchainConfig } from '@deltabox/toolchain/shared';
 
 import { generateTsconfigs, tsconfigSyncTask } from '../src/index.js';
 

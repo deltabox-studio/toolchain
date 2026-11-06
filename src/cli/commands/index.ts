@@ -1,4 +1,4 @@
-import type { ToolchainCommand, ToolchainConfig } from '@deltabox/toolchain-shared';
+import type { ToolchainCommand, ToolchainConfig } from '@deltabox/toolchain/shared';
 
 import { projectsCommand } from './projects.js';
 import { providerCommands } from './providers.js';

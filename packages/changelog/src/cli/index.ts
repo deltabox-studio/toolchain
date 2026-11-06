@@ -1,4 +1,4 @@
-import { logger, resolveChangelogConfig, type ToolchainCommand } from '@deltabox/toolchain-shared';
+import { logger, resolveChangelogConfig, type ToolchainCommand } from '@deltabox/toolchain/shared';
 
 import { runWorkflows, workflowTargets } from '../run-workflows.js';
 import { runChangelog } from '../run.js';

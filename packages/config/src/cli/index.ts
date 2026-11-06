@@ -3,7 +3,7 @@
  * `createConfigEngine`, then exposes these on its CLI:
  *
  * ```ts
- * import { configCommands } from '@deltabox/toolchain-config/cli';
+ * import { configCommands } from '@deltabox/toolchain/config';
  * program.addCommand(...)
  * ```
  */
@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
+import { logger, type ToolchainCommand } from '@deltabox/toolchain/shared';
 
 import type { ConfigEngine } from '../engine.js';
 

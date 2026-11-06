@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { logger } from '@deltabox/toolchain-shared';
+import { logger } from '@deltabox/toolchain/shared';
 
 import {
     DEFAULT_WORKFLOW_TOKENS,

@@ -13,7 +13,7 @@ import {
     type ToolchainConfig,
     type WorkflowOptions,
     type WorkflowSetting,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import { renderCommitlintConfig } from './templates.js';
 import {

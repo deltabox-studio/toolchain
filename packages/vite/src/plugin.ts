@@ -31,7 +31,7 @@ import {
     logger,
     spawnCross,
     TOOLCHAIN_PACKAGE,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import { which } from './vp.js';
 

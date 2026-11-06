@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { type ChangelogBreakingSetting, logger } from '@deltabox/toolchain-shared';
+import { type ChangelogBreakingSetting, logger } from '@deltabox/toolchain/shared';
 
 import { formatChangelogFile } from './format.js';
 import { readCommits, repoSlug } from './git.js';

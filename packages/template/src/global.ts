@@ -13,12 +13,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { providerRegistryPaths } from '@deltabox/toolchain-core';
+import { providerRegistryPaths } from '@deltabox/toolchain/core';
 import {
     registrySourceAllowed,
     type RegistryPolicy,
     type ToolchainTemplateSource,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import { BUILTIN_TEMPLATES } from './builtin.js';
 import { loadLocalTemplates } from './local.js';

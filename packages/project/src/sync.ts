@@ -8,7 +8,7 @@ import {
     readJsonAt,
     splitPackageName,
     type SyncTask,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 /** The nearest ancestor directory containing a `.git` entry (the repo root). */
 function repoRoot(cwd: string): string | undefined {

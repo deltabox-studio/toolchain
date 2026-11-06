@@ -1,7 +1,7 @@
 import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { logger } from '@deltabox/toolchain-shared';
+import { logger } from '@deltabox/toolchain/shared';
 
 /**
  * The monorepo root: the nearest ancestor of the current working directory that

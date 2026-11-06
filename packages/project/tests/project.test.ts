@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { parseTsconfig } from '@deltabox/toolchain-tsconfig';
+import { parseTsconfig } from '@deltabox/toolchain/tsconfig';
 
 import {
     catalogsSyncTask,

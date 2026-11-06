@@ -8,7 +8,7 @@ import {
     orderProjects,
     selectProjects,
     writeProjectGraph,
-} from '@deltabox/toolchain-core';
+} from '@deltabox/toolchain/core';
 import {
     ensureViteFmtIgnore,
     extractViteObject,
@@ -16,13 +16,13 @@ import {
     foldViteIntoConfig,
     objectHasSections,
     scanLiteralObject,
-} from '@deltabox/toolchain-migrate';
+} from '@deltabox/toolchain/migrate';
 import {
     type PackageJson,
     projectFromPackageJson,
     type ProjectType,
     readJsonAt,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import {
     configFileName,

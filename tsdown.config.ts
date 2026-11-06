@@ -1,11 +1,7 @@
-import { fileURLToPath } from 'node:url';
-
 import { defineConfig } from 'tsdown';
 
 import { baseTsdownConfig } from './packages/tsdown/src/config/node.js';
-
-/** Resolve a repo-relative path to an absolute one (rolldown needs absolutes). */
-const src = (p: string): string => fileURLToPath(new URL(p, import.meta.url));
+import { workspaceSourceAliases } from './packages/tsdown/src/config/workspace.js';
 
 /** The base config's never-bundle list (`true` means "all dependencies"). */
 const baseNeverBundle = baseTsdownConfig.deps?.neverBundle;
@@ -38,31 +34,10 @@ export default defineConfig({
         template: 'src/template.ts',
         vite: 'src/vite.ts',
     },
-    alias: {
-        '@deltabox/toolchain-shared': src('packages/shared/src/index.ts'),
-        '@deltabox/toolchain-config/cli': src('packages/config/src/cli/index.ts'),
-        '@deltabox/toolchain-config': src('packages/config/src/index.ts'),
-        '@deltabox/toolchain-core': src('packages/core/src/index.ts'),
-        '@deltabox/toolchain-changelog/cli': src('packages/changelog/src/cli/index.ts'),
-        '@deltabox/toolchain-changelog': src('packages/changelog/src/index.ts'),
-        '@deltabox/toolchain-tsconfig/cli': src('packages/tsconfig/src/cli/index.ts'),
-        '@deltabox/toolchain-tsconfig': src('packages/tsconfig/src/index.ts'),
-        '@deltabox/toolchain-tsdown/cli': src('packages/tsdown/src/cli/index.ts'),
-        '@deltabox/toolchain-tsdown/config/node': src('packages/tsdown/src/config/node.ts'),
-        '@deltabox/toolchain-tsdown': src('packages/tsdown/src/index.ts'),
-        '@deltabox/toolchain-biome': src('packages/biome/src/index.ts'),
-        '@deltabox/toolchain-project/cli': src('packages/project/src/cli/index.ts'),
-        '@deltabox/toolchain-project': src('packages/project/src/index.ts'),
-        '@deltabox/toolchain-migrate/cli': src('packages/migrate/src/cli/index.ts'),
-        '@deltabox/toolchain-migrate': src('packages/migrate/src/index.ts'),
-        '@deltabox/toolchain-template/cli': src('packages/template/src/cli/index.ts'),
-        '@deltabox/toolchain-template': src('packages/template/src/index.ts'),
-        '@deltabox/toolchain-vite/cli': src('packages/vite/src/cli/index.ts'),
-        '@deltabox/toolchain-vite': src('packages/vite/src/index.ts'),
-    },
+    alias: workspaceSourceAliases(),
     deps: {
         ...baseTsdownConfig.deps,
-        alwaysBundle: [/^@deltabox\/toolchain-/],
+        alwaysBundle: [/^@deltabox\/toolchain\//],
         // Keep the optional `tsx` loader external: bundling a bare specifier
         // bakes the *build machine's* absolute path into `dist`, which breaks the
         // config loader's transpile fallback everywhere else.

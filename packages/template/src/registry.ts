@@ -8,7 +8,7 @@ import {
     sectionEnabled,
     type ToolchainConfig,
     type ToolchainTemplateSource,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import { BUILTIN_TEMPLATES } from './builtin.js';
 import { loadGlobalTemplates } from './global.js';

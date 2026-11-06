@@ -16,7 +16,7 @@ import {
     resolveTokens,
     type ToolchainConfig,
     type ToolchainViteConfig,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import { resolveProjectType } from './project-type.js';
 
