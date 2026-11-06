@@ -47,8 +47,8 @@ export default defineConfig({
                 },
             },
             // Keep the hand-written references: the typecheck task uses
-            // `tsc -p --noEmit` (not build mode), so generated composite projects
-            // would not have built outputs to reference.
+            // `tsc -p --noEmit` (not `tsc -b`), and `tsc -p` does not follow
+            // project references. Keep them in sync manually when exports change.
             refsAuto: false,
         },
         ci: {

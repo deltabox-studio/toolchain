@@ -149,6 +149,15 @@ When on, the generated configs spread the workspaces tsconfig's
 `emitDeclarationOnly`, ...) and merge its `types`. Leave it off unless you build
 the graph with `tsc --build`.
 
+### `refsAuto`
+
+`refsAuto` derives the workspaces `references` from the project graph. It
+defaults to `auto`; `refs` must also be enabled and each referenced workspace
+must be `composite`. References are only followed by `tsc --build` (`tsc -b`);
+**`tsc -p --noEmit` ignores them**. If your typecheck runs `tsc -p --noEmit`
+(as this repo's does), keep `refsAuto: false` and maintain the `references` in
+`tsconfig.workspaces.json` by hand, or switch the check to `tsc -b`.
+
 ### `glob`
 
 The glob(s) selecting the workspace default tsconfig files to expand. A single
