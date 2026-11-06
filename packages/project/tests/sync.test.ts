@@ -87,6 +87,19 @@ describe('projectSyncTask', () => {
         expect(pkg.repository.directory).toBe('packages/app');
     });
 
+    it('falls back to the nearest config root for repository.directory without .git', async () => {
+        const root = tmp();
+        fs.writeFileSync(path.join(root, 'dbx.config.ts'), 'export default {};\n');
+        const ws = path.join(root, 'packages', 'app');
+        writeJson(path.join(ws, 'package.json'), { name: '@acme/app' });
+
+        const files = await projectSyncTask().run(
+            ctx(ws, { project: { repo: 'https://github.com/acme/app' } })
+        );
+        const pkg = JSON.parse(files!.find(f => f.path === 'package.json')!.content);
+        expect(pkg.repository.directory).toBe('packages/app');
+    });
+
     it('returns nothing when no field is defined', async () => {
         const cwd = tmp();
         writeJson(path.join(cwd, 'package.json'), { name: 'x' });
