@@ -118,6 +118,7 @@ Regenerate every managed file from dbx.config.\*.
 * `--watch` — Keep running and re-sync on change.
 * `--recursive` — Sync every discovered dbx project in dependency order.
 * `--force` — Run even when no dbx.config.\* is present.
+* `--only ‹tasks›` — Only run the named sync task(s), comma-separated (eg. `tsconfig`).
 * `--json` — Print the sync result (including removed files) as JSON.
 
 ## `dbx watch`
@@ -159,6 +160,13 @@ Generate workspace tsconfig.json files from the default tsconfig (aliases + refe
 * `--no-aliases` — Skip path aliases.
 * `--composite` — Emit composite + references.
 * `--refs` — Wire project references.
+* `--auto` — Auto-wire the root workspaces tsconfig paths/references from the project graph (default false).
+* `--no-auto` — Only use the paths/references already in the root workspaces tsconfig.
+* `--auto-aliases` — Auto-wire path aliases (defaults to --auto).
+* `--no-auto-aliases` — Do not auto-wire path aliases.
+* `--auto-refs` — Auto-wire project references (defaults to --auto).
+* `--no-auto-refs` — Do not auto-wire project references.
+* `--auto-src-dir ‹dir›` — Source directory for auto entry points (default: the workspace tsconfig rootDir/baseUrl, then src).
 * `-i, --indent ‹n›` — JSON indentation.
 * `--glob ‹glob...›` — Glob(s) for the default tsconfig files.
 * `--exclude ‹glob...›` — Glob(s) to exclude (on top of the common ignored paths).
@@ -1761,7 +1769,7 @@ Biome linter options (`true` = defaults, `false` = disabled); merged into the ge
 
 ### `eslint`
 
-* **Type**: `boolean | Linter.Config`
+* **Type**: `boolean | EslintConfig`
 
 ESLint options (`true` = defaults, `false` = disabled).
 
@@ -1834,6 +1842,60 @@ Emit `composite: true` (default false).
 * **Type**: `boolean`
 
 Inject path aliases (default true).
+
+### `auto`
+
+* **Type**: `boolean | ToolchainTsconfigAliasAutoSetting`
+
+Auto-generate the root workspaces tsconfig paths/references from the project graph (default false). Set true to derive them from the project graph; set false to only use the entries you define yourself.
+
+#### `include`
+
+* **Type**: `Array<string>`
+
+Only auto-wire entries matching these globs (`auto`: workspace dirs; `aliasAuto`: rewritten alias keys; `refsAuto`: reference paths).
+
+#### `exclude`
+
+* **Type**: `Array<string>`
+
+Skip entries matching these globs (same targets as `include`).
+
+#### `rewriteAlias`
+
+* **Type**: `ToolchainTsconfigAliasRewrite`
+
+Rewrite the alias keys auto-wiring generates (custom keys are preserved). Patterns are URL-rewrite style: a string is a regular-expression source and replacements support `$1`, `$2`, ... capture groups. Examples: `{ "^@acme/(.+)$": "@acme/pkg/$1" }` (string patterns), `[{ pattern: /^@acme\/(.+)$/, replacement: "@acme/pkg/$1" }]` (RegExp patterns), `[{ pattern: ["^@acme/a$", "^@acme/b$"], replacement: "@acme/x" }]` (an array of keys), and an array of such rules (applied in order; the first matching rule wins). `RegExp` patterns are only available from TS/JS configs; JSON configs use string patterns.
+
+### `aliasAuto`
+
+* **Type**: `boolean | ToolchainTsconfigAliasAutoSetting`
+
+Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). Accepts the same `include`/`exclude`/`rewriteAlias` object as `auto`.
+
+### `refsAuto`
+
+* **Type**: `boolean | ToolchainTsconfigAutoSetting`
+
+Auto-generate project references (defaults to `auto`; `refs` must also be enabled).
+
+#### `include`
+
+* **Type**: `Array<string>`
+
+Only auto-wire entries matching these globs (`auto`: workspace dirs; `aliasAuto`: rewritten alias keys; `refsAuto`: reference paths).
+
+#### `exclude`
+
+* **Type**: `Array<string>`
+
+Skip entries matching these globs (same targets as `include`).
+
+### `autoSrcDir`
+
+* **Type**: `'src' | '.' | (string & {})`
+
+Source directory used to resolve workspace entry points when `package.json` does not declare `exports`/`main`/`types` (default: the workspace's final tsconfig `rootDir`/`baseUrl`, falling back to `src`).
 
 ### `indent`
 
@@ -2350,6 +2412,7 @@ dbx create --template project --name my-app --out ./my-app
 dbx sync              # write managed files
 dbx sync --check      # CI: fail if files are out of date
 dbx sync --recursive  # every discovered project, in dependency order
+dbx sync --only tsconfig  # only refresh tsconfig aliases/references
 dbx watch             # re-sync on change
 ```
 
@@ -2522,6 +2585,8 @@ code --install-extension deltabox.toolchain-vscode
 | ---------------------------- | --------------------------------------------------------------------------------------- |
 | Sync all / active / selected | Run `dbx sync` (`--recursive` / per project).                                           |
 | Check sync                   | `sync --check` across the workspace.                                                    |
+| Sync tsconfig                | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).               |
+| Manage tsconfig…             | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).               |
 | Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**. |
 | Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.       |
 | Remove template…             | `template:list --registry` then `template:remove`.                                      |
@@ -2607,13 +2672,18 @@ The Home view links to this documentation with **Need help? Go to documentation*
 
 ## Auto-sync
 
-Auto-sync watches input files only: `dbx.config.*` plus the inputs each
-project's config resolves to (by default `tsconfig.workspaces.json` and every
-`tsconfig.default.json`). The extension asks the CLI for them
-(`dbx watch --list --json`), so custom `tsconfig.rootFile` / `tsconfig.defaultFile`
-names are watched instead of the defaults, and the list is refreshed whenever a
-`dbx.config.*` changes. Setting `deltabox.toolchain.watch` explicitly replaces
-the resolved inputs.
+Auto-sync watches input files only. The extension asks the CLI
+(`dbx watch --list --json`) for the concrete, project-graph-resolved files:
+every `dbx.config.*` plus each enabled project's `tsconfig.baseFile`,
+`tsconfig.defaultFile` and the root `tsconfig.rootFile`. Custom file names are
+honoured, nested configs can disable or override their own tsconfig section, and
+the list is refreshed whenever a `dbx.config.*` changes (and after each sync).
+
+The resolved patterns are workspace-relative and non-recursive by default, so
+VS Code reuses its workspace watcher instead of installing extra recursive
+watchers (which can hold `node_modules` handles during a package-manager link
+step on Windows). Setting `deltabox.toolchain.watch` explicitly replaces the
+resolved inputs; an empty list disables watching.
 
 Generated outputs are never watched. The scheduler debounces bursts, allows one sync at a time, queues at most one follow-up, and suppresses events briefly after a run.
 
@@ -2662,6 +2732,7 @@ Search for `deltabox:` to find:
 * **Sync selected projects**
 * **Sync all projects**
 * **Check sync**
+* **Manage tsconfig…**
 * **Scaffold project…**
 * **Add template…**
 * **Remove template…**
@@ -2768,8 +2839,19 @@ if (template) await scaffoldTemplate(template, { cwd: './out', tokens: { name: '
 import { toolchainProviders } from '@deltabox/toolchain/providers';
 console.log(toolchainProviders().map(p => p.id));
 
+// Sync only the tsconfig task (eg. after a build changed package exports)
+import { defaultSyncTasks, loadToolchainConfig, runSync } from '@deltabox/toolchain';
 // Config engine
 import { createConfigEngine } from '@deltabox/toolchain/config';
+const loaded = await loadToolchainConfig(process.cwd());
+await runSync({
+    tasks: defaultSyncTasks(),
+    only: ['tsconfig'],
+    cwd: process.cwd(),
+    config: loaded.config,
+    tokens: loaded.tokens,
+    projectType: loaded.projectType,
+});
 ```
 
 ---
@@ -2864,8 +2946,9 @@ Loads `dbx.config.*`, builds the project graph and runs the sync tasks.
 | ------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `loadToolchainConfig(cwd?)`                                   | Find + load the config, resolve tokens and the project type.                        |
 | `findConfigFile(cwd?)`                                        | The config file path, if any.                                                       |
-| `runSync(options)`                                            | Run the given `SyncTask[]` and return the summary.                                  |
-| `runWatch(options)`                                           | Sync once, then watch inputs and re-sync.                                           |
+| `runSync(options)`                                            | Run the given `SyncTask[]` (or `only` a named subset) and return the summary.       |
+| `runWatch(options)`                                           | Sync once, then watch inputs and re-sync (honours `only`).                          |
+| `selectSyncTasks(tasks, only)`                                | Select tasks by name; throws on unknown names.                                      |
 | `buildProjectGraph(root, options?)`                           | Discover workspace packages and their dependencies.                                 |
 | `orderProjects(nodes)` / `detectPackageManager(root)`         | Dependency ordering and package-manager detection.                                  |
 | `writeProjectGraph` / `readProjectGraph`                      | Persist/read `.dbx/toolchain/projects.json`.                                        |
@@ -2875,6 +2958,24 @@ Loads `dbx.config.*`, builds the project graph and runs the sync tasks.
 | `resolveProjectType(cwd, config?)` / `detectProjectType(cwd)` | The project kind (`monorepo-root` / `monorepo-workspace` / `project`).              |
 | `readManifest(cwd)` / `writeManifest(cwd, files)`             | The `.dbx/toolchain/manifest.json` helpers.                                         |
 | `resolveFmtCustomGroups(input?)`                              | Build the `sortImports` workspace group from every dbx project (graph-based).       |
+
+```ts
+import { defaultSyncTasks, runSync, selectSyncTasks } from '@deltabox/toolchain';
+
+await runSync({
+    tasks: defaultSyncTasks(),
+    only: ['tsconfig'],
+    cwd,
+    config,
+    tokens,
+});
+
+// Or select explicitly:
+const tasks = selectSyncTasks(defaultSyncTasks(), ['tsconfig']);
+```
+
+`only` implies `prune: false`, so a task subset never deletes files owned by the
+tasks it skipped. Unknown task names throw.
 
 ## `@deltabox/toolchain/config`
 
@@ -4179,10 +4280,22 @@ Colour is on by default and follows `--no-color` / the [`logger` config](/guide/
 | Command     | Description                                                                                                          |
 | ----------- | -------------------------------------------------------------------------------------------------------------------- |
 | `projects`  | Discover projects and write `.dbx/toolchain/projects.json`.                                                          |
-| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`, `--json`).                            |
+| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`, `--only`, `--json`).                  |
 | `watch`     | Sync once, then watch key inputs and re-sync.                                                                        |
 | `reset`     | Remove generated files, the manifest and/or the config (`--all`, `--recursive`); reverts `tsconfig.overrides` first. |
 | `providers` | List registered providers + their commands (`--json`).                                                               |
+
+### Task-only sync
+
+`dbx sync --only <tasks>` runs just the named sync tasks (comma-separated) and
+does **not** prune files owned by the tasks it skipped. This is useful at the
+end of a build, when only the tsconfig aliases/references need refreshing:
+
+```sh
+dbx sync --only tsconfig
+```
+
+Unknown task names fail with the list of available tasks.
 
 ## Scaffolding
 
@@ -7397,6 +7510,36 @@ applies to `monorepo-root` projects. Run
 `dbx sync --check` in CI to fail when a generated `tsconfig.json` drifts from
 its inputs.
 
+### Refresh aliases after builds
+
+Auto-wired aliases and references are derived from each workspace's
+`package.json` (`exports`, then `types`/`main`, then a source scan). If a build
+step can change a workspace manifest (a generated `package.json`, a rewritten
+export map, ...), run the tsconfig-only sync once **after all workspace builds**:
+
+```sh
+dbx sync --only tsconfig
+```
+
+This regenerates the workspaces tsconfig and every managed `tsconfig.json`
+without running the other sync tasks, and it does not prune files owned by those
+tasks. Add it to the end of your root build script so the aliases always reflect
+the final `package.json` exports:
+
+```json [package.json]
+{
+    "scripts": {
+        "build": "yarn workspaces foreach -A run build && dbx sync --only tsconfig"
+    }
+}
+```
+
+The task is skipped when `toolchain.tsconfig` is omitted or `false` — including
+`dbx tsconfig` and `dbx sync --only tsconfig` — so a disabled section never
+generates files. A nested workspace that defines its own `tsconfig` section owns
+its generated file: the root still aliases/references it, but does not rewrite
+it.
+
 ## Per-project configs
 
 `toolchain.tsconfig` is repository-scoped: the root sync task expands every
@@ -7532,10 +7675,21 @@ await runSync({
     tokens: loaded.tokens,
     projectType: loaded.projectType,
 });
+
+// Run only a named task (eg. refresh the tsconfig aliases after a build).
+await runSync({
+    tasks: defaultSyncTasks(),
+    only: ['tsconfig'],
+    cwd: process.cwd(),
+    config,
+    tokens: loaded.tokens,
+    projectType: loaded.projectType,
+});
 ```
 
-See the [Programmatic API](/guide/api/) guide for the package-by-package
-reference.
+`only` implies `prune: false`, so a subset never deletes files owned by the
+tasks it skipped. See the [Programmatic API](/guide/api/) guide for the
+package-by-package reference.
 
 ## Vite+
 
