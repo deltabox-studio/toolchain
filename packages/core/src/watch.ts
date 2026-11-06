@@ -96,6 +96,13 @@ function relPosix(cwd: string, file: string): string {
     return path.relative(cwd, file).replace(/\\/g, '/');
 }
 
+/** Whether a glob stays inside the directory it is relative to. */
+function isSafeRelativeGlob(glob: string): boolean {
+    const normalized = glob.replace(/\\/g, '/');
+    if (!normalized || normalized.startsWith('/') || /^[a-zA-Z]:/.test(normalized)) return false;
+    return normalized.split('/').every(segment => segment !== '..');
+}
+
 /**
  * Resolve the exact files the auto-sync watcher should watch. Unlike the legacy
  * recursive globs, this uses the project graph (plus each project's own config)
@@ -109,7 +116,11 @@ export async function resolveWatchInputFiles(
     const names = tsconfigFileNames(options.config);
     const userGlobs = options.userGlobs;
     if (userGlobs) {
-        return { globs: [...new Set(userGlobs)], configs: [], tsconfig: names };
+        return {
+            globs: [...new Set(userGlobs)].filter(isSafeRelativeGlob),
+            configs: [],
+            tsconfig: names,
+        };
     }
 
     const graph = options.graph ?? buildProjectGraph(cwd);
@@ -122,7 +133,7 @@ export async function resolveWatchInputFiles(
     const add = (file: string): void => {
         if (!file || file === '.' || path.isAbsolute(file)) return;
         const normalized = file.replace(/\\/g, '/').replace(/^\.\//, '');
-        if (normalized.startsWith('../') || normalized === '..') return;
+        if (!isSafeRelativeGlob(normalized)) return;
         if (isIgnoredPath(normalized, ignore)) return;
         globs.add(normalized);
     };

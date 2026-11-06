@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { SyncTask } from '@deltabox/toolchain/shared';
 
 import { loadToolchainConfig } from '../src/loader.js';
-import { runWatch } from '../src/watch.js';
+import { resolveWatchInputFiles, runWatch } from '../src/watch.js';
 
 const dirs: string[] = [];
 
@@ -31,6 +31,27 @@ async function waitFor(predicate: () => boolean, timeout = 5000): Promise<void> 
         await sleep(25);
     }
 }
+
+describe('resolveWatchInputFiles', () => {
+    it('drops user globs that escape the project root', async () => {
+        const cwd = tmp();
+        const result = await resolveWatchInputFiles({
+            cwd,
+            config: {},
+            userGlobs: ['dbx.config.*', '../repo/**/*', 'C:\\repo\\**\\*', '/abs/**/*'],
+        });
+        expect(result.globs).toEqual(['dbx.config.*']);
+    });
+
+    it('only reports paths inside the project root', async () => {
+        const cwd = tmp();
+        fs.writeFileSync(path.join(cwd, 'package.json'), JSON.stringify({ name: 'x' }));
+        fs.writeFileSync(path.join(cwd, 'tsconfig.default.json'), '{}');
+        const result = await resolveWatchInputFiles({ cwd, config: {} });
+        expect(result.globs).toContain('tsconfig.default.json');
+        expect(result.globs.every(glob => !glob.split('/').includes('..'))).toBe(true);
+    });
+});
 
 describe('runWatch', () => {
     it('reloads an edited code config before re-syncing', async () => {

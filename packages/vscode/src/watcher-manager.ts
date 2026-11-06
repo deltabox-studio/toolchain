@@ -15,8 +15,12 @@ export interface WatcherManagerOptions {
     resolveInputs: (root: string) => Promise<WatchInputs>;
     /** Called with each resolved root (tsconfig names/project detection). */
     onResolved: (root: string, inputs: WatchInputs) => void;
-    /** Called when an input file changed (debounced by the caller's scheduler). */
-    onChange: () => void;
+    /**
+     * Called when an input file changed (debounced by the caller's scheduler).
+     * Receives the owning root, or `undefined` for a user glob that can match
+     * files in any workspace folder.
+     */
+    onChange: (root: string | undefined) => void;
     /** Called after a `dbx.config.*` change so the caller can re-resolve inputs. */
     onConfigChange?: () => void;
     /** Optional log sink. */
@@ -27,10 +31,12 @@ export interface WatcherManagerOptions {
  * Owns the auto-sync file watchers.
  *
  * The CLI resolves the exact config/tsconfig files from the project graph (and
- * each project's nested config), so the extension can use workspace-relative
- * string patterns. VS Code then reuses its workspace watcher instead of
- * installing additional recursive watchers — the latter is what can hold
- * `node_modules` handles during a package-manager link step on Windows.
+ * each project's nested config). Each resolved pattern is scoped to its own
+ * root with a `RelativePattern`, so a file with the same name in another
+ * workspace folder (or an ancestor of the root) can never trigger this root's
+ * auto-sync. The patterns are concrete files, so this does not install a
+ * recursive watcher (which is what can hold `node_modules` handles during a
+ * package-manager link step on Windows).
  */
 export class WatcherManager {
     private watchers: vscode.FileSystemWatcher[] = [];
@@ -68,9 +74,12 @@ export class WatcherManager {
         for (const { root, inputs } of resolved) this.options.onResolved(root, inputs);
 
         for (const target of planWatchTargets(userGlobs, resolved)) {
-            const watcher = vscode.workspace.createFileSystemWatcher(target.glob);
+            const pattern = target.base
+                ? new vscode.RelativePattern(target.base, target.glob)
+                : target.glob;
+            const watcher = vscode.workspace.createFileSystemWatcher(pattern);
             const onEvent = (uri: vscode.Uri): void => {
-                this.options.onChange();
+                this.options.onChange(target.root);
                 if (path.basename(uri.fsPath).startsWith('dbx.config.')) {
                     this.options.onConfigChange?.();
                     clearTimeout(this.timer);

@@ -296,14 +296,26 @@ export function activate(context: vscode.ExtensionContext): void {
     async function rebuildWatchers(): Promise<void> {
         await watcherManager?.rebuild();
     }
+    // Roots with a pending input change. A user glob has no owning root and
+    // means "every root"; otherwise only the root whose input changed is synced,
+    // so a file in one workspace folder never resyncs an unrelated one.
+    const pendingRoots = new Set<string>();
+    let pendingAll = false;
     const scheduler = new SyncScheduler({
         debounceMs: () => config().get<number>('debounce', 300),
         run: async () => {
-            const roots = workspaceRoots();
-            if (roots.length === 0) {
+            const all = workspaceRoots();
+            if (all.length === 0) {
                 output.appendLine('dbx: no workspace folder open.');
                 return;
             }
+            const roots =
+                pendingAll || pendingRoots.size === 0
+                    ? all
+                    : all.filter(root => pendingRoots.has(root));
+            pendingRoots.clear();
+            pendingAll = false;
+            if (roots.length === 0) return;
             const command = config().get<string>('command', 'sync');
             for (const root of roots) await runCli(root, [command]);
             // The sync may have created/renamed generated tsconfig files: refresh
@@ -321,7 +333,11 @@ export function activate(context: vscode.ExtensionContext): void {
             setTsconfigFileNames(root, inputs.tsconfig);
             tree.refresh();
         },
-        onChange: () => scheduler.notify(),
+        onChange: root => {
+            if (root) pendingRoots.add(root);
+            else pendingAll = true;
+            scheduler.notify();
+        },
         log: message => output.appendLine(message),
     });
 
