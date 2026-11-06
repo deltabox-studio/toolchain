@@ -22,3 +22,7 @@ const commands = configCommands({
 });
 // register `commands` on your commander program
 ```
+
+The `config:*` commands generate config artifacts; they do not write the CLI
+reference. For that, pass the command descriptors your CLI registers to
+[`generateCliDocs()`](/guide/config-generator/generate#cli-docs).

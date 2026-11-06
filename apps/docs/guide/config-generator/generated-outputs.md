@@ -4,6 +4,9 @@ Every generator reads from the same Zod or untyped schema. The engine's own conf
 is the living example: its types are committed at
 [packages/shared/src/config-types.ts](https://github.com/deltabox-studio/toolchain/blob/main/packages/shared/src/config-types.ts).
 
+For the engine/standalone call forms and the full option list per generator, see
+[Generate](/guide/config-generator/generate).
+
 ## Config types — `generateConfigTypes()` / `writeConfigTypes()`
 
 Named `interface`s (and `type` aliases for enums/unions) with jsdoc taken from
@@ -83,6 +86,43 @@ The resolved untyped JSON Schema for every scope, for editor autocomplete:
 ```ts
 await engine.writeJsonSchema({ output: 'config.schema.json' });
 ```
+
+## CLI docs — `generateCliDocs()`
+
+`generateCliDocs` is the one generator that does not read the config schema: it
+renders a markdown reference from `ToolchainCommand` descriptors. Pass the command
+list your CLI actually registers, including custom descriptors:
+
+```ts
+import { builtinCommands } from '@deltabox/toolchain/cli';
+import { generateCliDocs } from '@deltabox/toolchain/config';
+
+const markdown = generateCliDocs([...builtinCommands(), ...myCommands], {
+    prefix: 'my-cli',
+    title: 'CLI reference',
+    intro: 'Generated from the registered commands.',
+});
+```
+
+Hidden commands are omitted and duplicate names keep the first descriptor. The
+`dbx` reference itself is generated this way, so a custom command no longer has
+to be added to `builtinCommands()` to be documented.
+
+## Post-processing
+
+The `generate*` functions return their content, so you can transform it before
+writing (the `write*` methods write immediately):
+
+```ts
+const files = generateConfigTypes(schema);
+for (const [scope, source] of Object.entries(files)) {
+    const sourceWithBanner = `// Generated — do not edit.\n${source}`;
+    await fs.promises.writeFile(`types/${scope}.ts`, sourceWithBanner);
+}
+```
+
+If the transform changes the formatting, run the result through
+[`formatGenerated()`](#formatting--formatgenerated) before writing.
 
 ## Formatting — `formatGenerated()`
 
