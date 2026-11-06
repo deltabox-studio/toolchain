@@ -81,15 +81,28 @@ function catalogDefined(packageManager: string | undefined, isMonorepo: boolean)
     return true;
 }
 
+/**
+ * The catalog a scaffold writes for a package manager. `undefined` when the
+ * manager has no catalog file: npm has no catalog support, and Bun's lives in
+ * `package.json` `workspaces.catalog` (handled by {@link workspacesField}).
+ */
+export function scaffoldCatalog(
+    packageManager: string | undefined,
+    exclude: string[] = []
+): Record<string, string> | undefined {
+    const pm = packageManager ?? 'yarn';
+    if (pm !== 'yarn' && pm !== 'pnpm') return undefined;
+    return Object.fromEntries(Object.entries(CATALOG).filter(([name]) => !exclude.includes(name)));
+}
+
 /** The package-manager catalog file(s) a scaffolded root should write. */
 function catalogFiles(
     packageManager: string | undefined,
     isMonorepo: boolean,
     exclude: string[] = []
 ): GeneratedFile[] {
-    const catalog = Object.fromEntries(
-        Object.entries(CATALOG).filter(([name]) => !exclude.includes(name))
-    );
+    const catalog = scaffoldCatalog(packageManager, exclude);
+    if (!catalog) return [];
     switch (packageManager ?? 'yarn') {
         case 'yarn':
             return [{ path: '.yarnrc.yml', content: renderYarnrc({ packages: catalog }) }];
@@ -104,7 +117,6 @@ function catalogFiles(
                 },
             ];
         default:
-            // npm has no catalogs; Bun's live in `package.json` (below).
             return [];
     }
 }
@@ -358,6 +370,8 @@ export function renderToolchainConfig(
         type: ProjectType;
         fmtOxc?: boolean;
         lintOxc?: boolean;
+        /** The catalog the scaffold writes (`toolchain.catalogs.packages`). */
+        catalogs?: Record<string, string>;
         /** The generated file extension (default `ts`). */
         configExtension?: ConfigExtension;
         /** The package's `type` (`module`/`commonjs`), used for `.js` syntax. */
@@ -395,8 +409,16 @@ export function renderToolchainConfig(
     // / `.oxlintrc.json` files on `dbx sync`.
     const fmtOxc = ctx.fmtOxc ?? ctx.oxc === true;
     const lintOxc = ctx.lintOxc ?? ctx.oxc === true;
+    // Opt the scaffold into the catalog it writes, so `dbx sync` owns the
+    // managed catalog file instead of leaving it orphaned.
+    const catalogs = ctx.catalogs
+        ? `        catalogs: {\n            packages: {\n${Object.entries(ctx.catalogs)
+              .map(([name, range]) => `                ${quote(name)}: ${quote(range)},`)
+              .join('\n')}\n            },\n        },`
+        : undefined;
     const sections = [
         `        project: {\n${project}\n        },`,
+        ...(catalogs ? [catalogs] : []),
         ...(fmtOxc ? ['        fmt: { oxc: true },'] : []),
         ...(lintOxc ? ['        lint: { oxc: true },'] : []),
     ];
@@ -442,6 +464,7 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
     const allowOxc = ctx.oxc !== false && ctx.includeConfig !== false;
     const withFmt = allowOxc && ctx.rootOxc?.fmt !== true;
     const withLint = allowOxc && ctx.rootOxc?.lint !== true;
+    const catalog = scaffoldCatalog(ctx.packageManager, application ? ['tsdown'] : []);
     const pkg = {
         name: ctx.scope ? `${ctx.scope}/${ctx.name}` : ctx.name,
         version: '0.1.0',
@@ -492,6 +515,7 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
                           type: ctx.type ?? 'project',
                           fmtOxc: withFmt,
                           lintOxc: withLint,
+                          ...(catalog ? { catalogs: catalog } : {}),
                       }),
                   },
               ]),
@@ -549,6 +573,7 @@ export interface MonorepoRootContext extends ProjectContext {
 /** Files for a monorepo root (workspaces + monorepo tsconfig). */
 export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile[] {
     const withOxc = ctx.oxc !== false && ctx.includeConfig !== false;
+    const catalog = scaffoldCatalog(ctx.packageManager);
     const pkg = {
         name: ctx.name,
         version: '0.1.0',
@@ -588,6 +613,7 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
                           ...ctx,
                           type: ctx.type ?? 'monorepo-root',
                           oxc: withOxc,
+                          ...(catalog ? { catalogs: catalog } : {}),
                       }),
                   },
               ]),

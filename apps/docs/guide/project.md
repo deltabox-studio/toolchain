@@ -154,9 +154,11 @@ the file the package manager reads it from, so dependencies can be declared with
 | `bun`   | `package.json`        | `workspaces.catalog`.                        |
 | `npm`   | —                     | No catalog support; dependencies are pinned. |
 
-Scaffolding resolves the manager from the `packageManager` input and writes the
-catalog of the packages the project depends on. To keep it in sync with
-`dbx sync`, add a `catalogs` section to `dbx.config.*`:
+Scaffolding resolves the manager from the `packageManager` input, writes the
+catalog of the packages the project depends on, and **opts into it in the
+generated `dbx.config.*`**, so `dbx sync` owns the file. To manage catalogs in an
+existing project, add a `catalogs` section (see
+[Package catalogs](/guide/catalogs)):
 
 ```ts [dbx.config.ts]
 export default defineConfig({

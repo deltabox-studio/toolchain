@@ -41,8 +41,16 @@ export const VP_COMMANDS: VpCommandInfo[] = [
     // Develop
     { name: 'dev', group: 'develop', description: 'Run the Vite development server.' },
     { name: 'check', group: 'develop', description: 'Run format, lint and type checks.' },
-    { name: 'lint', group: 'develop', description: 'Lint code with Oxlint.' },
-    { name: 'fmt', group: 'develop', description: 'Format code with Oxfmt.' },
+    {
+        name: 'lint',
+        group: 'develop',
+        description: 'Lint code with the active linter (Oxlint via Vite+).',
+    },
+    {
+        name: 'fmt',
+        group: 'develop',
+        description: 'Format code with the active formatter (Oxfmt via Vite+).',
+    },
     { name: 'test', group: 'develop', description: 'Run tests through bundled Vitest.' },
 
     // Execute

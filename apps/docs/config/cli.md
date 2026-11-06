@@ -44,8 +44,8 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx vite:env`](#vite-env)                             | Vite+: Manage Node.js and package managers.                                                     |
 | [`dbx vite:dev`](#vite-dev)                             | Vite+: Run the Vite development server.                                                         |
 | [`dbx vite:check`](#vite-check)                         | Vite+: Run format, lint and type checks.                                                        |
-| [`dbx vite:lint`](#vite-lint)                           | Vite+: Lint code with Oxlint.                                                                   |
-| [`dbx vite:fmt`](#vite-fmt)                             | Vite+: Format code with Oxfmt.                                                                  |
+| [`dbx vite:lint`](#vite-lint)                           | Vite+: Lint code with the active linter (Oxlint via Vite+).                                     |
+| [`dbx vite:fmt`](#vite-fmt)                             | Vite+: Format code with the active formatter (Oxfmt via Vite+).                                 |
 | [`dbx vite:test`](#vite-test)                           | Vite+: Run tests through bundled Vitest.                                                        |
 | [`dbx vite:run`](#vite-run)                             | Vite+: Run package scripts and monorepo tasks.                                                  |
 | [`dbx vite:exec`](#vite-exec)                           | Vite+: Execute a binary from local node_modules.                                                |
@@ -438,13 +438,13 @@ Vite+: Run format, lint and type checks.
 
 ## `dbx vite:lint`
 
-Vite+: Lint code with Oxlint.
+Vite+: Lint code with the active linter (Oxlint via Vite+).
 
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:fmt`
 
-Vite+: Format code with Oxfmt.
+Vite+: Format code with the active formatter (Oxfmt via Vite+).
 
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 

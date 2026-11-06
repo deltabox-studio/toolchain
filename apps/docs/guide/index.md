@@ -104,16 +104,16 @@ need to add it by hand when the repo has no `.gitignore` yet.
 
 ## What gets managed
 
-| Area                                                                | Section in the config      |
-| ------------------------------------------------------------------- | -------------------------- |
-| GitHub workflows, commitlint, Conventional-Commits VS Code settings | `ci`                       |
-| `biome.json` (formatter/linter)                                     | `fmt.biome` / `lint.biome` |
-| `.oxfmtrc.json` / `.oxlintrc.json` (Oxc)                            | `fmt.oxc` / `lint.oxc`     |
-| Workspace `tsconfig.json` files (aliases + references)              | `tsconfig`                 |
-| `vite.config.ts` (Vite+ consumers)                                  | `vite`                     |
-| Template sources / scaffolding                                      | `templates`                |
-| Package catalogs (`.yarnrc.yml` / `pnpm-workspace.yaml`)            | `catalogs`                 |
-| Watch behaviour                                                     | `watch`                    |
+| Area                                                                | Section in the config         |
+| ------------------------------------------------------------------- | ----------------------------- |
+| GitHub workflows, commitlint, Conventional-Commits VS Code settings | `ci`                          |
+| `biome.json` (formatter/linter)                                     | `fmt.biome` / `lint.biome`    |
+| `.oxfmtrc.json` / `.oxlintrc.json` (Oxc)                            | `fmt.oxc` / `lint.oxc`        |
+| Workspace `tsconfig.json` files (aliases + references)              | `tsconfig`                    |
+| `vite.config.ts` (Vite+ consumers)                                  | `vite`                        |
+| Template sources / scaffolding                                      | `templates`                   |
+| Package catalogs (`.yarnrc.yml` / `pnpm-workspace.yaml`)            | [`catalogs`](/guide/catalogs) |
+| Watch behaviour                                                     | `watch`                       |
 
 Every section is **opt-in by presence**: define it to enable it, omit it to leave
 that area untouched.
@@ -125,6 +125,7 @@ that area untouched.
 - [Configuration reference](/config/reference)
 - [TypeScript](/guide/typescript)
 - [Project](/guide/project)
+- [Package catalogs](/guide/catalogs)
 - [CI](/guide/ci/)
 - [Changelog](/guide/changelog/)
 - [tsconfig](/guide/tsconfig)

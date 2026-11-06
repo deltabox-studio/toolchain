@@ -68,6 +68,8 @@ describe('project scaffolding', () => {
         expect(config).toContain('fmt:');
         expect(config).toContain('lint:');
         expect(config).toContain('oxc:');
+        expect(config).toContain('catalogs:');
+        expect(config).toContain("'@deltabox/toolchain':");
     });
 
     it('inherits root Oxc files for a nested project', () => {
@@ -135,6 +137,7 @@ describe('project scaffolding', () => {
         );
         expect(paths).not.toContain('.yarnrc.yml');
         expect(paths).not.toContain('pnpm-workspace.yaml');
+        expect(files.find(f => f.path === 'dbx.config.ts')!.content).not.toContain('catalogs:');
     });
 
     it('creates monorepo root files with references', () => {
@@ -467,6 +470,7 @@ describe('project scaffolding', () => {
         const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
         expect(pkg.devDependencies['@deltabox/toolchain']).toMatch(/^\^/);
         expect(pkg.workspaces).toBeUndefined();
+        expect(files.find(f => f.path === 'dbx.config.ts')!.content).not.toContain('catalogs:');
     });
 
     it('uses the catalog for a Bun monorepo root', () => {
@@ -474,6 +478,9 @@ describe('project scaffolding', () => {
         const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
         expect(pkg.devDependencies['@deltabox/toolchain']).toBe('catalog:');
         expect((pkg.workspaces as { catalog: Record<string, string> }).catalog).toBeDefined();
+        // Bun's catalog lives in package.json; `dbx sync` does not manage a
+        // separate catalog file, so the config does not opt into one.
+        expect(files.find(f => f.path === 'dbx.config.ts')!.content).not.toContain('catalogs:');
     });
 
     it('renders a gitignore', () => {

@@ -60,7 +60,7 @@ The offline builtins (`project`, `application`, `folder`, `monorepo`,
 and a `package.json` that depends on the same `@deltabox/toolchain` version as the
 CLI. There is no Turbo (Vite Task replaces it). They ask for a **package manager**
 (default `yarn`) and write that manager's catalog file (see
-[Catalogs](/guide/project#package-manager-and-catalogs)). The `vite-plus*`
+[Package catalogs](/guide/catalogs)). The `vite-plus*`
 builtins delegate to `vp create` and need network access.
 
 The root-oriented builtins (`project`, `application`, `monorepo`,

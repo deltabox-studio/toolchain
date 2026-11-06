@@ -149,7 +149,7 @@ Every provider subcommand is a passthrough. Vite+ commands are reachable both
 directly and through the `vite` namespace:
 
 ```sh
-dbx fmt                 # a bare Vite+ command forwards to `vp fmt`
+dbx fmt                 # the active formatter (vp fmt when Oxc)
 dbx run -r build        # forwards to `vp run -r build`
 dbx vite dev            # explicit namespace (always works)
 dbx vite:build          # named alias for `vp build`

@@ -267,15 +267,20 @@ describe('emulate: CLI + templates', () => {
                 expect(pkg.packageManager).toMatch(new RegExp(`^${pm}@\\d`));
                 const hasYarnrc = fs.existsSync(path.join(out, '.yarnrc.yml'));
                 const hasPnpmWs = fs.existsSync(path.join(out, 'pnpm-workspace.yaml'));
+                const config = fs.readFileSync(path.join(out, 'dbx.config.ts'), 'utf-8');
                 if (pm === 'yarn' || pm === 'pnpm') {
                     expect(pkg.devDependencies['@deltabox/toolchain']).toBe('catalog:');
                     if (pm === 'yarn') expect(hasYarnrc).toBe(true);
                     if (pm === 'pnpm') expect(hasPnpmWs).toBe(true);
+                    // The scaffold opts into the catalog it writes, so `dbx sync`
+                    // owns the managed catalog file.
+                    expect(config).toContain('catalogs:');
                 } else {
                     // npm has no catalogs, and a single Bun project has nowhere to
                     // declare one -> both pin.
                     expect(pkg.devDependencies['@deltabox/toolchain']).toMatch(/^\^\d/);
                     expect(hasYarnrc || hasPnpmWs).toBe(false);
+                    expect(config).not.toContain('catalogs:');
                 }
             }
         },
@@ -358,6 +363,7 @@ describe('emulate: CLI + templates', () => {
             expect(singleConfig).toContain('fmt:');
             expect(singleConfig).toContain('lint:');
             expect(singleConfig).toContain('oxc:');
+            expect(singleConfig).toContain('catalogs:');
 
             // The Oxc files are managed: `dbx sync` regenerates them from the config.
             fs.rmSync(path.join(single, '.oxfmtrc.json'));

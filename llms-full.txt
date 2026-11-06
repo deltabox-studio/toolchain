@@ -72,8 +72,8 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx vite:env`](#vite-env)                             | Vite+: Manage Node.js and package managers.                                                     |
 | [`dbx vite:dev`](#vite-dev)                             | Vite+: Run the Vite development server.                                                         |
 | [`dbx vite:check`](#vite-check)                         | Vite+: Run format, lint and type checks.                                                        |
-| [`dbx vite:lint`](#vite-lint)                           | Vite+: Lint code with Oxlint.                                                                   |
-| [`dbx vite:fmt`](#vite-fmt)                             | Vite+: Format code with Oxfmt.                                                                  |
+| [`dbx vite:lint`](#vite-lint)                           | Vite+: Lint code with the active linter (Oxlint via Vite+).                                     |
+| [`dbx vite:fmt`](#vite-fmt)                             | Vite+: Format code with the active formatter (Oxfmt via Vite+).                                 |
 | [`dbx vite:test`](#vite-test)                           | Vite+: Run tests through bundled Vitest.                                                        |
 | [`dbx vite:run`](#vite-run)                             | Vite+: Run package scripts and monorepo tasks.                                                  |
 | [`dbx vite:exec`](#vite-exec)                           | Vite+: Execute a binary from local node_modules.                                                |
@@ -466,13 +466,13 @@ Vite+: Run format, lint and type checks.
 
 ## `dbx vite:lint`
 
-Vite+: Lint code with Oxlint.
+Vite+: Lint code with the active linter (Oxlint via Vite+).
 
 * `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:fmt`
 
-Vite+: Format code with Oxfmt.
+Vite+: Format code with the active formatter (Oxfmt via Vite+).
 
 * `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
@@ -2443,16 +2443,16 @@ need to add it by hand when the repo has no `.gitignore` yet.
 
 ## What gets managed
 
-| Area                                                                | Section in the config      |
-| ------------------------------------------------------------------- | -------------------------- |
-| GitHub workflows, commitlint, Conventional-Commits VS Code settings | `ci`                       |
-| `biome.json` (formatter/linter)                                     | `fmt.biome` / `lint.biome` |
-| `.oxfmtrc.json` / `.oxlintrc.json` (Oxc)                            | `fmt.oxc` / `lint.oxc`     |
-| Workspace `tsconfig.json` files (aliases + references)              | `tsconfig`                 |
-| `vite.config.ts` (Vite+ consumers)                                  | `vite`                     |
-| Template sources / scaffolding                                      | `templates`                |
-| Package catalogs (`.yarnrc.yml` / `pnpm-workspace.yaml`)            | `catalogs`                 |
-| Watch behaviour                                                     | `watch`                    |
+| Area                                                                | Section in the config         |
+| ------------------------------------------------------------------- | ----------------------------- |
+| GitHub workflows, commitlint, Conventional-Commits VS Code settings | `ci`                          |
+| `biome.json` (formatter/linter)                                     | `fmt.biome` / `lint.biome`    |
+| `.oxfmtrc.json` / `.oxlintrc.json` (Oxc)                            | `fmt.oxc` / `lint.oxc`        |
+| Workspace `tsconfig.json` files (aliases + references)              | `tsconfig`                    |
+| `vite.config.ts` (Vite+ consumers)                                  | `vite`                        |
+| Template sources / scaffolding                                      | `templates`                   |
+| Package catalogs (`.yarnrc.yml` / `pnpm-workspace.yaml`)            | [`catalogs`](/guide/catalogs) |
+| Watch behaviour                                                     | `watch`                       |
 
 Every section is **opt-in by presence**: define it to enable it, omit it to leave
 that area untouched.
@@ -2464,6 +2464,7 @@ that area untouched.
 * [Configuration reference](/config/reference)
 * [TypeScript](/guide/typescript)
 * [Project](/guide/project)
+* [Package catalogs](/guide/catalogs)
 * [CI](/guide/ci/)
 * [Changelog](/guide/changelog/)
 * [tsconfig](/guide/tsconfig)
@@ -3257,6 +3258,140 @@ import {
 const { config, tokens, projectType } = await loadToolchainConfig(process.cwd());
 await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, projectType });
 ```
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/catalogs.md
+---
+# Package catalogs
+
+A **catalog** is a shared `package -> version range` map. Workspaces declare a
+dependency as `catalog:` and the package manager resolves it from the catalog, so
+a version lives in one place instead of being repeated (and drifting) across
+every `package.json`.
+
+`toolchain.catalogs` writes that map into the file the package manager reads it
+from. Like every section it is **opt-in by presence** and root-only: a workspace
+never inherits it.
+
+## Configuration
+
+```ts [dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        catalogs: {
+            // The default catalog (`catalog:`).
+            packages: {
+                react: '^19.0.0',
+                'react-dom': '^19.0.0',
+                lodash: '^4.17.21',
+            },
+            // Named catalogs (`catalogs.<name>`).
+            named: {
+                legacy: { react: '^18.0.0' },
+            },
+        },
+    },
+});
+```
+
+| Option     | Type                                     | Description                                    |
+| ---------- | ---------------------------------------- | ---------------------------------------------- |
+| `packages` | `Record<string, string>`                 | The default catalog: package -> version range. |
+| `named`    | `Record<string, Record<string, string>>` | Named catalogs: name -> (package -> range).    |
+| `enabled`  | `boolean`                                | Master switch (default: enabled when defined). |
+
+A section with neither `packages` nor `named` writes nothing.
+
+## Supported package managers
+
+| Manager | Catalog file          | Notes                                               |
+| ------- | --------------------- | --------------------------------------------------- |
+| `yarn`  | `.yarnrc.yml`         | `catalog:` / `catalogs:` (default + named).         |
+| `pnpm`  | `pnpm-workspace.yaml` | `catalog:` / `catalogs:`.                           |
+| `bun`   | `package.json`        | `workspaces.catalog`; declare it there.             |
+| `npm`   | —                     | No catalog support; dependencies are pinned inline. |
+
+The manager is read from the resolved `project.packageManager` (falling back to
+the root `package.json`'s `packageManager`, then `yarn`).
+
+## Managed files
+
+`dbx sync` writes the catalog file only when it is:
+
+* **absent**, or
+* **already toolchain-managed** — it carries the
+  `# Managed by @deltabox/toolchain (catalogs)` marker.
+
+A hand-written catalog file is never clobbered. The file is also marked as
+`keep`: removing the `catalogs` section (or replacing the file with your own)
+never deletes it, because the package manager reads it and it may hold
+hand-written keys.
+
+For Yarn the generated file also sets `nodeLinker: node-modules`; for pnpm it
+declares the `packages/*` globs on a monorepo root.
+
+Bun catalogs live in `package.json` `workspaces.catalog` and npm has no catalog
+support, so both warn instead of writing a separate file.
+
+## Scaffolding
+
+`dbx project:init` and `dbx project:init:monorepo` write the catalog for the
+packages the scaffold depends on **and opt into it in the generated
+`dbx.config.*`**, so `dbx sync` owns and keeps the file in sync:
+
+```ts [dbx.config.ts]
+toolchain: {
+    project: { packageManager: 'yarn' },
+    catalogs: {
+        packages: {
+            '@deltabox/toolchain': '^2.5.0',
+            typescript: '^6.0.3',
+            // ...
+        },
+    },
+}
+```
+
+A single Bun project pins its dependencies (there is nowhere to declare a
+catalog); a Bun monorepo root writes the catalog into `package.json`.
+
+## Keeping it in sync
+
+```sh
+dbx sync                  # regenerate the catalog file
+dbx sync --only catalogs  # just the catalog task
+dbx sync --check          # CI: fail on drift
+```
+
+## Programmatic API
+
+```ts
+import {
+    CATALOG_MARKER,
+    CATALOG_PACKAGE_MANAGERS,
+    catalogFileFor,
+    catalogsSyncTask,
+    hasCatalog,
+    renderPnpmWorkspace,
+    renderYarnrc,
+    scaffoldCatalog,
+    supportsCatalogs,
+} from '@deltabox/toolchain/project';
+```
+
+| Export                       | Description                                                          |
+| ---------------------------- | -------------------------------------------------------------------- |
+| `catalogsSyncTask()`         | The sync task that writes the managed catalog file.                  |
+| `catalogFileFor(pm)`         | The file a manager reads its catalog from (`undefined` for npm/bun). |
+| `hasCatalog(root, pm, req?)` | Whether a default catalog exists (optionally covering `req`).        |
+| `supportsCatalogs(pm)`       | Whether the manager supports catalogs at all.                        |
+| `renderYarnrc(catalog)`      | Render a `.yarnrc.yml` (node-modules linker + catalog(s)).           |
+| `renderPnpmWorkspace(c)`     | Render a `pnpm-workspace.yaml` (optional globs + catalog(s)).        |
+| `scaffoldCatalog(pm, ex?)`   | The catalog a scaffold writes (`undefined` when it writes none).     |
+| `CATALOG_MARKER`             | The marker line that identifies a toolchain-managed catalog file.    |
+| `CATALOG_PACKAGE_MANAGERS`   | The managers with catalog support (`yarn`, `pnpm`, `bun`).           |
 
 ---
 
@@ -4419,7 +4554,7 @@ Every provider subcommand is a passthrough. Vite+ commands are reachable both
 directly and through the `vite` namespace:
 
 ```sh
-dbx fmt                 # a bare Vite+ command forwards to `vp fmt`
+dbx fmt                 # the active formatter (vp fmt when Oxc)
 dbx run -r build        # forwards to `vp run -r build`
 dbx vite dev            # explicit namespace (always works)
 dbx vite:build          # named alias for `vp build`
@@ -5809,6 +5944,23 @@ tool's options are read into the matching `toolchain.fmt.*` /
 `toolchain.lint.*` entry. Oxc options are merged over the toolchain defaults
 using the same mapping as [`dbx migrate`](/guide/migrations/).
 
+## Running the active tool
+
+`dbx fmt` / `dbx lint` run the tool the config (or discovery) selects, even when
+`toolchain.fmt` / `toolchain.lint` is omitted:
+
+* an explicit `toolchain.fmt.*` / `toolchain.lint.*` tool wins, in precedence
+  order;
+* otherwise the same discovery `dbx sync` uses picks a tool from the project
+  `.vscode/settings.json`, the nearest config file/`package.json`, or the VS
+  Code user settings;
+* with nothing configured or installed, they fall back to `vp fmt` / `vp lint`
+  (Oxfmt / Oxlint).
+
+Mode flags are translated per tool (`--check`/`--write` for formatters, `--fix`
+for linters) and other operands are forwarded. Oxc keeps the full Vite+
+passthrough, so `dbx vite fmt ...` still accepts every `vp` flag.
+
 ## Precedence
 
 When more than one formatter/linter is configured, editor defaults use:
@@ -6713,9 +6865,11 @@ the file the package manager reads it from, so dependencies can be declared with
 | `bun`   | `package.json`        | `workspaces.catalog`.                        |
 | `npm`   | —                     | No catalog support; dependencies are pinned. |
 
-Scaffolding resolves the manager from the `packageManager` input and writes the
-catalog of the packages the project depends on. To keep it in sync with
-`dbx sync`, add a `catalogs` section to `dbx.config.*`:
+Scaffolding resolves the manager from the `packageManager` input, writes the
+catalog of the packages the project depends on, and **opts into it in the
+generated `dbx.config.*`**, so `dbx sync` owns the file. To manage catalogs in an
+existing project, add a `catalogs` section (see
+[Package catalogs](/guide/catalogs)):
 
 ```ts [dbx.config.ts]
 export default defineConfig({
@@ -7188,7 +7342,7 @@ The offline builtins (`project`, `application`, `folder`, `monorepo`,
 and a `package.json` that depends on the same `@deltabox/toolchain` version as the
 CLI. There is no Turbo (Vite Task replaces it). They ask for a **package manager**
 (default `yarn`) and write that manager's catalog file (see
-[Catalogs](/guide/project#package-manager-and-catalogs)). The `vite-plus*`
+[Package catalogs](/guide/catalogs)). The `vite-plus*`
 builtins delegate to `vp create` and need network access.
 
 The root-oriented builtins (`project`, `application`, `monorepo`,
@@ -8234,7 +8388,7 @@ Vite+ commands are reachable directly or through the `vite` namespace, and are
 registered as a provider (see [Providers](/guide/providers)):
 
 ```sh
-dbx fmt                 # a bare Vite+ command forwards to `vp fmt`
+dbx fmt                 # the active formatter (vp fmt when Oxc)
 dbx run -r build        # forwards to `vp run -r build`
 dbx vite dev            # explicit namespace (always works)
 dbx vite:build          # named alias for `vp build`
@@ -8242,7 +8396,9 @@ dbx vite:build          # named alias for `vp build`
 
 A bare `dbx <command>` is forwarded to Vite+ when the name (or a Vite+ alias)
 matches — built-in commands win, so `dbx migrate` stays the toolchain's
-migration.
+migration. `dbx fmt` / `dbx lint` route to the configured/discovered
+Biome/Prettier/Dprint/ESLint tool, and keep the `vp` passthrough when the active
+tool is Oxc (see [Formatting & linting](/guide/formatting#running-the-active-tool)).
 
 ## Programmatic API
 
@@ -8347,6 +8503,78 @@ configures the **CLI** `dbx watch` command.
 url: https://toolchain.deltabox.studio/CHANGELOG.md
 ---
 # Changelog
+
+## 2.5.0 (November 2026)
+
+### New features
+
+#### Config
+
+* Add a reusable CLI docs generator ([#900566a](https://github.com/deltabox-studio/toolchain/commit/900566a) by [T0chi](https://github.com/T0chi))
+  * add generateCliDocs(commands, options?) for custom command descriptors
+  * use it to render the dbx CLI reference
+  * document generating docs for a consumer's own command list
+  * cover hidden/duplicate commands, args/options and custom prefix/title
+* Add self-contained vendor types and `tsconfig` auto/`rewriteAlias` schemas ([#31c47a9](https://github.com/deltabox-studio/toolchain/commit/31c47a9) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+
+* Inject provider setup into custom and vendor workflows ([#b6b240f](https://github.com/deltabox-studio/toolchain/commit/b6b240f) by [T0chi](https://github.com/T0chi))
+  * add an opt-in setup flag to custom workflow options and vendor settings
+  * GitHub injects the missing checkout/Node/Corepack/install steps
+  * GitLab adds a Node image + before_script; Azure adds UseNode@1 + install
+  * avoid duplicating setup steps the workflow already defines
+  * resolve vendor workflow tokens from the default token set
+
+#### Biome
+
+* Add array removal directives and resolve toolchain debt ([#da100c8](https://github.com/deltabox-studio/toolchain/commit/da100c8) by [T0chi](https://github.com/T0chi))
+  * add $remove: / $reset array directives with a resolver step for biome.json
+  * fix peer warnings (declare vite, filter the stale VitePress plugin peer)
+  * replace the RULE_MAP cast with an Object.hasOwn guard
+  * add a direct extension env-propagation test
+  * drop the 30s real-git changelog timeout
+
+#### Cli
+
+* Add `sync --only` task selection and `selectSyncTasks` ([#49d73dd](https://github.com/deltabox-studio/toolchain/commit/49d73dd) by [T0chi](https://github.com/T0chi))
+
+#### Vscode
+
+* Split extension modules and add `syncTsconfig` action ([#f121c47](https://github.com/deltabox-studio/toolchain/commit/f121c47) by [T0chi](https://github.com/T0chi))
+
+#### Tsconfig
+
+* Auto-wire aliases/references with `rewriteAlias` and gating ([#124f4b5](https://github.com/deltabox-studio/toolchain/commit/124f4b5) by [T0chi](https://github.com/T0chi))
+
+### Bug fixes
+
+#### Cli
+
+* Sync and watch configless projects with the inherited config ([#346060d](https://github.com/deltabox-studio/toolchain/commit/346060d) by [T0chi](https://github.com/T0chi))
+  * The command context did not expose the ancestor config path, so dbx sync/watch in a nested project without its own dbx.config.\* warned and did nothing. Pass parentPath through the context and allow both commands when it is set. The VS Code Sync all compensation now works for configless projects, while sync --recursive stays config-bearing-only and is documented as such.
+
+### Documentation
+
+* Document watcher scoping and project identity inheritance ([#074bfcd](https://github.com/deltabox-studio/toolchain/commit/074bfcd) by [T0chi](https://github.com/T0chi))
+  * Update the VS Code auto-sync section and the project guide to match the implementation: watchers are root-scoped and sync only the changed root; project name/scope/description/type are never inherited. Regenerate llms-full.txt.
+
+#### Tsconfig
+
+* Note that refsAuto requires tsc --build ([#74a25b2](https://github.com/deltabox-studio/toolchain/commit/74a25b2) by [T0chi](https://github.com/T0chi))
+  * Project references are only followed by tsc --build; tsc -p --noEmit ignores them. Document the refsAuto requirement and why this repo keeps the references hand-written (refsAuto: false).
+
+#### Config
+
+* Document every generator and generateCliDocs ([#28f812e](https://github.com/deltabox-studio/toolchain/commit/28f812e) by [T0chi](https://github.com/T0chi))
+  * add engine + standalone examples for each generator
+  * document CLI docs, post-processing and advanced options
+  * cross-link generateCliDocs from the config-generator index and CLI commands
+
+#### Vscode
+
+* Expand the extension guide and README ([#942aa55](https://github.com/deltabox-studio/toolchain/commit/942aa55) by [T0chi](https://github.com/T0chi))
+  * Restore the updated provider/template sections, settings and auto-sync documentation in both the guide and the extension README.
 
 ## 2.4.0 (November 2026)
 

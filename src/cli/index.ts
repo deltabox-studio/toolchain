@@ -36,6 +36,7 @@ import rootPkg from '../../package.json' with { type: 'json' };
 import { syncCommands } from './commands/index.js';
 import { extractConfigSelection, setConfigSelection } from './config-selection.js';
 import { isPassthroughCommand, registerToolchainCommands } from './register.js';
+import { withToolingRouting } from './tooling-commands.js';
 import { runUpdateCheck } from './update-check.js';
 
 export { extractConfigSelection } from './config-selection.js';
@@ -51,7 +52,7 @@ export function builtinCommands(config?: ToolchainConfig): ToolchainCommand[] {
         ...migrateCommands(),
         ...projectCommands(),
         ...templateCommands(),
-        ...viteCommands(),
+        ...withToolingRouting(viteCommands()),
     ];
 }
 

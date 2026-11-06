@@ -62,6 +62,23 @@ tool's options are read into the matching `toolchain.fmt.*` /
 `toolchain.lint.*` entry. Oxc options are merged over the toolchain defaults
 using the same mapping as [`dbx migrate`](/guide/migrations/).
 
+## Running the active tool
+
+`dbx fmt` / `dbx lint` run the tool the config (or discovery) selects, even when
+`toolchain.fmt` / `toolchain.lint` is omitted:
+
+- an explicit `toolchain.fmt.*` / `toolchain.lint.*` tool wins, in precedence
+  order;
+- otherwise the same discovery `dbx sync` uses picks a tool from the project
+  `.vscode/settings.json`, the nearest config file/`package.json`, or the VS
+  Code user settings;
+- with nothing configured or installed, they fall back to `vp fmt` / `vp lint`
+  (Oxfmt / Oxlint).
+
+Mode flags are translated per tool (`--check`/`--write` for formatters, `--fix`
+for linters) and other operands are forwarded. Oxc keeps the full Vite+
+passthrough, so `dbx vite fmt ...` still accepts every `vp` flag.
+
 ## Precedence
 
 When more than one formatter/linter is configured, editor defaults use:
