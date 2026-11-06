@@ -1,17 +1,25 @@
 # Changelog
 
-## 2.5.0 (November 2026)
+## 2.6.0 (November 2026)
 
 <!-- release:start -->
+
+### New features
+- Route fmt/lint to the active tool and opt scaffolds into catalogs ([#76df575](https://github.com/deltabox-studio/toolchain/commit/76df575) by [T0chi](https://github.com/T0chi))
+  - dbx fmt/lint resolve the configured/discovered formatter or linter (oxc > biome > prettier > dprint; oxc > biome > eslint) and run it, falling back to the vp/Oxc passthrough
+  - project:init/create scaffolds add the catalogs section for the catalog file they write, so dbx sync owns it instead of leaving the managed file orphaned
+  - document the active-tool routing and add the dedicated package catalogs guide
+
+<!-- release:end -->
+
+
+## 2.5.0 (November 2026)
 
 ### New features
 #### Tsconfig
 - Auto-wire aliases/references with `rewriteAlias` and gating ([#124f4b5](https://github.com/deltabox-studio/toolchain/commit/124f4b5) by [T0chi](https://github.com/T0chi))
 ### Refactors
 - Use `@deltabox/toolchain/<name>` import subpaths and workspace-aware tsdown aliases ([#691445a](https://github.com/deltabox-studio/toolchain/commit/691445a) by [T0chi](https://github.com/T0chi))
-
-<!-- release:end -->
-
 
 ## 2.4.0 (November 2026)
 
