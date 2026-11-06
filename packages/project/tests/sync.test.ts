@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { loadToolchainConfig } from '@deltabox/toolchain/core';
 import type { SyncContext, ToolchainConfig } from '@deltabox/toolchain/shared';
 
 import { projectSyncTask } from '../src/index.js';
@@ -98,6 +99,47 @@ describe('projectSyncTask', () => {
         );
         const pkg = JSON.parse(files!.find(f => f.path === 'package.json')!.content);
         expect(pkg.repository.directory).toBe('packages/app');
+    });
+
+    it('keeps a configless workspace identity while inheriting shared metadata', async () => {
+        const root = tmp();
+        fs.mkdirSync(path.join(root, '.git'));
+        writeJson(path.join(root, 'dbx.config.json'), {
+            toolchain: {
+                project: {
+                    name: 'acme',
+                    scope: '@acme',
+                    description: 'The root app',
+                    type: 'monorepo-root',
+                    author: 'Acme',
+                    repo: 'https://github.com/acme/app',
+                },
+            },
+        });
+        const ws = path.join(root, 'packages', 'web');
+        writeJson(path.join(ws, 'package.json'), {
+            name: '@acme/web',
+            description: 'The web package',
+        });
+
+        const loaded = await loadToolchainConfig(ws);
+        const files = await projectSyncTask().run({
+            ...ctx(ws, loaded.config),
+            projectType: loaded.projectType,
+        });
+        const pkg = JSON.parse(files!.find(f => f.path === 'package.json')!.content);
+
+        expect(loaded.projectType).toBe('project');
+        // The workspace keeps its own identity...
+        expect(pkg.name).toBe('@acme/web');
+        expect(pkg.description).toBe('The web package');
+        // ...but still inherits the root's shared metadata.
+        expect(pkg.author).toBe('Acme');
+        expect(pkg.repository).toEqual({
+            type: 'git',
+            url: 'git+https://github.com/acme/app.git',
+            directory: 'packages/web',
+        });
     });
 
     it('returns nothing when no field is defined', async () => {
