@@ -1,21 +1,26 @@
 # Changelog
 
-## 2.6.0 (November 2026)
+## 2.6.1 (November 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Changelog
+- Scope package changes by package name ([#0ee9b9e](https://github.com/deltabox-studio/toolchain/commit/0ee9b9e) by [T0chi](https://github.com/T0chi))
+  - key dependency changes by the declaring package.json name so workspace-specific pins (eg. the docs site's Vite 5) are reported under that workspace
+  - scope the catalog to the root package name; keep workspace catalog: refs unresolved so a catalog bump is reported once
+  - add regression tests and regenerate every CHANGELOG.md with the scoped footer
+
+<!-- release:end -->
+
+
+## 2.6.0 (November 2026)
 
 ### New features
 - Route fmt/lint to the active tool and opt scaffolds into catalogs ([#76df575](https://github.com/deltabox-studio/toolchain/commit/76df575) by [T0chi](https://github.com/T0chi))
   - dbx fmt/lint resolve the configured/discovered formatter or linter (oxc > biome > prettier > dprint; oxc > biome > eslint) and run it, falling back to the vp/Oxc passthrough
   - project:init/create scaffolds add the catalogs section for the catalog file they write, so dbx sync owns it instead of leaving the managed file orphaned
   - document the active-tool routing and add the dedicated package catalogs guide
-
-### Package changes
-#### Updated
-- `vite` `^8.3.0` → `^5.4.14`
-
-<!-- release:end -->
-
 
 ## 2.5.0 (November 2026)
 
@@ -104,8 +109,20 @@
   - Restore the updated provider/template sections, settings and auto-sync documentation in both the guide and the extension README.
 
 ### Package changes
-#### Updated
-- `vite` `>=5` → `^5.4.14`
+#### Added
+- `@deltabox/toolchain-biome` › `vite` `catalog:`
+- `@deltabox/toolchain-changelog` › `vite` `catalog:`
+- `@deltabox/toolchain-config` › `vite` `catalog:`
+- `@deltabox/toolchain-core` › `vite` `catalog:`
+- `@deltabox/toolchain-docs` › `vite` `^5.4.14`
+- `@deltabox/toolchain-migrate` › `vite` `catalog:`
+- `@deltabox/toolchain-project` › `vite` `catalog:`
+- `@deltabox/toolchain-shared` › `vite` `catalog:`
+- `@deltabox/toolchain-template` › `vite` `catalog:`
+- `@deltabox/toolchain-tsconfig` › `@deltabox/toolchain-core` `workspace:*`
+- `@deltabox/toolchain-tsconfig` › `vite` `catalog:`
+- `@deltabox/toolchain-tsdown` › `vite` `catalog:`
+- `toolchain-vscode` › `vite` `catalog:`
 
 ## 2.4.0 (November 2026)
 
@@ -137,6 +154,10 @@
 #### Deps
 - Update lockfile for @clack/prompts ([#52c08df](https://github.com/deltabox-studio/toolchain/commit/52c08df) by [T0chi](https://github.com/T0chi))
   - Record the new project workspace dependency so immutable CI installs no longer fail.
+
+### Package changes
+#### Added
+- `@deltabox/toolchain-project` › `@clack/prompts` `catalog:`
 
 ## 2.3.4 (November 2026)
 
@@ -258,9 +279,12 @@
 
 ### Package changes
 #### Added
-- `@dprint/types` `^0.4.0`
-- `eslint` `^10.14.0`
-- `prettier` `^3.6.2`
+- `@deltabox/toolchain` › `@dprint/types` `^0.4.0`
+- `@deltabox/toolchain` › `eslint` `^10.14.0`
+- `@deltabox/toolchain` › `prettier` `^3.6.2`
+- `@deltabox/toolchain-shared` › `@dprint/types` `catalog:`
+- `@deltabox/toolchain-shared` › `eslint` `catalog:`
+- `@deltabox/toolchain-shared` › `prettier` `catalog:`
 
 ## 2.2.0 (November 2026)
 
@@ -275,9 +299,9 @@
 
 ### Package changes
 #### Added
-- `@types/mocha` `^10.0.10`
-- `@vscode/test-cli` `^0.0.15`
-- `@vscode/test-electron` `^3.1.0`
+- `toolchain-vscode` › `@types/mocha` `^10.0.10`
+- `toolchain-vscode` › `@vscode/test-cli` `^0.0.15`
+- `toolchain-vscode` › `@vscode/test-electron` `^3.1.0`
 
 ## 2.1.3 (November 2026)
 
@@ -325,22 +349,12 @@
 
 ### Package changes
 #### Added
-- `vite-plugin-vitepress-auto-sidebar` `^1.7.1`
+- `@deltabox/toolchain-docs` › `vite-plugin-vitepress-auto-sidebar` `^1.7.1`
 
 ## 2.0.0 (October 2026)
 
-### New features
-#### Changelog
-- Customize CC group order and titles ([#856842b](https://github.com/deltabox-studio/toolchain/commit/856842b) by [T0chi](https://github.com/T0chi))
-  - Support ordered arrays, title records, hidden groups and callbacks for the whole group config and per-group title/order/hidden values, including --format-only.
-- Add custom workflow paths, listing and non-Yarn support ([#2e96e6e](https://github.com/deltabox-studio/toolchain/commit/2e96e6e) by [T0chi](https://github.com/T0chi))
-- Add a New contributors footer ([#1e49596](https://github.com/deltabox-studio/toolchain/commit/1e49596) by [T0chi](https://github.com/T0chi))
-  - Detect first-time contributors by checking the authors before the scanned range (explicit range start, or the oldest commit's parent).
-  - Render them as a footer with the contributor (linked when the GitHub login is known) and a nested list of their commit messages, reusing the normal commit bullet formatting without the author/body.
-  - Keep the same formatting in the commitlint-disabled fallback summary; only the CC rule/scope grouping is replaced by major/minor/patch.
+### Breaking Changes
 #### Config
-- Type changelog group callbacks ([#a5c6186](https://github.com/deltabox-studio/toolchain/commit/a5c6186) by [T0chi](https://github.com/T0chi))
-  - Add the shared ChangelogGroupsSetting types, expose groups on both changelog sections, and regenerate the config schema/types/reference.
 - Revamp config generators and extend tooling customization ([#b924255](https://github.com/deltabox-studio/toolchain/commit/b924255) by [T0chi](https://github.com/T0chi))
   - replace env-first ConfigScopes/ConfigScopeDef/render* APIs with ConfigSchema and generateConfig* functions (optional disk writes, schema metadata)
   - consolidate configSchema and remove duplicated schema maps/descriptions
@@ -349,6 +363,32 @@
   - add custom logger support and shorthand fmt/lint tool inference
   - add changelog bump rules, over-bump opt-in, and provider/commit options
   - **BREAKING CHANGE:** ConfigScopes, ConfigScopeDef, CONFIG_SECTION_SCHEMAS, CONFIG_TYPE_SCHEMAS and CONFIG_SECTION_DESCRIPTIONS are removed. Consumers should use ConfigSchema with generateConfigTypes/Env/Markdown/Cli/All and read section descriptions from schema metadata.
+- Move CI workflows and changelog config under toolchain.ci ([#af1b536](https://github.com/deltabox-studio/toolchain/commit/af1b536) by [T0chi](https://github.com/T0chi))
+  - Add the opt-in `ci` section for the ci/release/issues/changelog/sync workflows and move the changelog pipeline to `ci.changelog`.
+  - Make every workflow setting opt-in; disable commitlint with `ci.changelog.commitlint: false` and fall back to coarse major/minor/patch changelog groups.
+  - Move `types`/`scopes` to `ci.changelog.commitlint` and extract `ChangelogBranchesConfig` as a named schema.
+  - Keep the old top-level `changelog` schema marked deprecated for older consumers, but reject it in the loader with a migration error.
+  - Add `withEnabled()` to the schema model and split `config-schema.ts` into the `config-schema/` folder.
+  - Rename the workflow types: the workflow map is `WorkflowConfig`, the per-workflow overrides are `WorkflowOptions`, and the new section type is `ToolchainCiConfig`.
+  - Surface `.meta()` descriptions for `$ref` and object nodes in the generated types.
+### New features
+#### Changelog
+- Customize CC group order and titles ([#856842b](https://github.com/deltabox-studio/toolchain/commit/856842b) by [T0chi](https://github.com/T0chi))
+  - Support ordered arrays, title records, hidden groups and callbacks for the whole group config and per-group title/order/hidden values, including --format-only.
+- Add custom workflow paths, listing and non-Yarn support ([#2e96e6e](https://github.com/deltabox-studio/toolchain/commit/2e96e6e) by [T0chi](https://github.com/T0chi))
+  - support `ci.custom.*` workflows with custom `filename`/`dir` and verbatim YAML
+  - make `dbx workflow` honour dir/filename, include custom workflows, and add `--list [--json]`
+  - use package-manager-aware CI setup and commands for yarn, pnpm, npm and bun
+  - fix custom-workflow opt-out hints to `ci.custom.<id>` and preserve conflicts in the manifest
+  - support Bun object-form workspaces and non-interactive changesets on Windows
+  - keep changelog tests offline and document the `major`/`minor`/`patch` bump rules
+- Add a New contributors footer ([#1e49596](https://github.com/deltabox-studio/toolchain/commit/1e49596) by [T0chi](https://github.com/T0chi))
+  - Detect first-time contributors by checking the authors before the scanned range (explicit range start, or the oldest commit's parent).
+  - Render them as a footer with the contributor (linked when the GitHub login is known) and a nested list of their commit messages, reusing the normal commit bullet formatting without the author/body.
+  - Keep the same formatting in the commitlint-disabled fallback summary; only the CC rule/scope grouping is replaced by major/minor/patch.
+#### Config
+- Type changelog group callbacks ([#a5c6186](https://github.com/deltabox-studio/toolchain/commit/a5c6186) by [T0chi](https://github.com/T0chi))
+  - Add the shared ChangelogGroupsSetting types, expose groups on both changelog sections, and regenerate the config schema/types/reference.
 - Support metadata annotations in generated output ([#1417bb2](https://github.com/deltabox-studio/toolchain/commit/1417bb2) by [T0chi](https://github.com/T0chi))
 - Add fmt/lint sections and manual changelog config ([#16000e5](https://github.com/deltabox-studio/toolchain/commit/16000e5) by [T0chi](https://github.com/T0chi))
 - Inherit shared sections and add fmt/lint defaults ([#94add6f](https://github.com/deltabox-studio/toolchain/commit/94add6f) by [T0chi](https://github.com/T0chi))
@@ -360,14 +400,6 @@
   - Export `@deltabox/toolchain/globals` so a consumer can add `/// <reference types="@deltabox/toolchain/globals" />` and get typed `.meta({ env, path, required, example, ... })` fields.
   - Add the shared/config ambient declarations and make `ConfigBaseMeta.deprecated` the JSON-Schema boolean.
   - Run the root and every workspace typecheck against `tsconfig.json` instead of `tsconfig.build.json`.
-- Move CI workflows and changelog config under toolchain.ci ([#af1b536](https://github.com/deltabox-studio/toolchain/commit/af1b536) by [T0chi](https://github.com/T0chi))
-  - Add the opt-in `ci` section for the ci/release/issues/changelog/sync workflows and move the changelog pipeline to `ci.changelog`.
-  - Make every workflow setting opt-in; disable commitlint with `ci.changelog.commitlint: false` and fall back to coarse major/minor/patch changelog groups.
-  - Move `types`/`scopes` to `ci.changelog.commitlint` and extract `ChangelogBranchesConfig` as a named schema.
-  - Keep the old top-level `changelog` schema marked deprecated for older consumers, but reject it in the loader with a migration error.
-  - Add `withEnabled()` to the schema model and split `config-schema.ts` into the `config-schema/` folder.
-  - Rename the workflow types: the workflow map is `WorkflowConfig`, the per-workflow overrides are `WorkflowOptions`, and the new section type is `ToolchainCiConfig`.
-  - Surface `.meta()` descriptions for `$ref` and object nodes in the generated types.
 - Let defineConfig accept a promise or a callback ([#111776c](https://github.com/deltabox-studio/toolchain/commit/111776c) by [T0chi](https://github.com/T0chi))
   - `defineConfig` now mirrors Vite's helper: the argument may be a plain object, a `Promise<DbxConfig>`, or a `() => DbxConfig | Promise<DbxConfig>` callback. The loader resolves the module export (awaits a promise, calls a callback and awaits its result), so a config can do async work before returning `{ toolchain }`.
 #### Vscode
@@ -394,6 +426,12 @@
 - Inherit root Oxc config and harden scaffolds ([#56a1895](https://github.com/deltabox-studio/toolchain/commit/56a1895) by [T0chi](https://github.com/T0chi))
   - Nested projects omit local Oxc files/opt-ins when the root owns them, template create gains --force, and scaffold writes now reject duplicates, BOM catalogs and root scope fallbacks are handled.
 - Make scaffolds runnable and safer ([#eab297b](https://github.com/deltabox-studio/toolchain/commit/eab297b) by [T0chi](https://github.com/T0chi))
+  - generate runnable `src/index.ts` + smoke tests, real Vite application entries and tsdown exports
+  - write the selected package-manager catalog and keep scaffold defaults in sync with the toolchain
+  - wire monorepo root tsconfigs, workspace refs and JSONC-preserving tsconfig updates
+  - honour `--no-config`, add `--force`, and refuse to overwrite files or write outside the output directory
+  - expand builtin template inputs/actions and only resolve online templates when `--online` is set
+  - add `jsonc-parser`, update `yarn.lock`, and refresh the tsconfig templates
 - Fold an existing vite config when generating a config ([#5891154](https://github.com/deltabox-studio/toolchain/commit/5891154) by [T0chi](https://github.com/T0chi))
   - `project:config` now checks for a hand-written `vite.config.*` and folds its literal props into the generated `dbx.config.ts`'s `toolchain.vite` (using the vite migration's extract/scan/fold helpers), adding the `/vite.config.ts` fmt ignore. A non-foldable config is reported and left alone. The VS Code "Generate config" actions run `dbx sync` afterwards so the managed shim is written.
 #### Core
@@ -456,13 +494,33 @@
 - Filter denied providers at registration ([#74c49bb](https://github.com/deltabox-studio/toolchain/commit/74c49bb) by [T0chi](https://github.com/T0chi))
   - Load the registry policy before registering provider commands, and make config-flag extraction work for argv without a node/script prefix.
 - Preserve provider flags and emit clean machine output ([#8f6c404](https://github.com/deltabox-studio/toolchain/commit/8f6c404) by [T0chi](https://github.com/T0chi))
+  - leave `--config`/`--no-config` untouched after a provider/Vite+ passthrough
+  - share the registered command set between dispatch, default Vite routing and config extraction
+  - honour `watch: false` and treat `template:info` as machine output
+  - recognise `--alias`/`--paths`/`--references` when deciding whether to run the update check
+  - enforce `toolchain.registry.providers` when running custom provider passthroughs
+  - add config-selection tests for flags before/after commands and after `--`
 #### Config
 - Support boolean formatter and linter opt-ins ([#d99384b](https://github.com/deltabox-studio/toolchain/commit/d99384b) by [T0chi](https://github.com/T0chi))
   - Allow true/false for every fmt/lint tool, honour explicit biome opt-outs, and ignore disabled biome overrides.
 - Honour disabled sections and regenerate config types ([#dddd9a7](https://github.com/deltabox-studio/toolchain/commit/dddd9a7) by [T0chi](https://github.com/T0chi))
+  - treat an explicit `false` formatter/linter as disabled instead of configured
+  - skip Vite, Biome and editor defaults when their section is `enabled: false`
+  - strip toolchain-only keys (`enabled`) from the resolved Vite config
+  - resolve package-manager default versions from the shared token model
+  - keep catalogs out of nested config inheritance
+  - add the custom `logger.logger` field to the schema and generated types
+  - read UTF-8 BOM-prefixed JSON and fix record rendering in generated markdown
+  - regenerate `config-types.ts` and its generator override
 - Keep union, enum and nested types in the combined markdown reference ([#2eaa373](https://github.com/deltabox-studio/toolchain/commit/2eaa373) by [T0chi](https://github.com/T0chi))
   - The combined (`combined: true`) markdown renderer received the untyped lowering of Zod scopes, which collapses unions/enums to `any` with a `{}` default. Render Zod scopes from `toJSONSchema` instead (resolving the root `$ref` into `$defs`), so the reference shows real types and nested options again.
 - Finish generator ergonomics and changelog customization ([#38f6d5b](https://github.com/deltabox-studio/toolchain/commit/38f6d5b) by [T0chi](https://github.com/T0chi))
+  - infer config type names from schema metadata and generate types from dbxConfigSchema
+  - move JSON Schema metadata normalization into the config generator API
+  - use the config engine in the dogfood generation scripts
+  - rename requiredEnvVars to requiredVars and writeMarkdown outDir to outputDir
+  - wire changelog commit credits/formatter options, custom providers and changesets
+  - add the v1 to v2 migration guide and an end-to-end shorthand/custom-logger test
 #### Changelog
 - Honour workflow token overrides and disabled ci ([#de266dd](https://github.com/deltabox-studio/toolchain/commit/de266dd) by [T0chi](https://github.com/T0chi))
   - Use the overridden package manager's version, honour legacy yarnVersion, and ignore workflow paths when ci is disabled.
@@ -470,11 +528,23 @@
 - Reload edited code configs in watch ([#10ba473](https://github.com/deltabox-studio/toolchain/commit/10ba473) by [T0chi](https://github.com/T0chi))
   - Cache-bust the ESM/CJS config import when watch reloads, and add loader + live watch coverage.
 - Protect adopted files, keep check read-only and reload watch config ([#c6fe500](https://github.com/deltabox-studio/toolchain/commit/c6fe500) by [T0chi](https://github.com/T0chi))
+  - make `dbx reset` skip files recorded as adopted instead of deleting user-owned files
+  - stop `dbx sync --check` from writing `.vscode/settings.json`
+  - persist arbitrary task metadata in the manifest and round-trip it through `SyncContext`
+  - reload the config and rebuild the watched inputs when a `dbx.config.*` changes
+  - read BOM-prefixed project graphs and extend the emulation coverage
 #### Vscode
 - List custom workflows and read BOM-prefixed manifests ([#2f62b47](https://github.com/deltabox-studio/toolchain/commit/2f62b47) by [T0chi](https://github.com/T0chi))
+  - build the Run workflow picker from `dbx workflow --list --json`, including `ci.custom` workflows
+  - pass `--online` when creating an online template so npm/git templates still resolve
+  - read project graphs/manifests written with a UTF-8 BOM
 - Use the default provider registry path and clarify template docs ([#017cfe6](https://github.com/deltabox-studio/toolchain/commit/017cfe6) by [T0chi](https://github.com/T0chi))
 #### Tsconfig
 - Make sync generation quiet, one-pass and non-fatal ([#f0d7663](https://github.com/deltabox-studio/toolchain/commit/f0d7663) by [T0chi](https://github.com/T0chi))
+  - route generation logs through a caller-supplied sink so `dbx sync --json`/`--quiet` stays clean
+  - keep project references when the target tsconfig is generated in the same run
+  - throw instead of calling `process.exit` from library code
+  - cover first-run reference wiring in the generator tests
 #### Ci
 - Keep the build tsconfigs for CI typechecks ([#b1502ad](https://github.com/deltabox-studio/toolchain/commit/b1502ad) by [T0chi](https://github.com/T0chi))
   - Revert the package/root `typecheck` tasks to `tsconfig.build.json`.
@@ -494,12 +564,20 @@
 - Document nested Oxc inheritance and workflow token versions ([#4f43cd9](https://github.com/deltabox-studio/toolchain/commit/4f43cd9) by [T0chi](https://github.com/T0chi))
   - Cover scaffold --force, root Oxc inheritance, boolean tool opt-ins, workflow package-manager version defaults and the managed-file conflict group.
 - Regenerate config artifacts and document the fixes ([#9be4d73](https://github.com/deltabox-studio/toolchain/commit/9be4d73) by [T0chi](https://github.com/T0chi))
+  - include the manual `toolchain.changelog` section in the generated dbx.config reference
+  - document custom workflow paths/listing, `ci.custom` opt-out and scaffold `--force`/safety
+  - clarify `project.type` handling, inherited sections, watch reload, editor settings and versioning rules
+  - regenerate `config/cli.md`, `config/reference.md`, the JSON schema and `llms-full.txt`
 - Document tsconfig overrides, snapshots and `--restore` ([#dad4084](https://github.com/deltabox-studio/toolchain/commit/dad4084) by [T0chi](https://github.com/T0chi))
   - `guide/tsconfig.md`: `baseFile`, custom file names, overrides (deep merge, snapshots, removal rules, restoring, warnings) and the new CLI flags/exports
   - `migration-v1-v2.md`: overrides, manifest `snapshots`/`tsconfigOverrides`, the sync task API additions and an upgrade step
   - note the override revert in the `dbx reset` / `dbx tsconfig` CLI docs and the package reference
   - regenerate `config/reference.md`, `config/cli.md`, `config.schema.json` and `llms-full.txt`
 - Document v2 generators, custom logger and changelog customization ([#f0f7f5d](https://github.com/deltabox-studio/toolchain/commit/f0f7f5d) by [T0chi](https://github.com/T0chi))
+  - refresh config-generator/package-reference APIs (ConfigSchema, generateConfig*)
+  - document markdown frontmatter, env/cli metadata and include flags
+  - document custom logger support
+  - document changelog bump rules, commit credits and providers
 - Update README highlights and regenerate LLM docs ([#6380770](https://github.com/deltabox-studio/toolchain/commit/6380770) by [T0chi](https://github.com/T0chi))
 - Add the CI guide, TypeScript page and interactive CLI sections ([#fc6099a](https://github.com/deltabox-studio/toolchain/commit/fc6099a) by [T0chi](https://github.com/T0chi))
   - Move the workflow/release pages from the Changelog guide into a new `guide/ci/` section (overview + settings + ci/issues/changelog/sync/ releases) and retitle the overview to "CI".
@@ -544,7 +622,12 @@
 
 ### Package changes
 #### Added
-- `jsonc-parser` `^3.3.1`
+- `@deltabox/toolchain` › `jsonc-parser` `^3.3.1`
+- `@deltabox/toolchain-project` › `@deltabox/toolchain-migrate` `workspace:*`
+- `@deltabox/toolchain-project` › `jsonc-parser` `^3.3.1`
+- `@deltabox/toolchain-template` › `@deltabox/toolchain-core` `workspace:*`
+#### Removed
+- `@deltabox/toolchain-project` › `@deltabox/toolchain-biome` `workspace:*`
 
 ## 1.11.4 (October 2026)
 
@@ -599,8 +682,8 @@
 
 ### Package changes
 #### Added
-- `vitepress-carbon` `^1.7.0`
-- `vitepress-plugin-group-icons` `^1.8.1`
+- `@deltabox/toolchain-docs` › `vitepress-carbon` `^1.7.0`
+- `@deltabox/toolchain-docs` › `vitepress-plugin-group-icons` `^1.8.1`
 
 ## 1.11.0 (October 2026)
 
@@ -785,14 +868,33 @@
 
 ### Package changes
 #### Added
-- `@deltabox/toolchain` `portal:.`
-- `vitepress-plugin-llms` `^1.14.0`
+- `@deltabox/toolchain` › `@deltabox/toolchain` `portal:.`
+- `@deltabox/toolchain-docs` › `vitepress-plugin-llms` `^1.14.0`
+- `@deltabox/toolchain-migrate` › `@clack/prompts` `catalog:`
+- `@deltabox/toolchain-migrate` › `@deltabox/toolchain-core` `workspace:*`
+- `@deltabox/toolchain-migrate` › `glob` `catalog:`
 
 ## 1.7.8 (October 2026)
 
 ### Bug fixes
 #### Vscode
 - Reverted VS Code extension package name to `toolchain-vscode` due to `toolchain` ([#5d0d38b](https://github.com/deltabox-studio/toolchain/commit/5d0d38b) by [T0chi](https://github.com/T0chi))
+
+### Package changes
+#### Added
+- `toolchain-vscode` › `@deltabox/toolchain-tsdown` `workspace:*`
+- `toolchain-vscode` › `@types/node` `catalog:`
+- `toolchain-vscode` › `@types/vscode` `^1.85.0`
+- `toolchain-vscode` › `tsdown` `catalog:`
+- `toolchain-vscode` › `typescript` `catalog:`
+- `toolchain-vscode` › `vitest` `catalog:`
+#### Removed
+- `toolchain` › `@deltabox/toolchain-tsdown` `workspace:*`
+- `toolchain` › `@types/node` `catalog:`
+- `toolchain` › `@types/vscode` `^1.85.0`
+- `toolchain` › `tsdown` `catalog:`
+- `toolchain` › `typescript` `catalog:`
+- `toolchain` › `vitest` `catalog:`
 
 ## 1.7.7 (October 2026)
 
@@ -842,6 +944,22 @@
 ### Chores
 #### Vscode
 - Uploaded the vscode extension to the Marketplace ([#993aadf](https://github.com/deltabox-studio/toolchain/commit/993aadf) by [T0chi](https://github.com/T0chi))
+
+### Package changes
+#### Added
+- `toolchain` › `@deltabox/toolchain-tsdown` `workspace:*`
+- `toolchain` › `@types/node` `catalog:`
+- `toolchain` › `@types/vscode` `^1.85.0`
+- `toolchain` › `tsdown` `catalog:`
+- `toolchain` › `typescript` `catalog:`
+- `toolchain` › `vitest` `catalog:`
+#### Removed
+- `toolchain-vscode` › `@deltabox/toolchain-tsdown` `workspace:*`
+- `toolchain-vscode` › `@types/node` `catalog:`
+- `toolchain-vscode` › `@types/vscode` `^1.85.0`
+- `toolchain-vscode` › `tsdown` `catalog:`
+- `toolchain-vscode` › `typescript` `catalog:`
+- `toolchain-vscode` › `vitest` `catalog:`
 
 ## 1.7.0 (October 2026)
 
@@ -944,6 +1062,10 @@
   - docs + README prose
 ### Documentation
 - Cover the clack CLI output, prompts and `dbx` binary resolution ([#f45ed3f](https://github.com/deltabox-studio/toolchain/commit/f45ed3f) by [T0chi](https://github.com/T0chi))
+  - cli: an Output section (clack rendering, intro/outro, coloured help), the --color flag, and the `create` prompts
+  - api: document findOwnCliEntry / TOOLCHAIN_PACKAGE
+  - providers: document the dbx() plugin's binary resolution
+  - scripts: note the Vite+ config can live in dbx.config's toolchain.vite
 - Document the Vite+ config type and the `Toolchain*` names ([#1e70950](https://github.com/deltabox-studio/toolchain/commit/1e70950) by [T0chi](https://github.com/T0chi))
   - Note that `toolchain.vite` is typed as Vite's `UserConfig` as augmented by Vite+ (`ToolchainViteConfig`), and list `ToolchainViteConfig` among the shared config types. Covers the unreleased changes since v1.3.1 together with the sections the feature commits already added (the Vite+ config in `dbx.config`, the generated `vite.config.ts`, the vite migration and the `dbx` plugin).
 #### Vscode
@@ -954,9 +1076,12 @@
 
 ### Package changes
 #### Added
-- `@clack/prompts` `^1.8.1`
+- `@deltabox/toolchain` › `@clack/prompts` `^1.8.1`
+- `@deltabox/toolchain-shared` › `@clack/prompts` `catalog:`
+- `@deltabox/toolchain-template` › `@clack/prompts` `catalog:`
+- `@deltabox/toolchain-vite` › `@deltabox/toolchain-core` `workspace:*`
 #### Updated
-- `vite-plus` `^1.2.0` → `>=1`
+- `@deltabox/toolchain` › `vite-plus` `^1.2.0` → `>=1`
 
 ## 1.3.1 (October 2026)
 
@@ -1018,7 +1143,8 @@
 
 ### Package changes
 #### Added
-- `picocolors` `^1.1.1`
+- `@deltabox/toolchain` › `picocolors` `^1.1.1`
+- `@deltabox/toolchain-shared` › `picocolors` `catalog:`
 
 ## 1.2.8 (October 2026)
 
@@ -1241,120 +1367,87 @@
 ## 1.1.1 (October 2026)
 
 ### Documentation
-
 - Publish `config.schema.json` at the docs site root ([#b7680cb](https://github.com/deltabox-studio/toolchain/commit/b7680cb) by [T0chi](https://github.com/T0chi))
   - - The VitePress build now copies the generated `dbx` JSON schema into the dist root, so it is served at https://toolchain.deltabox.studio/config.schema.json.
-
 ### CI
-
 #### Release
-
 - Publish to npm via trusted publishing (OIDC) ([#41be869](https://github.com/deltabox-studio/toolchain/commit/41be869) by [T0chi](https://github.com/T0chi))
   - - Drop the `NPM_TOKEN`-based `yarn npm publish` (which also staged). Use npm trusted publishing: `id-token: write`, setup-node `registry-url`, `yarn pack` (resolves `catalog:`/`workspace:`) + `npm publish <tarball>` — provenance is generated automatically. Re-enable `publishConfig.provenance`.
 
 ## 1.1.0 (October 2026)
 
 ### New features
-
 #### Vite
-
 - Add a `dbx()` Vite+ plugin and `defineDbxConfig` wrapper ([#a1edaf9](https://github.com/deltabox-studio/toolchain/commit/a1edaf9) by [T0chi](https://github.com/T0chi))
   - - Lets Vite+-only consumers drive `dbx` from `vite.config.ts`: `dbx()` runs `dbx sync` before dev/build (or `dbx sync --check` in CI) and re-syncs on input changes; `defineDbxConfig()` also registers the `vp run dbx:*` tasks (Vite+ reads `run.tasks` from the static config, not a plugin hook).
-
 ### Chores
-
 - Name the `changelog`/`tsconfig` bins explicitly ([#94c6c17](https://github.com/deltabox-studio/toolchain/commit/94c6c17) by [T0chi](https://github.com/T0chi))
 
 ### Package changes
-
-#### Updated
-
-- `vite` `^8.3.0` → `>=5`
+#### Added
+- `@deltabox/toolchain-vite` › `vite` `>=5`
 
 ## 1.0.8 (October 2026)
 
 ### CI
-
 #### Release
-
 - Manage the release workflow from `dbx.config.ts` ([#bf55b70](https://github.com/deltabox-studio/toolchain/commit/bf55b70) by [T0chi](https://github.com/T0chi))
   - - Drop the hand-written `.github/workflows/release.yml`; the release flow (tag + GitHub Release with the VSIX + notes, `npm publish`, Marketplace publish) is now defined under `changelog.workflows.release` in the config and generated by `dbx sync`. Removes the need to hand-write CI.
 
 ## 1.0.7 (October 2026)
 
 ### Bug fixes
-
 #### Vscode
-
 - Package the VSIX without `vp`; ignore `vite.config.ts`; untrack `*.vsix` ([#9d1e403](https://github.com/deltabox-studio/toolchain/commit/9d1e403) by [T0chi](https://github.com/T0chi))
-
 ### CI
-
 #### Release
-
 - Release on push to `main` (tag + GitHub Release + npm + Marketplace) ([#4714b1a](https://github.com/deltabox-studio/toolchain/commit/4714b1a) by [T0chi](https://github.com/T0chi))
   - - Replaces the generated release-PR workflow with a hand-written one that, on each push to `main`, packages the VS Code extension, creates the `v<version>` tag and a GitHub Release (notes from `CHANGELOG.md` + the `.vsix` asset), publishes `@deltabox/toolchain` to npm, and publishes the extension to the VS Code Marketplace. Idempotent: skipped when the tag already exists.
 
 ## 1.0.6 (October 2026)
 
 ### Documentation
-
 - Add GitHub social links to the navbar and footer ([#2925f1a](https://github.com/deltabox-studio/toolchain/commit/2925f1a) by [T0chi](https://github.com/T0chi))
-
 ### Chores
-
 - Name the `changelog`/`tsconfig` bins explicitly and disable publish provenance ([#ba2737d](https://github.com/deltabox-studio/toolchain/commit/ba2737d) by [T0chi](https://github.com/T0chi))
 
 ## 1.0.5 (October 2026)
 
 ### Documentation
-
 - Update tagline ([#e1fa86e](https://github.com/deltabox-studio/toolchain/commit/e1fa86e) by [T0chi](https://github.com/T0chi))
 
 ## 1.0.4 (October 2026)
 
 ### Documentation
-
 - Add a table of contents to the `README` ([#b2702e8](https://github.com/deltabox-studio/toolchain/commit/b2702e8) by [T0chi](https://github.com/T0chi))
-
 ### Chores
-
 - Fix grammar in the package description ([#8a199b8](https://github.com/deltabox-studio/toolchain/commit/8a199b8) by [T0chi](https://github.com/T0chi))
 
 ## 1.0.3 (October 2026)
 
 ### Documentation
-
 - Highlight the config generator and link `toolchain.deltabox.studio` ([#836cd36](https://github.com/deltabox-studio/toolchain/commit/836cd36) by [T0chi](https://github.com/T0chi))
-
 ### Chores
-
 - Exclude `CHANGELOG.md` from Oxfmt (the changelog pipeline owns its format) ([#f6ad3c0](https://github.com/deltabox-studio/toolchain/commit/f6ad3c0) by [T0chi](https://github.com/T0chi))
 - Add `MPL-2.0` `LICENSE` and the project homepage ([#cea0fb5](https://github.com/deltabox-studio/toolchain/commit/cea0fb5) by [T0chi](https://github.com/T0chi))
 
 ## 1.0.2 (October 2026)
 
 ### Tests
-
 #### Changelog
-
 - Update the release workflow reference fixture ([#e7efe0a](https://github.com/deltabox-studio/toolchain/commit/e7efe0a) by [T0chi](https://github.com/T0chi))
 
 ## 1.0.1 (October 2026)
 
 ### Bug fixes
-
 #### Changelog
-
 - Tolerate a missing `CHANGELOG.md` in the release workflow ([#18ad219](https://github.com/deltabox-studio/toolchain/commit/18ad219) by [T0chi](https://github.com/T0chi))
   - - The release PR job extracted notes with `awk`, which failed when `CHANGELOG.md` did not exist yet (a fresh repo). Fall back to an empty notes string.
 - Create `CHANGELOG.md` when missing; ignore dry-run output ([#f5e4926](https://github.com/deltabox-studio/toolchain/commit/f5e4926) by [T0chi](https://github.com/T0chi))
   - - `prependChangelogEntry` read the existing file unconditionally, so the first run on a repo without a `CHANGELOG.md` failed with `ENOENT`. Seed it with a `# Changelog` header instead. Also gitignore `CHANGELOG.proposed.md`.
 - Resolve repo root from `cwd` instead of the module location ([#5278e57](https://github.com/deltabox-studio/toolchain/commit/5278e57) by [T0chi](https://github.com/T0chi))
   - - Running `dbx changelog` from source (or from the published package in `node_modules`) walked up from `import.meta.url` and landed on the wrong `package.json`, so it looked for `CHANGELOG.md` in the wrong directory and failed. Resolve the nearest `package.json` above the working directory instead.
-
 ### Chores
-
 - Add extension keyword ([#99721f3](https://github.com/deltabox-studio/toolchain/commit/99721f3) by [T0chi](https://github.com/T0chi))
 - Drop Netlify config (docs move to Railway); move `PLAN.md` out of the repo ([#e51b714](https://github.com/deltabox-studio/toolchain/commit/e51b714) by [T0chi](https://github.com/T0chi))
 - Update package description and keywords ([#d75b503](https://github.com/deltabox-studio/toolchain/commit/d75b503) by [T0chi](https://github.com/T0chi))

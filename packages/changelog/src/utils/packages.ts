@@ -12,6 +12,8 @@ const DEP_FIELDS = [
 ] as const;
 
 export interface DependencyChange {
+    /** The `package.json` name that declares the dependency (or the catalog root). */
+    scope: string;
     name: string;
     from?: string;
     to?: string;
@@ -23,34 +25,52 @@ export interface DependencyDiff {
     removed: DependencyChange[];
 }
 
-type DependencyMap = Map<string, string>;
+/** One declared dependency, scoped to the package.json that declares it. */
+export interface DependencyEntry {
+    scope: string;
+    name: string;
+    version: string;
+}
+
+export type DependencyMap = Map<string, DependencyEntry>;
+
+/** A package-manager catalog (`package -> version range`). */
+type CatalogMap = Map<string, string>;
+
+/** The map key for a scoped dependency. */
+function dependencyKey(scope: string, name: string): string {
+    return `${scope}\u0000${name}`;
+}
+
+/** The scope for a package.json without a name. */
+const UNNAMED_SCOPE = '<unnamed>';
+
+/** The package.json name (the scope a dependency is reported under). */
+function packageScope(pkg: Record<string, unknown>): string {
+    return typeof pkg.name === 'string' && pkg.name.trim() ? pkg.name : UNNAMED_SCOPE;
+}
 
 /** Merge a package.json's dependency fields (and resolutions) into the map. */
-function collectFromPackage(
-    pkg: Record<string, unknown>,
-    map: DependencyMap,
-    catalog: DependencyMap
-): void {
+function collectFromPackage(pkg: Record<string, unknown>, map: DependencyMap): void {
+    const scope = packageScope(pkg);
     for (const field of DEP_FIELDS) {
         const deps = pkg[field];
         if (!deps || typeof deps !== 'object') continue;
         for (const [name, version] of Object.entries(deps as Record<string, unknown>)) {
-            const declared = String(version);
-            // Resolve `catalog:` to the catalog's version so a catalog bump shows
-            // up as an update on the packages that use it.
-            map.set(name, declared === 'catalog:' ? (catalog.get(name) ?? declared) : declared);
+            map.set(dependencyKey(scope, name), { scope, name, version: String(version) });
         }
     }
     const resolutions = pkg.resolutions;
     if (resolutions && typeof resolutions === 'object') {
         for (const [name, version] of Object.entries(resolutions as Record<string, unknown>)) {
-            map.set(`resolutions:${name}`, String(version));
+            const key = `resolutions:${name}`;
+            map.set(dependencyKey(scope, key), { scope, name: key, version: String(version) });
         }
     }
 }
 
 /** Merge the `.yarnrc.yml` `catalog:` entries into the map (plain names). */
-function collectFromYarnrc(content: string, map: DependencyMap): void {
+function collectFromYarnrc(content: string, map: CatalogMap): void {
     let inCatalog = false;
     for (const line of content.split('\n')) {
         if (/^catalog:\s*$/.test(line)) {
@@ -68,28 +88,50 @@ function collectFromYarnrc(content: string, map: DependencyMap): void {
     }
 }
 
+/**
+ * Build the dependency map from the workspace `package.json` files. Dependencies
+ * are scoped to the package.json that declares them, so a workspace-specific pin
+ * (eg. the docs site's Vite 5) is reported under that workspace instead of
+ * masquerading as a repo-wide change. The catalog is a root-level declaration, so
+ * it is scoped to the root package name.
+ */
+export function collectDependencies(
+    packages: Record<string, unknown>[],
+    catalog: CatalogMap = new Map(),
+    catalogScope = 'catalog'
+): DependencyMap {
+    const map: DependencyMap = new Map();
+    for (const pkg of packages) collectFromPackage(pkg, map);
+    for (const [name, version] of catalog) {
+        map.set(dependencyKey(catalogScope, name), { scope: catalogScope, name, version });
+    }
+    return map;
+}
+
 /** The current dependency state (working tree package.jsons + the catalog). */
 export function readCurrentDependencies(): DependencyMap {
     const root = repoRoot();
-    const catalog: DependencyMap = new Map();
+    const catalog: CatalogMap = new Map();
     try {
         collectFromYarnrc(readFileSync(resolve(root, '.yarnrc.yml'), 'utf8'), catalog);
     } catch {
         // no catalog
     }
-    const map: DependencyMap = new Map(catalog);
+    const packages: Record<string, unknown>[] = [];
+    let catalogScope = 'catalog';
     for (const dir of discoverWorkspaceDirs()) {
         try {
-            collectFromPackage(
-                JSON.parse(readFileSync(resolve(dir, 'package.json'), 'utf8')),
-                map,
-                catalog
-            );
+            const pkg = JSON.parse(readFileSync(resolve(dir, 'package.json'), 'utf8')) as Record<
+                string,
+                unknown
+            >;
+            packages.push(pkg);
+            if (resolve(dir) === resolve(root)) catalogScope = packageScope(pkg);
         } catch {
             // skip unreadable package.json
         }
     }
-    return map;
+    return collectDependencies(packages, catalog, catalogScope);
 }
 
 /** The dependency state at a git ref, or undefined when the ref can't be read. */
@@ -108,7 +150,7 @@ export function readDependenciesAtRef(ref: string): DependencyMap | undefined {
     }
     if (files.length === 0) return undefined;
 
-    const catalog: DependencyMap = new Map();
+    const catalog: CatalogMap = new Map();
     try {
         const yarnrc = execFileSync('git', ['show', `${ref}:.yarnrc.yml`], {
             encoding: 'utf8',
@@ -119,19 +161,22 @@ export function readDependenciesAtRef(ref: string): DependencyMap | undefined {
         // no catalog at the ref
     }
 
-    const map: DependencyMap = new Map(catalog);
+    const packages: Record<string, unknown>[] = [];
+    let catalogScope = 'catalog';
     for (const file of files) {
         try {
             const content = execFileSync('git', ['show', `${ref}:${file}`], {
                 encoding: 'utf8',
                 stdio: ['ignore', 'pipe', 'ignore'],
             });
-            collectFromPackage(JSON.parse(content), map, catalog);
+            const pkg = JSON.parse(content) as Record<string, unknown>;
+            packages.push(pkg);
+            if (file === 'package.json') catalogScope = packageScope(pkg);
         } catch {
             // skip files not present at the ref
         }
     }
-    return map;
+    return collectDependencies(packages, catalog, catalogScope);
 }
 
 /** Resolve the git ref for a released version (tag, then release commit). */
@@ -160,7 +205,7 @@ export function resolveVersionRef(version: string): string | undefined {
 }
 
 function byName(a: DependencyChange, b: DependencyChange): number {
-    return a.name.localeCompare(b.name);
+    return a.scope.localeCompare(b.scope) || a.name.localeCompare(b.name);
 }
 
 /** Diff two dependency maps into added / updated / removed entries. */
@@ -168,13 +213,22 @@ export function diffDependencies(prev: DependencyMap, next: DependencyMap): Depe
     const added: DependencyChange[] = [];
     const updated: DependencyChange[] = [];
     const removed: DependencyChange[] = [];
-    for (const [name, version] of next) {
-        if (!prev.has(name)) added.push({ name, to: version });
-        else if (prev.get(name) !== version)
-            updated.push({ name, from: prev.get(name), to: version });
+    for (const [key, entry] of next) {
+        const before = prev.get(key);
+        if (!before) added.push({ scope: entry.scope, name: entry.name, to: entry.version });
+        else if (before.version !== entry.version) {
+            updated.push({
+                scope: entry.scope,
+                name: entry.name,
+                from: before.version,
+                to: entry.version,
+            });
+        }
     }
-    for (const [name, version] of prev) {
-        if (!next.has(name)) removed.push({ name, from: version });
+    for (const [key, entry] of prev) {
+        if (!next.has(key)) {
+            removed.push({ scope: entry.scope, name: entry.name, from: entry.version });
+        }
     }
     return {
         added: added.sort(byName),
@@ -190,17 +244,23 @@ export function renderPackageChanges(diff: DependencyDiff): string {
     const lines = ['### Package changes'];
     if (added.length > 0) {
         lines.push('#### Added');
-        for (const change of added) lines.push(`- \`${change.name}\` \`${change.to}\``);
+        for (const change of added) {
+            lines.push(`- \`${change.scope}\` › \`${change.name}\` \`${change.to}\``);
+        }
     }
     if (updated.length > 0) {
         lines.push('#### Updated');
         for (const change of updated) {
-            lines.push(`- \`${change.name}\` \`${change.from}\` → \`${change.to}\``);
+            lines.push(
+                `- \`${change.scope}\` › \`${change.name}\` \`${change.from}\` → \`${change.to}\``
+            );
         }
     }
     if (removed.length > 0) {
         lines.push('#### Removed');
-        for (const change of removed) lines.push(`- \`${change.name}\``);
+        for (const change of removed) {
+            lines.push(`- \`${change.scope}\` › \`${change.name}\` \`${change.from}\``);
+        }
     }
     return lines.join('\n');
 }

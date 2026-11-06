@@ -1,8 +1,20 @@
 # Changelog
 
-## 2.5.0 (November 2026)
+## 2.6.1 (November 2026)
 
 <!-- release:start -->
+
+### Bug fixes
+#### Changelog
+- Scope package changes by package name ([#0ee9b9e](https://github.com/deltabox-studio/toolchain/commit/0ee9b9e) by [T0chi](https://github.com/T0chi))
+  - key dependency changes by the declaring package.json name so workspace-specific pins (eg. the docs site's Vite 5) are reported under that workspace
+  - scope the catalog to the root package name; keep workspace catalog: refs unresolved so a catalog bump is reported once
+  - add regression tests and regenerate every CHANGELOG.md with the scoped footer
+
+<!-- release:end -->
+
+
+## 2.5.0 (November 2026)
 
 ### New features
 #### Biome
@@ -36,9 +48,6 @@
 #### Vscode
 - Expand the extension guide and README ([#942aa55](https://github.com/deltabox-studio/toolchain/commit/942aa55) by [T0chi](https://github.com/T0chi))
   - Restore the updated provider/template sections, settings and auto-sync documentation in both the guide and the extension README.
-
-<!-- release:end -->
-
 
 ## 2.4.0 (November 2026)
 
