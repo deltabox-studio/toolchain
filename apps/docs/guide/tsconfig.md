@@ -501,6 +501,36 @@ applies to `monorepo-root` projects. Run
 `dbx sync --check` in CI to fail when a generated `tsconfig.json` drifts from
 its inputs.
 
+### Refresh aliases after builds
+
+Auto-wired aliases and references are derived from each workspace's
+`package.json` (`exports`, then `types`/`main`, then a source scan). If a build
+step can change a workspace manifest (a generated `package.json`, a rewritten
+export map, ...), run the tsconfig-only sync once **after all workspace builds**:
+
+```sh
+dbx sync --only tsconfig
+```
+
+This regenerates the workspaces tsconfig and every managed `tsconfig.json`
+without running the other sync tasks, and it does not prune files owned by those
+tasks. Add it to the end of your root build script so the aliases always reflect
+the final `package.json` exports:
+
+```json [package.json]
+{
+    "scripts": {
+        "build": "yarn workspaces foreach -A run build && dbx sync --only tsconfig"
+    }
+}
+```
+
+The task is skipped when `toolchain.tsconfig` is omitted or `false` — including
+`dbx tsconfig` and `dbx sync --only tsconfig` — so a disabled section never
+generates files. A nested workspace that defines its own `tsconfig` section owns
+its generated file: the root still aliases/references it, but does not rewrite
+it.
+
 ## Per-project configs
 
 `toolchain.tsconfig` is repository-scoped: the root sync task expands every

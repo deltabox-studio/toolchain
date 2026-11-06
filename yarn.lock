@@ -693,6 +693,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@deltabox/toolchain-tsconfig@workspace:packages/tsconfig"
   dependencies:
+    "@deltabox/toolchain-core": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
     "@deltabox/toolchain-tsdown": "workspace:*"
     "@types/node": "catalog:"

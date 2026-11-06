@@ -2,10 +2,11 @@ import {
     logger,
     sectionConfig,
     type ToolchainCommand,
+    type ToolchainTsconfigConfig,
     warningMessage,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
-import { generateTsconfigs } from '../cli/generate/index.js';
+import { generateWorkspaceTsconfigs } from '../cli/generate/index.js';
 import {
     hasOverrideKeys,
     TSCONFIG_OVERRIDE_KINDS,
@@ -30,6 +31,37 @@ export function tsconfigCommands(): ToolchainCommand[] {
                 { flags: '--no-aliases', description: 'Skip path aliases.' },
                 { flags: '--composite', description: 'Emit composite + references.' },
                 { flags: '--refs', description: 'Wire project references.' },
+                {
+                    flags: '--auto',
+                    description:
+                        'Auto-wire the root workspaces tsconfig paths/references from the project graph (default false).',
+                },
+                {
+                    flags: '--no-auto',
+                    description:
+                        'Only use the paths/references already in the root workspaces tsconfig.',
+                },
+                {
+                    flags: '--auto-aliases',
+                    description: 'Auto-wire path aliases (defaults to --auto).',
+                },
+                {
+                    flags: '--no-auto-aliases',
+                    description: 'Do not auto-wire path aliases.',
+                },
+                {
+                    flags: '--auto-refs',
+                    description: 'Auto-wire project references (defaults to --auto).',
+                },
+                {
+                    flags: '--no-auto-refs',
+                    description: 'Do not auto-wire project references.',
+                },
+                {
+                    flags: '--auto-src-dir <dir>',
+                    description:
+                        'Source directory for auto entry points (default: the workspace tsconfig rootDir/baseUrl, then src).',
+                },
                 { flags: '-i, --indent <n>', description: 'JSON indentation.' },
                 {
                     flags: '--glob <glob...>',
@@ -74,7 +106,7 @@ export function tsconfigCommands(): ToolchainCommand[] {
                         'Remove the applied tsconfig overrides (all, or base|root|default|build) using the manifest snapshots.',
                 },
             ],
-            run: (opts, context) => {
+            run: async (opts, context) => {
                 const cwd = (opts.cwd as string | undefined) ?? context.cwd;
                 const root = (opts.root as string | undefined) ?? cwd;
                 const t = sectionConfig(context.config.tsconfig) ?? {};
@@ -148,24 +180,36 @@ export function tsconfigCommands(): ToolchainCommand[] {
                     return;
                 }
 
-                const glob = opts.glob as string[] | string | undefined;
-                generateTsconfigs({
-                    cwd: context.cwd,
-                    aliases: (opts.aliases as boolean | undefined) ?? t.aliases ?? true,
-                    composite: (opts.composite as boolean | undefined) ?? t.composite ?? false,
-                    refs: (opts.refs as boolean | undefined) ?? t.refs ?? false,
-                    indent:
-                        opts.indent !== undefined
-                            ? Number.parseInt(String(opts.indent), 10)
-                            : t.indent,
-                    glob: glob ?? t.glob ?? `**/${defaultFile}`,
-                    exclude: (opts.exclude as string[] | string | undefined) ?? t.exclude,
-                    gitignore: (opts.gitignore as boolean | undefined) ?? t.gitignore,
-                    defaultFile,
-                    buildFile,
-                    monorepoTsconfigFilename: rootFile,
-                    ...(t.overrides ? { overrides: t.overrides } : {}),
+                const overrides: Partial<ToolchainTsconfigConfig> = {};
+                if (opts.aliases !== undefined) overrides.aliases = Boolean(opts.aliases);
+                if (opts.composite !== undefined) overrides.composite = Boolean(opts.composite);
+                if (opts.refs !== undefined) overrides.refs = Boolean(opts.refs);
+                if (opts.auto !== undefined) overrides.auto = Boolean(opts.auto);
+                if (opts.autoAliases !== undefined) {
+                    overrides.aliasAuto = Boolean(opts.autoAliases);
+                }
+                if (opts.autoRefs !== undefined) overrides.refsAuto = Boolean(opts.autoRefs);
+                if (opts.autoSrcDir !== undefined) overrides.autoSrcDir = String(opts.autoSrcDir);
+                if (opts.indent !== undefined) {
+                    overrides.indent = Number.parseInt(String(opts.indent), 10);
+                }
+                if (opts.glob !== undefined) overrides.glob = opts.glob as string[];
+                if (opts.exclude !== undefined) overrides.exclude = opts.exclude as string[];
+                if (opts.gitignore !== undefined) overrides.gitignore = Boolean(opts.gitignore);
+                overrides.defaultFile = defaultFile;
+                overrides.buildFile = buildFile;
+                overrides.rootFile = rootFile;
+
+                const generated = await generateWorkspaceTsconfigs({
+                    cwd,
+                    config: context.config,
+                    overrides,
                 });
+                if (generated.skipped) {
+                    logger.warn(
+                        'toolchain.tsconfig is not enabled in dbx.config; skipping the tsconfig task.'
+                    );
+                }
             },
         },
     ];
