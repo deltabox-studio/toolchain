@@ -1,4 +1,4 @@
-import { readAllProvidersSync } from '@deltabox/toolchain-core';
+import { readAllProvidersSync } from '@deltabox/toolchain/core';
 import {
     logger,
     spawnCross,
@@ -6,7 +6,7 @@ import {
     type ToolchainConfig,
     type ToolchainProvider,
     type ToolchainProviderCommand,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import { loadToolchainProviders, providerPolicy } from '../../providers.js';
 

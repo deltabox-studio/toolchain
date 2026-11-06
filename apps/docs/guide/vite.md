@@ -100,7 +100,7 @@ Vite+ commands are reachable directly or through the `vite` namespace, and are
 registered as a provider (see [Providers](/guide/providers)):
 
 ```sh
-dbx fmt                 # a bare Vite+ command forwards to `vp fmt`
+dbx fmt                 # the active formatter (vp fmt when Oxc)
 dbx run -r build        # forwards to `vp run -r build`
 dbx vite dev            # explicit namespace (always works)
 dbx vite:build          # named alias for `vp build`
@@ -108,7 +108,9 @@ dbx vite:build          # named alias for `vp build`
 
 A bare `dbx <command>` is forwarded to Vite+ when the name (or a Vite+ alias)
 matches — built-in commands win, so `dbx migrate` stays the toolchain's
-migration.
+migration. `dbx fmt` / `dbx lint` route to the configured/discovered
+Biome/Prettier/Dprint/ESLint tool, and keep the `vp` passthrough when the active
+tool is Oxc (see [Formatting & linting](/guide/formatting#running-the-active-tool)).
 
 ## Programmatic API
 

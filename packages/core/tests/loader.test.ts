@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { sectionConfig } from '@deltabox/toolchain-shared';
+import { sectionConfig } from '@deltabox/toolchain/shared';
 
 import {
     findConfigFile,
@@ -275,9 +275,99 @@ describe('nested config inheritance', () => {
 
         const loaded = await loadToolchainConfig(child);
 
-        expect(loaded.config.project?.name).toBe('acme');
+        // The parent's identity is not inherited, and neither are its hooks.
+        expect(loaded.config.project).toBeUndefined();
         expect(loaded.config.hooks).toBeUndefined();
         expect((globalThis as { __dbxParentHook?: boolean }).__dbxParentHook).toBeUndefined();
+    });
+
+    it('does not inherit project identity for a configless workspace', async () => {
+        const root = tmp();
+        const child = path.join(root, 'packages', 'web');
+        fs.mkdirSync(child, { recursive: true });
+        writeJson(path.join(root, 'dbx.config.json'), {
+            toolchain: {
+                project: {
+                    name: 'acme',
+                    scope: '@acme',
+                    description: 'The root app',
+                    type: 'monorepo-root',
+                    author: 'Acme',
+                    license: 'MIT',
+                    repo: 'https://github.com/acme/app',
+                },
+            },
+        });
+        writeJson(path.join(child, 'package.json'), {
+            name: '@acme/web',
+            description: 'The web package',
+        });
+        fs.writeFileSync(path.join(child, 'tsconfig.default.json'), '{}');
+
+        const loaded = await loadToolchainConfig(child);
+
+        // Shared metadata flows down; identity comes from this project instead.
+        expect(loaded.config.project).toEqual({
+            author: 'Acme',
+            license: 'MIT',
+            repo: 'https://github.com/acme/app',
+        });
+        expect(loaded.tokens.name).toBe('web');
+        expect(loaded.tokens.scope).toBe('@acme');
+        expect(loaded.tokens.description).toBe('The web package');
+        // The root `type: 'monorepo-root'` must not leak into detection.
+        expect(loaded.projectType).toBe('monorepo-workspace');
+    });
+
+    it('does not inherit workspace-scoped sections for a configless project', async () => {
+        const root = tmp();
+        const child = path.join(root, 'packages', 'web');
+        fs.mkdirSync(child, { recursive: true });
+        writeJson(path.join(root, 'dbx.config.json'), {
+            toolchain: {
+                project: { name: 'acme', author: 'Acme' },
+                ci: { ci: true },
+                changelog: { versioning: true },
+                catalogs: { react: '^19' },
+                tsconfig: { refs: true },
+                vite: {
+                    fmt: { printWidth: 100 },
+                    test: { include: ['tests/**'] },
+                    run: { tasks: { build: { command: 'tsdown' } } },
+                },
+                logger: { level: 'debug' },
+            },
+        });
+        writeJson(path.join(child, 'package.json'), { name: 'web' });
+
+        const loaded = await loadToolchainConfig(child);
+
+        // Shared sections flow down; repository/workspace-scoped ones do not.
+        expect(loaded.config.project).toEqual({ author: 'Acme' });
+        expect(sectionConfig(loaded.config.logger)).toEqual({ level: 'debug' });
+        expect(sectionConfig(loaded.config.vite)?.fmt).toEqual({ printWidth: 100 });
+        expect(sectionConfig(loaded.config.vite)?.test).toBeUndefined();
+        expect(sectionConfig(loaded.config.vite)?.run).toBeUndefined();
+        expect(loaded.config.ci).toBeUndefined();
+        expect(loaded.config.changelog).toBeUndefined();
+        expect(loaded.config.catalogs).toBeUndefined();
+        expect(loaded.config.tsconfig).toBeUndefined();
+    });
+
+    it('detects a configless standalone project without inheriting the root type', async () => {
+        const root = tmp();
+        const child = path.join(root, 'apps', 'web');
+        fs.mkdirSync(child, { recursive: true });
+        writeJson(path.join(root, 'dbx.config.json'), {
+            toolchain: { project: { name: 'acme', type: 'monorepo-root' } },
+        });
+        writeJson(path.join(child, 'package.json'), { name: 'web' });
+
+        const loaded = await loadToolchainConfig(child);
+
+        expect(loaded.config.project).toBeUndefined();
+        expect(loaded.tokens.name).toBe('web');
+        expect(loaded.projectType).toBe('project');
     });
 
     it('finds the nearest ancestor config and loads it under the child', async () => {

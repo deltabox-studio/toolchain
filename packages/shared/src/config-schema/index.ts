@@ -29,6 +29,7 @@ import { tsconfigConfigSchema } from './tsconfig.js';
 import { viteConfigSchema } from './vite.js';
 import { watchConfigSchema } from './watch.js';
 
+export * from './alias-rewrite.js';
 export * from './biome.js';
 export * from './catalogs.js';
 export * from './changelog.js';
@@ -50,6 +51,7 @@ export * from './providers.js';
 export * from './registry.js';
 export * from './templates.js';
 export * from './tsconfig.js';
+export * from './vendor-types.js';
 export * from './vite.js';
 export * from './watch.js';
 export * from './workflow.js';

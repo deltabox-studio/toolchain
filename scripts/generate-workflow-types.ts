@@ -15,8 +15,8 @@ import { fileURLToPath } from 'node:url';
 
 import { z } from 'zod';
 
-import { createConfigEngine, formatGenerated } from '@deltabox/toolchain-config';
-import { logger } from '@deltabox/toolchain-shared';
+import { createConfigEngine, formatGenerated } from '@deltabox/toolchain/config';
+import { logger } from '@deltabox/toolchain/shared';
 
 import { sanitizeJsonSchema } from './lib/sanitize-json-schema.js';
 

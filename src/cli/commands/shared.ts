@@ -1,4 +1,4 @@
-import { sectionConfig, type ToolchainCommandContext } from '@deltabox/toolchain-shared';
+import { sectionConfig, type ToolchainCommandContext } from '@deltabox/toolchain/shared';
 
 import { defaultSyncTasks } from '../../sync.js';
 

@@ -62,6 +62,23 @@ tool's options are read into the matching `toolchain.fmt.*` /
 `toolchain.lint.*` entry. Oxc options are merged over the toolchain defaults
 using the same mapping as [`dbx migrate`](/guide/migrations/).
 
+## Running the active tool
+
+`dbx fmt` / `dbx lint` run the tool the config (or discovery) selects, even when
+`toolchain.fmt` / `toolchain.lint` is omitted:
+
+- an explicit `toolchain.fmt.*` / `toolchain.lint.*` tool wins, in precedence
+  order;
+- otherwise the same discovery `dbx sync` uses picks a tool from the project
+  `.vscode/settings.json`, the nearest config file/`package.json`, or the VS
+  Code user settings;
+- with nothing configured or installed, they fall back to `vp fmt` / `vp lint`
+  (Oxfmt / Oxlint).
+
+Mode flags are translated per tool (`--check`/`--write` for formatters, `--fix`
+for linters) and other operands are forwarded. Oxc keeps the full Vite+
+passthrough, so `dbx vite fmt ...` still accepts every `vp` flag.
+
 ## Precedence
 
 When more than one formatter/linter is configured, editor defaults use:
@@ -199,6 +216,37 @@ biome: {
 }
 ```
 
+Default array entries can be pruned with a `$remove:` entry (its value is JSON,
+or a raw string when it is not valid JSON) or replaced wholesale with `$reset`:
+
+```ts
+import { BIOME_RESET, removeBiomeEntry } from '@deltabox/toolchain/biome';
+
+biome: {
+    overrides: {
+        files: {
+            includes: [
+                removeBiomeEntry('!**/.generated'), // drop a default
+                '!**/generated/**',
+            ],
+        },
+        assist: {
+            actions: {
+                source: {
+                    organizeImports: {
+                        options: { groups: [BIOME_RESET, ['@/lib/**']] },
+                    },
+                },
+            },
+        },
+    },
+}
+```
+
+`removeBiomeEntry(entry)` builds the directive, and nested arrays (eg. import
+groups) are matched deeply. The same directives work in `fmt.biome` /
+`lint.biome`; sources are applied in order, so later ones see earlier results.
+
 #### `vscode`
 
 When on (the default), the sync also writes the recommended Biome VS Code
@@ -209,22 +257,27 @@ settings and the Biome extension recommendation (see
 
 ```ts
 import {
+    BIOME_RESET,
     biomeConfig,
     biomeSyncTask,
     biomeVscodeSettings,
     mergeBiomeConfig,
+    removeBiomeEntry,
     renderBiomeConfig,
     renderBiomeJson,
+    resolveBiomeArray,
 } from '@deltabox/toolchain/biome';
 ```
 
-| Export                                  | Description                                              |
-| --------------------------------------- | -------------------------------------------------------- |
-| `biomeSyncTask()`                       | The sync task (writes `biome.json`).                     |
-| `biomeConfig` / `biomeVscodeSettings`   | The generic Biome config / recommended VS Code settings. |
-| `renderBiomeConfig(tokens, overrides?)` | Resolve tokens + merge overrides into an object.         |
-| `renderBiomeJson(tokens, overrides?)`   | Serialize the rendered config.                           |
-| `mergeBiomeConfig(base, patch)`         | The recursive/array-union merge used above.              |
+| Export                                    | Description                                              |
+| ----------------------------------------- | -------------------------------------------------------- |
+| `biomeSyncTask()`                         | The sync task (writes `biome.json`).                     |
+| `biomeConfig` / `biomeVscodeSettings`     | The generic Biome config / recommended VS Code settings. |
+| `renderBiomeConfig(tokens, overrides?)`   | Resolve tokens + merge overrides into an object.         |
+| `renderBiomeJson(tokens, overrides?)`     | Serialize the rendered config.                           |
+| `mergeBiomeConfig(base, patch)`           | The recursive/array-union merge used above.              |
+| `resolveBiomeArray(base, patch)`          | Resolve `$remove:`/`$reset` directives for one array.    |
+| `removeBiomeEntry(entry)` / `BIOME_RESET` | Build the array-pruning / array-reset directives.        |
 
 > Migrating **from** Biome to Oxc is a different concern — see
 > [Migrations](/guide/migrations/).

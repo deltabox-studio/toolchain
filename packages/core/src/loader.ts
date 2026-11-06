@@ -15,8 +15,9 @@ import {
     type Replacements,
     resolveTokens,
     type ToolchainConfig,
+    type ToolchainProjectConfig,
     type ToolchainViteConfig,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import { resolveProjectType } from './project-type.js';
 
@@ -191,6 +192,20 @@ async function resolveConfigExport(value: unknown): Promise<unknown> {
 const PROJECT_IDENTITY_KEYS = new Set(['name', 'scope', 'description', 'type']);
 
 /**
+ * The inheritable part of a parent `project` section: the shared metadata
+ * (author, license, repo, ...) without the per-project identity fields.
+ */
+function inheritedProject(
+    project: ToolchainProjectConfig | undefined
+): ToolchainProjectConfig | undefined {
+    if (!project) return undefined;
+    const shared = Object.fromEntries(
+        Object.entries(project).filter(([key]) => !PROJECT_IDENTITY_KEYS.has(key))
+    );
+    return Object.keys(shared).length > 0 ? (shared as ToolchainProjectConfig) : undefined;
+}
+
+/**
  * `vite` keys that describe how a single workspace runs and are therefore not
  * inherited: `test` (that workspace's test config) and `run` (its Vite Tasks).
  * The rest of `vite` (`fmt`, `lint`, `plugins`, ...) is shared and flows down.
@@ -244,11 +259,9 @@ export function mergeToolchainConfig(
     if (vite !== undefined) {
         base = { ...base, vite };
     }
-    if (child.project?.inherit !== false && parentProject) {
-        const shared = Object.fromEntries(
-            Object.entries(parentProject).filter(([key]) => !PROJECT_IDENTITY_KEYS.has(key))
-        );
-        if (Object.keys(shared).length > 0) {
+    if (child.project?.inherit !== false) {
+        const shared = inheritedProject(parentProject);
+        if (shared) {
             base = { ...base, project: shared };
         }
     }
@@ -307,11 +320,12 @@ export async function loadToolchainConfig(
             error = `failed to load ${file}: ${errorMessage(cause)}`;
         }
     } else if (parentConfig) {
-        // Hooks are code and are not inherited by a nested project. When the
-        // project has no config of its own, the parent still supplies sections
-        // and tokens, but its lifecycle hooks must not run here.
-        const { hooks: _hooks, ...rest } = config;
-        config = rest;
+        // A configless project inherits the ancestor config exactly like a child
+        // config with no sections: workspace-scoped sections (`ci`, `changelog`,
+        // `catalogs`, `tsconfig`, `vite.test`/`vite.run`) and hooks are dropped,
+        // and the parent's project identity is stripped (so detection uses this
+        // project's own files and `package.json` supplies `name`/`scope`/`description`).
+        config = mergeToolchainConfig(parentConfig, {});
     }
 
     // When a `project` field is not defined, fall back to the project's own

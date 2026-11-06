@@ -50,10 +50,22 @@ Colour is on by default and follows `--no-color` / the [`logger` config](/guide/
 | Command     | Description                                                                                                          |
 | ----------- | -------------------------------------------------------------------------------------------------------------------- |
 | `projects`  | Discover projects and write `.dbx/toolchain/projects.json`.                                                          |
-| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`, `--json`).                            |
+| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`, `--only`, `--json`).                  |
 | `watch`     | Sync once, then watch key inputs and re-sync.                                                                        |
 | `reset`     | Remove generated files, the manifest and/or the config (`--all`, `--recursive`); reverts `tsconfig.overrides` first. |
 | `providers` | List registered providers + their commands (`--json`).                                                               |
+
+### Task-only sync
+
+`dbx sync --only <tasks>` runs just the named sync tasks (comma-separated) and
+does **not** prune files owned by the tasks it skipped. This is useful at the
+end of a build, when only the tsconfig aliases/references need refreshing:
+
+```sh
+dbx sync --only tsconfig
+```
+
+Unknown task names fail with the list of available tasks.
 
 ## Scaffolding
 
@@ -137,7 +149,7 @@ Every provider subcommand is a passthrough. Vite+ commands are reachable both
 directly and through the `vite` namespace:
 
 ```sh
-dbx fmt                 # a bare Vite+ command forwards to `vp fmt`
+dbx fmt                 # the active formatter (vp fmt when Oxc)
 dbx run -r build        # forwards to `vp run -r build`
 dbx vite dev            # explicit namespace (always works)
 dbx vite:build          # named alias for `vp build`

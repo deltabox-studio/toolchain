@@ -1,2 +1,2 @@
-export * from '@deltabox/toolchain-tsconfig';
-export * from '@deltabox/toolchain-tsconfig/cli';
+export * from '@deltabox/toolchain/tsconfig';
+export * from '@deltabox/toolchain/tsconfig/cli';

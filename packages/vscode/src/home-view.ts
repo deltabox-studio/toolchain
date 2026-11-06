@@ -35,6 +35,7 @@ export type HomeAction =
     | { type: 'syncActive' }
     | { type: 'syncSelected' }
     | { type: 'syncCheck' }
+    | { type: 'syncTsconfig' }
     | { type: 'scaffold' }
     | { type: 'refresh' }
     | { type: 'generateConfigs' }
@@ -83,6 +84,7 @@ const SIMPLE_ACTIONS = new Set<HomeAction['type']>([
     'syncActive',
     'syncSelected',
     'syncCheck',
+    'syncTsconfig',
     'scaffold',
     'refresh',
     'generateConfigs',
@@ -297,6 +299,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
       <button class="secondary" data-action="addProvider">Add provider\u2026</button>
       <button class="secondary" data-action="templateAdd">Add template\u2026</button>
       <button class="secondary" data-action="syncCheck">Check sync</button>
+      <button class="secondary" data-action="syncTsconfig">Sync tsconfig</button>
       <button class="secondary" data-action="refresh">Refresh projects</button>
     </div>
   </section>
@@ -307,6 +310,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
       <button class="secondary" data-action="syncActive">Sync active project</button>
       <button class="secondary" data-action="syncSelected">Sync selected projects</button>
       <button class="secondary" data-action="syncCheck">Check sync</button>
+      <button class="secondary" data-action="syncTsconfig">Sync tsconfig</button>
       <button class="secondary" data-action="scaffold">Scaffold project\u2026</button>
       <button class="secondary" data-action="generateConfigs">Generate configs\u2026</button>
       <button class="secondary" data-action="migrate">Migrate tooling\u2026</button>
@@ -352,7 +356,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     }
 
     // Actions that need a project with a dbx.config.* to be meaningful.
-    const SYNC_ACTIONS = ['syncAll','syncActive','syncSelected','syncCheck','syncProject','checkProject'];
+    const SYNC_ACTIONS = ['syncAll','syncActive','syncSelected','syncCheck','syncTsconfig','syncProject','checkProject'];
     // Actions that need the Vite+ provider to be available.
     const VITE_ACTIONS = ['runVite','runProjectVite'];
     function applyEnablement(model) {

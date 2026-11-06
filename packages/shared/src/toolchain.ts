@@ -191,12 +191,19 @@ export function resolveChangelogConfig(
 }
 
 /** Default package-manager versions used when a config omits `packageManagerVersion`. */
-export const DEFAULT_PACKAGE_MANAGER_VERSIONS: Record<string, string> = {
+export const DEFAULT_PACKAGE_MANAGER_VERSIONS = {
     yarn: '4.17.1',
     pnpm: '10.11.1',
     npm: '11.19.0',
     bun: '1.3.0',
-};
+} as const;
+
+/** The default version for a package manager, when known. */
+export function defaultPackageManagerVersion(packageManager: string): string | undefined {
+    return DEFAULT_PACKAGE_MANAGER_VERSIONS[
+        packageManager as keyof typeof DEFAULT_PACKAGE_MANAGER_VERSIONS
+    ];
+}
 
 /** Formatter tools, highest priority first. */
 export const FORMATTER_PRECEDENCE = ['oxc', 'biome', 'prettier', 'dprint'] as const;
@@ -318,9 +325,7 @@ export function resolveTokens(config: ToolchainConfig = {}): Replacements {
     const name = project.name ?? 'app';
     const packageManager = project.packageManager ?? 'yarn';
     const packageManagerVersion =
-        project.packageManagerVersion ??
-        DEFAULT_PACKAGE_MANAGER_VERSIONS[packageManager] ??
-        '4.17.1';
+        project.packageManagerVersion ?? defaultPackageManagerVersion(packageManager) ?? '4.17.1';
     return {
         name,
         scope: project.scope ?? '',

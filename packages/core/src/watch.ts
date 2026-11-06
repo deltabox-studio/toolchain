@@ -1,21 +1,26 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Glob } from 'glob';
+import { globSync } from 'glob';
 
 import {
+    deepMerge,
     isIgnoredPath,
     logger,
     type ProjectType,
     resolveIgnorePatterns,
     sectionConfig,
+    sectionEnabled,
     type SyncTask,
     type ToolchainConfig,
-} from '@deltabox/toolchain-shared';
+    type TsconfigFileNameSet,
+    tsconfigFileNames,
+} from '@deltabox/toolchain/shared';
 
+import { buildProjectGraph, type ProjectGraph } from './graph.js';
 import { findConfigFile, loadToolchainConfig } from './loader.js';
 import { resolveProjectType } from './project-type.js';
-import { type RunSyncOptions, runSync } from './sync.js';
+import { type RunSyncOptions, runSync, selectSyncTasks } from './sync.js';
 
 export interface RunWatchOptions extends Omit<RunSyncOptions, 'check'> {
     /** The config file to watch (re-runs every task on change). */
@@ -49,12 +54,178 @@ export function resolveWatchGlobs(
 }
 
 /**
+ * The legacy/default watch globs. The extension resolves these to concrete,
+ * non-recursive repo-relative files via {@link resolveWatchInputFiles}; this
+ * const is exported for consumers that still want the wide patterns.
+ */
+export const DEFAULT_WATCH_GLOBS = [
+    '**/dbx.config.*',
+    'tsconfig.workspaces.json',
+    '**/tsconfig.default.json',
+] as const;
+
+export interface ResolveWatchInputFilesOptions {
+    /** Repo root. */
+    cwd: string;
+    /** The merged root config. */
+    config: ToolchainConfig;
+    /** The detected/config project type. */
+    projectType?: ProjectType;
+    /** The sync tasks to derive task-level inputs from. */
+    tasks?: SyncTask[];
+    /** A prebuilt project graph (default: built from `cwd`). */
+    graph?: ProjectGraph;
+    /** Explicit user globs; when set they replace the resolved inputs. */
+    userGlobs?: string[];
+    /** Extra glob(s) to exclude. */
+    exclude?: string | string[];
+    /** Respect `.gitignore` files (default true). */
+    gitignore?: boolean;
+}
+
+export interface ResolvedWatchInputFiles {
+    /** Concrete, repo-relative (posix), non-recursive paths to watch. */
+    globs: string[];
+    /** Every `dbx.config.*` path. */
+    configs: string[];
+    /** The root tsconfig file names (drives project detection). */
+    tsconfig: TsconfigFileNameSet;
+}
+
+function relPosix(cwd: string, file: string): string {
+    return path.relative(cwd, file).replace(/\\/g, '/');
+}
+
+/** Whether a glob stays inside the directory it is relative to. */
+function isSafeRelativeGlob(glob: string): boolean {
+    const normalized = glob.replace(/\\/g, '/');
+    if (!normalized || normalized.startsWith('/') || /^[a-zA-Z]:/.test(normalized)) return false;
+    return normalized.split('/').every(segment => segment !== '..');
+}
+
+/**
+ * Resolve the exact files the auto-sync watcher should watch. Unlike the legacy
+ * recursive globs, this uses the project graph (plus each project's own config)
+ * so only the necessary config/tsconfig files are watched, and custom file names
+ * are honoured.
+ */
+export async function resolveWatchInputFiles(
+    options: ResolveWatchInputFilesOptions
+): Promise<ResolvedWatchInputFiles> {
+    const cwd = path.resolve(options.cwd);
+    const names = tsconfigFileNames(options.config);
+    const userGlobs = options.userGlobs;
+    if (userGlobs) {
+        return {
+            globs: [...new Set(userGlobs)].filter(isSafeRelativeGlob),
+            configs: [],
+            tsconfig: names,
+        };
+    }
+
+    const graph = options.graph ?? buildProjectGraph(cwd);
+    const ignore = resolveIgnorePatterns(cwd, {
+        ...(options.exclude !== undefined ? { exclude: options.exclude } : {}),
+        ...(options.gitignore !== undefined ? { gitignore: options.gitignore } : {}),
+    });
+    const globs = new Set<string>();
+    const configs = new Set<string>();
+    const add = (file: string): void => {
+        if (!file || file === '.' || path.isAbsolute(file)) return;
+        const normalized = file.replace(/\\/g, '/').replace(/^\.\//, '');
+        if (!isSafeRelativeGlob(normalized)) return;
+        if (isIgnoredPath(normalized, ignore)) return;
+        globs.add(normalized);
+    };
+    const addIfExists = (file: string): void => {
+        if (fs.existsSync(path.resolve(cwd, file))) add(file);
+    };
+
+    for (const project of graph.projects) {
+        const config = project.config;
+        if (project.hasConfig && config) {
+            add(config);
+            configs.add(config);
+        }
+    }
+    const rootConfig = findConfigFile(cwd);
+    if (rootConfig) {
+        const relative = relPosix(cwd, rootConfig);
+        add(relative);
+        configs.add(relative);
+    }
+
+    const rootEnabled = sectionEnabled(options.config.tsconfig);
+    const rootOptions = (sectionConfig(options.config.tsconfig) ?? {}) as Record<string, unknown>;
+    for (const project of graph.projects) {
+        const dir = path.resolve(cwd, project.dir);
+        let ownSection: unknown;
+        if (project.dir !== '.' && project.hasConfig) {
+            try {
+                const loaded = await loadToolchainConfig(dir, { tolerant: true, skipHooks: true });
+                ownSection = loaded.ownConfig?.tsconfig;
+            } catch {
+                ownSection = undefined;
+            }
+        }
+        const enabled =
+            rootEnabled && (ownSection === undefined ? true : sectionEnabled(ownSection as never));
+        if (!enabled) continue;
+        const override =
+            ownSection !== undefined && typeof ownSection === 'object'
+                ? (sectionConfig(ownSection as never) ?? {})
+                : {};
+        const merged = deepMerge(rootOptions, override as Record<string, unknown>);
+        const fileNames = tsconfigFileNames({
+            ...options.config,
+            tsconfig: merged as ToolchainConfig['tsconfig'],
+        });
+        const prefix = project.dir === '.' ? '' : `${project.dir}/`;
+        addIfExists(`${prefix}${fileNames.defaultFile}`);
+        addIfExists(`${prefix}${fileNames.baseFile}`);
+        if (project.dir === '.') addIfExists(fileNames.rootFile);
+    }
+
+    // Directories with a default tsconfig but no package/config are not in the
+    // graph (test fixtures, package-less workspaces); include their file too.
+    for (const file of globSync(`**/${names.defaultFile}`, { cwd, nodir: true, ignore })) {
+        add(file);
+    }
+    // Keep task-level inputs for tasks other than tsconfig (and forward-compat).
+    for (const task of options.tasks ?? []) {
+        if (task.enabled && !task.enabled(options.config)) continue;
+        const patterns =
+            typeof task.watch === 'function' ? task.watch(options.config) : (task.watch ?? []);
+        for (const pattern of patterns) {
+            if (!pattern.includes('**')) {
+                addIfExists(pattern);
+                continue;
+            }
+            const suffix = pattern.replace(/^\*\*\//, '');
+            for (const project of graph.projects) {
+                const prefix = project.dir === '.' ? '' : `${project.dir}/`;
+                addIfExists(`${prefix}${suffix}`);
+            }
+        }
+    }
+
+    return {
+        globs: [...globs].sort(),
+        configs: [...configs].sort(),
+        tsconfig: names,
+    };
+}
+/**
  * Run one sync, then watch the config file + every task's `watch` globs and
  * re-run on change. Writing generated files must not re-trigger a run, so a
  * short quiet window follows each sync.
  */
 export async function runWatch(options: RunWatchOptions): Promise<void> {
-    const { cwd, tasks } = options;
+    const { cwd } = options;
+    const tasks =
+        options.only && options.only.length > 0
+            ? selectSyncTasks(options.tasks, options.only)
+            : options.tasks;
     let configFile = options.configPath ? path.resolve(cwd, options.configPath) : undefined;
     const log = options.quiet ? () => {} : (options.log ?? ((m: string) => logger.info(m)));
 
@@ -125,7 +296,7 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
             ignoreUntil = Date.now() + Math.max(debounceMs() * 3, 300);
             if (replan) {
                 replan = false;
-                rebuildWatchers();
+                await rebuildWatchers();
             }
             if (queued) {
                 queued = false;
@@ -164,8 +335,8 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
         watchers.push(watcher);
     };
 
-    /** Recompute the input directories/watchers from the current config. */
-    function rebuildWatchers(): void {
+    /** Recompute the exact input files/watchers from the current config. */
+    async function rebuildWatchers(): Promise<void> {
         closeWatchers();
         const watch = sectionConfig(current.config.watch);
         ignore = resolveIgnorePatterns(cwd, {
@@ -176,21 +347,19 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
                 ? { gitignore: watch?.gitignore ?? options.gitignore }
                 : {}),
         });
-        const dirs = new Set<string>([cwd]);
         const projectType = current.projectType ?? resolveProjectType(cwd, current.config);
-        for (const glob of resolveWatchGlobs(tasks, current.config, projectType)) {
-            try {
-                const files = new Glob(glob, { cwd, dot: true, ignore }).walkSync();
-                for (const file of files) {
-                    const abs = path.resolve(cwd, file);
-                    const rel = path.relative(cwd, abs).replace(/\\/g, '/');
-                    if (isIgnoredPath(rel, ignore)) continue;
-                    dirs.add(path.dirname(abs));
-                }
-            } catch {
-                // ignore invalid globs
-            }
-        }
+        const inputs = await resolveWatchInputFiles({
+            cwd,
+            config: current.config,
+            projectType,
+            tasks,
+            ...((watch?.exclude ?? options.exclude)
+                ? { exclude: watch?.exclude ?? options.exclude }
+                : {}),
+            ...((watch?.gitignore ?? options.gitignore)
+                ? { gitignore: watch?.gitignore ?? options.gitignore }
+                : {}),
+        });
 
         if (configFile) {
             try {
@@ -205,25 +374,18 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
                 // config file may not be watchable
             }
         }
-        for (const dir of dirs) {
-            const emit = (filename: string | null): void =>
-                onChange(path.join(dir, filename ?? ''));
+        for (const file of inputs.globs) {
+            const absolute = path.resolve(cwd, file);
             try {
-                addWatcher(
-                    fs.watch(dir, { recursive: true }, (_event, filename) => emit(filename))
-                );
+                addWatcher(fs.watch(absolute, () => onChange(absolute)));
             } catch {
-                try {
-                    addWatcher(fs.watch(dir, (_event, filename) => emit(filename)));
-                } catch {
-                    // directory may not exist
-                }
+                // a missing/unwatchable file is re-planned after the next sync
             }
         }
     }
 
     await sync();
-    rebuildWatchers();
+    await rebuildWatchers();
     log('watching for changes (Ctrl+C to stop)');
 
     await new Promise<void>(resolve => {

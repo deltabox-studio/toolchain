@@ -1,6 +1,5 @@
-import { resolveWatchGlobs, runWatch } from '@deltabox/toolchain-core';
-import { logger, sectionConfig, type ToolchainCommand } from '@deltabox/toolchain-shared';
-import { tsconfigFileNames } from '@deltabox/toolchain-tsconfig';
+import { resolveWatchInputFiles, runWatch } from '@deltabox/toolchain/core';
+import { logger, sectionConfig, type ToolchainCommand } from '@deltabox/toolchain/shared';
 
 import { defaultSyncTasks } from '../../sync.js';
 import { baseOptions, watchOptions } from './shared.js';
@@ -28,17 +27,12 @@ export function watchCommand(): ToolchainCommand {
                 // What `dbx watch` (and the VS Code auto-sync) should watch: the
                 // config file plus the active tasks' inputs, with configured
                 // file names (eg. a custom `tsconfig.defaultFile`) resolved.
-                const inputs = {
-                    globs: [
-                        '**/dbx.config.*',
-                        ...resolveWatchGlobs(
-                            defaultSyncTasks(),
-                            context.config,
-                            context.projectType
-                        ),
-                    ],
-                    tsconfig: tsconfigFileNames(context.config),
-                };
+                const inputs = await resolveWatchInputFiles({
+                    cwd: context.cwd,
+                    config: context.config,
+                    projectType: context.projectType,
+                    tasks: defaultSyncTasks(),
+                });
                 if (opts.json) {
                     logger.raw(JSON.stringify(inputs, null, 4));
                 } else {
@@ -46,7 +40,7 @@ export function watchCommand(): ToolchainCommand {
                 }
                 return;
             }
-            if (!context.configPath && !opts.force && !context.noConfig) {
+            if (!context.configPath && !context.parentPath && !opts.force && !context.noConfig) {
                 logger.warn(
                     'no dbx.config.* found here; nothing to watch (use --force to run anyway).'
                 );

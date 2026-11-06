@@ -5,7 +5,7 @@ import {
     type ProjectType,
     type SyncTask,
     type ToolchainConfig,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 export interface VscodeSyncOptions {
     /**

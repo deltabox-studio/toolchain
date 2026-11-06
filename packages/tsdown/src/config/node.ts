@@ -2,7 +2,10 @@ import fs from 'node:fs';
 
 import { globalLogger, type UserConfig } from 'tsdown';
 
-import { sort } from '@deltabox/toolchain-shared';
+/** Sort an object's keys alphabetically (kept local to avoid a runtime dep). */
+function sortKeys<T extends Record<string, unknown>>(value: T): T {
+    return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b))) as T;
+}
 
 /**
  * Sort a package.json's `exports` keys in place (`./types` after the root,
@@ -13,7 +16,7 @@ export function sortPackageExports(packageJsonPath: string): boolean {
         exports?: unknown;
     };
     if (!raw.exports || typeof raw.exports !== 'object') return false;
-    const sorted = sort(raw.exports as Record<string, unknown>);
+    const sorted = sortKeys(raw.exports as Record<string, unknown>);
     const {
         '.': indexField,
         './': rootField = indexField,

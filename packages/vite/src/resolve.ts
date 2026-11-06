@@ -10,7 +10,7 @@
 
 import type { ViteUserConfig } from 'vite-plus';
 
-import { loadToolchainConfig, resolveFmtCustomGroups } from '@deltabox/toolchain-core';
+import { loadToolchainConfig, resolveFmtCustomGroups } from '@deltabox/toolchain/core';
 import {
     applyFmtCustomGroups,
     applyReplacementsDeep,
@@ -22,7 +22,7 @@ import {
     type ToolchainConfig,
     type ToolchainConfigSections,
     type ToolchainOxfmtConfig,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import { viteConfigObject } from './sync.js';
 

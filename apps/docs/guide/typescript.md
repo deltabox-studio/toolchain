@@ -110,10 +110,21 @@ await runSync({
     tokens: loaded.tokens,
     projectType: loaded.projectType,
 });
+
+// Run only a named task (eg. refresh the tsconfig aliases after a build).
+await runSync({
+    tasks: defaultSyncTasks(),
+    only: ['tsconfig'],
+    cwd: process.cwd(),
+    config,
+    tokens: loaded.tokens,
+    projectType: loaded.projectType,
+});
 ```
 
-See the [Programmatic API](/guide/api/) guide for the package-by-package
-reference.
+`only` implies `prune: false`, so a subset never deletes files owned by the
+tasks it skipped. See the [Programmatic API](/guide/api/) guide for the
+package-by-package reference.
 
 ## Vite+
 

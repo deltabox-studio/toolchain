@@ -553,6 +553,7 @@ __metadata:
     "@types/node": "catalog:"
     tsdown: "catalog:"
     typescript: "catalog:"
+    vite: "catalog:"
     vitest: "catalog:"
   languageName: unknown
   linkType: soft
@@ -568,6 +569,7 @@ __metadata:
     tsx: "catalog:"
     type-fest: "catalog:"
     typescript: "catalog:"
+    vite: "catalog:"
     vitest: "catalog:"
   bin:
     toolchain-changelog: ./dist/bin.js
@@ -588,6 +590,7 @@ __metadata:
     type-fest: "catalog:"
     typescript: "catalog:"
     untyped: "npm:^2.0.0"
+    vite: "catalog:"
     vitest: "catalog:"
     zod: "catalog:"
   languageName: unknown
@@ -604,6 +607,7 @@ __metadata:
     tsdown: "catalog:"
     tsx: "catalog:"
     typescript: "catalog:"
+    vite: "catalog:"
     vitest: "catalog:"
   languageName: unknown
   linkType: soft
@@ -612,6 +616,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@deltabox/toolchain-docs@workspace:apps/docs"
   dependencies:
+    vite: "npm:^5.4.14"
     vite-plugin-vitepress-auto-sidebar: "npm:^1.7.1"
     vitepress: "npm:^1.6.4"
     vitepress-carbon: "npm:^1.7.0"
@@ -632,6 +637,7 @@ __metadata:
     glob: "catalog:"
     tsdown: "catalog:"
     typescript: "catalog:"
+    vite: "catalog:"
     vitest: "catalog:"
   languageName: unknown
   linkType: soft
@@ -650,6 +656,7 @@ __metadata:
     jsonc-parser: "npm:^3.3.1"
     tsdown: "catalog:"
     typescript: "catalog:"
+    vite: "catalog:"
     vitest: "catalog:"
   languageName: unknown
   linkType: soft
@@ -667,6 +674,7 @@ __metadata:
     tsdown: "catalog:"
     type-fest: "catalog:"
     typescript: "catalog:"
+    vite: "catalog:"
     vitest: "catalog:"
     zod: "catalog:"
   languageName: unknown
@@ -685,6 +693,7 @@ __metadata:
     "@types/node": "catalog:"
     tsdown: "catalog:"
     typescript: "catalog:"
+    vite: "catalog:"
     vitest: "catalog:"
   languageName: unknown
   linkType: soft
@@ -693,6 +702,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@deltabox/toolchain-tsconfig@workspace:packages/tsconfig"
   dependencies:
+    "@deltabox/toolchain-core": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
     "@deltabox/toolchain-tsdown": "workspace:*"
     "@types/node": "catalog:"
@@ -700,6 +710,7 @@ __metadata:
     tsdown: "catalog:"
     type-fest: "catalog:"
     typescript: "catalog:"
+    vite: "catalog:"
     vitest: "catalog:"
   bin:
     toolchain-tsconfig: ./dist/cli/generate/index.js
@@ -716,6 +727,7 @@ __metadata:
     tsdown: "catalog:"
     type-fest: "catalog:"
     typescript: "catalog:"
+    vite: "catalog:"
     vitest: "catalog:"
   languageName: unknown
   linkType: soft
@@ -9021,6 +9033,7 @@ __metadata:
     "@vscode/test-electron": "npm:^3.1.0"
     tsdown: "catalog:"
     typescript: "catalog:"
+    vite: "catalog:"
     vitest: "catalog:"
   languageName: unknown
   linkType: soft

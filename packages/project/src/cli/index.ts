@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import { cancel, confirm, isCancel, select } from '@clack/prompts';
 
-import { loadToolchainConfig } from '@deltabox/toolchain-core';
+import { loadToolchainConfig } from '@deltabox/toolchain/core';
 import {
     logger,
     type ProjectType,
@@ -10,8 +10,8 @@ import {
     sectionConfig,
     type ToolchainCommand,
     type ToolchainCommandContext,
-} from '@deltabox/toolchain-shared';
-import { tsconfigFileNames, type TsconfigExtendsOptions } from '@deltabox/toolchain-tsconfig';
+} from '@deltabox/toolchain/shared';
+import { tsconfigFileNames, type TsconfigExtendsOptions } from '@deltabox/toolchain/tsconfig';
 
 import { hasCatalog } from '../catalogs.js';
 import { generateProjectConfigs } from '../config.js';

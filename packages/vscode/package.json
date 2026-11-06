@@ -2,7 +2,7 @@
     "name": "toolchain-vscode",
     "displayName": "deltabox toolchain",
     "description": "All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.",
-    "version": "2.4.0",
+    "version": "2.6.0",
     "private": true,
     "type": "module",
     "publisher": "deltabox",
@@ -75,6 +75,20 @@
                 "title": "Check sync",
                 "category": "deltabox",
                 "icon": "$(check-all)",
+                "enablement": "deltabox.canSync"
+            },
+            {
+                "command": "deltabox.toolchain.tsconfig",
+                "title": "Manage tsconfig.",
+                "category": "deltabox",
+                "icon": "$(symbol-structure)",
+                "enablement": "deltabox.canSync"
+            },
+            {
+                "command": "deltabox.toolchain.syncTsconfig",
+                "title": "Sync tsconfig",
+                "category": "deltabox",
+                "icon": "$(symbol-structure)",
                 "enablement": "deltabox.canSync"
             },
             {
@@ -630,6 +644,7 @@
         "@vscode/test-electron": "^3.1.0",
         "tsdown": "catalog:",
         "typescript": "catalog:",
+        "vite": "catalog:",
         "vitest": "catalog:"
     },
     "author": "Victor Sango <victor@deltabox.studio>",

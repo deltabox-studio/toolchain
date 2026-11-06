@@ -38,6 +38,18 @@ export default defineConfig({
         // fixtures under `packages/tsconfig/src/templates` are excluded.
         tsconfig: {
             exclude: ['**/src/templates/**'],
+            // Auto-wire the aliases and rewrite the private workspaces onto the
+            // published `@deltabox/toolchain/<name>` subpaths (eg.
+            // `@deltabox/toolchain-shared` -> `@deltabox/toolchain/shared`).
+            auto: {
+                rewriteAlias: {
+                    '^@deltabox/toolchain-(.+)$': '@deltabox/toolchain/$1',
+                },
+            },
+            // Keep the hand-written references: the typecheck task uses
+            // `tsc -p --noEmit` (not `tsc -b`), and `tsc -p` does not follow
+            // project references. Keep them in sync manually when exports change.
+            refsAuto: false,
         },
         ci: {
             changelog: {

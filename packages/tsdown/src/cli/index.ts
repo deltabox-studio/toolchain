@@ -1,4 +1,4 @@
-import type { ToolchainCommand } from '@deltabox/toolchain-shared';
+import type { ToolchainCommand } from '@deltabox/toolchain/shared';
 
 import { cleanup } from '../cleanup.js';
 

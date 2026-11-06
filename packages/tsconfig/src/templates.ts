@@ -1,16 +1,16 @@
-import { applyReplacementsDeep, type Replacements } from '@deltabox/toolchain-shared';
+import { applyReplacementsDeep, type Replacements } from '@deltabox/toolchain/shared';
 
 import baseTemplate from './templates/tsconfig.base.json' with { type: 'json' };
 import buildTemplate from './templates/tsconfig.build.json' with { type: 'json' };
 import defaultTemplate from './templates/tsconfig.default.json' with { type: 'json' };
 
 /** The static tsconfig templates (with `{{envTypesFile}}` tokens). */
-export const tsconfigBaseTemplate: Record<string, unknown> = baseTemplate;
-export const tsconfigDefaultTemplate: Record<string, unknown> = defaultTemplate;
-export const tsconfigBuildTemplate: Record<string, unknown> = buildTemplate;
+export const tsconfigBaseTemplate = baseTemplate;
+export const tsconfigDefaultTemplate = defaultTemplate;
+export const tsconfigBuildTemplate = buildTemplate;
 
 /** The default replacement values for the tsconfig templates. */
-export const DEFAULT_TSCONFIG_REPLACEMENTS: Replacements = { envTypesFile: 'src/env.d.ts' };
+export const DEFAULT_TSCONFIG_REPLACEMENTS = { envTypesFile: 'src/env.d.ts' } as const;
 
 /** The `extends` value to write into one generated template. */
 export type TsconfigExtends = string | string[] | false;

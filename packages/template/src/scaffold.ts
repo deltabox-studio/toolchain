@@ -13,14 +13,14 @@ import {
     upsertWorkspaceTsconfig,
     workspaceDirForTsconfig,
     writeGeneratedFiles,
-} from '@deltabox/toolchain-project';
+} from '@deltabox/toolchain/project';
 import {
     applyReplacements,
     type GeneratedFile,
     type Replacements,
     spawnCross,
-} from '@deltabox/toolchain-shared';
-import { runVp } from '@deltabox/toolchain-vite';
+} from '@deltabox/toolchain/shared';
+import { runVp } from '@deltabox/toolchain/vite';
 
 import { readTemplateManifest } from './local.js';
 import type { Template, TemplateAction, TemplateActionContext } from './types.js';

@@ -8,7 +8,7 @@ import {
     setLogOverrides,
     type ToolchainCommand,
     type ToolchainCommandContext,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import { defaultSyncTasks } from '../sync.js';
 import { getConfigSelection } from './config-selection.js';
@@ -120,6 +120,7 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                     tokens: loaded.tokens,
                     syncTasks: defaultSyncTasks(),
                     ...(loaded.path ? { configPath: loaded.path } : {}),
+                    ...(loaded.parentPath ? { parentPath: loaded.parentPath } : {}),
                     ...(selection.noConfig ? { noConfig: true } : {}),
                     ...(loaded.error ? { configError: loaded.error } : {}),
                 };

@@ -3,6 +3,13 @@ import type { OxlintConfig } from './config-schema/generated/oxlint-config.js';
 import { DEFAULT_FMT_IGNORE_PATTERNS, DEFAULT_LINT_IGNORE_PATTERNS } from './ignore.js';
 import { isPlainObject } from './object-utils.js';
 
+/** A deeply readonly view of a config object (for the literal default values). */
+export type DeepReadonly<T> = T extends readonly (infer U)[]
+    ? readonly DeepReadonly<U>[]
+    : T extends object
+      ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+      : T;
+
 /** The Oxfmt options accepted by Vite+ (`toolchain.vite.fmt`). */
 export type ToolchainOxfmtConfig = OxfmtConfig;
 
@@ -26,18 +33,25 @@ export const DEFAULT_FMT_SORT_GROUP = 'workspace';
  * aliases, relatives, styles and unknowns. The `workspace` group is inserted
  * after `external` by {@link applyFmtCustomGroups}.
  */
-export const DEFAULT_FMT_SORT_GROUPS: FmtSortGroup[] = [
+export const DEFAULT_FMT_SORT_GROUPS = [
     'builtin',
     'external',
     ['internal', 'subpath'],
     ['parent', 'sibling', 'index'],
     'style',
     'unknown',
-];
+] as const;
+
+/** A mutable copy of the default groups (the exported constant is readonly). */
+function defaultFmtSortGroups(): FmtSortGroup[] {
+    return DEFAULT_FMT_SORT_GROUPS.map(group =>
+        Array.isArray(group) ? [...group] : group
+    ) as FmtSortGroup[];
+}
 
 /** The default Oxfmt `sortImports` options (without resolved custom groups). */
 export const DEFAULT_FMT_SORT_IMPORTS: FmtSortImports = {
-    groups: [...DEFAULT_FMT_SORT_GROUPS],
+    groups: defaultFmtSortGroups(),
     customGroups: [],
     internalPattern: ['~/', '@/'],
     newlinesBetween: true,
@@ -48,7 +62,7 @@ export const DEFAULT_FMT_SORT_IMPORTS: FmtSortImports = {
  * object is merged over. Import sorting is enabled by default; the workspace
  * custom group is filled in from the project graph by `resolveFmtCustomGroups`.
  */
-export const DEFAULT_FMT_RULES: ToolchainOxfmtConfig = {
+export const DEFAULT_FMT_RULES = {
     useTabs: false,
     tabWidth: 4,
     printWidth: 100,
@@ -71,11 +85,11 @@ export const DEFAULT_FMT_RULES: ToolchainOxfmtConfig = {
     sortPackageJson: false,
     sortImports: {
         ...DEFAULT_FMT_SORT_IMPORTS,
-        groups: [...DEFAULT_FMT_SORT_GROUPS],
+        groups: defaultFmtSortGroups(),
         customGroups: [],
     },
     ignorePatterns: [...DEFAULT_FMT_IGNORE_PATTERNS],
-};
+} as const satisfies DeepReadonly<ToolchainOxfmtConfig>;
 
 /** The `name`/`scope` fields needed to build a workspace custom group. */
 export interface FmtProjectIdentity {
@@ -127,23 +141,29 @@ function ensureGroup(groups: FmtSortGroup[], name: string): void {
  * `sortImports` is absent the config is left alone.
  */
 export function applyFmtCustomGroups(
-    fmt: ToolchainOxfmtConfig,
+    fmt: ToolchainOxfmtConfig | DeepReadonly<ToolchainOxfmtConfig>,
     customGroups: FmtCustomGroup[]
 ): ToolchainOxfmtConfig {
-    if (customGroups.length === 0 || fmt.sortImports === undefined || fmt.sortImports === false) {
-        return fmt;
+    // The function never mutates the input; accept the readonly defaults too.
+    const input = fmt as ToolchainOxfmtConfig;
+    if (
+        customGroups.length === 0 ||
+        input.sortImports === undefined ||
+        input.sortImports === false
+    ) {
+        return input;
     }
     const base: FmtSortImports =
-        fmt.sortImports === true || !isPlainObject(fmt.sortImports)
+        input.sortImports === true || !isPlainObject(input.sortImports)
             ? {
                   ...DEFAULT_FMT_SORT_IMPORTS,
-                  groups: [...DEFAULT_FMT_SORT_GROUPS],
+                  groups: defaultFmtSortGroups(),
                   customGroups: [],
               }
-            : { ...fmt.sortImports };
+            : { ...input.sortImports };
     const groups: FmtSortGroup[] = Array.isArray(base.groups)
         ? [...base.groups]
-        : [...DEFAULT_FMT_SORT_GROUPS];
+        : defaultFmtSortGroups();
     const existing: FmtCustomGroup[] = Array.isArray(base.customGroups)
         ? base.customGroups.map(group => ({ ...group }))
         : [];
@@ -165,7 +185,7 @@ export function applyFmtCustomGroups(
         }
         if (group.groupName) ensureGroup(groups, group.groupName);
     }
-    return { ...fmt, sortImports: { ...base, groups, customGroups: existing } };
+    return { ...input, sortImports: { ...base, groups, customGroups: existing } };
 }
 
 /**
@@ -173,7 +193,7 @@ export function applyFmtCustomGroups(
  * object is merged over. Framework/a11y rules are disabled by default (opt in
  * per project); the remaining rules are non-blocking warnings.
  */
-export const DEFAULT_LINT_RULES: ToolchainOxlintConfig = {
+export const DEFAULT_LINT_RULES = {
     ignorePatterns: [...DEFAULT_LINT_IGNORE_PATTERNS],
     rules: {
         'jsx-a11y/alt-text': 'off',
@@ -203,4 +223,4 @@ export const DEFAULT_LINT_RULES: ToolchainOxlintConfig = {
         'prefer-exponentiation-operator': 'off',
         'prefer-template': 'off',
     },
-};
+} as const satisfies DeepReadonly<ToolchainOxlintConfig>;

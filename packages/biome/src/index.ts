@@ -6,29 +6,93 @@ import {
     type ToolchainConfig,
     sectionConfig,
     sectionEnabled,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import biomeConfigJson from './config.json' with { type: 'json' };
 import vscodeSettingsJson from './vscode-settings.json' with { type: 'json' };
 
 /** The generic Biome configuration (with `{{name}}` / `{{scope}}` tokens). */
-export const biomeConfig: Record<string, unknown> = biomeConfigJson;
+export const biomeConfig = biomeConfigJson;
 
 /** The recommended Biome VS Code settings. */
-export const biomeVscodeSettings: Record<string, unknown> = vscodeSettingsJson;
+export const biomeVscodeSettings = vscodeSettingsJson;
+
+/**
+ * Array directive that removes an entry from the base array during the merge.
+ * The value after the prefix is JSON (or a raw string when it is not valid
+ * JSON), so nested groups can be targeted with `$remove:["a","b"]`.
+ */
+export const BIOME_REMOVE_PREFIX = '$remove:';
+
+/** Array directive that drops the base array before the patch entries are added. */
+export const BIOME_RESET = '$reset';
+
+/** Build the directive that removes `entry` from the default array. */
+export function removeBiomeEntry(entry: unknown): string {
+    return `${BIOME_REMOVE_PREFIX}${JSON.stringify(entry)}`;
+}
+
+function parseBiomeRemoval(raw: string): unknown {
+    try {
+        return JSON.parse(raw);
+    } catch {
+        return raw;
+    }
+}
+
+function sameBiomeEntry(a: unknown, b: unknown): boolean {
+    if (Object.is(a, b)) return true;
+    if (Array.isArray(a) && Array.isArray(b)) {
+        return a.length === b.length && a.every((entry, index) => sameBiomeEntry(entry, b[index]));
+    }
+    if (isPlainObject(a) && isPlainObject(b)) {
+        const aKeys = Object.keys(a);
+        const bKeys = Object.keys(b);
+        return (
+            aKeys.length === bKeys.length &&
+            aKeys.every(key => key in b && sameBiomeEntry(a[key], b[key]))
+        );
+    }
+    return false;
+}
+
+/**
+ * Resolve the array directives in `patch` against `base`: `$remove:` entries
+ * prune matching base entries, `$reset` drops the base array, and the remaining
+ * entries are unioned on top. Directives never appear in the result.
+ */
+export function resolveBiomeArray(base: readonly unknown[], patch: readonly unknown[]): unknown[] {
+    const removals: unknown[] = [];
+    const additions: unknown[] = [];
+    let reset = false;
+    for (const entry of patch) {
+        if (entry === BIOME_RESET) {
+            reset = true;
+        } else if (typeof entry === 'string' && entry.startsWith(BIOME_REMOVE_PREFIX)) {
+            removals.push(parseBiomeRemoval(entry.slice(BIOME_REMOVE_PREFIX.length)));
+        } else {
+            additions.push(entry);
+        }
+    }
+    const kept = (reset ? [] : base).filter(
+        entry => !removals.some(target => sameBiomeEntry(entry, target))
+    );
+    return [...new Set([...kept, ...additions])];
+}
 
 /**
  * Merge an override over a base config: object keys merge recursively and
- * arrays are unioned (so `files.includes` can be extended, not replaced).
+ * arrays are unioned, with `$remove:` / `$reset` directives resolved first so
+ * defaults can be pruned or replaced (see {@link resolveBiomeArray}).
  */
 export function mergeBiomeConfig(base: unknown, patch: unknown): unknown {
-    if (Array.isArray(base) && Array.isArray(patch)) {
-        return [...new Set([...base, ...patch])];
+    if (Array.isArray(patch)) {
+        return resolveBiomeArray(Array.isArray(base) ? base : [], patch);
     }
-    if (isPlainObject(base) && isPlainObject(patch)) {
-        const out: Record<string, unknown> = { ...base };
+    if (isPlainObject(patch)) {
+        const out: Record<string, unknown> = isPlainObject(base) ? { ...base } : {};
         for (const [key, value] of Object.entries(patch)) {
-            out[key] = key in out ? mergeBiomeConfig(out[key], value) : value;
+            out[key] = mergeBiomeConfig(out[key], value);
         }
         return out;
     }
@@ -60,27 +124,32 @@ function withoutUnscopedGroups(value: unknown, replacements: Replacements): unkn
 /**
  * Render the Biome config for a project by resolving its replacement tokens
  * (`{{name}}` = unscoped project name, `{{scope}}` = npm scope, eg. `@acme`)
- * and merging the consumer's `overrides` over the defaults.
+ * and merging the consumer's `overrides` over the defaults. Pass several
+ * patches to apply them in order (later patches see earlier results).
  */
 export function renderBiomeConfig(
     replacements: Replacements = {},
-    overrides: Record<string, unknown> = {}
+    overrides: Record<string, unknown> | Record<string, unknown>[] = {}
 ): Record<string, unknown> {
-    const base = applyReplacementsDeep(
+    let out = applyReplacementsDeep(
         withoutUnscopedGroups(biomeConfig, replacements) as Record<string, unknown>,
         replacements
-    );
-    const patch = applyReplacementsDeep(
-        withoutUnscopedGroups(overrides, replacements) as Record<string, unknown>,
-        replacements
-    );
-    return mergeBiomeConfig(base, patch) as Record<string, unknown>;
+    ) as Record<string, unknown>;
+    const patches = Array.isArray(overrides) ? overrides : [overrides];
+    for (const patch of patches) {
+        const resolved = applyReplacementsDeep(
+            withoutUnscopedGroups(patch, replacements) as Record<string, unknown>,
+            replacements
+        ) as Record<string, unknown>;
+        out = mergeBiomeConfig(out, resolved) as Record<string, unknown>;
+    }
+    return out;
 }
 
 /** Serialize the rendered Biome config to JSON text. */
 export function renderBiomeJson(
     replacements: Replacements = {},
-    overrides: Record<string, unknown> = {},
+    overrides: Record<string, unknown> | Record<string, unknown>[] = {},
     indent = 4
 ): string {
     return `${JSON.stringify(renderBiomeConfig(replacements, overrides), null, indent)}\n`;
@@ -91,19 +160,19 @@ export function renderVscodeSettings(indent = 4): string {
     return `${JSON.stringify(biomeVscodeSettings, null, indent)}\n`;
 }
 
-/** Merge the deprecated `biome.overrides` with `fmt.biome` / `lint.biome`. */
-function biomeOverrides(config: ToolchainConfig): Record<string, unknown> {
+/**
+ * Collect the deprecated `biome.overrides` and `fmt.biome` / `lint.biome` as an
+ * ordered patch list, so each one is resolved against the previous result.
+ */
+function biomeOverrides(config: ToolchainConfig): Record<string, unknown>[] {
+    const patches: Record<string, unknown>[] = [];
     const biome = sectionEnabled(config.biome) ? sectionConfig(config.biome) : undefined;
-    let out = (biome?.overrides ?? {}) as Record<string, unknown>;
     const fmt = sectionEnabled(config.fmt) ? sectionConfig(config.fmt)?.biome : undefined;
     const lint = sectionEnabled(config.lint) ? sectionConfig(config.lint)?.biome : undefined;
-    if (isPlainObject(fmt)) {
-        out = mergeBiomeConfig(out, fmt) as Record<string, unknown>;
-    }
-    if (isPlainObject(lint)) {
-        out = mergeBiomeConfig(out, lint) as Record<string, unknown>;
-    }
-    return out;
+    if (isPlainObject(biome?.overrides)) patches.push(biome.overrides);
+    if (isPlainObject(fmt)) patches.push(fmt);
+    if (isPlainObject(lint)) patches.push(lint);
+    return patches;
 }
 
 /**

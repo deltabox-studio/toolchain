@@ -22,7 +22,7 @@ import type {
     ChangelogProvider,
     ChangelogProviderContext,
     ChangelogProviderSetting,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 export type {
     ChangelogAuthorInfo,

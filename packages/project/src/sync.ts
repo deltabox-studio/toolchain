@@ -2,16 +2,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
+    CONFIG_FILE_NAMES,
     type ManagedFile,
     type PackageJson,
     projectToPackageJson,
     readJsonAt,
     splitPackageName,
     type SyncTask,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 /** The nearest ancestor directory containing a `.git` entry (the repo root). */
-function repoRoot(cwd: string): string | undefined {
+function gitRoot(cwd: string): string | undefined {
     let dir = path.resolve(cwd);
     for (;;) {
         if (fs.existsSync(path.join(dir, '.git'))) return dir;
@@ -19,6 +20,26 @@ function repoRoot(cwd: string): string | undefined {
         if (parent === dir) return undefined;
         dir = parent;
     }
+}
+
+/**
+ * The nearest ancestor directory with a `dbx.config.*` (the monorepo root).
+ * Used as the repo-root fallback when a workspace is not inside a git checkout
+ * yet, so `repository.directory` is still written.
+ */
+function configRoot(cwd: string): string | undefined {
+    let dir = path.dirname(path.resolve(cwd));
+    for (;;) {
+        if (CONFIG_FILE_NAMES.some(name => fs.existsSync(path.join(dir, name)))) return dir;
+        const parent = path.dirname(dir);
+        if (parent === dir) return undefined;
+        dir = parent;
+    }
+}
+
+/** The repo root: the git checkout, falling back to the nearest ancestor config. */
+function repoRoot(cwd: string): string | undefined {
+    return gitRoot(cwd) ?? configRoot(cwd);
 }
 
 /**

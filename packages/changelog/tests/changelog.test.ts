@@ -627,7 +627,7 @@ describe.skipIf(!GIT)('changelog dry run (real git history)', () => {
         expect(summary.length).toBeGreaterThan(0);
         // The summary is grouped into `### <Rule>` sections.
         expect(summary).toMatch(/^### /m);
-    }, 30_000);
+    });
 
     it('renders the full proposed entry without throwing', () => {
         const records = readCommits(safeRange());

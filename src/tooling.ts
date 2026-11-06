@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { resolveFmtCustomGroups } from '@deltabox/toolchain-core';
+import { resolveFmtCustomGroups } from '@deltabox/toolchain/core';
 import {
     biomeToOx,
     dprintToOx,
@@ -14,7 +14,7 @@ import {
     findPrettierConfig,
     prettierToOx,
     readJsonc,
-} from '@deltabox/toolchain-migrate';
+} from '@deltabox/toolchain/migrate';
 import {
     applyFmtCustomGroups,
     DEFAULT_FMT_RULES,
@@ -24,6 +24,8 @@ import {
     isPlainObject,
     LINTER_PRECEDENCE,
     type ConfigJsonValue,
+    type FormatterTool,
+    type LinterTool,
     type PackageJson,
     readJsonAt,
     readJsoncAt,
@@ -38,7 +40,7 @@ import {
     type ToolchainOxfmtConfig,
     warningMessage,
     type WarningId,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 type Json = Record<string, unknown>;
 
@@ -352,6 +354,73 @@ function existingConfigOptions(cwd: string, tool: string): Json | undefined {
     return undefined;
 }
 
+/** Where the active formatter/linter was selected from. */
+export type ToolSource = 'config' | 'project-settings' | 'workspace' | 'user-settings' | 'default';
+
+/** The active tool for one kind, plus where it came from. */
+export interface DiscoveredTool<T extends string> {
+    tool: T;
+    source: ToolSource;
+}
+
+/** The active formatter and linter for a project. */
+export interface DiscoveredTooling {
+    fmt: DiscoveredTool<FormatterTool>;
+    lint: DiscoveredTool<LinterTool>;
+}
+
+/**
+ * Pick the active formatter/linter. An explicitly configured tool wins (in
+ * precedence order: oxc > biome > prettier > dprint for fmt, oxc > biome >
+ * eslint for lint); otherwise use the same discovery `dbx sync` applies — the
+ * project `.vscode/settings.json`, the nearest config file/`package.json`, the
+ * VS Code user settings — and fall back to Oxc.
+ */
+function selectTool<T extends string>(
+    config: ToolchainConfig,
+    kind: 'fmt' | 'lint',
+    precedence: readonly T[],
+    options: NormalizeToolingOptions
+): DiscoveredTool<T> {
+    const section = config[kind];
+    // An explicit `fmt: false` / `{ enabled: false }` opts out of discovery.
+    if (section !== undefined && !sectionEnabled(section)) {
+        return { tool: precedence[0] as T, source: 'default' };
+    }
+    const configured = kind === 'fmt' ? resolveFmtTools(config) : resolveLintTools(config);
+    if (configured.length > 0) {
+        return { tool: configured[0] as T, source: 'config' };
+    }
+    const disabled = disabledTools(section, precedence);
+    const projectSettings = readJsoncAt<Json>(options.cwd, '.vscode/settings.json');
+    const fromProject = editorTool(projectSettings, precedence, kind, disabled);
+    if (fromProject) return { tool: fromProject, source: 'project-settings' };
+    const fromWorkspace = workspaceTool(options.cwd, kind, precedence, disabled);
+    if (fromWorkspace) return { tool: fromWorkspace, source: 'workspace' };
+    const fromUser = editorTool(
+        readSettings(options.vscodeSettingsPath),
+        precedence,
+        kind,
+        disabled
+    );
+    if (fromUser) return { tool: fromUser, source: 'user-settings' };
+    return { tool: precedence[0] as T, source: 'default' };
+}
+
+/**
+ * Resolve the active formatter and linter without migrating any options. This
+ * is what `dbx fmt` / `dbx lint` use to decide which tool to run.
+ */
+export function discoverTooling(
+    config: ToolchainConfig = {},
+    options: NormalizeToolingOptions
+): DiscoveredTooling {
+    return {
+        fmt: selectTool(config, 'fmt', FORMATTER_PRECEDENCE, options),
+        lint: selectTool(config, 'lint', LINTER_PRECEDENCE, options),
+    };
+}
+
 export async function normalizeToolingConfig(
     config: ToolchainConfig,
     options: NormalizeToolingOptions
@@ -359,29 +428,22 @@ export async function normalizeToolingConfig(
     const warnings: WarningId[] = [];
     let fmt = sectionConfig(config.fmt) as ToolchainFmtConfig | undefined;
     let lint = sectionConfig(config.lint) as ToolchainLintConfig | undefined;
-    const projectSettings = readJsoncAt<Json>(options.cwd, '.vscode/settings.json');
-    const userSettings = readSettings(options.vscodeSettingsPath);
     const names = hasUserConfig(options.cwd, 'fmt');
     const lintNames = hasUserConfig(options.cwd, 'lint');
 
     if (sectionEnabled(config.fmt) && resolveFmtTools(config).length === 0) {
-        const disabled = disabledTools(config.fmt, FORMATTER_PRECEDENCE);
-        const tool =
-            editorTool(projectSettings, FORMATTER_PRECEDENCE, 'fmt', disabled) ??
-            workspaceTool(options.cwd, 'fmt', FORMATTER_PRECEDENCE, disabled) ??
-            editorTool(userSettings, FORMATTER_PRECEDENCE, 'fmt', disabled);
-        const fallback = !tool && !names;
+        const selected = selectTool(config, 'fmt', FORMATTER_PRECEDENCE, options);
+        const fallback = selected.source === 'default' && !names;
         if (fallback) warnings.push('fmt.no-tool');
-        const selected = tool ?? 'oxc';
         const next: ToolchainFmtConfig = { ...fmt };
-        if (selected === 'oxc') {
+        if (selected.tool === 'oxc') {
             const migrated = await migratedFmtOptions(options.cwd);
             const merged = deepMerge<Json>(DEFAULT_FMT_RULES as Json, migrated ?? {});
             mergeIgnorePatterns(merged, migrated ?? {});
             next.oxc = merged as Record<string, ConfigJsonValue>;
         } else {
-            (next as Record<string, unknown>)[selected] =
-                existingConfigOptions(options.cwd, selected) ?? {};
+            (next as Record<string, unknown>)[selected.tool] =
+                existingConfigOptions(options.cwd, selected.tool) ?? {};
         }
         fmt = next;
     }
@@ -394,23 +456,18 @@ export async function normalizeToolingConfig(
     }
 
     if (sectionEnabled(config.lint) && resolveLintTools(config).length === 0) {
-        const disabled = disabledTools(config.lint, LINTER_PRECEDENCE);
-        const tool =
-            editorTool(projectSettings, LINTER_PRECEDENCE, 'lint', disabled) ??
-            workspaceTool(options.cwd, 'lint', LINTER_PRECEDENCE, disabled) ??
-            editorTool(userSettings, LINTER_PRECEDENCE, 'lint', disabled);
-        const fallback = !tool && !lintNames;
+        const selected = selectTool(config, 'lint', LINTER_PRECEDENCE, options);
+        const fallback = selected.source === 'default' && !lintNames;
         if (fallback) warnings.push('lint.no-tool');
-        const selected = tool ?? 'oxc';
         const next: ToolchainLintConfig = { ...lint };
-        if (selected === 'oxc') {
+        if (selected.tool === 'oxc') {
             const migrated = await migratedLintOptions(options.cwd);
             const merged = deepMerge<Json>(DEFAULT_LINT_RULES as Json, migrated ?? {});
             mergeIgnorePatterns(merged, migrated ?? {});
             next.oxc = merged as Record<string, ConfigJsonValue>;
         } else {
-            (next as Record<string, unknown>)[selected] =
-                existingConfigOptions(options.cwd, selected) ?? {};
+            (next as Record<string, unknown>)[selected.tool] =
+                existingConfigOptions(options.cwd, selected.tool) ?? {};
         }
         lint = next;
     }

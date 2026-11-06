@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 
-import { logger, sanitizeText } from '@deltabox/toolchain-shared';
+import { logger, sanitizeText } from '@deltabox/toolchain/shared';
 
 import { hasCompleteGitHistory, readCommit } from './git.js';
 import type {

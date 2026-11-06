@@ -11,7 +11,7 @@ import {
     type SyncContext,
     type ToolchainConfig,
 } from '../src/index.js';
-import { normalizeToolingConfig, toolingDefaultsTask } from '../src/tooling.js';
+import { discoverTooling, normalizeToolingConfig, toolingDefaultsTask } from '../src/tooling.js';
 
 const tmpDirs: string[] = [];
 
@@ -198,6 +198,69 @@ describe('normalizeToolingConfig', () => {
         expect(fmtOf(config)?.prettier).toEqual({});
         expect(lintOf(config)?.eslint).toEqual({});
         expect(warnings).toEqual([]);
+    });
+});
+
+describe('discoverTooling', () => {
+    it('selects an explicitly configured tool by precedence', () => {
+        const cwd = tmp();
+        const result = discoverTooling(
+            { fmt: { prettier: true, biome: true }, lint: { eslint: true, biome: true } },
+            { cwd, vscodeSettingsPath: missingSettings(cwd) }
+        );
+        expect(result.fmt).toEqual({ tool: 'biome', source: 'config' });
+        expect(result.lint).toEqual({ tool: 'biome', source: 'config' });
+    });
+
+    it('discovers config files in precedence order', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, '.prettierrc'), {});
+        writeJson(path.join(cwd, 'biome.json'), {});
+        const result = discoverTooling({}, { cwd, vscodeSettingsPath: missingSettings(cwd) });
+        expect(result.fmt).toEqual({ tool: 'biome', source: 'workspace' });
+    });
+
+    it('prefers Oxc over another formatter config file', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, '.oxfmtrc.json'), {});
+        writeJson(path.join(cwd, 'biome.json'), {});
+        const result = discoverTooling({}, { cwd, vscodeSettingsPath: missingSettings(cwd) });
+        expect(result.fmt.tool).toBe('oxc');
+    });
+
+    it('falls back to Oxc when nothing is configured or installed', () => {
+        const cwd = tmp();
+        const result = discoverTooling({}, { cwd, vscodeSettingsPath: missingSettings(cwd) });
+        expect(result.fmt).toEqual({ tool: 'oxc', source: 'default' });
+        expect(result.lint).toEqual({ tool: 'oxc', source: 'default' });
+    });
+
+    it('opts out of discovery when the section is explicitly disabled', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, '.prettierrc'), {});
+        const result = discoverTooling(
+            { fmt: false },
+            { cwd, vscodeSettingsPath: missingSettings(cwd) }
+        );
+        expect(result.fmt).toEqual({ tool: 'oxc', source: 'default' });
+    });
+
+    it('uses the project VS Code settings before config files', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, '.prettierrc'), {});
+        writeJson(path.join(cwd, '.vscode/settings.json'), {
+            'editor.defaultFormatter': 'oxc.oxc-vscode',
+        });
+        const result = discoverTooling({}, { cwd, vscodeSettingsPath: missingSettings(cwd) });
+        expect(result.fmt).toEqual({ tool: 'oxc', source: 'project-settings' });
+    });
+
+    it('uses the VS Code user settings when the project has nothing', () => {
+        const cwd = tmp();
+        const settings = path.join(cwd, 'settings.json');
+        writeJson(settings, { 'editor.defaultFormatter': 'esbenp.prettier-vscode' });
+        const result = discoverTooling({}, { cwd, vscodeSettingsPath: settings });
+        expect(result.fmt).toEqual({ tool: 'prettier', source: 'user-settings' });
     });
 });
 

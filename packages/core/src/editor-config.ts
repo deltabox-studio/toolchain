@@ -28,7 +28,7 @@ import {
     type ToolchainConfig,
     type ToolchainVscodeSettings,
     warningMessage,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 const FORMATTER_EXTENSIONS: Record<string, string> = {
     oxc: 'oxc.oxc-vscode',
@@ -39,21 +39,95 @@ const FORMATTER_EXTENSIONS: Record<string, string> = {
 
 const LINTER_ACTIONS: Record<string, Record<string, string>> = {
     oxc: { 'source.fixAll.oxc': 'explicit' },
-    biome: { 'quickfix.biome': 'explicit', 'source.organizeImports.biome': 'explicit' },
+    // `quickfix.biome` is only for lightbulb quick fixes; on-save fix-all is
+    // `source.fixAll.biome`, and import sorting is `source.organizeImports.biome`.
+    biome: {
+        'source.fixAll.biome': 'explicit',
+        'source.organizeImports.biome': 'explicit',
+    },
     eslint: { 'source.fixAll.eslint': 'explicit' },
 };
 
-const FORMATTER_LANGUAGES = ['javascript', 'javascriptreact', 'typescript', 'typescriptreact'];
+/** Languages each formatter can handle; the per-language key is what makes
+ * `Alt+Shift+F` use the dbx-selected formatter instead of the user's global one. */
+const FORMATTER_LANGUAGES: Record<string, string[]> = {
+    oxc: [
+        'javascript',
+        'javascriptreact',
+        'typescript',
+        'typescriptreact',
+        'json',
+        'jsonc',
+        'json5',
+        'css',
+        'scss',
+        'less',
+        'vue',
+        'svelte',
+        'markdown',
+        'mdx',
+        'yaml',
+        'graphql',
+        'handlebars',
+        'html',
+    ],
+    biome: [
+        'javascript',
+        'javascriptreact',
+        'typescript',
+        'typescriptreact',
+        'json',
+        'jsonc',
+        'css',
+        'graphql',
+    ],
+    prettier: [
+        'javascript',
+        'javascriptreact',
+        'typescript',
+        'typescriptreact',
+        'json',
+        'jsonc',
+        'json5',
+        'css',
+        'scss',
+        'less',
+        'vue',
+        'svelte',
+        'markdown',
+        'mdx',
+        'yaml',
+        'graphql',
+        'handlebars',
+        'html',
+    ],
+    dprint: [
+        'javascript',
+        'javascriptreact',
+        'typescript',
+        'typescriptreact',
+        'json',
+        'jsonc',
+        'markdown',
+        'toml',
+    ],
+};
 
 function formatterSettings(tool: string): Record<string, unknown> {
     const extension = FORMATTER_EXTENSIONS[tool];
     if (!extension) return {};
+    const languages = FORMATTER_LANGUAGES[tool] ?? FORMATTER_LANGUAGES.prettier ?? [];
     return {
         'editor.defaultFormatter': extension,
+        'editor.formatOnSave': true,
+        ...(tool === 'oxc' ? { 'editor.formatOnSaveMode': 'file' } : {}),
         ...Object.fromEntries(
-            FORMATTER_LANGUAGES.map(language => [
+            languages.map(language => [
                 `[${language}]`,
-                { 'editor.defaultFormatter': extension },
+                {
+                    'editor.defaultFormatter': extension,
+                    'editor.formatOnSave': true,
+                },
             ])
         ),
     };

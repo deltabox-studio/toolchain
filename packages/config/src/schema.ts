@@ -271,12 +271,12 @@ export function renderTsType(
     }
     if (types.includes('object')) {
         const additional = node.additionalProperties;
-        if (additional === undefined || additional === false) return 'Record<string, unknown>';
+        if (additional === undefined || additional === false) return 'Record<string & {}, unknown>';
         const value =
             additional === true || isEmptySchema(additional)
                 ? 'unknown'
                 : renderTsType(additional, defs);
-        return `Record<string, ${value}>`;
+        return `Record<string & {}, ${value}>`;
     }
     if (types.length === 0) return 'unknown';
     return types.map(type => TS_TYPE_MAP[type] ?? 'unknown').join(' | ');

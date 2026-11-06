@@ -5,7 +5,7 @@
  * VS Code extension, which builds its menus + actions from it.
  */
 
-import type { ToolchainProvider, ToolchainProviderAction } from '@deltabox/toolchain-shared';
+import type { ToolchainProvider, ToolchainProviderAction } from '@deltabox/toolchain/shared';
 
 import { VP_COMMANDS, viteCommandName } from './commands.js';
 

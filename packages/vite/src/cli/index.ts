@@ -8,7 +8,7 @@
 
 import path from 'node:path';
 
-import { logger, sectionConfig, type ToolchainCommand } from '@deltabox/toolchain-shared';
+import { logger, sectionConfig, type ToolchainCommand } from '@deltabox/toolchain/shared';
 
 import { VP_COMMANDS, viteCommandName } from '../commands.js';
 import { runVp } from '../vp.js';

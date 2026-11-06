@@ -7,7 +7,7 @@ import {
     type ChangelogConfig,
     type ChangelogVersioningConfig,
     logger,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import { isBreakingCommit } from './breaking.js';
 import { parseCcSubject } from './format.js';

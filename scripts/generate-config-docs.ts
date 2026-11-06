@@ -12,9 +12,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { collectVars } from '@deltabox/toolchain-config';
-import type { ToolchainCommand } from '@deltabox/toolchain-shared';
-import { toolchainConfigSchema } from '@deltabox/toolchain-shared';
+import { collectVars, generateCliDocs } from '@deltabox/toolchain/config';
+import { toolchainConfigSchema } from '@deltabox/toolchain/shared';
 
 import { builtinCommands } from '../src/cli/index.js';
 
@@ -28,60 +27,6 @@ function esc(value: string): string {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/\|/g, '\\|');
-}
-
-/** Use typographic angles inside code spans (entities render literally there). */
-function code(value: string): string {
-    return value.replace(/</g, '‹').replace(/>/g, '›');
-}
-
-function commands(): ToolchainCommand[] {
-    // `builtinCommands` is the CLI's single source of truth, so a newly added
-    // builtin cannot be missed here. Provider passthroughs are marked hidden:
-    // their names depend on the consumer's registry, not on the toolchain.
-    const all = builtinCommands().filter(command => !command.hidden);
-    const seen = new Set<string>();
-    return all.filter(command => {
-        if (seen.has(command.name)) return false;
-        seen.add(command.name);
-        return true;
-    });
-}
-
-function renderCli(): string {
-    const lines = [
-        '---',
-        'title: CLI reference',
-        'outline: [2, 3]',
-        '---',
-        '',
-        '# CLI reference',
-        '',
-        'Generated from the same `ToolchainCommand` descriptors the `dbx` binary',
-        'registers. Run `yarn config:docs` after changing a command.',
-        '',
-        '| Command | Description |',
-        '| ------- | ----------- |',
-    ];
-    const all = commands();
-    for (const command of all) {
-        lines.push(
-            `| [\`dbx ${command.name}\`](#${command.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}) | ${esc(command.description)} |`
-        );
-    }
-    for (const command of all) {
-        lines.push('', `## \`dbx ${command.name}\``, '', esc(command.description));
-        for (const arg of command.args ?? []) {
-            const label = arg.required === false ? `[${arg.name}]` : `<${arg.name}>`;
-            lines.push(`- \`${code(label)}\` — ${esc(arg.description)}`);
-        }
-        for (const option of command.options ?? []) {
-            const fallback =
-                option.default !== undefined ? ` (default: \`${String(option.default)}\`)` : '';
-            lines.push(`- \`${code(option.flags)}\` — ${esc(option.description)}${fallback}`);
-        }
-    }
-    return `${lines.join('\n').trimEnd()}\n`;
 }
 
 function renderEnv(): string {
@@ -150,6 +95,15 @@ Every generated page uses the same \`ConfigMeta\` fields: \`description\`,
 
 fs.mkdirSync(docsDir, { recursive: true });
 fs.writeFileSync(path.join(docsDir, 'index.md'), renderIndex(), 'utf-8');
-fs.writeFileSync(path.join(docsDir, 'cli.md'), renderCli(), 'utf-8');
+fs.writeFileSync(
+    path.join(docsDir, 'cli.md'),
+    generateCliDocs(builtinCommands(), {
+        intro: [
+            'Generated from the same `ToolchainCommand` descriptors the `dbx` binary',
+            'registers. Run `yarn config:docs` after changing a command.',
+        ].join('\n'),
+    }),
+    'utf-8'
+);
 fs.writeFileSync(path.join(docsDir, 'env.md'), renderEnv(), 'utf-8');
 console.log('Generated apps/docs/config/{index,cli,env}.md');

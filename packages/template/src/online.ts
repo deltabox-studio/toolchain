@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { ToolchainTemplateSource } from '@deltabox/toolchain-shared';
+import type { ToolchainTemplateSource } from '@deltabox/toolchain/shared';
 
 import type { Template } from './types.js';
 

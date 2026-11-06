@@ -125,6 +125,12 @@ Override the generated workflow file name (eg. `deploy.yml`).
 
 Directory for the workflow file (default `.github/workflows`).
 
+#### `setup`
+
+- **Type**: `boolean`
+
+Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false; built-in workflows already include them).
+
 #### `enabled`
 
 - **Type**: `boolean`
@@ -519,6 +525,12 @@ Override the generated workflow file name (eg. `deploy.yml`).
 - **Type**: `string`
 
 Directory for the workflow file (default `.github/workflows`).
+
+#### `setup`
+
+- **Type**: `boolean`
+
+Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false; built-in workflows already include them).
 
 #### `enabled`
 
@@ -1076,7 +1088,7 @@ Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` over
 
 - **Type**: `boolean | BiomeConfig`
 
-Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`.
+Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
 
 ### `prettier`
 
@@ -1128,11 +1140,11 @@ Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` ov
 
 - **Type**: `boolean | BiomeConfig`
 
-Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`.
+Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
 
 ### `eslint`
 
-- **Type**: `boolean | Linter.Config`
+- **Type**: `boolean | EslintConfig`
 
 ESLint options (`true` = defaults, `false` = disabled).
 
@@ -1158,7 +1170,7 @@ Write the Biome VS Code settings (default true).
 
 - **Type**: `BiomeConfig`
 
-Deep-merged over the generated `biome.json` (arrays union).
+Deep-merged over the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
 
 ### `enabled`
 
@@ -1205,6 +1217,60 @@ Emit `composite: true` (default false).
 - **Type**: `boolean`
 
 Inject path aliases (default true).
+
+### `auto`
+
+- **Type**: `boolean | ToolchainTsconfigAliasAutoSetting`
+
+Auto-generate the root workspaces tsconfig paths/references from the project graph (default false). Set true to derive them from the project graph; set false to only use the entries you define yourself.
+
+#### `include`
+
+- **Type**: `Array<string>`
+
+Only auto-wire entries matching these globs (`auto`: workspace dirs; `aliasAuto`: rewritten alias keys; `refsAuto`: reference paths).
+
+#### `exclude`
+
+- **Type**: `Array<string>`
+
+Skip entries matching these globs (same targets as `include`).
+
+#### `rewriteAlias`
+
+- **Type**: `ToolchainTsconfigAliasRewrite`
+
+Rewrite the alias keys auto-wiring generates (custom keys are preserved). Patterns are URL-rewrite style: a string is a regular-expression source and replacements support `$1`, `$2`, ... capture groups. Examples: `{ "^@acme/(.+)$": "@acme/pkg/$1" }` (string patterns), `[{ pattern: /^@acme\/(.+)$/, replacement: "@acme/pkg/$1" }]` (RegExp patterns), `[{ pattern: ["^@acme/a$", "^@acme/b$"], replacement: "@acme/x" }]` (an array of keys), and an array of such rules (applied in order; the first matching rule wins). `RegExp` patterns are only available from TS/JS configs; JSON configs use string patterns.
+
+### `aliasAuto`
+
+- **Type**: `boolean | ToolchainTsconfigAliasAutoSetting`
+
+Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). Accepts the same `include`/`exclude`/`rewriteAlias` object as `auto`.
+
+### `refsAuto`
+
+- **Type**: `boolean | ToolchainTsconfigAutoSetting`
+
+Auto-generate project references (defaults to `auto`; `refs` must also be enabled).
+
+#### `include`
+
+- **Type**: `Array<string>`
+
+Only auto-wire entries matching these globs (`auto`: workspace dirs; `aliasAuto`: rewritten alias keys; `refsAuto`: reference paths).
+
+#### `exclude`
+
+- **Type**: `Array<string>`
+
+Skip entries matching these globs (same targets as `include`).
+
+### `autoSrcDir`
+
+- **Type**: `'src' | '.' | (string & {})`
+
+Source directory used to resolve workspace entry points when `package.json` does not declare `exports`/`main`/`types` (default: the workspace's final tsconfig `rootDir`/`baseUrl`, falling back to `src`).
 
 ### `indent`
 

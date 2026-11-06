@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { toJson } from '@deltabox/toolchain-shared';
+import { toJson } from '@deltabox/toolchain/shared';
 
 /** The manifest directory + file recording every file the tooling manages. */
 export const MANIFEST_DIR = '.dbx/toolchain';

@@ -1,6 +1,6 @@
-import { resetProjects } from '@deltabox/toolchain-core';
-import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
-import { restoreTsconfigOverrides } from '@deltabox/toolchain-tsconfig';
+import { resetProjects } from '@deltabox/toolchain/core';
+import { logger, type ToolchainCommand } from '@deltabox/toolchain/shared';
+import { restoreTsconfigOverrides } from '@deltabox/toolchain/tsconfig';
 
 /** `dbx reset` — remove a project's generated files, manifest and/or config. */
 export function resetCommand(): ToolchainCommand {

@@ -1,4 +1,5 @@
 export * from './cli.js';
+export * from './commands.js';
 export * from './env.js';
 export * from './json.js';
 export * from './markdown.js';

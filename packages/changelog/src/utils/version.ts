@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { logger } from '@deltabox/toolchain-shared';
+import { logger } from '@deltabox/toolchain/shared';
 
 import { discoverWorkspaceDirs, repoRoot } from './repo.js';
 import type { BumpType } from './types.js';

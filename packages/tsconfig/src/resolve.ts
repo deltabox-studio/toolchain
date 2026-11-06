@@ -22,7 +22,7 @@ export interface TsconfigAlias {
 export interface TsconfigReference {
     /** Absolute path to the referenced tsconfig file. */
     path: string;
-    [key: string]: unknown;
+    [key: string & {}]: unknown;
 }
 
 /** The result of {@link resolveTsconfig}. */
@@ -52,9 +52,10 @@ export interface TsconfigJson {
     extends?: string | string[];
     compilerOptions?: {
         baseUrl?: string;
-        paths?: Record<string, string[] | string>;
+        rootDir?: string;
+        paths?: Record<string, string[]>;
     };
-    references?: { path: string; [key: string]: unknown }[];
+    references?: { path: string; [key: string & {}]: unknown }[];
 }
 
 interface LoadedTsconfig {
@@ -251,6 +252,99 @@ function pathToAlias(find: string, target: string): AliasCandidate {
     };
 }
 
+/** Build a chain from an in-memory config, following its `extends`. */
+function loadConfigChain(
+    config: TsconfigJson,
+    file: string,
+    followExtends: boolean,
+    seen: Set<string>
+): LoadedTsconfig[] {
+    const absolute = path.resolve(file);
+    const dir = path.dirname(absolute);
+    const chain: LoadedTsconfig[] = [{ file: absolute, dir, config }];
+    if (!followExtends) return chain;
+    seen.add(absolute);
+    for (const specifier of [...extendsList(config)].reverse()) {
+        const resolved = resolveExtends(specifier, dir);
+        if (!resolved) {
+            throw new Error(`Cannot resolve tsconfig "extends": "${specifier}" from ${absolute}`);
+        }
+        chain.push(...loadChain(resolved, seen));
+    }
+    return chain;
+}
+
+/** Resolve a loaded config chain into paths, references and Vite aliases. */
+function resolveChain(chain: LoadedTsconfig[], file: string): ResolvedTsconfig {
+    const pathsEntry = chain.find(entry => entry.config.compilerOptions?.paths !== undefined);
+    const referencesEntry = chain.find(entry => entry.config.references !== undefined);
+    const baseUrlEntry = chain.find(entry => entry.config.compilerOptions?.baseUrl !== undefined);
+
+    const pathsBase = baseUrlEntry
+        ? path.resolve(baseUrlEntry.dir, baseUrlEntry.config.compilerOptions?.baseUrl ?? '.')
+        : (pathsEntry?.dir ?? path.dirname(file));
+
+    const paths: Record<string, string[]> = {};
+    for (const [key, value] of Object.entries(pathsEntry?.config.compilerOptions?.paths ?? {})) {
+        const targets = (Array.isArray(value) ? value : [value]) as string[];
+        paths[key] = targets.map(target => path.resolve(pathsBase, target));
+    }
+
+    const references: TsconfigReference[] = (referencesEntry?.config.references ?? []).map(
+        reference => ({
+            ...reference,
+            path: path.resolve(referencesEntry?.dir ?? path.dirname(file), reference.path),
+        })
+    );
+
+    const alias = Object.entries(paths)
+        .filter(([, targets]) => targets.length > 0)
+        .map(([find, targets]) => pathToAlias(find, targets[0] as string))
+        .sort((a, b) => b.score - a.score)
+        .map(({ find, replacement }) => ({ find, replacement }));
+
+    return { alias, paths, references };
+}
+
+/**
+ * Resolve an in-memory tsconfig object (eg. the auto-generated workspaces config)
+ * exactly like {@link resolveTsconfig}, but without requiring it to be on disk.
+ */
+export function resolveTsconfigConfig(
+    config: TsconfigJson,
+    dir: string,
+    options: Pick<ResolveTsconfigOptions, 'extends' | 'overrides'> = {}
+): ResolvedTsconfig {
+    const file = path.join(path.resolve(dir), 'tsconfig.json');
+    const chain = loadConfigChain(config, file, options.extends !== false, new Set());
+    if (options.overrides && chain[0]) {
+        chain[0] = {
+            ...chain[0],
+            config: mergeOverride(chain[0].config, options.overrides),
+        };
+    }
+    return resolveChain(chain, file);
+}
+
+/**
+ * The nearest `compilerOptions.rootDir`/`baseUrl` in a tsconfig's `extends`
+ * chain, resolved to an absolute path. Used by auto alias wiring to infer the
+ * workspace source directory.
+ */
+export function resolveTsconfigCompilerOption(
+    file: string,
+    key: 'rootDir' | 'baseUrl'
+): string | undefined {
+    if (!isFile(file)) return undefined;
+    const chain = loadChain(path.resolve(file), new Set());
+    const entry = chain.find(candidate => {
+        const value = candidate.config.compilerOptions?.[key];
+        return typeof value === 'string' && value.length > 0;
+    });
+    if (!entry) return undefined;
+    return path.resolve(entry.dir, entry.config.compilerOptions?.[key] as string);
+}
+
 /**
  * Resolve a tsconfig's `paths` and `references`, following `extends` per field.
  */
@@ -270,33 +364,5 @@ export function resolveTsconfig(options: ResolveTsconfigOptions = {}): ResolvedT
             config: mergeOverride(chain[0].config, options.overrides),
         };
     }
-
-    const pathsEntry = chain.find(entry => entry.config.compilerOptions?.paths !== undefined);
-    const referencesEntry = chain.find(entry => entry.config.references !== undefined);
-    const baseUrlEntry = chain.find(entry => entry.config.compilerOptions?.baseUrl !== undefined);
-
-    const pathsBase = baseUrlEntry
-        ? path.resolve(baseUrlEntry.dir, baseUrlEntry.config.compilerOptions?.baseUrl ?? '.')
-        : (pathsEntry?.dir ?? path.dirname(file));
-
-    const paths: Record<string, string[]> = {};
-    for (const [key, value] of Object.entries(pathsEntry?.config.compilerOptions?.paths ?? {})) {
-        const targets = Array.isArray(value) ? value : [value];
-        paths[key] = targets.map(target => path.resolve(pathsBase, target));
-    }
-
-    const references: TsconfigReference[] = (referencesEntry?.config.references ?? []).map(
-        reference => ({
-            ...reference,
-            path: path.resolve(referencesEntry?.dir ?? path.dirname(file), reference.path),
-        })
-    );
-
-    const alias = Object.entries(paths)
-        .filter(([, targets]) => targets.length > 0)
-        .map(([find, targets]) => pathToAlias(find, targets[0] as string))
-        .sort((a, b) => b.score - a.score)
-        .map(({ find, replacement }) => ({ find, replacement }));
-
-    return { alias, paths, references };
+    return resolveChain(chain, file);
 }

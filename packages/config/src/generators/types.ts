@@ -12,7 +12,7 @@ import path from 'node:path';
 
 import { generateTypes, type Schema } from 'untyped';
 
-import { pascalCase } from '@deltabox/toolchain-shared';
+import { pascalCase } from '@deltabox/toolchain/shared';
 
 import {
     isZodSchema,
@@ -112,9 +112,11 @@ function tidyInterface(schema: Schema, interfaceName: string): string {
 }
 
 /**
- * Insert a `[key: string]: unknown` index signature before the closing brace of
- * a generated interface. Used for schemas that accept arbitrary keys
- * (`.catchall` / `.passthrough`), so the generated type stays open.
+ * Insert a `[key: string & {}]: unknown` index signature before the closing
+ * brace of a generated interface. Used for schemas that accept arbitrary keys
+ * (`.catchall` / `.passthrough`), so the generated type stays open while
+ * `keyof` stays `string & {}` instead of collapsing to `string` (which would
+ * hide the known keys from editor autocomplete in intersections/unions).
  *
  * The value stays `unknown` rather than the catchall's own type: a nested
  * interface (eg. `WorkflowStep[]`) is not assignable to an index signature
@@ -123,7 +125,7 @@ function tidyInterface(schema: Schema, interfaceName: string): string {
 function withIndexSignature(body: string): string {
     const close = body.lastIndexOf('}');
     if (close === -1) return body;
-    return `${body.slice(0, close)}    [key: string]: unknown;\n${body.slice(close)}`;
+    return `${body.slice(0, close)}    [key: string & {}]: unknown;\n${body.slice(close)}`;
 }
 
 /** Normalize `example` metadata into a list of strings. */

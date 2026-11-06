@@ -21,7 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 
-import { warningMessage } from '@deltabox/toolchain-shared';
+import { warningMessage } from '@deltabox/toolchain/shared';
 
 import {
     isAppliedOverride,

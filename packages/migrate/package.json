@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-migrate",
-    "version": "2.4.0",
+    "version": "2.6.0",
     "description": "Pluggable tooling-config migrations to Oxc: Biome/ESLint/Prettier -> Oxfmt/Oxlint.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
@@ -25,6 +25,7 @@
         "@types/node": "catalog:",
         "tsdown": "catalog:",
         "typescript": "catalog:",
+        "vite": "catalog:",
         "vitest": "catalog:"
     },
     "exports": {

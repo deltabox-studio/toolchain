@@ -267,15 +267,20 @@ describe('emulate: CLI + templates', () => {
                 expect(pkg.packageManager).toMatch(new RegExp(`^${pm}@\\d`));
                 const hasYarnrc = fs.existsSync(path.join(out, '.yarnrc.yml'));
                 const hasPnpmWs = fs.existsSync(path.join(out, 'pnpm-workspace.yaml'));
+                const config = fs.readFileSync(path.join(out, 'dbx.config.ts'), 'utf-8');
                 if (pm === 'yarn' || pm === 'pnpm') {
                     expect(pkg.devDependencies['@deltabox/toolchain']).toBe('catalog:');
                     if (pm === 'yarn') expect(hasYarnrc).toBe(true);
                     if (pm === 'pnpm') expect(hasPnpmWs).toBe(true);
+                    // The scaffold opts into the catalog it writes, so `dbx sync`
+                    // owns the managed catalog file.
+                    expect(config).toContain('catalogs:');
                 } else {
                     // npm has no catalogs, and a single Bun project has nowhere to
                     // declare one -> both pin.
                     expect(pkg.devDependencies['@deltabox/toolchain']).toMatch(/^\^\d/);
                     expect(hasYarnrc || hasPnpmWs).toBe(false);
+                    expect(config).not.toContain('catalogs:');
                 }
             }
         },
@@ -358,6 +363,7 @@ describe('emulate: CLI + templates', () => {
             expect(singleConfig).toContain('fmt:');
             expect(singleConfig).toContain('lint:');
             expect(singleConfig).toContain('oxc:');
+            expect(singleConfig).toContain('catalogs:');
 
             // The Oxc files are managed: `dbx sync` regenerates them from the config.
             fs.rmSync(path.join(single, '.oxfmtrc.json'));
@@ -972,6 +978,48 @@ describe('emulate: CLI + templates', () => {
     );
 
     it(
+        'syncs a configless workspace with the inherited config',
+        async () => {
+            const ws = scratch('configless-sync');
+            const root = path.join(ws, 'root');
+            writeJson(path.join(root, 'package.json'), {
+                name: '@acme/root',
+                version: '0.1.0',
+                private: true,
+                type: 'module',
+                workspaces: ['packages/*'],
+            });
+            writeJson(path.join(root, 'dbx.config.json'), {
+                toolchain: {
+                    project: {
+                        type: 'monorepo-root',
+                        name: 'root',
+                        scope: '@acme',
+                        author: 'Acme',
+                    },
+                },
+            });
+            const child = path.join(root, 'packages/a');
+            writeJson(path.join(child, 'package.json'), {
+                name: '@acme/a',
+                version: '0.1.0',
+                type: 'module',
+            });
+            // No child config: `dbx sync` must use the inherited root config.
+            const sync = await dbx(child, ['sync']);
+            expect(sync.code, sync.stderr).toBe(0);
+            const childPkg = readJson<{ name: string; author?: string }>(
+                path.join(child, 'package.json')
+            );
+            expect(childPkg.name).toBe('@acme/a');
+            expect(childPkg.author).toBe('Acme');
+            const check = await dbx(child, ['sync', '--check']);
+            expect(check.code, check.stderr).toBe(0);
+        },
+        TIMEOUT
+    );
+
+    it(
         'accepts `template:info --json`',
         async () => {
             const ws = scratch('template-info');
@@ -1303,7 +1351,7 @@ describe('emulate: tsconfig overrides', () => {
             const defaults = path.join(ws, 'packages/core/tsconfig.default.json');
             const build = path.join(ws, 'packages/core/tsconfig.build.json');
 
-            writeConfig(ws, { project, tsconfig: { overrides } });
+            writeConfig(ws, { project, tsconfig: { overrides, auto: false } });
             const sync = await dbx(ws, ['sync']);
             expect(sync.code, sync.stderr).toBe(0);
             expect(readJson<any>(base).compilerOptions.target).toBe('ES2020');
@@ -1341,7 +1389,10 @@ describe('emulate: tsconfig overrides', () => {
             // Drop `composite` (the original defined `false`) and `types` (it did not).
             writeConfig(ws, {
                 project,
-                tsconfig: { overrides: { ...overrides, root: { compilerOptions: {} } } },
+                tsconfig: {
+                    overrides: { ...overrides, root: { compilerOptions: {} } },
+                    auto: false,
+                },
             });
             expect((await dbx(ws, ['sync'])).code).toBe(0);
             expect(readJson<any>(root)).toEqual({
@@ -1392,6 +1443,7 @@ describe('emulate: tsconfig overrides', () => {
                     defaultFile: 'tsconfig.src.json',
                     buildFile: 'tsconfig.dist.json',
                     overrides,
+                    auto: false,
                 },
             });
 
@@ -1429,13 +1481,23 @@ describe('emulate: tsconfig overrides', () => {
     it(
         'reports the watched inputs (default and custom tsconfig names) for the extension',
         async () => {
-            type Inputs = { globs: string[]; tsconfig: Record<string, string> };
+            type Inputs = {
+                globs: string[];
+                configs: string[];
+                tsconfig: Record<string, string>;
+            };
 
-            // Defaults: the config file plus the default tsconfig inputs.
+            // Defaults: the config file plus the resolved default tsconfig inputs.
             const defaults = tsconfigMonorepo('watch-inputs-default');
             writeConfig(defaults, { project, tsconfig: {} });
             expect(await dbxJson<Inputs>(defaults, ['watch', '--list', '--json'])).toEqual({
-                globs: ['**/dbx.config.*', 'tsconfig.workspaces.json', '**/tsconfig.default.json'],
+                globs: [
+                    'dbx.config.ts',
+                    'packages/core/tsconfig.default.json',
+                    'tsconfig.base.json',
+                    'tsconfig.workspaces.json',
+                ],
+                configs: ['dbx.config.ts'],
                 tsconfig: {
                     baseFile: 'tsconfig.base.json',
                     rootFile: 'tsconfig.workspaces.json',
@@ -1447,6 +1509,11 @@ describe('emulate: tsconfig overrides', () => {
             // Custom names replace the defaults in the watched globs.
             const custom = scratch('watch-inputs-custom');
             writeJson(path.join(custom, 'package.json'), { name: 'custom', private: true });
+            writeJson(path.join(custom, 'config/tsconfig.shared.json'), { compilerOptions: {} });
+            writeJson(path.join(custom, 'tsconfig.graph.json'), { compilerOptions: {} });
+            writeJson(path.join(custom, 'packages/core/tsconfig.src.json'), {
+                compilerOptions: {},
+            });
             const tsconfig = {
                 baseFile: 'config/tsconfig.shared.json',
                 rootFile: 'tsconfig.graph.json',
@@ -1456,9 +1523,10 @@ describe('emulate: tsconfig overrides', () => {
             writeConfig(custom, { project, tsconfig });
             const inputs = await dbxJson<Inputs>(custom, ['watch', '--list', '--json']);
             expect(inputs.globs).toEqual([
-                '**/dbx.config.*',
+                'config/tsconfig.shared.json',
+                'dbx.config.ts',
+                'packages/core/tsconfig.src.json',
                 'tsconfig.graph.json',
-                '**/tsconfig.src.json',
             ]);
             expect(inputs.tsconfig).toEqual(tsconfig);
 
@@ -1467,7 +1535,7 @@ describe('emulate: tsconfig overrides', () => {
             writeJson(path.join(plain, 'package.json'), { name: 'plain', private: true });
             writeConfig(plain, { project: { name: 'plain' } });
             expect((await dbxJson<Inputs>(plain, ['watch', '--list', '--json'])).globs).toEqual([
-                '**/dbx.config.*',
+                'dbx.config.ts',
             ]);
         },
         TIMEOUT

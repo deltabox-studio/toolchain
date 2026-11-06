@@ -12,7 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { logger, spawnCross } from '@deltabox/toolchain-shared';
+import { logger, spawnCross } from '@deltabox/toolchain/shared';
 
 const IS_WINDOWS = process.platform === 'win32';
 

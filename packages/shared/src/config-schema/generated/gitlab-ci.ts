@@ -389,5 +389,5 @@ export interface GitLabCi {
         };
         rules?: Array<{} | Array<string>>;
     };
-    [key: string]: unknown;
+    [key: string & {}]: unknown;
 }

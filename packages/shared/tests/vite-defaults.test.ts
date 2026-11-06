@@ -17,6 +17,15 @@ function schemaRules(): Record<string, unknown> {
 }
 
 describe('DEFAULT_FMT_RULES', () => {
+    it('keeps the default values literal-typed', () => {
+        // The annotations are compile-time assertions: `satisfies` must keep the
+        // literal types instead of widening them to the interface.
+        const useTabs: false = DEFAULT_FMT_RULES.useTabs;
+        const printWidth: 100 = DEFAULT_FMT_RULES.printWidth;
+        const rule: 'warn' = DEFAULT_LINT_RULES.rules.eqeqeq;
+        expect([useTabs, printWidth, rule]).toEqual([false, 100, 'warn']);
+    });
+
     it('sorts imports by default (the workspace group is resolved separately)', () => {
         const sortImports = DEFAULT_FMT_RULES.sortImports as { groups: string[] };
         expect(sortImports.groups).toEqual(expect.arrayContaining(['builtin', 'external']));

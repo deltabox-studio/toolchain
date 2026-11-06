@@ -24,24 +24,26 @@ code --install-extension deltabox.toolchain-vscode
 
 ## Commands
 
-| Command                      | What it does                                                                            |
-| ---------------------------- | --------------------------------------------------------------------------------------- |
-| Sync all / active / selected | Run `dbx sync` (`--recursive` / per project).                                           |
-| Check sync                   | `sync --check` across the workspace.                                                    |
-| Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**. |
-| Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.       |
-| Remove template…             | `template:list --registry` then `template:remove`.                                      |
-| Generate configs             | `project:config` for missing configs, or refresh the project graph only; picks TS/JS.   |
-| Generate config              | Per-project `project:config` (also works from the Command Palette).                     |
-| Migrate tooling…             | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).  |
-| Run workflow                 | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                   |
-| Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                          |
-| Create Vite+ project…        | `vp create` in a terminal.                                                              |
-| Add provider...              | Register a custom provider (project or global registry).                                |
-| Run command...               | Run a provider command (`dbx <command>`) in a terminal.                                 |
-| Create from template...      | `dbx create --template <id>` (terminal for online templates).                           |
-| Reset tooling                | Remove generated files / manifest / config.                                             |
-| Toggle auto-sync             | Enable/disable sync-on-change.                                                          |
+| Command                      | What it does                                                                                   |
+| ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| Sync all / active / selected | Run `dbx sync` (`--recursive` for config-bearing projects, then configless ones individually). |
+| Check sync                   | `sync --check` across the workspace.                                                           |
+| Sync tsconfig                | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).                      |
+| Manage tsconfig…             | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                      |
+| Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**.        |
+| Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.              |
+| Remove template…             | `template:list --registry` then `template:remove`.                                             |
+| Generate configs             | `project:config` for missing configs, or refresh the project graph only; picks TS/JS.          |
+| Generate config              | Per-project `project:config` (also works from the Command Palette).                            |
+| Migrate tooling…             | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).         |
+| Run workflow                 | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                          |
+| Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                                 |
+| Create Vite+ project…        | `vp create` in a terminal.                                                                     |
+| Add provider...              | Register a custom provider (project or global registry).                                       |
+| Run command...               | Run a provider command (`dbx <command>`) in a terminal.                                        |
+| Create from template...      | `dbx create --template <id>` (terminal for online templates).                                  |
+| Reset tooling                | Remove generated files / manifest / config.                                                    |
+| Toggle auto-sync             | Enable/disable sync-on-change.                                                                 |
 
 Interactive commands (the dev server, `vp create`, online scaffolding) run in an
 integrated terminal at the project root; everything else runs in the output
@@ -66,33 +68,46 @@ actions, scoped to that project:
 
 The **Providers** and **Templates** views read `dbx providers --json` and `dbx template:list --json`, so adding one surfaces it in the UI automatically.
 
-**Add provider...** writes a custom provider to the default project registry
-(`.dbx/toolchain/.registry/providers/providers.json`) or the global
+### Add provider...
+
+Writes a custom provider to the default project registry (`.dbx/toolchain/.registry/providers/providers.json`) or the global
 `~/.dbx/toolchain/.registry/providers/` when you choose the global scope, which
 `toolchainProviders()` merges with the built-ins, so a registered provider's
 commands also become `dbx` commands (`dbx <command>`), runnable from the view.
+
 Provider search paths can also be added with the **Registries** view; the
 `deltabox.providerRegistrySearchPaths` setting mirrors them globally.
 
-**Add template...** runs `template:init --add` and asks whether to add the
-template to the **global** registry (yes by default), so it is available in every
-project. See [Global templates](/guide/templates#global-templates). The
+### Add template...
+
+Runs `template:init --add` and asks whether to add the template to the **global** registry (yes by default), so it is available in every
+project.
+
+See [Global templates](/guide/templates#global-templates).
+
+The
 `deltabox.registrySearchPaths` setting controls the global search paths and is
 kept in sync with the CLI config.
 
-**Remove template source...** runs `template:list --registry` + `template:remove`.
+### Remove template source...
+
+Runs `template:list --registry` + `template:remove`.
 
 The **Registries** view (below **Templates**) shows the detected provider and
-template registries as **Providers** / **Templates** roots. Each item has **Open
-registry** (the folder in the explorer, or the website for remote URLs), **Add new
-registry** and **Remove registry** (it only drops the path, keeping the files).
+template registries as **Providers** / **Templates** roots.
+
+Each item has **Open registry** (the folder in the explorer, or the website for remote URLs), **Add new registry** and **Remove registry** (it only drops the path, keeping the files).
+
 The title bar's **New registry…** / **Remove registry…** actions add or remove
 search paths for either kind, asking whether they are global or project-scoped.
+
 Remote registries are `http(s)` JSON registries: template registries accept
 `{ sources }` or an array of sources; provider registries accept
 `{ providers }` or an array of provider descriptors.
 
-**Create from template…** prompts for the template's inputs and actions (see
+### Create from template...
+
+Prompts for the template's inputs and actions (see
 [Templates](/guide/templates)) before running `dbx create`. Scaffolding also asks
 for a package manager (`yarn` default).
 
@@ -100,13 +115,22 @@ The Home view links to this documentation with **Need help? Go to documentation*
 
 ## Auto-sync
 
-Auto-sync watches input files only: `dbx.config.*` plus the inputs each
-project's config resolves to (by default `tsconfig.workspaces.json` and every
-`tsconfig.default.json`). The extension asks the CLI for them
-(`dbx watch --list --json`), so custom `tsconfig.rootFile` / `tsconfig.defaultFile`
-names are watched instead of the defaults, and the list is refreshed whenever a
-`dbx.config.*` changes. Setting `deltabox.toolchain.watch` explicitly replaces
-the resolved inputs.
+Auto-sync watches input files only. The extension asks the CLI
+(`dbx watch --list --json`) for the concrete, project-graph-resolved files:
+every `dbx.config.*` plus each enabled project's `tsconfig.baseFile`,
+`tsconfig.defaultFile` and the root `tsconfig.rootFile`. Custom file names are
+honoured, nested configs can disable or override their own tsconfig section, and
+the list is refreshed whenever a `dbx.config.*` changes (and after each sync).
+
+Each resolved pattern is scoped to its own workspace root (and a concrete
+nested file is watched from its own directory), so a same-named file in another
+workspace folder or an ancestor can never trigger this root's sync, and VS Code
+does not install a recursive watcher over the whole root (which can hold
+`node_modules` handles during a package-manager link step on Windows). Only the
+root whose input changed is synced. Setting `deltabox.toolchain.watch`
+explicitly replaces the resolved inputs; user globs are matched across every
+workspace folder, absolute/ancestor globs are ignored, and an empty list
+disables watching.
 
 Generated outputs are never watched. The scheduler debounces bursts, allows one sync at a time, queues at most one follow-up, and suppresses events briefly after a run.
 
@@ -155,6 +179,7 @@ Search for `deltabox:` to find:
 - **Sync selected projects**
 - **Sync all projects**
 - **Check sync**
+- **Manage tsconfig…**
 - **Scaffold project…**
 - **Add template…**
 - **Remove template…**

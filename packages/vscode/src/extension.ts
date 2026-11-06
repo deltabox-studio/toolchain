@@ -14,6 +14,14 @@ import {
     spawnCli,
     workspaceRoots,
 } from './cli.js';
+import { createGenerateCommands } from './commands/generate.js';
+import { createMigrateCommand } from './commands/migrate.js';
+import { createProviderRegistryCommands } from './commands/providers.js';
+import { createResetCommand } from './commands/reset.js';
+import { createScaffoldCommands } from './commands/scaffold.js';
+import { createSyncCommands } from './commands/sync.js';
+import { createTsconfigCommand } from './commands/tsconfig.js';
+import { createWorkflowCommands } from './commands/workflows.js';
 import { type HomeAction, HomeViewProvider } from './home-view.js';
 import {
     discoverProjectGroups,
@@ -26,27 +34,15 @@ import {
 } from './projects.js';
 import {
     loadProviders,
-    type Provider,
-    type ProviderCommand,
     type ProviderCommandNode,
     type ProviderNode,
     ProviderTreeProvider,
-    readAllProviders,
-    readGlobalProviders,
-    readProviderRegistry,
-    writeGlobalProviders,
-    writeProviderRegistry,
 } from './providers.js';
 import { RegistryTreeProvider, type RegistryItemNode } from './registries.js';
 import { type SchedulerState, SyncScheduler } from './sync-scheduler.js';
-import { type Template, TemplateTreeProvider, loadTemplates } from './templates.js';
-import {
-    defaultWatchInputs,
-    parseWatchInputs,
-    planWatchTargets,
-    type WatchInputs,
-} from './watch-inputs.js';
-import { parseWorkflowTargets, type WorkflowTarget, workflowQuickPickItems } from './workflows.js';
+import { type Template, TemplateTreeProvider } from './templates.js';
+import { defaultWatchInputs, parseWatchInputs, type WatchInputs } from './watch-inputs.js';
+import { WatcherManager } from './watcher-manager.js';
 
 const SECTION = 'deltabox.toolchain';
 const OUTPUT_NAME = 'deltabox toolchain';
@@ -58,24 +54,6 @@ const REGISTRIES_VIEW_ID = 'deltabox.registries';
 
 /** The public documentation site (the Home "Need help?" link). */
 const DOCS_URL = 'https://toolchain.deltabox.studio';
-
-/** The workflow ids the CLI understands. */
-const WORKFLOW_IDS = ['ci', 'changelog', 'release', 'sync', 'issues'];
-
-/** The `dbx migrate --from` sources, plus "all detected". */
-const MIGRATION_SOURCES = [
-    {
-        label: 'All detected',
-        value: 'all',
-        description: 'Every source config found in the project',
-    },
-    { label: 'Biome', value: 'biome', description: 'biome.json -> Oxfmt / Oxlint' },
-    { label: 'Prettier', value: 'prettier', description: '.prettierrc -> Oxfmt' },
-    { label: 'Dprint', value: 'dprint', description: 'dprint.json -> Oxfmt' },
-    { label: 'ESLint', value: 'eslint', description: '.eslintrc -> Oxlint' },
-    { label: 'Oxc', value: 'oxc', description: '.oxfmtrc/.oxlintrc -> dbx.config' },
-    { label: 'Vite config', value: 'vite', description: 'Fold vite.config.* into dbx.config' },
-];
 
 /** How long to wait for `dbx watch --list` before falling back to the defaults. */
 const WATCH_INPUTS_TIMEOUT_MS = 30_000;
@@ -176,7 +154,6 @@ export function activate(context: vscode.ExtensionContext): void {
 
     let enabled = getEnabled();
     let child: ChildProcess | undefined;
-    let watchers: vscode.FileSystemWatcher[] = [];
     // The tsconfig "no workspaces" warning is shown once per session (a sync
     // runs on every watched change, so a notification each time would nag).
     let warnedNoWorkspaces = false;
@@ -304,18 +281,52 @@ export function activate(context: vscode.ExtensionContext): void {
         status.tooltip = `dbx: ${state}`;
     };
 
+    async function rebuildWatchers(): Promise<void> {
+        await watcherManager?.rebuild();
+    }
+    // Roots with a pending input change. A user glob has no owning root and
+    // means "every root"; otherwise only the root whose input changed is synced,
+    // so a file in one workspace folder never resyncs an unrelated one.
+    const pendingRoots = new Set<string>();
+    let pendingAll = false;
     const scheduler = new SyncScheduler({
         debounceMs: () => config().get<number>('debounce', 300),
         run: async () => {
-            const roots = workspaceRoots();
-            if (roots.length === 0) {
+            const all = workspaceRoots();
+            if (all.length === 0) {
                 output.appendLine('dbx: no workspace folder open.');
                 return;
             }
+            const roots =
+                pendingAll || pendingRoots.size === 0
+                    ? all
+                    : all.filter(root => pendingRoots.has(root));
+            pendingRoots.clear();
+            pendingAll = false;
+            if (roots.length === 0) return;
             const command = config().get<string>('command', 'sync');
             for (const root of roots) await runCli(root, [command]);
+            // The sync may have created/renamed generated tsconfig files: refresh
+            // the concrete watcher set (non-recursive, project-graph based).
+            void rebuildWatchers();
         },
         onStateChange: setStatus,
+    });
+    const watcherManager = new WatcherManager({
+        enabled: () => enabled,
+        userGlobs: userWatchGlobs,
+        roots: workspaceRoots,
+        resolveInputs: resolveWatchInputs,
+        onResolved: (root, inputs) => {
+            setTsconfigFileNames(root, inputs.tsconfig);
+            tree.refresh();
+        },
+        onChange: root => {
+            if (root) pendingRoots.add(root);
+            else pendingAll = true;
+            scheduler.notify();
+        },
+        log: message => output.appendLine(message),
     });
 
     const refreshViews = (): void => {
@@ -363,297 +374,29 @@ export function activate(context: vscode.ExtensionContext): void {
         refreshViews();
     };
 
-    const checkSync = async (): Promise<void> => {
-        const roots = workspaceRoots();
-        if (roots.length === 0) {
-            vscode.window.showWarningMessage('deltabox: no workspace folder open.');
-            return;
-        }
-        const failed: string[] = [];
-        for (const root of roots) {
-            if ((await runCli(root, ['sync', '--recursive', '--check'])) !== 0) {
-                failed.push(path.basename(root));
-            }
-        }
-        if (failed.length > 0) {
-            const choice = await vscode.window.showWarningMessage(
-                `deltabox: generated files are out of date in ${failed.join(', ')}.`,
-                'Run sync',
-                'Show output'
-            );
-            if (choice === 'Run sync') await vscode.commands.executeCommand(`${SECTION}.syncAll`);
-            else if (choice === 'Show output') output.show();
-        } else {
-            vscode.window.showInformationMessage('deltabox: all generated files are in sync.');
-        }
+    const commandDeps = {
+        output,
+        runCli,
+        captureCli,
+        workspaceRoots,
+        refreshGraph,
+        refreshViews,
+        runRoots,
+        runProjects,
+        selectedProjects: (): Project[] =>
+            treeView.selection.filter((node): node is Project => node.kind === 'project'),
+        section: SECTION,
     };
-
-    /** Prompt for a subset of projects (multi-select). */
-    const pickProjects = async (
-        projects: Project[],
-        placeHolder: string
-    ): Promise<Project[] | undefined> => {
-        if (projects.length === 0) return [];
-        const picks = await vscode.window.showQuickPick(
-            projects.map(project => ({
-                label: project.label,
-                description: project.relativePath,
-                detail: project.dir,
-                project,
-            })),
-            { canPickMany: true, placeHolder }
-        );
-        return picks?.map(pick => pick.project);
-    };
-
-    /** Prompt for one or more enabled workflows (multi-select). */
-    const pickWorkflows = async (cwd: string): Promise<string[] | undefined> => {
-        const result = await captureCli(cwd, ['workflow', '--list', '--json']);
-        let targets: WorkflowTarget[] = [];
-        if (result.code === 0) targets = parseWorkflowTargets(result.stdout);
-        if (targets.length === 0) {
-            targets = WORKFLOW_IDS.map(id => ({ id, path: id, provider: 'github' }));
-        }
-        const picks = await vscode.window.showQuickPick(workflowQuickPickItems(targets), {
-            canPickMany: true,
-            placeHolder: 'Which workflows should run?',
-        });
-        return picks?.map(pick => pick.label);
-    };
-
+    const syncCommands = createSyncCommands(commandDeps);
+    const generateCommands = createGenerateCommands(commandDeps);
+    const migrateTooling = createMigrateCommand(commandDeps);
+    const resetToolchain = createResetCommand(commandDeps);
+    const manageTsconfig = createTsconfigCommand(commandDeps);
+    const { runWorkflow } = createWorkflowCommands(commandDeps);
+    const { createViteProject, createFromTemplate, scaffold, addTemplate, removeTemplate } =
+        createScaffoldCommands(commandDeps);
     const goToProject = (dir: string): void => {
         void vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(dir));
-    };
-
-    const checkProject = async (dir: string, label: string): Promise<void> => {
-        if ((await runCli(dir, ['sync', '--check'])) === 0) {
-            vscode.window.showInformationMessage(`deltabox: ${label} is in sync.`);
-            return;
-        }
-        const choice = await vscode.window.showWarningMessage(
-            `deltabox: ${label} is out of sync.`,
-            'Run sync',
-            'Show output'
-        );
-        if (choice === 'Run sync') {
-            await runCli(dir, ['sync']);
-            refreshViews();
-        } else if (choice === 'Show output') output.show();
-    };
-
-    interface ConfigGenerationOptions {
-        skipConfig: boolean;
-        language?: 'ts' | 'js';
-    }
-
-    /** Ask whether to create configs or only refresh the project graph, and the language. */
-    const pickConfigGeneration = async (): Promise<ConfigGenerationOptions | undefined> => {
-        const mode = await vscode.window.showQuickPick(
-            [
-                {
-                    label: 'Create dbx.config.*',
-                    description: 'Write a config for each selected project',
-                    value: 'config' as const,
-                },
-                {
-                    label: 'Only write the project graph',
-                    description: 'Refresh .dbx/toolchain/projects.json without creating configs',
-                    value: 'graph' as const,
-                },
-            ],
-            { placeHolder: 'What should be generated?' }
-        );
-        if (!mode) return undefined;
-        if (mode.value === 'graph') return { skipConfig: true };
-        const language = await vscode.window.showQuickPick(
-            [
-                { label: 'TypeScript', description: 'dbx.config.ts', value: 'ts' as const },
-                {
-                    label: 'JavaScript',
-                    description: 'dbx.config.js / .mjs / .cjs (follows the package type)',
-                    value: 'js' as const,
-                },
-            ],
-            { placeHolder: 'Config language?' }
-        );
-        if (!language) return undefined;
-        return { skipConfig: false, language: language.value };
-    };
-
-    /** The `project:config` flags for a generation choice. */
-    const configArgs = (options: ConfigGenerationOptions, force = false): string[] => {
-        const args = ['project:config'];
-        if (options.skipConfig) args.push('--skip-config');
-        else if (options.language) args.push('--language', options.language);
-        if (force) args.push('--force');
-        return args;
-    };
-
-    const generateConfigs = async (): Promise<void> => {
-        const options = await pickConfigGeneration();
-        if (!options) return;
-        const all = discoverProjects();
-        const candidates = options.skipConfig ? all : all.filter(project => !project.hasConfig);
-        if (candidates.length === 0) {
-            vscode.window.showInformationMessage(
-                options.skipConfig
-                    ? 'deltabox: no projects found to graph.'
-                    : 'deltabox: every project already has a config.'
-            );
-            return;
-        }
-        const selected = await pickProjects(
-            candidates,
-            options.skipConfig
-                ? 'Refresh the project graph for which projects?'
-                : 'Generate a dbx config for which projects?'
-        );
-        if (!selected || selected.length === 0) return;
-        let failed = 0;
-        for (const project of selected) {
-            if ((await runCli(project.dir, configArgs(options))) !== 0) failed += 1;
-            else if (!options.skipConfig) await runCli(project.dir, ['sync']);
-        }
-        await refreshGraph();
-        if (failed === 0) {
-            vscode.window.showInformationMessage(
-                options.skipConfig
-                    ? `deltabox: refreshed the project graph for ${selected.length} project(s).`
-                    : `deltabox: generated ${selected.length} config(s).`
-            );
-        } else {
-            vscode.window.showWarningMessage(
-                `deltabox: ${failed} config(s) failed. See the output channel.`
-            );
-            output.show();
-        }
-    };
-
-    const generateProjectConfig = async (dir?: string, label?: string): Promise<void> => {
-        const projects = discoverProjects();
-        let project = dir ? projects.find(candidate => candidate.dir === dir) : undefined;
-        if (!project) {
-            if (projects.length === 0) {
-                vscode.window.showInformationMessage('deltabox: no projects found.');
-                return;
-            }
-            const picked = await vscode.window.showQuickPick(
-                projects.map(candidate => ({
-                    label: candidate.label,
-                    description: candidate.relativePath,
-                    detail: candidate.dir,
-                    project: candidate,
-                })),
-                { placeHolder: 'Generate a dbx config for which project?' }
-            );
-            if (!picked) return;
-            project = picked.project;
-        }
-        const options = await pickConfigGeneration();
-        if (!options) return;
-        let force = false;
-        if (!options.skipConfig && project.hasConfig) {
-            const overwrite = await vscode.window.showWarningMessage(
-                `deltabox: ${project.label} already has a dbx config. Overwrite it?`,
-                { modal: true },
-                'Overwrite'
-            );
-            if (overwrite !== 'Overwrite') return;
-            force = true;
-        }
-        const code = await runCli(project.dir, configArgs(options, force));
-        if (code === 0 && !options.skipConfig) await runCli(project.dir, ['sync']);
-        await refreshGraph();
-        if (code === 0) {
-            vscode.window.showInformationMessage(
-                options.skipConfig
-                    ? `deltabox: project graph refreshed for ${label ?? project.label}.`
-                    : `deltabox: config written for ${label ?? project.label}.`
-            );
-        } else {
-            output.show();
-        }
-    };
-
-    const runWorkflow = async (cwd: string): Promise<void> => {
-        const ids = await pickWorkflows(cwd);
-        if (!ids || ids.length === 0) return;
-        const code = await runCli(cwd, ['workflow', ...ids]);
-        if (code === 0) {
-            vscode.window.showInformationMessage(`deltabox: triggered ${ids.join(', ')}.`);
-        } else {
-            vscode.window.showWarningMessage(
-                'deltabox: could not run the workflow(s). See the output channel.'
-            );
-            output.show();
-        }
-    };
-
-    const migrateTooling = async (cwd?: string): Promise<void> => {
-        const root = cwd ?? workspaceRoots()[0];
-        if (!root) {
-            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
-            return;
-        }
-        const picked = await vscode.window.showQuickPick(MIGRATION_SOURCES, {
-            placeHolder: 'Migrate which tooling config?',
-            matchOnDescription: true,
-        });
-        if (!picked) return;
-        const confirm = await vscode.window.showWarningMessage(
-            `Migrate ${picked.label.toLowerCase()} in ${path.basename(root)}?`,
-            { modal: true, detail: picked.description },
-            'Migrate'
-        );
-        if (confirm !== 'Migrate') return;
-        const args = ['migrate', '--cwd', root, '--write'];
-        if (picked.value !== 'all') args.push('--from', picked.value);
-        if ((await runCli(root, args)) === 0) {
-            vscode.window.showInformationMessage(`deltabox: migration finished (${picked.label}).`);
-            await refreshGraph();
-        } else {
-            vscode.window.showWarningMessage('deltabox: migration failed. See the output channel.');
-            output.show();
-        }
-    };
-
-    const resetToolchain = async (targets?: Project[]): Promise<void> => {
-        const scope = await vscode.window.showQuickPick(
-            [
-                {
-                    label: 'Generated files + manifest',
-                    value: 'default',
-                    detail: 'Keeps dbx.config.ts',
-                },
-                {
-                    label: 'Everything (including config)',
-                    value: 'all',
-                    detail: 'Removes dbx.config.ts too',
-                },
-            ],
-            { placeHolder: 'What should be removed?' }
-        );
-        if (!scope) return;
-
-        const selected =
-            targets ?? (await pickProjects(discoverProjects(), 'Reset which projects?'));
-        if (!selected || selected.length === 0) return;
-
-        const what =
-            scope.value === 'all'
-                ? 'generated files, the manifest and the config'
-                : 'generated files and the manifest';
-        const confirm = await vscode.window.showWarningMessage(
-            `Remove ${what} from ${selected.length} project(s)?`,
-            { modal: true },
-            'Remove'
-        );
-        if (confirm !== 'Remove') return;
-
-        const args = scope.value === 'all' ? ['reset', '--all'] : ['reset'];
-        await runProjects(selected, args);
-        await refreshGraph();
-        vscode.window.showInformationMessage(`deltabox: reset ${selected.length} project(s).`);
     };
 
     /** Open an integrated terminal at `root` and run a `dbx` command. */
@@ -695,481 +438,27 @@ export function activate(context: vscode.ExtensionContext): void {
         openTerminalCommand(root, choice.command.name, `vp ${choice.command.subcommand}`);
     };
 
-    /** Turn a folder into a local template and register it (via the CLI). */
-    const addTemplate = async (): Promise<void> => {
-        const base = workspaceRoots()[0];
-        if (!base) {
-            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
-            return;
-        }
-        const kind = await vscode.window.showQuickPick(
-            [
-                { label: 'Project', value: 'project', detail: 'A single-package project' },
-                {
-                    label: 'Workspace',
-                    value: 'workspace',
-                    detail: 'A monorepo workspace package',
-                },
-                { label: 'Application', value: 'application', detail: 'A runnable application' },
-                { label: 'Folder', value: 'folder', detail: 'A bare folder of files' },
-                { label: 'Toolchain', value: 'tooling', detail: 'A tooling config/pipeline' },
-                { label: 'Pipeline', value: 'pipeline', detail: 'A CI/pipeline template' },
-            ],
-            { placeHolder: 'What kind of template is this?' }
-        );
-        if (!kind) return;
-        const picked = await vscode.window.showOpenDialog({
-            canSelectFolders: true,
-            canSelectFiles: false,
-            openLabel: 'Use this folder as a template',
-            defaultUri: vscode.Uri.file(base),
-        });
-        if (!picked?.[0]) return;
-        const dir = picked[0].fsPath;
-        const name = await vscode.window.showInputBox({
-            prompt: 'Template name',
-            value: path.basename(dir),
-            validateInput: value => (value.trim() ? undefined : 'Required'),
-        });
-        if (!name) return;
-        const scope = await vscode.window.showQuickPick(
-            [
-                { label: 'Yes', detail: 'Available in every project' },
-                { label: 'No', detail: 'Only in this project' },
-            ],
-            { placeHolder: 'Add this template to the global registry?' }
-        );
-        if (!scope) return;
-        const args = [
-            'template:init',
-            dir,
-            '--kind',
-            kind.value,
-            '--name',
-            name,
-            '--add',
-            '--cwd',
-            base,
-        ];
-        if (scope.label === 'No') args.push('--no-global');
-        const code = await runCli(base, args);
-        if (code === 0) {
-            vscode.window.showInformationMessage(`deltabox: added template "${name}".`);
-        } else {
-            output.show();
-        }
-    };
-
-    /** Remove a source from the template registry (via the CLI). */
-    const removeTemplate = async (): Promise<void> => {
-        const base = workspaceRoots()[0];
-        if (!base) {
-            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
-            return;
-        }
-        interface RegistryEntry {
-            key: string;
-            type?: string;
-            name?: string;
-            id?: string;
-            kind?: string;
-        }
-        const [listed, globals] = await Promise.all([
-            captureCli(base, ['template:list', '--registry', '--json', '--cwd', base]),
-            captureCli(base, ['template:list', '--global', '--json', '--cwd', base]),
-        ]);
-        let sources: RegistryEntry[] = [];
-        if (listed.code === 0) {
-            try {
-                sources = JSON.parse(listed.stdout) as RegistryEntry[];
-            } catch {
-                sources = [];
-            }
-        }
-        let globalTemplates: { id: string; name?: string }[] = [];
-        if (globals.code === 0) {
-            try {
-                globalTemplates = JSON.parse(globals.stdout) as { id: string; name?: string }[];
-            } catch {
-                globalTemplates = [];
-            }
-        }
-        const items = [
-            ...sources.map(source => ({
-                label: source.name ?? source.id ?? source.key,
-                description: source.key,
-                detail: [source.kind, source.type].filter(Boolean).join(' \u00b7 '),
-                source,
-                global: false,
-            })),
-            ...globalTemplates.map(template => ({
-                label: template.name ?? template.id,
-                description: template.id,
-                detail: 'global',
-                source: { key: template.id },
-                global: true,
-            })),
-        ];
-        if (items.length === 0) {
-            vscode.window.showInformationMessage('deltabox: the template registry is empty.');
-            return;
-        }
-        const picked = await vscode.window.showQuickPick(items, {
-            placeHolder: 'Which template should be removed?',
-            matchOnDetail: true,
-        });
-        if (!picked) return;
-        const code = await runCli(
-            base,
-            picked.global
-                ? ['template:remove', picked.source.key, '--global', '--cwd', base]
-                : ['template:remove', picked.source.key, '--cwd', base]
-        );
-        if (code === 0) {
-            vscode.window.showInformationMessage(`deltabox: removed ${picked.label}.`);
-        } else {
-            output.show();
-        }
-    };
-
-    /** Register a custom provider in `.dbx/toolchain/providers.json`. */
-    const addProvider = async (): Promise<void> => {
-        const root = workspaceRoots()[0];
-        if (!root) {
-            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
-            return;
-        }
-        const id = await vscode.window.showInputBox({
-            prompt: 'Provider id',
-            placeHolder: 'my-tool',
-            validateInput: value =>
-                /^[a-z0-9][a-z0-9-]*$/.test(value.trim())
-                    ? undefined
-                    : 'lowercase letters, digits and dashes',
-        });
-        if (!id) return;
-        const name = await vscode.window.showInputBox({
-            prompt: 'Display name',
-            value: id,
-            validateInput: value => (value.trim() ? undefined : 'Required'),
-        });
-        if (!name) return;
-        const binary = await vscode.window.showInputBox({
-            prompt: 'Binary the provider wraps (optional)',
-            placeHolder: 'mytool',
-        });
-        const description = await vscode.window.showInputBox({ prompt: 'Description (optional)' });
-        const homepage = await vscode.window.showInputBox({ prompt: 'Homepage URL (optional)' });
-
-        const commands: ProviderCommand[] = [];
-        for (;;) {
-            const subcommand = await vscode.window.showInputBox({
-                prompt: 'Command subcommand (leave empty to finish)',
-                placeHolder: 'build',
-            });
-            if (subcommand === undefined) return;
-            if (!subcommand.trim()) break;
-            const label = await vscode.window.showInputBox({
-                prompt: `Description for "${subcommand}"`,
-                value: subcommand,
-            });
-            commands.push({
-                name: `${id}:${subcommand}`,
-                subcommand,
-                description: label ?? subcommand,
-            });
-        }
-
-        const existing = readAllProviders(root);
-        let providerId = id;
-        if (existing.some(provider => provider.id === providerId)) {
-            let index = 2;
-            while (existing.some(candidate => candidate.id === `${id}-${index}`)) index += 1;
-            const renamed = await vscode.window.showInputBox({
-                prompt: `Provider "${id}" already exists. New id`,
-                value: `${id}-${index}`,
-                validateInput: value =>
-                    /^[a-z0-9][a-z0-9-]*$/.test(value.trim())
-                        ? existing.some(candidate => candidate.id === value.trim())
-                            ? 'That id already exists.'
-                            : undefined
-                        : 'Use lowercase letters, numbers and dashes.',
-            });
-            if (!renamed) return;
-            providerId = renamed.trim();
-            for (const command of commands) command.name = `${providerId}:${command.subcommand}`;
-        }
-        const provider: Provider = {
-            id: providerId,
-            name,
-            ...(binary ? { binary } : {}),
-            ...(description ? { description } : {}),
-            ...(homepage ? { homepage } : {}),
-            commands,
-        };
-        const scope = await vscode.window.showQuickPick(
-            [
-                { label: 'Yes', detail: 'Available in every project' },
-                { label: 'No', detail: 'Only in this project' },
-            ],
-            { placeHolder: 'Add this provider to the global registry?' }
-        );
-        if (!scope) return;
-        if (scope.label === 'Yes') {
-            writeGlobalProviders([...readGlobalProviders(), provider]);
-        } else {
-            writeProviderRegistry(root, [...readProviderRegistry(root), provider]);
-        }
-        await providers.refresh();
-        updateContextKeys();
-        vscode.window.showInformationMessage(`deltabox: added provider "${name}".`);
-    };
-
-    /** Remove a custom provider from the (project and global) registries. */
-    const removeProvider = async (node?: ProviderNode): Promise<void> => {
-        if (!node || !node.custom) return;
-        const confirm = await vscode.window.showWarningMessage(
-            `Remove provider "${node.provider.name}"?`,
-            { modal: true },
-            'Remove'
-        );
-        if (confirm !== 'Remove') return;
-        const id = node.provider.id;
-        writeProviderRegistry(
-            node.root,
-            readProviderRegistry(node.root).filter(provider => provider.id !== id)
-        );
-        writeGlobalProviders(readGlobalProviders().filter(provider => provider.id !== id));
-        await providers.refresh();
-        updateContextKeys();
-    };
-
-    /** Open a registry: the file/folder for locals, the website for remotes. */
-    const openRegistryItem = (node?: RegistryItemNode): void => {
-        if (!node) return;
-        if (node.entry.remote) void vscode.env.openExternal(vscode.Uri.parse(node.entry.path));
-        else
-            void vscode.commands.executeCommand(
-                'revealInExplorer',
-                vscode.Uri.file(node.entry.path)
-            );
-    };
-
-    /** Add a new registry search path (global or project). */
-    const newRegistry = async (): Promise<void> => {
-        const root = workspaceRoots()[0];
-        if (!root) {
-            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
-            return;
-        }
-        const category = await vscode.window.showQuickPick(
-            [
-                { label: 'Templates', value: 'templates' },
-                { label: 'Providers', value: 'providers' },
-            ],
-            { placeHolder: 'Which kind of registry?' }
-        );
-        if (!category) return;
-        const providersKind = category.value === 'providers';
-        const entry = await vscode.window.showInputBox({
-            prompt: 'Registry path or http(s) URL',
-            value: providersKind
-                ? '.dbx/toolchain/.registry/providers'
-                : '.dbx/toolchain/.registry/templates',
-            validateInput: value => (value.trim() ? undefined : 'Required'),
-        });
-        if (!entry) return;
-        const scope = await vscode.window.showQuickPick(
-            [
-                { label: 'Global', detail: 'Available in every project' },
-                { label: 'Project', detail: 'This project only' },
-            ],
-            { placeHolder: 'Where should this registry live?' }
-        );
-        if (!scope) return;
-        const args = [
-            'registry',
-            '--add',
-            entry,
-            '--scope',
-            scope.label === 'Project' ? 'project' : 'global',
-            '--cwd',
-            root,
-        ];
-        if (providersKind) args.push('--kind', 'providers');
-        const code = await runCli(root, args);
-        if (code === 0) {
-            await registries.refresh();
-            if (providersKind) await providers.refresh();
-            else await templates.refresh();
-            vscode.window.showInformationMessage(
-                `deltabox: added ${scope.label.toLowerCase()} ${category.label.toLowerCase()} registry.`
-            );
-        } else {
-            output.show();
-        }
-    };
-
-    /** Remove one or more template registry paths (keeps the files). */
-    const removeRegistry = async (): Promise<void> => {
-        const root = workspaceRoots()[0];
-        if (!root) {
-            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
-            return;
-        }
-        const result = await captureCli(root, ['registry', '--json', '--cwd', root]);
-        let entries: RegistryItemNode['entry'][] = [];
-        if (result.code === 0) {
-            try {
-                const parsed = JSON.parse(result.stdout) as {
-                    templates?: RegistryItemNode['entry'][];
-                    providers?: RegistryItemNode['entry'][];
-                };
-                entries = [...(parsed.templates ?? []), ...(parsed.providers ?? [])];
-            } catch {
-                entries = [];
-            }
-        }
-        if (entries.length === 0) {
-            vscode.window.showInformationMessage('deltabox: no registries.');
-            return;
-        }
-        const picked = await vscode.window.showQuickPick(
-            entries.map(entry => ({ label: entry.path, description: entry.scope, entry })),
-            { canPickMany: true, placeHolder: 'Which registries should be removed?' }
-        );
-        if (!picked || picked.length === 0) return;
-        const confirm = await vscode.window.showWarningMessage(
-            `Remove ${picked.length} registry path(s)? The files are kept.`,
-            { modal: true },
-            'Remove'
-        );
-        if (confirm !== 'Remove') return;
-        for (const item of picked) {
-            const args = [
-                'registry',
-                '--remove',
-                item.entry.path,
-                '--scope',
-                item.entry.scope,
-                '--cwd',
-                root,
-            ];
-            if (item.entry.kind === 'providers') args.push('--kind', 'providers');
-            await runCli(root, args);
-        }
-        await registries.refresh();
-    };
-
-    /** Remove one registry item from the view (template registries only). */
-    const removeRegistryEntry = async (node?: RegistryItemNode): Promise<void> => {
-        if (!node || node.category !== 'templates') return;
-        const root = workspaceRoots()[0];
-        if (!root) return;
-        const confirm = await vscode.window.showWarningMessage(
-            `Remove registry "${node.entry.path}"? The files are kept.`,
-            { modal: true },
-            'Remove'
-        );
-        if (confirm !== 'Remove') return;
-        await runCli(root, [
-            'registry',
-            '--remove',
-            node.entry.path,
-            '--scope',
-            node.entry.scope,
-            '--cwd',
-            root,
-        ]);
-        await registries.refresh();
-    };
-
-    /** Add an item (template/provider) through the category's flow. */
-    const addRegistryEntry = async (node?: RegistryItemNode): Promise<void> => {
-        if (!node) return;
-        if (node.category === 'providers') {
-            await addProvider();
-            await providers.refresh();
-        } else {
-            await addTemplate();
-            await templates.refresh();
-        }
-        await registries.refresh();
-    };
-
-    /** Run a provider command (`dbx <command.name>`) in a terminal. */
-    const runProviderCommand = async (node?: ProviderNode | ProviderCommandNode): Promise<void> => {
-        if (!node) {
-            const root = workspaceRoots()[0];
-            if (!root) {
-                vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
-                return;
-            }
-            const providers = await loadProviders(root);
-            const commands = providers.flatMap(provider =>
-                provider.commands.map(command => ({
-                    label: command.description,
-                    description: `dbx ${command.name}`,
-                    detail: provider.name,
-                    command,
-                }))
-            );
-            if (commands.length === 0) {
-                vscode.window.showInformationMessage('deltabox: no provider commands available.');
-                return;
-            }
-            const picked = await vscode.window.showQuickPick(commands, {
-                placeHolder: 'Which provider command should run?',
-                matchOnDescription: true,
-            });
-            if (!picked) return;
-            if (picked.command.name === 'vite:create') {
-                await createViteProject(root);
-                return;
-            }
-            openTerminalCommand(root, picked.command.name, `dbx ${picked.command.name}`);
-            return;
-        }
-        if (!node.root) {
-            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
-            return;
-        }
-        let command = node.kind === 'command' ? node.command : undefined;
-        if (!command) {
-            if (node.provider.commands.length === 0) {
-                vscode.window.showInformationMessage(
-                    `deltabox: ${node.provider.name} has no commands.`
-                );
-                return;
-            }
-            const picked = await vscode.window.showQuickPick(
-                node.provider.commands.map(candidate => ({
-                    label: candidate.description,
-                    description: `dbx ${candidate.name}`,
-                    command: candidate,
-                })),
-                { placeHolder: `Which ${node.provider.name} command should run?` }
-            );
-            if (!picked) return;
-            command = picked.command;
-        }
-        // `vite:create` prompts interactively; run it through the extension.
-        if (command.name === 'vite:create') {
-            await createViteProject(node.root);
-            return;
-        }
-        openTerminalCommand(node.root, command.name, command.name);
-    };
-
-    const openProviderHomepage = (node?: ProviderNode): void => {
-        const url = node?.provider.homepage;
-        if (url) void vscode.env.openExternal(vscode.Uri.parse(url));
-    };
-
-    const copyProviderId = (node?: ProviderNode): void => {
-        if (node) void vscode.env.clipboard.writeText(node.provider.id);
-    };
-
+    const {
+        addProvider,
+        removeProvider,
+        newRegistry,
+        removeRegistry,
+        removeRegistryEntry,
+        addRegistryEntry,
+        runProviderCommand,
+        openProviderHomepage,
+        copyProviderId,
+        openRegistryItem,
+    } = createProviderRegistryCommands({
+        ...commandDeps,
+        providers,
+        templates,
+        registries,
+        updateContextKeys,
+        createViteProject,
+        addTemplate,
+        openTerminalCommand,
+    });
     /** Show a template's descriptor (`dbx template:info --json`) in the output. */
     const showTemplateInfo = async (node?: Template): Promise<void> => {
         const root = workspaceRoots()[0];
@@ -1178,44 +467,6 @@ export function activate(context: vscode.ExtensionContext): void {
         output.appendLine(`\n> dbx template:info ${node.id}`);
         output.append(result.stdout || result.stderr);
         output.show();
-    };
-
-    /**
-     * Scaffold a Vite+ project through the extension UI: pick a concrete Vite+
-     * template and run it via the same create pipeline as every other template,
-     * instead of dropping the user into the interactive `vp create` menu.
-     */
-    const createViteProject = async (cwd?: string): Promise<void> => {
-        let root = cwd ?? workspaceRoots()[0];
-        if (!root) {
-            const picked = await vscode.window.showOpenDialog({
-                canSelectFolders: true,
-                canSelectFiles: false,
-                openLabel: 'Create the project here',
-            });
-            root = picked?.[0]?.fsPath;
-        }
-        if (!root) return;
-        // The bare `vite-plus` builtin *is* the interactive `vp create`; always
-        // pick a concrete Vite+ template so the create runs non-interactively.
-        const vite = (await loadTemplates(root)).filter(
-            template => template.type === 'vite-plus' && template.id !== 'vite-plus'
-        );
-        if (vite.length === 0) {
-            vscode.window.showWarningMessage('deltabox: no Vite+ templates available.');
-            return;
-        }
-        const picked = await vscode.window.showQuickPick(
-            vite.map(template => ({
-                label: template.name || template.id,
-                description: template.id,
-                detail: template.description,
-                template,
-            })),
-            { placeHolder: 'Which Vite+ project should be created?', matchOnDetail: true }
-        );
-        if (!picked) return;
-        await createFromTemplate(picked.template, root);
     };
 
     const home = new HomeViewProvider(
@@ -1254,8 +505,7 @@ export function activate(context: vscode.ExtensionContext): void {
         async (action: HomeAction) => {
             switch (action.type) {
                 case 'syncAll':
-                    await runRoots(['sync', '--recursive']);
-                    refreshViews();
+                    await syncCommands.syncAll();
                     break;
                 case 'syncActive':
                     await vscode.commands.executeCommand(`${SECTION}.sync`);
@@ -1264,7 +514,10 @@ export function activate(context: vscode.ExtensionContext): void {
                     await vscode.commands.executeCommand(`${SECTION}.syncSelected`);
                     break;
                 case 'syncCheck':
-                    await checkSync();
+                    await syncCommands.checkSync();
+                    break;
+                case 'syncTsconfig':
+                    await vscode.commands.executeCommand(`${SECTION}.syncTsconfig`);
                     break;
                 case 'scaffold':
                     await vscode.commands.executeCommand(`${SECTION}.scaffold`);
@@ -1273,7 +526,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     await refreshGraph();
                     break;
                 case 'generateConfigs':
-                    await generateConfigs();
+                    await generateCommands.generateConfigs();
                     break;
                 case 'runWorkflow':
                     await runWorkflow(workspaceRoots()[0] ?? process.cwd());
@@ -1299,11 +552,17 @@ export function activate(context: vscode.ExtensionContext): void {
                     const project = discoverProjects().find(
                         candidate => candidate.dir === action.dir
                     );
-                    await checkProject(action.dir, project?.label ?? path.basename(action.dir));
+                    await syncCommands.checkProject(
+                        action.dir,
+                        project?.label ?? path.basename(action.dir)
+                    );
                     break;
                 }
                 case 'generateProjectConfig':
-                    await generateProjectConfig(action.dir, path.basename(action.dir));
+                    await generateCommands.generateProjectConfig(
+                        action.dir,
+                        path.basename(action.dir)
+                    );
                     break;
                 case 'runProjectWorkflow':
                     await runWorkflow(action.dir);
@@ -1378,320 +637,6 @@ export function activate(context: vscode.ExtensionContext): void {
         }
     );
 
-    // Each rebuild bumps the generation, so a slower, older resolve never
-    // replaces the watchers of a newer one.
-    let watchGeneration = 0;
-    let watchInputsTimer: NodeJS.Timeout | undefined;
-    const rebuildWatchers = async (): Promise<void> => {
-        const generation = ++watchGeneration;
-        const userGlobs = userWatchGlobs();
-        // Resolved even with explicit watch globs: the tsconfig names also drive
-        // project detection in the Projects view.
-        const roots = workspaceRoots();
-        const resolved = await Promise.all(
-            roots.map(async root => ({ root, inputs: await resolveWatchInputs(root) }))
-        );
-        if (generation !== watchGeneration) return;
-        for (const { root, inputs } of resolved) setTsconfigFileNames(root, inputs.tsconfig);
-        if (resolved.length > 0) tree.refresh();
-
-        for (const watcher of watchers) watcher.dispose();
-        watchers = [];
-        if (!enabled) return;
-        for (const target of planWatchTargets(userGlobs, resolved)) {
-            const pattern = target.base
-                ? new vscode.RelativePattern(target.base, target.glob)
-                : target.glob;
-            const watcher = vscode.workspace.createFileSystemWatcher(pattern);
-            const onEvent = (uri: vscode.Uri): void => {
-                scheduler.notify();
-                // A config change can rename the watched inputs: re-resolve them.
-                if (path.basename(uri.fsPath).startsWith('dbx.config.')) {
-                    clearTimeout(watchInputsTimer);
-                    watchInputsTimer = setTimeout(() => void rebuildWatchers(), 500);
-                }
-            };
-            watcher.onDidChange(onEvent);
-            watcher.onDidCreate(onEvent);
-            watcher.onDidDelete(onEvent);
-            watchers.push(watcher);
-        }
-    };
-
-    /** Scaffold from a template (optionally preselected from the Templates view). */
-    const createFromTemplate = async (preselected?: Template, root?: string): Promise<void> => {
-        const base = root ?? workspaceRoots()[0];
-        if (!base) {
-            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
-            return;
-        }
-        // The bare `vite-plus` template *is* the interactive `vp create`; route it
-        // to the Vite+ picker so the user never lands in a CLI prompt.
-        if (preselected?.id === 'vite-plus') {
-            await createViteProject(base);
-            return;
-        }
-        let template = preselected;
-        if (!template) {
-            const listed = await loadTemplates(base);
-            if (listed.length === 0) {
-                vscode.window.showWarningMessage('deltabox: no templates found.');
-                return;
-            }
-            const picked = await vscode.window.showQuickPick(
-                listed.map(candidate => ({
-                    label: candidate.name || candidate.id,
-                    description: candidate.id,
-                    detail: [
-                        candidate.kind,
-                        candidate.online ? 'online' : 'offline',
-                        candidate.type,
-                    ]
-                        .filter(Boolean)
-                        .join(' · '),
-                    template: candidate,
-                })),
-                { placeHolder: 'Which template should be used?', matchOnDetail: true }
-            );
-            if (!picked) return;
-            template = picked.template;
-        }
-
-        const name = await vscode.window.showInputBox({
-            prompt: 'Project name',
-            value: 'my-app',
-            validateInput: value => (value.trim() ? undefined : 'Required'),
-        });
-        if (!name) return;
-        const scope = await vscode.window.showInputBox({
-            prompt: 'npm scope (optional)',
-            placeHolder: '@acme',
-        });
-        // Cancelling any prompt aborts the whole scaffold (no files are written).
-        if (scope === undefined) return;
-
-        // Prompt for the template's own inputs (the same pipeline the CLI uses):
-        // a select when the variable declares `options`, otherwise free text.
-        const varArgs: string[] = [];
-        for (const variable of template.variables ?? []) {
-            if (variable.name === 'name' || variable.name === 'scope') continue;
-            const message = variable.prompt ?? variable.name;
-            if (variable.options && variable.options.length > 0) {
-                const picked = await vscode.window.showQuickPick(variable.options, {
-                    placeHolder: message,
-                });
-                if (picked === undefined) return;
-                varArgs.push(`${variable.name}=${picked}`);
-            } else {
-                const value = await vscode.window.showInputBox({
-                    prompt: message,
-                    value: variable.default ?? '',
-                });
-                if (value === undefined) return;
-                varArgs.push(`${variable.name}=${value}`);
-            }
-        }
-
-        const baseArgs = ['create', '--template', template.id, '--name', name, '--cwd', base];
-        if (template.online) baseArgs.push('--online');
-        if (scope) baseArgs.push('--scope', scope);
-        if (varArgs.length > 0) baseArgs.push('--var', ...varArgs);
-
-        // Opt-in post-scaffold actions (eg. Install dependencies?).
-        const actionArgs: string[] = [];
-        for (const action of template.actions ?? []) {
-            const yesFirst = action.default === true;
-            const picked = await vscode.window.showQuickPick(
-                yesFirst ? ['Yes', 'No'] : ['No', 'Yes'],
-                {
-                    placeHolder: action.prompt ?? `Run ${action.id}?`,
-                }
-            );
-            if (picked === undefined) return;
-            if (picked === 'Yes') actionArgs.push(action.id);
-        }
-        if (actionArgs.length > 0) baseArgs.push('--action', ...actionArgs);
-
-        // Run every template through the same pipeline (an argv array, no shell),
-        // so a value like an npm `@scope` is never mangled by the terminal's shell
-        // — PowerShell reads a bare `@name` as splatting and drops it. Vite+
-        // templates then run `vp create <template> <name>` in the chosen dir.
-        const dir = await vscode.window.showOpenDialog({
-            canSelectFolders: true,
-            canSelectFiles: false,
-            openLabel: 'Create here',
-            defaultUri: vscode.Uri.file(base),
-        });
-        if (!dir?.[0]) return;
-        const out = dir[0].fsPath;
-        const code = await runCli(base, [...baseArgs, '--out', out]);
-        // Sync the new project so its managed files (and manifest) exist and the
-        // Managed Files / Home views populate immediately. (Vite+ projects are not
-        // dbx-managed out of the box, so there is nothing to sync.)
-        if (code === 0 && !template.online) await runCli(out, ['sync']);
-        await refreshGraph();
-        if (code === 0) {
-            vscode.window.showInformationMessage(
-                `deltabox: created from template "${template.name}".`
-            );
-        } else {
-            output.show();
-        }
-    };
-
-    const scaffold = async (): Promise<void> => {
-        const workspace = workspaceRoots()[0];
-        // Offer *every* template (builtin, local, npm/git, Vite+) directly. The
-        // first four entries are the curated dbx flows (the workspace one has its
-        // own root/dir prompts), so those builtins are not repeated.
-        const covered = new Set([
-            'project',
-            'monorepo',
-            'monorepo-example',
-            'workspace',
-            'vite-plus',
-        ]);
-        const templates = workspace ? await loadTemplates(workspace) : [];
-        const kind = await vscode.window.showQuickPick(
-            [
-                {
-                    label: 'Single project',
-                    command: 'project:init',
-                    detail: 'One TypeScript package',
-                    flow: 'project' as const,
-                },
-                {
-                    label: 'Monorepo root',
-                    command: 'project:init:monorepo',
-                    detail: 'A monorepo root (no example workspace)',
-                    flow: 'root' as const,
-                },
-                {
-                    label: 'Monorepo root + example',
-                    command: 'project:init:monorepo',
-                    detail: 'Root plus one example workspace package',
-                    flow: 'root' as const,
-                    example: true,
-                },
-                {
-                    label: 'Monorepo workspace',
-                    command: 'project:init:workspace',
-                    detail: 'A workspace package inside an existing monorepo',
-                    flow: 'workspace' as const,
-                },
-                ...templates
-                    .filter(template => !covered.has(template.id))
-                    .map(template => ({
-                        label: template.name || template.id,
-                        command: '',
-                        description: template.id,
-                        detail: [
-                            template.kind,
-                            template.online ? 'online' : 'offline',
-                            template.type,
-                        ]
-                            .filter(Boolean)
-                            .join(' \u00b7 '),
-                        flow: 'template' as const,
-                        template,
-                    })),
-            ],
-            { placeHolder: 'What kind of project should be scaffolded?', matchOnDetail: true }
-        );
-        if (!kind) return;
-
-        if (kind.flow === 'template') {
-            await createFromTemplate(kind.template);
-            return;
-        }
-
-        const name = await vscode.window.showInputBox({
-            prompt: kind.flow === 'workspace' ? 'Workspace name' : 'Project name',
-            value: kind.flow === 'workspace' ? 'my-package' : 'my-app',
-            validateInput: value => (value.trim() ? undefined : 'Required'),
-        });
-        if (!name) return;
-
-        // Every prompt must be answered before anything is written: cancelling
-        // any one of them aborts the scaffold so it can't leave orphan files.
-        const scope = await vscode.window.showInputBox({
-            prompt: 'npm scope (optional)',
-            placeHolder: '@acme',
-        });
-        if (scope === undefined) return;
-        const packageManager = await vscode.window.showQuickPick(['yarn', 'pnpm', 'npm', 'bun'], {
-            placeHolder: 'Package manager',
-        });
-        if (!packageManager) return;
-        const includeConfig = await vscode.window.showQuickPick(
-            [
-                { label: 'Yes', value: 'yes' },
-                { label: 'No', value: 'no' },
-            ],
-            { placeHolder: 'Include a dbx.config.ts? (recommended)' }
-        );
-        if (!includeConfig) return;
-        const base = workspaceRoots()[0];
-
-        // A workspace is scaffolded *into* an existing monorepo root at a
-        // relative directory; a project/root is scaffolded into a chosen dir.
-        if (kind.flow === 'workspace') {
-            const pickedRoot = await vscode.window.showOpenDialog({
-                canSelectFolders: true,
-                canSelectFiles: false,
-                openLabel: 'Select monorepo root',
-                defaultUri: base ? vscode.Uri.file(base) : undefined,
-            });
-            if (!pickedRoot?.[0]) return;
-            const root = pickedRoot[0].fsPath;
-            // `.` means "use the root directory's name".
-            const wsName = name === '.' ? path.basename(root) : name;
-            const dir = await vscode.window.showInputBox({
-                prompt: 'Workspace directory (relative to the root)',
-                value: `packages/${wsName}`,
-                validateInput: value => (value.trim() ? undefined : 'Required'),
-            });
-            if (!dir) return;
-
-            const args = [kind.command, '--name', wsName, '--root', root, '--dir', dir];
-            if (scope) args.push('--scope', scope);
-            if (includeConfig.value === 'no') args.push('--no-config');
-            args.push('--package-manager', packageManager);
-
-            const code = await runCli(root, args);
-            if (code === 0) await runCli(path.join(root, dir.replace(/\\/g, '/')), ['sync']);
-            await refreshGraph();
-            if (code === 0) {
-                vscode.window.showInformationMessage(`deltabox: scaffolded workspace "${wsName}".`);
-            }
-            return;
-        }
-
-        const picked = await vscode.window.showOpenDialog({
-            canSelectFolders: true,
-            canSelectFiles: false,
-            openLabel: 'Scaffold here',
-            defaultUri: base ? vscode.Uri.file(base) : undefined,
-        });
-        if (!picked?.[0]) return;
-        const target = picked[0].fsPath;
-        // `.` means "use the target directory's name".
-        const finalName = name === '.' ? path.basename(target) : name;
-
-        const args = [kind.command, '--name', finalName];
-        if (scope) args.push('--scope', scope);
-        if (includeConfig.value === 'no') args.push('--no-config');
-        if ((kind as { example?: boolean }).example) args.push('--example');
-        args.push('--package-manager', packageManager);
-        args.push('--out', target);
-
-        const code = await runCli(target, args);
-        if (code === 0) await runCli(target, ['sync']);
-        await refreshGraph();
-        if (code === 0)
-            vscode.window.showInformationMessage(`deltabox: scaffolded "${finalName}".`);
-    };
-
     const provider = vscode.window.registerWebviewViewProvider('deltabox.home', home, {
         webviewOptions: { retainContextWhenHidden: true },
     });
@@ -1705,36 +650,19 @@ export function activate(context: vscode.ExtensionContext): void {
         providersView,
         templatesView,
         registriesView,
-        vscode.commands.registerCommand('deltabox.toolchain.sync', async () => {
-            const root = workspaceRoots()[0];
-            if (root) await runCli(root, ['sync']);
-            refreshViews();
-        }),
-        vscode.commands.registerCommand('deltabox.toolchain.syncAll', async () => {
-            await runRoots(['sync', '--recursive']);
-            refreshViews();
-        }),
-        vscode.commands.registerCommand('deltabox.toolchain.syncSelected', async () => {
-            const projects = treeView.selection.filter(
-                (node): node is Project => node.kind === 'project'
-            );
-            if (projects.length === 0) {
-                vscode.window.showInformationMessage(
-                    'Select one or more projects in the Projects view first.'
-                );
-                return;
-            }
-            await runProjects(projects, ['sync']);
-            refreshViews();
-        }),
+        vscode.commands.registerCommand('deltabox.toolchain.sync', syncCommands.syncActive),
+        vscode.commands.registerCommand('deltabox.toolchain.syncAll', syncCommands.syncAll),
         vscode.commands.registerCommand(
-            'deltabox.toolchain.syncProject',
-            async (project: Project) => {
-                await runCli(project.dir, ['sync']);
-                refreshViews();
-            }
+            'deltabox.toolchain.syncTsconfig',
+            syncCommands.syncTsconfig
         ),
-        vscode.commands.registerCommand('deltabox.toolchain.syncCheck', checkSync),
+        vscode.commands.registerCommand(
+            'deltabox.toolchain.syncSelected',
+            syncCommands.syncSelected
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.syncProject', syncCommands.syncProject),
+        vscode.commands.registerCommand('deltabox.toolchain.syncCheck', syncCommands.checkSync),
+        vscode.commands.registerCommand('deltabox.toolchain.tsconfig', manageTsconfig),
         vscode.commands.registerCommand('deltabox.toolchain.chooseDbxSource', () =>
             chooseDbxSource(context)
         ),
@@ -1745,15 +673,18 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand(
             'deltabox.toolchain.checkProject',
             async (node?: Project) => {
-                if (node) await checkProject(node.dir, node.label);
+                if (node) await syncCommands.checkProject(node.dir, node.label);
             }
         ),
-        vscode.commands.registerCommand('deltabox.toolchain.generateConfigs', generateConfigs),
+        vscode.commands.registerCommand(
+            'deltabox.toolchain.generateConfigs',
+            generateCommands.generateConfigs
+        ),
         vscode.commands.registerCommand('deltabox.toolchain.migrate', () => migrateTooling()),
         vscode.commands.registerCommand(
             'deltabox.toolchain.generateConfig',
             async (node?: Project) => {
-                await generateProjectConfig(node?.dir, node?.label);
+                await generateCommands.generateProjectConfig(node?.dir, node?.label);
             }
         ),
         vscode.commands.registerCommand(
@@ -1868,8 +799,7 @@ export function activate(context: vscode.ExtensionContext): void {
         }),
         new vscode.Disposable(() => {
             child?.kill();
-            clearTimeout(watchInputsTimer);
-            for (const watcher of watchers) watcher.dispose();
+            watcherManager?.dispose();
             scheduler.dispose();
         })
     );

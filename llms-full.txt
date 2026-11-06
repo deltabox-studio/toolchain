@@ -72,8 +72,8 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx vite:env`](#vite-env)                             | Vite+: Manage Node.js and package managers.                                                     |
 | [`dbx vite:dev`](#vite-dev)                             | Vite+: Run the Vite development server.                                                         |
 | [`dbx vite:check`](#vite-check)                         | Vite+: Run format, lint and type checks.                                                        |
-| [`dbx vite:lint`](#vite-lint)                           | Vite+: Lint code with Oxlint.                                                                   |
-| [`dbx vite:fmt`](#vite-fmt)                             | Vite+: Format code with Oxfmt.                                                                  |
+| [`dbx vite:lint`](#vite-lint)                           | Vite+: Lint code with the active linter (Oxlint via Vite+).                                     |
+| [`dbx vite:fmt`](#vite-fmt)                             | Vite+: Format code with the active formatter (Oxfmt via Vite+).                                 |
 | [`dbx vite:test`](#vite-test)                           | Vite+: Run tests through bundled Vitest.                                                        |
 | [`dbx vite:run`](#vite-run)                             | Vite+: Run package scripts and monorepo tasks.                                                  |
 | [`dbx vite:exec`](#vite-exec)                           | Vite+: Execute a binary from local node_modules.                                                |
@@ -116,8 +116,9 @@ Regenerate every managed file from dbx.config.\*.
 * `-q, --quiet` — Only log errors.
 * `--check` — Do not write; fail if files are out of date.
 * `--watch` — Keep running and re-sync on change.
-* `--recursive` — Sync every discovered dbx project in dependency order.
+* `--recursive` — Sync every project that has its own dbx.config.\* in dependency order.
 * `--force` — Run even when no dbx.config.\* is present.
+* `--only ‹tasks›` — Only run the named sync task(s), comma-separated (eg. `tsconfig`).
 * `--json` — Print the sync result (including removed files) as JSON.
 
 ## `dbx watch`
@@ -159,6 +160,13 @@ Generate workspace tsconfig.json files from the default tsconfig (aliases + refe
 * `--no-aliases` — Skip path aliases.
 * `--composite` — Emit composite + references.
 * `--refs` — Wire project references.
+* `--auto` — Auto-wire the root workspaces tsconfig paths/references from the project graph (default false).
+* `--no-auto` — Only use the paths/references already in the root workspaces tsconfig.
+* `--auto-aliases` — Auto-wire path aliases (defaults to --auto).
+* `--no-auto-aliases` — Do not auto-wire path aliases.
+* `--auto-refs` — Auto-wire project references (defaults to --auto).
+* `--no-auto-refs` — Do not auto-wire project references.
+* `--auto-src-dir ‹dir›` — Source directory for auto entry points (default: the workspace tsconfig rootDir/baseUrl, then src).
 * `-i, --indent ‹n›` — JSON indentation.
 * `--glob ‹glob...›` — Glob(s) for the default tsconfig files.
 * `--exclude ‹glob...›` — Glob(s) to exclude (on top of the common ignored paths).
@@ -458,13 +466,13 @@ Vite+: Run format, lint and type checks.
 
 ## `dbx vite:lint`
 
-Vite+: Lint code with Oxlint.
+Vite+: Lint code with the active linter (Oxlint via Vite+).
 
 * `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:fmt`
 
-Vite+: Format code with Oxfmt.
+Vite+: Format code with the active formatter (Oxfmt via Vite+).
 
 * `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
@@ -753,6 +761,12 @@ Override the generated workflow file name (eg. `deploy.yml`).
 * **Type**: `string`
 
 Directory for the workflow file (default `.github/workflows`).
+
+#### `setup`
+
+* **Type**: `boolean`
+
+Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false; built-in workflows already include them).
 
 #### `enabled`
 
@@ -1148,6 +1162,12 @@ Override the generated workflow file name (eg. `deploy.yml`).
 * **Type**: `string`
 
 Directory for the workflow file (default `.github/workflows`).
+
+#### `setup`
+
+* **Type**: `boolean`
+
+Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false; built-in workflows already include them).
 
 #### `enabled`
 
@@ -1705,7 +1725,7 @@ Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` over
 
 * **Type**: `boolean | BiomeConfig`
 
-Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`.
+Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
 
 ### `prettier`
 
@@ -1757,11 +1777,11 @@ Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` ov
 
 * **Type**: `boolean | BiomeConfig`
 
-Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json`.
+Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
 
 ### `eslint`
 
-* **Type**: `boolean | Linter.Config`
+* **Type**: `boolean | EslintConfig`
 
 ESLint options (`true` = defaults, `false` = disabled).
 
@@ -1787,7 +1807,7 @@ Write the Biome VS Code settings (default true).
 
 * **Type**: `BiomeConfig`
 
-Deep-merged over the generated `biome.json` (arrays union).
+Deep-merged over the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
 
 ### `enabled`
 
@@ -1834,6 +1854,60 @@ Emit `composite: true` (default false).
 * **Type**: `boolean`
 
 Inject path aliases (default true).
+
+### `auto`
+
+* **Type**: `boolean | ToolchainTsconfigAliasAutoSetting`
+
+Auto-generate the root workspaces tsconfig paths/references from the project graph (default false). Set true to derive them from the project graph; set false to only use the entries you define yourself.
+
+#### `include`
+
+* **Type**: `Array<string>`
+
+Only auto-wire entries matching these globs (`auto`: workspace dirs; `aliasAuto`: rewritten alias keys; `refsAuto`: reference paths).
+
+#### `exclude`
+
+* **Type**: `Array<string>`
+
+Skip entries matching these globs (same targets as `include`).
+
+#### `rewriteAlias`
+
+* **Type**: `ToolchainTsconfigAliasRewrite`
+
+Rewrite the alias keys auto-wiring generates (custom keys are preserved). Patterns are URL-rewrite style: a string is a regular-expression source and replacements support `$1`, `$2`, ... capture groups. Examples: `{ "^@acme/(.+)$": "@acme/pkg/$1" }` (string patterns), `[{ pattern: /^@acme\/(.+)$/, replacement: "@acme/pkg/$1" }]` (RegExp patterns), `[{ pattern: ["^@acme/a$", "^@acme/b$"], replacement: "@acme/x" }]` (an array of keys), and an array of such rules (applied in order; the first matching rule wins). `RegExp` patterns are only available from TS/JS configs; JSON configs use string patterns.
+
+### `aliasAuto`
+
+* **Type**: `boolean | ToolchainTsconfigAliasAutoSetting`
+
+Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). Accepts the same `include`/`exclude`/`rewriteAlias` object as `auto`.
+
+### `refsAuto`
+
+* **Type**: `boolean | ToolchainTsconfigAutoSetting`
+
+Auto-generate project references (defaults to `auto`; `refs` must also be enabled).
+
+#### `include`
+
+* **Type**: `Array<string>`
+
+Only auto-wire entries matching these globs (`auto`: workspace dirs; `aliasAuto`: rewritten alias keys; `refsAuto`: reference paths).
+
+#### `exclude`
+
+* **Type**: `Array<string>`
+
+Skip entries matching these globs (same targets as `include`).
+
+### `autoSrcDir`
+
+* **Type**: `'src' | '.' | (string & {})`
+
+Source directory used to resolve workspace entry points when `package.json` does not declare `exports`/`main`/`types` (default: the workspace's final tsconfig `rootDir`/`baseUrl`, falling back to `src`).
 
 ### `indent`
 
@@ -2349,7 +2423,8 @@ dbx create --template project --name my-app --out ./my-app
 ```sh
 dbx sync              # write managed files
 dbx sync --check      # CI: fail if files are out of date
-dbx sync --recursive  # every discovered project, in dependency order
+dbx sync --recursive  # every project with its own dbx.config.*, in dependency order
+dbx sync --only tsconfig  # only refresh tsconfig aliases/references
 dbx watch             # re-sync on change
 ```
 
@@ -2368,16 +2443,16 @@ need to add it by hand when the repo has no `.gitignore` yet.
 
 ## What gets managed
 
-| Area                                                                | Section in the config      |
-| ------------------------------------------------------------------- | -------------------------- |
-| GitHub workflows, commitlint, Conventional-Commits VS Code settings | `ci`                       |
-| `biome.json` (formatter/linter)                                     | `fmt.biome` / `lint.biome` |
-| `.oxfmtrc.json` / `.oxlintrc.json` (Oxc)                            | `fmt.oxc` / `lint.oxc`     |
-| Workspace `tsconfig.json` files (aliases + references)              | `tsconfig`                 |
-| `vite.config.ts` (Vite+ consumers)                                  | `vite`                     |
-| Template sources / scaffolding                                      | `templates`                |
-| Package catalogs (`.yarnrc.yml` / `pnpm-workspace.yaml`)            | `catalogs`                 |
-| Watch behaviour                                                     | `watch`                    |
+| Area                                                                | Section in the config         |
+| ------------------------------------------------------------------- | ----------------------------- |
+| GitHub workflows, commitlint, Conventional-Commits VS Code settings | `ci`                          |
+| `biome.json` (formatter/linter)                                     | `fmt.biome` / `lint.biome`    |
+| `.oxfmtrc.json` / `.oxlintrc.json` (Oxc)                            | `fmt.oxc` / `lint.oxc`        |
+| Workspace `tsconfig.json` files (aliases + references)              | `tsconfig`                    |
+| `vite.config.ts` (Vite+ consumers)                                  | `vite`                        |
+| Template sources / scaffolding                                      | `templates`                   |
+| Package catalogs (`.yarnrc.yml` / `pnpm-workspace.yaml`)            | [`catalogs`](/guide/catalogs) |
+| Watch behaviour                                                     | `watch`                       |
 
 Every section is **opt-in by presence**: define it to enable it, omit it to leave
 that area untouched.
@@ -2389,6 +2464,7 @@ that area untouched.
 * [Configuration reference](/config/reference)
 * [TypeScript](/guide/typescript)
 * [Project](/guide/project)
+* [Package catalogs](/guide/catalogs)
 * [CI](/guide/ci/)
 * [Changelog](/guide/changelog/)
 * [tsconfig](/guide/tsconfig)
@@ -2518,24 +2594,26 @@ code --install-extension deltabox.toolchain-vscode
 
 ## Commands
 
-| Command                      | What it does                                                                            |
-| ---------------------------- | --------------------------------------------------------------------------------------- |
-| Sync all / active / selected | Run `dbx sync` (`--recursive` / per project).                                           |
-| Check sync                   | `sync --check` across the workspace.                                                    |
-| Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**. |
-| Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.       |
-| Remove template…             | `template:list --registry` then `template:remove`.                                      |
-| Generate configs             | `project:config` for missing configs, or refresh the project graph only; picks TS/JS.   |
-| Generate config              | Per-project `project:config` (also works from the Command Palette).                     |
-| Migrate tooling…             | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).  |
-| Run workflow                 | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                   |
-| Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                          |
-| Create Vite+ project…        | `vp create` in a terminal.                                                              |
-| Add provider...              | Register a custom provider (project or global registry).                                |
-| Run command...               | Run a provider command (`dbx <command>`) in a terminal.                                 |
-| Create from template...      | `dbx create --template <id>` (terminal for online templates).                           |
-| Reset tooling                | Remove generated files / manifest / config.                                             |
-| Toggle auto-sync             | Enable/disable sync-on-change.                                                          |
+| Command                      | What it does                                                                                   |
+| ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| Sync all / active / selected | Run `dbx sync` (`--recursive` for config-bearing projects, then configless ones individually). |
+| Check sync                   | `sync --check` across the workspace.                                                           |
+| Sync tsconfig                | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).                      |
+| Manage tsconfig…             | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                      |
+| Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**.        |
+| Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.              |
+| Remove template…             | `template:list --registry` then `template:remove`.                                             |
+| Generate configs             | `project:config` for missing configs, or refresh the project graph only; picks TS/JS.          |
+| Generate config              | Per-project `project:config` (also works from the Command Palette).                            |
+| Migrate tooling…             | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).         |
+| Run workflow                 | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                          |
+| Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                                 |
+| Create Vite+ project…        | `vp create` in a terminal.                                                                     |
+| Add provider...              | Register a custom provider (project or global registry).                                       |
+| Run command...               | Run a provider command (`dbx <command>`) in a terminal.                                        |
+| Create from template...      | `dbx create --template <id>` (terminal for online templates).                                  |
+| Reset tooling                | Remove generated files / manifest / config.                                                    |
+| Toggle auto-sync             | Enable/disable sync-on-change.                                                                 |
 
 Interactive commands (the dev server, `vp create`, online scaffolding) run in an
 integrated terminal at the project root; everything else runs in the output
@@ -2560,33 +2638,46 @@ actions, scoped to that project:
 
 The **Providers** and **Templates** views read `dbx providers --json` and `dbx template:list --json`, so adding one surfaces it in the UI automatically.
 
-**Add provider...** writes a custom provider to the default project registry
-(`.dbx/toolchain/.registry/providers/providers.json`) or the global
+### Add provider...
+
+Writes a custom provider to the default project registry (`.dbx/toolchain/.registry/providers/providers.json`) or the global
 `~/.dbx/toolchain/.registry/providers/` when you choose the global scope, which
 `toolchainProviders()` merges with the built-ins, so a registered provider's
 commands also become `dbx` commands (`dbx <command>`), runnable from the view.
+
 Provider search paths can also be added with the **Registries** view; the
 `deltabox.providerRegistrySearchPaths` setting mirrors them globally.
 
-**Add template...** runs `template:init --add` and asks whether to add the
-template to the **global** registry (yes by default), so it is available in every
-project. See [Global templates](/guide/templates#global-templates). The
+### Add template...
+
+Runs `template:init --add` and asks whether to add the template to the **global** registry (yes by default), so it is available in every
+project.
+
+See [Global templates](/guide/templates#global-templates).
+
+The
 `deltabox.registrySearchPaths` setting controls the global search paths and is
 kept in sync with the CLI config.
 
-**Remove template source...** runs `template:list --registry` + `template:remove`.
+### Remove template source...
+
+Runs `template:list --registry` + `template:remove`.
 
 The **Registries** view (below **Templates**) shows the detected provider and
-template registries as **Providers** / **Templates** roots. Each item has **Open
-registry** (the folder in the explorer, or the website for remote URLs), **Add new
-registry** and **Remove registry** (it only drops the path, keeping the files).
+template registries as **Providers** / **Templates** roots.
+
+Each item has **Open registry** (the folder in the explorer, or the website for remote URLs), **Add new registry** and **Remove registry** (it only drops the path, keeping the files).
+
 The title bar's **New registry…** / **Remove registry…** actions add or remove
 search paths for either kind, asking whether they are global or project-scoped.
+
 Remote registries are `http(s)` JSON registries: template registries accept
 `{ sources }` or an array of sources; provider registries accept
 `{ providers }` or an array of provider descriptors.
 
-**Create from template…** prompts for the template's inputs and actions (see
+### Create from template...
+
+Prompts for the template's inputs and actions (see
 [Templates](/guide/templates)) before running `dbx create`. Scaffolding also asks
 for a package manager (`yarn` default).
 
@@ -2594,13 +2685,22 @@ The Home view links to this documentation with **Need help? Go to documentation*
 
 ## Auto-sync
 
-Auto-sync watches input files only: `dbx.config.*` plus the inputs each
-project's config resolves to (by default `tsconfig.workspaces.json` and every
-`tsconfig.default.json`). The extension asks the CLI for them
-(`dbx watch --list --json`), so custom `tsconfig.rootFile` / `tsconfig.defaultFile`
-names are watched instead of the defaults, and the list is refreshed whenever a
-`dbx.config.*` changes. Setting `deltabox.toolchain.watch` explicitly replaces
-the resolved inputs.
+Auto-sync watches input files only. The extension asks the CLI
+(`dbx watch --list --json`) for the concrete, project-graph-resolved files:
+every `dbx.config.*` plus each enabled project's `tsconfig.baseFile`,
+`tsconfig.defaultFile` and the root `tsconfig.rootFile`. Custom file names are
+honoured, nested configs can disable or override their own tsconfig section, and
+the list is refreshed whenever a `dbx.config.*` changes (and after each sync).
+
+Each resolved pattern is scoped to its own workspace root (and a concrete
+nested file is watched from its own directory), so a same-named file in another
+workspace folder or an ancestor can never trigger this root's sync, and VS Code
+does not install a recursive watcher over the whole root (which can hold
+`node_modules` handles during a package-manager link step on Windows). Only the
+root whose input changed is synced. Setting `deltabox.toolchain.watch`
+explicitly replaces the resolved inputs; user globs are matched across every
+workspace folder, absolute/ancestor globs are ignored, and an empty list
+disables watching.
 
 Generated outputs are never watched. The scheduler debounces bursts, allows one sync at a time, queues at most one follow-up, and suppresses events briefly after a run.
 
@@ -2649,6 +2749,7 @@ Search for `deltabox:` to find:
 * **Sync selected projects**
 * **Sync all projects**
 * **Check sync**
+* **Manage tsconfig…**
 * **Scaffold project…**
 * **Add template…**
 * **Remove template…**
@@ -2755,8 +2856,19 @@ if (template) await scaffoldTemplate(template, { cwd: './out', tokens: { name: '
 import { toolchainProviders } from '@deltabox/toolchain/providers';
 console.log(toolchainProviders().map(p => p.id));
 
+// Sync only the tsconfig task (eg. after a build changed package exports)
+import { defaultSyncTasks, loadToolchainConfig, runSync } from '@deltabox/toolchain';
 // Config engine
 import { createConfigEngine } from '@deltabox/toolchain/config';
+const loaded = await loadToolchainConfig(process.cwd());
+await runSync({
+    tasks: defaultSyncTasks(),
+    only: ['tsconfig'],
+    cwd: process.cwd(),
+    config: loaded.config,
+    tokens: loaded.tokens,
+    projectType: loaded.projectType,
+});
 ```
 
 ---
@@ -2851,8 +2963,9 @@ Loads `dbx.config.*`, builds the project graph and runs the sync tasks.
 | ------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `loadToolchainConfig(cwd?)`                                   | Find + load the config, resolve tokens and the project type.                        |
 | `findConfigFile(cwd?)`                                        | The config file path, if any.                                                       |
-| `runSync(options)`                                            | Run the given `SyncTask[]` and return the summary.                                  |
-| `runWatch(options)`                                           | Sync once, then watch inputs and re-sync.                                           |
+| `runSync(options)`                                            | Run the given `SyncTask[]` (or `only` a named subset) and return the summary.       |
+| `runWatch(options)`                                           | Sync once, then watch inputs and re-sync (honours `only`).                          |
+| `selectSyncTasks(tasks, only)`                                | Select tasks by name; throws on unknown names.                                      |
 | `buildProjectGraph(root, options?)`                           | Discover workspace packages and their dependencies.                                 |
 | `orderProjects(nodes)` / `detectPackageManager(root)`         | Dependency ordering and package-manager detection.                                  |
 | `writeProjectGraph` / `readProjectGraph`                      | Persist/read `.dbx/toolchain/projects.json`.                                        |
@@ -2862,6 +2975,24 @@ Loads `dbx.config.*`, builds the project graph and runs the sync tasks.
 | `resolveProjectType(cwd, config?)` / `detectProjectType(cwd)` | The project kind (`monorepo-root` / `monorepo-workspace` / `project`).              |
 | `readManifest(cwd)` / `writeManifest(cwd, files)`             | The `.dbx/toolchain/manifest.json` helpers.                                         |
 | `resolveFmtCustomGroups(input?)`                              | Build the `sortImports` workspace group from every dbx project (graph-based).       |
+
+```ts
+import { defaultSyncTasks, runSync, selectSyncTasks } from '@deltabox/toolchain';
+
+await runSync({
+    tasks: defaultSyncTasks(),
+    only: ['tsconfig'],
+    cwd,
+    config,
+    tokens,
+});
+
+// Or select explicitly:
+const tasks = selectSyncTasks(defaultSyncTasks(), ['tsconfig']);
+```
+
+`only` implies `prune: false`, so a task subset never deletes files owned by the
+tasks it skipped. Unknown task names throw.
 
 ## `@deltabox/toolchain/config`
 
@@ -2880,6 +3011,7 @@ guide for the full workflow).
 | `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                    |
 | `generateConfigTypes` / `generateConfigEnv`                                              | Type/env generators (optional disk writes).               |
 | `generateConfigMarkdown` / `generateConfigCli`                                           | Markdown/CLI generators (optional disk writes).           |
+| `generateCliDocs(commands, options?)`                                                    | A CLI reference from `ToolchainCommand` descriptors.      |
 | `generateConfigJsonSchema` / `generateJsonSchemaFile`                                    | JSON Schema generation.                                   |
 | `normalizeJsonSchemaMetadata(node)`                                                      | Normalize Zod JSON Schema metadata for editor schemas.    |
 | `generateEnv` / `generateEnvDts` / `generateConfigEnv`                                   | `.env` / env type generation.                             |
@@ -3038,6 +3170,22 @@ registerToolchainCommands(program, configCommands({ engine }));
 await program.parseAsync();
 ```
 
+Custom descriptors do not need to be added to `builtinCommands()` to appear in
+the generated reference. Pass the same command list to `generateCliDocs`:
+
+```ts
+import { builtinCommands } from '@deltabox/toolchain/cli';
+import { generateCliDocs } from '@deltabox/toolchain/config';
+
+const markdown = generateCliDocs([...builtinCommands(), ...myCommands], {
+    prefix: 'my-cli',
+});
+```
+
+`generateCliDocs` omits `hidden` commands, keeps the first of any duplicate
+name, and renders args/options (with defaults) the same way as the `dbx`
+reference.
+
 ---
 
 ---
@@ -3110,6 +3258,140 @@ import {
 const { config, tokens, projectType } = await loadToolchainConfig(process.cwd());
 await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, projectType });
 ```
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/catalogs.md
+---
+# Package catalogs
+
+A **catalog** is a shared `package -> version range` map. Workspaces declare a
+dependency as `catalog:` and the package manager resolves it from the catalog, so
+a version lives in one place instead of being repeated (and drifting) across
+every `package.json`.
+
+`toolchain.catalogs` writes that map into the file the package manager reads it
+from. Like every section it is **opt-in by presence** and root-only: a workspace
+never inherits it.
+
+## Configuration
+
+```ts [dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        catalogs: {
+            // The default catalog (`catalog:`).
+            packages: {
+                react: '^19.0.0',
+                'react-dom': '^19.0.0',
+                lodash: '^4.17.21',
+            },
+            // Named catalogs (`catalogs.<name>`).
+            named: {
+                legacy: { react: '^18.0.0' },
+            },
+        },
+    },
+});
+```
+
+| Option     | Type                                     | Description                                    |
+| ---------- | ---------------------------------------- | ---------------------------------------------- |
+| `packages` | `Record<string, string>`                 | The default catalog: package -> version range. |
+| `named`    | `Record<string, Record<string, string>>` | Named catalogs: name -> (package -> range).    |
+| `enabled`  | `boolean`                                | Master switch (default: enabled when defined). |
+
+A section with neither `packages` nor `named` writes nothing.
+
+## Supported package managers
+
+| Manager | Catalog file          | Notes                                               |
+| ------- | --------------------- | --------------------------------------------------- |
+| `yarn`  | `.yarnrc.yml`         | `catalog:` / `catalogs:` (default + named).         |
+| `pnpm`  | `pnpm-workspace.yaml` | `catalog:` / `catalogs:`.                           |
+| `bun`   | `package.json`        | `workspaces.catalog`; declare it there.             |
+| `npm`   | —                     | No catalog support; dependencies are pinned inline. |
+
+The manager is read from the resolved `project.packageManager` (falling back to
+the root `package.json`'s `packageManager`, then `yarn`).
+
+## Managed files
+
+`dbx sync` writes the catalog file only when it is:
+
+* **absent**, or
+* **already toolchain-managed** — it carries the
+  `# Managed by @deltabox/toolchain (catalogs)` marker.
+
+A hand-written catalog file is never clobbered. The file is also marked as
+`keep`: removing the `catalogs` section (or replacing the file with your own)
+never deletes it, because the package manager reads it and it may hold
+hand-written keys.
+
+For Yarn the generated file also sets `nodeLinker: node-modules`; for pnpm it
+declares the `packages/*` globs on a monorepo root.
+
+Bun catalogs live in `package.json` `workspaces.catalog` and npm has no catalog
+support, so both warn instead of writing a separate file.
+
+## Scaffolding
+
+`dbx project:init` and `dbx project:init:monorepo` write the catalog for the
+packages the scaffold depends on **and opt into it in the generated
+`dbx.config.*`**, so `dbx sync` owns and keeps the file in sync:
+
+```ts [dbx.config.ts]
+toolchain: {
+    project: { packageManager: 'yarn' },
+    catalogs: {
+        packages: {
+            '@deltabox/toolchain': '^2.5.0',
+            typescript: '^6.0.3',
+            // ...
+        },
+    },
+}
+```
+
+A single Bun project pins its dependencies (there is nowhere to declare a
+catalog); a Bun monorepo root writes the catalog into `package.json`.
+
+## Keeping it in sync
+
+```sh
+dbx sync                  # regenerate the catalog file
+dbx sync --only catalogs  # just the catalog task
+dbx sync --check          # CI: fail on drift
+```
+
+## Programmatic API
+
+```ts
+import {
+    CATALOG_MARKER,
+    CATALOG_PACKAGE_MANAGERS,
+    catalogFileFor,
+    catalogsSyncTask,
+    hasCatalog,
+    renderPnpmWorkspace,
+    renderYarnrc,
+    scaffoldCatalog,
+    supportsCatalogs,
+} from '@deltabox/toolchain/project';
+```
+
+| Export                       | Description                                                          |
+| ---------------------------- | -------------------------------------------------------------------- |
+| `catalogsSyncTask()`         | The sync task that writes the managed catalog file.                  |
+| `catalogFileFor(pm)`         | The file a manager reads its catalog from (`undefined` for npm/bun). |
+| `hasCatalog(root, pm, req?)` | Whether a default catalog exists (optionally covering `req`).        |
+| `supportsCatalogs(pm)`       | Whether the manager supports catalogs at all.                        |
+| `renderYarnrc(catalog)`      | Render a `.yarnrc.yml` (node-modules linker + catalog(s)).           |
+| `renderPnpmWorkspace(c)`     | Render a `pnpm-workspace.yaml` (optional globs + catalog(s)).        |
+| `scaffoldCatalog(pm, ex?)`   | The catalog a scaffold writes (`undefined` when it writes none).     |
+| `CATALOG_MARKER`             | The marker line that identifies a toolchain-managed catalog file.    |
+| `CATALOG_PACKAGE_MANAGERS`   | The managers with catalog support (`yarn`, `pnpm`, `bun`).           |
 
 ---
 
@@ -4034,6 +4316,11 @@ vendor workflow defines its own triggers, so the `ci.changelog.branches` default
 do not rewrite them. `dbx workflow` runs each workflow with its vendor CLI
 (`glab ci run`, `az pipelines run --name <pipeline>`, or `gh workflow run`).
 
+Set `setup: true` to inject the provider-specific setup before the pipeline's own
+steps: GitHub gets the checkout/Node/Corepack/install steps, GitLab gets a
+`node:<version>` image plus a `before_script`, and Azure gets `UseNode@1` plus an
+install script. It defaults to `false`, so the workflow is written as-is.
+
 If a hand-written `.gitlab-ci.yml` / `azure-pipelines.yml` already exists, sync
 leaves it untouched and records a workflow conflict, exactly like a GitHub
 workflow. Set `ci.<id>: { enabled: false }` to opt out explicitly.
@@ -4071,6 +4358,8 @@ toolchain: {
 
 This writes `.github/workflows/deploy.yml` and manages it like any built-in
 workflow (the generated header is prepended, and `dbx sync --check` tracks it).
+Set `setup: true` to inject the shared checkout/Node/Corepack/install steps into
+each job; steps the job already defines are not duplicated.
 
 ## Existing workflows
 
@@ -4166,10 +4455,22 @@ Colour is on by default and follows `--no-color` / the [`logger` config](/guide/
 | Command     | Description                                                                                                          |
 | ----------- | -------------------------------------------------------------------------------------------------------------------- |
 | `projects`  | Discover projects and write `.dbx/toolchain/projects.json`.                                                          |
-| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`, `--json`).                            |
+| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`, `--only`, `--json`).                  |
 | `watch`     | Sync once, then watch key inputs and re-sync.                                                                        |
 | `reset`     | Remove generated files, the manifest and/or the config (`--all`, `--recursive`); reverts `tsconfig.overrides` first. |
 | `providers` | List registered providers + their commands (`--json`).                                                               |
+
+### Task-only sync
+
+`dbx sync --only <tasks>` runs just the named sync tasks (comma-separated) and
+does **not** prune files owned by the tasks it skipped. This is useful at the
+end of a build, when only the tsconfig aliases/references need refreshing:
+
+```sh
+dbx sync --only tsconfig
+```
+
+Unknown task names fail with the list of available tasks.
 
 ## Scaffolding
 
@@ -4253,7 +4554,7 @@ Every provider subcommand is a passthrough. Vite+ commands are reachable both
 directly and through the `vite` namespace:
 
 ```sh
-dbx fmt                 # a bare Vite+ command forwards to `vp fmt`
+dbx fmt                 # the active formatter (vp fmt when Oxc)
 dbx run -r build        # forwards to `vp run -r build`
 dbx vite dev            # explicit namespace (always works)
 dbx vite:build          # named alias for `vp build`
@@ -4849,8 +5150,8 @@ url: https://toolchain.deltabox.studio/guide/config-generator.md
 `@deltabox/toolchain/config` is a configuration engine. A
 **Zod/untyped schema is the single source of truth**: attach metadata to zod leaves with
 `.meta()`, then generate the env/config TypeScript types, a JSON
-Schema, a markdown reference, config metadata JSON and CLI option definitions —
-all from that one schema.
+Schema, a markdown reference, config metadata JSON, CLI option definitions and a
+CLI reference — all from that one schema.
 
 ## Where to start
 
@@ -4864,7 +5165,7 @@ all from that one schema.
 * [Load the config](/guide/config-generator/load-the-config) — the runtime loader
   (`parseEnvTree`, `compileZodSchema`, and `applyOverrides` from shared).
 * [Generated outputs](/guide/config-generator/generated-outputs) — types,
-  markdown, env files, JSON Schema and formatting.
+  markdown, env files, JSON Schema, CLI docs and formatting.
 * [Real-world shape](/guide/config-generator/real-world-shape) — how a consumer
   binds the engine end-to-end.
 
@@ -4901,6 +5202,10 @@ const commands = configCommands({
 });
 // register `commands` on your commander program
 ```
+
+The `config:*` commands generate config artifacts; they do not write the CLI
+reference. For that, pass the command descriptors your CLI registers to
+[`generateCliDocs()`](/guide/config-generator/generate#cli-docs).
 
 ---
 
@@ -5002,21 +5307,308 @@ url: https://toolchain.deltabox.studio/guide/config-generator/generate.md
 ---
 # Generate
 
-Every generator is a method on the bound engine:
+Every generator has two forms:
+
+* **Bound engine** — `engine.generateConfigTypes()` injects the engine's
+  `envPrefix`, `baseGroup`, `root` and `envPathOf`.
+* **Standalone** — `generateConfigTypes(schema, options)` takes those options
+  explicitly, for one-off scripts and tests.
+
+`write*` methods write to disk and return the written paths. The `generate*`
+methods return the content and only write when you pass `outputDir`/`output`
+(a string); `false` disables writing.
+
+## At a glance
+
+| Output         | Engine                                                       | Standalone                                                |
+| -------------- | ------------------------------------------------------------ | --------------------------------------------------------- |
+| `.env.example` | `engine.generateEnvFile()` / `engine.writeEnvFile()`         | `generateEnvFile()`                                       |
+| Env types      | `engine.generateConfigEnv()` / `engine.writeEnvTypes()`      | `generateConfigEnv()`                                     |
+| Config types   | `engine.generateConfigTypes()` / `engine.writeConfigTypes()` | `generateConfigTypes()`                                   |
+| Markdown       | `engine.generateConfigMarkdown()` / `engine.writeMarkdown()` | `generateConfigMarkdown()`                                |
+| JSON Schema    | `engine.generateJsonSchema()` / `engine.writeJsonSchema()`   | `generateConfigJsonSchema()` / `generateJsonSchemaFile()` |
+| Metadata JSON  | `engine.buildConfigJson()`                                   | `buildConfigJson()`                                       |
+| CLI options    | `engine.generateConfigCli()` / `generateCliOptions()`        | `generateCliOptions()`                                    |
+| CLI docs       | —                                                            | `generateCliDocs()`                                       |
+| Formatting     | —                                                            | `formatGenerated()`                                       |
+
+## Env file — `.env.example`
 
 ```ts
-engine.collectVars(); // ConfigDef[] across every scope
-engine.requiredVars('server'); // required var names for a scope
-
 engine.writeEnvFile({ output: '.env.example' });
-engine.writeEnvTypes({ outputDir: 'types' });
-engine.writeConfigTypes({ outputDir: 'types' });
-engine.writeJsonSchema({ output: 'config.schema.json' });
-engine.writeMarkdown({ outputDir: 'docs/reference/configuration' });
-
-engine.generateCliOptions({ output: 'cli-options.json' });
-engine.buildConfigJson(); // the config metadata document
 ```
+
+Standalone, with the common options:
+
+```ts
+import { generateEnvFile } from '@deltabox/toolchain/config';
+
+const content = generateEnvFile(schema, {
+    envPrefix: 'MYAPP_',
+    header: 'Copy to .env and fill the blanks.',
+    scopes: ['server', 'cli'],
+    exclude: ['MYAPP_INTERNAL_TOKEN'],
+    values: { MYAPP_PORT: '8080' },
+    extra: { MYAPP_FEATURE_FLAG: 'true' },
+});
+```
+
+Options: `include`/`exclude` (env names), `values` (default overrides),
+`scopes`, `bare`, `extra` (raw `NAME=value` lines), `header`, `scopeSeparator`.
+Secrets are emitted commented out.
+
+## Env types — `env.ts` + `env.d.ts`
+
+```ts
+engine.writeEnvTypes({ outputDir: 'types' }); // types/env.ts, types/env.d.ts
+```
+
+```ts
+import { generateConfigEnv } from '@deltabox/toolchain/config';
+
+const files = generateConfigEnv(schema, {
+    envPrefix: 'MYAPP_',
+    outputDir: 'types',
+    envInterfaceName: 'AppEnv',
+    viteEnvInterfaceName: 'AppViteEnv',
+    importPath: './env.js',
+    augmentVite: true,
+    envComment: 'Runtime configuration.',
+});
+// files: { 'env.ts': '...', 'env.d.ts': '...' }
+```
+
+Options: `envFile`/`dtsFile` (file names), `header`, `envHeader`, `dtsHeader`,
+`augmentVite` (a `declare module 'vite'` augmentation).
+
+## Config types
+
+```ts
+engine.writeConfigTypes({ outputDir: 'types' });
+```
+
+Standalone, with hand-written overrides and aliases:
+
+```ts
+import { generateConfigTypes } from '@deltabox/toolchain/config';
+
+const files = generateConfigTypes(schema, {
+    baseGroup: 'base',
+    outputDir: 'types',
+    interfaceNames: { server: 'ServerConfig' },
+    aliases: { server: 'export type ServerOptions = ServerConfig;' },
+    imports: ["import type { FastifyServerOptions } from 'fastify';"],
+    overrides: {
+        ServerConfig: `export interface ServerConfig {
+    host?: string;
+    port?: number;
+}`,
+    },
+    header: '// Generated — do not edit.',
+    extension: 'ts',
+    includeEnv: false,
+});
+```
+
+Options: `interfaceNames` (per scope), `aliases` (per scope, appended),
+`overrides` (full declaration text, keyed by type name), `imports` (emitted once
+at the top), `extension`, `header`, and the `include*` annotation flags.
+
+## Markdown
+
+```ts
+engine.writeMarkdown({ outputDir: 'docs/reference/configuration' });
+```
+
+```ts
+import { generateConfigMarkdown } from '@deltabox/toolchain/config';
+
+const files = generateConfigMarkdown(schema, {
+    baseGroup: 'base',
+    envPrefix: 'MYAPP_',
+    outputDir: 'docs/reference/configuration',
+    title: 'Configuration',
+    frontmatter: ctx => `title: ${ctx.options.title ?? 'Configuration'}`,
+    combined: true, // one index.md instead of one file per scope
+    includeEnv: false,
+});
+```
+
+`frontmatter: false` omits the frontmatter, a string replaces the body, and a
+callback builds it from the generator options. `combined: true` renders every
+scope into one file. `cliScope`, `shortFlags` and `references` control the CLI
+equivalents and footer links.
+
+## JSON Schema
+
+```ts
+const doc = await engine.generateJsonSchema();
+await engine.writeJsonSchema({ output: 'config.schema.json' });
+```
+
+```ts
+import { generateConfigJsonSchema, generateJsonSchemaFile } from '@deltabox/toolchain/config';
+
+const doc = await generateConfigJsonSchema(schema, {
+    baseGroup: 'base',
+    id: 'https://acme.dev/schemas/config.json',
+    title: 'Acme configuration',
+    description: 'Every env-backed setting.',
+});
+const path = await generateJsonSchemaFile(schema, { output: 'config.schema.json' });
+```
+
+Both functions are async. `generateConfigJsonSchema` returns the document;
+`generateJsonSchemaFile` writes it and returns the path.
+
+## Config metadata JSON
+
+```ts
+const metadata = engine.buildConfigJson();
+fs.writeFileSync('config.json', `${JSON.stringify(metadata, null, 4)}\n`);
+```
+
+```ts
+import { buildConfigJson } from '@deltabox/toolchain/config';
+
+const metadata = buildConfigJson(schema, {
+    envPrefix: 'MYAPP_',
+    comment: 'Generated from the config schemas.',
+});
+```
+
+The document contains `$comment`, `version`, and `env[]` entries with the name,
+path, scope, description, default, `required`, `secret` and `public` flags.
+Secrets never include a default.
+
+## CLI options
+
+```ts
+const defs = engine.generateConfigCli({ scope: 'cli' });
+// engine.generateCliOptions() is an alias.
+```
+
+```ts
+import { createCliArgsParser, generateCliOptions } from '@deltabox/toolchain/config';
+
+const defs = generateCliOptions(schema, {
+    envPrefix: 'MYAPP_',
+    scope: 'cli',
+    output: 'cli-options.json',
+});
+const parser = createCliArgsParser(defs);
+parser.parse(['--base-url', 'http://localhost:8080']);
+```
+
+Options: `scope` (default `cli`), `output`, `shortFlags`, `envPathOf`.
+
+## CLI docs
+
+`generateCliDocs(commands, options?)` renders a markdown reference from
+`ToolchainCommand` descriptors. It is standalone because it does not read a
+config schema:
+
+```ts
+import { builtinCommands } from '@deltabox/toolchain/cli';
+import { generateCliDocs } from '@deltabox/toolchain/config';
+
+const markdown = generateCliDocs([...builtinCommands(), ...myCommands], {
+    title: 'CLI reference',
+    intro: 'Generated from the registered commands.',
+    prefix: 'my-cli',
+    outline: [2, 3],
+});
+```
+
+Hidden commands are omitted, duplicate names keep the first descriptor, and
+args/options/defaults are rendered like the `dbx` reference. Pass the result
+through `formatGenerated(..., { fileName: 'cli.md' })` to format it.
+
+## Formatting
+
+```ts
+import { formatGenerated } from '@deltabox/toolchain/config';
+
+const formatted = await formatGenerated(source, {
+    fileName: 'config.ts', // infers the language
+    options: { printWidth: 100 }, // merged over GENERATED_FORMAT_OPTIONS
+});
+```
+
+`formatGenerated` is best-effort: it returns the input unchanged when no
+formatter is available.
+
+## Advanced
+
+### Post-process generated output
+
+Generators return strings or records, so you can transform them before writing:
+
+```ts
+import fs from 'node:fs';
+
+import { formatGenerated, generateConfigTypes } from '@deltabox/toolchain/config';
+
+const files = generateConfigTypes(schema, { baseGroup: 'base' });
+for (const [scope, source] of Object.entries(files)) {
+    const withBanner = `// Generated from schemas/${scope}.ts — do not edit.\n${source}`;
+    const formatted = await formatGenerated(withBanner, { fileName: `${scope}.ts` });
+    fs.mkdirSync('types', { recursive: true });
+    fs.writeFileSync(`types/${scope}.ts`, formatted);
+}
+```
+
+### Custom headers, imports and overrides
+
+```ts
+generateConfigTypes(schema, {
+    header: '/* eslint-disable */',
+    imports: ["import type { AppEnv } from './env.js';"],
+    overrides: {
+        ServerConfig: 'export interface ServerConfig extends BaseServer {}',
+    },
+});
+```
+
+`overrides` is keyed by the generated type name and replaces the whole
+declaration, so keep the `imports`/`header` options handy for types the schema
+cannot express.
+
+### Dry runs
+
+Every generator accepts `outputDir: false` / `output: false`:
+
+```ts
+generateConfigTypes(schema, { outputDir: false });
+await generateConfigJsonSchema(schema, { output: false });
+```
+
+The engine's `write*` methods always write; use the `generate*` methods when you
+only need the content.
+
+### Engine vs standalone
+
+The engine form injects the bound options; the standalone form takes them
+explicitly. They produce the same output:
+
+```ts
+const engine = createConfigEngine({
+    schema,
+    envPrefix: 'MYAPP_',
+    baseGroup: 'base',
+});
+
+engine.generateConfigMarkdown(); // uses the bound options
+
+generateConfigMarkdown(schema, {
+    envPrefix: 'MYAPP_',
+    baseGroup: 'base',
+});
+```
+
+See [Generated outputs](/guide/config-generator/generated-outputs) for the shape
+of each file and [CLI commands](/guide/config-generator/cli-commands) for the
+`config:*` descriptors.
 
 ---
 
@@ -5028,6 +5620,9 @@ url: https://toolchain.deltabox.studio/guide/config-generator/generated-outputs.
 Every generator reads from the same Zod or untyped schema. The engine's own config model
 is the living example: its types are committed at
 [packages/shared/src/config-types.ts](https://github.com/deltabox-studio/toolchain/blob/main/packages/shared/src/config-types.ts).
+
+For the engine/standalone call forms and the full option list per generator, see
+[Generate](/guide/config-generator/generate).
 
 ## Config types — `generateConfigTypes()` / `writeConfigTypes()`
 
@@ -5108,6 +5703,43 @@ The resolved untyped JSON Schema for every scope, for editor autocomplete:
 ```ts
 await engine.writeJsonSchema({ output: 'config.schema.json' });
 ```
+
+## CLI docs — `generateCliDocs()`
+
+`generateCliDocs` is the one generator that does not read the config schema: it
+renders a markdown reference from `ToolchainCommand` descriptors. Pass the command
+list your CLI actually registers, including custom descriptors:
+
+```ts
+import { builtinCommands } from '@deltabox/toolchain/cli';
+import { generateCliDocs } from '@deltabox/toolchain/config';
+
+const markdown = generateCliDocs([...builtinCommands(), ...myCommands], {
+    prefix: 'my-cli',
+    title: 'CLI reference',
+    intro: 'Generated from the registered commands.',
+});
+```
+
+Hidden commands are omitted and duplicate names keep the first descriptor. The
+`dbx` reference itself is generated this way, so a custom command no longer has
+to be added to `builtinCommands()` to be documented.
+
+## Post-processing
+
+The `generate*` functions return their content, so you can transform it before
+writing (the `write*` methods write immediately):
+
+```ts
+const files = generateConfigTypes(schema);
+for (const [scope, source] of Object.entries(files)) {
+    const sourceWithBanner = `// Generated — do not edit.\n${source}`;
+    await fs.promises.writeFile(`types/${scope}.ts`, sourceWithBanner);
+}
+```
+
+If the transform changes the formatting, run the result through
+[`formatGenerated()`](#formatting--formatgenerated) before writing.
 
 ## Formatting — `formatGenerated()`
 
@@ -5312,6 +5944,23 @@ tool's options are read into the matching `toolchain.fmt.*` /
 `toolchain.lint.*` entry. Oxc options are merged over the toolchain defaults
 using the same mapping as [`dbx migrate`](/guide/migrations/).
 
+## Running the active tool
+
+`dbx fmt` / `dbx lint` run the tool the config (or discovery) selects, even when
+`toolchain.fmt` / `toolchain.lint` is omitted:
+
+* an explicit `toolchain.fmt.*` / `toolchain.lint.*` tool wins, in precedence
+  order;
+* otherwise the same discovery `dbx sync` uses picks a tool from the project
+  `.vscode/settings.json`, the nearest config file/`package.json`, or the VS
+  Code user settings;
+* with nothing configured or installed, they fall back to `vp fmt` / `vp lint`
+  (Oxfmt / Oxlint).
+
+Mode flags are translated per tool (`--check`/`--write` for formatters, `--fix`
+for linters) and other operands are forwarded. Oxc keeps the full Vite+
+passthrough, so `dbx vite fmt ...` still accepts every `vp` flag.
+
 ## Precedence
 
 When more than one formatter/linter is configured, editor defaults use:
@@ -5449,6 +6098,37 @@ biome: {
 }
 ```
 
+Default array entries can be pruned with a `$remove:` entry (its value is JSON,
+or a raw string when it is not valid JSON) or replaced wholesale with `$reset`:
+
+```ts
+import { BIOME_RESET, removeBiomeEntry } from '@deltabox/toolchain/biome';
+
+biome: {
+    overrides: {
+        files: {
+            includes: [
+                removeBiomeEntry('!**/.generated'), // drop a default
+                '!**/generated/**',
+            ],
+        },
+        assist: {
+            actions: {
+                source: {
+                    organizeImports: {
+                        options: { groups: [BIOME_RESET, ['@/lib/**']] },
+                    },
+                },
+            },
+        },
+    },
+}
+```
+
+`removeBiomeEntry(entry)` builds the directive, and nested arrays (eg. import
+groups) are matched deeply. The same directives work in `fmt.biome` /
+`lint.biome`; sources are applied in order, so later ones see earlier results.
+
 #### `vscode`
 
 When on (the default), the sync also writes the recommended Biome VS Code
@@ -5459,22 +6139,27 @@ settings and the Biome extension recommendation (see
 
 ```ts
 import {
+    BIOME_RESET,
     biomeConfig,
     biomeSyncTask,
     biomeVscodeSettings,
     mergeBiomeConfig,
+    removeBiomeEntry,
     renderBiomeConfig,
     renderBiomeJson,
+    resolveBiomeArray,
 } from '@deltabox/toolchain/biome';
 ```
 
-| Export                                  | Description                                              |
-| --------------------------------------- | -------------------------------------------------------- |
-| `biomeSyncTask()`                       | The sync task (writes `biome.json`).                     |
-| `biomeConfig` / `biomeVscodeSettings`   | The generic Biome config / recommended VS Code settings. |
-| `renderBiomeConfig(tokens, overrides?)` | Resolve tokens + merge overrides into an object.         |
-| `renderBiomeJson(tokens, overrides?)`   | Serialize the rendered config.                           |
-| `mergeBiomeConfig(base, patch)`         | The recursive/array-union merge used above.              |
+| Export                                    | Description                                              |
+| ----------------------------------------- | -------------------------------------------------------- |
+| `biomeSyncTask()`                         | The sync task (writes `biome.json`).                     |
+| `biomeConfig` / `biomeVscodeSettings`     | The generic Biome config / recommended VS Code settings. |
+| `renderBiomeConfig(tokens, overrides?)`   | Resolve tokens + merge overrides into an object.         |
+| `renderBiomeJson(tokens, overrides?)`     | Serialize the rendered config.                           |
+| `mergeBiomeConfig(base, patch)`           | The recursive/array-union merge used above.              |
+| `resolveBiomeArray(base, patch)`          | Resolve `$remove:`/`$reset` directives for one array.    |
+| `removeBiomeEntry(entry)` / `BIOME_RESET` | Build the array-pruning / array-reset directives.        |
 
 > Migrating **from** Biome to Oxc is a different concern — see
 > [Migrations](/guide/migrations/).
@@ -6084,16 +6769,24 @@ A non-root `dbx.config.*` is merged over the nearest ancestor config (see
 [Configuration → Nested configs](/guide/config/nested-configs)). For `project`
 specifically:
 
-* **Fields are inherited** (scope, author, license, ...), so a workspace keeps the
-  shared metadata while overriding the fields it sets (typically `name`).
-* **`type` is never inherited** — the project kind is location-specific, so a
-  workspace without an explicit `type` is still detected from its own files.
+* **Identity fields are never inherited**: `name`, `scope`, `description` and
+  `type` are per-project. A workspace keeps its own values, falling back to its
+  `package.json` for `name`/`scope`/`description`, and is still detected from its
+  own files — a root `project` never renames or rescopes a workspace. The scope
+  therefore comes from the workspace's own `package.json` name (eg.
+  `@acme/web`); an unscoped name stays unscoped unless the workspace config sets
+  `scope`.
+* **Shared metadata is inherited** (`author`, `license`, `homepage`, `repo`,
+  `packageManager`, ...), so those `package.json` values and replacement tokens
+  stay shared.
 * **`inherit: false`** opts out entirely: the project keeps only its own `project`
   and ignores the parent's (useful for an unrelated package inside the tree).
 
 ```ts [packages/web/dbx.config.ts]
 export default defineConfig({
     toolchain: {
+        // `name`/`scope` are identity; here the scope comes from the package's
+        // `@acme/web` name. `author`/`license`/`repo` still inherit from the root.
         project: { name: 'web' },
         // ...
     },
@@ -6172,9 +6865,11 @@ the file the package manager reads it from, so dependencies can be declared with
 | `bun`   | `package.json`        | `workspaces.catalog`.                        |
 | `npm`   | —                     | No catalog support; dependencies are pinned. |
 
-Scaffolding resolves the manager from the `packageManager` input and writes the
-catalog of the packages the project depends on. To keep it in sync with
-`dbx sync`, add a `catalogs` section to `dbx.config.*`:
+Scaffolding resolves the manager from the `packageManager` input, writes the
+catalog of the packages the project depends on, and **opts into it in the
+generated `dbx.config.*`**, so `dbx sync` owns the file. To manage catalogs in an
+existing project, add a `catalogs` section (see
+[Package catalogs](/guide/catalogs)):
 
 ```ts [dbx.config.ts]
 export default defineConfig({
@@ -6647,7 +7342,7 @@ The offline builtins (`project`, `application`, `folder`, `monorepo`,
 and a `package.json` that depends on the same `@deltabox/toolchain` version as the
 CLI. There is no Turbo (Vite Task replaces it). They ask for a **package manager**
 (default `yarn`) and write that manager's catalog file (see
-[Catalogs](/guide/project#package-manager-and-catalogs)). The `vite-plus*`
+[Package catalogs](/guide/catalogs)). The `vite-plus*`
 builtins delegate to `vp create` and need network access.
 
 The root-oriented builtins (`project`, `application`, `monorepo`,
@@ -7032,6 +7727,15 @@ When on, the generated configs spread the workspaces tsconfig's
 `emitDeclarationOnly`, ...) and merge its `types`. Leave it off unless you build
 the graph with `tsc --build`.
 
+### `refsAuto`
+
+`refsAuto` derives the workspaces `references` from the project graph. It
+defaults to `auto`; `refs` must also be enabled and each referenced workspace
+must be `composite`. References are only followed by `tsc --build` (`tsc -b`);
+**`tsc -p --noEmit` ignores them**. If your typecheck runs `tsc -p --noEmit`
+(as this repo's does), keep `refsAuto: false` and maintain the `references` in
+`tsconfig.workspaces.json` by hand, or switch the check to `tsc -b`.
+
 ### `glob`
 
 The glob(s) selecting the workspace default tsconfig files to expand. A single
@@ -7384,6 +8088,36 @@ applies to `monorepo-root` projects. Run
 `dbx sync --check` in CI to fail when a generated `tsconfig.json` drifts from
 its inputs.
 
+### Refresh aliases after builds
+
+Auto-wired aliases and references are derived from each workspace's
+`package.json` (`exports`, then `types`/`main`, then a source scan). If a build
+step can change a workspace manifest (a generated `package.json`, a rewritten
+export map, ...), run the tsconfig-only sync once **after all workspace builds**:
+
+```sh
+dbx sync --only tsconfig
+```
+
+This regenerates the workspaces tsconfig and every managed `tsconfig.json`
+without running the other sync tasks, and it does not prune files owned by those
+tasks. Add it to the end of your root build script so the aliases always reflect
+the final `package.json` exports:
+
+```json [package.json]
+{
+    "scripts": {
+        "build": "yarn workspaces foreach -A run build && dbx sync --only tsconfig"
+    }
+}
+```
+
+The task is skipped when `toolchain.tsconfig` is omitted or `false` — including
+`dbx tsconfig` and `dbx sync --only tsconfig` — so a disabled section never
+generates files. A nested workspace that defines its own `tsconfig` section owns
+its generated file: the root still aliases/references it, but does not rewrite
+it.
+
 ## Per-project configs
 
 `toolchain.tsconfig` is repository-scoped: the root sync task expands every
@@ -7519,10 +8253,21 @@ await runSync({
     tokens: loaded.tokens,
     projectType: loaded.projectType,
 });
+
+// Run only a named task (eg. refresh the tsconfig aliases after a build).
+await runSync({
+    tasks: defaultSyncTasks(),
+    only: ['tsconfig'],
+    cwd: process.cwd(),
+    config,
+    tokens: loaded.tokens,
+    projectType: loaded.projectType,
+});
 ```
 
-See the [Programmatic API](/guide/api/) guide for the package-by-package
-reference.
+`only` implies `prune: false`, so a subset never deletes files owned by the
+tasks it skipped. See the [Programmatic API](/guide/api/) guide for the
+package-by-package reference.
 
 ## Vite+
 
@@ -7643,7 +8388,7 @@ Vite+ commands are reachable directly or through the `vite` namespace, and are
 registered as a provider (see [Providers](/guide/providers)):
 
 ```sh
-dbx fmt                 # a bare Vite+ command forwards to `vp fmt`
+dbx fmt                 # the active formatter (vp fmt when Oxc)
 dbx run -r build        # forwards to `vp run -r build`
 dbx vite dev            # explicit namespace (always works)
 dbx vite:build          # named alias for `vp build`
@@ -7651,7 +8396,9 @@ dbx vite:build          # named alias for `vp build`
 
 A bare `dbx <command>` is forwarded to Vite+ when the name (or a Vite+ alias)
 matches — built-in commands win, so `dbx migrate` stays the toolchain's
-migration.
+migration. `dbx fmt` / `dbx lint` route to the configured/discovered
+Biome/Prettier/Dprint/ESLint tool, and keep the `vp` passthrough when the active
+tool is Oxc (see [Formatting & linting](/guide/formatting#running-the-active-tool)).
 
 ## Programmatic API
 
@@ -7756,6 +8503,111 @@ configures the **CLI** `dbx watch` command.
 url: https://toolchain.deltabox.studio/CHANGELOG.md
 ---
 # Changelog
+
+## 2.5.0 (November 2026)
+
+### New features
+
+#### Config
+
+* Add a reusable CLI docs generator ([#900566a](https://github.com/deltabox-studio/toolchain/commit/900566a) by [T0chi](https://github.com/T0chi))
+  * add generateCliDocs(commands, options?) for custom command descriptors
+  * use it to render the dbx CLI reference
+  * document generating docs for a consumer's own command list
+  * cover hidden/duplicate commands, args/options and custom prefix/title
+* Add self-contained vendor types and `tsconfig` auto/`rewriteAlias` schemas ([#31c47a9](https://github.com/deltabox-studio/toolchain/commit/31c47a9) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+
+* Inject provider setup into custom and vendor workflows ([#b6b240f](https://github.com/deltabox-studio/toolchain/commit/b6b240f) by [T0chi](https://github.com/T0chi))
+  * add an opt-in setup flag to custom workflow options and vendor settings
+  * GitHub injects the missing checkout/Node/Corepack/install steps
+  * GitLab adds a Node image + before_script; Azure adds UseNode@1 + install
+  * avoid duplicating setup steps the workflow already defines
+  * resolve vendor workflow tokens from the default token set
+
+#### Biome
+
+* Add array removal directives and resolve toolchain debt ([#da100c8](https://github.com/deltabox-studio/toolchain/commit/da100c8) by [T0chi](https://github.com/T0chi))
+  * add $remove: / $reset array directives with a resolver step for biome.json
+  * fix peer warnings (declare vite, filter the stale VitePress plugin peer)
+  * replace the RULE_MAP cast with an Object.hasOwn guard
+  * add a direct extension env-propagation test
+  * drop the 30s real-git changelog timeout
+
+#### Cli
+
+* Add `sync --only` task selection and `selectSyncTasks` ([#49d73dd](https://github.com/deltabox-studio/toolchain/commit/49d73dd) by [T0chi](https://github.com/T0chi))
+
+#### Vscode
+
+* Split extension modules and add `syncTsconfig` action ([#f121c47](https://github.com/deltabox-studio/toolchain/commit/f121c47) by [T0chi](https://github.com/T0chi))
+
+#### Tsconfig
+
+* Auto-wire aliases/references with `rewriteAlias` and gating ([#124f4b5](https://github.com/deltabox-studio/toolchain/commit/124f4b5) by [T0chi](https://github.com/T0chi))
+
+### Bug fixes
+
+#### Cli
+
+* Sync and watch configless projects with the inherited config ([#346060d](https://github.com/deltabox-studio/toolchain/commit/346060d) by [T0chi](https://github.com/T0chi))
+  * The command context did not expose the ancestor config path, so dbx sync/watch in a nested project without its own dbx.config.\* warned and did nothing. Pass parentPath through the context and allow both commands when it is set. The VS Code Sync all compensation now works for configless projects, while sync --recursive stays config-bearing-only and is documented as such.
+
+### Documentation
+
+* Document watcher scoping and project identity inheritance ([#074bfcd](https://github.com/deltabox-studio/toolchain/commit/074bfcd) by [T0chi](https://github.com/T0chi))
+  * Update the VS Code auto-sync section and the project guide to match the implementation: watchers are root-scoped and sync only the changed root; project name/scope/description/type are never inherited. Regenerate llms-full.txt.
+
+#### Tsconfig
+
+* Note that refsAuto requires tsc --build ([#74a25b2](https://github.com/deltabox-studio/toolchain/commit/74a25b2) by [T0chi](https://github.com/T0chi))
+  * Project references are only followed by tsc --build; tsc -p --noEmit ignores them. Document the refsAuto requirement and why this repo keeps the references hand-written (refsAuto: false).
+
+#### Config
+
+* Document every generator and generateCliDocs ([#28f812e](https://github.com/deltabox-studio/toolchain/commit/28f812e) by [T0chi](https://github.com/T0chi))
+  * add engine + standalone examples for each generator
+  * document CLI docs, post-processing and advanced options
+  * cross-link generateCliDocs from the config-generator index and CLI commands
+
+#### Vscode
+
+* Expand the extension guide and README ([#942aa55](https://github.com/deltabox-studio/toolchain/commit/942aa55) by [T0chi](https://github.com/T0chi))
+  * Restore the updated provider/template sections, settings and auto-sync documentation in both the guide and the extension README.
+
+## 2.4.0 (November 2026)
+
+### New features
+
+#### Shared
+
+* Improve workflow config autocomplete ([#5babd18](https://github.com/deltabox-studio/toolchain/commit/5babd18) by [T0chi](https://github.com/T0chi))
+  * Add typed WorkflowTriggers, WorkflowExtra and WorkflowTokens shapes so known workflow keys are suggested, and regenerate the config types, schema and reference.
+* Expose formatter and linter ignore defaults ([#5f2c8b1](https://github.com/deltabox-studio/toolchain/commit/5f2c8b1) by [T0chi](https://github.com/T0chi))
+  * Export DEFAULT_FMT_IGNORE_PATTERNS and DEFAULT_LINT_IGNORE_PATTERNS alongside DEFAULT_IGNORE_PATTERNS, and document how to extend them.
+
+#### Project
+
+* Add config generation options and migration routing ([#c658b0d](https://github.com/deltabox-studio/toolchain/commit/c658b0d) by [T0chi](https://github.com/T0chi))
+  * Support --skip-config, --language and --config-extension, write the project graph before configs, generate TS/JS configs, and route migrated fmt/lint into toolchain.vite only when the existing Vite config owns them.
+
+#### Vscode
+
+* Add tooling actions and config generation ([#31da418](https://github.com/deltabox-studio/toolchain/commit/31da418) by [T0chi](https://github.com/T0chi))
+  * Add the format import-group setting, migrate/global Home actions, and config generation prompts (TS/JS, graph-only) that also work from the Command Palette.
+
+#### Core
+
+* Add import sorting defaults and workspace groups ([#1c5f5a3](https://github.com/deltabox-studio/toolchain/commit/1c5f5a3) by [T0chi](https://github.com/T0chi))
+  * Enable sortImports by default, resolve a workspace custom group from the project graph, and inject it into resolveVite, vite sync and tooling normalization.
+
+### Bug fixes
+
+#### Shared
+
+* Repair PowerShell backtick artifacts in changelogs ([#61ced92](https://github.com/deltabox-studio/toolchain/commit/61ced92) by [T0chi](https://github.com/T0chi))
+  * Repair paired \code\ and lone trailing identifier backslashes back to inline code while leaving paths and regexes alone, and correct the affected 2.3.1-2.3.3 entries.
 
 ## 2.3.0 (November 2026)
 

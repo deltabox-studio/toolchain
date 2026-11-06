@@ -29,6 +29,7 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [VS Code Extension](https://toolchain.deltabox.studio/guide/vscode.md)
 - [LLMs](https://toolchain.deltabox.studio/llms.md)
 
+- [Package catalogs](https://toolchain.deltabox.studio/guide/catalogs.md)
 - [CLI](https://toolchain.deltabox.studio/guide/cli.md)
 - [Formatting & linting](https://toolchain.deltabox.studio/guide/formatting.md)
 - [Logger](https://toolchain.deltabox.studio/guide/logger.md)

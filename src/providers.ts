@@ -7,7 +7,7 @@
  * automatically.
  */
 
-import { readAllProviders, readAllProvidersSync } from '@deltabox/toolchain-core';
+import { readAllProviders, readAllProvidersSync } from '@deltabox/toolchain/core';
 import {
     providerActions,
     type RegistryPolicy,
@@ -15,16 +15,16 @@ import {
     sectionEnabled,
     type ToolchainConfig,
     type ToolchainProvider,
-} from '@deltabox/toolchain-shared';
-import { viteProvider } from '@deltabox/toolchain-vite';
+} from '@deltabox/toolchain/shared';
+import { viteProvider } from '@deltabox/toolchain/vite';
 
 export type {
     ToolchainProvider,
     ToolchainProviderAction,
     ToolchainProviderCommand,
-} from '@deltabox/toolchain-shared';
-export { providerActions } from '@deltabox/toolchain-shared';
-export { viteProvider } from '@deltabox/toolchain-vite';
+} from '@deltabox/toolchain/shared';
+export { providerActions } from '@deltabox/toolchain/shared';
+export { viteProvider } from '@deltabox/toolchain/vite';
 
 /** The provider source policy from `toolchain.registry.providers`. */
 export function providerPolicy(config?: ToolchainConfig): RegistryPolicy | undefined {

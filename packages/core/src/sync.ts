@@ -9,7 +9,7 @@ import {
     type SyncContext,
     type SyncTask,
     type ToolchainConfig,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import { ensureDbxGitignore } from './gitignore.js';
 import { readManifest, writeManifest } from './manifest.js';
@@ -19,6 +19,8 @@ import { resolveProjectType } from './project-type.js';
 export interface RunSyncOptions {
     /** The task list to run. */
     tasks: SyncTask[];
+    /** Only run the named task(s); implies `prune: false`. */
+    only?: string[];
     /** The project root. */
     cwd: string;
     /** The loaded config. */
@@ -31,6 +33,8 @@ export interface RunSyncOptions {
     projectType?: ProjectType;
     /** Dry-run: report drift and exit non-zero without writing. */
     check?: boolean;
+    /** Remove managed files no longer produced by the active tasks (default true). */
+    prune?: boolean;
     /** Suppress logging. */
     quiet?: boolean;
     /** Custom logger (default `logger.info`). */
@@ -62,13 +66,31 @@ function norm(relative: string): string {
     return relative.replace(/\\/g, '/');
 }
 
+/** Select sync tasks by name; throws when a name is unknown. */
+export function selectSyncTasks(tasks: SyncTask[], only: string[]): SyncTask[] {
+    const byName = new Map(tasks.map(task => [task.name, task]));
+    const unknown = only.filter(name => !byName.has(name));
+    if (unknown.length > 0) {
+        throw new Error(
+            `unknown sync task(s): ${unknown.join(', ')} (available: ${tasks
+                .map(task => task.name)
+                .join(', ')})`
+        );
+    }
+    return only.map(name => byName.get(name)!);
+}
+
 /**
  * Run every enabled sync task, writing the managed files and pruning files that
  * are no longer generated. With `check: true` nothing is written: drift is
  * reported instead (for CI).
  */
 export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
-    const { tasks, cwd, config, ownConfig, tokens } = options;
+    const { cwd, config, ownConfig, tokens } = options;
+    const only = options.only && options.only.length > 0 ? options.only : undefined;
+    const tasks = only ? selectSyncTasks(options.tasks, only) : options.tasks;
+    // A task subset must not prune files owned by the tasks it skipped.
+    const prune = only ? false : options.prune !== false;
     const log = options.quiet ? () => {} : (options.log ?? ((m: string) => logger.info(m)));
     const warn = options.quiet ? () => {} : (m: string, id?: string) => logger.warn(m, id);
     const projectType = options.projectType ?? resolveProjectType(cwd, config);
@@ -176,6 +198,7 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     const removedFiles: RemovedFile[] = [];
     for (const relative of manifest.files) {
         if (
+            !prune ||
             desired.has(relative) ||
             untracked.has(relative) ||
             isKept(relative) ||
@@ -226,7 +249,9 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     for (const relative of removed) {
         fs.rmSync(path.resolve(cwd, relative), { force: true });
     }
-    const tracked = [...desired.keys()].filter(relative => !untracked.has(relative));
+    const tracked = [...new Set([...(prune ? [] : manifest.files), ...desired.keys()])].filter(
+        relative => !untracked.has(relative)
+    );
     const origins: Record<string, 'created' | 'adopted'> = {};
     for (const relative of tracked) {
         origins[relative] = originOf(relative);

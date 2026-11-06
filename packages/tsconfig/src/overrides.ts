@@ -12,18 +12,13 @@ import { isDeepStrictEqual } from 'node:util';
 
 import type { TsConfigJson } from 'type-fest';
 
-import type { ToolchainTsconfigOverrides } from '@deltabox/toolchain-shared';
-
-/** The file an override targets. */
-export type TsconfigOverrideKind = 'base' | 'root' | 'default' | 'build';
+import type { ToolchainTsconfigOverrides } from '@deltabox/toolchain/shared';
 
 /** Every override kind, in the order the sync task applies them. */
-export const TSCONFIG_OVERRIDE_KINDS: readonly TsconfigOverrideKind[] = [
-    'base',
-    'root',
-    'default',
-    'build',
-];
+export const TSCONFIG_OVERRIDE_KINDS = ['base', 'root', 'default', 'build'] as const;
+
+/** The file an override targets. */
+export type TsconfigOverrideKind = (typeof TSCONFIG_OVERRIDE_KINDS)[number];
 
 /** The `tsconfig.overrides` config section. */
 export type TsconfigOverrides = ToolchainTsconfigOverrides;

@@ -19,7 +19,7 @@ import {
     sectionEnabled,
     type ToolchainConfig,
     type WorkflowSetting,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import {
     isEnabled,

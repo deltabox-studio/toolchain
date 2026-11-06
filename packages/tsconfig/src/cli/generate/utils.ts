@@ -3,10 +3,10 @@ import path from 'node:path';
 
 import type { TsConfigJson } from 'type-fest';
 
-import { logger } from '@deltabox/toolchain-shared';
+import { logger } from '@deltabox/toolchain/shared';
 
 import { mergeOverride, type TsconfigOverrides } from '../../overrides.js';
-import { readTsconfig, resolveTsconfig } from '../../resolve.js';
+import { readTsconfig, resolveTsconfig, resolveTsconfigConfig } from '../../resolve.js';
 
 export type GeneratedTsconfigResult = ReturnType<typeof generateTsconfig>;
 
@@ -22,6 +22,12 @@ export function generateTsconfig(options: {
     ignoreAliases?: boolean;
     ignoreReferences?: boolean;
     disableComposite?: boolean;
+    /** Effective per-workspace switches (they override the legacy ignore flags). */
+    aliases?: boolean;
+    refs?: boolean;
+    composite?: boolean;
+    /** In-memory workspaces tsconfig (the auto-generated object). */
+    monorepoConfig?: TsConfigJson;
     /** Write the generated files to disk (default true). */
     write?: boolean;
     /** Log sink (default: the shared info logger). Pass a no-op to stay quiet. */
@@ -41,10 +47,17 @@ export function generateTsconfig(options: {
         disableComposite,
         ignoreAliases,
         ignoreReferences,
+        aliases,
+        refs,
+        composite,
+        monorepoConfig,
         write = true,
         log = (message: string) => logger.info(message),
         overrides,
     } = options;
+    const enableAliases = aliases ?? !ignoreAliases;
+    const enableRefs = refs ?? !ignoreReferences;
+    const enableComposite = composite ?? !disableComposite;
 
     const dirnameRelative = path.relative(cwd, dirname).replace(/\\/g, '/') || '.';
 
@@ -67,18 +80,26 @@ export function generateTsconfig(options: {
         // to wire (no shared `paths`/`references`), and each workspace still gets
         // a `tsconfig.json` that extends its own default. It can itself `extend`
         // another config: the resolver follows the chain per field.
-        const hasMonorepo = fs.existsSync(monorepoTsconfigPath);
-        const tsconfigMonorepoRaw = hasMonorepo
-            ? (readTsconfig(monorepoTsconfigPath) as TsConfigJson)
-            : ({} as TsConfigJson);
+        const hasMonorepo = monorepoConfig !== undefined || fs.existsSync(monorepoTsconfigPath);
+        const tsconfigMonorepoRaw =
+            monorepoConfig ??
+            (hasMonorepo
+                ? (readTsconfig(monorepoTsconfigPath) as TsConfigJson)
+                : ({} as TsConfigJson));
         const tsconfigMonorepo = mergeOverride(tsconfigMonorepoRaw, overrides?.root);
         const resolvedMonorepo = hasMonorepo
-            ? resolveTsconfig({
-                  tsconfig: monorepoTsconfigPath,
-                  root: cwd,
-                  cwd,
-                  ...(overrides?.root ? { overrides: overrides.root } : {}),
-              })
+            ? monorepoConfig !== undefined
+                ? resolveTsconfigConfig(
+                      monorepoConfig,
+                      cwd,
+                      overrides?.root ? { overrides: overrides.root } : {}
+                  )
+                : resolveTsconfig({
+                      tsconfig: monorepoTsconfigPath,
+                      root: cwd,
+                      cwd,
+                      ...(overrides?.root ? { overrides: overrides.root } : {}),
+                  })
             : { alias: [], paths: {}, references: [] };
 
         const tsconfigRaw = readTsconfig(tsconfigPath) as TsConfigJson;
@@ -91,17 +112,17 @@ export function generateTsconfig(options: {
             ? mergeOverride(tsconfigBuildRaw, overrides?.build)
             : undefined;
 
-        const types = disableComposite
-            ? []
-            : [
+        const types = enableComposite
+            ? [
                   ...new Set([
                       ...(tsconfig.compilerOptions?.types ?? []),
-                      ...(disableComposite ? [] : (tsconfigMonorepo.compilerOptions?.types ?? [])),
+                      ...(tsconfigMonorepo.compilerOptions?.types ?? []),
                   ]),
-              ];
+              ]
+            : [];
 
         const monorepoPaths: Record<string, string[]> = {};
-        if (!ignoreAliases) {
+        if (enableAliases) {
             for (const [key, targets] of Object.entries(resolvedMonorepo.paths)) {
                 const transformed = targets
                     .map(target => toWorkspacePath(target, dirname, dirnameRelative))
@@ -111,9 +132,12 @@ export function generateTsconfig(options: {
         }
 
         const references: TsConfigJson.References[] = [];
-        if (!ignoreReferences) {
+        if (enableRefs) {
             const seen = new Set<string>();
-            const add = (absolute: string, reference: { path: string; [key: string]: unknown }) => {
+            const add = (
+                absolute: string,
+                reference: { path: string; [key: string & {}]: unknown }
+            ) => {
                 const relative = toWorkspacePath(absolute, dirname, dirnameRelative);
                 if (relative === undefined || seen.has(relative)) return;
                 seen.add(relative);
@@ -130,22 +154,31 @@ export function generateTsconfig(options: {
             }
         }
 
+        const monorepoCompilerOptions = { ...tsconfigMonorepo.compilerOptions };
+        delete monorepoCompilerOptions.paths;
+        const monorepoRest = { ...tsconfigMonorepo };
+        delete monorepoRest.references;
         const newTsconfig: TsConfigJson = {
-            ...(disableComposite ? {} : tsconfigMonorepo),
+            ...(enableComposite ? monorepoRest : {}),
             extends: `./${tsconfigFilename}`,
             compilerOptions: {
-                ...(disableComposite ? { composite: false } : tsconfigMonorepo.compilerOptions),
+                ...(enableComposite ? monorepoCompilerOptions : {}),
+                composite: enableComposite,
                 ...(types.length ? { types } : {}),
-                ...(ignoreAliases
-                    ? {}
-                    : {
+                ...(enableAliases &&
+                Object.keys({
+                    ...tsconfig.compilerOptions?.paths,
+                    ...monorepoPaths,
+                }).length > 0
+                    ? {
                           paths: {
                               ...tsconfig.compilerOptions?.paths,
                               ...monorepoPaths,
                           },
-                      }),
+                      }
+                    : {}),
             },
-            ...(ignoreReferences ? {} : { references }),
+            ...(enableRefs ? { references } : {}),
         };
 
         const newTsconfigBuild: TsConfigJson | undefined = tsconfigBuildExists

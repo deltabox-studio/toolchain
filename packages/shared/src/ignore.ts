@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /** The common paths always ignored (dependency/build/cache dirs). */
-export const DEFAULT_IGNORE_PATTERNS: readonly string[] = [
+export const DEFAULT_IGNORE_PATTERNS = [
     '**/node_modules/**',
     '**/.git/**',
     '**/.dbx/**',
@@ -25,16 +25,17 @@ export const DEFAULT_IGNORE_PATTERNS: readonly string[] = [
     '**/.cache/**',
     '**/.output/**',
     '**/.vite/**',
+    '**/.vscode/**',
     '**/.nyc_output/**',
     '**/*.tsbuildinfo',
-];
+] as const;
 
 /**
- * Common paths Oxfmt should leave alone. Starts from the shared build/cache
+ * Common paths formatters should leave alone. Starts from the shared build/cache
  * ignores and adds generated JSON/YAML, lockfiles, changelogs and the managed
  * `vite.config.ts` shim.
  */
-export const DEFAULT_FMT_IGNORE_PATTERNS: readonly string[] = [
+export const DEFAULT_FMT_IGNORE_PATTERNS = [
     ...DEFAULT_IGNORE_PATTERNS,
     '**/.nuxt/**',
     '**/.svelte-kit/**',
@@ -45,21 +46,23 @@ export const DEFAULT_FMT_IGNORE_PATTERNS: readonly string[] = [
     '**/*.yaml',
     '**/*.lock',
     '**/*.min.*',
+    '**/*.gen.*',
     '**/CHANGELOG.md',
     'CHANGELOG.proposed.md',
     '**/vite.config.ts',
-];
+] as const;
 
-/** Common paths Oxlint should leave alone. */
-export const DEFAULT_LINT_IGNORE_PATTERNS: readonly string[] = [
+/** Common paths linters should leave alone. */
+export const DEFAULT_LINT_IGNORE_PATTERNS = [
     ...DEFAULT_IGNORE_PATTERNS,
     '**/.nuxt/**',
     '**/.svelte-kit/**',
     '**/.generated/**',
     '**/generated/**',
+    '**/*.gen.*',
     '**/*.min.*',
     '**/vendor/**',
-];
+] as const;
 
 /** Directory names skipped when scanning for nested `.gitignore` files. */
 const IGNORED_DIR_NAMES = new Set([

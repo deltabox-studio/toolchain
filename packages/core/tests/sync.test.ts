@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { readJsoncFile, type SyncTask } from '@deltabox/toolchain-shared';
+import { readJsoncFile, type SyncTask } from '@deltabox/toolchain/shared';
 
 import { readManifest, writeManifest } from '../src/manifest.js';
 import { runSync } from '../src/sync.js';
@@ -43,6 +43,74 @@ describe('runSync', () => {
         });
         expect(result.removed).toEqual(['a.txt']);
         expect(fs.existsSync(path.join(cwd, 'a.txt'))).toBe(false);
+    });
+
+    it('skips a task disabled by the config', async () => {
+        const cwd = tmp();
+        const result = await runSync({
+            tasks: [
+                {
+                    name: 'x',
+                    enabled: config => config.tsconfig !== false,
+                    run: () => [{ path: 'x.txt', content: 'x' }],
+                },
+            ],
+            cwd,
+            config: { tsconfig: false },
+            tokens: {},
+            quiet: true,
+        });
+
+        expect(result.written).toEqual([]);
+        expect(fs.existsSync(path.join(cwd, 'x.txt'))).toBe(false);
+    });
+
+    it('runs only the named tasks and rejects unknown names', async () => {
+        const cwd = tmp();
+        const tasks: SyncTask[] = [
+            { name: 'a', run: () => [{ path: 'a.txt', content: 'a' }] },
+            { name: 'b', run: () => [{ path: 'b.txt', content: 'b' }] },
+        ];
+        const result = await runSync({
+            tasks,
+            only: ['b'],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+
+        expect(result.written).toEqual(['b.txt']);
+        expect(fs.existsSync(path.join(cwd, 'a.txt'))).toBe(false);
+        expect(fs.existsSync(path.join(cwd, 'b.txt'))).toBe(true);
+
+        await expect(
+            runSync({ tasks, only: ['nope'], cwd, config: {}, tokens: {}, quiet: true })
+        ).rejects.toThrow(/unknown sync task/);
+    });
+
+    it('does not prune files owned by skipped tasks when prune is false', async () => {
+        const cwd = tmp();
+        await runSync({
+            tasks: [{ name: 'a', run: () => [{ path: 'a.txt', content: 'a' }] }],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        const result = await runSync({
+            tasks: [{ name: 'b', run: () => [{ path: 'b.txt', content: 'b' }] }],
+            cwd,
+            config: {},
+            tokens: {},
+            prune: false,
+            quiet: true,
+        });
+
+        expect(result.removed).toEqual([]);
+        expect(fs.existsSync(path.join(cwd, 'a.txt'))).toBe(true);
+        expect(fs.existsSync(path.join(cwd, 'b.txt'))).toBe(true);
+        expect(readManifest(cwd).files.sort()).toEqual(['a.txt', 'b.txt']);
     });
 
     it('never deletes a pre-existing (adopted) file', async () => {

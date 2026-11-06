@@ -1,4 +1,4 @@
-import { camelCase } from '@deltabox/toolchain-shared';
+import { camelCase } from '@deltabox/toolchain/shared';
 
 /** Extract the (camelCased) long option keys from a commander flags string. */
 export function optionKeys(flags: string): string[] {

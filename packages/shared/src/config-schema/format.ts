@@ -1,6 +1,3 @@
-import type { Configuration as DprintConfig } from '@dprint/types';
-import type { Linter } from 'eslint';
-import type { Options as PrettierConfig } from 'prettier';
 import type { JsonObject } from 'type-fest';
 import { z } from 'zod';
 
@@ -9,6 +6,7 @@ import { externalConfigSchema } from './external.js';
 import type { OxfmtConfig } from './generated/oxfmt-config.js';
 import type { OxlintConfig } from './generated/oxlint-config.js';
 import { withEnabled } from './meta.js';
+import type { DprintConfig, EslintConfig, PrettierConfig } from './vendor-types.js';
 
 /** A tool config: `true` for the defaults, `false` to disable, or its options. */
 const toolOptions = <T>(schema: z.ZodType<T>) => z.union([z.boolean(), schema]);
@@ -33,9 +31,9 @@ const dprintOptions = externalConfigSchema<DprintConfig>(
     'DprintConfig'
 );
 
-const eslintOptions = externalConfigSchema<Linter.Config>(
+const eslintOptions = externalConfigSchema<EslintConfig>(
     'ESLint configuration options.',
-    'Linter.Config'
+    'EslintConfig'
 );
 
 const jsonObjectOptions = externalConfigSchema<JsonObject>(
@@ -85,7 +83,8 @@ export const fmtConfigSchema = withEnabled(
         biome: toolOptions(biomeConfigOptionsSchema)
             .describe(
                 'Biome formatter options (`true` = defaults, `false` = disabled); ' +
-                    'merged into the generated `biome.json`.'
+                    'merged into the generated `biome.json` (arrays union; ' +
+                    '`$remove:`/`$reset` prune or replace them).'
             )
             .optional(),
         prettier: toolOptions(prettierOptions)
@@ -114,7 +113,8 @@ export const lintConfigSchema = withEnabled(
         biome: toolOptions(biomeConfigOptionsSchema)
             .describe(
                 'Biome linter options (`true` = defaults, `false` = disabled); ' +
-                    'merged into the generated `biome.json`.'
+                    'merged into the generated `biome.json` (arrays union; ' +
+                    '`$remove:`/`$reset` prune or replace them).'
             )
             .optional(),
         eslint: toolOptions(eslintOptions)

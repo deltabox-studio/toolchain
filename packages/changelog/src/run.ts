@@ -74,7 +74,7 @@ import {
     type ChangelogConfig,
     logger,
     resolveCommitlintEnabled,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 import { parseArgsCli } from './utils/args.js';
 import { readCommits } from './utils/git.js';

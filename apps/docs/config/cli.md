@@ -44,8 +44,8 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx vite:env`](#vite-env)                             | Vite+: Manage Node.js and package managers.                                                     |
 | [`dbx vite:dev`](#vite-dev)                             | Vite+: Run the Vite development server.                                                         |
 | [`dbx vite:check`](#vite-check)                         | Vite+: Run format, lint and type checks.                                                        |
-| [`dbx vite:lint`](#vite-lint)                           | Vite+: Lint code with Oxlint.                                                                   |
-| [`dbx vite:fmt`](#vite-fmt)                             | Vite+: Format code with Oxfmt.                                                                  |
+| [`dbx vite:lint`](#vite-lint)                           | Vite+: Lint code with the active linter (Oxlint via Vite+).                                     |
+| [`dbx vite:fmt`](#vite-fmt)                             | Vite+: Format code with the active formatter (Oxfmt via Vite+).                                 |
 | [`dbx vite:test`](#vite-test)                           | Vite+: Run tests through bundled Vitest.                                                        |
 | [`dbx vite:run`](#vite-run)                             | Vite+: Run package scripts and monorepo tasks.                                                  |
 | [`dbx vite:exec`](#vite-exec)                           | Vite+: Execute a binary from local node_modules.                                                |
@@ -88,8 +88,9 @@ Regenerate every managed file from dbx.config.*.
 - `-q, --quiet` — Only log errors.
 - `--check` — Do not write; fail if files are out of date.
 - `--watch` — Keep running and re-sync on change.
-- `--recursive` — Sync every discovered dbx project in dependency order.
+- `--recursive` — Sync every project that has its own dbx.config.* in dependency order.
 - `--force` — Run even when no dbx.config.* is present.
+- `--only ‹tasks›` — Only run the named sync task(s), comma-separated (eg. `tsconfig`).
 - `--json` — Print the sync result (including removed files) as JSON.
 
 ## `dbx watch`
@@ -131,6 +132,13 @@ Generate workspace tsconfig.json files from the default tsconfig (aliases + refe
 - `--no-aliases` — Skip path aliases.
 - `--composite` — Emit composite + references.
 - `--refs` — Wire project references.
+- `--auto` — Auto-wire the root workspaces tsconfig paths/references from the project graph (default false).
+- `--no-auto` — Only use the paths/references already in the root workspaces tsconfig.
+- `--auto-aliases` — Auto-wire path aliases (defaults to --auto).
+- `--no-auto-aliases` — Do not auto-wire path aliases.
+- `--auto-refs` — Auto-wire project references (defaults to --auto).
+- `--no-auto-refs` — Do not auto-wire project references.
+- `--auto-src-dir ‹dir›` — Source directory for auto entry points (default: the workspace tsconfig rootDir/baseUrl, then src).
 - `-i, --indent ‹n›` — JSON indentation.
 - `--glob ‹glob...›` — Glob(s) for the default tsconfig files.
 - `--exclude ‹glob...›` — Glob(s) to exclude (on top of the common ignored paths).
@@ -430,13 +438,13 @@ Vite+: Run format, lint and type checks.
 
 ## `dbx vite:lint`
 
-Vite+: Lint code with Oxlint.
+Vite+: Lint code with the active linter (Oxlint via Vite+).
 
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:fmt`
 
-Vite+: Format code with Oxfmt.
+Vite+: Format code with the active formatter (Oxfmt via Vite+).
 
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 

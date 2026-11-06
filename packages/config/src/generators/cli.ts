@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import { type ParseArgsOptionsConfig, parseArgs } from 'node:util';
 
-import { formatCliFlag } from '@deltabox/toolchain-shared';
+import { formatCliFlag } from '@deltabox/toolchain/shared';
 
 import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from '../collect.js';
 import type { ConfigSchema } from '../types.js';

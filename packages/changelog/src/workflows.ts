@@ -11,7 +11,8 @@
 import {
     applyReplacementsDeep,
     type CustomWorkflowSettings,
-    DEFAULT_PACKAGE_MANAGER_VERSIONS,
+    defaultPackageManagerVersion,
+    isPlainObject,
     isVendorWorkflowConfig,
     type Replacements,
     toYaml,
@@ -20,7 +21,7 @@ import {
     type WorkflowSetting,
     type WorkflowStep,
     type YamlValue,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 export interface WorkflowJob {
     name?: string;
@@ -42,11 +43,11 @@ export interface Workflow {
     concurrency?: unknown;
     env?: Record<string, string>;
     jobs: Record<string, WorkflowJob>;
-    [key: string]: unknown;
+    [key: string & {}]: unknown;
 }
 
 /** The default replacement values for the workflow templates. */
-export const DEFAULT_WORKFLOW_TOKENS: Replacements = {
+export const DEFAULT_WORKFLOW_TOKENS = {
     nodeVersion: '22',
     yarnVersion: '4.17.1',
     packageManager: 'yarn',
@@ -55,19 +56,19 @@ export const DEFAULT_WORKFLOW_TOKENS: Replacements = {
     devBranch: 'main',
     tooling: 'dbx',
     commitlintConfig: 'commitlint.config.mjs',
-};
-
-/** The workflow ids the builder knows about. */
-export type WorkflowId = 'ci' | 'changelog' | 'release' | 'sync' | 'issues';
+} as const;
 
 /** Default file name per workflow id. */
-export const WORKFLOW_FILENAMES: Record<WorkflowId, string> = {
+export const WORKFLOW_FILENAMES = {
     ci: 'ci.yml',
     changelog: 'changelog.yml',
     release: 'release.yml',
     sync: 'sync.yml',
     issues: 'issues.yml',
-};
+} as const;
+
+/** The workflow ids the builder knows about. */
+export type WorkflowId = keyof typeof WORKFLOW_FILENAMES;
 
 /** The default directory for generated workflows. */
 export const DEFAULT_WORKFLOW_DIR = '.github/workflows';
@@ -147,7 +148,7 @@ function packageManagerVersion(tokens: Replacements): string {
     return String(
         tokens.packageManagerVersion ??
             tokens.yarnVersion ??
-            DEFAULT_PACKAGE_MANAGER_VERSIONS[packageManager] ??
+            defaultPackageManagerVersion(packageManager) ??
             '4.17.1'
     );
 }
@@ -160,7 +161,11 @@ function packageManagerVersion(tokens: Replacements): string {
  */
 function workflowTokens(options: RenderWorkflowOptions): Replacements {
     const configTokens = options.config?.tokens ?? {};
-    const tokens = { ...DEFAULT_WORKFLOW_TOKENS, ...options.tokens, ...configTokens };
+    const tokens: Replacements = {
+        ...DEFAULT_WORKFLOW_TOKENS,
+        ...options.tokens,
+        ...configTokens,
+    };
     const manager = configTokens.packageManager;
     if (manager !== undefined && manager !== options.tokens.packageManager) {
         if (
@@ -251,6 +256,116 @@ function setupSteps(tokens: Replacements): WorkflowStep[] {
                     : 'yarn install --immutable',
         },
     ];
+}
+
+/** Whether a step is an action (`uses`) matching a prefix. */
+function usesAction(step: unknown, action: string): boolean {
+    return isPlainObject(step) && typeof step.uses === 'string' && step.uses.startsWith(action);
+}
+
+/** Whether a step's `run` matches a pattern. */
+function runsCommand(step: unknown, pattern: RegExp): boolean {
+    return isPlainObject(step) && typeof step.run === 'string' && pattern.test(step.run);
+}
+
+/**
+ * The setup steps a GitHub job is missing. A job that already checks out, sets
+ * up Node or installs dependencies keeps its own steps (no duplicates).
+ */
+function missingSetupSteps(steps: readonly unknown[], tokens: Replacements): WorkflowStep[] {
+    const hasCheckout = steps.some(step => usesAction(step, 'actions/checkout'));
+    const hasNode = steps.some(step => usesAction(step, 'actions/setup-node'));
+    const hasBun = steps.some(step => usesAction(step, 'oven-sh/setup-bun'));
+    const hasPnpm = steps.some(step => usesAction(step, 'pnpm/action-setup'));
+    const hasInstall = steps.some(step =>
+        runsCommand(
+            step,
+            /\b(?:corepack|npm\s+(?:ci|install)|yarn\s+install|pnpm\s+install|bun\s+install)\b/
+        )
+    );
+    return setupSteps(tokens).filter(step => {
+        if (usesAction(step, 'actions/checkout')) return !hasCheckout;
+        if (usesAction(step, 'actions/setup-node')) return !hasNode;
+        if (usesAction(step, 'oven-sh/setup-bun')) return !hasBun;
+        if (step.name === 'Enable Corepack') return !hasInstall && !hasPnpm;
+        if (step.name === 'Install dependencies') return !hasInstall;
+        return true;
+    });
+}
+
+/** Inject the shared setup into every GitHub job that has steps. */
+function injectGithubSetup(workflow: Record<string, unknown>, tokens: Replacements): void {
+    const jobs = workflow.jobs;
+    if (!isPlainObject(jobs)) return;
+    for (const job of Object.values(jobs)) {
+        if (!isPlainObject(job) || !Array.isArray(job.steps)) continue;
+        const missing = missingSetupSteps(job.steps, tokens);
+        if (missing.length > 0) job.steps = [...missing, ...job.steps];
+    }
+}
+
+/** The provider-agnostic shell setup commands (GitLab/Azure). */
+function setupCommands(tokens: Replacements): string[] {
+    const packageManager = String(tokens.packageManager ?? 'yarn');
+    const version = packageManagerVersion(tokens);
+    if (packageManager === 'bun') {
+        return [`npm install -g bun@${version}`, 'bun install --frozen-lockfile'];
+    }
+    if (packageManager === 'npm') {
+        return [`npm install -g npm@${version}`, 'npm ci'];
+    }
+    return [
+        'corepack enable',
+        `corepack prepare ${packageManager}@${version} --activate`,
+        packageManager === 'pnpm' ? 'pnpm install --frozen-lockfile' : 'yarn install --immutable',
+    ];
+}
+
+/** Inject a Node image + `before_script` into a GitLab pipeline. */
+function injectGitlabSetup(workflow: Record<string, unknown>, tokens: Replacements): void {
+    const defaults = isPlainObject(workflow.default) ? workflow.default : undefined;
+    const hasBefore =
+        Array.isArray(workflow.before_script) ||
+        (defaults !== undefined && Array.isArray(defaults.before_script));
+    if (!hasBefore) workflow.before_script = setupCommands(tokens);
+    if (workflow.image === undefined && defaults?.image === undefined) {
+        workflow.image = `node:${String(tokens.nodeVersion)}`;
+    }
+}
+
+/** The Azure `UseNode` + install steps. */
+function azureSetupSteps(tokens: Replacements): Record<string, unknown>[] {
+    return [
+        { task: 'UseNode@1', inputs: { version: String(tokens.nodeVersion) } },
+        { script: setupCommands(tokens).join('\n') },
+    ];
+}
+
+/** Inject the Node + install steps into an Azure pipeline (or each job). */
+function injectAzureSetup(workflow: Record<string, unknown>, tokens: Replacements): void {
+    const steps = azureSetupSteps(tokens);
+    const jobs = workflow.jobs;
+    if (isPlainObject(jobs)) {
+        for (const job of Object.values(jobs)) {
+            if (!isPlainObject(job) || !Array.isArray(job.steps)) continue;
+            job.steps = [...steps, ...job.steps];
+        }
+        return;
+    }
+    if (Array.isArray(workflow.steps)) {
+        workflow.steps = [...steps, ...workflow.steps];
+    }
+}
+
+/** Inject the provider-specific setup into a complete vendor workflow. */
+function injectProviderSetup(
+    provider: VendorWorkflowSetting['provider'],
+    workflow: Record<string, unknown>,
+    tokens: Replacements
+): void {
+    if (provider === 'github') injectGithubSetup(workflow, tokens);
+    else if (provider === 'gitlab') injectGitlabSetup(workflow, tokens);
+    else injectAzureSetup(workflow, tokens);
 }
 
 export interface DefaultWorkflowOptions {
@@ -515,7 +630,9 @@ export function renderCustomWorkflow(
     if (config.enabled === false) return undefined;
     const tokens = workflowTokens(options);
     const base: Workflow = { name: id, on: {}, jobs: {} };
-    const resolved = applyReplacementsDeep(applyWorkflowConfig(base, config), tokens);
+    const merged = applyWorkflowConfig(base, config);
+    if (config.setup === true) injectGithubSetup(merged, tokens);
+    const resolved = applyReplacementsDeep(merged, tokens);
     const hasTriggers =
         resolved.on && typeof resolved.on === 'object' && Object.keys(resolved.on).length > 0;
     const hasJobs =
@@ -531,7 +648,12 @@ export function renderCustomWorkflow(
 
 /** Render a complete vendor workflow (GitHub/GitLab/Azure) as YAML. */
 export function renderVendorWorkflow(setting: VendorWorkflowSetting, tokens: Replacements): string {
-    const resolved = applyReplacementsDeep(setting.workflow, tokens);
+    const resolvedTokens = workflowTokens({ tokens });
+    const resolved = applyReplacementsDeep(setting.workflow, resolvedTokens) as Record<
+        string,
+        unknown
+    >;
+    if (setting.setup === true) injectProviderSetup(setting.provider, resolved, resolvedTokens);
     return toYaml(resolved as unknown as Record<string, YamlValue>);
 }
 

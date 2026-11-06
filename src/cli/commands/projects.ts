@@ -1,5 +1,5 @@
-import { buildProjectGraph, writeProjectGraph } from '@deltabox/toolchain-core';
-import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
+import { buildProjectGraph, writeProjectGraph } from '@deltabox/toolchain/core';
+import { logger, type ToolchainCommand } from '@deltabox/toolchain/shared';
 
 /** `dbx projects` — discover projects and write the graph file. */
 export function projectsCommand(): ToolchainCommand {

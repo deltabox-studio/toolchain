@@ -12,7 +12,7 @@ export type ReplacementValue = string | number | boolean | null | undefined;
 
 /** A map of token name to replacement value. */
 export interface Replacements {
-    [key: string]: ReplacementValue;
+    [key: string & {}]: ReplacementValue;
 }
 
 export interface ReplacementOptions {

@@ -6,7 +6,7 @@ import {
     readJsonAt,
     sectionConfig,
     type ToolchainConfig,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 /** The tsconfig file names a project can be detected from. */
 export interface TsconfigFileNames {

@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { addProjectProviderRegistry } from '@deltabox/toolchain-core';
+import { addProjectProviderRegistry } from '@deltabox/toolchain/core';
 
 import { providerPassthroughCommands } from '../src/cli/commands/providers.js';
 import { extractConfigSelection } from '../src/cli/config-selection.js';
@@ -25,7 +25,7 @@ import {
     pascalCase,
     sort,
 } from '../src/index.js';
-import { defaultSyncTasks } from '../src/sync.js';
+import { defaultSyncTasks, selectSyncTasks } from '../src/sync.js';
 
 describe('root API re-exports', () => {
     it('exposes shared helpers from the root', () => {
@@ -35,6 +35,18 @@ describe('root API re-exports', () => {
         expect(sort({ b: 1, a: 2 })).toEqual({ a: 2, b: 1 });
         expect(deepMerge({ a: { b: 1 } } as any, { a: { c: 2 } })).toEqual({ a: { b: 1, c: 2 } });
         expect(applyReplacementsDeep('{{x}}', { x: 'y' })).toBe('y');
+    });
+});
+
+describe('dbx sync task selection', () => {
+    it('selects tasks by name and rejects unknown ones', () => {
+        const tasks = defaultSyncTasks();
+        expect(selectSyncTasks(tasks, ['tsconfig']).map(task => task.name)).toEqual(['tsconfig']);
+        expect(selectSyncTasks(tasks, ['tsconfig', 'vite']).map(task => task.name)).toEqual([
+            'tsconfig',
+            'vite',
+        ]);
+        expect(() => selectSyncTasks(tasks, ['nope'])).toThrow(/unknown sync task/);
     });
 });
 

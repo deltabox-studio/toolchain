@@ -21,7 +21,7 @@ import {
     registrySourceAllowed,
     type RegistryPolicy,
     type ToolchainProvider,
-} from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/shared';
 
 const REGISTRY_DIR = path.join('.dbx', 'toolchain');
 /** The legacy project file, still read for compatibility. */

@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { SyncContext, ToolchainTsconfigConfig } from '@deltabox/toolchain-shared';
+import type { SyncContext, ToolchainTsconfigConfig } from '@deltabox/toolchain/shared';
 
 import {
     applyOverride,

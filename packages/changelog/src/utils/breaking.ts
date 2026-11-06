@@ -1,4 +1,4 @@
-import type { ChangelogBreakingSetting } from '@deltabox/toolchain-shared';
+import type { ChangelogBreakingSetting } from '@deltabox/toolchain/shared';
 
 /** The commit fields breaking detection needs. */
 export interface BreakingCommit {

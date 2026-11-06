@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { readJsoncFile, type SyncContext } from '@deltabox/toolchain-shared';
+import { readJsoncFile, type SyncContext } from '@deltabox/toolchain/shared';
 
 import { editorConfigSyncTask, toolingConfigTask } from '../src/index.js';
 
@@ -95,8 +95,8 @@ describe('editorConfigSyncTask', () => {
             fs.readFileSync(path.join(cwd, '.vscode/settings.json'), 'utf-8')
         );
         expect(settings['editor.defaultFormatter']).toBe('biomejs.biome');
-        // Only the formatter selection + language blocks are added.
-        expect(settings['editor.formatOnSave']).toBeUndefined();
+        // The formatter selection + language blocks and format-on-save are added.
+        expect(settings['editor.formatOnSave']).toBe(true);
         expect(settings['editor.formatOnSaveMode']).toBeUndefined();
         expect(settings['oxc.disableNestedConfig']).toBeUndefined();
     });

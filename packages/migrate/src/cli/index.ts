@@ -3,8 +3,8 @@ import path from 'node:path';
 
 import { cancel, isCancel, multiselect } from '@clack/prompts';
 
-import { loadToolchainConfig, runSync, selectProjects } from '@deltabox/toolchain-core';
-import { logger, type ToolchainCommand } from '@deltabox/toolchain-shared';
+import { loadToolchainConfig, runSync, selectProjects } from '@deltabox/toolchain/core';
+import { logger, type ToolchainCommand } from '@deltabox/toolchain/shared';
 
 import { diffFiles, hasPending } from '../check.js';
 import { listMigrations, migrations } from '../registry.js';

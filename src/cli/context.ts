@@ -1,4 +1,4 @@
-import { type LoadedConfig, loadToolchainConfig } from '@deltabox/toolchain-core';
+import { type LoadedConfig, loadToolchainConfig } from '@deltabox/toolchain/core';
 
 import { getConfigSelection } from './config-selection.js';
 

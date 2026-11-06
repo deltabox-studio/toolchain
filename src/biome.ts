@@ -1,1 +1,1 @@
-export * from '@deltabox/toolchain-biome';
+export * from '@deltabox/toolchain/biome';

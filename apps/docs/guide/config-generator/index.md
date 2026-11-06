@@ -3,8 +3,8 @@
 `@deltabox/toolchain/config` is a configuration engine. A
 **Zod/untyped schema is the single source of truth**: attach metadata to zod leaves with
 `.meta()`, then generate the env/config TypeScript types, a JSON
-Schema, a markdown reference, config metadata JSON and CLI option definitions —
-all from that one schema.
+Schema, a markdown reference, config metadata JSON, CLI option definitions and a
+CLI reference — all from that one schema.
 
 ## Where to start
 
@@ -18,7 +18,7 @@ all from that one schema.
 - [Load the config](/guide/config-generator/load-the-config) — the runtime loader
   (`parseEnvTree`, `compileZodSchema`, and `applyOverrides` from shared).
 - [Generated outputs](/guide/config-generator/generated-outputs) — types,
-  markdown, env files, JSON Schema and formatting.
+  markdown, env files, JSON Schema, CLI docs and formatting.
 - [Real-world shape](/guide/config-generator/real-world-shape) — how a consumer
   binds the engine end-to-end.
 

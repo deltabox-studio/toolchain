@@ -17,7 +17,7 @@ export type JsonValue =
     | boolean
     | null
     | JsonValue[]
-    | { [key: string]: JsonValue };
+    | { [key: string & {}]: JsonValue };
 
 /** A CLI option a tooling command exposes (framework-agnostic). */
 export interface ToolchainOption {
@@ -49,6 +49,8 @@ export interface ToolchainCommandContext {
     tokens: Replacements;
     /** The config file that was loaded, if any. */
     configPath?: string;
+    /** The inherited ancestor config file, when this project has no config of its own. */
+    parentPath?: string;
     /** Whether config discovery was disabled (`dbx --no-config`). */
     noConfig?: boolean;
     /**
@@ -125,5 +127,5 @@ export interface PackageJson {
     workspaces?: string[] | { packages?: string[] };
     exports?: Record<string, unknown> | string;
     files?: string[];
-    [key: string]: unknown;
+    [key: string & {}]: unknown;
 }

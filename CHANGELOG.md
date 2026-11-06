@@ -1,8 +1,113 @@
 # Changelog
 
-## 2.4.0 (November 2026)
+## 2.6.0 (November 2026)
 
 <!-- release:start -->
+
+### New features
+- Route fmt/lint to the active tool and opt scaffolds into catalogs ([#76df575](https://github.com/deltabox-studio/toolchain/commit/76df575) by [T0chi](https://github.com/T0chi))
+  - dbx fmt/lint resolve the configured/discovered formatter or linter (oxc > biome > prettier > dprint; oxc > biome > eslint) and run it, falling back to the vp/Oxc passthrough
+  - project:init/create scaffolds add the catalogs section for the catalog file they write, so dbx sync owns it instead of leaving the managed file orphaned
+  - document the active-tool routing and add the dedicated package catalogs guide
+
+### Package changes
+#### Updated
+- `vite` `^8.3.0` → `^5.4.14`
+
+<!-- release:end -->
+
+
+## 2.5.0 (November 2026)
+
+### New features
+#### Config
+- Add a reusable CLI docs generator ([#900566a](https://github.com/deltabox-studio/toolchain/commit/900566a) by [T0chi](https://github.com/T0chi))
+  - add generateCliDocs(commands, options?) for custom command descriptors
+  - use it to render the dbx CLI reference
+  - document generating docs for a consumer's own command list
+  - cover hidden/duplicate commands, args/options and custom prefix/title
+- Add self-contained vendor types and `tsconfig` auto/`rewriteAlias` schemas ([#31c47a9](https://github.com/deltabox-studio/toolchain/commit/31c47a9) by [T0chi](https://github.com/T0chi))
+#### Changelog
+- Inject provider setup into custom and vendor workflows ([#b6b240f](https://github.com/deltabox-studio/toolchain/commit/b6b240f) by [T0chi](https://github.com/T0chi))
+  - add an opt-in setup flag to custom workflow options and vendor settings
+  - GitHub injects the missing checkout/Node/Corepack/install steps
+  - GitLab adds a Node image + before_script; Azure adds UseNode@1 + install
+  - avoid duplicating setup steps the workflow already defines
+  - resolve vendor workflow tokens from the default token set
+#### Biome
+- Add array removal directives and resolve toolchain debt ([#da100c8](https://github.com/deltabox-studio/toolchain/commit/da100c8) by [T0chi](https://github.com/T0chi))
+  - add $remove: / $reset array directives with a resolver step for biome.json
+  - fix peer warnings (declare vite, filter the stale VitePress plugin peer)
+  - replace the RULE_MAP cast with an Object.hasOwn guard
+  - add a direct extension env-propagation test
+  - drop the 30s real-git changelog timeout
+#### Cli
+- Add `sync --only` task selection and `selectSyncTasks` ([#49d73dd](https://github.com/deltabox-studio/toolchain/commit/49d73dd) by [T0chi](https://github.com/T0chi))
+#### Vscode
+- Split extension modules and add `syncTsconfig` action ([#f121c47](https://github.com/deltabox-studio/toolchain/commit/f121c47) by [T0chi](https://github.com/T0chi))
+#### Core
+- Expand VS Code formatter/linter defaults ([#e9ad3ff](https://github.com/deltabox-studio/toolchain/commit/e9ad3ff) by [T0chi](https://github.com/T0chi))
+- Resolve concrete watch inputs and update the VS Code watcher ([#425f0d3](https://github.com/deltabox-studio/toolchain/commit/425f0d3) by [T0chi](https://github.com/T0chi))
+#### Tsconfig
+- Auto-wire aliases/references with `rewriteAlias` and gating ([#124f4b5](https://github.com/deltabox-studio/toolchain/commit/124f4b5) by [T0chi](https://github.com/T0chi))
+### Bug fixes
+#### Cli
+- Sync and watch configless projects with the inherited config ([#346060d](https://github.com/deltabox-studio/toolchain/commit/346060d) by [T0chi](https://github.com/T0chi))
+  - The command context did not expose the ancestor config path, so dbx sync/watch in a nested project without its own dbx.config.* warned and did nothing. Pass parentPath through the context and allow both commands when it is set. The VS Code Sync all compensation now works for configless projects, while sync --recursive stays config-bearing-only and is documented as such.
+#### Core
+- Inherit only shared sections in configless projects ([#3c62b6f](https://github.com/deltabox-studio/toolchain/commit/3c62b6f) by [T0chi](https://github.com/T0chi))
+  - A configless project inherited the ancestor config as-is, so repository-level sections (ci, changelog, catalogs, tsconfig) and workspace-scoped vite.test/vite.run leaked into it. Merge the parent with an empty child config instead, which drops those sections and the parent's project identity while keeping the shared metadata and vite fmt/lint.
+- Stop inheriting project identity for configless workspaces ([#8f163ed](https://github.com/deltabox-studio/toolchain/commit/8f163ed) by [T0chi](https://github.com/T0chi))
+  - A nested workspace without its own dbx.config.* inherited the parent's project name/scope/description/type, so it could be detected as monorepo-root and lose its package.json identity. Strip the identity fields (and still drop the parent's hooks) when a configless project inherits an ancestor config.
+#### Vscode
+- Scope auto-sync watchers to their workspace root ([#6604b23](https://github.com/deltabox-studio/toolchain/commit/6604b23) by [T0chi](https://github.com/T0chi))
+  - String globs match across every workspace folder, and any watcher event synced every root. Scope each resolved input to its owning root (watching a concrete nested file from its own directory so the watcher stays non-recursive), drop absolute/ancestor globs, and sync only the root whose input changed. The CLI also rejects unsafe user globs.
+- Sync configless projects from Sync all ([#d9c185e](https://github.com/deltabox-studio/toolchain/commit/d9c185e) by [T0chi](https://github.com/T0chi))
+  - keep the CLI recursive pass for projects with their own config
+  - sync projects that only inherit the root config individually
+  - refresh the project graph first so newly discovered projects are included
+#### Project
+- Resolve repository.directory without a git checkout ([#a2d53d6](https://github.com/deltabox-studio/toolchain/commit/a2d53d6) by [T0chi](https://github.com/T0chi))
+  - fall back to the nearest ancestor dbx.config.* when no .git root is found
+  - keep the git checkout as the primary repository root
+  - add a regression test for a nested workspace without a .git checkout
+### Refactors
+- Use `@deltabox/toolchain/<name>` import subpaths and workspace-aware tsdown aliases ([#691445a](https://github.com/deltabox-studio/toolchain/commit/691445a) by [T0chi](https://github.com/T0chi))
+#### Shared
+- Literal-type the Vite+ default rules ([#b55fe2a](https://github.com/deltabox-studio/toolchain/commit/b55fe2a) by [T0chi](https://github.com/T0chi))
+  - Type DEFAULT_FMT_RULES and DEFAULT_LINT_RULES with as const satisfies a deeply readonly config view, so their values stay literal instead of widening to the interface. applyFmtCustomGroups accepts the readonly defaults (it never mutates its input), and a type-level test guards the literals.
+- Use as const for exported defaults ([#5b37c08](https://github.com/deltabox-studio/toolchain/commit/5b37c08) by [T0chi](https://github.com/T0chi))
+  - Prefer literal tuples/objects over broad annotations, derive the related union types, and keep dynamic lookups/mutable copies behind small helpers.
+#### Vscode
+- Extract sync, generate, migrate and reset commands ([#b2b146d](https://github.com/deltabox-studio/toolchain/commit/b2b146d) by [T0chi](https://github.com/T0chi))
+  - Move the sync/check, config generation, migrate and reset handlers out of extension.ts into commands modules. Expand CommandDeps with the shared run/refresh helpers and add a focused syncAll/syncSelected test.
+#### Config
+- Use string & {} for open index signatures ([#11665c0](https://github.com/deltabox-studio/toolchain/commit/11665c0) by [T0chi](https://github.com/T0chi))
+  - Emit [key: string & {}] from the config generator and use it in hand-written open maps, keeping known keys visible to autocomplete. Zod cannot express this key type, so the generator remains the post-processing point.
+  - Also make the workflow filename/token defaults literal constants.
+### Documentation
+- Document watcher scoping and project identity inheritance ([#074bfcd](https://github.com/deltabox-studio/toolchain/commit/074bfcd) by [T0chi](https://github.com/T0chi))
+  - Update the VS Code auto-sync section and the project guide to match the implementation: watchers are root-scoped and sync only the changed root; project name/scope/description/type are never inherited. Regenerate llms-full.txt.
+- Refresh `llms-full.txt` ([#e075ff1](https://github.com/deltabox-studio/toolchain/commit/e075ff1) by [T0chi](https://github.com/T0chi))
+- Regenerate llms docs ([#c1bf94a](https://github.com/deltabox-studio/toolchain/commit/c1bf94a) by [T0chi](https://github.com/T0chi))
+  - Refresh the generated llms bundle after the 2.4.0 changelog and VS Code documentation updates.
+#### Tsconfig
+- Note that refsAuto requires tsc --build ([#74a25b2](https://github.com/deltabox-studio/toolchain/commit/74a25b2) by [T0chi](https://github.com/T0chi))
+  - Project references are only followed by tsc --build; tsc -p --noEmit ignores them. Document the refsAuto requirement and why this repo keeps the references hand-written (refsAuto: false).
+#### Config
+- Document every generator and generateCliDocs ([#28f812e](https://github.com/deltabox-studio/toolchain/commit/28f812e) by [T0chi](https://github.com/T0chi))
+  - add engine + standalone examples for each generator
+  - document CLI docs, post-processing and advanced options
+  - cross-link generateCliDocs from the config-generator index and CLI commands
+#### Vscode
+- Expand the extension guide and README ([#942aa55](https://github.com/deltabox-studio/toolchain/commit/942aa55) by [T0chi](https://github.com/T0chi))
+  - Restore the updated provider/template sections, settings and auto-sync documentation in both the guide and the extension README.
+
+### Package changes
+#### Updated
+- `vite` `>=5` → `^5.4.14`
+
+## 2.4.0 (November 2026)
 
 ### New features
 #### Shared
@@ -32,9 +137,6 @@
 #### Deps
 - Update lockfile for @clack/prompts ([#52c08df](https://github.com/deltabox-studio/toolchain/commit/52c08df) by [T0chi](https://github.com/T0chi))
   - Record the new project workspace dependency so immutable CI installs no longer fail.
-
-<!-- release:end -->
-
 
 ## 2.3.4 (November 2026)
 

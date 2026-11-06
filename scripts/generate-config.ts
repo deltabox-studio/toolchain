@@ -14,8 +14,8 @@ import {
     createConfigEngine,
     normalizeJsonSchemaMetadata,
     toJsonSchemaSafe,
-} from '@deltabox/toolchain-config';
-import { configSchema, dbxConfigSchema, logger } from '@deltabox/toolchain-shared';
+} from '@deltabox/toolchain/config';
+import { configSchema, dbxConfigSchema, logger } from '@deltabox/toolchain/shared';
 
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const engine = createConfigEngine({ schema: configSchema });

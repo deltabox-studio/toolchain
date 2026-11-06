@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain",
-    "version": "2.4.0",
+    "version": "2.6.0",
     "description": "All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.",
     "homepage": "https://toolchain.deltabox.studio",
     "author": "Victor Sango <victor@deltabox.studio>",
@@ -34,11 +34,12 @@
         "environment",
         "variables",
         "configuration",
-        "settings"
+        "settings",
+        "dbx"
     ],
     "scripts": {
         "dev": "tsx src/cli/index.ts",
-        "build": "vp run --filter \"./packages/*\" build && vp run -w build:root && yarn build:vscode",
+        "build": "vp run --filter \"./packages/*\" build && vp run -w build:root && yarn build:vscode && yarn dbx sync --only tsconfig",
         "build:vscode": "yarn workspace toolchain-vscode package:vsix",
         "docs": "vp run --filter \"./apps/docs\"",
         "format": "vp run --filter \"./packages/*\" format && vp run -w format:root",
