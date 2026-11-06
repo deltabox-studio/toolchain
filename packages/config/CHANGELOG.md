@@ -1,15 +1,40 @@
 # Changelog
 
-## 2.4.0 (November 2026)
+## 2.5.0 (November 2026)
 
 <!-- release:start -->
+
+### New features
+#### Config
+- Add a reusable CLI docs generator ([#900566a](https://github.com/deltabox-studio/toolchain/commit/900566a) by [T0chi](https://github.com/T0chi))
+  - add generateCliDocs(commands, options?) for custom command descriptors
+  - use it to render the dbx CLI reference
+  - document generating docs for a consumer's own command list
+  - cover hidden/duplicate commands, args/options and custom prefix/title
+#### Biome
+- Add array removal directives and resolve toolchain debt ([#da100c8](https://github.com/deltabox-studio/toolchain/commit/da100c8) by [T0chi](https://github.com/T0chi))
+  - add $remove: / $reset array directives with a resolver step for biome.json
+  - fix peer warnings (declare vite, filter the stale VitePress plugin peer)
+  - replace the RULE_MAP cast with an Object.hasOwn guard
+  - add a direct extension env-propagation test
+  - drop the 30s real-git changelog timeout
+#### Tsconfig
+- Auto-wire aliases/references with `rewriteAlias` and gating ([#124f4b5](https://github.com/deltabox-studio/toolchain/commit/124f4b5) by [T0chi](https://github.com/T0chi))
+### Refactors
+- Use `@deltabox/toolchain/<name>` import subpaths and workspace-aware tsdown aliases ([#691445a](https://github.com/deltabox-studio/toolchain/commit/691445a) by [T0chi](https://github.com/T0chi))
+#### Config
+- Use string & {} for open index signatures ([#11665c0](https://github.com/deltabox-studio/toolchain/commit/11665c0) by [T0chi](https://github.com/T0chi))
+  - Emit [key: string & {}] from the config generator and use it in hand-written open maps, keeping known keys visible to autocomplete. Zod cannot express this key type, so the generator remains the post-processing point.
+  - Also make the workflow filename/token defaults literal constants.
+
+<!-- release:end -->
+
+
+## 2.4.0 (November 2026)
 
 ### Chores
 - Regenerate managed configs for import sorting ([#ce7a2e6](https://github.com/deltabox-studio/toolchain/commit/ce7a2e6) by [T0chi](https://github.com/T0chi))
   - Regenerate .oxfmtrc.json and every workspace vite.config.ts with the resolved sortImports workspace group.
-
-<!-- release:end -->
-
 
 ## 2.3.1 (November 2026)
 

@@ -1,8 +1,40 @@
 # Changelog
 
-## 2.4.0 (November 2026)
+## 2.5.0 (November 2026)
 
 <!-- release:start -->
+
+### New features
+#### Biome
+- Add array removal directives and resolve toolchain debt ([#da100c8](https://github.com/deltabox-studio/toolchain/commit/da100c8) by [T0chi](https://github.com/T0chi))
+  - add $remove: / $reset array directives with a resolver step for biome.json
+  - fix peer warnings (declare vite, filter the stale VitePress plugin peer)
+  - replace the RULE_MAP cast with an Object.hasOwn guard
+  - add a direct extension env-propagation test
+  - drop the 30s real-git changelog timeout
+#### Cli
+- Add `sync --only` task selection and `selectSyncTasks` ([#49d73dd](https://github.com/deltabox-studio/toolchain/commit/49d73dd) by [T0chi](https://github.com/T0chi))
+#### Core
+- Expand VS Code formatter/linter defaults ([#e9ad3ff](https://github.com/deltabox-studio/toolchain/commit/e9ad3ff) by [T0chi](https://github.com/T0chi))
+- Resolve concrete watch inputs and update the VS Code watcher ([#425f0d3](https://github.com/deltabox-studio/toolchain/commit/425f0d3) by [T0chi](https://github.com/T0chi))
+#### Tsconfig
+- Auto-wire aliases/references with `rewriteAlias` and gating ([#124f4b5](https://github.com/deltabox-studio/toolchain/commit/124f4b5) by [T0chi](https://github.com/T0chi))
+### Bug fixes
+#### Core
+- Inherit only shared sections in configless projects ([#3c62b6f](https://github.com/deltabox-studio/toolchain/commit/3c62b6f) by [T0chi](https://github.com/T0chi))
+  - A configless project inherited the ancestor config as-is, so repository-level sections (ci, changelog, catalogs, tsconfig) and workspace-scoped vite.test/vite.run leaked into it. Merge the parent with an empty child config instead, which drops those sections and the parent's project identity while keeping the shared metadata and vite fmt/lint.
+- Stop inheriting project identity for configless workspaces ([#8f163ed](https://github.com/deltabox-studio/toolchain/commit/8f163ed) by [T0chi](https://github.com/T0chi))
+  - A nested workspace without its own dbx.config.* inherited the parent's project name/scope/description/type, so it could be detected as monorepo-root and lose its package.json identity. Strip the identity fields (and still drop the parent's hooks) when a configless project inherits an ancestor config.
+#### Vscode
+- Scope auto-sync watchers to their workspace root ([#6604b23](https://github.com/deltabox-studio/toolchain/commit/6604b23) by [T0chi](https://github.com/T0chi))
+  - String globs match across every workspace folder, and any watcher event synced every root. Scope each resolved input to its owning root (watching a concrete nested file from its own directory so the watcher stays non-recursive), drop absolute/ancestor globs, and sync only the root whose input changed. The CLI also rejects unsafe user globs.
+### Refactors
+- Use `@deltabox/toolchain/<name>` import subpaths and workspace-aware tsdown aliases ([#691445a](https://github.com/deltabox-studio/toolchain/commit/691445a) by [T0chi](https://github.com/T0chi))
+
+<!-- release:end -->
+
+
+## 2.4.0 (November 2026)
 
 ### New features
 #### Project
@@ -14,9 +46,6 @@
 ### Chores
 - Regenerate managed configs for import sorting ([#ce7a2e6](https://github.com/deltabox-studio/toolchain/commit/ce7a2e6) by [T0chi](https://github.com/T0chi))
   - Regenerate .oxfmtrc.json and every workspace vite.config.ts with the resolved sortImports workspace group.
-
-<!-- release:end -->
-
 
 ## 2.3.1 (November 2026)
 

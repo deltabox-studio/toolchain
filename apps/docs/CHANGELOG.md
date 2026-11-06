@@ -1,8 +1,60 @@
 # Changelog
 
-## 2.4.0 (November 2026)
+## 2.5.0 (November 2026)
 
 <!-- release:start -->
+
+### New features
+#### Config
+- Add a reusable CLI docs generator ([#900566a](https://github.com/deltabox-studio/toolchain/commit/900566a) by [T0chi](https://github.com/T0chi))
+  - add generateCliDocs(commands, options?) for custom command descriptors
+  - use it to render the dbx CLI reference
+  - document generating docs for a consumer's own command list
+  - cover hidden/duplicate commands, args/options and custom prefix/title
+- Add self-contained vendor types and `tsconfig` auto/`rewriteAlias` schemas ([#31c47a9](https://github.com/deltabox-studio/toolchain/commit/31c47a9) by [T0chi](https://github.com/T0chi))
+#### Changelog
+- Inject provider setup into custom and vendor workflows ([#b6b240f](https://github.com/deltabox-studio/toolchain/commit/b6b240f) by [T0chi](https://github.com/T0chi))
+  - add an opt-in setup flag to custom workflow options and vendor settings
+  - GitHub injects the missing checkout/Node/Corepack/install steps
+  - GitLab adds a Node image + before_script; Azure adds UseNode@1 + install
+  - avoid duplicating setup steps the workflow already defines
+  - resolve vendor workflow tokens from the default token set
+#### Biome
+- Add array removal directives and resolve toolchain debt ([#da100c8](https://github.com/deltabox-studio/toolchain/commit/da100c8) by [T0chi](https://github.com/T0chi))
+  - add $remove: / $reset array directives with a resolver step for biome.json
+  - fix peer warnings (declare vite, filter the stale VitePress plugin peer)
+  - replace the RULE_MAP cast with an Object.hasOwn guard
+  - add a direct extension env-propagation test
+  - drop the 30s real-git changelog timeout
+#### Cli
+- Add `sync --only` task selection and `selectSyncTasks` ([#49d73dd](https://github.com/deltabox-studio/toolchain/commit/49d73dd) by [T0chi](https://github.com/T0chi))
+#### Vscode
+- Split extension modules and add `syncTsconfig` action ([#f121c47](https://github.com/deltabox-studio/toolchain/commit/f121c47) by [T0chi](https://github.com/T0chi))
+#### Tsconfig
+- Auto-wire aliases/references with `rewriteAlias` and gating ([#124f4b5](https://github.com/deltabox-studio/toolchain/commit/124f4b5) by [T0chi](https://github.com/T0chi))
+### Bug fixes
+#### Cli
+- Sync and watch configless projects with the inherited config ([#346060d](https://github.com/deltabox-studio/toolchain/commit/346060d) by [T0chi](https://github.com/T0chi))
+  - The command context did not expose the ancestor config path, so dbx sync/watch in a nested project without its own dbx.config.* warned and did nothing. Pass parentPath through the context and allow both commands when it is set. The VS Code Sync all compensation now works for configless projects, while sync --recursive stays config-bearing-only and is documented as such.
+### Documentation
+- Document watcher scoping and project identity inheritance ([#074bfcd](https://github.com/deltabox-studio/toolchain/commit/074bfcd) by [T0chi](https://github.com/T0chi))
+  - Update the VS Code auto-sync section and the project guide to match the implementation: watchers are root-scoped and sync only the changed root; project name/scope/description/type are never inherited. Regenerate llms-full.txt.
+#### Tsconfig
+- Note that refsAuto requires tsc --build ([#74a25b2](https://github.com/deltabox-studio/toolchain/commit/74a25b2) by [T0chi](https://github.com/T0chi))
+  - Project references are only followed by tsc --build; tsc -p --noEmit ignores them. Document the refsAuto requirement and why this repo keeps the references hand-written (refsAuto: false).
+#### Config
+- Document every generator and generateCliDocs ([#28f812e](https://github.com/deltabox-studio/toolchain/commit/28f812e) by [T0chi](https://github.com/T0chi))
+  - add engine + standalone examples for each generator
+  - document CLI docs, post-processing and advanced options
+  - cross-link generateCliDocs from the config-generator index and CLI commands
+#### Vscode
+- Expand the extension guide and README ([#942aa55](https://github.com/deltabox-studio/toolchain/commit/942aa55) by [T0chi](https://github.com/T0chi))
+  - Restore the updated provider/template sections, settings and auto-sync documentation in both the guide and the extension README.
+
+<!-- release:end -->
+
+
+## 2.4.0 (November 2026)
 
 ### New features
 #### Shared
@@ -23,9 +75,6 @@
 #### Shared
 - Repair PowerShell backtick artifacts in changelogs ([#61ced92](https://github.com/deltabox-studio/toolchain/commit/61ced92) by [T0chi](https://github.com/T0chi))
   - Repair paired \\code\\ and lone trailing identifier backslashes back to inline code while leaving paths and regexes alone, and correct the affected 2.3.1-2.3.3 entries.
-
-<!-- release:end -->
-
 
 ## 2.3.0 (November 2026)
 

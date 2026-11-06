@@ -1,8 +1,48 @@
 # Changelog
 
-## 2.4.0 (November 2026)
+## 2.5.0 (November 2026)
 
 <!-- release:start -->
+
+### New features
+#### Changelog
+- Inject provider setup into custom and vendor workflows ([#b6b240f](https://github.com/deltabox-studio/toolchain/commit/b6b240f) by [T0chi](https://github.com/T0chi))
+  - add an opt-in setup flag to custom workflow options and vendor settings
+  - GitHub injects the missing checkout/Node/Corepack/install steps
+  - GitLab adds a Node image + before_script; Azure adds UseNode@1 + install
+  - avoid duplicating setup steps the workflow already defines
+  - resolve vendor workflow tokens from the default token set
+#### Biome
+- Add array removal directives and resolve toolchain debt ([#da100c8](https://github.com/deltabox-studio/toolchain/commit/da100c8) by [T0chi](https://github.com/T0chi))
+  - add $remove: / $reset array directives with a resolver step for biome.json
+  - fix peer warnings (declare vite, filter the stale VitePress plugin peer)
+  - replace the RULE_MAP cast with an Object.hasOwn guard
+  - add a direct extension env-propagation test
+  - drop the 30s real-git changelog timeout
+#### Tsconfig
+- Auto-wire aliases/references with `rewriteAlias` and gating ([#124f4b5](https://github.com/deltabox-studio/toolchain/commit/124f4b5) by [T0chi](https://github.com/T0chi))
+#### Config
+- Add self-contained vendor types and `tsconfig` auto/`rewriteAlias` schemas ([#31c47a9](https://github.com/deltabox-studio/toolchain/commit/31c47a9) by [T0chi](https://github.com/T0chi))
+### Bug fixes
+#### Cli
+- Sync and watch configless projects with the inherited config ([#346060d](https://github.com/deltabox-studio/toolchain/commit/346060d) by [T0chi](https://github.com/T0chi))
+  - The command context did not expose the ancestor config path, so dbx sync/watch in a nested project without its own dbx.config.* warned and did nothing. Pass parentPath through the context and allow both commands when it is set. The VS Code Sync all compensation now works for configless projects, while sync --recursive stays config-bearing-only and is documented as such.
+### Refactors
+- Use `@deltabox/toolchain/<name>` import subpaths and workspace-aware tsdown aliases ([#691445a](https://github.com/deltabox-studio/toolchain/commit/691445a) by [T0chi](https://github.com/T0chi))
+#### Shared
+- Literal-type the Vite+ default rules ([#b55fe2a](https://github.com/deltabox-studio/toolchain/commit/b55fe2a) by [T0chi](https://github.com/T0chi))
+  - Type DEFAULT_FMT_RULES and DEFAULT_LINT_RULES with as const satisfies a deeply readonly config view, so their values stay literal instead of widening to the interface. applyFmtCustomGroups accepts the readonly defaults (it never mutates its input), and a type-level test guards the literals.
+- Use as const for exported defaults ([#5b37c08](https://github.com/deltabox-studio/toolchain/commit/5b37c08) by [T0chi](https://github.com/T0chi))
+  - Prefer literal tuples/objects over broad annotations, derive the related union types, and keep dynamic lookups/mutable copies behind small helpers.
+#### Config
+- Use string & {} for open index signatures ([#11665c0](https://github.com/deltabox-studio/toolchain/commit/11665c0) by [T0chi](https://github.com/T0chi))
+  - Emit [key: string & {}] from the config generator and use it in hand-written open maps, keeping known keys visible to autocomplete. Zod cannot express this key type, so the generator remains the post-processing point.
+  - Also make the workflow filename/token defaults literal constants.
+
+<!-- release:end -->
+
+
+## 2.4.0 (November 2026)
 
 ### New features
 #### Shared
@@ -20,9 +60,6 @@
 ### Chores
 - Regenerate managed configs for import sorting ([#ce7a2e6](https://github.com/deltabox-studio/toolchain/commit/ce7a2e6) by [T0chi](https://github.com/T0chi))
   - Regenerate .oxfmtrc.json and every workspace vite.config.ts with the resolved sortImports workspace group.
-
-<!-- release:end -->
-
 
 ## 2.3.1 (November 2026)
 
