@@ -370,6 +370,19 @@ export function activate(context: vscode.ExtensionContext): void {
         refreshViews();
     };
 
+    /**
+     * Sync every discovered project. The CLI's recursive pass covers projects
+     * with their own config (in dependency order); projects that only inherit
+     * the root `dbx.config.*` are synced individually afterwards.
+     */
+    const syncAllProjects = async (): Promise<void> => {
+        await refreshGraph();
+        await runRoots(['sync', '--recursive']);
+        const configless = discoverProjects().filter(project => !project.hasConfig);
+        if (configless.length > 0) await runProjects(configless, ['sync']);
+        refreshViews();
+    };
+
     const commandDeps = {
         output,
         runCli,
@@ -751,8 +764,7 @@ export function activate(context: vscode.ExtensionContext): void {
         async (action: HomeAction) => {
             switch (action.type) {
                 case 'syncAll':
-                    await runRoots(['sync', '--recursive']);
-                    refreshViews();
+                    await syncAllProjects();
                     break;
                 case 'syncActive':
                     await vscode.commands.executeCommand(`${SECTION}.sync`);
@@ -896,10 +908,7 @@ export function activate(context: vscode.ExtensionContext): void {
             if (root) await runCli(root, ['sync']);
             refreshViews();
         }),
-        vscode.commands.registerCommand('deltabox.toolchain.syncAll', async () => {
-            await runRoots(['sync', '--recursive']);
-            refreshViews();
-        }),
+        vscode.commands.registerCommand('deltabox.toolchain.syncAll', syncAllProjects),
         vscode.commands.registerCommand('deltabox.toolchain.syncTsconfig', async () => {
             await runRoots(['sync', '--only', 'tsconfig']);
             refreshViews();
