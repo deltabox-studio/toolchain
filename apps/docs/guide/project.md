@@ -58,16 +58,24 @@ A non-root `dbx.config.*` is merged over the nearest ancestor config (see
 [Configuration → Nested configs](/guide/config/nested-configs)). For `project`
 specifically:
 
-- **Fields are inherited** (scope, author, license, ...), so a workspace keeps the
-  shared metadata while overriding the fields it sets (typically `name`).
-- **`type` is never inherited** — the project kind is location-specific, so a
-  workspace without an explicit `type` is still detected from its own files.
+- **Identity fields are never inherited**: `name`, `scope`, `description` and
+  `type` are per-project. A workspace keeps its own values, falling back to its
+  `package.json` for `name`/`scope`/`description`, and is still detected from its
+  own files — a root `project` never renames or rescopes a workspace. The scope
+  therefore comes from the workspace's own `package.json` name (eg.
+  `@acme/web`); an unscoped name stays unscoped unless the workspace config sets
+  `scope`.
+- **Shared metadata is inherited** (`author`, `license`, `homepage`, `repo`,
+  `packageManager`, ...), so those `package.json` values and replacement tokens
+  stay shared.
 - **`inherit: false`** opts out entirely: the project keeps only its own `project`
   and ignores the parent's (useful for an unrelated package inside the tree).
 
 ```ts [packages/web/dbx.config.ts]
 export default defineConfig({
     toolchain: {
+        // `name`/`scope` are identity; here the scope comes from the package's
+        // `@acme/web` name. `author`/`license`/`repo` still inherit from the root.
         project: { name: 'web' },
         // ...
     },

@@ -122,11 +122,15 @@ every `dbx.config.*` plus each enabled project's `tsconfig.baseFile`,
 honoured, nested configs can disable or override their own tsconfig section, and
 the list is refreshed whenever a `dbx.config.*` changes (and after each sync).
 
-The resolved patterns are workspace-relative and non-recursive by default, so
-VS Code reuses its workspace watcher instead of installing extra recursive
-watchers (which can hold `node_modules` handles during a package-manager link
-step on Windows). Setting `deltabox.toolchain.watch` explicitly replaces the
-resolved inputs; an empty list disables watching.
+Each resolved pattern is scoped to its own workspace root (and a concrete
+nested file is watched from its own directory), so a same-named file in another
+workspace folder or an ancestor can never trigger this root's sync, and VS Code
+does not install a recursive watcher over the whole root (which can hold
+`node_modules` handles during a package-manager link step on Windows). Only the
+root whose input changed is synced. Setting `deltabox.toolchain.watch`
+explicitly replaces the resolved inputs; user globs are matched across every
+workspace folder, absolute/ancestor globs are ignored, and an empty list
+disables watching.
 
 Generated outputs are never watched. The scheduler debounces bursts, allows one sync at a time, queues at most one follow-up, and suppresses events briefly after a run.
 
