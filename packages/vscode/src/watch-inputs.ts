@@ -33,14 +33,21 @@ export const DEFAULT_TSCONFIG_FILES: TsconfigFileNames = {
     buildFile: 'tsconfig.build.json',
 };
 
+/**
+ * The non-recursive fallback watch globs (root only) used when the CLI cannot
+ * be asked. The normal path resolves every project's concrete config/tsconfig
+ * files via `dbx watch --list --json`.
+ */
+export const DEFAULT_WATCH_GLOBS = [
+    'dbx.config.*',
+    DEFAULT_TSCONFIG_FILES.rootFile,
+    DEFAULT_TSCONFIG_FILES.defaultFile,
+] as const;
+
 /** The fallback inputs when the CLI cannot be asked (mirrors the defaults). */
 export function defaultWatchInputs(): WatchInputs {
     return {
-        globs: [
-            '**/dbx.config.*',
-            DEFAULT_TSCONFIG_FILES.rootFile,
-            `**/${DEFAULT_TSCONFIG_FILES.defaultFile}`,
-        ],
+        globs: [...DEFAULT_WATCH_GLOBS],
         tsconfig: { ...DEFAULT_TSCONFIG_FILES },
     };
 }
@@ -86,23 +93,14 @@ export interface WatchTarget {
 
 /**
  * The watchers to create: the user's `deltabox.toolchain.watch` globs when they
- * set any, otherwise each root's resolved inputs relative to that root.
- * Duplicates are dropped.
+ * set any, otherwise the CLI-resolved concrete input files. The globs are kept
+ * workspace-relative (no `base`) so VS Code reuses its workspace watcher instead
+ * of installing an extra recursive watcher per root. Duplicates are dropped.
  */
 export function planWatchTargets(
     userGlobs: string[] | undefined,
     roots: { root: string; inputs: WatchInputs }[]
 ): WatchTarget[] {
-    if (userGlobs) return [...new Set(userGlobs)].map(glob => ({ glob }));
-    const seen = new Set<string>();
-    const targets: WatchTarget[] = [];
-    for (const { root, inputs } of roots) {
-        for (const glob of inputs.globs) {
-            const key = `${root}\0${glob}`;
-            if (seen.has(key)) continue;
-            seen.add(key);
-            targets.push({ glob, base: root });
-        }
-    }
-    return targets;
+    const globs = userGlobs ?? roots.flatMap(({ inputs }) => inputs.globs);
+    return [...new Set(globs)].map(glob => ({ glob }));
 }

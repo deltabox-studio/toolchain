@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { SyncTask } from '@deltabox/toolchain-shared';
+import type { SyncTask } from '@deltabox/toolchain/shared';
 
 import { loadToolchainConfig } from '../src/loader.js';
 import { runWatch } from '../src/watch.js';
