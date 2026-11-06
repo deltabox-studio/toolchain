@@ -3006,6 +3006,7 @@ guide for the full workflow).
 | `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                    |
 | `generateConfigTypes` / `generateConfigEnv`                                              | Type/env generators (optional disk writes).               |
 | `generateConfigMarkdown` / `generateConfigCli`                                           | Markdown/CLI generators (optional disk writes).           |
+| `generateCliDocs(commands, options?)`                                                    | A CLI reference from `ToolchainCommand` descriptors.      |
 | `generateConfigJsonSchema` / `generateJsonSchemaFile`                                    | JSON Schema generation.                                   |
 | `normalizeJsonSchemaMetadata(node)`                                                      | Normalize Zod JSON Schema metadata for editor schemas.    |
 | `generateEnv` / `generateEnvDts` / `generateConfigEnv`                                   | `.env` / env type generation.                             |
@@ -3163,6 +3164,22 @@ const program = new Command();
 registerToolchainCommands(program, configCommands({ engine }));
 await program.parseAsync();
 ```
+
+Custom descriptors do not need to be added to `builtinCommands()` to appear in
+the generated reference. Pass the same command list to `generateCliDocs`:
+
+```ts
+import { builtinCommands } from '@deltabox/toolchain/cli';
+import { generateCliDocs } from '@deltabox/toolchain/config';
+
+const markdown = generateCliDocs([...builtinCommands(), ...myCommands], {
+    prefix: 'my-cli',
+});
+```
+
+`generateCliDocs` omits `hidden` commands, keeps the first of any duplicate
+name, and renders args/options (with defaults) the same way as the `dbx`
+reference.
 
 ---
 

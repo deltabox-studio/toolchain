@@ -5,7 +5,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import { dbxConfigSchema } from '@deltabox/toolchain/shared';
+import { dbxConfigSchema, type ToolchainCommand } from '@deltabox/toolchain/shared';
 
 import {
     buildConfigJson,
@@ -16,6 +16,7 @@ import {
     envInt,
     envPathOf,
     envString,
+    generateCliDocs,
     generateCliOptions,
     generateConfigEnv,
     generateConfigJsonSchema,
@@ -115,6 +116,44 @@ describe('generators', () => {
         expect(token?.secret).toBe(true);
         const parser = createCliArgsParser(defs);
         expect(parser.parse(['--base-url', 'http://x']).values['base-url']).toBe('http://x');
+    });
+
+    it('renders custom command descriptors', () => {
+        const commands: ToolchainCommand[] = [
+            {
+                name: 'deploy',
+                description: 'Deploy the app | safely <now>',
+                args: [{ name: 'target', description: 'Where to deploy', required: true }],
+                options: [
+                    { flags: '-e, --env <name>', description: 'Environment', default: 'prod' },
+                ],
+                run: () => {},
+            },
+            { name: 'deploy', description: 'duplicate', run: () => {} },
+            { name: 'secret', description: 'hidden', hidden: true, run: () => {} },
+        ];
+        const markdown = generateCliDocs(commands, { intro: 'Custom intro.' });
+        expect(markdown).toContain('Custom intro.');
+        expect(markdown).toContain('[`dbx deploy`](#deploy)');
+        expect(markdown).toContain('Deploy the app \\| safely &lt;now&gt;');
+        expect(markdown).toContain('`‹target›`');
+        expect(markdown).toContain('default: `prod`');
+        expect(markdown).not.toContain('secret');
+        expect(markdown).not.toContain('duplicate');
+        expect(markdown.match(/## `dbx deploy`/g)).toHaveLength(1);
+    });
+
+    it('uses a custom CLI docs prefix and title', () => {
+        const markdown = generateCliDocs(
+            [{ name: 'build', description: 'Build.', run: () => {} }],
+            {
+                prefix: 'acme',
+                title: 'Commands',
+            }
+        );
+        expect(markdown).toContain('# Commands');
+        expect(markdown).toContain('[`acme build`](#build)');
+        expect(markdown).toContain('## `acme build`');
     });
 
     it('supports custom frontmatter strings and callbacks', () => {

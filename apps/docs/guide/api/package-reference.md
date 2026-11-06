@@ -92,6 +92,7 @@ guide for the full workflow).
 | `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                    |
 | `generateConfigTypes` / `generateConfigEnv`                                              | Type/env generators (optional disk writes).               |
 | `generateConfigMarkdown` / `generateConfigCli`                                           | Markdown/CLI generators (optional disk writes).           |
+| `generateCliDocs(commands, options?)`                                                    | A CLI reference from `ToolchainCommand` descriptors.      |
 | `generateConfigJsonSchema` / `generateJsonSchemaFile`                                    | JSON Schema generation.                                   |
 | `normalizeJsonSchemaMetadata(node)`                                                      | Normalize Zod JSON Schema metadata for editor schemas.    |
 | `generateEnv` / `generateEnvDts` / `generateConfigEnv`                                   | `.env` / env type generation.                             |
