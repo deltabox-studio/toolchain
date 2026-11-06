@@ -14,8 +14,12 @@ import {
     spawnCli,
     workspaceRoots,
 } from './cli.js';
+import { createGenerateCommands } from './commands/generate.js';
+import { createMigrateCommand } from './commands/migrate.js';
 import { createProviderRegistryCommands } from './commands/providers.js';
+import { createResetCommand } from './commands/reset.js';
 import { createScaffoldCommands } from './commands/scaffold.js';
+import { createSyncCommands } from './commands/sync.js';
 import { createTsconfigCommand } from './commands/tsconfig.js';
 import { createWorkflowCommands } from './commands/workflows.js';
 import { type HomeAction, HomeViewProvider } from './home-view.js';
@@ -50,22 +54,6 @@ const REGISTRIES_VIEW_ID = 'deltabox.registries';
 
 /** The public documentation site (the Home "Need help?" link). */
 const DOCS_URL = 'https://toolchain.deltabox.studio';
-
-/** The workflow ids the CLI understands. */
-/** The `dbx migrate --from` sources, plus "all detected". */
-const MIGRATION_SOURCES = [
-    {
-        label: 'All detected',
-        value: 'all',
-        description: 'Every source config found in the project',
-    },
-    { label: 'Biome', value: 'biome', description: 'biome.json -> Oxfmt / Oxlint' },
-    { label: 'Prettier', value: 'prettier', description: '.prettierrc -> Oxfmt' },
-    { label: 'Dprint', value: 'dprint', description: 'dprint.json -> Oxfmt' },
-    { label: 'ESLint', value: 'eslint', description: '.eslintrc -> Oxlint' },
-    { label: 'Oxc', value: 'oxc', description: '.oxfmtrc/.oxlintrc -> dbx.config' },
-    { label: 'Vite config', value: 'vite', description: 'Fold vite.config.* into dbx.config' },
-];
 
 /** How long to wait for `dbx watch --list` before falling back to the defaults. */
 const WATCH_INPUTS_TIMEOUT_MS = 30_000;
@@ -386,292 +374,29 @@ export function activate(context: vscode.ExtensionContext): void {
         refreshViews();
     };
 
-    /**
-     * Sync every discovered project. The CLI's recursive pass covers projects
-     * with their own config (in dependency order); projects that only inherit
-     * the root `dbx.config.*` are synced individually afterwards.
-     */
-    const syncAllProjects = async (): Promise<void> => {
-        await refreshGraph();
-        await runRoots(['sync', '--recursive']);
-        const configless = discoverProjects().filter(project => !project.hasConfig);
-        if (configless.length > 0) await runProjects(configless, ['sync']);
-        refreshViews();
-    };
-
     const commandDeps = {
         output,
         runCli,
         captureCli,
         workspaceRoots,
         refreshGraph,
+        refreshViews,
+        runRoots,
+        runProjects,
+        selectedProjects: (): Project[] =>
+            treeView.selection.filter((node): node is Project => node.kind === 'project'),
+        section: SECTION,
     };
+    const syncCommands = createSyncCommands(commandDeps);
+    const generateCommands = createGenerateCommands(commandDeps);
+    const migrateTooling = createMigrateCommand(commandDeps);
+    const resetToolchain = createResetCommand(commandDeps);
     const manageTsconfig = createTsconfigCommand(commandDeps);
     const { runWorkflow } = createWorkflowCommands(commandDeps);
     const { createViteProject, createFromTemplate, scaffold, addTemplate, removeTemplate } =
         createScaffoldCommands(commandDeps);
-    const checkSync = async (): Promise<void> => {
-        const roots = workspaceRoots();
-        if (roots.length === 0) {
-            vscode.window.showWarningMessage('deltabox: no workspace folder open.');
-            return;
-        }
-        const failed: string[] = [];
-        for (const root of roots) {
-            if ((await runCli(root, ['sync', '--recursive', '--check'])) !== 0) {
-                failed.push(path.basename(root));
-            }
-        }
-        if (failed.length > 0) {
-            const choice = await vscode.window.showWarningMessage(
-                `deltabox: generated files are out of date in ${failed.join(', ')}.`,
-                'Run sync',
-                'Show output'
-            );
-            if (choice === 'Run sync') await vscode.commands.executeCommand(`${SECTION}.syncAll`);
-            else if (choice === 'Show output') output.show();
-        } else {
-            vscode.window.showInformationMessage('deltabox: all generated files are in sync.');
-        }
-    };
-
-    /** Prompt for a subset of projects (multi-select). */
-    const pickProjects = async (
-        projects: Project[],
-        placeHolder: string
-    ): Promise<Project[] | undefined> => {
-        if (projects.length === 0) return [];
-        const picks = await vscode.window.showQuickPick(
-            projects.map(project => ({
-                label: project.label,
-                description: project.relativePath,
-                detail: project.dir,
-                project,
-            })),
-            { canPickMany: true, placeHolder }
-        );
-        return picks?.map(pick => pick.project);
-    };
-
     const goToProject = (dir: string): void => {
         void vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(dir));
-    };
-
-    const checkProject = async (dir: string, label: string): Promise<void> => {
-        if ((await runCli(dir, ['sync', '--check'])) === 0) {
-            vscode.window.showInformationMessage(`deltabox: ${label} is in sync.`);
-            return;
-        }
-        const choice = await vscode.window.showWarningMessage(
-            `deltabox: ${label} is out of sync.`,
-            'Run sync',
-            'Show output'
-        );
-        if (choice === 'Run sync') {
-            await runCli(dir, ['sync']);
-            refreshViews();
-        } else if (choice === 'Show output') output.show();
-    };
-
-    interface ConfigGenerationOptions {
-        skipConfig: boolean;
-        language?: 'ts' | 'js';
-    }
-
-    /** Ask whether to create configs or only refresh the project graph, and the language. */
-    const pickConfigGeneration = async (): Promise<ConfigGenerationOptions | undefined> => {
-        const mode = await vscode.window.showQuickPick(
-            [
-                {
-                    label: 'Create dbx.config.*',
-                    description: 'Write a config for each selected project',
-                    value: 'config' as const,
-                },
-                {
-                    label: 'Only write the project graph',
-                    description: 'Refresh .dbx/toolchain/projects.json without creating configs',
-                    value: 'graph' as const,
-                },
-            ],
-            { placeHolder: 'What should be generated?' }
-        );
-        if (!mode) return undefined;
-        if (mode.value === 'graph') return { skipConfig: true };
-        const language = await vscode.window.showQuickPick(
-            [
-                { label: 'TypeScript', description: 'dbx.config.ts', value: 'ts' as const },
-                {
-                    label: 'JavaScript',
-                    description: 'dbx.config.js / .mjs / .cjs (follows the package type)',
-                    value: 'js' as const,
-                },
-            ],
-            { placeHolder: 'Config language?' }
-        );
-        if (!language) return undefined;
-        return { skipConfig: false, language: language.value };
-    };
-
-    /** The `project:config` flags for a generation choice. */
-    const configArgs = (options: ConfigGenerationOptions, force = false): string[] => {
-        const args = ['project:config'];
-        if (options.skipConfig) args.push('--skip-config');
-        else if (options.language) args.push('--language', options.language);
-        if (force) args.push('--force');
-        return args;
-    };
-
-    const generateConfigs = async (): Promise<void> => {
-        const options = await pickConfigGeneration();
-        if (!options) return;
-        const all = discoverProjects();
-        const candidates = options.skipConfig ? all : all.filter(project => !project.hasConfig);
-        if (candidates.length === 0) {
-            vscode.window.showInformationMessage(
-                options.skipConfig
-                    ? 'deltabox: no projects found to graph.'
-                    : 'deltabox: every project already has a config.'
-            );
-            return;
-        }
-        const selected = await pickProjects(
-            candidates,
-            options.skipConfig
-                ? 'Refresh the project graph for which projects?'
-                : 'Generate a dbx config for which projects?'
-        );
-        if (!selected || selected.length === 0) return;
-        let failed = 0;
-        for (const project of selected) {
-            if ((await runCli(project.dir, configArgs(options))) !== 0) failed += 1;
-            else if (!options.skipConfig) await runCli(project.dir, ['sync']);
-        }
-        await refreshGraph();
-        if (failed === 0) {
-            vscode.window.showInformationMessage(
-                options.skipConfig
-                    ? `deltabox: refreshed the project graph for ${selected.length} project(s).`
-                    : `deltabox: generated ${selected.length} config(s).`
-            );
-        } else {
-            vscode.window.showWarningMessage(
-                `deltabox: ${failed} config(s) failed. See the output channel.`
-            );
-            output.show();
-        }
-    };
-
-    const generateProjectConfig = async (dir?: string, label?: string): Promise<void> => {
-        const projects = discoverProjects();
-        let project = dir ? projects.find(candidate => candidate.dir === dir) : undefined;
-        if (!project) {
-            if (projects.length === 0) {
-                vscode.window.showInformationMessage('deltabox: no projects found.');
-                return;
-            }
-            const picked = await vscode.window.showQuickPick(
-                projects.map(candidate => ({
-                    label: candidate.label,
-                    description: candidate.relativePath,
-                    detail: candidate.dir,
-                    project: candidate,
-                })),
-                { placeHolder: 'Generate a dbx config for which project?' }
-            );
-            if (!picked) return;
-            project = picked.project;
-        }
-        const options = await pickConfigGeneration();
-        if (!options) return;
-        let force = false;
-        if (!options.skipConfig && project.hasConfig) {
-            const overwrite = await vscode.window.showWarningMessage(
-                `deltabox: ${project.label} already has a dbx config. Overwrite it?`,
-                { modal: true },
-                'Overwrite'
-            );
-            if (overwrite !== 'Overwrite') return;
-            force = true;
-        }
-        const code = await runCli(project.dir, configArgs(options, force));
-        if (code === 0 && !options.skipConfig) await runCli(project.dir, ['sync']);
-        await refreshGraph();
-        if (code === 0) {
-            vscode.window.showInformationMessage(
-                options.skipConfig
-                    ? `deltabox: project graph refreshed for ${label ?? project.label}.`
-                    : `deltabox: config written for ${label ?? project.label}.`
-            );
-        } else {
-            output.show();
-        }
-    };
-
-    const migrateTooling = async (cwd?: string): Promise<void> => {
-        const root = cwd ?? workspaceRoots()[0];
-        if (!root) {
-            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
-            return;
-        }
-        const picked = await vscode.window.showQuickPick(MIGRATION_SOURCES, {
-            placeHolder: 'Migrate which tooling config?',
-            matchOnDescription: true,
-        });
-        if (!picked) return;
-        const confirm = await vscode.window.showWarningMessage(
-            `Migrate ${picked.label.toLowerCase()} in ${path.basename(root)}?`,
-            { modal: true, detail: picked.description },
-            'Migrate'
-        );
-        if (confirm !== 'Migrate') return;
-        const args = ['migrate', '--cwd', root, '--write'];
-        if (picked.value !== 'all') args.push('--from', picked.value);
-        if ((await runCli(root, args)) === 0) {
-            vscode.window.showInformationMessage(`deltabox: migration finished (${picked.label}).`);
-            await refreshGraph();
-        } else {
-            vscode.window.showWarningMessage('deltabox: migration failed. See the output channel.');
-            output.show();
-        }
-    };
-
-    const resetToolchain = async (targets?: Project[]): Promise<void> => {
-        const scope = await vscode.window.showQuickPick(
-            [
-                {
-                    label: 'Generated files + manifest',
-                    value: 'default',
-                    detail: 'Keeps dbx.config.ts',
-                },
-                {
-                    label: 'Everything (including config)',
-                    value: 'all',
-                    detail: 'Removes dbx.config.ts too',
-                },
-            ],
-            { placeHolder: 'What should be removed?' }
-        );
-        if (!scope) return;
-
-        const selected =
-            targets ?? (await pickProjects(discoverProjects(), 'Reset which projects?'));
-        if (!selected || selected.length === 0) return;
-
-        const what =
-            scope.value === 'all'
-                ? 'generated files, the manifest and the config'
-                : 'generated files and the manifest';
-        const confirm = await vscode.window.showWarningMessage(
-            `Remove ${what} from ${selected.length} project(s)?`,
-            { modal: true },
-            'Remove'
-        );
-        if (confirm !== 'Remove') return;
-
-        const args = scope.value === 'all' ? ['reset', '--all'] : ['reset'];
-        await runProjects(selected, args);
-        await refreshGraph();
-        vscode.window.showInformationMessage(`deltabox: reset ${selected.length} project(s).`);
     };
 
     /** Open an integrated terminal at `root` and run a `dbx` command. */
@@ -780,7 +505,7 @@ export function activate(context: vscode.ExtensionContext): void {
         async (action: HomeAction) => {
             switch (action.type) {
                 case 'syncAll':
-                    await syncAllProjects();
+                    await syncCommands.syncAll();
                     break;
                 case 'syncActive':
                     await vscode.commands.executeCommand(`${SECTION}.sync`);
@@ -789,7 +514,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     await vscode.commands.executeCommand(`${SECTION}.syncSelected`);
                     break;
                 case 'syncCheck':
-                    await checkSync();
+                    await syncCommands.checkSync();
                     break;
                 case 'syncTsconfig':
                     await vscode.commands.executeCommand(`${SECTION}.syncTsconfig`);
@@ -801,7 +526,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     await refreshGraph();
                     break;
                 case 'generateConfigs':
-                    await generateConfigs();
+                    await generateCommands.generateConfigs();
                     break;
                 case 'runWorkflow':
                     await runWorkflow(workspaceRoots()[0] ?? process.cwd());
@@ -827,11 +552,17 @@ export function activate(context: vscode.ExtensionContext): void {
                     const project = discoverProjects().find(
                         candidate => candidate.dir === action.dir
                     );
-                    await checkProject(action.dir, project?.label ?? path.basename(action.dir));
+                    await syncCommands.checkProject(
+                        action.dir,
+                        project?.label ?? path.basename(action.dir)
+                    );
                     break;
                 }
                 case 'generateProjectConfig':
-                    await generateProjectConfig(action.dir, path.basename(action.dir));
+                    await generateCommands.generateProjectConfig(
+                        action.dir,
+                        path.basename(action.dir)
+                    );
                     break;
                 case 'runProjectWorkflow':
                     await runWorkflow(action.dir);
@@ -919,37 +650,18 @@ export function activate(context: vscode.ExtensionContext): void {
         providersView,
         templatesView,
         registriesView,
-        vscode.commands.registerCommand('deltabox.toolchain.sync', async () => {
-            const root = workspaceRoots()[0];
-            if (root) await runCli(root, ['sync']);
-            refreshViews();
-        }),
-        vscode.commands.registerCommand('deltabox.toolchain.syncAll', syncAllProjects),
-        vscode.commands.registerCommand('deltabox.toolchain.syncTsconfig', async () => {
-            await runRoots(['sync', '--only', 'tsconfig']);
-            refreshViews();
-        }),
-        vscode.commands.registerCommand('deltabox.toolchain.syncSelected', async () => {
-            const projects = treeView.selection.filter(
-                (node): node is Project => node.kind === 'project'
-            );
-            if (projects.length === 0) {
-                vscode.window.showInformationMessage(
-                    'Select one or more projects in the Projects view first.'
-                );
-                return;
-            }
-            await runProjects(projects, ['sync']);
-            refreshViews();
-        }),
+        vscode.commands.registerCommand('deltabox.toolchain.sync', syncCommands.syncActive),
+        vscode.commands.registerCommand('deltabox.toolchain.syncAll', syncCommands.syncAll),
         vscode.commands.registerCommand(
-            'deltabox.toolchain.syncProject',
-            async (project: Project) => {
-                await runCli(project.dir, ['sync']);
-                refreshViews();
-            }
+            'deltabox.toolchain.syncTsconfig',
+            syncCommands.syncTsconfig
         ),
-        vscode.commands.registerCommand('deltabox.toolchain.syncCheck', checkSync),
+        vscode.commands.registerCommand(
+            'deltabox.toolchain.syncSelected',
+            syncCommands.syncSelected
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.syncProject', syncCommands.syncProject),
+        vscode.commands.registerCommand('deltabox.toolchain.syncCheck', syncCommands.checkSync),
         vscode.commands.registerCommand('deltabox.toolchain.tsconfig', manageTsconfig),
         vscode.commands.registerCommand('deltabox.toolchain.chooseDbxSource', () =>
             chooseDbxSource(context)
@@ -961,15 +673,18 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand(
             'deltabox.toolchain.checkProject',
             async (node?: Project) => {
-                if (node) await checkProject(node.dir, node.label);
+                if (node) await syncCommands.checkProject(node.dir, node.label);
             }
         ),
-        vscode.commands.registerCommand('deltabox.toolchain.generateConfigs', generateConfigs),
+        vscode.commands.registerCommand(
+            'deltabox.toolchain.generateConfigs',
+            generateCommands.generateConfigs
+        ),
         vscode.commands.registerCommand('deltabox.toolchain.migrate', () => migrateTooling()),
         vscode.commands.registerCommand(
             'deltabox.toolchain.generateConfig',
             async (node?: Project) => {
-                await generateProjectConfig(node?.dir, node?.label);
+                await generateCommands.generateProjectConfig(node?.dir, node?.label);
             }
         ),
         vscode.commands.registerCommand(
