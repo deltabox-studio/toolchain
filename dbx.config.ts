@@ -6,8 +6,9 @@ import { defineConfig } from '@deltabox/toolchain';
  * settings from here.
  *
  * Every workspace also has its own `dbx.config.ts` (holding its Vite Task
- * definitions), so `dbx sync --recursive` writes each workspace's
- * `vite.config.ts`. The dogfooded shims are static (`vite.shim: 'static'`), so
+ * definitions and its own `vite` settings, since `vite` is never inherited), so
+ * `dbx sync --recursive` writes each workspace's `vite.config.ts`. The
+ * dogfooded shims are static (`vite.shim: 'static'`), so
  * Vite+ can load them without a built `@deltabox/toolchain` `dist`; the root
  * `devDependencies` self-link (`"@deltabox/toolchain": "portal:."`) still
  * provides the package to TypeScript/tests.
@@ -51,6 +52,11 @@ export default defineConfig({
             // project references. Keep them in sync manually when exports change.
             refsAuto: false,
         },
+        // The dogfooded configs import the built `@deltabox/toolchain`, but the
+        // repo tsconfig maps that specifier to source. Loading the config with
+        // the tsconfig would mix source and `dist` modules, so opt the loader
+        // out (tsx still rewrites relative `.js` -> `.ts`).
+        loader: { tsconfig: false },
         ci: {
             changelog: {
                 vscode: true,
@@ -299,23 +305,11 @@ export default defineConfig({
             issues: true,
             sync: true,
         },
-        vite: {
-            // Dogfood a static shim so Vite+ can load it without a built dist.
-            shim: 'static',
-            // Resolve workspace imports through the tsconfig `paths` in Vite.
-            resolve: {
-                tsconfigPaths: true,
-            },
-
-            // Vitest: every package's tests + the root CLI tests.
-            test: {
-                include: ['packages/**/tests/**/*.test.ts', 'tests/**/*.test.ts'],
-                environment: 'node',
-                exclude: ['**/node_modules/**', '**/dist/**'],
-            },
-
+        // Shared formatting/linting lives at the top level so every workspace
+        // (even one with a hand-written `vite.config.*`) inherits it.
+        fmt: {
             // Oxfmt (from `biome.json` formatter + javascript.formatter).
-            fmt: {
+            oxc: {
                 useTabs: false,
                 tabWidth: 4,
                 printWidth: 100,
@@ -355,9 +349,10 @@ export default defineConfig({
                 // Import sorting comes from the toolchain defaults; the
                 // `workspace` group is resolved from the project graph.
             },
-
+        },
+        lint: {
             // Oxlint (from `biome.json` linter.rules; `info` -> `off`, no Oxlint level).
-            lint: {
+            oxc: {
                 ignorePatterns: [
                     '**/node_modules/**',
                     '**/dist/**',
@@ -385,6 +380,21 @@ export default defineConfig({
                     // The markdown sanitizers intentionally match control chars.
                     'no-control-regex': 'off',
                 },
+            },
+        },
+        vite: {
+            // Dogfood a static shim so Vite+ can load it without a built dist.
+            shim: 'static',
+            // Resolve workspace imports through the tsconfig `paths` in Vite.
+            resolve: {
+                tsconfigPaths: true,
+            },
+
+            // Vitest: every package's tests + the root CLI tests.
+            test: {
+                include: ['packages/**/tests/**/*.test.ts', 'tests/**/*.test.ts'],
+                environment: 'node',
+                exclude: ['**/node_modules/**', '**/dist/**'],
             },
 
             // Vite Task (`vp run`) replaces turbo. Each package declares its own

@@ -2,7 +2,16 @@ import { defineConfig } from '@deltabox/toolchain';
 
 export default defineConfig({
     toolchain: {
+        // Sections are opt-in per nested config; inherit the root formatting.
+        fmt: true,
+        lint: true,
         vite: {
+            // Static shim + tsconfig path resolution (the root `vite` section is
+            // not inherited).
+            shim: 'static',
+            resolve: {
+                tsconfigPaths: true,
+            },
             run: {
                 tasks: {
                     build: {

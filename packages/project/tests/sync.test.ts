@@ -122,7 +122,7 @@ describe('projectSyncTask', () => {
             description: 'The web package',
         });
 
-        const loaded = await loadToolchainConfig(ws);
+        const loaded = await loadToolchainConfig(ws, { manageConfigless: true });
         const files = await projectSyncTask().run({
             ...ctx(ws, loaded.config),
             projectType: loaded.projectType,
