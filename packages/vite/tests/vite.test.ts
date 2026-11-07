@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { runSync } from '@deltabox/toolchain/core';
 import { DEFAULT_FMT_RULES, DEFAULT_LINT_RULES } from '@deltabox/toolchain/shared';
 
 import {
@@ -385,6 +386,65 @@ describe('vite.config.ts shim', () => {
         const files = await viteSyncTask().run(ctx);
         expect(files?.some(file => file.path === OXC_FMT_CONFIG_FILE)).toBe(true);
         expect(files?.some(file => file.path === OXC_LINT_CONFIG_FILE)).toBe(false);
+    });
+
+    it('leaves a hand-written vite.config.ts untouched when the workspace has no vite section', async () => {
+        const dir = makeTmp();
+        const original = 'export default { server: { port: 4321 } };\n';
+        fs.writeFileSync(path.join(dir, 'vite.config.ts'), original);
+
+        // `config` is the merged config (it still carries the parent's vite
+        // section); `ownConfig` is what the workspace itself declared.
+        await runSync({
+            tasks: [viteSyncTask()],
+            cwd: dir,
+            config: { vite: { shim: 'static', resolve: { tsconfigPaths: true } } },
+            ownConfig: {},
+            tokens: {},
+            projectType: 'monorepo-workspace',
+            quiet: true,
+        });
+
+        expect(fs.readFileSync(path.join(dir, 'vite.config.ts'), 'utf-8')).toBe(original);
+    });
+
+    it('writes the shim when the workspace declares its own vite section', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'vite.config.ts'),
+            'export default { server: { port: 4321 } };\n'
+        );
+
+        await runSync({
+            tasks: [viteSyncTask()],
+            cwd: dir,
+            config: {
+                vite: { shim: 'static', resolve: { tsconfigPaths: true } },
+            },
+            ownConfig: { vite: { run: { tasks: {} } } },
+            tokens: {},
+            projectType: 'monorepo-workspace',
+            quiet: true,
+        });
+
+        const written = fs.readFileSync(path.join(dir, 'vite.config.ts'), 'utf-8');
+        expect(written).toContain("import { defineConfig, type ViteUserConfig } from 'vite-plus';");
+        expect(written).toContain('"tsconfigPaths": true');
+        expect(written).not.toContain('4321');
+    });
+
+    it('does not write a shim for a configless workspace', async () => {
+        const dir = makeTmp();
+        await runSync({
+            tasks: [viteSyncTask()],
+            cwd: dir,
+            config: {},
+            ownConfig: {},
+            tokens: {},
+            projectType: 'monorepo-workspace',
+            quiet: true,
+        });
+        expect(fs.existsSync(path.join(dir, 'vite.config.ts'))).toBe(false);
     });
 });
 

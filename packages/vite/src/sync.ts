@@ -416,11 +416,12 @@ function renderOxcConfig(schemaPath: string, config: unknown): string {
 }
 
 /**
- * The vite sync task: writes the `vite.config.ts` shim when the `vite` section is
- * enabled (and `config` is not `false`), plus the root `.oxfmtrc.json` /
- * `.oxlintrc.json` files the Oxc VS Code extension reads. A nested config only
- * gets its own Oxc files when it defines `vite.fmt` / `vite.lint` itself (not
- * merely inherited from the root).
+ * The vite sync task: writes the `vite.config.ts` shim when the project's **own**
+ * `vite` section is enabled (and `config` is not `false`), plus the root
+ * `.oxfmtrc.json` / `.oxlintrc.json` files the Oxc VS Code extension reads. A
+ * nested config only gets its own shim/Oxc files when it defines `vite` itself;
+ * a project with no `vite` section keeps its hand-written `vite.config.*`
+ * untouched even though the shared `vite` config is inherited.
  */
 export function viteSyncTask(): SyncTask {
     return {
@@ -431,12 +432,10 @@ export function viteSyncTask(): SyncTask {
             sectionEnabled(config.fmt) ||
             sectionEnabled(config.lint),
         run: async ctx => {
-            const hasVite = sectionEnabled(ctx.config.vite);
             const section = sectionConfig(ctx.config.vite) ?? {};
             const ownConfig = ctx.ownConfig ?? ctx.config;
-            const ownVite = sectionEnabled(ownConfig.vite)
-                ? (sectionConfig(ownConfig.vite) ?? {})
-                : {};
+            const ownViteEnabled = sectionEnabled(ownConfig.vite);
+            const ownVite = ownViteEnabled ? (sectionConfig(ownConfig.vite) ?? {}) : {};
             const ownFmt = sectionEnabled(ownConfig.fmt)
                 ? sectionConfig(ownConfig.fmt)?.oxc
                 : undefined;
@@ -468,7 +467,10 @@ export function viteSyncTask(): SyncTask {
                     : typeof configuredPath === 'string' && configuredPath.trim()
                       ? configuredPath
                       : 'vite.config.ts';
-            if (hasVite && shimPath) {
+            // Only a project with its own `vite` section manages a shim. An
+            // inherited section must never overwrite a hand-written
+            // `vite.config.*` in a project that did not opt in.
+            if (ownViteEnabled && shimPath) {
                 let existing: string | undefined;
                 try {
                     const target = path.isAbsolute(shimPath)
