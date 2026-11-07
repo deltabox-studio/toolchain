@@ -53,6 +53,14 @@ export interface ToolchainCommandContext {
     parentPath?: string;
     /** Whether config discovery was disabled (`dbx --no-config`). */
     noConfig?: boolean;
+    /** Whether this project has no config of its own but an ancestor config. */
+    configless?: boolean;
+    /**
+     * Whether the toolchain should manage this project. Config-bearing projects
+     * are always managed; configless projects only when opted in (`--configless`
+     * or `project.manageConfigless`).
+     */
+    managed?: boolean;
     /**
      * Set when a `dbx.config.*` file failed to import (the CLI loads configs
      * tolerantly so unrelated commands still work). Commands that cannot operate

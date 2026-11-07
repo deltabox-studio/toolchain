@@ -70,6 +70,10 @@
                 "inherit": {
                     "type": "boolean",
                     "description": "Inherit the parent project metadata (default true). Set false to keep this project metadata independent of the root config (other sections still merge normally)."
+                },
+                "manageConfigless": {
+                    "type": "boolean",
+                    "description": "Manage projects that have no dbx.config.* of their own by inheriting the nearest ancestor config (default false). Disabled by default so configless projects are never touched unless explicitly opted in."
                 }
             },
             "additionalProperties": false,
@@ -1997,6 +2001,24 @@
             "additionalProperties": false,
             "description": "Managed overrides deep-merged into the base/root/default/build tsconfig files during sync. The originals are snapshotted in the manifest, so removing a key reverts it (restoring the original value when the file defined one)."
         },
+        "ToolchainLoaderConfig": {
+            "type": "object",
+            "properties": {
+                "tsconfig": {
+                    "description": "The tsconfig the config loader uses (default true: the nearest `tsconfig.json`). A string selects a different file (relative to the project root); false disables tsconfig resolution.",
+                    "type": [
+                        "boolean",
+                        "string"
+                    ]
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false,
+            "description": "How `dbx.config.*` files are imported (tsconfig discovery)."
+        },
         "ToolchainTemplatesConfig": {
             "type": "object",
             "properties": {
@@ -2435,6 +2457,17 @@
                         }
                     ],
                     "description": "Workspace tsconfig generation (path aliases + project references)."
+                },
+                "loader": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainLoaderConfig"
+                        }
+                    ],
+                    "description": "How `dbx.config.*` files are imported (tsconfig discovery)."
                 },
                 "templates": {
                     "anyOf": [

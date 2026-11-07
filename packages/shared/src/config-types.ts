@@ -62,6 +62,12 @@ export interface ToolchainProjectConfig {
      * independent of the root config (other sections still merge normally).
      */
     inherit?: boolean;
+    /**
+     * Manage projects that have no dbx.config.* of their own by inheriting the nearest ancestor config
+     * (default false). Disabled by default so configless projects are never touched unless explicitly
+     * opted in.
+     */
+    manageConfigless?: boolean;
 }
 
 export interface ToolchainCiConfig {
@@ -832,6 +838,16 @@ export interface ToolchainTsconfigOverrides {
     root?: TsConfigJson;
 }
 
+export interface ToolchainLoaderConfig {
+    /**
+     * The tsconfig the config loader uses (default true: the nearest `tsconfig.json`). A string
+     * selects a different file (relative to the project root); false disables tsconfig resolution.
+     */
+    tsconfig?: boolean | string;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
+}
+
 export interface ToolchainTemplatesConfig {
     /** Extra sources on top of the builtin + registry sources. */
     sources?: Array<ToolchainTemplateSource>;
@@ -923,6 +939,8 @@ export type ToolchainViteConfig = Omit<ViteUserConfig, 'fmt' | 'lint'> & {
     shim?: 'runtime' | 'static';
     /** Module specifier used to import resolveVite in runtime shims. */
     shimImport?: string;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
     /** Oxfmt options; `true` uses the toolchain defaults. */
     fmt?: boolean | NonNullable<ViteUserConfig['fmt']>;
     /** Oxlint options; `true` uses the toolchain defaults. */
@@ -987,6 +1005,8 @@ export interface ToolchainConfigSections {
     biome?: boolean | ToolchainBiomeConfig;
     /** Workspace tsconfig generation (path aliases + project references). */
     tsconfig?: boolean | ToolchainTsconfigConfig;
+    /** How `dbx.config.*` files are imported (tsconfig discovery). */
+    loader?: boolean | ToolchainLoaderConfig;
     /** Template sources / scaffolding. */
     templates?: boolean | ToolchainTemplatesConfig;
     /** Allow/deny host and path globs for template/provider registries. */

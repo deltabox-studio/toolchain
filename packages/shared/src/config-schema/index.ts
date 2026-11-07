@@ -19,6 +19,7 @@ import { catalogsConfigSchema } from './catalogs.js';
 import { changelogConfigSchema } from './changelog.js';
 import { ciConfigSchema } from './ci.js';
 import { fmtConfigSchema, lintConfigSchema } from './format.js';
+import { loaderConfigSchema } from './loader.js';
 import { loggerConfigSchema } from './logger.js';
 import { section } from './meta.js';
 import { projectConfigSchema } from './project.js';
@@ -44,6 +45,7 @@ export type { GitLabCi } from './generated/gitlab-ci.js';
 export type { OxfmtConfig } from './generated/oxfmt-config.js';
 export type { OxlintConfig } from './generated/oxlint-config.js';
 export * from './json.js';
+export * from './loader.js';
 export * from './logger.js';
 export * from './meta.js';
 export * from './project.js';
@@ -88,6 +90,9 @@ export const toolchainConfigSchema = z
         tsconfig: section(tsconfigConfigSchema)
             .describe('Workspace tsconfig generation (path aliases + project references).')
             .optional(),
+        loader: section(loaderConfigSchema)
+            .describe('How `dbx.config.*` files are imported (tsconfig discovery).')
+            .optional(),
         templates: section(templatesConfigSchema)
             .describe('Template sources / scaffolding.')
             .optional(),
@@ -127,6 +132,7 @@ export const configSchema = {
     lint: lintConfigSchema,
     biome: biomeConfigSchema,
     tsconfig: tsconfigConfigSchema,
+    loader: loaderConfigSchema,
     templates: templatesConfigSchema,
     registry: registryConfigSchema,
     catalogs: catalogsConfigSchema,

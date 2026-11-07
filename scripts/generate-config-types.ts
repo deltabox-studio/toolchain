@@ -36,6 +36,8 @@ const overrides = {
     shim?: 'runtime' | 'static';
     /** Module specifier used to import resolveVite in runtime shims. */
     shimImport?: string;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
     /** Oxfmt options; \`true\` uses the toolchain defaults. */
     fmt?: boolean | NonNullable<ViteUserConfig['fmt']>;
     /** Oxlint options; \`true\` uses the toolchain defaults. */

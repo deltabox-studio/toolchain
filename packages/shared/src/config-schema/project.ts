@@ -54,6 +54,14 @@ export const projectConfigSchema = z
                     'still merge normally).'
             )
             .optional(),
+        manageConfigless: z
+            .boolean()
+            .describe(
+                'Manage projects that have no dbx.config.* of their own by inheriting the ' +
+                    'nearest ancestor config (default false). Disabled by default so configless ' +
+                    'projects are never touched unless explicitly opted in.'
+            )
+            .optional(),
     })
     .describe(
         'Project metadata: canonical `package.json` fields and template tokens ' +
