@@ -78,6 +78,7 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [Config file names](https://toolchain.deltabox.studio/guide/config/config-file-names.md)
 - [`defineConfig`](https://toolchain.deltabox.studio/guide/config/defineconfig.md)
 - [Hooks](https://toolchain.deltabox.studio/guide/config/hooks.md)
+- [Loader](https://toolchain.deltabox.studio/guide/config/loader.md)
 - [Logging](https://toolchain.deltabox.studio/guide/config/logging.md)
 - [Nested configs](https://toolchain.deltabox.studio/guide/config/nested-configs.md)
 - [Opt-in by presence](https://toolchain.deltabox.studio/guide/config/opt-in-by-presence.md)

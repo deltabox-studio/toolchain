@@ -114,9 +114,10 @@ Regenerate every managed file from dbx.config.\*.
 
 * `--cwd ‹dir›` — Project root (default: cwd).
 * `-q, --quiet` — Only log errors.
+* `--configless` — Manage projects without their own dbx.config.\* (inherit the nearest config).
 * `--check` — Do not write; fail if files are out of date.
 * `--watch` — Keep running and re-sync on change.
-* `--recursive` — Sync every project that has its own dbx.config.\* in dependency order.
+* `--recursive` — Sync every managed project in dependency order (nested workspaces included; configless projects only with --configless).
 * `--force` — Run even when no dbx.config.\* is present.
 * `--only ‹tasks›` — Only run the named sync task(s), comma-separated (eg. `tsconfig`).
 * `--json` — Print the sync result (including removed files) as JSON.
@@ -127,6 +128,7 @@ Sync once, then watch key files and re-sync on change.
 
 * `--cwd ‹dir›` — Project root (default: cwd).
 * `-q, --quiet` — Only log errors.
+* `--configless` — Manage projects without their own dbx.config.\* (inherit the nearest config).
 * `--force` — Run even when no dbx.config.\* is present.
 * `--list` — Print the resolved input globs (+ tsconfig file names) instead of watching.
 * `--json` — With --list: print the inputs as JSON.
@@ -725,6 +727,12 @@ One-line description (`package.json` `description`).
 * **Type**: `boolean`
 
 Inherit the parent project metadata (default true). Set false to keep this project metadata independent of the root config (other sections still merge normally).
+
+### `manageConfigless`
+
+* **Type**: `boolean`
+
+Manage projects that have no dbx.config.\* of their own by inheriting the nearest ancestor config (default false). Disabled by default so configless projects are never touched unless explicitly opted in.
 
 ## `ci`
 
@@ -1999,6 +2007,22 @@ Deep-merged into the root workspaces tsconfig (`rootFile`) during sync.
 
 Enable/disable this section (default: enabled when defined).
 
+## `loader`
+
+How `dbx.config.*` files are imported (tsconfig discovery).
+
+### `tsconfig`
+
+* **Type**: `boolean | string`
+
+The tsconfig the config loader uses (default true: the nearest `tsconfig.json`). A string selects a different file (relative to the project root); false disables tsconfig resolution.
+
+### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
 ## `templates`
 
 Template sources / scaffolding.
@@ -2594,26 +2618,26 @@ code --install-extension deltabox.toolchain-vscode
 
 ## Commands
 
-| Command                      | What it does                                                                                   |
-| ---------------------------- | ---------------------------------------------------------------------------------------------- |
-| Sync all / active / selected | Run `dbx sync` (`--recursive` for config-bearing projects, then configless ones individually). |
-| Check sync                   | `sync --check` across the workspace.                                                           |
-| Sync tsconfig                | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).                      |
-| Manage tsconfig…             | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                      |
-| Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**.        |
-| Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.              |
-| Remove template…             | `template:list --registry` then `template:remove`.                                             |
-| Generate configs             | `project:config` for missing configs, or refresh the project graph only; picks TS/JS.          |
-| Generate config              | Per-project `project:config` (also works from the Command Palette).                            |
-| Migrate tooling…             | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).         |
-| Run workflow                 | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                          |
-| Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                                 |
-| Create Vite+ project…        | `vp create` in a terminal.                                                                     |
-| Add provider...              | Register a custom provider (project or global registry).                                       |
-| Run command...               | Run a provider command (`dbx <command>`) in a terminal.                                        |
-| Create from template...      | `dbx create --template <id>` (terminal for online templates).                                  |
-| Reset tooling                | Remove generated files / manifest / config.                                                    |
-| Toggle auto-sync             | Enable/disable sync-on-change.                                                                 |
+| Command                      | What it does                                                                                                                                                                                             |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sync all / active / selected | Run `dbx sync --recursive`, which walks every managed project in dependency order (nested workspaces included). Configless projects are skipped unless `deltabox.toolchain.manageConfigless` is enabled. |
+| Check sync                   | `sync --check` across the workspace.                                                                                                                                                                     |
+| Sync tsconfig                | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).                                                                                                                                |
+| Manage tsconfig…             | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                                                                                                                                |
+| Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**.                                                                                                                  |
+| Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.                                                                                                                        |
+| Remove template…             | `template:list --registry` then `template:remove`.                                                                                                                                                       |
+| Generate configs             | `project:config` for missing configs, or refresh the project graph only; picks TS/JS.                                                                                                                    |
+| Generate config              | Per-project `project:config` (also works from the Command Palette).                                                                                                                                      |
+| Migrate tooling…             | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).                                                                                                                   |
+| Run workflow                 | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                                                                                                                                    |
+| Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                                                                                                                                           |
+| Create Vite+ project…        | `vp create` in a terminal.                                                                                                                                                                               |
+| Add provider...              | Register a custom provider (project or global registry).                                                                                                                                                 |
+| Run command...               | Run a provider command (`dbx <command>`) in a terminal.                                                                                                                                                  |
+| Create from template...      | `dbx create --template <id>` (terminal for online templates).                                                                                                                                            |
+| Reset tooling                | Remove generated files / manifest / config.                                                                                                                                                              |
+| Toggle auto-sync             | Enable/disable sync-on-change.                                                                                                                                                                           |
 
 Interactive commands (the dev server, `vp create`, online scaffolding) run in an
 integrated terminal at the project root; everything else runs in the output
@@ -2722,6 +2746,7 @@ Each item names the config key to opt out with, and opens the existing file.
 | `deltabox.toolchain.enabled`                         | `true`          | Auto sync on watched changes.                                                                              |
 | `deltabox.toolchain.debounce`                        | `300`           | Debounce (ms) before a sync.                                                                               |
 | `deltabox.toolchain.command`                         | `sync`          | The command to run on change.                                                                              |
+| `deltabox.toolchain.manageConfigless`                | `false`         | Manage projects without their own `dbx.config.*` (passes `--configless` to sync/watch).                    |
 | `deltabox.toolchain.enableFormatImportGroupDefaults` | `true`          | Add the resolved workspace `sortImports` custom group when syncing; set `false` to manage groups yourself. |
 | `deltabox.toolchain.watch`                           | `[]` (resolved) | Inputs that trigger a sync (empty = resolved from the config).                                             |
 | `deltabox.toolchain.version`                         | `""` (auto)     | Pin the `@deltabox/toolchain` version this workspace runs.                                                 |
@@ -4663,8 +4688,10 @@ Changelog](/guide/changelog/), [tsconfig](/guide/tsconfig),
 * [Nested configs](/guide/config/nested-configs) — how a workspace config merges
   over its root.
 * [`defineConfig`](/guide/config/defineconfig) — object, promise or callback.
-* [Config file names](/guide/config/config-file-names) — the file names the loader
-  probes.
+* [Config file names](/guide/config/config-file-names) — the file names the
+  loader probes.
+* [Loader](/guide/config/loader) — the `toolchain.loader` tsconfig options,
+  path aliases, `.js` → `.ts` imports and examples.
 * [Hooks](/guide/config/hooks) — lifecycle hooks in a `.ts`/`.js` config.
 * [Logging](/guide/config/logging) — the logger section and CLI overrides.
 * [Providers](/guide/config/providers) — provider passthrough colour settings.
@@ -4690,6 +4717,11 @@ dbx.config.mjs
 dbx.config.cjs
 dbx.config.json
 ```
+
+A TS/JS config is imported through `tsx` with the nearest `tsconfig.json`, so
+it can use the project's path aliases and `.js` specifiers that point at `.ts`
+sources. See [Loader](/guide/config/loader) for the `toolchain.loader` section,
+custom tsconfigs and examples.
 
 ---
 
@@ -4740,6 +4772,98 @@ export default defineConfig({
 ```
 
 Return values are awaited.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config/loader.md
+---
+# Loader
+
+The `toolchain.loader` section controls how `dbx.config.*` files are imported.
+A TS/JS config is loaded through [`tsx`](https://tsx.is), so it can use the
+project's TypeScript path aliases and import `.ts` sources with a `.js`
+specifier.
+
+## Options
+
+| Option     | Type                | Default | Description                                                             |
+| ---------- | ------------------- | ------- | ----------------------------------------------------------------------- |
+| `tsconfig` | `boolean \| string` | `true`  | The tsconfig used to resolve imports. `true` = nearest `tsconfig.json`. |
+
+* `true` (default) — use the nearest `tsconfig.json` above the config file
+  (the workspace's own).
+* `"path/to/tsconfig.json"` — use a different tsconfig. The path is resolved
+  from the project root.
+* `false` — disable tsconfig resolution. Relative `.js` → `.ts` rewriting still
+  works, but tsconfig `paths` aliases do not.
+
+```ts [dbx.config.ts]
+import { defineConfig } from '@deltabox/toolchain';
+
+export default defineConfig({
+    toolchain: {
+        loader: { tsconfig: 'tsconfig.loader.json' },
+    },
+});
+```
+
+`loader` is repository-scoped: it is **not merged into a nested workspace's
+config**. A nested config uses its parent's loader choice when it does not set
+one itself.
+
+## Path aliases and source extensions
+
+With the default loader, imports resolve the way the project's TypeScript does:
+
+```ts [dbx.config.ts]
+import { shared } from '@acme/shared/config.js'; // shared/config.ts
+
+import { defineConfig } from '@deltabox/toolchain';
+
+export default defineConfig({
+    toolchain: {
+        project: shared.project,
+    },
+});
+```
+
+The loader rewrites these specifiers when the target exists:
+
+| Import         | Resolves to                    |
+| -------------- | ------------------------------ |
+| `./helper.js`  | `helper.ts`, `helper.tsx`, ... |
+| `./helper.mjs` | `helper.mts`                   |
+| `./helper.cjs` | `helper.cts`                   |
+| `./helper.jsx` | `helper.tsx`                   |
+
+It also follows a tsconfig's relative `extends` chain for `baseUrl` / `paths`.
+A genuinely missing package or module is still an error: the loader does not
+silently turn it into an empty module.
+
+## Programmatic API
+
+`loadToolchainConfig` accepts the same override directly:
+
+```ts
+import { loadToolchainConfig } from '@deltabox/toolchain';
+
+const loaded = await loadToolchainConfig(process.cwd(), {
+    loaderTsconfig: 'tsconfig.loader.json', // or false
+});
+```
+
+The option takes precedence over the config's own `loader.tsconfig` and over
+the parent config's choice. When omitted, the loader uses the config's
+`loader.tsconfig`, then the parent config's, then the nearest `tsconfig.json`.
+
+## Notes
+
+* The loader reads `loader.tsconfig` from the config it is loading, so the
+  first import must already be resolvable. Put a shared choice on the root
+  config (it is used for nested configs) or point the nearest `tsconfig.json`
+  at it.
+* `.json` configs are parsed directly and do not use a tsconfig.
 
 ---
 
@@ -4823,53 +4947,69 @@ project) is merged over the nearest ancestor `dbx.config.*` found while walking
 up to the repository root (the walk stops at the `.git` boundary, so it never
 picks up a config from outside the repo).
 
-The merge is recursive:
+The merge is recursive, but **sections are strictly opt-in**:
 
-* **Objects** are merged key by key, so a child keeps every option it does not
-  mention.
-* **Leaves** — booleans, strings, numbers and **arrays** — in the child
-  **replace** the root's value (arrays are not concatenated).
-* **Repository-scoped sections are not inherited**: `ci`, `catalogs` and the
-  top-level `changelog`, `tsconfig`, `vite.test` and `vite.run`. A workflow,
-  workspace tsconfig tree, test config or task list describes the repository or
-  one workspace, so a child starts without the parent's values for them. In
-  particular, the root `tsconfig` task already expands every workspace
-  `tsconfig.json`; inheriting it into each workspace would only re-scan that
-  subtree.
+* **Only a section the nested config explicitly enables/configures is
+  inherited.** If the nested config omits `fmt`, `lint`, `biome`, `changelog`,
+  `catalogs` or `logger`, that section stays disabled for that project even when
+  the root defines it.
+* When the nested config **does** opt in, objects are merged key by key and
+  leaves (booleans, strings, numbers, arrays) in the child replace the root's
+  value. `true` means “enabled with the parent's options”; `false` disables it.
+* **Repository/workspace-scoped sections are never inherited**: `ci`, `tsconfig`,
+  `loader`, `templates`, `registry`, `watch`, `providers`, and `vite`. A
+  workflow, workspace tsconfig tree, config loader, source/registry policy,
+  watch process or Vite config describes the repository or one workspace, so a
+  child starts without the parent's values for them. In particular, the root
+  `tsconfig` task already expands every workspace `tsconfig.json`; inheriting it
+  into each workspace would only re-scan that subtree. `loader` is read from the
+  nearest config file to import the nested config, but it is not merged into the
+  child's config.
+* **`project` metadata is the exception**: shared metadata (`author`, `license`,
+  `homepage`, `repo`, `packageManager`, ...) is inherited because it is project
+  metadata, not a task section.
 
-Everything else is shared unless the child overrides it — `vite.fmt`,
-`vite.lint`, `vite.plugins`, `logger`, `biome`, `templates`, `registry`, and so
-on — so lint/format settings are cohesive across a monorepo by default.
+`vite.fmt` / `vite.lint` are hoisted into the top-level `fmt.oxc` / `lint.oxc`
+**when the nested config opts into `fmt` / `lint`**.
 
 ```ts [<root>/dbx.config.ts]
 export default defineConfig({
     toolchain: {
         logger: { level: 'debug', color: false },
-        vite: {
-            fmt: { printWidth: 100, singleQuote: true },
-        },
+        fmt: { oxc: { printWidth: 100, singleQuote: true } },
+        vite: { shim: 'static', resolve: { tsconfigPaths: true } },
     },
 });
 
-// <root>/packages/web/dbx.config.ts — inherits `vite.fmt`, tweaks `logger`
+// <root>/packages/web/dbx.config.ts — opts into `fmt` + `logger`; `vite` is local
 export default defineConfig({
     toolchain: {
-        logger: { level: 'warn' }, // leaf overrides the root's level
+        logger: { level: 'warn' }, // opts in; leaf overrides the root's level
+        fmt: true, // opts in; inherits the root's `fmt` options
         vite: {
-            run: { tasks: { build: { command: 'tsdown' } } }, // not inherited
+            shim: 'static',
+            resolve: { tsconfigPaths: true },
+            run: { tasks: { build: { command: 'tsdown' } } },
         },
     },
 });
 ```
 
 The workspace above ends up with `logger: { level: 'warn', color: false }` and
-the root's `vite.fmt` settings. Its `vite.run` holds only the `build` task it
-declares — the root's tasks are not merged in.
+the root's `fmt` options (because it opted in with `fmt: true`). If it omitted
+`fmt`, it would have no `fmt` section at all. Its `vite.run` holds only the
+`build` task it declares — the root's tasks are not merged in.
 
-> **Arrays replace, so repeat what you need.** If a workspace sets
-> `vite.fmt.ignorePatterns`, that array replaces the root's list (it is not
-> appended). Either keep the root patterns in the workspace array, or put the
-> shared pattern on the root config — for example `**/vite.config.ts` there
+> **`vite` is never inherited.** A workspace only has the `vite` config it
+> declares itself; a project with no `vite` section keeps its hand-written
+> `vite.config.*` alone. Declare the settings it needs (`shim`, `resolve`,
+> `plugins`, ...) in its own config. `vite.fmt` / `vite.lint` are hoisted into
+> `fmt` / `lint` only when the workspace opts into those sections.
+
+> **Arrays replace, so repeat what you need.** If a workspace opts into `fmt`
+> and sets `fmt.oxc.ignorePatterns`, that array replaces the root's list (it is
+> not appended). Either keep the root patterns in the workspace array, or put
+> the shared pattern on the root config — for example `**/vite.config.ts` there
 > covers every workspace's generated shim.
 
 > **`project` is inherited except its identity fields.** `name`, `scope`,
@@ -4881,6 +5021,38 @@ declares — the root's tasks are not merged in.
 > `project: { inherit: false }` disables project inheritance entirely. `hooks`
 > are not inherited either — a parent's hooks are code and do not run for a
 > nested project's sync.
+
+## Configless projects
+
+A project with **no `dbx.config.*` of its own** is not managed by the toolchain
+by default: it does not inherit the ancestor config, `dbx sync` leaves it
+alone, and its files are never generated or pruned. This avoids surprising
+changes in packages that never opted in.
+
+To manage configless projects, opt in explicitly:
+
+* **Config:** set `toolchain.project.manageConfigless: true` on the ancestor
+  config (it is repository-scoped, so a configless project inherits the choice
+  through the parent config).
+* **CLI:** pass `dbx sync --configless` (or `dbx watch --configless`).
+* **VS Code:** enable `deltabox.toolchain.manageConfigless`.
+
+```ts [<root>/dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        project: {
+            manageConfigless: true,
+        },
+    },
+});
+```
+
+When enabled, a configless project inherits the ancestor config (the configless
+opt-in is the explicit opt-in for the whole project; repository-scoped sections
+are still dropped) and `dbx sync` regenerates its managed files.
+
+> Configless projects are still **discovered** (so the Projects view and the
+> project graph can show them); they are just not managed until you opt in.
 
 ---
 
@@ -4928,6 +5100,18 @@ import { loadToolchainConfig, runSync, defaultSyncTasks } from '@deltabox/toolch
 const { config, tokens, projectType } = await loadToolchainConfig(process.cwd());
 await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, projectType });
 ```
+
+`loadToolchainConfig` accepts `loaderTsconfig` to override the tsconfig used to
+import the config (the same option as [`toolchain.loader.tsconfig`](/guide/config/loader)):
+
+```ts
+const loaded = await loadToolchainConfig(process.cwd(), {
+    loaderTsconfig: 'tsconfig.loader.json', // or false
+});
+```
+
+The result also reports `configless` and `managed`, which tell whether the
+project has no config of its own and whether the toolchain should manage it.
 
 Full section reference: [dbx.config](/config/reference).
 
@@ -5009,6 +5193,29 @@ Everything else under `vite` is Vite+ config (plugins, `test`, `lint`, `fmt`,
 `run.tasks`, ...), so `toolchain.vite` is the full Vite+ configuration. The section is typed as Vite+'s own config
 (`ToolchainViteConfig` = Vite's `UserConfig` as augmented by Vite+), so the whole
 Vite+ surface autocompletes in `dbx.config.ts`.
+
+### Nested workspaces
+
+`vite` is **never inherited**. A workspace only has the `vite` config it
+declares itself; a project with no `vite` section keeps its hand-written
+`vite.config.*` untouched. Declare the settings the workspace needs in its own
+config:
+
+```ts [packages/web/dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        vite: {
+            shim: 'static',
+            resolve: { tsconfigPaths: true },
+            run: { tasks: { build: { command: 'tsdown' } } },
+        },
+    },
+});
+```
+
+`vite.fmt` / `vite.lint` are the exception: when the workspace **opts into
+`fmt` / `lint`**, they are hoisted into the top-level `fmt.oxc` / `lint.oxc`
+before inheritance, so shared formatter/linter settings flow down.
 
 ### Static shims
 
@@ -6766,7 +6973,9 @@ is a different concern from the published `engines.node` range.
 ## Workspace inheritance
 
 A non-root `dbx.config.*` is merged over the nearest ancestor config (see
-[Configuration → Nested configs](/guide/config/nested-configs)). For `project`
+[Configuration → Nested configs](/guide/config/nested-configs)). Tooling
+sections are strictly opt-in for nested configs; `project` metadata is the
+exception because it is metadata, not a task section. For `project`
 specifically:
 
 * **Identity fields are never inherited**: `name`, `scope`, `description` and
@@ -6781,6 +6990,11 @@ specifically:
   stay shared.
 * **`inherit: false`** opts out entirely: the project keeps only its own `project`
   and ignores the parent's (useful for an unrelated package inside the tree).
+* **`manageConfigless: true`** opts into managing projects that have no
+  `dbx.config.*` of their own. It is repository-scoped (set it on the root
+  config) and is **disabled by default**: configless projects are discovered
+  but never synced or generated for unless you opt in. See
+  [Configless projects](/guide/config/nested-configs#configless-projects).
 
 ```ts [packages/web/dbx.config.ts]
 export default defineConfig({
@@ -8360,6 +8574,29 @@ Set `vite: { config: false }` to leave a hand-written
 `dbx` provider passthrough). `config: 'config/vite.custom.ts'` writes the shim
 there instead (relative to the project, or an absolute path inside it).
 
+## Nested workspaces
+
+`vite` is **never inherited**. A workspace with no `vite` section keeps its
+hand-written `vite.config.*` untouched; `dbx sync` only writes a shim when the
+project declares `vite` itself. Declare the settings the workspace needs in its
+own config:
+
+```ts [packages/web/dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        vite: {
+            shim: 'static',
+            resolve: { tsconfigPaths: true },
+            run: { tasks: { build: { command: 'tsdown' } } },
+        },
+    },
+});
+```
+
+`vite.fmt` / `vite.lint` are the exception: when the workspace opts into `fmt` /
+`lint`, they are hoisted into the top-level `fmt.oxc` / `lint.oxc` before
+inheritance, so shared formatting still flows down.
+
 ## Keep the shim out of Oxfmt
 
 Add the shim to `vite.fmt.ignorePatterns`, otherwise `vp fmt` rewrites the
@@ -8373,10 +8610,10 @@ vite: {
 }
 ```
 
-In a monorepo, put `**/vite.config.ts` on the **root** config so every
-workspace shim is covered (workspace `fmt` settings are inherited, but an
-`ignorePatterns` array in a workspace replaces the root's list). `dbx migrate --from vite` adds the ignore for you (see
-[Migrations](/guide/migrations/#vite-config)).
+In a monorepo, put `**/vite.config.ts` on the **root** top-level `fmt.oxc`
+config so every workspace shim is covered (an `ignorePatterns` array in a
+workspace replaces the root's list). `dbx migrate --from vite` adds the ignore
+for you (see [Migrations](/guide/migrations/#vite-config)).
 
 When `fmt` / `lint` are defined, `dbx sync` also writes `.oxfmtrc.json` /
 `.oxlintrc.json` for the Oxc VS Code extension. They are root-only unless a
@@ -8503,6 +8740,17 @@ configures the **CLI** `dbx watch` command.
 url: https://toolchain.deltabox.studio/CHANGELOG.md
 ---
 # Changelog
+
+## 2.6.1 (November 2026)
+
+### Bug fixes
+
+#### Changelog
+
+* Scope package changes by package name ([#0ee9b9e](https://github.com/deltabox-studio/toolchain/commit/0ee9b9e) by [T0chi](https://github.com/T0chi))
+  * key dependency changes by the declaring package.json name so workspace-specific pins (eg. the docs site's Vite 5) are reported under that workspace
+  * scope the catalog to the root package name; keep workspace catalog: refs unresolved so a catalog bump is reported once
+  * add regression tests and regenerate every CHANGELOG.md with the scoped footer
 
 ## 2.6.0 (November 2026)
 

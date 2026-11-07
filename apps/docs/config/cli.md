@@ -86,9 +86,10 @@ Regenerate every managed file from dbx.config.*.
 
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `-q, --quiet` — Only log errors.
+- `--configless` — Manage projects without their own dbx.config.* (inherit the nearest config).
 - `--check` — Do not write; fail if files are out of date.
 - `--watch` — Keep running and re-sync on change.
-- `--recursive` — Sync every project that has its own dbx.config.* in dependency order.
+- `--recursive` — Sync every managed project in dependency order (nested workspaces included; configless projects only with --configless).
 - `--force` — Run even when no dbx.config.* is present.
 - `--only ‹tasks›` — Only run the named sync task(s), comma-separated (eg. `tsconfig`).
 - `--json` — Print the sync result (including removed files) as JSON.
@@ -99,6 +100,7 @@ Sync once, then watch key files and re-sync on change.
 
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `-q, --quiet` — Only log errors.
+- `--configless` — Manage projects without their own dbx.config.* (inherit the nearest config).
 - `--force` — Run even when no dbx.config.* is present.
 - `--list` — Print the resolved input globs (+ tsconfig file names) instead of watching.
 - `--json` — With --list: print the inputs as JSON.

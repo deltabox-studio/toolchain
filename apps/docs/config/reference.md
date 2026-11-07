@@ -89,6 +89,12 @@ One-line description (`package.json` `description`).
 
 Inherit the parent project metadata (default true). Set false to keep this project metadata independent of the root config (other sections still merge normally).
 
+### `manageConfigless`
+
+- **Type**: `boolean`
+
+Manage projects that have no dbx.config.* of their own by inheriting the nearest ancestor config (default false). Disabled by default so configless projects are never touched unless explicitly opted in.
+
 ## `ci`
 
 GitHub Actions workflows to generate (CI, release, issues, changelog, sync).
@@ -1355,6 +1361,22 @@ Deep-merged into every workspace build tsconfig (`buildFile`) during sync.
 - **Type**: `TsConfigJson`
 
 Deep-merged into the root workspaces tsconfig (`rootFile`) during sync.
+
+### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
+## `loader`
+
+How `dbx.config.*` files are imported (tsconfig discovery).
+
+### `tsconfig`
+
+- **Type**: `boolean | string`
+
+The tsconfig the config loader uses (default true: the nearest `tsconfig.json`). A string selects a different file (relative to the project root); false disables tsconfig resolution.
 
 ### `enabled`
 

@@ -71,6 +71,29 @@ Set `vite: { config: false }` to leave a hand-written
 `dbx` provider passthrough). `config: 'config/vite.custom.ts'` writes the shim
 there instead (relative to the project, or an absolute path inside it).
 
+## Nested workspaces
+
+`vite` is **never inherited**. A workspace with no `vite` section keeps its
+hand-written `vite.config.*` untouched; `dbx sync` only writes a shim when the
+project declares `vite` itself. Declare the settings the workspace needs in its
+own config:
+
+```ts [packages/web/dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        vite: {
+            shim: 'static',
+            resolve: { tsconfigPaths: true },
+            run: { tasks: { build: { command: 'tsdown' } } },
+        },
+    },
+});
+```
+
+`vite.fmt` / `vite.lint` are the exception: when the workspace opts into `fmt` /
+`lint`, they are hoisted into the top-level `fmt.oxc` / `lint.oxc` before
+inheritance, so shared formatting still flows down.
+
 ## Keep the shim out of Oxfmt
 
 Add the shim to `vite.fmt.ignorePatterns`, otherwise `vp fmt` rewrites the
@@ -84,11 +107,10 @@ vite: {
 }
 ```
 
-In a monorepo, put `**/vite.config.ts` on the **root** config so every
-workspace shim is covered (workspace `fmt` settings are inherited, but an
-`ignorePatterns` array in a workspace replaces the root's list). `dbx migrate
---from vite` adds the ignore for you (see
-[Migrations](/guide/migrations/#vite-config)).
+In a monorepo, put `**/vite.config.ts` on the **root** top-level `fmt.oxc`
+config so every workspace shim is covered (an `ignorePatterns` array in a
+workspace replaces the root's list). `dbx migrate --from vite` adds the ignore
+for you (see [Migrations](/guide/migrations/#vite-config)).
 
 When `fmt` / `lint` are defined, `dbx sync` also writes `.oxfmtrc.json` /
 `.oxlintrc.json` for the Oxc VS Code extension. They are root-only unless a

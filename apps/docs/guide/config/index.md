@@ -46,8 +46,10 @@ Changelog](/guide/changelog/), [tsconfig](/guide/tsconfig),
 - [Nested configs](/guide/config/nested-configs) — how a workspace config merges
   over its root.
 - [`defineConfig`](/guide/config/defineconfig) — object, promise or callback.
-- [Config file names](/guide/config/config-file-names) — the file names the loader
-  probes.
+- [Config file names](/guide/config/config-file-names) — the file names the
+  loader probes.
+- [Loader](/guide/config/loader) — the `toolchain.loader` tsconfig options,
+  path aliases, `.js` → `.ts` imports and examples.
 - [Hooks](/guide/config/hooks) — lifecycle hooks in a `.ts`/`.js` config.
 - [Logging](/guide/config/logging) — the logger section and CLI overrides.
 - [Providers](/guide/config/providers) — provider passthrough colour settings.

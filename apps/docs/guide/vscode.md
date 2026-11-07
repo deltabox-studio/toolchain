@@ -24,26 +24,26 @@ code --install-extension deltabox.toolchain-vscode
 
 ## Commands
 
-| Command                      | What it does                                                                                   |
-| ---------------------------- | ---------------------------------------------------------------------------------------------- |
-| Sync all / active / selected | Run `dbx sync` (`--recursive` for config-bearing projects, then configless ones individually). |
-| Check sync                   | `sync --check` across the workspace.                                                           |
-| Sync tsconfig                | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).                      |
-| Manage tsconfig…             | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                      |
-| Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**.        |
-| Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.              |
-| Remove template…             | `template:list --registry` then `template:remove`.                                             |
-| Generate configs             | `project:config` for missing configs, or refresh the project graph only; picks TS/JS.          |
-| Generate config              | Per-project `project:config` (also works from the Command Palette).                            |
-| Migrate tooling…             | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).         |
-| Run workflow                 | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                          |
-| Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                                 |
-| Create Vite+ project…        | `vp create` in a terminal.                                                                     |
-| Add provider...              | Register a custom provider (project or global registry).                                       |
-| Run command...               | Run a provider command (`dbx <command>`) in a terminal.                                        |
-| Create from template...      | `dbx create --template <id>` (terminal for online templates).                                  |
-| Reset tooling                | Remove generated files / manifest / config.                                                    |
-| Toggle auto-sync             | Enable/disable sync-on-change.                                                                 |
+| Command                      | What it does                                                                                                                                                                                             |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sync all / active / selected | Run `dbx sync --recursive`, which walks every managed project in dependency order (nested workspaces included). Configless projects are skipped unless `deltabox.toolchain.manageConfigless` is enabled. |
+| Check sync                   | `sync --check` across the workspace.                                                                                                                                                                     |
+| Sync tsconfig                | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).                                                                                                                                |
+| Manage tsconfig…             | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                                                                                                                                |
+| Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**.                                                                                                                  |
+| Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.                                                                                                                        |
+| Remove template…             | `template:list --registry` then `template:remove`.                                                                                                                                                       |
+| Generate configs             | `project:config` for missing configs, or refresh the project graph only; picks TS/JS.                                                                                                                    |
+| Generate config              | Per-project `project:config` (also works from the Command Palette).                                                                                                                                      |
+| Migrate tooling…             | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).                                                                                                                   |
+| Run workflow                 | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                                                                                                                                    |
+| Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                                                                                                                                           |
+| Create Vite+ project…        | `vp create` in a terminal.                                                                                                                                                                               |
+| Add provider...              | Register a custom provider (project or global registry).                                                                                                                                                 |
+| Run command...               | Run a provider command (`dbx <command>`) in a terminal.                                                                                                                                                  |
+| Create from template...      | `dbx create --template <id>` (terminal for online templates).                                                                                                                                            |
+| Reset tooling                | Remove generated files / manifest / config.                                                                                                                                                              |
+| Toggle auto-sync             | Enable/disable sync-on-change.                                                                                                                                                                           |
 
 Interactive commands (the dev server, `vp create`, online scaffolding) run in an
 integrated terminal at the project root; everything else runs in the output
@@ -152,6 +152,7 @@ Each item names the config key to opt out with, and opens the existing file.
 | `deltabox.toolchain.enabled`                         | `true`          | Auto sync on watched changes.                                                                              |
 | `deltabox.toolchain.debounce`                        | `300`           | Debounce (ms) before a sync.                                                                               |
 | `deltabox.toolchain.command`                         | `sync`          | The command to run on change.                                                                              |
+| `deltabox.toolchain.manageConfigless`                | `false`         | Manage projects without their own `dbx.config.*` (passes `--configless` to sync/watch).                    |
 | `deltabox.toolchain.enableFormatImportGroupDefaults` | `true`          | Add the resolved workspace `sortImports` custom group when syncing; set `false` to manage groups yourself. |
 | `deltabox.toolchain.watch`                           | `[]` (resolved) | Inputs that trigger a sync (empty = resolved from the config).                                             |
 | `deltabox.toolchain.version`                         | `""` (auto)     | Pin the `@deltabox/toolchain` version this workspace runs.                                                 |
