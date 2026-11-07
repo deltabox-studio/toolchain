@@ -200,6 +200,10 @@ export function createCli(commands: ToolchainCommand[] = builtinCommands()): Com
         .option('--no-update-check', 'Do not check for a newer dbx version.')
         .option('--config <file>', 'Use a specific dbx config file.')
         .option('--no-config', 'Ignore discovered config; use CLI flags/env only.')
+        .option(
+            '--configless',
+            'Manage projects without their own dbx.config.* (inherit the nearest config).'
+        )
         .showHelpAfterError();
     // Commander's built-in Help does not colourise; wire its style hooks to the
     // logger's colour set (identity when colours are off, so `--no-color` is plain).

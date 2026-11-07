@@ -6,6 +6,10 @@ import { defaultSyncTasks } from '../../sync.js';
 export const baseOptions = [
     { flags: '--cwd <dir>', description: 'Project root (default: cwd).' },
     { flags: '-q, --quiet', description: 'Only log errors.' },
+    {
+        flags: '--configless',
+        description: 'Manage projects without their own dbx.config.* (inherit the nearest config).',
+    },
 ];
 
 /** Build the run options for `runSync`/`runWatch` from the command context. */

@@ -40,9 +40,9 @@ export function watchCommand(): ToolchainCommand {
                 }
                 return;
             }
-            if (!context.configPath && !context.parentPath && !opts.force && !context.noConfig) {
+            if (!context.managed && !opts.force && !context.noConfig) {
                 logger.warn(
-                    'no dbx.config.* found here; nothing to watch (use --force to run anyway).'
+                    'no dbx.config.* found here; nothing to watch (use --force to run anyway, or --configless to manage configless projects).'
                 );
                 return;
             }

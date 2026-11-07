@@ -122,6 +122,8 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                     ...(loaded.path ? { configPath: loaded.path } : {}),
                     ...(loaded.parentPath ? { parentPath: loaded.parentPath } : {}),
                     ...(selection.noConfig ? { noConfig: true } : {}),
+                    ...(loaded.configless ? { configless: true } : {}),
+                    managed: loaded.managed,
                     ...(loaded.error ? { configError: loaded.error } : {}),
                 };
                 await cmd.run(provided, context);

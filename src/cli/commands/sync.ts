@@ -3,6 +3,7 @@ import path from 'node:path';
 import {
     buildProjectGraph,
     loadToolchainConfig,
+    orderProjects,
     runSync,
     runWatch,
     writeProjectGraph,
@@ -25,7 +26,7 @@ export function syncCommand(): ToolchainCommand {
             {
                 flags: '--recursive',
                 description:
-                    'Sync every project that has its own dbx.config.* in dependency order.',
+                    'Sync every managed project in dependency order (nested workspaces included; configless projects only with --configless).',
             },
             {
                 flags: '--force',
@@ -63,7 +64,9 @@ export function syncCommand(): ToolchainCommand {
                 if (!check) writeProjectGraph(context.cwd, graph);
                 const results: { dir: string; result: Awaited<ReturnType<typeof runSync>> }[] = [];
                 const selection = getConfigSelection();
-                for (const relDir of graph.order) {
+                // Order every project (not only the config-bearing ones) so an
+                // opted-in configless workspace still syncs after its dependencies.
+                for (const relDir of orderProjects(graph.projects)) {
                     const dir = path.resolve(context.cwd, relDir);
                     const loaded = await loadToolchainConfig(dir, { tolerant: true, ...selection });
                     if (loaded.error) {
@@ -71,6 +74,8 @@ export function syncCommand(): ToolchainCommand {
                         process.exitCode = 1;
                         continue;
                     }
+                    // A configless project is skipped unless it was opted in.
+                    if (!loaded.managed) continue;
                     const result = await runSync({
                         tasks: defaultSyncTasks(),
                         only,
@@ -89,9 +94,9 @@ export function syncCommand(): ToolchainCommand {
                 return;
             }
 
-            if (!context.configPath && !context.parentPath && !opts.force && !context.noConfig) {
+            if (!context.managed && !opts.force && !context.noConfig) {
                 logger.warn(
-                    'no dbx.config.* found here; nothing to sync (use --force to run anyway).'
+                    'no dbx.config.* found here; nothing to sync (use --force to run anyway, or --configless to manage configless projects).'
                 );
                 return;
             }

@@ -978,7 +978,7 @@ describe('emulate: CLI + templates', () => {
     );
 
     it(
-        'syncs a configless workspace with the inherited config',
+        'only syncs a configless workspace when opted in',
         async () => {
             const ws = scratch('configless-sync');
             const root = path.join(ws, 'root');
@@ -1005,15 +1005,24 @@ describe('emulate: CLI + templates', () => {
                 version: '0.1.0',
                 type: 'module',
             });
-            // No child config: `dbx sync` must use the inherited root config.
-            const sync = await dbx(child, ['sync']);
+            // No child config: the default `dbx sync` leaves it untouched.
+            const skipped = await dbx(child, ['sync']);
+            expect(skipped.code, skipped.stderr).toBe(0);
+            const before = readJson<{ name: string; author?: string }>(
+                path.join(child, 'package.json')
+            );
+            expect(before.name).toBe('@acme/a');
+            expect(before.author).toBeUndefined();
+
+            // Opting in manages it with the inherited root config.
+            const sync = await dbx(child, ['sync', '--configless']);
             expect(sync.code, sync.stderr).toBe(0);
             const childPkg = readJson<{ name: string; author?: string }>(
                 path.join(child, 'package.json')
             );
             expect(childPkg.name).toBe('@acme/a');
             expect(childPkg.author).toBe('Acme');
-            const check = await dbx(child, ['sync', '--check']);
+            const check = await dbx(child, ['sync', '--check', '--configless']);
             expect(check.code, check.stderr).toBe(0);
         },
         TIMEOUT

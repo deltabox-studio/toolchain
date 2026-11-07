@@ -4,6 +4,8 @@ export interface ConfigSelection {
     config?: string;
     /** Do not load any discovered config; use CLI flags/env only. */
     noConfig?: boolean;
+    /** Manage projects without their own dbx.config.* (inherit the nearest config). */
+    manageConfigless?: boolean;
 }
 
 let selection: ConfigSelection = {};
@@ -26,8 +28,8 @@ function commandStartIndex(argv: string[]): number {
 }
 
 /**
- * Pull `--no-config` / `--config <file>` out of `argv` so they work before or
- * after a subcommand. Everything after `--` is left untouched.
+ * Pull `--no-config` / `--config <file>` / `--configless` out of `argv` so they
+ * work before or after a subcommand. Everything after `--` is left untouched.
  *
  * A provider passthrough (`vite`, `vite:*`, or a custom provider command)
  * receives its operands verbatim, so config flags after that command are left
@@ -63,6 +65,8 @@ export function extractConfigSelection(
         }
         if (arg === '--no-config') {
             found.noConfig = true;
+        } else if (arg === '--configless') {
+            found.manageConfigless = true;
         } else if (arg === '--config') {
             // `dbx reset --config` is the reset command's boolean "also remove
             // the config" flag, not the global `--config <file>` selector.
