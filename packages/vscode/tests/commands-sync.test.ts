@@ -54,8 +54,8 @@ describe('createSyncCommands', () => {
         mocks.projects = [];
     });
 
-    it('syncs configless projects after the recursive pass', async () => {
-        mocks.projects = [project('/repo/packages/a', false)];
+    it('syncs every managed project through the recursive pass', async () => {
+        mocks.projects = [project('/repo/packages/a', true), project('/repo/packages/b', false)];
         const runRoots = vi.fn(async () => [0]);
         const runProjects = vi.fn(async () => [0]);
         const commands = createSyncCommands(deps({ runRoots, runProjects }));
@@ -63,16 +63,8 @@ describe('createSyncCommands', () => {
         await commands.syncAll();
 
         expect(runRoots).toHaveBeenCalledWith(['sync', '--recursive']);
-        expect(runProjects).toHaveBeenCalledWith(mocks.projects, ['sync']);
-    });
-
-    it('does not run the configless pass when every project has a config', async () => {
-        mocks.projects = [project('/repo/packages/a', true)];
-        const runProjects = vi.fn(async () => [0]);
-        const commands = createSyncCommands(deps({ runProjects }));
-
-        await commands.syncAll();
-
+        // Configless projects are handled by the CLI (only when opted in), not
+        // by a separate extension-side pass.
         expect(runProjects).not.toHaveBeenCalled();
     });
 

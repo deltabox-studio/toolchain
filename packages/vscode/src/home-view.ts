@@ -301,6 +301,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
       <button class="secondary" data-action="syncCheck">Check sync</button>
       <button class="secondary" data-action="syncTsconfig">Sync tsconfig</button>
       <button class="secondary" data-action="refresh">Refresh projects</button>
+      <button class="secondary" data-action="migrate">Migrate tooling\u2026</button>
     </div>
   </section>
   <section class="section">

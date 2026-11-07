@@ -184,6 +184,51 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage(`deltabox: restored ${files.length} file(s).`);
     };
 
+    // Commands whose failure is expected to be silent (metadata refreshes) or is
+    // already reported by the caller (`--check`, or the command handler itself).
+    const SILENT_FAILURE_COMMANDS = new Set(['projects', 'watch', 'registry']);
+    const HANDLED_FAILURE_COMMANDS = new Set(['project:config', 'migrate', 'workflow']);
+    const notifiedFailures = new Set<string>();
+
+    /** The stable key for a command (eg. `sync`, `project:config`). */
+    const commandKey = (args: string[]): string => args[0] ?? 'dbx';
+
+    /** Forget a command's previous failure once it succeeds. */
+    const clearFailure = (cwd: string, args: string[]): void => {
+        const prefix = `${cwd}:${commandKey(args)}:`;
+        for (const key of notifiedFailures) {
+            if (key.startsWith(prefix)) notifiedFailures.delete(key);
+        }
+    };
+
+    /**
+     * Show an important CLI failure as a VS Code notification. Failures are
+     * deduplicated per project/command/error so an auto-sync loop does not spam
+     * the user; the output channel still has every run.
+     */
+    const notifyFailure = (cwd: string, args: string[], detail: string): void => {
+        if (
+            args.includes('--check') ||
+            SILENT_FAILURE_COMMANDS.has(commandKey(args)) ||
+            HANDLED_FAILURE_COMMANDS.has(commandKey(args))
+        )
+            return;
+        const firstLine =
+            detail
+                .split(/\r?\n/)
+                .map(line => line.trim())
+                .find(line => line.length > 0) ?? 'command failed';
+        const key = `${cwd}:${commandKey(args)}:${firstLine}`;
+        if (notifiedFailures.has(key)) return;
+        notifiedFailures.add(key);
+        const label = path.basename(cwd) || cwd;
+        void vscode.window
+            .showErrorMessage(`deltabox: ${commandKey(args)} failed in ${label}.`, 'Show output')
+            .then(choice => {
+                if (choice === 'Show output') output.show();
+            });
+    };
+
     /** Sync through the CLI's JSON output so removed files can be restored. */
     const runSyncCli = async (cwd: string, args: string[]): Promise<number> => {
         output.appendLine(`\n> ${cliInvocation(cwd)} ${args.join(' ')} --json  (${cwd})`);
@@ -191,6 +236,7 @@ export function activate(context: vscode.ExtensionContext): void {
         output.append(result.stdout || result.stderr);
         let removed: RemovedFile[] = [];
         if (result.code === 0) {
+            clearFailure(cwd, args);
             try {
                 const parsed = JSON.parse(result.stdout) as {
                     removedFiles?: RemovedFile[];
@@ -202,23 +248,35 @@ export function activate(context: vscode.ExtensionContext): void {
             } catch {
                 // non-JSON output; nothing to notify
             }
+        } else {
+            notifyFailure(cwd, args, result.stderr || result.stdout);
         }
         await notifyRemovedFiles(cwd, removed);
         return result.code;
     };
 
+    /** Add `--configless` to sync/watch when the workspace opted in. */
+    const withConfigless = (args: string[]): string[] => {
+        if (args[0] !== 'sync' && args[0] !== 'watch') return args;
+        if (!config().get<boolean>('manageConfigless', false)) return args;
+        if (args.includes('--configless')) return args;
+        return [...args, '--configless'];
+    };
+
     /** Run `dbx <args>` in `cwd`, streaming output to the channel. */
     const runCli = (cwd: string, args: string[]): Promise<number> => {
-        if (args[0] === 'sync' && !args.includes('--check') && !args.includes('--json')) {
-            return runSyncCli(cwd, args);
+        const cliArgs = withConfigless(args);
+        if (cliArgs[0] === 'sync' && !cliArgs.includes('--check') && !cliArgs.includes('--json')) {
+            return runSyncCli(cwd, cliArgs);
         }
-        output.appendLine(`\n> ${cliInvocation(cwd)} ${args.join(' ')}  (${cwd})`);
+        output.appendLine(`\n> ${cliInvocation(cwd)} ${cliArgs.join(' ')}  (${cwd})`);
         return new Promise<number>(resolve => {
             let proc: ChildProcess;
             try {
-                proc = spawnCli(cwd, args);
+                proc = spawnCli(cwd, cliArgs);
             } catch (error) {
                 output.appendLine(`dbx: ${String(error)}`);
+                notifyFailure(cwd, cliArgs, String(error));
                 resolve(1);
                 return;
             }
@@ -234,6 +292,7 @@ export function activate(context: vscode.ExtensionContext): void {
             proc.on('error', error => {
                 output.appendLine(`dbx: ${String(error)}`);
                 child = undefined;
+                notifyFailure(cwd, cliArgs, `${captured}\n${String(error)}`);
                 resolve(1);
             });
             proc.on('close', (code, signal) => {
@@ -249,7 +308,10 @@ export function activate(context: vscode.ExtensionContext): void {
                             if (choice === 'Show output') output.show();
                         });
                 }
-                resolve(exitCodeOf(code, signal));
+                const exitCode = exitCodeOf(code, signal);
+                if (exitCode === 0) clearFailure(cwd, cliArgs);
+                else notifyFailure(cwd, cliArgs, captured);
+                resolve(exitCode);
             });
         });
     };

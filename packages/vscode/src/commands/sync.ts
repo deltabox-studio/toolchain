@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import * as vscode from 'vscode';
 
-import { discoverProjects, type Project } from '../projects.js';
+import type { Project } from '../projects.js';
 import type { CommandDeps } from './deps.js';
 
 export interface SyncCommands {
@@ -24,15 +24,13 @@ export function createSyncCommands(deps: CommandDeps): SyncCommands {
     };
 
     /**
-     * Sync every discovered project. The CLI's recursive pass covers projects
-     * with their own config (in dependency order); projects that only inherit
-     * the root `dbx.config.*` are synced individually afterwards.
+     * Sync every managed project. The CLI's recursive pass walks the whole
+     * project graph (nested workspaces included) in dependency order and skips
+     * configless projects unless configless management is enabled.
      */
     const syncAll = async (): Promise<void> => {
         await deps.refreshGraph();
         await deps.runRoots(['sync', '--recursive']);
-        const configless = discoverProjects().filter(project => !project.hasConfig);
-        if (configless.length > 0) await deps.runProjects(configless, ['sync']);
         deps.refreshViews();
     };
 

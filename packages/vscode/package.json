@@ -593,6 +593,11 @@
                     "default": "sync",
                     "description": "The dbx command to run on change."
                 },
+                "deltabox.toolchain.manageConfigless": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Manage projects without their own dbx.config.* by inheriting the nearest ancestor config. Disabled by default so configless projects are left untouched."
+                },
                 "deltabox.toolchain.enableFormatImportGroupDefaults": {
                     "type": "boolean",
                     "default": true,
