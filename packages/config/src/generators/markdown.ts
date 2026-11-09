@@ -5,9 +5,8 @@
 
 import fs from 'node:fs';
 
-import type { Schema } from 'untyped';
-
 import { sanitizeText, titleCase } from '@deltabox/toolchain/shared';
+import type { Schema } from 'untyped';
 
 import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from '../collect.js';
 import {

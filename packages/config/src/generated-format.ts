@@ -23,7 +23,7 @@ export interface FormatGeneratedOptions {
  */
 export const GENERATED_FORMAT_OPTIONS = {
     useTabs: false,
-    tabWidth: 4,
+    tabWidth: 2,
     printWidth: 100,
     endOfLine: 'lf',
     singleQuote: true,

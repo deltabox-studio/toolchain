@@ -1,7 +1,7 @@
 {
     "name": "@deltabox/toolchain-config",
     "version": "2.6.1",
-    "description": "Generic Zod/env-backed configuration engine: env parsing, schema walking, and .env/types/markdown/JSON/CLI generators.",
+    "description": "Zod- and env-backed configuration engine: parse environment variables, walk schemas, resolve typed config and generate .env, types, markdown, JSON and CLI output.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
         "type": "git",
@@ -13,7 +13,6 @@
     "files": [
         "dist"
     ],
-    "private": true,
     "dependencies": {
         "@deltabox/toolchain-shared": "workspace:*",
         "lodash": "catalog:",
@@ -25,11 +24,9 @@
         "@types/lodash": "catalog:",
         "@types/node": "catalog:",
         "fastify": "catalog:",
-        "tsdown": "catalog:",
         "type-fest": "catalog:",
         "typescript": "catalog:",
-        "vite": "catalog:",
-        "vitest": "catalog:"
+        "vite-plus": "catalog:"
     },
     "exports": {
         ".": "./dist/index.js",
@@ -38,5 +35,21 @@
         "./package.json": "./package.json"
     },
     "homepage": "https://toolchain.deltabox.studio",
-    "packageManager": "yarn@4.17.1"
+    "packageManager": "yarn@4.17.1",
+    "keywords": [
+        "config",
+        "zod",
+        "environment",
+        "env",
+        "schema",
+        "codegen",
+        "typescript",
+        "dbx",
+        "deltabox",
+        "toolchain"
+    ],
+    "publishConfig": {
+        "access": "public",
+        "provenance": true
+    }
 }

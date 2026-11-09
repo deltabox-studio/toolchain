@@ -10,9 +10,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { generateTypes, type Schema } from 'untyped';
-
 import { pascalCase } from '@deltabox/toolchain/shared';
+import { generateTypes, type Schema } from 'untyped';
 
 import {
     isZodSchema,
