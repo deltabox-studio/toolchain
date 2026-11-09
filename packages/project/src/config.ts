@@ -224,7 +224,7 @@ export function generateProjectConfigs(
         if (viteFile) {
             try {
                 const source = fs.readFileSync(viteFile, 'utf-8').replace(/^\uFEFF/, '');
-                if (!source.includes('@deltabox/toolchain/vite')) {
+                if (!/@deltabox\/toolchain\/vite|vite-plugin-dbx/.test(source)) {
                     const extracted = extractViteObject(source);
                     const literal =
                         'error' in extracted ? undefined : scanLiteralObject(extracted.text);

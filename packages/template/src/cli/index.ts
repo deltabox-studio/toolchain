@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { cancel, confirm, isCancel, select, text } from '@clack/prompts';
-
 import {
     addGlobalProviderRegistry,
     addProjectProviderRegistry,

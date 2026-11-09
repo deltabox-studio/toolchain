@@ -1,7 +1,7 @@
 {
     "name": "@deltabox/toolchain-project",
     "version": "2.6.1",
-    "description": "Project scaffolding generators (TypeScript root, monorepo root and workspace files).",
+    "description": "Project and workspace scaffolding generators: TypeScript roots, monorepos, catalogs, package.json, tsconfig and Vite/dbx config files.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
         "type": "git",
@@ -13,7 +13,6 @@
     "files": [
         "dist"
     ],
-    "private": true,
     "dependencies": {
         "@clack/prompts": "catalog:",
         "@deltabox/toolchain-core": "workspace:*",
@@ -25,10 +24,8 @@
     "devDependencies": {
         "@deltabox/toolchain-tsdown": "workspace:*",
         "@types/node": "catalog:",
-        "tsdown": "catalog:",
         "typescript": "catalog:",
-        "vite": "catalog:",
-        "vitest": "catalog:"
+        "vite-plus": "catalog:"
     },
     "exports": {
         ".": "./dist/index.js",
@@ -36,5 +33,20 @@
         "./package.json": "./package.json"
     },
     "homepage": "https://toolchain.deltabox.studio",
-    "packageManager": "yarn@4.17.1"
+    "packageManager": "yarn@4.17.1",
+    "keywords": [
+        "scaffold",
+        "generator",
+        "monorepo",
+        "workspace",
+        "package-manager",
+        "catalog",
+        "dbx",
+        "deltabox",
+        "toolchain"
+    ],
+    "publishConfig": {
+        "access": "public",
+        "provenance": true
+    }
 }

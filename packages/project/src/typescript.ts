@@ -1,8 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { applyEdits, type FormattingOptions, modify } from 'jsonc-parser';
-
 import {
     DEFAULT_FMT_RULES,
     DEFAULT_LINT_RULES,
@@ -22,6 +20,7 @@ import {
     renderTsconfigDefault,
     type TsconfigExtendsOptions,
 } from '@deltabox/toolchain/tsconfig';
+import { applyEdits, type FormattingOptions, modify } from 'jsonc-parser';
 
 import rootPkg from '../../../package.json' with { type: 'json' };
 import { renderPnpmWorkspace, renderYarnrc, supportsCatalogs } from './catalogs.js';
@@ -36,11 +35,8 @@ import { renderPnpmWorkspace, renderYarnrc, supportsCatalogs } from './catalogs.
 const CATALOG: Record<string, string> = {
     '@deltabox/toolchain': `^${rootPkg.version}`,
     '@types/node': '^22.10.2',
-    tsdown: '^0.23.0',
     typescript: '^6.0.3',
-    vite: '^8.3.0',
-    'vite-plus': '^1.2.0',
-    vitest: '^5.0.0',
+    'vite-plus': '1.2.0',
 };
 
 /** The catalog a scaffolded root writes into its package-manager file. */
@@ -347,7 +343,7 @@ export function renderApplicationHtml(name: string): string {
 /** A smoke test paired with {@link renderSourceEntry}. */
 export function renderSourceTest(): string {
     return [
-        "import { describe, expect, it } from 'vitest';",
+        "import { describe, expect, it } from 'vite-plus/test';",
         '',
         "import { greet } from '../src/index.js';",
         '',
@@ -444,6 +440,131 @@ ${sections.join('\n')}
 `;
 }
 
+export interface PluginViteConfigOptions {
+    ctx: ProjectContext;
+    type: ProjectType;
+    /** `defaults` writes `fmt: { oxc: true }`; `inherit` opts into a parent. */
+    fmt?: 'defaults' | 'inherit' | false;
+    lint?: 'defaults' | 'inherit' | false;
+    catalogs?: Record<string, string>;
+    flavor?: 'application' | 'library' | 'monorepo-root' | 'workspace';
+}
+
+/**
+ * Render the scaffold's `vite.config.*`: Vite+ loads it, and `dbx()` carries the
+ * toolchain config inline so the project does not need a `dbx.config.*`.
+ * Vitest (`test`) and the Vite+ task runner (`run.tasks`) also live here.
+ */
+export function renderPluginViteConfig(options: PluginViteConfigOptions): string {
+    const { ctx, type } = options;
+    const flavor = options.flavor ?? 'library';
+    const entries: [string, string][] = [
+        ['type', type],
+        ['name', ctx.name],
+    ];
+    if (ctx.scope) entries.push(['scope', ctx.scope]);
+    if (ctx.description) entries.push(['description', ctx.description]);
+    if (ctx.author) entries.push(['author', ctx.author]);
+    if (ctx.license) entries.push(['license', ctx.license]);
+    if (ctx.homepage) entries.push(['homepage', ctx.homepage]);
+    const repo = ctx.repo ?? ctx.repoUrl;
+    if (repo) entries.push(['repo', repo]);
+    entries.push(['nodeVersion', ctx.nodeVersion ?? '22']);
+    const packageManager = ctx.packageManager ?? 'yarn';
+    entries.push(['packageManager', packageManager]);
+    const pmVersion =
+        ctx.packageManagerVersion ??
+        ctx.yarnVersion ??
+        defaultPackageManagerVersion(packageManager);
+    if (pmVersion) entries.push(['packageManagerVersion', pmVersion]);
+
+    const project = entries
+        .map(([key, value]) => `                    ${key}: ${quote(value)},`)
+        .join('\n');
+    const catalogs = options.catalogs
+        ? [
+              '                catalogs: {',
+              '                    packages: {',
+              ...Object.entries(options.catalogs).map(
+                  ([name, range]) => `                        ${quote(name)}: ${quote(range)},`
+              ),
+              '                    },',
+              '                },',
+          ].join('\n')
+        : undefined;
+    const oxc = (value: 'defaults' | 'inherit' | false | undefined): string | undefined => {
+        if (value === 'defaults') return '{ oxc: true }';
+        if (value === 'inherit') return 'true';
+        return undefined;
+    };
+    const fmt = oxc(options.fmt);
+    const lint = oxc(options.lint);
+
+    const testInclude =
+        flavor === 'monorepo-root'
+            ? "['packages/**/tests/**/*.test.ts']"
+            : "['tests/**/*.test.ts']";
+    const tasks: [string, string][] =
+        flavor === 'application'
+            ? [
+                  ['dev', 'vp dev'],
+                  ['build', 'vp build'],
+                  ['preview', 'vp preview'],
+                  ['test', 'vp test'],
+              ]
+            : flavor === 'monorepo-root'
+              ? [
+                    ['build', 'dbx run --filter "./packages/*" build'],
+                    ['test', 'dbx run --filter "./packages/*" test'],
+                    ['typecheck', 'dbx run --filter "./packages/*" typecheck'],
+                ]
+              : [
+                    ['build', 'vp pack'],
+                    ['test', 'vp test'],
+                ];
+    tasks.push(
+        ['typecheck', 'tsc -p tsconfig.json --noEmit'],
+        ['format', 'vp fmt'],
+        ['lint', 'vp lint --fix']
+    );
+    const taskLines = tasks
+        .map(([name, command]) => `                ${name}: { command: ${quote(command)} },`)
+        .join('\n');
+
+    return `import { defineConfig } from 'vite-plus';
+
+import { dbx } from 'vite-plugin-dbx';
+
+export default defineConfig({
+    plugins: [
+        dbx({
+            toolchain: {
+                project: {
+${project}
+                },
+${[
+    catalogs,
+    fmt ? `                fmt: ${fmt},` : undefined,
+    lint ? `                lint: ${lint},` : undefined,
+]
+    .filter(Boolean)
+    .join('\n')}
+            },
+        }),
+    ],
+    test: {
+        include: ${testInclude},
+        environment: 'node',
+    },
+    run: {
+        tasks: {
+${taskLines}
+        },
+    },
+});
+`;
+}
+
 /** A minimal tsconfig.json that extends the default template. */
 export function renderWorkspaceTsconfig(
     composite = false,
@@ -471,27 +592,18 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
         private: true,
         type: 'module',
         ...packageMetadata(ctx),
-        scripts: application
-            ? {
-                  dev: 'vite',
-                  build: 'vite build',
-                  preview: 'vite preview',
-                  format: 'dbx fmt',
-                  lint: 'dbx lint --fix',
-                  test: 'vitest run',
-                  typecheck: 'tsc -p tsconfig.json --noEmit',
-              }
-            : {
-                  build: 'tsdown',
-                  format: 'dbx fmt',
-                  lint: 'dbx lint --fix',
-                  test: 'vitest run',
-                  typecheck: 'tsc -p tsconfig.json --noEmit',
-              },
+        scripts: {
+            ...(application
+                ? { dev: 'vp dev', build: 'vp build', preview: 'vp preview' }
+                : { build: 'vp pack' }),
+            format: 'dbx fmt',
+            lint: 'dbx lint --fix',
+            test: 'vp test',
+            typecheck: 'tsc -p tsconfig.json --noEmit',
+        },
         devDependencies: devDependencies(
             ctx.packageManager,
-            catalogDefined(ctx.packageManager, false),
-            application ? ['tsdown'] : []
+            catalogDefined(ctx.packageManager, false)
         ),
         ...(packageManagerField(ctx.packageManager, ctx.packageManagerVersion ?? ctx.yarnVersion)
             ? {
@@ -509,13 +621,14 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
             ? []
             : [
                   {
-                      path: 'dbx.config.ts',
-                      content: renderToolchainConfig({
-                          ...ctx,
+                      path: 'vite.config.ts',
+                      content: renderPluginViteConfig({
+                          ctx,
                           type: ctx.type ?? 'project',
-                          fmtOxc: withFmt,
-                          lintOxc: withLint,
+                          fmt: withFmt ? 'defaults' : ctx.rootOxc?.fmt ? 'inherit' : false,
+                          lint: withLint ? 'defaults' : ctx.rootOxc?.lint ? 'inherit' : false,
                           ...(catalog ? { catalogs: catalog } : {}),
+                          flavor: application ? 'application' : 'library',
                       }),
                   },
               ]),
@@ -559,7 +672,7 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
             : []),
         { path: '.gitignore', content: renderGitignore() },
         { path: 'README.md', content: `# ${ctx.name}\n` },
-        ...catalogFiles(ctx.packageManager, false, application ? ['tsdown'] : []),
+        ...catalogFiles(ctx.packageManager, false),
     ];
 }
 
@@ -608,12 +721,14 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
             ? []
             : [
                   {
-                      path: 'dbx.config.ts',
-                      content: renderToolchainConfig({
-                          ...ctx,
+                      path: 'vite.config.ts',
+                      content: renderPluginViteConfig({
+                          ctx,
                           type: ctx.type ?? 'monorepo-root',
-                          oxc: withOxc,
+                          fmt: withOxc ? 'defaults' : false,
+                          lint: withOxc ? 'defaults' : false,
                           ...(catalog ? { catalogs: catalog } : {}),
+                          flavor: 'monorepo-root',
                       }),
                   },
               ]),
@@ -844,10 +959,10 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
         sideEffects: false,
         files: ['dist'],
         scripts: {
-            build: 'tsdown',
+            build: 'vp pack',
             format: 'dbx fmt',
             lint: 'dbx lint --fix',
-            test: 'vitest run',
+            test: 'vp test',
             typecheck: 'tsc -p tsconfig.build.json --noEmit',
         },
         devDependencies: dev,
@@ -862,13 +977,15 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
             ? []
             : [
                   {
-                      path: 'dbx.config.ts',
-                      content: renderToolchainConfig({
-                          ...ctx,
+                      path: 'vite.config.ts',
+                      content: renderPluginViteConfig({
                           // A workspace config describes the workspace, not the root it
                           // was scaffolded from.
-                          name: ctx.wsName,
+                          ctx: { ...ctx, name: ctx.wsName },
                           type: ctx.type ?? 'monorepo-workspace',
+                          fmt: 'inherit',
+                          lint: 'inherit',
+                          flavor: 'workspace',
                       }),
                   },
               ]),
@@ -890,7 +1007,7 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
                     moduleResolution: 'NodeNext',
                     types: ['node'],
                 },
-                include: ['src', 'tests', 'tsdown.config.ts', 'vitest.config.ts'],
+                include: ['src', 'tests', 'vite.config.ts'],
             }),
         },
         {
@@ -898,10 +1015,6 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
             content: renderWorkspaceTsconfig(false, ctx.tsconfigExtends?.build),
         },
         { path: 'tsconfig.json', content: renderWorkspaceTsconfig() },
-        {
-            path: 'tsdown.config.ts',
-            content: `import { defineConfig } from 'tsdown';\n\nimport { baseTsdownConfig } from '@deltabox/toolchain/tsdown';\n\nexport default defineConfig({\n    ...baseTsdownConfig,\n    entry: { index: 'src/index.ts' },\n    // Keep the explicit package.json exports (types + import conditions).\n    exports: false,\n});\n`,
-        },
     ];
 }
 

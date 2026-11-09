@@ -23,10 +23,10 @@ const PACKAGE_MANAGER_VAR: TemplateVariable = {
     options: ['yarn', 'pnpm', 'npm', 'bun'],
 };
 
-/** Whether to write a `dbx.config.ts` (a select, to exercise the input pipeline). */
+/** Whether to write the toolchain (Vite plugin) + Oxc config (exercises inputs). */
 const CONFIG_VAR: TemplateVariable = {
     name: 'includeConfig',
-    prompt: 'Include a dbx.config.ts?',
+    prompt: 'Include the toolchain config (Vite plugin + Oxc)?',
     default: 'yes',
     options: ['yes', 'no'],
 };
@@ -64,7 +64,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
     {
         id: 'project',
         name: 'TypeScript project',
-        description: 'A single-package TypeScript project (tsconfig, tsdown, Vite+).',
+        description: 'A single-package TypeScript project (tsconfig, Vite+ plugin).',
         kind: 'project',
         builtin: 'single',
         source: { type: 'builtin', locate: 'project' },

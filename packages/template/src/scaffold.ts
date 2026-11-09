@@ -20,7 +20,7 @@ import {
     type Replacements,
     spawnCross,
 } from '@deltabox/toolchain/shared';
-import { runVp } from '@deltabox/toolchain/vite';
+import { runVp } from 'vite-plugin-dbx';
 
 import { readTemplateManifest } from './local.js';
 import type { Template, TemplateAction, TemplateActionContext } from './types.js';

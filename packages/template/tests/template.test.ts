@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import {
     addTemplateSource,
@@ -175,7 +175,7 @@ describe('scaffolding', () => {
         const result = await scaffoldTemplate(template, { cwd: out, tokens: { name: 'acme' } });
         expect(result.written.length).toBeGreaterThan(0);
         expect(fs.existsSync(path.join(out, 'package.json'))).toBe(true);
-        expect(fs.existsSync(path.join(out, 'dbx.config.ts'))).toBe(true);
+        expect(fs.existsSync(path.join(out, 'vite.config.ts'))).toBe(true);
     });
 
     it('does not reuse the configured version when packageManager is overridden', async () => {
@@ -203,7 +203,7 @@ describe('scaffolding', () => {
             cwd: out,
             tokens: { name: 'web', description: 'The root project' },
         });
-        const config = fs.readFileSync(path.join(out, 'packages/web/dbx.config.ts'), 'utf-8');
+        const config = fs.readFileSync(path.join(out, 'packages/web/vite.config.ts'), 'utf-8');
         expect(config).not.toContain('The root project');
     });
 

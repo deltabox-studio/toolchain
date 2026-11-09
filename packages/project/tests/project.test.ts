@@ -2,9 +2,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
-
+import { DEFAULT_FMT_RULES } from '@deltabox/toolchain/shared';
 import { parseTsconfig } from '@deltabox/toolchain/tsconfig';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import {
     catalogsSyncTask,
@@ -58,13 +58,13 @@ describe('project scaffolding', () => {
         expect(JSON.parse(files.find(f => f.path === '.oxfmtrc.json')!.content)).toMatchObject({
             $schema: './node_modules/oxfmt/configuration_schema.json',
             useTabs: false,
-            tabWidth: 4,
+            tabWidth: DEFAULT_FMT_RULES.tabWidth,
         });
         expect(JSON.parse(files.find(f => f.path === '.oxlintrc.json')!.content)).toHaveProperty(
             '$schema',
             './node_modules/oxlint/configuration_schema.json'
         );
-        const config = files.find(f => f.path === 'dbx.config.ts')!.content;
+        const config = files.find(f => f.path === 'vite.config.ts')!.content;
         expect(config).toContain('fmt:');
         expect(config).toContain('lint:');
         expect(config).toContain('oxc:');
@@ -80,9 +80,12 @@ describe('project scaffolding', () => {
         const paths = files.map(file => file.path);
         expect(paths).not.toContain('.oxfmtrc.json');
         expect(paths).not.toContain('.oxlintrc.json');
-        const config = files.find(f => f.path === 'dbx.config.ts')!.content;
-        expect(config).not.toContain('fmt:');
-        expect(config).not.toContain('lint:');
+        const config = files.find(f => f.path === 'vite.config.ts')!.content;
+        // Opt into the parent's options instead of redefining them locally.
+        expect(config).toContain('fmt: true');
+        expect(config).toContain('lint: true');
+        expect(config).not.toContain('fmt: { oxc: true }');
+        expect(config).not.toContain('lint: { oxc: true }');
     });
 
     it('omits only the Oxc tool a nested root already owns', () => {
@@ -93,9 +96,10 @@ describe('project scaffolding', () => {
         const paths = files.map(file => file.path);
         expect(paths).not.toContain('.oxfmtrc.json');
         expect(paths).toContain('.oxlintrc.json');
-        const config = files.find(f => f.path === 'dbx.config.ts')!.content;
-        expect(config).not.toContain('fmt:');
-        expect(config).toContain('lint:');
+        const config = files.find(f => f.path === 'vite.config.ts')!.content;
+        expect(config).toContain('fmt: true');
+        expect(config).toContain('lint: { oxc: true }');
+        expect(config).not.toContain('fmt: { oxc: true }');
     });
 
     it('finds root Oxc files above a nested scaffold', () => {
@@ -117,9 +121,10 @@ describe('project scaffolding', () => {
             '<div id="app"></div>'
         );
         const pkg = JSON.parse(files.find(file => file.path === 'package.json')!.content);
-        expect(pkg.scripts.dev).toBe('vite');
-        expect(pkg.scripts.build).toBe('vite build');
+        expect(pkg.scripts.dev).toBe('vp dev');
+        expect(pkg.scripts.build).toBe('vp build');
         expect(pkg.devDependencies.tsdown).toBeUndefined();
+        expect(pkg.devDependencies.vitest).toBeUndefined();
         const yarnrc = files.find(file => file.path === '.yarnrc.yml')!.content;
         expect(yarnrc).not.toContain('tsdown:');
         const escaped = createRootProjectFiles({ name: '<app>', kind: 'application' }).find(
@@ -137,7 +142,7 @@ describe('project scaffolding', () => {
         );
         expect(paths).not.toContain('.yarnrc.yml');
         expect(paths).not.toContain('pnpm-workspace.yaml');
-        expect(files.find(f => f.path === 'dbx.config.ts')!.content).not.toContain('catalogs:');
+        expect(files.find(f => f.path === 'vite.config.ts')!.content).not.toContain('catalogs:');
     });
 
     it('creates monorepo root files with references', () => {
@@ -272,11 +277,15 @@ describe('project scaffolding', () => {
             import: './dist/index.js',
         });
         expect(pkg.exports['./package.json']).toBe('./package.json');
-        const tsdown = files.find(f => f.path === 'tsdown.config.ts')!.content;
-        expect(tsdown).toContain('exports: false');
+        expect(pkg.scripts.build).toBe('vp pack');
+        expect(pkg.devDependencies.tsdown).toBeUndefined();
+        expect(pkg.devDependencies.vitest).toBeUndefined();
+        const vite = files.find(f => f.path === 'vite.config.ts')!.content;
+        expect(vite).toContain('vp pack');
+        expect(files.some(f => f.path === 'tsdown.config.ts')).toBe(false);
     });
 
-    it('writes the inherited project metadata into package.json and dbx.config.ts', () => {
+    it('writes the inherited project metadata into package.json and vite.config.ts', () => {
         const files = createRootProjectFiles({
             name: 'acme',
             scope: '@acme',
@@ -297,7 +306,7 @@ describe('project scaffolding', () => {
             url: 'git+https://github.com/acme/acme.git',
         });
         expect(pkg.engines.node).toBe('>=24');
-        const config = files.find(f => f.path === 'dbx.config.ts')!.content;
+        const config = files.find(f => f.path === 'vite.config.ts')!.content;
         expect(config).toContain("description: 'The acme app'");
         expect(config).toContain("repo: 'https://github.com/acme/acme'");
         expect(config).toContain("nodeVersion: '24'");
@@ -307,7 +316,7 @@ describe('project scaffolding', () => {
         const config = createRootProjectFiles({
             name: 'acme',
             description: 'line1\nline2\rline3',
-        }).find(file => file.path === 'dbx.config.ts')!.content;
+        }).find(file => file.path === 'vite.config.ts')!.content;
         expect(config).toContain("description: 'line1\\u000aline2\\u000dline3'");
         expect(config).not.toContain('line1\nline2');
     });
@@ -422,7 +431,7 @@ describe('project scaffolding', () => {
             wsName: 'core',
             wsDir: 'packages/core',
         });
-        const config = files.find(file => file.path === 'dbx.config.ts')!.content;
+        const config = files.find(file => file.path === 'vite.config.ts')!.content;
         expect(config).toContain("name: 'core'");
         expect(config).not.toContain("name: 'root'");
     });
@@ -451,7 +460,7 @@ describe('project scaffolding', () => {
 
     it('pairs the package manager with a version in the generated config', () => {
         const files = createRootProjectFiles({ name: 'x', type: 'project' });
-        const config = files.find(f => f.path === 'dbx.config.ts')!.content;
+        const config = files.find(f => f.path === 'vite.config.ts')!.content;
         expect(config).toContain("packageManager: 'yarn'");
         expect(config).toContain("packageManagerVersion: '4.17.1'");
         // No explicit manager chosen -> no `packageManager` field yet.
@@ -470,7 +479,7 @@ describe('project scaffolding', () => {
         const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
         expect(pkg.devDependencies['@deltabox/toolchain']).toMatch(/^\^/);
         expect(pkg.workspaces).toBeUndefined();
-        expect(files.find(f => f.path === 'dbx.config.ts')!.content).not.toContain('catalogs:');
+        expect(files.find(f => f.path === 'vite.config.ts')!.content).not.toContain('catalogs:');
     });
 
     it('uses the catalog for a Bun monorepo root', () => {
@@ -480,7 +489,7 @@ describe('project scaffolding', () => {
         expect((pkg.workspaces as { catalog: Record<string, string> }).catalog).toBeDefined();
         // Bun's catalog lives in package.json; `dbx sync` does not manage a
         // separate catalog file, so the config does not opt into one.
-        expect(files.find(f => f.path === 'dbx.config.ts')!.content).not.toContain('catalogs:');
+        expect(files.find(f => f.path === 'vite.config.ts')!.content).not.toContain('catalogs:');
     });
 
     it('renders a gitignore', () => {

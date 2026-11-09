@@ -1,7 +1,6 @@
 import path from 'node:path';
 
 import { cancel, confirm, isCancel, select } from '@clack/prompts';
-
 import { loadToolchainConfig } from '@deltabox/toolchain/core';
 import {
     logger,
