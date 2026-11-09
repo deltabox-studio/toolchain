@@ -44,7 +44,7 @@ describe('tool defaults', () => {
         expect(DEFAULT_FMT_IGNORE_PATTERNS).toContain('**/.nuxt/**');
         expect(DEFAULT_FMT_IGNORE_PATTERNS).toContain('**/*.lock');
         expect(DEFAULT_LINT_IGNORE_PATTERNS).toContain('**/*.min.*');
-        expect(DEFAULT_LINT_IGNORE_PATTERNS).not.toContain('**/.svelte-kit/**');
+        expect(DEFAULT_LINT_IGNORE_PATTERNS).toContain('**/.svelte-kit/**');
     });
 });
 

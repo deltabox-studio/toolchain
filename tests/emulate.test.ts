@@ -357,31 +357,14 @@ describe('emulate: CLI + templates', () => {
             expect(singlePkg.scripts.format).toBe('dbx fmt');
             expect(singlePkg.scripts.lint).toBe('dbx lint --fix');
             expect(singlePkg.packageManager).toMatch(/^yarn@\d/);
-            expect(fs.existsSync(path.join(single, '.oxfmtrc.json'))).toBe(true);
-            expect(fs.existsSync(path.join(single, '.oxlintrc.json'))).toBe(true);
+            // Vite+ reads fmt/lint from vite.config; no standalone Oxc files.
+            expect(fs.existsSync(path.join(single, '.oxfmtrc.json'))).toBe(false);
+            expect(fs.existsSync(path.join(single, '.oxlintrc.json'))).toBe(false);
             const singleConfig = fs.readFileSync(path.join(single, 'vite.config.ts'), 'utf-8');
             expect(singleConfig).toContain('fmt:');
             expect(singleConfig).toContain('lint:');
             expect(singleConfig).toContain('oxc:');
             expect(singleConfig).toContain('catalogs:');
-
-            // The Oxc files are managed: `dbx sync` regenerates them from the config.
-            fs.rmSync(path.join(single, '.oxfmtrc.json'));
-            fs.rmSync(path.join(single, '.oxlintrc.json'));
-            const sync = await dbx(single, ['sync']);
-            expect(sync.code, sync.stderr).toBe(0);
-            expect(fs.existsSync(path.join(single, '.oxfmtrc.json'))).toBe(true);
-            expect(fs.existsSync(path.join(single, '.oxlintrc.json'))).toBe(true);
-            // `oxc: true` resolves the shared defaults (not a bare `$schema`).
-            const oxfmt = readJson<{ useTabs: boolean; ignorePatterns: string[] }>(
-                path.join(single, '.oxfmtrc.json')
-            );
-            expect(oxfmt.useTabs).toBe(false);
-            expect(oxfmt.ignorePatterns.length).toBeGreaterThan(0);
-            const oxlint = readJson<{ rules: Record<string, string> }>(
-                path.join(single, '.oxlintrc.json')
-            );
-            expect(oxlint.rules.eqeqeq).toBe('warn');
 
             // A monorepo example: root tsconfig/scripts, workspace named after itself.
             const mono = path.join(ws, 'mono');
@@ -397,8 +380,8 @@ describe('emulate: CLI + templates', () => {
             ]);
             expect(monoResult.code, monoResult.stderr).toBe(0);
             expect(fs.existsSync(path.join(mono, 'tsconfig.json'))).toBe(true);
-            expect(fs.existsSync(path.join(mono, '.oxfmtrc.json'))).toBe(true);
-            expect(fs.existsSync(path.join(mono, '.oxlintrc.json'))).toBe(true);
+            expect(fs.existsSync(path.join(mono, '.oxfmtrc.json'))).toBe(false);
+            expect(fs.existsSync(path.join(mono, '.oxlintrc.json'))).toBe(false);
             const monoPkg = readJson<{ scripts: Record<string, string> }>(
                 path.join(mono, 'package.json')
             );
@@ -1267,7 +1250,7 @@ describe('emulate: CLI + templates', () => {
                 name: 'tooling-defaults',
                 version: '1.0.0',
                 private: true,
-                devDependencies: { 'vite-plus': '^1' },
+                devDependencies: { '@deltabox/toolchain': '^1' },
             });
             write(
                 path.join(ws, 'dbx.config.ts'),
