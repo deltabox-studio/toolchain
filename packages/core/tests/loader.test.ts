@@ -2,9 +2,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
-
 import { sectionConfig } from '@deltabox/toolchain/shared';
+import { describe, expect, it } from 'vite-plus/test';
 
 import {
     findConfigFile,
@@ -787,5 +786,109 @@ describe('loadToolchainConfig conflicting flags', () => {
         await expect(
             loadToolchainConfig(tmp(), { config: 'dbx.config.json', noConfig: true })
         ).rejects.toThrow(/cannot be used together/);
+    });
+});
+
+describe('dbx() plugin config', () => {
+    function writePluginConfig(
+        cwd: string,
+        toolchain: Record<string, unknown>,
+        form: 'object' | 'function' = 'object'
+    ): void {
+        const body = [
+            'const marker = Symbol.for("@deltabox/toolchain/vite-plugin");',
+            'const plugin = { name: "deltabox-toolchain" };',
+            `plugin[marker] = { toolchain: ${JSON.stringify(toolchain)} };`,
+            form === 'function'
+                ? 'export default () => ({ plugins: [plugin] });'
+                : 'export default { plugins: [plugin] };',
+            '',
+        ].join('\n');
+        fs.writeFileSync(path.join(cwd, 'vite.config.mjs'), body);
+    }
+
+    it('loads the inline config without a dbx.config', async () => {
+        const cwd = tmp();
+        writePluginConfig(cwd, {
+            project: { name: 'plugin-app', scope: '@acme' },
+            fmt: { oxc: { printWidth: 90 } },
+        });
+
+        const loaded = await loadToolchainConfig(cwd);
+        expect(loaded.plugin).toBe(true);
+        expect(loaded.pluginPath).toBe(path.join(cwd, 'vite.config.mjs'));
+        expect(loaded.managed).toBe(true);
+        expect(loaded.configless).toBe(false);
+        expect(loaded.config.project?.name).toBe('plugin-app');
+        expect(loaded.tokens.scope).toBe('@acme');
+        expect(sectionConfig(loaded.config.fmt)?.oxc).toEqual({ printWidth: 90 });
+    });
+
+    it('evaluates a config function so inline plugin options survive', async () => {
+        const cwd = tmp();
+        writePluginConfig(cwd, { project: { name: 'from-function' } }, 'function');
+        const loaded = await loadToolchainConfig(cwd);
+        expect(loaded.plugin).toBe(true);
+        expect(loaded.config.project?.name).toBe('from-function');
+    });
+
+    it('merges a dbx.config under the plugin config', async () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'dbx.config.json'), {
+            toolchain: {
+                fmt: { oxc: { printWidth: 120 } },
+                project: { name: 'from-dbx', author: 'Acme' },
+            },
+        });
+        writePluginConfig(cwd, { project: { name: 'from-plugin' } });
+
+        const loaded = await loadToolchainConfig(cwd);
+        expect(loaded.plugin).toBe(true);
+        expect(loaded.managed).toBe(true);
+        expect(loaded.config.project?.name).toBe('from-plugin');
+        expect(loaded.config.project?.author).toBe('Acme');
+        expect(sectionConfig(loaded.config.fmt)?.oxc).toEqual({ printWidth: 120 });
+    });
+
+    it('never re-imports a generated resolveVite shim', async () => {
+        const cwd = tmp();
+        fs.writeFileSync(
+            path.join(cwd, 'vite.config.ts'),
+            [
+                "import { defineConfig } from 'vite';",
+                "import { resolveVite } from 'vite-plugin-dbx';",
+                'export default defineConfig(resolveVite({ cwd: import.meta.dirname }));',
+                '',
+            ].join('\n')
+        );
+        const loaded = await loadToolchainConfig(cwd);
+        expect(loaded.plugin).toBe(false);
+        expect(loaded.managed).toBe(false);
+    });
+
+    it('skips the plugin probe when asked', async () => {
+        const cwd = tmp();
+        writePluginConfig(cwd, { project: { name: 'plugin-app' } });
+        const loaded = await loadToolchainConfig(cwd, { skipPluginProbe: true });
+        expect(loaded.plugin).toBe(false);
+        expect(loaded.config).toEqual({});
+    });
+
+    it('inherits a parent plugin config when the workspace only has its own plugin', async () => {
+        const root = tmp();
+        const child = path.join(root, 'packages/app');
+        fs.mkdirSync(child, { recursive: true });
+        writePluginConfig(root, {
+            project: { author: 'Acme', license: 'MIT' },
+            fmt: { oxc: { tabWidth: 4 } },
+            lint: true,
+        });
+        writePluginConfig(child, { fmt: true, lint: true });
+
+        const loaded = await loadToolchainConfig(child, { skipHooks: true });
+        expect(loaded.plugin).toBe(true);
+        expect(loaded.managed).toBe(true);
+        expect(sectionConfig(loaded.config.fmt)?.oxc).toEqual({ tabWidth: 4 });
+        expect(loaded.config.project?.author).toBe('Acme');
     });
 });

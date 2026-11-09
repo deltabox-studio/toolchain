@@ -2,9 +2,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
-
 import { readJsoncFile, type SyncContext } from '@deltabox/toolchain/shared';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import { editorConfigSyncTask, toolingConfigTask } from '../src/index.js';
 

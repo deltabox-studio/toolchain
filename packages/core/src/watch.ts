@@ -1,8 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { globSync } from 'glob';
-
 import {
     deepMerge,
     isIgnoredPath,
@@ -16,9 +14,15 @@ import {
     type TsconfigFileNameSet,
     tsconfigFileNames,
 } from '@deltabox/toolchain/shared';
+import { globSync } from 'glob';
 
 import { buildProjectGraph, type ProjectGraph } from './graph.js';
-import { findConfigFile, loadToolchainConfig } from './loader.js';
+import {
+    findConfigFile,
+    isDbxPluginConfig,
+    loadToolchainConfig,
+    VITE_CONFIG_FILE_NAMES,
+} from './loader.js';
 import { resolveProjectType } from './project-type.js';
 import { type RunSyncOptions, runSync, selectSyncTasks } from './sync.js';
 
@@ -60,6 +64,7 @@ export function resolveWatchGlobs(
  */
 export const DEFAULT_WATCH_GLOBS = [
     '**/dbx.config.*',
+    '**/vite.config.*',
     'tsconfig.workspaces.json',
     '**/tsconfig.default.json',
 ] as const;
@@ -153,6 +158,19 @@ export async function resolveWatchInputFiles(
         const relative = relPosix(cwd, rootConfig);
         add(relative);
         configs.add(relative);
+    }
+
+    // Plugin mode: the `dbx()` options live in `vite.config.*`, so an edit there
+    // must re-sync just like a `dbx.config.*` edit.
+    for (const project of graph.projects) {
+        const prefix = project.dir === '.' ? '' : `${project.dir}/`;
+        for (const name of VITE_CONFIG_FILE_NAMES) {
+            const relative = `${prefix}${name}`;
+            if (isDbxPluginConfig(path.resolve(cwd, relative))) {
+                add(relative);
+                configs.add(relative);
+            }
+        }
     }
 
     const rootEnabled = sectionEnabled(options.config.tsconfig);
@@ -250,13 +268,27 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
     };
 
     const reloadConfig = async (): Promise<boolean> => {
-        // The file may have been renamed/created; fall back to discovery only
-        // when the watch started from a config (never override `--no-config`).
-        const fallback = options.configPath ? findConfigFile(cwd) : undefined;
-        const file = configFile && fs.existsSync(configFile) ? configFile : fallback;
-        if (!file) return false;
-        configFile = file;
         try {
+            // Plugin mode has no config file to target: rediscover the config
+            // (the loader re-reads the `vite.config.*` plugin options).
+            if (options.plugin) {
+                const loaded = await loadToolchainConfig(cwd, { fresh: true });
+                current = {
+                    ...current,
+                    config: loaded.config,
+                    ownConfig: loaded.ownConfig,
+                    tokens: loaded.tokens,
+                    projectType: loaded.projectType,
+                    ...(loaded.plugin ? { plugin: true } : {}),
+                };
+                return true;
+            }
+            // The file may have been renamed/created; fall back to discovery only
+            // when the watch started from a config (never override `--no-config`).
+            const fallback = options.configPath ? findConfigFile(cwd) : undefined;
+            const file = configFile && fs.existsSync(configFile) ? configFile : fallback;
+            if (!file) return false;
+            configFile = file;
             const loaded = await loadToolchainConfig(cwd, { config: file, fresh: true });
             current = {
                 ...current,
@@ -268,9 +300,7 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
             return true;
         } catch (error) {
             logger.error(
-                `failed to reload ${configFile}: ${
-                    error instanceof Error ? error.message : String(error)
-                }`
+                `failed to reload ${configFile}: ${error instanceof Error ? error.message : String(error)}`
             );
             return false;
         }
@@ -317,7 +347,9 @@ export async function runWatch(options: RunWatchOptions): Promise<void> {
         if (changedAbs) {
             const rel = path.relative(cwd, changedAbs).replace(/\\/g, '/');
             if (isIgnoredPath(rel, ignore)) return;
-            isConfig = path.basename(changedAbs).startsWith('dbx.config.');
+            isConfig =
+                path.basename(changedAbs).startsWith('dbx.config.') ||
+                (current.plugin === true && isDbxPluginConfig(changedAbs));
             if (isConfig) configDirty = true;
         }
         // A config edit inside the post-sync quiet window must still re-sync;

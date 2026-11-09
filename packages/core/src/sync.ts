@@ -39,6 +39,8 @@ export interface RunSyncOptions {
     quiet?: boolean;
     /** Custom logger (default `logger.info`). */
     log?: (message: string) => void;
+    /** Whether the config came from a `dbx()` Vite/Vite+ plugin. */
+    plugin?: boolean;
 }
 
 export interface RemovedFile {
@@ -104,6 +106,7 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
         log,
         warn,
         check: options.check === true,
+        ...(options.plugin ? { plugin: true } : {}),
         managedFiles: manifest.files,
         manifest: {
             ...manifest.extras,
