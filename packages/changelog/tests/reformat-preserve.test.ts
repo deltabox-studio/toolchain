@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 
 // Simulate a commit whose body is intact (no shell-escape artifacts). A
 // `--format-only` run must still keep the hand-corrected changelog text instead
