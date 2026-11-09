@@ -30,7 +30,7 @@ export default defineConfig({
                     homepage: 'https://toolchain.deltabox.studio',
                     repo: 'https://github.com/deltabox-studio/toolchain',
                     description:
-                        "All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.",
+                        'A superset of Vite+ with rich extras: project synchronization, config generator, tsconfig management, MCP server, CI and changelog automation, providers, catalogs and a VS Code extension. Use it as a Vite plugin or standalone.',
                     nodeVersion: '22',
                     packageManager: 'yarn',
                     packageManagerVersion: '4.17.1',
