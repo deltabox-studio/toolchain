@@ -1,7 +1,7 @@
 {
     "name": "@deltabox/toolchain",
     "version": "2.6.1",
-    "description": "All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.",
+    "description": "A superset of Vite+ with rich extras: project synchronization, config generator, tsconfig management, MCP server, CI and changelog automation, providers, catalogs and a VS Code extension. Use it as a Vite plugin or standalone.",
     "homepage": "https://toolchain.deltabox.studio",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
@@ -75,7 +75,6 @@
         "jsonc-parser": "^3.3.1",
         "lodash": "catalog:",
         "picocolors": "catalog:",
-        "tsdown": "catalog:",
         "tsx": "catalog:",
         "type-fest": "catalog:",
         "untyped": "^2.0.0",
@@ -89,13 +88,13 @@
         "@deltabox/toolchain-changelog": "workspace:*",
         "@deltabox/toolchain-config": "workspace:*",
         "@deltabox/toolchain-core": "workspace:*",
+        "@deltabox/toolchain-mcp": "workspace:*",
         "@deltabox/toolchain-migrate": "workspace:*",
         "@deltabox/toolchain-project": "workspace:*",
         "@deltabox/toolchain-shared": "workspace:*",
         "@deltabox/toolchain-template": "workspace:*",
         "@deltabox/toolchain-tsconfig": "workspace:*",
         "@deltabox/toolchain-tsdown": "workspace:*",
-        "@deltabox/toolchain-vite": "workspace:*",
         "@types/node": "catalog:",
         "@typescript/native-preview": "catalog:",
         "cross-env": "catalog:",
@@ -104,9 +103,8 @@
         "publint": "^0.3.24",
         "typescript": "catalog:",
         "unrun": "^0.3.1",
-        "vite": "catalog:",
-        "vite-plus": "^1.2.0",
-        "vitest": "catalog:"
+        "vite-plugin-dbx": "workspace:*",
+        "vite-plus": "catalog:"
     },
     "peerDependencies": {
         "@dprint/types": ">=0.4",
@@ -144,6 +142,7 @@
         "./config": "./dist/config.js",
         "./core": "./dist/core.js",
         "./globals": "./dist/globals.js",
+        "./mcp": "./dist/mcp.js",
         "./migrate": "./dist/migrate.js",
         "./project": "./dist/project.js",
         "./providers": "./dist/providers.js",

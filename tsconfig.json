@@ -1,5 +1,18 @@
 {
     "extends": "./tsconfig.default.json",
+    "include": [
+        "apps/docs/.vitepress/**/*.ts",
+        "src",
+        "scripts",
+        "tests",
+        "vite.config.ts",
+        "package.json"
+    ],
+    "exclude": [
+        "**/dist",
+        "**/node_modules",
+        "packages"
+    ],
     "compilerOptions": {
         "composite": false,
         "paths": {
@@ -78,12 +91,6 @@
             "@deltabox/toolchain/tsdown/*": [
                 "./packages/tsdown/src/*"
             ],
-            "@deltabox/toolchain/vite/package.json": [
-                "./packages/vite/package.json"
-            ],
-            "@deltabox/toolchain/vite/*": [
-                "./packages/vite/src/*"
-            ],
             "toolchain-vscode/*": [
                 "./packages/vscode/src/*"
             ],
@@ -120,8 +127,23 @@
             "@deltabox/toolchain/tsdown": [
                 "./packages/tsdown/src/index.ts"
             ],
-            "@deltabox/toolchain/vite": [
+            "@deltabox/toolchain/mcp/package.json": [
+                "./packages/mcp/package.json"
+            ],
+            "@deltabox/toolchain/mcp": [
+                "./packages/mcp/src/index.ts"
+            ],
+            "@deltabox/toolchain/mcp/*": [
+                "./packages/mcp/src/*"
+            ],
+            "vite-plugin-dbx/package.json": [
+                "./packages/vite/package.json"
+            ],
+            "vite-plugin-dbx": [
                 "./packages/vite/src/index.ts"
+            ],
+            "vite-plugin-dbx/*": [
+                "./packages/vite/src/*"
             ]
         }
     }

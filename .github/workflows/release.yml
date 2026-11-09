@@ -77,3 +77,6 @@ jobs:
             echo "::warning::Direct publish failed; falling back to a staged publish."
             npm stage publish toolchain.tgz --access public
           fi
+      - name: Publish stale workspace packages
+        if: steps.release.outputs.skip == 'false'
+        run: node scripts/publish-workspaces.mjs

@@ -43,6 +43,7 @@ export default {
                 'migrate',
                 'changelog',
                 'vscode',
+                'mcp',
                 'cli',
                 'ci',
                 'release',
