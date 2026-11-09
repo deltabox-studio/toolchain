@@ -12,6 +12,7 @@ export * as changelog from '@deltabox/toolchain/changelog';
 export * as config from '@deltabox/toolchain/config';
 export * as core from '@deltabox/toolchain/core';
 export * from '@deltabox/toolchain/core';
+export * as mcp from '@deltabox/toolchain/mcp';
 export * as project from '@deltabox/toolchain/project';
 export * as shared from '@deltabox/toolchain/shared';
 export * from '@deltabox/toolchain/shared';

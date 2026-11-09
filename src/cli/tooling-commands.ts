@@ -20,7 +20,7 @@ import {
     type ToolchainCommand,
     type ToolchainCommandContext,
 } from '@deltabox/toolchain/shared';
-import { which } from '@deltabox/toolchain/vite';
+import { which } from 'vite-plugin-dbx';
 
 import { discoverTooling } from '../tooling.js';
 import { getConfigSelection } from './config-selection.js';

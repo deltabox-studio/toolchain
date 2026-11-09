@@ -84,6 +84,7 @@ export function syncCommand(): ToolchainCommand {
                         config: loaded.config,
                         ownConfig: loaded.ownConfig,
                         tokens: loaded.tokens,
+                        ...(loaded.plugin ? { plugin: true } : {}),
                         check,
                         quiet,
                     });

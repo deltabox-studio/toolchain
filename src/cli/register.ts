@@ -1,6 +1,4 @@
 import { intro, outro } from '@clack/prompts';
-import type { Command } from 'commander';
-
 import {
     getLogOverrides,
     logger,
@@ -9,6 +7,7 @@ import {
     type ToolchainCommand,
     type ToolchainCommandContext,
 } from '@deltabox/toolchain/shared';
+import type { Command } from 'commander';
 
 import { defaultSyncTasks } from '../sync.js';
 import { getConfigSelection } from './config-selection.js';
@@ -124,6 +123,8 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                     ...(selection.noConfig ? { noConfig: true } : {}),
                     ...(loaded.configless ? { configless: true } : {}),
                     managed: loaded.managed,
+                    ...(loaded.plugin ? { plugin: true } : {}),
+                    ...(loaded.pluginPath ? { pluginPath: loaded.pluginPath } : {}),
                     ...(loaded.error ? { configError: loaded.error } : {}),
                 };
                 await cmd.run(provided, context);

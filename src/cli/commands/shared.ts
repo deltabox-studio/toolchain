@@ -22,6 +22,7 @@ export function watchOptions(context: ToolchainCommandContext) {
         config: context.config,
         ...(context.ownConfig ? { ownConfig: context.ownConfig } : {}),
         tokens: context.tokens,
+        ...(context.plugin ? { plugin: true } : {}),
         ...(context.configPath ? { configPath: context.configPath } : {}),
         ...(watch?.debounce !== undefined ? { debounce: watch.debounce } : {}),
         ...(watch?.exclude !== undefined ? { exclude: watch.exclude } : {}),

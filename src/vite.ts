@@ -1,2 +1,2 @@
-export * from '@deltabox/toolchain/vite';
-export * from '@deltabox/toolchain/vite/cli';
+export * from 'vite-plugin-dbx';
+export * from 'vite-plugin-dbx/cli';

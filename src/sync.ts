@@ -14,7 +14,7 @@ import {
     sectionEnabled,
 } from '@deltabox/toolchain/shared';
 import { tsconfigSyncTask } from '@deltabox/toolchain/tsconfig';
-import { viteSyncTask } from '@deltabox/toolchain/vite';
+import { viteSyncTask } from 'vite-plugin-dbx';
 
 import { toolingDefaultsTask } from './tooling.js';
 
