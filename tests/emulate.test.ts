@@ -14,7 +14,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CLI = path.join(ROOT, 'dist', 'cli', 'index.js');
@@ -267,7 +267,7 @@ describe('emulate: CLI + templates', () => {
                 expect(pkg.packageManager).toMatch(new RegExp(`^${pm}@\\d`));
                 const hasYarnrc = fs.existsSync(path.join(out, '.yarnrc.yml'));
                 const hasPnpmWs = fs.existsSync(path.join(out, 'pnpm-workspace.yaml'));
-                const config = fs.readFileSync(path.join(out, 'dbx.config.ts'), 'utf-8');
+                const config = fs.readFileSync(path.join(out, 'vite.config.ts'), 'utf-8');
                 if (pm === 'yarn' || pm === 'pnpm') {
                     expect(pkg.devDependencies['@deltabox/toolchain']).toBe('catalog:');
                     if (pm === 'yarn') expect(hasYarnrc).toBe(true);
@@ -304,7 +304,7 @@ describe('emulate: CLI + templates', () => {
             ]);
             expect(fs.existsSync(path.join(bare, 'packages'))).toBe(false);
             expect(fs.existsSync(path.join(bare, 'turbo.json'))).toBe(false);
-            const config = fs.readFileSync(path.join(bare, 'dbx.config.ts'), 'utf-8');
+            const config = fs.readFileSync(path.join(bare, 'vite.config.ts'), 'utf-8');
             expect(config).toContain('project:');
             expect(config).not.toContain('changelog:');
             expect(config).not.toContain('biome:');
@@ -359,7 +359,7 @@ describe('emulate: CLI + templates', () => {
             expect(singlePkg.packageManager).toMatch(/^yarn@\d/);
             expect(fs.existsSync(path.join(single, '.oxfmtrc.json'))).toBe(true);
             expect(fs.existsSync(path.join(single, '.oxlintrc.json'))).toBe(true);
-            const singleConfig = fs.readFileSync(path.join(single, 'dbx.config.ts'), 'utf-8');
+            const singleConfig = fs.readFileSync(path.join(single, 'vite.config.ts'), 'utf-8');
             expect(singleConfig).toContain('fmt:');
             expect(singleConfig).toContain('lint:');
             expect(singleConfig).toContain('oxc:');
@@ -404,7 +404,7 @@ describe('emulate: CLI + templates', () => {
             );
             expect(monoPkg.scripts.build).toContain('dbx run');
             const coreConfig = fs.readFileSync(
-                path.join(mono, 'packages/core/dbx.config.ts'),
+                path.join(mono, 'packages/core/vite.config.ts'),
                 'utf-8'
             );
             expect(coreConfig).toContain("name: 'core'");
@@ -460,9 +460,10 @@ describe('emulate: CLI + templates', () => {
                 scripts: Record<string, string>;
                 devDependencies: Record<string, string>;
             }>(path.join(app, 'package.json'));
-            expect(appPkg.scripts.dev).toBe('vite');
-            expect(appPkg.scripts.build).toBe('vite build');
+            expect(appPkg.scripts.dev).toBe('vp dev');
+            expect(appPkg.scripts.build).toBe('vp build');
             expect(appPkg.devDependencies.tsdown).toBeUndefined();
+            expect(appPkg.devDependencies.vitest).toBeUndefined();
         },
         TIMEOUT
     );
@@ -487,9 +488,11 @@ describe('emulate: CLI + templates', () => {
             expect(result.code, result.stderr).toBe(0);
             expect(fs.existsSync(path.join(out, '.oxfmtrc.json'))).toBe(false);
             expect(fs.existsSync(path.join(out, '.oxlintrc.json'))).toBe(false);
-            const config = fs.readFileSync(path.join(out, 'dbx.config.ts'), 'utf-8');
-            expect(config).not.toContain('fmt:');
-            expect(config).not.toContain('lint:');
+            const config = fs.readFileSync(path.join(out, 'vite.config.ts'), 'utf-8');
+            // Opt into the root's Oxc options instead of redefining them.
+            expect(config).toContain('fmt: true');
+            expect(config).toContain('lint: true');
+            expect(config).not.toContain('fmt: { oxc: true }');
         },
         TIMEOUT
     );
@@ -557,7 +560,7 @@ describe('emulate: CLI + templates', () => {
             expect(
                 readJson<{ name: string }>(path.join(root, 'packages/web/package.json')).name
             ).toBe('@target/web');
-            const config = fs.readFileSync(path.join(root, 'packages/web/dbx.config.ts'), 'utf-8');
+            const config = fs.readFileSync(path.join(root, 'packages/web/vite.config.ts'), 'utf-8');
             expect(config).toContain("scope: '@target'");
         },
         TIMEOUT
@@ -593,7 +596,7 @@ describe('emulate: CLI + templates', () => {
             expect(
                 readJson<{ name: string }>(path.join(root, 'packages/web/package.json')).name
             ).toBe('@root/web');
-            expect(fs.existsSync(path.join(root, 'packages/web/dbx.config.ts'))).toBe(false);
+            expect(fs.existsSync(path.join(root, 'packages/web/vite.config.ts'))).toBe(false);
         },
         TIMEOUT
     );
@@ -613,7 +616,7 @@ describe('emulate: CLI + templates', () => {
             ]);
             expect(result.code, result.stderr).toBe(0);
             expect(fs.existsSync(path.join(out, 'package.json'))).toBe(true);
-            expect(fs.existsSync(path.join(out, 'dbx.config.ts'))).toBe(false);
+            expect(fs.existsSync(path.join(out, 'vite.config.ts'))).toBe(false);
             expect(fs.existsSync(path.join(out, '.oxfmtrc.json'))).toBe(false);
             expect(fs.existsSync(path.join(out, '.oxlintrc.json'))).toBe(false);
         },
@@ -1172,6 +1175,7 @@ describe('emulate: CLI + templates', () => {
             ]);
             expect(init.code, init.stderr).toBe(0);
             fs.rmSync(path.join(root, 'dbx.config.ts'), { force: true });
+            fs.rmSync(path.join(root, 'vite.config.ts'), { force: true });
             writeJson(path.join(root, 'dbx.config.json'), {
                 toolchain: {
                     project: { type: 'monorepo-root', name: 'root', scope: '@acme' },
@@ -1201,7 +1205,7 @@ describe('emulate: CLI + templates', () => {
             const pkg = path.join(root, 'packages/my-package');
             // The generated config tags the folder a workspace, not the root's
             // `monorepo-root` (which would generate CI/husky/vscode inside it).
-            expect(fs.readFileSync(path.join(pkg, 'dbx.config.ts'), 'utf-8')).toContain(
+            expect(fs.readFileSync(path.join(pkg, 'vite.config.ts'), 'utf-8')).toContain(
                 "type: 'monorepo-workspace'"
             );
 

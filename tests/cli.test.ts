@@ -2,9 +2,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
-
 import { addProjectProviderRegistry } from '@deltabox/toolchain/core';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { providerPassthroughCommands } from '../src/cli/commands/providers.js';
 import { extractConfigSelection } from '../src/cli/config-selection.js';
