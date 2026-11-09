@@ -1,5 +1,11 @@
 {
     "extends": "./tsconfig.default.json",
+    "include": [
+        "src",
+        "tests",
+        "vite.config.ts",
+        "../../package.json"
+    ],
     "compilerOptions": {
         "composite": false,
         "paths": {
@@ -113,6 +119,15 @@
             ],
             "@deltabox/toolchain/tsdown": [
                 "../tsdown/src/index.ts"
+            ],
+            "@deltabox/toolchain/mcp/package.json": [
+                "../mcp/package.json"
+            ],
+            "@deltabox/toolchain/mcp": [
+                "../mcp/src/index.ts"
+            ],
+            "@deltabox/toolchain/mcp/*": [
+                "../mcp/src/*"
             ]
         }
     }

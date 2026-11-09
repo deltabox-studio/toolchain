@@ -8,8 +8,6 @@
  * and a missing one throws rather than silently producing an empty config.
  */
 
-import type { ViteUserConfig } from 'vite-plus';
-
 import { loadToolchainConfig, resolveFmtCustomGroups } from '@deltabox/toolchain/core';
 import {
     applyFmtCustomGroups,
@@ -23,6 +21,7 @@ import {
     type ToolchainConfigSections,
     type ToolchainOxfmtConfig,
 } from '@deltabox/toolchain/shared';
+import type { ViteUserConfig } from 'vite-plus';
 
 import { viteConfigObject } from './sync.js';
 

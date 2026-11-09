@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import { runGuard, viteCommands } from '../src/cli/index.js';
 

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import { DBX_TASKS, dbx, dbxTaskCommand, resolveDbx } from '../src/index.js';
 
@@ -110,5 +110,71 @@ describe('dbx resolution', () => {
             expect(resolved.source).toBe('global');
             expect(resolved.exe).toBe(globalBin);
         });
+    });
+});
+
+describe('dbx() plugin config bridge', () => {
+    const MARKER = Symbol.for('@deltabox/toolchain/vite-plugin');
+
+    function withPackage(dir: string, deps: Record<string, unknown>): void {
+        fs.writeFileSync(
+            path.join(dir, 'package.json'),
+            JSON.stringify({ name: 'fixture', private: true, ...deps })
+        );
+    }
+
+    type ConfigHook = (config: Record<string, unknown>, env: unknown) => Promise<unknown> | unknown;
+
+    async function runConfig(
+        dir: string,
+        options: Parameters<typeof dbx>[0],
+        userConfig: Record<string, unknown> = {}
+    ): Promise<Record<string, unknown>> {
+        const plugin = dbx({ cwd: dir, ...options });
+        const hook = plugin.config as unknown as ConfigHook;
+        return ((await hook(userConfig, { command: 'serve', mode: 'development' })) ??
+            {}) as Record<string, unknown>;
+    }
+
+    it('marks itself with the inline toolchain options', () => {
+        const plugin = dbx({ toolchain: { project: { name: 'inline' } } });
+        const descriptor = (plugin as unknown as Record<symbol, { toolchain: unknown }>)[MARKER];
+        const toolchain = descriptor?.toolchain;
+        expect(toolchain).toMatchObject({ project: { name: 'inline' } });
+        expect((toolchain as { vite?: unknown }).vite).toBeUndefined();
+    });
+
+    it('maps the dbx logger and watch sections onto Vite options', async () => {
+        const dir = makeTmp();
+        const result = await runConfig(dir, {
+            toolchain: { logger: { level: 'warn' }, watch: { exclude: '**/ignored/**' } },
+        });
+        expect(result.logLevel).toBe('warn');
+        expect(result.server).toMatchObject({ watch: { ignored: '**/ignored/**' } });
+        // Pure Vite: no Vite+ only keys.
+        expect(result.fmt).toBeUndefined();
+        expect(result.lint).toBeUndefined();
+    });
+
+    it('adds fmt/lint only when Vite+ is declared', async () => {
+        const plain = makeTmp();
+        const plainResult = await runConfig(plain, { toolchain: { fmt: true, lint: true } });
+        expect(plainResult.fmt).toBeUndefined();
+
+        const vitePlus = makeTmp();
+        withPackage(vitePlus, { devDependencies: { 'vite-plus': '^1.0.0' } });
+        const result = await runConfig(vitePlus, { toolchain: { fmt: true, lint: true } });
+        expect(result.fmt).toBeTruthy();
+        expect(result.lint).toBeTruthy();
+    });
+
+    it('reads dbx.config when no inline toolchain is given', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'dbx.config.json'),
+            JSON.stringify({ toolchain: { logger: { level: 'error' } } })
+        );
+        const result = await runConfig(dir, {});
+        expect(result.logLevel).toBe('error');
     });
 });

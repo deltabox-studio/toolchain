@@ -1,8 +1,4 @@
 {
-    "files": [
-        "vite.config.ts"
-    ],
-    "origins": {
-        "vite.config.ts": "created"
-    }
+    "files": [],
+    "origins": {}
 }

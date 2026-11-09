@@ -13,7 +13,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { resolveFmtCustomGroups } from '@deltabox/toolchain/core';
+import { findViteConfigFile, resolveFmtCustomGroups } from '@deltabox/toolchain/core';
 import {
     applyFmtCustomGroups,
     applyReplacementsDeep,
@@ -240,7 +240,7 @@ function leadingHeader(source: string): HeaderEntry[] {
 }
 
 /** The default module the runtime shim imports `resolveVite` from. */
-export const DEFAULT_RESOLVE_IMPORT = '@deltabox/toolchain/vite';
+export const DEFAULT_RESOLVE_IMPORT = 'vite-plugin-dbx';
 
 /**
  * Merge the required `defineConfig` + config-type specifiers into an existing
@@ -460,6 +460,20 @@ export function viteSyncTask(): SyncTask {
             }
             const files: ManagedFile[] = [];
 
+            // Plugin mode: the `dbx()` plugin lives in `vite.config.*`, which is
+            // now user-owned. Return it untracked so the previous managed shim is
+            // not pruned (and drop it from the manifest) without rewriting it.
+            if (ctx.plugin) {
+                const pluginFile = findViteConfigFile(ctx.cwd);
+                if (pluginFile) {
+                    files.push({
+                        path: path.relative(ctx.cwd, pluginFile).replace(/\\/g, '/'),
+                        content: fs.readFileSync(pluginFile, 'utf-8'),
+                        track: false,
+                    });
+                }
+            }
+
             const configuredPath = section.config;
             const shimPath =
                 configuredPath === false
@@ -467,10 +481,11 @@ export function viteSyncTask(): SyncTask {
                     : typeof configuredPath === 'string' && configuredPath.trim()
                       ? configuredPath
                       : 'vite.config.ts';
-            // Only a project with its own `vite` section manages a shim. An
+            // Only a project with its own `vite` section manages a shim, and
+            // never in plugin mode: the `dbx()` plugin lives in that file. An
             // inherited section must never overwrite a hand-written
-            // `vite.config.*` in a project that did not opt in.
-            if (ownViteEnabled && shimPath) {
+            // `vite.config.*` either.
+            if (ownViteEnabled && shimPath && !ctx.plugin) {
                 let existing: string | undefined;
                 try {
                     const target = path.isAbsolute(shimPath)

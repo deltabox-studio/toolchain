@@ -1,5 +1,5 @@
 /**
- * `@deltabox/toolchain-vite` — the Vite+ provider.
+ * `vite-plugin-dbx` — the Vite+ provider.
  *
  * Wraps the `vp` binary (Vite, Vitest, Oxlint, Oxfmt, Rolldown, tsdown) as
  * `dbx vite:*` commands, exposes a programmatic API for running it, and
