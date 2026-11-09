@@ -293,12 +293,6 @@ function escapeHtml(value: string): string {
 }
 
 /** The Oxfmt/Oxlint config files the Oxc VS Code extension reads. */
-const OXC_FMT_SCHEMA = './node_modules/oxfmt/configuration_schema.json';
-const OXC_LINT_SCHEMA = './node_modules/oxlint/configuration_schema.json';
-
-function renderOxcConfig(schema: string, config: unknown): string {
-    return `${JSON.stringify({ $schema: schema, ...(config as object) }, null, 4)}\n`;
-}
 
 /** A minimal source entry so `tsdown` has an input and the scaffold builds. */
 export function renderSourceEntry(): string {
@@ -401,8 +395,8 @@ export function renderToolchainConfig(
         .join('\n');
 
     // Sections are opt-in by presence. Every scaffold declares its `project`
-    // identity; the Oxc defaults are opt-out and drive the managed `.oxfmtrc.json`
-    // / `.oxlintrc.json` files on `dbx sync`.
+    // identity; the Oxc `fmt`/`lint` defaults live in the root `vite.config.*`
+    // (Vite+ recommended) rather than in standalone `.oxfmtrc.json` files.
     const fmtOxc = ctx.fmtOxc ?? ctx.oxc === true;
     const lintOxc = ctx.lintOxc ?? ctx.oxc === true;
     // Opt the scaffold into the catalog it writes, so `dbx sync` owns the
@@ -654,22 +648,6 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
             content: renderTsconfigBuild(tokens(ctx), ctx.tsconfigExtends?.build),
         },
         { path: 'tsconfig.json', content: renderWorkspaceTsconfig() },
-        ...(withFmt
-            ? [
-                  {
-                      path: '.oxfmtrc.json',
-                      content: renderOxcConfig(OXC_FMT_SCHEMA, DEFAULT_FMT_RULES),
-                  },
-              ]
-            : []),
-        ...(withLint
-            ? [
-                  {
-                      path: '.oxlintrc.json',
-                      content: renderOxcConfig(OXC_LINT_SCHEMA, DEFAULT_LINT_RULES),
-                  },
-              ]
-            : []),
         { path: '.gitignore', content: renderGitignore() },
         { path: 'README.md', content: `# ${ctx.name}\n` },
         ...catalogFiles(ctx.packageManager, false),
@@ -752,18 +730,6 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
                 files: [],
             }),
         },
-        ...(withOxc
-            ? [
-                  {
-                      path: '.oxfmtrc.json',
-                      content: renderOxcConfig(OXC_FMT_SCHEMA, DEFAULT_FMT_RULES),
-                  },
-                  {
-                      path: '.oxlintrc.json',
-                      content: renderOxcConfig(OXC_LINT_SCHEMA, DEFAULT_LINT_RULES),
-                  },
-              ]
-            : []),
         { path: '.gitignore', content: renderGitignore() },
         { path: 'README.md', content: `# ${ctx.name}\n` },
         ...catalogFiles(ctx.packageManager, true),

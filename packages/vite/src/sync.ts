@@ -33,6 +33,8 @@ import {
     type ToolchainViteConfig,
 } from '@deltabox/toolchain/shared';
 
+import { declaresVitePlus } from './vp.js';
+
 /**
  * The `vite` section with the toolchain opt-out (`config`) removed. `fmt` and
  * `lint` fall back to the shared defaults when opted in with `true`, and an
@@ -513,11 +515,16 @@ export function viteSyncTask(): SyncTask {
                             : renderViteConfig(specifier, existing, resolveImport),
                 });
             }
+            // Vite+ reads `fmt`/`lint` from `vite.config.*` and disables nested
+            // Oxfmt/Oxlint configs, so do not emit the standalone files there.
+            const usesVitePlus = declaresVitePlus(ctx.cwd);
             const hasFmt =
+                !usesVitePlus &&
                 (ownFmt !== undefined || ownVite.fmt !== undefined) &&
                 resolved.fmt !== undefined &&
                 resolved.fmt !== false;
             const hasLint =
+                !usesVitePlus &&
                 (ownLint !== undefined || ownVite.lint !== undefined) &&
                 resolved.lint !== undefined &&
                 resolved.lint !== false;

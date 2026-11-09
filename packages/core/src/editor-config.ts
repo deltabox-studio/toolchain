@@ -122,7 +122,13 @@ function formatterSettings(tool: string): Record<string, unknown> {
         // One project-wide save hook; the per-language blocks only pick the
         // formatter, so `editor.formatOnSave` is not duplicated everywhere.
         'editor.formatOnSave': true,
-        ...(tool === 'oxc' ? { 'editor.formatOnSaveMode': 'file' } : {}),
+        ...(tool === 'oxc'
+            ? {
+                  'editor.formatOnSaveMode': 'file',
+                  // Vite+ disables nested Oxfmt configs; tell the Oxc extension too.
+                  'oxc.fmt.disableNestedConfig': true,
+              }
+            : {}),
         ...Object.fromEntries(
             languages.map(language => [
                 `[${language}]`,

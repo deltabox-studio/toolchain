@@ -98,6 +98,7 @@ describe('editorConfigSyncTask', () => {
         expect(settings['editor.formatOnSave']).toBe(true);
         expect(settings['editor.formatOnSaveMode']).toBeUndefined();
         expect(settings['oxc.disableNestedConfig']).toBeUndefined();
+        expect(settings['oxc.fmt.disableNestedConfig']).toBeUndefined();
         // `editor.formatOnSave` lives only at the root, not in every language block.
         expect(settings['[typescript]']?.['editor.formatOnSave']).toBeUndefined();
         expect(settings['[markdown]']?.['editor.formatOnSave']).toBeUndefined();
@@ -154,6 +155,7 @@ describe('editorConfigSyncTask', () => {
         expect(settings['[typescript]']).toBeDefined();
         expect(settings['[typescript]']['editor.defaultFormatter']).toBeUndefined();
         expect(settings['[javascript]']['editor.defaultFormatter']).toBe('oxc.oxc-vscode');
+        expect(settings['oxc.fmt.disableNestedConfig']).toBe(true);
     });
 });
 

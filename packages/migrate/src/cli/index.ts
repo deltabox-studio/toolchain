@@ -10,6 +10,33 @@ import { listMigrations, migrations } from '../registry.js';
 import type { MigrationResult, MigrateTarget, ToolchainMigration } from '../types.js';
 import { viteConfigHasFmtLint } from '../vite.js';
 
+/** Whether the project (or an ancestor) declares Vite+; then fmt/lint belong in vite.config. */
+function usesVitePlus(dir: string): boolean {
+    let current = path.resolve(dir);
+    for (;;) {
+        try {
+            const pkg = JSON.parse(fs.readFileSync(path.join(current, 'package.json'), 'utf8')) as {
+                dependencies?: Record<string, string>;
+                devDependencies?: Record<string, string>;
+                peerDependencies?: Record<string, string>;
+                optionalDependencies?: Record<string, string>;
+            };
+            const fields = [
+                pkg.dependencies,
+                pkg.devDependencies,
+                pkg.peerDependencies,
+                pkg.optionalDependencies,
+            ];
+            if (fields.some(field => field && 'vite-plus' in field)) return true;
+        } catch {
+            // no package.json here; keep walking
+        }
+        const parent = path.dirname(current);
+        if (parent === current) return false;
+        current = parent;
+    }
+}
+
 /** Whether we may prompt (an interactive terminal, not `--json`). */
 function canPrompt(opts: Record<string, unknown>): boolean {
     return Boolean(process.stdin.isTTY && process.stdout.isTTY) && opts.json !== true;
@@ -178,9 +205,10 @@ export function migrateCommands(): ToolchainCommand[] {
                     const viteSections = explicitTarget ? undefined : viteConfigHasFmtLint(dir);
                     const routeToVite =
                         !explicitTarget &&
-                        autoFold('vite') &&
                         target === 'files' &&
-                        Boolean(viteSections && (viteSections.fmt || viteSections.lint));
+                        (usesVitePlus(dir) ||
+                            (autoFold('vite') &&
+                                Boolean(viteSections && (viteSections.fmt || viteSections.lint))));
                     const dirTarget: MigrateTarget = routeToVite ? 'vite' : target;
 
                     const run = async (migration: ToolchainMigration): Promise<void> => {

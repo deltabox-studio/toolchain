@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { DEFAULT_FMT_RULES } from '@deltabox/toolchain/shared';
 import { parseTsconfig } from '@deltabox/toolchain/tsconfig';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 
@@ -53,17 +52,9 @@ describe('project scaffolding', () => {
         expect(paths).not.toContain('biome.json');
         expect(pkg.scripts.format).toBe('dbx fmt');
         expect(pkg.scripts.lint).toBe('dbx lint --fix');
-        expect(paths).toContain('.oxfmtrc.json');
-        expect(paths).toContain('.oxlintrc.json');
-        expect(JSON.parse(files.find(f => f.path === '.oxfmtrc.json')!.content)).toMatchObject({
-            $schema: './node_modules/oxfmt/configuration_schema.json',
-            useTabs: false,
-            tabWidth: DEFAULT_FMT_RULES.tabWidth,
-        });
-        expect(JSON.parse(files.find(f => f.path === '.oxlintrc.json')!.content)).toHaveProperty(
-            '$schema',
-            './node_modules/oxlint/configuration_schema.json'
-        );
+        // Vite+ reads fmt/lint from vite.config; no standalone Oxc files.
+        expect(paths).not.toContain('.oxfmtrc.json');
+        expect(paths).not.toContain('.oxlintrc.json');
         const config = files.find(f => f.path === 'vite.config.ts')!.content;
         expect(config).toContain('fmt:');
         expect(config).toContain('lint:');
@@ -95,7 +86,7 @@ describe('project scaffolding', () => {
         });
         const paths = files.map(file => file.path);
         expect(paths).not.toContain('.oxfmtrc.json');
-        expect(paths).toContain('.oxlintrc.json');
+        expect(paths).not.toContain('.oxlintrc.json');
         const config = files.find(f => f.path === 'vite.config.ts')!.content;
         expect(config).toContain('fmt: true');
         expect(config).toContain('lint: { oxc: true }');
@@ -166,8 +157,8 @@ describe('project scaffolding', () => {
         const paths = files.map(file => file.path);
         expect(paths).toContain('tsconfig.json');
         expect(paths).toContain('tsconfig.workspaces.json');
-        expect(paths).toContain('.oxfmtrc.json');
-        expect(paths).toContain('.oxlintrc.json');
+        expect(paths).not.toContain('.oxfmtrc.json');
+        expect(paths).not.toContain('.oxlintrc.json');
         const rootTsconfig = JSON.parse(files.find(file => file.path === 'tsconfig.json')!.content);
         expect(rootTsconfig.extends).toBe('./tsconfig.workspaces.json');
         const pkg = JSON.parse(files.find(file => file.path === 'package.json')!.content);
