@@ -1,9 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Glob } from 'glob';
-
 import { logger } from '@deltabox/toolchain/shared';
+import { Glob } from 'glob';
 
 export interface CleanupOptions {
     /** Directory to search from (default `process.cwd()`). */

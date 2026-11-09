@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
  *
  * The published package exposes these as real subpaths (`./shared`, `./core`,
  * ...), but the per-workspace builds run before the root `dist` exists, so the
- * repo aliases them back to source (mirroring `tsdown.config.ts`). This helper is
+ * repo aliases them back to source (mirroring each workspace's pack config). This helper is
  * repo-internal: it is not re-exported from `src/index.ts`.
  */
 export function workspacePackageAliases(): Record<string, string> {
@@ -28,10 +28,14 @@ export function workspacePackageAliases(): Record<string, string> {
         '@deltabox/toolchain/project': '@deltabox/toolchain-project',
         '@deltabox/toolchain/migrate/cli': '@deltabox/toolchain-migrate/cli',
         '@deltabox/toolchain/migrate': '@deltabox/toolchain-migrate',
+        '@deltabox/toolchain/mcp/cli': '@deltabox/toolchain-mcp/cli',
+        '@deltabox/toolchain/mcp': '@deltabox/toolchain-mcp',
         '@deltabox/toolchain/template/cli': '@deltabox/toolchain-template/cli',
         '@deltabox/toolchain/template': '@deltabox/toolchain-template',
-        '@deltabox/toolchain/vite/cli': '@deltabox/toolchain-vite/cli',
-        '@deltabox/toolchain/vite': '@deltabox/toolchain-vite',
+        '@deltabox/toolchain/vite/cli': 'vite-plugin-dbx/cli',
+        '@deltabox/toolchain/vite': 'vite-plugin-dbx',
+        'vite-plugin-dbx/cli': 'vite-plugin-dbx/cli',
+        'vite-plugin-dbx': 'vite-plugin-dbx',
     };
 }
 
@@ -58,9 +62,13 @@ export function workspaceSourceAliases(root?: string): Record<string, string> {
         '@deltabox/toolchain/project': pkg('project'),
         '@deltabox/toolchain/migrate/cli': sub('migrate', 'cli/index.ts'),
         '@deltabox/toolchain/migrate': pkg('migrate'),
+        '@deltabox/toolchain/mcp/cli': sub('mcp', 'cli/index.ts'),
+        '@deltabox/toolchain/mcp': pkg('mcp'),
         '@deltabox/toolchain/template/cli': sub('template', 'cli/index.ts'),
         '@deltabox/toolchain/template': pkg('template'),
         '@deltabox/toolchain/vite/cli': sub('vite', 'cli/index.ts'),
         '@deltabox/toolchain/vite': pkg('vite'),
+        'vite-plugin-dbx/cli': sub('vite', 'cli/index.ts'),
+        'vite-plugin-dbx': pkg('vite'),
     };
 }

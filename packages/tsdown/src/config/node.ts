@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import { globalLogger, type UserConfig } from 'tsdown';
+import { globalLogger, type PackUserConfig } from 'vite-plus/pack';
 
 /** Sort an object's keys alphabetically (kept local to avoid a runtime dep). */
 function sortKeys<T extends Record<string, unknown>>(value: T): T {
@@ -38,7 +38,7 @@ export function sortPackageExports(packageJsonPath: string): boolean {
  * The shared tsdown base configuration. Kept project-agnostic: the ASCII/banner
  * branding is opt-in via {@link createPostBanner} and consumer metadata.
  */
-export const baseTsdownConfig: UserConfig = {
+export const baseTsdownConfig: PackUserConfig = {
     format: ['esm'],
     platform: 'node',
     fixedExtension: false,
@@ -112,10 +112,10 @@ export function createPostBanner(
  * and an optional branded post banner.
  */
 export function createTsdownConfig(
-    overrides: UserConfig = {},
+    overrides: PackUserConfig = {},
     banner?: PostBannerOptions
-): UserConfig {
-    const config: UserConfig = { ...baseTsdownConfig, ...overrides };
+): PackUserConfig {
+    const config: PackUserConfig = { ...baseTsdownConfig, ...overrides };
     if (banner) {
         config.outputOptions = {
             ...baseTsdownConfig.outputOptions,
