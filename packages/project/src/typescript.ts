@@ -2,8 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
-    DEFAULT_FMT_RULES,
-    DEFAULT_LINT_RULES,
     DEFAULT_PACKAGE_MANAGER_VERSIONS,
     defaultPackageManagerVersion,
     type GeneratedFile,
