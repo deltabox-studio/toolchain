@@ -2,9 +2,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
-
 import type { SyncContext, ToolchainTsconfigConfig } from '@deltabox/toolchain/shared';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import {
     applyOverride,
@@ -363,7 +362,9 @@ describe('tsconfig overrides sync', () => {
             overrides: { default: { compilerOptions: { strict: true } } },
         });
         expect(read(path.join(cwd, 'packages/core/tsconfig.default.json')).compilerOptions).toEqual(
-            { target: 'ES2022' }
+            {
+                target: 'ES2022',
+            }
         );
         expect(read(path.join(cwd, 'packages/core/tsconfig.src.json')).compilerOptions).toEqual({
             strict: true,

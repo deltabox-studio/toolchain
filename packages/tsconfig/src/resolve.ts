@@ -50,6 +50,12 @@ export interface ResolveTsconfigOptions {
 
 export interface TsconfigJson {
     extends?: string | string[];
+    /** Files/globs the config includes (inherited through `extends`). */
+    include?: string[];
+    /** Files/globs the config excludes (inherited through `extends`). */
+    exclude?: string[];
+    /** Explicit file list (inherited through `extends`). */
+    files?: string[];
     compilerOptions?: {
         baseUrl?: string;
         rootDir?: string;
@@ -343,6 +349,48 @@ export function resolveTsconfigCompilerOption(
     });
     if (!entry) return undefined;
     return path.resolve(entry.dir, entry.config.compilerOptions?.[key] as string);
+}
+
+/**
+ * The `include` / `exclude` patterns a tsconfig effectively uses, following
+ * `extends` (the nearest definition wins, the same way TypeScript resolves
+ * them). Each pattern is relative to the config file that defined it, so
+ * {@link includeDir} / {@link excludeDir} tell callers how to rebase them.
+ */
+export interface TsconfigFilePatterns {
+    include?: string[];
+    exclude?: string[];
+    /** Directory the `include` patterns are relative to. */
+    includeDir?: string;
+    /** Directory the `exclude` patterns are relative to. */
+    excludeDir?: string;
+}
+
+/**
+ * Resolve a tsconfig's effective `include` / `exclude` patterns through its
+ * `extends` chain. A config that cannot be loaded falls back to its own
+ * (shallow) patterns so generation never fails on a broken inherited config.
+ */
+export function resolveTsconfigFilePatterns(file: string): TsconfigFilePatterns {
+    let chain: LoadedTsconfig[];
+    try {
+        chain = loadChain(path.resolve(file), new Set());
+    } catch {
+        const absolute = path.resolve(file);
+        chain = [{ file: absolute, dir: path.dirname(absolute), config: readTsconfig(absolute) }];
+    }
+    const stringArray = (value: unknown): string[] | undefined =>
+        Array.isArray(value)
+            ? value.filter((item): item is string => typeof item === 'string')
+            : undefined;
+    const includeEntry = chain.find(entry => stringArray(entry.config.include) !== undefined);
+    const excludeEntry = chain.find(entry => stringArray(entry.config.exclude) !== undefined);
+    const include = includeEntry ? stringArray(includeEntry.config.include) : undefined;
+    const exclude = excludeEntry ? stringArray(excludeEntry.config.exclude) : undefined;
+    return {
+        ...(include ? { include, includeDir: includeEntry!.dir } : {}),
+        ...(exclude ? { exclude, excludeDir: excludeEntry!.dir } : {}),
+    };
 }
 
 /**

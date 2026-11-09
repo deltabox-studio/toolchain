@@ -1,12 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { logger } from '@deltabox/toolchain/shared';
 import type { TsConfigJson } from 'type-fest';
 
-import { logger } from '@deltabox/toolchain/shared';
-
 import { mergeOverride, type TsconfigOverrides } from '../../overrides.js';
-import { readTsconfig, resolveTsconfig, resolveTsconfigConfig } from '../../resolve.js';
+import {
+    readTsconfig,
+    resolveTsconfig,
+    resolveTsconfigConfig,
+    resolveTsconfigFilePatterns,
+} from '../../resolve.js';
 
 export type GeneratedTsconfigResult = ReturnType<typeof generateTsconfig>;
 
@@ -158,9 +162,27 @@ export function generateTsconfig(options: {
         delete monorepoCompilerOptions.paths;
         const monorepoRest = { ...tsconfigMonorepo };
         delete monorepoRest.references;
+        // Hoist the effective `include` / `exclude` from the extended config
+        // chain into the generated file. TypeScript resolves those patterns
+        // relative to the config that defined them; a generated file that only
+        // `extends` another config can make tools scan the whole tree instead of
+        // the workspace's own sources, so write them out (rebased) explicitly.
+        const inheritedGlobs = resolveTsconfigFilePatterns(tsconfigPath);
+        const hoistedInclude = rebasePatterns(
+            tsconfig.include ?? inheritedGlobs.include,
+            tsconfig.include !== undefined ? dirname : inheritedGlobs.includeDir,
+            dirname
+        );
+        const hoistedExclude = rebasePatterns(
+            tsconfig.exclude ?? inheritedGlobs.exclude,
+            tsconfig.exclude !== undefined ? dirname : inheritedGlobs.excludeDir,
+            dirname
+        );
         const newTsconfig: TsConfigJson = {
             ...(enableComposite ? monorepoRest : {}),
             extends: `./${tsconfigFilename}`,
+            ...(hoistedInclude ? { include: hoistedInclude } : {}),
+            ...(hoistedExclude ? { exclude: hoistedExclude } : {}),
             compilerOptions: {
                 ...(enableComposite ? monorepoCompilerOptions : {}),
                 composite: enableComposite,
@@ -212,6 +234,27 @@ export function generateTsconfig(options: {
             }`
         );
     }
+}
+
+/**
+ * Rebase tsconfig `include` / `exclude` patterns from the directory of the
+ * config that defined them onto the generated config's directory. Patterns in
+ * the same directory are kept verbatim; others become workspace-relative posix
+ * paths (glob metacharacters are preserved as literal path text).
+ */
+function rebasePatterns(
+    patterns: string[] | undefined,
+    fromDir: string | undefined,
+    toDir: string
+): string[] | undefined {
+    if (!patterns) return undefined;
+    if (!fromDir || path.resolve(fromDir) === path.resolve(toDir)) return [...patterns];
+    return patterns.map(pattern => {
+        if (path.isAbsolute(pattern)) return pattern;
+        const absolute = path.resolve(fromDir, pattern);
+        const relative = path.relative(toDir, absolute).replace(/\\/g, '/');
+        return relative === '' ? '.' : relative;
+    });
 }
 
 /**

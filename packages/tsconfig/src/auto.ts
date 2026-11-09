@@ -10,10 +10,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import type { PackageJson, ToolchainTsconfigAliasRewrite } from '@deltabox/toolchain/shared';
 import { globSync } from 'glob';
 import type { TsConfigJson } from 'type-fest';
-
-import type { PackageJson, ToolchainTsconfigAliasRewrite } from '@deltabox/toolchain/shared';
 
 import { resolveTsconfigCompilerOption } from './resolve.js';
 import { matchesAutoFilter, resolveAutoSwitches, type TsconfigWorkspace } from './workspaces.js';

@@ -2,9 +2,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
-
 import type { SyncContext, ToolchainConfig } from '@deltabox/toolchain/shared';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { generateTsconfigs, tsconfigSyncTask } from '../src/index.js';
 
@@ -180,6 +179,131 @@ describe('generateTsconfigs', () => {
         });
         expect(results).toHaveLength(1);
         expect(results[0]!.newTsconfig.extends).toBe('./tsconfig.src.json');
+    });
+});
+
+describe('generateTsconfigs include/exclude hoisting', () => {
+    it('hoists include/exclude inherited from a relative extends', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'tsconfig.base.json'), {
+            include: ['src'],
+            exclude: ['dist'],
+        });
+        writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {
+            extends: '../../tsconfig.base.json',
+        });
+
+        const results = generateTsconfigs({ cwd, log: false, write: false });
+        const core = results.find(result => result.dirnameRelative === 'packages/core')!;
+
+        // Patterns are rebased from the base config's directory onto the
+        // generated config (the workspace), not left resolved against the base.
+        expect(core.newTsconfig.include).toEqual(['../../src']);
+        expect(core.newTsconfig.exclude).toEqual(['../../dist']);
+    });
+
+    it('keeps local include/exclude over inherited arrays', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'tsconfig.base.json'), {
+            include: ['base-src'],
+            exclude: ['base-dist'],
+        });
+        writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {
+            extends: '../../tsconfig.base.json',
+            include: ['src', 'tests'],
+            exclude: ['dist'],
+        });
+
+        const results = generateTsconfigs({ cwd, log: false, write: false });
+        const core = results.find(result => result.dirnameRelative === 'packages/core')!;
+
+        expect(core.newTsconfig.include).toEqual(['src', 'tests']);
+        expect(core.newTsconfig.exclude).toEqual(['dist']);
+    });
+
+    it('hoists include/exclude from a package tsconfig extends', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'node_modules/@acme/tsconfig/package.json'), {
+            name: '@acme/tsconfig',
+            version: '1.0.0',
+            main: 'tsconfig.json',
+        });
+        writeJson(path.join(cwd, 'node_modules/@acme/tsconfig/tsconfig.json'), {
+            include: ['src'],
+            exclude: ['dist'],
+        });
+        writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {
+            extends: '@acme/tsconfig',
+        });
+
+        const results = generateTsconfigs({ cwd, log: false, write: false });
+        const core = results.find(result => result.dirnameRelative === 'packages/core')!;
+
+        expect(core.newTsconfig.include).toEqual(['../../node_modules/@acme/tsconfig/src']);
+        expect(core.newTsconfig.exclude).toEqual(['../../node_modules/@acme/tsconfig/dist']);
+    });
+
+    it('hoists per workspace in a monorepo and leaves the root relative to itself', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'tsconfig.default.json'), {
+            include: ['src'],
+            exclude: ['dist'],
+        });
+        writeJson(path.join(cwd, 'tsconfig.workspaces.json'), {
+            references: [
+                { path: './packages/core/tsconfig.json' },
+                { path: './packages/cli/tsconfig.json' },
+            ],
+        });
+        writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {
+            extends: '../../tsconfig.default.json',
+        });
+        writeJson(path.join(cwd, 'packages/cli/tsconfig.default.json'), {
+            extends: '../../tsconfig.default.json',
+        });
+
+        const results = generateTsconfigs({ cwd, log: false, write: false });
+        const root = results.find(result => result.dirnameRelative === '.')!;
+        const core = results.find(result => result.dirnameRelative === 'packages/core')!;
+
+        expect(root.newTsconfig.include).toEqual(['src']);
+        expect(root.newTsconfig.exclude).toEqual(['dist']);
+        expect(core.newTsconfig.include).toEqual(['../../src']);
+        expect(core.newTsconfig.exclude).toEqual(['../../dist']);
+    });
+
+    it('omits include/exclude when the extends chain defines neither', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {
+            compilerOptions: { strict: true },
+        });
+
+        const results = generateTsconfigs({ cwd, log: false, write: false });
+        expect(results[0]!.newTsconfig.include).toBeUndefined();
+        expect(results[0]!.newTsconfig.exclude).toBeUndefined();
+    });
+
+    it('respects custom default file names when hoisting include/exclude', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'tsconfig.base.json'), {
+            include: ['src'],
+            exclude: ['dist'],
+        });
+        writeJson(path.join(cwd, 'packages/core/tsconfig.src.json'), {
+            extends: '../../tsconfig.base.json',
+        });
+
+        const results = generateTsconfigs({
+            cwd,
+            defaultFile: 'tsconfig.src.json',
+            log: false,
+            write: false,
+        });
+        const core = results.find(result => result.dirnameRelative === 'packages/core')!;
+
+        expect(core.newTsconfig.extends).toBe('./tsconfig.src.json');
+        expect(core.newTsconfig.include).toEqual(['../../src']);
+        expect(core.newTsconfig.exclude).toEqual(['../../dist']);
     });
 });
 

@@ -2,8 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 
-import type { TsConfigJson } from 'type-fest';
-
 import {
     type ManagedFile,
     type SyncContext,
@@ -12,6 +10,7 @@ import {
     sectionEnabled,
     warningMessage,
 } from '@deltabox/toolchain/shared';
+import type { TsConfigJson } from 'type-fest';
 
 import { generateWorkspaceTsconfigs } from './cli/generate/index.js';
 import { tsconfigFileNames } from './files.js';
