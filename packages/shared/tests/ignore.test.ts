@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import {
     collectGitignorePatterns,
@@ -41,10 +41,10 @@ describe('tool defaults', () => {
     });
 
     it('adds the formatter-specific paths', () => {
-        expect(DEFAULT_FMT_IGNORE_PATTERNS).toContain('**/vite.config.ts');
-        expect(DEFAULT_FMT_IGNORE_PATTERNS).toContain('**/*.json');
-        expect(DEFAULT_LINT_IGNORE_PATTERNS).toContain('**/vendor/**');
-        expect(DEFAULT_LINT_IGNORE_PATTERNS).not.toContain('**/vite.config.ts');
+        expect(DEFAULT_FMT_IGNORE_PATTERNS).toContain('**/.nuxt/**');
+        expect(DEFAULT_FMT_IGNORE_PATTERNS).toContain('**/*.lock');
+        expect(DEFAULT_LINT_IGNORE_PATTERNS).toContain('**/*.min.*');
+        expect(DEFAULT_LINT_IGNORE_PATTERNS).not.toContain('**/.svelte-kit/**');
     });
 });
 

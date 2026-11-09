@@ -47,7 +47,7 @@ export const viteConfigSchema = withEnabled(
             .string()
             .describe(
                 'Module specifier used to import `resolveVite` in runtime shims (default ' +
-                    '`@deltabox/toolchain/vite`). A relative path is resolved from the repo root ' +
+                    '`vite-plugin-dbx`, or the umbrella `@deltabox/toolchain/vite`). A relative path is resolved from the repo root ' +
                     'and rewritten relative to each generated config - useful for dogfooding a ' +
                     'source checkout without a built `dist`.'
             )

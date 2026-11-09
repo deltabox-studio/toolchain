@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { applyFmtCustomGroups, DEFAULT_FMT_RULES, DEFAULT_LINT_RULES } from '../src/index.js';
 

@@ -52,6 +52,12 @@ export interface ToolchainProvider {
     homepage?: string;
     /** The external binary the provider wraps, eg. `vp`. */
     binary?: string;
+    /**
+     * Whether the provider is available for the current project (eg. Vite+ is
+     * only available when `vite-plus` is installed/detected). Editors grey out
+     * provider-dependent commands when `false`.
+     */
+    available?: boolean;
     /** The commands the provider contributes to the CLI. */
     commands: ToolchainProviderCommand[];
     /** Curated actions for the extension (defaults to one per command). */

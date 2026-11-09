@@ -28,28 +28,19 @@ export const DEFAULT_IGNORE_PATTERNS = [
     '**/.vscode/**',
     '**/.nyc_output/**',
     '**/*.tsbuildinfo',
+    '**/*.lock',
 ] as const;
 
 /**
- * Common paths formatters should leave alone. Starts from the shared build/cache
- * ignores and adds generated JSON/YAML, lockfiles, changelogs and the managed
- * `vite.config.ts` shim.
+ * Common paths formatters should leave alone.
  */
 export const DEFAULT_FMT_IGNORE_PATTERNS = [
     ...DEFAULT_IGNORE_PATTERNS,
     '**/.nuxt/**',
     '**/.svelte-kit/**',
-    '**/.generated/**',
-    '**/generated/**',
-    '**/*.json',
     '**/*.yml',
     '**/*.yaml',
-    '**/*.lock',
     '**/*.min.*',
-    '**/*.gen.*',
-    '**/CHANGELOG.md',
-    'CHANGELOG.proposed.md',
-    '**/vite.config.ts',
 ] as const;
 
 /** Common paths linters should leave alone. */
@@ -57,11 +48,7 @@ export const DEFAULT_LINT_IGNORE_PATTERNS = [
     ...DEFAULT_IGNORE_PATTERNS,
     '**/.nuxt/**',
     '**/.svelte-kit/**',
-    '**/.generated/**',
-    '**/generated/**',
-    '**/*.gen.*',
     '**/*.min.*',
-    '**/vendor/**',
 ] as const;
 
 /** Directory names skipped when scanning for nested `.gitignore` files. */

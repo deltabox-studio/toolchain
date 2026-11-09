@@ -61,6 +61,10 @@ export interface ToolchainCommandContext {
      * or `project.manageConfigless`).
      */
     managed?: boolean;
+    /** Whether the config came from a `dbx()` Vite/Vite+ plugin. */
+    plugin?: boolean;
+    /** The `vite.config.*` that carries the plugin, when {@link plugin}. */
+    pluginPath?: string;
     /**
      * Set when a `dbx.config.*` file failed to import (the CLI loads configs
      * tolerantly so unrelated commands still work). Commands that cannot operate

@@ -386,6 +386,8 @@ export interface SyncContext {
     managedFiles?: string[];
     /** Extra manifest metadata tasks can persist between syncs. */
     manifest?: Record<string, unknown>;
+    /** Whether the config came from a `dbx()` Vite/Vite+ plugin. */
+    plugin?: boolean;
 }
 
 /** A unit of sync work exposed by a package. */
