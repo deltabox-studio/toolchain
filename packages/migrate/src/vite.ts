@@ -465,7 +465,7 @@ function isManagedShim(source: string): boolean {
     // The shim calls `resolveVite(...)` (possibly with a generic type argument).
     return (
         /resolveVite\s*(?:<[^>]*>)?\s*\(/.test(source) &&
-        source.includes('@deltabox/toolchain/vite')
+        /@deltabox\/toolchain\/vite|vite-plugin-dbx/.test(source)
     );
 }
 
