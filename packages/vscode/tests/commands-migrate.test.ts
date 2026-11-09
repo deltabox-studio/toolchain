@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import type { Project } from '../src/projects.js';
 
@@ -30,6 +30,7 @@ function project(dir: string, label: string): Project {
         relativePath: label,
         type: 'project',
         hasConfig: true,
+        plugin: false,
         dependencies: [],
         trackedFiles: 0,
     };

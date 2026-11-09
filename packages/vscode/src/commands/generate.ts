@@ -63,7 +63,9 @@ export function createGenerateCommands(deps: CommandDeps): GenerateCommands {
         const options = await pickConfigGeneration();
         if (!options) return;
         const all = discoverProjects();
-        const candidates = options.skipConfig ? all : all.filter(project => !project.hasConfig);
+        const candidates = options.skipConfig
+            ? all
+            : all.filter(project => !project.hasConfig && !project.plugin);
         if (candidates.length === 0) {
             vscode.window.showInformationMessage(
                 options.skipConfig
@@ -120,6 +122,12 @@ export function createGenerateCommands(deps: CommandDeps): GenerateCommands {
             );
             if (!picked) return;
             project = picked.project;
+        }
+        if (project.plugin && !dir) {
+            vscode.window.showInformationMessage(
+                `deltabox: ${project.label} is already configured through its Vite plugin.`
+            );
+            return;
         }
         const options = await pickConfigGeneration();
         if (!options) return;

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { DEFAULT_TSCONFIG_FILES, type WatchInputs } from '../src/watch-inputs.js';
 import { WatcherManager } from '../src/watcher-manager.js';

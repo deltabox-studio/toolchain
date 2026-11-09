@@ -8,6 +8,8 @@ export interface HomeProject {
     relativePath: string;
     type: string;
     hasConfig: boolean;
+    /** Whether the project is configured through the `dbx()` Vite plugin. */
+    plugin?: boolean;
     dependencies: string[];
     /** ISO timestamp of the last sync recorded in the project manifest. */
     syncedAt?: string;
@@ -37,6 +39,8 @@ export type HomeAction =
     | { type: 'syncCheck' }
     | { type: 'syncTsconfig' }
     | { type: 'scaffold' }
+    | { type: 'migrate' }
+    | { type: 'installMcp' }
     | { type: 'refresh' }
     | { type: 'generateConfigs' }
     | { type: 'runWorkflow' }
@@ -302,6 +306,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
       <button class="secondary" data-action="syncTsconfig">Sync tsconfig</button>
       <button class="secondary" data-action="refresh">Refresh projects</button>
       <button class="secondary" data-action="migrate">Migrate tooling\u2026</button>
+      <button class="secondary" data-action="installMcp">Install MCP\u2026</button>
     </div>
   </section>
   <section class="section">
@@ -480,7 +485,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         row.className = 'project';
         const icon = document.createElement('span');
         icon.className = 'projectIcon';
-        icon.textContent = project.hasConfig ? '\\u25C6' : '\\u25C7';
+        icon.textContent = project.hasConfig || project.plugin ? '\\u25C6' : '\\u25C7';
         const info = document.createElement('div');
         info.className = 'projectInfo';
         const name = document.createElement('div');
@@ -492,7 +497,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         meta.textContent = project.relativePath + (project.dependencies?.length ? ' \\u00B7 ' + project.dependencies.length + ' deps' : '');
         meta.title = meta.textContent;
         info.append(name, meta);
-        if (project.hasConfig) {
+        if (project.hasConfig || project.plugin) {
           const syncInfo = document.createElement('div');
           syncInfo.className = 'projectSync';
           syncInfo.textContent = 'Last sync: ' + relativeTime(project.syncedAt);
@@ -501,7 +506,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         }
         row.append(icon, info);
 
-        if (project.hasConfig) {
+        if (project.hasConfig || project.plugin) {
           const sync = document.createElement('button');
           sync.className = 'secondary';
           sync.textContent = 'Sync';

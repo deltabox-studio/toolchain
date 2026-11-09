@@ -24,6 +24,8 @@ export interface Project {
     type: 'monorepo-root' | 'monorepo-workspace' | 'project';
     /** Whether the directory has a `dbx.config.*` (syncable). */
     hasConfig: boolean;
+    /** Whether a `vite.config.*` carries the `dbx()` plugin (plugin mode). */
+    plugin: boolean;
     /** Internal package dependencies (package names). */
     dependencies: string[];
     /** ISO timestamp of the last sync recorded in the project manifest. */
@@ -105,6 +107,24 @@ function hasToolchainConfig(dir: string): boolean {
     }
 }
 
+const VITE_CONFIG_PREFIX = 'vite.config.';
+const DBX_PLUGIN_SOURCE = /@deltabox\/toolchain(?:\/vite)?['"]|\bdbx\s*\(/;
+
+/** Whether a hand-written `vite.config.*` in `dir` uses the `dbx()` plugin. */
+function hasVitePluginConfig(dir: string): boolean {
+    try {
+        const file = fs
+            .readdirSync(dir)
+            .find(name => name.startsWith(VITE_CONFIG_PREFIX) && !name.endsWith('.d.ts'));
+        if (!file) return false;
+        const source = fs.readFileSync(path.join(dir, file), 'utf-8');
+        // A generated `resolveVite` shim reads `dbx.config.*`; it is not plugin mode.
+        return DBX_PLUGIN_SOURCE.test(source) && !/resolveVite\s*[<(]/.test(source);
+    } catch {
+        return false;
+    }
+}
+
 function packageName(dir: string): string | undefined {
     return readJson<{ name?: string }>(path.join(dir, 'package.json'))?.name;
 }
@@ -145,7 +165,13 @@ function inferType(dir: string, root: string): Project['type'] {
         : 'project';
 }
 
-function toProject(root: string, dir: string, hasConfig: boolean, dependencies: string[]): Project {
+function toProject(
+    root: string,
+    dir: string,
+    hasConfig: boolean,
+    dependencies: string[],
+    plugin: boolean = false
+): Project {
     const name = packageName(dir);
     const manifest = readManifest(dir);
     // The workspace folder itself resolves to an absolute path; fall back to its
@@ -160,6 +186,7 @@ function toProject(root: string, dir: string, hasConfig: boolean, dependencies: 
         ...(name ? { packageName: name } : {}),
         type: inferType(dir, root),
         hasConfig,
+        plugin,
         dependencies,
         ...(manifest.syncedAt ? { syncedAt: manifest.syncedAt } : {}),
         trackedFiles: manifest.files.length,
@@ -168,9 +195,16 @@ function toProject(root: string, dir: string, hasConfig: boolean, dependencies: 
 
 function fromGraph(root: string, nodes: GraphNode[]): Project[] {
     return nodes
-        .map(node =>
-            toProject(root, path.resolve(root, node.dir), node.hasConfig, node.dependencies ?? [])
-        )
+        .map(node => {
+            const dir = path.resolve(root, node.dir);
+            return toProject(
+                root,
+                dir,
+                node.hasConfig,
+                node.dependencies ?? [],
+                hasVitePluginConfig(dir)
+            );
+        })
         .sort((a, b) => a.label.localeCompare(b.label));
 }
 
@@ -186,7 +220,7 @@ function scanRoot(root: string): Project[] {
     }
     return [...dirs]
         .sort((a, b) => (packageName(a) ?? a).localeCompare(packageName(b) ?? b))
-        .map(dir => toProject(root, dir, hasToolchainConfig(dir), []));
+        .map(dir => toProject(root, dir, hasToolchainConfig(dir), [], hasVitePluginConfig(dir)));
 }
 
 /**
@@ -250,7 +284,11 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeN
         }
 
         const item = new vscode.TreeItem(node.label, vscode.TreeItemCollapsibleState.None);
-        item.description = node.hasConfig ? node.type : `${node.type} · no config`;
+        item.description = node.plugin
+            ? `${node.type} · plugin`
+            : node.hasConfig
+              ? node.type
+              : `${node.type} · no config`;
         item.tooltip = [
             node.packageName ?? node.dir,
             node.dir,
@@ -260,9 +298,14 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeN
             .join('\n');
         item.resourceUri = vscode.Uri.file(node.dir);
         item.iconPath = new vscode.ThemeIcon(
-            node.hasConfig ? 'check' : node.type === 'monorepo-root' ? 'repo' : 'circle-outline'
+            node.hasConfig || node.plugin
+                ? 'check'
+                : node.type === 'monorepo-root'
+                  ? 'repo'
+                  : 'circle-outline'
         );
-        item.contextValue = node.hasConfig ? 'deltabox.project.configured' : 'deltabox.project';
+        item.contextValue =
+            node.hasConfig || node.plugin ? 'deltabox.project.configured' : 'deltabox.project';
         return item;
     }
 }

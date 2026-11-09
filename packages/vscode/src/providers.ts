@@ -30,6 +30,8 @@ export interface Provider {
     description?: string;
     homepage?: string;
     binary?: string;
+    /** Whether the provider's binary/tooling is available for this project. */
+    available?: boolean;
     commands: ProviderCommand[];
 }
 
@@ -213,16 +215,27 @@ export class ProviderTreeProvider implements vscode.TreeDataProvider<ProviderTre
                       ? vscode.TreeItemCollapsibleState.Expanded
                       : vscode.TreeItemCollapsibleState.Collapsed
             );
-            item.description = node.provider.binary ?? node.provider.id;
+            const unavailable = node.provider.available === false;
+            item.description = [
+                node.provider.binary ?? node.provider.id,
+                unavailable ? 'unavailable' : '',
+            ]
+                .filter(Boolean)
+                .join(' · ');
             item.tooltip = [
                 node.provider.description,
                 node.provider.homepage,
+                unavailable
+                    ? 'Not available in this project. Install the provider (eg. `vite-plus`) to enable it.'
+                    : '',
                 `${node.provider.commands.length} command(s)`,
                 `dbx ${node.provider.id}`,
             ]
                 .filter(Boolean)
                 .join('\n');
-            item.iconPath = new vscode.ThemeIcon(node.custom ? 'plug' : 'extensions');
+            item.iconPath = new vscode.ThemeIcon(
+                unavailable ? 'circle-slash' : node.custom ? 'plug' : 'extensions'
+            );
             item.contextValue = node.custom ? 'deltabox.provider.custom' : 'deltabox.provider';
             return item;
         }
@@ -231,15 +244,22 @@ export class ProviderTreeProvider implements vscode.TreeDataProvider<ProviderTre
             node.command.description,
             vscode.TreeItemCollapsibleState.None
         );
+        const unavailable = node.provider.available === false;
         item.description = `dbx ${node.command.name}`;
-        item.tooltip = `${node.command.description}\n\nvp ${node.command.subcommand}\ndbx ${node.command.name}`;
-        item.iconPath = new vscode.ThemeIcon('play');
-        item.contextValue = 'deltabox.providerCommand';
-        item.command = {
-            command: 'deltabox.toolchain.providers.runCommand',
-            title: 'Run',
-            arguments: [node],
-        };
+        item.tooltip = unavailable
+            ? `${node.command.description}\n\nProvider unavailable in this project.`
+            : `${node.command.description}\n\nvp ${node.command.subcommand}\ndbx ${node.command.name}`;
+        item.iconPath = new vscode.ThemeIcon(unavailable ? 'circle-slash' : 'play');
+        item.contextValue = unavailable
+            ? 'deltabox.providerCommand.unavailable'
+            : 'deltabox.providerCommand';
+        if (!unavailable) {
+            item.command = {
+                command: 'deltabox.toolchain.providers.runCommand',
+                title: 'Run',
+                arguments: [node],
+            };
+        }
         return item;
     }
 }

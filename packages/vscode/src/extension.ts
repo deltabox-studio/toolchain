@@ -143,12 +143,17 @@ export function activate(context: vscode.ExtensionContext): void {
         const listed = providers.list();
         setContext(
             'deltabox.canSync',
-            projects.some(project => project.hasConfig)
+            projects.some(project => project.hasConfig || project.plugin)
         );
         setContext('deltabox.hasProviders', listed.length > 0);
         setContext(
             'deltabox.hasVite',
-            listed.some(provider => provider.id === 'vite-plus' && provider.commands.length > 0)
+            listed.some(
+                provider =>
+                    provider.id === 'vite-plus' &&
+                    provider.commands.length > 0 &&
+                    provider.available !== false
+            )
         );
     };
 
@@ -468,6 +473,62 @@ export function activate(context: vscode.ExtensionContext): void {
         terminal.sendText(`${cliInvocation(root)} ${command}`);
     };
 
+    /** Install the dbx MCP server + skill into an AI harness/editor. */
+    const installMcp = async (cwd?: string): Promise<void> => {
+        const root = cwd ?? workspaceRoots()[0];
+        if (!root) {
+            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
+            return;
+        }
+        const listed = await captureCli(root, ['mcp:list', '--json']);
+        let providers: { id: string; name: string; description: string }[] = [];
+        try {
+            const parsed = JSON.parse(listed.stdout) as unknown;
+            if (Array.isArray(parsed)) providers = parsed as typeof providers;
+        } catch {
+            providers = [];
+        }
+        if (providers.length === 0) {
+            vscode.window.showWarningMessage('deltabox: the MCP providers could not be loaded.');
+            return;
+        }
+        const provider = await vscode.window.showQuickPick(
+            providers.map(entry => ({
+                label: entry.name,
+                description: entry.id,
+                detail: entry.description,
+                id: entry.id,
+            })),
+            {
+                placeHolder: 'Install the dbx MCP server for which client?',
+                matchOnDescription: true,
+            }
+        );
+        if (!provider) return;
+        const scope = await vscode.window.showQuickPick(
+            [
+                {
+                    label: 'Project',
+                    description: 'Write the config into this workspace.',
+                    value: 'project',
+                },
+                {
+                    label: 'Global',
+                    description: 'Write the config into your user profile.',
+                    value: 'global',
+                },
+            ],
+            { placeHolder: 'Install scope?' }
+        );
+        if (!scope) return;
+        const args = ['mcp:install', '--provider', provider.id, '--scope', scope.value];
+        if ((await runCli(root, args)) === 0) {
+            vscode.window.showInformationMessage(
+                `deltabox: MCP + skill installed for ${provider.label} (${scope.value}).`
+            );
+        }
+    };
+
     /** Pick a Vite+ command from the provider and run it in a terminal. */
     const runVite = async (cwd?: string): Promise<void> => {
         const root = cwd ?? workspaceRoots()[0];
@@ -477,8 +538,10 @@ export function activate(context: vscode.ExtensionContext): void {
         }
         const providers = await loadProviders(root);
         const vite = providers.find(provider => provider.id === 'vite-plus');
-        if (!vite || vite.commands.length === 0) {
-            vscode.window.showWarningMessage('deltabox: the Vite+ provider is unavailable.');
+        if (!vite || vite.commands.length === 0 || vite.available === false) {
+            vscode.window.showWarningMessage(
+                'deltabox: the Vite+ provider is unavailable. Install `vite-plus` in this project to enable it.'
+            );
             return;
         }
         const choice = await vscode.window.showQuickPick(
@@ -545,10 +608,13 @@ export function activate(context: vscode.ExtensionContext): void {
             const listed = providers.list();
             return {
                 enabled,
-                canSync: projects.some(project => project.hasConfig),
+                canSync: projects.some(project => project.hasConfig || project.plugin),
                 hasProviders: listed.length > 0,
                 hasVite: listed.some(
-                    provider => provider.id === 'vite-plus' && provider.commands.length > 0
+                    provider =>
+                        provider.id === 'vite-plus' &&
+                        provider.commands.length > 0 &&
+                        provider.available !== false
                 ),
                 projects: projects.map(project => ({
                     label: project.label,
@@ -556,6 +622,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     relativePath: project.relativePath,
                     type: project.type,
                     hasConfig: project.hasConfig,
+                    plugin: project.plugin,
                     dependencies: project.dependencies,
                     ...(project.syncedAt ? { syncedAt: project.syncedAt } : {}),
                     trackedFiles: project.trackedFiles,
@@ -595,6 +662,9 @@ export function activate(context: vscode.ExtensionContext): void {
                     break;
                 case 'migrate':
                     await migrateTooling();
+                    break;
+                case 'installMcp':
+                    await installMcp();
                     break;
                 case 'resetToolchain':
                     await resetToolchain();
@@ -743,6 +813,9 @@ export function activate(context: vscode.ExtensionContext): void {
             generateCommands.generateConfigs
         ),
         vscode.commands.registerCommand('deltabox.toolchain.migrate', () => migrateTooling()),
+        vscode.commands.registerCommand('deltabox.toolchain.installMcp', (cwd?: string) =>
+            installMcp(cwd)
+        ),
         vscode.commands.registerCommand(
             'deltabox.toolchain.generateConfig',
             async (node?: Project) => {

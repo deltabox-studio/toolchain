@@ -1,7 +1,7 @@
 {
     "name": "toolchain-vscode",
     "displayName": "deltabox toolchain",
-    "description": "All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.",
+    "description": "VS Code extension for deltabox toolchain and Vite/Vite+ with rich extras: project synchronization, a config generator, tsconfig management, MCP server, CI/changelog automation, providers, catalogs and managed files.",
     "version": "2.6.1",
     "private": true,
     "type": "module",
@@ -102,6 +102,12 @@
                 "title": "Generate configs…",
                 "category": "deltabox",
                 "icon": "$(new-file)"
+            },
+            {
+                "command": "deltabox.toolchain.installMcp",
+                "title": "Install MCP server + skill…",
+                "category": "deltabox",
+                "icon": "$(plug)"
             },
             {
                 "command": "deltabox.toolchain.migrate",
@@ -636,7 +642,7 @@
         }
     },
     "scripts": {
-        "build:extension": "tsdown --config ../../tsdown.bin.config.ts --config-loader unrun && tsdown --no-clean --config-loader unrun",
+        "build:extension": "vp pack",
         "package:vsix": "yarn build:extension && npx --yes @vscode/vsce package --no-dependencies --out deltabox-toolchain.vsix",
         "test:integration": "yarn build:extension && tsc -p tsconfig.test.json && vscode-test"
     },
@@ -647,10 +653,8 @@
         "@types/vscode": "^1.85.0",
         "@vscode/test-cli": "^0.0.15",
         "@vscode/test-electron": "^3.1.0",
-        "tsdown": "catalog:",
         "typescript": "catalog:",
-        "vite": "catalog:",
-        "vitest": "catalog:"
+        "vite-plus": "catalog:"
     },
     "author": "Victor Sango <victor@deltabox.studio>",
     "license": "MPL-2.0",
