@@ -3,7 +3,7 @@
     "version": "2.6.1",
     "private": true,
     "type": "module",
-    "description": "Documentation site for @deltabox/toolchain (VitePress).",
+    "description": "Documentation site for deltabox toolchain — a superset of Vite+ with project synchronization, a config generator, tsconfig management, MCP server, CI/changelog automation, providers, catalogs and a VS Code extension.",
     "scripts": {
         "dev": "vitepress dev",
         "build": "vitepress build && node scripts/copy-llms.mjs",

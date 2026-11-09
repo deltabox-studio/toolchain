@@ -1,9 +1,10 @@
 # CLI
 
 The `dbx` binary is composed from framework-agnostic command
-descriptors. Commands that run against a project load its
-`dbx.config.ts` first, so config-derived defaults apply unless you
-override them on the command line.
+descriptors. Commands that run against a project load its toolchain config —
+the `dbx()` Vite plugin config when present, otherwise the nearest
+`dbx.config.*` — so config-derived defaults apply unless you override them on the
+command line.
 
 ## Global flags
 

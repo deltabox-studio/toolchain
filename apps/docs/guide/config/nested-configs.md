@@ -111,3 +111,24 @@ are still dropped) and `dbx sync` regenerates its managed files.
 
 > Configless projects are still **discovered** (so the Projects view and the
 > project graph can show them); they are just not managed until you opt in.
+
+## Vite plugin mode
+
+A project can also be configured by the `dbx()` Vite plugin instead of a
+`dbx.config.*`:
+
+```ts [vite.config.ts]
+import { dbx } from '@deltabox/toolchain/vite';
+import { defineConfig } from 'vite-plus';
+
+export default defineConfig({
+    plugins: [dbx({ toolchain: { project: { name: 'app' }, fmt: { oxc: true } } })],
+});
+```
+
+The loader evaluates `vite.config.*` and reads the plugin options, so the CLI,
+sync, watch and the VS Code extension all see the config with no
+`dbx.config.*`. When both exist, the `dbx.config.*` is the base and the plugin
+options are merged on top (the plugin layer keeps the sections it does not
+mention). In plugin mode the toolchain never writes or manages
+`vite.config.*`, and it watches the plugin config for changes.

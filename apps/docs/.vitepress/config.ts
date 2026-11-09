@@ -27,9 +27,11 @@ const LLMS_DETAILS = [
     '',
     '- **One config.** `dbx.config.ts` exports `{ toolchain: { ...sections } }`; every section is opt-in by presence (`section: true` uses defaults, omit it to leave that area untouched).',
     '- **Sync.** `dbx sync` runs each enabled section and writes the managed files, tracked in `.dbx/toolchain/manifest.json` (the last-sync time lives in the gitignored `.dbx/toolchain/timestamps.json`); `dbx sync --check` is the CI gate. `dbx sync --recursive` syncs every discovered project in dependency order.',
-    '- **Nested configs.** A non-root `dbx.config.*` merges over the nearest ancestor config: objects merge, while scalars and arrays replace; `project.type` and `hooks` are never inherited.',
+    '- **Nested configs.** A non-root `dbx.config.*` only inherits sections it explicitly enables (`fmt`, `lint`, `biome`, `changelog`, `catalogs`, `logger`); `project` metadata is inherited except its identity fields. `ci`, `tsconfig`, `loader`, `templates`, `registry`, `watch`, `providers`, `vite` and `hooks` are never inherited. Configless projects are unmanaged unless `project.manageConfigless` / `--configless` opts in.',
     '- **Project graph.** `dbx projects` writes `.dbx/toolchain/projects.json` (workspace dirs + dependencies), used by `sync --recursive`, the VS Code view and per-workspace changelogs.',
-    '- **Sections.** `project`, `ci` (workflows + changelog), `fmt`, `lint`, `biome`, `tsconfig`, `templates`, `vite`, `watch`, `logger`, `providers`; every workflow under `ci` is opt-in.',
+    '- **Vite plugin.** `dbx()` in `vite.config.*` can carry the whole toolchain config, so a Vite/Vite+ project needs no `dbx.config.*`; the CLI reads the plugin options back. dbx never manages `vite.config.*` in plugin mode, and Vite+ passthrough commands are gated on Vite+ being detected.',
+    '- **MCP.** `dbx mcp:serve` exposes every public dbx API over MCP; `dbx mcp:install` writes the server + skill for Claude, Codex, VS Code, OpenCode, Pi or a custom directory.',
+    '- **Sections.** `project`, `ci` (workflows + changelog), `fmt`, `lint`, `biome`, `tsconfig`, `loader`, `templates`, `vite`, `watch`, `logger`, `providers`; every workflow under `ci` is opt-in.',
     '- **Runtime.** Node ≥ 22.5 and Yarn 4 (corepack); Vite+ (`vp`) resolves at the repo root.',
 ].join('\n');
 

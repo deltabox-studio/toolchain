@@ -68,6 +68,20 @@ actions, scoped to that project:
 
 The **Providers** and **Templates** views read `dbx providers --json` and `dbx template:list --json`, so adding one surfaces it in the UI automatically.
 
+### Plugin mode
+
+A project configured through the `dbx()` Vite plugin (rather than a
+`dbx.config.*`) is detected automatically: the Projects view shows it as
+`plugin`, sync stays enabled, and auto-sync watches `vite.config.*`. The
+extension never manages `vite.config.*` in plugin mode — the CLI's `vite` sync
+task skips it, and config generation skips projects that already have the
+plugin.
+
+Vite+ commands are only enabled when Vite+ is detected for the project. When it
+is not, the provider and its commands are greyed out (`available: false` in
+`dbx providers --json`) and the extension refuses to run them, while plain Vite
+projects keep working normally.
+
 ### Add provider...
 
 Writes a custom provider to the default project registry (`.dbx/toolchain/.registry/providers/providers.json`) or the global

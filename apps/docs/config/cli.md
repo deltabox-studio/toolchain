@@ -20,6 +20,9 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx cleanup:turbo`](#cleanup-turbo)                   | Remove the turbo cache (.turbo/).                                                               |
 | [`dbx workflow`](#workflow)                             | Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).                       |
 | [`dbx changelog`](#changelog)                           | Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.              |
+| [`dbx mcp:serve`](#mcp-serve)                           | Run the dbx MCP server over stdio (for MCP clients).                                            |
+| [`dbx mcp:install`](#mcp-install)                       | Install the dbx MCP server + skill into an AI harness/editor.                                   |
+| [`dbx mcp:list`](#mcp-list)                             | List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).                          |
 | [`dbx migrate`](#migrate)                               | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.* into dbx.config. |
 | [`dbx migrate:list`](#migrate-list)                     | List the registered migrations and whether each is detected.                                    |
 | [`dbx project:init`](#project-init)                     | Scaffold a single-package TypeScript project.                                                   |
@@ -195,6 +198,31 @@ Scan commits, derive the semver bump and update the CHANGELOG.md files + version
 - `--processing-method ‹method›` — `latest` (default), `all`, or a git range.
 - `--format-only` — Only regroup existing changelogs.
 - `--no-package-changes-section` — Skip the package-changes footer.
+
+## `dbx mcp:serve`
+
+Run the dbx MCP server over stdio (for MCP clients).
+
+- `--cwd ‹dir›` — Project root (default: cwd).
+
+## `dbx mcp:install`
+
+Install the dbx MCP server + skill into an AI harness/editor.
+
+- `--provider ‹id›` — claude, codex, vscode, opencode, pi or custom.
+- `--scope ‹scope›` — project (default) or global.
+- `--cwd ‹dir›` — Project root (default: cwd).
+- `--dir ‹dir›` — Custom directory (for --provider custom).
+- `--command ‹command›` — Client command (default `dbx`).
+- `--no-skills` — Do not write the skill/instructions file.
+- `--json` — Print the written paths as JSON.
+
+## `dbx mcp:list`
+
+List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).
+
+- `--cwd ‹dir›` — Project root (default: cwd).
+- `--json` — Print the providers as JSON.
 
 ## `dbx migrate`
 

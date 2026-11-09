@@ -1,6 +1,8 @@
 # Config file names
 
-The loader looks for, in order:
+A `dbx.config.*` file is **optional**: the recommended setup carries the config
+inline in the `dbx()` Vite plugin inside `vite.config.*`. When a project uses a
+config file, the loader looks for, in order:
 
 ```
 dbx.config.ts

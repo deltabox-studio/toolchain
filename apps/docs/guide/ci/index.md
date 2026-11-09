@@ -96,10 +96,9 @@ If you prefer a typed builder over hand-writing YAML, use
 plain workflow object in `.workflow`, which the `github` vendor form accepts:
 
 ```ts [dbx.config.ts]
+import { defineConfig, type GitHubWorkflow } from '@deltabox/toolchain';
 import { ActionsCheckoutV4, ActionsSetupNodeV4 } from '@github-actions-workflow-ts/actions';
 import { NormalJob, Step, Workflow } from '@github-actions-workflow-ts/lib';
-
-import { defineConfig, type GitHubWorkflow } from '@deltabox/toolchain';
 
 const test = new NormalJob('test', { 'runs-on': 'ubuntu-latest' });
 test.addStep(new ActionsCheckoutV4({ name: 'Checkout' }));

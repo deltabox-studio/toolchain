@@ -48,6 +48,9 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx cleanup:turbo`](#cleanup-turbo)                   | Remove the turbo cache (.turbo/).                                                               |
 | [`dbx workflow`](#workflow)                             | Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).                       |
 | [`dbx changelog`](#changelog)                           | Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.              |
+| [`dbx mcp:serve`](#mcp-serve)                           | Run the dbx MCP server over stdio (for MCP clients).                                            |
+| [`dbx mcp:install`](#mcp-install)                       | Install the dbx MCP server + skill into an AI harness/editor.                                   |
+| [`dbx mcp:list`](#mcp-list)                             | List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).                          |
 | [`dbx migrate`](#migrate)                               | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.\* into dbx.config. |
 | [`dbx migrate:list`](#migrate-list)                     | List the registered migrations and whether each is detected.                                    |
 | [`dbx project:init`](#project-init)                     | Scaffold a single-package TypeScript project.                                                   |
@@ -223,6 +226,31 @@ Scan commits, derive the semver bump and update the CHANGELOG.md files + version
 * `--processing-method ‹method›` — `latest` (default), `all`, or a git range.
 * `--format-only` — Only regroup existing changelogs.
 * `--no-package-changes-section` — Skip the package-changes footer.
+
+## `dbx mcp:serve`
+
+Run the dbx MCP server over stdio (for MCP clients).
+
+* `--cwd ‹dir›` — Project root (default: cwd).
+
+## `dbx mcp:install`
+
+Install the dbx MCP server + skill into an AI harness/editor.
+
+* `--provider ‹id›` — claude, codex, vscode, opencode, pi or custom.
+* `--scope ‹scope›` — project (default) or global.
+* `--cwd ‹dir›` — Project root (default: cwd).
+* `--dir ‹dir›` — Custom directory (for --provider custom).
+* `--command ‹command›` — Client command (default `dbx`).
+* `--no-skills` — Do not write the skill/instructions file.
+* `--json` — Print the written paths as JSON.
+
+## `dbx mcp:list`
+
+List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).
+
+* `--cwd ‹dir›` — Project root (default: cwd).
+* `--json` — Print the providers as JSON.
 
 ## `dbx migrate`
 
@@ -2183,7 +2211,7 @@ How the generated `vite.config.ts` is rendered. `runtime` (default) loads the co
 
 * **Type**: `string`
 
-Module specifier used to import `resolveVite` in runtime shims (default `@deltabox/toolchain/vite`). A relative path is resolved from the repo root and rewritten relative to each generated config - useful for dogfooding a source checkout without a built `dist`.
+Module specifier used to import `resolveVite` in runtime shims (default `vite-plugin-dbx`, or the umbrella `@deltabox/toolchain/vite`). A relative path is resolved from the repo root and rewritten relative to each generated config - useful for dogfooding a source checkout without a built `dist`.
 
 ### `fmt`
 
@@ -2367,10 +2395,11 @@ url: https://toolchain.deltabox.studio/guide.md
 ---
 # Getting Started
 
-`@deltabox/toolchain` is an all-in-one project toolchain. You drop a
-`dbx.config.ts` at a repo root and the toolchain generates and manages
-your configs, tsconfigs, changelogs, CI and more — from the CLI, the programmatic
-API and the VS Code extension.
+`@deltabox/toolchain` is a superset of [Vite+](https://viteplus.dev). It keeps the
+Vite+ workflow and adds project synchronization, a config generator, tsconfig
+management, an MCP server, CI and changelog automation, providers, catalogs and a
+VS Code extension. Use it as a Vite/Vite+ plugin or standalone — from the CLI, the
+programmatic API and the VS Code extension.
 
 ## Install
 
@@ -2426,7 +2455,17 @@ also accepts flags (`--name`, `--kind`, ...) for scripted use.
 
 ## Create a config
 
-Scaffold a config for a project that does not have one yet:
+Add the `dbx()` plugin to `vite.config.ts` (recommended, no `dbx.config.*` needed):
+
+```ts
+import { dbx } from 'vite-plugin-dbx';
+
+export default {
+    plugins: [dbx({ toolchain: { fmt: true, lint: true } })],
+};
+```
+
+Or, for a project that does not use Vite, scaffold a standalone config:
 
 ```sh
 dbx project:config        # detect + write dbx.config.ts
@@ -2447,7 +2486,7 @@ dbx create --template project --name my-app --out ./my-app
 ```sh
 dbx sync              # write managed files
 dbx sync --check      # CI: fail if files are out of date
-dbx sync --recursive  # every project with its own dbx.config.*, in dependency order
+dbx sync --recursive  # every managed project, in dependency order
 dbx sync --only tsconfig  # only refresh tsconfig aliases/references
 dbx watch             # re-sync on change
 ```
@@ -2661,6 +2700,20 @@ actions, scoped to that project:
 ## Providers, templates and Vite+ in the editor
 
 The **Providers** and **Templates** views read `dbx providers --json` and `dbx template:list --json`, so adding one surfaces it in the UI automatically.
+
+### Plugin mode
+
+A project configured through the `dbx()` Vite plugin (rather than a
+`dbx.config.*`) is detected automatically: the Projects view shows it as
+`plugin`, sync stays enabled, and auto-sync watches `vite.config.*`. The
+extension never manages `vite.config.*` in plugin mode — the CLI's `vite` sync
+task skips it, and config generation skips projects that already have the
+plugin.
+
+Vite+ commands are only enabled when Vite+ is detected for the project. When it
+is not, the provider and its commands are greyed out (`available: false` in
+`dbx providers --json`) and the extension refuses to run them, while plain Vite
+projects keep working normally.
 
 ### Add provider...
 
@@ -3185,10 +3238,9 @@ a commander program with `registerToolchainCommands` (this is how the bundled
 `dbx` binary, and a consumer's own CLI, are assembled):
 
 ```ts
-import { Command } from 'commander';
-
 import { registerToolchainCommands } from '@deltabox/toolchain/cli';
 import { configCommands } from '@deltabox/toolchain/config';
+import { Command } from 'commander';
 
 const program = new Command();
 registerToolchainCommands(program, configCommands({ engine }));
@@ -4037,10 +4089,9 @@ If you prefer a typed builder over hand-writing YAML, use
 plain workflow object in `.workflow`, which the `github` vendor form accepts:
 
 ```ts [dbx.config.ts]
+import { defineConfig, type GitHubWorkflow } from '@deltabox/toolchain';
 import { ActionsCheckoutV4, ActionsSetupNodeV4 } from '@github-actions-workflow-ts/actions';
 import { NormalJob, Step, Workflow } from '@github-actions-workflow-ts/lib';
-
-import { defineConfig, type GitHubWorkflow } from '@deltabox/toolchain';
 
 const test = new NormalJob('test', { 'runs-on': 'ubuntu-latest' });
 test.addStep(new ActionsCheckoutV4({ name: 'Checkout' }));
@@ -4431,9 +4482,10 @@ url: https://toolchain.deltabox.studio/guide/cli.md
 # CLI
 
 The `dbx` binary is composed from framework-agnostic command
-descriptors. Commands that run against a project load its
-`dbx.config.ts` first, so config-derived defaults apply unless you
-override them on the command line.
+descriptors. Commands that run against a project load its toolchain config —
+the `dbx()` Vite plugin config when present, otherwise the nearest
+`dbx.config.*` — so config-derived defaults apply unless you override them on the
+command line.
 
 ## Global flags
 
@@ -4642,7 +4694,14 @@ url: https://toolchain.deltabox.studio/guide/config.md
 ---
 # Configuration
 
-A project is driven by a single `dbx.config.ts`:
+A project is configured in one of two ways:
+
+* the recommended `dbx()` **Vite plugin** in `vite.config.*` (config inline, no
+  `dbx.config.*` needed), or
+* a standalone `dbx.config.ts` when the project does not use Vite.
+
+Both can be combined: `dbx.config.*` is the base and the plugin options merge on
+top. The `@deltabox/toolchain` settings live under the `toolchain` key:
 
 ```ts [dbx.config.ts]
 import { defineConfig } from '@deltabox/toolchain';
@@ -4672,8 +4731,8 @@ export default defineConfig({
 });
 ```
 
-The `@deltabox/toolchain` settings live under the `toolchain` key, so a
-`dbx.config.ts` can host other dbx concerns alongside it.
+A `dbx.config.ts` can also host other dbx concerns alongside the `toolchain`
+section.
 
 Each section has its own guide: [Project](/guide/project), [CI +
 Changelog](/guide/changelog/), [tsconfig](/guide/tsconfig),
@@ -4707,7 +4766,9 @@ url: https://toolchain.deltabox.studio/guide/config/config-file-names.md
 ---
 # Config file names
 
-The loader looks for, in order:
+A `dbx.config.*` file is **optional**: the recommended setup carries the config
+inline in the `dbx()` Vite plugin inside `vite.config.*`. When a project uses a
+config file, the loader looks for, in order:
 
 ```
 dbx.config.ts
@@ -4818,7 +4879,6 @@ With the default loader, imports resolve the way the project's TypeScript does:
 
 ```ts [dbx.config.ts]
 import { shared } from '@acme/shared/config.js'; // shared/config.ts
-
 import { defineConfig } from '@deltabox/toolchain';
 
 export default defineConfig({
@@ -5054,6 +5114,27 @@ are still dropped) and `dbx sync` regenerates its managed files.
 > Configless projects are still **discovered** (so the Projects view and the
 > project graph can show them); they are just not managed until you opt in.
 
+## Vite plugin mode
+
+A project can also be configured by the `dbx()` Vite plugin instead of a
+`dbx.config.*`:
+
+```ts [vite.config.ts]
+import { dbx } from '@deltabox/toolchain/vite';
+import { defineConfig } from 'vite-plus';
+
+export default defineConfig({
+    plugins: [dbx({ toolchain: { project: { name: 'app' }, fmt: { oxc: true } } })],
+});
+```
+
+The loader evaluates `vite.config.*` and reads the plugin options, so the CLI,
+sync, watch and the VS Code extension all see the config with no
+`dbx.config.*`. When both exist, the `dbx.config.*` is the base and the plugin
+options are merged on top (the plugin layer keeps the sections it does not
+mention). In plugin mode the toolchain never writes or manages
+`vite.config.*`, and it watches the plugin config for changes.
+
 ---
 
 ---
@@ -5167,10 +5248,9 @@ export default defineConfig({
 time, so the generated file never duplicates (or drifts from) `dbx.config.*`:
 
 ```ts [vite.config.ts]
-import { defineConfig, type ViteUserConfig } from 'vite-plus';
-
 // Generated by @deltabox/toolchain — edit the vite section in dbx.config and run `dbx sync`.
 import { resolveVite } from '@deltabox/toolchain/vite';
+import { defineConfig, type ViteUserConfig } from 'vite-plus';
 
 export default defineConfig(resolveVite<ViteUserConfig>({ cwd: import.meta.dirname }));
 ```
@@ -5237,7 +5317,7 @@ A static shim imports only `defineConfig`, so Vite+ can load it without a built
 must stay serializable: functions, regexps and class instances are rejected at
 sync time (plugins still work with `shim: 'runtime'`).
 
-Runtime shims import `@deltabox/toolchain/vite` by default. Set
+Runtime shims import `vite-plugin-dbx` by default. Set
 `vite.shimImport` to change that specifier, for example to a local wrapper that
 re-exports `resolveVite`. Relative values are resolved from the repository root
 and rewritten relative to each generated config:
@@ -6481,6 +6561,68 @@ Use `logger.info` for human messages and `logger.raw` for machine output; avoid
 ---
 
 ---
+url: https://toolchain.deltabox.studio/guide/mcp.md
+---
+# MCP (Model Context Protocol)
+
+`@deltabox/toolchain` ships an MCP server that exposes the dbx APIs to AI
+harnesses and editors. It is a dependency-free stdio server, so it works with
+any MCP client and does not pull the MCP SDK into your project.
+
+```sh
+dbx mcp:serve
+```
+
+The server exposes one tool per public dbx capability:
+
+| Tool                 | Runs                                                         |
+| -------------------- | ------------------------------------------------------------ |
+| `dbx_sync`           | `dbx sync` (with `check`, `recursive`, `configless`, `only`) |
+| `dbx_projects`       | `dbx projects`                                               |
+| `dbx_providers`      | `dbx providers`                                              |
+| `dbx_templates`      | `dbx template:list`                                          |
+| `dbx_template_info`  | `dbx template:info`                                          |
+| `dbx_changelog`      | `dbx changelog`                                              |
+| `dbx_migrate`        | `dbx migrate` (preview unless `write`)                       |
+| `dbx_project_config` | `dbx project:config`                                         |
+| `dbx_tsconfig`       | `dbx tsconfig`                                               |
+| `dbx_workflow`       | `dbx workflow`                                               |
+| `dbx_run`            | an allowlisted `dbx` command                                 |
+
+Every tool runs the project's own resolved `dbx` binary, so the MCP surface
+always matches the CLI version the project pins. Plugin-mode projects work
+without a `dbx.config.*` (the server reads the `dbx()` Vite plugin options).
+
+## Install
+
+```sh
+dbx mcp:install --provider claude
+dbx mcp:install --provider vscode --scope global
+dbx mcp:install --provider custom --dir ./tools/mcp
+```
+
+`dbx mcp:list` prints the builtin providers and the exact files each one writes:
+
+| Provider   | Project config       | Skill / instructions                            |
+| ---------- | -------------------- | ----------------------------------------------- |
+| `claude`   | `.mcp.json`          | `.claude/skills/deltabox/SKILL.md`              |
+| `codex`    | `.codex/config.toml` | `.codex/skills/deltabox/SKILL.md`               |
+| `vscode`   | `.vscode/mcp.json`   | `.github/instructions/deltabox.instructions.md` |
+| `opencode` | `opencode.json`      | `.opencode/skills/deltabox/SKILL.md`            |
+| `pi`       | `.pi/mcp.json`       | `.pi/skills/deltabox/SKILL.md`                  |
+| `custom`   | `<dir>/mcp.json`     | `<dir>/deltabox/SKILL.md`                       |
+
+`--scope global` writes to the provider's user profile instead
+(`~/.claude.json`, `~/.codex/config.toml`, `~/.config/opencode/opencode.json`,
+...). `--no-skills` writes only the MCP config, and `--json` prints the exact
+paths that were written.
+
+The VS Code extension exposes the same flow from **Install MCP server + skill…**
+(and the Home view's Quick Actions).
+
+---
+
+---
 url: https://toolchain.deltabox.studio/guide/migrations.md
 ---
 # Migrations
@@ -7240,9 +7382,8 @@ Vite+ consumers can drive dbx from `vite.config.ts`, so a Vite+-only project
 still gets dbx's generated/managed files:
 
 ```ts [vite.config.ts]
-import { defineConfig } from 'vite-plus';
-
 import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
+import { defineConfig } from 'vite-plus';
 
 export default defineConfig({
     plugins: [dbx()],
@@ -8503,6 +8644,67 @@ url: https://toolchain.deltabox.studio/guide/vite.md
 ---
 # Vite+
 
+There are two ways to use dbx with Vite:
+
+* **Plugin mode (recommended):** put the toolchain config inline in the `dbx()`
+  Vite plugin inside `vite.config.*`. No `dbx.config.*` is required, and dbx
+  never manages `vite.config.*` because the plugin lives there.
+* **Config mode:** keep the whole Vite+ config in `dbx.config.*` under
+  `toolchain.vite`, and let `dbx sync` write a thin `vite.config.ts` shim.
+
+Both can be combined: a `dbx.config.*` provides shared config and the plugin
+options are merged on top.
+
+## Plugin mode
+
+```ts [vite.config.ts]
+import { dbx } from '@deltabox/toolchain/vite';
+import { defineConfig } from 'vite-plus'; // or 'vite' for plain Vite
+
+export default defineConfig({
+    plugins: [
+        dbx({
+            toolchain: {
+                project: { name: 'my-app', scope: '@acme' },
+                fmt: { oxc: true },
+                lint: { oxc: true },
+                ci: { sync: true },
+                changelog: { preset: 'conventional' },
+            },
+        }),
+    ],
+    // your usual Vite config
+});
+```
+
+The plugin carries the config inline and the dbx CLI (sync, projects, watch and
+the VS Code extension) reads it back from `vite.config.*`. The plugin also
+derives the Vite options from the dbx sections:
+
+| dbx section | Vite option                            |
+| ----------- | -------------------------------------- |
+| `logger`    | `logLevel` / `customLogger`            |
+| `watch`     | `server.watch` (the `exclude` globs)   |
+| `fmt`       | Vite+ `fmt` (only on a Vite+ project)  |
+| `lint`      | Vite+ `lint` (only on a Vite+ project) |
+
+The `vite` section is deliberately omitted from the plugin options: the Vite
+config is the user config in plugin mode. Vite+ keys are only added when the
+project declares `vite-plus`; a pure Vite project gets only standard Vite
+options. Vite+ CLI passthroughs (`dbx vite:*`) are refused unless Vite+ is
+installed/detected.
+
+`dbx sync` runs before the dev server/build (or `dbx sync --check` in CI) and
+re-syncs when `vite.config.*`, `dbx.config.*` or a tsconfig input changes.
+
+Builtin scaffolds (`dbx create`, `dbx project:init`, `dbx project:init:workspace`)
+use plugin mode: they generate a `vite.config.*` with `dbx({ toolchain })`,
+Vitest (`test`) and Vite+ tasks (`run.tasks`) instead of a `dbx.config.*`. The
+scaffolded packages depend on `vite-plus` and use `vp` for build/test, so no
+separate `vitest` or `tsdown` dependency is written.
+
+## Config mode
+
 The `vite` section holds the **entire Vite+ configuration**. Every key is passed
 through verbatim to Vite+, so `dbx.config.*` stays the only hand-authored root
 config; `dbx sync` writes a thin root `vite.config.ts` that resolves it at load
@@ -8530,10 +8732,9 @@ The section is typed as Vite+'s own config (`ToolchainViteConfig` = Vite's
 `dbx sync` writes a fixed `vite.config.ts`:
 
 ```ts [vite.config.ts]
-import { defineConfig, type ViteUserConfig } from 'vite-plus';
-
 // Generated by @deltabox/toolchain — edit the vite section in dbx.config and run `dbx sync`.
 import { resolveVite } from '@deltabox/toolchain/vite';
+import { defineConfig, type ViteUserConfig } from 'vite-plus';
 
 export default defineConfig(resolveVite<ViteUserConfig>({ cwd: import.meta.dirname }));
 ```
