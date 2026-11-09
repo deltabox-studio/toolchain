@@ -98,6 +98,9 @@ describe('editorConfigSyncTask', () => {
         expect(settings['editor.formatOnSave']).toBe(true);
         expect(settings['editor.formatOnSaveMode']).toBeUndefined();
         expect(settings['oxc.disableNestedConfig']).toBeUndefined();
+        // `editor.formatOnSave` lives only at the root, not in every language block.
+        expect(settings['[typescript]']?.['editor.formatOnSave']).toBeUndefined();
+        expect(settings['[markdown]']?.['editor.formatOnSave']).toBeUndefined();
     });
 
     it('does not write in check mode', async () => {
@@ -133,6 +136,24 @@ describe('editorConfigSyncTask', () => {
         expect(settings['[typescript]']['editor.defaultFormatter']).toBe('custom.ts');
         expect(settings['[javascript]']).toBeUndefined();
         expect(settings['editor.codeActionsOnSave']).toBeUndefined();
+    });
+
+    it('supports dotted-path exclusions', async () => {
+        const cwd = makeTmp();
+        await editorConfigSyncTask().run(
+            context(cwd, {
+                fmt: {
+                    oxc: {},
+                    vscode: { exclude: ['[typescript].editor.defaultFormatter'] },
+                },
+            })
+        );
+        const settings = JSON.parse(
+            fs.readFileSync(path.join(cwd, '.vscode/settings.json'), 'utf-8')
+        );
+        expect(settings['[typescript]']).toBeDefined();
+        expect(settings['[typescript]']['editor.defaultFormatter']).toBeUndefined();
+        expect(settings['[javascript]']['editor.defaultFormatter']).toBe('oxc.oxc-vscode');
     });
 });
 
