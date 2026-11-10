@@ -81,16 +81,17 @@ passthrough, so `dbx vite fmt ...` still accepts every `vp` flag.
 
 ## Formatting managed files
 
-`dbx sync` formats the files it writes with the project's active formatter by
-default, in fix mode. This keeps generated files (workflows, tsconfigs, editor
-settings, configs, ...) consistent with the rest of the repository instead of
-leaving them in the generator's raw output.
+Managed-file formatting is **opt-in**. Enable `sync.format` to format the files
+`dbx sync` writes with the project's active formatter, in fix mode. This keeps
+generated files (workflows, tsconfigs, editor settings, configs, ...) consistent
+with the rest of the repository instead of leaving them in the generator's raw
+output.
 
 ```ts [dbx.config.ts]
 toolchain: {
     sync: {
         format: {
-            enabled: true,   // default
+            enabled: true,
             fix: true,       // default; false runs the formatter in check mode
             command: 'prettier --write {files}', // optional override
             exclude: ['**/generated/**'],        // per-file opt-out
@@ -99,8 +100,8 @@ toolchain: {
 }
 ```
 
-`sync.format` also accepts a plain boolean: `true` uses the defaults, `false`
-disables managed-file formatting.
+`sync.format: true` uses the defaults (enabled + fix). It is disabled when the
+section/key is absent; `sync.format: false` disables it explicitly.
 
 The default command follows the detected/configured formatter:
 

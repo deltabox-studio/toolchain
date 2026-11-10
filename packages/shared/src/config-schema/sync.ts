@@ -9,7 +9,9 @@ const syncFormatSchema = z
         z.object({
             enabled: z
                 .boolean()
-                .describe('Format the managed files after writing them (default true).')
+                .describe(
+                    'Format the managed files after writing them (default true once enabled).'
+                )
                 .optional(),
             fix: z
                 .boolean()
@@ -32,8 +34,8 @@ const syncFormatSchema = z
         }),
     ])
     .describe(
-        'Format the managed files after generation (default on). `true` uses the defaults, ' +
-            '`false` disables it, and an object tunes `enabled`/`fix`/`command`/`exclude`.'
+        'Opt-in formatting of the managed files after generation (default off). `true` uses ' +
+            'the defaults, `false` disables it, and an object tunes `enabled`/`fix`/`command`/`exclude`.'
     );
 
 /** `dbx sync` behaviour. */

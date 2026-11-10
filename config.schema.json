@@ -2342,7 +2342,7 @@
                             "properties": {
                                 "enabled": {
                                     "type": "boolean",
-                                    "description": "Format the managed files after writing them (default true)."
+                                    "description": "Format the managed files after writing them (default true once enabled)."
                                 },
                                 "fix": {
                                     "type": "boolean",
@@ -2363,7 +2363,7 @@
                             "additionalProperties": false
                         }
                     ],
-                    "description": "Format the managed files after generation (default on). `true` uses the defaults, `false` disables it, and an object tunes `enabled`/`fix`/`command`/`exclude`."
+                    "description": "Opt-in formatting of the managed files after generation (default off). `true` uses the defaults, `false` disables it, and an object tunes `enabled`/`fix`/`command`/`exclude`."
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",

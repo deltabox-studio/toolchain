@@ -1,10 +1,10 @@
 /**
  * Format the files a sync run manages.
  *
- * Formatting is on by default and runs in fix mode, so the generated files end
- * up formatted instead of drifting from the project's formatter. Consumers can
- * disable it globally (`sync.format: false`), tune the command/fix mode, or
- * exclude individual managed files with globs.
+ * Formatting is opt-in (`sync.format: true` or an options object) and runs in
+ * fix mode by default. Consumers can tune the command/fix mode, or exclude
+ * individual managed files with globs. Files a task marks
+ * `format: false` (eg. generated tsconfigs) are never formatted.
  */
 
 import fs from 'node:fs';
@@ -61,9 +61,9 @@ export function resolveManagedFormatting(options: ManagedFormatOptions = {}): {
     exclude: string[];
 } {
     const setting = options.setting ?? sectionConfig(options.config?.sync)?.format;
-    if (setting === false) return { enabled: false, fix: true, exclude: [] };
-    if (setting === true || setting === undefined) {
-        return { enabled: true, fix: true, exclude: [] };
+    if (setting === true) return { enabled: true, fix: true, exclude: [] };
+    if (setting === undefined || setting === false) {
+        return { enabled: false, fix: true, exclude: [] };
     }
     return {
         enabled: setting.enabled !== false,

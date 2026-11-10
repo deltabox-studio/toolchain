@@ -47,8 +47,13 @@ function command(cwd: string): string {
 }
 
 describe('managed-file formatting', () => {
-    it('defaults to enabled + fix and honours the config', () => {
-        expect(resolveManagedFormatting()).toEqual({ enabled: true, fix: true, exclude: [] });
+    it('is opt-in and honours the config', () => {
+        expect(resolveManagedFormatting()).toEqual({ enabled: false, fix: true, exclude: [] });
+        expect(resolveManagedFormatting({ config: { sync: { format: true } } })).toEqual({
+            enabled: true,
+            fix: true,
+            exclude: [],
+        });
         expect(resolveManagedFormatting({ config: { sync: { format: false } } })).toEqual({
             enabled: false,
             fix: true,
@@ -90,7 +95,7 @@ describe('managed-file formatting', () => {
         expect(fs.readFileSync(path.join(cwd, 'b.ts'), 'utf-8')).toBe('b\n');
     });
 
-    it('formats managed files by default during runSync', async () => {
+    it('formats managed files when enabled during runSync', async () => {
         const cwd = tmp();
         const task: SyncTask = { name: 'x', run: () => [{ path: 'a.ts', content: 'a\n' }] };
         const result = await runSync({
@@ -106,7 +111,14 @@ describe('managed-file formatting', () => {
         expect(fs.readFileSync(path.join(cwd, 'a.ts'), 'utf-8')).toBe('// formatted\na\n');
     });
 
-    it('can disable formatting globally', async () => {
+    it('leaves managed files unformatted by default', async () => {
+        const cwd = tmp();
+        const task: SyncTask = { name: 'x', run: () => [{ path: 'a.ts', content: 'a\n' }] };
+        await runSync({ tasks: [task], cwd, config: {}, tokens: {}, quiet: true });
+        expect(fs.readFileSync(path.join(cwd, 'a.ts'), 'utf-8')).toBe('a\n');
+    });
+
+    it('can disable formatting explicitly', async () => {
         const cwd = tmp();
         const task: SyncTask = { name: 'x', run: () => [{ path: 'a.ts', content: 'a\n' }] };
         await runSync({
