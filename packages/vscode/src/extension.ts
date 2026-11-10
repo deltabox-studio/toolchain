@@ -268,9 +268,35 @@ export function activate(context: vscode.ExtensionContext): void {
         return [...args, '--configless'];
     };
 
+    /** Add the managed-file formatting settings to a `sync` invocation. */
+    const withFormatting = (args: string[]): string[] => {
+        if (args[0] !== 'sync') return args;
+        const cfg = config();
+        const out = [...args];
+        if (
+            cfg.get<boolean>('formatManagedFiles', true) === false &&
+            !out.includes('--no-format')
+        ) {
+            out.push('--no-format');
+        }
+        if (
+            cfg.get<boolean>('formatManagedFilesFix', true) === false &&
+            !out.includes('--no-format-fix')
+        ) {
+            out.push('--no-format-fix');
+        }
+        const command = cfg.get<string>('formatManagedFilesCommand', '').trim();
+        if (command && !out.includes('--format-command')) out.push('--format-command', command);
+        const exclude = cfg.get<string[]>('formatManagedFilesExclude', []);
+        if (exclude.length > 0 && !out.includes('--format-exclude')) {
+            out.push('--format-exclude', ...exclude);
+        }
+        return out;
+    };
+
     /** Run `dbx <args>` in `cwd`, streaming output to the channel. */
     const runCli = (cwd: string, args: string[]): Promise<number> => {
-        const cliArgs = withConfigless(args);
+        const cliArgs = withFormatting(withConfigless(args));
         if (cliArgs[0] === 'sync' && !cliArgs.includes('--check') && !cliArgs.includes('--json')) {
             return runSyncCli(cwd, cliArgs);
         }
@@ -648,6 +674,12 @@ export function activate(context: vscode.ExtensionContext): void {
                 case 'syncTsconfig':
                     await vscode.commands.executeCommand(`${SECTION}.syncTsconfig`);
                     break;
+                case 'fmt':
+                    await vscode.commands.executeCommand(`${SECTION}.fmt`);
+                    break;
+                case 'lint':
+                    await vscode.commands.executeCommand(`${SECTION}.lint`);
+                    break;
                 case 'scaffold':
                     await vscode.commands.executeCommand(`${SECTION}.scaffold`);
                     break;
@@ -788,6 +820,8 @@ export function activate(context: vscode.ExtensionContext): void {
             'deltabox.toolchain.syncTsconfig',
             syncCommands.syncTsconfig
         ),
+        vscode.commands.registerCommand('deltabox.toolchain.fmt', () => runRoots(['fmt'])),
+        vscode.commands.registerCommand('deltabox.toolchain.lint', () => runRoots(['lint'])),
         vscode.commands.registerCommand(
             'deltabox.toolchain.syncSelected',
             syncCommands.syncSelected

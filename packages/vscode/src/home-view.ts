@@ -38,6 +38,8 @@ export type HomeAction =
     | { type: 'syncSelected' }
     | { type: 'syncCheck' }
     | { type: 'syncTsconfig' }
+    | { type: 'fmt' }
+    | { type: 'lint' }
     | { type: 'scaffold' }
     | { type: 'migrate' }
     | { type: 'installMcp' }
@@ -89,6 +91,8 @@ const SIMPLE_ACTIONS = new Set<HomeAction['type']>([
     'syncSelected',
     'syncCheck',
     'syncTsconfig',
+    'fmt',
+    'lint',
     'scaffold',
     'refresh',
     'generateConfigs',
@@ -304,6 +308,8 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
       <button class="secondary" data-action="templateAdd">Add template\u2026</button>
       <button class="secondary" data-action="syncCheck">Check sync</button>
       <button class="secondary" data-action="syncTsconfig">Sync tsconfig</button>
+      <button class="secondary" data-action="fmt">Format project</button>
+      <button class="secondary" data-action="lint">Lint project</button>
       <button class="secondary" data-action="refresh">Refresh projects</button>
       <button class="secondary" data-action="migrate">Migrate tooling\u2026</button>
       <button class="secondary" data-action="installMcp">Install MCP\u2026</button>
@@ -317,6 +323,8 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
       <button class="secondary" data-action="syncSelected">Sync selected projects</button>
       <button class="secondary" data-action="syncCheck">Check sync</button>
       <button class="secondary" data-action="syncTsconfig">Sync tsconfig</button>
+      <button class="secondary" data-action="fmt">Format project</button>
+      <button class="secondary" data-action="lint">Lint project</button>
       <button class="secondary" data-action="scaffold">Scaffold project\u2026</button>
       <button class="secondary" data-action="generateConfigs">Generate configs\u2026</button>
       <button class="secondary" data-action="migrate">Migrate tooling\u2026</button>

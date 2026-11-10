@@ -29,6 +29,8 @@ code --install-extension deltabox.toolchain-vscode
 | Sync all / active / selected | Run `dbx sync --recursive`, which walks every managed project in dependency order (nested workspaces included). Configless projects are skipped unless `deltabox.toolchain.manageConfigless` is enabled. |
 | Check sync                   | `sync --check` across the workspace.                                                                                                                                                                     |
 | Sync tsconfig                | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).                                                                                                                                |
+| Format project               | Run `dbx fmt` with the formatter detected/configured for the project (Oxfmt/Vite+, Prettier, Biome, dprint or standalone Oxc).                                                                           |
+| Lint project                 | Run `dbx lint` with the linter detected/configured for the project (Oxlint/Vite+, ESLint or Biome).                                                                                                      |
 | Manage tsconfig…             | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                                                                                                                                |
 | Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**.                                                                                                                  |
 | Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.                                                                                                                        |
@@ -48,6 +50,12 @@ code --install-extension deltabox.toolchain-vscode
 Interactive commands (the dev server, `vp create`, online scaffolding) run in an
 integrated terminal at the project root; everything else runs in the output
 channel.
+
+**Format project** and **Lint project** are generic toolchain commands, not
+Vite+ commands: they run `dbx fmt` / `dbx lint`, which route to the
+detected/configured formatter and linter. A project using Prettier, ESLint,
+Biome, dprint or standalone Oxc gets the same actions as a Vite+ project (the
+`vp` passthrough is only used when Oxc is backed by `vite-plus`).
 
 ## Project menu
 
