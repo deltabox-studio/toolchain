@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { ensureToolingDependencies } from '@deltabox/toolchain/core';
 import {
     createMonorepoRootFiles,
     createRootProjectFiles,
@@ -51,6 +52,8 @@ export interface ScaffoldOptions {
     actions?: string[];
     /** The monorepo workspaces tsconfig name (workspace scaffolds). */
     tsconfigRootFile?: string;
+    /** Version overrides for the provisioned formatter/linter dependencies. */
+    toolVersions?: Record<string, string>;
 }
 
 export interface ScaffoldResult {
@@ -111,6 +114,8 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
     // A workspace describes itself, not the root it is scaffolded from.
     const { description: _description, ...workspaceMetadata } = metadata;
     const files: GeneratedFile[] = [];
+    let toolingCwd = options.cwd;
+    let toolingRoot: string | undefined;
 
     switch (template.builtin) {
         case 'monorepo-root': {
@@ -160,6 +165,8 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
             // Validate before writing: a name like `../..` must never target the
             // monorepo root (or another package) with `--force`.
             const dir = workspaceDirForTsconfig(`packages/${name}`);
+            toolingCwd = path.join(options.cwd, dir);
+            toolingRoot = options.cwd;
             files.push(
                 ...createWorkspaceFiles({
                     ...workspaceMetadata,
@@ -200,6 +207,14 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
         }
     }
     const written = writeGeneratedFiles(files, options.cwd, { force: options.force === true });
+    if (template.builtin !== 'folder') {
+        ensureToolingDependencies({
+            cwd: toolingCwd,
+            ...(toolingRoot ? { root: toolingRoot } : {}),
+            selection: { fmt: 'oxc', lint: 'oxc' },
+            ...(options.toolVersions ? { versions: options.toolVersions } : {}),
+        });
+    }
     if (template.builtin === 'monorepo-workspace') {
         upsertWorkspaceTsconfig(
             options.cwd,

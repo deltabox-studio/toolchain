@@ -10,8 +10,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { loadToolchainConfig } from '@deltabox/toolchain/core';
+import { assertToolingDependency, loadToolchainConfig } from '@deltabox/toolchain/core';
 import {
+    declaredDependencies,
     type FormatterTool,
     type LinterTool,
     logger,
@@ -36,6 +37,12 @@ const TOOL_PACKAGE: Record<Exclude<Tool, 'oxc'>, { bin: string; pkg: string }> =
     biome: { bin: 'biome', pkg: '@biomejs/biome' },
     dprint: { bin: 'dprint', pkg: 'dprint' },
     eslint: { bin: 'eslint', pkg: 'eslint' },
+};
+
+/** The standalone Oxc binaries, used when `vite-plus` is not installed. */
+const OXC_PACKAGE: Record<Kind, { bin: string; pkg: string }> = {
+    fmt: { bin: 'oxfmt', pkg: 'oxfmt' },
+    lint: { bin: 'oxlint', pkg: 'oxlint' },
 };
 
 /** Flags that select a tool's mode rather than being forwarded verbatim. */
@@ -125,18 +132,28 @@ function localBinCandidates(cwd: string, bin: string): string[] {
 }
 
 /** Resolve a tool binary: project-local shim -> `PATH` -> `npx`. */
-export function resolveToolCommand(
-    tool: Exclude<Tool, 'oxc'>,
+function resolveBinary(
+    bin: string,
+    pkg: string,
     args: string[],
     cwd: string
 ): { exe: string; args: string[] } {
-    const { bin, pkg } = TOOL_PACKAGE[tool];
     for (const candidate of localBinCandidates(cwd, bin)) {
         if (fs.existsSync(candidate)) return { exe: candidate, args };
     }
     const onPath = which(bin);
     if (onPath) return { exe: onPath, args };
     return { exe: IS_WINDOWS ? 'npx.cmd' : 'npx', args: ['--yes', pkg, ...args] };
+}
+
+/** Resolve a non-Oxc tool binary. */
+export function resolveToolCommand(
+    tool: Exclude<Tool, 'oxc'>,
+    args: string[],
+    cwd: string
+): { exe: string; args: string[] } {
+    const { bin, pkg } = TOOL_PACKAGE[tool];
+    return resolveBinary(bin, pkg, args, cwd);
 }
 
 /** Spawn the selected tool, resolving to its exit code (never rejects). */
@@ -162,8 +179,10 @@ function spawnTool(
 
 /**
  * Run `args` with the active tool. Returns `false` when the active tool is Oxc
- * (or help was requested), so the caller can fall through to the `vp`
- * passthrough unchanged.
+ * backed by `vite-plus` (or help was requested), so the caller can fall through
+ * to the `vp` passthrough unchanged. A standalone `oxfmt`/`oxlint` dependency is
+ * run directly, and a missing dependency raises a clear error instead of an
+ * implicit `npx` download.
  */
 async function runDiscoveredTool(
     kind: Kind,
@@ -199,12 +218,21 @@ async function runDiscoveredTool(
     }
     const discovered = discoverTooling(config, { cwd });
     const tool = kind === 'fmt' ? discovered.fmt.tool : discovered.lint.tool;
-    if (tool === 'oxc') return false;
-    const command = resolveToolCommand(
-        tool as Exclude<Tool, 'oxc'>,
-        buildToolArgs(kind, tool, args),
-        cwd
-    );
+    const found = assertToolingDependency(cwd, kind, tool);
+    let command: { exe: string; args: string[] };
+    if (tool === 'oxc') {
+        // `vite-plus` owns the `vp fmt`/`vp lint` passthrough; the standalone
+        // Oxc packages are only used when Vite+ is not declared.
+        if (found.pkg && declaredDependencies(found.pkg).has('vite-plus')) return false;
+        const oxc = OXC_PACKAGE[kind];
+        command = resolveBinary(oxc.bin, oxc.pkg, buildToolArgs(kind, tool, args), cwd);
+    } else {
+        command = resolveToolCommand(
+            tool as Exclude<Tool, 'oxc'>,
+            buildToolArgs(kind, tool, args),
+            cwd
+        );
+    }
     const color =
         logger.colors.isColorSupported && sectionConfig(config.providers)?.color !== false;
     const code = await spawnTool(command, { cwd, color });

@@ -12,6 +12,7 @@ import {
 } from '@deltabox/toolchain/core';
 import {
     logger,
+    parseToolVersions,
     type Replacements,
     sectionConfig,
     type ToolchainCommand,
@@ -582,6 +583,12 @@ export function templateCommands(): ToolchainCommand[] {
                     flags: '--action <id...>',
                     description: 'Action id to run after scaffolding (repeatable).',
                 },
+                {
+                    flags: '--tool-version <name@range>',
+                    description:
+                        'Override a provisioned formatter/linter dependency version (repeatable).',
+                    multiple: true,
+                },
                 { flags: '--online', description: 'Resolve online templates too.' },
                 {
                     flags: '--force',
@@ -742,6 +749,7 @@ export function templateCommands(): ToolchainCommand[] {
                     actions: [...actions],
                     force: Boolean(opts.force),
                     tsconfigRootFile: tsconfig?.rootFile ?? 'tsconfig.workspaces.json',
+                    toolVersions: parseToolVersions(opts.toolVersion as string[] | undefined),
                 });
 
                 if (opts.json) {

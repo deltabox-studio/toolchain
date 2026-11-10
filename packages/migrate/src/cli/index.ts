@@ -2,8 +2,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { cancel, isCancel, multiselect } from '@clack/prompts';
-import { loadToolchainConfig, runSync, selectProjects } from '@deltabox/toolchain/core';
-import { logger, type ToolchainCommand } from '@deltabox/toolchain/shared';
+import {
+    ensureToolingDependencies,
+    loadToolchainConfig,
+    runSync,
+    selectProjects,
+} from '@deltabox/toolchain/core';
+import {
+    logger,
+    parseToolVersions,
+    type ToolchainCommand,
+    type ToolingSelection,
+} from '@deltabox/toolchain/shared';
 
 import { diffFiles, hasPending } from '../check.js';
 import { listMigrations, migrations } from '../registry.js';
@@ -102,6 +112,12 @@ export function migrateCommands(): ToolchainCommand[] {
                 {
                     flags: '--ignore-changelog',
                     description: 'Skip the changelog task in the post-migration sync.',
+                },
+                {
+                    flags: '--tool-version <name@range>',
+                    description:
+                        'Override a provisioned formatter/linter dependency version (repeatable).',
+                    multiple: true,
                 },
                 { flags: '--json', description: 'Print the result as JSON.' },
             ],
@@ -303,7 +319,7 @@ export function migrateCommands(): ToolchainCommand[] {
                         for (const file of removed)
                             logger.info(`D  ${path.relative(root, file) || file}`);
                         logger.info(
-                            `${pending.length + removed.length} file(s) out of date — run \`migrate --write\` to apply.`
+                            `${pending.length + removed.length} file(s) out of date - run \`migrate --write\` to apply.`
                         );
                     } else {
                         logger.info('up to date.');
@@ -311,6 +327,69 @@ export function migrateCommands(): ToolchainCommand[] {
                     if (hasPending(diffs) || removed.length > 0) process.exitCode = 1;
                     return;
                 }
+
+                // Migrations only write Oxc configs, so the consumer ends up
+                // using Oxc for whichever kinds were migrated. Add those deps to
+                // the root package.json when every project shares the same tool
+                // set, otherwise to each migrated project (respecting scope).
+                const selectionFor = (dir: string): ToolingSelection => {
+                    const migrated = results
+                        .filter(entry => entry.dir === dir)
+                        .map(entry => entry.result);
+                    return {
+                        ...(migrated.some(entry => entry.oxfmt !== undefined)
+                            ? { fmt: 'oxc' as const }
+                            : {}),
+                        ...(migrated.some(entry => entry.oxlint !== undefined)
+                            ? { lint: 'oxc' as const }
+                            : {}),
+                    };
+                };
+                const provision = (dryRun: boolean): void => {
+                    const entries = changedDirs
+                        .map(dir => ({ dir, selection: selectionFor(dir) }))
+                        .filter(entry => entry.selection.fmt || entry.selection.lint);
+                    if (entries.length === 0) return;
+                    const signature = (selection: ToolingSelection): string =>
+                        `${selection.fmt ?? ''}/${selection.lint ?? ''}`;
+                    const shared =
+                        fs.existsSync(path.join(root, 'package.json')) &&
+                        new Set(entries.map(entry => signature(entry.selection))).size === 1;
+                    const groups = shared
+                        ? [
+                              {
+                                  cwd: root,
+                                  selection: entries[0]!.selection,
+                                  dirs: entries.map(entry => entry.dir),
+                              },
+                          ]
+                        : entries.map(entry => ({
+                              cwd: entry.dir,
+                              selection: entry.selection,
+                              dirs: [entry.dir],
+                          }));
+                    const versions = parseToolVersions(opts.toolVersion as string[] | undefined);
+                    for (const group of groups) {
+                        const result = ensureToolingDependencies({
+                            cwd: group.cwd,
+                            root,
+                            scope: shared ? 'root' : 'project',
+                            selection: group.selection,
+                            versions,
+                            dryRun,
+                        });
+                        if (!result.changed) continue;
+                        const added = Object.entries(result.added)
+                            .map(([name, version]) => `${name}@${version}`)
+                            .join(', ');
+                        const message = `${dryRun ? 'Would add' : 'Added'} devDependencies: ${added} (${result.scope} package.json).`;
+                        for (const { dir, result: migration } of results) {
+                            if (!group.dirs.includes(dir)) continue;
+                            migration.notes = [...(migration.notes ?? []), message];
+                        }
+                    }
+                };
+                provision(!write);
 
                 // `--write` also regenerates the toolchain-managed files (the
                 // post-migration sync), so a migrated project is immediately

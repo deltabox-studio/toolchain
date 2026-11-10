@@ -589,6 +589,11 @@ function spyTask(ran: string[]): SyncTask {
 }
 
 function cliContext(dir: string, syncTasks: SyncTask[] = []): ToolchainCommandContext {
+    // The migration CLI provisions the target formatter/linter dependencies, so
+    // every CLI migration project needs a package.json.
+    if (!fs.existsSync(path.join(dir, 'package.json'))) {
+        fs.writeFileSync(path.join(dir, 'package.json'), '{\n    "name": "test"\n}\n', 'utf-8');
+    }
     return { cwd: dir, projectType: 'project', config: {}, tokens: {}, syncTasks };
 }
 
@@ -611,6 +616,32 @@ describe('migrate CLI post-migration sync', () => {
         await migrateCommand().run({ from: 'biome', write: true }, cliContext(dir, [spyTask(ran)]));
         expect(ran).toEqual([dir]);
         expect(fs.existsSync(path.join(dir, '.oxfmtrc.json'))).toBe(true);
+    });
+
+    it('adds the target formatter/linter dependencies on --write', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
+        await migrateCommand().run(
+            { from: 'biome', write: true, toolVersion: ['oxfmt@^0.80.0'] },
+            cliContext(dir)
+        );
+        const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8')) as {
+            devDependencies: Record<string, string>;
+        };
+        expect(pkg.devDependencies).toEqual({
+            oxfmt: '^0.80.0',
+            oxlint: '^1.93.0',
+        });
+    });
+
+    it('reports the dependencies a dry run would add', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
+        await migrateCommand().run({ from: 'biome' }, cliContext(dir));
+        const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8')) as {
+            devDependencies?: Record<string, string>;
+        };
+        expect(pkg.devDependencies).toBeUndefined();
     });
 
     it('skips the sync with `ignoreManagedFiles`', async () => {

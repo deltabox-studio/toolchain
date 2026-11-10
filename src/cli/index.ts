@@ -42,8 +42,27 @@ import { runUpdateCheck } from './update-check.js';
 export { extractConfigSelection } from './config-selection.js';
 export { registerToolchainCommands } from './register.js';
 
+/** The first-class `dbx fmt` / `dbx lint` commands (delegating to the tooling routes). */
+function toolingAliases(commands: ToolchainCommand[]): ToolchainCommand[] {
+    const out: ToolchainCommand[] = [];
+    for (const name of ['fmt', 'lint'] as const) {
+        const command = commands.find(candidate => candidate.name === `vite:${name}`);
+        if (!command) continue;
+        out.push({
+            ...command,
+            name,
+            description:
+                name === 'fmt'
+                    ? 'Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc).'
+                    : 'Lint with the detected linter (Vite+ Oxlint, ESLint or Biome).',
+        });
+    }
+    return out;
+}
+
 /** The commands built into the root CLI (config commands need a consumer engine). */
 export function builtinCommands(config?: ToolchainConfig): ToolchainCommand[] {
+    const vite = withToolingRouting(viteCommands());
     return [
         ...syncCommands(config),
         ...tsconfigCommands(),
@@ -53,7 +72,8 @@ export function builtinCommands(config?: ToolchainConfig): ToolchainCommand[] {
         ...migrateCommands(),
         ...projectCommands(),
         ...templateCommands(),
-        ...withToolingRouting(viteCommands()),
+        ...vite,
+        ...toolingAliases(vite),
     ];
 }
 

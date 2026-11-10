@@ -60,6 +60,8 @@ describe('dbx CLI', () => {
         expect(names).toContain('cleanup:turbo');
         expect(names).toContain('changelog');
         expect(names).toContain('project:init');
+        expect(names).toContain('fmt');
+        expect(names).toContain('lint');
     });
 
     it('builds a program with the expected subcommands', () => {
@@ -122,11 +124,23 @@ describe('default Vite+ command', () => {
     const argv = (...args: string[]) => ['node', 'dbx', ...args];
 
     it('inserts `vite` for a bare Vite+ command', () => {
-        expect(withDefaultVite(argv('fmt', '--check'))).toEqual(argv('vite', 'fmt', '--check'));
-        expect(withDefaultVite(argv('lint', '--fix'))).toEqual(argv('vite', 'lint', '--fix'));
+        expect(withDefaultVite(argv('dev'))).toEqual(argv('vite', 'dev'));
+        expect(withDefaultVite(argv('build', '--mode', 'production'))).toEqual([
+            'node',
+            'dbx',
+            'vite',
+            'build',
+            '--mode',
+            'production',
+        ]);
         expect(withDefaultVite(argv('run', '-r', 'build'))).toEqual(
             argv('vite', 'run', '-r', 'build')
         );
+    });
+
+    it('keeps the first-class `fmt` and `lint` commands', () => {
+        expect(withDefaultVite(argv('fmt', '--check'))).toEqual(argv('fmt', '--check'));
+        expect(withDefaultVite(argv('lint', '--fix'))).toEqual(argv('lint', '--fix'));
     });
 
     it('defaults a Vite+ alias too', () => {

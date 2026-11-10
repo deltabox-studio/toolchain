@@ -15,6 +15,7 @@ export * from './run.js';
 export * from './string-utils.js';
 export * from './template.js';
 export * from './toolchain.js';
+export * from './tooling-dependencies.js';
 export * from './tsconfig-files.js';
 export * from './types.js';
 export * from './vite-defaults.js';

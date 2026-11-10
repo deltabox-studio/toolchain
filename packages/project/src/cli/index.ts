@@ -1,9 +1,10 @@
 import path from 'node:path';
 
 import { cancel, confirm, isCancel, select } from '@clack/prompts';
-import { loadToolchainConfig } from '@deltabox/toolchain/core';
+import { ensureToolingDependencies, loadToolchainConfig } from '@deltabox/toolchain/core';
 import {
     logger,
+    parseToolVersions,
     type ProjectType,
     type Replacements,
     sectionConfig,
@@ -41,6 +42,13 @@ const CONFIG_OPTIONS = [
 const PACKAGE_MANAGER_OPTION = {
     flags: '--package-manager <pm>',
     description: 'Package manager: yarn (default) | pnpm | npm | bun.',
+};
+
+/** Override a provisioned formatter/linter dependency version (repeatable). */
+const TOOL_VERSION_OPTION = {
+    flags: '--tool-version <name@range>',
+    description: 'Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.',
+    multiple: true,
 };
 
 /** The valid `project.type` values. */
@@ -185,6 +193,7 @@ export function projectCommands(): ToolchainCommand[] {
                 { flags: '-s, --scope <scope>', description: 'npm scope, eg. @acme.' },
                 { flags: '-o, --out <dir>', description: 'Output directory (default: cwd).' },
                 PACKAGE_MANAGER_OPTION,
+                TOOL_VERSION_OPTION,
                 ...CONFIG_OPTIONS,
             ],
             run: (opts, context) => {
@@ -205,6 +214,11 @@ export function projectCommands(): ToolchainCommand[] {
                     ...(tsconfigExtends ? { tsconfigExtends } : {}),
                 });
                 const written = writeGeneratedFiles(files, out, { force: Boolean(opts.force) });
+                ensureToolingDependencies({
+                    cwd: out,
+                    selection: { fmt: 'oxc', lint: 'oxc' },
+                    versions: parseToolVersions(opts.toolVersion as string[] | undefined),
+                });
                 for (const file of written) logger.info(`Created ${file}`);
             },
         },
@@ -217,6 +231,7 @@ export function projectCommands(): ToolchainCommand[] {
                 { flags: '-o, --out <dir>', description: 'Output directory (default: cwd).' },
                 { flags: '--example', description: 'Also scaffold one example workspace package.' },
                 PACKAGE_MANAGER_OPTION,
+                TOOL_VERSION_OPTION,
                 ...CONFIG_OPTIONS,
             ],
             run: (opts, context) => {
@@ -261,6 +276,11 @@ export function projectCommands(): ToolchainCommand[] {
                     );
                 }
                 const written = writeGeneratedFiles(files, out, { force: Boolean(opts.force) });
+                ensureToolingDependencies({
+                    cwd: out,
+                    selection: { fmt: 'oxc', lint: 'oxc' },
+                    versions: parseToolVersions(opts.toolVersion as string[] | undefined),
+                });
                 for (const file of written) logger.info(`Created ${file}`);
             },
         },
@@ -276,6 +296,7 @@ export function projectCommands(): ToolchainCommand[] {
                     description: 'Workspace dir relative to the root (default: packages/<name>).',
                 },
                 PACKAGE_MANAGER_OPTION,
+                TOOL_VERSION_OPTION,
                 ...CONFIG_OPTIONS,
             ],
             run: async (opts, context) => {
@@ -334,6 +355,12 @@ export function projectCommands(): ToolchainCommand[] {
                 }).map(file => ({ ...file, path: `${wsDir}/${file.path}` }));
 
                 const written = writeGeneratedFiles(files, root, { force: Boolean(opts.force) });
+                ensureToolingDependencies({
+                    cwd: path.join(root, wsDir),
+                    root,
+                    selection: { fmt: 'oxc', lint: 'oxc' },
+                    versions: parseToolVersions(opts.toolVersion as string[] | undefined),
+                });
                 upsertWorkspaceTsconfig(
                     root,
                     { alias: name, dir: wsDir },
