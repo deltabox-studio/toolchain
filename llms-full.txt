@@ -293,6 +293,7 @@ Scaffold a single-package TypeScript project.
 * `-o, --out ‹dir›` — Output directory (default: cwd).
 * `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
 * `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
+* `--containerize` — Also generate Docker artifacts (Dockerfile + .dockerignore).
 * `--no-config` — Skip the dbx.config.ts file.
 * `--type ‹type›` — Project type: project | monorepo-root | monorepo-workspace.
 * `--force` — Overwrite existing files in the output directory.
@@ -443,6 +444,7 @@ Scaffold a project from a template (builtin, local or Vite+).
 * `--tool-version ‹name@range›` — Override a provisioned formatter/linter dependency version (repeatable).
 * `--online` — Resolve online templates too.
 * `--force` — Overwrite existing files in the output directory.
+* `--containerize` — Also generate Docker artifacts (Dockerfile + .dockerignore).
 * `--json` — Print the result as JSON.
 
 ## `dbx vite`
@@ -1512,6 +1514,66 @@ The issue-title workflow (`issues.yml`).
 
 The toolchain sync workflow (`sync.yml`).
 
+### `dependabot`
+
+* **Type**: `boolean | ToolchainDependabotConfig`
+
+Dependabot version-update automation (`.github/dependabot.yml`).
+
+#### `schedule`
+
+* **Type**: `'daily' | 'weekly' | 'monthly'`
+
+Dependabot update interval (default `weekly`).
+
+#### `directories`
+
+* **Type**: `Array<string>`
+
+Directories to scan (default `["/"]`).
+
+#### `ecosystems`
+
+* **Type**: `Array<string>`
+
+Package ecosystems (default `["github-actions", "npm"]`; `github-actions` keeps `voidzero-dev/setup-vp` and the other actions up to date).
+
+#### `labels`
+
+* **Type**: `Array<string>`
+
+Labels added to the update PRs.
+
+#### `openPullRequestsLimit`
+
+* **Type**: `number`
+
+Maximum open update PRs per entry (Dependabot default 5).
+
+#### `groups`
+
+* **Type**: `Record<string, object>`
+
+Dependabot update groups, keyed by group name.
+
+#### `filename`
+
+* **Type**: `string`
+
+Override the generated file name (default `dependabot.yml`).
+
+#### `dir`
+
+* **Type**: `string`
+
+Directory for the config (default `.github`).
+
+#### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
 ### `custom`
 
 * **Type**: `Record<string, CustomWorkflowSettings>`
@@ -2422,11 +2484,17 @@ Override the runtime base image.
 
 Runtime user to run as (default `node`, `bun` or `nobody`).
 
+### `managed`
+
+* **Type**: `boolean`
+
+Manage the Dockerfile (default true). Set false to keep a hand-written Dockerfile while dbx still generates `.dockerignore`/compose.
+
 ### `compose`
 
 * **Type**: `boolean`
 
-Also write a `docker-compose.yml` (default false).
+Also write a `docker-compose.yaml` (default false).
 
 ### `healthcheck`
 
@@ -3068,7 +3136,7 @@ url: https://toolchain.deltabox.studio/guide/docker.md
 # Docker
 
 `@deltabox/toolchain-docker` generates a deployable, multi-stage `Dockerfile`, a
-`.dockerignore` and an optional `docker-compose.yml`. Containerization is
+`.dockerignore` and an optional `docker-compose.yaml`. Containerization is
 **opt-in**: nothing is written unless you ask for it.
 
 ```sh
@@ -3095,7 +3163,7 @@ toolchain: {
         image: 'acme/api', // default: the project name
         tag: 'latest',
         port: 3000, // default 3000, or 8080 for static sites
-        compose: true, // also write docker-compose.yml
+        compose: true, // also write docker-compose.yaml
     },
 }
 ```
@@ -3112,7 +3180,8 @@ toolchain: {
 | `baseImage`       | Vite+/Bun/Node image        | Override the build-stage image.                |
 | `runtimeImage`    | Debian/Bun/nginx/Node image | Override the runtime image.                    |
 | `user`            | `nobody` / `node` / `bun`   | Runtime user.                                  |
-| `compose`         | `false`                     | Write `docker-compose.yml`.                    |
+| `managed`         | `true`                      | Manage the Dockerfile.                         |
+| `compose`         | `false`                     | Write `docker-compose.yaml`.                   |
 | `healthcheck`     | `true`                      | Add an HTTP `HEALTHCHECK`.                     |
 | `healthcheckPath` | `/`                         | Path the healthcheck requests.                 |
 | `dockerfile`      | `Dockerfile`                | Dockerfile file name.                          |
@@ -3121,6 +3190,17 @@ toolchain: {
 The task applies to single projects and monorepo workspaces (not a monorepo
 root) and marks the files as unformatted managed files, so `dbx sync --check`
 compares the generated content directly.
+
+### User-owned Dockerfiles
+
+A hand-written `Dockerfile` is left untouched: `dbx sync` skips any existing
+Docker artifact that has no generated header, warns, and still writes the
+missing ones. Set `docker.managed: false` to keep the Dockerfile permanently
+user-owned while `.dockerignore`/compose are still generated.
+
+`dbx create --containerize` and `dbx project:init --containerize` always add a
+`docker-compose.yaml` for local development (`docker compose up --build`). With
+`dbx sync` the compose file is opt-in with `docker.compose: true`.
 
 ## Images
 
@@ -4319,8 +4399,8 @@ url: https://toolchain.deltabox.studio/guide/ci.md
 `dbx sync` writes the opted-in workflows for **GitHub Actions**, **GitLab CI**
 and **Azure Pipelines**. Every workflow is **opt-in**: declare it under
 `toolchain.ci` to write it; omit it (or set it to `false`) and the toolchain
-leaves that file unmanaged. Every id (`ci`, `changelog`, `release`, `issues`,
-`sync`) accepts one of four forms:
+leaves that file unmanaged. Every workflow id (`ci`, `changelog`, `release`,
+`issues`, `sync`) accepts one of four forms:
 
 * `true` / `false` — write the generated GitHub default, or skip it;
 * a **`WorkflowOptions` object** — override parts of the GitHub default
@@ -4448,13 +4528,14 @@ hand-written object.
 
 ## Workflows
 
-| Workflow  | GitHub file     | Page                                      |
-| --------- | --------------- | ----------------------------------------- |
-| CI checks | `ci.yml`        | [CI checks](/guide/ci/ci)                 |
-| Changelog | `changelog.yml` | [Changelog workflow](/guide/ci/changelog) |
-| Release   | `release.yml`   | [Releases](/guide/ci/releases)            |
-| Issues    | `issues.yml`    | [Issues](/guide/ci/issues)                |
-| Toolchain | `sync.yml`      | [Sync](/guide/ci/sync)                    |
+| Workflow   | GitHub file      | Page                                      |
+| ---------- | ---------------- | ----------------------------------------- |
+| CI checks  | `ci.yml`         | [CI checks](/guide/ci/ci)                 |
+| Changelog  | `changelog.yml`  | [Changelog workflow](/guide/ci/changelog) |
+| Release    | `release.yml`    | [Releases](/guide/ci/releases)            |
+| Issues     | `issues.yml`     | [Issues](/guide/ci/issues)                |
+| Toolchain  | `sync.yml`       | [Sync](/guide/ci/sync)                    |
+| Dependabot | `dependabot.yml` | [Dependabot](/guide/ci/dependabot)        |
 
 Extra workflows can be defined under `toolchain.ci.custom.<id>` (for example
 `ci.custom.deploy` writes `.github/workflows/deploy.yml`, or the vendor default
@@ -4550,6 +4631,80 @@ how a project is detected as Vite+ and how to force or disable that setup. The
 workflow is opt-in: `ci: { ci: true }` writes it; omitting `ci.ci` (or setting it
 to `false`) leaves the file unmanaged. Set `provider` (`gitlab`/`azure`) with a
 complete `workflow` object to write that vendor's pipeline instead.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/ci/dependabot.md
+---
+# Dependabot
+
+`ci.dependabot` writes `.github/dependabot.yml` so GitHub keeps the project's
+dependencies and pinned actions up to date. Like every workflow it is **opt-in**:
+omit it (or set it to `false`) and the file is left unmanaged.
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        dependabot: true,
+    },
+}
+```
+
+By default the config watches the **GitHub Actions** and **npm** ecosystems at
+the repository root with a **weekly** schedule. The `github-actions` entry also
+keeps pinned actions such as
+[`voidzero-dev/setup-vp`](https://viteplus.dev/guide/ci#automatic-version-updates),
+`actions/checkout` and `actions/setup-node` current, so a Vite+ CI setup does not
+drift.
+
+```yaml [.github/dependabot.yml]
+version: 2
+updates:
+    - package-ecosystem: github-actions
+      directory: /
+      schedule:
+          interval: weekly
+    - package-ecosystem: npm
+      directory: /
+      schedule:
+          interval: weekly
+```
+
+## Options
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        dependabot: {
+            schedule: 'daily',
+            directories: ['/', '/packages/api'],
+            ecosystems: ['github-actions', 'npm'],
+            labels: ['dependencies'],
+            openPullRequestsLimit: 5,
+            groups: {
+                minor: { 'update-types': ['minor', 'patch'] },
+            },
+            dir: '.github', // default
+            filename: 'dependabot.yml', // default
+        },
+    },
+}
+```
+
+| Option                  | Default                     | What it does                             |
+| ----------------------- | --------------------------- | ---------------------------------------- |
+| `schedule`              | `weekly`                    | `daily`, `weekly` or `monthly`.          |
+| `directories`           | `['/']`                     | Directories to scan.                     |
+| `ecosystems`            | `['github-actions', 'npm']` | Package ecosystems.                      |
+| `labels`                | none                        | Labels added to the update PRs.          |
+| `openPullRequestsLimit` | Dependabot default (5)      | Maximum open update PRs per entry.       |
+| `groups`                | none                        | Update groups (patterns / update types). |
+| `dir` / `filename`      | `.github/dependabot.yml`    | Generated path overrides.                |
+| `enabled`               | `true` when present         | Set `false` to opt out explicitly.       |
+
+A hand-written `.github/dependabot.yml` without the generated header is left
+untouched and reported as a conflict, exactly like a hand-written workflow.
 
 ---
 
@@ -8164,7 +8319,8 @@ of the same project scaffold (package manager, catalogs, `vite.config.ts` with
 `packageManager` and `includeConfig` inputs and an opt-in install action.
 
 Pass `--containerize` (or use the [Docker](/guide/docker) section) to also write
-a multi-stage `Dockerfile`/`.dockerignore` for the new project.
+a multi-stage `Dockerfile`, `.dockerignore` and `docker-compose.yaml` for local
+development.
 
 | Template             | Stack       | Notes                                                      |
 | -------------------- | ----------- | ---------------------------------------------------------- |

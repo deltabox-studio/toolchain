@@ -72,6 +72,7 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [CI](https://toolchain.deltabox.studio/guide/ci.md)
 - [Changelog workflow](https://toolchain.deltabox.studio/guide/ci/changelog.md)
 - [CI checks](https://toolchain.deltabox.studio/guide/ci/ci.md)
+- [Dependabot](https://toolchain.deltabox.studio/guide/ci/dependabot.md)
 - [Issues](https://toolchain.deltabox.studio/guide/ci/issues.md)
 - [Releases](https://toolchain.deltabox.studio/guide/ci/releases.md)
 - [Workflow settings](https://toolchain.deltabox.studio/guide/ci/settings.md)

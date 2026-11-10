@@ -3,8 +3,8 @@
 `dbx sync` writes the opted-in workflows for **GitHub Actions**, **GitLab CI**
 and **Azure Pipelines**. Every workflow is **opt-in**: declare it under
 `toolchain.ci` to write it; omit it (or set it to `false`) and the toolchain
-leaves that file unmanaged. Every id (`ci`, `changelog`, `release`, `issues`,
-`sync`) accepts one of four forms:
+leaves that file unmanaged. Every workflow id (`ci`, `changelog`, `release`,
+`issues`, `sync`) accepts one of four forms:
 
 - `true` / `false` — write the generated GitHub default, or skip it;
 - a **`WorkflowOptions` object** — override parts of the GitHub default
@@ -132,13 +132,14 @@ hand-written object.
 
 ## Workflows
 
-| Workflow  | GitHub file     | Page                                      |
-| --------- | --------------- | ----------------------------------------- |
-| CI checks | `ci.yml`        | [CI checks](/guide/ci/ci)                 |
-| Changelog | `changelog.yml` | [Changelog workflow](/guide/ci/changelog) |
-| Release   | `release.yml`   | [Releases](/guide/ci/releases)            |
-| Issues    | `issues.yml`    | [Issues](/guide/ci/issues)                |
-| Toolchain | `sync.yml`      | [Sync](/guide/ci/sync)                    |
+| Workflow   | GitHub file      | Page                                      |
+| ---------- | ---------------- | ----------------------------------------- |
+| CI checks  | `ci.yml`         | [CI checks](/guide/ci/ci)                 |
+| Changelog  | `changelog.yml`  | [Changelog workflow](/guide/ci/changelog) |
+| Release    | `release.yml`    | [Releases](/guide/ci/releases)            |
+| Issues     | `issues.yml`     | [Issues](/guide/ci/issues)                |
+| Toolchain  | `sync.yml`       | [Sync](/guide/ci/sync)                    |
+| Dependabot | `dependabot.yml` | [Dependabot](/guide/ci/dependabot)        |
 
 Extra workflows can be defined under `toolchain.ci.custom.<id>` (for example
 `ci.custom.deploy` writes `.github/workflows/deploy.yml`, or the vendor default
