@@ -102,6 +102,17 @@
                     "description": "The toolchain sync workflow (`sync.yml`).",
                     "$ref": "#/$defs/WorkflowSetting"
                 },
+                "dependabot": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainDependabotConfig"
+                        }
+                    ],
+                    "description": "Dependabot version-update automation (`.github/dependabot.yml`)."
+                },
                 "custom": {
                     "type": "object",
                     "propertyNames": {
@@ -1331,6 +1342,95 @@
             ],
             "description": "`true`/`false` to enable/disable, a complete GitHub/GitLab/Azure workflow (with `provider`), the changelog pipeline config object, or a raw YAML string written verbatim as the changelog workflow file."
         },
+        "ToolchainDependabotConfig": {
+            "type": "object",
+            "properties": {
+                "schedule": {
+                    "type": "string",
+                    "enum": [
+                        "daily",
+                        "weekly",
+                        "monthly"
+                    ],
+                    "description": "Dependabot update interval (default `weekly`)."
+                },
+                "directories": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Directories to scan (default `[\"/\"]`)."
+                },
+                "ecosystems": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Package ecosystems (default `[\"github-actions\", \"npm\"]`; `github-actions` keeps `voidzero-dev/setup-vp` and the other actions up to date)."
+                },
+                "labels": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Labels added to the update PRs."
+                },
+                "openPullRequestsLimit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "description": "Maximum open update PRs per entry (Dependabot default 5)."
+                },
+                "groups": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                            "patterns": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "description": "Package name patterns (default `[\"*\"]`)."
+                            },
+                            "exclude-patterns": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "description": "Package name patterns to exclude."
+                            },
+                            "update-types": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "description": "Update types to group (eg. `[\"minor\", \"patch\"]`)."
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "description": "Dependabot update groups, keyed by group name."
+                },
+                "filename": {
+                    "type": "string",
+                    "description": "Override the generated file name (default `dependabot.yml`)."
+                },
+                "dir": {
+                    "type": "string",
+                    "description": "Directory for the config (default `.github`)."
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false,
+            "description": "Dependabot version-update automation (`.github/dependabot.yml`). Opt-in by presence."
+        },
         "CustomWorkflowSettings": {
             "anyOf": [
                 {
@@ -2432,9 +2532,13 @@
                     "type": "string",
                     "description": "Runtime user to run as (default `node`, `bun` or `nobody`)."
                 },
+                "managed": {
+                    "type": "boolean",
+                    "description": "Manage the Dockerfile (default true). Set false to keep a hand-written Dockerfile while dbx still generates `.dockerignore`/compose."
+                },
                 "compose": {
                     "type": "boolean",
-                    "description": "Also write a `docker-compose.yml` (default false)."
+                    "description": "Also write a `docker-compose.yaml` (default false)."
                 },
                 "healthcheck": {
                     "type": "boolean",

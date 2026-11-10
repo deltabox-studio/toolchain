@@ -822,6 +822,66 @@ The issue-title workflow (`issues.yml`).
 
 The toolchain sync workflow (`sync.yml`).
 
+### `dependabot`
+
+- **Type**: `boolean | ToolchainDependabotConfig`
+
+Dependabot version-update automation (`.github/dependabot.yml`).
+
+#### `schedule`
+
+- **Type**: `'daily' | 'weekly' | 'monthly'`
+
+Dependabot update interval (default `weekly`).
+
+#### `directories`
+
+- **Type**: `Array<string>`
+
+Directories to scan (default `["/"]`).
+
+#### `ecosystems`
+
+- **Type**: `Array<string>`
+
+Package ecosystems (default `["github-actions", "npm"]`; `github-actions` keeps `voidzero-dev/setup-vp` and the other actions up to date).
+
+#### `labels`
+
+- **Type**: `Array<string>`
+
+Labels added to the update PRs.
+
+#### `openPullRequestsLimit`
+
+- **Type**: `number`
+
+Maximum open update PRs per entry (Dependabot default 5).
+
+#### `groups`
+
+- **Type**: `Record<string, object>`
+
+Dependabot update groups, keyed by group name.
+
+#### `filename`
+
+- **Type**: `string`
+
+Override the generated file name (default `dependabot.yml`).
+
+#### `dir`
+
+- **Type**: `string`
+
+Directory for the config (default `.github`).
+
+#### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
 ### `custom`
 
 - **Type**: `Record<string, CustomWorkflowSettings>`
@@ -1732,11 +1792,17 @@ Override the runtime base image.
 
 Runtime user to run as (default `node`, `bun` or `nobody`).
 
+### `managed`
+
+- **Type**: `boolean`
+
+Manage the Dockerfile (default true). Set false to keep a hand-written Dockerfile while dbx still generates `.dockerignore`/compose.
+
 ### `compose`
 
 - **Type**: `boolean`
 
-Also write a `docker-compose.yml` (default false).
+Also write a `docker-compose.yaml` (default false).
 
 ### `healthcheck`
 

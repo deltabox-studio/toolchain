@@ -265,6 +265,7 @@ Scaffold a single-package TypeScript project.
 - `-o, --out ‹dir›` — Output directory (default: cwd).
 - `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
 - `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
+- `--containerize` — Also generate Docker artifacts (Dockerfile + .dockerignore).
 - `--no-config` — Skip the dbx.config.ts file.
 - `--type ‹type›` — Project type: project \| monorepo-root \| monorepo-workspace.
 - `--force` — Overwrite existing files in the output directory.
@@ -415,6 +416,7 @@ Scaffold a project from a template (builtin, local or Vite+).
 - `--tool-version ‹name@range›` — Override a provisioned formatter/linter dependency version (repeatable).
 - `--online` — Resolve online templates too.
 - `--force` — Overwrite existing files in the output directory.
+- `--containerize` — Also generate Docker artifacts (Dockerfile + .dockerignore).
 - `--json` — Print the result as JSON.
 
 ## `dbx vite`

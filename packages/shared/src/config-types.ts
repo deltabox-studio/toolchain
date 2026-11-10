@@ -84,6 +84,8 @@ export interface ToolchainCiConfig {
     issues?: WorkflowSetting;
     /** The toolchain sync workflow (`sync.yml`). */
     sync?: WorkflowSetting;
+    /** Dependabot version-update automation (`.github/dependabot.yml`). */
+    dependabot?: boolean | ToolchainDependabotConfig;
     /**
      * Additional custom workflows, keyed by id (eg. `custom.my-workflow`). Each id writes
      * `<dir>/<filename ?? id>.yml`.
@@ -596,6 +598,37 @@ export type ChangelogWorkflowSetting =
     | AzureWorkflowSetting
     | CiChangelogConfig;
 
+export interface ToolchainDependabotConfig {
+    /** Dependabot update interval (default `weekly`). */
+    schedule?: 'daily' | 'weekly' | 'monthly';
+    /** Directories to scan (default `["/"]`). */
+    directories?: Array<string>;
+    /**
+     * Package ecosystems (default `["github-actions", "npm"]`; `github-actions` keeps
+     * `voidzero-dev/setup-vp` and the other actions up to date).
+     */
+    ecosystems?: Array<string>;
+    /** Labels added to the update PRs. */
+    labels?: Array<string>;
+    /** Maximum open update PRs per entry (Dependabot default 5). */
+    openPullRequestsLimit?: number;
+    /** Dependabot update groups, keyed by group name. */
+    groups?: Record<
+        string & {},
+        {
+            patterns?: Array<string>;
+            'exclude-patterns'?: Array<string>;
+            'update-types'?: Array<string>;
+        }
+    >;
+    /** Override the generated file name (default `dependabot.yml`). */
+    filename?: string;
+    /** Directory for the config (default `.github`). */
+    dir?: string;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
+}
+
 export type CustomWorkflowSettings =
     | string
     | GitHubWorkflowSetting
@@ -1019,7 +1052,12 @@ export interface ToolchainDockerConfig {
     runtimeImage?: string;
     /** Runtime user to run as (default `node`, `bun` or `nobody`). */
     user?: string;
-    /** Also write a `docker-compose.yml` (default false). */
+    /**
+     * Manage the Dockerfile (default true). Set false to keep a hand-written Dockerfile while dbx
+     * still generates `.dockerignore`/compose.
+     */
+    managed?: boolean;
+    /** Also write a `docker-compose.yaml` (default false). */
     compose?: boolean;
     /** Add a `HEALTHCHECK` to the runtime image (default true). */
     healthcheck?: boolean;
