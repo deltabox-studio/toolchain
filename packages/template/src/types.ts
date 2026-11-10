@@ -83,7 +83,18 @@ export interface Template {
         | 'folder'
         | 'monorepo-root'
         | 'monorepo-example'
-        | 'monorepo-workspace';
+        | 'monorepo-workspace'
+        | 'vitepress'
+        | 'express'
+        | 'bun'
+        | 'fastify'
+        | 'orpc'
+        | 'file-server'
+        | 'file-server-s3'
+        | 'file-server-bun-s3'
+        | 'file-server-minio'
+        | 'file-server-rclone'
+        | 'ollama-chat';
     /** Local templates only: the absolute directory holding `template.json`. */
     dir?: string;
     /** Variables a local template declares. */

@@ -6,10 +6,12 @@ import { pathToFileURL } from 'node:url';
 import { ensureToolingDependencies } from '@deltabox/toolchain/core';
 import {
     createMonorepoRootFiles,
+    createQolProjectFiles,
     createRootProjectFiles,
     createWorkspaceFiles,
     findRootOxcFiles,
     hasCatalog,
+    isQolTemplateId,
     SCAFFOLD_CATALOG,
     upsertWorkspaceTsconfig,
     workspaceDirForTsconfig,
@@ -191,18 +193,24 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
             break;
         }
         default: {
-            // `single` + `application`: a root package project.
+            const projectContext = {
+                ...metadata,
+                name,
+                ...(scope ? { scope } : {}),
+                type: 'project' as const,
+                includeConfig,
+                rootOxc: findRootOxcFiles(options.cwd),
+                ...(packageManager ? { packageManager } : {}),
+            };
+            // `single` + `application`: a root package project; the quality-of-life
+            // templates layer their own files/deps over the same scaffold.
             files.push(
-                ...createRootProjectFiles({
-                    ...metadata,
-                    name,
-                    ...(scope ? { scope } : {}),
-                    type: 'project',
-                    kind: template.builtin === 'application' ? 'application' : 'project',
-                    includeConfig,
-                    rootOxc: findRootOxcFiles(options.cwd),
-                    ...(packageManager ? { packageManager } : {}),
-                })
+                ...(template.builtin && isQolTemplateId(template.builtin)
+                    ? createQolProjectFiles(template.builtin, projectContext)
+                    : createRootProjectFiles({
+                          ...projectContext,
+                          kind: template.builtin === 'application' ? 'application' : 'project',
+                      }))
             );
         }
     }
