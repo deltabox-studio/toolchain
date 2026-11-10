@@ -167,6 +167,14 @@ export interface ProjectContext {
     includeConfig?: boolean;
     /** Per-file `extends` overrides for the scaffolded tsconfig templates. */
     tsconfigExtends?: TsconfigExtendsOptions;
+    /** Extra runtime dependencies merged into `dependencies`. */
+    dependencies?: Record<string, string>;
+    /** Extra dev dependencies merged over the scaffold's toolchain ones. */
+    extraDevDependencies?: Record<string, string>;
+    /** Scripts merged over (or replacing) the scaffold's default scripts. */
+    scripts?: Record<string, string>;
+    /** Vite+ task overrides merged over the flavour's default tasks. */
+    tasks?: Record<string, string>;
 }
 
 /** Oxc config files found in an ancestor of a scaffold output directory. */
@@ -251,7 +259,15 @@ export function findRootOxcFiles(start: string): RootOxcFiles {
 
 /** The token replacements derived from a {@link ProjectContext}. */
 function tokens(ctx: ProjectContext): Replacements {
-    const { tsconfigExtends: _tsconfigExtends, rootOxc: _rootOxc, ...tokens } = ctx;
+    const {
+        tsconfigExtends: _tsconfigExtends,
+        rootOxc: _rootOxc,
+        dependencies: _dependencies,
+        extraDevDependencies: _extraDevDependencies,
+        scripts: _scripts,
+        tasks: _tasks,
+        ...tokens
+    } = ctx;
     return tokens;
 }
 
@@ -440,6 +456,8 @@ export interface PluginViteConfigOptions {
     lint?: 'defaults' | 'inherit' | false;
     catalogs?: Record<string, string>;
     flavor?: 'application' | 'library' | 'monorepo-root' | 'workspace';
+    /** Extra/replacement `run.tasks` entries. */
+    tasks?: Record<string, string>;
 }
 
 /**
@@ -519,7 +537,8 @@ export function renderPluginViteConfig(options: PluginViteConfigOptions): string
         ['format', 'vp fmt'],
         ['lint', 'vp lint --fix']
     );
-    const taskLines = tasks
+    const mergedTasks = new Map<string, string>([...tasks, ...Object.entries(options.tasks ?? {})]);
+    const taskLines = [...mergedTasks]
         .map(([name, command]) => `                ${name}: { command: ${quote(command)} },`)
         .join('\n');
 
@@ -592,11 +611,13 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
             lint: 'dbx lint --fix',
             test: 'vp test',
             typecheck: 'tsc -p tsconfig.json --noEmit',
+            ...ctx.scripts,
         },
-        devDependencies: devDependencies(
-            ctx.packageManager,
-            catalogDefined(ctx.packageManager, false)
-        ),
+        ...(ctx.dependencies ? { dependencies: ctx.dependencies } : {}),
+        devDependencies: {
+            ...devDependencies(ctx.packageManager, catalogDefined(ctx.packageManager, false)),
+            ...ctx.extraDevDependencies,
+        },
         ...(packageManagerField(ctx.packageManager, ctx.packageManagerVersion ?? ctx.yarnVersion)
             ? {
                   packageManager: packageManagerField(
@@ -621,6 +642,7 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
                           lint: withLint ? 'defaults' : ctx.rootOxc?.lint ? 'inherit' : false,
                           ...(catalog ? { catalogs: catalog } : {}),
                           flavor: application ? 'application' : 'library',
+                          ...(ctx.tasks ? { tasks: ctx.tasks } : {}),
                       }),
                   },
               ]),
