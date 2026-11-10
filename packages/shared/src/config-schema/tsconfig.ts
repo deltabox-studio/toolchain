@@ -51,10 +51,48 @@ const tsconfigAliasRewrite = z
     )
     .meta({ tsType: 'ToolchainTsconfigAliasRewrite' });
 
+/** How auto-wiring discovers a workspace's aliases. */
+const tsconfigAliasMode = z
+    .union([
+        z.literal('auto'),
+        z.literal('exports'),
+        z.literal('project-structure'),
+        z.array(z.union([z.literal('exports'), z.literal('project-structure')])),
+    ])
+    .describe(
+        'Alias discovery: `auto` (exports, then the project structure), `exports` (package.json ' +
+            'exports/types/main only), `project-structure` (scan the source tree), or an array ' +
+            'combining `exports` and `project-structure`.'
+    );
+
 /** Include/exclude globs plus an alias rewrite for alias auto-wiring. */
 const tsconfigAliasAutoFilters = tsconfigAutoFilters
     .extend({
         rewriteAlias: tsconfigAliasRewrite.optional(),
+
+        modes: tsconfigAliasMode.optional(),
+        prefix: z
+            .string()
+            .describe(
+                'Prefix for generated aliases instead of the package scope (eg. `@` produces ' +
+                    '`@/<package>` and `@/<package>/<subpath>`).'
+            )
+            .meta({ tsType: "'@' | (string & {})" })
+            .optional(),
+        devMode: z
+            .boolean()
+            .describe(
+                'Resolve generated aliases to source files (default true). Set false to point at ' +
+                    'the distributed files instead.'
+            )
+            .optional(),
+        dist: z
+            .string()
+            .describe(
+                'Output directory used to map source/dist targets (default: the workspace ' +
+                    "tsconfig's `outDir`, then `dist`)."
+            )
+            .optional(),
     })
     .meta({ id: 'ToolchainTsconfigAliasAutoSetting' });
 
@@ -96,11 +134,13 @@ export const tsconfigConfigSchema = withEnabled(
         auto: tsconfigAliasAutoSetting(
             'Auto-generate the root workspaces tsconfig paths/references from the project graph ' +
                 '(default false). Set true to derive them from the project graph; set false to ' +
-                'only use the entries you define yourself.'
+                'only use the entries you define yourself. An object additionally accepts ' +
+                '`include`/`exclude`, `rewriteAlias`, `modes`, `prefix`, `devMode` and `dist`.'
         ).optional(),
         aliasAuto: tsconfigAliasAutoSetting(
             'Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). ' +
-                'Accepts the same `include`/`exclude`/`rewriteAlias` object as `auto`.'
+                'Accepts the same `include`/`exclude`/`rewriteAlias`/`modes`/`prefix`/`devMode`/' +
+                '`dist` object as `auto`.'
         ).optional(),
         refsAuto: tsconfigAutoSetting(
             'Auto-generate project references (defaults to `auto`; `refs` must also be enabled).'

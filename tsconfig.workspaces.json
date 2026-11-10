@@ -137,6 +137,60 @@
             ],
             "vite-plugin-dbx/*": [
                 "./packages/vite/src/*"
+            ],
+            "@deltabox/toolchain/globals": [
+                "./src/globals.ts"
+            ],
+            "@deltabox/toolchain/providers": [
+                "./src/providers.ts"
+            ],
+            "@deltabox/toolchain/vite": [
+                "./src/vite.ts"
+            ],
+            "@deltabox/toolchain/changelog/bin": [
+                "./packages/changelog/src/bin.ts"
+            ],
+            "@deltabox/toolchain/changelog/cli": [
+                "./packages/changelog/src/cli/index.ts"
+            ],
+            "@deltabox/toolchain/changelog/run": [
+                "./packages/changelog/src/run.ts"
+            ],
+            "@deltabox/toolchain/config/cli": [
+                "./packages/config/src/cli/index.ts"
+            ],
+            "@deltabox/toolchain/config/generators": [
+                "./packages/config/src/generators/index.ts"
+            ],
+            "@deltabox/toolchain/mcp/cli": [
+                "./packages/mcp/src/cli/index.ts"
+            ],
+            "@deltabox/toolchain/migrate/cli": [
+                "./packages/migrate/src/cli/index.ts"
+            ],
+            "@deltabox/toolchain/project/cli": [
+                "./packages/project/src/cli/index.ts"
+            ],
+            "@deltabox/toolchain/template/cli": [
+                "./packages/template/src/cli/index.ts"
+            ],
+            "@deltabox/toolchain/tsconfig/cli": [
+                "./packages/tsconfig/src/cli/index.ts"
+            ],
+            "@deltabox/toolchain/tsconfig/cli/generate": [
+                "./packages/tsconfig/src/cli/generate/index.ts"
+            ],
+            "@deltabox/toolchain/tsdown/cli": [
+                "./packages/tsdown/src/cli/index.ts"
+            ],
+            "@deltabox/toolchain/tsdown/config/node": [
+                "./packages/tsdown/src/config/node.ts"
+            ],
+            "vite-plugin-dbx/cli": [
+                "./packages/vite/src/cli/index.ts"
+            ],
+            "toolchain-vscode": [
+                "./packages/vscode/src/extension.ts"
             ]
         }
     },

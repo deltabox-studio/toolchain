@@ -50,6 +50,8 @@ export interface ResolvedTsconfig {
     references: TsconfigReference[];
     /** Whether the returned paths are relative. */
     relativePaths: boolean;
+    /** Whether exact aliases are anchored regexes (default true). */
+    strict: boolean;
 }
 
 export interface ResolveTsconfigOptions {
@@ -65,6 +67,12 @@ export interface ResolveTsconfigOptions {
      * directory for `references`), matching how TypeScript resolves them.
      */
     relativePaths?: boolean;
+    /**
+     * Anchor exact aliases as `^...$` regexes (default true) so a bundler never
+     * resolves a module through a shorter prefix (`@acme/core` vs
+     * `@acme/core-utils`). Set `false` to keep exact aliases as plain strings.
+     */
+    strict?: boolean;
     /** Follow `extends` (default true). */
     extends?: boolean;
     /** Deep-merged into the selected config before reading its fields. */
@@ -82,6 +90,7 @@ export interface TsconfigJson {
     compilerOptions?: {
         baseUrl?: string;
         rootDir?: string;
+        outDir?: string;
         paths?: Record<string, string[]>;
     };
     references?: { path: string; [key: string & {}]: unknown }[];
@@ -258,19 +267,25 @@ function escapeRegExp(value: string): string {
 }
 
 interface AliasCandidate extends TsconfigAlias {
-    score: number;
+    /** The original (normalized) `paths` key, used for the descending sort. */
+    key: string;
+}
+
+/** Compare two path keys descending, so the longest/most specific comes first. */
+function compareKeysDescending(a: string, b: string): number {
+    return a < b ? 1 : a > b ? -1 : 0;
 }
 
 /** Convert one `paths` entry into a Vite-compatible alias. */
-function pathToAlias(find: string, target: string): AliasCandidate {
+function pathToAlias(find: string, target: string, strict: boolean): AliasCandidate {
     const findStr = find.replace(/\\/g, '/');
     const targetStr = target.replace(/\\/g, '/');
     const asterisk = findStr.indexOf('*');
     if (asterisk === -1) {
         return {
-            find: findStr,
+            key: findStr,
+            find: strict ? new RegExp(`^${escapeRegExp(findStr)}$`) : findStr,
             replacement: targetStr,
-            score: Number.POSITIVE_INFINITY,
         };
     }
     // One capture group per `*`, each mapped to the matching `$n` in the target.
@@ -278,9 +293,9 @@ function pathToAlias(find: string, target: string): AliasCandidate {
     const pattern = `^${findStr.split('*').map(escapeRegExp).join('(.*)')}$`;
     let capture = 0;
     return {
+        key: findStr,
         find: new RegExp(pattern),
         replacement: targetStr.replace(/\*/g, () => (capture < groups ? `$${++capture}` : '*')),
-        score: asterisk + 1,
     };
 }
 
@@ -337,7 +352,8 @@ function loadConfigChain(
 function resolveChain(
     chain: LoadedTsconfig[],
     file: string,
-    relativePaths: boolean
+    relativePaths: boolean,
+    strict: boolean
 ): ResolvedTsconfig {
     const pathsEntry = chain.find(entry => entry.config.compilerOptions?.paths !== undefined);
     const referencesEntry = chain.find(entry => entry.config.references !== undefined);
@@ -347,8 +363,13 @@ function resolveChain(
         ? path.resolve(baseUrlEntry.dir, baseUrlEntry.config.compilerOptions?.baseUrl ?? '.')
         : (pathsEntry?.dir ?? path.dirname(file));
 
+    // Longest/most specific keys first, so a shorter prefix never shadows a
+    // longer entry (eg. `@acme/core` before `@acme`).
+    const pathEntries = Object.entries(pathsEntry?.config.compilerOptions?.paths ?? {}).sort(
+        ([a], [b]) => compareKeysDescending(a, b)
+    );
     const paths: Record<string, string[]> = {};
-    for (const [key, value] of Object.entries(pathsEntry?.config.compilerOptions?.paths ?? {})) {
+    for (const [key, value] of pathEntries) {
         const targets = (Array.isArray(value) ? value : [value]) as string[];
         paths[key] = targets.map(target => {
             const absolute = path.resolve(pathsBase, target);
@@ -373,11 +394,11 @@ function resolveChain(
 
     const alias = Object.entries(paths)
         .filter(([, targets]) => targets.length > 0)
-        .map(([find, targets]) => pathToAlias(find, targets[0] as string))
-        .sort((a, b) => b.score - a.score)
+        .map(([find, targets]) => pathToAlias(find, targets[0] as string, strict))
+        .sort((a, b) => compareKeysDescending(a.key, b.key))
         .map(({ find, replacement }) => ({ find, replacement }));
 
-    return { alias, paths, references, relativePaths };
+    return { alias, paths, references, relativePaths, strict };
 }
 
 /**
@@ -387,7 +408,7 @@ function resolveChain(
 export function resolveTsconfigConfig(
     config: TsconfigJson,
     dir: string,
-    options: Pick<ResolveTsconfigOptions, 'extends' | 'overrides' | 'relativePaths'> = {}
+    options: Pick<ResolveTsconfigOptions, 'extends' | 'overrides' | 'relativePaths' | 'strict'> = {}
 ): ResolvedTsconfig {
     const file = path.join(path.resolve(dir), 'tsconfig.json');
     const chain = loadConfigChain(config, file, options.extends !== false, new Set());
@@ -397,7 +418,7 @@ export function resolveTsconfigConfig(
             config: mergeOverride(chain[0].config, options.overrides),
         };
     }
-    return resolveChain(chain, file, !!options.relativePaths);
+    return resolveChain(chain, file, !!options.relativePaths, options.strict !== false);
 }
 
 /**
@@ -407,7 +428,7 @@ export function resolveTsconfigConfig(
  */
 export function resolveTsconfigCompilerOption(
     file: string,
-    key: 'rootDir' | 'baseUrl'
+    key: 'rootDir' | 'baseUrl' | 'outDir'
 ): string | undefined {
     if (!isFile(file)) return undefined;
     const chain = loadChain(path.resolve(file), new Set());
@@ -480,5 +501,5 @@ export function resolveTsconfig(options: ResolveTsconfigOptions = {}): ResolvedT
             config: mergeOverride(chain[0].config, options.overrides),
         };
     }
-    return resolveChain(chain, file, !!options.relativePaths);
+    return resolveChain(chain, file, !!options.relativePaths, options.strict !== false);
 }

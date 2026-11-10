@@ -9,50 +9,71 @@
     "compilerOptions": {
         "composite": false,
         "paths": {
-            "@deltabox/toolchain": [
-                "../../src/index.ts"
+            "vite-plugin-dbx/package.json": [
+                "../vite/package.json"
             ],
-            "@deltabox/toolchain/*": [
-                "../../src/*"
+            "vite-plugin-dbx/cli": [
+                "../vite/src/cli/index.ts"
             ],
-            "@deltabox/toolchain/cli": [
-                "../../src/cli/index.ts"
+            "vite-plugin-dbx/*": [
+                "../vite/src/*"
             ],
-            "@deltabox/toolchain/package.json": [
-                "../../package.json"
+            "vite-plugin-dbx": [
+                "../vite/src/index.ts"
             ],
-            "@deltabox/toolchain/docs/*": [
-                "../../apps/docs/src/*"
+            "toolchain-vscode/*": [
+                "../vscode/src/*"
             ],
-            "@deltabox/toolchain/biome/package.json": [
-                "../biome/package.json"
+            "toolchain-vscode": [
+                "../vscode/src/extension.ts"
             ],
-            "@deltabox/toolchain/biome/*": [
-                "../biome/src/*"
+            "dbx-vscode-test-workspace/*": [
+                "../vscode/test-fixtures/workspace/src/*"
             ],
-            "@deltabox/toolchain/config/package.json": [
-                "../config/package.json"
+            "@deltabox/toolchain/vite": [
+                "../../src/vite.ts"
             ],
-            "@deltabox/toolchain/config/*": [
-                "../config/src/*"
+            "@deltabox/toolchain/tsdown/package.json": [
+                "../tsdown/package.json"
             ],
-            "@deltabox/toolchain/core/package.json": [
-                "../core/package.json"
+            "@deltabox/toolchain/tsdown/config/node": [
+                "../tsdown/src/config/node.ts"
             ],
-            "@deltabox/toolchain/core/*": [
-                "../core/src/*"
+            "@deltabox/toolchain/tsdown/cli": [
+                "../tsdown/src/cli/index.ts"
             ],
-            "@deltabox/toolchain/migrate/package.json": [
-                "../migrate/package.json"
+            "@deltabox/toolchain/tsdown/*": [
+                "../tsdown/src/*"
             ],
-            "@deltabox/toolchain/migrate/*": [
-                "../migrate/src/*"
+            "@deltabox/toolchain/tsdown": [
+                "../tsdown/src/index.ts"
             ],
-            "@deltabox/toolchain/project/package.json": [
-                "../project/package.json"
+            "@deltabox/toolchain/tsconfig/package.json": [
+                "../tsconfig/package.json"
             ],
-            "@deltabox/toolchain/project/*": [
-                "../project/src/*"
+            "@deltabox/toolchain/tsconfig/cli/generate": [
+                "../tsconfig/src/cli/generate/index.ts"
+            ],
+            "@deltabox/toolchain/tsconfig/cli": [
+                "../tsconfig/src/cli/index.ts"
+            ],
+            "@deltabox/toolchain/tsconfig/*": [
+                "../tsconfig/src/*"
+            ],
+            "@deltabox/toolchain/tsconfig": [
+                "../tsconfig/src/index.ts"
+            ],
+            "@deltabox/toolchain/template/package.json": [
+                "../template/package.json"
+            ],
+            "@deltabox/toolchain/template/cli": [
+                "../template/src/cli/index.ts"
+            ],
+            "@deltabox/toolchain/template/*": [
+                "../template/src/*"
+            ],
+            "@deltabox/toolchain/template": [
+                "../template/src/index.ts"
             ],
             "@deltabox/toolchain/shared/package.json": [
                 "../shared/package.json"
@@ -60,74 +81,98 @@
             "@deltabox/toolchain/shared/*": [
                 "../shared/src/*"
             ],
-            "@deltabox/toolchain/template/package.json": [
-                "../template/package.json"
+            "@deltabox/toolchain/shared": [
+                "../shared/src/index.ts"
             ],
-            "@deltabox/toolchain/template/*": [
-                "../template/src/*"
+            "@deltabox/toolchain/providers": [
+                "../../src/providers.ts"
             ],
-            "@deltabox/toolchain/tsconfig/package.json": [
-                "../tsconfig/package.json"
+            "@deltabox/toolchain/project/package.json": [
+                "../project/package.json"
             ],
-            "@deltabox/toolchain/tsconfig/*": [
-                "../tsconfig/src/*"
+            "@deltabox/toolchain/project/cli": [
+                "../project/src/cli/index.ts"
             ],
-            "@deltabox/toolchain/tsdown/package.json": [
-                "../tsdown/package.json"
-            ],
-            "@deltabox/toolchain/tsdown/*": [
-                "../tsdown/src/*"
-            ],
-            "toolchain-vscode/*": [
-                "../vscode/src/*"
-            ],
-            "dbx-vscode-test-workspace/*": [
-                "../vscode/test-fixtures/workspace/src/*"
-            ],
-            "@deltabox/toolchain/biome": [
-                "../biome/src/index.ts"
-            ],
-            "@deltabox/toolchain/config": [
-                "../config/src/index.ts"
-            ],
-            "@deltabox/toolchain/core": [
-                "../core/src/index.ts"
-            ],
-            "@deltabox/toolchain/migrate": [
-                "../migrate/src/index.ts"
+            "@deltabox/toolchain/project/*": [
+                "../project/src/*"
             ],
             "@deltabox/toolchain/project": [
                 "../project/src/index.ts"
             ],
-            "@deltabox/toolchain/shared": [
-                "../shared/src/index.ts"
+            "@deltabox/toolchain/package.json": [
+                "../../package.json"
             ],
-            "@deltabox/toolchain/template": [
-                "../template/src/index.ts"
+            "@deltabox/toolchain/migrate/package.json": [
+                "../migrate/package.json"
             ],
-            "@deltabox/toolchain/tsconfig": [
-                "../tsconfig/src/index.ts"
+            "@deltabox/toolchain/migrate/cli": [
+                "../migrate/src/cli/index.ts"
             ],
-            "@deltabox/toolchain/tsdown": [
-                "../tsdown/src/index.ts"
+            "@deltabox/toolchain/migrate/*": [
+                "../migrate/src/*"
+            ],
+            "@deltabox/toolchain/migrate": [
+                "../migrate/src/index.ts"
             ],
             "@deltabox/toolchain/mcp/package.json": [
                 "../mcp/package.json"
             ],
-            "@deltabox/toolchain/mcp": [
-                "../mcp/src/index.ts"
+            "@deltabox/toolchain/mcp/cli": [
+                "../mcp/src/cli/index.ts"
             ],
             "@deltabox/toolchain/mcp/*": [
                 "../mcp/src/*"
             ],
-            "vite-plugin-dbx/package.json": [
-                "../vite/package.json"
+            "@deltabox/toolchain/mcp": [
+                "../mcp/src/index.ts"
             ],
-            "vite-plugin-dbx": [
-                "../vite/src/index.ts"
+            "@deltabox/toolchain/globals": [
+                "../../src/globals.ts"
             ],
-            "vite-plugin-dbx/*": [
-                "../vite/src/*"
+            "@deltabox/toolchain/docs/*": [
+                "../../apps/docs/src/*"
+            ],
+            "@deltabox/toolchain/core/package.json": [
+                "../core/package.json"
+            ],
+            "@deltabox/toolchain/core/*": [
+                "../core/src/*"
+            ],
+            "@deltabox/toolchain/core": [
+                "../core/src/index.ts"
+            ],
+            "@deltabox/toolchain/config/package.json": [
+                "../config/package.json"
+            ],
+            "@deltabox/toolchain/config/generators": [
+                "../config/src/generators/index.ts"
+            ],
+            "@deltabox/toolchain/config/cli": [
+                "../config/src/cli/index.ts"
+            ],
+            "@deltabox/toolchain/config/*": [
+                "../config/src/*"
+            ],
+            "@deltabox/toolchain/config": [
+                "../config/src/index.ts"
+            ],
+            "@deltabox/toolchain/cli": [
+                "../../src/cli/index.ts"
+            ],
+            "@deltabox/toolchain/biome/package.json": [
+                "../biome/package.json"
+            ],
+            "@deltabox/toolchain/biome/*": [
+                "../biome/src/*"
+            ],
+            "@deltabox/toolchain/biome": [
+                "../biome/src/index.ts"
+            ],
+            "@deltabox/toolchain/*": [
+                "../../src/*"
+            ],
+            "@deltabox/toolchain": [
+                "../../src/index.ts"
             ]
         }
     }

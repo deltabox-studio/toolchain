@@ -105,7 +105,7 @@ export function generateTsconfig(options: {
                       cwd,
                       ...(overrides?.root ? { overrides: overrides.root } : {}),
                   })
-            : { alias: [], paths: {}, references: [], relativePaths: false };
+            : { alias: [], paths: {}, references: [], relativePaths: false, strict: true };
 
         const tsconfigRaw = readTsconfig(tsconfigPath) as TsConfigJson;
         const tsconfig = mergeOverride(tsconfigRaw, overrides?.default);

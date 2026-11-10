@@ -53,15 +53,16 @@ describe('resolveTsconfig', () => {
         expect(resolved.references).toEqual([
             { path: path.join(cwd, 'packages/core/tsconfig.json') },
         ]);
-        // Exact aliases sort before wildcards.
+        // Exact aliases sort before wildcards and are strict by default.
         expect(resolved.alias[0]).toEqual({
-            find: '@acme/core',
+            find: /^@acme\/core$/,
             replacement: core.replace(/\\/g, '/'),
         });
         expect(resolved.alias[1]).toEqual({
             find: /^@acme\/(.*)$/,
             replacement: path.join(cwd, 'packages/$1/src/index.ts').replace(/\\/g, '/'),
         });
+        expect(resolved.strict).toBe(true);
     });
 
     it('follows extends per field', () => {
@@ -137,6 +138,66 @@ describe('resolveTsconfig', () => {
             tsconfig: 'config/tsconfig.json',
         });
         expect(resolved.paths['@acme/*']).toEqual([path.join(root, 'config/src/*')]);
+    });
+
+    it('anchors exact aliases by default and escapes the pattern', () => {
+        const cwd = tmp();
+        write(path.join(cwd, 'tsconfig.json'), {
+            compilerOptions: {
+                paths: {
+                    '@acme/core': ['./packages/core/src/index.ts'],
+                    '@acme/core-utils': ['./packages/core-utils/src/index.ts'],
+                    '@acme/core.lib': ['./packages/core-lib/src/index.ts'],
+                },
+            },
+        });
+
+        const resolved = resolveTsconfig({ cwd });
+        const exact = resolved.alias.find(
+            alias => alias.find instanceof RegExp && alias.find.source === '^@acme\\/core$'
+        );
+        expect(exact).toBeDefined();
+        const pattern = exact?.find as RegExp;
+        expect(pattern.test('@acme/core')).toBe(true);
+        expect(pattern.test('@acme/core-utils')).toBe(false);
+        // The dot in a plain find must be escaped (not a wildcard).
+        expect(
+            resolved.alias.some(
+                alias => alias.find instanceof RegExp && alias.find.source.includes('core\\.lib')
+            )
+        ).toBe(true);
+
+        const loose = resolveTsconfig({ cwd, strict: false });
+        expect(loose.strict).toBe(false);
+        expect(loose.alias.some(alias => alias.find === '@acme/core')).toBe(true);
+        expect(loose.alias.some(alias => alias.find === '@acme/core.lib')).toBe(true);
+    });
+
+    it('sorts aliases and paths descending so the longest key comes first', () => {
+        const cwd = tmp();
+        write(path.join(cwd, 'tsconfig.json'), {
+            compilerOptions: {
+                paths: {
+                    '@acme/core': ['./packages/core/src/index.ts'],
+                    '@acme/*': ['./packages/*/src/index.ts'],
+                    '@acme/core-utils/deep': ['./packages/core-utils-deep/src/index.ts'],
+                    '@acme/core-utils': ['./packages/core-utils/src/index.ts'],
+                },
+            },
+        });
+
+        const resolved = resolveTsconfig({ cwd, strict: false });
+        expect(Object.keys(resolved.paths)).toEqual([
+            '@acme/core-utils/deep',
+            '@acme/core-utils',
+            '@acme/core',
+            '@acme/*',
+        ]);
+        expect(
+            resolved.alias.map(alias =>
+                typeof alias.find === 'string' ? alias.find : alias.find.source
+            )
+        ).toEqual(['@acme/core-utils/deep', '@acme/core-utils', '@acme/core', '^@acme\\/(.*)$']);
     });
 
     it('parses JSONC (comments + trailing commas)', () => {

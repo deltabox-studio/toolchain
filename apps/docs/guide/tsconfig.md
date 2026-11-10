@@ -116,6 +116,10 @@ only do it when that is what you want.
 | `aliases`     | `boolean`                            | `true`                     | Inject `compilerOptions.paths` from the workspaces config.          |
 | `refs`        | `boolean`                            | `false`                    | Wire project references between workspaces.                         |
 | `composite`   | `boolean`                            | `false`                    | Emit `composite: true` on the generated configs.                    |
+| `auto`        | `boolean \| object`                  | `false`                    | Auto-generate the workspaces paths/references from the graph.       |
+| `aliasAuto`   | `boolean \| object`                  | `auto`                     | Auto-generate aliases (`modes`, `prefix`, `devMode`, `dist`, ...).  |
+| `refsAuto`    | `boolean \| object`                  | `auto`                     | Auto-generate project references.                                   |
+| `autoSrcDir`  | `string`                             | `src`                      | Source dir used when resolving package entry points.                |
 | `glob`        | `string \| string[]`                 | `**/tsconfig.default.json` | Glob(s) for the workspace default tsconfig files to expand.         |
 | `exclude`     | `string \| string[]`                 | common ignored paths       | Glob(s) excluded from `glob`.                                       |
 | `gitignore`   | `boolean`                            | `true`                     | Respect `.gitignore` files (root + nested).                         |
@@ -148,6 +152,93 @@ When on, the generated configs spread the workspaces tsconfig's
 `compilerOptions` (including `composite: true`, `declaration`,
 `emitDeclarationOnly`, ...) and merge its `types`. Leave it off unless you build
 the graph with `tsc --build`.
+
+### `auto` / `aliasAuto`
+
+`auto` derives both the workspaces `paths` and `references` from the project
+graph. `aliasAuto` controls only the aliases and defaults to `auto`; `refsAuto`
+controls only the references. Every one is opt-in (`false` by default for
+`auto`) and preserves keys you wrote yourself: only entries a previous auto run
+managed are updated or removed.
+
+The alias object accepts:
+
+| Option                | Type                                                                                 | Default                   | Description                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------ | ------------------------- | --------------------------------------------------------------------------- |
+| `modes`               | `'auto' \| 'exports' \| 'project-structure' \| ('exports' \| 'project-structure')[]` | `auto`                    | How aliases are discovered.                                                 |
+| `prefix`              | `string` (eg. `@`)                                                                   | package name              | Base key for generated aliases (`@` → `@/<package>` and `@/<package>/*`).   |
+| `devMode`             | `boolean`                                                                            | `true`                    | Resolve `exports` to source files; `false` points at the distributed files. |
+| `dist`                | `string`                                                                             | tsconfig `outDir`, `dist` | Output directory used for the source/dist mapping.                          |
+| `rewriteAlias`        | `Record<string, string> \| Rule[]`                                                   | none                      | Rewrite generated alias keys (`$1`, `$2`, ... capture groups).              |
+| `include` / `exclude` | `string[]`                                                                           | none                      | Filter aliases by their generated keys.                                     |
+
+`modes` values:
+
+- **`auto`** — use `exports`/`types`/`main` when they resolve to usable source,
+  otherwise scan the project structure.
+- **`exports`** — only `package.json` `exports` (falling back to `types`/`main`
+  for the package root).
+- **`project-structure`** — scan the workspace source tree (`index.*` files and a
+  wildcard).
+- **an array** — combine both; an earlier mode wins when keys collide.
+
+#### Visual example: input → generated paths
+
+Given `packages/core/package.json`:
+
+```json
+{
+    "name": "@acme/core",
+    "exports": {
+        ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+        "./utils": { "types": "./dist/utils.d.ts", "import": "./dist/utils.js" }
+    }
+}
+```
+
+and `packages/core/tsconfig.default.json`:
+
+```json
+{ "compilerOptions": { "rootDir": "src", "outDir": "dist" } }
+```
+
+this config:
+
+```ts
+tsconfig: {
+    auto: { modes: 'exports', devMode: true },
+}
+```
+
+produces these entries in `tsconfig.workspaces.json` (then rebased into each
+workspace's generated `tsconfig.json`):
+
+```json
+{
+    "compilerOptions": {
+        "paths": {
+            "@acme/core": ["./packages/core/src/index.ts"],
+            "@acme/core/utils": ["./packages/core/src/utils.ts"],
+            "@acme/core/*": ["./packages/core/src/*"]
+        }
+    }
+}
+```
+
+With `devMode: false` the same exports resolve to the distributed files instead:
+
+```json
+{
+    "@acme/core": ["./packages/core/dist/index.js"],
+    "@acme/core/utils": ["./packages/core/dist/utils.js"],
+    "@acme/core/*": ["./packages/core/dist/*"]
+}
+```
+
+With `prefix: '@'` the keys become `@/core`, `@/core/utils` and `@/core/*`
+(the prefix replaces the package scope, not the package name). `rewriteAlias`
+runs against those final generated keys, so
+`{ "^@/core/utils$": "@/core/helpers" }` renames that one alias.
 
 ### `refsAuto`
 
@@ -440,11 +531,72 @@ dbx tsconfig --root packages/app  # root used for detection + relative tsconfig
 dbx tsconfig --no-extends         # only the selected file
 ```
 
-The output is machine-clean JSON (absolute paths). Exact `alias` keys are strings;
-wildcards are anchored regular expressions (serialized as `{ source, flags }` so
-JSON keeps the pattern), so `@acme/core` never captures `@acme/core-utils`.
-Exact keys sort before wildcards. Use `deserializeTsconfigAlias` to turn an alias
-back into a `RegExp`.
+The output is machine-clean JSON (absolute paths). Aliases are anchored
+regular expressions by default (`strict`, from exact keys to wildcards), so
+`@acme/core` never captures `@acme/core-utils`; they serialize as
+`{ source, flags }` so JSON keeps the pattern. With `strict: false`, exact keys
+stay plain strings (wildcards remain regexes). Use `deserializeTsconfigAlias` to
+turn an alias back into a `RegExp`. Aliases and `paths` keys are sorted
+descending, so the longest/most specific entry comes first.
+
+### Visual example: resolved aliases
+
+Input `tsconfig.json`:
+
+```json
+{
+    "compilerOptions": {
+        "paths": {
+            "@acme/core": ["./packages/core/src/index.ts"],
+            "@acme/core-utils": ["./packages/core-utils/src/index.ts"],
+            "@acme/core-utils/deep": ["./packages/core-utils-deep/src/index.ts"],
+            "@acme/core.lib": ["./packages/core-lib/src/index.ts"],
+            "@acme/*": ["./packages/*/src/index.ts"]
+        }
+    }
+}
+```
+
+`dbx tsconfig --json` output (shortened replacements):
+
+```json
+{
+    "alias": [
+        {
+            "find": { "source": "^@acme\\/core\\.lib$", "flags": "" },
+            "replacement": ".../core-lib/src/index.ts"
+        },
+        {
+            "find": { "source": "^@acme\\/core-utils\\/deep$", "flags": "" },
+            "replacement": ".../core-utils-deep/src/index.ts"
+        },
+        {
+            "find": { "source": "^@acme\\/core-utils$", "flags": "" },
+            "replacement": ".../core-utils/src/index.ts"
+        },
+        {
+            "find": { "source": "^@acme\\/core$", "flags": "" },
+            "replacement": ".../core/src/index.ts"
+        },
+        {
+            "find": { "source": "^@acme\\/(.*)$", "flags": "" },
+            "replacement": ".../packages/$1/src/index.ts"
+        }
+    ],
+    "paths": {
+        "@acme/core.lib": [".../core-lib/src/index.ts"],
+        "@acme/core-utils/deep": [".../core-utils-deep/src/index.ts"],
+        "@acme/core-utils": [".../core-utils/src/index.ts"],
+        "@acme/core": [".../core/src/index.ts"],
+        "@acme/*": [".../packages/*/src/index.ts"]
+    },
+    "references": []
+}
+```
+
+Exact keys are escaped (`core.lib` → `core\\.lib`) and anchored, and the
+prefix-extended keys sort before their shorter prefix. The same order applies to
+`paths`, so consumers that iterate it see the most specific key first.
 
 ## Programmatic API
 
@@ -486,11 +638,12 @@ import {
 | `applyOverride` / `mergeOverride` / `revertOverride`                   | The deep-merge + snapshot-aware revert helpers.                   |
 | `getSnapshot` / `setSnapshot` / `deleteSnapshot`                       | Read/write the manifest snapshot tree by relative path.           |
 
-`resolveTsconfig` accepts `{ tsconfig, cwd, root, relativePaths, extends, overrides }`:
+`resolveTsconfig` accepts `{ tsconfig, cwd, root, relativePaths, strict, extends, overrides }`:
 `tsconfig` is resolved from `root` (default `cwd`), `extends` defaults to `true`, and
 `relativePaths` (default `false`) returns paths relative to the config that defines
-them. `paths` are resolved against the defining config's `baseUrl` (or its
-directory), matching TypeScript.
+them. `strict` (default `true`) anchors exact aliases as `^...$` regexes; `false`
+keeps exact aliases as plain strings. `paths` are resolved against the defining
+config's `baseUrl` (or its directory), matching TypeScript.
 
 `generateTsconfigs` returns one result per workspace (with `newTsconfig`,
 `originalConfig`, ...); pass `write: false` for a dry run. The task-level

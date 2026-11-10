@@ -286,6 +286,136 @@ describe('tsconfig auto alias rewriting', () => {
     });
 });
 
+describe('tsconfig alias discovery modes', () => {
+    function withExports(cwd: string, name = 'foo'): void {
+        const dir = path.join(cwd, 'packages', name);
+        writeJson(path.join(dir, 'package.json'), {
+            name: `@acme/${name}`,
+            exports: {
+                '.': {
+                    types: './dist/index.d.ts',
+                    import: './dist/index.js',
+                },
+                './utils': {
+                    types: './dist/utils.d.ts',
+                    import: './dist/utils.js',
+                },
+            },
+        });
+        writeJson(path.join(dir, 'tsconfig.default.json'), {
+            compilerOptions: { rootDir: 'src', outDir: 'dist' },
+        });
+        write(path.join(dir, 'src/index.ts'), 'export {};\n');
+        write(path.join(dir, 'src/utils.ts'), 'export {};\n');
+        write(path.join(dir, 'src/components/index.ts'), 'export {};\n');
+    }
+
+    it('resolves package exports to source files by default', async () => {
+        const cwd = makeRepo();
+        withExports(cwd);
+        const result = await run(cwd, { auto: { modes: 'exports' } });
+        const paths = pathsOf(result);
+
+        expect(paths['@acme/foo']).toEqual(['./packages/foo/src/index.ts']);
+        expect(paths['@acme/foo/utils']).toEqual(['./packages/foo/src/utils.ts']);
+        expect(paths['@acme/foo/*']).toEqual(['./packages/foo/src/*']);
+        expect(JSON.stringify(paths)).not.toContain('dist');
+    });
+
+    it('can resolve exports to distributed files when devMode is false', async () => {
+        const cwd = makeRepo();
+        withExports(cwd);
+        const result = await run(cwd, { auto: { modes: 'exports', devMode: false } });
+        const paths = pathsOf(result);
+
+        expect(paths['@acme/foo']).toEqual(['./packages/foo/dist/index.js']);
+        expect(paths['@acme/foo/utils']).toEqual(['./packages/foo/dist/utils.js']);
+        expect(paths['@acme/foo/*']).toEqual(['./packages/foo/dist/*']);
+    });
+
+    it('uses a custom dist directory for the source/dist mapping', async () => {
+        const cwd = makeRepo();
+        const dir = path.join(cwd, 'packages/foo');
+        writeJson(path.join(dir, 'package.json'), {
+            name: '@acme/foo',
+            exports: { './utils': './build/utils.js' },
+        });
+        writeJson(path.join(dir, 'tsconfig.default.json'), {
+            compilerOptions: { rootDir: 'src', outDir: 'build' },
+        });
+        write(path.join(dir, 'src/utils.ts'), 'export {};\n');
+
+        const result = await run(cwd, { auto: { modes: 'exports' } });
+        expect(pathsOf(result)['@acme/foo/utils']).toEqual(['./packages/foo/src/utils.ts']);
+    });
+
+    it('can scan only the project structure', async () => {
+        const cwd = makeRepo();
+        withExports(cwd);
+        const result = await run(cwd, { auto: { modes: 'project-structure' } });
+        const paths = pathsOf(result);
+
+        expect(paths['@acme/foo']).toEqual(['./packages/foo/src/index.ts']);
+        expect(paths['@acme/foo/components']).toEqual(['./packages/foo/src/components/index.ts']);
+        expect(paths['@acme/foo/utils']).toBeUndefined();
+    });
+
+    it('maps project-structure aliases to dist when devMode is false', async () => {
+        const cwd = makeRepo();
+        withExports(cwd);
+        const result = await run(cwd, {
+            auto: { modes: 'project-structure', devMode: false },
+        });
+        const paths = pathsOf(result);
+
+        expect(paths['@acme/foo']).toEqual(['./packages/foo/dist/index.js']);
+        expect(paths['@acme/foo/components']).toEqual(['./packages/foo/dist/components/index.js']);
+        expect(paths['@acme/foo/*']).toEqual(['./packages/foo/dist/*']);
+    });
+
+    it('combines exports and project-structure without overriding exports', async () => {
+        const cwd = makeRepo();
+        withExports(cwd);
+        const result = await run(cwd, {
+            auto: { modes: ['exports', 'project-structure'] },
+        });
+        const paths = pathsOf(result);
+
+        expect(paths['@acme/foo']).toEqual(['./packages/foo/src/index.ts']);
+        expect(paths['@acme/foo/utils']).toEqual(['./packages/foo/src/utils.ts']);
+        expect(paths['@acme/foo/components']).toEqual(['./packages/foo/src/components/index.ts']);
+    });
+
+    it('uses a custom prefix for generated alias keys', async () => {
+        const cwd = makeRepo();
+        withExports(cwd);
+        const result = await run(cwd, { auto: { modes: 'exports', prefix: '@' } });
+        const paths = pathsOf(result);
+
+        expect(paths['@/foo']).toEqual(['./packages/foo/src/index.ts']);
+        expect(paths['@/foo/utils']).toEqual(['./packages/foo/src/utils.ts']);
+        expect(paths['@/foo/*']).toEqual(['./packages/foo/src/*']);
+        expect(paths['@acme/foo']).toBeUndefined();
+    });
+
+    it('rewrites the generated keys (including a custom prefix)', async () => {
+        const cwd = makeRepo();
+        withExports(cwd);
+        const result = await run(cwd, {
+            auto: {
+                modes: 'exports',
+                prefix: '@',
+                rewriteAlias: { '^@/foo/utils$': '@/helpers' },
+            },
+        });
+        const paths = pathsOf(result);
+
+        expect(paths['@/helpers']).toEqual(['./packages/foo/src/utils.ts']);
+        expect(paths['@/foo/utils']).toBeUndefined();
+        expect(result.autoState.paths).toContain('@/helpers');
+    });
+});
+
 describe('tsconfig section gating', () => {
     it('skips generation when the section is disabled or undefined', async () => {
         const cwd = makeRepo();
