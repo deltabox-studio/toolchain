@@ -1588,4 +1588,62 @@ describe('emulate: quality-of-life templates', () => {
         },
         TIMEOUT * 3
     );
+
+    it(
+        'scaffolds Docker artifacts with --containerize',
+        async () => {
+            const ws = scratch('containerize');
+
+            const app = path.join(ws, 'api');
+            const appResult = await dbx(ws, [
+                'create',
+                '--template',
+                'express',
+                '--name',
+                'api',
+                '--var',
+                'packageManager=yarn',
+                '--out',
+                app,
+                '--containerize',
+                '--json',
+            ]);
+            expect(appResult.code, appResult.stderr).toBe(0);
+            expect(fs.existsSync(path.join(app, 'Dockerfile'))).toBe(true);
+            expect(fs.existsSync(path.join(app, '.dockerignore'))).toBe(true);
+            const apiDockerfile = fs.readFileSync(path.join(app, 'Dockerfile'), 'utf-8');
+            expect(apiDockerfile).toContain('ghcr.io/voidzero-dev/vite-plus');
+            expect(apiDockerfile).toContain('USER nobody');
+            expect(apiDockerfile).toContain('CMD ["node", "dist/index.js"]');
+
+            const docs = path.join(ws, 'docs');
+            const docsResult = await dbx(ws, [
+                'create',
+                '--template',
+                'vitepress',
+                '--name',
+                'docs',
+                '--out',
+                docs,
+                '--containerize',
+            ]);
+            expect(docsResult.code, docsResult.stderr).toBe(0);
+            const docsDockerfile = fs.readFileSync(path.join(docs, 'Dockerfile'), 'utf-8');
+            expect(docsDockerfile).toContain('nginx-unprivileged');
+            expect(docsDockerfile).toContain('/app/docs/.vitepress/dist');
+
+            const projectDir = path.join(ws, 'proj');
+            const projectResult = await dbx(ws, [
+                'project:init',
+                '--name',
+                'proj',
+                '--out',
+                projectDir,
+                '--containerize',
+            ]);
+            expect(projectResult.code, projectResult.stderr).toBe(0);
+            expect(fs.existsSync(path.join(projectDir, 'Dockerfile'))).toBe(true);
+        },
+        TIMEOUT * 2
+    );
 });
