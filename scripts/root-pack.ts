@@ -43,6 +43,7 @@ export const rootPackConfig: PackUserConfig = {
         project: 'src/project.ts',
         providers: 'src/providers.ts',
         template: 'src/template.ts',
+        docker: 'src/docker.ts',
         vite: 'src/vite.ts',
     },
     alias: workspaceSourceAliases(),

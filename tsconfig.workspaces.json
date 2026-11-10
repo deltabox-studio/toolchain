@@ -191,6 +191,15 @@
             ],
             "toolchain-vscode": [
                 "./packages/vscode/src/extension.ts"
+            ],
+            "@deltabox/toolchain/docker": [
+                "./packages/docker/src/index.ts"
+            ],
+            "@deltabox/toolchain/docker/package.json": [
+                "./packages/docker/package.json"
+            ],
+            "@deltabox/toolchain/docker/*": [
+                "./packages/docker/src/*"
             ]
         }
     },

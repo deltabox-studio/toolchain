@@ -139,6 +139,15 @@
             "@deltabox/toolchain/docs/*": [
                 "./apps/docs/src/*"
             ],
+            "@deltabox/toolchain/docker/package.json": [
+                "./packages/docker/package.json"
+            ],
+            "@deltabox/toolchain/docker/*": [
+                "./packages/docker/src/*"
+            ],
+            "@deltabox/toolchain/docker": [
+                "./packages/docker/src/index.ts"
+            ],
             "@deltabox/toolchain/core/package.json": [
                 "./packages/core/package.json"
             ],

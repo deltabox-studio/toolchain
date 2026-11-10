@@ -39,6 +39,7 @@ export default {
                 'tsdown',
                 'biome',
                 'vite',
+                'docker',
                 'template',
                 'migrate',
                 'changelog',

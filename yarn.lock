@@ -604,6 +604,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@deltabox/toolchain-docker@workspace:*, @deltabox/toolchain-docker@workspace:packages/docker":
+  version: 0.0.0-use.local
+  resolution: "@deltabox/toolchain-docker@workspace:packages/docker"
+  dependencies:
+    "@deltabox/toolchain-shared": "workspace:*"
+    "@deltabox/toolchain-tsdown": "workspace:*"
+    "@types/node": "catalog:"
+    typescript: "catalog:"
+    vite-plus: "catalog:"
+  languageName: unknown
+  linkType: soft
+
 "@deltabox/toolchain-docs@workspace:apps/docs":
   version: 0.0.0-use.local
   resolution: "@deltabox/toolchain-docs@workspace:apps/docs"
@@ -650,6 +662,7 @@ __metadata:
   dependencies:
     "@clack/prompts": "catalog:"
     "@deltabox/toolchain-core": "workspace:*"
+    "@deltabox/toolchain-docker": "workspace:*"
     "@deltabox/toolchain-migrate": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
     "@deltabox/toolchain-tsconfig": "workspace:*"
@@ -684,6 +697,7 @@ __metadata:
   dependencies:
     "@clack/prompts": "catalog:"
     "@deltabox/toolchain-core": "workspace:*"
+    "@deltabox/toolchain-docker": "workspace:*"
     "@deltabox/toolchain-project": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
     "@deltabox/toolchain-tsdown": "workspace:*"
@@ -769,6 +783,7 @@ __metadata:
     "@deltabox/toolchain-changelog": "workspace:*"
     "@deltabox/toolchain-config": "workspace:*"
     "@deltabox/toolchain-core": "workspace:*"
+    "@deltabox/toolchain-docker": "workspace:*"
     "@deltabox/toolchain-mcp": "workspace:*"
     "@deltabox/toolchain-migrate": "workspace:*"
     "@deltabox/toolchain-project": "workspace:*"

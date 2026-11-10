@@ -152,6 +152,7 @@ export default defineConfig({
                                 'tsdown',
                                 'biome',
                                 'vite',
+                                'docker',
                                 'template',
                                 'migrate',
                                 'changelog',
