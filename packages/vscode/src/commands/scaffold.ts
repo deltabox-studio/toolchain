@@ -284,6 +284,17 @@ export function createScaffoldCommands(deps: CommandDeps): ScaffoldCommands {
         }
         if (actionArgs.length > 0) baseArgs.push('--action', ...actionArgs);
 
+        // Opt-in Docker artifacts. The setting supplies the default order.
+        const containerizeDefault = vscode.workspace
+            .getConfiguration('deltabox.toolchain')
+            .get<boolean>('containerizeTemplates', false);
+        const containerize = await vscode.window.showQuickPick(
+            containerizeDefault ? ['Yes', 'No'] : ['No', 'Yes'],
+            { placeHolder: 'Containerize with Docker?' }
+        );
+        if (containerize === undefined) return;
+        if (containerize === 'Yes') baseArgs.push('--containerize');
+
         // Run every template through the same pipeline (an argv array, no shell),
         // so a value like an npm `@scope` is never mangled by the terminal's shell
         // — PowerShell reads a bare `@name` as splatting and drops it. Vite+
@@ -455,6 +466,15 @@ export function createScaffoldCommands(deps: CommandDeps): ScaffoldCommands {
         if (includeConfig.value === 'no') args.push('--no-config');
         if ((kind as { example?: boolean }).example) args.push('--example');
         args.push('--package-manager', packageManager);
+        // Only the single-project flow supports containerization.
+        if (
+            kind.flow === 'project' &&
+            vscode.workspace
+                .getConfiguration('deltabox.toolchain')
+                .get<boolean>('containerizeTemplates', false)
+        ) {
+            args.push('--containerize');
+        }
         args.push('--out', target);
 
         const code = await deps.runCli(target, args);

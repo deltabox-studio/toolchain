@@ -604,6 +604,11 @@
                     "default": false,
                     "description": "Manage projects without their own dbx.config.* by inheriting the nearest ancestor config. Disabled by default so configless projects are left untouched."
                 },
+                "deltabox.toolchain.containerizeTemplates": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Generate Docker artifacts when scaffolding a new project (also prompted per create). Disabled by default."
+                },
                 "deltabox.toolchain.enableFormatImportGroupDefaults": {
                     "type": "boolean",
                     "default": true,
