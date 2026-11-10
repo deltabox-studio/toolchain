@@ -2420,112 +2420,6 @@ Globs of managed files to leave unformatted (per-file opt-out).
 
 Enable/disable this section (default: enabled when defined).
 
-## `docker`
-
-Dockerfile / compose generation for the project.
-
-### `image`
-
-* **Type**: `string`
-
-Container image name (default: the project name).
-
-### `tag`
-
-* **Type**: `string`
-
-Container image tag (default `latest`).
-
-### `port`
-
-* **Type**: `number`
-
-Container port to expose (default 3000, or 80 for static sites).
-
-### `runtime`
-
-* **Type**: `'auto' | 'node' | 'static' | 'bun'`
-
-How the container runs: a Node.js server, a static/SSG site, or a Bun server (default `auto`, detected from `package.json`).
-
-### `entry`
-
-* **Type**: `string`
-
-Built entry file, relative to the project root (default `dist/index.js`).
-
-### `output`
-
-* **Type**: `string`
-
-Build output directory (default `dist`, or the VitePress output).
-
-### `nodeVersion`
-
-* **Type**: `string`
-
-Node.js version for non-Vite+ images.
-
-### `baseImage`
-
-* **Type**: `string`
-
-Override the build-stage base image.
-
-### `runtimeImage`
-
-* **Type**: `string`
-
-Override the runtime base image.
-
-### `user`
-
-* **Type**: `string`
-
-Runtime user to run as (default `node`, `bun` or `nobody`).
-
-### `managed`
-
-* **Type**: `boolean`
-
-Manage the Dockerfile (default true). Set false to keep a hand-written Dockerfile while dbx still generates `.dockerignore`/compose.
-
-### `compose`
-
-* **Type**: `boolean`
-
-Also write a `docker-compose.yaml` (default false).
-
-### `healthcheck`
-
-* **Type**: `boolean`
-
-Add a `HEALTHCHECK` to the runtime image (default true).
-
-### `healthcheckPath`
-
-* **Type**: `string`
-
-HTTP path the healthcheck requests (default `/`).
-
-### `dockerfile`
-
-* **Type**: `string`
-
-Dockerfile name (default `Dockerfile`).
-
-### `dockerignore`
-
-* **Type**: `boolean`
-
-Write a `.dockerignore` alongside the Dockerfile (default true).
-
-### `enabled`
-
-* **Type**: `boolean`
-
-Enable/disable this section (default: enabled when defined).
-
 ## `logger`
 
 Logging level, colours and prefix for toolchain output.
@@ -2782,7 +2676,6 @@ need to add it by hand when the repo has no `.gitignore` yet.
 | `vite.config.ts` (Vite+ consumers)                                  | `vite`                        |
 | Template sources / scaffolding                                      | `templates`                   |
 | Package catalogs (`.yarnrc.yml` / `pnpm-workspace.yaml`)            | [`catalogs`](/guide/catalogs) |
-| `Dockerfile` / `.dockerignore` / compose                            | [`docker`](/guide/docker)     |
 | Watch behaviour                                                     | `watch`                       |
 
 Every section is **opt-in by presence**: define it to enable it, omit it to leave
@@ -3136,8 +3029,9 @@ url: https://toolchain.deltabox.studio/guide/docker.md
 # Docker
 
 `@deltabox/toolchain-docker` generates a deployable, multi-stage `Dockerfile`, a
-`.dockerignore` and an optional `docker-compose.yaml`. Containerization is
-**opt-in**: nothing is written unless you ask for it.
+`.dockerignore` and a `docker-compose.yaml`. Containerization is **opt-in** and
+happens only when you scaffold: the files are a starting point, not
+`dbx sync`-managed artifacts, so you can edit them freely afterwards.
 
 ```sh
 # Add Docker artifacts to a new project
@@ -3152,20 +3046,29 @@ setting `deltabox.toolchain.containerizeTemplates` supplies the default and is
 used by the curated **Scaffold** flow. Programmatically, pass
 `containerize: true` to `scaffoldTemplate()`.
 
-## Managed Dockerfile
+Every scaffold gets `Dockerfile`, `.dockerignore` and `docker-compose.yaml` for
+local development (`docker compose up --build`).
 
-Enable the `docker` section to let `dbx sync` manage the artifacts from
-`dbx.config.*` (or the `dbx()` plugin):
+## Programmatic API
+
+`dockerFiles()` renders the artifacts (without writing), and
+`writeDockerFiles()` writes them to a project:
 
 ```ts
-toolchain: {
-    docker: {
-        image: 'acme/api', // default: the project name
-        tag: 'latest',
-        port: 3000, // default 3000, or 8080 for static sites
-        compose: true, // also write docker-compose.yaml
-    },
-}
+import { dockerFiles, writeDockerFiles } from '@deltabox/toolchain/docker';
+
+const files = dockerFiles({
+    cwd: process.cwd(),
+    image: 'acme/api',
+    tag: 'latest',
+    port: 3000,
+});
+
+const written = writeDockerFiles({
+    cwd: process.cwd(),
+    compose: true,
+    force: true, // overwrite existing artifacts
+});
 ```
 
 | Option            | Default                     | What it does                                   |
@@ -3180,27 +3083,15 @@ toolchain: {
 | `baseImage`       | Vite+/Bun/Node image        | Override the build-stage image.                |
 | `runtimeImage`    | Debian/Bun/nginx/Node image | Override the runtime image.                    |
 | `user`            | `nobody` / `node` / `bun`   | Runtime user.                                  |
-| `managed`         | `true`                      | Manage the Dockerfile.                         |
-| `compose`         | `false`                     | Write `docker-compose.yaml`.                   |
+| `compose`         | `false`                     | Also render `docker-compose.yaml`.             |
 | `healthcheck`     | `true`                      | Add an HTTP `HEALTHCHECK`.                     |
 | `healthcheckPath` | `/`                         | Path the healthcheck requests.                 |
 | `dockerfile`      | `Dockerfile`                | Dockerfile file name.                          |
-| `dockerignore`    | `true`                      | Write `.dockerignore`.                         |
+| `dockerignore`    | `true`                      | Render `.dockerignore`.                        |
 
-The task applies to single projects and monorepo workspaces (not a monorepo
-root) and marks the files as unformatted managed files, so `dbx sync --check`
-compares the generated content directly.
-
-### User-owned Dockerfiles
-
-A hand-written `Dockerfile` is left untouched: `dbx sync` skips any existing
-Docker artifact that has no generated header, warns, and still writes the
-missing ones. Set `docker.managed: false` to keep the Dockerfile permanently
-user-owned while `.dockerignore`/compose are still generated.
-
-`dbx create --containerize` and `dbx project:init --containerize` always add a
-`docker-compose.yaml` for local development (`docker compose up --build`). With
-`dbx sync` the compose file is opt-in with `docker.compose: true`.
+`writeDockerFiles()` does not overwrite existing files unless `force: true`
+(scaffolding passes it for a fresh project). There is no `docker` config section
+and no sync task: the generated files are yours to maintain.
 
 ## Images
 
@@ -3218,7 +3109,7 @@ Server images run as a non-root user and get a `HEALTHCHECK` that requests
 
 ## Detection
 
-With `runtime: 'auto'` the task reads `package.json`:
+With `runtime: 'auto'` the generator reads `package.json`:
 
 * a `vitepress build` script is a **static** site
   (`docs/.vitepress/dist`);

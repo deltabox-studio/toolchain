@@ -1,8 +1,9 @@
 # Docker
 
 `@deltabox/toolchain-docker` generates a deployable, multi-stage `Dockerfile`, a
-`.dockerignore` and an optional `docker-compose.yaml`. Containerization is
-**opt-in**: nothing is written unless you ask for it.
+`.dockerignore` and a `docker-compose.yaml`. Containerization is **opt-in** and
+happens only when you scaffold: the files are a starting point, not
+`dbx sync`-managed artifacts, so you can edit them freely afterwards.
 
 ```sh
 # Add Docker artifacts to a new project
@@ -17,20 +18,29 @@ setting `deltabox.toolchain.containerizeTemplates` supplies the default and is
 used by the curated **Scaffold** flow. Programmatically, pass
 `containerize: true` to `scaffoldTemplate()`.
 
-## Managed Dockerfile
+Every scaffold gets `Dockerfile`, `.dockerignore` and `docker-compose.yaml` for
+local development (`docker compose up --build`).
 
-Enable the `docker` section to let `dbx sync` manage the artifacts from
-`dbx.config.*` (or the `dbx()` plugin):
+## Programmatic API
+
+`dockerFiles()` renders the artifacts (without writing), and
+`writeDockerFiles()` writes them to a project:
 
 ```ts
-toolchain: {
-    docker: {
-        image: 'acme/api', // default: the project name
-        tag: 'latest',
-        port: 3000, // default 3000, or 8080 for static sites
-        compose: true, // also write docker-compose.yaml
-    },
-}
+import { dockerFiles, writeDockerFiles } from '@deltabox/toolchain/docker';
+
+const files = dockerFiles({
+    cwd: process.cwd(),
+    image: 'acme/api',
+    tag: 'latest',
+    port: 3000,
+});
+
+const written = writeDockerFiles({
+    cwd: process.cwd(),
+    compose: true,
+    force: true, // overwrite existing artifacts
+});
 ```
 
 | Option            | Default                     | What it does                                   |
@@ -45,27 +55,15 @@ toolchain: {
 | `baseImage`       | Vite+/Bun/Node image        | Override the build-stage image.                |
 | `runtimeImage`    | Debian/Bun/nginx/Node image | Override the runtime image.                    |
 | `user`            | `nobody` / `node` / `bun`   | Runtime user.                                  |
-| `managed`         | `true`                      | Manage the Dockerfile.                         |
-| `compose`         | `false`                     | Write `docker-compose.yaml`.                   |
+| `compose`         | `false`                     | Also render `docker-compose.yaml`.             |
 | `healthcheck`     | `true`                      | Add an HTTP `HEALTHCHECK`.                     |
 | `healthcheckPath` | `/`                         | Path the healthcheck requests.                 |
 | `dockerfile`      | `Dockerfile`                | Dockerfile file name.                          |
-| `dockerignore`    | `true`                      | Write `.dockerignore`.                         |
+| `dockerignore`    | `true`                      | Render `.dockerignore`.                        |
 
-The task applies to single projects and monorepo workspaces (not a monorepo
-root) and marks the files as unformatted managed files, so `dbx sync --check`
-compares the generated content directly.
-
-### User-owned Dockerfiles
-
-A hand-written `Dockerfile` is left untouched: `dbx sync` skips any existing
-Docker artifact that has no generated header, warns, and still writes the
-missing ones. Set `docker.managed: false` to keep the Dockerfile permanently
-user-owned while `.dockerignore`/compose are still generated.
-
-`dbx create --containerize` and `dbx project:init --containerize` always add a
-`docker-compose.yaml` for local development (`docker compose up --build`). With
-`dbx sync` the compose file is opt-in with `docker.compose: true`.
+`writeDockerFiles()` does not overwrite existing files unless `force: true`
+(scaffolding passes it for a fresh project). There is no `docker` config section
+and no sync task: the generated files are yours to maintain.
 
 ## Images
 
@@ -83,7 +81,7 @@ Server images run as a non-root user and get a `HEALTHCHECK` that requests
 
 ## Detection
 
-With `runtime: 'auto'` the task reads `package.json`:
+With `runtime: 'auto'` the generator reads `package.json`:
 
 - a `vitepress build` script is a **static** site
   (`docs/.vitepress/dist`);
