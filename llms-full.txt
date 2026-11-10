@@ -4492,9 +4492,9 @@ to that manager's default version unless you also set `packageManagerVersion`
 
 ## Vite+ projects
 
-For a Vite/Vite+ project the generated GitHub workflows install `vp` with the
-[`voidzero-dev/setup-vp`](https://viteplus.dev/guide/ci) action instead of the
-`setup-node` + Corepack + package-manager install steps. The action also sets up
+For a Vite/Vite+ project the generated workflows install `vp` with the
+[`voidzero-dev/setup-vp`](https://viteplus.dev/guide/ci) integration instead of
+the Node/Corepack/package-manager install steps. The GitHub Action also sets up
 the project's Node.js version and the package manager, and runs `vp install`.
 
 A project is detected as Vite/Vite+ when any of these is true:
@@ -4518,8 +4518,32 @@ toolchain: {
 }
 ```
 
-GitLab and Azure pipelines keep their Node-based setup; `setup-vp` is currently
-generated for GitHub Actions only.
+The other vendors use their own `setup-vp` integration when `setup: true` is set
+on a complete pipeline:
+
+* **GitLab** adds the reusable remote template to `include` (`setup-ref` pinned
+  to the same version) and adds `extends: .setup-vp` to every job. The template
+  does not install Node.js, so the pipeline still gets a `node:<nodeVersion>`
+  image.
+* **Azure** adds the `setupVp` repository resource (`ref` pinned to the version)
+  and the `azure/setup-vp.yml@setupVp` template step with
+  `setupRef`/`nodeVersion`/`cache`/`runInstall`. A job that already defines a
+  checkout or the template step is left alone.
+
+```yaml [.gitlab-ci.yml]
+include:
+    - remote: https://raw.githubusercontent.com/voidzero-dev/setup-vp/v1.21.2/gitlab/setup-vp.yml
+      inputs:
+          setup-ref: v1.21.2
+image: node:22
+test:
+    extends: .setup-vp
+    stage: test
+    script: [yarn test]
+```
+
+Set `tokens.vitePlus: false` on a vendor workflow to keep its Node/Corepack
+setup instead.
 
 ## Raw YAML
 
