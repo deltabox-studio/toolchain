@@ -409,6 +409,100 @@ describe('workflow config', () => {
         expect(files['.gitlab-ci.yml']).toContain('yarn install --immutable');
     });
 
+    it('injects the setup-vp GitLab template for Vite+ projects', () => {
+        const files = renderWorkflows(
+            { vitePlus: true },
+            {
+                ci: {
+                    provider: 'gitlab',
+                    setup: true,
+                    workflow: {
+                        stages: ['test'],
+                        test: { stage: 'test', script: ['yarn test'] },
+                    },
+                },
+            }
+        );
+        const yml = files['.gitlab-ci.yml']!;
+        expect(yml).toContain(
+            'remote: https://raw.githubusercontent.com/voidzero-dev/setup-vp/v1.21.2/gitlab/setup-vp.yml'
+        );
+        expect(yml).toContain('setup-ref: v1.21.2');
+        expect(yml).toContain('image: node:22');
+        expect(yml).toContain('extends: .setup-vp');
+        expect(yml).not.toContain('corepack');
+        expect(yml).not.toContain('before_script');
+    });
+
+    it('injects the setup-vp Azure template for Vite+ projects', () => {
+        const files = renderWorkflows(
+            { vitePlus: true },
+            {
+                ci: {
+                    provider: 'azure',
+                    setup: true,
+                    workflow: {
+                        trigger: ['main'],
+                        pool: { vmImage: 'ubuntu-latest' },
+                        steps: [{ script: 'yarn build' }],
+                    },
+                },
+            }
+        );
+        const yml = files['azure-pipelines.yml']!;
+        expect(yml).toContain('repository: setupVp');
+        expect(yml).toContain('ref: refs/tags/v1.21.2');
+        expect(yml).toContain('template: azure/setup-vp.yml@setupVp');
+        expect(yml).toContain('setupRef: v1.21.2');
+        expect(yml).toContain('nodeVersion: 22.x');
+        expect(yml).toContain('runInstall: true');
+        expect(yml).toContain('- checkout: self');
+        expect(yml).not.toContain('UseNode@1');
+        expect(yml).not.toContain('corepack');
+    });
+
+    it('injects setup-vp into Azure job arrays', () => {
+        const files = renderWorkflows(
+            { vitePlus: true },
+            {
+                ci: {
+                    provider: 'azure',
+                    setup: true,
+                    workflow: {
+                        jobs: [{ job: 'test', steps: [{ script: 'yarn test' }] }],
+                    },
+                },
+            }
+        );
+        const yml = files['azure-pipelines.yml']!;
+        expect(yml).toContain('jobs:');
+        expect(yml).toContain('- checkout: self');
+        expect(yml).toContain('template: azure/setup-vp.yml@setupVp');
+        expect(yml).toContain('script: yarn test');
+    });
+
+    it('does not duplicate an existing Azure checkout or setup-vp step', () => {
+        const files = renderWorkflows(
+            { vitePlus: true },
+            {
+                ci: {
+                    provider: 'azure',
+                    setup: true,
+                    workflow: {
+                        steps: [
+                            { checkout: 'self' },
+                            { template: 'azure/setup-vp.yml@setupVp', parameters: {} },
+                            { script: 'yarn build' },
+                        ],
+                    },
+                },
+            }
+        );
+        const yml = files['azure-pipelines.yml']!;
+        expect((yml.match(/checkout: self/g) ?? []).length).toBe(1);
+        expect((yml.match(/setup-vp\.yml@setupVp/g) ?? []).length).toBe(1);
+    });
+
     it('injects the Azure setup into a vendor pipeline when asked', () => {
         const files = renderWorkflows(
             {},
