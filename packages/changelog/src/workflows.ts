@@ -46,6 +46,13 @@ export interface Workflow {
     [key: string & {}]: unknown;
 }
 
+/**
+ * The exact `voidzero-dev/setup-vp` release used for Vite+ projects. `setup-vp`
+ * does not publish a moving tag, so a workflow must pin an exact version (or a
+ * commit SHA); consumers can override it with the `setupVpVersion` token.
+ */
+export const DEFAULT_SETUP_VP_VERSION = 'v1.21.2';
+
 /** The default replacement values for the workflow templates. */
 export const DEFAULT_WORKFLOW_TOKENS = {
     nodeVersion: '22',
@@ -56,6 +63,10 @@ export const DEFAULT_WORKFLOW_TOKENS = {
     devBranch: 'main',
     tooling: 'dbx',
     commitlintConfig: 'commitlint.config.mjs',
+    setupVpVersion: DEFAULT_SETUP_VP_VERSION,
+    // Whether the project is a Vite/Vite+ project; the changelog sync task sets
+    // this from the project files (and a consumer can override it per workflow).
+    vitePlus: false,
 } as const;
 
 /** Default file name per workflow id. */
@@ -204,12 +215,27 @@ function cli(tokens: Replacements, bin?: string): string {
 function setupSteps(tokens: Replacements): WorkflowStep[] {
     const packageManager = String(tokens.packageManager ?? 'yarn');
     const version = packageManagerVersion(tokens);
+    const checkout: WorkflowStep = {
+        name: 'Checkout',
+        uses: 'actions/checkout@v5',
+        with: { 'fetch-depth': 0, token: '${{ secrets.GITHUB_TOKEN }}' },
+    };
+    // Vite+ ships `setup-vp`, which installs Vite+, the project's Node.js
+    // version and the package manager, then runs `vp install` (and caches).
+    if (tokens.vitePlus) {
+        return [
+            checkout,
+            {
+                name: 'Setup Vite+',
+                uses: `voidzero-dev/setup-vp@${String(
+                    tokens.setupVpVersion ?? DEFAULT_SETUP_VP_VERSION
+                )}`,
+                with: { 'node-version': String(tokens.nodeVersion), cache: true },
+            },
+        ];
+    }
     const setup: WorkflowStep[] = [
-        {
-            name: 'Checkout',
-            uses: 'actions/checkout@v5',
-            with: { 'fetch-depth': 0, token: '${{ secrets.GITHUB_TOKEN }}' },
-        },
+        checkout,
         {
             name: 'Setup Node',
             uses: 'actions/setup-node@v5',
@@ -277,16 +303,18 @@ function missingSetupSteps(steps: readonly unknown[], tokens: Replacements): Wor
     const hasNode = steps.some(step => usesAction(step, 'actions/setup-node'));
     const hasBun = steps.some(step => usesAction(step, 'oven-sh/setup-bun'));
     const hasPnpm = steps.some(step => usesAction(step, 'pnpm/action-setup'));
+    const hasSetupVp = steps.some(step => usesAction(step, 'voidzero-dev/setup-vp'));
     const hasInstall = steps.some(step =>
         runsCommand(
             step,
-            /\b(?:corepack|npm\s+(?:ci|install)|yarn\s+install|pnpm\s+install|bun\s+install)\b/
+            /\b(?:corepack|npm\s+(?:ci|install)|yarn\s+install|pnpm\s+install|bun\s+install|vp\s+install)\b/
         )
     );
     return setupSteps(tokens).filter(step => {
         if (usesAction(step, 'actions/checkout')) return !hasCheckout;
         if (usesAction(step, 'actions/setup-node')) return !hasNode;
         if (usesAction(step, 'oven-sh/setup-bun')) return !hasBun;
+        if (usesAction(step, 'voidzero-dev/setup-vp')) return !hasSetupVp && !hasInstall;
         if (step.name === 'Enable Corepack') return !hasInstall && !hasPnpm;
         if (step.name === 'Install dependencies') return !hasInstall;
         return true;

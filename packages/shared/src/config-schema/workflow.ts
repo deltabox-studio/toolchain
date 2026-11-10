@@ -178,6 +178,16 @@ export const workflowTokensSchema = z
             .optional(),
         mainBranch: z.string().describe('Main branch (`{{mainBranch}}`).').optional(),
         devBranch: z.string().describe('Dev branch (`{{devBranch}}`).').optional(),
+        vitePlus: z
+            .boolean()
+            .describe(
+                'Use `voidzero-dev/setup-vp` for this workflow (default: detected from the project).'
+            )
+            .optional(),
+        setupVpVersion: z
+            .string()
+            .describe('Exact `voidzero-dev/setup-vp` version or commit SHA to pin.')
+            .optional(),
     })
     .catchall(z.union([z.string(), z.number(), z.boolean()]))
     .describe('Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).')

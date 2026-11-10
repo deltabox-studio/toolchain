@@ -19,4 +19,5 @@ export * from './tooling-dependencies.js';
 export * from './tsconfig-files.js';
 export * from './types.js';
 export * from './vite-defaults.js';
+export * from './vite-project.js';
 export * from './yaml.js';

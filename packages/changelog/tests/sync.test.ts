@@ -177,6 +177,64 @@ describe('changelogSyncTask', () => {
         expect(workflowFilenames(config)).toEqual(['checks.yaml', 'deploy.yaml']);
     });
 
+    it('uses setup-vp when the project declares `vite-plus`', async () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-vite-plus-'));
+        try {
+            fs.writeFileSync(
+                path.join(cwd, 'package.json'),
+                JSON.stringify({ devDependencies: { 'vite-plus': '^1.2.0' } }),
+                'utf-8'
+            );
+            const files = await changelogSyncTask().run({
+                ...makeContext({ ci: { ci: true } }),
+                cwd,
+            });
+            const ci = files?.find(file => file.path === '.github/workflows/ci.yml');
+            expect(ci?.content).toContain('uses: voidzero-dev/setup-vp@v1.21.2');
+            expect(ci?.content).not.toContain('actions/setup-node');
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
+    });
+
+    it('uses setup-vp when the project has a Vite config', async () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-vite-config-'));
+        try {
+            fs.writeFileSync(path.join(cwd, 'vite.config.ts'), 'export default {};\n', 'utf-8');
+            const files = await changelogSyncTask().run({
+                ...makeContext({ ci: { ci: true } }),
+                cwd,
+            });
+            const ci = files?.find(file => file.path === '.github/workflows/ci.yml');
+            expect(ci?.content).toContain('voidzero-dev/setup-vp@v1.21.2');
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
+    });
+
+    it('uses setup-vp in the toolchain Vite+ mode', async () => {
+        const files = await changelogSyncTask().run(makeContext({ ci: { ci: true }, vite: true }));
+        const ci = files?.find(file => file.path === '.github/workflows/ci.yml');
+        expect(ci?.content).toContain('voidzero-dev/setup-vp@v1.21.2');
+    });
+
+    it('keeps the Node/Corepack setup for non-Vite projects', async () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-no-vite-'));
+        try {
+            fs.writeFileSync(path.join(cwd, 'package.json'), '{ "name": "plain" }', 'utf-8');
+            const files = await changelogSyncTask().run({
+                ...makeContext({ ci: { ci: true } }),
+                cwd,
+            });
+            const ci = files?.find(file => file.path === '.github/workflows/ci.yml');
+            expect(ci?.content).toContain('actions/setup-node@v5');
+            expect(ci?.content).toContain('corepack prepare yarn@4.17.1 --activate');
+            expect(ci?.content).not.toContain('setup-vp');
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
+    });
+
     it('writes complete GitLab/Azure/GitHub workflows to vendor paths', async () => {
         const config: ToolchainConfig = {
             ci: {

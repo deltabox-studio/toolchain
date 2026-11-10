@@ -750,6 +750,14 @@
                 "devBranch": {
                     "type": "string",
                     "description": "Dev branch (`{{devBranch}}`)."
+                },
+                "vitePlus": {
+                    "type": "boolean",
+                    "description": "Use `voidzero-dev/setup-vp` for this workflow (default: detected from the project)."
+                },
+                "setupVpVersion": {
+                    "type": "string",
+                    "description": "Exact `voidzero-dev/setup-vp` version or commit SHA to pin."
                 }
             },
             "additionalProperties": {

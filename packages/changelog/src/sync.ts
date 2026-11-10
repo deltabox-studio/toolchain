@@ -11,6 +11,7 @@ import {
     sectionEnabled,
     type SyncTask,
     type ToolchainConfig,
+    usesVitePlus,
     type WorkflowOptions,
     type WorkflowSetting,
 } from '@deltabox/toolchain/shared';
@@ -210,7 +211,13 @@ export function changelogSyncTask(): SyncTask {
                 declaredWorkflows(ctx.config),
                 resolveChangelogBranches(ch)
             );
-            const tokens = { ...ctx.tokens, commitlintConfig: commitlintPath };
+            const tokens = {
+                ...ctx.tokens,
+                commitlintConfig: commitlintPath,
+                // Vite/Vite+ projects install `vp` with `voidzero-dev/setup-vp`
+                // instead of the Node/Corepack/package-manager steps.
+                vitePlus: usesVitePlus(ctx.cwd, ctx.config),
+            };
 
             for (const [id, filename] of Object.entries(WORKFLOW_FILENAMES) as [
                 WorkflowId,

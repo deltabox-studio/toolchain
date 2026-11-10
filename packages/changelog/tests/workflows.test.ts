@@ -151,6 +151,46 @@ describe('workflow config', () => {
         expect(bun).toContain('bunx dbx');
     });
 
+    it('uses `voidzero-dev/setup-vp` for Vite+ projects', () => {
+        const yaml = renderWorkflow('ci', {
+            tokens: { ...DEFAULT_WORKFLOW_TOKENS, vitePlus: true },
+        })!;
+        expect(yaml).toContain('uses: voidzero-dev/setup-vp@v1.21.2');
+        expect(yaml).toContain('node-version: "22"');
+        expect(yaml).toContain('cache: true');
+        expect(yaml).not.toContain('actions/setup-node');
+        expect(yaml).not.toContain('corepack');
+    });
+
+    it('pins an overridden setup-vp version and lets a workflow opt out', () => {
+        const pinned = renderWorkflow('ci', {
+            tokens: { vitePlus: true, setupVpVersion: 'v1.30.0' },
+        })!;
+        expect(pinned).toContain('uses: voidzero-dev/setup-vp@v1.30.0');
+
+        const optedOut = renderWorkflow('ci', {
+            tokens: { vitePlus: true },
+            config: { tokens: { vitePlus: false } },
+        })!;
+        expect(optedOut).toContain('actions/setup-node@v5');
+        expect(optedOut).not.toContain('setup-vp');
+    });
+
+    it('injects setup-vp into a custom workflow setup for Vite+ projects', () => {
+        const yaml = renderCustomWorkflow('deploy', {
+            tokens: { vitePlus: true },
+            config: {
+                setup: true,
+                triggers: { workflow_dispatch: {} },
+                jobs: {
+                    deploy: { 'runs-on': 'ubuntu-latest', steps: [{ run: 'yarn deploy' }] },
+                },
+            },
+        })!;
+        expect(yaml).toContain('uses: voidzero-dev/setup-vp@v1.21.2');
+        expect(yaml).not.toContain('corepack');
+    });
+
     it('renderWorkflows omits disabled workflows', () => {
         const files = renderWorkflows({}, { issues: false, ci: { pushBranches: ['main'] } });
         expect(files['ci.yml']).toBeDefined();
