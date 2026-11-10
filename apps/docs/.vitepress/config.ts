@@ -42,6 +42,7 @@ const INTRODUCTION = {
         { text: 'Getting Started', link: '/guide/' },
         { text: 'Monorepo Guide', link: '/guide/monorepo' },
         { text: 'VS Code Extension', link: '/guide/vscode' },
+        { text: 'Docker', link: '/guide/docker' },
         { text: 'LLMs', link: '/llms' },
     ],
 };

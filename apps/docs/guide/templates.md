@@ -89,6 +89,9 @@ of the same project scaffold (package manager, catalogs, `vite.config.ts` with
 `dbx()`, formatter/linter). They all accept the standard `name`, `scope`,
 `packageManager` and `includeConfig` inputs and an opt-in install action.
 
+Pass `--containerize` (or use the [Docker](/guide/docker) section) to also write
+a multi-stage `Dockerfile`/`.dockerignore` for the new project.
+
 | Template             | Stack       | Notes                                                      |
 | -------------------- | ----------- | ---------------------------------------------------------- |
 | `vitepress`          | VitePress   | `docs/` site; `yarn build` writes the static output.       |

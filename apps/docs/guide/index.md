@@ -124,6 +124,7 @@ need to add it by hand when the repo has no `.gitignore` yet.
 | `vite.config.ts` (Vite+ consumers)                                  | `vite`                        |
 | Template sources / scaffolding                                      | `templates`                   |
 | Package catalogs (`.yarnrc.yml` / `pnpm-workspace.yaml`)            | [`catalogs`](/guide/catalogs) |
+| `Dockerfile` / `.dockerignore` / compose                            | [`docker`](/guide/docker)     |
 | Watch behaviour                                                     | `watch`                       |
 
 Every section is **opt-in by presence**: define it to enable it, omit it to leave
@@ -148,6 +149,7 @@ that area untouched.
 - [Providers (Vite+)](/guide/providers)
 - [Package scripts](/guide/scripts)
 - [Templates](/guide/templates)
+- [Docker](/guide/docker)
 - [Migrations](/guide/migrations/)
 - [Programmatic API](/guide/api/)
 - [LLMs](/llms)

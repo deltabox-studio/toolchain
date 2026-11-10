@@ -1668,6 +1668,106 @@ Globs of managed files to leave unformatted (per-file opt-out).
 
 Enable/disable this section (default: enabled when defined).
 
+## `docker`
+
+Dockerfile / compose generation for the project.
+
+### `image`
+
+- **Type**: `string`
+
+Container image name (default: the project name).
+
+### `tag`
+
+- **Type**: `string`
+
+Container image tag (default `latest`).
+
+### `port`
+
+- **Type**: `number`
+
+Container port to expose (default 3000, or 80 for static sites).
+
+### `runtime`
+
+- **Type**: `'auto' | 'node' | 'static' | 'bun'`
+
+How the container runs: a Node.js server, a static/SSG site, or a Bun server (default `auto`, detected from `package.json`).
+
+### `entry`
+
+- **Type**: `string`
+
+Built entry file, relative to the project root (default `dist/index.js`).
+
+### `output`
+
+- **Type**: `string`
+
+Build output directory (default `dist`, or the VitePress output).
+
+### `nodeVersion`
+
+- **Type**: `string`
+
+Node.js version for non-Vite+ images.
+
+### `baseImage`
+
+- **Type**: `string`
+
+Override the build-stage base image.
+
+### `runtimeImage`
+
+- **Type**: `string`
+
+Override the runtime base image.
+
+### `user`
+
+- **Type**: `string`
+
+Runtime user to run as (default `node`, `bun` or `nobody`).
+
+### `compose`
+
+- **Type**: `boolean`
+
+Also write a `docker-compose.yml` (default false).
+
+### `healthcheck`
+
+- **Type**: `boolean`
+
+Add a `HEALTHCHECK` to the runtime image (default true).
+
+### `healthcheckPath`
+
+- **Type**: `string`
+
+HTTP path the healthcheck requests (default `/`).
+
+### `dockerfile`
+
+- **Type**: `string`
+
+Dockerfile name (default `Dockerfile`).
+
+### `dockerignore`
+
+- **Type**: `boolean`
+
+Write a `.dockerignore` alongside the Dockerfile (default true).
+
+### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
 ## `logger`
 
 Logging level, colours and prefix for toolchain output.

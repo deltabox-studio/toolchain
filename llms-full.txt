@@ -2358,6 +2358,106 @@ Globs of managed files to leave unformatted (per-file opt-out).
 
 Enable/disable this section (default: enabled when defined).
 
+## `docker`
+
+Dockerfile / compose generation for the project.
+
+### `image`
+
+* **Type**: `string`
+
+Container image name (default: the project name).
+
+### `tag`
+
+* **Type**: `string`
+
+Container image tag (default `latest`).
+
+### `port`
+
+* **Type**: `number`
+
+Container port to expose (default 3000, or 80 for static sites).
+
+### `runtime`
+
+* **Type**: `'auto' | 'node' | 'static' | 'bun'`
+
+How the container runs: a Node.js server, a static/SSG site, or a Bun server (default `auto`, detected from `package.json`).
+
+### `entry`
+
+* **Type**: `string`
+
+Built entry file, relative to the project root (default `dist/index.js`).
+
+### `output`
+
+* **Type**: `string`
+
+Build output directory (default `dist`, or the VitePress output).
+
+### `nodeVersion`
+
+* **Type**: `string`
+
+Node.js version for non-Vite+ images.
+
+### `baseImage`
+
+* **Type**: `string`
+
+Override the build-stage base image.
+
+### `runtimeImage`
+
+* **Type**: `string`
+
+Override the runtime base image.
+
+### `user`
+
+* **Type**: `string`
+
+Runtime user to run as (default `node`, `bun` or `nobody`).
+
+### `compose`
+
+* **Type**: `boolean`
+
+Also write a `docker-compose.yml` (default false).
+
+### `healthcheck`
+
+* **Type**: `boolean`
+
+Add a `HEALTHCHECK` to the runtime image (default true).
+
+### `healthcheckPath`
+
+* **Type**: `string`
+
+HTTP path the healthcheck requests (default `/`).
+
+### `dockerfile`
+
+* **Type**: `string`
+
+Dockerfile name (default `Dockerfile`).
+
+### `dockerignore`
+
+* **Type**: `boolean`
+
+Write a `.dockerignore` alongside the Dockerfile (default true).
+
+### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
 ## `logger`
 
 Logging level, colours and prefix for toolchain output.
@@ -2614,6 +2714,7 @@ need to add it by hand when the repo has no `.gitignore` yet.
 | `vite.config.ts` (Vite+ consumers)                                  | `vite`                        |
 | Template sources / scaffolding                                      | `templates`                   |
 | Package catalogs (`.yarnrc.yml` / `pnpm-workspace.yaml`)            | [`catalogs`](/guide/catalogs) |
+| `Dockerfile` / `.dockerignore` / compose                            | [`docker`](/guide/docker)     |
 | Watch behaviour                                                     | `watch`                       |
 
 Every section is **opt-in by presence**: define it to enable it, omit it to leave
@@ -2638,6 +2739,7 @@ that area untouched.
 * [Providers (Vite+)](/guide/providers)
 * [Package scripts](/guide/scripts)
 * [Templates](/guide/templates)
+* [Docker](/guide/docker)
 * [Migrations](/guide/migrations/)
 * [Programmatic API](/guide/api/)
 * [LLMs](/llms)
@@ -2957,6 +3059,93 @@ Search for `deltabox:` to find:
 * **New registry…**
 * **Remove registry…**
 * **Toggle auto-sync**
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/docker.md
+---
+# Docker
+
+`@deltabox/toolchain-docker` generates a deployable, multi-stage `Dockerfile`, a
+`.dockerignore` and an optional `docker-compose.yml`. Containerization is
+**opt-in**: nothing is written unless you ask for it.
+
+```sh
+# Add Docker artifacts to a new project
+dbx create --template express --name api --containerize
+
+# Or scaffold with the project command
+dbx project:init --name api --containerize
+```
+
+In VS Code, **Create from template…** asks *Containerize with Docker?*. The
+setting `deltabox.toolchain.containerizeTemplates` supplies the default and is
+used by the curated **Scaffold** flow. Programmatically, pass
+`containerize: true` to `scaffoldTemplate()`.
+
+## Managed Dockerfile
+
+Enable the `docker` section to let `dbx sync` manage the artifacts from
+`dbx.config.*` (or the `dbx()` plugin):
+
+```ts
+toolchain: {
+    docker: {
+        image: 'acme/api', // default: the project name
+        tag: 'latest',
+        port: 3000, // default 3000, or 8080 for static sites
+        compose: true, // also write docker-compose.yml
+    },
+}
+```
+
+| Option            | Default                     | What it does                                   |
+| ----------------- | --------------------------- | ---------------------------------------------- |
+| `image`           | project name                | OCI image name.                                |
+| `tag`             | `latest`                    | Image tag.                                     |
+| `port`            | `3000` / `8080`             | Port the runtime image exposes.                |
+| `runtime`         | `auto`                      | `node`, `static`, `bun`, or detect.            |
+| `entry`           | `dist/index.js`             | Built server entry for `node`/`bun` runtimes.  |
+| `output`          | `dist`                      | Build output directory (`static` copies this). |
+| `nodeVersion`     | `engines.node` or `22`      | Node.js version for non-Vite+ images.          |
+| `baseImage`       | Vite+/Bun/Node image        | Override the build-stage image.                |
+| `runtimeImage`    | Debian/Bun/nginx/Node image | Override the runtime image.                    |
+| `user`            | `nobody` / `node` / `bun`   | Runtime user.                                  |
+| `compose`         | `false`                     | Write `docker-compose.yml`.                    |
+| `healthcheck`     | `true`                      | Add an HTTP `HEALTHCHECK`.                     |
+| `healthcheckPath` | `/`                         | Path the healthcheck requests.                 |
+| `dockerfile`      | `Dockerfile`                | Dockerfile file name.                          |
+| `dockerignore`    | `true`                      | Write `.dockerignore`.                         |
+
+The task applies to single projects and monorepo workspaces (not a monorepo
+root) and marks the files as unformatted managed files, so `dbx sync --check`
+compares the generated content directly.
+
+## Images
+
+* **Vite+ projects** build with
+  `ghcr.io/voidzero-dev/vite-plus:latest`, install with `vp install`, build with
+  `vp build`, and copy the resolved Node.js binary into the runtime stage.
+* **Bun projects** use `oven/bun:1` to build and `oven/bun:1-slim` to run.
+* **Other Node projects** use `node:<version>-bookworm-slim`.
+* **Static sites** copy the build output into
+  `nginxinc/nginx-unprivileged:alpine`, so the container runs as a non-root
+  user on port `8080`.
+
+Server images run as a non-root user and get a `HEALTHCHECK` that requests
+`http://127.0.0.1:<port><healthcheckPath>`.
+
+## Detection
+
+With `runtime: 'auto'` the task reads `package.json`:
+
+* a `vitepress build` script is a **static** site
+  (`docs/.vitepress/dist`);
+* a `bun build`/`bun ...` start script is a **Bun** server;
+* a `start` script is a **Node** server;
+* a `vp build` script without `start` is a **static** app;
+* otherwise it falls back to a **Node** server.
 
 ---
 
@@ -7973,6 +8162,9 @@ The quality-of-life templates are fully offline and layer a working app on top
 of the same project scaffold (package manager, catalogs, `vite.config.ts` with
 `dbx()`, formatter/linter). They all accept the standard `name`, `scope`,
 `packageManager` and `includeConfig` inputs and an opt-in install action.
+
+Pass `--containerize` (or use the [Docker](/guide/docker) section) to also write
+a multi-stage `Dockerfile`/`.dockerignore` for the new project.
 
 | Template             | Stack       | Notes                                                      |
 | -------------------- | ----------- | ---------------------------------------------------------- |
