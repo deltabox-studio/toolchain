@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import { cancel, confirm, isCancel, select } from '@clack/prompts';
 import { ensureToolingDependencies, loadToolchainConfig } from '@deltabox/toolchain/core';
+import { writeDockerFiles } from '@deltabox/toolchain/docker';
 import {
     logger,
     parseToolVersions,
@@ -194,6 +195,10 @@ export function projectCommands(): ToolchainCommand[] {
                 { flags: '-o, --out <dir>', description: 'Output directory (default: cwd).' },
                 PACKAGE_MANAGER_OPTION,
                 TOOL_VERSION_OPTION,
+                {
+                    flags: '--containerize',
+                    description: 'Also generate Docker artifacts (Dockerfile + .dockerignore).',
+                },
                 ...CONFIG_OPTIONS,
             ],
             run: (opts, context) => {
@@ -201,11 +206,12 @@ export function projectCommands(): ToolchainCommand[] {
                 const name = resolveName(requireName(opts, context.config), out);
                 const tsconfigExtends = scaffoldTsconfigExtends(context.config);
                 const scope = (opts.scope as string | undefined) ?? tokenText(context.tokens.scope);
+                const packageManager = scaffoldPackageManager(opts, context.tokens);
                 const files = createRootProjectFiles({
                     ...projectDefaults(context.tokens),
                     name,
                     ...(scope ? { scope } : {}),
-                    ...scaffoldPackageManager(opts, context.tokens),
+                    ...packageManager,
                     type: resolveType(opts, 'project'),
                     includeConfig: context.noConfig
                         ? false
@@ -214,6 +220,20 @@ export function projectCommands(): ToolchainCommand[] {
                     ...(tsconfigExtends ? { tsconfigExtends } : {}),
                 });
                 const written = writeGeneratedFiles(files, out, { force: Boolean(opts.force) });
+                if (opts.containerize) {
+                    written.push(
+                        ...writeDockerFiles({
+                            cwd: out,
+                            projectName: name,
+                            vitePlus: true,
+                            runtime: 'node',
+                            ...(packageManager.packageManager
+                                ? { packageManager: packageManager.packageManager }
+                                : {}),
+                            force: Boolean(opts.force),
+                        })
+                    );
+                }
                 ensureToolingDependencies({
                     cwd: out,
                     selection: { fmt: 'oxc', lint: 'oxc' },

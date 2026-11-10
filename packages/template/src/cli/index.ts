@@ -594,6 +594,10 @@ export function templateCommands(): ToolchainCommand[] {
                     flags: '--force',
                     description: 'Overwrite existing files in the output directory.',
                 },
+                {
+                    flags: '--containerize',
+                    description: 'Also generate Docker artifacts (Dockerfile + .dockerignore).',
+                },
                 { flags: '--json', description: 'Print the result as JSON.' },
             ],
             run: async (opts, context) => {
@@ -750,6 +754,7 @@ export function templateCommands(): ToolchainCommand[] {
                     force: Boolean(opts.force),
                     tsconfigRootFile: tsconfig?.rootFile ?? 'tsconfig.workspaces.json',
                     toolVersions: parseToolVersions(opts.toolVersion as string[] | undefined),
+                    containerize: Boolean(opts.containerize),
                 });
 
                 if (opts.json) {

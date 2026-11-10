@@ -4,6 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { ensureToolingDependencies } from '@deltabox/toolchain/core';
+import { type DockerRuntime, dockerFiles, writeDockerFiles } from '@deltabox/toolchain/docker';
 import {
     createMonorepoRootFiles,
     createQolProjectFiles,
@@ -56,6 +57,8 @@ export interface ScaffoldOptions {
     tsconfigRootFile?: string;
     /** Version overrides for the provisioned formatter/linter dependencies. */
     toolVersions?: Record<string, string>;
+    /** Also write Docker artifacts (default false). */
+    containerize?: boolean;
 }
 
 export interface ScaffoldResult {
@@ -92,6 +95,33 @@ function projectContext(tokens: Record<string, unknown>): Record<string, string>
         ...(repo ? { repo } : {}),
         ...(text(tokens.nodeVersion) ? { nodeVersion: text(tokens.nodeVersion)! } : {}),
     };
+}
+
+/** The Docker runtime a builtin template produces (undefined = not containerized). */
+function containerRuntime(
+    template: Template
+): { runtime: DockerRuntime; output?: string } | undefined {
+    switch (template.builtin) {
+        case 'vitepress':
+            return { runtime: 'static', output: 'docs/.vitepress/dist' };
+        case 'application':
+        case 'ollama-chat':
+            return { runtime: 'static', output: 'dist' };
+        case 'bun':
+        case 'file-server-bun-s3':
+            return { runtime: 'bun', output: 'dist' };
+        case 'single':
+        case 'express':
+        case 'fastify':
+        case 'orpc':
+        case 'file-server':
+        case 'file-server-s3':
+        case 'file-server-minio':
+        case 'file-server-rclone':
+            return { runtime: 'node', output: 'dist' };
+        default:
+            return undefined;
+    }
 }
 
 /** Scaffold from one of the local generators (builtin templates). */
@@ -214,6 +244,22 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
             );
         }
     }
+    if (options.containerize) {
+        const docker = containerRuntime(template);
+        if (docker) {
+            files.push(
+                ...dockerFiles({
+                    cwd: options.cwd,
+                    projectName: name,
+                    vitePlus: true,
+                    ...(packageManager ? { packageManager } : {}),
+                    ...(metadata.nodeVersion ? { nodeVersion: metadata.nodeVersion } : {}),
+                    runtime: docker.runtime,
+                    ...(docker.output ? { output: docker.output } : {}),
+                })
+            );
+        }
+    }
     const written = writeGeneratedFiles(files, options.cwd, { force: options.force === true });
     if (template.builtin !== 'folder') {
         ensureToolingDependencies({
@@ -303,7 +349,22 @@ async function scaffoldViaVp(
     const name = options.tokens?.name;
     if (name) args.push(String(name));
     const result = await runVp(args, { cwd: options.cwd });
-    return { written: [], code: result.code };
+    if (result.code !== 0 || !options.containerize) return { written: [], code: result.code };
+
+    // `vp create` writes into a folder named after the project (or the current
+    // directory for an interactive create); write the Docker artifacts there.
+    const candidates = [...(name ? [path.join(options.cwd, String(name))] : []), options.cwd];
+    const dir = candidates.find(candidate => fs.existsSync(path.join(candidate, 'package.json')));
+    if (!dir) return { written: [], code: result.code };
+    const written = writeDockerFiles({
+        cwd: dir,
+        ...(name ? { projectName: String(name) } : {}),
+        ...(options.tokens?.packageManager
+            ? { packageManager: String(options.tokens.packageManager) }
+            : {}),
+        force: true,
+    });
+    return { written, code: result.code };
 }
 
 /** Run a command to completion (inherited stdio). Resolves with the exit code. */
