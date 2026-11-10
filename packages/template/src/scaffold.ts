@@ -256,6 +256,8 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
                     ...(metadata.nodeVersion ? { nodeVersion: metadata.nodeVersion } : {}),
                     runtime: docker.runtime,
                     ...(docker.output ? { output: docker.output } : {}),
+                    // Every containerized scaffold ships a local compose file.
+                    compose: true,
                 })
             );
         }
@@ -362,6 +364,7 @@ async function scaffoldViaVp(
         ...(options.tokens?.packageManager
             ? { packageManager: String(options.tokens.packageManager) }
             : {}),
+        compose: true,
         force: true,
     });
     return { written, code: result.code };

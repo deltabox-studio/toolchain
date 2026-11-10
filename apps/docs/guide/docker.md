@@ -1,7 +1,7 @@
 # Docker
 
 `@deltabox/toolchain-docker` generates a deployable, multi-stage `Dockerfile`, a
-`.dockerignore` and an optional `docker-compose.yml`. Containerization is
+`.dockerignore` and an optional `docker-compose.yaml`. Containerization is
 **opt-in**: nothing is written unless you ask for it.
 
 ```sh
@@ -28,7 +28,7 @@ toolchain: {
         image: 'acme/api', // default: the project name
         tag: 'latest',
         port: 3000, // default 3000, or 8080 for static sites
-        compose: true, // also write docker-compose.yml
+        compose: true, // also write docker-compose.yaml
     },
 }
 ```
@@ -45,7 +45,8 @@ toolchain: {
 | `baseImage`       | Vite+/Bun/Node image        | Override the build-stage image.                |
 | `runtimeImage`    | Debian/Bun/nginx/Node image | Override the runtime image.                    |
 | `user`            | `nobody` / `node` / `bun`   | Runtime user.                                  |
-| `compose`         | `false`                     | Write `docker-compose.yml`.                    |
+| `managed`         | `true`                      | Manage the Dockerfile.                         |
+| `compose`         | `false`                     | Write `docker-compose.yaml`.                   |
 | `healthcheck`     | `true`                      | Add an HTTP `HEALTHCHECK`.                     |
 | `healthcheckPath` | `/`                         | Path the healthcheck requests.                 |
 | `dockerfile`      | `Dockerfile`                | Dockerfile file name.                          |
@@ -54,6 +55,17 @@ toolchain: {
 The task applies to single projects and monorepo workspaces (not a monorepo
 root) and marks the files as unformatted managed files, so `dbx sync --check`
 compares the generated content directly.
+
+### User-owned Dockerfiles
+
+A hand-written `Dockerfile` is left untouched: `dbx sync` skips any existing
+Docker artifact that has no generated header, warns, and still writes the
+missing ones. Set `docker.managed: false` to keep the Dockerfile permanently
+user-owned while `.dockerignore`/compose are still generated.
+
+`dbx create --containerize` and `dbx project:init --containerize` always add a
+`docker-compose.yaml` for local development (`docker compose up --build`). With
+`dbx sync` the compose file is opt-in with `docker.compose: true`.
 
 ## Images
 

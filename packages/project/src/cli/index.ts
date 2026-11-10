@@ -230,6 +230,7 @@ export function projectCommands(): ToolchainCommand[] {
                             ...(packageManager.packageManager
                                 ? { packageManager: packageManager.packageManager }
                                 : {}),
+                            compose: true,
                             force: Boolean(opts.force),
                         })
                     );

@@ -1611,6 +1611,7 @@ describe('emulate: quality-of-life templates', () => {
             expect(appResult.code, appResult.stderr).toBe(0);
             expect(fs.existsSync(path.join(app, 'Dockerfile'))).toBe(true);
             expect(fs.existsSync(path.join(app, '.dockerignore'))).toBe(true);
+            expect(fs.existsSync(path.join(app, 'docker-compose.yaml'))).toBe(true);
             const apiDockerfile = fs.readFileSync(path.join(app, 'Dockerfile'), 'utf-8');
             expect(apiDockerfile).toContain('ghcr.io/voidzero-dev/vite-plus');
             expect(apiDockerfile).toContain('USER nobody');
@@ -1628,6 +1629,7 @@ describe('emulate: quality-of-life templates', () => {
                 '--containerize',
             ]);
             expect(docsResult.code, docsResult.stderr).toBe(0);
+            expect(fs.existsSync(path.join(docs, 'docker-compose.yaml'))).toBe(true);
             const docsDockerfile = fs.readFileSync(path.join(docs, 'Dockerfile'), 'utf-8');
             expect(docsDockerfile).toContain('nginx-unprivileged');
             expect(docsDockerfile).toContain('/app/docs/.vitepress/dist');
@@ -1643,6 +1645,7 @@ describe('emulate: quality-of-life templates', () => {
             ]);
             expect(projectResult.code, projectResult.stderr).toBe(0);
             expect(fs.existsSync(path.join(projectDir, 'Dockerfile'))).toBe(true);
+            expect(fs.existsSync(path.join(projectDir, 'docker-compose.yaml'))).toBe(true);
         },
         TIMEOUT * 2
     );

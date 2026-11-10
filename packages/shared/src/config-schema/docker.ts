@@ -38,9 +38,16 @@ export const dockerConfigSchema = withEnabled(
             .string()
             .describe('Runtime user to run as (default `node`, `bun` or `nobody`).')
             .optional(),
+        managed: z
+            .boolean()
+            .describe(
+                'Manage the Dockerfile (default true). Set false to keep a hand-written ' +
+                    'Dockerfile while dbx still generates `.dockerignore`/compose.'
+            )
+            .optional(),
         compose: z
             .boolean()
-            .describe('Also write a `docker-compose.yml` (default false).')
+            .describe('Also write a `docker-compose.yaml` (default false).')
             .optional(),
         healthcheck: z
             .boolean()

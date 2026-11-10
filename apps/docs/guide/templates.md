@@ -90,7 +90,8 @@ of the same project scaffold (package manager, catalogs, `vite.config.ts` with
 `packageManager` and `includeConfig` inputs and an opt-in install action.
 
 Pass `--containerize` (or use the [Docker](/guide/docker) section) to also write
-a multi-stage `Dockerfile`/`.dockerignore` for the new project.
+a multi-stage `Dockerfile`, `.dockerignore` and `docker-compose.yaml` for local
+development.
 
 | Template             | Stack       | Notes                                                      |
 | -------------------- | ----------- | ---------------------------------------------------------- |

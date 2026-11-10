@@ -136,9 +136,9 @@ describe('docker plans', () => {
         expect(files.map(file => file.path)).toEqual([
             'Dockerfile',
             '.dockerignore',
-            'docker-compose.yml',
+            'docker-compose.yaml',
         ]);
-        const compose = files.find(file => file.path === 'docker-compose.yml')!;
+        const compose = files.find(file => file.path === 'docker-compose.yaml')!;
         expect(compose.content).toContain('image: registry.example.com/acme/svc:v1');
         expect(compose.content).toContain('- "8081:8081"');
         expect(files[0]!.content).toContain('CMD ["node", "dist/server.js"]');
@@ -173,11 +173,48 @@ describe('docker sync task', () => {
         expect(list.map(file => file.path)).toEqual([
             'Dockerfile',
             '.dockerignore',
-            'docker-compose.yml',
+            'docker-compose.yaml',
         ]);
         expect(list.every(file => file.format === false)).toBe(true);
-        expect(list.find(file => file.path === 'docker-compose.yml')!.content).toContain(
+        expect(list.find(file => file.path === 'docker-compose.yaml')!.content).toContain(
             'acme/svc'
         );
+    });
+
+    it('leaves user-owned artifacts untouched and still writes the missing ones', async () => {
+        const cwd = project({ name: 'svc', scripts: { start: 'node dist/index.js' } });
+        fs.writeFileSync(path.join(cwd, 'Dockerfile'), 'FROM custom\n', 'utf-8');
+        fs.writeFileSync(path.join(cwd, 'docker-compose.yaml'), 'services: {}\n', 'utf-8');
+        const warnings: string[] = [];
+
+        const files = await dockerSyncTask().run({
+            cwd,
+            projectType: 'project',
+            config: { docker: { compose: true } },
+            tokens: {},
+            log: () => {},
+            warn: message => warnings.push(message),
+        });
+
+        expect(files?.map(file => file.path)).toEqual(['.dockerignore']);
+        expect(fs.readFileSync(path.join(cwd, 'Dockerfile'), 'utf-8')).toBe('FROM custom\n');
+        expect(fs.readFileSync(path.join(cwd, 'docker-compose.yaml'), 'utf-8')).toBe(
+            'services: {}\n'
+        );
+        expect(warnings.some(message => message.includes('Dockerfile'))).toBe(true);
+    });
+
+    it('never manages the Dockerfile when `managed: false`', async () => {
+        const cwd = project({ name: 'svc', scripts: { start: 'node dist/index.js' } });
+        const files = await dockerSyncTask().run({
+            cwd,
+            projectType: 'project',
+            config: { docker: { managed: false, compose: true } },
+            tokens: {},
+            log: () => {},
+            warn: () => {},
+        });
+
+        expect(files?.map(file => file.path)).toEqual(['.dockerignore', 'docker-compose.yaml']);
     });
 });
