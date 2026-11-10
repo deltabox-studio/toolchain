@@ -65,6 +65,37 @@ package manager without changing `project`. Overriding `packageManager` switches
 to that manager's default version unless you also set `packageManagerVersion`
 (or the legacy `yarnVersion` alias).
 
+## Vite+ projects
+
+For a Vite/Vite+ project the generated GitHub workflows install `vp` with the
+[`voidzero-dev/setup-vp`](https://viteplus.dev/guide/ci) action instead of the
+`setup-node` + Corepack + package-manager install steps. The action also sets up
+the project's Node.js version and the package manager, and runs `vp install`.
+
+A project is detected as Vite/Vite+ when any of these is true:
+
+- its `package.json` declares `vite-plus` (checked up to the repository root, so
+  a hoisted workspace dependency counts);
+- it has a `vite.config.*` at the project root;
+- the toolchain's `vite` section is enabled (the dbx-managed Vite+ mode).
+
+Override the detection per workflow with `tokens.vitePlus` (`true` forces the
+setup-vp path, `false` keeps the Node/Corepack path). `tokens.setupVpVersion`
+pins a different exact `setup-vp` release or commit SHA; the action has no moving
+tag, so always pin an exact version.
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        ci: { tokens: { setupVpVersion: 'v1.30.0' } },
+        sync: { tokens: { vitePlus: false } },
+    },
+}
+```
+
+GitLab and Azure pipelines keep their Node-based setup; `setup-vp` is currently
+generated for GitHub Actions only.
+
 ## Raw YAML
 
 A string is used as the workflow file's exact content. It is not merged, not

@@ -466,6 +466,18 @@ Main branch (`{{mainBranch}}`).
 
 Dev branch (`{{devBranch}}`).
 
+##### `vitePlus`
+
+- **Type**: `boolean`
+
+Use `voidzero-dev/setup-vp` for this workflow (default: detected from the project).
+
+##### `setupVpVersion`
+
+- **Type**: `string`
+
+Exact `voidzero-dev/setup-vp` version or commit SHA to pin.
+
 ### `changelog`
 
 - **Type**: `ChangelogWorkflowSetting`
