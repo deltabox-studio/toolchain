@@ -18,6 +18,7 @@ import { biomeConfigSchema } from './biome.js';
 import { catalogsConfigSchema } from './catalogs.js';
 import { changelogConfigSchema } from './changelog.js';
 import { ciConfigSchema } from './ci.js';
+import { dockerConfigSchema } from './docker.js';
 import { fmtConfigSchema, lintConfigSchema } from './format.js';
 import { loaderConfigSchema } from './loader.js';
 import { loggerConfigSchema } from './logger.js';
@@ -36,6 +37,7 @@ export * from './biome.js';
 export * from './catalogs.js';
 export * from './changelog.js';
 export * from './ci.js';
+export * from './docker.js';
 export * from './format.js';
 // Re-export only the public generated types: their internal helper types
 // (`__schemaN`) collide across vendor schemas.
@@ -111,6 +113,9 @@ export const toolchainConfigSchema = z
         sync: section(syncConfigSchema)
             .describe('`dbx sync` behaviour (formatting of the generated managed files).')
             .optional(),
+        docker: section(dockerConfigSchema)
+            .describe('Dockerfile / compose generation for the project.')
+            .optional(),
         logger: section(loggerConfigSchema)
             .describe('Logging level, colours and prefix for toolchain output.')
             .optional(),
@@ -144,6 +149,7 @@ export const configSchema = {
     vite: viteConfigSchema,
     watch: watchConfigSchema,
     sync: syncConfigSchema,
+    docker: dockerConfigSchema,
     logger: loggerConfigSchema,
     providers: providersConfigSchema,
 } as const;
