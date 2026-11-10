@@ -18,21 +18,38 @@ export interface TsconfigAlias {
     replacement: string;
 }
 
+/** A `RegExp` in its JSON-safe form. */
+export interface TsconfigAliasPattern {
+    /** The regular-expression source (without the surrounding slashes). */
+    source: string;
+    /** The regular-expression flags (usually empty). */
+    flags: string;
+}
+
+/** A {@link TsconfigAlias} in its JSON-safe form. */
+export interface SerializedTsconfigAlias {
+    /** A literal prefix, or a `RegExp` split into `{ source, flags }`. */
+    find: string | TsconfigAliasPattern;
+    replacement: string;
+}
+
 /** A resolved project reference. */
 export interface TsconfigReference {
-    /** Absolute path to the referenced tsconfig file. */
+    /** Path to the referenced tsconfig (absolute unless `relativePaths` is true). */
     path: string;
     [key: string & {}]: unknown;
 }
 
 /** The result of {@link resolveTsconfig}. */
 export interface ResolvedTsconfig {
-    /** Vite/Vitest `resolve.alias` entries (absolute replacements). */
+    /** Vite/Vitest `resolve.alias` entries (absolute replacements unless `relativePaths` is true). */
     alias: TsconfigAlias[];
-    /** Resolved `compilerOptions.paths` (absolute targets). */
+    /** Resolved `compilerOptions.paths` (absolute targets unless `relativePaths` is true). */
     paths: Record<string, string[]>;
-    /** Resolved project references (absolute paths). */
+    /** Resolved project references (absolute paths unless `relativePaths` is true). */
     references: TsconfigReference[];
+    /** Whether the returned paths are relative. */
+    relativePaths: boolean;
 }
 
 export interface ResolveTsconfigOptions {
@@ -42,6 +59,12 @@ export interface ResolveTsconfigOptions {
     cwd?: string;
     /** Repo/workspace root (default: `cwd`). Used to detect the default config. */
     root?: string;
+    /**
+     * Return relative paths instead of absolute paths (default false). Paths are
+     * relative to the config that defines them (its `baseUrl` for `paths`, its
+     * directory for `references`), matching how TypeScript resolves them.
+     */
+    relativePaths?: boolean;
     /** Follow `extends` (default true). */
     extends?: boolean;
     /** Deep-merged into the selected config before reading its fields. */
@@ -240,22 +263,52 @@ interface AliasCandidate extends TsconfigAlias {
 
 /** Convert one `paths` entry into a Vite-compatible alias. */
 function pathToAlias(find: string, target: string): AliasCandidate {
-    const star = find.indexOf('*');
-    if (star === -1) {
+    const findStr = find.replace(/\\/g, '/');
+    const targetStr = target.replace(/\\/g, '/');
+    const asterisk = findStr.indexOf('*');
+    if (asterisk === -1) {
         return {
-            find,
-            replacement: target,
+            find: findStr,
+            replacement: targetStr,
             score: Number.POSITIVE_INFINITY,
         };
     }
-    const before = find.slice(0, star);
-    const after = find.slice(star + 1);
-    const pattern = `^${escapeRegExp(before)}(.*)${escapeRegExp(after)}$`;
+    // One capture group per `*`, each mapped to the matching `$n` in the target.
+    const groups = findStr.split('*').length - 1;
+    const pattern = `^${findStr.split('*').map(escapeRegExp).join('(.*)')}$`;
+    let capture = 0;
     return {
         find: new RegExp(pattern),
-        replacement: target.replace(/\*/g, '$1'),
-        score: before.length + 1,
+        replacement: targetStr.replace(/\*/g, () => (capture < groups ? `$${++capture}` : '*')),
+        score: asterisk + 1,
     };
+}
+
+/**
+ * Convert a resolved alias into JSON-safe form: a string `find` stays a string,
+ * a `RegExp` becomes `{ source, flags }` so `JSON.stringify` (CLI `--json`, the
+ * VS Code extension, MCP) keeps the pattern instead of emitting `{}`.
+ */
+export function serializeTsconfigAlias(alias: TsconfigAlias): SerializedTsconfigAlias {
+    const { find, replacement } = alias;
+    return typeof find === 'string'
+        ? { find, replacement }
+        : { find: { source: find.source, flags: find.flags }, replacement };
+}
+
+/** Rebuild a Vite-compatible alias from {@link serializeTsconfigAlias}'s output. */
+export function deserializeTsconfigAlias(alias: SerializedTsconfigAlias): TsconfigAlias {
+    const { find, replacement } = alias;
+    return typeof find === 'string'
+        ? { find, replacement }
+        : { find: new RegExp(find.source, find.flags), replacement };
+}
+
+/** Convert a whole resolved tsconfig into JSON-safe form (aliases only differ). */
+export function serializeResolvedTsconfig(
+    resolved: ResolvedTsconfig
+): Omit<ResolvedTsconfig, 'alias'> & { alias: SerializedTsconfigAlias[] } {
+    return { ...resolved, alias: resolved.alias.map(serializeTsconfigAlias) };
 }
 
 /** Build a chain from an in-memory config, following its `extends`. */
@@ -281,7 +334,11 @@ function loadConfigChain(
 }
 
 /** Resolve a loaded config chain into paths, references and Vite aliases. */
-function resolveChain(chain: LoadedTsconfig[], file: string): ResolvedTsconfig {
+function resolveChain(
+    chain: LoadedTsconfig[],
+    file: string,
+    relativePaths: boolean
+): ResolvedTsconfig {
     const pathsEntry = chain.find(entry => entry.config.compilerOptions?.paths !== undefined);
     const referencesEntry = chain.find(entry => entry.config.references !== undefined);
     const baseUrlEntry = chain.find(entry => entry.config.compilerOptions?.baseUrl !== undefined);
@@ -293,14 +350,25 @@ function resolveChain(chain: LoadedTsconfig[], file: string): ResolvedTsconfig {
     const paths: Record<string, string[]> = {};
     for (const [key, value] of Object.entries(pathsEntry?.config.compilerOptions?.paths ?? {})) {
         const targets = (Array.isArray(value) ? value : [value]) as string[];
-        paths[key] = targets.map(target => path.resolve(pathsBase, target));
+        paths[key] = targets.map(target => {
+            const absolute = path.resolve(pathsBase, target);
+            return relativePaths
+                ? path.relative(pathsBase, absolute).replace(/\\/g, '/')
+                : absolute;
+        });
     }
 
     const references: TsconfigReference[] = (referencesEntry?.config.references ?? []).map(
-        reference => ({
-            ...reference,
-            path: path.resolve(referencesEntry?.dir ?? path.dirname(file), reference.path),
-        })
+        reference => {
+            const dirBase = referencesEntry?.dir ?? path.dirname(file);
+            const absolute = path.resolve(dirBase, reference.path);
+            return {
+                ...reference,
+                path: relativePaths
+                    ? path.relative(dirBase, absolute).replace(/\\/g, '/')
+                    : absolute,
+            };
+        }
     );
 
     const alias = Object.entries(paths)
@@ -309,7 +377,7 @@ function resolveChain(chain: LoadedTsconfig[], file: string): ResolvedTsconfig {
         .sort((a, b) => b.score - a.score)
         .map(({ find, replacement }) => ({ find, replacement }));
 
-    return { alias, paths, references };
+    return { alias, paths, references, relativePaths };
 }
 
 /**
@@ -319,7 +387,7 @@ function resolveChain(chain: LoadedTsconfig[], file: string): ResolvedTsconfig {
 export function resolveTsconfigConfig(
     config: TsconfigJson,
     dir: string,
-    options: Pick<ResolveTsconfigOptions, 'extends' | 'overrides'> = {}
+    options: Pick<ResolveTsconfigOptions, 'extends' | 'overrides' | 'relativePaths'> = {}
 ): ResolvedTsconfig {
     const file = path.join(path.resolve(dir), 'tsconfig.json');
     const chain = loadConfigChain(config, file, options.extends !== false, new Set());
@@ -329,7 +397,7 @@ export function resolveTsconfigConfig(
             config: mergeOverride(chain[0].config, options.overrides),
         };
     }
-    return resolveChain(chain, file);
+    return resolveChain(chain, file, !!options.relativePaths);
 }
 
 /**
@@ -412,5 +480,5 @@ export function resolveTsconfig(options: ResolveTsconfigOptions = {}): ResolvedT
             config: mergeOverride(chain[0].config, options.overrides),
         };
     }
-    return resolveChain(chain, file);
+    return resolveChain(chain, file, !!options.relativePaths);
 }

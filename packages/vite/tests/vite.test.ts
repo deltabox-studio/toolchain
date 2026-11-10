@@ -141,6 +141,14 @@ describe('vite.config.ts shim', () => {
         ).toThrow(/cannot serialize a function/);
     });
 
+    it('names regex aliases when a static shim cannot serialize them', () => {
+        expect(() =>
+            renderStaticViteConfig('vite-plus', {
+                resolve: { alias: [{ find: /^@\//, replacement: '/src/' }] },
+            })
+        ).toThrow(/cannot serialize a RegExp \(vite\.resolve\.alias\[0\]\.find\)/);
+    });
+
     it('preserves existing imports/comments and merges the defineConfig import', () => {
         const existing = [
             '// my custom header',

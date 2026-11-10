@@ -350,7 +350,13 @@ function assertSerializable(value: unknown, at: string): void {
                 '`vite.shim: "runtime"` for dynamic configs.'
         );
     }
-    if (typeof value === 'symbol' || typeof value === 'bigint' || value instanceof RegExp) {
+    if (value instanceof RegExp) {
+        throw new Error(
+            `vite.shim "static" cannot serialize a RegExp (${at}). Use a string ` +
+                'alias or `vite.shim: "runtime"` for regex aliases.'
+        );
+    }
+    if (typeof value === 'symbol' || typeof value === 'bigint') {
         throw new Error(
             `vite.shim "static" cannot serialize ${typeof value} (${at}). Use ` +
                 '`vite.shim: "runtime"` for dynamic configs.'

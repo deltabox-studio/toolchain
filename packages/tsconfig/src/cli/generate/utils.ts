@@ -10,6 +10,7 @@ import {
     resolveTsconfig,
     resolveTsconfigConfig,
     resolveTsconfigFilePatterns,
+    type ResolvedTsconfig,
 } from '../../resolve.js';
 
 export type GeneratedTsconfigResult = ReturnType<typeof generateTsconfig>;
@@ -91,7 +92,7 @@ export function generateTsconfig(options: {
                 ? (readTsconfig(monorepoTsconfigPath) as TsConfigJson)
                 : ({} as TsConfigJson));
         const tsconfigMonorepo = mergeOverride(tsconfigMonorepoRaw, overrides?.root);
-        const resolvedMonorepo = hasMonorepo
+        const resolvedMonorepo: ResolvedTsconfig = hasMonorepo
             ? monorepoConfig !== undefined
                 ? resolveTsconfigConfig(
                       monorepoConfig,
@@ -104,7 +105,7 @@ export function generateTsconfig(options: {
                       cwd,
                       ...(overrides?.root ? { overrides: overrides.root } : {}),
                   })
-            : { alias: [], paths: {}, references: [] };
+            : { alias: [], paths: {}, references: [], relativePaths: false };
 
         const tsconfigRaw = readTsconfig(tsconfigPath) as TsConfigJson;
         const tsconfig = mergeOverride(tsconfigRaw, overrides?.default);

@@ -4,7 +4,12 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 
-import { resolveTsconfig } from '../src/index.js';
+import {
+    resolveTsconfig,
+    serializeResolvedTsconfig,
+    serializeTsconfigAlias,
+    deserializeTsconfigAlias,
+} from '../src/index.js';
 
 const dirs: string[] = [];
 
@@ -49,10 +54,13 @@ describe('resolveTsconfig', () => {
             { path: path.join(cwd, 'packages/core/tsconfig.json') },
         ]);
         // Exact aliases sort before wildcards.
-        expect(resolved.alias[0]).toEqual({ find: '@acme/core', replacement: core });
+        expect(resolved.alias[0]).toEqual({
+            find: '@acme/core',
+            replacement: core.replace(/\\/g, '/'),
+        });
         expect(resolved.alias[1]).toEqual({
             find: /^@acme\/(.*)$/,
-            replacement: path.join(cwd, 'packages/$1/src/index.ts'),
+            replacement: path.join(cwd, 'packages/$1/src/index.ts').replace(/\\/g, '/'),
         });
     });
 
@@ -147,5 +155,89 @@ describe('resolveTsconfig', () => {
         expect(resolveTsconfig({ cwd }).paths['@acme/core']).toEqual([
             path.join(cwd, 'src/index.ts'),
         ]);
+    });
+
+    it('maps every wildcard to its own capture group', () => {
+        const cwd = tmp();
+        write(path.join(cwd, 'packages/core/src/features/auth/index.ts'), '');
+        write(path.join(cwd, 'tsconfig.json'), {
+            compilerOptions: {
+                paths: {
+                    '@acme/*/feature/*': ['./packages/*/src/features/*/index.ts'],
+                },
+            },
+        });
+
+        const [alias] = resolveTsconfig({ cwd }).alias;
+        expect(alias?.find).toBeInstanceOf(RegExp);
+        const find = alias?.find as RegExp;
+        expect(find.test('@acme/core/feature/auth')).toBe(true);
+        expect(find.test('@acme/core/feature')).toBe(false);
+        expect('@acme/core/feature/auth'.replace(find, alias?.replacement ?? '')).toBe(
+            path.resolve(cwd, 'packages/core/src/features/auth/index.ts').replace(/\\/g, '/')
+        );
+    });
+
+    it('returns paths relative to the defining config when asked', () => {
+        const cwd = tmp();
+        write(path.join(cwd, 'base/tsconfig.json'), {
+            compilerOptions: {
+                baseUrl: '.',
+                paths: { '@acme/*': ['packages/*/src/index.ts'] },
+            },
+            references: [{ path: './packages/core/tsconfig.json' }],
+        });
+        write(path.join(cwd, 'tsconfig.json'), {
+            extends: './base/tsconfig.json',
+        });
+
+        const resolved = resolveTsconfig({ cwd, relativePaths: true });
+        expect(resolved.relativePaths).toBe(true);
+        expect(resolved.paths['@acme/*']).toEqual(['packages/*/src/index.ts']);
+        expect(resolved.references).toEqual([{ path: 'packages/core/tsconfig.json' }]);
+        expect(resolved.alias[0]).toEqual({
+            find: /^@acme\/(.*)$/,
+            replacement: 'packages/$1/src/index.ts',
+        });
+    });
+});
+
+describe('alias serialization', () => {
+    it('keeps exact aliases as strings', () => {
+        const alias = { find: '@acme/core', replacement: '/repo/packages/core/src/index.ts' };
+        expect(serializeTsconfigAlias(alias)).toEqual(alias);
+        expect(deserializeTsconfigAlias(serializeTsconfigAlias(alias))).toEqual(alias);
+    });
+
+    it('round-trips wildcard aliases through JSON', () => {
+        const alias = {
+            find: /^@acme\/(.*)$/,
+            replacement: '/repo/packages/$1/src/index.ts',
+        };
+        const serialized = serializeTsconfigAlias(alias);
+        expect(serialized).toEqual({
+            find: { source: '^@acme\\/(.*)$', flags: '' },
+            replacement: '/repo/packages/$1/src/index.ts',
+        });
+
+        const json = JSON.stringify({ alias: [serialized] });
+        expect(json).not.toContain('"find":{}');
+        const parsed = JSON.parse(json) as { alias: (typeof serialized)[] };
+        const restored = deserializeTsconfigAlias(parsed.alias[0]!);
+        expect(restored.find).toBeInstanceOf(RegExp);
+        expect((restored.find as RegExp).source).toBe('^@acme\\/(.*)$');
+        expect(restored.replacement).toBe('/repo/packages/$1/src/index.ts');
+    });
+
+    it('serializes a whole resolved config', () => {
+        const cwd = tmp();
+        write(path.join(cwd, 'tsconfig.json'), {
+            compilerOptions: { paths: { '@acme/*': ['./packages/*/src/index.ts'] } },
+        });
+
+        const serialized = serializeResolvedTsconfig(resolveTsconfig({ cwd }));
+        const json = JSON.parse(JSON.stringify(serialized));
+        expect(json.alias[0].find).toEqual({ source: '^@acme\\/(.*)$', flags: '' });
+        expect(json.paths['@acme/*']).toHaveLength(1);
     });
 });

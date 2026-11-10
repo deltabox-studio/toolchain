@@ -441,9 +441,10 @@ dbx tsconfig --no-extends         # only the selected file
 ```
 
 The output is machine-clean JSON (absolute paths). Exact `alias` keys are strings;
-wildcards are anchored regular expressions (rendered as `/.../` strings in the
-CLI JSON), so `@acme/core` never captures `@acme/core-utils`. Exact keys sort
-before wildcards.
+wildcards are anchored regular expressions (serialized as `{ source, flags }` so
+JSON keeps the pattern), so `@acme/core` never captures `@acme/core-utils`.
+Exact keys sort before wildcards. Use `deserializeTsconfigAlias` to turn an alias
+back into a `RegExp`.
 
 ## Programmatic API
 
@@ -452,6 +453,9 @@ import {
     generateTsconfigs,
     runTsconfigCli,
     resolveTsconfig,
+    serializeTsconfigAlias,
+    deserializeTsconfigAlias,
+    serializeResolvedTsconfig,
     readTsconfig,
     renderTsconfigBase,
     renderTsconfigDefault,
@@ -465,25 +469,28 @@ import {
 } from '@deltabox/toolchain/tsconfig';
 ```
 
-| Export                                                                 | Description                                             |
-| ---------------------------------------------------------------------- | ------------------------------------------------------- |
-| `generateTsconfigs(options)`                                           | Expand every default tsconfig (dry-run-able).           |
-| `runTsconfigCli(argv?)`                                                | The `dbx tsconfig` entry point.                         |
-| `resolveTsconfig(options?)`                                            | Resolve `{ alias, paths, references }` (extends-aware). |
-| `readTsconfig(file)`                                                   | Read a JSONC tsconfig (comments + trailing commas).     |
-| `renderTsconfigBase` / `renderTsconfigDefault` / `renderTsconfigBuild` | Render a template with replacements.                    |
-| `renderTsconfigTemplates(replacements?)`                               | Render every template keyed by file name.               |
-| `buildMonorepoTsconfig(options)` / `renderMonorepoTsconfig(options)`   | The workspaces config (object / JSON text).             |
-| `tsconfigSyncTask()`                                                   | The sync task wired into `dbx sync`.                    |
-| `tsconfigFileNames(config)`                                            | The configured base/root/default/build file names.      |
-| `restoreTsconfigOverrides(options)`                                    | Remove applied overrides (`{ cwd, kind?, dryRun? }`).   |
-| `applyOverride` / `mergeOverride` / `revertOverride`                   | The deep-merge + snapshot-aware revert helpers.         |
-| `getSnapshot` / `setSnapshot` / `deleteSnapshot`                       | Read/write the manifest snapshot tree by relative path. |
+| Export                                                                 | Description                                                       |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `generateTsconfigs(options)`                                           | Expand every default tsconfig (dry-run-able).                     |
+| `runTsconfigCli(argv?)`                                                | The `dbx tsconfig` entry point.                                   |
+| `resolveTsconfig(options?)`                                            | Resolve `{ alias, paths, references }` (extends-aware).           |
+| `serializeTsconfigAlias(alias)` / `deserializeTsconfigAlias(alias)`    | Convert aliases to/from their JSON-safe `{ source, flags }` form. |
+| `serializeResolvedTsconfig(resolved)`                                  | Serialize a whole resolved config for JSON transport.             |
+| `readTsconfig(file)`                                                   | Read a JSONC tsconfig (comments + trailing commas).               |
+| `renderTsconfigBase` / `renderTsconfigDefault` / `renderTsconfigBuild` | Render a template with replacements.                              |
+| `renderTsconfigTemplates(replacements?)`                               | Render every template keyed by file name.                         |
+| `buildMonorepoTsconfig(options)` / `renderMonorepoTsconfig(options)`   | The workspaces config (object / JSON text).                       |
+| `tsconfigSyncTask()`                                                   | The sync task wired into `dbx sync`.                              |
+| `tsconfigFileNames(config)`                                            | The configured base/root/default/build file names.                |
+| `restoreTsconfigOverrides(options)`                                    | Remove applied overrides (`{ cwd, kind?, dryRun? }`).             |
+| `applyOverride` / `mergeOverride` / `revertOverride`                   | The deep-merge + snapshot-aware revert helpers.                   |
+| `getSnapshot` / `setSnapshot` / `deleteSnapshot`                       | Read/write the manifest snapshot tree by relative path.           |
 
-`resolveTsconfig` accepts `{ tsconfig, cwd, root, extends, overrides }`: `tsconfig` is
-resolved from `root` (default `cwd`), and `extends` defaults to `true`. Paths are
-resolved against the defining config's `baseUrl` (or its directory), matching
-TypeScript.
+`resolveTsconfig` accepts `{ tsconfig, cwd, root, relativePaths, extends, overrides }`:
+`tsconfig` is resolved from `root` (default `cwd`), `extends` defaults to `true`, and
+`relativePaths` (default `false`) returns paths relative to the config that defines
+them. `paths` are resolved against the defining config's `baseUrl` (or its
+directory), matching TypeScript.
 
 `generateTsconfigs` returns one result per workspace (with `newTsconfig`,
 `originalConfig`, ...); pass `write: false` for a dry run. The task-level

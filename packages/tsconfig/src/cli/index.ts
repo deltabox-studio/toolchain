@@ -13,7 +13,7 @@ import {
     type TsconfigOverrideKind,
     type TsconfigOverrides,
 } from '../overrides.js';
-import { resolveTsconfig } from '../resolve.js';
+import { resolveTsconfig, serializeTsconfigAlias } from '../resolve.js';
 import { restoreTsconfigOverrides } from '../snapshots.js';
 
 /**
@@ -164,19 +164,25 @@ export function tsconfigCommands(): ToolchainCommand[] {
                         ...(opts.tsconfig ? { tsconfig: opts.tsconfig as string } : {}),
                         ...(opts.extends === false ? { extends: false } : {}),
                     });
+                    const alias = resolved.alias.map(serializeTsconfigAlias);
+                    const pick = (key: 'alias' | 'paths' | 'references') =>
+                        key === 'alias' ? alias : resolved[key];
                     const output =
                         selectors.length === 0
-                            ? resolved
+                            ? {
+                                  alias,
+                                  paths: resolved.paths,
+                                  references: resolved.references,
+                              }
                             : selectors.length === 1
-                              ? resolved[selectors[0] as keyof typeof resolved]
-                              : Object.fromEntries(selectors.map(key => [key, resolved[key]]));
-                    logger.raw(
-                        JSON.stringify(
-                            output,
-                            (_key, value) => (value instanceof RegExp ? String(value) : value),
-                            4
-                        )
-                    );
+                              ? pick(selectors[0] as 'alias' | 'paths' | 'references')
+                              : Object.fromEntries(
+                                    selectors.map(key => [
+                                        key,
+                                        pick(key as 'alias' | 'paths' | 'references'),
+                                    ])
+                                );
+                    logger.raw(JSON.stringify(output, null, 4));
                     return;
                 }
 
