@@ -7,7 +7,6 @@ import { afterEach, describe, expect, it } from 'vite-plus/test';
 import {
     dockerFiles,
     dockerImageName,
-    dockerSyncTask,
     renderCompose,
     renderDockerfile,
     resolveDockerPlan,
@@ -150,71 +149,5 @@ describe('docker plans', () => {
         expect(dockerImageName('@acme/my app')).toBe('my-app');
         expect(dockerImageName('@acme/core')).toBe('core');
         expect(dockerImageName('!!!')).toBe('app');
-    });
-});
-
-describe('docker sync task', () => {
-    it('is opt-in and writes unformatted managed files', async () => {
-        const task = dockerSyncTask();
-        expect(task.enabled?.({})).toBe(false);
-        expect(task.enabled?.({ docker: true })).toBe(true);
-        expect(task.enabled?.({ docker: { enabled: false } })).toBe(false);
-
-        const cwd = project({ name: 'svc', scripts: { start: 'node dist/index.js' } });
-        const files = await task.run({
-            cwd,
-            projectType: 'project',
-            config: { docker: { image: 'acme/svc', compose: true } },
-            tokens: {},
-            log: () => {},
-            warn: () => {},
-        });
-        const list = files ?? [];
-        expect(list.map(file => file.path)).toEqual([
-            'Dockerfile',
-            '.dockerignore',
-            'docker-compose.yaml',
-        ]);
-        expect(list.every(file => file.format === false)).toBe(true);
-        expect(list.find(file => file.path === 'docker-compose.yaml')!.content).toContain(
-            'acme/svc'
-        );
-    });
-
-    it('leaves user-owned artifacts untouched and still writes the missing ones', async () => {
-        const cwd = project({ name: 'svc', scripts: { start: 'node dist/index.js' } });
-        fs.writeFileSync(path.join(cwd, 'Dockerfile'), 'FROM custom\n', 'utf-8');
-        fs.writeFileSync(path.join(cwd, 'docker-compose.yaml'), 'services: {}\n', 'utf-8');
-        const warnings: string[] = [];
-
-        const files = await dockerSyncTask().run({
-            cwd,
-            projectType: 'project',
-            config: { docker: { compose: true } },
-            tokens: {},
-            log: () => {},
-            warn: message => warnings.push(message),
-        });
-
-        expect(files?.map(file => file.path)).toEqual(['.dockerignore']);
-        expect(fs.readFileSync(path.join(cwd, 'Dockerfile'), 'utf-8')).toBe('FROM custom\n');
-        expect(fs.readFileSync(path.join(cwd, 'docker-compose.yaml'), 'utf-8')).toBe(
-            'services: {}\n'
-        );
-        expect(warnings.some(message => message.includes('Dockerfile'))).toBe(true);
-    });
-
-    it('never manages the Dockerfile when `managed: false`', async () => {
-        const cwd = project({ name: 'svc', scripts: { start: 'node dist/index.js' } });
-        const files = await dockerSyncTask().run({
-            cwd,
-            projectType: 'project',
-            config: { docker: { managed: false, compose: true } },
-            tokens: {},
-            log: () => {},
-            warn: () => {},
-        });
-
-        expect(files?.map(file => file.path)).toEqual(['.dockerignore', 'docker-compose.yaml']);
     });
 });

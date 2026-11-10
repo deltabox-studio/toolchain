@@ -11,17 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {
-    declaresVitePlus,
-    type ManagedFile,
-    type PackageJson,
-    readJsonAt,
-    sectionConfig,
-    sectionEnabled,
-    type SyncTask,
-    type ToolchainConfig,
-    type ToolchainDockerConfig,
-} from '@deltabox/toolchain/shared';
+import { declaresVitePlus, type PackageJson, readJsonAt } from '@deltabox/toolchain/shared';
 
 /** A generated Docker artifact. */
 export interface DockerFile {
@@ -34,8 +24,42 @@ export interface DockerFile {
 /** How the generated container runs. */
 export type DockerRuntime = 'node' | 'static' | 'bun';
 
-/** Options for planning/rendering the Docker artifacts. */
-export interface DockerPlanOptions extends ToolchainDockerConfig {
+/** Options for generating the Docker artifacts. */
+export interface DockerOptions {
+    /** Container image name (default: the project name). */
+    image?: string;
+    /** Container image tag (default `latest`). */
+    tag?: string;
+    /** Container port to expose (default 3000, or 8080 for static sites). */
+    port?: number;
+    /** Runtime layout (default `auto`, detected from `package.json`). */
+    runtime?: 'auto' | DockerRuntime;
+    /** Built entry file, relative to the project root (default `dist/index.js`). */
+    entry?: string;
+    /** Build output directory (default `dist`, or the VitePress output). */
+    output?: string;
+    /** Node.js version for non-Vite+ images. */
+    nodeVersion?: string;
+    /** Override the build-stage base image. */
+    baseImage?: string;
+    /** Override the runtime base image. */
+    runtimeImage?: string;
+    /** Runtime user to run as. */
+    user?: string;
+    /** Also write `docker-compose.yaml` (default false). */
+    compose?: boolean;
+    /** Add a `HEALTHCHECK` to the runtime image (default true). */
+    healthcheck?: boolean;
+    /** HTTP path the healthcheck requests (default `/`). */
+    healthcheckPath?: string;
+    /** Dockerfile name (default `Dockerfile`). */
+    dockerfile?: string;
+    /** Write a `.dockerignore` alongside the Dockerfile (default true). */
+    dockerignore?: boolean;
+}
+
+/** Options for planning/rendering the Docker artifacts for a project. */
+export interface DockerPlanOptions extends DockerOptions {
     /** The project root. */
     cwd: string;
     /** The project/package name (used for the image name). */
@@ -382,71 +406,4 @@ export function writeDockerFiles(options: DockerPlanOptions & { force?: boolean 
         written.push(target);
     }
     return written;
-}
-
-/** The `docker` sync task: writes the managed artifacts for the section. */
-export function dockerSyncTask(): SyncTask {
-    return {
-        name: 'docker',
-        // Dockerfiles describe a deployable project or workspace, not a repo root.
-        projectTypes: ['project', 'monorepo-workspace'],
-        enabled: (config: ToolchainConfig) => sectionEnabled(config.docker),
-        run: ctx => {
-            const docker = sectionConfig(ctx.config.docker) ?? {};
-            const plan = resolveDockerPlan({
-                ...docker,
-                cwd: ctx.cwd,
-                ...(ctx.config.project?.name ? { projectName: ctx.config.project.name } : {}),
-                ...(ctx.config.project?.packageManager
-                    ? { packageManager: ctx.config.project.packageManager }
-                    : {}),
-                ...(ctx.config.project?.nodeVersion
-                    ? { nodeVersion: ctx.config.project.nodeVersion }
-                    : {}),
-            });
-            const managedFiles = new Set(ctx.managedFiles ?? []);
-            const isManaged = (pathname: string): boolean => {
-                if (managedFiles.has(pathname)) return true;
-                const abs = path.resolve(ctx.cwd, pathname);
-                if (!fs.existsSync(abs)) return true;
-                try {
-                    const head = fs
-                        .readFileSync(abs, 'utf-8')
-                        .replace(/^\uFEFF/, '')
-                        .split('\n')
-                        .slice(0, 3);
-                    return head.includes(DOCKER_HEADER);
-                } catch {
-                    return false;
-                }
-            };
-            const files: DockerFile[] = [
-                { path: plan.dockerfile, content: renderDockerfile(plan) },
-            ];
-            if (plan.dockerignore) {
-                files.push({ path: '.dockerignore', content: renderDockerignore(plan) });
-            }
-            if (plan.compose) {
-                files.push({ path: DOCKER_COMPOSE_FILE, content: renderCompose(plan) });
-            }
-            return files
-                .filter(file => {
-                    // `managed: false` leaves the Dockerfile entirely user-owned.
-                    if (file.path === plan.dockerfile && docker.managed === false) return false;
-                    if (isManaged(file.path)) return true;
-                    ctx.warn(
-                        `docker: ${file.path} already exists and is not managed by dbx; leaving it untouched.`
-                    );
-                    return false;
-                })
-                .map(
-                    file =>
-                        ({
-                            path: file.path,
-                            content: file.content,
-                            format: false,
-                        }) as ManagedFile
-                );
-        },
-    };
 }

@@ -5,7 +5,6 @@ import {
     conventionalCommitsVscodeSettings,
 } from '@deltabox/toolchain/changelog';
 import { editorConfigSyncTask, toolingConfigTask, vscodeSyncTask } from '@deltabox/toolchain/core';
-import { dockerSyncTask } from '@deltabox/toolchain/docker';
 import { catalogsSyncTask, projectSyncTask } from '@deltabox/toolchain/project';
 import {
     changelogSectionEnabled,
@@ -36,7 +35,6 @@ export function defaultSyncTasks(): SyncTask[] {
         tsconfigSyncTask(),
         viteSyncTask(),
         toolingConfigTask(),
-        dockerSyncTask(),
         editorConfigSyncTask(),
         vscodeSyncTask({
             settings: config => [
