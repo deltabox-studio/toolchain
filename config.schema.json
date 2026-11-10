@@ -2481,89 +2481,6 @@
             "additionalProperties": false,
             "description": "`dbx sync` behaviour (formatting of the managed files)."
         },
-        "ToolchainDockerConfig": {
-            "type": "object",
-            "properties": {
-                "image": {
-                    "type": "string",
-                    "description": "Container image name (default: the project name)."
-                },
-                "tag": {
-                    "type": "string",
-                    "description": "Container image tag (default `latest`)."
-                },
-                "port": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 65535,
-                    "description": "Container port to expose (default 3000, or 80 for static sites)."
-                },
-                "runtime": {
-                    "type": "string",
-                    "enum": [
-                        "auto",
-                        "node",
-                        "static",
-                        "bun"
-                    ],
-                    "description": "How the container runs: a Node.js server, a static/SSG site, or a Bun server (default `auto`, detected from `package.json`)."
-                },
-                "entry": {
-                    "type": "string",
-                    "description": "Built entry file, relative to the project root (default `dist/index.js`)."
-                },
-                "output": {
-                    "type": "string",
-                    "description": "Build output directory (default `dist`, or the VitePress output)."
-                },
-                "nodeVersion": {
-                    "type": "string",
-                    "description": "Node.js version for non-Vite+ images."
-                },
-                "baseImage": {
-                    "type": "string",
-                    "description": "Override the build-stage base image."
-                },
-                "runtimeImage": {
-                    "type": "string",
-                    "description": "Override the runtime base image."
-                },
-                "user": {
-                    "type": "string",
-                    "description": "Runtime user to run as (default `node`, `bun` or `nobody`)."
-                },
-                "managed": {
-                    "type": "boolean",
-                    "description": "Manage the Dockerfile (default true). Set false to keep a hand-written Dockerfile while dbx still generates `.dockerignore`/compose."
-                },
-                "compose": {
-                    "type": "boolean",
-                    "description": "Also write a `docker-compose.yaml` (default false)."
-                },
-                "healthcheck": {
-                    "type": "boolean",
-                    "description": "Add a `HEALTHCHECK` to the runtime image (default true)."
-                },
-                "healthcheckPath": {
-                    "type": "string",
-                    "description": "HTTP path the healthcheck requests (default `/`)."
-                },
-                "dockerfile": {
-                    "type": "string",
-                    "description": "Dockerfile name (default `Dockerfile`)."
-                },
-                "dockerignore": {
-                    "type": "boolean",
-                    "description": "Write a `.dockerignore` alongside the Dockerfile (default true)."
-                },
-                "enabled": {
-                    "description": "Enable/disable this section (default: enabled when defined).",
-                    "type": "boolean"
-                }
-            },
-            "additionalProperties": false,
-            "description": "Dockerfile / compose generation for the project."
-        },
         "ToolchainLoggerConfig": {
             "type": "object",
             "properties": {
@@ -2813,17 +2730,6 @@
                         }
                     ],
                     "description": "`dbx sync` behaviour (formatting of the generated managed files)."
-                },
-                "docker": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainDockerConfig"
-                        }
-                    ],
-                    "description": "Dockerfile / compose generation for the project."
                 },
                 "logger": {
                     "anyOf": [

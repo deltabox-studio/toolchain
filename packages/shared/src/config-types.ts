@@ -1028,49 +1028,6 @@ export interface ToolchainSyncConfig {
     enabled?: boolean;
 }
 
-export interface ToolchainDockerConfig {
-    /** Container image name (default: the project name). */
-    image?: string;
-    /** Container image tag (default `latest`). */
-    tag?: string;
-    /** Container port to expose (default 3000, or 80 for static sites). */
-    port?: number;
-    /**
-     * How the container runs: a Node.js server, a static/SSG site, or a Bun server (default `auto`,
-     * detected from `package.json`).
-     */
-    runtime?: 'auto' | 'node' | 'static' | 'bun';
-    /** Built entry file, relative to the project root (default `dist/index.js`). */
-    entry?: string;
-    /** Build output directory (default `dist`, or the VitePress output). */
-    output?: string;
-    /** Node.js version for non-Vite+ images. */
-    nodeVersion?: string;
-    /** Override the build-stage base image. */
-    baseImage?: string;
-    /** Override the runtime base image. */
-    runtimeImage?: string;
-    /** Runtime user to run as (default `node`, `bun` or `nobody`). */
-    user?: string;
-    /**
-     * Manage the Dockerfile (default true). Set false to keep a hand-written Dockerfile while dbx
-     * still generates `.dockerignore`/compose.
-     */
-    managed?: boolean;
-    /** Also write a `docker-compose.yaml` (default false). */
-    compose?: boolean;
-    /** Add a `HEALTHCHECK` to the runtime image (default true). */
-    healthcheck?: boolean;
-    /** HTTP path the healthcheck requests (default `/`). */
-    healthcheckPath?: string;
-    /** Dockerfile name (default `Dockerfile`). */
-    dockerfile?: string;
-    /** Write a `.dockerignore` alongside the Dockerfile (default true). */
-    dockerignore?: boolean;
-    /** Enable/disable this section (default: enabled when defined). */
-    enabled?: boolean;
-}
-
 export interface ToolchainLoggerConfig {
     /** Minimum level to print (default `info`). */
     level?: 'debug' | 'info' | 'warn' | 'error' | 'silent';
@@ -1129,8 +1086,6 @@ export interface ToolchainConfigSections {
     watch?: boolean | ToolchainWatchConfig;
     /** `dbx sync` behaviour (formatting of the generated managed files). */
     sync?: boolean | ToolchainSyncConfig;
-    /** Dockerfile / compose generation for the project. */
-    docker?: boolean | ToolchainDockerConfig;
     /** Logging level, colours and prefix for toolchain output. */
     logger?: boolean | ToolchainLoggerConfig;
     /** Provider command behaviour (eg. colour for the passthrough commands). */
