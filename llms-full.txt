@@ -101,6 +101,8 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx vite:toolchain`](#vite-toolchain)                 | Vite+: Show Vite+ tool versions.                                                                |
 | [`dbx vite:upgrade`](#vite-upgrade)                     | Vite+: Update `vp` itself.                                                                      |
 | [`dbx vite:implode`](#vite-implode)                     | Vite+: Remove `vp` and all related data.                                                        |
+| [`dbx fmt`](#fmt)                                       | Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc).               |
+| [`dbx lint`](#lint)                                     | Lint with the detected linter (Vite+ Oxlint, ESLint or Biome).                                  |
 
 ## `dbx projects`
 
@@ -268,6 +270,7 @@ Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.\* 
 * `--ignore-vite-config-file` — Do not remove the folded `vite.config.*`.
 * `--ignore-managed-files` — Skip the post-migration sync (leave the toolchain-managed files as-is).
 * `--ignore-changelog` — Skip the changelog task in the post-migration sync.
+* `--tool-version ‹name@range›` — Override a provisioned formatter/linter dependency version (repeatable).
 * `--json` — Print the result as JSON.
 
 ## `dbx migrate:list`
@@ -285,6 +288,7 @@ Scaffold a single-package TypeScript project.
 * `-s, --scope ‹scope›` — npm scope, eg. @acme.
 * `-o, --out ‹dir›` — Output directory (default: cwd).
 * `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
+* `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
 * `--no-config` — Skip the dbx.config.ts file.
 * `--type ‹type›` — Project type: project | monorepo-root | monorepo-workspace.
 * `--force` — Overwrite existing files in the output directory.
@@ -298,6 +302,7 @@ Scaffold a monorepo root (add --example for one example workspace).
 * `-o, --out ‹dir›` — Output directory (default: cwd).
 * `--example` — Also scaffold one example workspace package.
 * `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
+* `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
 * `--no-config` — Skip the dbx.config.ts file.
 * `--type ‹type›` — Project type: project | monorepo-root | monorepo-workspace.
 * `--force` — Overwrite existing files in the output directory.
@@ -311,6 +316,7 @@ Scaffold a monorepo workspace package into an existing monorepo root.
 * `-r, --root ‹dir›` — Monorepo root (default: cwd).
 * `-d, --dir ‹dir›` — Workspace dir relative to the root (default: packages/\<name>).
 * `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
+* `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
 * `--no-config` — Skip the dbx.config.ts file.
 * `--type ‹type›` — Project type: project | monorepo-root | monorepo-workspace.
 * `--force` — Overwrite existing files in the output directory.
@@ -430,6 +436,7 @@ Scaffold a project from a template (builtin, local or Vite+).
 * `--cwd ‹dir›` — Project root (default: cwd).
 * `--var ‹pair...›` — Template variables as key=value (repeatable).
 * `--action ‹id...›` — Action id to run after scaffolding (repeatable).
+* `--tool-version ‹name@range›` — Override a provisioned formatter/linter dependency version (repeatable).
 * `--online` — Resolve online templates too.
 * `--force` — Overwrite existing files in the output directory.
 * `--json` — Print the result as JSON.
@@ -647,6 +654,18 @@ Vite+: Update `vp` itself.
 ## `dbx vite:implode`
 
 Vite+: Remove `vp` and all related data.
+
+* `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
+
+## `dbx fmt`
+
+Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc).
+
+* `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
+
+## `dbx lint`
+
+Lint with the detected linter (Vite+ Oxlint, ESLint or Biome).
 
 * `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
@@ -1895,7 +1914,7 @@ Inject path aliases (default true).
 
 * **Type**: `boolean | ToolchainTsconfigAliasAutoSetting`
 
-Auto-generate the root workspaces tsconfig paths/references from the project graph (default false). Set true to derive them from the project graph; set false to only use the entries you define yourself.
+Auto-generate the root workspaces tsconfig paths/references from the project graph (default false). Set true to derive them from the project graph; set false to only use the entries you define yourself. An object additionally accepts `include`/`exclude`, `rewriteAlias`, `modes`, `prefix`, `devMode` and `dist`.
 
 #### `include`
 
@@ -1915,11 +1934,35 @@ Skip entries matching these globs (same targets as `include`).
 
 Rewrite the alias keys auto-wiring generates (custom keys are preserved). Patterns are URL-rewrite style: a string is a regular-expression source and replacements support `$1`, `$2`, ... capture groups. Examples: `{ "^@acme/(.+)$": "@acme/pkg/$1" }` (string patterns), `[{ pattern: /^@acme\/(.+)$/, replacement: "@acme/pkg/$1" }]` (RegExp patterns), `[{ pattern: ["^@acme/a$", "^@acme/b$"], replacement: "@acme/x" }]` (an array of keys), and an array of such rules (applied in order; the first matching rule wins). `RegExp` patterns are only available from TS/JS configs; JSON configs use string patterns.
 
+#### `modes`
+
+* **Type**: `'auto' | 'exports' | 'project-structure' | Array<'exports' | 'project-structure'>`
+
+Alias discovery: `auto` (exports, then the project structure), `exports` (package.json exports/types/main only), `project-structure` (scan the source tree), or an array combining `exports` and `project-structure`.
+
+#### `prefix`
+
+* **Type**: `'@' | (string & {})`
+
+Prefix for generated aliases instead of the package scope (eg. `@` produces `@/<package>` and `@/<package>/<subpath>`).
+
+#### `devMode`
+
+* **Type**: `boolean`
+
+Resolve generated aliases to source files (default true). Set false to point at the distributed files instead.
+
+#### `dist`
+
+* **Type**: `string`
+
+Output directory used to map source/dist targets (default: the workspace tsconfig's `outDir`, then `dist`).
+
 ### `aliasAuto`
 
 * **Type**: `boolean | ToolchainTsconfigAliasAutoSetting`
 
-Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). Accepts the same `include`/`exclude`/`rewriteAlias` object as `auto`.
+Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). Accepts the same `include`/`exclude`/`rewriteAlias`/`modes`/`prefix`/`devMode`/`dist` object as `auto`.
 
 ### `refsAuto`
 
@@ -2662,6 +2705,8 @@ code --install-extension deltabox.toolchain-vscode
 | Sync all / active / selected | Run `dbx sync --recursive`, which walks every managed project in dependency order (nested workspaces included). Configless projects are skipped unless `deltabox.toolchain.manageConfigless` is enabled. |
 | Check sync                   | `sync --check` across the workspace.                                                                                                                                                                     |
 | Sync tsconfig                | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).                                                                                                                                |
+| Format project               | Run `dbx fmt` with the formatter detected/configured for the project (Oxfmt/Vite+, Prettier, Biome, dprint or standalone Oxc).                                                                           |
+| Lint project                 | Run `dbx lint` with the linter detected/configured for the project (Oxlint/Vite+, ESLint or Biome).                                                                                                      |
 | Manage tsconfig…             | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                                                                                                                                |
 | Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**.                                                                                                                  |
 | Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.                                                                                                                        |
@@ -2681,6 +2726,12 @@ code --install-extension deltabox.toolchain-vscode
 Interactive commands (the dev server, `vp create`, online scaffolding) run in an
 integrated terminal at the project root; everything else runs in the output
 channel.
+
+**Format project** and **Lint project** are generic toolchain commands, not
+Vite+ commands: they run `dbx fmt` / `dbx lint`, which route to the
+detected/configured formatter and linter. A project using Prettier, ESLint,
+Biome, dprint or standalone Oxc gets the same actions as a Vite+ project (the
+`vp` passthrough is only used when Oxc is backed by `vite-plus`).
 
 ## Project menu
 
@@ -3380,6 +3431,33 @@ export default defineConfig({
 | `enabled`  | `boolean`                                | Master switch (default: enabled when defined). |
 
 A section with neither `packages` nor `named` writes nothing.
+
+### Visual example: config → generated catalog
+
+```ts [dbx.config.ts]
+toolchain: {
+    catalogs: {
+        packages: { react: '^19.0.0', 'react-dom': '^19.0.0' },
+        named: { legacy: { react: '^18.0.0' } },
+    },
+}
+```
+
+With Yarn this writes `.yarnrc.yml`:
+
+```yaml
+nodeLinker: node-modules
+catalog:
+    react: ^19.0.0
+    react-dom: ^19.0.0
+catalogs:
+    legacy:
+        react: ^18.0.0
+```
+
+A workspace then references the default catalog with `"react": "catalog:"` (or
+`"react": "catalog:legacy"` for a named catalog); the package manager resolves
+the actual version from this file.
 
 ## Supported package managers
 
@@ -8049,6 +8127,10 @@ only do it when that is what you want.
 | `aliases`     | `boolean`                            | `true`                     | Inject `compilerOptions.paths` from the workspaces config.          |
 | `refs`        | `boolean`                            | `false`                    | Wire project references between workspaces.                         |
 | `composite`   | `boolean`                            | `false`                    | Emit `composite: true` on the generated configs.                    |
+| `auto`        | `boolean \| object`                  | `false`                    | Auto-generate the workspaces paths/references from the graph.       |
+| `aliasAuto`   | `boolean \| object`                  | `auto`                     | Auto-generate aliases (`modes`, `prefix`, `devMode`, `dist`, ...).  |
+| `refsAuto`    | `boolean \| object`                  | `auto`                     | Auto-generate project references.                                   |
+| `autoSrcDir`  | `string`                             | `src`                      | Source dir used when resolving package entry points.                |
 | `glob`        | `string \| string[]`                 | `**/tsconfig.default.json` | Glob(s) for the workspace default tsconfig files to expand.         |
 | `exclude`     | `string \| string[]`                 | common ignored paths       | Glob(s) excluded from `glob`.                                       |
 | `gitignore`   | `boolean`                            | `true`                     | Respect `.gitignore` files (root + nested).                         |
@@ -8081,6 +8163,93 @@ When on, the generated configs spread the workspaces tsconfig's
 `compilerOptions` (including `composite: true`, `declaration`,
 `emitDeclarationOnly`, ...) and merge its `types`. Leave it off unless you build
 the graph with `tsc --build`.
+
+### `auto` / `aliasAuto`
+
+`auto` derives both the workspaces `paths` and `references` from the project
+graph. `aliasAuto` controls only the aliases and defaults to `auto`; `refsAuto`
+controls only the references. Every one is opt-in (`false` by default for
+`auto`) and preserves keys you wrote yourself: only entries a previous auto run
+managed are updated or removed.
+
+The alias object accepts:
+
+| Option                | Type                                                                                 | Default                   | Description                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------ | ------------------------- | --------------------------------------------------------------------------- |
+| `modes`               | `'auto' \| 'exports' \| 'project-structure' \| ('exports' \| 'project-structure')[]` | `auto`                    | How aliases are discovered.                                                 |
+| `prefix`              | `string` (eg. `@`)                                                                   | package name              | Base key for generated aliases (`@` → `@/<package>` and `@/<package>/*`).   |
+| `devMode`             | `boolean`                                                                            | `true`                    | Resolve `exports` to source files; `false` points at the distributed files. |
+| `dist`                | `string`                                                                             | tsconfig `outDir`, `dist` | Output directory used for the source/dist mapping.                          |
+| `rewriteAlias`        | `Record<string, string> \| Rule[]`                                                   | none                      | Rewrite generated alias keys (`$1`, `$2`, ... capture groups).              |
+| `include` / `exclude` | `string[]`                                                                           | none                      | Filter aliases by their generated keys.                                     |
+
+`modes` values:
+
+* **`auto`** — use `exports`/`types`/`main` when they resolve to usable source,
+  otherwise scan the project structure.
+* **`exports`** — only `package.json` `exports` (falling back to `types`/`main`
+  for the package root).
+* **`project-structure`** — scan the workspace source tree (`index.*` files and a
+  wildcard).
+* **an array** — combine both; an earlier mode wins when keys collide.
+
+#### Visual example: input → generated paths
+
+Given `packages/core/package.json`:
+
+```json
+{
+    "name": "@acme/core",
+    "exports": {
+        ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+        "./utils": { "types": "./dist/utils.d.ts", "import": "./dist/utils.js" }
+    }
+}
+```
+
+and `packages/core/tsconfig.default.json`:
+
+```json
+{ "compilerOptions": { "rootDir": "src", "outDir": "dist" } }
+```
+
+this config:
+
+```ts
+tsconfig: {
+    auto: { modes: 'exports', devMode: true },
+}
+```
+
+produces these entries in `tsconfig.workspaces.json` (then rebased into each
+workspace's generated `tsconfig.json`):
+
+```json
+{
+    "compilerOptions": {
+        "paths": {
+            "@acme/core": ["./packages/core/src/index.ts"],
+            "@acme/core/utils": ["./packages/core/src/utils.ts"],
+            "@acme/core/*": ["./packages/core/src/*"]
+        }
+    }
+}
+```
+
+With `devMode: false` the same exports resolve to the distributed files instead:
+
+```json
+{
+    "@acme/core": ["./packages/core/dist/index.js"],
+    "@acme/core/utils": ["./packages/core/dist/utils.js"],
+    "@acme/core/*": ["./packages/core/dist/*"]
+}
+```
+
+With `prefix: '@'` the keys become `@/core`, `@/core/utils` and `@/core/*`
+(the prefix replaces the package scope, not the package name). `rewriteAlias`
+runs against those final generated keys, so
+`{ "^@/core/utils$": "@/core/helpers" }` renames that one alias.
 
 ### `refsAuto`
 
@@ -8373,10 +8542,72 @@ dbx tsconfig --root packages/app  # root used for detection + relative tsconfig
 dbx tsconfig --no-extends         # only the selected file
 ```
 
-The output is machine-clean JSON (absolute paths). Exact `alias` keys are strings;
-wildcards are anchored regular expressions (rendered as `/.../` strings in the
-CLI JSON), so `@acme/core` never captures `@acme/core-utils`. Exact keys sort
-before wildcards.
+The output is machine-clean JSON (absolute paths). Aliases are anchored
+regular expressions by default (`strict`, from exact keys to wildcards), so
+`@acme/core` never captures `@acme/core-utils`; they serialize as
+`{ source, flags }` so JSON keeps the pattern. With `strict: false`, exact keys
+stay plain strings (wildcards remain regexes). Use `deserializeTsconfigAlias` to
+turn an alias back into a `RegExp`. Aliases and `paths` keys are sorted
+descending, so the longest/most specific entry comes first.
+
+### Visual example: resolved aliases
+
+Input `tsconfig.json`:
+
+```json
+{
+    "compilerOptions": {
+        "paths": {
+            "@acme/core": ["./packages/core/src/index.ts"],
+            "@acme/core-utils": ["./packages/core-utils/src/index.ts"],
+            "@acme/core-utils/deep": ["./packages/core-utils-deep/src/index.ts"],
+            "@acme/core.lib": ["./packages/core-lib/src/index.ts"],
+            "@acme/*": ["./packages/*/src/index.ts"]
+        }
+    }
+}
+```
+
+`dbx tsconfig --json` output (shortened replacements):
+
+```json
+{
+    "alias": [
+        {
+            "find": { "source": "^@acme\\/core\\.lib$", "flags": "" },
+            "replacement": ".../core-lib/src/index.ts"
+        },
+        {
+            "find": { "source": "^@acme\\/core-utils\\/deep$", "flags": "" },
+            "replacement": ".../core-utils-deep/src/index.ts"
+        },
+        {
+            "find": { "source": "^@acme\\/core-utils$", "flags": "" },
+            "replacement": ".../core-utils/src/index.ts"
+        },
+        {
+            "find": { "source": "^@acme\\/core$", "flags": "" },
+            "replacement": ".../core/src/index.ts"
+        },
+        {
+            "find": { "source": "^@acme\\/(.*)$", "flags": "" },
+            "replacement": ".../packages/$1/src/index.ts"
+        }
+    ],
+    "paths": {
+        "@acme/core.lib": [".../core-lib/src/index.ts"],
+        "@acme/core-utils/deep": [".../core-utils-deep/src/index.ts"],
+        "@acme/core-utils": [".../core-utils/src/index.ts"],
+        "@acme/core": [".../core/src/index.ts"],
+        "@acme/*": [".../packages/*/src/index.ts"]
+    },
+    "references": []
+}
+```
+
+Exact keys are escaped (`core.lib` → `core\\.lib`) and anchored, and the
+prefix-extended keys sort before their shorter prefix. The same order applies to
+`paths`, so consumers that iterate it see the most specific key first.
 
 ## Programmatic API
 
@@ -8385,6 +8616,9 @@ import {
     generateTsconfigs,
     runTsconfigCli,
     resolveTsconfig,
+    serializeTsconfigAlias,
+    deserializeTsconfigAlias,
+    serializeResolvedTsconfig,
     readTsconfig,
     renderTsconfigBase,
     renderTsconfigDefault,
@@ -8398,25 +8632,29 @@ import {
 } from '@deltabox/toolchain/tsconfig';
 ```
 
-| Export                                                                 | Description                                             |
-| ---------------------------------------------------------------------- | ------------------------------------------------------- |
-| `generateTsconfigs(options)`                                           | Expand every default tsconfig (dry-run-able).           |
-| `runTsconfigCli(argv?)`                                                | The `dbx tsconfig` entry point.                         |
-| `resolveTsconfig(options?)`                                            | Resolve `{ alias, paths, references }` (extends-aware). |
-| `readTsconfig(file)`                                                   | Read a JSONC tsconfig (comments + trailing commas).     |
-| `renderTsconfigBase` / `renderTsconfigDefault` / `renderTsconfigBuild` | Render a template with replacements.                    |
-| `renderTsconfigTemplates(replacements?)`                               | Render every template keyed by file name.               |
-| `buildMonorepoTsconfig(options)` / `renderMonorepoTsconfig(options)`   | The workspaces config (object / JSON text).             |
-| `tsconfigSyncTask()`                                                   | The sync task wired into `dbx sync`.                    |
-| `tsconfigFileNames(config)`                                            | The configured base/root/default/build file names.      |
-| `restoreTsconfigOverrides(options)`                                    | Remove applied overrides (`{ cwd, kind?, dryRun? }`).   |
-| `applyOverride` / `mergeOverride` / `revertOverride`                   | The deep-merge + snapshot-aware revert helpers.         |
-| `getSnapshot` / `setSnapshot` / `deleteSnapshot`                       | Read/write the manifest snapshot tree by relative path. |
+| Export                                                                 | Description                                                       |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `generateTsconfigs(options)`                                           | Expand every default tsconfig (dry-run-able).                     |
+| `runTsconfigCli(argv?)`                                                | The `dbx tsconfig` entry point.                                   |
+| `resolveTsconfig(options?)`                                            | Resolve `{ alias, paths, references }` (extends-aware).           |
+| `serializeTsconfigAlias(alias)` / `deserializeTsconfigAlias(alias)`    | Convert aliases to/from their JSON-safe `{ source, flags }` form. |
+| `serializeResolvedTsconfig(resolved)`                                  | Serialize a whole resolved config for JSON transport.             |
+| `readTsconfig(file)`                                                   | Read a JSONC tsconfig (comments + trailing commas).               |
+| `renderTsconfigBase` / `renderTsconfigDefault` / `renderTsconfigBuild` | Render a template with replacements.                              |
+| `renderTsconfigTemplates(replacements?)`                               | Render every template keyed by file name.                         |
+| `buildMonorepoTsconfig(options)` / `renderMonorepoTsconfig(options)`   | The workspaces config (object / JSON text).                       |
+| `tsconfigSyncTask()`                                                   | The sync task wired into `dbx sync`.                              |
+| `tsconfigFileNames(config)`                                            | The configured base/root/default/build file names.                |
+| `restoreTsconfigOverrides(options)`                                    | Remove applied overrides (`{ cwd, kind?, dryRun? }`).             |
+| `applyOverride` / `mergeOverride` / `revertOverride`                   | The deep-merge + snapshot-aware revert helpers.                   |
+| `getSnapshot` / `setSnapshot` / `deleteSnapshot`                       | Read/write the manifest snapshot tree by relative path.           |
 
-`resolveTsconfig` accepts `{ tsconfig, cwd, root, extends, overrides }`: `tsconfig` is
-resolved from `root` (default `cwd`), and `extends` defaults to `true`. Paths are
-resolved against the defining config's `baseUrl` (or its directory), matching
-TypeScript.
+`resolveTsconfig` accepts `{ tsconfig, cwd, root, relativePaths, strict, extends, overrides }`:
+`tsconfig` is resolved from `root` (default `cwd`), `extends` defaults to `true`, and
+`relativePaths` (default `false`) returns paths relative to the config that defines
+them. `strict` (default `true`) anchors exact aliases as `^...$` regexes; `false`
+keeps exact aliases as plain strings. `paths` are resolved against the defining
+config's `baseUrl` (or its directory), matching TypeScript.
 
 `generateTsconfigs` returns one result per workspace (with `newTsconfig`,
 `originalConfig`, ...); pass `write: false` for a dry run. The task-level
