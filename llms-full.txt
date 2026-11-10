@@ -7933,6 +7933,17 @@ prompts for the template, name and scope instead (Ctrl-C cancels).
 | `monorepo`              | `project`     | A monorepo root (no example workspace).        |
 | `monorepo-example`      | `project`     | A monorepo root + one example workspace.       |
 | `workspace`             | `workspace`   | A workspace package into an existing monorepo. |
+| `vitepress`             | `project`     | A VitePress documentation site.                |
+| `express`               | `application` | An Express 5 API server.                       |
+| `bun`                   | `application` | A Bun HTTP server (`Bun.serve`).               |
+| `fastify`               | `application` | A Fastify 5 API server.                        |
+| `orpc`                  | `application` | A type-safe oRPC API server.                   |
+| `file-server`           | `application` | A dependency-free local file server.           |
+| `file-server-s3`        | `application` | An AWS S3 file server.                         |
+| `file-server-bun-s3`    | `application` | A Bun S3 file server.                          |
+| `file-server-minio`     | `application` | A MinIO / S3-compatible file server.           |
+| `file-server-rclone`    | `application` | An rclone-backed file server.                  |
+| `ollama-chat`           | `application` | A local chat UI for Ollama.                    |
 | `vite-plus`             | `project`     | `vp create` (interactive or templated).        |
 | `vite-plus-monorepo`    | `project`     | `vp create vite:monorepo`.                     |
 | `vite-plus-application` | `application` | `vp create vite:application`.                  |
@@ -7949,12 +7960,37 @@ CLI. There is no Turbo (Vite Task replaces it). They ask for a **package manager
 builtins delegate to `vp create` and need network access.
 
 The root-oriented builtins (`project`, `application`, `monorepo`,
-`monorepo-example`) also write `.oxfmtrc.json` / `.oxlintrc.json` and opt in with
-`fmt.oxc` / `lint.oxc`. A nested `project`/`application` scaffold instead detects
-an ancestor that already owns those files and omits both the local files and the
-config opt-ins, so it inherits the root formatting/linting. `folder` and
-`workspace` never create Oxc files. Existing files are never overwritten unless
-`dbx create --force` is passed.
+`monorepo-example`, and the quality-of-life templates) write the Oxc `fmt` /
+`lint` defaults into `vite.config.ts` (the Vite+ configuration surface) and opt
+in with `fmt.oxc` / `lint.oxc`. A nested `project`/`application` scaffold instead
+detects an ancestor that already owns those settings and inherits them. `folder`
+and `workspace` never create Oxc config. Existing files are never overwritten
+unless `dbx create --force` is passed.
+
+## Quality-of-life builtins
+
+The quality-of-life templates are fully offline and layer a working app on top
+of the same project scaffold (package manager, catalogs, `vite.config.ts` with
+`dbx()`, formatter/linter). They all accept the standard `name`, `scope`,
+`packageManager` and `includeConfig` inputs and an opt-in install action.
+
+| Template             | Stack       | Notes                                                      |
+| -------------------- | ----------- | ---------------------------------------------------------- |
+| `vitepress`          | VitePress   | `docs/` site; `yarn build` writes the static output.       |
+| `express`            | Express 5   | `GET /` and `GET /health`; `tsx watch` dev server.         |
+| `bun`                | Bun         | `Bun.serve`; needs the `bun` binary (any package manager). |
+| `fastify`            | Fastify 5   | `GET /` and `GET /health`; `tsx watch` dev server.         |
+| `orpc`               | oRPC + Zod  | Typed router served at `/rpc` over Node HTTP.              |
+| `file-server`        | Node `http` | Serves `FILE_ROOT` (default `public`), rejects traversal.  |
+| `file-server-s3`     | AWS SDK v3  | List/download/upload; `S3_BUCKET` + AWS credentials.       |
+| `file-server-bun-s3` | Bun S3      | Same endpoints through Bun's built-in S3 client.           |
+| `file-server-minio`  | AWS SDK v3  | MinIO defaults (`localhost:9000`, `minioadmin`).           |
+| `file-server-rclone` | rclone CLI  | Exposes an `RCLONE_REMOTE` over HTTP; needs `rclone`.      |
+| `ollama-chat`        | Vite+ app   | Streaming chat UI; talks to `http://127.0.0.1:11434`.      |
+
+The S3/MinIO file servers expose `GET /files` (list), `GET /files/<key>`
+(download) and `PUT /files/<key>` (upload). The Express, Fastify, Bun and oRPC
+templates include a small test that exercises the generated handler/config.
 
 ## Inputs (variables)
 
