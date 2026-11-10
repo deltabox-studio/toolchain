@@ -178,6 +178,136 @@ describe('scaffolding', () => {
         expect(fs.existsSync(path.join(out, 'vite.config.ts'))).toBe(true);
     });
 
+    const QOL_CASES: {
+        id: string;
+        files: string[];
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+        dev: RegExp;
+    }[] = [
+        {
+            id: 'vitepress',
+            files: ['docs/index.md', 'docs/.vitepress/config.ts'],
+            devDependencies: { vitepress: expect.stringMatching(/^\^1\.6\./) },
+            dev: /^vitepress dev docs$/,
+        },
+        {
+            id: 'express',
+            files: ['src/app.ts', 'src/index.ts'],
+            dependencies: { express: expect.stringMatching(/^\^5\./) },
+            dev: /^tsx watch/,
+        },
+        {
+            id: 'fastify',
+            files: ['src/app.ts', 'src/index.ts'],
+            dependencies: { fastify: expect.stringMatching(/^\^5\./) },
+            dev: /^tsx watch/,
+        },
+        {
+            id: 'bun',
+            files: ['src/app.ts', 'src/index.ts'],
+            devDependencies: { '@types/bun': expect.stringMatching(/^\^1\./) },
+            dev: /^bun --watch/,
+        },
+        {
+            id: 'orpc',
+            files: ['src/router.ts', 'src/index.ts'],
+            dependencies: {
+                '@orpc/server': expect.stringMatching(/^\^1\./),
+                zod: expect.stringMatching(/^\^4\./),
+            },
+            dev: /^tsx watch/,
+        },
+        {
+            id: 'file-server',
+            files: ['src/server.ts', 'src/index.ts', 'public/index.html'],
+            dev: /^tsx watch/,
+        },
+        {
+            id: 'file-server-s3',
+            files: ['src/server.ts', 'src/index.ts', '.env.example'],
+            dependencies: { '@aws-sdk/client-s3': expect.stringMatching(/^\^3\./) },
+            dev: /^tsx watch/,
+        },
+        {
+            id: 'file-server-minio',
+            files: ['src/server.ts', 'src/index.ts', '.env.example'],
+            dependencies: { '@aws-sdk/client-s3': expect.stringMatching(/^\^3\./) },
+            dev: /^tsx watch/,
+        },
+        {
+            id: 'file-server-bun-s3',
+            files: ['src/app.ts', 'src/index.ts', '.env.example'],
+            devDependencies: { '@types/bun': expect.stringMatching(/^\^1\./) },
+            dev: /^bun --watch/,
+        },
+        {
+            id: 'file-server-rclone',
+            files: ['src/server.ts', 'src/index.ts'],
+            dev: /^tsx watch/,
+        },
+        {
+            id: 'ollama-chat',
+            files: ['index.html', 'src/main.ts', 'src/style.css', 'src/ollama.ts'],
+            dev: /^vp dev$/,
+        },
+    ];
+
+    for (const testCase of QOL_CASES) {
+        it(`scaffolds the ${testCase.id} quality-of-life builtin`, async () => {
+            const out = makeTmp();
+            const template = BUILTIN_TEMPLATES.find(candidate => candidate.id === testCase.id);
+            if (!template) throw new Error(`missing builtin ${testCase.id}`);
+
+            await scaffoldTemplate(template, {
+                cwd: out,
+                tokens: { name: 'acme', packageManager: 'yarn' },
+            });
+
+            for (const relative of testCase.files) {
+                expect(fs.existsSync(path.join(out, relative)), relative).toBe(true);
+            }
+            // Every template keeps the plugin-first Vite+ config.
+            expect(fs.existsSync(path.join(out, 'vite.config.ts'))).toBe(true);
+
+            const pkg = JSON.parse(fs.readFileSync(path.join(out, 'package.json'), 'utf-8')) as {
+                scripts: Record<string, string>;
+                dependencies?: Record<string, string>;
+                devDependencies: Record<string, string>;
+            };
+            expect(pkg.scripts.dev, 'dev script').toMatch(testCase.dev);
+            expect(pkg.scripts.build).toBeTruthy();
+            expect(pkg.scripts.typecheck).toBeTruthy();
+            if (testCase.dependencies) {
+                expect(pkg.dependencies).toMatchObject(testCase.dependencies);
+            }
+            if (testCase.devDependencies) {
+                expect(pkg.devDependencies).toMatchObject(testCase.devDependencies);
+            }
+        });
+    }
+
+    it('pins template dependencies while keeping the toolchain in the catalog', async () => {
+        const out = makeTmp();
+        const template = BUILTIN_TEMPLATES.find(candidate => candidate.id === 'express');
+        if (!template) throw new Error('missing builtin');
+
+        await scaffoldTemplate(template, {
+            cwd: out,
+            tokens: { name: 'acme' },
+            variables: { packageManager: 'pnpm' },
+        });
+
+        const pkg = JSON.parse(fs.readFileSync(path.join(out, 'package.json'), 'utf-8')) as {
+            dependencies: Record<string, string>;
+            devDependencies: Record<string, string>;
+        };
+        expect(pkg.dependencies.express).toMatch(/^\^5\./);
+        expect(pkg.devDependencies.typescript).toBe('catalog:');
+        expect(pkg.devDependencies['vite-plus']).toBe('catalog:');
+        expect(fs.existsSync(path.join(out, 'pnpm-workspace.yaml'))).toBe(true);
+    });
+
     it('does not reuse the configured version when packageManager is overridden', async () => {
         const out = makeTmp();
         const template = BUILTIN_TEMPLATES.find(candidate => candidate.id === 'project');

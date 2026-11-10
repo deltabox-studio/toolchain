@@ -1537,3 +1537,55 @@ describe('emulate: tsconfig overrides', () => {
         TIMEOUT
     );
 });
+
+describe('emulate: quality-of-life templates', () => {
+    it(
+        'scaffolds the docs, server, file-server and LLM builtins through the CLI',
+        async () => {
+            const ws = scratch('qol-templates');
+            const cases: { id: string; files: string[]; dev: RegExp }[] = [
+                { id: 'vitepress', files: ['docs/index.md'], dev: /^vitepress dev/ },
+                { id: 'express', files: ['src/app.ts'], dev: /^tsx watch/ },
+                { id: 'bun', files: ['src/app.ts'], dev: /^bun --watch/ },
+                { id: 'fastify', files: ['src/app.ts'], dev: /^tsx watch/ },
+                { id: 'orpc', files: ['src/router.ts'], dev: /^tsx watch/ },
+                { id: 'file-server', files: ['src/server.ts'], dev: /^tsx watch/ },
+                { id: 'file-server-s3', files: ['.env.example'], dev: /^tsx watch/ },
+                {
+                    id: 'file-server-bun-s3',
+                    files: ['.env.example'],
+                    dev: /^bun --watch/,
+                },
+                { id: 'file-server-minio', files: ['.env.example'], dev: /^tsx watch/ },
+                { id: 'file-server-rclone', files: ['src/server.ts'], dev: /^tsx watch/ },
+                { id: 'ollama-chat', files: ['src/main.ts'], dev: /^vp dev$/ },
+            ];
+
+            for (const testCase of cases) {
+                const out = path.join(ws, testCase.id);
+                const result = await dbx(ws, [
+                    'create',
+                    '--template',
+                    testCase.id,
+                    '--name',
+                    testCase.id,
+                    '--var',
+                    'packageManager=yarn',
+                    '--out',
+                    out,
+                    '--json',
+                ]);
+                expect(result.code, `${testCase.id}: ${result.stderr}`).toBe(0);
+                for (const relative of testCase.files) {
+                    expect(fs.existsSync(path.join(out, relative)), relative).toBe(true);
+                }
+                const pkg = readJson<{ scripts: Record<string, string> }>(
+                    path.join(out, 'package.json')
+                );
+                expect(pkg.scripts.dev, testCase.id).toMatch(testCase.dev);
+                expect(fs.existsSync(path.join(out, 'vite.config.ts'))).toBe(true);
+            }
+        },
+        TIMEOUT * 3
+    );
+});
