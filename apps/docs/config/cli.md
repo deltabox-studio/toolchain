@@ -73,6 +73,8 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx vite:toolchain`](#vite-toolchain)                 | Vite+: Show Vite+ tool versions.                                                                |
 | [`dbx vite:upgrade`](#vite-upgrade)                     | Vite+: Update `vp` itself.                                                                      |
 | [`dbx vite:implode`](#vite-implode)                     | Vite+: Remove `vp` and all related data.                                                        |
+| [`dbx fmt`](#fmt)                                       | Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc).               |
+| [`dbx lint`](#lint)                                     | Lint with the detected linter (Vite+ Oxlint, ESLint or Biome).                                  |
 
 ## `dbx projects`
 
@@ -95,6 +97,10 @@ Regenerate every managed file from dbx.config.*.
 - `--recursive` — Sync every managed project in dependency order (nested workspaces included; configless projects only with --configless).
 - `--force` — Run even when no dbx.config.* is present.
 - `--only ‹tasks›` — Only run the named sync task(s), comma-separated (eg. `tsconfig`).
+- `--no-format` — Do not format the written managed files.
+- `--no-format-fix` — Run the formatter in check mode instead of rewriting the files.
+- `--format-command ‹command›` — Override the managed-file formatter command (`{files}` expands to the files).
+- `--format-exclude ‹glob...›` — Managed files to leave unformatted (repeatable globs).
 - `--json` — Print the sync result (including removed files) as JSON.
 
 ## `dbx watch`
@@ -240,6 +246,7 @@ Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.* i
 - `--ignore-vite-config-file` — Do not remove the folded `vite.config.*`.
 - `--ignore-managed-files` — Skip the post-migration sync (leave the toolchain-managed files as-is).
 - `--ignore-changelog` — Skip the changelog task in the post-migration sync.
+- `--tool-version ‹name@range›` — Override a provisioned formatter/linter dependency version (repeatable).
 - `--json` — Print the result as JSON.
 
 ## `dbx migrate:list`
@@ -257,6 +264,7 @@ Scaffold a single-package TypeScript project.
 - `-s, --scope ‹scope›` — npm scope, eg. @acme.
 - `-o, --out ‹dir›` — Output directory (default: cwd).
 - `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
+- `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
 - `--no-config` — Skip the dbx.config.ts file.
 - `--type ‹type›` — Project type: project \| monorepo-root \| monorepo-workspace.
 - `--force` — Overwrite existing files in the output directory.
@@ -270,6 +278,7 @@ Scaffold a monorepo root (add --example for one example workspace).
 - `-o, --out ‹dir›` — Output directory (default: cwd).
 - `--example` — Also scaffold one example workspace package.
 - `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
+- `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
 - `--no-config` — Skip the dbx.config.ts file.
 - `--type ‹type›` — Project type: project \| monorepo-root \| monorepo-workspace.
 - `--force` — Overwrite existing files in the output directory.
@@ -283,6 +292,7 @@ Scaffold a monorepo workspace package into an existing monorepo root.
 - `-r, --root ‹dir›` — Monorepo root (default: cwd).
 - `-d, --dir ‹dir›` — Workspace dir relative to the root (default: packages/&lt;name&gt;).
 - `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
+- `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
 - `--no-config` — Skip the dbx.config.ts file.
 - `--type ‹type›` — Project type: project \| monorepo-root \| monorepo-workspace.
 - `--force` — Overwrite existing files in the output directory.
@@ -402,6 +412,7 @@ Scaffold a project from a template (builtin, local or Vite+).
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--var ‹pair...›` — Template variables as key=value (repeatable).
 - `--action ‹id...›` — Action id to run after scaffolding (repeatable).
+- `--tool-version ‹name@range›` — Override a provisioned formatter/linter dependency version (repeatable).
 - `--online` — Resolve online templates too.
 - `--force` — Overwrite existing files in the output directory.
 - `--json` — Print the result as JSON.
@@ -619,5 +630,17 @@ Vite+: Update `vp` itself.
 ## `dbx vite:implode`
 
 Vite+: Remove `vp` and all related data.
+
+- `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
+
+## `dbx fmt`
+
+Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc).
+
+- `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
+
+## `dbx lint`
+
+Lint with the detected linter (Vite+ Oxlint, ESLint or Biome).
 
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).

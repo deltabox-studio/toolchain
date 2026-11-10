@@ -1767,7 +1767,7 @@
                             "$ref": "#/$defs/ToolchainTsconfigAliasAutoSetting"
                         }
                     ],
-                    "description": "Auto-generate the root workspaces tsconfig paths/references from the project graph (default false). Set true to derive them from the project graph; set false to only use the entries you define yourself."
+                    "description": "Auto-generate the root workspaces tsconfig paths/references from the project graph (default false). Set true to derive them from the project graph; set false to only use the entries you define yourself. An object additionally accepts `include`/`exclude`, `rewriteAlias`, `modes`, `prefix`, `devMode` and `dist`."
                 },
                 "aliasAuto": {
                     "anyOf": [
@@ -1778,7 +1778,7 @@
                             "$ref": "#/$defs/ToolchainTsconfigAliasAutoSetting"
                         }
                     ],
-                    "description": "Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). Accepts the same `include`/`exclude`/`rewriteAlias` object as `auto`."
+                    "description": "Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). Accepts the same `include`/`exclude`/`rewriteAlias`/`modes`/`prefix`/`devMode`/`dist` object as `auto`."
                 },
                 "refsAuto": {
                     "anyOf": [
@@ -1946,6 +1946,50 @@
                         }
                     ],
                     "description": "Rewrite the alias keys auto-wiring generates (custom keys are preserved). Patterns are URL-rewrite style: a string is a regular-expression source and replacements support `$1`, `$2`, ... capture groups. Examples: `{ \"^@acme/(.+)$\": \"@acme/pkg/$1\" }` (string patterns), `[{ pattern: /^@acme\\/(.+)$/, replacement: \"@acme/pkg/$1\" }]` (RegExp patterns), `[{ pattern: [\"^@acme/a$\", \"^@acme/b$\"], replacement: \"@acme/x\" }]` (an array of keys), and an array of such rules (applied in order; the first matching rule wins). `RegExp` patterns are only available from TS/JS configs; JSON configs use string patterns."
+                },
+                "modes": {
+                    "anyOf": [
+                        {
+                            "type": "string",
+                            "const": "auto"
+                        },
+                        {
+                            "type": "string",
+                            "const": "exports"
+                        },
+                        {
+                            "type": "string",
+                            "const": "project-structure"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "type": "string",
+                                        "const": "exports"
+                                    },
+                                    {
+                                        "type": "string",
+                                        "const": "project-structure"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "description": "Alias discovery: `auto` (exports, then the project structure), `exports` (package.json exports/types/main only), `project-structure` (scan the source tree), or an array combining `exports` and `project-structure`."
+                },
+                "prefix": {
+                    "type": "string",
+                    "description": "Prefix for generated aliases instead of the package scope (eg. `@` produces `@/<package>` and `@/<package>/<subpath>`)."
+                },
+                "devMode": {
+                    "type": "boolean",
+                    "description": "Resolve generated aliases to source files (default true). Set false to point at the distributed files instead."
+                },
+                "dist": {
+                    "type": "string",
+                    "description": "Output directory used to map source/dist targets (default: the workspace tsconfig's `outDir`, then `dist`)."
                 }
             },
             "additionalProperties": false
@@ -2285,6 +2329,50 @@
             "additionalProperties": false,
             "description": "Watch behaviour for `dbx watch`."
         },
+        "ToolchainSyncConfig": {
+            "type": "object",
+            "properties": {
+                "format": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "enabled": {
+                                    "type": "boolean",
+                                    "description": "Format the managed files after writing them (default true)."
+                                },
+                                "fix": {
+                                    "type": "boolean",
+                                    "description": "Rewrite the managed files with the formatter (default true). Set false to run the formatter in check mode instead."
+                                },
+                                "command": {
+                                    "type": "string",
+                                    "description": "Override the formatter command. `{files}` expands to the managed files (space-separated); when it is absent the files are appended."
+                                },
+                                "exclude": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "description": "Globs of managed files to leave unformatted (per-file opt-out)."
+                                }
+                            },
+                            "additionalProperties": false
+                        }
+                    ],
+                    "description": "Format the managed files after generation (default on). `true` uses the defaults, `false` disables it, and an object tunes `enabled`/`fix`/`command`/`exclude`."
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false,
+            "description": "`dbx sync` behaviour (formatting of the managed files)."
+        },
         "ToolchainLoggerConfig": {
             "type": "object",
             "properties": {
@@ -2523,6 +2611,17 @@
                         }
                     ],
                     "description": "Watch behaviour for `dbx watch`."
+                },
+                "sync": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainSyncConfig"
+                        }
+                    ],
+                    "description": "`dbx sync` behaviour (formatting of the generated managed files)."
                 },
                 "logger": {
                     "anyOf": [

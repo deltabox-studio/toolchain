@@ -294,7 +294,10 @@ export function tsconfigSyncTask(): SyncTask {
             if (results.length > 0) {
                 ctx.log(`tsconfig: regenerated ${results.length} workspace tsconfig(s).`);
             }
-            return files;
+            // The generator already writes these in their final form (custom
+            // `indent` included); the generic post-write formatter must not
+            // reformat them again.
+            return files.map(file => ({ ...file, format: false }));
         },
     };
 }

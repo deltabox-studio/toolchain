@@ -362,6 +362,13 @@ export interface ManagedFile {
      * tsconfig a `tsconfig.overrides` entry patches).
      */
     track?: boolean;
+    /**
+     * Whether the post-write formatter may format this file (default true).
+     * Set `false` for files the task already writes in their final form (eg.
+     * generated tsconfigs, which may use a custom indent), so `sync --check`
+     * compares the generator output directly.
+     */
+    format?: boolean;
 }
 
 /** The context handed to every {@link SyncTask}. */

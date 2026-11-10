@@ -11,6 +11,11 @@ import {
     type ToolchainConfig,
 } from '@deltabox/toolchain/shared';
 
+import {
+    formatManagedFiles,
+    type ManagedFormatSetting,
+    resolveManagedFormatting,
+} from './format-managed.js';
 import { ensureDbxGitignore } from './gitignore.js';
 import { readManifest, writeManifest } from './manifest.js';
 import { resolveManagedPath } from './paths.js';
@@ -41,6 +46,8 @@ export interface RunSyncOptions {
     log?: (message: string) => void;
     /** Whether the config came from a `dbx()` Vite/Vite+ plugin. */
     plugin?: boolean;
+    /** Format the written managed files (overrides `sync.format`). */
+    format?: ManagedFormatSetting;
 }
 
 export interface RemovedFile {
@@ -151,6 +158,12 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     const untracked = new Set(
         files.filter(file => file.track === false).map(file => norm(file.path))
     );
+    // Files a task already writes in their final form (eg. generated
+    // tsconfigs): never run the post-write formatter on them, so `--check`
+    // compares the generator output directly.
+    const unformatted = new Set(
+        files.filter(file => file.format === false).map(file => norm(file.path))
+    );
 
     // Files a task declares as user-owned (`keep`): never deleted, dropped from
     // the manifest, so consumers can edit them (eg. `tsconfig.build.json`).
@@ -175,14 +188,18 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
         return false;
     };
 
-    const changed: string[] = [];
-    for (const [relative, content] of desired) {
+    // Snapshot the original contents so the final `changed` list reflects the
+    // formatted output (not the raw generator output).
+    const originalContent = new Map<string, string | undefined>();
+    for (const relative of desired.keys()) {
         const abs = path.resolve(cwd, relative);
-        const current = fs.existsSync(abs) ? fs.readFileSync(abs, 'utf-8') : undefined;
-        if (current !== content) changed.push(relative);
+        originalContent.set(
+            relative,
+            fs.existsSync(abs) ? fs.readFileSync(abs, 'utf-8') : undefined
+        );
     }
     const existedBefore = new Map(
-        [...desired.keys()].map(relative => [relative, fs.existsSync(path.resolve(cwd, relative))])
+        [...desired.keys()].map(relative => [relative, originalContent.get(relative) !== undefined])
     );
     // A file dbx never created (it existed before the first sync) is adopted:
     // stop managing it, but never delete it when its section is removed.
@@ -226,6 +243,52 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
         removed.push(relative);
         removedFiles.push({ path: relative, content: fs.readFileSync(abs, 'utf-8') });
     }
+
+    // Write (and, by default, format) the generated files before comparing, so
+    // the comparison uses the same content the user will get. In check mode the
+    // original files are restored afterwards; nothing is left behind.
+    let preWritten = false;
+    const formatting = resolveManagedFormatting({ setting: options.format, config });
+    if (formatting.enabled && desired.size > 0) {
+        try {
+            for (const [relative, content] of desired) {
+                const abs = path.resolve(cwd, relative);
+                if (fs.existsSync(abs) && fs.readFileSync(abs, 'utf-8') === content) continue;
+                fs.mkdirSync(path.dirname(abs), { recursive: true });
+                fs.writeFileSync(abs, content, 'utf-8');
+            }
+            const formatTargets = [...desired.keys()].filter(
+                relative => !unformatted.has(relative)
+            );
+            const formatted = await formatManagedFiles(cwd, formatTargets, {
+                setting: options.format,
+                config,
+            });
+            if (formatted.ran && formatted.code !== 0) {
+                log(`  ! formatter exited ${formatted.code}; managed files may be unformatted.`);
+            }
+            for (const relative of desired.keys()) {
+                const abs = path.resolve(cwd, relative);
+                if (fs.existsSync(abs)) desired.set(relative, fs.readFileSync(abs, 'utf-8'));
+            }
+            preWritten = !options.check;
+        } finally {
+            if (options.check) {
+                for (const [relative, content] of originalContent) {
+                    const abs = path.resolve(cwd, relative);
+                    if (content === undefined) {
+                        fs.rmSync(abs, { force: true });
+                    } else {
+                        fs.mkdirSync(path.dirname(abs), { recursive: true });
+                        fs.writeFileSync(abs, content, 'utf-8');
+                    }
+                }
+            }
+        }
+    }
+    const changed = [...desired]
+        .filter(([relative, content]) => originalContent.get(relative) !== content)
+        .map(([relative]) => relative);
     const upToDate = changed.length === 0 && removed.length === 0;
 
     if (options.check) {
@@ -243,11 +306,15 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     }
 
     const written: string[] = [];
-    for (const [relative, content] of desired) {
-        const abs = path.resolve(cwd, relative);
-        fs.mkdirSync(path.dirname(abs), { recursive: true });
-        fs.writeFileSync(abs, content, 'utf-8');
-        written.push(relative);
+    if (preWritten) {
+        written.push(...desired.keys());
+    } else {
+        for (const [relative, content] of desired) {
+            const abs = path.resolve(cwd, relative);
+            fs.mkdirSync(path.dirname(abs), { recursive: true });
+            fs.writeFileSync(abs, content, 'utf-8');
+            written.push(relative);
+        }
     }
     for (const relative of removed) {
         fs.rmSync(path.resolve(cwd, relative), { force: true });

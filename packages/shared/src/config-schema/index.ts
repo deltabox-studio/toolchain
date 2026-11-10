@@ -25,6 +25,7 @@ import { section } from './meta.js';
 import { projectConfigSchema } from './project.js';
 import { providersConfigSchema } from './providers.js';
 import { registryConfigSchema } from './registry.js';
+import { syncConfigSchema } from './sync.js';
 import { templatesConfigSchema } from './templates.js';
 import { tsconfigConfigSchema } from './tsconfig.js';
 import { viteConfigSchema } from './vite.js';
@@ -51,6 +52,7 @@ export * from './meta.js';
 export * from './project.js';
 export * from './providers.js';
 export * from './registry.js';
+export * from './sync.js';
 export * from './templates.js';
 export * from './tsconfig.js';
 export * from './vendor-types.js';
@@ -106,6 +108,9 @@ export const toolchainConfigSchema = z
             .describe('The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.')
             .optional(),
         watch: section(watchConfigSchema).describe('Watch behaviour for `dbx watch`.').optional(),
+        sync: section(syncConfigSchema)
+            .describe('`dbx sync` behaviour (formatting of the generated managed files).')
+            .optional(),
         logger: section(loggerConfigSchema)
             .describe('Logging level, colours and prefix for toolchain output.')
             .optional(),
@@ -138,6 +143,7 @@ export const configSchema = {
     catalogs: catalogsConfigSchema,
     vite: viteConfigSchema,
     watch: watchConfigSchema,
+    sync: syncConfigSchema,
     logger: loggerConfigSchema,
     providers: providersConfigSchema,
 } as const;

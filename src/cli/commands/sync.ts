@@ -3,6 +3,7 @@ import path from 'node:path';
 import {
     buildProjectGraph,
     loadToolchainConfig,
+    type ManagedFormatSetting,
     orderProjects,
     runSync,
     runWatch,
@@ -13,6 +14,20 @@ import { logger, type ToolchainCommand } from '@deltabox/toolchain/shared';
 import { defaultSyncTasks } from '../../sync.js';
 import { getConfigSelection } from '../config-selection.js';
 import { baseOptions, watchOptions } from './shared.js';
+
+/** The CLI `--format*` flags as a `sync.format` override. */
+function formatSetting(opts: Record<string, unknown>): ManagedFormatSetting | undefined {
+    const setting: Exclude<ManagedFormatSetting, boolean> = {};
+    if (opts.format === false) setting.enabled = false;
+    if (opts.formatFix === false) setting.fix = false;
+    if (typeof opts.formatCommand === 'string' && opts.formatCommand) {
+        setting.command = opts.formatCommand;
+    }
+    if (Array.isArray(opts.formatExclude) && opts.formatExclude.length > 0) {
+        setting.exclude = opts.formatExclude as string[];
+    }
+    return Object.keys(setting).length > 0 ? setting : undefined;
+}
 
 /** `dbx sync` — regenerate managed files (single, recursive, or watch). */
 export function syncCommand(): ToolchainCommand {
@@ -37,6 +52,24 @@ export function syncCommand(): ToolchainCommand {
                 description: 'Only run the named sync task(s), comma-separated (eg. `tsconfig`).',
             },
             {
+                flags: '--no-format',
+                description: 'Do not format the written managed files.',
+            },
+            {
+                flags: '--no-format-fix',
+                description: 'Run the formatter in check mode instead of rewriting the files.',
+            },
+            {
+                flags: '--format-command <command>',
+                description:
+                    'Override the managed-file formatter command (`{files}` expands to the files).',
+            },
+            {
+                flags: '--format-exclude <glob...>',
+                description: 'Managed files to leave unformatted (repeatable globs).',
+                multiple: true,
+            },
+            {
                 flags: '--json',
                 description: 'Print the sync result (including removed files) as JSON.',
             },
@@ -52,6 +85,7 @@ export function syncCommand(): ToolchainCommand {
                           .map(name => name.trim())
                           .filter(Boolean)
                     : undefined;
+            const format = formatSetting(opts);
 
             if (context.configError) {
                 logger.error(context.configError);
@@ -66,7 +100,12 @@ export function syncCommand(): ToolchainCommand {
                 const selection = getConfigSelection();
                 // Order every project (not only the config-bearing ones) so an
                 // opted-in configless workspace still syncs after its dependencies.
-                for (const relDir of orderProjects(graph.projects)) {
+                // The root runs last: its tsconfig/auto tasks aggregate the
+                // workspace metadata, so later workspace writes must not undo it.
+                const ordered = orderProjects(graph.projects);
+                const rootIndex = ordered.indexOf('.');
+                if (rootIndex >= 0) ordered.push(...ordered.splice(rootIndex, 1));
+                for (const relDir of ordered) {
                     const dir = path.resolve(context.cwd, relDir);
                     const loaded = await loadToolchainConfig(dir, { tolerant: true, ...selection });
                     if (loaded.error) {
@@ -87,6 +126,7 @@ export function syncCommand(): ToolchainCommand {
                         ...(loaded.plugin ? { plugin: true } : {}),
                         check,
                         quiet,
+                        ...(format ? { format } : {}),
                     });
                     results.push({ dir: relDir, result });
                     if (check && !result.upToDate) process.exitCode = 1;
@@ -103,11 +143,22 @@ export function syncCommand(): ToolchainCommand {
             }
 
             if (opts.watch) {
-                await runWatch({ ...watchOptions(context), only, quiet });
+                await runWatch({
+                    ...watchOptions(context),
+                    only,
+                    quiet,
+                    ...(format ? { format } : {}),
+                });
                 return;
             }
 
-            const result = await runSync({ ...watchOptions(context), only, check, quiet });
+            const result = await runSync({
+                ...watchOptions(context),
+                only,
+                check,
+                quiet,
+                ...(format ? { format } : {}),
+            });
             if (check && !result.upToDate) process.exitCode = 1;
 
             // Keep the project graph fresh for the IDE/other tools (`--check`

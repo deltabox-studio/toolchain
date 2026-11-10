@@ -79,6 +79,60 @@ Mode flags are translated per tool (`--check`/`--write` for formatters, `--fix`
 for linters) and other operands are forwarded. Oxc keeps the full Vite+
 passthrough, so `dbx vite fmt ...` still accepts every `vp` flag.
 
+## Formatting managed files
+
+`dbx sync` formats the files it writes with the project's active formatter by
+default, in fix mode. This keeps generated files (workflows, tsconfigs, editor
+settings, configs, ...) consistent with the rest of the repository instead of
+leaving them in the generator's raw output.
+
+```ts [dbx.config.ts]
+toolchain: {
+    sync: {
+        format: {
+            enabled: true,   // default
+            fix: true,       // default; false runs the formatter in check mode
+            command: 'prettier --write {files}', // optional override
+            exclude: ['**/generated/**'],        // per-file opt-out
+        },
+    },
+}
+```
+
+`sync.format` also accepts a plain boolean: `true` uses the defaults, `false`
+disables managed-file formatting.
+
+The default command follows the detected/configured formatter:
+
+| Tool             | Fix mode                       | Check mode (`fix: false`)  |
+| ---------------- | ------------------------------ | -------------------------- |
+| Vite+ Oxfmt      | `vp fmt <files>`               | `vp fmt --check <files>`   |
+| standalone Oxfmt | `oxfmt <files>`                | `oxfmt --check <files>`    |
+| Prettier         | `prettier --write <files>`     | `prettier --check <files>` |
+| Biome            | `biome format --write <files>` | `biome format <files>`     |
+| dprint           | `dprint fmt <files>`           | `dprint check <files>`     |
+
+A custom `command` is split like a shell command line (quotes are honoured). The
+`{files}` token expands to the managed files; when it is absent, the files are
+appended. If no formatter can be detected, the step is skipped.
+
+The same switch is available on the command line and in VS Code:
+
+```sh
+dbx sync --no-format                    # disable for this run
+dbx sync --no-format-fix                # run the formatter in check mode
+dbx sync --format-command "prettier --write {files}"
+dbx sync --format-exclude "**/generated/**"
+```
+
+VS Code exposes them as `deltabox.toolchain.formatManagedFiles`,
+`formatManagedFilesFix`, `formatManagedFilesCommand` and
+`formatManagedFilesExclude`.
+
+`dbx sync --check` temporarily writes + formats the files to compare the same
+content a real sync would produce, then restores the originals; a successful
+check therefore reflects the formatted output too.
+
 ## Precedence
 
 When more than one formatter/linter is configured, editor defaults use:

@@ -1228,7 +1228,7 @@ Inject path aliases (default true).
 
 - **Type**: `boolean | ToolchainTsconfigAliasAutoSetting`
 
-Auto-generate the root workspaces tsconfig paths/references from the project graph (default false). Set true to derive them from the project graph; set false to only use the entries you define yourself.
+Auto-generate the root workspaces tsconfig paths/references from the project graph (default false). Set true to derive them from the project graph; set false to only use the entries you define yourself. An object additionally accepts `include`/`exclude`, `rewriteAlias`, `modes`, `prefix`, `devMode` and `dist`.
 
 #### `include`
 
@@ -1248,11 +1248,35 @@ Skip entries matching these globs (same targets as `include`).
 
 Rewrite the alias keys auto-wiring generates (custom keys are preserved). Patterns are URL-rewrite style: a string is a regular-expression source and replacements support `$1`, `$2`, ... capture groups. Examples: `{ "^@acme/(.+)$": "@acme/pkg/$1" }` (string patterns), `[{ pattern: /^@acme\/(.+)$/, replacement: "@acme/pkg/$1" }]` (RegExp patterns), `[{ pattern: ["^@acme/a$", "^@acme/b$"], replacement: "@acme/x" }]` (an array of keys), and an array of such rules (applied in order; the first matching rule wins). `RegExp` patterns are only available from TS/JS configs; JSON configs use string patterns.
 
+#### `modes`
+
+- **Type**: `'auto' | 'exports' | 'project-structure' | Array<'exports' | 'project-structure'>`
+
+Alias discovery: `auto` (exports, then the project structure), `exports` (package.json exports/types/main only), `project-structure` (scan the source tree), or an array combining `exports` and `project-structure`.
+
+#### `prefix`
+
+- **Type**: `'@' | (string & {})`
+
+Prefix for generated aliases instead of the package scope (eg. `@` produces `@/<package>` and `@/<package>/<subpath>`).
+
+#### `devMode`
+
+- **Type**: `boolean`
+
+Resolve generated aliases to source files (default true). Set false to point at the distributed files instead.
+
+#### `dist`
+
+- **Type**: `string`
+
+Output directory used to map source/dist targets (default: the workspace tsconfig's `outDir`, then `dist`).
+
 ### `aliasAuto`
 
 - **Type**: `boolean | ToolchainTsconfigAliasAutoSetting`
 
-Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). Accepts the same `include`/`exclude`/`rewriteAlias` object as `auto`.
+Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). Accepts the same `include`/`exclude`/`rewriteAlias`/`modes`/`prefix`/`devMode`/`dist` object as `auto`.
 
 ### `refsAuto`
 
@@ -1585,6 +1609,46 @@ Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modu
 - **Type**: `boolean`
 
 Also respect `.gitignore` files (root + nested) when watching (default true).
+
+### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
+## `sync`
+
+`dbx sync` behaviour (formatting of the managed files).
+
+### `format`
+
+- **Type**: `boolean | object`
+
+Format the managed files after generation (default on). `true` uses the defaults, `false` disables it, and an object tunes `enabled`/`fix`/`command`/`exclude`.
+
+#### `enabled`
+
+- **Type**: `boolean`
+
+Format the managed files after writing them (default true).
+
+#### `fix`
+
+- **Type**: `boolean`
+
+Rewrite the managed files with the formatter (default true). Set false to run the formatter in check mode instead.
+
+#### `command`
+
+- **Type**: `string`
+
+Override the formatter command. `{files}` expands to the managed files (space-separated); when it is absent the files are appended.
+
+#### `exclude`
+
+- **Type**: `Array<string>`
+
+Globs of managed files to leave unformatted (per-file opt-out).
 
 ### `enabled`
 

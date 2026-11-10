@@ -739,12 +739,13 @@ export interface ToolchainTsconfigConfig {
     /**
      * Auto-generate the root workspaces tsconfig paths/references from the project graph (default
      * false). Set true to derive them from the project graph; set false to only use the entries you
-     * define yourself.
+     * define yourself. An object additionally accepts `include`/`exclude`, `rewriteAlias`, `modes`,
+     * `prefix`, `devMode` and `dist`.
      */
     auto?: boolean | ToolchainTsconfigAliasAutoSetting;
     /**
      * Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). Accepts the
-     * same `include`/`exclude`/`rewriteAlias` object as `auto`.
+     * same `include`/`exclude`/`rewriteAlias`/`modes`/`prefix`/`devMode`/`dist` object as `auto`.
      */
     aliasAuto?: boolean | ToolchainTsconfigAliasAutoSetting;
     /** Auto-generate project references (defaults to `auto`; `refs` must also be enabled). */
@@ -815,6 +816,27 @@ export interface ToolchainTsconfigAliasAutoSetting {
      * from TS/JS configs; JSON configs use string patterns.
      */
     rewriteAlias?: ToolchainTsconfigAliasRewrite;
+    /**
+     * Alias discovery: `auto` (exports, then the project structure), `exports` (package.json
+     * exports/types/main only), `project-structure` (scan the source tree), or an array combining
+     * `exports` and `project-structure`.
+     */
+    modes?: 'auto' | 'exports' | 'project-structure' | Array<'exports' | 'project-structure'>;
+    /**
+     * Prefix for generated aliases instead of the package scope (eg. `@` produces `@/<package>` and
+     * `@/<package>/<subpath>`).
+     */
+    prefix?: '@' | (string & {});
+    /**
+     * Resolve generated aliases to source files (default true). Set false to point at the distributed
+     * files instead.
+     */
+    devMode?: boolean;
+    /**
+     * Output directory used to map source/dist targets (default: the workspace tsconfig's `outDir`,
+     * then `dist`).
+     */
+    dist?: string;
 }
 
 export interface ToolchainTsconfigAutoSetting {
@@ -961,6 +983,18 @@ export interface ToolchainWatchConfig {
     enabled?: boolean;
 }
 
+export interface ToolchainSyncConfig {
+    /**
+     * Format the managed files after generation (default on). `true` uses the defaults, `false`
+     * disables it, and an object tunes `enabled`/`fix`/`command`/`exclude`.
+     */
+    format?:
+        | boolean
+        | { enabled?: boolean; fix?: boolean; command?: string; exclude?: Array<string> };
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
+}
+
 export interface ToolchainLoggerConfig {
     /** Minimum level to print (default `info`). */
     level?: 'debug' | 'info' | 'warn' | 'error' | 'silent';
@@ -1017,6 +1051,8 @@ export interface ToolchainConfigSections {
     vite?: boolean | ToolchainViteConfig;
     /** Watch behaviour for `dbx watch`. */
     watch?: boolean | ToolchainWatchConfig;
+    /** `dbx sync` behaviour (formatting of the generated managed files). */
+    sync?: boolean | ToolchainSyncConfig;
     /** Logging level, colours and prefix for toolchain output. */
     logger?: boolean | ToolchainLoggerConfig;
     /** Provider command behaviour (eg. colour for the passthrough commands). */

@@ -6,6 +6,7 @@
 
 export * from './editor-config.js';
 export * from './fmt-groups.js';
+export * from './format-managed.js';
 export * from './gitignore.js';
 export * from './graph.js';
 export * from './loader.js';
@@ -15,5 +16,6 @@ export * from './provider-registry.js';
 export * from './reset.js';
 export * from './select.js';
 export * from './sync.js';
+export * from './tooling-deps.js';
 export * from './vscode.js';
 export * from './watch.js';
