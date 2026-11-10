@@ -1,12 +1,13 @@
 import type { JsonObject } from 'type-fest';
 import { z } from 'zod';
 
+import { dependabotConfigSchema } from './dependabot.js';
 import { externalConfigSchema } from './external.js';
 import type { AzurePipelines } from './generated/azure-pipelines.js';
 import type { GitHubWorkflow } from './generated/github-workflow.js';
 import type { GitLabCi } from './generated/gitlab-ci.js';
 import { configJsonValueSchema } from './json.js';
-import { withEnabled } from './meta.js';
+import { section, withEnabled } from './meta.js';
 
 const jsonObjectSchema = (description: string) =>
     externalConfigSchema<JsonObject>(description, 'JsonObject');
@@ -363,6 +364,9 @@ export const workflowConfigSchema = z
             .optional(),
         sync: workflowSettingSchema
             .describe('The toolchain sync workflow (`sync.yml`).')
+            .optional(),
+        dependabot: section(dependabotConfigSchema)
+            .describe('Dependabot version-update automation (`.github/dependabot.yml`).')
             .optional(),
         custom: z
             .record(z.string(), customWorkflowSettingsSchema)

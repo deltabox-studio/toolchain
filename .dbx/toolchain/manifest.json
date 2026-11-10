@@ -65,6 +65,7 @@
         "references": []
     },
     "files": [
+        ".github/dependabot.yml",
         ".github/workflows/changelog.yml",
         ".github/workflows/ci.yml",
         ".github/workflows/issues.yml",
@@ -89,6 +90,7 @@
         "tsconfig.json"
     ],
     "origins": {
+        ".github/dependabot.yml": "created",
         ".github/workflows/changelog.yml": "created",
         ".github/workflows/ci.yml": "created",
         ".github/workflows/issues.yml": "created",

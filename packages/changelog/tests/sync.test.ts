@@ -277,6 +277,57 @@ describe('changelogSyncTask', () => {
         ]);
     });
 
+    it('writes an opt-in Dependabot config', async () => {
+        const files = await changelogSyncTask().run(makeContext({ ci: { dependabot: true } }));
+        const dependabot = files?.find(file => file.path === '.github/dependabot.yml');
+        expect(dependabot).toBeDefined();
+        expect(dependabot?.content.startsWith(WORKFLOW_HEADER)).toBe(true);
+        expect(dependabot?.content).toContain('package-ecosystem: github-actions');
+        expect(dependabot?.content).toContain('package-ecosystem: npm');
+        expect(dependabot?.format).toBe(false);
+    });
+
+    it('leaves Dependabot disabled unless opted in', async () => {
+        const files = await changelogSyncTask().run(makeContext({ ci: { ci: true } }));
+        expect(files?.some(file => file.path === '.github/dependabot.yml')).toBe(false);
+    });
+
+    it('honours Dependabot config and leaves a user-owned file untouched', async () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-dependabot-'));
+        try {
+            const target = path.join(cwd, '.github/dependabot.yml');
+            fs.mkdirSync(path.dirname(target), { recursive: true });
+            fs.writeFileSync(target, 'version: 2\nupdates: []\n', 'utf-8');
+            const warnings: string[] = [];
+
+            const files = await changelogSyncTask().run({
+                ...makeContext({ ci: { dependabot: { schedule: 'monthly' } } }),
+                cwd,
+                warn: message => warnings.push(message),
+            });
+
+            expect(files?.some(file => file.path === '.github/dependabot.yml')).toBe(false);
+            expect(fs.readFileSync(target, 'utf-8')).toBe('version: 2\nupdates: []\n');
+            expect(warnings.some(message => message.includes('leaving it untouched'))).toBe(true);
+
+            const custom = await changelogSyncTask().run(
+                makeContext({
+                    ci: {
+                        dependabot: {
+                            dir: '.config',
+                            filename: 'updates.yml',
+                            schedule: 'daily',
+                        },
+                    },
+                })
+            );
+            const file = custom?.find(entry => entry.path === '.config/updates.yml');
+            expect(file?.content).toContain('interval: daily');
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
+    });
+
     it('reports no workflow paths when the ci section is disabled', () => {
         expect(workflowFilePaths({ ci: { enabled: false, ci: true } })).toEqual([]);
         expect(workflowFilenames({ ci: { enabled: false, ci: true } })).toEqual([]);

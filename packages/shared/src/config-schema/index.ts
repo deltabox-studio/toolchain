@@ -37,6 +37,7 @@ export * from './biome.js';
 export * from './catalogs.js';
 export * from './changelog.js';
 export * from './ci.js';
+export * from './dependabot.js';
 export * from './docker.js';
 export * from './format.js';
 // Re-export only the public generated types: their internal helper types

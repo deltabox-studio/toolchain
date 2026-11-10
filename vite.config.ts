@@ -297,6 +297,9 @@ export default defineConfig({
                             },
                         },
                     },
+                    // Dependabot keeps the actions (incl. `setup-vp`) and npm
+                    // dependencies up to date. Opt-in like every workflow.
+                    dependabot: true,
                     // Keep the hand-written CI checks on top of the generated
                     // workflow (commitlint + `sync --check --recursive` + build come first).
                     ci: {

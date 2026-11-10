@@ -16,6 +16,7 @@ import {
     type WorkflowSetting,
 } from '@deltabox/toolchain/shared';
 
+import { dependabotFilePath, renderDependabot } from './dependabot.js';
 import { renderCommitlintConfig } from './templates.js';
 import {
     isEnabled,
@@ -269,6 +270,39 @@ export function changelogSyncTask(): SyncTask {
                     raw ? content : `${WORKFLOW_HEADER}\n${content}`,
                     true
                 );
+            }
+
+            // Dependabot version updates (`ci.dependabot`): a separate
+            // `.github/dependabot.yml`, opt-in like every workflow.
+            const dependabot = sectionEnabled(ctx.config.ci)
+                ? sectionConfig(ctx.config.ci)?.dependabot
+                : undefined;
+            const dependabotOn =
+                dependabot === true ||
+                (typeof dependabot === 'object' &&
+                    dependabot !== null &&
+                    dependabot.enabled !== false);
+            if (dependabotOn) {
+                const setting = typeof dependabot === 'object' ? dependabot : {};
+                const filePath = dependabotFilePath(setting);
+                if (workflowPaths.has(filePath)) {
+                    ctx.warn(
+                        `changelog: workflow path "${filePath}" is declared more than once; skipping the duplicate.`
+                    );
+                } else if (!isManagedWorkflow(filePath)) {
+                    ctx.warn(
+                        `changelog: ${filePath} already exists and is not managed by dbx; leaving it untouched. ` +
+                            'Set `ci.dependabot: { enabled: false }` in dbx.config to keep it explicit.',
+                        'changelog.existing-dependabot'
+                    );
+                } else {
+                    workflowPaths.add(filePath);
+                    files.push({
+                        path: filePath,
+                        content: `${WORKFLOW_HEADER}\n${renderDependabot(setting)}`,
+                        format: false,
+                    });
+                }
             }
 
             if (commitlint) {
