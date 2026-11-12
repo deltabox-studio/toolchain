@@ -124,8 +124,9 @@ config once and generate `.env.example`, a JSON Schema, a markdown reference, TS
 types and CLI flags from it — no hand-maintained docs to drift:
 
 ```ts
-import { createConfigEngine } from '@deltabox/toolchain/config';
 import { z } from 'zod';
+
+import { createConfigEngine } from '@deltabox/toolchain/config';
 
 export const engine = createConfigEngine({
     scopes: {
@@ -192,9 +193,10 @@ without a separate `dbx.config.*` or a separate `dbx sync` step. Put the
 toolchain config inline in the plugin:
 
 ```ts
-import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
 // vite.config.ts
 import { defineConfig } from 'vite-plus'; // or 'vite'
+
+import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
 
 export default defineConfig({
     plugins: [

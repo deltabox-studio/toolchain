@@ -7,9 +7,10 @@ need a `dbx.config.*` at all, and it can run `dbx sync` before dev/build or
 `dbx sync --check` in CI.
 
 ```ts
-import { dbx, DBX_TASKS } from 'vite-plugin-dbx';
 // vite.config.ts
 import { defineConfig } from 'vite-plus';
+
+import { dbx, DBX_TASKS } from 'vite-plugin-dbx';
 
 export default defineConfig({
     plugins: [

@@ -13,9 +13,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { z } from 'zod';
+
 import { createConfigEngine, formatGenerated } from '@deltabox/toolchain/config';
 import { logger } from '@deltabox/toolchain/shared';
-import { z } from 'zod';
 
 import { sanitizeJsonSchema } from './lib/sanitize-json-schema.js';
 

@@ -38,6 +38,7 @@ With the default loader, imports resolve the way the project's TypeScript does:
 
 ```ts [dbx.config.ts]
 import { shared } from '@acme/shared/config.js'; // shared/config.ts
+
 import { defineConfig } from '@deltabox/toolchain';
 
 export default defineConfig({

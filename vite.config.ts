@@ -1,5 +1,6 @@
-import { dbx } from '@deltabox/toolchain/vite';
 import { defineConfig } from 'vite-plus';
+
+import { dbx } from '@deltabox/toolchain/vite';
 
 import { rootPackConfig } from './scripts/root-pack.js';
 

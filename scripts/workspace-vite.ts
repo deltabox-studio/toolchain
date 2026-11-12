@@ -1,6 +1,7 @@
-import { dbx } from 'vite-plugin-dbx';
 import type { ViteUserConfig } from 'vite-plus';
 import type { PackUserConfig } from 'vite-plus/pack';
+
+import { dbx } from 'vite-plugin-dbx';
 
 import { baseTsdownConfig } from '../packages/tsdown/src/config/node.js';
 import { workspacePackageAliases } from '../packages/tsdown/src/config/workspace.js';

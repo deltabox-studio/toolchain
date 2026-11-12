@@ -5,9 +5,10 @@ a commander program with `registerToolchainCommands` (this is how the bundled
 `dbx` binary, and a consumer's own CLI, are assembled):
 
 ```ts
+import { Command } from 'commander';
+
 import { registerToolchainCommands } from '@deltabox/toolchain/cli';
 import { configCommands } from '@deltabox/toolchain/config';
-import { Command } from 'commander';
 
 const program = new Command();
 registerToolchainCommands(program, configCommands({ engine }));

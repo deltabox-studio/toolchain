@@ -23,6 +23,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import type { Plugin, ViteUserConfig } from 'vite-plus';
+
 import {
     loadToolchainConfig,
     mergeToolchainConfig,
@@ -52,7 +54,6 @@ import {
     type ToolchainOxfmtConfig,
     type ToolchainViteConfig,
 } from '@deltabox/toolchain/shared';
-import type { Plugin, ViteUserConfig } from 'vite-plus';
 
 import { viteConfigObject } from './sync.js';
 import { declaresVitePlus, which } from './vp.js';

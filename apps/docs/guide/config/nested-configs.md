@@ -118,8 +118,9 @@ A project can also be configured by the `dbx()` Vite plugin instead of a
 `dbx.config.*`:
 
 ```ts [vite.config.ts]
-import { dbx } from '@deltabox/toolchain/vite';
 import { defineConfig } from 'vite-plus';
+
+import { dbx } from '@deltabox/toolchain/vite';
 
 export default defineConfig({
     plugins: [dbx({ toolchain: { project: { name: 'app' }, fmt: { oxc: true } } })],

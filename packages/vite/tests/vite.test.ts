@@ -2,9 +2,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { afterEach, describe, expect, it } from 'vite-plus/test';
+
 import { runSync } from '@deltabox/toolchain/core';
 import { DEFAULT_FMT_RULES, DEFAULT_LINT_RULES } from '@deltabox/toolchain/shared';
-import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import {
     detectViteSpecifier,

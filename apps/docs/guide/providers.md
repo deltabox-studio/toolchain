@@ -109,8 +109,9 @@ Vite+ consumers can drive dbx from `vite.config.ts`, so a Vite+-only project
 still gets dbx's generated/managed files:
 
 ```ts [vite.config.ts]
-import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
 import { defineConfig } from 'vite-plus';
+
+import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
 
 export default defineConfig({
     plugins: [dbx()],
