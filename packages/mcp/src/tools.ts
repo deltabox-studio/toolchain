@@ -41,19 +41,63 @@ export const ALLOWED_COMMANDS = new Set([
     'workflow',
 ]);
 
-function localCandidates(cwd: string): string[] {
-    const base = path.join(cwd, 'node_modules', '.bin', 'dbx');
+function localCandidates(dir: string): string[] {
+    const base = path.join(dir, 'node_modules', '.bin', 'dbx');
     return IS_WINDOWS ? [`${base}.cmd`, `${base}.exe`, `${base}.ps1`, base] : [base];
+}
+
+/** The `dbx` shim in `cwd` or any ancestor (a workspace may not own one). */
+function findWorkspaceBin(cwd: string): string | undefined {
+    let dir = path.resolve(cwd);
+    for (;;) {
+        for (const candidate of localCandidates(dir)) {
+            if (fs.existsSync(candidate)) return candidate;
+        }
+        const parent = path.dirname(dir);
+        if (parent === dir) return undefined;
+        dir = parent;
+    }
+}
+
+/** The dbx CLI entry this process is running from, when it is dbx itself. */
+function currentCliEntry(): string | undefined {
+    const arg = process.argv[1];
+    if (!arg || !/[/\\](?:dist|src)[/\\]cli[/\\]index\.(?:js|ts)$/.test(arg)) {
+        return undefined;
+    }
+    try {
+        return fs.realpathSync(arg);
+    } catch {
+        return arg;
+    }
+}
+
+/** Look for `dbx` on `PATH` (never spawn a bare name that may not exist). */
+function findOnPath(): string | undefined {
+    const names = IS_WINDOWS ? ['dbx.cmd', 'dbx.exe', 'dbx.bat', 'dbx'] : ['dbx'];
+    for (const entry of (process.env.PATH ?? '').split(path.delimiter)) {
+        if (!entry) continue;
+        for (const name of names) {
+            const candidate = path.join(entry, name);
+            if (fs.existsSync(candidate)) return candidate;
+        }
+    }
+    return undefined;
 }
 
 /** Resolve the project's own `dbx` (never a bare PATH lookup when avoidable). */
 export function resolveDbxInvocation(cwd: string): { exe: string; args: string[] } {
-    for (const candidate of localCandidates(cwd)) {
-        if (fs.existsSync(candidate)) return { exe: candidate, args: [] };
-    }
+    const current = currentCliEntry();
+    if (current) return { exe: process.execPath, args: [current] };
+    const local = findWorkspaceBin(cwd);
+    if (local) return { exe: local, args: [] };
     const own = findOwnCliEntry(cwd);
     if (own) return { exe: process.execPath, args: [own] };
-    return { exe: IS_WINDOWS ? 'dbx.cmd' : 'dbx', args: [] };
+    const onPath = findOnPath();
+    if (onPath) return { exe: onPath, args: [] };
+    throw new Error(
+        'could not locate the dbx CLI: no running CLI entry, workspace `node_modules/.bin/dbx`, or `dbx` on PATH.'
+    );
 }
 
 interface DbxResult {

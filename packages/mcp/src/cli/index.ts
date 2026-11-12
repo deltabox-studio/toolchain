@@ -2,9 +2,15 @@
 
 import { logger, type ToolchainCommand } from '@deltabox/toolchain/shared';
 
+import mcpPkg from '../../package.json' with { type: 'json' };
 import { installMcp, listMcpProviders, type McpProviderId, type McpScope } from '../install.js';
 import { createMcpServer, MCP_SERVER_NAME, serveStdio } from '../protocol.js';
 import { defaultMcpTools } from '../tools.js';
+
+/** The MCP server for `dbx mcp:serve`, advertising the running package version. */
+export function createServeServer(cwd: string): ReturnType<typeof createMcpServer> {
+    return createMcpServer({ cwd, tools: defaultMcpTools(), version: mcpPkg.version });
+}
 
 /** `dbx mcp:serve` — run the stdio MCP server for the current project. */
 function serveCommand(): ToolchainCommand {
@@ -15,12 +21,7 @@ function serveCommand(): ToolchainCommand {
         options: [{ flags: '--cwd <dir>', description: 'Project root (default: cwd).' }],
         run: async (opts, context) => {
             const cwd = (opts.cwd as string | undefined) ?? context.cwd;
-            const server = createMcpServer({
-                cwd,
-                tools: defaultMcpTools(),
-                version: '0.0.0',
-            });
-            await serveStdio(server);
+            await serveStdio(createServeServer(cwd));
         },
     };
 }

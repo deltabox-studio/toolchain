@@ -4,9 +4,11 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 
+import mcpPkg from '../package.json' with { type: 'json' };
+import { createServeServer } from '../src/cli/index.js';
 import { installMcp, listMcpProviders } from '../src/install.js';
 import { createMcpServer, MCP_PROTOCOL_VERSION } from '../src/protocol.js';
-import { ALLOWED_COMMANDS, defaultMcpTools } from '../src/tools.js';
+import { ALLOWED_COMMANDS, defaultMcpTools, resolveDbxInvocation } from '../src/tools.js';
 
 const dirs: string[] = [];
 
@@ -24,6 +26,30 @@ function server(cwd = makeTmp()) {
     return createMcpServer({ cwd, tools: defaultMcpTools(), version: '1.2.3' });
 }
 
+describe('dbx subprocess resolution', () => {
+    it('walks up to a workspace root .bin shim', () => {
+        const root = makeTmp();
+        const bin = path.join(root, 'node_modules', '.bin');
+        fs.mkdirSync(bin, { recursive: true });
+        const shim = path.join(bin, process.platform === 'win32' ? 'dbx.cmd' : 'dbx');
+        fs.writeFileSync(shim, '');
+        const ws = path.join(root, 'packages', 'app');
+        fs.mkdirSync(ws, { recursive: true });
+
+        expect(resolveDbxInvocation(ws)).toEqual({ exe: shim, args: [] });
+    });
+
+    it('throws instead of spawning a bare dbx.cmd when nothing resolves', () => {
+        const previous = process.env.PATH;
+        process.env.PATH = '';
+        try {
+            expect(() => resolveDbxInvocation(makeTmp())).toThrow(/could not locate the dbx CLI/);
+        } finally {
+            process.env.PATH = previous;
+        }
+    });
+});
+
 describe('MCP protocol', () => {
     it('initializes with tool capabilities', async () => {
         const response = await server().handle({
@@ -40,6 +66,18 @@ describe('MCP protocol', () => {
                 serverInfo: { name: 'deltabox-toolchain', version: '1.2.3' },
             },
         });
+    });
+
+    it('advertises the running package version, not a hardcoded 0.0.0', async () => {
+        const response = await createServeServer(makeTmp()).handle({
+            jsonrpc: '2.0',
+            id: 9,
+            method: 'initialize',
+        });
+        const info = (response as { result: { serverInfo: { version: string } } }).result
+            .serverInfo;
+        expect(info.version).toBe(mcpPkg.version);
+        expect(info.version).not.toBe('0.0.0');
     });
 
     it('lists the dbx tools', async () => {
@@ -114,7 +152,10 @@ describe('MCP installers', () => {
             mcpServers: Record<string, { command: string; args: string[] }>;
         };
         expect(config.mcpServers.deltabox).toEqual({ command: 'dbx', args: ['mcp:serve'] });
-        expect(fs.readFileSync(result.skillPath as string, 'utf-8')).toContain('dbx_sync');
+        const skill = fs.readFileSync(result.skillPath as string, 'utf-8');
+        expect(skill.startsWith('---\n')).toBe(true);
+        expect(skill).toContain('description:');
+        expect(skill).toContain('dbx_sync');
     });
 
     it('writes the VS Code `servers` shape and is idempotent', () => {

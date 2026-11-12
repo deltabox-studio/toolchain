@@ -234,6 +234,15 @@ function codexToml(current: string, command: string, args: string[]): string {
 /** The skill body installed for a provider. */
 export function renderSkill(provider: McpProviderId): string {
     return [
+        '---',
+        'name: deltabox toolchain',
+        'description: >',
+        '  Manage this project with the deltabox MCP server (dbx_sync, dbx_projects,',
+        '  dbx_changelog, dbx_migrate, dbx_tsconfig). Use when the user asks to sync',
+        '  generated files, scaffold a project, inspect the project graph, migrate',
+        '  formatter/linter/vite config, manage tsconfig paths, or cut a release.',
+        '---',
+        '',
         '# deltabox toolchain',
         '',
         'Use the `deltabox` MCP server to manage this project. Prefer its tools over',
