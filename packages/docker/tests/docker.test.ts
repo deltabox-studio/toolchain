@@ -81,6 +81,7 @@ describe('docker plans', () => {
     it('uses the Bun images and commands for Bun projects', () => {
         const cwd = project({
             name: 'bun-api',
+            packageManager: 'bun@1.3.0',
             scripts: {
                 build: 'bun build src/index.ts --outdir dist --target bun',
                 start: 'bun src/index.ts',
@@ -95,8 +96,20 @@ describe('docker plans', () => {
 
         const dockerfile = renderDockerfile(plan);
         expect(dockerfile).toContain('RUN bun install --frozen-lockfile');
+        expect(dockerfile).toContain('bun.lock*');
+        expect(dockerfile).not.toContain('bun.lockb');
         expect(dockerfile).toContain('RUN bun run build');
         expect(dockerfile).toContain('CMD ["bun", "dist/index.js"]');
+    });
+
+    it('uses a neutral header for user-owned files', () => {
+        const cwd = project({ name: 'plain' });
+        const plan = resolveDockerPlan({ cwd });
+        const dockerfile = renderDockerfile(plan);
+
+        expect(dockerfile).toContain('this file is yours to edit');
+        expect(dockerfile).not.toContain('dbx.config');
+        expect(dockerfile).not.toContain('dbx sync');
     });
 
     it('falls back to Node images for non-Vite+ projects', () => {
