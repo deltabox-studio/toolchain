@@ -2,17 +2,21 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { parseTsconfig } from '@deltabox/toolchain/tsconfig';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
+
+import { parseTsconfig } from '@deltabox/toolchain/tsconfig';
 
 import {
     catalogsSyncTask,
     createMonorepoRootFiles,
+    createProjectTemplateFiles,
     createRootProjectFiles,
     createWorkspaceFiles,
     findRootOxcFiles,
     generateProjectConfigs,
     hasCatalog,
+    PROJECT_TEMPLATE_IDS,
+    projectCommands,
     projectSyncTask,
     renderGitignore,
     renderYarnrc,
@@ -61,6 +65,52 @@ describe('project scaffolding', () => {
         expect(config).toContain('oxc:');
         expect(config).toContain('catalogs:');
         expect(config).toContain("'@deltabox/toolchain':");
+    });
+
+    it('declares every bare import used by the generated Vite config', () => {
+        const cases = [
+            createRootProjectFiles({ name: 'acme' }),
+            createRootProjectFiles({ name: 'acme', kind: 'application' }),
+            createMonorepoRootFiles({ name: 'acme', workspaces: [] }),
+            createWorkspaceFiles({ name: 'acme', wsName: 'core', wsDir: 'packages/core' }),
+            ...PROJECT_TEMPLATE_IDS.map(id => createProjectTemplateFiles(id, { name: 'acme' })),
+        ];
+        for (const files of cases) {
+            const pkg = JSON.parse(files.find(file => file.path === 'package.json')!.content) as {
+                dependencies?: Record<string, string>;
+                devDependencies?: Record<string, string>;
+            };
+            const config = files.find(file => file.path === 'vite.config.ts')?.content;
+            if (!config) continue;
+            for (const [, specifier] of config.matchAll(/from '([^']+)'/g)) {
+                if (!specifier || specifier.startsWith('.') || specifier.startsWith('node:')) {
+                    continue;
+                }
+                expect(
+                    pkg.devDependencies?.[specifier] ?? pkg.dependencies?.[specifier],
+                    `${specifier} import in ${config}`
+                ).toBeDefined();
+            }
+        }
+    });
+
+    it('does not declare Vite+ tasks that shadow package scripts', () => {
+        const cases = [
+            createRootProjectFiles({ name: 'acme' }),
+            createRootProjectFiles({ name: 'acme', kind: 'application' }),
+            createMonorepoRootFiles({ name: 'acme', workspaces: [] }),
+            createWorkspaceFiles({ name: 'acme', wsName: 'core', wsDir: 'packages/core' }),
+            ...PROJECT_TEMPLATE_IDS.map(id => createProjectTemplateFiles(id, { name: 'acme' })),
+        ];
+        for (const files of cases) {
+            const pkg = JSON.parse(files.find(file => file.path === 'package.json')!.content) as {
+                scripts?: Record<string, string>;
+            };
+            const config = files.find(file => file.path === 'vite.config.ts')?.content;
+            if (!config) continue;
+            expect(config).not.toMatch(/\brun:\s*\{/);
+            expect(Object.keys(pkg.scripts ?? {}).length).toBeGreaterThan(0);
+        }
     });
 
     it('inherits root Oxc files for a nested project', () => {
@@ -269,10 +319,12 @@ describe('project scaffolding', () => {
         });
         expect(pkg.exports['./package.json']).toBe('./package.json');
         expect(pkg.scripts.build).toBe('vp pack');
+        expect(pkg.packageManager).toBe('yarn@4.17.1');
         expect(pkg.devDependencies.tsdown).toBeUndefined();
         expect(pkg.devDependencies.vitest).toBeUndefined();
         const vite = files.find(f => f.path === 'vite.config.ts')!.content;
-        expect(vite).toContain('vp pack');
+        expect(vite).toContain("from 'vite-plugin-dbx'");
+        expect(vite).not.toMatch(/\brun:\s*\{/);
         expect(files.some(f => f.path === 'tsdown.config.ts')).toBe(false);
     });
 
@@ -368,6 +420,21 @@ describe('project scaffolding', () => {
         });
     });
 
+    it('skips a project already configured through the Vite plugin', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'acme' }));
+        fs.writeFileSync(
+            path.join(dir, 'vite.config.ts'),
+            "import { dbx } from 'vite-plugin-dbx';\n\nexport default { plugins: [dbx({})] };\n"
+        );
+
+        const result = generateProjectConfigs({ root: dir });
+
+        expect(result.created).toEqual([]);
+        expect(result.skipped).toContain('.');
+        expect(fs.existsSync(path.join(dir, 'dbx.config.ts'))).toBe(false);
+    });
+
     it('writes only the project graph when skipConfig is set', () => {
         const dir = makeTmp();
         fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'acme' }));
@@ -454,9 +521,9 @@ describe('project scaffolding', () => {
         const config = files.find(f => f.path === 'vite.config.ts')!.content;
         expect(config).toContain("packageManager: 'yarn'");
         expect(config).toContain("packageManagerVersion: '4.17.1'");
-        // No explicit manager chosen -> no `packageManager` field yet.
+        // The package.json mirrors the config so `sync --check` is clean.
         const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
-        expect(pkg.packageManager).toBeUndefined();
+        expect(pkg.packageManager).toBe('yarn@4.17.1');
     });
 
     it('writes a versioned packageManager when one is chosen', () => {
@@ -634,5 +701,51 @@ describe('project scaffolding', () => {
         expect(renderYarnrc({ packages: { react: '^19.0.0' } })).toContain('catalog:');
         expect(catalogsSyncTask().keep).toContain('.yarnrc.yml');
         expect(catalogsSyncTask().keep).toContain('pnpm-workspace.yaml');
+    });
+});
+
+describe('project:init CLI', () => {
+    it('rejects an unsupported package manager', async () => {
+        const command = projectCommands().find(candidate => candidate.name === 'project:init');
+        if (!command?.run) throw new Error('missing project:init command');
+        const out = makeTmp();
+
+        expect(() =>
+            command.run!(
+                { name: 'bad', out, packageManager: 'pnpmx' },
+                { cwd: out, projectType: 'project', config: {}, tokens: {} }
+            )
+        ).toThrow(/invalid package manager/);
+        expect(fs.existsSync(path.join(out, 'package.json'))).toBe(false);
+    });
+
+    it('does not inherit project identity for an --out elsewhere', () => {
+        const command = projectCommands().find(candidate => candidate.name === 'project:init');
+        if (!command?.run) throw new Error('missing project:init command');
+        const cwd = makeTmp();
+        const out = makeTmp();
+
+        command.run!(
+            { name: 'demo', out },
+            {
+                cwd,
+                projectType: 'project',
+                config: {},
+                tokens: {
+                    scope: '@acme',
+                    description: 'The toolchain',
+                    author: 'Acme',
+                    repo: 'https://github.com/acme/toolchain',
+                    nodeVersion: '22',
+                },
+            }
+        );
+
+        const pkg = JSON.parse(fs.readFileSync(path.join(out, 'package.json'), 'utf-8'));
+        expect(pkg.name).toBe('demo');
+        expect(pkg.description).toBeUndefined();
+        expect(pkg.author).toBeUndefined();
+        expect(pkg.repository).toBeUndefined();
+        expect(pkg.engines).toEqual({ node: '>=22' });
     });
 });

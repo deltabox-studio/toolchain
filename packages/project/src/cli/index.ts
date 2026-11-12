@@ -1,9 +1,11 @@
 import path from 'node:path';
 
 import { cancel, confirm, isCancel, select } from '@clack/prompts';
+
 import { ensureToolingDependencies, loadToolchainConfig } from '@deltabox/toolchain/core';
 import { writeDockerFiles } from '@deltabox/toolchain/docker';
 import {
+    DEFAULT_PACKAGE_MANAGER_VERSIONS,
     logger,
     parseToolVersions,
     type ProjectType,
@@ -109,6 +111,28 @@ function projectDefaults(
     };
 }
 
+/** Whether `out` is the current project or a directory inside it. */
+function scaffoldInPlace(out: string, cwd: string): boolean {
+    const relative = path.relative(path.resolve(cwd), path.resolve(out));
+    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+/**
+ * Metadata a scaffold inherits. Only a project scaffolded **into** the current
+ * project inherits its identity (description, author, repo, ...); `--out`
+ * elsewhere keeps just the environment settings and never stamps the wrong
+ * scope/author onto an unrelated project.
+ */
+function scaffoldDefaults(
+    context: ToolchainCommandContext,
+    out: string,
+    options: { description?: boolean } = {}
+): Record<string, string> {
+    if (scaffoldInPlace(out, context.cwd)) return projectDefaults(context.tokens, options);
+    const nodeVersion = tokenText(context.tokens.nodeVersion);
+    return nodeVersion ? { nodeVersion } : {};
+}
+
 /** Resolve the scaffold's package manager (+ its matching version). */
 function scaffoldPackageManager(
     opts: Record<string, unknown>,
@@ -116,6 +140,12 @@ function scaffoldPackageManager(
 ): Record<string, string> {
     const configured = tokenText(tokens.packageManager);
     const packageManager = (opts.packageManager as string | undefined) ?? configured ?? 'yarn';
+    const supported = Object.keys(DEFAULT_PACKAGE_MANAGER_VERSIONS);
+    if (!supported.includes(packageManager)) {
+        throw new Error(
+            `invalid package manager "${packageManager}" (expected ${supported.join(' | ')}).`
+        );
+    }
     const version =
         packageManager === configured
             ? (tokenText(tokens.packageManagerVersion) ?? tokenText(tokens.yarnVersion))
@@ -205,10 +235,14 @@ export function projectCommands(): ToolchainCommand[] {
                 const out = (opts.out as string) ?? context.cwd;
                 const name = resolveName(requireName(opts, context.config), out);
                 const tsconfigExtends = scaffoldTsconfigExtends(context.config);
-                const scope = (opts.scope as string | undefined) ?? tokenText(context.tokens.scope);
+                const scope =
+                    (opts.scope as string | undefined) ??
+                    (scaffoldInPlace(out, context.cwd)
+                        ? tokenText(context.tokens.scope)
+                        : undefined);
                 const packageManager = scaffoldPackageManager(opts, context.tokens);
                 const files = createRootProjectFiles({
-                    ...projectDefaults(context.tokens),
+                    ...scaffoldDefaults(context, out),
                     name,
                     ...(scope ? { scope } : {}),
                     ...packageManager,
@@ -260,7 +294,9 @@ export function projectCommands(): ToolchainCommand[] {
                 const name = resolveName(requireName(opts, context.config), out);
                 const scope =
                     (opts.scope as string | undefined) ??
-                    tokenText(context.tokens.scope) ??
+                    (scaffoldInPlace(out, context.cwd)
+                        ? tokenText(context.tokens.scope)
+                        : undefined) ??
                     `@${name}`;
                 const includeConfig = context.noConfig
                     ? false
@@ -271,7 +307,7 @@ export function projectCommands(): ToolchainCommand[] {
                 const tsconfigExtends = scaffoldTsconfigExtends(context.config);
 
                 const files = createMonorepoRootFiles({
-                    ...projectDefaults(context.tokens),
+                    ...scaffoldDefaults(context, out),
                     name,
                     scope,
                     type: rootType,
@@ -283,7 +319,7 @@ export function projectCommands(): ToolchainCommand[] {
                 if (withExample) {
                     files.push(
                         ...createWorkspaceFiles({
-                            ...projectDefaults(context.tokens, { description: false }),
+                            ...scaffoldDefaults(context, out, { description: false }),
                             name,
                             scope,
                             wsName: 'core',

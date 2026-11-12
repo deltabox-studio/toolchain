@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { applyEdits, type FormattingOptions, modify } from 'jsonc-parser';
+
 import {
     DEFAULT_PACKAGE_MANAGER_VERSIONS,
     defaultPackageManagerVersion,
@@ -18,7 +20,6 @@ import {
     renderTsconfigDefault,
     type TsconfigExtendsOptions,
 } from '@deltabox/toolchain/tsconfig';
-import { applyEdits, type FormattingOptions, modify } from 'jsonc-parser';
 
 import rootPkg from '../../../package.json' with { type: 'json' };
 import { renderPnpmWorkspace, renderYarnrc, supportsCatalogs } from './catalogs.js';
@@ -34,6 +35,7 @@ const CATALOG: Record<string, string> = {
     '@deltabox/toolchain': `^${rootPkg.version}`,
     '@types/node': '^22.10.2',
     typescript: '^6.0.3',
+    'vite-plugin-dbx': `^${rootPkg.version}`,
     'vite-plus': '1.2.0',
 };
 
@@ -50,6 +52,17 @@ function packageManagerField(
     if (!packageManager) return undefined;
     const resolved = version ?? defaultPackageManagerVersion(packageManager);
     return resolved ? `${packageManager}@${resolved}` : packageManager;
+}
+
+/**
+ * The `packageManager` field a scaffold writes. Mirrors the inline config, which
+ * always defaults to Yarn, so `dbx sync --check` is clean immediately.
+ */
+function scaffoldPackageManager(ctx: ProjectContext): string | undefined {
+    return packageManagerField(
+        ctx.packageManager ?? 'yarn',
+        ctx.packageManagerVersion ?? ctx.yarnVersion
+    );
 }
 
 /** The dev-dependency map for a package manager (catalog refs or pinned). */
@@ -173,8 +186,6 @@ export interface ProjectContext {
     extraDevDependencies?: Record<string, string>;
     /** Scripts merged over (or replacing) the scaffold's default scripts. */
     scripts?: Record<string, string>;
-    /** Vite+ task overrides merged over the flavour's default tasks. */
-    tasks?: Record<string, string>;
 }
 
 /** Oxc config files found in an ancestor of a scaffold output directory. */
@@ -265,7 +276,6 @@ function tokens(ctx: ProjectContext): Replacements {
         dependencies: _dependencies,
         extraDevDependencies: _extraDevDependencies,
         scripts: _scripts,
-        tasks: _tasks,
         ...tokens
     } = ctx;
     return tokens;
@@ -456,14 +466,13 @@ export interface PluginViteConfigOptions {
     lint?: 'defaults' | 'inherit' | false;
     catalogs?: Record<string, string>;
     flavor?: 'application' | 'library' | 'monorepo-root' | 'workspace';
-    /** Extra/replacement `run.tasks` entries. */
-    tasks?: Record<string, string>;
 }
 
 /**
  * Render the scaffold's `vite.config.*`: Vite+ loads it, and `dbx()` carries the
  * toolchain config inline so the project does not need a `dbx.config.*`.
- * Vitest (`test`) and the Vite+ task runner (`run.tasks`) also live here.
+ * Vitest (`test`) also lives here. Tasks are intentionally not declared: every
+ * command is a `package.json` script, and Vite+ rejects a task that shadows one.
  */
 export function renderPluginViteConfig(options: PluginViteConfigOptions): string {
     const { ctx, type } = options;
@@ -514,33 +523,6 @@ export function renderPluginViteConfig(options: PluginViteConfigOptions): string
         flavor === 'monorepo-root'
             ? "['packages/**/tests/**/*.test.ts']"
             : "['tests/**/*.test.ts']";
-    const tasks: [string, string][] =
-        flavor === 'application'
-            ? [
-                  ['dev', 'vp dev'],
-                  ['build', 'vp build'],
-                  ['preview', 'vp preview'],
-                  ['test', 'vp test'],
-              ]
-            : flavor === 'monorepo-root'
-              ? [
-                    ['build', 'dbx run --filter "./packages/*" build'],
-                    ['test', 'dbx run --filter "./packages/*" test'],
-                    ['typecheck', 'dbx run --filter "./packages/*" typecheck'],
-                ]
-              : [
-                    ['build', 'vp pack'],
-                    ['test', 'vp test'],
-                ];
-    tasks.push(
-        ['typecheck', 'tsc -p tsconfig.json --noEmit'],
-        ['format', 'vp fmt'],
-        ['lint', 'vp lint --fix']
-    );
-    const mergedTasks = new Map<string, string>([...tasks, ...Object.entries(options.tasks ?? {})]);
-    const taskLines = [...mergedTasks]
-        .map(([name, command]) => `                ${name}: { command: ${quote(command)} },`)
-        .join('\n');
 
     return `import { defineConfig } from 'vite-plus';
 
@@ -567,11 +549,6 @@ ${[
         include: ${testInclude},
         environment: 'node',
     },
-    run: {
-        tasks: {
-${taskLines}
-        },
-    },
 });
 `;
 }
@@ -597,6 +574,7 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
     const withFmt = allowOxc && ctx.rootOxc?.fmt !== true;
     const withLint = allowOxc && ctx.rootOxc?.lint !== true;
     const catalog = scaffoldCatalog(ctx.packageManager, application ? ['tsdown'] : []);
+    const pmField = scaffoldPackageManager(ctx);
     const pkg = {
         name: ctx.scope ? `${ctx.scope}/${ctx.name}` : ctx.name,
         version: '0.1.0',
@@ -618,14 +596,7 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
             ...devDependencies(ctx.packageManager, catalogDefined(ctx.packageManager, false)),
             ...ctx.extraDevDependencies,
         },
-        ...(packageManagerField(ctx.packageManager, ctx.packageManagerVersion ?? ctx.yarnVersion)
-            ? {
-                  packageManager: packageManagerField(
-                      ctx.packageManager,
-                      ctx.packageManagerVersion ?? ctx.yarnVersion
-                  ),
-              }
-            : {}),
+        ...(pmField ? { packageManager: pmField } : {}),
         engines: { node: ctx.nodeVersion ? `>=${ctx.nodeVersion}` : '>=22' },
     };
 
@@ -642,7 +613,6 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
                           lint: withLint ? 'defaults' : ctx.rootOxc?.lint ? 'inherit' : false,
                           ...(catalog ? { catalogs: catalog } : {}),
                           flavor: application ? 'application' : 'library',
-                          ...(ctx.tasks ? { tasks: ctx.tasks } : {}),
                       }),
                   },
               ]),
@@ -685,6 +655,7 @@ export interface MonorepoRootContext extends ProjectContext {
 export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile[] {
     const withOxc = ctx.oxc !== false && ctx.includeConfig !== false;
     const catalog = scaffoldCatalog(ctx.packageManager);
+    const pmField = scaffoldPackageManager(ctx);
     const pkg = {
         name: ctx.name,
         version: '0.1.0',
@@ -703,14 +674,7 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
             ctx.packageManager,
             catalogDefined(ctx.packageManager, true)
         ),
-        ...(packageManagerField(ctx.packageManager, ctx.packageManagerVersion ?? ctx.yarnVersion)
-            ? {
-                  packageManager: packageManagerField(
-                      ctx.packageManager,
-                      ctx.packageManagerVersion ?? ctx.yarnVersion
-                  ),
-              }
-            : {}),
+        ...(pmField ? { packageManager: pmField } : {}),
         engines: { node: ctx.nodeVersion ? `>=${ctx.nodeVersion}` : '>=22' },
     };
 
@@ -927,6 +891,7 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
     // writes a catalog (npm has none; Bun's lives in the monorepo package.json).
     const useCatalog = ctx.useCatalog === true && catalogDefined(ctx.packageManager, true);
     const dev = useCatalog ? devDependencies(ctx.packageManager, true) : { ...CATALOG };
+    const pmField = scaffoldPackageManager(ctx);
     const pkg = {
         name: ctx.scope ? `${ctx.scope}/${ctx.wsName}` : ctx.wsName,
         version: '0.1.0',
@@ -952,6 +917,7 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
             typecheck: 'tsc -p tsconfig.build.json --noEmit',
         },
         devDependencies: dev,
+        ...(pmField ? { packageManager: pmField } : {}),
         ...(ctx.nodeVersion ? { engines: { node: `>=${ctx.nodeVersion}` } } : {}),
         publishConfig: { access: 'public', provenance: true },
     };

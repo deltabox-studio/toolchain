@@ -164,6 +164,35 @@ export function generateProjectConfigs(
         const extension = configExtensionOf(configPath);
         const already = Boolean(existingPath) || fs.existsSync(chosenPath);
         const type = options.type ?? detectProjectType(project.dir);
+        const viteFile = findViteConfig(project.dir);
+        let pluginManaged = false;
+        if (viteFile) {
+            try {
+                pluginManaged = /@deltabox\/toolchain\/vite|vite-plugin-dbx/.test(
+                    fs.readFileSync(viteFile, 'utf-8')
+                );
+            } catch {
+                pluginManaged = false;
+            }
+        }
+
+        // A project already configured through the Vite plugin needs no
+        // `dbx.config.*`; the plugin carries the same toolchain settings.
+        if (pluginManaged && !force) {
+            skipped.push(project.rel);
+            configs.push({
+                dir: project.dir,
+                rel: project.rel,
+                ...(project.name ? { name: project.name } : {}),
+                type,
+                configPath,
+                extension,
+                created: false,
+                skipped: 'uses vite-plugin-dbx',
+                ...(viteFile ? { vite: { path: viteFile, folded: false } } : {}),
+            });
+            continue;
+        }
 
         if (skipConfig) {
             skipped.push(project.rel);
@@ -220,7 +249,6 @@ export function generateProjectConfigs(
         // `toolchain.vite` so the generated config already owns that setup.
         let finalContent = content;
         let vite: GeneratedProjectConfig['vite'];
-        const viteFile = findViteConfig(project.dir);
         if (viteFile) {
             try {
                 const source = fs.readFileSync(viteFile, 'utf-8').replace(/^\uFEFF/, '');

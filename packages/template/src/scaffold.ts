@@ -7,12 +7,12 @@ import { ensureToolingDependencies } from '@deltabox/toolchain/core';
 import { type DockerRuntime, dockerFiles, writeDockerFiles } from '@deltabox/toolchain/docker';
 import {
     createMonorepoRootFiles,
-    createQolProjectFiles,
+    createProjectTemplateFiles,
     createRootProjectFiles,
     createWorkspaceFiles,
     findRootOxcFiles,
     hasCatalog,
-    isQolTemplateId,
+    isProjectTemplateId,
     SCAFFOLD_CATALOG,
     upsertWorkspaceTsconfig,
     workspaceDirForTsconfig,
@@ -232,11 +232,11 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
                 rootOxc: findRootOxcFiles(options.cwd),
                 ...(packageManager ? { packageManager } : {}),
             };
-            // `single` + `application`: a root package project; the quality-of-life
-            // templates layer their own files/deps over the same scaffold.
+            // `single` + `application`: a root package project; the built-in
+            // project templates layer their own files/deps over the same scaffold.
             files.push(
-                ...(template.builtin && isQolTemplateId(template.builtin)
-                    ? createQolProjectFiles(template.builtin, projectContext)
+                ...(template.builtin && isProjectTemplateId(template.builtin)
+                    ? createProjectTemplateFiles(template.builtin, projectContext)
                     : createRootProjectFiles({
                           ...projectContext,
                           kind: template.builtin === 'application' ? 'application' : 'project',

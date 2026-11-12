@@ -1542,7 +1542,7 @@ describe('emulate: quality-of-life templates', () => {
     it(
         'scaffolds the docs, server, file-server and LLM builtins through the CLI',
         async () => {
-            const ws = scratch('qol-templates');
+            const ws = scratch('project-templates');
             const cases: { id: string; files: string[]; dev: RegExp }[] = [
                 { id: 'vitepress', files: ['docs/index.md'], dev: /^vitepress dev/ },
                 { id: 'express', files: ['src/app.ts'], dev: /^tsx watch/ },

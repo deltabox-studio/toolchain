@@ -73,6 +73,12 @@ export function projectSyncTask(): SyncTask {
                 const { scope } = splitPackageName(pkg.name);
                 if (scope) merged.scope = scope;
             }
+            // A monorepo root keeps the scope it already has (the toolchain's
+            // own `@scope/name` root) but an unscoped root never gains one: the
+            // scope names workspace packages, not `acme` itself.
+            if (merged.type === 'monorepo-root' || ctx.projectType === 'monorepo-root') {
+                if (!splitPackageName(pkg.name).scope) delete merged.scope;
+            }
             const updates = projectToPackageJson(merged, directory ? { directory } : {}) as Record<
                 string,
                 unknown
