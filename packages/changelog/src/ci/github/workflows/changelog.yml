@@ -1,11 +1,11 @@
-name: Changelog (dev)
+name: Changelog
 on:
   push:
     branches: [main]
 permissions:
   contents: write
 concurrency:
-  group: changelog-dev
+  group: changelog-main
   cancel-in-progress: false
 jobs:
   generate-changelog:

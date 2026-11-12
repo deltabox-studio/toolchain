@@ -11,24 +11,54 @@ export function monthYear(date: Date): string {
     return `${date.toLocaleString('en-US', { month: 'long' })} ${date.getFullYear()}`;
 }
 
-/** Apply a semver bump to a `major.minor.patch` string. */
-export function bumpVersion(current: string, type: BumpType): string {
-    const match = /^(\d+)\.(\d+)\.(\d+)/.exec(current);
+/** A full semver (optionally with a prerelease/build suffix). */
+export const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
+
+/** The configured prerelease identifier (eg. `beta`, `rc`), without a counter. */
+const PRERELEASE_TAG = /^[0-9A-Za-z-]+$/;
+
+/**
+ * Apply a semver bump. With a `prerelease` tag the result becomes a prerelease:
+ * a stable version bumps its core and starts at `<tag>.0`; an existing
+ * prerelease keeps its core and continues the counter for the same tag (switching
+ * tags starts that tag at `.0`). The suffix is never appended twice.
+ */
+export function bumpVersion(current: string, type: BumpType, prerelease?: string): string {
+    const match = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?/.exec(current.trim());
     if (!match) throw new Error(`Cannot parse version "${current}"`);
-    let major = Number(match[1]);
-    let minor = Number(match[2]);
-    let patch = Number(match[3]);
-    if (type === 'major') {
-        major += 1;
-        minor = 0;
-        patch = 0;
-    } else if (type === 'minor') {
-        minor += 1;
-        patch = 0;
-    } else {
-        patch += 1;
+    const major = Number(match[1]);
+    const minor = Number(match[2]);
+    const patch = Number(match[3]);
+    const existing = match[4];
+    const tag = prerelease?.trim();
+    if (tag !== undefined && tag !== '' && !PRERELEASE_TAG.test(tag)) {
+        throw new Error(
+            `Invalid prerelease tag "${prerelease}" (use a single identifier like beta or rc).`
+        );
     }
-    return `${major}.${minor}.${patch}`;
+
+    if (tag) {
+        if (existing !== undefined) {
+            // Stay on the same core while a prerelease cycle is in progress.
+            const sameTag = new RegExp(`^${tag}(?:\\.(\\d+))?$`).exec(existing);
+            if (sameTag) {
+                const counter = sameTag[1] ? Number(sameTag[1]) + 1 : 0;
+                return `${major}.${minor}.${patch}-${tag}.${counter}`;
+            }
+            return `${major}.${minor}.${patch}-${tag}.0`;
+        }
+        const next = bumpedCore(major, minor, patch, type);
+        return `${next}-${tag}.0`;
+    }
+
+    return bumpedCore(major, minor, patch, type);
+}
+
+/** Apply the numeric part of a semver bump. */
+function bumpedCore(major: number, minor: number, patch: number, type: BumpType): string {
+    if (type === 'major') return `${major + 1}.0.0`;
+    if (type === 'minor') return `${major}.${minor + 1}.0`;
+    return `${major}.${minor}.${patch + 1}`;
 }
 
 /** Render a `## <version> (Month Year)` heading + summary, optionally marked. */

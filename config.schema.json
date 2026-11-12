@@ -1132,6 +1132,11 @@
                     },
                     "description": "Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own."
                 },
+                "prerelease": {
+                    "type": "string",
+                    "pattern": "^[0-9A-Za-z-]+$",
+                    "description": "Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice."
+                },
                 "bump": {
                     "type": "object",
                     "properties": {

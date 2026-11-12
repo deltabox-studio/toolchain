@@ -8,7 +8,8 @@
  * Usage:        node scripts/dist/changelog/index.js [options]
  *
  * Options:
- *   --range <range>            Git revision range or single rev to scan (default: HEAD).
+ *   --range <range>            Git revision range or single rev to scan (default:
+ *                              the commits since the last release boundary).
  *   --processing-method <m>    How much of the changelog to process:
  *                                - `latest` — only the new (prepended) entry is
  *                                  generated with the grouped format (default).
@@ -77,7 +78,7 @@ import {
 } from '@deltabox/toolchain/shared';
 
 import { parseArgsCli } from './utils/args.js';
-import { readCommits } from './utils/git.js';
+import { isGitRepository, isReleaseCommit, lastReleaseRef, readCommits } from './utils/git.js';
 import { packageChangesForCurrent } from './utils/packages.js';
 import {
     formatExistingChangelogs,
@@ -92,7 +93,12 @@ import type {
     ChangelogProvider,
     CommitFormatOptions,
 } from './utils/types.js';
-import { insertNewEntry, renderChangelogEntry, retagChangelogs } from './utils/version.js';
+import {
+    insertNewEntry,
+    renderChangelogEntry,
+    retagChangelogs,
+    SEMVER_PATTERN,
+} from './utils/version.js';
 import {
     deriveCustomBump,
     planVersions,
@@ -100,6 +106,32 @@ import {
     writePackageVersion,
 } from './utils/versioning.js';
 import { writeChangelogs } from './utils/write.js';
+
+/** Every commit hash already referenced by a changelog bullet (`[#abc1234]` or `#abc1234`). */
+function releasedCommitHashes(): Set<string> {
+    const hashes = new Set<string>();
+    for (const file of changelogFiles()) {
+        try {
+            const text = readFileSync(file, 'utf8');
+            for (const [, hash] of text.matchAll(/#([0-9a-f]{7,40})\b/gi)) {
+                if (hash) hashes.add(hash.toLowerCase());
+            }
+        } catch {
+            // A changelog we cannot read cannot vouch for any commit.
+        }
+    }
+    return hashes;
+}
+
+/** Whether a commit's full hash was already rendered (changelogs use short hashes). */
+function isAlreadyReleased(hash: string, released: ReadonlySet<string>): boolean {
+    const full = hash.toLowerCase();
+    if (released.has(full.slice(0, 7))) return true;
+    for (const short of released) {
+        if (full.startsWith(short)) return true;
+    }
+    return false;
+}
 
 /**
  * Run the changelog pipeline (bump versions + write changelogs). `changelog` is
@@ -116,6 +148,7 @@ export function runChangelog(
 
     // Machine-readable release body (used by the generated release workflow).
     if (options.releaseNotes) {
+        if (!isGitRepository()) throw new Error('dbx changelog: not a git repository.');
         logger.raw(releaseNotesFromGit(options.releaseNotes));
         return;
     }
@@ -132,12 +165,12 @@ export function runChangelog(
         return;
     }
 
-    const localCurrent = readRootVersion();
-
-    // Version override (e.g. a maintainer requested a different version).
+    // Version override (e.g. a maintainer requested a different version). It
+    // only rewrites package versions/changelog headings, so git is not needed.
     if (options.version) {
+        const localCurrent = readRootVersion();
         const next = options.version.trim();
-        if (!/^\d+\.\d+\.\d+$/.test(next)) throw new Error(`Invalid version: ${next}`);
+        if (!SEMVER_PATTERN.test(next)) throw new Error(`Invalid version: ${next}`);
         if (next === localCurrent) {
             logger.info(`Version is already ${next}; nothing to do.`);
             return;
@@ -154,9 +187,11 @@ export function runChangelog(
 
     // The bump starts from --base-version when provided (e.g. the latest npm
     // version), otherwise from the local package.json version.
+    if (!isGitRepository()) throw new Error('dbx changelog: not a git repository.');
+    const localCurrent = readRootVersion();
     let current = localCurrent;
     if (options.baseVersion) {
-        if (!/^\d+\.\d+\.\d+$/.test(options.baseVersion.trim())) {
+        if (!SEMVER_PATTERN.test(options.baseVersion.trim())) {
             throw new Error(`Invalid base version: ${options.baseVersion}`);
         }
         current = options.baseVersion.trim();
@@ -167,9 +202,14 @@ export function runChangelog(
     // commit source range.
     const method = options.processingMethod;
     const reformatAll = method === 'all';
-    const range = method !== 'latest' && method !== 'all' ? method : options.range;
+    let range = method !== 'latest' && method !== 'all' ? method : options.range;
+    // With no explicit range, stop at the last release boundary so a second run
+    // cannot re-bump (and re-list) commits that were already released.
+    if (method === 'latest' && !options.rangeExplicit) {
+        const boundary = lastReleaseRef();
+        if (boundary) range = `${boundary}..HEAD`;
+    }
 
-    const records = readCommits(range);
     const versioning = resolveVersioning(changelog);
     const provider = versioning.provider as ChangelogProvider | string | undefined;
     if (!options.dryRun && provider === 'changesets') {
@@ -182,6 +222,16 @@ export function runChangelog(
         });
         if (result.status !== 0) throw new Error('changesets provider failed.');
         logger.info('Ran the changesets provider; changesets owns the changelog/version output.');
+        return;
+    }
+
+    const released = releasedCommitHashes();
+    let records = readCommits(range).filter(record => !isReleaseCommit(record.subject));
+    if (released.size > 0) {
+        records = records.filter(record => !isAlreadyReleased(record.hash, released));
+    }
+    if (records.length === 0) {
+        logger.info('No new commits since the last release; nothing to do.');
         return;
     }
     const type = deriveCustomBump(records, versioning.bump, versioning.allowOverBump, {

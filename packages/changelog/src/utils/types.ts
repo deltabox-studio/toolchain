@@ -60,6 +60,8 @@ export type IssueInfo = ChangelogIssueInfo;
 
 export interface CliOptions {
     range: string;
+    /** Whether `--range` (or a positional range) was passed explicitly. */
+    rangeExplicit: boolean;
     dryRun: boolean;
     version?: string;
     baseVersion?: string;

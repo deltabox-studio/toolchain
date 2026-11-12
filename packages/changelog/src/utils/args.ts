@@ -24,8 +24,11 @@ export function parseArgsCli(argv: string[]): CliOptions {
         process.env.CHANGELOG_PROCESSING_METHOD?.trim() ||
         'latest';
 
+    const explicitRange = values.range ?? (positionals[0] as string | undefined);
+
     return {
-        range: values.range ?? (positionals[0] as string | undefined) ?? 'HEAD',
+        range: explicitRange ?? 'HEAD',
+        rangeExplicit: explicitRange !== undefined,
         dryRun: values['dry-run'] ?? false,
         version: values.version,
         baseVersion: values['base-version'],

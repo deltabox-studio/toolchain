@@ -509,6 +509,12 @@ export interface ChangelogVersioningConfig {
      * own.
      */
     workspaces?: Array<string>;
+    /**
+     * Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at
+     * `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so
+     * the suffix is never appended twice.
+     */
+    prerelease?: string;
     /** Custom bump rules for major/minor/patch (matchers or callbacks). */
     bump?: {
         /** A bump rule: a matcher/callback or a list of matchers/callbacks. */

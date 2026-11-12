@@ -31,6 +31,8 @@ export interface ResolvedVersioning {
     target: VersioningTarget;
     /** Explicit workspace globs (when configured). */
     workspaces?: string[];
+    /** Opt into a prerelease cycle (eg. `beta`, `rc`). */
+    prerelease?: string;
     /** Custom bump rules keyed by version index. */
     bump?: BumpRules;
     /** Apply a bump per matching change instead of once. */
@@ -56,6 +58,7 @@ export function resolveVersioning(changelog?: ChangelogConfig): ResolvedVersioni
         enabled: true,
         target: versioning.target ?? 'uniform',
         ...(versioning.workspaces ? { workspaces: versioning.workspaces } : {}),
+        ...(versioning.prerelease ? { prerelease: versioning.prerelease } : {}),
         ...(versioning.bump ? { bump: versioning.bump } : {}),
         ...(versioning.allowOverBump ? { allowOverBump: true } : {}),
         ...(versioning.provider ? { provider: versioning.provider } : {}),
@@ -293,7 +296,7 @@ export function planVersions(options: PlanVersionsOptions): VersionPlan {
         options.commitsFor ??
         ((dir: string) => readCommits(range, relatedWorkspacePaths(dir, root)));
 
-    const rootVersion = bumpVersion(options.rootVersion, bump);
+    const rootVersion = bumpVersion(options.rootVersion, bump, versioning.prerelease);
     const writes = new Map<string, string>();
     const entries = new Map<string, string>();
     // A disabled pipeline behaves like `uniform` for the changelog headings.
@@ -311,7 +314,8 @@ export function planVersions(options: PlanVersionsOptions): VersionPlan {
                     env: process.env,
                     logger,
                     ...(options.breaking !== undefined ? { breaking: options.breaking } : {}),
-                })
+                }),
+                versioning.prerelease
             );
             entries.set(dir, next);
             if (versioning.enabled) writes.set(dir, next);

@@ -35,6 +35,64 @@ export function readCommits(range: string, path?: string | string[]): CommitReco
         .filter(record => record.subject.length > 0);
 }
 
+/** Whether `cwd` is inside a git work tree. */
+export function isGitRepository(cwd: string = process.cwd()): boolean {
+    try {
+        return (
+            execFileSync('git', ['rev-parse', '--is-inside-work-tree'], {
+                cwd,
+                encoding: 'utf8',
+                stdio: ['ignore', 'pipe', 'ignore'],
+            }).trim() === 'true'
+        );
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * The newest release boundary reachable from `HEAD`: the last generated
+ * `chore: version packages (...)` / `release: ...` commit, else the nearest tag.
+ * Used to scan only commits since the previous release when no range is given.
+ */
+export function lastReleaseRef(): string | undefined {
+    try {
+        const out = execFileSync(
+            'git',
+            [
+                'log',
+                '--no-merges',
+                '-n',
+                '1',
+                '--format=%H',
+                '--grep=^chore: version packages ',
+                '--grep=^release: ',
+                'HEAD',
+            ],
+            { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
+        ).trim();
+        const hash = out.split(/\r?\n/)[0]?.trim();
+        if (hash) return hash;
+    } catch {
+        // no release commit
+    }
+    try {
+        return (
+            execFileSync('git', ['describe', '--tags', '--abbrev=0', 'HEAD'], {
+                encoding: 'utf8',
+                stdio: ['ignore', 'pipe', 'ignore'],
+            }).trim() || undefined
+        );
+    } catch {
+        return undefined;
+    }
+}
+
+/** Whether a commit subject is a generated release/version commit. */
+export function isReleaseCommit(subject: string): boolean {
+    return /^(?:chore: version packages\b|release:)/i.test(subject.trim());
+}
+
 /** The `owner/name` slug of a GitHub URL, or undefined. */
 function githubSlug(url: string): string | undefined {
     const match = url.match(/(?:github\.com[/:])([^/]+)\/([^/.]+?)(?:\.git)?$/);

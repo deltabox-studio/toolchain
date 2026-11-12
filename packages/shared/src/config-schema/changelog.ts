@@ -230,6 +230,16 @@ export const changelogVersioningConfigSchema = z
                     'there is none the root `package.json` is used on its own.'
             )
             .optional(),
+        prerelease: z
+            .string()
+            .regex(/^[0-9A-Za-z-]+$/)
+            .describe(
+                'Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump ' +
+                    'their core and start at `<tag>.0`; existing prereleases keep their ' +
+                    'core and increment the counter for the same tag, so the suffix is ' +
+                    'never appended twice.'
+            )
+            .optional(),
         bump: z
             .object({
                 major: changelogBumpRuleSchema.optional(),

@@ -622,6 +622,12 @@ Automatic version bumping on changelog generation (default `true`).
 
 Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own.
 
+##### `prerelease`
+
+- **Type**: `string`
+
+Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice.
+
 ##### `bump`
 
 - **Type**: `object`
@@ -945,6 +951,12 @@ Automatic version bumping on changelog generation (default `true`).
 - **Type**: `Array<string>`
 
 Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own.
+
+#### `prerelease`
+
+- **Type**: `string`
+
+Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice.
 
 #### `bump`
 

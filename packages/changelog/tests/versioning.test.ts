@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test';
 
 import type { CommitRecord } from '../src/index.js';
 import { discoverVersionPackages, planVersions, resolveVersioning } from '../src/index.js';
+import { bumpVersion } from '../src/utils/version.js';
 
 describe('resolveVersioning', () => {
     it('defaults to enabled + uniform', () => {
@@ -34,6 +35,38 @@ describe('resolveVersioning', () => {
             enabled: true,
             target: 'individual',
         });
+        expect(resolveVersioning({ versioning: { prerelease: 'beta' } })).toEqual({
+            enabled: true,
+            target: 'uniform',
+            prerelease: 'beta',
+        });
+    });
+});
+
+describe('prerelease versions', () => {
+    it('starts a channel from a stable version', () => {
+        expect(bumpVersion('1.0.0', 'minor', 'beta')).toBe('1.1.0-beta.0');
+        expect(bumpVersion('1.0.0', 'major', 'rc')).toBe('2.0.0-rc.0');
+        expect(bumpVersion('1.0.0', 'patch', 'beta')).toBe('1.0.1-beta.0');
+    });
+
+    it('continues the counter without appending the tag twice', () => {
+        expect(bumpVersion('1.1.0-beta.0', 'minor', 'beta')).toBe('1.1.0-beta.1');
+        expect(bumpVersion('1.1.0-beta.2', 'patch', 'beta')).toBe('1.1.0-beta.3');
+        expect(bumpVersion('1.1.0-beta', 'patch', 'beta')).toBe('1.1.0-beta.0');
+    });
+
+    it('switches tags on the same core', () => {
+        expect(bumpVersion('1.1.0-alpha.2', 'minor', 'beta')).toBe('1.1.0-beta.0');
+    });
+
+    it('still bumps the core when no prerelease is configured', () => {
+        expect(bumpVersion('1.1.0-beta.2', 'minor')).toBe('1.2.0');
+        expect(bumpVersion('1.1.0', 'patch')).toBe('1.1.1');
+    });
+
+    it('rejects a tag that already contains a counter', () => {
+        expect(() => bumpVersion('1.0.0', 'minor', 'beta.1')).toThrow(/Invalid prerelease/);
     });
 });
 
@@ -125,6 +158,28 @@ describe('versioning plans', () => {
         expect(plan.writes.has(b)).toBe(false);
         expect(plan.entries.get(a)).toBe('0.2.0');
         expect(plan.entries.has(b)).toBe(false);
+    });
+
+    it('applies the prerelease tag to root and individual workspaces', () => {
+        const a = join(root, 'packages', 'a');
+        const b = join(root, 'packages', 'b');
+        writeFileSync(
+            join(a, 'package.json'),
+            JSON.stringify({ name: 'a', version: '0.2.0-beta.1' })
+        );
+        const plan = planVersions({
+            versioning: { enabled: true, target: 'individual', prerelease: 'beta' },
+            rootVersion: '1.0.0',
+            bump: 'minor',
+            range: 'HEAD',
+            root,
+            commitsFor: dir => (dir === a ? [commit('fix: x')] : []),
+        });
+        expect(plan.rootVersion).toBe('1.1.0-beta.0');
+        expect(plan.writes.get(root)).toBe('1.1.0-beta.0');
+        expect(plan.writes.get(a)).toBe('0.2.0-beta.2');
+        expect(plan.entries.get(a)).toBe('0.2.0-beta.2');
+        expect(plan.writes.has(b)).toBe(false);
     });
 
     it('disabled writes no versions but keeps the changelog headings', () => {

@@ -592,4 +592,19 @@ describe('workflow command fixes', () => {
         expect(files['changelog.yml']).toContain('git add -- "*package.json" "*CHANGELOG.md"');
         expect(files['changelog.yml']).not.toContain('git add -u');
     });
+
+    it('names the changelog workflow after the resolved branch', () => {
+        const single = renderWorkflow('changelog', {
+            tokens: { mainBranch: 'main', devBranch: 'main' },
+        })!;
+        expect(single).toContain('name: Changelog\n');
+        expect(single).toContain('group: changelog-main');
+        expect(single).not.toContain('Changelog (main)');
+
+        const split = renderWorkflow('changelog', {
+            tokens: { mainBranch: 'main', devBranch: 'dev' },
+        })!;
+        expect(split).toContain('name: Changelog (dev)');
+        expect(split).toContain('group: changelog-dev');
+    });
 });

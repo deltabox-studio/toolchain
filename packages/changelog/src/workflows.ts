@@ -538,6 +538,7 @@ export function defaultWorkflows(
     const engine = cli(tokens);
     const main = String(tokens.mainBranch);
     const dev = String(tokens.devBranch);
+    const changelogName = dev === main ? 'Changelog' : `Changelog (${dev})`;
     const commitlint = options.commitlint !== false;
 
     return {
@@ -573,10 +574,10 @@ export function defaultWorkflows(
             },
         },
         changelog: {
-            name: 'Changelog (dev)',
+            name: changelogName,
             on: { push: { branches: [dev] } },
             permissions: { contents: 'write' },
-            concurrency: { group: 'changelog-dev', 'cancel-in-progress': false },
+            concurrency: { group: `changelog-${dev}`, 'cancel-in-progress': false },
             jobs: {
                 'generate-changelog': {
                     'runs-on': 'ubuntu-latest',

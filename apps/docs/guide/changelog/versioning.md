@@ -50,6 +50,26 @@ of the workspaces it depends on (see [Workspace changelogs](#workspace-changelog
 The root's version always follows the overall bump derived from every scanned
 commit.
 
+## `prerelease`
+
+Set a tag such as `beta` or `rc` to keep a release on a prerelease channel:
+
+```ts
+ci: { changelog: { versioning: { target: 'individual', prerelease: 'beta' } } }
+```
+
+- A stable version bumps its core and starts the channel:
+  `1.0.0` + a minor bump → `1.1.0-beta.0`.
+- An existing prerelease keeps its core and increments the counter instead of
+  bumping again: `1.1.0-beta.0` → `1.1.0-beta.1`.
+- Switching tags keeps the core and starts the new channel at `.0`:
+  `1.1.0-alpha.2` → `1.1.0-beta.0`.
+- The suffix is checked before it is applied, so it is never appended twice.
+
+The tag is a single identifier (`^[0-9A-Za-z-]+$`); the numeric counter is added
+automatically. The same rule applies to `uniform`, `root-only` and `individual`
+targets, including each workspace's own version in `individual` mode.
+
 ## How a run decides its versions
 
 Each run:
