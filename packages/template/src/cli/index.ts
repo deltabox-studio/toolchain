@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { cancel, confirm, isCancel, select, text } from '@clack/prompts';
+
 import {
     addGlobalProviderRegistry,
     addProjectProviderRegistry,
@@ -656,7 +657,13 @@ export function templateCommands(): ToolchainCommand[] {
                     template = templates.find(candidate => candidate.kind === kind);
                 }
                 if (!template && id) {
-                    // An unlisted id is treated as a Vite+ template (`vp create <id>`).
+                    if (!opts.online) {
+                        throw new Error(
+                            `template "${id}" not found; see \`dbx template:list\` (pass --online to use a Vite+ template).`
+                        );
+                    }
+                    // An unlisted id with `--online` is a Vite+ template
+                    // (`vp create <id>`).
                     template = {
                         id,
                         name: id,
@@ -759,6 +766,7 @@ export function templateCommands(): ToolchainCommand[] {
 
                 if (opts.json) {
                     logger.raw(JSON.stringify({ template: template.id, out, ...result }, null, 4));
+                    if (result.code) process.exitCode = result.code;
                     return;
                 }
                 if (
@@ -766,7 +774,12 @@ export function templateCommands(): ToolchainCommand[] {
                     template.source.type === 'npm' ||
                     template.source.type === 'git'
                 ) {
-                    if (result.code) process.exitCode = result.code;
+                    if (result.code) {
+                        process.exitCode = result.code;
+                        logger.error(
+                            `template "${template.id}" failed with exit code ${result.code}.`
+                        );
+                    }
                     return;
                 }
                 for (const file of result.written) logger.info(`Created ${file}`);

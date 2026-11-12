@@ -15,6 +15,7 @@ import {
     readTemplateRegistry,
     removeTemplateSource,
     scaffoldTemplate,
+    templateCommands,
     writeTemplateManifest,
 } from '../src/index.js';
 
@@ -167,6 +168,21 @@ describe('template authoring', () => {
     });
 });
 
+describe('create CLI', () => {
+    it('rejects an unknown template id without --online', async () => {
+        const command = templateCommands().find(candidate => candidate.name === 'create');
+        if (!command?.run) throw new Error('missing create command');
+        const out = makeTmp();
+
+        await expect(
+            command.run(
+                { template: 'not-a-template', out, json: true },
+                { cwd: out, projectType: 'project', config: {}, tokens: {} }
+            )
+        ).rejects.toThrow(/not found/);
+    });
+});
+
 describe('scaffolding', () => {
     it('creates a builtin TypeScript project', async () => {
         const out = makeTmp();
@@ -178,7 +194,7 @@ describe('scaffolding', () => {
         expect(fs.existsSync(path.join(out, 'vite.config.ts'))).toBe(true);
     });
 
-    const QOL_CASES: {
+    const PROJECT_TEMPLATE_CASES: {
         id: string;
         files: string[];
         dependencies?: Record<string, string>;
@@ -253,8 +269,8 @@ describe('scaffolding', () => {
         },
     ];
 
-    for (const testCase of QOL_CASES) {
-        it(`scaffolds the ${testCase.id} quality-of-life builtin`, async () => {
+    for (const testCase of PROJECT_TEMPLATE_CASES) {
+        it(`scaffolds the ${testCase.id} built-in project template`, async () => {
             const out = makeTmp();
             const template = BUILTIN_TEMPLATES.find(candidate => candidate.id === testCase.id);
             if (!template) throw new Error(`missing builtin ${testCase.id}`);
