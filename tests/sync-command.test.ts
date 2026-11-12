@@ -1,0 +1,57 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
+
+import { logger, type ToolchainCommandContext } from '@deltabox/toolchain/shared';
+
+import { syncCommand } from '../src/cli/commands/sync.js';
+
+function tmp(): string {
+    return fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-sync-cli-'));
+}
+
+function context(cwd: string): ToolchainCommandContext {
+    return { cwd, projectType: 'project', config: {}, tokens: {}, managed: false };
+}
+
+describe('sync command without a managed config', () => {
+    const originalExitCode = process.exitCode;
+
+    afterEach(() => {
+        process.exitCode = originalExitCode;
+        vi.restoreAllMocks();
+    });
+
+    it('fails --check and still emits a JSON envelope', async () => {
+        const cwd = tmp();
+        fs.writeFileSync(path.join(cwd, 'package.json'), '{"name":"app"}\n');
+        const raw = vi.spyOn(logger, 'raw').mockImplementation(() => {});
+        vi.spyOn(logger, 'error').mockImplementation(() => {});
+        vi.spyOn(logger, 'warn').mockImplementation(() => {});
+
+        await syncCommand().run?.({ check: true, json: true }, context(cwd));
+
+        expect(process.exitCode).toBe(1);
+        expect(raw).toHaveBeenCalledTimes(1);
+        const printed = JSON.parse(raw.mock.calls[0]![0] as string) as {
+            results: unknown[];
+            upToDate: boolean;
+        };
+        expect(printed.results).toEqual([]);
+        expect(printed.upToDate).toBe(false);
+    });
+
+    it('passes a check outside a project-shaped directory', async () => {
+        const cwd = tmp();
+        vi.spyOn(logger, 'raw').mockImplementation(() => {});
+        vi.spyOn(logger, 'error').mockImplementation(() => {});
+        const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+
+        await syncCommand().run?.({ check: true, json: true }, context(cwd));
+
+        expect(process.exitCode).not.toBe(1);
+        expect(warn).toHaveBeenCalled();
+    });
+});

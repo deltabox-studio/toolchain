@@ -1,4 +1,6 @@
 import { intro, outro } from '@clack/prompts';
+import type { Command } from 'commander';
+
 import {
     getLogOverrides,
     logger,
@@ -7,7 +9,6 @@ import {
     type ToolchainCommand,
     type ToolchainCommandContext,
 } from '@deltabox/toolchain/shared';
-import type { Command } from 'commander';
 
 import { defaultSyncTasks } from '../sync.js';
 import { getConfigSelection } from './config-selection.js';

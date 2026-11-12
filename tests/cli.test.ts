@@ -2,8 +2,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { describe, expect, it, vi } from 'vite-plus/test';
+
 import { addProjectProviderRegistry } from '@deltabox/toolchain/core';
-import { describe, expect, it } from 'vite-plus/test';
+import { logger } from '@deltabox/toolchain/shared';
 
 import { providerPassthroughCommands } from '../src/cli/commands/providers.js';
 import { extractConfigSelection } from '../src/cli/config-selection.js';
@@ -12,6 +14,7 @@ import {
     createCli,
     extractLogOptions,
     extractUpdateCheck,
+    runCli,
     withDefaultVite,
 } from '../src/cli/index.js';
 import { isPassthroughCommand } from '../src/cli/register.js';
@@ -96,9 +99,40 @@ describe('dbx CLI', () => {
         run(['sync', '--help']);
         expect(isPassthroughCommand()).toBe(false);
     });
+
+    it('lets a subcommand reuse a global option name', async () => {
+        const seen: unknown[] = [];
+        const program = createCli([
+            {
+                name: 'changelog',
+                description: 'fake changelog',
+                options: [{ flags: '--version <semver>', description: 'Target version.' }],
+                run: opts => {
+                    seen.push(opts.version);
+                },
+            },
+        ]);
+        program.exitOverride();
+        program.configureOutput({ writeOut: () => {}, writeErr: () => {} });
+        await program.parseAsync(['node', 'dbx', 'changelog', '--version', '1.5.0']);
+        expect(seen).toEqual(['1.5.0']);
+    });
 });
 
 describe('config selection flags', () => {
+    it('rejects --config together with --no-config before loading a config', async () => {
+        const error = vi.spyOn(logger, 'error').mockImplementation(() => {});
+        const previous = process.exitCode;
+        try {
+            await runCli(['node', 'dbx', '--config', 'dbx.custom.ts', '--no-config', 'sync']);
+            expect(error).toHaveBeenCalledWith(expect.stringContaining('cannot be used together'));
+            expect(process.exitCode).toBe(1);
+        } finally {
+            process.exitCode = previous;
+            error.mockRestore();
+        }
+    });
+
     it('extracts --config / --no-config and respects `--`', () => {
         const argv = (value: string): string[] => ['node', 'dbx', ...value.split(' ')];
         expect(extractConfigSelection(argv('--config dbx.config.test.ts sync'))).toEqual({

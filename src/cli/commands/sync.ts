@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 
 import {
@@ -131,14 +132,53 @@ export function syncCommand(): ToolchainCommand {
                     results.push({ dir: relDir, result });
                     if (check && !result.upToDate) process.exitCode = 1;
                 }
-                if (json) logger.raw(JSON.stringify({ results }, null, 4));
+                const unmanaged = check && results.length === 0 && graph.projects.length > 0;
+                if (unmanaged) {
+                    logger.error('no managed projects found; nothing to sync.');
+                    process.exitCode = 1;
+                }
+                if (json) {
+                    logger.raw(
+                        JSON.stringify(
+                            {
+                                results,
+                                ...(unmanaged
+                                    ? { upToDate: false, error: 'no managed projects found' }
+                                    : {}),
+                            },
+                            null,
+                            4
+                        )
+                    );
+                }
                 return;
             }
 
             if (!context.managed && !opts.force && !context.noConfig) {
-                logger.warn(
-                    'no dbx.config.* found here; nothing to sync (use --force to run anyway, or --configless to manage configless projects).'
-                );
+                const message =
+                    'no dbx config or plugin found here; nothing to sync (use --force to run anyway, or --configless to manage configless projects).';
+                // A directory that looks like a project must not pass a check
+                // silently just because nothing is managed.
+                const looksLikeProject = fs.existsSync(path.join(context.cwd, 'package.json'));
+                if (check && looksLikeProject) {
+                    logger.error(message);
+                    process.exitCode = 1;
+                } else {
+                    logger.warn(message);
+                }
+                if (json) {
+                    logger.raw(
+                        JSON.stringify(
+                            {
+                                results: [],
+                                upToDate: !(check && looksLikeProject),
+                                ...(check && looksLikeProject ? { error: message } : {}),
+                            },
+                            null,
+                            4
+                        )
+                    );
+                }
                 return;
             }
 
