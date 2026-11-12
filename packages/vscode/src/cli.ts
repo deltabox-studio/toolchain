@@ -130,15 +130,15 @@ export function extensionVersion(): string | undefined {
 /**
  * Which `dbx` the extension should prefer: the project's own
  * `@deltabox/toolchain` (`'project'`) or the extension's bundled `dbx.cjs`
- * (`'extension'`). The default is the extension, so an unresolved or declined
- * setup always falls back to a known-good CLI.
+ * (`'extension'`). The project's version wins by default; the extension bundle is
+ * only the fallback when the workspace has no local install.
  */
 export type DbxSource = 'project' | 'extension';
 
 /** The `workspaceState` key the chosen source is persisted under. */
 const DBX_SOURCE_KEY = 'deltabox.dbxSource';
 
-let dbxSource: DbxSource = 'extension';
+let dbxSource: DbxSource = 'project';
 
 /** Set the preferred `dbx` source (the extension persists it per workspace). */
 export function setDbxSource(source: DbxSource): void {
@@ -241,16 +241,21 @@ export async function selectVersion(): Promise<void> {
 }
 
 /**
- * Detect the current workspace's own `dbx` and, when the extension also ships a
- * bundled one, ask the user once which to run. The choice is remembered per
- * workspace; dismissing the notification falls back to the extension's CLI.
+ * Detect the current workspace's own `dbx` and default to it. When the extension
+ * also ships a bundled one and the versions differ, ask the user once which to
+ * run; dismissing the notification keeps the project's CLI. The choice is
+ * remembered per workspace.
  */
 export async function initDbxSource(context: vscode.ExtensionContext): Promise<void> {
     const bundled = bundledCliEntry();
     const root = workspaceRoots()[0] ?? process.cwd();
     const project = projectDbx(root);
-    if (!bundled || !project) {
-        dbxSource = project ? 'project' : 'extension';
+    if (!project) {
+        dbxSource = 'extension';
+        return;
+    }
+    if (!bundled) {
+        dbxSource = 'project';
         return;
     }
     const stored = context.workspaceState.get<DbxSource>(DBX_SOURCE_KEY);
@@ -258,15 +263,14 @@ export async function initDbxSource(context: vscode.ExtensionContext): Promise<v
         dbxSource = stored;
         return;
     }
-    // Only ask when the project pins a different version than the extension (or
-    // the version is otherwise unknown); otherwise prefer the bundled CLI.
+    // The project's own CLI is the default. Only a version mismatch needs the
+    // user's attention, and dismissing the prompt keeps the project's version.
     const projectVersion = projectToolchainVersion(root);
     const extension = extensionVersion();
-    if (!projectVersion || !extension || projectVersion === extension) {
-        dbxSource = 'extension';
-        return;
+    dbxSource = 'project';
+    if (projectVersion && extension && projectVersion !== extension) {
+        dbxSource = (await promptDbxSource(projectVersion, extension)) ?? 'project';
     }
-    dbxSource = (await promptDbxSource(projectVersion, extension)) ?? 'extension';
     await context.workspaceState.update(DBX_SOURCE_KEY, dbxSource);
 }
 
@@ -274,7 +278,8 @@ export async function initDbxSource(context: vscode.ExtensionContext): Promise<v
 export async function chooseDbxSource(
     context: vscode.ExtensionContext
 ): Promise<DbxSource | undefined> {
-    const choice = await promptDbxSource();
+    const root = workspaceRoots()[0] ?? process.cwd();
+    const choice = await promptDbxSource(projectToolchainVersion(root), extensionVersion());
     if (!choice) return undefined;
     dbxSource = choice;
     await context.workspaceState.update(DBX_SOURCE_KEY, choice);

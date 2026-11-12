@@ -251,7 +251,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
     {
         id: 'project',
         name: 'TypeScript project',
-        description: 'A single-package TypeScript project (tsconfig, tsdown, Vite+).',
+        description: 'A single-package TypeScript project (tsconfig, Vite plugin).',
         kind: 'project',
         type: 'builtin',
         tags: PROJECT_TAGS,

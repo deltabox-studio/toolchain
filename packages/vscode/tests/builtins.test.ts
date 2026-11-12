@@ -67,6 +67,12 @@ describe('builtin templates', () => {
         );
     });
 
+    it('describes the fallback templates without stale tools', () => {
+        for (const template of BUILTIN_TEMPLATES) {
+            expect(template.description ?? '').not.toContain('tsdown');
+        }
+    });
+
     it('lets CLI descriptors win and fills missing builtins', () => {
         const merged = withBuiltinTemplates([
             { id: 'project', name: 'Override' },
