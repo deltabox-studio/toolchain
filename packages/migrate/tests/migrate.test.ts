@@ -2,8 +2,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import type { SyncTask, ToolchainCommandContext } from '@deltabox/toolchain/shared';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
+
+import type { SyncTask, ToolchainCommandContext } from '@deltabox/toolchain/shared';
 
 import {
     detectMigrations,
@@ -718,6 +719,44 @@ describe('migrate fmt/lint routing', () => {
         expect(fs.existsSync(path.join(dir, '.oxfmtrc.json'))).toBe(false);
         expect(fs.existsSync(path.join(dir, '.oxlintrc.json'))).toBe(false);
         expect(fs.existsSync(path.join(dir, 'vite.config.ts'))).toBe(false);
+    });
+
+    it('passes --check after a write + fold', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(path.join(dir, '.prettierrc'), JSON.stringify({ semi: false }), 'utf-8');
+
+        await migrateCommand().run({ cwd: dir, from: 'prettier', write: true }, cliContext(dir));
+        await migrateCommand().run({ cwd: dir, write: true }, cliContext(dir));
+
+        process.exitCode = 0;
+        await migrateCommand().run({ cwd: dir, check: true }, cliContext(dir));
+        expect(process.exitCode ?? 0).toBe(0);
+        process.exitCode = 0;
+    });
+
+    it('routes to vite.config.ts when package.json has a BOM and uses Vite+', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'package.json'),
+            `\uFEFF${JSON.stringify(
+                {
+                    name: 'probe',
+                    type: 'module',
+                    devDependencies: { 'vite-plus': '1.2.0' },
+                },
+                null,
+                4
+            )}\n`,
+            'utf-8'
+        );
+        fs.writeFileSync(path.join(dir, '.prettierrc'), JSON.stringify({ semi: false }), 'utf-8');
+
+        await migrateCommand().run({ cwd: dir, write: true }, cliContext(dir));
+
+        const vite = path.join(dir, 'vite.config.ts');
+        expect(fs.existsSync(vite)).toBe(true);
+        expect(fs.readFileSync(vite, 'utf-8')).toContain('fmt:');
+        expect(fs.existsSync(path.join(dir, '.oxfmtrc.json'))).toBe(false);
     });
 
     it('uses toolchain.vite.fmt/lint only when the vite config already has them', async () => {

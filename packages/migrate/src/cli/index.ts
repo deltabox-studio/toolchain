@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { cancel, isCancel, multiselect } from '@clack/prompts';
+
 import {
     ensureToolingDependencies,
     loadToolchainConfig,
@@ -18,14 +19,17 @@ import {
 import { diffFiles, hasPending } from '../check.js';
 import { listMigrations, migrations } from '../registry.js';
 import type { MigrationResult, MigrateTarget, ToolchainMigration } from '../types.js';
-import { viteConfigHasFmtLint } from '../vite.js';
+import { findDbxConfig, viteConfigHasFmtLint } from '../vite.js';
 
 /** Whether the project (or an ancestor) declares Vite+; then fmt/lint belong in vite.config. */
 function usesVitePlus(dir: string): boolean {
     let current = path.resolve(dir);
     for (;;) {
         try {
-            const pkg = JSON.parse(fs.readFileSync(path.join(current, 'package.json'), 'utf8')) as {
+            const raw = fs
+                .readFileSync(path.join(current, 'package.json'), 'utf8')
+                .replace(/^\uFEFF/, '');
+            const pkg = JSON.parse(raw) as {
                 dependencies?: Record<string, string>;
                 devDependencies?: Record<string, string>;
                 peerDependencies?: Record<string, string>;
@@ -45,6 +49,24 @@ function usesVitePlus(dir: string): boolean {
         if (parent === current) return false;
         current = parent;
     }
+}
+
+/** Whether a project's final config already owns `fmt`/`lint` (so a source's intermediate file is obsolete). */
+function ownsFmtLint(dir: string): { fmt: boolean; lint: boolean } {
+    const vite = viteConfigHasFmtLint(dir);
+    let fmt = Boolean(vite?.fmt);
+    let lint = Boolean(vite?.lint);
+    const dbx = findDbxConfig(dir);
+    if (dbx) {
+        try {
+            const text = fs.readFileSync(dbx, 'utf-8').replace(/^\uFEFF/, '');
+            fmt ||= /\bfmt\s*:/.test(text);
+            lint ||= /\blint\s*:/.test(text);
+        } catch {
+            // An unreadable config owns nothing.
+        }
+    }
+    return { fmt, lint };
 }
 
 /** Whether we may prompt (an interactive terminal, not `--json`). */
@@ -219,10 +241,11 @@ export function migrateCommands(): ToolchainCommand[] {
                     // `toolchain.fmt`/`toolchain.lint`. An explicit `--target`
                     // always wins.
                     const viteSections = explicitTarget ? undefined : viteConfigHasFmtLint(dir);
+                    const vitePlus = usesVitePlus(dir);
                     const routeToVite =
                         !explicitTarget &&
                         target === 'files' &&
-                        (usesVitePlus(dir) ||
+                        (vitePlus ||
                             (autoFold('vite') &&
                                 Boolean(viteSections && (viteSections.fmt || viteSections.lint))));
                     const dirTarget: MigrateTarget = routeToVite ? 'vite' : target;
@@ -262,9 +285,10 @@ export function migrateCommands(): ToolchainCommand[] {
                         : undefined;
                     if (oxc && oxc.detect(dir)) await run(oxc);
 
-                    const vite = autoFold('vite')
-                        ? migrations().find(migration => migration.id === 'vite-to-toolchain')
-                        : undefined;
+                    const vite =
+                        autoFold('vite') && (!vitePlus || fromAll || selectedFrom.includes('vite'))
+                            ? migrations().find(migration => migration.id === 'vite-to-toolchain')
+                            : undefined;
                     if (vite && vite.detect(dir)) await run(vite);
                 }
 
@@ -298,7 +322,19 @@ export function migrateCommands(): ToolchainCommand[] {
                 ];
 
                 if (check) {
-                    const diffs = results.flatMap(({ result }) => diffFiles(result.files ?? []));
+                    const diffs = results.flatMap(({ dir, result }) => {
+                        // A source's intermediate `.oxfmtrc.json` /
+                        // `.oxlintrc.json` is folded into the final config by
+                        // `--write`; checking for it would never pass.
+                        const owns = ownsFmtLint(dir);
+                        const files = (result.files ?? []).filter(file => {
+                            const base = path.basename(file.path);
+                            if (base === '.oxfmtrc.json') return !owns.fmt;
+                            if (base === '.oxlintrc.json') return !owns.lint;
+                            return true;
+                        });
+                        return diffFiles(files);
+                    });
                     const pending = diffs.filter(diff => diff.status !== 'same');
                     const removed = results
                         .flatMap(({ result }) => result.removed ?? [])
