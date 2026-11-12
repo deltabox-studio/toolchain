@@ -6,6 +6,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { parseArgs } from 'node:util';
 
+import { Glob } from 'glob';
+import type { TsConfigJson } from 'type-fest';
+
 import {
     deepMerge,
     logger,
@@ -15,8 +18,6 @@ import {
     type ToolchainConfig,
     type ToolchainTsconfigConfig,
 } from '@deltabox/toolchain/shared';
-import { Glob } from 'glob';
-import type { TsConfigJson } from 'type-fest';
 
 import {
     autoStatePath,

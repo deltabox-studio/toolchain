@@ -2,8 +2,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import type { ToolchainConfig } from '@deltabox/toolchain/shared';
 import { describe, expect, it } from 'vite-plus/test';
+
+import type { ToolchainConfig } from '@deltabox/toolchain/shared';
 
 import { generateWorkspaceTsconfigs, tsconfigSyncTask } from '../src/index.js';
 
@@ -66,6 +67,13 @@ function pathsOf(result: Awaited<ReturnType<typeof run>>): Record<string, string
 }
 
 describe('tsconfig auto alias rewriting', () => {
+    it('writes paths in descending key order', async () => {
+        const cwd = makeRepo({ workspaces: ['core', 'web'] });
+        const keys = Object.keys(pathsOf(await run(cwd, { auto: true })));
+        const sorted = [...keys].sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
+        expect(keys).toEqual(sorted);
+    });
+
     it('rewrites generated keys with string patterns', async () => {
         const cwd = makeRepo();
         const result = await run(cwd, {

@@ -10,6 +10,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { globSync } from 'glob';
+
 import { buildProjectGraph, findConfigFile, loadToolchainConfig } from '@deltabox/toolchain/core';
 import {
     deepMerge,
@@ -24,7 +26,6 @@ import {
     type ToolchainTsconfigAliasRewrite,
     type ToolchainTsconfigConfig,
 } from '@deltabox/toolchain/shared';
-import { globSync } from 'glob';
 
 import { type TsconfigFileNames, tsconfigFileNames } from './files.js';
 

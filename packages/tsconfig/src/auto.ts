@@ -10,13 +10,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { globSync } from 'glob';
+import type { TsConfigJson } from 'type-fest';
+
 import {
     type PackageJson,
     splitPackageName,
     type ToolchainTsconfigAliasRewrite,
 } from '@deltabox/toolchain/shared';
-import { globSync } from 'glob';
-import type { TsConfigJson } from 'type-fest';
 
 import { resolveTsconfigCompilerOption } from './resolve.js';
 import {
@@ -584,7 +585,13 @@ export function buildAutoTsconfig(
         }
     }
 
-    if (Object.keys(paths).length > 0) compilerOptions.paths = paths;
+    // Match the resolver/`dbx tsconfig --json` view: the most specific
+    // (longest) key sorts first, so order-sensitive consumers see the same
+    // paths whether they read the file or the JSON output.
+    const sortedPaths = Object.fromEntries(
+        Object.entries(paths).sort(([a], [b]) => (a < b ? 1 : a > b ? -1 : 0))
+    );
+    if (Object.keys(sortedPaths).length > 0) compilerOptions.paths = sortedPaths;
     else delete compilerOptions.paths;
     const next: TsConfigJson = { ...config, compilerOptions };
     if (references.length > 0) next.references = references;

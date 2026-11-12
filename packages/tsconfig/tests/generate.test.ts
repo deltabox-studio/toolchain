@@ -2,8 +2,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import type { SyncContext, ToolchainConfig } from '@deltabox/toolchain/shared';
 import { describe, expect, it } from 'vite-plus/test';
+
+import type { SyncContext, ToolchainConfig } from '@deltabox/toolchain/shared';
 
 import { generateTsconfigs, tsconfigSyncTask } from '../src/index.js';
 
