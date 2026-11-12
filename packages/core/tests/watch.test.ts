@@ -2,8 +2,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import type { SyncTask } from '@deltabox/toolchain/shared';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
+
+import type { SyncTask } from '@deltabox/toolchain/shared';
 
 import { loadToolchainConfig } from '../src/loader.js';
 import { resolveWatchInputFiles, runWatch } from '../src/watch.js';

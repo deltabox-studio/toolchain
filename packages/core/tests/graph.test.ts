@@ -63,6 +63,36 @@ describe('buildProjectGraph', () => {
         expect(graph.order).toEqual(['packages/b', 'packages/a']);
     });
 
+    it('includes plugin-mode projects in dbxProjects and order', () => {
+        const root = tmp();
+        writeJson(path.join(root, 'package.json'), { name: 'root', workspaces: ['packages/*'] });
+        writeJson(path.join(root, 'packages', 'b', 'package.json'), { name: '@acme/b' });
+        fs.writeFileSync(
+            path.join(root, 'packages', 'b', 'vite.config.ts'),
+            "import { dbx } from 'vite-plugin-dbx';\n\nexport default { plugins: [dbx({})] };\n"
+        );
+        writeJson(path.join(root, 'packages', 'a', 'package.json'), {
+            name: '@acme/a',
+            dependencies: { '@acme/b': 'workspace:*' },
+        });
+        fs.writeFileSync(
+            path.join(root, 'packages', 'a', 'vite.config.ts'),
+            "import { dbx } from 'vite-plugin-dbx';\n\nexport default { plugins: [dbx({})] };\n"
+        );
+
+        const graph = buildProjectGraph(root);
+        const b = graph.projects.find(project => project.name === '@acme/b');
+
+        expect(b?.hasConfig).toBe(false);
+        expect(b?.hasPlugin).toBe(true);
+        expect(b?.plugin).toBe('packages/b/vite.config.ts');
+        expect(graph.dbxProjects.map(project => project.name).sort()).toEqual([
+            '@acme/a',
+            '@acme/b',
+        ]);
+        expect(graph.order).toEqual(['packages/b', 'packages/a']);
+    });
+
     it('detects the package manager from the lock file', () => {
         const root = fixture();
         expect(detectPackageManager(root)).toBe('yarn');

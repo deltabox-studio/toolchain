@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { globSync } from 'glob';
+
 import {
     deepMerge,
     isIgnoredPath,
@@ -14,7 +16,6 @@ import {
     type TsconfigFileNameSet,
     tsconfigFileNames,
 } from '@deltabox/toolchain/shared';
-import { globSync } from 'glob';
 
 import { buildProjectGraph, type ProjectGraph } from './graph.js';
 import {

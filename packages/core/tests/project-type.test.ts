@@ -45,6 +45,14 @@ describe('detectProjectType', () => {
         expect(detectProjectType(cwd)).toBe('monorepo-workspace');
     });
 
+    it('keeps a standalone scaffold a project (it owns tsconfig.base.json)', () => {
+        const cwd = tmp();
+        fs.writeFileSync(path.join(cwd, 'package.json'), JSON.stringify({ name: 'pkg' }));
+        fs.writeFileSync(path.join(cwd, 'tsconfig.default.json'), '{}');
+        fs.writeFileSync(path.join(cwd, 'tsconfig.base.json'), '{}');
+        expect(detectProjectType(cwd)).toBe('project');
+    });
+
     it('defaults to a single project', () => {
         const cwd = tmp();
         fs.writeFileSync(path.join(cwd, 'package.json'), JSON.stringify({ name: 'app' }));
