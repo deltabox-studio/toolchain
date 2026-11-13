@@ -8,6 +8,7 @@ import {
     type ManagedFile,
     type SyncContext,
     type SyncTask,
+    regenerateEnabled,
     sectionConfig,
     sectionEnabled,
     warningMessage,
@@ -39,6 +40,7 @@ import {
     stringifyTsconfig,
     toRepoRelative,
 } from './snapshots.js';
+import { renderTsconfigBuild } from './templates.js';
 
 export type { TsconfigFileNames } from './files.js';
 export { tsconfigFileNames } from './files.js';
@@ -185,6 +187,7 @@ export function tsconfigSyncTask(): SyncTask {
         // inherited, so a plain workspace still has no section and is skipped.
         projectTypes: ['monorepo-root', 'monorepo-workspace'],
         enabled: config => sectionEnabled(config.tsconfig),
+        regenerate: config => regenerateEnabled(config.tsconfig),
         watch: config => {
             const names = tsconfigFileNames(config);
             return [names.rootFile, `**/${names.defaultFile}`];
@@ -234,6 +237,23 @@ export function tsconfigSyncTask(): SyncTask {
                 path: rel(ctx.cwd, result.targetTsconfigPath),
                 content: `${JSON.stringify(result.newTsconfig, null, indent)}\n`,
             }));
+
+            // The build tsconfig is user-owned: seed it from the template only
+            // when it is missing, and never rewrite an existing one. The custom
+            // `buildFile`/`defaultFile` names are honoured. An explicit
+            // `overrides.build` on a missing file still warns instead of
+            // silently creating it (the override may be a config mistake).
+            for (const result of results) {
+                if (hasOverrideKeys(overrides.build)) continue;
+                if (fs.existsSync(result.targetTsconfigBuildPath)) continue;
+                const defaultName = path.basename(result.tsconfigPath);
+                files.push({
+                    path: rel(ctx.cwd, result.targetTsconfigBuildPath),
+                    content: renderTsconfigBuild({}, `./${defaultName}`),
+                    track: false,
+                    format: false,
+                });
+            }
 
             // A nested workspace with its own `tsconfig` section owns its
             // generated file. Keep it untracked so a root sync neither rewrites

@@ -355,6 +355,7 @@ describe('tsconfigSyncTask', () => {
         );
         expect(warnings).toEqual([]);
         expect(files?.map(f => f.path).sort()).toEqual([
+            'packages/cli/tsconfig.build.json',
             'packages/cli/tsconfig.json',
             'packages/core/tsconfig.json',
         ]);

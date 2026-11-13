@@ -24,6 +24,7 @@ import {
     type ManagedFile,
     type PackageJson,
     readJsonAt,
+    regenerateEnabled,
     resolveOxcFmtConfig,
     resolveOxcLintConfig,
     type SyncTask,
@@ -439,6 +440,10 @@ export function viteSyncTask(): SyncTask {
             sectionEnabled(config.vite) ||
             sectionEnabled(config.fmt) ||
             sectionEnabled(config.lint),
+        regenerate: config =>
+            regenerateEnabled(config.vite) ||
+            regenerateEnabled(config.fmt) ||
+            regenerateEnabled(config.lint),
         run: async ctx => {
             const section = sectionConfig(ctx.config.vite) ?? {};
             const ownConfig = ctx.ownConfig ?? ctx.config;

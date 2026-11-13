@@ -58,6 +58,23 @@ describe('loadToolchainConfig', () => {
         expect(loaded.tokens.packageManager).toBe('yarn');
     });
 
+    it('accepts a workspace-scoped enabled value', async () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'dbx.config.json'), {
+            toolchain: { enabled: { scope: 'workspace', disabled: true } },
+        });
+        const loaded = await loadToolchainConfig(cwd);
+        expect(loaded.config.enabled).toEqual({ scope: 'workspace', disabled: true });
+    });
+
+    it('rejects a global-scoped enabled value in a config file', async () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'dbx.config.json'), {
+            toolchain: { enabled: { scope: 'global' } },
+        });
+        await expect(loadToolchainConfig(cwd)).rejects.toThrow(/workspace/);
+    });
+
     it('runs the afterLoad hook for a JS config', async () => {
         const cwd = tmp();
         (globalThis as Record<string, unknown>).__dbxHook = undefined;

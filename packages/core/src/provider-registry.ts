@@ -82,6 +82,8 @@ interface CliConfig {
     registrySearchPaths?: string | string[] | RegistrySearchPaths;
     providerRegistrySearchPaths?: string | string[];
     vscodeDir?: string;
+    /** The global auto-sync/toolchain switch (written by `dbx enable/disable --global`). */
+    enabled?: boolean;
 }
 
 function readCliConfig(): CliConfig {
@@ -146,6 +148,22 @@ function writeCliConfig(patch: Partial<CliConfig>): CliConfig {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, `${JSON.stringify(next, null, 4)}\n`, 'utf-8');
     return next;
+}
+
+/** The global `toolchain.enabled` value (`undefined` when never set). */
+export function readGlobalEnabled(): boolean | undefined {
+    const value = readCliConfig().enabled;
+    return typeof value === 'boolean' ? value : undefined;
+}
+
+/** Persist the global `toolchain.enabled` value in `~/.dbx/toolchain/cli/config.json`. */
+export function writeGlobalEnabled(enabled: boolean): void {
+    writeCliConfig({ enabled });
+}
+
+/** The path of the global CLI config file (`~/.dbx/toolchain/cli/config.json`). */
+export function globalCliConfigPath(): string {
+    return cliConfigPath();
 }
 
 function samePath(cwd: string, a: string, b: string): boolean {

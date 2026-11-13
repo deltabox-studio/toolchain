@@ -6,6 +6,7 @@ import {
     type ManagedFile,
     type ProjectType,
     type Replacements,
+    resolveToolchainEnabled,
     type SyncContext,
     type SyncTask,
     type ToolchainConfig,
@@ -99,11 +100,21 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     const only = options.only && options.only.length > 0 ? options.only : undefined;
     const tasks = only ? selectSyncTasks(options.tasks, only) : options.tasks;
     // A task subset must not prune files owned by the tasks it skipped.
-    const prune = only ? false : options.prune !== false;
+    const pruneRequested = only ? false : options.prune !== false;
     const log = options.quiet ? () => {} : (options.log ?? ((m: string) => logger.info(m)));
     const warn = options.quiet ? () => {} : (m: string, id?: string) => logger.warn(m, id);
     const projectType = options.projectType ?? resolveProjectType(cwd, config);
     const manifest = readManifest(cwd);
+    if (!resolveToolchainEnabled(config).enabled) {
+        log('toolchain disabled; skipping sync.');
+        return {
+            written: [],
+            changed: [],
+            removed: [],
+            removedFiles: [],
+            upToDate: true,
+        };
+    }
     const ctx: SyncContext = {
         cwd,
         projectType,
@@ -126,11 +137,21 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     const hooks = config.hooks ?? {};
     await hooks.beforeSync?.(ctx);
 
-    const active = tasks.filter(
+    const applicable = tasks.filter(
         task =>
             (!task.projectTypes || task.projectTypes.includes(projectType)) &&
             (!task.enabled || task.enabled(config))
     );
+    // A task can opt out of regenerating its managed files (`<section>.regenerate
+    // = false`). Skipping it means its files are neither written nor drift-checked.
+    const frozen = applicable.filter(task => task.regenerate && !task.regenerate(config));
+    const active = applicable.filter(task => !frozen.includes(task));
+    // Never prune while a task is frozen: its previously-managed files still
+    // belong to it and must not be deleted just because they are not desired now.
+    const prune = pruneRequested && frozen.length === 0;
+    for (const task of frozen) {
+        log(`  - ${task.name} (regeneration disabled)`);
+    }
     log(`running ${active.length} task(s)${options.check ? ' (check)' : ''} [${projectType}]`);
 
     const files: ManagedFile[] = [];

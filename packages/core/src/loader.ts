@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
+    assertWorkspaceEnabledScope,
     collectDbxPluginDescriptors,
     CONFIG_FILE_NAMES,
     deepMerge,
@@ -25,6 +26,7 @@ import {
 } from '@deltabox/toolchain/shared';
 
 import { resolveProjectType } from './project-type.js';
+import { readGlobalEnabled } from './provider-registry.js';
 
 /** A loaded tooling config plus its resolved path + replacement tokens. */
 export interface LoadedConfig {
@@ -899,6 +901,20 @@ export async function loadToolchainConfig(
 
     // When a `project` field is not defined, fall back to the project's own
     // `package.json` value (so tokens are correct without a config).
+    // Config files and the Vite plugin are workspace-scoped; the global scope is
+    // reserved for the CLI/programmatic API and the VS Code extension.
+    assertWorkspaceEnabledScope(config, plugin ? 'vite plugin' : 'config file');
+    // A global CLI switch only applies when the project config does not set
+    // `enabled`; the project's own workspace value always wins.
+    if (config.enabled === undefined) {
+        const globalEnabled = readGlobalEnabled();
+        if (globalEnabled !== undefined) {
+            config = {
+                ...config,
+                enabled: { scope: 'global', disabled: !globalEnabled },
+            };
+        }
+    }
     const pkg = readJsonAt<PackageJson>(cwd, 'package.json');
     const project = {
         ...(pkg ? projectFromPackageJson(pkg) : undefined),

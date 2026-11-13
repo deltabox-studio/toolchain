@@ -65,6 +65,37 @@ describe('runSync', () => {
         expect(fs.existsSync(path.join(cwd, 'x.txt'))).toBe(false);
     });
 
+    it('skips a task whose regeneration is disabled without pruning its files', async () => {
+        const cwd = tmp();
+        const task: SyncTask = {
+            name: 'frozen',
+            run: () => [{ path: 'frozen.txt', content: 'first' }],
+        };
+        await runSync({ tasks: [task], cwd, config: {}, tokens: {}, quiet: true });
+
+        let ran = false;
+        const frozen: SyncTask = {
+            name: 'frozen',
+            regenerate: () => false,
+            run: () => {
+                ran = true;
+                return [{ path: 'frozen.txt', content: 'second' }];
+            },
+        };
+        const result = await runSync({
+            tasks: [frozen],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+
+        expect(ran).toBe(false);
+        expect(result.changed).toEqual([]);
+        expect(result.removed).toEqual([]);
+        expect(fs.readFileSync(path.join(cwd, 'frozen.txt'), 'utf-8')).toBe('first');
+    });
+
     it('runs only the named tasks and rejects unknown names', async () => {
         const cwd = tmp();
         const tasks: SyncTask[] = [

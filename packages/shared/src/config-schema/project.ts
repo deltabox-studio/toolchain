@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { REGENERATE_DESCRIPTION } from './meta.js';
+
 /** The kind of project a `dbx.config.*` lives in. */
 export const projectTypeSchema = z
     .enum(['monorepo-root', 'monorepo-workspace', 'project'])
@@ -15,6 +17,7 @@ export const projectTypeSchema = z
 export const projectConfigSchema = z
     .object({
         type: projectTypeSchema.optional(),
+        regenerate: z.boolean().optional().describe(REGENERATE_DESCRIPTION),
         name: z
             .string()
             .describe('The unscoped project name (written as `<scope>/<name>`).')

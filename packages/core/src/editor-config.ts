@@ -18,6 +18,7 @@ import {
     isPlainObject,
     LINTER_PRECEDENCE,
     readJsoncFile,
+    regenerateEnabled,
     resolveFmtTool,
     resolveFmtTools,
     resolveLintTool,
@@ -252,6 +253,8 @@ export function editorConfigSyncTask(): SyncTask {
             vscodeEnabled(
                 sectionEnabled(config.lint) ? sectionConfig(config.lint)?.vscode : undefined
             ),
+        regenerate: (config: ToolchainConfig) =>
+            regenerateEnabled(config.fmt) || regenerateEnabled(config.lint),
         run: ctx => {
             const fmt = resolveFmtTool(ctx.config);
             const lint = resolveLintTool(ctx.config);

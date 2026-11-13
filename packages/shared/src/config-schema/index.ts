@@ -61,9 +61,34 @@ export * from './vite.js';
 export * from './watch.js';
 export * from './workflow.js';
 
+/** A top-level enabled/disabled switch with an API-only global scope. */
+const enabledConfigSchema = z
+    .union([
+        z.boolean(),
+        z.object({
+            disabled: z
+                .boolean()
+                .describe('Disable the toolchain for this scope (default false).')
+                .optional(),
+            scope: z
+                .enum(['global', 'workspace'])
+                .describe(
+                    'The scope the value applies to. Config files and the Vite plugin may only ' +
+                        'use `workspace`; `global` is reserved for the CLI/programmatic API and ' +
+                        'the VS Code extension.'
+                ),
+        }),
+    ])
+    .describe(
+        'Enable/disable the toolchain. The shorthand is workspace-scoped; the object form is ' +
+            'reserved for APIs and the VS Code extension.'
+    )
+    .meta({ id: 'ToolchainEnabledConfig' });
+
 /** The full `dbx.config` schema (minus the function-bearing `hooks`). */
 export const toolchainConfigSchema = z
     .object({
+        enabled: enabledConfigSchema.optional(),
         project: projectConfigSchema
             .describe(
                 'Project metadata: canonical `package.json` fields and template tokens ' +
@@ -131,6 +156,7 @@ export const dbxConfigSchema = z
     .meta({ id: 'DbxConfigSections' });
 
 export const configSchema = {
+    enabled: enabledConfigSchema,
     project: projectConfigSchema,
     ci: ciConfigSchema,
     changelog: changelogConfigSchema,

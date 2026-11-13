@@ -26,6 +26,12 @@ describe('dbx() plugin', () => {
         expect(typeof plugin.configResolved).toBe('function');
         expect(typeof plugin.watchChange).toBe('function');
     });
+
+    it('rejects a global-scoped enabled value in the inline toolchain config', () => {
+        expect(() => dbx({ toolchain: { enabled: { scope: 'global' } } } as never)).toThrow(
+            /workspace/
+        );
+    });
 });
 
 describe('DBX_TASKS', () => {

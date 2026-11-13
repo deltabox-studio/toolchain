@@ -33,6 +33,7 @@ import {
 import {
     applyFmtCustomGroups,
     applyReplacementsDeep,
+    assertWorkspaceEnabledScope,
     DBX_PLUGIN_NAME,
     DBX_PLUGIN_SYMBOL,
     type DbxPluginDescriptor,
@@ -329,6 +330,7 @@ export function dbx(options: DbxPluginOptions = {}): Plugin {
     const watch = options.watch ?? true;
     const debounce = options.debounce ?? 150;
     const inline = options.toolchain ?? {};
+    assertWorkspaceEnabledScope(inline as ToolchainConfig, 'vite plugin');
     const hasInline = Object.keys(inline).length > 0;
 
     const descriptor: DbxPluginDescriptor = {

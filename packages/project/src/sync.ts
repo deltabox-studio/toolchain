@@ -7,6 +7,7 @@ import {
     type PackageJson,
     projectToPackageJson,
     readJsonAt,
+    regenerateEnabled,
     splitPackageName,
     type SyncTask,
 } from '@deltabox/toolchain/shared';
@@ -53,6 +54,7 @@ export function projectSyncTask(): SyncTask {
     return {
         name: 'project',
         enabled: config => config.project !== undefined,
+        regenerate: config => regenerateEnabled(config.project),
         run: ctx => {
             const project = ctx.config.project;
             if (!project) return [];

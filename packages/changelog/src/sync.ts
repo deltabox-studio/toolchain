@@ -7,6 +7,7 @@ import {
     resolveChangelogBranches,
     resolveChangelogConfig,
     resolveCommitlintEnabled,
+    regenerateEnabled,
     sectionConfig,
     sectionEnabled,
     type SyncTask,
@@ -156,6 +157,7 @@ export function changelogSyncTask(): SyncTask {
         // whenever the `ci` section is enabled; the changelog-specific outputs
         // (pipeline config, commitlint) still require `ci.changelog`.
         enabled: config => sectionEnabled(config.ci),
+        regenerate: config => regenerateEnabled(config.ci),
         run: ctx => {
             const ch = resolveChangelogConfig(ctx.config) ?? {};
             const commitlintConfig = sectionConfig(ch.commitlint);

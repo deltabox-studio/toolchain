@@ -8,6 +8,7 @@ import { editorConfigSyncTask, toolingConfigTask, vscodeSyncTask } from '@deltab
 import { catalogsSyncTask, projectSyncTask } from '@deltabox/toolchain/project';
 import {
     changelogSectionEnabled,
+    regenerateEnabled,
     resolveChangelogConfig,
     type SyncTask,
     sectionConfig,
@@ -46,6 +47,9 @@ export function defaultSyncTasks(): SyncTask[] {
                 (changelogSectionEnabled(config) &&
                     resolveChangelogConfig(config)?.vscode !== false) ||
                 (sectionEnabled(config.biome) && sectionConfig(config.biome)?.vscode !== false),
+            regenerate: config =>
+                (changelogSectionEnabled(config) && regenerateEnabled(config.ci)) ||
+                (sectionEnabled(config.biome) && regenerateEnabled(config.biome)),
         }),
     ];
 }

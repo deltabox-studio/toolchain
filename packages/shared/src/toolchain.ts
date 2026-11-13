@@ -137,6 +137,65 @@ export function sectionConfig<T extends object>(
     return section !== undefined && typeof section === 'object' ? section : undefined;
 }
 
+/**
+ * Whether a section's managed files should be regenerated during sync.
+ *
+ * A section only regenerates when it is enabled (opt-in by presence) and does
+ * not opt out with `regenerate: false`. The default is `true`, so existing
+ * configs keep their current behaviour.
+ */
+export function regenerateEnabled(
+    section: boolean | { enabled?: boolean; regenerate?: boolean } | undefined
+): boolean {
+    if (!sectionEnabled(section)) return false;
+    return sectionConfig(section)?.regenerate !== false;
+}
+
+/** Where a `toolchain.enabled` value applies. */
+export type ToolchainEnabledScope = 'global' | 'workspace';
+
+/** A normalized `toolchain.enabled` value. */
+export interface ResolvedToolchainEnabled {
+    enabled: boolean;
+    scope: ToolchainEnabledScope;
+}
+
+/** The object form of the top-level `enabled` setting. */
+export interface ToolchainEnabledSetting {
+    disabled?: boolean;
+    scope: ToolchainEnabledScope;
+}
+
+/** Normalize `toolchain.enabled` (`true | false | { disabled, scope }`). */
+export function resolveToolchainEnabled(
+    config: { enabled?: boolean | ToolchainEnabledSetting } | undefined
+): ResolvedToolchainEnabled {
+    const value = config?.enabled;
+    if (value === undefined) return { enabled: true, scope: 'workspace' };
+    if (typeof value === 'boolean') return { enabled: value, scope: 'workspace' };
+    return { enabled: value.disabled !== true, scope: value.scope };
+}
+
+/**
+ * Reject a non-workspace scope in a config file or the Vite plugin's inline
+ * `dbx({ toolchain })` config. Global scope is only settable through the CLI /
+ * programmatic API and the VS Code extension.
+ */
+export function assertWorkspaceEnabledScope(
+    config: { enabled?: boolean | ToolchainEnabledSetting } | undefined,
+    source = 'config'
+): void {
+    const value = config?.enabled;
+    if (value === undefined || typeof value === 'boolean') return;
+    if (value.scope !== 'workspace') {
+        throw new Error(
+            `${source}: \`toolchain.enabled\` only accepts the \`workspace\` scope in config ` +
+                `files and the Vite plugin (got \`${value.scope}\`). Use \`dbx enable/disable ` +
+                '--global\` or the VS Code command to change the global scope.'
+        );
+    }
+}
+
 /** The file names a config loader looks for, in priority order. */
 export const CONFIG_FILE_NAMES = [
     'dbx.config.ts',
@@ -416,6 +475,13 @@ export interface SyncTask {
     keep?: string[] | ((config: ToolchainConfig) => string[]);
     /** Whether the task runs for the given config (default: always). */
     enabled?: (config: ToolchainConfig) => boolean;
+    /**
+     * Whether the task should regenerate its managed files (default: true).
+     * When it returns false the task is skipped entirely, so `runSync` neither
+     * writes nor drift-checks its files, and pruning is disabled to avoid
+     * deleting files the task still owns.
+     */
+    regenerate?: (config: ToolchainConfig) => boolean;
     /**
      * The project kinds the task applies to (default: all). A task is skipped
      * when the resolved project type is not in this list.

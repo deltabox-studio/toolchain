@@ -4,6 +4,7 @@ import path from 'node:path';
 import {
     type ManagedFile,
     readJsonFile,
+    regenerateEnabled,
     type SyncTask,
     sectionConfig,
     sectionEnabled,
@@ -149,6 +150,7 @@ export function catalogsSyncTask(): SyncTask {
         // files are read by the package manager and may hold hand-written keys.
         keep: ['.yarnrc.yml', 'pnpm-workspace.yaml'],
         enabled: config => sectionEnabled(config.catalogs),
+        regenerate: config => regenerateEnabled(config.catalogs),
         run: ctx => {
             const config = sectionConfig(ctx.config.catalogs) ?? {};
             // Use the resolved token so a package.json-only project manager
