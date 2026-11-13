@@ -12,6 +12,7 @@ import {
 import {
     logger,
     parseToolVersions,
+    sectionEnabled,
     type ToolchainCommand,
     type ToolingSelection,
 } from '@deltabox/toolchain/shared';
@@ -51,17 +52,45 @@ function usesVitePlus(dir: string): boolean {
     }
 }
 
-/** Whether a project's final config already owns `fmt`/`lint` (so a source's intermediate file is obsolete). */
-function ownsFmtLint(dir: string): { fmt: boolean; lint: boolean } {
+/**
+ * Whether a project's effective (inherited) config already owns `fmt`/`lint`,
+ * so a source's intermediate file is obsolete. Uses the resolved config rather
+ * than regex-matching the local file text, so an inherited section, `fmt: false`
+ * or a folded `toolchain.vite` is judged correctly.
+ *
+ * When the config cannot be imported (eg. its `@deltabox/toolchain` import is
+ * not installed yet), fall back to the local file text so `--check` still sees
+ * a config the migration itself just generated.
+ */
+async function ownsFmtLint(dir: string): Promise<{ fmt: boolean; lint: boolean }> {
     const vite = viteConfigHasFmtLint(dir);
+    const loaded = await loadToolchainConfig(dir, { tolerant: true, skipHooks: true });
+    if (loaded.error) return localOwnsFmtLint(dir, vite);
+    const config = loaded.config;
+    const viteSection = config.vite;
+    const ownVite =
+        viteSection && typeof viteSection === 'object'
+            ? (viteSection as { fmt?: boolean | object; lint?: boolean | object })
+            : undefined;
+    return {
+        fmt: sectionEnabled(config.fmt) || sectionEnabled(ownVite?.fmt) || Boolean(vite?.fmt),
+        lint: sectionEnabled(config.lint) || sectionEnabled(ownVite?.lint) || Boolean(vite?.lint),
+    };
+}
+
+/** A raw-text fallback used only when the resolved config cannot be imported. */
+function localOwnsFmtLint(
+    dir: string,
+    vite: { fmt?: boolean; lint?: boolean } | undefined
+): { fmt: boolean; lint: boolean } {
     let fmt = Boolean(vite?.fmt);
     let lint = Boolean(vite?.lint);
     const dbx = findDbxConfig(dir);
     if (dbx) {
         try {
             const text = fs.readFileSync(dbx, 'utf-8').replace(/^\uFEFF/, '');
-            fmt ||= /\bfmt\s*:/.test(text);
-            lint ||= /\blint\s*:/.test(text);
+            fmt ||= /\bfmt\s*:\s*(?!false\b)/.test(text);
+            lint ||= /\blint\s*:\s*(?!false\b)/.test(text);
         } catch {
             // An unreadable config owns nothing.
         }
@@ -322,19 +351,23 @@ export function migrateCommands(): ToolchainCommand[] {
                 ];
 
                 if (check) {
-                    const diffs = results.flatMap(({ dir, result }) => {
-                        // A source's intermediate `.oxfmtrc.json` /
-                        // `.oxlintrc.json` is folded into the final config by
-                        // `--write`; checking for it would never pass.
-                        const owns = ownsFmtLint(dir);
-                        const files = (result.files ?? []).filter(file => {
-                            const base = path.basename(file.path);
-                            if (base === '.oxfmtrc.json') return !owns.fmt;
-                            if (base === '.oxlintrc.json') return !owns.lint;
-                            return true;
-                        });
-                        return diffFiles(files);
-                    });
+                    const diffs = (
+                        await Promise.all(
+                            results.map(async ({ dir, result }) => {
+                                // A source's intermediate `.oxfmtrc.json` /
+                                // `.oxlintrc.json` is folded into the final config
+                                // by `--write`; checking for it would never pass.
+                                const owns = await ownsFmtLint(dir);
+                                const files = (result.files ?? []).filter(file => {
+                                    const base = path.basename(file.path);
+                                    if (base === '.oxfmtrc.json') return !owns.fmt;
+                                    if (base === '.oxlintrc.json') return !owns.lint;
+                                    return true;
+                                });
+                                return diffFiles(files);
+                            })
+                        )
+                    ).flat();
                     const pending = diffs.filter(diff => diff.status !== 'same');
                     const removed = results
                         .flatMap(({ result }) => result.removed ?? [])

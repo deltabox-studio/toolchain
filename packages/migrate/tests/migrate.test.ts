@@ -22,6 +22,8 @@ import {
     migrateCommands,
     objectHasSections,
     readJsonc,
+    findPrettierConfig,
+    hasPrettierConfig,
     renderViteTarget,
     runMigration,
     scanLiteralObject,
@@ -176,6 +178,17 @@ describe('prettier -> oxc', () => {
         expect(mapped.oxfmt.printWidth).toBe(80);
         expect(mapped.oxfmt.sortTailwindcss).toBe(true);
         expect(mapped.unmapped).toContain('plugin: some-other-plugin');
+    });
+
+    it('reads a `prettier` field from a package.json written with a BOM', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'package.json'),
+            `\uFEFF${JSON.stringify({ name: 'probe', prettier: { semi: false } })}`,
+            'utf-8'
+        );
+        expect(hasPrettierConfig(dir)).toBe(true);
+        expect(findPrettierConfig(dir)?.config).toEqual({ semi: false });
     });
 });
 
@@ -731,6 +744,46 @@ describe('migrate fmt/lint routing', () => {
         process.exitCode = 0;
         await migrateCommand().run({ cwd: dir, check: true }, cliContext(dir));
         expect(process.exitCode ?? 0).toBe(0);
+        process.exitCode = 0;
+    });
+
+    it('sees an fmt section inherited from the root when checking a workspace', async () => {
+        const root = makeTmp();
+        fs.writeFileSync(
+            path.join(root, 'package.json'),
+            JSON.stringify({ name: 'root', workspaces: ['packages/*'] }),
+            'utf-8'
+        );
+        fs.writeFileSync(
+            path.join(root, 'dbx.config.ts'),
+            `export default { toolchain: { project: { manageConfigless: true }, fmt: { oxc: {} } } };\n`,
+            'utf-8'
+        );
+        const ws = path.join(root, 'packages', 'app');
+        fs.mkdirSync(ws, { recursive: true });
+        fs.writeFileSync(path.join(ws, '.prettierrc'), JSON.stringify({ semi: false }), 'utf-8');
+
+        process.exitCode = 0;
+        await migrateCommand().run({ cwd: ws, from: 'prettier', check: true }, cliContext(ws));
+        expect(process.exitCode ?? 0).toBe(0);
+        process.exitCode = 0;
+    });
+
+    it('does not treat a disabled fmt section as owning the config', async () => {
+        const root = makeTmp();
+        fs.writeFileSync(
+            path.join(root, 'dbx.config.ts'),
+            `export default { toolchain: { project: { manageConfigless: true }, fmt: false } };\n`,
+            'utf-8'
+        );
+        const ws = path.join(root, 'packages', 'app');
+        fs.mkdirSync(ws, { recursive: true });
+        fs.writeFileSync(path.join(root, 'package.json'), '{"name":"root"}', 'utf-8');
+        fs.writeFileSync(path.join(ws, '.prettierrc'), JSON.stringify({ semi: false }), 'utf-8');
+
+        process.exitCode = 0;
+        await migrateCommand().run({ cwd: ws, from: 'prettier', check: true }, cliContext(ws));
+        expect(process.exitCode).toBe(1);
         process.exitCode = 0;
     });
 
