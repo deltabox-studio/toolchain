@@ -748,4 +748,38 @@ describe('project:init CLI', () => {
         expect(pkg.repository).toBeUndefined();
         expect(pkg.engines).toEqual({ node: '>=22' });
     });
+
+    it('does not inherit the config project name for an --out elsewhere', () => {
+        const command = projectCommands().find(candidate => candidate.name === 'project:init');
+        if (!command?.run) throw new Error('missing project:init command');
+        const cwd = makeTmp();
+        const out = path.join(makeTmp(), 'new-app');
+        fs.mkdirSync(out, { recursive: true });
+
+        command.run!(
+            { out },
+            { cwd, projectType: 'project', config: { project: { name: 'toolchain' } }, tokens: {} }
+        );
+
+        const pkg = JSON.parse(fs.readFileSync(path.join(out, 'package.json'), 'utf-8'));
+        expect(pkg.name).toBe('new-app');
+    });
+
+    it('does not inherit the config name for project:init:monorepo --out elsewhere', () => {
+        const command = projectCommands().find(
+            candidate => candidate.name === 'project:init:monorepo'
+        );
+        if (!command?.run) throw new Error('missing project:init:monorepo command');
+        const cwd = makeTmp();
+        const out = path.join(makeTmp(), 'new-monorepo');
+        fs.mkdirSync(out, { recursive: true });
+
+        command.run!(
+            { out },
+            { cwd, projectType: 'project', config: { project: { name: 'toolchain' } }, tokens: {} }
+        );
+
+        const pkg = JSON.parse(fs.readFileSync(path.join(out, 'package.json'), 'utf-8'));
+        expect(pkg.name).toBe('new-monorepo');
+    });
 });

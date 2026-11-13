@@ -157,20 +157,28 @@ function scaffoldPackageManager(
 }
 
 /**
- * Resolve the project name for a scaffold. A name is **required**: it comes from
- * `--name` or `project.name` in `dbx.config.*`, otherwise the scaffold fails.
+ * Resolve the project name for a scaffold. An explicit `--name` always wins;
+ * otherwise a scaffold **into** the current project inherits `project.name` from
+ * `dbx.config.*`. A scaffold `--out` elsewhere never inherits the parent
+ * project's name — it uses the target directory basename instead.
  */
 function requireName(
     opts: Record<string, unknown>,
-    config: ToolchainCommandContext['config']
+    config: ToolchainCommandContext['config'],
+    out: string,
+    cwd: string
 ): string {
-    const name = String(opts.name ?? config.project?.name ?? '').trim();
-    if (!name) {
-        throw new Error(
-            'a project name is required: pass `--name <name>` or set `project.name` in dbx.config.*.'
-        );
+    const explicit = tokenText(opts.name);
+    if (explicit) return explicit;
+    if (scaffoldInPlace(out, cwd)) {
+        const configured = String(config.project?.name ?? '').trim();
+        if (configured) return configured;
     }
-    return name;
+    const base = path.basename(path.resolve(out));
+    if (base) return base;
+    throw new Error(
+        'a project name is required: pass `--name <name>` or set `project.name` in dbx.config.*.'
+    );
 }
 
 /**
@@ -233,7 +241,7 @@ export function projectCommands(): ToolchainCommand[] {
             ],
             run: (opts, context) => {
                 const out = (opts.out as string) ?? context.cwd;
-                const name = resolveName(requireName(opts, context.config), out);
+                const name = resolveName(requireName(opts, context.config, out, context.cwd), out);
                 const tsconfigExtends = scaffoldTsconfigExtends(context.config);
                 const scope =
                     (opts.scope as string | undefined) ??
@@ -291,7 +299,7 @@ export function projectCommands(): ToolchainCommand[] {
             ],
             run: (opts, context) => {
                 const out = (opts.out as string) ?? context.cwd;
-                const name = resolveName(requireName(opts, context.config), out);
+                const name = resolveName(requireName(opts, context.config, out, context.cwd), out);
                 const scope =
                     (opts.scope as string | undefined) ??
                     (scaffoldInPlace(out, context.cwd)
