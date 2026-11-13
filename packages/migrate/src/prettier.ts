@@ -10,6 +10,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { readJsonFile } from '@deltabox/toolchain/shared';
+
 import type {
     MigrationContext,
     MigrationFile,
@@ -51,12 +53,8 @@ export function hasPrettierConfig(cwd: string): boolean {
     if (PRETTIER_FILES.some(name => fs.existsSync(path.join(cwd, name)))) return true;
     const pkgFile = path.join(cwd, 'package.json');
     if (!fs.existsSync(pkgFile)) return false;
-    try {
-        const pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf-8')) as Json;
-        return Boolean(pkg.prettier && typeof pkg.prettier === 'object');
-    } catch {
-        return false;
-    }
+    const pkg = readJsonFile<Json>(pkgFile);
+    return Boolean(pkg?.prettier && typeof pkg.prettier === 'object');
 }
 
 /** Locate a Prettier config (JSON files or the `prettier` package.json field). */
@@ -76,12 +74,9 @@ export function findPrettierConfig(cwd: string): { file: string; config: Json } 
     }
     const pkgFile = path.join(cwd, 'package.json');
     if (fs.existsSync(pkgFile)) {
-        try {
-            const pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf-8')) as Json;
-            if (pkg.prettier && typeof pkg.prettier === 'object')
-                return { file: pkgFile, config: pkg.prettier as Json };
-        } catch {
-            // ignore
+        const pkg = readJsonFile<Json>(pkgFile);
+        if (pkg?.prettier && typeof pkg.prettier === 'object') {
+            return { file: pkgFile, config: pkg.prettier as Json };
         }
     }
     return undefined;

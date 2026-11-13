@@ -60,4 +60,17 @@ describe('provider registry search paths', () => {
             readAllProvidersSync(cwd, { allow: [path.resolve(registry)] }).map(item => item.id)
         ).toContain('blocked');
     });
+
+    it('reads a registry file written with a UTF-8 BOM', () => {
+        const cwd = tmp();
+        const registry = path.join(cwd, 'providers');
+        fs.mkdirSync(registry, { recursive: true });
+        fs.writeFileSync(
+            path.join(registry, 'providers.json'),
+            `\uFEFF${JSON.stringify([provider('bom')])}`
+        );
+        addProjectProviderRegistry(cwd, './providers');
+
+        expect(readAllProvidersSync(cwd).map(item => item.id)).toContain('bom');
+    });
 });

@@ -18,6 +18,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import {
+    readJsonFile,
     registrySourceAllowed,
     type RegistryPolicy,
     type ToolchainProvider,
@@ -304,7 +305,7 @@ function readProvidersTarget(
             }
             return providers;
         }
-        return parseProviders(JSON.parse(fs.readFileSync(target, 'utf-8')));
+        return parseProviders(readJsonFile(target));
     } catch {
         return [];
     }

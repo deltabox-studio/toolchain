@@ -448,6 +448,20 @@ describe('restoreTsconfigOverrides', () => {
         expect(fs.readFileSync(path.join(cwd, MANIFEST), 'utf-8')).toBe(before);
     });
 
+    it('reads a manifest written with a UTF-8 BOM', async () => {
+        const cwd = monorepo();
+        await sync(cwd, { overrides });
+        const file = path.join(cwd, MANIFEST);
+        fs.writeFileSync(file, `\uFEFF${fs.readFileSync(file, 'utf-8')}`, 'utf-8');
+
+        const result = restoreTsconfigOverrides({ cwd });
+        expect(result.restored.sort()).toEqual([
+            'packages/core/tsconfig.build.json',
+            'packages/core/tsconfig.default.json',
+            'tsconfig.base.json',
+        ]);
+    });
+
     it('warns and skips a missing file, keeping its manifest entry', async () => {
         const cwd = monorepo();
         await sync(cwd, { overrides });
