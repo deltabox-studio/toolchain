@@ -1,5 +1,6 @@
 import type { ToolchainCommand, ToolchainConfig } from '@deltabox/toolchain/shared';
 
+import { enabledCommands } from './enabled.js';
 import { projectsCommand } from './projects.js';
 import { providerCommands } from './providers.js';
 import { resetCommand } from './reset.js';
@@ -17,5 +18,6 @@ export function syncCommands(config?: ToolchainConfig): ToolchainCommand[] {
         watchCommand(),
         resetCommand(),
         ...providerCommands(config),
+        ...enabledCommands(),
     ];
 }
