@@ -16,6 +16,7 @@
     "dependencies": {
         "@clack/prompts": "catalog:",
         "picocolors": "catalog:",
+        "type-fest": "catalog:",
         "zod": "catalog:"
     },
     "devDependencies": {
@@ -23,7 +24,6 @@
         "@types/node": "catalog:",
         "eslint": "catalog:",
         "prettier": "catalog:",
-        "type-fest": "catalog:",
         "typescript": "catalog:",
         "vite-plus": "catalog:"
     },
