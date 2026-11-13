@@ -31,6 +31,8 @@ import {
     bundledCliEntry,
     getDbxSource,
     initDbxSource,
+    projectDbx,
+    projectToolchainVersion,
     resolveCliCommand,
     setDbxSource,
     setExtensionInfo,
@@ -141,5 +143,48 @@ describe('dbx source selection', () => {
 
         expect(getDbxSource()).toBe('extension');
         expect(resolveCliCommand(root).args[0]).toBe(bundledCliEntry());
+    });
+
+    it('finds a hoisted toolchain from a nested workspace (and reads a BOM)', () => {
+        const root = projectWithDbx('1.2.3');
+        fs.writeFileSync(
+            path.join(root, 'node_modules', '@deltabox', 'toolchain', 'package.json'),
+            `\uFEFF${JSON.stringify({ name: '@deltabox/toolchain', version: '1.2.3' })}`
+        );
+        const nested = path.join(root, 'packages', 'app');
+        fs.mkdirSync(nested, { recursive: true });
+        mock.folders = [{ uri: { fsPath: nested } }];
+
+        expect(projectToolchainVersion(nested)).toBe('1.2.3');
+        expect(projectDbx(nested)?.args[0]).toBe(
+            path.join(root, 'node_modules', '@deltabox', 'toolchain', 'dist', 'cli', 'index.js')
+        );
+    });
+
+    it('checks every workspace root in a multi-root workspace', () => {
+        const first = tmp();
+        const second = projectWithDbx('1.2.3');
+        mock.folders = [{ uri: { fsPath: first } }, { uri: { fsPath: second } }];
+
+        expect(projectToolchainVersion(first)).toBe('1.2.3');
+        expect(projectDbx(first)?.args[0]).toBe(
+            path.join(second, 'node_modules', '@deltabox', 'toolchain', 'dist', 'cli', 'index.js')
+        );
+    });
+
+    it('prefers a nearer .bin shim over a hoisted built entry', () => {
+        const root = projectWithDbx('1.2.3');
+        const nested = path.join(root, 'packages', 'app');
+        fs.mkdirSync(nested, { recursive: true });
+        const shim = path.join(
+            nested,
+            'node_modules',
+            '.bin',
+            process.platform === 'win32' ? 'dbx.cmd' : 'dbx'
+        );
+        write(shim);
+        mock.folders = [{ uri: { fsPath: nested } }];
+
+        expect(projectDbx(nested)).toEqual({ exe: shim, args: [] });
     });
 });

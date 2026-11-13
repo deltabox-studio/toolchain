@@ -40,21 +40,43 @@ export function workspaceRoots(): string[] {
     return (vscode.workspace.workspaceFolders ?? []).map(folder => folder.uri.fsPath);
 }
 
-/** The built entry of a workspace-local `@deltabox/toolchain`, if installed. */
-function localCliEntry(cwd: string): string | undefined {
-    for (const dir of [cwd, ...workspaceRoots()]) {
-        const entry = path.join(
-            dir,
-            'node_modules',
-            '@deltabox',
-            'toolchain',
-            'dist',
-            'cli',
-            'index.js'
-        );
-        if (fs.existsSync(entry)) return entry;
-    }
-    return undefined;
+/**
+ * The directories to search for a project `dbx`: `cwd` and every workspace
+ * root, walking up to the repository boundary (the nearest `.git`) so a
+ * toolchain hoisted to a monorepo root is found from a nested workspace. Every
+ * workspace root is considered, not just the first one.
+ */
+function searchDirs(cwd: string): string[] {
+    const dirs: string[] = [];
+    const seen = new Set<string>();
+    const add = (start: string): void => {
+        let dir = path.resolve(start);
+        for (;;) {
+            if (seen.has(dir)) break;
+            seen.add(dir);
+            dirs.push(dir);
+            if (fs.existsSync(path.join(dir, '.git'))) break;
+            const parent = path.dirname(dir);
+            if (parent === dir) break;
+            dir = parent;
+        }
+    };
+    for (const root of [cwd, ...workspaceRoots()]) add(root);
+    return dirs;
+}
+
+/** The built entry of a workspace-local `@deltabox/toolchain` in `dir`, if installed. */
+function localCliEntry(dir: string): string | undefined {
+    const entry = path.join(
+        dir,
+        'node_modules',
+        '@deltabox',
+        'toolchain',
+        'dist',
+        'cli',
+        'index.js'
+    );
+    return fs.existsSync(entry) ? entry : undefined;
 }
 
 /**
@@ -106,17 +128,19 @@ export function formatImportGroupDefaultsEnv(): NodeJS.ProcessEnv {
 
 /** The `@deltabox/toolchain` version installed in the project (if any). */
 export function projectToolchainVersion(cwd: string = process.cwd()): string | undefined {
-    for (const dir of [cwd, ...workspaceRoots()]) {
+    for (const dir of searchDirs(cwd)) {
         try {
             const pkg = JSON.parse(
-                fs.readFileSync(
-                    path.join(dir, 'node_modules', '@deltabox', 'toolchain', 'package.json'),
-                    'utf-8'
-                )
+                fs
+                    .readFileSync(
+                        path.join(dir, 'node_modules', '@deltabox', 'toolchain', 'package.json'),
+                        'utf-8'
+                    )
+                    .replace(/^\uFEFF/, '')
             ) as { version?: unknown };
             if (typeof pkg.version === 'string' && pkg.version) return pkg.version;
         } catch {
-            // Try the next workspace root.
+            // Try the next directory.
         }
     }
     return undefined;
@@ -152,10 +176,12 @@ export function getDbxSource(): DbxSource {
 
 /** The workspace-local `dbx`: the built `@deltabox/toolchain` entry or a `.bin` shim. */
 export function projectDbx(cwd: string): CliCommand | undefined {
-    const entry = localCliEntry(cwd);
-    if (entry) return { exe: process.execPath, args: [entry] };
     const names = IS_WINDOWS ? ['dbx.cmd', 'dbx.exe', 'dbx.ps1', 'dbx'] : ['dbx'];
-    for (const dir of [cwd, ...workspaceRoots()]) {
+    for (const dir of searchDirs(cwd)) {
+        // Prefer a nearer install: a `.bin` shim in this directory must win over
+        // a built hoisted entry further up.
+        const entry = localCliEntry(dir);
+        if (entry) return { exe: process.execPath, args: [entry] };
         for (const name of names) {
             const bin = path.join(dir, 'node_modules', '.bin', name);
             if (fs.existsSync(bin)) return { exe: bin, args: [] };
