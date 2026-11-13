@@ -8,7 +8,7 @@ import { readCommits, repoSlug } from './git.js';
 import { relatedWorkspacePaths } from './graph.js';
 import { packageChangesForCurrent } from './packages.js';
 import { formatExistingChangelogs, parseExistingChangelog } from './reformat.js';
-import { discoverWorkspaceDirs, repoRoot } from './repo.js';
+import { discoverWorkspaceDirs, isCommitReleased, readReleasedHashes, repoRoot } from './repo.js';
 import { buildSummary } from './summary.js';
 import type { ChangelogGroupsSetting, CommitRecord } from './types.js';
 import { prependChangelogEntry, renderChangelogEntry } from './version.js';
@@ -61,7 +61,10 @@ export function writeChangelogs(
         );
     for (const [dir, workspaceVersion] of entries) {
         const file = resolve(dir, 'CHANGELOG.md');
-        const filtered = readCommits(range, relatedWorkspacePaths(dir, root));
+        const released = readReleasedHashes(file);
+        const filtered = readCommits(range, relatedWorkspacePaths(dir, root)).filter(
+            record => !isCommitReleased(record.hash, released)
+        );
         if (filtered.length === 0) {
             logger.info(`  skipped ${file} (no related commits)`);
             continue;

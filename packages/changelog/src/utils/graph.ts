@@ -1,5 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
+
+import { readJsonFile } from '@deltabox/toolchain/shared';
 
 import { repoRoot } from './repo.js';
 
@@ -15,12 +17,8 @@ export interface ProjectGraphNode {
 export function readProjectGraph(root: string = repoRoot()): ProjectGraphNode[] | undefined {
     const file = resolve(root, '.dbx', 'toolchain', 'projects.json');
     if (!existsSync(file)) return undefined;
-    try {
-        const doc = JSON.parse(readFileSync(file, 'utf8')) as { projects?: ProjectGraphNode[] };
-        return Array.isArray(doc.projects) ? doc.projects : undefined;
-    } catch {
-        return undefined;
-    }
+    const doc = readJsonFile<{ projects?: ProjectGraphNode[] }>(file);
+    return Array.isArray(doc?.projects) ? doc.projects : undefined;
 }
 
 /** Normalize a graph/relative dir (`./x/` -> `x`, `` -> `.`). */

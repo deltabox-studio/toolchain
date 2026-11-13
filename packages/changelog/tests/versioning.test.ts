@@ -235,4 +235,17 @@ describe('discoverVersionPackages', () => {
         const pkg = discoverVersionPackages(['pkgs/*'], root);
         expect(pkg.workspaces).toEqual([join(root, 'pkgs', 'x')]);
     });
+
+    it('excludes negated workspace globs', () => {
+        writeFileSync(
+            join(root, 'package.json'),
+            JSON.stringify({ name: 'root', workspaces: ['packages/*', '!packages/private-*'] })
+        );
+        for (const name of ['public', 'private-x']) {
+            mkdirSync(join(root, 'packages', name), { recursive: true });
+            writeFileSync(join(root, 'packages', name, 'package.json'), '{}');
+        }
+        const pkg = discoverVersionPackages(undefined, root);
+        expect(pkg.workspaces).toEqual([join(root, 'packages', 'public')]);
+    });
 });

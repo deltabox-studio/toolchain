@@ -1,10 +1,22 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import {
     collectDependencies,
     diffDependencies,
+    packageChangesForCurrent,
+    readCurrentDependencies,
     renderPackageChanges,
 } from '../src/utils/packages.js';
+
+/** A default-catalog map entry (`name` + version range). */
+function catalog(...entries: [string, string][]): Map<string, { name: string; version: string }> {
+    return new Map(entries.map(([name, version]) => [name, { name, version }]));
+}
 
 describe('dependency maps', () => {
     it('scopes dependencies to the package.json name', () => {
@@ -13,7 +25,7 @@ describe('dependency maps', () => {
                 { name: '@acme/app', devDependencies: { vite: '^5.4.14' } },
                 { name: '@acme/lib', devDependencies: { vite: 'catalog:' } },
             ],
-            new Map([['vite', '^8.3.0']]),
+            catalog(['vite', '^8.3.0']),
             '@acme/root'
         );
         expect([...map.values()].filter(entry => entry.name === 'vite')).toEqual([
@@ -40,11 +52,11 @@ describe('dependency maps', () => {
     });
 
     it('is independent of package iteration order', () => {
-        const catalog = new Map([['vite', '^8.3.0']]);
+        const catalogMap = catalog(['vite', '^8.3.0']);
         const app = { name: '@acme/app', devDependencies: { vite: '^5.4.14' } };
         const lib = { name: '@acme/lib', devDependencies: { vite: 'catalog:' } };
-        const forward = collectDependencies([app, lib], catalog, '@acme/root');
-        const reverse = collectDependencies([lib, app], catalog, '@acme/root');
+        const forward = collectDependencies([app, lib], catalogMap, '@acme/root');
+        const reverse = collectDependencies([lib, app], catalogMap, '@acme/root');
         expect(diffDependencies(forward, reverse)).toEqual({
             added: [],
             updated: [],
@@ -55,12 +67,12 @@ describe('dependency maps', () => {
     it('reports a catalog bump under the root package name only', () => {
         const prev = collectDependencies(
             [{ name: '@acme/lib', devDependencies: { vite: 'catalog:' } }],
-            new Map([['vite', '^8.3.0']]),
+            catalog(['vite', '^8.3.0']),
             '@acme/root'
         );
         const next = collectDependencies(
             [{ name: '@acme/lib', devDependencies: { vite: 'catalog:' } }],
-            new Map([['vite', '^8.4.0']]),
+            catalog(['vite', '^8.4.0']),
             '@acme/root'
         );
         expect(diffDependencies(prev, next).updated).toEqual([
@@ -77,5 +89,99 @@ describe('dependency maps', () => {
             name: 'prettier',
             version: '^3',
         });
+    });
+});
+
+describe('catalog sources', () => {
+    const originalCwd = process.cwd();
+    const dirs: string[] = [];
+
+    function fixture(pkg: Record<string, unknown>): string {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-catalogs-'));
+        dirs.push(root);
+        fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify(pkg, null, 4));
+        fs.mkdirSync(path.join(root, 'packages', 'app'), { recursive: true });
+        fs.writeFileSync(
+            path.join(root, 'packages', 'app', 'package.json'),
+            JSON.stringify({ name: '@acme/app', dependencies: { react: 'catalog:' } }, null, 4)
+        );
+        return root;
+    }
+
+    function git(root: string, ...args: string[]): void {
+        execFileSync('git', args, { cwd: root, stdio: 'ignore' });
+    }
+
+    function commitAndTag(root: string): void {
+        git(root, 'init');
+        git(root, 'config', 'user.name', 'Test');
+        git(root, 'config', 'user.email', 'test@example.com');
+        git(root, 'add', '-A');
+        git(root, 'commit', '-m', 'chore: init');
+        git(root, 'tag', 'v1.0.0');
+        process.chdir(root);
+    }
+
+    afterEach(() => {
+        process.chdir(originalCwd);
+        for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    it('reads pnpm catalogs and reports their range change', () => {
+        const root = fixture({ name: 'acme', version: '1.0.0', workspaces: ['packages/*'] });
+        fs.writeFileSync(path.join(root, 'pnpm-workspace.yaml'), 'catalog:\n  react: ^19.0.0\n');
+        commitAndTag(root);
+
+        expect([...readCurrentDependencies().values()]).toContainEqual({
+            scope: 'acme',
+            name: 'react',
+            version: '^19.0.0',
+        });
+
+        fs.writeFileSync(path.join(root, 'pnpm-workspace.yaml'), 'catalog:\n  react: ^19.1.0\n');
+        expect(packageChangesForCurrent('1.0.0')).toContain(
+            '- `acme` › `react` `^19.0.0` → `^19.1.0`'
+        );
+    });
+
+    it('reads Bun catalogs and named catalogs and reports their range change', () => {
+        const root = fixture({
+            name: 'acme',
+            version: '1.0.0',
+            workspaces: {
+                packages: ['packages/*'],
+                catalog: { react: '^19.0.0' },
+                catalogs: { legacy: { react: '^17.0.0' } },
+            },
+        });
+        commitAndTag(root);
+
+        const entries = [...readCurrentDependencies().values()];
+        expect(entries).toContainEqual({ scope: 'acme', name: 'react', version: '^19.0.0' });
+        expect(entries).toContainEqual({
+            scope: 'acme',
+            name: 'legacy:react',
+            version: '^17.0.0',
+        });
+
+        fs.writeFileSync(
+            path.join(root, 'package.json'),
+            JSON.stringify(
+                {
+                    name: 'acme',
+                    version: '1.0.0',
+                    workspaces: {
+                        packages: ['packages/*'],
+                        catalog: { react: '^19.2.0' },
+                        catalogs: { legacy: { react: '^17.0.0' } },
+                    },
+                },
+                null,
+                4
+            )
+        );
+        expect(packageChangesForCurrent('1.0.0')).toContain(
+            '- `acme` › `react` `^19.0.0` → `^19.2.0`'
+        );
     });
 });

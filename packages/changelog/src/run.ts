@@ -86,7 +86,14 @@ import {
     reformatRootChangelog,
 } from './utils/reformat.js';
 import { releaseNotesFromGit } from './utils/release-notes.js';
-import { changelogFiles, readRootVersion, repoRoot, writeVersion } from './utils/repo.js';
+import {
+    changelogFiles,
+    isCommitReleased,
+    readReleasedHashes,
+    readRootVersion,
+    repoRoot,
+    writeVersion,
+} from './utils/repo.js';
 import { buildSummary } from './utils/summary.js';
 import type {
     ChangelogGroupsSetting,
@@ -107,30 +114,13 @@ import {
 } from './utils/versioning.js';
 import { writeChangelogs } from './utils/write.js';
 
-/** Every commit hash already referenced by a changelog bullet (`[#abc1234]` or `#abc1234`). */
+/** Every commit hash already referenced by a root + workspace changelog. */
 function releasedCommitHashes(): Set<string> {
     const hashes = new Set<string>();
     for (const file of changelogFiles()) {
-        try {
-            const text = readFileSync(file, 'utf8');
-            for (const [, hash] of text.matchAll(/#([0-9a-f]{7,40})\b/gi)) {
-                if (hash) hashes.add(hash.toLowerCase());
-            }
-        } catch {
-            // A changelog we cannot read cannot vouch for any commit.
-        }
+        for (const hash of readReleasedHashes(file)) hashes.add(hash);
     }
     return hashes;
-}
-
-/** Whether a commit's full hash was already rendered (changelogs use short hashes). */
-function isAlreadyReleased(hash: string, released: ReadonlySet<string>): boolean {
-    const full = hash.toLowerCase();
-    if (released.has(full.slice(0, 7))) return true;
-    for (const short of released) {
-        if (full.startsWith(short)) return true;
-    }
-    return false;
 }
 
 /**
@@ -228,7 +218,7 @@ export function runChangelog(
     const released = releasedCommitHashes();
     let records = readCommits(range).filter(record => !isReleaseCommit(record.subject));
     if (released.size > 0) {
-        records = records.filter(record => !isAlreadyReleased(record.hash, released));
+        records = records.filter(record => !isCommitReleased(record.hash, released));
     }
     if (records.length === 0) {
         logger.info('No new commits since the last release; nothing to do.');

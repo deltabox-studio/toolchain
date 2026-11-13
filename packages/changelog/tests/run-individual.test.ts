@@ -19,7 +19,8 @@ function write(file: string, value: unknown): void {
 }
 
 function versionOf(file: string): string {
-    return (JSON.parse(fs.readFileSync(file, 'utf8')) as { version: string }).version;
+    return (JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '')) as { version: string })
+        .version;
 }
 
 describe('individual changelog versioning end to end', () => {
@@ -84,6 +85,72 @@ describe('individual changelog versioning end to end', () => {
         );
         expect(fs.readFileSync(path.join(root, 'packages', 'b', 'CHANGELOG.md'), 'utf8')).toContain(
             '## 0.1.1'
+        );
+    });
+
+    it('does not re-count already-released commits or re-bump untouched workspaces', () => {
+        const config: ChangelogConfig = { versioning: { target: 'individual' } };
+        runChangelog([], config);
+        const bChangelog = fs.readFileSync(
+            path.join(root, 'packages', 'b', 'CHANGELOG.md'),
+            'utf8'
+        );
+
+        fs.writeFileSync(path.join(root, 'packages', 'a', 'a.txt'), 'a2\n');
+        git(root, 'add', 'packages/a/a.txt');
+        git(root, 'commit', '-m', 'fix(a): second');
+
+        runChangelog([], config);
+
+        expect(versionOf(path.join(root, 'package.json'))).toBe('1.1.1');
+        // The old `feat(a)` commit is already released: only the new `fix`
+        // counts, so this is a patch, not another minor.
+        expect(versionOf(path.join(root, 'packages', 'a', 'package.json'))).toBe('0.2.1');
+        expect(versionOf(path.join(root, 'packages', 'b', 'package.json'))).toBe('0.1.1');
+        expect(fs.readFileSync(path.join(root, 'packages', 'b', 'CHANGELOG.md'), 'utf8')).toBe(
+            bChangelog
+        );
+        expect(fs.readFileSync(path.join(root, 'packages', 'a', 'CHANGELOG.md'), 'utf8')).toContain(
+            '## 0.2.1'
+        );
+    });
+
+    it('reads root and workspace package.json files written with a UTF-8 BOM', () => {
+        const config: ChangelogConfig = { versioning: { target: 'individual' } };
+        for (const file of [
+            path.join(root, 'package.json'),
+            path.join(root, 'packages', 'a', 'package.json'),
+            path.join(root, 'packages', 'b', 'package.json'),
+        ]) {
+            fs.writeFileSync(file, `\uFEFF${fs.readFileSync(file, 'utf8')}`);
+        }
+
+        runChangelog([], config);
+
+        expect(versionOf(path.join(root, 'package.json'))).toBe('1.1.0');
+        expect(versionOf(path.join(root, 'packages', 'a', 'package.json'))).toBe('0.2.0');
+        expect(versionOf(path.join(root, 'packages', 'b', 'package.json'))).toBe('0.1.1');
+    });
+
+    it('does not duplicate an untouched workspace entry in uniform mode', () => {
+        const config: ChangelogConfig = { versioning: { target: 'uniform' } };
+        runChangelog([], config);
+        const bChangelog = fs.readFileSync(
+            path.join(root, 'packages', 'b', 'CHANGELOG.md'),
+            'utf8'
+        );
+
+        fs.writeFileSync(path.join(root, 'packages', 'a', 'a.txt'), 'a2\n');
+        git(root, 'add', 'packages/a/a.txt');
+        git(root, 'commit', '-m', 'fix(a): second');
+
+        runChangelog([], config);
+
+        expect(versionOf(path.join(root, 'package.json'))).toBe('1.1.1');
+        expect(versionOf(path.join(root, 'packages', 'a', 'package.json'))).toBe('1.1.1');
+        expect(versionOf(path.join(root, 'packages', 'b', 'package.json'))).toBe('1.1.1');
+        expect(fs.readFileSync(path.join(root, 'packages', 'b', 'CHANGELOG.md'), 'utf8')).toBe(
+            bChangelog
         );
     });
 });

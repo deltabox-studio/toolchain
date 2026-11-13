@@ -1,4 +1,4 @@
-import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import {
@@ -7,13 +7,14 @@ import {
     type ChangelogConfig,
     type ChangelogVersioningConfig,
     logger,
+    readJsonFile,
 } from '@deltabox/toolchain/shared';
 
 import { isBreakingCommit } from './breaking.js';
 import { parseCcSubject } from './format.js';
 import { deriveBump, readCommits } from './git.js';
 import { relatedWorkspacePaths } from './graph.js';
-import { repoRoot } from './repo.js';
+import { globWorkspaces, isCommitReleased, readReleasedHashes, repoRoot } from './repo.js';
 import type { BumpType, CommitRecord } from './types.js';
 import { bumpVersion } from './version.js';
 
@@ -78,14 +79,8 @@ export interface VersionPackages {
 
 /** Read the `version` field of a directory's `package.json` (if any). */
 export function readPackageVersion(dir: string): string | undefined {
-    try {
-        const pkg = JSON.parse(readFileSync(resolve(dir, 'package.json'), 'utf8')) as {
-            version?: unknown;
-        };
-        return typeof pkg.version === 'string' ? pkg.version : undefined;
-    } catch {
-        return undefined;
-    }
+    const pkg = readJsonFile<{ version?: unknown }>(resolve(dir, 'package.json'));
+    return typeof pkg?.version === 'string' ? pkg.version : undefined;
 }
 
 /** Write `version` into a directory's `package.json` in place (minimal diff). */
@@ -109,36 +104,23 @@ export function discoverVersionPackages(workspaces?: string[], root = repoRoot()
     const rootHasPackage = existsSync(resolve(root, 'package.json'));
     let patterns = workspaces;
     if (patterns === undefined && rootHasPackage) {
-        try {
-            const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as {
-                workspaces?: unknown;
-            };
-            const value = pkg.workspaces;
-            // Yarn/npm use an array; Bun uses `{ packages, catalog }`.
-            patterns = Array.isArray(value)
-                ? value.filter((entry): entry is string => typeof entry === 'string')
-                : value &&
-                    typeof value === 'object' &&
-                    Array.isArray((value as { packages?: unknown }).packages)
-                  ? ((value as { packages: unknown[] }).packages.filter(
-                        (entry): entry is string => typeof entry === 'string'
-                    ) as string[])
-                  : undefined;
-        } catch {
-            patterns = undefined;
-        }
+        const pkg = readJsonFile<{ workspaces?: unknown }>(resolve(root, 'package.json'));
+        const value = pkg?.workspaces;
+        // Yarn/npm use an array; Bun uses `{ packages, catalog }`.
+        patterns = Array.isArray(value)
+            ? value.filter((entry): entry is string => typeof entry === 'string')
+            : value &&
+                typeof value === 'object' &&
+                Array.isArray((value as { packages?: unknown }).packages)
+              ? ((value as { packages: unknown[] }).packages.filter(
+                    (entry): entry is string => typeof entry === 'string'
+                ) as string[])
+              : undefined;
     }
 
     const dirs = new Set<string>();
-    for (const pattern of patterns ?? []) {
-        if (pattern === '.') {
-            dirs.add(root);
-            continue;
-        }
-        for (const match of globSync(pattern, { cwd: root })) {
-            const dir = resolve(root, match);
-            if (existsSync(resolve(dir, 'package.json'))) dirs.add(dir);
-        }
+    for (const dir of globWorkspaces(patterns ?? [], root)) {
+        if (existsSync(resolve(dir, 'package.json'))) dirs.add(dir);
     }
     dirs.delete(root);
 
@@ -306,7 +288,13 @@ export function planVersions(options: PlanVersionsOptions): VersionPlan {
 
     if (target === 'individual') {
         for (const dir of workspaces) {
-            const commits = commitsFor(dir);
+            // A second run re-reads the whole range; drop commits this
+            // workspace's own changelog already lists so an old `feat` cannot
+            // re-bump it and an untouched workspace is skipped entirely.
+            const released = readReleasedHashes(resolve(dir, 'CHANGELOG.md'));
+            const commits = commitsFor(dir).filter(
+                record => !isCommitReleased(record.hash, released)
+            );
             if (commits.length === 0) continue;
             const next = bumpVersion(
                 readPackageVersion(dir) ?? '0.0.0',

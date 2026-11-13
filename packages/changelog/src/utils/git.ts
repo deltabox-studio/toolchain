@@ -1,10 +1,14 @@
 import { execFileSync } from 'node:child_process';
-import fs from 'node:fs';
 import path from 'node:path';
 
-import { type ChangelogBreakingSetting, sanitizeText } from '@deltabox/toolchain/shared';
+import {
+    type ChangelogBreakingSetting,
+    readJsonFile,
+    sanitizeText,
+} from '@deltabox/toolchain/shared';
 
 import { isBreakingCommit } from './breaking.js';
+import { repoRoot } from './repo.js';
 import type { AuthorInfo, BumpType, CommitRecord, IssueInfo } from './types.js';
 
 /** Read the commits in a git range (optionally limited to path(s)), newest first. */
@@ -118,9 +122,10 @@ export function repoSlug(): string | undefined {
         // no remote configured
     }
     try {
-        const raw = fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8');
-        const pkg = JSON.parse(raw) as { repository?: string | { url?: string } };
-        const url = typeof pkg.repository === 'string' ? pkg.repository : pkg.repository?.url;
+        const pkg = readJsonFile<{ repository?: string | { url?: string } }>(
+            path.join(repoRoot(), 'package.json')
+        );
+        const url = typeof pkg?.repository === 'string' ? pkg.repository : pkg?.repository?.url;
         if (url) return githubSlug(url);
     } catch {
         // no readable root package.json
