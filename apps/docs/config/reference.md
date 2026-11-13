@@ -883,6 +883,174 @@ Prefix the author with their GitHub avatar (default false).
 
 Fully custom commit line formatter (TS/JS configs only; return the bullet body).
 
+###### `details`
+
+- **Type**: `ChangelogDetailsConfig`
+
+Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables descriptions, release notes and breaking changes; use an object or `false` to opt out.
+
+###### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable details wrapping (default true).
+
+###### `descriptions`
+
+- **Type**: `boolean | object`
+
+Enable/disable this collapsible, optionally with a title/expanded state.
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
+###### `releaseNotes`
+
+- **Type**: `boolean | object`
+
+Enable/disable this collapsible, optionally with a title/expanded state.
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
+###### `intro`
+
+- **Type**: `boolean | object`
+
+Enable/disable this collapsible, optionally with a title/expanded state.
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
+###### `outro`
+
+- **Type**: `boolean | object`
+
+Enable/disable this collapsible, optionally with a title/expanded state.
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
+###### `footer`
+
+- **Type**: `boolean | object`
+
+Enable/disable this collapsible, optionally with a title/expanded state.
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
+###### `breaking`
+
+- **Type**: `boolean | object`
+
+Enable/disable this collapsible, optionally with a title/expanded state.
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
+###### `types`
+
+- **Type**: `boolean | object | Array<string>`
+
+Wrap these CC type sections (all types when `true`).
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
+###### `custom`
+
+- **Type**: `RegExp | string | object | Array<RegExp | string | object>`
+
+Wrap matching text (the match or `start` match becomes the summary).
+
+###### `start`
+
+- **Type**: `RegExp | string`
+
+The opening marker.
+
+###### `end`
+
+- **Type**: `RegExp | string`
+
+The closing marker.
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
 ###### `target`
 
 - **Type**: `string`
@@ -958,6 +1126,44 @@ Skip workspaces whose repo-relative directory matches these globs.
 - **Type**: `ChangelogTextSetting`
 
 Opt-in text inserted at the start of the new changelog entry, globally or for matching targets (workspaces/root).
+
+##### `enabled`
+
+- **Type**: `boolean`
+
+Set false to skip this entry (default true).
+
+##### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+##### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+##### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+##### `content`
+
+- **Required**
+- **Type**: `unknown`
+
+Not allowed with `file`.
+
+##### `file`
+
+- **Required**
+- **Type**: `string`
+
+Path to a file containing the text (relative to the repository root or absolute). It is read at changelog-generation time.
 
 #### `outro`
 
@@ -1412,6 +1618,174 @@ Prefix the author with their GitHub avatar (default false).
 
 Fully custom commit line formatter (TS/JS configs only; return the bullet body).
 
+##### `details`
+
+- **Type**: `ChangelogDetailsConfig`
+
+Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables descriptions, release notes and breaking changes; use an object or `false` to opt out.
+
+###### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable details wrapping (default true).
+
+###### `descriptions`
+
+- **Type**: `boolean | object`
+
+Enable/disable this collapsible, optionally with a title/expanded state.
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
+###### `releaseNotes`
+
+- **Type**: `boolean | object`
+
+Enable/disable this collapsible, optionally with a title/expanded state.
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
+###### `intro`
+
+- **Type**: `boolean | object`
+
+Enable/disable this collapsible, optionally with a title/expanded state.
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
+###### `outro`
+
+- **Type**: `boolean | object`
+
+Enable/disable this collapsible, optionally with a title/expanded state.
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
+###### `footer`
+
+- **Type**: `boolean | object`
+
+Enable/disable this collapsible, optionally with a title/expanded state.
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
+###### `breaking`
+
+- **Type**: `boolean | object`
+
+Enable/disable this collapsible, optionally with a title/expanded state.
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
+###### `types`
+
+- **Type**: `boolean | object | Array<string>`
+
+Wrap these CC type sections (all types when `true`).
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
+###### `custom`
+
+- **Type**: `RegExp | string | object | Array<RegExp | string | object>`
+
+Wrap matching text (the match or `start` match becomes the summary).
+
+###### `start`
+
+- **Type**: `RegExp | string`
+
+The opening marker.
+
+###### `end`
+
+- **Type**: `RegExp | string`
+
+The closing marker.
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
 ##### `target`
 
 - **Type**: `string`
@@ -1487,6 +1861,44 @@ Skip workspaces whose repo-relative directory matches these globs.
 - **Type**: `ChangelogTextSetting`
 
 Opt-in text inserted at the start of the new changelog entry, globally or for matching targets (workspaces/root).
+
+#### `enabled`
+
+- **Type**: `boolean`
+
+Set false to skip this entry (default true).
+
+#### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+#### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+#### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+#### `content`
+
+- **Required**
+- **Type**: `unknown`
+
+Not allowed with `file`.
+
+#### `file`
+
+- **Required**
+- **Type**: `string`
+
+Path to a file containing the text (relative to the repository root or absolute). It is read at changelog-generation time.
 
 ### `outro`
 

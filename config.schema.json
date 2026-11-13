@@ -2025,6 +2025,253 @@
             "additionalProperties": false,
             "description": "A declarative bump matcher."
         },
+        "ChangelogDetailsConfig": {
+            "anyOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "description": "Enable/disable details wrapping (default true)."
+                        },
+                        "descriptions": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "title": {
+                                            "type": "string",
+                                            "description": "Custom `<summary>` text."
+                                        },
+                                        "expanded": {
+                                            "type": "boolean",
+                                            "description": "Render the collapsible open by default."
+                                        }
+                                    },
+                                    "additionalProperties": false
+                                }
+                            ],
+                            "description": "Enable/disable this collapsible, optionally with a title/expanded state."
+                        },
+                        "releaseNotes": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "title": {
+                                            "type": "string",
+                                            "description": "Custom `<summary>` text."
+                                        },
+                                        "expanded": {
+                                            "type": "boolean",
+                                            "description": "Render the collapsible open by default."
+                                        }
+                                    },
+                                    "additionalProperties": false
+                                }
+                            ],
+                            "description": "Enable/disable this collapsible, optionally with a title/expanded state."
+                        },
+                        "intro": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "title": {
+                                            "type": "string",
+                                            "description": "Custom `<summary>` text."
+                                        },
+                                        "expanded": {
+                                            "type": "boolean",
+                                            "description": "Render the collapsible open by default."
+                                        }
+                                    },
+                                    "additionalProperties": false
+                                }
+                            ],
+                            "description": "Enable/disable this collapsible, optionally with a title/expanded state."
+                        },
+                        "outro": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "title": {
+                                            "type": "string",
+                                            "description": "Custom `<summary>` text."
+                                        },
+                                        "expanded": {
+                                            "type": "boolean",
+                                            "description": "Render the collapsible open by default."
+                                        }
+                                    },
+                                    "additionalProperties": false
+                                }
+                            ],
+                            "description": "Enable/disable this collapsible, optionally with a title/expanded state."
+                        },
+                        "footer": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "title": {
+                                            "type": "string",
+                                            "description": "Custom `<summary>` text."
+                                        },
+                                        "expanded": {
+                                            "type": "boolean",
+                                            "description": "Render the collapsible open by default."
+                                        }
+                                    },
+                                    "additionalProperties": false
+                                }
+                            ],
+                            "description": "Enable/disable this collapsible, optionally with a title/expanded state."
+                        },
+                        "breaking": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "title": {
+                                            "type": "string",
+                                            "description": "Custom `<summary>` text."
+                                        },
+                                        "expanded": {
+                                            "type": "boolean",
+                                            "description": "Render the collapsible open by default."
+                                        }
+                                    },
+                                    "additionalProperties": false
+                                }
+                            ],
+                            "description": "Enable/disable this collapsible, optionally with a title/expanded state."
+                        },
+                        "types": {
+                            "anyOf": [
+                                {
+                                    "anyOf": [
+                                        {
+                                            "type": "boolean"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "title": {
+                                                    "type": "string",
+                                                    "description": "Custom `<summary>` text."
+                                                },
+                                                "expanded": {
+                                                    "type": "boolean",
+                                                    "description": "Render the collapsible open by default."
+                                                }
+                                            },
+                                            "additionalProperties": false
+                                        }
+                                    ],
+                                    "description": "Enable/disable this collapsible, optionally with a title/expanded state."
+                                },
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            ],
+                            "description": "Wrap these CC type sections (all types when `true`)."
+                        },
+                        "custom": {
+                            "anyOf": [
+                                {
+                                    "anyOf": [
+                                        {
+                                            "description": "A string or regular expression (TS/JS configs only for RegExp)."
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "start": {
+                                                    "description": "The opening marker."
+                                                },
+                                                "end": {
+                                                    "description": "The closing marker."
+                                                },
+                                                "title": {
+                                                    "type": "string",
+                                                    "description": "Custom `<summary>` text."
+                                                },
+                                                "expanded": {
+                                                    "type": "boolean",
+                                                    "description": "Render the collapsible open by default."
+                                                }
+                                            },
+                                            "additionalProperties": false
+                                        }
+                                    ],
+                                    "description": "A custom collapsible matcher."
+                                },
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "anyOf": [
+                                            {
+                                                "description": "A string or regular expression (TS/JS configs only for RegExp)."
+                                            },
+                                            {
+                                                "type": "object",
+                                                "properties": {
+                                                    "start": {
+                                                        "description": "The opening marker."
+                                                    },
+                                                    "end": {
+                                                        "description": "The closing marker."
+                                                    },
+                                                    "title": {
+                                                        "type": "string",
+                                                        "description": "Custom `<summary>` text."
+                                                    },
+                                                    "expanded": {
+                                                        "type": "boolean",
+                                                        "description": "Render the collapsible open by default."
+                                                    }
+                                                },
+                                                "additionalProperties": false
+                                            }
+                                        ],
+                                        "description": "A custom collapsible matcher."
+                                    }
+                                }
+                            ],
+                            "description": "Wrap matching text (the match or `start` match becomes the summary)."
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            ],
+            "description": "Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables descriptions, release notes and breaking changes; use an object or `false` to opt out."
+        },
         "ChangelogCommitFormatConfig": {
             "type": "object",
             "properties": {
@@ -2046,6 +2293,9 @@
                 },
                 "format": {
                     "description": "Fully custom commit line formatter (TS/JS configs only; return the bullet body)."
+                },
+                "details": {
+                    "$ref": "#/$defs/ChangelogDetailsConfig"
                 }
             },
             "additionalProperties": false,
