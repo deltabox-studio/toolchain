@@ -41,6 +41,8 @@ export interface ChangelogCommitFormatOptions {
     authorAvatar?: boolean;
     /** Fully custom commit line formatter (TS/JS configs only). */
     format?: (ctx: ChangelogCommitFormatContext) => string;
+    /** Markdown `<details>` wrapping for changelog sections/text. */
+    details?: unknown;
 }
 
 /** The context handed to a custom commit line formatter. */

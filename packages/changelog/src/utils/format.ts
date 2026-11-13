@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 import { logger, sanitizeText } from '@deltabox/toolchain/shared';
 
+import { renderDetails, type ResolvedDetails } from './details.js';
 import { hasCompleteGitHistory, readCommit } from './git.js';
 import type {
     ChangelogGroupConfig,
@@ -165,7 +166,7 @@ export function groupItems(items: GroupedItem[], setting?: ChangelogGroupsSettin
         const type = item.breaking || parsed.breaking ? 'breaking' : parsed.type;
         const rule =
             rules.get(type) ??
-            ({ title: ruleTitle(type), ungrouped: [], scopes: new Map() } as GroupedRule);
+            ({ type, title: ruleTitle(type), ungrouped: [], scopes: new Map() } as GroupedRule);
         if (parsed.scope) {
             const bucket = rule.scopes.get(parsed.scope) ?? [];
             bucket.push(item);
@@ -220,24 +221,56 @@ export function groupItems(items: GroupedItem[], setting?: ChangelogGroupsSettin
     return entries.sort((a, b) => a.order - b.order || a.seq - b.seq).map(entry => entry.rule);
 }
 
-export function renderGroups(groups: GroupedRule[]): string {
+export function renderGroups(groups: GroupedRule[], details?: ResolvedDetails): string {
     if (groups.length === 0) return '- No description provided.';
-    const lines: string[] = [];
+    const sections: string[] = [];
     for (const rule of groups) {
+        const lines: string[] = [];
         lines.push(`### ${rule.title}`);
         for (const item of rule.ungrouped) {
             lines.push(item.text);
-            lines.push(...renderParagraphs(item.bodyParagraphs));
+            lines.push(...renderItemBody(item, details));
         }
         for (const [scope, scopeItems] of rule.scopes) {
             lines.push(`#### ${scopeTitle(scope)}`);
             for (const item of scopeItems) {
                 lines.push(item.text);
-                lines.push(...renderParagraphs(item.bodyParagraphs));
+                lines.push(...renderItemBody(item, details));
             }
         }
+        let section = lines.join('\n');
+        if (details?.enabled) {
+            if (rule.type === 'breaking' && details.breaking.enabled) {
+                section = renderDetails(
+                    details.breaking.title ?? '**BREAKING CHANGES**',
+                    section,
+                    details.breaking.expanded === true
+                );
+            } else if (
+                details.types.enabled &&
+                (!details.types.list || details.types.list.includes(rule.type))
+            ) {
+                section = renderDetails(
+                    details.types.title ?? rule.title,
+                    section,
+                    details.types.expanded === true
+                );
+            }
+        }
+        sections.push(section);
     }
-    return lines.join('\n');
+    return sections.join('\n');
+}
+
+/** Render a commit's description paragraphs, optionally inside a details block. */
+function renderItemBody(item: GroupedItem, details?: ResolvedDetails): string[] {
+    if (item.bodyParagraphs.length === 0) return [];
+    const body = renderParagraphs(item.bodyParagraphs).join('\n');
+    if (details?.enabled && details.descriptions.enabled) {
+        const title = details.descriptions.title ?? item.text.replace(/^[-*+]\s+/, '').trim();
+        return [renderDetails(title, body, details.descriptions.expanded === true)];
+    }
+    return body.split('\n');
 }
 
 /** Render description paragraphs as nested bullets (continuations indented under the bullet). */

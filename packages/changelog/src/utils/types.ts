@@ -84,6 +84,8 @@ export interface ParsedCommit {
 
 /** A list of parsed commits grouped by CC rule, then by scope. */
 export interface GroupedRule {
+    /** The CC type (or `breaking`) this section covers. */
+    type: string;
     title: string;
     ungrouped: GroupedItem[];
     scopes: Map<string, GroupedItem[]>;

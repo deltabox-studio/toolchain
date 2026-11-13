@@ -297,7 +297,8 @@ export function runChangelog(
             true,
             footer,
             introFor(root) ?? '',
-            outroFor(root) ?? ''
+            outroFor(root) ?? '',
+            rootCommit?.details
         );
         logger.info(`[DRY-RUN] Range: ${range}`);
         logger.info(

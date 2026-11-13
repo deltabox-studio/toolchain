@@ -97,7 +97,7 @@ export const changelogTextEntrySchema = z
 export const changelogTextSettingSchema = z
     .union([changelogTextEntrySchema, z.array(changelogTextEntrySchema)])
     .describe('A changelog intro/outro entry or an array of entries (`Arrayable`).')
-    .meta({ id: 'ChangelogTextSetting', tsType: 'Arrayable<ChangelogTextEntry>' });
+    .meta({ id: 'ChangelogTextSetting' });
 
 /** A scoped option: the base value, or `{ target?, ...selector, options }`. */
 function changelogTargetedOption<T extends z.ZodTypeAny>(base: T) {
@@ -185,11 +185,73 @@ const changelogCommitFormatCallbackSchema = z
     .describe('Fully custom commit line formatter (TS/JS configs only; return the bullet body).')
     .meta({ tsType: '((ctx: ChangelogCommitFormatContext) => string)' });
 
+/** One details toggle: `true`/`false` or a custom title/expanded state. */
+const changelogDetailsToggleSchema = z
+    .union([
+        z.boolean(),
+        z.object({
+            title: z.string().describe('Custom `<summary>` text.').optional(),
+            expanded: z.boolean().describe('Render the collapsible open by default.').optional(),
+        }),
+    ])
+    .describe('Enable/disable this collapsible, optionally with a title/expanded state.');
+
+/** A regex/string matcher used by `details.custom`. */
+const changelogDetailsPatternSchema = z
+    .custom<RegExp | string>(value => typeof value === 'string' || value instanceof RegExp)
+    .describe('A string or regular expression (TS/JS configs only for RegExp).')
+    .meta({ tsType: 'RegExp | string' });
+
+/** A custom details matcher: a regex/string, or a start/end marker pair. */
+const changelogDetailsCustomSchema = z
+    .union([
+        changelogDetailsPatternSchema,
+        z.object({
+            start: changelogDetailsPatternSchema.describe('The opening marker.').optional(),
+            end: changelogDetailsPatternSchema.describe('The closing marker.').optional(),
+            title: z.string().describe('Custom `<summary>` text.').optional(),
+            expanded: z.boolean().describe('Render the collapsible open by default.').optional(),
+        }),
+    ])
+    .describe('A custom collapsible matcher.');
+
+/** Markdown `<details>` wrapping for changelog sections and text. */
+export const changelogDetailsConfigSchema = z
+    .union([
+        z.boolean(),
+        z.object({
+            enabled: z
+                .boolean()
+                .describe('Enable/disable details wrapping (default true).')
+                .optional(),
+            descriptions: changelogDetailsToggleSchema.optional(),
+            releaseNotes: changelogDetailsToggleSchema.optional(),
+            intro: changelogDetailsToggleSchema.optional(),
+            outro: changelogDetailsToggleSchema.optional(),
+            footer: changelogDetailsToggleSchema.optional(),
+            breaking: changelogDetailsToggleSchema.optional(),
+            types: z
+                .union([changelogDetailsToggleSchema, z.array(z.string())])
+                .describe('Wrap these CC type sections (all types when `true`).')
+                .optional(),
+            custom: z
+                .union([changelogDetailsCustomSchema, z.array(changelogDetailsCustomSchema)])
+                .describe('Wrap matching text (the match or `start` match becomes the summary).')
+                .optional(),
+        }),
+    ])
+    .describe(
+        'Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables ' +
+            'descriptions, release notes and breaking changes; use an object or `false` to opt out.'
+    )
+    .meta({ id: 'ChangelogDetailsConfig' });
+
 /** Commit message formatting/credit options (or a custom formatter callback). */
 export const changelogCommitFormatConfigSchema = z
     .object({
         ...changelogCommitFormatShape,
         format: changelogCommitFormatCallbackSchema.optional(),
+        details: changelogDetailsConfigSchema.optional(),
     })
     .describe('Commit message formatting/credit options.')
     .meta({ id: 'ChangelogCommitFormatConfig' });

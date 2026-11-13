@@ -209,3 +209,38 @@ nothing matches, the plain value is used. Workspaces outside
 
 `Arrayable` entries (one value or an array) are supported for every targeted
 option and for the intro/outro settings.
+
+## Collapsible details
+
+`versioning.commit.details` wraps changelog sections in markdown
+`<details>`/`<summary>` blocks. It is enabled by default (`details: true`
+wraps commit descriptions, the release notes and the breaking-changes section);
+set `details: false` to opt out.
+
+`ts
+ci: {
+    changelog: {
+        versioning: {
+            commit: {
+                details: {
+                    descriptions: { title: 'More', expanded: true },
+                    releaseNotes: { title: '**Release Notes**' },
+                    intro: true,
+                    outro: true,
+                    footer: true,
+                    breaking: false,
+                    types: ['feat', 'fix'],
+                    custom: { start: '<!-- details:start -->', end: '<!-- details:end -->' },
+                },
+            },
+        },
+    },
+}
+`
+
+- `descriptions` uses the resolved commit title (including the SHA/author) as the summary and only applies when the commit has a body.
+- `releaseNotes`, `intro`, `outro`, `footer` and `breaking` default to bold summaries.
+- `types` wraps matching CC type sections (all types when `true`), using the section title by default.
+- `custom` accepts a regex/string or `{ start, end }` markers; the match (or start match) becomes the summary.
+
+Every flag also accepts `{ title?: string; expanded?: boolean }`.

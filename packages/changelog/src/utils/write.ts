@@ -87,7 +87,8 @@ export function writeChangelogs(
         true,
         footer,
         resolvers.intro?.(root) ?? '',
-        resolvers.outro?.(root) ?? ''
+        resolvers.outro?.(root) ?? '',
+        resolvers.commit?.(root)?.details
     );
     prependChangelogEntry(rootChangelog, entry);
     logger.info(`  updated ${rootChangelog}`);
@@ -136,7 +137,8 @@ export function writeChangelogs(
                 true,
                 '',
                 resolvers.intro?.(dir) ?? '',
-                resolvers.outro?.(dir) ?? ''
+                resolvers.outro?.(dir) ?? '',
+                resolvers.commit?.(dir)?.details
             )
         );
         logger.info(`  ${created ? 'created' : 'updated'} ${file}`);

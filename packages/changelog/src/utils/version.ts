@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 import { logger } from '@deltabox/toolchain/shared';
 
+import { renderDetails, resolveDetails } from './details.js';
 import { discoverWorkspaceDirs, repoRoot } from './repo.js';
 import type { BumpType } from './types.js';
 
@@ -69,10 +70,27 @@ export function renderChangelogEntry(
     withMarkers = true,
     packageChanges = '',
     intro = '',
-    outro = ''
+    outro = '',
+    details?: unknown
 ): string {
     const suffix = date ? ` (${monthYear(date)})` : '';
-    const body = [intro.trim(), summary.trim(), packageChanges.trim(), outro.trim()]
+    const d = resolveDetails(details);
+    const wrap = (
+        value: string,
+        toggle: { enabled: boolean; title?: string; expanded?: boolean },
+        fallback: string
+    ): string => {
+        if (!value.trim()) return '';
+        return toggle.enabled
+            ? renderDetails(toggle.title ?? fallback, value, toggle.expanded === true)
+            : value.trim();
+    };
+    const body = [
+        wrap(intro, d.intro, '**Intro**'),
+        summary.trim(),
+        wrap(packageChanges, d.footer, '**Footer**'),
+        wrap(outro, d.outro, '**Outro**'),
+    ]
         .filter(Boolean)
         .join('\n\n');
     if (!withMarkers) {
