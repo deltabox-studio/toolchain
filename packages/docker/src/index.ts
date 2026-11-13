@@ -89,6 +89,8 @@ export interface DockerPlan {
     user: string;
     baseImage: string;
     runtimeImage: string;
+    /** The sources `COPY`ed before installing dependencies (only existing files). */
+    installSources: string[];
 }
 
 /** The header prepended to every generated Docker artifact. */
@@ -129,31 +131,49 @@ function lockfilePackageManager(cwd: string): string | undefined {
     return undefined;
 }
 
-/** The files `COPY`ed before installing dependencies. */
-function installSources(packageManager: string): string[] {
+/** The files `COPY`ed before installing dependencies (only those that exist). */
+function installSources(packageManager: string, cwd: string): string[] {
+    const has = (file: string): boolean => fs.existsSync(path.join(cwd, file));
+    const sources = ['package.json'];
     switch (packageManager) {
         case 'pnpm':
-            return ['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.node-version*'];
+            if (has('pnpm-lock.yaml')) sources.push('pnpm-lock.yaml');
+            if (has('pnpm-workspace.yaml')) sources.push('pnpm-workspace.yaml');
+            break;
         case 'npm':
-            return ['package.json', 'package-lock.json', '.node-version*'];
+            if (has('package-lock.json')) sources.push('package-lock.json');
+            break;
         case 'bun':
-            return ['package.json', 'bun.lock*', '.node-version*'];
+            if (has('bun.lock')) sources.push('bun.lock');
+            else if (has('bun.lockb')) sources.push('bun.lockb');
+            break;
         default:
-            return ['package.json', 'yarn.lock', '.yarnrc.yml', '.node-version*'];
+            if (has('yarn.lock')) sources.push('yarn.lock');
+            if (has('.yarnrc.yml')) sources.push('.yarnrc.yml');
     }
+    return sources;
+}
+
+/** Whether a plan's copy sources include a lockfile a frozen install can use. */
+function hasLockfile(sources: string[]): boolean {
+    return sources.some(file =>
+        /^(?:yarn\.lock|pnpm-lock\.yaml|package-lock\.json|bun\.lock|bun\.lockb)$/.test(file)
+    );
 }
 
 /** The install command for a Node image. */
-function nodeInstall(packageManager: string, production = false): string {
+function nodeInstall(packageManager: string, production = false, frozen = true): string {
     switch (packageManager) {
         case 'pnpm':
-            return `corepack enable && pnpm install --frozen-lockfile${production ? ' --prod' : ''}`;
+            return `corepack enable && pnpm install${frozen ? ' --frozen-lockfile' : ''}${production ? ' --prod' : ''}`;
         case 'npm':
-            return production ? 'npm ci --omit=dev' : 'npm ci';
+            return frozen
+                ? `npm ci${production ? ' --omit=dev' : ''}`
+                : `npm install${production ? ' --omit=dev' : ''}`;
         case 'bun':
-            return `bun install --frozen-lockfile${production ? ' --production' : ''}`;
+            return `bun install${frozen ? ' --frozen-lockfile' : ''}${production ? ' --production' : ''}`;
         default:
-            return 'corepack enable && yarn install --immutable';
+            return `corepack enable && yarn install${frozen ? ' --immutable' : ''}`;
     }
 }
 
@@ -165,8 +185,8 @@ function buildCommand(plan: DockerPlan): string {
 }
 
 /** The install command for a Vite+ image. */
-function vitePlusInstall(production = false): string {
-    return `vp install --frozen-lockfile${production ? ' --prod' : ''}`;
+function vitePlusInstall(production = false, frozen = true): string {
+    return `vp install${frozen ? ' --frozen-lockfile' : ''}${production ? ' --prod' : ''}`;
 }
 
 /** The default runtime user for a plan. */
@@ -196,11 +216,6 @@ export function resolveDockerPlan(options: DockerPlanOptions): DockerPlan {
     const start = scripts.start ?? '';
     const vitePlus = options.vitePlus ?? declaresVitePlus(options.cwd);
     const engines = (pkg as { engines?: { node?: string } } | undefined)?.engines;
-    const packageManager =
-        options.packageManager ??
-        declaredPackageManager(pkg) ??
-        lockfilePackageManager(options.cwd) ??
-        'yarn';
 
     let runtime: DockerRuntime;
     if (options.runtime && options.runtime !== 'auto') runtime = options.runtime;
@@ -209,6 +224,15 @@ export function resolveDockerPlan(options: DockerPlanOptions): DockerPlan {
     else if (start) runtime = 'node';
     else if (build.includes('vp build')) runtime = 'static';
     else runtime = 'node';
+
+    // The package manager is the single source of truth for both the COPY
+    // sources and the install command. A Bun-runtime project with no declared
+    // manager installs with Bun; otherwise the declared manager wins so a
+    // `yarn.lock` is never paired with `bun install`.
+    const packageManager =
+        options.packageManager ??
+        declaredPackageManager(pkg) ??
+        (runtime === 'bun' ? 'bun' : (lockfilePackageManager(options.cwd) ?? 'yarn'));
 
     const output =
         options.output ?? (build.includes('vitepress') ? 'docs/.vitepress/dist' : 'dist');
@@ -247,6 +271,7 @@ export function resolveDockerPlan(options: DockerPlanOptions): DockerPlan {
                   : vitePlus
                     ? 'debian:bookworm-slim'
                     : `node:${nodeVersion}-bookworm-slim`),
+        installSources: installSources(packageManager, options.cwd),
     };
     plan.user = plan.user || defaultUser({ ...plan, vitePlus });
     return plan;
@@ -254,22 +279,47 @@ export function resolveDockerPlan(options: DockerPlanOptions): DockerPlan {
 
 /** The build stage for a plan. */
 function buildStage(plan: DockerPlan): string[] {
-    const lines: string[] = [`FROM ${plan.baseImage} AS build`, 'WORKDIR /app', ''];
+    const lines: string[] = [];
+    const frozen = hasLockfile(plan.installSources);
+    // A Bun-runtime project that declares another package manager needs both
+    // runtimes: install with the declared manager in a Node stage, then build
+    // with Bun. `oven/bun` has no npm/corepack, so installing in that image
+    // would fail.
+    const nodeDeps = plan.runtime === 'bun' && plan.packageManager !== 'bun';
+    if (nodeDeps) {
+        lines.push(
+            `FROM node:${plan.nodeVersion}-bookworm-slim AS deps`,
+            'WORKDIR /app',
+            `COPY ${plan.installSources.join(' ')} ./`,
+            `RUN ${nodeInstall(plan.packageManager, false, frozen)}`,
+            ''
+        );
+    }
+    lines.push(`FROM ${plan.baseImage} AS build`, 'WORKDIR /app', '');
     if (plan.vitePlus && plan.runtime !== 'bun') {
         lines.push(
-            `COPY --chown=vp:vp ${installSources(plan.packageManager).join(' ')} ./`,
-            `RUN ${vitePlusInstall()}`,
+            `COPY --chown=vp:vp ${plan.installSources.join(' ')} ./`,
+            `RUN ${vitePlusInstall(false, frozen)}`,
             '',
             'COPY --chown=vp:vp . .',
             `RUN ${buildCommand(plan)}`
         );
         return lines;
     }
+    if (nodeDeps) {
+        lines.push(
+            // Copy the whole installed tree so both `node_modules` and Yarn PnP
+            // files (`.pnp.cjs`, `.yarn`) reach the build stage.
+            'COPY --from=deps /app ./',
+            '',
+            'COPY . .',
+            `RUN ${buildCommand(plan)}`
+        );
+        return lines;
+    }
     lines.push(
-        `COPY ${installSources(plan.packageManager).join(' ')} ./`,
-        plan.runtime === 'bun'
-            ? 'RUN bun install --frozen-lockfile'
-            : `RUN ${nodeInstall(plan.packageManager)}`,
+        `COPY ${plan.installSources.join(' ')} ./`,
+        `RUN ${nodeInstall(plan.packageManager, false, frozen)}`,
         '',
         'COPY . .',
         `RUN ${buildCommand(plan)}`
@@ -331,8 +381,8 @@ export function renderDockerfile(plan: DockerPlan): string {
             '',
             `FROM ${plan.baseImage} AS deps`,
             'WORKDIR /app',
-            `COPY --chown=vp:vp ${installSources(plan.packageManager).join(' ')} ./`,
-            `RUN ${vitePlusInstall(true)}`
+            `COPY --chown=vp:vp ${plan.installSources.join(' ')} ./`,
+            `RUN ${vitePlusInstall(true, hasLockfile(plan.installSources))}`
         );
     }
 

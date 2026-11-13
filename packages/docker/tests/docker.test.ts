@@ -51,7 +51,8 @@ describe('docker plans', () => {
         expect(dockerfile).toContain('AS build');
         expect(dockerfile).toContain('AS deps');
         expect(dockerfile).toContain('AS runtime');
-        expect(dockerfile).toContain('vp install --frozen-lockfile');
+        expect(dockerfile).toContain('vp install');
+        expect(dockerfile).not.toContain('vp install --frozen-lockfile');
         expect(dockerfile).toContain('vp env which node');
         expect(dockerfile).toContain('USER nobody');
         expect(dockerfile).toContain('EXPOSE 3000');
@@ -95,11 +96,106 @@ describe('docker plans', () => {
         expect(plan.user).toBe('bun');
 
         const dockerfile = renderDockerfile(plan);
-        expect(dockerfile).toContain('RUN bun install --frozen-lockfile');
-        expect(dockerfile).toContain('bun.lock*');
-        expect(dockerfile).not.toContain('bun.lockb');
+        expect(dockerfile).toContain('RUN bun install');
         expect(dockerfile).toContain('RUN bun run build');
         expect(dockerfile).toContain('CMD ["bun", "dist/index.js"]');
+        expect(dockerfile).not.toContain('AS deps');
+    });
+
+    it('installs with npm in a Node stage for a Bun runtime (no npm in the Bun image)', () => {
+        const cwd = project({
+            name: 'bun-npm',
+            packageManager: 'npm@11.0.0',
+            scripts: { build: 'bun build src/index.ts', start: 'bun src/index.ts' },
+        });
+
+        const plan = resolveDockerPlan({ cwd });
+        expect(plan.runtime).toBe('bun');
+        expect(plan.packageManager).toBe('npm');
+
+        const dockerfile = renderDockerfile(plan);
+        expect(dockerfile).toContain('FROM node:22-bookworm-slim AS deps');
+        expect(dockerfile).toContain('RUN npm install');
+        expect(dockerfile).toContain('COPY --from=deps /app ./');
+        expect(dockerfile).toContain('RUN bun run build');
+        expect(dockerfile).not.toContain('FROM oven/bun:1 AS deps');
+    });
+
+    it('uses one package manager for both COPY sources and install (Bun runtime, no declaration)', () => {
+        const cwd = project({
+            name: 'bun-api',
+            scripts: {
+                build: 'bun build src/index.ts --outdir dist --target bun',
+                start: 'bun src/index.ts',
+            },
+        });
+
+        const plan = resolveDockerPlan({ cwd });
+        expect(plan.runtime).toBe('bun');
+        expect(plan.packageManager).toBe('bun');
+
+        const dockerfile = renderDockerfile(plan);
+        expect(dockerfile).toContain('COPY package.json ./');
+        expect(dockerfile).not.toContain('yarn.lock');
+        expect(dockerfile).not.toContain('.yarnrc.yml');
+        expect(dockerfile).toContain('RUN bun install');
+    });
+
+    it('copies only sources that exist on a fresh scaffold', () => {
+        const cwd = project({
+            name: 'fresh',
+            scripts: { build: 'vp pack', start: 'node dist/index.js' },
+            packageManager: 'yarn@4.17.1',
+        });
+
+        const plan = resolveDockerPlan({ cwd, vitePlus: true });
+        const dockerfile = renderDockerfile(plan);
+
+        expect(plan.installSources).toEqual(['package.json']);
+        expect(dockerfile).not.toContain('.node-version');
+        expect(dockerfile).not.toContain('yarn.lock');
+        const copyLines = dockerfile
+            .split('\n')
+            .filter(
+                line =>
+                    line.includes('COPY') &&
+                    line.includes('package.json') &&
+                    !line.includes('--from')
+            );
+        for (const line of copyLines) {
+            const sources = line
+                .replace(/^COPY\s+(?:--chown=\S+\s+)?/, '')
+                .replace(/\s+\.\/$/, '')
+                .split(/\s+/);
+            for (const source of sources) {
+                expect(
+                    source.includes('*') || fs.existsSync(path.join(cwd, source)),
+                    `${source} should exist`
+                ).toBe(true);
+            }
+        }
+    });
+
+    it('uses a declared package manager even when the runtime is Bun', () => {
+        const cwd = project({
+            name: 'bun-yarn',
+            packageManager: 'yarn@4.17.1',
+            scripts: { build: 'bun build src/index.ts', start: 'bun src/index.ts' },
+        });
+        fs.writeFileSync(path.join(cwd, 'yarn.lock'), '');
+
+        const plan = resolveDockerPlan({ cwd });
+        expect(plan.runtime).toBe('bun');
+        expect(plan.packageManager).toBe('yarn');
+
+        const dockerfile = renderDockerfile(plan);
+        expect(plan.installSources).toContain('yarn.lock');
+        // The declared manager installs in a Node stage; Bun only builds.
+        expect(dockerfile).toContain('FROM node:22-bookworm-slim AS deps');
+        expect(dockerfile).toMatch(/COPY --from=deps \/app \.\//);
+        expect(dockerfile).toContain('corepack enable && yarn install --immutable');
+        expect(dockerfile).toContain('RUN bun run build');
+        expect(dockerfile).not.toContain('bun install');
     });
 
     it('uses a neutral header for user-owned files', () => {
@@ -119,6 +215,7 @@ describe('docker plans', () => {
             scripts: { build: 'tsc', start: 'node dist/index.js' },
             packageManager: 'npm@11.0.0',
         });
+        fs.writeFileSync(path.join(cwd, 'package-lock.json'), '{}');
 
         const plan = resolveDockerPlan({ cwd });
         expect(plan.vitePlus).toBe(false);
