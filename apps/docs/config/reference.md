@@ -13,6 +13,10 @@ define it to enable it, omit it to leave that area untouched.
 > Generated from the Zod config schema — do not edit by hand.
 > Run `yarn config:generate`.
 
+## `enabled`
+
+Enable/disable the toolchain. The shorthand is workspace-scoped; the object form is reserved for APIs and the VS Code extension.
+
 ## `project`
 
 Project metadata: canonical `package.json` fields and template tokens (shared fields are inherited by workspaces).
@@ -22,6 +26,12 @@ Project metadata: canonical `package.json` fields and template tokens (shared fi
 - **Type**: `'monorepo-root' | 'monorepo-workspace' | 'project'`
 
 The project kind (detected when omitted).
+
+### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
 ### `name`
 
@@ -478,6 +488,12 @@ Use `voidzero-dev/setup-vp` for this workflow (default: detected from the projec
 
 Exact `voidzero-dev/setup-vp` version or commit SHA to pin.
 
+#### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ### `changelog`
 
 - **Type**: `ChangelogWorkflowSetting`
@@ -556,6 +572,12 @@ Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs
 
 Enable/disable the changelog workflow and pipeline (default: enabled when present).
 
+#### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 #### `branches`
 
 - **Type**: `ChangelogBranchesConfig`
@@ -604,6 +626,12 @@ Allowed commit scopes (commitlint).
 
 Enable commitlint (default true when the changelog is enabled). Set false to generate changelogs without the Conventional-Commits pipeline.
 
+##### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 #### `versioning`
 
 - **Type**: `ChangelogVersioning`
@@ -624,6 +652,31 @@ Glob patterns selecting the workspaces to version (relative to the root). Defaul
 
 ##### `prerelease`
 
+- **Type**: `string | object | Array<object>`
+
+The prerelease tag globally, or per-target via `{ target, options }`.
+
+###### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+- **Required**
 - **Type**: `string`
 
 Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice.
@@ -632,13 +685,11 @@ Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core 
 
 - **Type**: `object`
 
-Custom bump rules for major/minor/patch (matchers or callbacks).
+Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{ target, options }`.
 
 ###### `major`
 
-- **Type**: `ChangelogBumpRule`
-
-A bump rule: a matcher/callback or a list of matchers/callbacks.
+- **Type**: `ChangelogBumpRule | object | Array<object>`
 
 ###### `breaking`
 
@@ -682,29 +733,125 @@ Match this regular expression.
 
 Match this substring.
 
+###### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+- **Required**
+- **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
+
 ###### `minor`
 
+- **Type**: `ChangelogBumpRule | object | Array<object>`
+
+###### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+- **Required**
 - **Type**: `ChangelogBumpRule`
 
 A bump rule: a matcher/callback or a list of matchers/callbacks.
 
 ###### `patch`
 
+- **Type**: `ChangelogBumpRule | object | Array<object>`
+
+###### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+- **Required**
 - **Type**: `ChangelogBumpRule`
 
 A bump rule: a matcher/callback or a list of matchers/callbacks.
 
 ##### `allowOverBump`
 
+- **Type**: `boolean | object | Array<object>`
+
+Enable over-bumping globally, or per-target via `{ target, options }`.
+
+###### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+- **Required**
 - **Type**: `boolean`
 
 Apply a bump once per matching change instead of once per run (default false).
 
 ##### `commit`
 
-- **Type**: `ChangelogCommitFormatConfig`
+- **Type**: `ChangelogCommitFormatConfig | object | Array<object>`
 
-Commit message formatting/credit options (with an optional formatter callback).
+Commit formatting globally, or per-target via `{ target, options }`.
 
 ###### `author`
 
@@ -736,11 +883,36 @@ Prefix the author with their GitHub avatar (default false).
 
 Fully custom commit line formatter (TS/JS configs only; return the bullet body).
 
+###### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+- **Required**
+- **Type**: `ChangelogCommitFormatConfig`
+
+Commit message formatting/credit options (with an optional formatter callback).
+
 ##### `provider`
 
-- **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
+- **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void) | object | Array<object>`
 
-`default`, `changesets`, a provider id, or a custom provider/callback.
+The provider globally, or per-target via `{ target, options }`.
 
 ###### `id`
 
@@ -755,6 +927,43 @@ The provider id.
 - **Type**: `((ctx: ChangelogProviderContext) => string | void)`
 
 A custom provider callback returning the changelog body (TS/JS configs only).
+
+###### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+- **Required**
+- **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
+
+`default`, `changesets`, a provider id, or a custom provider/callback.
+
+#### `intro`
+
+- **Type**: `ChangelogTextSetting`
+
+Opt-in text inserted at the start of the new changelog entry, globally or for matching targets (workspaces/root).
+
+#### `outro`
+
+- **Type**: `ChangelogTextSetting`
+
+Opt-in text appended to the new changelog entry, globally or for matching targets (workspaces/root).
 
 #### `vscode`
 
@@ -888,6 +1097,12 @@ Directory for the config (default `.github`).
 
 Enable/disable this section (default: enabled when defined).
 
+#### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ### `custom`
 
 - **Type**: `Record<string, CustomWorkflowSettings>`
@@ -899,6 +1114,12 @@ Additional custom workflows, keyed by id (eg. `custom.my-workflow`). Each id wri
 - **Type**: `boolean`
 
 Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `changelog`
 
@@ -934,6 +1155,12 @@ Allowed commit scopes (commitlint).
 
 Enable commitlint (default true when the changelog is enabled). Set false to generate changelogs without the Conventional-Commits pipeline.
 
+#### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ### `versioning`
 
 - **Type**: `ChangelogVersioning`
@@ -954,6 +1181,31 @@ Glob patterns selecting the workspaces to version (relative to the root). Defaul
 
 #### `prerelease`
 
+- **Type**: `string | object | Array<object>`
+
+The prerelease tag globally, or per-target via `{ target, options }`.
+
+##### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+##### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+##### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+##### `options`
+
+- **Required**
 - **Type**: `string`
 
 Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice.
@@ -962,13 +1214,11 @@ Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core 
 
 - **Type**: `object`
 
-Custom bump rules for major/minor/patch (matchers or callbacks).
+Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{ target, options }`.
 
 ##### `major`
 
-- **Type**: `ChangelogBumpRule`
-
-A bump rule: a matcher/callback or a list of matchers/callbacks.
+- **Type**: `ChangelogBumpRule | object | Array<object>`
 
 ###### `breaking`
 
@@ -1012,29 +1262,125 @@ Match this regular expression.
 
 Match this substring.
 
+###### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+- **Required**
+- **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
+
 ##### `minor`
 
+- **Type**: `ChangelogBumpRule | object | Array<object>`
+
+###### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+- **Required**
 - **Type**: `ChangelogBumpRule`
 
 A bump rule: a matcher/callback or a list of matchers/callbacks.
 
 ##### `patch`
 
+- **Type**: `ChangelogBumpRule | object | Array<object>`
+
+###### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+- **Required**
 - **Type**: `ChangelogBumpRule`
 
 A bump rule: a matcher/callback or a list of matchers/callbacks.
 
 #### `allowOverBump`
 
+- **Type**: `boolean | object | Array<object>`
+
+Enable over-bumping globally, or per-target via `{ target, options }`.
+
+##### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+##### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+##### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+##### `options`
+
+- **Required**
 - **Type**: `boolean`
 
 Apply a bump once per matching change instead of once per run (default false).
 
 #### `commit`
 
-- **Type**: `ChangelogCommitFormatConfig`
+- **Type**: `ChangelogCommitFormatConfig | object | Array<object>`
 
-Commit message formatting/credit options (with an optional formatter callback).
+Commit formatting globally, or per-target via `{ target, options }`.
 
 ##### `author`
 
@@ -1066,11 +1412,36 @@ Prefix the author with their GitHub avatar (default false).
 
 Fully custom commit line formatter (TS/JS configs only; return the bullet body).
 
+##### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+##### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+##### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+##### `options`
+
+- **Required**
+- **Type**: `ChangelogCommitFormatConfig`
+
+Commit message formatting/credit options (with an optional formatter callback).
+
 #### `provider`
 
-- **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
+- **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void) | object | Array<object>`
 
-`default`, `changesets`, a provider id, or a custom provider/callback.
+The provider globally, or per-target via `{ target, options }`.
 
 ##### `id`
 
@@ -1085,6 +1456,43 @@ The provider id.
 - **Type**: `((ctx: ChangelogProviderContext) => string | void)`
 
 A custom provider callback returning the changelog body (TS/JS configs only).
+
+##### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+##### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+##### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+##### `options`
+
+- **Required**
+- **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
+
+`default`, `changesets`, a provider id, or a custom provider/callback.
+
+### `intro`
+
+- **Type**: `ChangelogTextSetting`
+
+Opt-in text inserted at the start of the new changelog entry, globally or for matching targets (workspaces/root).
+
+### `outro`
+
+- **Type**: `ChangelogTextSetting`
+
+Opt-in text appended to the new changelog entry, globally or for matching targets (workspaces/root).
 
 ### `vscode`
 
@@ -1146,6 +1554,12 @@ A substring matched against the subject and body.
 
 Enable/disable this section (default: enabled when defined).
 
+### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## `fmt`
 
 Formatter configuration: Oxc/Biome configs, editor defaults and source-tool options.
@@ -1198,6 +1612,12 @@ Dprint options (`true` = defaults, `false` = disabled).
 
 Enable/disable this section (default: enabled when defined).
 
+### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## `lint`
 
 Linter configuration: Oxc/Biome configs, editor defaults and ESLint options.
@@ -1244,6 +1664,12 @@ ESLint options (`true` = defaults, `false` = disabled).
 
 Enable/disable this section (default: enabled when defined).
 
+### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## `biome`
 
 Biome config generation (for consumers that still want a `biome.json`).
@@ -1267,6 +1693,12 @@ Deep-merged over the generated `biome.json` (arrays union; `$remove:`/`$reset` p
 - **Type**: `boolean`
 
 Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `tsconfig`
 
@@ -1476,6 +1908,12 @@ Deep-merged into the root workspaces tsconfig (`rootFile`) during sync.
 
 Enable/disable this section (default: enabled when defined).
 
+### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## `loader`
 
 How `dbx.config.*` files are imported (tsconfig discovery).
@@ -1491,6 +1929,12 @@ The tsconfig the config loader uses (default true: the nearest `tsconfig.json`).
 - **Type**: `boolean`
 
 Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `templates`
 
@@ -1576,6 +2020,12 @@ Whether the source needs network access.
 
 Enable/disable this section (default: enabled when defined).
 
+### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## `registry`
 
 Registry source allow/deny policies (templates + providers).
@@ -1610,6 +2060,12 @@ Allow/deny globs for provider sources and registries.
 
 Enable/disable this section (default: enabled when defined).
 
+### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## `catalogs`
 
 Package catalogs written to the package manager catalog file (`catalog:`).
@@ -1631,6 +2087,12 @@ Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages.
 - **Type**: `boolean`
 
 Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `vite`
 
@@ -1672,6 +2134,12 @@ Oxlint options; `true` uses the toolchain defaults.
 
 Enable/disable this section (default: enabled when defined).
 
+### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## `watch`
 
 Watch behaviour for `dbx watch`.
@@ -1699,6 +2167,12 @@ Also respect `.gitignore` files (root + nested) when watching (default true).
 - **Type**: `boolean`
 
 Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `sync`
 
@@ -1739,6 +2213,12 @@ Globs of managed files to leave unformatted (per-file opt-out).
 - **Type**: `boolean`
 
 Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `logger`
 
@@ -1836,6 +2316,12 @@ Print an error.
 
 Enable/disable this section (default: enabled when defined).
 
+### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## `providers`
 
 Provider command behaviour (eg. colour for the passthrough commands).
@@ -1851,6 +2337,12 @@ Force provider command colours on/off (default: inherit the logger).
 - **Type**: `boolean`
 
 Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+- **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## Full example
 

@@ -15,6 +15,9 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx watch`](#watch)                                   | Sync once, then watch key files and re-sync on change.                                          |
 | [`dbx reset`](#reset)                                   | Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a project.       |
 | [`dbx providers`](#providers)                           | List the tooling providers (Vite+, ...) and their commands.                                     |
+| [`dbx enabled`](#enabled)                               | Print whether the toolchain is enabled for this project (and the scope).                        |
+| [`dbx enable`](#enable)                                 | Enable the toolchain (workspace scope by default).                                              |
+| [`dbx disable`](#disable)                               | Disable the toolchain (workspace scope by default).                                             |
 | [`dbx tsconfig`](#tsconfig)                             | Generate workspace tsconfig.json files from the default tsconfig (aliases + references).        |
 | [`dbx cleanup`](#cleanup)                               | Remove build artifacts (*.tsbuildinfo, dist/).                                                  |
 | [`dbx cleanup:turbo`](#cleanup-turbo)                   | Remove the turbo cache (.turbo/).                                                               |
@@ -134,6 +137,30 @@ Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a
 List the tooling providers (Vite+, ...) and their commands.
 
 - `--json` — Print the providers (with actions) as JSON.
+
+## `dbx enabled`
+
+Print whether the toolchain is enabled for this project (and the scope).
+
+- `--json` — Print the resolved state as JSON.
+
+## `dbx enable`
+
+Enable the toolchain (workspace scope by default).
+
+- `--global` — Set the global scope (`~/.dbx/toolchain/cli/config.json`).
+- `--workspace` — Set the workspace scope (`.vscode/settings.json`).
+- `--cwd ‹dir›` — Project root (default: cwd).
+- `--json` — Print the result as JSON.
+
+## `dbx disable`
+
+Disable the toolchain (workspace scope by default).
+
+- `--global` — Set the global scope (`~/.dbx/toolchain/cli/config.json`).
+- `--workspace` — Set the workspace scope (`.vscode/settings.json`).
+- `--cwd ‹dir›` — Project root (default: cwd).
+- `--json` — Print the result as JSON.
 
 ## `dbx tsconfig`
 

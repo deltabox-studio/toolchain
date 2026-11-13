@@ -12,6 +12,35 @@
             },
             "additionalProperties": false
         },
+        "ToolchainEnabledConfig": {
+            "anyOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "disabled": {
+                            "type": "boolean",
+                            "description": "Disable the toolchain for this scope (default false)."
+                        },
+                        "scope": {
+                            "type": "string",
+                            "enum": [
+                                "global",
+                                "workspace"
+                            ],
+                            "description": "The scope the value applies to. Config files and the Vite plugin may only use `workspace`; `global` is reserved for the CLI/programmatic API and the VS Code extension."
+                        }
+                    },
+                    "required": [
+                        "scope"
+                    ],
+                    "additionalProperties": false
+                }
+            ],
+            "description": "Enable/disable the toolchain. The shorthand is workspace-scoped; the object form is reserved for APIs and the VS Code extension."
+        },
         "ProjectType": {
             "type": "string",
             "enum": [
@@ -26,6 +55,10 @@
             "properties": {
                 "type": {
                     "$ref": "#/$defs/ProjectType"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "string",
@@ -125,6 +158,10 @@
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
                     "type": "boolean"
                 }
             },
@@ -314,6 +351,10 @@
                 },
                 "enabled": {
                     "description": "Enable/disable this workflow (default: enabled when present).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
                     "type": "boolean"
                 }
             },
@@ -874,6 +915,10 @@
                     "description": "Enable/disable the changelog workflow and pipeline (default: enabled when present).",
                     "type": "boolean"
                 },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "type": "boolean"
+                },
                 "branches": {
                     "$ref": "#/$defs/ChangelogBranchesConfig"
                 },
@@ -891,6 +936,14 @@
                 "versioning": {
                     "description": "Automatic version bumping on changelog generation (default `true`).",
                     "$ref": "#/$defs/ChangelogVersioning"
+                },
+                "intro": {
+                    "description": "Opt-in text inserted at the start of the new changelog entry, globally or for matching targets (workspaces/root).",
+                    "$ref": "#/$defs/ChangelogTextSetting"
+                },
+                "outro": {
+                    "description": "Opt-in text appended to the new changelog entry, globally or for matching targets (workspaces/root).",
+                    "$ref": "#/$defs/ChangelogTextSetting"
                 },
                 "vscode": {
                     "type": "boolean",
@@ -1113,6 +1166,10 @@
                 "enabled": {
                     "description": "Enable commitlint (default true when the changelog is enabled). Set false to generate changelogs without the Conventional-Commits pipeline.",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
@@ -1133,47 +1190,746 @@
                     "description": "Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own."
                 },
                 "prerelease": {
-                    "type": "string",
-                    "pattern": "^[0-9A-Za-z-]+$",
-                    "description": "Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice."
+                    "anyOf": [
+                        {
+                            "type": "string",
+                            "pattern": "^[0-9A-Za-z-]+$",
+                            "description": "Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice."
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "target": {
+                                    "type": "string",
+                                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                                },
+                                "include": {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    ],
+                                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                                },
+                                "exclude": {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    ],
+                                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                                },
+                                "options": {
+                                    "type": "string",
+                                    "pattern": "^[0-9A-Za-z-]+$",
+                                    "description": "Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice."
+                                }
+                            },
+                            "required": [
+                                "options"
+                            ],
+                            "additionalProperties": false
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "target": {
+                                        "type": "string",
+                                        "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                                    },
+                                    "include": {
+                                        "anyOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        ],
+                                        "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                                    },
+                                    "exclude": {
+                                        "anyOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        ],
+                                        "description": "Skip workspaces whose repo-relative directory matches these globs."
+                                    },
+                                    "options": {
+                                        "type": "string",
+                                        "pattern": "^[0-9A-Za-z-]+$",
+                                        "description": "Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice."
+                                    }
+                                },
+                                "required": [
+                                    "options"
+                                ],
+                                "additionalProperties": false
+                            }
+                        }
+                    ],
+                    "description": "The prerelease tag globally, or per-target via `{ target, options }`."
                 },
                 "bump": {
                     "type": "object",
                     "properties": {
                         "major": {
-                            "$ref": "#/$defs/ChangelogBumpRule"
+                            "anyOf": [
+                                {
+                                    "$ref": "#/$defs/ChangelogBumpRule"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "target": {
+                                            "type": "string",
+                                            "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                                        },
+                                        "include": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "string"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            ],
+                                            "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                                        },
+                                        "exclude": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "string"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            ],
+                                            "description": "Skip workspaces whose repo-relative directory matches these globs."
+                                        },
+                                        "options": {
+                                            "$ref": "#/$defs/ChangelogBumpRule"
+                                        }
+                                    },
+                                    "required": [
+                                        "options"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "target": {
+                                                "type": "string",
+                                                "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                                            },
+                                            "include": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "string"
+                                                    },
+                                                    {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    }
+                                                ],
+                                                "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                                            },
+                                            "exclude": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "string"
+                                                    },
+                                                    {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    }
+                                                ],
+                                                "description": "Skip workspaces whose repo-relative directory matches these globs."
+                                            },
+                                            "options": {
+                                                "$ref": "#/$defs/ChangelogBumpRule"
+                                            }
+                                        },
+                                        "required": [
+                                            "options"
+                                        ],
+                                        "additionalProperties": false
+                                    }
+                                }
+                            ]
                         },
                         "minor": {
-                            "$ref": "#/$defs/ChangelogBumpRule"
+                            "anyOf": [
+                                {
+                                    "$ref": "#/$defs/ChangelogBumpRule"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "target": {
+                                            "type": "string",
+                                            "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                                        },
+                                        "include": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "string"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            ],
+                                            "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                                        },
+                                        "exclude": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "string"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            ],
+                                            "description": "Skip workspaces whose repo-relative directory matches these globs."
+                                        },
+                                        "options": {
+                                            "$ref": "#/$defs/ChangelogBumpRule"
+                                        }
+                                    },
+                                    "required": [
+                                        "options"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "target": {
+                                                "type": "string",
+                                                "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                                            },
+                                            "include": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "string"
+                                                    },
+                                                    {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    }
+                                                ],
+                                                "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                                            },
+                                            "exclude": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "string"
+                                                    },
+                                                    {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    }
+                                                ],
+                                                "description": "Skip workspaces whose repo-relative directory matches these globs."
+                                            },
+                                            "options": {
+                                                "$ref": "#/$defs/ChangelogBumpRule"
+                                            }
+                                        },
+                                        "required": [
+                                            "options"
+                                        ],
+                                        "additionalProperties": false
+                                    }
+                                }
+                            ]
                         },
                         "patch": {
-                            "$ref": "#/$defs/ChangelogBumpRule"
+                            "anyOf": [
+                                {
+                                    "$ref": "#/$defs/ChangelogBumpRule"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "target": {
+                                            "type": "string",
+                                            "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                                        },
+                                        "include": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "string"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            ],
+                                            "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                                        },
+                                        "exclude": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "string"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            ],
+                                            "description": "Skip workspaces whose repo-relative directory matches these globs."
+                                        },
+                                        "options": {
+                                            "$ref": "#/$defs/ChangelogBumpRule"
+                                        }
+                                    },
+                                    "required": [
+                                        "options"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "target": {
+                                                "type": "string",
+                                                "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                                            },
+                                            "include": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "string"
+                                                    },
+                                                    {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    }
+                                                ],
+                                                "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                                            },
+                                            "exclude": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "string"
+                                                    },
+                                                    {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    }
+                                                ],
+                                                "description": "Skip workspaces whose repo-relative directory matches these globs."
+                                            },
+                                            "options": {
+                                                "$ref": "#/$defs/ChangelogBumpRule"
+                                            }
+                                        },
+                                        "required": [
+                                            "options"
+                                        ],
+                                        "additionalProperties": false
+                                    }
+                                }
+                            ]
                         }
                     },
                     "additionalProperties": false,
-                    "description": "Custom bump rules for major/minor/patch (matchers or callbacks)."
+                    "description": "Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{ target, options }`."
                 },
                 "allowOverBump": {
-                    "type": "boolean",
-                    "description": "Apply a bump once per matching change instead of once per run (default false)."
+                    "anyOf": [
+                        {
+                            "type": "boolean",
+                            "description": "Apply a bump once per matching change instead of once per run (default false)."
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "target": {
+                                    "type": "string",
+                                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                                },
+                                "include": {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    ],
+                                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                                },
+                                "exclude": {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    ],
+                                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                                },
+                                "options": {
+                                    "type": "boolean",
+                                    "description": "Apply a bump once per matching change instead of once per run (default false)."
+                                }
+                            },
+                            "required": [
+                                "options"
+                            ],
+                            "additionalProperties": false
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "target": {
+                                        "type": "string",
+                                        "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                                    },
+                                    "include": {
+                                        "anyOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        ],
+                                        "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                                    },
+                                    "exclude": {
+                                        "anyOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        ],
+                                        "description": "Skip workspaces whose repo-relative directory matches these globs."
+                                    },
+                                    "options": {
+                                        "type": "boolean",
+                                        "description": "Apply a bump once per matching change instead of once per run (default false)."
+                                    }
+                                },
+                                "required": [
+                                    "options"
+                                ],
+                                "additionalProperties": false
+                            }
+                        }
+                    ],
+                    "description": "Enable over-bumping globally, or per-target via `{ target, options }`."
                 },
                 "commit": {
-                    "description": "Commit message formatting/credit options (with an optional formatter callback).",
-                    "$ref": "#/$defs/ChangelogCommitFormatConfig"
+                    "anyOf": [
+                        {
+                            "description": "Commit message formatting/credit options (with an optional formatter callback).",
+                            "$ref": "#/$defs/ChangelogCommitFormatConfig"
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "target": {
+                                    "type": "string",
+                                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                                },
+                                "include": {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    ],
+                                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                                },
+                                "exclude": {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    ],
+                                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                                },
+                                "options": {
+                                    "description": "Commit message formatting/credit options (with an optional formatter callback).",
+                                    "$ref": "#/$defs/ChangelogCommitFormatConfig"
+                                }
+                            },
+                            "required": [
+                                "options"
+                            ],
+                            "additionalProperties": false
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "target": {
+                                        "type": "string",
+                                        "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                                    },
+                                    "include": {
+                                        "anyOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        ],
+                                        "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                                    },
+                                    "exclude": {
+                                        "anyOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        ],
+                                        "description": "Skip workspaces whose repo-relative directory matches these globs."
+                                    },
+                                    "options": {
+                                        "description": "Commit message formatting/credit options (with an optional formatter callback).",
+                                        "$ref": "#/$defs/ChangelogCommitFormatConfig"
+                                    }
+                                },
+                                "required": [
+                                    "options"
+                                ],
+                                "additionalProperties": false
+                            }
+                        }
+                    ],
+                    "description": "Commit formatting globally, or per-target via `{ target, options }`."
                 },
                 "provider": {
                     "anyOf": [
                         {
-                            "type": "string"
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "$ref": "#/$defs/ChangelogProviderConfig"
+                                },
+                                {
+                                    "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
+                                }
+                            ],
+                            "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
                         },
                         {
-                            "$ref": "#/$defs/ChangelogProviderConfig"
+                            "type": "object",
+                            "properties": {
+                                "target": {
+                                    "type": "string",
+                                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                                },
+                                "include": {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    ],
+                                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                                },
+                                "exclude": {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    ],
+                                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                                },
+                                "options": {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "$ref": "#/$defs/ChangelogProviderConfig"
+                                        },
+                                        {
+                                            "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
+                                        }
+                                    ],
+                                    "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
+                                }
+                            },
+                            "required": [
+                                "options"
+                            ],
+                            "additionalProperties": false
                         },
                         {
-                            "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "target": {
+                                        "type": "string",
+                                        "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                                    },
+                                    "include": {
+                                        "anyOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        ],
+                                        "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                                    },
+                                    "exclude": {
+                                        "anyOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        ],
+                                        "description": "Skip workspaces whose repo-relative directory matches these globs."
+                                    },
+                                    "options": {
+                                        "anyOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "$ref": "#/$defs/ChangelogProviderConfig"
+                                            },
+                                            {
+                                                "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
+                                            }
+                                        ],
+                                        "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
+                                    }
+                                },
+                                "required": [
+                                    "options"
+                                ],
+                                "additionalProperties": false
+                            }
                         }
                     ],
-                    "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
+                    "description": "The provider globally, or per-target via `{ target, options }`."
                 }
             },
             "additionalProperties": false,
@@ -1324,6 +2080,137 @@
             ],
             "description": "Automatic version bumping when a changelog entry is generated."
         },
+        "ChangelogTextEntry": {
+            "anyOf": [
+                {
+                    "$ref": "#/$defs/ChangelogTextContentEntry"
+                },
+                {
+                    "$ref": "#/$defs/ChangelogTextFileEntry"
+                }
+            ],
+            "description": "A changelog intro/outro entry (`content` or `file`, plus the target selector)."
+        },
+        "ChangelogTextContentEntry": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Set false to skip this entry (default true)."
+                },
+                "target": {
+                    "type": "string",
+                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                },
+                "include": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                },
+                "content": {
+                    "type": "string",
+                    "description": "The text inserted into the changelog entry."
+                },
+                "file": {
+                    "description": "Not allowed with `content`.",
+                    "not": {}
+                }
+            },
+            "required": [
+                "content"
+            ],
+            "additionalProperties": false
+        },
+        "ChangelogTextFileEntry": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Set false to skip this entry (default true)."
+                },
+                "target": {
+                    "type": "string",
+                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                },
+                "include": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                },
+                "content": {
+                    "description": "Not allowed with `file`.",
+                    "not": {}
+                },
+                "file": {
+                    "type": "string",
+                    "description": "Path to a file containing the text (relative to the repository root or absolute). It is read at changelog-generation time."
+                }
+            },
+            "required": [
+                "file"
+            ],
+            "additionalProperties": false
+        },
+        "ChangelogTextSetting": {
+            "anyOf": [
+                {
+                    "$ref": "#/$defs/ChangelogTextEntry"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/ChangelogTextEntry"
+                    }
+                }
+            ],
+            "description": "A changelog intro/outro entry or an array of entries (`Arrayable`)."
+        },
         "ChangelogWorkflowSetting": {
             "anyOf": [
                 {
@@ -1431,6 +2318,10 @@
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
@@ -1473,6 +2364,14 @@
                 "versioning": {
                     "description": "Automatic version bumping on changelog generation (default `true`).",
                     "$ref": "#/$defs/ChangelogVersioning"
+                },
+                "intro": {
+                    "description": "Opt-in text inserted at the start of the new changelog entry, globally or for matching targets (workspaces/root).",
+                    "$ref": "#/$defs/ChangelogTextSetting"
+                },
+                "outro": {
+                    "description": "Opt-in text appended to the new changelog entry, globally or for matching targets (workspaces/root).",
+                    "$ref": "#/$defs/ChangelogTextSetting"
                 },
                 "vscode": {
                     "type": "boolean",
@@ -1635,6 +2534,10 @@
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
@@ -1712,6 +2615,10 @@
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
                     "type": "boolean"
                 }
             },
@@ -1796,6 +2703,10 @@
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
@@ -1816,6 +2727,10 @@
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
                     "type": "boolean"
                 }
             },
@@ -1995,6 +2910,10 @@
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
@@ -2171,6 +3090,10 @@
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
@@ -2188,6 +3111,10 @@
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
                     "type": "boolean"
                 }
             },
@@ -2288,6 +3215,10 @@
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
@@ -2345,6 +3276,10 @@
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
                     "type": "boolean"
                 }
             },
@@ -2404,6 +3339,10 @@
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "type": "boolean"
                 }
             },
             "additionalProperties": {},
@@ -2436,6 +3375,10 @@
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
                     "type": "boolean"
                 }
             },
@@ -2480,6 +3423,10 @@
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
                     "type": "boolean"
                 }
             },
@@ -2566,6 +3513,10 @@
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
@@ -2581,6 +3532,10 @@
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
@@ -2589,6 +3544,9 @@
         "ToolchainConfigSections": {
             "type": "object",
             "properties": {
+                "enabled": {
+                    "$ref": "#/$defs/ToolchainEnabledConfig"
+                },
                 "project": {
                     "description": "Project metadata: canonical `package.json` fields and template tokens (inherited by workspaces).",
                     "$ref": "#/$defs/ToolchainProjectConfig"

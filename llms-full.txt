@@ -43,6 +43,9 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx watch`](#watch)                                   | Sync once, then watch key files and re-sync on change.                                          |
 | [`dbx reset`](#reset)                                   | Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a project.       |
 | [`dbx providers`](#providers)                           | List the tooling providers (Vite+, ...) and their commands.                                     |
+| [`dbx enabled`](#enabled)                               | Print whether the toolchain is enabled for this project (and the scope).                        |
+| [`dbx enable`](#enable)                                 | Enable the toolchain (workspace scope by default).                                              |
+| [`dbx disable`](#disable)                               | Disable the toolchain (workspace scope by default).                                             |
 | [`dbx tsconfig`](#tsconfig)                             | Generate workspace tsconfig.json files from the default tsconfig (aliases + references).        |
 | [`dbx cleanup`](#cleanup)                               | Remove build artifacts (*.tsbuildinfo, dist/).                                                  |
 | [`dbx cleanup:turbo`](#cleanup-turbo)                   | Remove the turbo cache (.turbo/).                                                               |
@@ -162,6 +165,30 @@ Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a
 List the tooling providers (Vite+, ...) and their commands.
 
 * `--json` — Print the providers (with actions) as JSON.
+
+## `dbx enabled`
+
+Print whether the toolchain is enabled for this project (and the scope).
+
+* `--json` — Print the resolved state as JSON.
+
+## `dbx enable`
+
+Enable the toolchain (workspace scope by default).
+
+* `--global` — Set the global scope (`~/.dbx/toolchain/cli/config.json`).
+* `--workspace` — Set the workspace scope (`.vscode/settings.json`).
+* `--cwd ‹dir›` — Project root (default: cwd).
+* `--json` — Print the result as JSON.
+
+## `dbx disable`
+
+Disable the toolchain (workspace scope by default).
+
+* `--global` — Set the global scope (`~/.dbx/toolchain/cli/config.json`).
+* `--workspace` — Set the workspace scope (`.vscode/settings.json`).
+* `--cwd ‹dir›` — Project root (default: cwd).
+* `--json` — Print the result as JSON.
 
 ## `dbx tsconfig`
 
@@ -705,6 +732,10 @@ define it to enable it, omit it to leave that area untouched.
 > Generated from the Zod config schema — do not edit by hand.
 > Run `yarn config:generate`.
 
+## `enabled`
+
+Enable/disable the toolchain. The shorthand is workspace-scoped; the object form is reserved for APIs and the VS Code extension.
+
 ## `project`
 
 Project metadata: canonical `package.json` fields and template tokens (shared fields are inherited by workspaces).
@@ -714,6 +745,12 @@ Project metadata: canonical `package.json` fields and template tokens (shared fi
 * **Type**: `'monorepo-root' | 'monorepo-workspace' | 'project'`
 
 The project kind (detected when omitted).
+
+### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
 ### `name`
 
@@ -1170,6 +1207,12 @@ Use `voidzero-dev/setup-vp` for this workflow (default: detected from the projec
 
 Exact `voidzero-dev/setup-vp` version or commit SHA to pin.
 
+#### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ### `changelog`
 
 * **Type**: `ChangelogWorkflowSetting`
@@ -1248,6 +1291,12 @@ Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs
 
 Enable/disable the changelog workflow and pipeline (default: enabled when present).
 
+#### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 #### `branches`
 
 * **Type**: `ChangelogBranchesConfig`
@@ -1296,6 +1345,12 @@ Allowed commit scopes (commitlint).
 
 Enable commitlint (default true when the changelog is enabled). Set false to generate changelogs without the Conventional-Commits pipeline.
 
+##### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 #### `versioning`
 
 * **Type**: `ChangelogVersioning`
@@ -1316,6 +1371,31 @@ Glob patterns selecting the workspaces to version (relative to the root). Defaul
 
 ##### `prerelease`
 
+* **Type**: `string | object | Array<object>`
+
+The prerelease tag globally, or per-target via `{ target, options }`.
+
+###### `target`
+
+* **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+* **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+* **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+* **Required**
 * **Type**: `string`
 
 Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice.
@@ -1324,13 +1404,11 @@ Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core 
 
 * **Type**: `object`
 
-Custom bump rules for major/minor/patch (matchers or callbacks).
+Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{ target, options }`.
 
 ###### `major`
 
-* **Type**: `ChangelogBumpRule`
-
-A bump rule: a matcher/callback or a list of matchers/callbacks.
+* **Type**: `ChangelogBumpRule | object | Array<object>`
 
 ###### `breaking`
 
@@ -1374,29 +1452,125 @@ Match this regular expression.
 
 Match this substring.
 
+###### `target`
+
+* **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+* **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+* **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+* **Required**
+* **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
+
 ###### `minor`
 
+* **Type**: `ChangelogBumpRule | object | Array<object>`
+
+###### `target`
+
+* **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+* **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+* **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+* **Required**
 * **Type**: `ChangelogBumpRule`
 
 A bump rule: a matcher/callback or a list of matchers/callbacks.
 
 ###### `patch`
 
+* **Type**: `ChangelogBumpRule | object | Array<object>`
+
+###### `target`
+
+* **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+* **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+* **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+* **Required**
 * **Type**: `ChangelogBumpRule`
 
 A bump rule: a matcher/callback or a list of matchers/callbacks.
 
 ##### `allowOverBump`
 
+* **Type**: `boolean | object | Array<object>`
+
+Enable over-bumping globally, or per-target via `{ target, options }`.
+
+###### `target`
+
+* **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+* **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+* **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+* **Required**
 * **Type**: `boolean`
 
 Apply a bump once per matching change instead of once per run (default false).
 
 ##### `commit`
 
-* **Type**: `ChangelogCommitFormatConfig`
+* **Type**: `ChangelogCommitFormatConfig | object | Array<object>`
 
-Commit message formatting/credit options (with an optional formatter callback).
+Commit formatting globally, or per-target via `{ target, options }`.
 
 ###### `author`
 
@@ -1428,11 +1602,36 @@ Prefix the author with their GitHub avatar (default false).
 
 Fully custom commit line formatter (TS/JS configs only; return the bullet body).
 
+###### `target`
+
+* **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+* **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+* **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+* **Required**
+* **Type**: `ChangelogCommitFormatConfig`
+
+Commit message formatting/credit options (with an optional formatter callback).
+
 ##### `provider`
 
-* **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
+* **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void) | object | Array<object>`
 
-`default`, `changesets`, a provider id, or a custom provider/callback.
+The provider globally, or per-target via `{ target, options }`.
 
 ###### `id`
 
@@ -1447,6 +1646,43 @@ The provider id.
 * **Type**: `((ctx: ChangelogProviderContext) => string | void)`
 
 A custom provider callback returning the changelog body (TS/JS configs only).
+
+###### `target`
+
+* **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+* **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+* **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+* **Required**
+* **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
+
+`default`, `changesets`, a provider id, or a custom provider/callback.
+
+#### `intro`
+
+* **Type**: `ChangelogTextSetting`
+
+Opt-in text inserted at the start of the new changelog entry, globally or for matching targets (workspaces/root).
+
+#### `outro`
+
+* **Type**: `ChangelogTextSetting`
+
+Opt-in text appended to the new changelog entry, globally or for matching targets (workspaces/root).
 
 #### `vscode`
 
@@ -1580,6 +1816,12 @@ Directory for the config (default `.github`).
 
 Enable/disable this section (default: enabled when defined).
 
+#### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ### `custom`
 
 * **Type**: `Record<string, CustomWorkflowSettings>`
@@ -1591,6 +1833,12 @@ Additional custom workflows, keyed by id (eg. `custom.my-workflow`). Each id wri
 * **Type**: `boolean`
 
 Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `changelog`
 
@@ -1626,6 +1874,12 @@ Allowed commit scopes (commitlint).
 
 Enable commitlint (default true when the changelog is enabled). Set false to generate changelogs without the Conventional-Commits pipeline.
 
+#### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ### `versioning`
 
 * **Type**: `ChangelogVersioning`
@@ -1646,6 +1900,31 @@ Glob patterns selecting the workspaces to version (relative to the root). Defaul
 
 #### `prerelease`
 
+* **Type**: `string | object | Array<object>`
+
+The prerelease tag globally, or per-target via `{ target, options }`.
+
+##### `target`
+
+* **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+##### `include`
+
+* **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+##### `exclude`
+
+* **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+##### `options`
+
+* **Required**
 * **Type**: `string`
 
 Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice.
@@ -1654,13 +1933,11 @@ Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core 
 
 * **Type**: `object`
 
-Custom bump rules for major/minor/patch (matchers or callbacks).
+Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{ target, options }`.
 
 ##### `major`
 
-* **Type**: `ChangelogBumpRule`
-
-A bump rule: a matcher/callback or a list of matchers/callbacks.
+* **Type**: `ChangelogBumpRule | object | Array<object>`
 
 ###### `breaking`
 
@@ -1704,29 +1981,125 @@ Match this regular expression.
 
 Match this substring.
 
+###### `target`
+
+* **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+* **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+* **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+* **Required**
+* **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
+
 ##### `minor`
 
+* **Type**: `ChangelogBumpRule | object | Array<object>`
+
+###### `target`
+
+* **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+* **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+* **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+* **Required**
 * **Type**: `ChangelogBumpRule`
 
 A bump rule: a matcher/callback or a list of matchers/callbacks.
 
 ##### `patch`
 
+* **Type**: `ChangelogBumpRule | object | Array<object>`
+
+###### `target`
+
+* **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+* **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+* **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+* **Required**
 * **Type**: `ChangelogBumpRule`
 
 A bump rule: a matcher/callback or a list of matchers/callbacks.
 
 #### `allowOverBump`
 
+* **Type**: `boolean | object | Array<object>`
+
+Enable over-bumping globally, or per-target via `{ target, options }`.
+
+##### `target`
+
+* **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+##### `include`
+
+* **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+##### `exclude`
+
+* **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+##### `options`
+
+* **Required**
 * **Type**: `boolean`
 
 Apply a bump once per matching change instead of once per run (default false).
 
 #### `commit`
 
-* **Type**: `ChangelogCommitFormatConfig`
+* **Type**: `ChangelogCommitFormatConfig | object | Array<object>`
 
-Commit message formatting/credit options (with an optional formatter callback).
+Commit formatting globally, or per-target via `{ target, options }`.
 
 ##### `author`
 
@@ -1758,11 +2131,36 @@ Prefix the author with their GitHub avatar (default false).
 
 Fully custom commit line formatter (TS/JS configs only; return the bullet body).
 
+##### `target`
+
+* **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+##### `include`
+
+* **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+##### `exclude`
+
+* **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+##### `options`
+
+* **Required**
+* **Type**: `ChangelogCommitFormatConfig`
+
+Commit message formatting/credit options (with an optional formatter callback).
+
 #### `provider`
 
-* **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
+* **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void) | object | Array<object>`
 
-`default`, `changesets`, a provider id, or a custom provider/callback.
+The provider globally, or per-target via `{ target, options }`.
 
 ##### `id`
 
@@ -1777,6 +2175,43 @@ The provider id.
 * **Type**: `((ctx: ChangelogProviderContext) => string | void)`
 
 A custom provider callback returning the changelog body (TS/JS configs only).
+
+##### `target`
+
+* **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+##### `include`
+
+* **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+##### `exclude`
+
+* **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+##### `options`
+
+* **Required**
+* **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
+
+`default`, `changesets`, a provider id, or a custom provider/callback.
+
+### `intro`
+
+* **Type**: `ChangelogTextSetting`
+
+Opt-in text inserted at the start of the new changelog entry, globally or for matching targets (workspaces/root).
+
+### `outro`
+
+* **Type**: `ChangelogTextSetting`
+
+Opt-in text appended to the new changelog entry, globally or for matching targets (workspaces/root).
 
 ### `vscode`
 
@@ -1838,6 +2273,12 @@ A substring matched against the subject and body.
 
 Enable/disable this section (default: enabled when defined).
 
+### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## `fmt`
 
 Formatter configuration: Oxc/Biome configs, editor defaults and source-tool options.
@@ -1890,6 +2331,12 @@ Dprint options (`true` = defaults, `false` = disabled).
 
 Enable/disable this section (default: enabled when defined).
 
+### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## `lint`
 
 Linter configuration: Oxc/Biome configs, editor defaults and ESLint options.
@@ -1936,6 +2383,12 @@ ESLint options (`true` = defaults, `false` = disabled).
 
 Enable/disable this section (default: enabled when defined).
 
+### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## `biome`
 
 Biome config generation (for consumers that still want a `biome.json`).
@@ -1959,6 +2412,12 @@ Deep-merged over the generated `biome.json` (arrays union; `$remove:`/`$reset` p
 * **Type**: `boolean`
 
 Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `tsconfig`
 
@@ -2168,6 +2627,12 @@ Deep-merged into the root workspaces tsconfig (`rootFile`) during sync.
 
 Enable/disable this section (default: enabled when defined).
 
+### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## `loader`
 
 How `dbx.config.*` files are imported (tsconfig discovery).
@@ -2183,6 +2648,12 @@ The tsconfig the config loader uses (default true: the nearest `tsconfig.json`).
 * **Type**: `boolean`
 
 Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `templates`
 
@@ -2268,6 +2739,12 @@ Whether the source needs network access.
 
 Enable/disable this section (default: enabled when defined).
 
+### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## `registry`
 
 Registry source allow/deny policies (templates + providers).
@@ -2302,6 +2779,12 @@ Allow/deny globs for provider sources and registries.
 
 Enable/disable this section (default: enabled when defined).
 
+### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## `catalogs`
 
 Package catalogs written to the package manager catalog file (`catalog:`).
@@ -2323,6 +2806,12 @@ Named catalogs (Yarn `catalogs:` / pnpm `catalogs:`): name -> packages.
 * **Type**: `boolean`
 
 Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `vite`
 
@@ -2364,6 +2853,12 @@ Oxlint options; `true` uses the toolchain defaults.
 
 Enable/disable this section (default: enabled when defined).
 
+### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## `watch`
 
 Watch behaviour for `dbx watch`.
@@ -2391,6 +2886,12 @@ Also respect `.gitignore` files (root + nested) when watching (default true).
 * **Type**: `boolean`
 
 Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `sync`
 
@@ -2431,6 +2932,12 @@ Globs of managed files to leave unformatted (per-file opt-out).
 * **Type**: `boolean`
 
 Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `logger`
 
@@ -2528,6 +3035,12 @@ Print an error.
 
 Enable/disable this section (default: enabled when defined).
 
+### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## `providers`
 
 Provider command behaviour (eg. colour for the passthrough commands).
@@ -2543,6 +3056,12 @@ Force provider command colours on/off (default: inherit the logger).
 * **Type**: `boolean`
 
 Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+* **Type**: `boolean`
+
+Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## Full example
 
@@ -2942,7 +3461,36 @@ for a package manager (`yarn` default).
 
 The Home view links to this documentation with **Need help? Go to documentation**.
 
+## Actions
+
+The **Actions** view (below **Projects**) lists every dbx action grouped by area
+(Changelog, CI, Cleanup, Config, MCP, Migrate, Pack, Project, Providers,
+Registries, Sync, Templates, Tools). Groups are collapsed by default and sorted
+ascending; expanding one shows its actions sorted by name. Selecting an action
+runs its VS Code command directly.
+
+The Home view's **More actions…** button opens the same list as a searchable,
+paged QuickPick. Navigation entries (`Go back`, `Next page (n/m)`) are rendered
+before the real choices, and every prompt-based dbx flow (scaffolding, template
+pickers, …) uses the same paging factory. Actions only delegate to their own VS
+Code command; the palette itself never shells out.
+
 ## Auto-sync
+
+The Home view shows the current state as a clickable **Auto-sync enabled** /
+**Auto-sync paused** button (the same secondary style as the other quick
+actions). Opening it lists the global and workspace scopes independently, so a
+global value and a workspace value can disagree:
+
+* **Enable/Disable (global)** writes `deltabox.toolchain.enabled` at the global
+  VS Code scope and mirrors the value into the CLI global store
+  (`~/.dbx/toolchain/cli/config.json`, via `dbx enable/disable --global`).
+* **Enable/Disable (workspace)** writes `.vscode/settings.json` through the
+  workspace configuration target (via `dbx enable/disable --workspace`).
+
+A project's `toolchain.enabled` config takes precedence over both settings. The
+extension resolves it through the project's CLI (`dbx enabled --json`), so a
+disabled config keeps auto-sync off even when the VS Code setting is on.
 
 Auto-sync watches input files only. The extension asks the CLI
 (`dbx watch --list --json`) for the concrete, project-graph-resolved files:
@@ -2978,7 +3526,7 @@ Each item names the config key to opt out with, and opens the existing file.
 
 | Setting                                              | Default         | Description                                                                                                |
 | ---------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------- |
-| `deltabox.toolchain.enabled`                         | `true`          | Auto sync on watched changes.                                                                              |
+| `deltabox.toolchain.enabled`                         | `true`          | Auto sync on watched changes. A project's `toolchain.enabled` config takes precedence.                     |
 | `deltabox.toolchain.debounce`                        | `300`           | Debounce (ms) before a sync.                                                                               |
 | `deltabox.toolchain.command`                         | `sync`          | The command to run on change.                                                                              |
 | `deltabox.toolchain.manageConfigless`                | `false`         | Manage projects without their own `dbx.config.*` (passes `--configless` to sync/watch).                    |
@@ -3467,7 +4015,7 @@ import { toolchainProviders } from '@deltabox/toolchain/providers';
 console.log(toolchainProviders().map(p => p.id));
 ```
 
-## `@deltabox/toolchain/tsdown`
+## `@deltabox/toolchain/pack`
 
 | Export                                                         | Description                                  |
 | -------------------------------------------------------------- | -------------------------------------------- |
@@ -3583,7 +4131,7 @@ url: https://toolchain.deltabox.studio/guide/api/subpath-exports.md
 | `@deltabox/toolchain/migrate`   | Pluggable migrations to Oxfmt/Oxlint (Biome, ESLint, Prettier, Dprint).                         |
 | `@deltabox/toolchain/template`  | The builtin/local/online template registry, loading and scaffolding.                            |
 | `@deltabox/toolchain/providers` | The provider registry (`toolchainProviders`) the editor reads.                                  |
-| `@deltabox/toolchain/tsdown`    | The tsdown base config, `createTsdownConfig`, post banner and cleanup.                          |
+| `@deltabox/toolchain/pack`      | The tsdown base config, `createTsdownConfig`, post banner and cleanup.                          |
 | `@deltabox/toolchain/tsconfig`  | The tsconfig sync task, templates and the tsconfig generator.                                   |
 | `@deltabox/toolchain/changelog` | The changelog runner, workflows, commitlint and the changelog sync task.                        |
 | `@deltabox/toolchain/biome`     | The generic Biome config, rendering helpers and the biome sync task.                            |
@@ -3628,10 +4176,10 @@ import {
     changelog,
     config,
     core,
+    pack,
     project,
     shared,
     tsconfig,
-    tsdown,
 } from '@deltabox/toolchain';
 ```
 
@@ -4097,6 +4645,54 @@ than the rule/scope grouping, but it works with any commit-message style.
 ---
 
 ---
+url: https://toolchain.deltabox.studio/guide/changelog/intro-outro.md
+---
+# Intro and outro text
+
+`toolchain.changelog.intro` and `toolchain.changelog.outro` add custom text to the
+newest changelog entry. They are opt-in: when the section is absent or an entry
+is disabled, nothing is added. `ci.changelog` inherits the same options.
+
+Each setting accepts one entry or an array (`Arrayable`). An entry contains:
+
+| Field     | Description                                                                                                    |
+| --------- | -------------------------------------------------------------------------------------------------------------- |
+| `content` | The text to insert. Mutually exclusive with `file`.                                                            |
+| `file`    | A file whose contents are inserted (relative to the repo root or absolute). Mutually exclusive with `content`. |
+| `target`  | A workspace path relative to the repo root, `.` for the root, or a glob like `apps/*`.                         |
+| `include` | Only apply to workspaces whose repo-relative directory matches these globs (tsconfig-style include).           |
+| `exclude` | Skip workspaces whose repo-relative directory matches these globs.                                             |
+| `enabled` | Set `false` to skip the entry (default `true`).                                                                |
+
+Intro text is placed before the version body; outro text is appended after it.
+Entries are applied in config order, and multiple matching entries are joined
+with a blank line. Workspaces outside `ci.changelog.versioning.workspaces` (or
+the default workspace fallback) are skipped.
+
+```ts
+export default defineConfig({
+    toolchain: {
+        changelog: {
+            intro: [
+                { target: '.', content: '> **Pre-release:** APIs may change.' },
+                { include: 'apps/*', file: 'docs/CHANGELOG.intro.md' },
+            ],
+            outro: {
+                target: 'packages/ui',
+                content: '_Thanks to everyone who contributed!_',
+            },
+        },
+    },
+});
+```
+
+The same target selector is reused by the scoped versioning options
+(`prerelease`, `bump`, `allowOverBump`, `commit`, `provider`); see
+[Versioning](/guide/changelog/versioning#targeted-options).
+
+---
+
+---
 url: https://toolchain.deltabox.studio/guide/changelog/troubleshooting.md
 ---
 # Troubleshooting
@@ -4316,6 +4912,37 @@ ci: {
 * a callback `(ctx) => string | void` can replace the summary.
 * an object `{ id, run(ctx) }` can run custom logic and optionally return the
   summary string.
+
+## Targeted options
+
+prerelease, `bump.{major,minor,patch}`, `allowOverBump`, `commit` and
+`provider` accept either the plain value or a scoped form:
+
+`ts
+ci: {
+    changelog: {
+        versioning: {
+            prerelease: [
+                { target: 'packages/ui', options: 'beta' },
+                { include: 'apps/*', options: 'rc' },
+            ],
+            bump: { minor: [{ target: 'packages/core', options: /^feat/ }] },
+            allowOverBump: [{ target: 'packages/ui', options: true }],
+            commit: [{ exclude: 'packages/legacy', options: { authorAvatar: true } }],
+            provider: [{ target: '.', options: { id: 'custom', run: ctx => ctx.records.length + ' commits' } }],
+        },
+    },
+}
+`
+
+Each scoped entry shares the same selector as `toolchain.changelog.intro` /
+`outro`: `target` (a workspace path, `.` for the root, or a glob like
+`apps/*`), `include` and `exclude`. The narrowest matching target wins; when
+nothing matches, the plain value is used. Workspaces outside
+`versioning.workspaces` are never considered.
+
+`Arrayable` entries (one value or an array) are supported for every targeted
+option and for the intro/outro settings.
 
 ---
 
@@ -5037,13 +5664,16 @@ Colour is on by default and follows `--no-color` / the [`logger` config](/guide/
 
 ## Core
 
-| Command     | Description                                                                                                          |
-| ----------- | -------------------------------------------------------------------------------------------------------------------- |
-| `projects`  | Discover projects and write `.dbx/toolchain/projects.json`.                                                          |
-| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`, `--only`, `--json`).                  |
-| `watch`     | Sync once, then watch key inputs and re-sync.                                                                        |
-| `reset`     | Remove generated files, the manifest and/or the config (`--all`, `--recursive`); reverts `tsconfig.overrides` first. |
-| `providers` | List registered providers + their commands (`--json`).                                                               |
+| Command     | Description                                                                                                            |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `projects`  | Discover projects and write `.dbx/toolchain/projects.json`.                                                            |
+| `sync`      | Regenerate every managed file (`--check`, `--recursive`, `--watch`, `--force`, `--only`, `--json`).                    |
+| `watch`     | Sync once, then watch key inputs and re-sync.                                                                          |
+| `reset`     | Remove generated files, the manifest and/or the config (`--all`, `--recursive`); reverts `tsconfig.overrides` first.   |
+| `providers` | List registered providers + their commands (`--json`).                                                                 |
+| `enable`    | Enable the toolchain (`--workspace` by default, or `--global`; `--json`).                                              |
+| `disable`   | Disable the toolchain (`--workspace` by default, or `--global`; `--json`).                                             |
+| `enabled`   | Print the resolved enabled state and scope (`--json`). A config `toolchain.enabled` wins over `.vscode/settings.json`. |
 
 ### Task-only sync
 
@@ -7643,6 +8273,28 @@ re-run sync.
 
 ## Breaking changes
 
+### The `tsdown` workspace is now `pack`
+
+The workspace package `@deltabox/toolchain-tsdown` is renamed to
+`@deltabox/toolchain-pack`, and the umbrella subpath
+`@deltabox/toolchain/tsdown` becomes `@deltabox/toolchain/pack`. The workspace
+directory moves from `packages/tsdown` to `packages/pack` and the commitlint
+scope changes from `tsdown` to `pack`.
+
+The underlying bundler is still tsdown, so the public helper names
+(`baseTsdownConfig`, `createTsdownConfig`, `createPostBanner`) are unchanged. A
+consumer only needs to replace the import specifier:
+
+```ts
+// v3
+import { baseTsdownConfig } from '@deltabox/toolchain/pack';
+// v2
+import { baseTsdownConfig } from '@deltabox/toolchain/tsdown';
+```
+
+Workspace manifests that depended on `@deltabox/toolchain-tsdown` must switch
+the dependency name to `@deltabox/toolchain-pack`.
+
 ### Vite plugin is the default config path
 
 New scaffolds declare `vite-plugin-dbx` and are configured through the `dbx()`
@@ -7676,6 +8328,32 @@ Dockerfile copies before installing dependencies. Code that constructs a
 `dockerFiles()` instead.
 
 ## Behaviour changes
+
+### Toolchain enable/disable
+
+A top-level `toolchain.enabled` switch is available. The boolean shorthand is
+workspace-scoped:
+
+```ts
+export default defineConfig({
+    plugins: [dbx({ toolchain: { enabled: false } })],
+});
+```
+
+Config files and the inline `dbx()` plugin only accept the workspace scope; the
+object form (`{ disabled, scope: 'global' | 'workspace' }`) is reserved for the
+CLI/programmatic API and the VS Code extension. `dbx enable`/`dbx disable` choose
+the workspace scope by default; pass `--global` to update
+`~/.dbx/toolchain/cli/config.json`. The project config takes precedence over both
+the CLI workspace setting and `.vscode/settings.json`.
+
+### Managed-file regeneration
+
+Every managed section now accepts `regenerate?: boolean` (default `true`). Set it
+to `false` to skip that section in `dbx sync`: its files are neither written nor
+drift-checked, and sync does not prune them. User-owned files
+(`tsconfig.workspaces.json`, `tsconfig.build.json`) are only seeded when missing;
+an existing file is never overwritten by the missing-file fallback.
 
 ### Changelog versioning
 
