@@ -2,9 +2,31 @@ import fs from 'node:fs';
 
 import { globalLogger, type PackUserConfig } from 'vite-plus/pack';
 
+import {
+    createNodeModulesLeakReporter,
+    NODE_MODULES_LEAK_REPORTER,
+    type NodeModulesLeakReporterOptions,
+} from './reporter.js';
+
 /** Sort an object's keys alphabetically (kept local to avoid a runtime dep). */
 function sortKeys<T extends Record<string, unknown>>(value: T): T {
     return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b))) as T;
+}
+
+/** Normalize a `plugins` option to an array (tsdown accepts a single plugin too). */
+function pluginArray(plugins: PackUserConfig['plugins']): unknown[] {
+    if (!plugins) return [];
+    return Array.isArray(plugins) ? plugins : [plugins];
+}
+
+/** Whether a plugin is the base absolute-node_modules leak reporter. */
+function isLeakReporter(plugin: unknown): boolean {
+    return Boolean(
+        plugin &&
+        typeof plugin === 'object' &&
+        'name' in plugin &&
+        (plugin as { name?: unknown }).name === NODE_MODULES_LEAK_REPORTER
+    );
 }
 
 /**
@@ -42,7 +64,13 @@ export const baseTsdownConfig: PackUserConfig = {
     format: ['esm'],
     platform: 'node',
     fixedExtension: false,
-    deps: { neverBundle: [/(^node:)|\/tests\/|node_modules/] },
+    deps: {
+        neverBundle: [/(^node:)|\/tests\/|node_modules/],
+        // Declarations must never resolve a package to an absolute
+        // `node_modules` path. Keep npm specifiers external **as written** in
+        // the dts build; JS bundling keeps the path-based rule above.
+        dts: { neverBundle: true },
+    },
     dts: { generator: 'tsgo' },
     minify: true,
     tsconfig: 'tsconfig.build.json',
@@ -55,6 +83,7 @@ export const baseTsdownConfig: PackUserConfig = {
         assetFileNames: '_assets/[name][extname]',
         chunkFileNames: '_chunks/[name]-[hash].js',
     },
+    plugins: [createNodeModulesLeakReporter()],
     hooks: {
         'build:done': ctx => {
             try {
@@ -107,13 +136,23 @@ export function createPostBanner(
     };
 }
 
+/** Options for {@link createTsdownConfig} beyond the pack config and banner. */
+export interface CreateTsdownConfigOptions {
+    /**
+     * Configure the absolute `node_modules` leak reporter, or `false` to remove
+     * it. Defaults to `{ level: 'error' }`.
+     */
+    nodeModulesLeakReporter?: NodeModulesLeakReporterOptions | false;
+}
+
 /**
  * Create a tsdown config by merging the base config with per-project overrides
  * and an optional branded post banner.
  */
 export function createTsdownConfig(
     overrides: PackUserConfig = {},
-    banner?: PostBannerOptions
+    banner?: PostBannerOptions,
+    options: CreateTsdownConfigOptions = {}
 ): PackUserConfig {
     const config: PackUserConfig = { ...baseTsdownConfig, ...overrides };
     if (banner) {
@@ -123,5 +162,20 @@ export function createTsdownConfig(
             postBanner: createPostBanner(banner),
         };
     }
+
+    // Keep the base reporter (reconfigured, or removed) and append consumer
+    // plugins instead of letting `overrides.plugins` silently replace it.
+    const basePlugins = pluginArray(baseTsdownConfig.plugins).filter(
+        plugin => !isLeakReporter(plugin)
+    );
+    const reporter =
+        options.nodeModulesLeakReporter === false
+            ? undefined
+            : createNodeModulesLeakReporter(options.nodeModulesLeakReporter);
+    const extraPlugins = pluginArray(overrides.plugins);
+    const plugins = [...basePlugins, ...(reporter ? [reporter] : []), ...extraPlugins];
+    if (plugins.length > 0) config.plugins = plugins as PackUserConfig['plugins'];
+    else delete config.plugins;
+
     return config;
 }

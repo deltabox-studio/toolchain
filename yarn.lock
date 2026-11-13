@@ -735,6 +735,8 @@ __metadata:
     type-fest: "catalog:"
     typescript: "catalog:"
     vite-plus: "catalog:"
+  peerDependencies:
+    vite-plus: ">=1"
   languageName: unknown
   linkType: soft
 
