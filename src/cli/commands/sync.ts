@@ -89,7 +89,17 @@ export function syncCommand(): ToolchainCommand {
             const format = formatSetting(opts);
 
             if (context.configError) {
-                logger.error(context.configError);
+                if (json) {
+                    logger.raw(
+                        JSON.stringify(
+                            { results: [], upToDate: false, error: context.configError },
+                            null,
+                            4
+                        )
+                    );
+                } else {
+                    logger.error(context.configError);
+                }
                 process.exitCode = 1;
                 return;
             }

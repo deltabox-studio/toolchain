@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vite-plus/test';
 import { addProjectProviderRegistry } from '@deltabox/toolchain/core';
 import { logger } from '@deltabox/toolchain/shared';
 
+import { projectsCommand } from '../src/cli/commands/projects.js';
 import { providerPassthroughCommands } from '../src/cli/commands/providers.js';
 import { extractConfigSelection } from '../src/cli/config-selection.js';
 import {
@@ -218,6 +219,51 @@ describe('logger flag pre-scan', () => {
 describe('default sync tasks', () => {
     it('includes the Vite+ sync task', () => {
         expect(defaultSyncTasks().map(task => task.name)).toContain('vite');
+    });
+});
+
+describe('dbx projects --max-depth', () => {
+    function projectTree(): string {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-projects-depth-'));
+        fs.writeFileSync(path.join(cwd, 'package.json'), '{"name":"root","version":"1.0.0"}');
+        fs.mkdirSync(path.join(cwd, 'packages', 'app'), { recursive: true });
+        fs.writeFileSync(
+            path.join(cwd, 'packages', 'app', 'package.json'),
+            '{"name":"app","version":"1.0.0"}'
+        );
+        return cwd;
+    }
+
+    it('rejects a non-numeric depth instead of disabling the limit', () => {
+        const cwd = projectTree();
+        try {
+            expect(() =>
+                projectsCommand().run?.(
+                    { maxDepth: 'abcd', write: false },
+                    { cwd, projectType: 'project', config: {}, tokens: {} }
+                )
+            ).toThrow(/invalid --max-depth/);
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
+    });
+
+    it('scans only the root at depth 0', () => {
+        const cwd = projectTree();
+        const raw = vi.spyOn(logger, 'raw').mockImplementation(() => {});
+        try {
+            projectsCommand().run?.(
+                { maxDepth: '0', write: false, json: true },
+                { cwd, projectType: 'project', config: {}, tokens: {} }
+            );
+            const graph = JSON.parse(raw.mock.calls[0]![0] as string) as {
+                projects: { dir: string }[];
+            };
+            expect(graph.projects.map(project => project.dir)).toEqual(['.']);
+        } finally {
+            raw.mockRestore();
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
     });
 });
 

@@ -54,4 +54,29 @@ describe('sync command without a managed config', () => {
         expect(process.exitCode).not.toBe(1);
         expect(warn).toHaveBeenCalled();
     });
+
+    it('emits a JSON error envelope when the config failed to load', async () => {
+        const cwd = tmp();
+        const raw = vi.spyOn(logger, 'raw').mockImplementation(() => {});
+        const error = vi.spyOn(logger, 'error').mockImplementation(() => {});
+
+        await syncCommand().run?.(
+            { json: true },
+            { ...context(cwd), configError: 'cannot import dbx.config.ts' }
+        );
+
+        expect(process.exitCode).toBe(1);
+        expect(error).not.toHaveBeenCalled();
+        expect(raw).toHaveBeenCalledTimes(1);
+        const printed = JSON.parse(raw.mock.calls[0]![0] as string) as {
+            results: unknown[];
+            upToDate: boolean;
+            error: string;
+        };
+        expect(printed).toEqual({
+            results: [],
+            upToDate: false,
+            error: 'cannot import dbx.config.ts',
+        });
+    });
 });
