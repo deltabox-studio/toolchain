@@ -135,7 +135,36 @@ for a package manager (`yarn` default).
 
 The Home view links to this documentation with **Need help? Go to documentation**.
 
+## Actions
+
+The **Actions** view (below **Projects**) lists every dbx action grouped by area
+(Changelog, CI, Cleanup, Config, MCP, Migrate, Pack, Project, Providers,
+Registries, Sync, Templates, Tools). Groups are collapsed by default and sorted
+ascending; expanding one shows its actions sorted by name. Selecting an action
+runs its VS Code command directly.
+
+The Home view's **More actions…** button opens the same list as a searchable,
+paged QuickPick. Navigation entries (`Go back`, `Next page (n/m)`) are rendered
+before the real choices, and every prompt-based dbx flow (scaffolding, template
+pickers, …) uses the same paging factory. Actions only delegate to their own VS
+Code command; the palette itself never shells out.
+
 ## Auto-sync
+
+The Home view shows the current state as a clickable **Auto-sync enabled** /
+**Auto-sync paused** button (the same secondary style as the other quick
+actions). Opening it lists the global and workspace scopes independently, so a
+global value and a workspace value can disagree:
+
+- **Enable/Disable (global)** writes `deltabox.toolchain.enabled` at the global
+  VS Code scope and mirrors the value into the CLI global store
+  (`~/.dbx/toolchain/cli/config.json`, via `dbx enable/disable --global`).
+- **Enable/Disable (workspace)** writes `.vscode/settings.json` through the
+  workspace configuration target (via `dbx enable/disable --workspace`).
+
+A project's `toolchain.enabled` config takes precedence over both settings. The
+extension resolves it through the project's CLI (`dbx enabled --json`), so a
+disabled config keeps auto-sync off even when the VS Code setting is on.
 
 Auto-sync watches input files only. The extension asks the CLI
 (`dbx watch --list --json`) for the concrete, project-graph-resolved files:
@@ -171,7 +200,7 @@ Each item names the config key to opt out with, and opens the existing file.
 
 | Setting                                              | Default         | Description                                                                                                |
 | ---------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------- |
-| `deltabox.toolchain.enabled`                         | `true`          | Auto sync on watched changes.                                                                              |
+| `deltabox.toolchain.enabled`                         | `true`          | Auto sync on watched changes. A project's `toolchain.enabled` config takes precedence.                     |
 | `deltabox.toolchain.debounce`                        | `300`           | Debounce (ms) before a sync.                                                                               |
 | `deltabox.toolchain.command`                         | `sync`          | The command to run on change.                                                                              |
 | `deltabox.toolchain.manageConfigless`                | `false`         | Manage projects without their own `dbx.config.*` (passes `--configless` to sync/watch).                    |

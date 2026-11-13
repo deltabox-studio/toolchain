@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import * as vscode from 'vscode';
 
+import { ActionsTreeProvider, runActionById, showActionPalette } from './actions-view.js';
 import {
     captureCli,
     chooseDbxSource,
@@ -22,6 +23,7 @@ import { createScaffoldCommands } from './commands/scaffold.js';
 import { createSyncCommands } from './commands/sync.js';
 import { createTsconfigCommand } from './commands/tsconfig.js';
 import { createWorkflowCommands } from './commands/workflows.js';
+import { type EnabledConfigValue, type EnabledScope, resolveEnabledState } from './enabled.js';
 import { type HomeAction, HomeViewProvider } from './home-view.js';
 import {
     discoverProjectGroups,
@@ -80,8 +82,52 @@ async function resolveWatchInputs(root: string): Promise<WatchInputs> {
     return (result.code === 0 && parseWatchInputs(result.stdout)) || defaultWatchInputs();
 }
 
+/** The project's resolved `toolchain.enabled` value (from the CLI), when known. */
+let enabledConfig: EnabledConfigValue | undefined;
+
+/** Resolve the effective auto-sync state (config wins over `.vscode/settings.json`). */
+function currentEnabledState() {
+    const inspected = config().inspect<boolean>('enabled');
+    return resolveEnabledState(enabledConfig, {
+        ...(inspected?.globalValue !== undefined ? { globalValue: inspected.globalValue } : {}),
+        ...(inspected?.workspaceValue !== undefined
+            ? { workspaceValue: inspected.workspaceValue }
+            : {}),
+        ...(inspected?.workspaceFolderValue !== undefined
+            ? { workspaceFolderValue: inspected.workspaceFolderValue }
+            : {}),
+        ...(inspected?.defaultValue !== undefined ? { defaultValue: inspected.defaultValue } : {}),
+    });
+}
+
 function getEnabled(): boolean {
-    return config().get<boolean>('enabled', true);
+    return currentEnabledState().enabled;
+}
+
+/**
+ * Ask the project's `dbx` for the resolved `toolchain.enabled` value. The CLI
+ * applies the project config plus the global CLI switch, so this is the
+ * authoritative source; the VS Code setting is only the fallback.
+ */
+async function refreshEnabledConfig(): Promise<void> {
+    const root = workspaceRoots()[0];
+    if (!root) {
+        enabledConfig = undefined;
+        return;
+    }
+    try {
+        const result = await captureCli(root, ['enabled', '--json']);
+        if (result.code !== 0) return;
+        const parsed = JSON.parse(result.stdout) as {
+            enabled?: unknown;
+            scope?: unknown;
+        };
+        if (typeof parsed.enabled !== 'boolean') return;
+        const scope = parsed.scope === 'global' ? 'global' : 'workspace';
+        enabledConfig = { enabled: { scope, disabled: !parsed.enabled } };
+    } catch {
+        // No config / CLI failure: fall back to the VS Code setting.
+    }
 }
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -96,6 +142,12 @@ export function activate(context: vscode.ExtensionContext): void {
 
     // Detect the workspace's own `dbx` and ask once which one to run (see cli.ts).
     void initDbxSource(context);
+    // Resolve `toolchain.enabled` from the project config (it wins over settings).
+    void refreshEnabledConfig().then(() => {
+        enabled = getEnabled();
+        void rebuildWatchers();
+        setStatus('idle');
+    });
 
     const tree = new ProjectTreeProvider();
     const treeView = vscode.window.createTreeView(PROJECTS_VIEW_ID, {
@@ -113,6 +165,12 @@ export function activate(context: vscode.ExtensionContext): void {
     const providers = new ProviderTreeProvider(() => workspaceRoots()[0]);
     const providersView = vscode.window.createTreeView(PROVIDERS_VIEW_ID, {
         treeDataProvider: providers,
+        showCollapseAll: true,
+    });
+
+    const actions = new ActionsTreeProvider();
+    const actionsView = vscode.window.createTreeView('deltabox.actions', {
+        treeDataProvider: actions,
         showCollapseAll: true,
     });
 
@@ -364,6 +422,36 @@ export function activate(context: vscode.ExtensionContext): void {
         return results;
     };
 
+    /** Run a CLI command in the first workspace root and report failures. */
+    const runRootCli = async (args: string[]): Promise<number> => {
+        const root = workspaceRoots()[0] ?? process.cwd();
+        const code = await runCli(root, args);
+        if (code !== 0) {
+            vscode.window.showWarningMessage(
+                `deltabox: \`dbx ${args.join(' ')}\` failed. See the output channel.`
+            );
+            output.show();
+        }
+        return code;
+    };
+
+    /** Prompt for a project name/output directory and run a `project:init*` command. */
+    const initProject = async (command: string): Promise<void> => {
+        const name = await vscode.window.showInputBox({
+            prompt: `Name for the new ${command === 'project:init:monorepo' ? 'monorepo' : 'project'}`,
+            placeHolder: 'my-app',
+        });
+        if (!name) return;
+        const base = workspaceRoots()[0] ?? process.cwd();
+        const out = await vscode.window.showInputBox({
+            prompt: 'Output directory',
+            value: path.join(base, name),
+        });
+        if (!out) return;
+        await runRootCli([command, '--name', name, '--out', out]);
+        void actions.refresh();
+    };
+
     const setStatus = (state: SchedulerState): void => {
         if (!enabled) {
             status.text = '$(circle-slash) dbx';
@@ -376,6 +464,29 @@ export function activate(context: vscode.ExtensionContext): void {
 
     async function rebuildWatchers(): Promise<void> {
         await watcherManager?.rebuild();
+    }
+
+    /**
+     * Toggle auto-sync for one scope. Global updates the VS Code global setting
+     * and the CLI global store; workspace updates `.vscode/settings.json`.
+     */
+    async function setEnabledForScope(scope: EnabledScope, value: boolean): Promise<void> {
+        const target =
+            scope === 'global'
+                ? vscode.ConfigurationTarget.Global
+                : vscode.ConfigurationTarget.Workspace;
+        await config().update('enabled', value, target);
+        const root = workspaceRoots()[0];
+        if (root) {
+            await runCli(root, [value ? 'enable' : 'disable', `--${scope}`]);
+        }
+        // Re-resolve from the CLI/config so the project config keeps precedence.
+        await refreshEnabledConfig();
+        enabled = getEnabled();
+        void rebuildWatchers();
+        setStatus('idle');
+        home.refresh();
+        output.appendLine(`dbx: auto-sync ${value ? 'enabled' : 'disabled'} (${scope} scope).`);
     }
     // Roots with a pending input change. A user glob has no owning root and
     // means "every root"; otherwise only the root whose input changed is synced,
@@ -632,8 +743,11 @@ export function activate(context: vscode.ExtensionContext): void {
                 .filter((value): value is string => Boolean(value))
                 .sort();
             const listed = providers.list();
+            const enabledState = currentEnabledState();
             return {
-                enabled,
+                enabled: enabledState.enabled,
+                globalEnabled: enabledState.globalEnabled,
+                workspaceEnabled: enabledState.workspaceEnabled,
                 canSync: projects.some(project => project.hasConfig || project.plugin),
                 hasProviders: listed.length > 0,
                 hasVite: listed.some(
@@ -703,6 +817,15 @@ export function activate(context: vscode.ExtensionContext): void {
                     break;
                 case 'toggle':
                     await vscode.commands.executeCommand(`${SECTION}.toggle`);
+                    break;
+                case 'actions':
+                    await showActionPalette();
+                    break;
+                case 'toggleGlobal':
+                    await setEnabledForScope('global', !currentEnabledState().globalEnabled);
+                    break;
+                case 'toggleWorkspace':
+                    await setEnabledForScope('workspace', !currentEnabledState().workspaceEnabled);
                     break;
                 case 'syncProject': {
                     const project = discoverProjects().find(
@@ -812,6 +935,7 @@ export function activate(context: vscode.ExtensionContext): void {
         treeView,
         filesView,
         providersView,
+        actionsView,
         templatesView,
         registriesView,
         vscode.commands.registerCommand('deltabox.toolchain.sync', syncCommands.syncActive),
@@ -867,6 +991,99 @@ export function activate(context: vscode.ExtensionContext): void {
             runVite(node?.dir)
         ),
         vscode.commands.registerCommand('deltabox.toolchain.createVite', () => createViteProject()),
+        vscode.commands.registerCommand('deltabox.toolchain.actions', () => showActionPalette()),
+        vscode.commands.registerCommand('deltabox.toolchain.actions.run', (id: string) =>
+            runActionById(id)
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.cleanup', () =>
+            runRootCli(['cleanup'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.cleanupTurbo', () =>
+            runRootCli(['cleanup:turbo'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.changelog', () =>
+            runRootCli(['changelog'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.changelogDryRun', () =>
+            runRootCli(['changelog', '--dry-run'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.changelogFormat', () =>
+            runRootCli(['changelog', '--format-only'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.changelogReleaseNotes', async () => {
+            const version = await vscode.window.showInputBox({
+                prompt: 'Released version (for example 1.2.3)',
+                placeHolder: '1.2.3',
+            });
+            if (!version) return;
+            const code = await runRootCli(['changelog', '--release-notes', version]);
+            if (code === 0) output.show();
+        }),
+        vscode.commands.registerCommand('deltabox.toolchain.configEnv', () =>
+            runRootCli(['config:env'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.configTypes', () =>
+            runRootCli(['config:types'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.configSchema', () =>
+            runRootCli(['config:schema'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.configDocs', () =>
+            runRootCli(['config:markdown'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.configAll', () =>
+            runRootCli(['config:all'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.configJson', () =>
+            runRootCli(['config:json'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.configCli', () =>
+            runRootCli(['config:cli'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.mcpList', () =>
+            runRootCli(['mcp:list'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.mcpServe', () =>
+            runRootCli(['mcp:serve'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.migrateList', () =>
+            runRootCli(['migrate:list'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.projectConfig', () =>
+            runRootCli(['project:config'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.projects', () =>
+            runRootCli(['projects'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.providersList', () =>
+            runRootCli(['providers'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.watch', () => runRootCli(['watch'])),
+        vscode.commands.registerCommand('deltabox.toolchain.enable', () => runRootCli(['enable'])),
+        vscode.commands.registerCommand('deltabox.toolchain.disable', () =>
+            runRootCli(['disable'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.state', () =>
+            runRootCli(['enabled', '--json'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.templates.list', () =>
+            runRootCli(['template:list'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.templates.registry', () =>
+            runRootCli(['template:registry'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.templates.source', () =>
+            runRootCli(['source'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.projectInit', () =>
+            initProject('project:init')
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.projectInitWorkspace', () =>
+            initProject('project:init:workspace')
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.projectInitMonorepo', () =>
+            initProject('project:init:monorepo')
+        ),
         vscode.commands.registerCommand('deltabox.toolchain.templateAdd', () => addTemplate()),
         vscode.commands.registerCommand('deltabox.toolchain.templateRemove', () =>
             removeTemplate()
@@ -943,12 +1160,7 @@ export function activate(context: vscode.ExtensionContext): void {
             if (node) goToProject(node.dir);
         }),
         vscode.commands.registerCommand('deltabox.toolchain.toggle', async () => {
-            enabled = !enabled;
-            await config().update('enabled', enabled, vscode.ConfigurationTarget.Workspace);
-            void rebuildWatchers();
-            setStatus('idle');
-            home.refresh();
-            output.appendLine(`dbx: auto-sync ${enabled ? 'enabled' : 'disabled'}.`);
+            await setEnabledForScope('workspace', !currentEnabledState().workspaceEnabled);
         }),
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('deltabox.registrySearchPaths')) {
@@ -961,10 +1173,12 @@ export function activate(context: vscode.ExtensionContext): void {
                 });
             }
             if (!e.affectsConfiguration(SECTION)) return;
-            enabled = getEnabled();
-            void rebuildWatchers();
-            setStatus('idle');
-            home.refresh();
+            void refreshEnabledConfig().then(() => {
+                enabled = getEnabled();
+                void rebuildWatchers();
+                setStatus('idle');
+                home.refresh();
+            });
         }),
         new vscode.Disposable(() => {
             child?.kill();

@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import * as vscode from 'vscode';
 
+import { pickPaged, vscodePromptHost } from '../prompt.js';
 import { loadTemplates, type Template } from '../templates.js';
 import type { CommandDeps } from './deps.js';
 
@@ -177,17 +178,18 @@ export function createScaffoldCommands(deps: CommandDeps): ScaffoldCommands {
             vscode.window.showWarningMessage('deltabox: no Vite+ templates available.');
             return;
         }
-        const picked = await vscode.window.showQuickPick(
+        const picked = await pickPaged(
+            vscodePromptHost(),
+            'Which Vite+ project should be created?',
             vite.map(template => ({
                 label: template.name || template.id,
                 description: template.id,
                 detail: template.description,
-                template,
-            })),
-            { placeHolder: 'Which Vite+ project should be created?', matchOnDetail: true }
+                value: template,
+            }))
         );
         if (!picked) return;
-        await createFromTemplate(picked.template, root);
+        await createFromTemplate(picked, root);
     };
 
     /** Scaffold from a template (optionally preselected from the Templates view). */
@@ -210,7 +212,9 @@ export function createScaffoldCommands(deps: CommandDeps): ScaffoldCommands {
                 vscode.window.showWarningMessage('deltabox: no templates found.');
                 return;
             }
-            const picked = await vscode.window.showQuickPick(
+            const picked = await pickPaged(
+                vscodePromptHost(),
+                'Which template should be used?',
                 listed.map(candidate => ({
                     label: candidate.name || candidate.id,
                     description: candidate.id,
@@ -221,12 +225,11 @@ export function createScaffoldCommands(deps: CommandDeps): ScaffoldCommands {
                     ]
                         .filter(Boolean)
                         .join(' · '),
-                    template: candidate,
-                })),
-                { placeHolder: 'Which template should be used?', matchOnDetail: true }
+                    value: candidate,
+                }))
             );
             if (!picked) return;
-            template = picked.template;
+            template = picked;
         }
 
         const name = await vscode.window.showInputBox({

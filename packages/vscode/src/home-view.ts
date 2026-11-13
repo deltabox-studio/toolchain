@@ -19,6 +19,10 @@ export interface HomeProject {
 
 export interface HomeModel {
     enabled: boolean;
+    /** The global-scoped auto-sync value (VS Code global setting). */
+    globalEnabled: boolean;
+    /** The workspace-scoped auto-sync value (VS Code workspace setting). */
+    workspaceEnabled: boolean;
     /** Whether any project has a `dbx.config.*` (sync is meaningful). */
     canSync: boolean;
     /** Whether any provider is available. */
@@ -48,7 +52,10 @@ export type HomeAction =
     | { type: 'runWorkflow' }
     | { type: 'migrate' }
     | { type: 'resetToolchain' }
+    | { type: 'actions' }
     | { type: 'toggle' }
+    | { type: 'toggleGlobal' }
+    | { type: 'toggleWorkspace' }
     | { type: 'runVite' }
     | { type: 'runProviderCommand' }
     | { type: 'createVite' }
@@ -99,7 +106,10 @@ const SIMPLE_ACTIONS = new Set<HomeAction['type']>([
     'runWorkflow',
     'migrate',
     'resetToolchain',
+    'actions',
     'toggle',
+    'toggleGlobal',
+    'toggleWorkspace',
     'runVite',
     'runProviderCommand',
     'createVite',
@@ -211,6 +221,8 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     .dot { width:8px; height:8px; border-radius:50%; background:var(--vscode-testing-iconPassed); }
     .dot.off { background:var(--vscode-descriptionForeground); }
     .statusText { flex:1; font-weight:600; }
+    .autoSync { position:relative; margin:-4px 0 12px; }
+    .autoSync > button { width:100%; }
     .muted { color:var(--vscode-descriptionForeground); font-size:11px; }
     .section { margin-top:15px; }
     .sectionHead { display:flex; align-items:center; justify-content:space-between; margin:0 1px 8px; }
@@ -299,6 +311,13 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
   <div class="docsLink"><a class="link" data-action="openSettings">Configure extension settings</a></div>
   <div id="lastSync" class="lastSync"></div>
   <div class="status"><span id="statusDot" class="dot"></span><span id="statusText" class="statusText">Ready</span><span id="manager" class="muted"></span></div>
+  <div class="autoSync">
+    <button id="autoSync" class="secondary" data-menu="autoSync">Auto-sync enabled</button>
+    <div class="menu" hidden>
+      <button data-action="toggleGlobal" id="toggleGlobal">Disable (global)</button>
+      <button data-action="toggleWorkspace" id="toggleWorkspace">Disable (workspace)</button>
+    </div>
+  </div>
   <section class="section">
     <div class="sectionHead"><h2>Quick actions</h2></div>
     <div class="actions">
@@ -316,36 +335,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     </div>
   </section>
   <section class="section">
-    <button class="accordion" data-toggle="moreActions">More actions <span class="chev">\u25BE</span></button>
-    <div id="moreActions" class="moreActions" hidden>
-      <button class="secondary" data-action="syncAll">Sync all projects</button>
-      <button class="secondary" data-action="syncActive">Sync active project</button>
-      <button class="secondary" data-action="syncSelected">Sync selected projects</button>
-      <button class="secondary" data-action="syncCheck">Check sync</button>
-      <button class="secondary" data-action="syncTsconfig">Sync tsconfig</button>
-      <button class="secondary" data-action="fmt">Format project</button>
-      <button class="secondary" data-action="lint">Lint project</button>
-      <button class="secondary" data-action="scaffold">Scaffold project\u2026</button>
-      <button class="secondary" data-action="generateConfigs">Generate configs\u2026</button>
-      <button class="secondary" data-action="migrate">Migrate tooling\u2026</button>
-      <button class="secondary" data-action="runWorkflow">Run workflow\u2026</button>
-      <button class="secondary" data-action="runVite">Run Vite+ command\u2026</button>
-      <button class="secondary" data-action="runProviderCommand">Run provider command\u2026</button>
-      <button class="secondary" data-action="createVite">Create Vite+ project\u2026</button>
-      <button class="secondary" data-action="addProvider">Add provider\u2026</button>
-      <button class="secondary" data-action="refreshProviders">Refresh providers</button>
-      <button class="secondary" data-action="refreshTemplates">Refresh templates</button>
-      <button class="secondary" data-action="registryNew">New registry\u2026</button>
-      <button class="secondary" data-action="registryRemove">Remove registry\u2026</button>
-      <button class="secondary" data-action="selectVersion">Select dbx version\u2026</button>
-      <button class="secondary" data-action="chooseDbxSource">Choose dbx source\u2026</button>
-      <button class="secondary" data-action="templateAdd">Add template\u2026</button>
-      <button class="secondary" data-action="templateRemove">Remove template\u2026</button>
-      <button class="secondary" data-action="resetToolchain">Reset tooling\u2026</button>
-      <button class="secondary" data-action="refresh">Refresh projects</button>
-      <button class="secondary" data-action="refreshFiles">Refresh tracked files</button>
-      <button class="secondary" data-action="toggle">Toggle auto-sync</button>
-    </div>
+    <button class="secondary" data-action="actions">More actions\u2026</button>
   </section>
   <section class="section">
     <div class="sectionHead"><h2>Projects</h2><span id="count" class="muted"></span></div>
@@ -472,8 +462,14 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
       const model = message.model;
       const projects = model.projects || [];
 
-      document.getElementById('statusText').textContent = model.enabled ? 'Auto-sync enabled' : 'Auto-sync paused';
       document.getElementById('statusDot').classList.toggle('off', !model.enabled);
+      const autoSync = document.getElementById('autoSync');
+      autoSync.textContent = model.enabled ? 'Auto-sync enabled' : 'Auto-sync paused';
+      autoSync.title = 'Change auto-sync for the global or workspace scope';
+      const globalOn = model.globalEnabled !== false;
+      const workspaceOn = model.workspaceEnabled !== false;
+      document.getElementById('toggleGlobal').textContent = globalOn ? 'Disable (global)' : 'Enable (global)';
+      document.getElementById('toggleWorkspace').textContent = workspaceOn ? 'Disable (workspace)' : 'Enable (workspace)';
       document.getElementById('manager').textContent = model.packageManager || '';
       document.getElementById('count').textContent = String(projects.length);
 
