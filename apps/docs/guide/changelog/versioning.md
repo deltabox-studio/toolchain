@@ -44,11 +44,19 @@ ci: {
 }
 ```
 
+Glob negation (`!pattern`) is honoured: the excluded workspaces are removed from
+the set, so private packages are never versioned or given a changelog.
+
 `individual` uses a `git log` path filter per workspace, so a workspace is only
 bumped when the scanned commit range touched a file inside it — or a file in one
 of the workspaces it depends on (see [Workspace changelogs](#workspace-changelogs)).
 The root's version always follows the overall bump derived from every scanned
 commit.
+
+Re-runs are idempotent: commits already listed in a workspace's own `CHANGELOG.md`
+are filtered out before the bump is derived. A workspace with no new commits is
+skipped entirely (no bump, no duplicate entry), and an old `feat` cannot re-bump a
+workspace as a minor on a later run.
 
 ## `prerelease`
 
@@ -98,6 +106,20 @@ just in its own.
 Without a graph (eg. `dbx projects` was never run), a workspace falls back to
 filtering on its own directory only. A workspace with no related commits is
 skipped (no empty entry, no file created).
+
+## Package changes footer
+
+By default the root entry ends with a `### Package changes` footer comparing the
+working tree against the previous released version. It reads dependency fields
+from every `package.json` and the package-manager catalogs:
+
+- Yarn: `.yarnrc.yml` (`catalog:` and named `catalogs:`);
+- pnpm: `pnpm-workspace.yaml` (`catalog:` and named `catalogs:`);
+- Bun: `package.json` `workspaces.catalog` / `catalogs`.
+
+Catalog entries are diffed in the same map as declared dependencies, so a
+catalog-only range change is reported under the root package at both ends of the
+release. Pass `--no-package-changes-section` to omit the footer.
 
 ## Custom bump rules
 

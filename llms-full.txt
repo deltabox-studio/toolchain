@@ -1314,6 +1314,12 @@ Automatic version bumping on changelog generation (default `true`).
 
 Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own.
 
+##### `prerelease`
+
+* **Type**: `string`
+
+Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice.
+
 ##### `bump`
 
 * **Type**: `object`
@@ -1637,6 +1643,12 @@ Automatic version bumping on changelog generation (default `true`).
 * **Type**: `Array<string>`
 
 Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own.
+
+#### `prerelease`
+
+* **Type**: `string`
+
+Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice.
 
 #### `bump`
 
@@ -2989,6 +3001,12 @@ versions. **Select dbx version…** pins a version in the project's
 `.vscode/settings.json` (like TypeScript's version picker); it runs that version
 via `npx` unless the project already installs it.
 
+Project lookup follows the repository boundary: from the open folder (and every
+workspace root in a multi-root workspace) the extension walks up to the nearest
+`.git`, so a toolchain hoisted to the monorepo root is found even when a nested
+workspace package is opened as the folder. The project's own `dbx` stays the
+default; the bundled CLI is only the fallback.
+
 ## Command palette
 
 Search for `deltabox:` to find:
@@ -3106,6 +3124,24 @@ and no sync task: the generated files are yours to maintain.
 
 Server images run as a non-root user and get a `HEALTHCHECK` that requests
 `http://127.0.0.1:<port><healthcheckPath>`.
+
+## COPY sources and installs
+
+The dependency-install stage copies only sources that exist when the Dockerfile
+is generated: `package.json` plus the project's lockfile/workspace files
+(`yarn.lock`/`.yarnrc.yml`, `pnpm-lock.yaml`/`pnpm-workspace.yaml`,
+`package-lock.json`, `bun.lock`/`bun.lockb`). No `.node-version` file is assumed,
+and a missing lockfile is never `COPY`ed, so a fresh scaffold builds.
+
+The declared package manager is the single source of truth: `packageManager` in
+`package.json` (or the `packageManager` option) drives both the copied lockfiles
+and the `RUN` command. A Bun-runtime project with no declared manager installs
+with Bun; otherwise the declared manager wins, so `yarn.lock` is never paired
+with `bun install`. When a Bun-runtime project declares yarn/pnpm/npm,
+dependencies install in a `node:<version>` `deps` stage and the Bun image only
+builds (the official Bun image has no npm/corepack). Without a lockfile the
+install runs without a frozen flag (`yarn install`, `pnpm install`,
+`npm install`, `bun install`, `vp install`).
 
 ## Detection
 
@@ -3505,9 +3541,10 @@ a commander program with `registerToolchainCommands` (this is how the bundled
 `dbx` binary, and a consumer's own CLI, are assembled):
 
 ```ts
+import { Command } from 'commander';
+
 import { registerToolchainCommands } from '@deltabox/toolchain/cli';
 import { configCommands } from '@deltabox/toolchain/config';
-import { Command } from 'commander';
 
 const program = new Command();
 registerToolchainCommands(program, configCommands({ engine }));
@@ -4145,11 +4182,39 @@ ci: {
 }
 ```
 
+Glob negation (`!pattern`) is honoured: the excluded workspaces are removed from
+the set, so private packages are never versioned or given a changelog.
+
 `individual` uses a `git log` path filter per workspace, so a workspace is only
 bumped when the scanned commit range touched a file inside it — or a file in one
 of the workspaces it depends on (see [Workspace changelogs](#workspace-changelogs)).
 The root's version always follows the overall bump derived from every scanned
 commit.
+
+Re-runs are idempotent: commits already listed in a workspace's own `CHANGELOG.md`
+are filtered out before the bump is derived. A workspace with no new commits is
+skipped entirely (no bump, no duplicate entry), and an old `feat` cannot re-bump a
+workspace as a minor on a later run.
+
+## `prerelease`
+
+Set a tag such as `beta` or `rc` to keep a release on a prerelease channel:
+
+```ts
+ci: { changelog: { versioning: { target: 'individual', prerelease: 'beta' } } }
+```
+
+* A stable version bumps its core and starts the channel:
+  `1.0.0` + a minor bump → `1.1.0-beta.0`.
+* An existing prerelease keeps its core and increments the counter instead of
+  bumping again: `1.1.0-beta.0` → `1.1.0-beta.1`.
+* Switching tags keeps the core and starts the new channel at `.0`:
+  `1.1.0-alpha.2` → `1.1.0-beta.0`.
+* The suffix is checked before it is applied, so it is never appended twice.
+
+The tag is a single identifier (`^[0-9A-Za-z-]+$`); the numeric counter is added
+automatically. The same rule applies to `uniform`, `root-only` and `individual`
+targets, including each workspace's own version in `individual` mode.
 
 ## How a run decides its versions
 
@@ -4179,6 +4244,20 @@ just in its own.
 Without a graph (eg. `dbx projects` was never run), a workspace falls back to
 filtering on its own directory only. A workspace with no related commits is
 skipped (no empty entry, no file created).
+
+## Package changes footer
+
+By default the root entry ends with a `### Package changes` footer comparing the
+working tree against the previous released version. It reads dependency fields
+from every `package.json` and the package-manager catalogs:
+
+* Yarn: `.yarnrc.yml` (`catalog:` and named `catalogs:`);
+* pnpm: `pnpm-workspace.yaml` (`catalog:` and named `catalogs:`);
+* Bun: `package.json` `workspaces.catalog` / `catalogs`.
+
+Catalog entries are diffed in the same map as declared dependencies, so a
+catalog-only range change is reported under the root package at both ends of the
+release. Pass `--no-package-changes-section` to omit the footer.
 
 ## Custom bump rules
 
@@ -4383,9 +4462,10 @@ If you prefer a typed builder over hand-writing YAML, use
 plain workflow object in `.workflow`, which the `github` vendor form accepts:
 
 ```ts [dbx.config.ts]
-import { defineConfig, type GitHubWorkflow } from '@deltabox/toolchain';
 import { ActionsCheckoutV4, ActionsSetupNodeV4 } from '@github-actions-workflow-ts/actions';
 import { NormalJob, Step, Workflow } from '@github-actions-workflow-ts/lib';
+
+import { defineConfig, type GitHubWorkflow } from '@deltabox/toolchain';
 
 const test = new NormalJob('test', { 'runs-on': 'ubuntu-latest' });
 test.addStep(new ActionsCheckoutV4({ name: 'Checkout' }));
@@ -5307,6 +5387,7 @@ With the default loader, imports resolve the way the project's TypeScript does:
 
 ```ts [dbx.config.ts]
 import { shared } from '@acme/shared/config.js'; // shared/config.ts
+
 import { defineConfig } from '@deltabox/toolchain';
 
 export default defineConfig({
@@ -5548,8 +5629,9 @@ A project can also be configured by the `dbx()` Vite plugin instead of a
 `dbx.config.*`:
 
 ```ts [vite.config.ts]
-import { dbx } from '@deltabox/toolchain/vite';
 import { defineConfig } from 'vite-plus';
+
+import { dbx } from '@deltabox/toolchain/vite';
 
 export default defineConfig({
     plugins: [dbx({ toolchain: { project: { name: 'app' }, fmt: { oxc: true } } })],
@@ -5676,9 +5758,10 @@ export default defineConfig({
 time, so the generated file never duplicates (or drifts from) `dbx.config.*`:
 
 ```ts [vite.config.ts]
+import { defineConfig, type ViteUserConfig } from 'vite-plus';
+
 // Generated by @deltabox/toolchain — edit the vite section in dbx.config and run `dbx sync`.
 import { resolveVite } from '@deltabox/toolchain/vite';
-import { defineConfig, type ViteUserConfig } from 'vite-plus';
 
 export default defineConfig(resolveVite<ViteUserConfig>({ cwd: import.meta.dirname }));
 ```
@@ -7273,8 +7356,13 @@ file is missing or differs from what the migration would produce, so a pipeline
 can require that a repo is fully on Oxc:
 
 ```sh
-dbx migrate --check || echo "still on Biome/ESLint — run migrate --write"
+dbx migrate --check || echo "still on Biome/etc — run migrate --write"
 ```
+
+The check resolves the **effective** `dbx.config.*` (including an inherited
+ancestor config), so a workspace that inherits `fmt`/`lint` from the root is not
+asked to keep an intermediate `.oxfmtrc.json` / `.oxlintrc.json`. A disabled
+section (`fmt: false`) does not count as owning the config.
 
 `--online` allows network access: the ESLint migration shells out to
 `@oxlint/migrate` to evaluate JS/flat configs (it writes `.oxlintrc.json`, so it
@@ -7305,6 +7393,10 @@ console.log(result.unmapped);
 `oxfmt --migrate biome`-style tools cover formatter options only; the pieces the
 upstream tools skip (Biome `organizeImports`, Biome linter rules, Dprint) are
 handled here.
+
+## Upgrading from v2
+
+See the [v2 → v3 migration guide](/guide/migrations/v2-v3).
 
 ## Upgrading from v1
 
@@ -7539,6 +7631,135 @@ delete it and use one of those two options.
 ---
 
 ---
+url: https://toolchain.deltabox.studio/guide/migrations/v2-v3.md
+---
+# Migrating from v2 to v3
+
+v3 is a correctness release. It makes releases idempotent, accepts UTF-8 BOM
+files, generates Dockerfiles that build from a fresh scaffold, and fixes
+scaffolding, catalog diffing, migration checks and VS Code discovery. The config
+file format is unchanged: most projects only need to update the dependency and
+re-run sync.
+
+## Breaking changes
+
+### Vite plugin is the default config path
+
+New scaffolds declare `vite-plugin-dbx` and are configured through the `dbx()`
+Vite plugin. `dbx.config.*` remains fully supported as the non-Vite fallback, so
+an existing `dbx.config.*` project does not need to move. If you generate
+projects programmatically, expect the generated `vite.config.*` to carry the
+plugin instead of a separate `dbx.config.*`.
+
+### Project templates are one module per template
+
+The monolithic template module is gone. The supported programmatic surface from
+`@deltabox/toolchain/project` (also re-exported by the umbrella) is:
+
+```ts
+import {
+    createProjectTemplateFiles,
+    isProjectTemplateId,
+    PROJECT_TEMPLATE_IDS,
+    type ProjectTemplateId,
+} from '@deltabox/toolchain/project';
+```
+
+Look a template up through `PROJECT_TEMPLATE_IDS` / `createProjectTemplateFiles`
+instead of importing a shared `qol` helper.
+
+### Docker plans expose their copy sources
+
+`resolveDockerPlan()` now returns `installSources` — the exact files the
+Dockerfile copies before installing dependencies. Code that constructs a
+`DockerPlan` by hand must provide it; prefer `resolveDockerPlan()` +
+`dockerFiles()` instead.
+
+## Behaviour changes
+
+### Changelog versioning
+
+* `versioning.target: 'individual'` is idempotent. Commits already listed in a
+  workspace's `CHANGELOG.md` are filtered out before deriving its bump, and a
+  workspace with no new commits is skipped entirely. Re-running no longer bumps
+  untouched workspaces or re-counts an old `feat` as a new minor.
+* Workspace glob negation (`['packages/*', '!packages/private-*']`) is honoured.
+* A UTF-8 BOM in any `package.json` (common with PowerShell/Notepad) no longer
+  makes `dbx changelog` fail; the same BOM handling applies to local CLI
+  discovery, providers, Prettier detection and the VS Code extension.
+* The `### Package changes` footer now reads Yarn (`.yarnrc.yml`), pnpm
+  (`pnpm-workspace.yaml`) and Bun (`package.json` `workspaces.catalog`) catalogs,
+  including named catalogs.
+* Running changelog from a nested workspace uses the repository root for the
+  fallback commit/issue links instead of the workspace's own `package.json`.
+
+### Docker
+
+* Only files that exist when the Dockerfile is generated are copied:
+  `package.json` plus the project's lockfile/workspace files. `.node-version*` is
+  never assumed, and a missing lockfile is not copied.
+* The declared package manager drives both the copy list and the install command.
+  A Bun-runtime project with no declared manager installs with Bun; otherwise the
+  declared manager wins (so `yarn.lock` is not paired with `bun install`). When a
+  Bun-runtime project declares yarn/pnpm/npm, dependencies install in a
+  `node:<version>` `deps` stage and the Bun image only builds.
+* When there is no lockfile, the install runs without a frozen flag.
+
+### Scaffolding and migrations
+
+* `dbx project:init --out <dir>` (and `project:init:monorepo`) no longer inherits
+  the current project's name when `--name` is omitted; it uses the target
+  directory's basename. The in-place case still inherits `project.name`.
+* `dbx migrate --check` resolves the effective (inherited) config, so a
+  workspace inheriting `fmt`/`lint` from the root is not asked to keep an
+  intermediate `.oxfmtrc.json` / `.oxlintrc.json`. A disabled section
+  (`fmt: false`) does not count as owning the config.
+
+### CLI and VS Code
+
+* `dbx sync --json` always emits a JSON envelope, including when the config
+  failed to load (`{ results: [], upToDate: false, error }`).
+* `dbx projects --max-depth` rejects non-numeric values instead of silently
+  turning the limit into `NaN`; `--max-depth 0` still scans only the root.
+* The VS Code extension walks up to the repository boundary for the project's
+  `dbx`, checks every workspace root in a multi-root workspace, and keeps the
+  project's CLI as the default (the bundled CLI is only the fallback).
+
+### TypeScript declarations
+
+* The shared tsdown base config externalizes declaration imports **as written**
+  (`deps.dts.neverBundle: true`), so emitted `.d.ts` files reference bare
+  package specifiers instead of build-machine absolute `node_modules` paths.
+  Packages whose public types reference another package must declare it in
+  `dependencies` (or `peerDependencies`).
+* The base config also ships a Rolldown leak reporter. It scans emitted JS,
+  declaration and textual asset chunks and fails the build by default when an
+  absolute `node_modules` path appears. Configure it via the third
+  `createTsdownConfig` argument:
+  `{ nodeModulesLeakReporter: { level: 'warn' | 'info' | 'silent', when: 'generateBundle' | 'writeBundle' | 'closeBundle' } }`
+  (or `false` to disable it). `writeBundle` is the default; use `closeBundle`
+  when a later plugin rewrites output in `writeBundle`. Non-fatal levels respect
+  tsdown/rolldown's log level. The plugin is also exported as
+  `createNodeModulesLeakReporter` for use in your own builds.
+
+## Recommended upgrade steps
+
+1. Update `@deltabox/toolchain` (and `vite-plugin-dbx` when used) to v3.
+2. Run `dbx sync --recursive` and commit the regenerated managed files.
+3. Run `dbx sync --recursive --check`, `yarn typecheck`, `yarn lint` and your
+   test suite.
+4. Regenerate Docker artifacts created by v2 (or edit the `COPY` lines to list
+   only files that exist) and rebuild the image once with Docker available.
+5. Replace imports of the old monolithic template helper with
+   `PROJECT_TEMPLATE_IDS` / `createProjectTemplateFiles`.
+6. If you build a `DockerPlan` by hand, add its `installSources` (or switch to
+   `resolveDockerPlan()`).
+7. Re-run `dbx migrate --check` in CI; inherited workspace configs may now pass
+   where v2 reported a false drift.
+
+---
+
+---
 url: https://toolchain.deltabox.studio/guide/project.md
 ---
 # Project
@@ -7663,9 +7884,11 @@ section still generates correct tokens from its existing metadata.
 `dbx project:init`, `dbx project:init:monorepo` and
 `dbx project:init:workspace` read `project` as their defaults, and:
 
-* **`name` is required** (from `--name` or `project.name`) — a
-  scaffold fails with a clear error when it is missing. A workspace always needs
-  an explicit `--name` (the root's name is not the workspace name).
+* **`name`** comes from `--name`, or from `project.name` when the scaffold writes
+  **into** the current project. A scaffold `--out` elsewhere never inherits the
+  parent project's name — it uses the target directory's basename instead (pass
+  `--name` to override). A workspace always needs an explicit `--name` (the
+  root's name is not the workspace name).
 * **`--type` must be valid** (`project`, `monorepo-root` or `monorepo-workspace`)
   when passed explicitly; an invalid value is rejected. A `project.type` in the
   config still drives `dbx sync` detection, but scaffolding deliberately ignores
@@ -7865,8 +8088,9 @@ Vite+ consumers can drive dbx from `vite.config.ts`, so a Vite+-only project
 still gets dbx's generated/managed files:
 
 ```ts [vite.config.ts]
-import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
 import { defineConfig } from 'vite-plus';
+
+import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
 
 export default defineConfig({
     plugins: [dbx()],
@@ -9341,8 +9565,9 @@ options are merged on top.
 ## Plugin mode
 
 ```ts [vite.config.ts]
-import { dbx } from '@deltabox/toolchain/vite';
 import { defineConfig } from 'vite-plus'; // or 'vite' for plain Vite
+
+import { dbx } from '@deltabox/toolchain/vite';
 
 export default defineConfig({
     plugins: [
@@ -9415,9 +9640,10 @@ The section is typed as Vite+'s own config (`ToolchainViteConfig` = Vite's
 `dbx sync` writes a fixed `vite.config.ts`:
 
 ```ts [vite.config.ts]
+import { defineConfig, type ViteUserConfig } from 'vite-plus';
+
 // Generated by @deltabox/toolchain — edit the vite section in dbx.config and run `dbx sync`.
 import { resolveVite } from '@deltabox/toolchain/vite';
-import { defineConfig, type ViteUserConfig } from 'vite-plus';
 
 export default defineConfig(resolveVite<ViteUserConfig>({ cwd: import.meta.dirname }));
 ```

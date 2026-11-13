@@ -79,6 +79,24 @@ and no sync task: the generated files are yours to maintain.
 Server images run as a non-root user and get a `HEALTHCHECK` that requests
 `http://127.0.0.1:<port><healthcheckPath>`.
 
+## COPY sources and installs
+
+The dependency-install stage copies only sources that exist when the Dockerfile
+is generated: `package.json` plus the project's lockfile/workspace files
+(`yarn.lock`/`.yarnrc.yml`, `pnpm-lock.yaml`/`pnpm-workspace.yaml`,
+`package-lock.json`, `bun.lock`/`bun.lockb`). No `.node-version` file is assumed,
+and a missing lockfile is never `COPY`ed, so a fresh scaffold builds.
+
+The declared package manager is the single source of truth: `packageManager` in
+`package.json` (or the `packageManager` option) drives both the copied lockfiles
+and the `RUN` command. A Bun-runtime project with no declared manager installs
+with Bun; otherwise the declared manager wins, so `yarn.lock` is never paired
+with `bun install`. When a Bun-runtime project declares yarn/pnpm/npm,
+dependencies install in a `node:<version>` `deps` stage and the Bun image only
+builds (the official Bun image has no npm/corepack). Without a lockfile the
+install runs without a frozen flag (`yarn install`, `pnpm install`,
+`npm install`, `bun install`, `vp install`).
+
 ## Detection
 
 With `runtime: 'auto'` the generator reads `package.json`:

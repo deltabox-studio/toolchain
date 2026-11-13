@@ -120,9 +120,11 @@ section still generates correct tokens from its existing metadata.
 `dbx project:init`, `dbx project:init:monorepo` and
 `dbx project:init:workspace` read `project` as their defaults, and:
 
-- **`name` is required** (from `--name` or `project.name`) — a
-  scaffold fails with a clear error when it is missing. A workspace always needs
-  an explicit `--name` (the root's name is not the workspace name).
+- **`name`** comes from `--name`, or from `project.name` when the scaffold writes
+  **into** the current project. A scaffold `--out` elsewhere never inherits the
+  parent project's name — it uses the target directory's basename instead (pass
+  `--name` to override). A workspace always needs an explicit `--name` (the
+  root's name is not the workspace name).
 - **`--type` must be valid** (`project`, `monorepo-root` or `monorepo-workspace`)
   when passed explicitly; an invalid value is rejected. A `project.type` in the
   config still drives `dbx sync` detection, but scaffolding deliberately ignores

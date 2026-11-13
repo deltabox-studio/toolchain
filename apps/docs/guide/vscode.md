@@ -194,6 +194,12 @@ versions. **Select dbx version…** pins a version in the project's
 `.vscode/settings.json` (like TypeScript's version picker); it runs that version
 via `npx` unless the project already installs it.
 
+Project lookup follows the repository boundary: from the open folder (and every
+workspace root in a multi-root workspace) the extension walks up to the nearest
+`.git`, so a toolchain hoisted to the monorepo root is found even when a nested
+workspace package is opened as the folder. The project's own `dbx` stays the
+default; the bundled CLI is only the fallback.
+
 ## Command palette
 
 Search for `deltabox:` to find:

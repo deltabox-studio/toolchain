@@ -163,8 +163,13 @@ file is missing or differs from what the migration would produce, so a pipeline
 can require that a repo is fully on Oxc:
 
 ```sh
-dbx migrate --check || echo "still on Biome/ESLint — run migrate --write"
+dbx migrate --check || echo "still on Biome/etc — run migrate --write"
 ```
+
+The check resolves the **effective** `dbx.config.*` (including an inherited
+ancestor config), so a workspace that inherits `fmt`/`lint` from the root is not
+asked to keep an intermediate `.oxfmtrc.json` / `.oxlintrc.json`. A disabled
+section (`fmt: false`) does not count as owning the config.
 
 `--online` allows network access: the ESLint migration shells out to
 `@oxlint/migrate` to evaluate JS/flat configs (it writes `.oxlintrc.json`, so it
@@ -195,6 +200,10 @@ console.log(result.unmapped);
 `oxfmt --migrate biome`-style tools cover formatter options only; the pieces the
 upstream tools skip (Biome `organizeImports`, Biome linter rules, Dprint) are
 handled here.
+
+## Upgrading from v2
+
+See the [v2 → v3 migration guide](/guide/migrations/v2-v3).
 
 ## Upgrading from v1
 
