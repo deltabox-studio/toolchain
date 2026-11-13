@@ -1,12 +1,12 @@
 {
-    "name": "@deltabox/toolchain-tsdown",
+    "name": "@deltabox/toolchain-pack",
     "version": "2.6.1",
-    "description": "tsdown base configuration, workspace aliases and cleanup commands used by @deltabox/toolchain.",
+    "description": "Build-pack base configuration (tsdown), workspace aliases and cleanup commands used by @deltabox/toolchain.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/deltabox-studio/toolchain.git",
-        "directory": "packages/tsdown"
+        "directory": "packages/pack"
     },
     "license": "MPL-2.0",
     "type": "module",

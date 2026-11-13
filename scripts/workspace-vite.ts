@@ -3,8 +3,8 @@ import type { PackUserConfig } from 'vite-plus/pack';
 
 import { dbx } from 'vite-plugin-dbx';
 
-import { baseTsdownConfig } from '../packages/tsdown/src/config/node.js';
-import { workspacePackageAliases } from '../packages/tsdown/src/config/workspace.js';
+import { baseTsdownConfig } from '../packages/pack/src/config/node.js';
+import { workspacePackageAliases } from '../packages/pack/src/config/workspace.js';
 
 /** The workspace package's shared source alias preset. */
 export const ALL_WORKSPACES = [/^@deltabox\/toolchain[-\/]/];

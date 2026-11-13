@@ -20,7 +20,7 @@
         "@deltabox/toolchain-shared": "workspace:*"
     },
     "devDependencies": {
-        "@deltabox/toolchain-tsdown": "workspace:*",
+        "@deltabox/toolchain-pack": "workspace:*",
         "@types/node": "catalog:",
         "tsx": "catalog:",
         "type-fest": "catalog:",

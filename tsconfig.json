@@ -40,21 +40,6 @@
             "@deltabox/toolchain/vite": [
                 "./src/vite.ts"
             ],
-            "@deltabox/toolchain/tsdown/package.json": [
-                "./packages/tsdown/package.json"
-            ],
-            "@deltabox/toolchain/tsdown/config/node": [
-                "./packages/tsdown/src/config/node.ts"
-            ],
-            "@deltabox/toolchain/tsdown/cli": [
-                "./packages/tsdown/src/cli/index.ts"
-            ],
-            "@deltabox/toolchain/tsdown/*": [
-                "./packages/tsdown/src/*"
-            ],
-            "@deltabox/toolchain/tsdown": [
-                "./packages/tsdown/src/index.ts"
-            ],
             "@deltabox/toolchain/tsconfig/package.json": [
                 "./packages/tsconfig/package.json"
             ],
@@ -108,6 +93,21 @@
             ],
             "@deltabox/toolchain/package.json": [
                 "./package.json"
+            ],
+            "@deltabox/toolchain/pack/package.json": [
+                "./packages/pack/package.json"
+            ],
+            "@deltabox/toolchain/pack/config/node": [
+                "./packages/pack/src/config/node.ts"
+            ],
+            "@deltabox/toolchain/pack/cli": [
+                "./packages/pack/src/cli/index.ts"
+            ],
+            "@deltabox/toolchain/pack/*": [
+                "./packages/pack/src/*"
+            ],
+            "@deltabox/toolchain/pack": [
+                "./packages/pack/src/index.ts"
             ],
             "@deltabox/toolchain/migrate/package.json": [
                 "./packages/migrate/package.json"

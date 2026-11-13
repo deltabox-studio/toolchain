@@ -548,8 +548,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@deltabox/toolchain-biome@workspace:packages/biome"
   dependencies:
+    "@deltabox/toolchain-pack": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
-    "@deltabox/toolchain-tsdown": "workspace:*"
     "@types/node": "catalog:"
     typescript: "catalog:"
     vite-plus: "catalog:"
@@ -560,8 +560,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@deltabox/toolchain-changelog@workspace:packages/changelog"
   dependencies:
+    "@deltabox/toolchain-pack": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
-    "@deltabox/toolchain-tsdown": "workspace:*"
     "@types/node": "catalog:"
     tsx: "catalog:"
     type-fest: "catalog:"
@@ -576,8 +576,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@deltabox/toolchain-config@workspace:packages/config"
   dependencies:
+    "@deltabox/toolchain-pack": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
-    "@deltabox/toolchain-tsdown": "workspace:*"
     "@types/lodash": "catalog:"
     "@types/node": "catalog:"
     fastify: "catalog:"
@@ -594,8 +594,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@deltabox/toolchain-core@workspace:packages/core"
   dependencies:
+    "@deltabox/toolchain-pack": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
-    "@deltabox/toolchain-tsdown": "workspace:*"
     "@types/node": "catalog:"
     glob: "catalog:"
     tsx: "catalog:"
@@ -608,8 +608,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@deltabox/toolchain-docker@workspace:packages/docker"
   dependencies:
+    "@deltabox/toolchain-pack": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
-    "@deltabox/toolchain-tsdown": "workspace:*"
     "@types/node": "catalog:"
     typescript: "catalog:"
     vite-plus: "catalog:"
@@ -633,8 +633,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@deltabox/toolchain-mcp@workspace:packages/mcp"
   dependencies:
+    "@deltabox/toolchain-pack": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
-    "@deltabox/toolchain-tsdown": "workspace:*"
     "@types/node": "catalog:"
     typescript: "catalog:"
     vite-plus: "catalog:"
@@ -647,12 +647,27 @@ __metadata:
   dependencies:
     "@clack/prompts": "catalog:"
     "@deltabox/toolchain-core": "workspace:*"
+    "@deltabox/toolchain-pack": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
-    "@deltabox/toolchain-tsdown": "workspace:*"
     "@types/node": "catalog:"
     glob: "catalog:"
     typescript: "catalog:"
     vite-plus: "catalog:"
+  languageName: unknown
+  linkType: soft
+
+"@deltabox/toolchain-pack@workspace:*, @deltabox/toolchain-pack@workspace:packages/pack":
+  version: 0.0.0-use.local
+  resolution: "@deltabox/toolchain-pack@workspace:packages/pack"
+  dependencies:
+    "@deltabox/toolchain-shared": "workspace:*"
+    "@types/node": "catalog:"
+    glob: "catalog:"
+    type-fest: "catalog:"
+    typescript: "catalog:"
+    vite-plus: "catalog:"
+  peerDependencies:
+    vite-plus: ">=1"
   languageName: unknown
   linkType: soft
 
@@ -664,9 +679,9 @@ __metadata:
     "@deltabox/toolchain-core": "workspace:*"
     "@deltabox/toolchain-docker": "workspace:*"
     "@deltabox/toolchain-migrate": "workspace:*"
+    "@deltabox/toolchain-pack": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
     "@deltabox/toolchain-tsconfig": "workspace:*"
-    "@deltabox/toolchain-tsdown": "workspace:*"
     "@types/node": "catalog:"
     jsonc-parser: "npm:^3.3.1"
     typescript: "catalog:"
@@ -698,9 +713,9 @@ __metadata:
     "@clack/prompts": "catalog:"
     "@deltabox/toolchain-core": "workspace:*"
     "@deltabox/toolchain-docker": "workspace:*"
+    "@deltabox/toolchain-pack": "workspace:*"
     "@deltabox/toolchain-project": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
-    "@deltabox/toolchain-tsdown": "workspace:*"
     "@types/node": "catalog:"
     typescript: "catalog:"
     vite-plugin-dbx: "workspace:*"
@@ -713,8 +728,8 @@ __metadata:
   resolution: "@deltabox/toolchain-tsconfig@workspace:packages/tsconfig"
   dependencies:
     "@deltabox/toolchain-core": "workspace:*"
+    "@deltabox/toolchain-pack": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
-    "@deltabox/toolchain-tsdown": "workspace:*"
     "@types/node": "catalog:"
     glob: "catalog:"
     type-fest: "catalog:"
@@ -722,21 +737,6 @@ __metadata:
     vite-plus: "catalog:"
   bin:
     toolchain-tsconfig: ./dist/cli/generate/index.js
-  languageName: unknown
-  linkType: soft
-
-"@deltabox/toolchain-tsdown@workspace:*, @deltabox/toolchain-tsdown@workspace:packages/tsdown":
-  version: 0.0.0-use.local
-  resolution: "@deltabox/toolchain-tsdown@workspace:packages/tsdown"
-  dependencies:
-    "@deltabox/toolchain-shared": "workspace:*"
-    "@types/node": "catalog:"
-    glob: "catalog:"
-    type-fest: "catalog:"
-    typescript: "catalog:"
-    vite-plus: "catalog:"
-  peerDependencies:
-    vite-plus: ">=1"
   languageName: unknown
   linkType: soft
 
@@ -788,11 +788,11 @@ __metadata:
     "@deltabox/toolchain-docker": "workspace:*"
     "@deltabox/toolchain-mcp": "workspace:*"
     "@deltabox/toolchain-migrate": "workspace:*"
+    "@deltabox/toolchain-pack": "workspace:*"
     "@deltabox/toolchain-project": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
     "@deltabox/toolchain-template": "workspace:*"
     "@deltabox/toolchain-tsconfig": "workspace:*"
-    "@deltabox/toolchain-tsdown": "workspace:*"
     "@types/node": "catalog:"
     "@typescript/native-preview": "catalog:"
     commander: "npm:^14.0.0"
@@ -8782,7 +8782,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "toolchain-vscode@workspace:packages/vscode"
   dependencies:
-    "@deltabox/toolchain-tsdown": "workspace:*"
+    "@deltabox/toolchain-pack": "workspace:*"
     "@types/mocha": "npm:^10.0.10"
     "@types/node": "catalog:"
     "@types/vscode": "npm:^1.85.0"
@@ -9170,8 +9170,8 @@ __metadata:
   resolution: "vite-plugin-dbx@workspace:packages/vite"
   dependencies:
     "@deltabox/toolchain-core": "workspace:*"
+    "@deltabox/toolchain-pack": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
-    "@deltabox/toolchain-tsdown": "workspace:*"
     "@types/node": "catalog:"
     typescript: "catalog:"
     vite-plus: "catalog:"

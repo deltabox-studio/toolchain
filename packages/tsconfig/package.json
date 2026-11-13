@@ -20,7 +20,7 @@
         "type-fest": "catalog:"
     },
     "devDependencies": {
-        "@deltabox/toolchain-tsdown": "workspace:*",
+        "@deltabox/toolchain-pack": "workspace:*",
         "@types/node": "catalog:",
         "typescript": "catalog:",
         "vite-plus": "catalog:"
@@ -31,9 +31,7 @@
         "./cli/generate": "./dist/cli/generate/index.js",
         "./package.json": "./package.json"
     },
-    "bin": {
-        "toolchain-tsconfig": "./dist/cli/generate/index.js"
-    },
+    "bin": "./dist/cli/generate/index.js",
     "homepage": "https://toolchain.deltabox.studio",
     "packageManager": "yarn@4.17.1",
     "keywords": [

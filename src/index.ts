@@ -14,11 +14,11 @@ export * as core from '@deltabox/toolchain/core';
 export * from '@deltabox/toolchain/core';
 export * as docker from '@deltabox/toolchain/docker';
 export * as mcp from '@deltabox/toolchain/mcp';
+export * as pack from '@deltabox/toolchain/pack';
 export * as project from '@deltabox/toolchain/project';
 export * as shared from '@deltabox/toolchain/shared';
 export * from '@deltabox/toolchain/shared';
 export * as tsconfig from '@deltabox/toolchain/tsconfig';
-export * as tsdown from '@deltabox/toolchain/tsdown';
 
 export * from './sync.js';
 export * from './tooling.js';

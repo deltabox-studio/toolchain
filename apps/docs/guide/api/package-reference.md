@@ -167,7 +167,7 @@ import { toolchainProviders } from '@deltabox/toolchain/providers';
 console.log(toolchainProviders().map(p => p.id));
 ```
 
-## `@deltabox/toolchain/tsdown`
+## `@deltabox/toolchain/pack`
 
 | Export                                                         | Description                                  |
 | -------------------------------------------------------------- | -------------------------------------------- |

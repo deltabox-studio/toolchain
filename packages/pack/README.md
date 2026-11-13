@@ -1,14 +1,16 @@
-# @deltabox/toolchain-tsdown
+# @deltabox/toolchain-pack
 
-tsdown base configuration, workspace aliases and cleanup commands used by @deltabox/toolchain.
+Build-pack base configuration (tsdown), workspace aliases and cleanup commands used by @deltabox/toolchain.
+
+The workspace is named `pack` after Vite+'s `pack` field, but the underlying bundler remains tsdown, so the public helper names (`baseTsdownConfig`, `createTsdownConfig`) are unchanged.
 
 Part of **deltabox toolchain** - a superset of [Vite+](https://viteplus.dev) with project synchronization, a config generator, tsconfig management, MCP server, CI/changelog automation, providers, catalogs and a VS Code extension. Use it as a Vite plugin or standalone.
 
 ## Install
 
 ```sh
-yarn add -D @deltabox/toolchain-tsdown
-# or: npm install -D @deltabox/toolchain-tsdown
+yarn add -D @deltabox/toolchain-pack
+# or: npm install -D @deltabox/toolchain-pack
 ```
 
 ## Public API
@@ -34,14 +36,14 @@ createTsdownConfig(overrides, banner, {
 It is also exported as a standalone plugin:
 
 ```ts
-import { createNodeModulesLeakReporter } from '@deltabox/toolchain-tsdown';
+import { createNodeModulesLeakReporter } from '@deltabox/toolchain-pack';
 
 export default {
     plugins: [createNodeModulesLeakReporter({ level: 'warn', when: 'closeBundle' })],
 };
 ```
 
-It is also available through the umbrella subpath `@deltabox/toolchain/tsdown`.
+It is also available through the umbrella subpath `@deltabox/toolchain/pack`.
 
 ## License
 

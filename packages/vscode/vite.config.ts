@@ -4,8 +4,8 @@ import { defineConfig } from 'vite-plus';
 
 import { dbx } from 'vite-plugin-dbx';
 
-import { baseTsdownConfig } from '../tsdown/src/config/node.js';
-import { workspaceSourceAliases } from '../tsdown/src/config/workspace.js';
+import { baseTsdownConfig } from '../pack/src/config/node.js';
+import { workspaceSourceAliases } from '../pack/src/config/workspace.js';
 import { workspaceTasks } from '../../scripts/workspace-vite.js';
 
 /** Repo root (this config lives in `packages/vscode/`). */

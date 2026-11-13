@@ -36,7 +36,7 @@ export default {
                 'core',
                 'project',
                 'tsconfig',
-                'tsdown',
+                'pack',
                 'biome',
                 'vite',
                 'docker',

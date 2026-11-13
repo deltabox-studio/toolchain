@@ -20,7 +20,7 @@
         "zod": "catalog:"
     },
     "devDependencies": {
-        "@deltabox/toolchain-tsdown": "workspace:*",
+        "@deltabox/toolchain-pack": "workspace:*",
         "@types/lodash": "catalog:",
         "@types/node": "catalog:",
         "fastify": "catalog:",

@@ -2,8 +2,8 @@ import { fileURLToPath } from 'node:url';
 
 import type { PackUserConfig } from 'vite-plus/pack';
 
-import { baseTsdownConfig } from '../packages/tsdown/src/config/node.js';
-import { workspaceSourceAliases } from '../packages/tsdown/src/config/workspace.js';
+import { baseTsdownConfig } from '../packages/pack/src/config/node.js';
+import { workspaceSourceAliases } from '../packages/pack/src/config/workspace.js';
 
 /** Repo root: this config lives under `scripts/`. */
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -36,7 +36,7 @@ export const rootPackConfig: PackUserConfig = {
         core: 'src/core.ts',
         changelog: 'src/changelog.ts',
         tsconfig: 'src/tsconfig.ts',
-        tsdown: 'src/tsdown.ts',
+        pack: 'src/pack.ts',
         biome: 'src/biome.ts',
         mcp: 'src/mcp.ts',
         migrate: 'src/migrate.ts',

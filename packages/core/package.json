@@ -19,7 +19,7 @@
         "tsx": "catalog:"
     },
     "devDependencies": {
-        "@deltabox/toolchain-tsdown": "workspace:*",
+        "@deltabox/toolchain-pack": "workspace:*",
         "@types/node": "catalog:",
         "typescript": "catalog:",
         "vite-plus": "catalog:"
