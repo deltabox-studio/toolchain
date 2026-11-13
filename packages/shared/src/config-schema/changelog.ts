@@ -31,6 +31,83 @@ export const changelogBranchesConfigSchema = z
     .describe('Branches the generated workflows target.')
     .meta({ id: 'ChangelogBranchesConfig' });
 
+/** Shared target selector for scoped changelog options and text entries. */
+export const changelogTargetSelectorSchema = z
+    .object({
+        target: z
+            .string()
+            .describe(
+                'A workspace path relative to the repository root (`.` for the root), or ' +
+                    'a glob such as `apps/*`. When omitted the entry applies to every target.'
+            )
+            .optional(),
+        include: z
+            .union([z.string(), z.array(z.string())])
+            .describe(
+                'Only apply to workspaces whose repo-relative directory matches one of ' +
+                    'these globs (tsconfig-style include).'
+            )
+            .optional(),
+        exclude: z
+            .union([z.string(), z.array(z.string())])
+            .describe('Skip workspaces whose repo-relative directory matches these globs.')
+            .optional(),
+    })
+    .describe('Selects the workspace/root a changelog option or text entry applies to.')
+    .meta({ id: 'ChangelogTargetSelector' });
+
+const changelogTargetSelectorShape = {
+    target: changelogTargetSelectorSchema.shape.target,
+    include: changelogTargetSelectorSchema.shape.include,
+    exclude: changelogTargetSelectorSchema.shape.exclude,
+};
+
+/** A plain string intro/outro entry. */
+const changelogTextContentEntrySchema = z
+    .object({
+        enabled: z.boolean().describe('Set false to skip this entry (default true).').optional(),
+        ...changelogTargetSelectorShape,
+        content: z.string().describe('The text inserted into the changelog entry.'),
+        file: z.never().optional().describe('Not allowed with `content`.'),
+    })
+    .meta({ id: 'ChangelogTextContentEntry' });
+
+/** A file-backed intro/outro entry. */
+const changelogTextFileEntrySchema = z
+    .object({
+        enabled: z.boolean().describe('Set false to skip this entry (default true).').optional(),
+        ...changelogTargetSelectorShape,
+        content: z.never().optional().describe('Not allowed with `file`.'),
+        file: z
+            .string()
+            .describe(
+                'Path to a file containing the text (relative to the repository root or ' +
+                    'absolute). It is read at changelog-generation time.'
+            ),
+    })
+    .meta({ id: 'ChangelogTextFileEntry' });
+
+/** One intro/outro entry. */
+export const changelogTextEntrySchema = z
+    .union([changelogTextContentEntrySchema, changelogTextFileEntrySchema])
+    .describe('A changelog intro/outro entry (`content` or `file`, plus the target selector).')
+    .meta({ id: 'ChangelogTextEntry' });
+
+/** An intro/outro setting: one entry or an array (`Arrayable`). */
+export const changelogTextSettingSchema = z
+    .union([changelogTextEntrySchema, z.array(changelogTextEntrySchema)])
+    .describe('A changelog intro/outro entry or an array of entries (`Arrayable`).')
+    .meta({ id: 'ChangelogTextSetting', tsType: 'Arrayable<ChangelogTextEntry>' });
+
+/** A scoped option: the base value, or `{ target?, ...selector, options }`. */
+function changelogTargetedOption<T extends z.ZodTypeAny>(base: T) {
+    const scoped = z.object({
+        ...changelogTargetSelectorShape,
+        options: base,
+    });
+    return z.union([base, scoped, z.array(scoped)]);
+}
+
 /** commitlint output location plus the Conventional-Commits allow-lists. */
 export const changelogCommitlintConfigSchema = withEnabled(
     z.object({
@@ -230,37 +307,52 @@ export const changelogVersioningConfigSchema = z
                     'there is none the root `package.json` is used on its own.'
             )
             .optional(),
-        prerelease: z
-            .string()
-            .regex(/^[0-9A-Za-z-]+$/)
-            .describe(
-                'Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump ' +
-                    'their core and start at `<tag>.0`; existing prereleases keep their ' +
-                    'core and increment the counter for the same tag, so the suffix is ' +
-                    'never appended twice.'
-            )
+        prerelease: changelogTargetedOption(
+            z
+                .string()
+                .regex(/^[0-9A-Za-z-]+$/)
+                .describe(
+                    'Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump ' +
+                        'their core and start at `<tag>.0`; existing prereleases keep their ' +
+                        'core and increment the counter for the same tag, so the suffix is ' +
+                        'never appended twice.'
+                )
+        )
+            .describe('The prerelease tag globally, or per-target via `{ target, options }`.')
             .optional(),
         bump: z
             .object({
-                major: changelogBumpRuleSchema.optional(),
-                minor: changelogBumpRuleSchema.optional(),
-                patch: changelogBumpRuleSchema.optional(),
+                major: changelogTargetedOption(changelogBumpRuleSchema).optional(),
+                minor: changelogTargetedOption(changelogBumpRuleSchema).optional(),
+                patch: changelogTargetedOption(changelogBumpRuleSchema).optional(),
             })
-            .describe('Custom bump rules for major/minor/patch (matchers or callbacks).')
-            .optional(),
-        allowOverBump: z
-            .boolean()
             .describe(
-                'Apply a bump once per matching change instead of once per run (default false).'
+                'Custom bump rules for major/minor/patch (matchers or callbacks), globally ' +
+                    'or per-target via `{ target, options }`.'
             )
             .optional(),
-        commit: changelogCommitFormatConfigSchema
-            .describe(
+        allowOverBump: changelogTargetedOption(
+            z
+                .boolean()
+                .describe(
+                    'Apply a bump once per matching change instead of once per run (default false).'
+                )
+        )
+            .describe('Enable over-bumping globally, or per-target via `{ target, options }`.')
+            .optional(),
+        commit: changelogTargetedOption(
+            changelogCommitFormatConfigSchema.describe(
                 'Commit message formatting/credit options (with an optional formatter callback).'
             )
+        )
+            .describe('Commit formatting globally, or per-target via `{ target, options }`.')
             .optional(),
-        provider: changelogProviderSettingSchema
-            .describe('`default`, `changesets`, a provider id, or a custom provider/callback.')
+        provider: changelogTargetedOption(
+            changelogProviderSettingSchema.describe(
+                '`default`, `changesets`, a provider id, or a custom provider/callback.'
+            )
+        )
+            .describe('The provider globally, or per-target via `{ target, options }`.')
             .optional(),
     })
     .describe('Automatic version bumping options.')
@@ -406,6 +498,18 @@ const changelogPipelineShape = {
         .optional(),
     versioning: changelogVersioningSchema
         .describe('Automatic version bumping on changelog generation (default `true`).')
+        .optional(),
+    intro: changelogTextSettingSchema
+        .describe(
+            'Opt-in text inserted at the start of the new changelog entry, globally or for ' +
+                'matching targets (workspaces/root).'
+        )
+        .optional(),
+    outro: changelogTextSettingSchema
+        .describe(
+            'Opt-in text appended to the new changelog entry, globally or for matching ' +
+                'targets (workspaces/root).'
+        )
         .optional(),
     vscode: z
         .boolean()

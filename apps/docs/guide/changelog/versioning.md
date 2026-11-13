@@ -178,3 +178,34 @@ ci: {
 - a callback `(ctx) => string | void` can replace the summary.
 - an object `{ id, run(ctx) }` can run custom logic and optionally return the
   summary string.
+
+## Targeted options
+
+prerelease, `bump.{major,minor,patch}`, `allowOverBump`, `commit` and
+`provider` accept either the plain value or a scoped form:
+
+`ts
+ci: {
+    changelog: {
+        versioning: {
+            prerelease: [
+                { target: 'packages/ui', options: 'beta' },
+                { include: 'apps/*', options: 'rc' },
+            ],
+            bump: { minor: [{ target: 'packages/core', options: /^feat/ }] },
+            allowOverBump: [{ target: 'packages/ui', options: true }],
+            commit: [{ exclude: 'packages/legacy', options: { authorAvatar: true } }],
+            provider: [{ target: '.', options: { id: 'custom', run: ctx => ctx.records.length + ' commits' } }],
+        },
+    },
+}
+`
+
+Each scoped entry shares the same selector as `toolchain.changelog.intro` /
+`outro`: `target` (a workspace path, `.` for the root, or a glob like
+`apps/*`), `include` and `exclude`. The narrowest matching target wins; when
+nothing matches, the plain value is used. Workspaces outside
+`versioning.workspaces` are never considered.
+
+`Arrayable` entries (one value or an array) are supported for every targeted
+option and for the intro/outro settings.

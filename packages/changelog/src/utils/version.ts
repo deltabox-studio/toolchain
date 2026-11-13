@@ -67,10 +67,14 @@ export function renderChangelogEntry(
     summary: string,
     date?: Date,
     withMarkers = true,
-    packageChanges = ''
+    packageChanges = '',
+    intro = '',
+    outro = ''
 ): string {
     const suffix = date ? ` (${monthYear(date)})` : '';
-    const body = packageChanges ? `${summary}\n\n${packageChanges}` : summary;
+    const body = [intro.trim(), summary.trim(), packageChanges.trim(), outro.trim()]
+        .filter(Boolean)
+        .join('\n\n');
     if (!withMarkers) {
         return `## ${version}${suffix}\n\n${body}`;
     }

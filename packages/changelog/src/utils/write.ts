@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { type ChangelogBreakingSetting, logger } from '@deltabox/toolchain/shared';
+import type { ChangelogConfig } from '@deltabox/toolchain/shared';
 
 import { formatChangelogFile } from './format.js';
 import { readCommits, repoSlug } from './git.js';
@@ -10,8 +11,40 @@ import { packageChangesForCurrent } from './packages.js';
 import { formatExistingChangelogs, parseExistingChangelog } from './reformat.js';
 import { discoverWorkspaceDirs, isCommitReleased, readReleasedHashes, repoRoot } from './repo.js';
 import { buildSummary } from './summary.js';
-import type { ChangelogGroupsSetting, CommitRecord } from './types.js';
+import type {
+    ChangelogGroupsSetting,
+    ChangelogProviderSetting,
+    CommitFormatOptions,
+    CommitRecord,
+} from './types.js';
 import { prependChangelogEntry, renderChangelogEntry } from './version.js';
+
+/** Per-target option resolvers for workspace changelog entries. */
+export interface ChangelogTargetResolvers {
+    intro?: (dir: string) => string | undefined;
+    outro?: (dir: string) => string | undefined;
+    commit?: (dir: string) => CommitFormatOptions | undefined;
+    provider?: (dir: string) => ChangelogProviderSetting | undefined;
+}
+
+function applyProvider(
+    provider: ChangelogProviderSetting | undefined,
+    cwd: string,
+    changelog: ChangelogConfig | undefined,
+    records: CommitRecord[],
+    summary: string
+): string {
+    if (!provider || provider === 'default' || provider === 'changesets') return summary;
+    if (typeof provider === 'object' && typeof provider.run === 'function') {
+        const custom = provider.run({ cwd, changelog, records });
+        return typeof custom === 'string' ? custom : summary;
+    }
+    if (typeof provider === 'function') {
+        const custom = provider({ cwd, changelog, records });
+        return typeof custom === 'string' ? custom : summary;
+    }
+    return summary;
+}
 
 /** Prepend the new entry to the root + workspace changelogs and normalize links. */
 export function writeChangelogs(
@@ -24,7 +57,9 @@ export function writeChangelogs(
     workspaceEntries?: Map<string, string>,
     commitlint = true,
     groups?: ChangelogGroupsSetting,
-    breaking?: ChangelogBreakingSetting
+    breaking?: ChangelogBreakingSetting,
+    resolvers: ChangelogTargetResolvers = {},
+    changelog?: ChangelogConfig
 ): void {
     const root = repoRoot();
     const repo = repoSlug();
@@ -45,7 +80,15 @@ export function writeChangelogs(
     }
 
     // The root changelog lists every pushed commit.
-    const entry = renderChangelogEntry(version, summary, new Date(), true, footer);
+    const entry = renderChangelogEntry(
+        version,
+        summary,
+        new Date(),
+        true,
+        footer,
+        resolvers.intro?.(root) ?? '',
+        resolvers.outro?.(root) ?? ''
+    );
     prependChangelogEntry(rootChangelog, entry);
     logger.info(`  updated ${rootChangelog}`);
 
@@ -75,8 +118,27 @@ export function writeChangelogs(
             range,
             ...(groups ? { groups } : {}),
             ...(breaking !== undefined ? { breaking } : {}),
+            ...(resolvers.commit?.(dir) ? { commit: resolvers.commit?.(dir) } : {}),
         });
-        prependChangelogEntry(file, renderChangelogEntry(workspaceVersion, wsSummary, new Date()));
+        const wsBody = applyProvider(
+            resolvers.provider?.(dir),
+            root,
+            changelog,
+            filtered,
+            wsSummary
+        );
+        prependChangelogEntry(
+            file,
+            renderChangelogEntry(
+                workspaceVersion,
+                wsBody,
+                new Date(),
+                true,
+                '',
+                resolvers.intro?.(dir) ?? '',
+                resolvers.outro?.(dir) ?? ''
+            )
+        );
         logger.info(`  ${created ? 'created' : 'updated'} ${file}`);
     }
     // Normalize every changelog (all versions, including old entries).

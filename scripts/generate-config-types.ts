@@ -92,7 +92,7 @@ const overrides = {
 } satisfies GenerateTypesOptions['overrides'];
 
 const imports = [
-    "import type { JsonObject, TsConfigJson } from 'type-fest';",
+    "import type { Arrayable, JsonObject, TsConfigJson } from 'type-fest';",
     "import type { ToolchainTsconfigAliasRewrite } from './config-schema/alias-rewrite.js';",
     "import type { ViteUserConfig } from 'vite-plus';",
     "import type { AzurePipelines } from './config-schema/generated/azure-pipelines.js';",

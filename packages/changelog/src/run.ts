@@ -95,9 +95,10 @@ import {
     writeVersion,
 } from './utils/repo.js';
 import { buildSummary } from './utils/summary.js';
+import { resolveScopedOption, resolveTextSetting } from './utils/target.js';
 import type {
     ChangelogGroupsSetting,
-    ChangelogProvider,
+    ChangelogProviderSetting,
     CommitFormatOptions,
 } from './utils/types.js';
 import {
@@ -107,7 +108,9 @@ import {
     SEMVER_PATTERN,
 } from './utils/version.js';
 import {
+    bumpRulesFor,
     deriveCustomBump,
+    overBumpFor,
     planVersions,
     resolveVersioning,
     writePackageVersion,
@@ -201,7 +204,23 @@ export function runChangelog(
     }
 
     const versioning = resolveVersioning(changelog);
-    const provider = versioning.provider as ChangelogProvider | string | undefined;
+    const rootDir = repoRoot();
+    const provider = resolveScopedOption<ChangelogProviderSetting | undefined>(
+        versioning.provider as never,
+        rootDir,
+        rootDir
+    );
+    const rootCommit = resolveScopedOption<CommitFormatOptions | undefined>(
+        versioning.commit as never,
+        rootDir,
+        rootDir
+    );
+    const rootBumpRules = bumpRulesFor(versioning.bump, rootDir, rootDir);
+    const rootOverBump = overBumpFor(versioning, rootDir, rootDir);
+    const introFor = (dir: string): string | undefined =>
+        resolveTextSetting(changelog?.intro, dir, rootDir, rootDir);
+    const outroFor = (dir: string): string | undefined =>
+        resolveTextSetting(changelog?.outro, dir, rootDir, rootDir);
     if (!options.dryRun && provider === 'changesets') {
         const result = spawnSync('npx', ['--yes', 'changeset', 'version'], {
             cwd: repoRoot(),
@@ -224,7 +243,7 @@ export function runChangelog(
         logger.info('No new commits since the last release; nothing to do.');
         return;
     }
-    const type = deriveCustomBump(records, versioning.bump, versioning.allowOverBump, {
+    const type = deriveCustomBump(records, rootBumpRules, rootOverBump, {
         env: process.env,
         logger,
         ...(breaking !== undefined ? { breaking } : {}),
@@ -235,7 +254,7 @@ export function runChangelog(
         range,
         ...(groups ? { groups } : {}),
         ...(breaking !== undefined ? { breaking } : {}),
-        ...(versioning.commit ? { commit: versioning.commit as CommitFormatOptions } : {}),
+        ...(rootCommit ? { commit: rootCommit } : {}),
     });
     if (provider && typeof provider === 'object' && typeof provider.run === 'function') {
         const custom = provider.run({ cwd: repoRoot(), changelog, records });
@@ -256,8 +275,8 @@ export function runChangelog(
         rootVersion: current,
         bump: type,
         range,
-        ...(versioning.bump ? { bumpRules: versioning.bump } : {}),
-        ...(versioning.allowOverBump ? { allowOverBump: true } : {}),
+        ...(rootBumpRules ? { bumpRules: rootBumpRules } : {}),
+        ...(rootOverBump ? { allowOverBump: true } : {}),
         ...(breaking !== undefined ? { breaking } : {}),
     });
     const next = plan.rootVersion;
@@ -271,7 +290,15 @@ export function runChangelog(
             options.packageChanges && previousVersion
                 ? packageChangesForCurrent(previousVersion)
                 : '';
-        const entry = renderChangelogEntry(next, summary, new Date(), true, footer);
+        const entry = renderChangelogEntry(
+            next,
+            summary,
+            new Date(),
+            true,
+            footer,
+            introFor(root) ?? '',
+            outroFor(root) ?? ''
+        );
         logger.info(`[DRY-RUN] Range: ${range}`);
         logger.info(
             `[DRY-RUN] Processing method: ${method}${reformatAll ? ' (backward reformat)' : ''}`
@@ -308,7 +335,24 @@ export function runChangelog(
         plan.entries,
         commitlint,
         groups,
-        breaking
+        breaking,
+        {
+            intro: introFor,
+            outro: outroFor,
+            commit: dir =>
+                resolveScopedOption<CommitFormatOptions | undefined>(
+                    versioning.commit as never,
+                    dir,
+                    rootDir
+                ),
+            provider: dir =>
+                resolveScopedOption<ChangelogProviderSetting | undefined>(
+                    versioning.provider as never,
+                    dir,
+                    rootDir
+                ),
+        },
+        changelog
     );
     if (versioning.enabled) {
         logger.info(`Bumped ${current} -> ${next} (${type}) from ${records.length} commit(s).`);
