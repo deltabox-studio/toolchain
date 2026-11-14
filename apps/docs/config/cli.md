@@ -230,6 +230,10 @@ Scan commits, derive the semver bump and update the CHANGELOG.md files + version
 - `--release-notes ‹semver›` — Print the release body for this version and exit.
 - `--processing-method ‹method›` — `latest` (default), `all`, or a git range.
 - `--format-only` — Only regroup existing changelogs.
+- `--intro ‹text›` — Inline intro text for the new changelog entry.
+- `--intro-file ‹file›` — Read the new entry intro text from a file.
+- `--outro ‹text›` — Inline outro text for the new changelog entry.
+- `--outro-file ‹file›` — Read the new entry outro text from a file.
 - `--no-package-changes-section` — Skip the package-changes footer.
 
 ## `dbx mcp:serve`

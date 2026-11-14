@@ -701,7 +701,9 @@ export type ChangelogDetailsConfig =
     | boolean
     | {
           enabled?: boolean;
+          lifecycle: 'after' | 'before';
           descriptions?: boolean | { title?: string; expanded?: boolean };
+          body?: boolean | { title?: string; expanded?: boolean };
           releaseNotes?: boolean | { title?: string; expanded?: boolean };
           intro?: boolean | { title?: string; expanded?: boolean };
           outro?: boolean | { title?: string; expanded?: boolean };

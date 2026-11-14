@@ -895,7 +895,33 @@ Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enable
 
 Enable/disable details wrapping (default true).
 
+###### `lifecycle`
+
+- **Required**
+- **Type**: `'after' | 'before'`
+- **Default**: `"after"`
+
+Apply details after the changelog formatting pipeline (default `after`, so custom searches regex-match the formatted text) or before it (`before`).
+
 ###### `descriptions`
+
+- **Type**: `boolean | object`
+
+Enable/disable this collapsible, optionally with a title/expanded state.
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
+###### `body`
 
 - **Type**: `boolean | object`
 
@@ -1630,7 +1656,33 @@ Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enable
 
 Enable/disable details wrapping (default true).
 
+###### `lifecycle`
+
+- **Required**
+- **Type**: `'after' | 'before'`
+- **Default**: `"after"`
+
+Apply details after the changelog formatting pipeline (default `after`, so custom searches regex-match the formatted text) or before it (`before`).
+
 ###### `descriptions`
+
+- **Type**: `boolean | object`
+
+Enable/disable this collapsible, optionally with a title/expanded state.
+
+###### `title`
+
+- **Type**: `string`
+
+Custom `<summary>` text.
+
+###### `expanded`
+
+- **Type**: `boolean`
+
+Render the collapsible open by default.
+
+###### `body`
 
 - **Type**: `boolean | object`
 

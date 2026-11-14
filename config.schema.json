@@ -2037,7 +2037,38 @@
                             "type": "boolean",
                             "description": "Enable/disable details wrapping (default true)."
                         },
+                        "lifecycle": {
+                            "default": "after",
+                            "type": "string",
+                            "enum": [
+                                "after",
+                                "before"
+                            ],
+                            "description": "Apply details after the changelog formatting pipeline (default `after`, so custom searches regex-match the formatted text) or before it (`before`)."
+                        },
                         "descriptions": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "title": {
+                                            "type": "string",
+                                            "description": "Custom `<summary>` text."
+                                        },
+                                        "expanded": {
+                                            "type": "boolean",
+                                            "description": "Render the collapsible open by default."
+                                        }
+                                    },
+                                    "additionalProperties": false
+                                }
+                            ],
+                            "description": "Enable/disable this collapsible, optionally with a title/expanded state."
+                        },
+                        "body": {
                             "anyOf": [
                                 {
                                     "type": "boolean"
@@ -2267,6 +2298,9 @@
                             "description": "Wrap matching text (the match or `start` match becomes the summary)."
                         }
                     },
+                    "required": [
+                        "lifecycle"
+                    ],
                     "additionalProperties": false
                 }
             ],
