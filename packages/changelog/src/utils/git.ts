@@ -170,6 +170,9 @@ function ghApi(repo: string, path: string, jq: string): string | undefined {
         }).trim();
         value = out && out !== 'null' ? out : undefined;
     } catch {
+        // A timeout/network failure must not be retried for every commit: disable
+        // gh for the rest of the run and fall back to plain git metadata.
+        ghAvailable = false;
         value = undefined;
     }
     ghApiCache.set(key, value);
