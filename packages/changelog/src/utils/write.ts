@@ -26,6 +26,8 @@ export interface ChangelogTargetResolvers {
     outro?: (dir: string) => string | undefined;
     commit?: (dir: string) => CommitFormatOptions | undefined;
     provider?: (dir: string) => ChangelogProviderSetting | undefined;
+    /** Release mode (Release Notes details). */
+    release?: boolean;
 }
 
 function applyProvider(
@@ -82,12 +84,16 @@ export function writeChangelogs(
             packageChanges,
             groups,
             breaking,
-            resolvers.commit?.(root)?.details
+            resolvers.commit?.(root)?.details,
+            resolvers.release === true
         );
     }
 
     // The root changelog lists every pushed commit.
-    const rootDetails = resolveDetails(resolvers.commit?.(root)?.details);
+    const rootDetails = resolveDetails(
+        resolvers.commit?.(root)?.details,
+        resolvers.release === true
+    );
     const entry = renderChangelogEntry(
         version,
         summary,
@@ -96,7 +102,8 @@ export function writeChangelogs(
         footer,
         resolvers.intro?.(root) ?? '',
         resolvers.outro?.(root) ?? '',
-        resolvers.commit?.(root)?.details
+        resolvers.commit?.(root)?.details,
+        resolvers.release === true
     );
     prependChangelogEntry(
         rootChangelog,
@@ -131,6 +138,7 @@ export function writeChangelogs(
             ...(groups ? { groups } : {}),
             ...(breaking !== undefined ? { breaking } : {}),
             ...(resolvers.commit?.(dir) ? { commit: resolvers.commit?.(dir) } : {}),
+            release: resolvers.release === true,
         });
         const wsBody = applyProvider(
             resolvers.provider?.(dir),
@@ -139,7 +147,10 @@ export function writeChangelogs(
             filtered,
             wsSummary
         );
-        const wsDetails = resolveDetails(resolvers.commit?.(dir)?.details);
+        const wsDetails = resolveDetails(
+            resolvers.commit?.(dir)?.details,
+            resolvers.release === true
+        );
         const wsEntry = renderChangelogEntry(
             workspaceVersion,
             wsBody,
@@ -148,7 +159,8 @@ export function writeChangelogs(
             '',
             resolvers.intro?.(dir) ?? '',
             resolvers.outro?.(dir) ?? '',
-            resolvers.commit?.(dir)?.details
+            resolvers.commit?.(dir)?.details,
+            resolvers.release === true
         );
         prependChangelogEntry(
             file,

@@ -213,18 +213,24 @@ option and for the intro/outro settings.
 ## Collapsible details
 
 `versioning.commit.details` wraps changelog sections in markdown
-`<details>`/`<summary>` blocks. It is enabled by default (`details: true`
-wraps commit descriptions, the release notes and the breaking-changes section);
-set `details: false` to opt out.
+`<details>`/`<summary>` blocks. It is enabled by default; `details: false` opts
+out.
 
-`ts
+- Non-release runs wrap the version body and use the version title
+  (`3.0.0 (November 2026)`) as the summary.
+- Release runs (`dbx changelog --release`) wrap the entry as
+  `<strong>Release Notes</strong>` instead.
+- `descriptions`, `breaking` and `intro`/`outro`/`footer` are opt-in wrappers;
+  `types` wraps matching CC sections.
+
+```ts
 ci: {
     changelog: {
         versioning: {
             commit: {
                 details: {
                     descriptions: { title: 'More', expanded: true },
-                    releaseNotes: { title: '**Release Notes**' },
+                    releaseNotes: { title: 'Release Notes' },
                     intro: true,
                     outro: true,
                     footer: true,
@@ -236,10 +242,10 @@ ci: {
         },
     },
 }
-`
+```
 
 - `descriptions` uses the resolved commit title (including the SHA/author) as the summary and only applies when the commit has a body.
-- `releaseNotes`, `intro`, `outro`, `footer` and `breaking` default to bold summaries.
+- `releaseNotes`, `intro`, `outro`, `footer` and `breaking` use bold summaries by default (`<strong>`; Markdown is not parsed inside `<summary>`).
 - `types` wraps matching CC type sections (all types when `true`), using the section title by default.
 - `custom` accepts a regex/string or `{ start, end }` markers; the match (or start match) becomes the summary.
 
@@ -254,5 +260,5 @@ Every flag also accepts `{ title?: string; expanded?: boolean }`.
   credits, etc.).
 - `before`: details are applied while the entry is rendered.
 
-`details.body: true` wraps the whole version body in a collapsible; the
-version heading is used as the summary by default.
+`details.body: true` wraps the whole version body in a collapsible. It is the
+default in non-release mode; release mode uses `details.releaseNotes` instead.

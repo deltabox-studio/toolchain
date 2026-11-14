@@ -58,6 +58,8 @@ export interface BuildSummaryOptions {
     groups?: ChangelogGroupsSetting;
     /** How breaking changes are detected (default: Conventional Commits). */
     breaking?: ChangelogBreakingSetting;
+    /** Whether this is the release-mode changelog (Release Notes details). */
+    release?: boolean;
 }
 
 type BumpGroup = 'major' | 'minor' | 'patch';
@@ -241,7 +243,7 @@ function renderNewContributors(
 /** Render the grouped changelog summary for a set of commits. */
 export function buildSummary(records: CommitRecord[], options: BuildSummaryOptions = {}): string {
     const repo = repoSlug();
-    const resolved = resolveDetails(options.commit?.details);
+    const resolved = resolveDetails(options.commit?.details, options.release === true);
     // `lifecycle: 'after'` applies details to the fully formatted entry instead.
     const details = resolved.lifecycle === 'after' ? resolveDetails(false) : resolved;
     const summary =

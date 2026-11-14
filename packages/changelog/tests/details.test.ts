@@ -16,16 +16,32 @@ const records = [
 ];
 
 describe('changelog details', () => {
-    it('is enabled by default and wraps release notes, descriptions and breaking changes', () => {
+    it('is enabled by default and wraps the version body, descriptions and breaking changes', () => {
         const summary = applyDetailsToEntry(
             renderChangelogEntry('1.0.0', buildSummary(records)),
             resolveDetails(true)
         );
         expect(summary).toContain('<details>');
-        expect(summary).toContain('<summary>**Release Notes**</summary>');
-        expect(summary).toContain('<summary>**BREAKING CHANGES**</summary>');
+        expect(summary).toContain('<summary>1.0.0</summary>');
+        expect(summary).toContain('<summary><strong>BREAKING CHANGES</strong></summary>');
         expect(summary).toContain('<summary>Add a thing');
         expect(summary).toContain('A longer explanation of the thing.');
+    });
+
+    it('uses Release Notes only in release mode', () => {
+        const release = applyDetailsToEntry(
+            renderChangelogEntry('1.0.0', buildSummary(records, { release: true })),
+            resolveDetails(true, true)
+        );
+        expect(release).toContain('<summary><strong>Release Notes</strong></summary>');
+        expect(release).not.toContain('<summary>1.0.0</summary>');
+
+        const normal = applyDetailsToEntry(
+            renderChangelogEntry('1.0.0', buildSummary(records)),
+            resolveDetails(true)
+        );
+        expect(normal).not.toContain('Release Notes');
+        expect(normal).toContain('<summary>1.0.0</summary>');
     });
 
     it('can be disabled with details: false', () => {
@@ -51,11 +67,14 @@ describe('changelog details', () => {
                     },
                 })
             ),
-            resolveDetails({
-                releaseNotes: { title: 'Notes', expanded: true },
-                breaking: false,
-                descriptions: { title: 'More' },
-            })
+            resolveDetails(
+                {
+                    releaseNotes: { title: 'Notes', expanded: true },
+                    breaking: false,
+                    descriptions: { title: 'More' },
+                },
+                true
+            )
         );
         expect(summary).toContain('<details open>');
         expect(summary).toContain('<summary>Notes</summary>');
@@ -93,6 +112,7 @@ describe('changelog details', () => {
 
     it('can apply details before formatting with lifecycle: before', () => {
         const summary = buildSummary(records, {
+            release: true,
             commit: {
                 details: {
                     lifecycle: 'before',
@@ -103,7 +123,7 @@ describe('changelog details', () => {
             },
         });
         expect(summary).toContain('<details>');
-        expect(summary).toContain('<summary>**Release Notes**</summary>');
+        expect(summary).toContain('<summary><strong>Release Notes</strong></summary>');
     });
 
     it('wraps intro/outro/footer text through renderChangelogEntry', () => {
@@ -124,9 +144,9 @@ describe('changelog details', () => {
                 descriptions: false,
             }
         );
-        expect(entry).toContain('<summary>**Intro**</summary>');
-        expect(entry).toContain('<summary>**Outro**</summary>');
-        expect(entry).toContain('<summary>**Footer**</summary>');
+        expect(entry).toContain('<summary><strong>Intro</strong></summary>');
+        expect(entry).toContain('<summary><strong>Outro</strong></summary>');
+        expect(entry).toContain('<summary><strong>Footer</strong></summary>');
     });
 });
 

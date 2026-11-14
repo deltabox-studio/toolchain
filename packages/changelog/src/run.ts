@@ -190,7 +190,8 @@ export function runChangelog(
             options.packageChanges,
             groups,
             breaking,
-            detailsOf(changelog)
+            detailsOf(changelog),
+            options.release
         );
         return;
     }
@@ -314,6 +315,7 @@ export function runChangelog(
         ...(groups ? { groups } : {}),
         ...(breaking !== undefined ? { breaking } : {}),
         ...(rootCommit ? { commit: rootCommit } : {}),
+        release: options.release,
     });
     if (provider && typeof provider === 'object' && typeof provider.run === 'function') {
         const custom = provider.run({ cwd: repoRoot(), changelog, records });
@@ -349,7 +351,7 @@ export function runChangelog(
             options.packageChanges && previousVersion
                 ? packageChangesForCurrent(previousVersion)
                 : '';
-        const rootDetails = resolveDetails(rootCommit?.details);
+        const rootDetails = resolveDetails(rootCommit?.details, options.release);
         const entry =
             rootDetails.lifecycle === 'after'
                 ? applyDetailsToEntry(
@@ -361,7 +363,8 @@ export function runChangelog(
                           footer,
                           introFor(root) ?? '',
                           outroFor(root) ?? '',
-                          rootCommit?.details
+                          rootCommit?.details,
+                          options.release
                       ),
                       rootDetails
                   )
@@ -373,7 +376,8 @@ export function runChangelog(
                       footer,
                       introFor(root) ?? '',
                       outroFor(root) ?? '',
-                      rootCommit?.details
+                      rootCommit?.details,
+                      options.release
                   );
         logger.info(`[DRY-RUN] Range: ${range}`);
         logger.info(
@@ -391,7 +395,13 @@ export function runChangelog(
         // entry, or the fully reformatted changelog for `all`) to
         // CHANGELOG.proposed.md, with the new entry inserted at the top.
         const base = reformatAll
-            ? reformatRootChangelog(options.packageChanges, groups, breaking, detailsOf(changelog))
+            ? reformatRootChangelog(
+                  options.packageChanges,
+                  groups,
+                  breaking,
+                  detailsOf(changelog),
+                  options.release
+              )
             : existing;
         const content = insertNewEntry(base, entry);
         const proposed = resolve(root, 'CHANGELOG.proposed.md');
@@ -427,6 +437,7 @@ export function runChangelog(
                     dir,
                     rootDir
                 ),
+            release: options.release,
         },
         changelog
     );

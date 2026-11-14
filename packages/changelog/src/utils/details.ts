@@ -76,7 +76,7 @@ function customMatcher(value: unknown): DetailsCustomMatcher | undefined {
 }
 
 /** Normalize `details` (`true | false | object`). Defaults to enabled. */
-export function resolveDetails(value: unknown): ResolvedDetails {
+export function resolveDetails(value: unknown, release = false): ResolvedDetails {
     if (value === false) {
         return {
             enabled: false,
@@ -97,8 +97,11 @@ export function resolveDetails(value: unknown): ResolvedDetails {
             enabled: true,
             lifecycle: 'after',
             descriptions: { enabled: true },
-            body: { enabled: false },
-            releaseNotes: { enabled: true, title: DEFAULT_TITLES.releaseNotes },
+            body: { enabled: !release },
+            releaseNotes: {
+                enabled: release,
+                title: DEFAULT_TITLES.releaseNotes,
+            },
             intro: { enabled: false, title: DEFAULT_TITLES.intro },
             outro: { enabled: false, title: DEFAULT_TITLES.outro },
             footer: { enabled: false, title: DEFAULT_TITLES.footer },
@@ -108,7 +111,7 @@ export function resolveDetails(value: unknown): ResolvedDetails {
         };
     }
     const record = value as Record<string, unknown>;
-    if (record.enabled === false) return resolveDetails(false);
+    if (record.enabled === false) return resolveDetails(false, release);
     const typesValue = record.types;
     const typesList = Array.isArray(typesValue)
         ? typesValue.filter((item): item is string => typeof item === 'string')
@@ -117,12 +120,15 @@ export function resolveDetails(value: unknown): ResolvedDetails {
     const custom = (Array.isArray(customValue) ? customValue : [customValue])
         .map(customMatcher)
         .filter((item): item is DetailsCustomMatcher => item !== undefined);
+    const releaseNotes = release
+        ? toggle(record.releaseNotes, DEFAULT_TITLES.releaseNotes, true)
+        : { enabled: false, title: DEFAULT_TITLES.releaseNotes };
     return {
         enabled: true,
         lifecycle: record.lifecycle === 'before' ? 'before' : 'after',
         descriptions: toggle(record.descriptions),
-        body: toggle(record.body),
-        releaseNotes: toggle(record.releaseNotes, DEFAULT_TITLES.releaseNotes),
+        body: record.body === undefined ? { enabled: !release } : toggle(record.body),
+        releaseNotes,
         intro: toggle(record.intro, DEFAULT_TITLES.intro),
         outro: toggle(record.outro, DEFAULT_TITLES.outro),
         footer: toggle(record.footer, DEFAULT_TITLES.footer),
@@ -136,11 +142,22 @@ export function resolveDetails(value: unknown): ResolvedDetails {
 }
 
 /** Render a markdown `<details>` collapsible. */
+/** Render inline markdown in a `<summary>` as HTML (Markdown is not parsed there). */
+function summaryHtml(title: string): string {
+    return title
+        .trim()
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+        .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+
+/** Render a markdown `<details>` collapsible. */
 export function renderDetails(title: string, content: string, expanded = false): string {
     const body = content.trim();
     return [
         `<details${expanded ? ' open' : ''}>`,
-        `<summary>${title}</summary>`,
+        `<summary>${summaryHtml(title)}</summary>`,
         '',
         body,
         '',
@@ -336,5 +353,27 @@ export function applyDetailsToEntry(entry: string, details: ResolvedDetails): st
     lines = wrapDescriptions(lines, details.descriptions);
     lines = wrapSections(lines, details);
     lines = wrapBody(lines, details);
-    return wrapCustomDetails(lines.join('\n'), details);
+    return normalizeDetailsSpacing(wrapCustomDetails(lines.join('\n'), details));
+}
+
+/** Keep details blocks separated from surrounding Markdown blocks. */
+function normalizeDetailsSpacing(text: string): string {
+    const lines = text.split('\n');
+    const out: string[] = [];
+    for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index]!;
+        const previous = out[out.length - 1];
+        if (/^<details\b/i.test(line.trim()) && previous !== undefined && previous.trim() !== '') {
+            out.push('');
+        }
+        out.push(line);
+        if (
+            /^<\/details>/i.test(line.trim()) &&
+            index + 1 < lines.length &&
+            lines[index + 1]!.trim() !== ''
+        ) {
+            out.push('');
+        }
+    }
+    return out.join('\n').replace(/\n{3,}/g, '\n\n');
 }

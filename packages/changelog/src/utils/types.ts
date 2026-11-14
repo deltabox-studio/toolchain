@@ -69,6 +69,8 @@ export interface CliOptions {
     releaseNotes?: string;
     processingMethod: ProcessingMethod;
     formatOnly: boolean;
+    /** Release mode (uses the **Release Notes** details wrapper). */
+    release: boolean;
     /** Include the `### Package changes` footer (disable with --no-package-changes-section). */
     packageChanges: boolean;
     /** Inline intro text for the new entry. */

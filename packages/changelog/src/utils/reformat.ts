@@ -127,9 +127,10 @@ function reformatEntry(
     packageChanges = '',
     groups?: ChangelogGroupsSetting,
     breakingSetting?: ChangelogBreakingSetting,
-    detailsValue?: unknown
+    detailsValue?: unknown,
+    release = false
 ): string {
-    const resolved = resolveDetails(detailsValue);
+    const resolved = resolveDetails(detailsValue, release);
     const details = resolved.lifecycle === 'before' ? resolved : undefined;
     const items: GroupedItem[] = [];
     for (const [index, line] of entry.bullets.entries()) {
@@ -181,7 +182,8 @@ export function reformatChangelogContent(
     includePackageChanges = false,
     groups?: ChangelogGroupsSetting,
     breaking?: ChangelogBreakingSetting,
-    details?: unknown
+    details?: unknown,
+    release = false
 ): string {
     // An unsupported `##` section (eg. `## Unreleased`) cannot be rendered by the
     // version-based reformatter; leave the file untouched instead of merging its
@@ -210,7 +212,8 @@ export function reformatChangelogContent(
                 changes,
                 groups,
                 breaking,
-                details
+                details,
+                release
             );
         })
         .filter(Boolean)
@@ -223,7 +226,8 @@ export function reformatRootChangelog(
     includePackageChanges = false,
     groups?: ChangelogGroupsSetting,
     breaking?: ChangelogBreakingSetting,
-    details?: unknown
+    details?: unknown,
+    release = false
 ): string {
     const root = repoRoot();
     const file = resolve(root, 'CHANGELOG.md');
@@ -235,7 +239,8 @@ export function reformatRootChangelog(
         includePackageChanges,
         groups,
         breaking,
-        details
+        details,
+        release
     );
 }
 
@@ -249,7 +254,8 @@ export function formatExistingChangelogs(
     packageChanges = false,
     groups?: ChangelogGroupsSetting,
     breaking?: ChangelogBreakingSetting,
-    details?: unknown
+    details?: unknown,
+    release = false
 ): void {
     const rootFile = resolve(repoRoot(), 'CHANGELOG.md');
     for (const file of changelogFiles()) {
@@ -263,7 +269,8 @@ export function formatExistingChangelogs(
             packageChanges && file === rootFile,
             groups,
             breaking,
-            details
+            details,
+            release
         );
         if (dryRun) {
             const proposed = file.replace(/CHANGELOG\.md$/, 'CHANGELOG.proposed.md');

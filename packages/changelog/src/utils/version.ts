@@ -71,10 +71,11 @@ export function renderChangelogEntry(
     packageChanges = '',
     intro = '',
     outro = '',
-    details?: unknown
+    details?: unknown,
+    release = false
 ): string {
     const suffix = date ? ` (${monthYear(date)})` : '';
-    const d = resolveDetails(details);
+    const d = resolveDetails(details, release);
     const wrap = (
         value: string,
         toggle: { enabled: boolean; title?: string; expanded?: boolean },
@@ -85,20 +86,21 @@ export function renderChangelogEntry(
             ? renderDetails(toggle.title ?? fallback, value, toggle.expanded === true)
             : value.trim();
     };
+    const introBlock = wrap(intro, d.intro, '**Intro**');
     const body = [
-        wrap(intro, d.intro, '**Intro**'),
         summary.trim(),
         wrap(packageChanges, d.footer, '**Footer**'),
         wrap(outro, d.outro, '**Outro**'),
     ]
         .filter(Boolean)
         .join('\n\n');
+    const introSection = introBlock ? `${introBlock}\n\n` : '';
     if (!withMarkers) {
-        return `## ${version}${suffix}\n\n${body}`;
+        return `## ${version}${suffix}\n\n${introSection}${body}`;
     }
     return `## ${version}${suffix}
 
-<!-- release:start -->
+${introSection}<!-- release:start -->
 
 ${body}
 

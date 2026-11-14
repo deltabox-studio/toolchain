@@ -107,6 +107,10 @@ export function changelogCommands(): ToolchainCommand[] {
                 },
                 { flags: '--format-only', description: 'Only regroup existing changelogs.' },
                 {
+                    flags: '--release',
+                    description: 'Release mode: wrap the entry as `**Release Notes**`.',
+                },
+                {
                     flags: '--intro <text>',
                     description: 'Inline intro text for the new changelog entry.',
                 },
@@ -140,6 +144,8 @@ export function changelogCommands(): ToolchainCommand[] {
                     argv.push('--processing-method', String(opts.processingMethod));
                 }
                 if (opts.formatOnly) argv.push('--format-only');
+                if (opts.release) argv.push('--release');
+                if (opts.release) argv.push('--release');
                 if (opts.intro) argv.push('--intro', String(opts.intro));
                 if (opts.introFile) argv.push('--intro-file', String(opts.introFile));
                 if (opts.outro) argv.push('--outro', String(opts.outro));
