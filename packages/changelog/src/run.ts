@@ -78,6 +78,7 @@ import {
 } from '@deltabox/toolchain/shared';
 
 import { parseArgsCli } from './utils/args.js';
+import { applyDetailsToEntry, resolveDetails } from './utils/details.js';
 import { isGitRepository, isReleaseCommit, lastReleaseRef, readCommits } from './utils/git.js';
 import { packageChangesForCurrent } from './utils/packages.js';
 import {
@@ -126,6 +127,27 @@ function releasedCommitHashes(): Set<string> {
     return hashes;
 }
 
+/** The `versioning.commit.details` value from a changelog config. */
+function detailsOf(changelog?: ChangelogConfig): unknown {
+    const versioning = changelog?.versioning;
+    if (!versioning || typeof versioning !== 'object') return undefined;
+    const commit = (versioning as { commit?: { details?: unknown } }).commit;
+    return commit?.details;
+}
+
+/** Append a CLI-provided intro/outro entry to the config setting. */
+function appendTextEntry<T>(setting: T | T[] | undefined, entry: T): T | T[] {
+    if (setting === undefined) return entry;
+    return [...(Array.isArray(setting) ? setting : [setting]), entry];
+}
+
+export interface RunChangelogOptions {
+    /** Top-level `toolchain.enabled` (default true). */
+    enabled?: boolean;
+    /** `ci.regenerate` / `ci.changelog.regenerate` (default true). */
+    regenerate?: boolean;
+}
+
 /**
  * Run the changelog pipeline (bump versions + write changelogs). `changelog` is
  * the consumer's `toolchain.ci.changelog` config (threaded from `dbx changelog`);
@@ -133,9 +155,18 @@ function releasedCommitHashes(): Set<string> {
  */
 export function runChangelog(
     argv: string[] = process.argv.slice(2),
-    changelog?: ChangelogConfig
+    changelog?: ChangelogConfig,
+    runOptions: RunChangelogOptions = {}
 ): void {
     const options = parseArgsCli(argv);
+    if (runOptions.enabled === false) {
+        logger.info('toolchain disabled; skipping changelog.');
+        return;
+    }
+    if (runOptions.regenerate === false && options.releaseNotes === undefined) {
+        logger.info('changelog regeneration disabled; skipping writes.');
+        return;
+    }
     const groups = changelog?.groups as ChangelogGroupsSetting | undefined;
     const breaking = changelog?.breaking as ChangelogBreakingSetting | undefined;
 
@@ -154,7 +185,13 @@ export function runChangelog(
                 options.dryRun ? ' (dry run)' : ''
             }.`
         );
-        formatExistingChangelogs(options.dryRun, options.packageChanges, groups, breaking);
+        formatExistingChangelogs(
+            options.dryRun,
+            options.packageChanges,
+            groups,
+            breaking,
+            detailsOf(changelog)
+        );
         return;
     }
 
@@ -217,10 +254,32 @@ export function runChangelog(
     );
     const rootBumpRules = bumpRulesFor(versioning.bump, rootDir, rootDir);
     const rootOverBump = overBumpFor(versioning, rootDir, rootDir);
+    const cliIntro = options.intro
+        ? { content: options.intro }
+        : options.introFile
+          ? { file: resolve(options.introFile) }
+          : undefined;
+    const cliOutro = options.outro
+        ? { content: options.outro }
+        : options.outroFile
+          ? { file: resolve(options.outroFile) }
+          : undefined;
+    const introSetting = cliIntro
+        ? appendTextEntry(
+              changelog?.intro as { content?: string; file?: string } | undefined,
+              cliIntro
+          )
+        : changelog?.intro;
+    const outroSetting = cliOutro
+        ? appendTextEntry(
+              changelog?.outro as { content?: string; file?: string } | undefined,
+              cliOutro
+          )
+        : changelog?.outro;
     const introFor = (dir: string): string | undefined =>
-        resolveTextSetting(changelog?.intro, dir, rootDir, rootDir);
+        resolveTextSetting(introSetting, dir, rootDir, rootDir);
     const outroFor = (dir: string): string | undefined =>
-        resolveTextSetting(changelog?.outro, dir, rootDir, rootDir);
+        resolveTextSetting(outroSetting, dir, rootDir, rootDir);
     if (!options.dryRun && provider === 'changesets') {
         const result = spawnSync('npx', ['--yes', 'changeset', 'version'], {
             cwd: repoRoot(),
@@ -290,16 +349,32 @@ export function runChangelog(
             options.packageChanges && previousVersion
                 ? packageChangesForCurrent(previousVersion)
                 : '';
-        const entry = renderChangelogEntry(
-            next,
-            summary,
-            new Date(),
-            true,
-            footer,
-            introFor(root) ?? '',
-            outroFor(root) ?? '',
-            rootCommit?.details
-        );
+        const rootDetails = resolveDetails(rootCommit?.details);
+        const entry =
+            rootDetails.lifecycle === 'after'
+                ? applyDetailsToEntry(
+                      renderChangelogEntry(
+                          next,
+                          summary,
+                          new Date(),
+                          true,
+                          footer,
+                          introFor(root) ?? '',
+                          outroFor(root) ?? '',
+                          rootCommit?.details
+                      ),
+                      rootDetails
+                  )
+                : renderChangelogEntry(
+                      next,
+                      summary,
+                      new Date(),
+                      true,
+                      footer,
+                      introFor(root) ?? '',
+                      outroFor(root) ?? '',
+                      rootCommit?.details
+                  );
         logger.info(`[DRY-RUN] Range: ${range}`);
         logger.info(
             `[DRY-RUN] Processing method: ${method}${reformatAll ? ' (backward reformat)' : ''}`
@@ -316,7 +391,7 @@ export function runChangelog(
         // entry, or the fully reformatted changelog for `all`) to
         // CHANGELOG.proposed.md, with the new entry inserted at the top.
         const base = reformatAll
-            ? reformatRootChangelog(options.packageChanges, groups, breaking)
+            ? reformatRootChangelog(options.packageChanges, groups, breaking, detailsOf(changelog))
             : existing;
         const content = insertNewEntry(base, entry);
         const proposed = resolve(root, 'CHANGELOG.proposed.md');

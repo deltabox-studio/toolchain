@@ -244,3 +244,15 @@ ci: {
 - `custom` accepts a regex/string or `{ start, end }` markers; the match (or start match) becomes the summary.
 
 Every flag also accepts `{ title?: string; expanded?: boolean }`.
+
+### Details lifecycle
+
+`details.lifecycle` controls when wrapping happens:
+
+- `after` (default): details are applied to the fully formatted entry. Custom
+  `RegExp`/string searches therefore match the formatted text (bold headings,
+  credits, etc.).
+- `before`: details are applied while the entry is rendered.
+
+`details.body: true` wraps the whole version body in a collapsible; the
+version heading is used as the summary by default.

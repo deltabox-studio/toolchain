@@ -48,16 +48,26 @@ function withPushBranches(
     return { pushBranches: branches, ...(setting as WorkflowOptions) };
 }
 
+/** Whether a workflow setting opts out of regeneration. */
+function workflowRegenerates(setting: unknown): boolean {
+    if (!setting || typeof setting !== 'object' || Array.isArray(setting)) return true;
+    return (setting as { regenerate?: unknown }).regenerate !== false;
+}
+
 /** The workflow settings declared under `toolchain.ci` (all opt-in). */
 function declaredWorkflows(config: ToolchainConfig): Partial<Record<WorkflowId, WorkflowSetting>> {
     const ci = sectionEnabled(config.ci) ? (sectionConfig(config.ci) ?? {}) : {};
-    return {
+    const workflows: Partial<Record<WorkflowId, WorkflowSetting>> = {
         ci: ci.ci,
         changelog: ci.changelog as WorkflowSetting | undefined,
         release: ci.release,
         issues: ci.issues,
         sync: ci.sync,
     };
+    for (const key of Object.keys(workflows) as WorkflowId[]) {
+        if (!workflowRegenerates(workflows[key])) delete workflows[key];
+    }
+    return workflows;
 }
 
 /**
@@ -162,7 +172,10 @@ export function changelogSyncTask(): SyncTask {
             const ch = resolveChangelogConfig(ctx.config) ?? {};
             const commitlintConfig = sectionConfig(ch.commitlint);
             // commitlint + the husky hook belong to the opted-in changelog pipeline.
-            const commitlint = changelogSectionEnabled(ctx.config) && resolveCommitlintEnabled(ch);
+            const commitlint =
+                changelogSectionEnabled(ctx.config) &&
+                regenerateEnabled(ch as { regenerate?: boolean }) &&
+                resolveCommitlintEnabled(ch);
             const files: ManagedFile[] = [];
             const workflowPaths = new Set<string>();
             const workflowConflicts: Record<string, string> = {};

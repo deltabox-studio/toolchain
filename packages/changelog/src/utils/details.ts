@@ -17,7 +17,9 @@ export interface DetailsCustomMatcher {
 /** The normalized `<details>` settings. */
 export interface ResolvedDetails {
     enabled: boolean;
+    lifecycle: 'after' | 'before';
     descriptions: DetailsToggle;
+    body: DetailsToggle;
     releaseNotes: DetailsToggle;
     intro: DetailsToggle;
     outro: DetailsToggle;
@@ -78,7 +80,9 @@ export function resolveDetails(value: unknown): ResolvedDetails {
     if (value === false) {
         return {
             enabled: false,
+            lifecycle: 'after',
             descriptions: { enabled: false },
+            body: { enabled: false },
             releaseNotes: { enabled: false },
             intro: { enabled: false },
             outro: { enabled: false },
@@ -91,7 +95,9 @@ export function resolveDetails(value: unknown): ResolvedDetails {
     if (value === undefined || value === true) {
         return {
             enabled: true,
+            lifecycle: 'after',
             descriptions: { enabled: true },
+            body: { enabled: false },
             releaseNotes: { enabled: true, title: DEFAULT_TITLES.releaseNotes },
             intro: { enabled: false, title: DEFAULT_TITLES.intro },
             outro: { enabled: false, title: DEFAULT_TITLES.outro },
@@ -113,7 +119,9 @@ export function resolveDetails(value: unknown): ResolvedDetails {
         .filter((item): item is DetailsCustomMatcher => item !== undefined);
     return {
         enabled: true,
+        lifecycle: record.lifecycle === 'before' ? 'before' : 'after',
         descriptions: toggle(record.descriptions),
+        body: toggle(record.body),
         releaseNotes: toggle(record.releaseNotes, DEFAULT_TITLES.releaseNotes),
         intro: toggle(record.intro, DEFAULT_TITLES.intro),
         outro: toggle(record.outro, DEFAULT_TITLES.outro),
@@ -188,4 +196,145 @@ export function wrapCustomDetails(text: string, details: ResolvedDetails): strin
         )}${output.slice(startMatch.index + inner.length)}`;
     }
     return output;
+}
+
+const TYPE_TITLES: Record<string, string> = {
+    feat: 'New features',
+    fix: 'Bug fixes',
+    refactor: 'Refactors',
+    docs: 'Documentation',
+    style: 'Styles',
+    chore: 'Chores',
+    test: 'Tests',
+    perf: 'Performance',
+    build: 'Build system',
+    ci: 'CI',
+    revert: 'Reverts',
+};
+
+function sectionMatchesTypes(title: string, list: string[] | undefined): boolean {
+    if (!list || list.length === 0) return true;
+    const normalized = title.toLowerCase();
+    return list.some(type => {
+        const raw = type.toLowerCase();
+        return raw === normalized || (TYPE_TITLES[raw] ?? '').toLowerCase() === normalized;
+    });
+}
+
+/** Wrap a bullet's indented description lines in a details block. */
+function wrapDescriptions(lines: string[], toggle: DetailsToggle): string[] {
+    if (!toggle.enabled) return lines;
+    const out: string[] = [];
+    for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index]!;
+        if (!/^[-*+]\s+/.test(line) || /^\s*<details/i.test(line)) {
+            out.push(line);
+            continue;
+        }
+        let end = index + 1;
+        while (end < lines.length && /^\s{2,}\S/.test(lines[end]!)) end += 1;
+        const body = lines.slice(index + 1, end);
+        if (body.length === 0) {
+            out.push(line);
+            continue;
+        }
+        const title = toggle.title ?? line.replace(/^[-*+]\s+/, '').trim();
+        out.push(
+            line,
+            ...renderDetails(title, body.join('\n'), toggle.expanded === true).split('\n')
+        );
+        index = end - 1;
+    }
+    return out;
+}
+
+function findSectionEnd(lines: string[], start: number): number {
+    let end = start + 1;
+    while (end < lines.length && !/^#{2,3}\s/.test(lines[end]!)) end += 1;
+    return end;
+}
+
+/** Wrap matching section headings (breaking/types) in details. */
+function wrapSections(lines: string[], details: ResolvedDetails): string[] {
+    const out: string[] = [];
+    for (let index = 0; index < lines.length; index += 1) {
+        const heading = /^###\s+(.+)$/.exec(lines[index]!);
+        if (!heading) {
+            out.push(lines[index]!);
+            continue;
+        }
+        const rawTitle = heading[1]!.replace(/\*\*/g, '').trim();
+        const end = findSectionEnd(lines, index);
+        const block = lines.slice(index, end);
+        let toggle: DetailsToggle | undefined;
+        if (details.breaking.enabled && rawTitle.toLowerCase() === 'breaking changes') {
+            toggle = details.breaking;
+        } else if (details.types.enabled && sectionMatchesTypes(rawTitle, details.types.list)) {
+            toggle = details.types;
+        }
+        if (!toggle) {
+            out.push(...block);
+            index = end - 1;
+            continue;
+        }
+        out.push(
+            ...renderDetails(
+                toggle.title ?? rawTitle,
+                block.join('\n'),
+                toggle.expanded === true
+            ).split('\n')
+        );
+        index = end - 1;
+    }
+    return out;
+}
+
+/** Wrap the version body (and/or release notes) in details. */
+function wrapBody(lines: string[], details: ResolvedDetails): string[] {
+    if (!details.enabled || (!details.body.enabled && !details.releaseNotes.enabled)) {
+        return lines;
+    }
+    const headingIndex = lines.findIndex(line => /^##\s+/.test(line));
+    if (headingIndex === -1) return lines;
+    const heading = lines[headingIndex]!.replace(/^##\s+/, '').trim();
+    let start = headingIndex + 1;
+    let end = lines.length;
+    const startMarker = lines.findIndex(
+        (line, index) => index > headingIndex && line.includes('<!-- release:start -->')
+    );
+    const endMarker = lines.findIndex(
+        (line, index) => index > headingIndex && line.includes('<!-- release:end -->')
+    );
+    if (startMarker !== -1 && endMarker !== -1 && endMarker > startMarker) {
+        start = startMarker + 1;
+        end = endMarker;
+    }
+    while (start < end && !lines[start]!.trim()) start += 1;
+    while (end > start && !lines[end - 1]!.trim()) end -= 1;
+    if (start >= end) return lines;
+    let inner = lines.slice(start, end).join('\n');
+    if (details.releaseNotes.enabled) {
+        inner = renderDetails(
+            details.releaseNotes.title ?? '**Release Notes**',
+            inner,
+            details.releaseNotes.expanded === true
+        );
+    }
+    if (details.body.enabled) {
+        inner = renderDetails(details.body.title ?? heading, inner, details.body.expanded === true);
+    }
+    return [...lines.slice(0, start), ...inner.split('\n'), ...lines.slice(end)];
+}
+
+/**
+ * Apply details to a fully formatted version entry (custom regexes run last, on
+ * the formatted text). This is the default lifecycle: 'after' pipeline.
+ */
+export function applyDetailsToEntry(entry: string, details: ResolvedDetails): string {
+    if (!details.enabled) return entry;
+    let lines = entry.split('\n');
+    lines = wrapDescriptions(lines, details.descriptions);
+    lines = wrapSections(lines, details);
+    lines = wrapBody(lines, details);
+    return wrapCustomDetails(lines.join('\n'), details);
 }

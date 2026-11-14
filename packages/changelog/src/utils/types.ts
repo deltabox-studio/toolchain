@@ -71,6 +71,14 @@ export interface CliOptions {
     formatOnly: boolean;
     /** Include the `### Package changes` footer (disable with --no-package-changes-section). */
     packageChanges: boolean;
+    /** Inline intro text for the new entry. */
+    intro?: string;
+    /** File containing the intro text for the new entry. */
+    introFile?: string;
+    /** Inline outro text for the new entry. */
+    outro?: string;
+    /** File containing the outro text for the new entry. */
+    outroFile?: string;
 }
 
 /** A Conventional-Commits subject parsed into its parts. */

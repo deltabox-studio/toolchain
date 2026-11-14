@@ -32,9 +32,10 @@ describe('reformatChangelogContent hand corrections', () => {
         expect(out).toContain('Add a hand-corrected thing');
         expect(out).toContain('The hand-corrected description with `backticks` and any, false.');
         expect(out).not.toContain('The original body.');
-        // The CC prefix is still stripped, and the credit suffix is not duplicated.
+        // The CC prefix is still stripped. The credit appears twice: once on the
+        // bullet and once in the description's `<summary>` (details.default).
         expect(out).not.toContain('**feat(server):**');
-        expect(out.match(/\[#abc1234\]/g)).toHaveLength(1);
+        expect(out.match(/\[#abc1234\]/g)).toHaveLength(2);
     });
 
     it('fills in a description when the existing entry has none', () => {

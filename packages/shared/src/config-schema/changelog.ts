@@ -224,7 +224,15 @@ export const changelogDetailsConfigSchema = z
                 .boolean()
                 .describe('Enable/disable details wrapping (default true).')
                 .optional(),
+            lifecycle: z
+                .enum(['after', 'before'])
+                .describe(
+                    'Apply details after the changelog formatting pipeline (default `after`, so ' +
+                        'custom searches regex-match the formatted text) or before it (`before`).'
+                )
+                .default('after'),
             descriptions: changelogDetailsToggleSchema.optional(),
+            body: changelogDetailsToggleSchema.optional(),
             releaseNotes: changelogDetailsToggleSchema.optional(),
             intro: changelogDetailsToggleSchema.optional(),
             outro: changelogDetailsToggleSchema.optional(),

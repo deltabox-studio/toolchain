@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { type ChangelogBreakingSetting, logger } from '@deltabox/toolchain/shared';
 import type { ChangelogConfig } from '@deltabox/toolchain/shared';
 
+import { applyDetailsToEntry, resolveDetails } from './details.js';
 import { formatChangelogFile } from './format.js';
 import { readCommits, repoSlug } from './git.js';
 import { relatedWorkspacePaths } from './graph.js';
@@ -76,10 +77,17 @@ export function writeChangelogs(
     if (reformatAll) {
         // Rewrite every changelog cohesively (root + workspaces), then prepend
         // the new entries below.
-        formatExistingChangelogs(false, packageChanges, groups, breaking);
+        formatExistingChangelogs(
+            false,
+            packageChanges,
+            groups,
+            breaking,
+            resolvers.commit?.(root)?.details
+        );
     }
 
     // The root changelog lists every pushed commit.
+    const rootDetails = resolveDetails(resolvers.commit?.(root)?.details);
     const entry = renderChangelogEntry(
         version,
         summary,
@@ -90,7 +98,10 @@ export function writeChangelogs(
         resolvers.outro?.(root) ?? '',
         resolvers.commit?.(root)?.details
     );
-    prependChangelogEntry(rootChangelog, entry);
+    prependChangelogEntry(
+        rootChangelog,
+        rootDetails.lifecycle === 'after' ? applyDetailsToEntry(entry, rootDetails) : entry
+    );
     logger.info(`  updated ${rootChangelog}`);
 
     // Each versioned workspace gets its own changelog, listing only its related
@@ -128,18 +139,20 @@ export function writeChangelogs(
             filtered,
             wsSummary
         );
+        const wsDetails = resolveDetails(resolvers.commit?.(dir)?.details);
+        const wsEntry = renderChangelogEntry(
+            workspaceVersion,
+            wsBody,
+            new Date(),
+            true,
+            '',
+            resolvers.intro?.(dir) ?? '',
+            resolvers.outro?.(dir) ?? '',
+            resolvers.commit?.(dir)?.details
+        );
         prependChangelogEntry(
             file,
-            renderChangelogEntry(
-                workspaceVersion,
-                wsBody,
-                new Date(),
-                true,
-                '',
-                resolvers.intro?.(dir) ?? '',
-                resolvers.outro?.(dir) ?? '',
-                resolvers.commit?.(dir)?.details
-            )
+            wsDetails.lifecycle === 'after' ? applyDetailsToEntry(wsEntry, wsDetails) : wsEntry
         );
         logger.info(`  ${created ? 'created' : 'updated'} ${file}`);
     }
