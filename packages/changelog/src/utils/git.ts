@@ -157,23 +157,39 @@ function isGhAvailable(): boolean {
 
 const ghApiCache = new Map<string, string | undefined>();
 
+/** Retries after the first `gh api` failure (default 5). */
+const GH_API_MAX_RETRIES = 5;
+/** Delay between `gh api` retries (default 3000ms). */
+const GH_API_RETRY_DELAY_MS = 3000;
+
+function waitSync(ms: number): void {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
 function ghApi(repo: string, path: string, jq: string): string | undefined {
     if (!isGhAvailable()) return undefined;
     const key = `repos/${repo}${path}::${jq}`;
     if (ghApiCache.has(key)) return ghApiCache.get(key);
     let value: string | undefined;
-    try {
-        const out = execFileSync('gh', ['api', `repos/${repo}${path}`, '--jq', jq], {
-            encoding: 'utf8',
-            stdio: ['ignore', 'pipe', 'pipe'],
-            timeout: 5000,
-        }).trim();
-        value = out && out !== 'null' ? out : undefined;
-    } catch {
-        // A timeout/network failure must not be retried for every commit: disable
-        // gh for the rest of the run and fall back to plain git metadata.
-        ghAvailable = false;
-        value = undefined;
+    for (let attempt = 0; attempt <= GH_API_MAX_RETRIES; attempt += 1) {
+        try {
+            const out = execFileSync('gh', ['api', `repos/${repo}${path}`, '--jq', jq], {
+                encoding: 'utf8',
+                stdio: ['ignore', 'pipe', 'pipe'],
+                timeout: 5000,
+            }).trim();
+            value = out && out !== 'null' ? out : undefined;
+            break;
+        } catch {
+            if (attempt >= GH_API_MAX_RETRIES) {
+                // Give up after the retry budget: stop calling gh for the rest of
+                // the run and fall back to plain git metadata.
+                ghAvailable = false;
+                value = undefined;
+                break;
+            }
+            waitSync(GH_API_RETRY_DELAY_MS);
+        }
     }
     ghApiCache.set(key, value);
     return value;
