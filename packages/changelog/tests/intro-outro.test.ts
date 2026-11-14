@@ -120,4 +120,13 @@ describe('changelog intro/outro', () => {
         expect(versionOf(path.join(root, 'package.json'))).toBe('2.1.0');
         expect(versionOf(path.join(root, 'packages/a/package.json'))).toBe('1.1.0-beta.0');
     });
+
+    it('accepts --intro and --outro-file from the CLI', () => {
+        fs.writeFileSync(path.join(root, 'outro.md'), 'CLI OUTRO\n');
+        runChangelog(['--intro', 'CLI INTRO', '--outro-file', 'outro.md']);
+        const changelog = fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8');
+        expect(changelog).toContain('CLI INTRO');
+        expect(changelog).toContain('CLI OUTRO');
+        expect(changelog.indexOf('CLI INTRO')).toBeLessThan(changelog.indexOf('### New features'));
+    });
 });

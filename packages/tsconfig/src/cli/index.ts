@@ -1,5 +1,7 @@
 import {
     logger,
+    regenerateEnabled,
+    resolveToolchainEnabled,
     sectionConfig,
     type ToolchainCommand,
     type ToolchainTsconfigConfig,
@@ -205,6 +207,19 @@ export function tsconfigCommands(): ToolchainCommand[] {
                 overrides.defaultFile = defaultFile;
                 overrides.buildFile = buildFile;
                 overrides.rootFile = rootFile;
+
+                if (opts.restore === undefined) {
+                    if (!resolveToolchainEnabled(context.config).enabled) {
+                        logger.warn('toolchain is disabled; skipping tsconfig generation.');
+                        return;
+                    }
+                    if (!regenerateEnabled(context.config.tsconfig)) {
+                        logger.warn(
+                            'toolchain.tsconfig.regenerate is false; skipping tsconfig generation.'
+                        );
+                        return;
+                    }
+                }
 
                 const generated = await generateWorkspaceTsconfigs({
                     cwd,

@@ -1,4 +1,10 @@
-import { logger, resolveChangelogConfig, type ToolchainCommand } from '@deltabox/toolchain/shared';
+import {
+    logger,
+    regenerateEnabled,
+    resolveChangelogConfig,
+    resolveToolchainEnabled,
+    type ToolchainCommand,
+} from '@deltabox/toolchain/shared';
 
 import { runWorkflows, workflowTargets } from '../run-workflows.js';
 import { runChangelog } from '../run.js';
@@ -101,6 +107,22 @@ export function changelogCommands(): ToolchainCommand[] {
                 },
                 { flags: '--format-only', description: 'Only regroup existing changelogs.' },
                 {
+                    flags: '--intro <text>',
+                    description: 'Inline intro text for the new changelog entry.',
+                },
+                {
+                    flags: '--intro-file <file>',
+                    description: 'Read the new entry intro text from a file.',
+                },
+                {
+                    flags: '--outro <text>',
+                    description: 'Inline outro text for the new changelog entry.',
+                },
+                {
+                    flags: '--outro-file <file>',
+                    description: 'Read the new entry outro text from a file.',
+                },
+                {
                     flags: '--no-package-changes-section',
                     description: 'Skip the package-changes footer.',
                 },
@@ -118,10 +140,17 @@ export function changelogCommands(): ToolchainCommand[] {
                     argv.push('--processing-method', String(opts.processingMethod));
                 }
                 if (opts.formatOnly) argv.push('--format-only');
+                if (opts.intro) argv.push('--intro', String(opts.intro));
+                if (opts.introFile) argv.push('--intro-file', String(opts.introFile));
+                if (opts.outro) argv.push('--outro', String(opts.outro));
+                if (opts.outroFile) argv.push('--outro-file', String(opts.outroFile));
                 if (opts.packageChangesSection === false) {
                     argv.push('--no-package-changes-section');
                 }
-                runChangelog(argv, resolveChangelogConfig(context.config));
+                runChangelog(argv, resolveChangelogConfig(context.config), {
+                    enabled: resolveToolchainEnabled(context.config).enabled,
+                    regenerate: regenerateEnabled(context.config.ci),
+                });
             },
         },
     ];

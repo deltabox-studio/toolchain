@@ -16,6 +16,10 @@ export function parseArgsCli(argv: string[]): CliOptions {
             'processing-method': { type: 'string' },
             'format-only': { type: 'boolean', default: false },
             'no-package-changes-section': { type: 'boolean', default: false },
+            intro: { type: 'string' },
+            'intro-file': { type: 'string' },
+            outro: { type: 'string' },
+            'outro-file': { type: 'string' },
         },
     });
 
@@ -36,5 +40,9 @@ export function parseArgsCli(argv: string[]): CliOptions {
         processingMethod,
         formatOnly: values['format-only'] ?? false,
         packageChanges: !(values['no-package-changes-section'] ?? false),
+        ...(values.intro ? { intro: values.intro } : {}),
+        ...(values['intro-file'] ? { introFile: values['intro-file'] } : {}),
+        ...(values.outro ? { outro: values.outro } : {}),
+        ...(values['outro-file'] ? { outroFile: values['outro-file'] } : {}),
     };
 }

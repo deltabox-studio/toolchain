@@ -40,3 +40,16 @@ export default defineConfig({
 The same target selector is reused by the scoped versioning options
 (`prerelease`, `bump`, `allowOverBump`, `commit`, `provider`); see
 [Versioning](/guide/changelog/versioning#targeted-options).
+
+### CLI flags
+
+You can add an intro/outro without editing the config:
+
+`sh
+dbx changelog --intro "> **Beta:** APIs may change." --outro-file CHANGELOG.outro.md
+dbx changelog --intro-file CHANGELOG.intro.md --outro "Thanks to all contributors!"
+`
+
+Flags are appended to the configured entries (config is still loaded from the
+dbx() Vite plugin or dbx.config.*). The intro is rendered below the version
+heading.
