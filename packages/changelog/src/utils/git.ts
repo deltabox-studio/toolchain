@@ -135,9 +135,19 @@ export function repoSlug(): string | undefined {
 
 let ghAvailable: boolean | undefined;
 
+/** Whether this process is a test runner (gh is disabled to keep tests offline). */
+function isTestEnvironment(): boolean {
+    return Boolean(
+        process.env.VITEST ||
+        process.env.VITEST_WORKER_ID ||
+        process.env.VITEST_POOL_ID ||
+        process.env.NODE_ENV === 'test'
+    );
+}
+
 /** Probe `gh` auth once; skips every subsequent (doomed) gh API call when it's unavailable. */
 function isGhAvailable(): boolean {
-    if (process.env.DBX_NO_GH) {
+    if (process.env.DBX_NO_GH || isTestEnvironment()) {
         ghAvailable = false;
         return false;
     }
