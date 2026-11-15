@@ -1611,7 +1611,7 @@ Fully custom commit line formatter (TS/JS configs only; return the bullet body).
 
 * **Type**: `ChangelogDetailsConfig`
 
-Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables descriptions, release notes and breaking changes; use an object or `false` to opt out.
+Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables descriptions, release notes, breaking changes and type sections; use an object or `false` to opt out.
 
 ###### `enabled`
 
@@ -1626,6 +1626,12 @@ Enable/disable details wrapping (default true).
 * **Default**: `"after"`
 
 Apply details after the changelog formatting pipeline (default `after`, so custom searches regex-match the formatted text) or before it (`before`).
+
+###### `minCommits`
+
+* **Type**: `number`
+
+Default minimum entries for every details section (a nested minCommits wins; the body defaults to 10).
 
 ###### `descriptions`
 
@@ -1645,11 +1651,17 @@ Custom `<summary>` text.
 
 Render the collapsible open by default.
 
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
+
 ###### `body`
 
 * **Type**: `boolean | object`
 
-Enable/disable this collapsible, optionally with a title/expanded state.
+Wrap the version body in a collapsible titled Release Notes (default outside release mode; requires 10 commits by default).
 
 ###### `title`
 
@@ -1662,6 +1674,12 @@ Custom `<summary>` text.
 * **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
 
 ###### `releaseNotes`
 
@@ -1681,6 +1699,12 @@ Custom `<summary>` text.
 
 Render the collapsible open by default.
 
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
+
 ###### `intro`
 
 * **Type**: `boolean | object`
@@ -1698,6 +1722,12 @@ Custom `<summary>` text.
 * **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
 
 ###### `outro`
 
@@ -1717,6 +1747,12 @@ Custom `<summary>` text.
 
 Render the collapsible open by default.
 
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
+
 ###### `footer`
 
 * **Type**: `boolean | object`
@@ -1734,6 +1770,12 @@ Custom `<summary>` text.
 * **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
 
 ###### `breaking`
 
@@ -1753,11 +1795,17 @@ Custom `<summary>` text.
 
 Render the collapsible open by default.
 
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
+
 ###### `types`
 
 * **Type**: `boolean | object | Array<string>`
 
-Wrap these CC type sections (all types when `true`).
+Wrap these CC type sections (all types when `true`; enabled by default).
 
 ###### `title`
 
@@ -1770,6 +1818,12 @@ Custom `<summary>` text.
 * **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
 
 ###### `custom`
 
@@ -1800,6 +1854,12 @@ Custom `<summary>` text.
 * **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the matched region before wrapping.
 
 ###### `target`
 
@@ -2372,7 +2432,7 @@ Fully custom commit line formatter (TS/JS configs only; return the bullet body).
 
 * **Type**: `ChangelogDetailsConfig`
 
-Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables descriptions, release notes and breaking changes; use an object or `false` to opt out.
+Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables descriptions, release notes, breaking changes and type sections; use an object or `false` to opt out.
 
 ###### `enabled`
 
@@ -2387,6 +2447,12 @@ Enable/disable details wrapping (default true).
 * **Default**: `"after"`
 
 Apply details after the changelog formatting pipeline (default `after`, so custom searches regex-match the formatted text) or before it (`before`).
+
+###### `minCommits`
+
+* **Type**: `number`
+
+Default minimum entries for every details section (a nested minCommits wins; the body defaults to 10).
 
 ###### `descriptions`
 
@@ -2406,11 +2472,17 @@ Custom `<summary>` text.
 
 Render the collapsible open by default.
 
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
+
 ###### `body`
 
 * **Type**: `boolean | object`
 
-Enable/disable this collapsible, optionally with a title/expanded state.
+Wrap the version body in a collapsible titled Release Notes (default outside release mode; requires 10 commits by default).
 
 ###### `title`
 
@@ -2423,6 +2495,12 @@ Custom `<summary>` text.
 * **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
 
 ###### `releaseNotes`
 
@@ -2442,6 +2520,12 @@ Custom `<summary>` text.
 
 Render the collapsible open by default.
 
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
+
 ###### `intro`
 
 * **Type**: `boolean | object`
@@ -2459,6 +2543,12 @@ Custom `<summary>` text.
 * **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
 
 ###### `outro`
 
@@ -2478,6 +2568,12 @@ Custom `<summary>` text.
 
 Render the collapsible open by default.
 
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
+
 ###### `footer`
 
 * **Type**: `boolean | object`
@@ -2495,6 +2591,12 @@ Custom `<summary>` text.
 * **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
 
 ###### `breaking`
 
@@ -2514,11 +2616,17 @@ Custom `<summary>` text.
 
 Render the collapsible open by default.
 
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
+
 ###### `types`
 
 * **Type**: `boolean | object | Array<string>`
 
-Wrap these CC type sections (all types when `true`).
+Wrap these CC type sections (all types when `true`; enabled by default).
 
 ###### `title`
 
@@ -2531,6 +2639,12 @@ Custom `<summary>` text.
 * **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
 
 ###### `custom`
 
@@ -2561,6 +2675,12 @@ Custom `<summary>` text.
 * **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+* **Type**: `number`
+
+Minimum entries in the matched region before wrapping.
 
 ##### `target`
 
@@ -4970,6 +5090,26 @@ toolchain: {
 pipeline options (`ci.changelog: true`, a raw workflow string, or workflow-only
 overrides). Options set explicitly on `ci.changelog` win.
 
+## GitHub metadata
+
+When `gh` is installed and authenticated, a run resolves commit authors, PR
+credit and issue titles/links from GitHub. Lookups are batched so a large range
+stays close to a handful of requests:
+
+* one REST `compare/{base}...{head}` request per scanned range for commit
+  authors;
+* GraphQL `associatedPullRequests` lookups in batches of 100 commits (a PR
+  author wins over the commit author, matching the changelog credit rules);
+* aliased GraphQL issue lookups, 100 issues per request.
+
+Without `gh` (or with `DBX_NO_GH=1`) the pipeline falls back to git metadata and
+plain `#123` references. Commits that no remote-tracking ref reaches are skipped
+(GitHub cannot resolve an unpushed SHA), and terminal client errors (eg. a 404
+for a missing ref) are not retried. Other failures are retried
+`DBX_GH_MAX_RETRIES` times (default 5) with a `DBX_GH_RETRY_DELAY` ms delay
+(default 3000), then `gh` is disabled for the rest of the run. Set `DBX_GH_BIN`
+to point at a different `gh` executable.
+
 ## Where to start
 
 * [CI](/guide/ci/) — the opt-in GitHub workflows (CI checks, changelog, release,
@@ -5335,7 +5475,9 @@ from every `package.json` and the package-manager catalogs:
 
 Catalog entries are diffed in the same map as declared dependencies, so a
 catalog-only range change is reported under the root package at both ends of the
-release. Pass `--no-package-changes-section` to omit the footer.
+release. Entries are grouped by the declaring package (one top-level bullet per
+package, with each changed dependency nested under it). Pass
+`--no-package-changes-section` to omit the footer.
 
 ## Custom bump rules
 
@@ -5432,12 +5574,20 @@ option and for the intro/outro settings.
 `<details>`/`<summary>` blocks. It is enabled by default; `details: false` opts
 out.
 
-* Non-release runs wrap the version body and use the version title
-  (`3.0.0 (November 2026)`) as the summary.
-* Release runs (`dbx changelog --release`) wrap the entry as
-  `<strong>Release Notes</strong>` instead.
-* `descriptions`, `breaking` and `intro`/`outro`/`footer` are opt-in wrappers;
-  `types` wraps matching CC sections.
+* `descriptions` (default on) nests a commit's description body under its bullet
+  as a collapsible whose summary is `**See more...**`.
+* `breaking` (default on) wraps the breaking section; the summary names the
+  section, so the duplicate heading is not repeated inside.
+* The version stays a normal `##` heading. The body details summary is
+  `**Release Notes**` in both release and non-release modes.
+* `intro`/`outro`/`footer` are opt-in wrappers; `types` (default on) wraps the
+  CC type sections, leaving the generated `Package changes`/`New contributors`
+  footers alone.
+
+Summaries accept inline Markdown, which is converted to HTML (`<strong>`,
+`<em>`, `<code>`, links, images and `<del>`) because Markdown is not parsed
+inside `<summary>`. Heading elements are not used there; summaries are bold or
+plain inline content.
 
 ```ts
 ci: {
@@ -5460,9 +5610,13 @@ ci: {
 }
 ```
 
-* `descriptions` uses the resolved commit title (including the SHA/author) as the summary and only applies when the commit has a body.
-* `releaseNotes`, `intro`, `outro`, `footer` and `breaking` use bold summaries by default (`<strong>`; Markdown is not parsed inside `<summary>`).
-* `types` wraps matching CC type sections (all types when `true`), using the section title by default.
+* `descriptions` uses `See more...` by default and only applies when the commit has a body; the collapsible is nested under the commit bullet.
+* `releaseNotes`/`body` use `Release Notes` by default; `breaking`/`types` use the section title (bold for breaking).
+* `intro`, `outro` and `footer` keep inline summaries.
+* `types` (default on) wraps CC type sections (all types when `true`), using the section title by default.
+* `minCommits` on a toggle skips the collapsible until that section has at least
+  N commit entries. A top-level `minCommits` sets the default for every section;
+  a nested value wins. The body defaults to **10** commits.
 * `custom` accepts a regex/string or `{ start, end }` markers; the match (or start match) becomes the summary.
 
 Every flag also accepts `{ title?: string; expanded?: boolean }`.
@@ -5476,8 +5630,10 @@ Every flag also accepts `{ title?: string; expanded?: boolean }`.
   credits, etc.).
 * `before`: details are applied while the entry is rendered.
 
-`details.body: true` wraps the whole version body in a collapsible. It is the
-default in non-release mode; release mode uses `details.releaseNotes` instead.
+`details.body` wraps the whole version body in a collapsible titled
+`Release Notes`. It is on by default outside release mode and requires at least
+10 commits (`minCommits`) unless overridden. Release mode uses
+`details.releaseNotes` with the same title.
 
 ---
 

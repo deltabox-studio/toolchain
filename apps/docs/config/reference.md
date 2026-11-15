@@ -887,7 +887,7 @@ Fully custom commit line formatter (TS/JS configs only; return the bullet body).
 
 - **Type**: `ChangelogDetailsConfig`
 
-Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables descriptions, release notes and breaking changes; use an object or `false` to opt out.
+Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables descriptions, release notes, breaking changes and type sections; use an object or `false` to opt out.
 
 ###### `enabled`
 
@@ -902,6 +902,12 @@ Enable/disable details wrapping (default true).
 - **Default**: `"after"`
 
 Apply details after the changelog formatting pipeline (default `after`, so custom searches regex-match the formatted text) or before it (`before`).
+
+###### `minCommits`
+
+- **Type**: `number`
+
+Default minimum entries for every details section (a nested minCommits wins; the body defaults to 10).
 
 ###### `descriptions`
 
@@ -921,11 +927,17 @@ Custom `<summary>` text.
 
 Render the collapsible open by default.
 
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
+
 ###### `body`
 
 - **Type**: `boolean | object`
 
-Enable/disable this collapsible, optionally with a title/expanded state.
+Wrap the version body in a collapsible titled Release Notes (default outside release mode; requires 10 commits by default).
 
 ###### `title`
 
@@ -938,6 +950,12 @@ Custom `<summary>` text.
 - **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
 
 ###### `releaseNotes`
 
@@ -957,6 +975,12 @@ Custom `<summary>` text.
 
 Render the collapsible open by default.
 
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
+
 ###### `intro`
 
 - **Type**: `boolean | object`
@@ -974,6 +998,12 @@ Custom `<summary>` text.
 - **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
 
 ###### `outro`
 
@@ -993,6 +1023,12 @@ Custom `<summary>` text.
 
 Render the collapsible open by default.
 
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
+
 ###### `footer`
 
 - **Type**: `boolean | object`
@@ -1010,6 +1046,12 @@ Custom `<summary>` text.
 - **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
 
 ###### `breaking`
 
@@ -1029,11 +1071,17 @@ Custom `<summary>` text.
 
 Render the collapsible open by default.
 
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
+
 ###### `types`
 
 - **Type**: `boolean | object | Array<string>`
 
-Wrap these CC type sections (all types when `true`).
+Wrap these CC type sections (all types when `true`; enabled by default).
 
 ###### `title`
 
@@ -1046,6 +1094,12 @@ Custom `<summary>` text.
 - **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
 
 ###### `custom`
 
@@ -1076,6 +1130,12 @@ Custom `<summary>` text.
 - **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the matched region before wrapping.
 
 ###### `target`
 
@@ -1648,7 +1708,7 @@ Fully custom commit line formatter (TS/JS configs only; return the bullet body).
 
 - **Type**: `ChangelogDetailsConfig`
 
-Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables descriptions, release notes and breaking changes; use an object or `false` to opt out.
+Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables descriptions, release notes, breaking changes and type sections; use an object or `false` to opt out.
 
 ###### `enabled`
 
@@ -1663,6 +1723,12 @@ Enable/disable details wrapping (default true).
 - **Default**: `"after"`
 
 Apply details after the changelog formatting pipeline (default `after`, so custom searches regex-match the formatted text) or before it (`before`).
+
+###### `minCommits`
+
+- **Type**: `number`
+
+Default minimum entries for every details section (a nested minCommits wins; the body defaults to 10).
 
 ###### `descriptions`
 
@@ -1682,11 +1748,17 @@ Custom `<summary>` text.
 
 Render the collapsible open by default.
 
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
+
 ###### `body`
 
 - **Type**: `boolean | object`
 
-Enable/disable this collapsible, optionally with a title/expanded state.
+Wrap the version body in a collapsible titled Release Notes (default outside release mode; requires 10 commits by default).
 
 ###### `title`
 
@@ -1699,6 +1771,12 @@ Custom `<summary>` text.
 - **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
 
 ###### `releaseNotes`
 
@@ -1718,6 +1796,12 @@ Custom `<summary>` text.
 
 Render the collapsible open by default.
 
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
+
 ###### `intro`
 
 - **Type**: `boolean | object`
@@ -1735,6 +1819,12 @@ Custom `<summary>` text.
 - **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
 
 ###### `outro`
 
@@ -1754,6 +1844,12 @@ Custom `<summary>` text.
 
 Render the collapsible open by default.
 
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
+
 ###### `footer`
 
 - **Type**: `boolean | object`
@@ -1771,6 +1867,12 @@ Custom `<summary>` text.
 - **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
 
 ###### `breaking`
 
@@ -1790,11 +1892,17 @@ Custom `<summary>` text.
 
 Render the collapsible open by default.
 
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
+
 ###### `types`
 
 - **Type**: `boolean | object | Array<string>`
 
-Wrap these CC type sections (all types when `true`).
+Wrap these CC type sections (all types when `true`; enabled by default).
 
 ###### `title`
 
@@ -1807,6 +1915,12 @@ Custom `<summary>` text.
 - **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the section before wrapping (nested overrides the top-level default).
 
 ###### `custom`
 
@@ -1837,6 +1951,12 @@ Custom `<summary>` text.
 - **Type**: `boolean`
 
 Render the collapsible open by default.
+
+###### `minCommits`
+
+- **Type**: `number`
+
+Minimum entries in the matched region before wrapping.
 
 ##### `target`
 

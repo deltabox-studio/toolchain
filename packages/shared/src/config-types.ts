@@ -702,14 +702,18 @@ export type ChangelogDetailsConfig =
     | {
           enabled?: boolean;
           lifecycle: 'after' | 'before';
-          descriptions?: boolean | { title?: string; expanded?: boolean };
-          body?: boolean | { title?: string; expanded?: boolean };
-          releaseNotes?: boolean | { title?: string; expanded?: boolean };
-          intro?: boolean | { title?: string; expanded?: boolean };
-          outro?: boolean | { title?: string; expanded?: boolean };
-          footer?: boolean | { title?: string; expanded?: boolean };
-          breaking?: boolean | { title?: string; expanded?: boolean };
-          types?: boolean | { title?: string; expanded?: boolean } | Array<string>;
+          minCommits?: number;
+          descriptions?: boolean | { title?: string; expanded?: boolean; minCommits?: number };
+          body?: boolean | { title?: string; expanded?: boolean; minCommits?: number };
+          releaseNotes?: boolean | { title?: string; expanded?: boolean; minCommits?: number };
+          intro?: boolean | { title?: string; expanded?: boolean; minCommits?: number };
+          outro?: boolean | { title?: string; expanded?: boolean; minCommits?: number };
+          footer?: boolean | { title?: string; expanded?: boolean; minCommits?: number };
+          breaking?: boolean | { title?: string; expanded?: boolean; minCommits?: number };
+          types?:
+              | boolean
+              | { title?: string; expanded?: boolean; minCommits?: number }
+              | Array<string>;
           custom?:
               | RegExp
               | string
@@ -718,6 +722,7 @@ export type ChangelogDetailsConfig =
                     end?: RegExp | string;
                     title?: string;
                     expanded?: boolean;
+                    minCommits?: number;
                 }
               | Array<
                     | RegExp
@@ -727,6 +732,7 @@ export type ChangelogDetailsConfig =
                           end?: RegExp | string;
                           title?: string;
                           expanded?: boolean;
+                          minCommits?: number;
                       }
                 >;
       };
@@ -744,7 +750,7 @@ export interface ChangelogCommitFormatConfig {
     format?: (ctx: ChangelogCommitFormatContext) => string;
     /**
      * Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables descriptions,
-     * release notes and breaking changes; use an object or `false` to opt out.
+     * release notes, breaking changes and type sections; use an object or `false` to opt out.
      */
     details?: ChangelogDetailsConfig;
 }
