@@ -23,6 +23,15 @@ import type { OxfmtConfig } from './config-schema/generated/oxfmt-config.js';
 import type { OxlintConfig } from './config-schema/generated/oxlint-config.js';
 import type { DprintConfig, EslintConfig, PrettierConfig } from './config-schema/vendor-types.js';
 import type { ToolchainLogger } from './logger.js';
+import type { Replacements } from './template.js';
+import type {
+    Awaitable,
+    ManagedFile,
+    SyncContext,
+    SyncSummary,
+    SyncTask,
+    ToolchainConfig,
+} from './types/index.js';
 
 export interface DbxConfigSections {
     /** The `@deltabox/toolchain` settings (every section is opt-in by presence). */
@@ -1353,6 +1362,34 @@ export interface ToolchainProvidersConfig {
     regenerate?: boolean;
 }
 
+export interface ToolchainHooks {
+    /** Runs after the config is loaded and its tokens are resolved. */
+    afterLoad?: (info: {
+        cwd: string;
+        config: ToolchainConfig;
+        tokens: Replacements;
+        path?: string;
+    }) => Awaitable<void>;
+    /** Runs once before the sync tasks. */
+    beforeSync?: (ctx: SyncContext) => Awaitable<void>;
+    /** Runs before each sync task. */
+    beforeTask?: (info: { task: SyncTask; ctx: SyncContext }) => Awaitable<void>;
+    /** Runs after each sync task, with the files it produced (if any). */
+    afterTask?: (info: {
+        task: SyncTask;
+        ctx: SyncContext;
+        files?: ManagedFile[];
+    }) => Awaitable<void>;
+    /** Runs once after the sync tasks with the result summary. */
+    afterSync?: (info: {
+        cwd: string;
+        config: ToolchainConfig;
+        result: SyncSummary;
+    }) => Awaitable<void>;
+    /** Runs on every watch-triggered change. */
+    onChange?: (info: { path?: string }) => Awaitable<void>;
+}
+
 export interface ToolchainConfigSections {
     /**
      * Enable/disable the toolchain. The shorthand is workspace-scoped; the object form is reserved for
@@ -1398,4 +1435,6 @@ export interface ToolchainConfigSections {
     logger?: boolean | ToolchainLoggerConfig;
     /** Provider command behaviour (eg. colour for the passthrough commands). */
     providers?: boolean | ToolchainProvidersConfig;
+    /** Lifecycle hooks (functions; TS/JS configs only). Return values are awaited. */
+    hooks?: ToolchainHooks;
 }

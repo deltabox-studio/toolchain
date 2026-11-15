@@ -8,8 +8,9 @@
  * (`apps/docs/config/reference.md`) plus the editor JSON Schema
  * (`config.schema.json`) are generated from them, so they can never drift.
  *
- * The `hooks` section is not here: it holds functions, which JSON Schema cannot
- * express, so it stays a hand-written TS interface in `toolchain.ts`.
+ * The `hooks` section is a Zod object of function schemas: JSON Schema cannot
+ * express functions, so each callback carries a hand-written `tsType` signature
+ * that the generated types and docs reuse.
  */
 
 import { z } from 'zod';
@@ -19,6 +20,7 @@ import { catalogsConfigSchema } from './catalogs.js';
 import { changelogConfigSchema } from './changelog.js';
 import { ciConfigSchema } from './ci.js';
 import { fmtConfigSchema, lintConfigSchema } from './format.js';
+import { toolchainHooksSchema } from './hooks.js';
 import { loaderConfigSchema } from './loader.js';
 import { loggerConfigSchema } from './logger.js';
 import { section } from './meta.js';
@@ -38,6 +40,7 @@ export * from './changelog.js';
 export * from './ci.js';
 export * from './dependabot.js';
 export * from './format.js';
+export * from './hooks.js';
 // Re-export only the public generated types: their internal helper types
 // (`__schemaN`) collide across vendor schemas.
 export type { AzurePipelines } from './generated/azure-pipelines.js';
@@ -143,6 +146,7 @@ export const toolchainConfigSchema = z
         providers: section(providersConfigSchema)
             .describe('Provider command behaviour (eg. colour for the passthrough commands).')
             .optional(),
+        hooks: toolchainHooksSchema.optional(),
     })
     .meta({ id: 'ToolchainConfigSections' });
 

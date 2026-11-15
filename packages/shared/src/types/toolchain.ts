@@ -1,39 +1,4 @@
 import type { ToolchainConfigSections } from '../config-types.js';
-import type { Replacements } from '../template.js';
-import type { Awaitable } from './common.js';
-import type { ManagedFile, SyncContext, SyncSummary, SyncTask } from './sync.js';
-
-/**
- * Lifecycle hooks, declared as functions in `dbx.config.ts` (so they only work
- * from a `.ts`/`.js` config, not JSON). Return values are awaited.
- */
-export interface ToolchainHooks {
-    /** Runs after the config is loaded + tokens resolved. */
-    afterLoad?: (info: {
-        cwd: string;
-        config: ToolchainConfig;
-        tokens: Replacements;
-        path?: string;
-    }) => Awaitable<void>;
-    /** Runs once before the sync tasks. */
-    beforeSync?: (ctx: SyncContext) => Awaitable<void>;
-    /** Runs before each task. */
-    beforeTask?: (info: { task: SyncTask; ctx: SyncContext }) => Awaitable<void>;
-    /** Runs after each task (with the files it produced, if any). */
-    afterTask?: (info: {
-        task: SyncTask;
-        ctx: SyncContext;
-        files?: ManagedFile[];
-    }) => Awaitable<void>;
-    /** Runs once after the sync tasks with the result summary. */
-    afterSync?: (info: {
-        cwd: string;
-        config: ToolchainConfig;
-        result: SyncSummary;
-    }) => Awaitable<void>;
-    /** Runs on every watch-triggered change. */
-    onChange?: (info: { path?: string }) => Awaitable<void>;
-}
 
 /**
  * The complete tooling configuration a consumer declares (under
@@ -41,9 +6,10 @@ export interface ToolchainHooks {
  *
  * Every section is **opt-in by presence** (see {@link sectionEnabled}): define a
  * section to enable it; omit it to leave that area untouched. Within a defined
- * section, `enabled: false` disables it explicitly.
+ * section, `enabled: false` disables it explicitly. Lifecycle `hooks` are
+ * generated from the function schemas in `config-schema/hooks.ts`.
  */
-export type ToolchainConfig = ToolchainConfigSections & { hooks?: ToolchainHooks };
+export type ToolchainConfig = ToolchainConfigSections;
 
 /**
  * The root shape of a `dbx.config.*` file. The `@deltabox/toolchain` settings

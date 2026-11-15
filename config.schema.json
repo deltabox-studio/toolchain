@@ -3272,6 +3272,31 @@
             "additionalProperties": false,
             "description": "Provider command behaviour (eg. colour for the passthrough commands)."
         },
+        "ToolchainHooks": {
+            "type": "object",
+            "properties": {
+                "afterLoad": {
+                    "description": "Runs after the config is loaded and its tokens are resolved."
+                },
+                "beforeSync": {
+                    "description": "Runs once before the sync tasks."
+                },
+                "beforeTask": {
+                    "description": "Runs before each sync task."
+                },
+                "afterTask": {
+                    "description": "Runs after each sync task, with the files it produced (if any)."
+                },
+                "afterSync": {
+                    "description": "Runs once after the sync tasks with the result summary."
+                },
+                "onChange": {
+                    "description": "Runs on every watch-triggered change."
+                }
+            },
+            "additionalProperties": false,
+            "description": "Lifecycle hooks (functions; TS/JS configs only). Return values are awaited."
+        },
         "ToolchainConfigSections": {
             "type": "object",
             "properties": {
@@ -3446,6 +3471,9 @@
                         }
                     ],
                     "description": "Provider command behaviour (eg. colour for the passthrough commands)."
+                },
+                "hooks": {
+                    "$ref": "#/$defs/ToolchainHooks"
                 }
             },
             "additionalProperties": false

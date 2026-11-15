@@ -106,6 +106,8 @@ const imports = [
     "import type { ChangelogGroupContext, ChangelogGroupsContext, ChangelogGroupsSetting } from './changelog-groups.js';",
     "import type { ChangelogBumpRuleCallbackContext, ChangelogCommitFormatContext, ChangelogProviderContext } from './changelog-callbacks.js';",
     "import type { ToolchainLogger } from './logger.js';",
+    "import type { Awaitable, ManagedFile, SyncContext, SyncSummary, SyncTask, ToolchainConfig } from './types/index.js';",
+    "import type { Replacements } from './template.js';",
 ];
 const engine = createConfigEngine({ schema: dbxConfigSchema });
 const types = engine.generateConfigTypes({ overrides, imports });
