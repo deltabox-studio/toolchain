@@ -47,8 +47,24 @@ describe('dependency maps', () => {
             '@acme/root'
         );
         expect(renderPackageChanges(diffDependencies(prev, next))).toContain(
-            '- `@acme/app` › `vite` `^5.4.14` → `^5.4.15`'
+            '- `@acme/app`\n  - `vite` `^5.4.14` → `^5.4.15`'
         );
+    });
+
+    it('groups multiple dependency changes under one list item', () => {
+        const prev = collectDependencies(
+            [{ name: '@acme/app', dependencies: { vite: '^5', react: '^18' } }],
+            new Map(),
+            '@acme/root'
+        );
+        const next = collectDependencies(
+            [{ name: '@acme/app', dependencies: { vite: '^6', react: '^19' } }],
+            new Map(),
+            '@acme/root'
+        );
+        const out = renderPackageChanges(diffDependencies(prev, next));
+        expect(out).toContain('- `@acme/app`\n  - `react` `^18` → `^19`\n  - `vite` `^5` → `^6`');
+        expect(out.match(/^- `@acme\/app`$/gm)).toHaveLength(1);
     });
 
     it('is independent of package iteration order', () => {
@@ -140,7 +156,7 @@ describe('catalog sources', () => {
 
         fs.writeFileSync(path.join(root, 'pnpm-workspace.yaml'), 'catalog:\n  react: ^19.1.0\n');
         expect(packageChangesForCurrent('1.0.0')).toContain(
-            '- `acme` › `react` `^19.0.0` → `^19.1.0`'
+            '- `acme`\n  - `react` `^19.0.0` → `^19.1.0`'
         );
     });
 
@@ -181,7 +197,7 @@ describe('catalog sources', () => {
             )
         );
         expect(packageChangesForCurrent('1.0.0')).toContain(
-            '- `acme` › `react` `^19.0.0` → `^19.2.0`'
+            '- `acme`\n  - `react` `^19.0.0` → `^19.2.0`'
         );
     });
 });
