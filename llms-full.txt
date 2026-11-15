@@ -6415,6 +6415,39 @@ the parent config's choice. When omitted, the loader uses the config's
   at it.
 * `.json` configs are parsed directly and do not use a tsconfig.
 
+## Reusing the loader in another project
+
+`@deltabox/toolchain/config` exposes the same building blocks for consumers with
+their own config format:
+
+```ts
+import {
+    collect,
+    createConfigFile,
+    loadConfig,
+    loadConfigSync,
+    parseCliConfig,
+    parseConfig,
+    parseEnvConfig,
+} from '@deltabox/toolchain/config';
+
+// Discover + validate a config (JSON, CJS, ESM or TypeScript).
+const loaded = await loadConfig({ packageJsonKeys: ['myapp'], schema });
+
+// Or parse a specific source.
+const fromEnv = parseEnvConfig(schema, process.env, { envPrefix: 'MYAPP_' });
+const fromCli = parseCliConfig(schema, process.argv.slice(2));
+const fromFile = parseConfig(schema, loaded?.config);
+
+// Scaffold a starter config file.
+createConfigFile({ name: 'myapp.config.ts', content: '{ enabled: true }' });
+```
+
+`collect(schema, options)` lists every config leaf (env/CLI metadata) and
+accepts `envPrefix`, `include`/`exclude`, `maxDepth`, and `validate` with
+`errorOptions` for required/empty values. `loadConfigSync` handles JSON and
+CommonJS only; use `loadConfigAsync` (or a custom `loader`) for TypeScript.
+
 ---
 
 ---

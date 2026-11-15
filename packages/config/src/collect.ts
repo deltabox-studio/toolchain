@@ -7,19 +7,64 @@
 import type { Schema } from 'untyped';
 import type { ZodType } from 'zod';
 
+import { parseEnvTree, readEnvPath } from './env.js';
 import { isZodSchema, metaOf, normalizeConfigSchema } from './schema.js';
 import type { ConfigDef, ConfigSchema, ConfigValueType } from './types/index.js';
 
 /** The default env-var prefix used when none is configured. */
 export const DEFAULT_ENV_PREFIX = 'APP_';
 
-/** Options for {@link collectVars}. */
-export interface CollectVarsOptions {
+/** The validation problems {@link CollectOptions.validate} can report. */
+export type CollectTrigger = 'missing-required' | 'empty-value';
+
+/** How validation problems are reported. */
+export interface CollectErrorOptions {
+    /** How to report a problem (default `warn`). `throw` raises an Error. */
+    level?: 'warn' | 'error' | 'throw';
+    /** Sinks for `warn`/`error` (default `console`). */
+    logger?: {
+        warn?: (message: string) => void;
+        error?: (message: string) => void;
+    };
+    /** Rewrite the problem message (wins over `defaultMessage`). */
+    rewriteMessage?: (message: string, def: ConfigDef) => string;
+    /** Build the problem message when no `rewriteMessage` is set. */
+    defaultMessage?: (def: ConfigDef) => string;
+    /** The problems to report (default: every trigger). */
+    triggers?: CollectTrigger[];
+}
+
+/** A path filter: a glob/list of globs, or a predicate on the definition. */
+export type CollectFilter = string | string[] | ((def: ConfigDef) => boolean);
+
+/** Options for {@link collect}. */
+export interface CollectOptions {
+    /** The env-var prefix (default {@link DEFAULT_ENV_PREFIX}); `null` disables it. */
+    envPrefix?: string | null;
     /**
      * Custom env-name -> dotted-path derivation, used when a leaf does not set
      * an explicit `envPath` (eg. to handle dual `PROXIFIED_`/`VITE_` prefixes).
      */
     envPathOf?: (env: string) => string;
+    /** Maximum schema nesting depth to walk (default: unlimited). */
+    maxDepth?: number;
+    /** Only keep these config paths (a glob/list of globs or a predicate). */
+    include?: CollectFilter;
+    /** Drop these config paths (a glob/list of globs or a predicate). */
+    exclude?: CollectFilter;
+    /** A flat env source used by {@link CollectOptions.validate}. */
+    envSource?: Record<string, string | undefined>;
+    /** Validate the collected definitions against `envSource`. */
+    validate?: boolean;
+    /** How validation problems are reported. */
+    errorOptions?: CollectErrorOptions;
+    /** An optional narrowing predicate applied after the include/exclude filters. */
+    filter?: (def: ConfigDef) => boolean;
+}
+
+/** A narrowed collection: `filter` both selects and types the definitions. */
+export interface CollectNarrowOptions<T extends ConfigDef> extends CollectOptions {
+    filter: (def: ConfigDef) => def is T;
 }
 
 function normalizeJsonType(type: unknown): ConfigValueType | undefined {
@@ -69,14 +114,33 @@ function defaultFromChildren(children: Record<string, ZodType | Schema>): unknow
     return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
+/** Convert a simple `*`/`**` glob to a regular expression. */
+function globToRegExp(pattern: string): RegExp {
+    const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+    const source = escaped
+        .replace(/\*\*/g, '\u0000')
+        .replace(/\*/g, '[^.]*')
+        .replace(/\u0000/g, '.*');
+    return new RegExp(`^${source}$`);
+}
+
+function matchesFilter(def: ConfigDef, filter: CollectFilter | undefined): boolean {
+    if (filter === undefined) return true;
+    if (typeof filter === 'function') return filter(def);
+    const patterns = Array.isArray(filter) ? filter : [filter];
+    return patterns.some(pattern => globToRegExp(pattern).test(pathOf(def)));
+}
+
 function walkSchema(
     schema: ZodType | Schema,
     out: ConfigDef[],
     scope: string,
     envPrefix: string,
-    options: CollectVarsOptions,
+    options: CollectOptions,
     pathParts: string[] = []
 ): void {
+    const depth = pathParts.length;
+    if (options.maxDepth !== undefined && depth > options.maxDepth) return;
     const meta = metaOf(schema);
     const children = schemaChildren(schema);
     const envName = meta?.envName ?? meta?.env;
@@ -97,7 +161,7 @@ function walkSchema(
     const fallbackType = children ? 'object' : schemaType(schema);
 
     if (!children || envName || meta?.cliFlag) {
-        out.push({
+        const def: ConfigDef = {
             path: path || (meta?.id ?? 'config'),
             ...(envName ? { name: envName } : {}),
             ...(cliFlag ? { cliFlag } : {}),
@@ -113,7 +177,10 @@ function walkSchema(
             ...(meta?.scope ? { scope: meta.scope } : { scope }),
             ...(fallbackType ? { type: fallbackType } : {}),
             ...(meta ? { meta } : {}),
-        });
+        };
+        const included = options.include === undefined || matchesFilter(def, options.include);
+        const excluded = options.exclude !== undefined && matchesFilter(def, options.exclude);
+        if (included && !excluded) out.push(def);
     }
     if (!children) return;
     for (const [key, child] of Object.entries(children)) {
@@ -121,12 +188,41 @@ function walkSchema(
     }
 }
 
+function report(message: string, def: ConfigDef, options: CollectOptions): void {
+    const errors = options.errorOptions ?? {};
+    const text = errors.rewriteMessage?.(message, def) ?? errors.defaultMessage?.(def) ?? message;
+    const level = errors.level ?? 'warn';
+    if (level === 'throw') throw new Error(text);
+    if (level === 'error') (errors.logger?.error ?? console.error)(text);
+    else (errors.logger?.warn ?? console.warn)(text);
+}
+
+function validateCollected(defs: ConfigDef[], options: CollectOptions): void {
+    if (options.validate !== true) return;
+    const triggers = new Set<CollectTrigger>(
+        options.errorOptions?.triggers ?? ['missing-required', 'empty-value']
+    );
+    const tree = parseEnvTree(options.envSource ?? {}, options.envPrefix ?? DEFAULT_ENV_PREFIX);
+    for (const def of defs) {
+        if (!def.name) continue;
+        const value = readEnvPath(tree, def.meta?.envPath ?? def.meta?.path ?? def.path);
+        if (value === undefined && def.required && triggers.has('missing-required')) {
+            report(`Missing required config \`${def.path}\` (${def.name}).`, def, options);
+        }
+        if (typeof value === 'string' && value.trim() === '' && triggers.has('empty-value')) {
+            report(`Empty config value for \`${def.path}\` (${def.name}).`, def, options);
+        }
+    }
+}
+
 /** Collect every config leaf from scoped schemas. */
-export function collectVars(
+export function collect(schema: ConfigSchema, options?: CollectOptions): ConfigDef[];
+export function collect<T extends ConfigDef>(
     schema: ConfigSchema,
-    envPrefix = DEFAULT_ENV_PREFIX,
-    options: CollectVarsOptions = {}
-): ConfigDef[] {
+    options: CollectNarrowOptions<T>
+): T[];
+export function collect(schema: ConfigSchema, options: CollectOptions = {}): ConfigDef[] {
+    const envPrefix = options.envPrefix === null ? '' : (options.envPrefix ?? DEFAULT_ENV_PREFIX);
     const scopes = normalizeConfigSchema(schema);
     const out: ConfigDef[] = [];
     for (const [scopeName, scopeSchema] of Object.entries(scopes)) {
@@ -139,22 +235,24 @@ export function collectVars(
     // Two leaves may declare the same env name; keep the first so generated
     // interfaces/env files do not contain duplicate members.
     const seen = new Set<string>();
-    return out.filter(def => {
+    const unique = out.filter(def => {
         if (!def.name) return true;
         if (seen.has(def.name)) return false;
         seen.add(def.name);
         return true;
     });
+    const filtered = options.filter === undefined ? unique : unique.filter(options.filter);
+    validateCollected(filtered, options);
+    return filtered;
 }
 
 /** Collect the config paths marked `required` for a scope. */
 export function collectRequired(
     schema: ConfigSchema,
     scope?: string,
-    envPrefix = DEFAULT_ENV_PREFIX,
-    options: CollectVarsOptions = {}
+    options: CollectOptions = {}
 ): ConfigDef[] {
-    return collectVars(schema, envPrefix, options).filter(
+    return collect(schema, options).filter(
         def => def.required && (scope === undefined || def.scope === scope)
     );
 }

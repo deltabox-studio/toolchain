@@ -9,7 +9,7 @@ import { type ParseArgsOptionsConfig, parseArgs } from 'node:util';
 
 import { formatCliFlag } from '@deltabox/toolchain/shared';
 
-import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from '../collect.js';
+import { type CollectOptions, collect, DEFAULT_ENV_PREFIX } from '../collect.js';
 import type { ConfigSchema } from '../types/index.js';
 
 /** Flag-shaping options shared by every CLI helper. */
@@ -19,7 +19,7 @@ export interface CliFlagOptions {
     /** Shorthand flags keyed by env var name (eg. `{ APP_TOKEN: 't' }`). */
     shortFlags?: Record<string, string>;
     /** Custom env-name -> dotted-path derivation. */
-    envPathOf?: CollectVarsOptions['envPathOf'];
+    envPathOf?: CollectOptions['envPathOf'];
 }
 
 /** A generated CLI option definition. */
@@ -77,7 +77,8 @@ export function generateCliOptions(
 ): CliOptionDef[] {
     const scope = options.scope ?? 'cli';
     const defs: CliOptionDef[] = [];
-    for (const def of collectVars(schema, options.envPrefix, {
+    for (const def of collect(schema, {
+        envPrefix: options.envPrefix,
         envPathOf: options.envPathOf,
     }).filter(v => v.scope === scope && (v.name || v.cliFlag))) {
         const short = def.meta?.cliFlagShort

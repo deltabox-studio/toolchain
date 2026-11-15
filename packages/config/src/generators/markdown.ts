@@ -9,7 +9,7 @@ import type { Schema } from 'untyped';
 
 import { sanitizeText, titleCase } from '@deltabox/toolchain/shared';
 
-import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from '../collect.js';
+import { type CollectOptions, collect, DEFAULT_ENV_PREFIX } from '../collect.js';
 import {
     isSchemaType,
     isZodSchema,
@@ -56,7 +56,7 @@ export interface RenderMarkdownOptions extends Pick<ConfigEngineOptions, 'baseGr
     /** Shorthand flags keyed by env var name (for the CLI scope). */
     shortFlags?: Record<string, string>;
     /** Custom env-name -> dotted-path derivation. */
-    envPathOf?: CollectVarsOptions['envPathOf'];
+    envPathOf?: CollectOptions['envPathOf'];
     /** Emit `- **Required**` lines (default true). */
     includeRequired?: boolean;
     /** Emit `- **Deprecated**` lines (default true). */
@@ -385,7 +385,8 @@ function renderConfigIndex(schema: ConfigSchema, options: RenderMarkdownOptions 
     for (const [scopeName, scopeSchema] of Object.entries(scopes)) {
         collectSchemaEnvVars(splitBaseSchema(scopeSchema, baseGroup).base, scopeName, core);
     }
-    for (const def of collectVars(schema, options.envPrefix ?? DEFAULT_ENV_PREFIX, {
+    for (const def of collect(schema, {
+        envPrefix: options.envPrefix,
         envPathOf: options.envPathOf,
     })) {
         if (def.required && def.name) {

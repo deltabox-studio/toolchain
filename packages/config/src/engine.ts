@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { collectVars, DEFAULT_ENV_PREFIX } from './collect.js';
+import { collect, DEFAULT_ENV_PREFIX } from './collect.js';
 import { type BuildConfigJsonOptions, buildConfigJson, type ConfigJsonDoc } from './config-json.js';
 import {
     type GenerateCliOptionsOptions,
@@ -30,7 +30,7 @@ export interface ConfigEngine {
     readonly envPrefix: string;
     readonly baseGroup: string;
     readonly root: string;
-    collectVars(): ConfigDef[];
+    collect(): ConfigDef[];
     requiredVars(scope?: string): ConfigDef[];
     generateEnvFile(options?: EnvFileOptions): string;
     buildConfigJson(options?: BuildConfigJsonOptions): ConfigJsonDoc;
@@ -62,9 +62,9 @@ export function createConfigEngine(options: ConfigEngineOptions): ConfigEngine {
         envPrefix,
         baseGroup: baseGroupName,
         root,
-        collectVars: () => collectVars(schema, envPrefix, { envPathOf }),
+        collect: () => collect(schema, { envPrefix, envPathOf }),
         requiredVars: scope =>
-            collectVars(schema, envPrefix, { envPathOf }).filter(
+            collect(schema, { envPrefix, envPathOf }).filter(
                 def => def.required && (scope === undefined || def.scope === scope)
             ),
         generateEnvFile: (opts = {}) => generateEnvFile(schema, { envPrefix, envPathOf, ...opts }),

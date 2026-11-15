@@ -12,6 +12,8 @@ export * from './config-json.js';
 export * from './engine.js';
 export * from './env.js';
 export * from './generators/index.js';
+export * from './loader/index.js';
+export * from './parser.js';
 export * from './root.js';
 export * from './schema.js';
 export * from './types/index.js';

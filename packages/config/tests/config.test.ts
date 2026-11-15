@@ -9,7 +9,7 @@ import { dbxConfigSchema, type ToolchainCommand } from '@deltabox/toolchain/shar
 
 import {
     buildConfigJson,
-    collectVars,
+    collect,
     createCliArgsParser,
     createConfigEngine,
     envBool,
@@ -82,9 +82,9 @@ describe('env tree', () => {
     });
 });
 
-describe('collectVars', () => {
+describe('collect', () => {
     it('collects scoped leaves with env metadata', () => {
-        const vars = collectVars(scopes, 'MYAPP_');
+        const vars = collect(scopes, { envPrefix: 'MYAPP_' });
         expect(vars.map(v => v.name)).toContain('MYAPP_HOST');
         const password = vars.find(v => v.name === 'MYAPP_AUTH_PASSWORD');
         expect(password?.secret).toBe(true);
@@ -240,7 +240,7 @@ describe('generators', () => {
 describe('createConfigEngine', () => {
     it('binds a schema and generates', async () => {
         const engine = createConfigEngine({ schema: scopes, envPrefix: 'MYAPP_' });
-        expect(engine.collectVars().length).toBeGreaterThan(0);
+        expect(engine.collect().length).toBeGreaterThan(0);
         const schema = await engine.generateJsonSchema();
         expect(schema.$id).toBeDefined();
         expect(Object.keys(engine.generateConfigTypes())).toEqual(['server', 'cli']);
@@ -265,7 +265,7 @@ describe('named nested schemas', () => {
     });
 
     it('collects env vars below a named `$ref`', () => {
-        const vars = collectVars({ server: schema }, 'APP_');
+        const vars = collect({ server: schema }, { envPrefix: 'APP_' });
         expect(vars.map(variable => variable.name)).toContain('APP_TOKEN');
         expect(vars.find(variable => variable.name === 'APP_TOKEN')?.path).toBe('auth.token');
     });
@@ -299,9 +299,13 @@ describe('secret defaults and envPathOf', () => {
         const schema = z.object({
             baseUrl: z.string().meta({ envName: 'APP_CLI_BASE_URL' }),
         });
-        const vars = collectVars({ server: schema }, 'APP_', {
-            envPathOf: () => 'cli.base.url',
-        });
+        const vars = collect(
+            { server: schema },
+            {
+                envPrefix: 'APP_',
+                envPathOf: () => 'cli.base.url',
+            }
+        );
         expect(vars.find(variable => variable.name === 'APP_CLI_BASE_URL')?.path).toBe(
             'cli.base.url'
         );
@@ -321,7 +325,7 @@ describe('duplicate env names', () => {
             a: z.string().meta({ envName: 'APP_TOKEN' }),
             b: z.string().meta({ envName: 'APP_TOKEN' }),
         });
-        const vars = collectVars({ server: schema }, 'APP_');
+        const vars = collect({ server: schema }, { envPrefix: 'APP_' });
         expect(vars.filter(variable => variable.name === 'APP_TOKEN')).toHaveLength(1);
     });
 });
