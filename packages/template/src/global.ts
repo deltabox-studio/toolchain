@@ -22,7 +22,7 @@ import {
 
 import { BUILTIN_TEMPLATES } from './builtin.js';
 import { loadLocalTemplates } from './local.js';
-import type { Template } from './types.js';
+import type { Template } from './types/index.js';
 
 /** The VS Code setting that lists the template search paths. */
 export const VSCODE_REGISTRY_SEARCH_PATHS = 'deltabox.registrySearchPaths';

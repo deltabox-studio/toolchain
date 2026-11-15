@@ -1,4 +1,5 @@
-import { sectionConfig, type ToolchainConfig } from './toolchain.js';
+import { sectionConfig } from './toolchain.js';
+import type { ToolchainConfig } from './types/index.js';
 
 /** The tsconfig file names a project reads and patches (custom names honoured). */
 export interface TsconfigFileNameSet {

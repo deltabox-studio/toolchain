@@ -27,7 +27,7 @@ import {
 import { runVp } from 'vite-plugin-dbx';
 
 import { readTemplateManifest } from './local.js';
-import type { Template, TemplateAction, TemplateActionContext } from './types.js';
+import type { Template, TemplateAction, TemplateActionContext } from './types/index.js';
 
 /** Files/dirs never copied from a local template. */
 const DEFAULT_IGNORE = new Set([

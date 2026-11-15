@@ -17,7 +17,7 @@ import type {
     ConfigSchemaInput,
     ConfigSchemaMap,
     ConfigSchemaType,
-} from './types.js';
+} from './types/index.js';
 
 /** A JSON Schema node produced by `z.toJSONSchema`. */
 interface JsonSchemaNode {

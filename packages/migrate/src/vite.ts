@@ -23,7 +23,7 @@ import type {
     MigrationResult,
     ToolchainMigration,
     UnmappedItem,
-} from './types.js';
+} from './types/index.js';
 import { findTopLevelValue, findViteMergeObject, matchBracket } from './vite-target.js';
 
 /** The root Vite config file names, in priority order. */

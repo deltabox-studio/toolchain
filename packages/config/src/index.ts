@@ -16,4 +16,4 @@ export * from './generated-format.js';
 export * from './generators/index.js';
 export * from './root.js';
 export * from './schema.js';
-export * from './types.js';
+export * from './types/index.js';

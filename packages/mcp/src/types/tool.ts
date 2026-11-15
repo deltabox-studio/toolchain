@@ -1,11 +1,4 @@
-/** A JSON value (the MCP transport only carries JSON). */
-export type JsonValue =
-    | null
-    | boolean
-    | number
-    | string
-    | JsonValue[]
-    | { [key: string]: JsonValue };
+import type { JsonValue } from './json.js';
 
 /** The input schema exposed by an MCP tool (a JSON Schema object). */
 export interface McpToolInputSchema {

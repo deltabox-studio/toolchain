@@ -16,7 +16,7 @@ import type {
     MigrationFile,
     MigrationResult,
     ToolchainMigration,
-} from './types.js';
+} from './types/index.js';
 import { renderViteTarget } from './vite-target.js';
 
 type Json = Record<string, any>;

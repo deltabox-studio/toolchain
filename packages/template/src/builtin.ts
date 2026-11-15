@@ -1,4 +1,4 @@
-import type { Template, TemplateAction, TemplateVariable } from './types.js';
+import type { Template, TemplateAction, TemplateVariable } from './types/index.js';
 
 /** The `name` input every builtin project template prompts for. */
 const NAME_VAR: TemplateVariable = {

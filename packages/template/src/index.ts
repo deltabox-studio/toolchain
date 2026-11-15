@@ -11,4 +11,4 @@ export * from './local.js';
 export * from './online.js';
 export * from './registry.js';
 export * from './scaffold.js';
-export * from './types.js';
+export * from './types/index.js';

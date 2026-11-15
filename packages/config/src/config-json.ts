@@ -4,7 +4,7 @@
  */
 
 import { type CollectVarsOptions, collectVars } from './collect.js';
-import type { ConfigSchema } from './types.js';
+import type { ConfigSchema } from './types/index.js';
 
 /** A serialized env var entry in `config.json`. */
 export interface ConfigJsonEntry {

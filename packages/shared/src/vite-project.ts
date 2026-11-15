@@ -12,8 +12,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { readJsonAt } from './fs-utils.js';
-import { sectionEnabled, type ToolchainConfig } from './toolchain.js';
-import type { PackageJson } from './types.js';
+import { sectionEnabled } from './toolchain.js';
+import type { PackageJson, ToolchainConfig } from './types/index.js';
 
 /** The Vite config file names, in Vite's own resolution order. */
 const VITE_CONFIG_FILE_NAMES = [

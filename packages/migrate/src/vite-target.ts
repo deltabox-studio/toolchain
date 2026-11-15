@@ -12,7 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { MigrationFile } from './types.js';
+import type { MigrationFile } from './types/index.js';
 
 type Json = Record<string, unknown>;
 

@@ -3,7 +3,7 @@
  */
 
 import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from './collect.js';
-import type { ConfigDef, ConfigSchema } from './types.js';
+import type { ConfigDef, ConfigSchema } from './types/index.js';
 
 export interface EnvFileOptions {
     /** Env vars to include (defaults to all). */

@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 
 import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from '../collect.js';
-import type { ConfigSchema } from '../types.js';
+import type { ConfigSchema } from '../types/index.js';
 import { resolveGeneratedFile } from './output.js';
 
 export interface GenerateEnvTypesOptions {

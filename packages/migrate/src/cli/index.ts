@@ -19,7 +19,7 @@ import {
 
 import { diffFiles, hasPending } from '../check.js';
 import { listMigrations, migrations } from '../registry.js';
-import type { MigrationResult, MigrateTarget, ToolchainMigration } from '../types.js';
+import type { MigrationResult, MigrateTarget, ToolchainMigration } from '../types/index.js';
 import { findDbxConfig, viteConfigHasFmtLint } from '../vite.js';
 
 /** Whether the project (or an ancestor) declares Vite+; then fmt/lint belong in vite.config. */

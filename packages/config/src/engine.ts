@@ -23,7 +23,7 @@ import {
 import { type GenerateMarkdownOptions, generateConfigMarkdown } from './generators/markdown.js';
 import { type GenerateTypesOptions, generateConfigTypes } from './generators/types.js';
 import { findProjectRoot } from './root.js';
-import type { ConfigDef, ConfigEngineOptions, ConfigSchema } from './types.js';
+import type { ConfigDef, ConfigEngineOptions, ConfigSchema } from './types/index.js';
 
 export interface ConfigEngine {
     readonly schema: ConfigSchema;

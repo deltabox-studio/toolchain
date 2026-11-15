@@ -8,8 +8,8 @@
  * `versions` so a consumer never has to accept a stale pin.
  */
 
-import type { FormatterTool, LinterTool } from './toolchain.js';
-import type { PackageJson } from './types.js';
+import type { PackageJson } from './types/index.js';
+import type { FormatterTool, LinterTool } from './types/tools.js';
 
 /** Any tool the toolchain can provision for formatting or linting. */
 export type ToolingTool = FormatterTool | LinterTool;

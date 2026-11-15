@@ -10,7 +10,7 @@ import { type ParseArgsOptionsConfig, parseArgs } from 'node:util';
 import { formatCliFlag } from '@deltabox/toolchain/shared';
 
 import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from '../collect.js';
-import type { ConfigSchema } from '../types.js';
+import type { ConfigSchema } from '../types/index.js';
 
 /** Flag-shaping options shared by every CLI helper. */
 export interface CliFlagOptions {

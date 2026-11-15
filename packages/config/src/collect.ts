@@ -8,7 +8,7 @@ import type { Schema } from 'untyped';
 import type { ZodType } from 'zod';
 
 import { isZodSchema, metaOf, normalizeConfigSchema } from './schema.js';
-import type { ConfigDef, ConfigSchema, ConfigValueType } from './types.js';
+import type { ConfigDef, ConfigSchema, ConfigValueType } from './types/index.js';
 
 /** The default env-var prefix used when none is configured. */
 export const DEFAULT_ENV_PREFIX = 'APP_';

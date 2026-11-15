@@ -10,7 +10,7 @@ import path from 'node:path';
 import type { Schema } from 'untyped';
 
 import { flattenBaseSchema, normalizeConfigSchema } from '../schema.js';
-import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
+import type { ConfigEngineOptions, ConfigSchema } from '../types/index.js';
 
 export interface GenerateJsonSchemaOptions extends Pick<ConfigEngineOptions, 'baseGroup'> {
     /** Output file path. When omitted, nothing is written. */

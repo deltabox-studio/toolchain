@@ -21,7 +21,7 @@ import {
     splitBaseSchema,
     zodToSchemaMap,
 } from '../schema.js';
-import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
+import type { ConfigEngineOptions, ConfigSchema } from '../types/index.js';
 import { resolveGeneratedFile } from './output.js';
 
 /** The `generateTypes` options shared by every interface. */

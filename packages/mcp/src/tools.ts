@@ -12,7 +12,7 @@ import path from 'node:path';
 
 import { findOwnCliEntry, spawnCross } from '@deltabox/toolchain/shared';
 
-import type { McpTool, McpToolInputSchema, McpToolResult } from './types.js';
+import type { McpTool, McpToolInputSchema, McpToolResult } from './types/index.js';
 
 const IS_WINDOWS = process.platform === 'win32';
 

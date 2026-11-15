@@ -18,7 +18,7 @@ import {
     splitBaseSchema,
     toJsonSchemaSafe,
 } from '../schema.js';
-import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
+import type { ConfigEngineOptions, ConfigSchema } from '../types/index.js';
 import { type CliFlagOptions, cliFlagLabel } from './cli.js';
 import { resolveGeneratedFile } from './output.js';
 

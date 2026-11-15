@@ -1,23 +1,8 @@
-import type { Replacements } from './template.js';
-import type { ProjectType, SyncTask, ToolchainConfig } from './toolchain.js';
-
-/** A value that may or may not be awaited. */
-export type Awaitable<T> = T | Promise<T>;
-
-/** A file that was written by a generator: an absolute path plus its content. */
-export interface GeneratedFile {
-    path: string;
-    content: string;
-}
-
-/** Any JSON-serializable value. */
-export type JsonValue =
-    | string
-    | number
-    | boolean
-    | null
-    | JsonValue[]
-    | { [key: string & {}]: JsonValue };
+import type { ProjectType } from '../config-types.js';
+import type { Replacements } from '../template.js';
+import type { Awaitable } from './common.js';
+import type { SyncTask } from './sync.js';
+import type { ToolchainConfig } from './toolchain.js';
 
 /** A CLI option a tooling command exposes (framework-agnostic). */
 export interface ToolchainOption {
@@ -122,22 +107,4 @@ export interface ToolchainCommand<Args extends Record<string, unknown> = Record<
     hidden?: boolean;
     /** Run the command with the CLI-provided options + the loaded config. */
     run: (args: Args, context: ToolchainCommandContext) => Awaitable<void>;
-}
-
-/** A package.json-shaped object (loose; only the fields the tooling touches). */
-export interface PackageJson {
-    name?: string;
-    version?: string;
-    private?: boolean;
-    type?: string;
-    description?: string;
-    scripts?: Record<string, string>;
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-    peerDependencies?: Record<string, string>;
-    optionalDependencies?: Record<string, string>;
-    workspaces?: string[] | { packages?: string[] };
-    exports?: Record<string, unknown> | string;
-    files?: string[];
-    [key: string & {}]: unknown;
 }

@@ -9,4 +9,4 @@
 export * from './install.js';
 export * from './protocol.js';
 export * from './tools.js';
-export type * from './types.js';
+export type * from './types/index.js';

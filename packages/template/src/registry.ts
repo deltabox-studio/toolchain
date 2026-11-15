@@ -14,7 +14,7 @@ import { BUILTIN_TEMPLATES } from './builtin.js';
 import { loadGlobalTemplates } from './global.js';
 import { loadLocalTemplates } from './local.js';
 import { detectNpmRegistry, gitTemplate, loadNpmTemplates } from './online.js';
-import type { Template } from './types.js';
+import type { Template } from './types/index.js';
 
 /** Where `template:add` records sources, relative to a project root. */
 export const REGISTRY_DIR = '.dbx/toolchain';

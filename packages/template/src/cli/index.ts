@@ -47,7 +47,7 @@ import {
     removeTemplateSource,
 } from '../registry.js';
 import { scaffoldTemplate } from '../scaffold.js';
-import type { Template, TemplateKind, TemplateManifest, TemplateVariable } from '../types.js';
+import type { Template, TemplateKind, TemplateManifest, TemplateVariable } from '../types/index.js';
 
 const CWD_OPTION = { flags: '--cwd <dir>', description: 'Project root (default: cwd).' };
 const KIND_OPTION = {

@@ -7,7 +7,7 @@
  * remaining wire-compatible with MCP clients.
  */
 
-import type { McpTool, McpToolResult } from './types.js';
+import type { McpTool, McpToolResult } from './types/index.js';
 
 /** The MCP protocol revision this server implements. */
 export const MCP_PROTOCOL_VERSION = '2025-06-18';
