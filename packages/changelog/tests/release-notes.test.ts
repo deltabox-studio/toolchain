@@ -112,3 +112,32 @@ describe('release notes for a version without a heading', () => {
         expect(notes).not.toContain('## 1.11.4');
     });
 });
+
+describe('release notes with details-body summaries', () => {
+    it('reads the summary heading as the version boundary', () => {
+        const changelog = [
+            '# Changelog',
+            '',
+            '<details>',
+            '<summary><h2>2.0.0 (October 2026)</h2></summary>',
+            '',
+            '<!-- release:start -->',
+            '',
+            '- New thing',
+            '',
+            '<!-- release:end -->',
+            '',
+            '</details>',
+            '',
+            '## 1.11.4 (September 2026)',
+            '',
+            '- Old thing',
+        ].join('\n');
+        const notes = buildReleaseNotes(changelog, ['v2.0.0', 'v1.11.4'], '2.0.0');
+        expect(notes.startsWith('<details>')).toBe(true);
+        expect(notes).toContain('<summary><h2>2.0.0 (October 2026)</h2></summary>');
+        expect(notes).toContain('- New thing');
+        expect(notes).not.toContain('## 1.11.4');
+        expect(notes).not.toContain('- Old thing');
+    });
+});

@@ -3,6 +3,8 @@ export interface DetailsToggle {
     enabled: boolean;
     title?: string;
     expanded?: boolean;
+    /** Minimum entries in the section before the collapsible is used. */
+    minCommits?: number;
 }
 
 /** A custom details matcher. */
@@ -12,6 +14,7 @@ export interface DetailsCustomMatcher {
     title?: string;
     expanded?: boolean;
     pattern?: RegExp | string;
+    minCommits?: number;
 }
 
 /** The normalized `<details>` settings. */
@@ -31,21 +34,43 @@ export interface ResolvedDetails {
 
 const DEFAULT_TITLES = {
     releaseNotes: '**Release Notes**',
+    descriptions: '**See more...**',
     intro: '**Intro**',
     outro: '**Outro**',
     footer: '**Footer**',
     breaking: '**BREAKING CHANGES**',
 } as const;
 
-function toggle(value: unknown, defaultTitle?: string, fallback = false): DetailsToggle {
+function minCommitsOf(value: unknown): number | undefined {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return undefined;
+    return Math.floor(value);
+}
+
+function toggle(
+    value: unknown,
+    defaultTitle?: string,
+    fallback = false,
+    defaultMinCommits?: number
+): DetailsToggle {
+    const defaultMin =
+        defaultMinCommits !== undefined ? minCommitsOf(defaultMinCommits) : undefined;
     if (value === undefined) {
-        return { enabled: fallback, ...(defaultTitle ? { title: defaultTitle } : {}) };
+        return {
+            enabled: fallback,
+            ...(defaultTitle ? { title: defaultTitle } : {}),
+            ...(defaultMin !== undefined ? { minCommits: defaultMin } : {}),
+        };
     }
     if (typeof value === 'boolean') {
-        return { enabled: value, ...(defaultTitle ? { title: defaultTitle } : {}) };
+        return {
+            enabled: value,
+            ...(defaultTitle ? { title: defaultTitle } : {}),
+            ...(value && defaultMin !== undefined ? { minCommits: defaultMin } : {}),
+        };
     }
     if (value && typeof value === 'object') {
-        const record = value as { title?: unknown; expanded?: unknown };
+        const record = value as { title?: unknown; expanded?: unknown; minCommits?: unknown };
+        const min = minCommitsOf(record.minCommits) ?? defaultMin;
         return {
             enabled: true,
             ...(typeof record.title === 'string' && record.title
@@ -54,25 +79,55 @@ function toggle(value: unknown, defaultTitle?: string, fallback = false): Detail
                   ? { title: defaultTitle }
                   : {}),
             ...(typeof record.expanded === 'boolean' ? { expanded: record.expanded } : {}),
+            ...(min !== undefined ? { minCommits: min } : {}),
         };
     }
-    return { enabled: fallback, ...(defaultTitle ? { title: defaultTitle } : {}) };
+    return {
+        enabled: fallback,
+        ...(defaultTitle ? { title: defaultTitle } : {}),
+        ...(defaultMin !== undefined ? { minCommits: defaultMin } : {}),
+    };
 }
 
-function customMatcher(value: unknown): DetailsCustomMatcher | undefined {
+function customMatcher(
+    value: unknown,
+    defaultMinCommits?: number
+): DetailsCustomMatcher | undefined {
+    const defaultMin =
+        defaultMinCommits !== undefined ? minCommitsOf(defaultMinCommits) : undefined;
     if (typeof value === 'string' || value instanceof RegExp) {
-        return { pattern: value };
+        return {
+            pattern: value,
+            ...(defaultMin !== undefined ? { minCommits: defaultMin } : {}),
+        };
     }
     if (!value || typeof value !== 'object') return undefined;
     const record = value as Record<string, unknown>;
     const start = record.start;
     const end = record.end;
+    const min = minCommitsOf(record.minCommits) ?? defaultMin;
     return {
         ...(typeof start === 'string' || start instanceof RegExp ? { start } : {}),
         ...(typeof end === 'string' || end instanceof RegExp ? { end } : {}),
         ...(typeof record.title === 'string' ? { title: record.title } : {}),
         ...(typeof record.expanded === 'boolean' ? { expanded: record.expanded } : {}),
+        ...(min !== undefined ? { minCommits: min } : {}),
     };
+}
+
+/** Whether a toggle applies for a section with `count` entries. */
+export function detailsEnabled(toggle: DetailsToggle, count: number): boolean {
+    return toggle.enabled && (toggle.minCommits === undefined || count >= toggle.minCommits);
+}
+
+/** Count top-level commit bullets in a body/section (footers are excluded). */
+export function countCommitEntries(text: string): number {
+    let count = 0;
+    for (const line of text.split('\n')) {
+        if (/^###\s+(?:Package changes|New contributors)\s*$/.test(line)) break;
+        if (/^[-*+]\s+/.test(line)) count += 1;
+    }
+    return count;
 }
 
 /** Normalize `details` (`true | false | object`). Defaults to enabled. */
@@ -96,8 +151,8 @@ export function resolveDetails(value: unknown, release = false): ResolvedDetails
         return {
             enabled: true,
             lifecycle: 'after',
-            descriptions: { enabled: true },
-            body: { enabled: !release },
+            descriptions: { enabled: true, title: DEFAULT_TITLES.descriptions },
+            body: { enabled: !release, title: DEFAULT_TITLES.releaseNotes, minCommits: 10 },
             releaseNotes: {
                 enabled: release,
                 title: DEFAULT_TITLES.releaseNotes,
@@ -106,50 +161,82 @@ export function resolveDetails(value: unknown, release = false): ResolvedDetails
             outro: { enabled: false, title: DEFAULT_TITLES.outro },
             footer: { enabled: false, title: DEFAULT_TITLES.footer },
             breaking: { enabled: true, title: DEFAULT_TITLES.breaking },
-            types: { enabled: false },
+            types: { enabled: true },
             custom: [],
         };
     }
     const record = value as Record<string, unknown>;
     if (record.enabled === false) return resolveDetails(false, release);
+    const configMin = minCommitsOf(record.minCommits);
+    const bodyMin = configMin ?? 10;
     const typesValue = record.types;
     const typesList = Array.isArray(typesValue)
         ? typesValue.filter((item): item is string => typeof item === 'string')
         : undefined;
     const customValue = record.custom;
     const custom = (Array.isArray(customValue) ? customValue : [customValue])
-        .map(customMatcher)
+        .map(item => customMatcher(item, configMin))
         .filter((item): item is DetailsCustomMatcher => item !== undefined);
     const releaseNotes = release
-        ? toggle(record.releaseNotes, DEFAULT_TITLES.releaseNotes, true)
+        ? toggle(record.releaseNotes, DEFAULT_TITLES.releaseNotes, true, configMin)
         : { enabled: false, title: DEFAULT_TITLES.releaseNotes };
     return {
         enabled: true,
         lifecycle: record.lifecycle === 'before' ? 'before' : 'after',
-        descriptions: toggle(record.descriptions),
-        body: record.body === undefined ? { enabled: !release } : toggle(record.body),
+        descriptions: toggle(record.descriptions, DEFAULT_TITLES.descriptions, false, configMin),
+        body:
+            record.body === undefined
+                ? { enabled: !release, title: DEFAULT_TITLES.releaseNotes, minCommits: bodyMin }
+                : toggle(record.body, DEFAULT_TITLES.releaseNotes, false, bodyMin),
         releaseNotes,
-        intro: toggle(record.intro, DEFAULT_TITLES.intro),
-        outro: toggle(record.outro, DEFAULT_TITLES.outro),
-        footer: toggle(record.footer, DEFAULT_TITLES.footer),
-        breaking: toggle(record.breaking, DEFAULT_TITLES.breaking),
+        intro: toggle(record.intro, DEFAULT_TITLES.intro, false, configMin),
+        outro: toggle(record.outro, DEFAULT_TITLES.outro, false, configMin),
+        footer: toggle(record.footer, DEFAULT_TITLES.footer, false, configMin),
+        breaking: toggle(record.breaking, DEFAULT_TITLES.breaking, false, configMin),
         types: {
-            ...toggle(typesList ? true : typesValue),
+            ...toggle(typesList ? true : typesValue, undefined, true, configMin),
             ...(typesList ? { list: typesList } : {}),
         },
         custom,
     };
 }
 
-/** Render a markdown `<details>` collapsible. */
-/** Render inline markdown in a `<summary>` as HTML (Markdown is not parsed there). */
+function escapeHtml(value: string): string {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+/**
+ * Render inline Markdown in a `<summary>` as HTML. Markdown is not parsed inside
+ * `<summary>`, so links, code, emphasis and strikethrough are converted
+ * explicitly (raw HTML is escaped).
+ */
 function summaryHtml(title: string): string {
-    return title
-        .trim()
+    const code: string[] = [];
+    let output = escapeHtml(title.trim());
+    output = output.replace(/`([^`]+)`/g, (_, value: string) => {
+        const token = `\u0000${code.length}\u0000`;
+        code.push(`<code>${value}</code>`);
+        return token;
+    });
+    output = output.replace(
+        /!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;.*?&quot;)?\)/g,
+        '<img src="$2" alt="$1">'
+    );
+    output = output.replace(
+        /\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;.*?&quot;)?\)/g,
+        '<a href="$2">$1</a>'
+    );
+    output = output
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
         .replace(/__([^_]+)__/g, '<strong>$1</strong>')
-        .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
-        .replace(/`([^`]+)`/g, '<code>$1</code>');
+        .replace(/(^|[^*])\*([^*]+)\*(?!\*)/g, '$1<em>$2</em>')
+        .replace(/(^|[^_])_([^_]+)_(?!_)/g, '$1<em>$2</em>')
+        .replace(/~~([^~]+)~~/g, '<del>$1</del>');
+    return output.replace(/\u0000(\d+)\u0000/g, (_, index: string) => code[Number(index)]!);
 }
 
 /** Render a markdown `<details>` collapsible. */
@@ -182,6 +269,8 @@ export function wrapCustomDetails(text: string, details: ResolvedDetails): strin
             const regex = patternOf(matcher.pattern);
             const flags = regex.flags.includes('g') ? regex.flags : `${regex.flags}g`;
             const global = new RegExp(regex.source, flags);
+            const matches = [...output.matchAll(global)];
+            if (matcher.minCommits !== undefined && matches.length < matcher.minCommits) continue;
             output = output.replace(global, match =>
                 renderDetails(matcher.title ?? match, match, matcher.expanded === true)
             );
@@ -195,6 +284,12 @@ export function wrapCustomDetails(text: string, details: ResolvedDetails): strin
         if (matcher.end === undefined) {
             const before = output.slice(0, startMatch.index);
             const after = output.slice(startMatch.index);
+            if (
+                matcher.minCommits !== undefined &&
+                countCommitEntries(after) < matcher.minCommits
+            ) {
+                continue;
+            }
             output = `${before}${renderDetails(title, after, matcher.expanded === true)}`;
             continue;
         }
@@ -206,6 +301,9 @@ export function wrapCustomDetails(text: string, details: ResolvedDetails): strin
             startMatch.index,
             startMatch.index + startMatch[0].length + endIndex + (endMatch ? endMatch[0].length : 0)
         );
+        if (matcher.minCommits !== undefined && countCommitEntries(inner) < matcher.minCommits) {
+            continue;
+        }
         output = `${output.slice(0, startMatch.index)}${renderDetails(
             title,
             inner,
@@ -229,9 +327,12 @@ const TYPE_TITLES: Record<string, string> = {
     revert: 'Reverts',
 };
 
+const NON_TYPE_TITLES = new Set(['package changes', 'new contributors']);
+
 function sectionMatchesTypes(title: string, list: string[] | undefined): boolean {
-    if (!list || list.length === 0) return true;
     const normalized = title.toLowerCase();
+    // With types enabled broadly, keep the generated footer sections out.
+    if (!list || list.length === 0) return !NON_TYPE_TITLES.has(normalized);
     return list.some(type => {
         const raw = type.toLowerCase();
         return raw === normalized || (TYPE_TITLES[raw] ?? '').toLowerCase() === normalized;
@@ -242,8 +343,20 @@ function sectionMatchesTypes(title: string, list: string[] | undefined): boolean
 function wrapDescriptions(lines: string[], toggle: DetailsToggle): string[] {
     if (!toggle.enabled) return lines;
     const out: string[] = [];
+    let inFooter = false;
     for (let index = 0; index < lines.length; index += 1) {
         const line = lines[index]!;
+        if (/^###\s+(?:Package changes|New contributors)\s*$/.test(line)) {
+            inFooter = true;
+            out.push(line);
+            continue;
+        }
+        if (inFooter) {
+            // A new top-level/type section ends the footer.
+            if (/^#{2,3}\s+/.test(line)) inFooter = false;
+            out.push(line);
+            continue;
+        }
         if (!/^[-*+]\s+/.test(line) || /^\s*<details/i.test(line)) {
             out.push(line);
             continue;
@@ -255,11 +368,17 @@ function wrapDescriptions(lines: string[], toggle: DetailsToggle): string[] {
             out.push(line);
             continue;
         }
-        const title = toggle.title ?? line.replace(/^[-*+]\s+/, '').trim();
-        out.push(
-            line,
-            ...renderDetails(title, body.join('\n'), toggle.expanded === true).split('\n')
-        );
+        const descriptionCount =
+            body.filter(item => /^\s*[-*+]\s+/.test(item)).length || body.length;
+        if (!detailsEnabled(toggle, descriptionCount)) {
+            out.push(line, ...body);
+            index = end - 1;
+            continue;
+        }
+        const title = toggle.title ?? DEFAULT_TITLES.descriptions;
+        const block = renderDetails(title, body.join('\n'), toggle.expanded === true).split('\n');
+        // Keep the collapsible inside the commit's list item.
+        out.push(line, ...block.map(detailLine => (detailLine ? `  ${detailLine}` : detailLine)));
         index = end - 1;
     }
     return out;
@@ -294,12 +413,23 @@ function wrapSections(lines: string[], details: ResolvedDetails): string[] {
             index = end - 1;
             continue;
         }
+        // The summary already names the section, so drop the duplicate heading
+        // from the collapsible body.
+        const content = block.slice(1).join('\n').trim();
+        if (!content) {
+            out.push(...block);
+            index = end - 1;
+            continue;
+        }
+        if (!detailsEnabled(toggle, countCommitEntries(content))) {
+            out.push(...block);
+            index = end - 1;
+            continue;
+        }
         out.push(
-            ...renderDetails(
-                toggle.title ?? rawTitle,
-                block.join('\n'),
-                toggle.expanded === true
-            ).split('\n')
+            ...renderDetails(toggle.title ?? rawTitle, content, toggle.expanded === true).split(
+                '\n'
+            )
         );
         index = end - 1;
     }
@@ -313,7 +443,6 @@ function wrapBody(lines: string[], details: ResolvedDetails): string[] {
     }
     const headingIndex = lines.findIndex(line => /^##\s+/.test(line));
     if (headingIndex === -1) return lines;
-    const heading = lines[headingIndex]!.replace(/^##\s+/, '').trim();
     let start = headingIndex + 1;
     let end = lines.length;
     const startMarker = lines.findIndex(
@@ -330,15 +459,20 @@ function wrapBody(lines: string[], details: ResolvedDetails): string[] {
     while (end > start && !lines[end - 1]!.trim()) end -= 1;
     if (start >= end) return lines;
     let inner = lines.slice(start, end).join('\n');
-    if (details.releaseNotes.enabled) {
+    const count = countCommitEntries(inner);
+    if (details.releaseNotes.enabled && detailsEnabled(details.releaseNotes, count)) {
         inner = renderDetails(
-            details.releaseNotes.title ?? '**Release Notes**',
+            details.releaseNotes.title ?? DEFAULT_TITLES.releaseNotes,
             inner,
             details.releaseNotes.expanded === true
         );
     }
-    if (details.body.enabled) {
-        inner = renderDetails(details.body.title ?? heading, inner, details.body.expanded === true);
+    if (details.body.enabled && detailsEnabled(details.body, count)) {
+        inner = renderDetails(
+            details.body.title ?? DEFAULT_TITLES.releaseNotes,
+            inner,
+            details.body.expanded === true
+        );
     }
     return [...lines.slice(0, start), ...inner.split('\n'), ...lines.slice(end)];
 }

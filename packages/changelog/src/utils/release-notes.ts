@@ -17,12 +17,17 @@ export function normalizeReleaseVersion(tag: string): string | undefined {
 
 function versionHeadings(changelog: string): VersionHeading[] {
     const headings: VersionHeading[] = [];
-    const pattern = /^##\s+(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?:\s|$)/gm;
-    for (const match of changelog.matchAll(pattern)) {
-        if (match.index === undefined) continue;
-        headings.push({ version: match[1]!, index: match.index });
+    const patterns = [
+        /^##\s+(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?:\s|$)/gm,
+        /^<details>\n\n?<summary><h2>(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?:\s*\([^)]*\))?<\/h2><\/summary>/gm,
+    ];
+    for (const pattern of patterns) {
+        for (const match of changelog.matchAll(pattern)) {
+            if (match.index === undefined) continue;
+            headings.push({ version: match[1]!, index: match.index });
+        }
     }
-    return headings;
+    return headings.sort((a, b) => a.index - b.index);
 }
 
 /**

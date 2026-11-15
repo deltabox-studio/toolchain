@@ -491,6 +491,31 @@ describe('changelog formatting', () => {
         expect(entries[0]!.bullets.join('\n')).not.toContain('A nested description line.');
         expect(entries[0]!.bullets.join('\n')).not.toContain('some-dep');
     });
+
+    it('parses a details-body version summary', () => {
+        const content = [
+            '# Changelog',
+            '',
+            '<details>',
+            '<summary><h2>0.15.0 (September 2026)</h2></summary>',
+            '',
+            '<!-- release:start -->',
+            '',
+            '- **chore(scripts):** tidy ([#abcdef1](https://github.com/x/y/commit/abcdef1) by [T](https://github.com/T))',
+            '',
+            '<!-- release:end -->',
+            '',
+            '</details>',
+            '',
+            '## 0.14.0',
+            '',
+            '- **feat(server):** add thing',
+        ].join('\n');
+        const entries = parseExistingChangelog(content);
+        expect(entries.map(entry => entry.version)).toEqual(['0.15.0', '0.14.0']);
+        expect(entries[0]!.bullets).toHaveLength(1);
+        expect(entries[0]!.bullets[0]).toContain('tidy');
+    });
 });
 
 describe('formatLine', () => {
@@ -573,9 +598,9 @@ describe('reformatChangelogContent (--format-only)', () => {
         ].join('\n');
         const out = reformatChangelogContent(content, 'x/y');
         expect(out).toContain('## 0.14.0');
-        expect(out).toContain('### New features');
+        expect(out).toContain('<summary>New features</summary>');
         expect(out).toContain('#### Server');
-        expect(out).toContain('### Bug fixes');
+        expect(out).toContain('<summary>Bug fixes</summary>');
         expect(out).toContain('#### Frontend');
         // CC prefix stripped + sentence capitalized
         expect(out).toContain('- Add a thing ([#abcdef1]');
@@ -597,7 +622,9 @@ describe('reformatChangelogContent (--format-only)', () => {
             { type: 'fix', title: 'Bug Fixes' },
             { type: 'feat', title: 'New Features' },
         ]);
-        expect(out.indexOf('### Bug Fixes')).toBeLessThan(out.indexOf('### New Features'));
+        expect(out.indexOf('<summary>Bug Fixes</summary>')).toBeLessThan(
+            out.indexOf('<summary>New Features</summary>')
+        );
         expect(out).toContain('#### Frontend');
         expect(out).toContain('#### Server');
     });

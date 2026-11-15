@@ -192,6 +192,14 @@ const changelogDetailsToggleSchema = z
         z.object({
             title: z.string().describe('Custom `<summary>` text.').optional(),
             expanded: z.boolean().describe('Render the collapsible open by default.').optional(),
+            minCommits: z
+                .number()
+                .int()
+                .nonnegative()
+                .describe(
+                    'Minimum entries in the section before wrapping (nested overrides the top-level default).'
+                )
+                .optional(),
         }),
     ])
     .describe('Enable/disable this collapsible, optionally with a title/expanded state.');
@@ -211,6 +219,12 @@ const changelogDetailsCustomSchema = z
             end: changelogDetailsPatternSchema.describe('The closing marker.').optional(),
             title: z.string().describe('Custom `<summary>` text.').optional(),
             expanded: z.boolean().describe('Render the collapsible open by default.').optional(),
+            minCommits: z
+                .number()
+                .int()
+                .nonnegative()
+                .describe('Minimum entries in the matched region before wrapping.')
+                .optional(),
         }),
     ])
     .describe('A custom collapsible matcher.');
@@ -231,8 +245,20 @@ export const changelogDetailsConfigSchema = z
                         'custom searches regex-match the formatted text) or before it (`before`).'
                 )
                 .default('after'),
+            minCommits: z
+                .number()
+                .int()
+                .nonnegative()
+                .describe(
+                    'Default minimum entries for every details section (a nested minCommits wins; the body defaults to 10).'
+                )
+                .optional(),
             descriptions: changelogDetailsToggleSchema.optional(),
-            body: changelogDetailsToggleSchema.optional(),
+            body: changelogDetailsToggleSchema
+                .describe(
+                    'Wrap the version body in a collapsible titled Release Notes (default outside release mode; requires 10 commits by default).'
+                )
+                .optional(),
             releaseNotes: changelogDetailsToggleSchema.optional(),
             intro: changelogDetailsToggleSchema.optional(),
             outro: changelogDetailsToggleSchema.optional(),
@@ -240,7 +266,9 @@ export const changelogDetailsConfigSchema = z
             breaking: changelogDetailsToggleSchema.optional(),
             types: z
                 .union([changelogDetailsToggleSchema, z.array(z.string())])
-                .describe('Wrap these CC type sections (all types when `true`).')
+                .describe(
+                    'Wrap these CC type sections (all types when `true`; enabled by default).'
+                )
                 .optional(),
             custom: z
                 .union([changelogDetailsCustomSchema, z.array(changelogDetailsCustomSchema)])
@@ -250,7 +278,8 @@ export const changelogDetailsConfigSchema = z
     ])
     .describe(
         'Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables ' +
-            'descriptions, release notes and breaking changes; use an object or `false` to opt out.'
+            'descriptions, release notes, breaking changes and type sections; use an object or ' +
+            '`false` to opt out.'
     )
     .meta({ id: 'ChangelogDetailsConfig' });
 

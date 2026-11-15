@@ -3,7 +3,13 @@ import { resolve } from 'node:path';
 
 import { logger } from '@deltabox/toolchain/shared';
 
-import { renderDetails, resolveDetails } from './details.js';
+import {
+    countCommitEntries,
+    detailsEnabled,
+    renderDetails,
+    resolveDetails,
+    type DetailsToggle,
+} from './details.js';
 import { discoverWorkspaceDirs, repoRoot } from './repo.js';
 import type { BumpType } from './types.js';
 
@@ -76,21 +82,23 @@ export function renderChangelogEntry(
 ): string {
     const suffix = date ? ` (${monthYear(date)})` : '';
     const d = resolveDetails(details, release);
+    const entryCount = countCommitEntries(summary);
     const wrap = (
         value: string,
-        toggle: { enabled: boolean; title?: string; expanded?: boolean },
-        fallback: string
+        toggle: DetailsToggle,
+        fallback: string,
+        count = entryCount
     ): string => {
         if (!value.trim()) return '';
-        return toggle.enabled
+        return detailsEnabled(toggle, count)
             ? renderDetails(toggle.title ?? fallback, value, toggle.expanded === true)
             : value.trim();
     };
-    const introBlock = wrap(intro, d.intro, '**Intro**');
+    const introBlock = wrap(intro, d.intro, 'Intro');
     const body = [
         summary.trim(),
-        wrap(packageChanges, d.footer, '**Footer**'),
-        wrap(outro, d.outro, '**Outro**'),
+        wrap(packageChanges, d.footer, 'Footer', countCommitEntries(packageChanges)),
+        wrap(outro, d.outro, 'Outro'),
     ]
         .filter(Boolean)
         .join('\n\n');
@@ -148,7 +156,9 @@ export function retagChangelogs(current: string, next: string): void {
     for (const file of files) {
         if (!existsSync(file)) continue;
         const content = readFileSync(file, 'utf8');
-        const updated = content.replace(`## ${current}`, `## ${next}`);
+        const updated = content
+            .replace(`## ${current}`, `## ${next}`)
+            .replace(`<h2>${current}`, `<h2>${next}`);
         if (updated !== content) {
             writeFileSync(file, updated, 'utf8');
             logger.info(`  retagged ${file}`);

@@ -23,6 +23,10 @@ import { renderChangelogEntry } from './version.js';
 const VERSION_HEADING =
     /^##\s+\[?v?(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)\]?\s*(?:\([^)]*\))?\s*(?:-\s+.*)?\s*$/;
 
+/** A details-body version summary: `<summary><h2>1.2.3 (January 2026)</h2></summary>`. */
+const VERSION_SUMMARY =
+    /^<summary><h2>\[?v?(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)\]?\s*(?:\([^)]*\))?\s*(?:-\s+.*)?<\/h2><\/summary>$/;
+
 /** Whether the changelog has a `## ` section that is not a version heading. */
 function hasUnsupportedHeading(content: string): boolean {
     for (const line of content.split('\n')) {
@@ -45,7 +49,7 @@ export function parseExistingChangelog(content: string): ExistingEntry[] {
     let inPackageChanges = false;
     let collectingBody = false;
     for (const line of content.split('\n')) {
-        const heading = VERSION_HEADING.exec(line);
+        const heading = VERSION_SUMMARY.exec(line) ?? VERSION_HEADING.exec(line);
         if (heading) {
             current = { version: heading[1]!, bullets: [], bodies: [] };
             entries.push(current);

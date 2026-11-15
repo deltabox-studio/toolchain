@@ -119,7 +119,9 @@ from every `package.json` and the package-manager catalogs:
 
 Catalog entries are diffed in the same map as declared dependencies, so a
 catalog-only range change is reported under the root package at both ends of the
-release. Pass `--no-package-changes-section` to omit the footer.
+release. Entries are grouped by the declaring package (one top-level bullet per
+package, with each changed dependency nested under it). Pass
+`--no-package-changes-section` to omit the footer.
 
 ## Custom bump rules
 
@@ -216,12 +218,20 @@ option and for the intro/outro settings.
 `<details>`/`<summary>` blocks. It is enabled by default; `details: false` opts
 out.
 
-- Non-release runs wrap the version body and use the version title
-  (`3.0.0 (November 2026)`) as the summary.
-- Release runs (`dbx changelog --release`) wrap the entry as
-  `<strong>Release Notes</strong>` instead.
-- `descriptions`, `breaking` and `intro`/`outro`/`footer` are opt-in wrappers;
-  `types` wraps matching CC sections.
+- `descriptions` (default on) nests a commit's description body under its bullet
+  as a collapsible whose summary is `**See more...**`.
+- `breaking` (default on) wraps the breaking section; the summary names the
+  section, so the duplicate heading is not repeated inside.
+- The version stays a normal `##` heading. The body details summary is
+  `**Release Notes**` in both release and non-release modes.
+- `intro`/`outro`/`footer` are opt-in wrappers; `types` (default on) wraps the
+  CC type sections, leaving the generated `Package changes`/`New contributors`
+  footers alone.
+
+Summaries accept inline Markdown, which is converted to HTML (`<strong>`,
+`<em>`, `<code>`, links, images and `<del>`) because Markdown is not parsed
+inside `<summary>`. Heading elements are not used there; summaries are bold or
+plain inline content.
 
 ```ts
 ci: {
@@ -244,9 +254,13 @@ ci: {
 }
 ```
 
-- `descriptions` uses the resolved commit title (including the SHA/author) as the summary and only applies when the commit has a body.
-- `releaseNotes`, `intro`, `outro`, `footer` and `breaking` use bold summaries by default (`<strong>`; Markdown is not parsed inside `<summary>`).
-- `types` wraps matching CC type sections (all types when `true`), using the section title by default.
+- `descriptions` uses `See more...` by default and only applies when the commit has a body; the collapsible is nested under the commit bullet.
+- `releaseNotes`/`body` use `Release Notes` by default; `breaking`/`types` use the section title (bold for breaking).
+- `intro`, `outro` and `footer` keep inline summaries.
+- `types` (default on) wraps CC type sections (all types when `true`), using the section title by default.
+- `minCommits` on a toggle skips the collapsible until that section has at least
+  N commit entries. A top-level `minCommits` sets the default for every section;
+  a nested value wins. The body defaults to **10** commits.
 - `custom` accepts a regex/string or `{ start, end }` markers; the match (or start match) becomes the summary.
 
 Every flag also accepts `{ title?: string; expanded?: boolean }`.
@@ -260,5 +274,7 @@ Every flag also accepts `{ title?: string; expanded?: boolean }`.
   credits, etc.).
 - `before`: details are applied while the entry is rendered.
 
-`details.body: true` wraps the whole version body in a collapsible. It is the
-default in non-release mode; release mode uses `details.releaseNotes` instead.
+`details.body` wraps the whole version body in a collapsible titled
+`Release Notes`. It is on by default outside release mode and requires at least
+10 commits (`minCommits`) unless overridden. Release mode uses
+`details.releaseNotes` with the same title.

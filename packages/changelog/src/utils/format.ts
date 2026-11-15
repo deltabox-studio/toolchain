@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 import { logger, sanitizeText } from '@deltabox/toolchain/shared';
 
-import { renderDetails, type ResolvedDetails } from './details.js';
+import { detailsEnabled, renderDetails, type ResolvedDetails } from './details.js';
 import { hasCompleteGitHistory, readCommit } from './git.js';
 import type {
     ChangelogGroupConfig,
@@ -232,6 +232,7 @@ export function renderGroups(groups: GroupedRule[], details?: ResolvedDetails): 
             lines.push(...renderItemBody(item, details));
         }
         for (const [scope, scopeItems] of rule.scopes) {
+            lines.push('');
             lines.push(`#### ${scopeTitle(scope)}`);
             for (const item of scopeItems) {
                 lines.push(item.text);
@@ -240,35 +241,49 @@ export function renderGroups(groups: GroupedRule[], details?: ResolvedDetails): 
         }
         let section = lines.join('\n');
         if (details?.enabled) {
+            const count =
+                rule.ungrouped.length +
+                [...rule.scopes.values()].reduce((total, items) => total + items.length, 0);
+            let title: string | undefined;
+            let expanded = false;
+            let applies = false;
             if (rule.type === 'breaking' && details.breaking.enabled) {
-                section = renderDetails(
-                    details.breaking.title ?? '**BREAKING CHANGES**',
-                    section,
-                    details.breaking.expanded === true
-                );
+                title = details.breaking.title ?? '**BREAKING CHANGES**';
+                expanded = details.breaking.expanded === true;
+                applies = detailsEnabled(details.breaking, count);
             } else if (
                 details.types.enabled &&
                 (!details.types.list || details.types.list.includes(rule.type))
             ) {
-                section = renderDetails(
-                    details.types.title ?? rule.title,
-                    section,
-                    details.types.expanded === true
-                );
+                title = details.types.title ?? rule.title;
+                expanded = details.types.expanded === true;
+                applies = detailsEnabled(details.types, count);
+            }
+            // The summary already names the section, so drop the duplicate
+            // heading from the collapsible body.
+            const content = lines.slice(1).join('\n').trim();
+            if (title !== undefined && content && applies) {
+                section = renderDetails(title, content, expanded);
             }
         }
         sections.push(section);
     }
-    return sections.join('\n');
+    return sections.join('\n\n');
 }
 
 /** Render a commit's description paragraphs, optionally inside a details block. */
 function renderItemBody(item: GroupedItem, details?: ResolvedDetails): string[] {
     if (item.bodyParagraphs.length === 0) return [];
     const body = renderParagraphs(item.bodyParagraphs).join('\n');
-    if (details?.enabled && details.descriptions.enabled) {
-        const title = details.descriptions.title ?? item.text.replace(/^[-*+]\s+/, '').trim();
-        return [renderDetails(title, body, details.descriptions.expanded === true)];
+    if (
+        details?.enabled &&
+        details.descriptions.enabled &&
+        detailsEnabled(details.descriptions, item.bodyParagraphs.length)
+    ) {
+        const title = details.descriptions.title ?? '**See more...**';
+        return renderDetails(title, body, details.descriptions.expanded === true)
+            .split('\n')
+            .map(line => (line ? `  ${line}` : line));
     }
     return body.split('\n');
 }

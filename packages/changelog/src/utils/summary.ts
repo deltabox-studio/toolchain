@@ -2,6 +2,7 @@ import type { ChangelogBreakingSetting } from '@deltabox/toolchain/shared';
 
 import { isBreakingCommit } from './breaking.js';
 import {
+    detailsEnabled,
     renderDetails,
     resolveDetails,
     wrapCustomDetails,
@@ -9,6 +10,7 @@ import {
 } from './details.js';
 import { capitalize, formatBody, groupItems, parseCcSubject, renderGroups } from './format.js';
 import {
+    prefetchGitHubMetadata,
     readPriorAuthors,
     recordIssues,
     renderAuthor,
@@ -129,9 +131,17 @@ function renderItem(item: GroupedItem, details?: ResolvedDetails): string[] {
         body.push(`  - ${first}`);
         body.push(...rest.map(line => `    ${line}`));
     }
-    if (details?.enabled && details.descriptions.enabled) {
-        const title = details.descriptions.title ?? item.text.replace(/^[-*+]\s+/, '').trim();
-        lines.push(renderDetails(title, body.join('\n'), details.descriptions.expanded === true));
+    if (
+        details?.enabled &&
+        details.descriptions.enabled &&
+        detailsEnabled(details.descriptions, item.bodyParagraphs.length)
+    ) {
+        const title = details.descriptions.title ?? '**See more...**';
+        lines.push(
+            ...renderDetails(title, body.join('\n'), details.descriptions.expanded === true)
+                .split('\n')
+                .map(line => (line ? `  ${line}` : line))
+        );
     } else {
         lines.push(...body);
     }
@@ -159,6 +169,7 @@ function buildFallbackSummary(
     for (const group of BUMP_GROUPS) {
         const items = groups.get(group);
         if (!items || items.length === 0) continue;
+        if (lines.length > 0) lines.push('');
         lines.push(`### ${BUMP_TITLES[group]}`);
         for (const item of items) lines.push(...renderItem(item, details));
     }
@@ -243,6 +254,12 @@ function renderNewContributors(
 /** Render the grouped changelog summary for a set of commits. */
 export function buildSummary(records: CommitRecord[], options: BuildSummaryOptions = {}): string {
     const repo = repoSlug();
+    // Resolve GitHub metadata in batched requests before rendering any commit.
+    prefetchGitHubMetadata({
+        ...(repo !== undefined ? { repo } : {}),
+        ...(options.range !== undefined ? { range: options.range } : {}),
+        commits: records,
+    });
     const resolved = resolveDetails(options.commit?.details, options.release === true);
     // `lifecycle: 'after'` applies details to the fully formatted entry instead.
     const details = resolved.lifecycle === 'after' ? resolveDetails(false) : resolved;
@@ -268,7 +285,11 @@ export function buildSummary(records: CommitRecord[], options: BuildSummaryOptio
     const contributors = renderNewContributors(records, repo, options);
     const body = contributors ? `${summary}\n\n${contributors}` : summary;
     const custom = wrapCustomDetails(body, details);
-    if (details.enabled && details.releaseNotes.enabled) {
+    if (
+        details.enabled &&
+        details.releaseNotes.enabled &&
+        detailsEnabled(details.releaseNotes, records.length)
+    ) {
         return renderDetails(
             details.releaseNotes.title ?? '**Release Notes**',
             custom,

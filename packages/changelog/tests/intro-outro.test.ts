@@ -84,9 +84,11 @@ describe('changelog intro/outro', () => {
         expect(rootChangelog).not.toContain('A OUTRO');
         expect(aChangelog).toContain('A INTRO');
         expect(aChangelog).toContain('A OUTRO');
-        expect(aChangelog.indexOf('A INTRO')).toBeLessThan(aChangelog.indexOf('### New features'));
+        expect(aChangelog.indexOf('A INTRO')).toBeLessThan(
+            aChangelog.indexOf('<summary>New features</summary>')
+        );
         expect(aChangelog.indexOf('A OUTRO')).toBeGreaterThan(
-            aChangelog.indexOf('### New features')
+            aChangelog.indexOf('<summary>New features</summary>')
         );
     });
 
@@ -127,6 +129,8 @@ describe('changelog intro/outro', () => {
         const changelog = fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8');
         expect(changelog).toContain('CLI INTRO');
         expect(changelog).toContain('CLI OUTRO');
-        expect(changelog.indexOf('CLI INTRO')).toBeLessThan(changelog.indexOf('### New features'));
+        expect(changelog.indexOf('CLI INTRO')).toBeLessThan(
+            changelog.indexOf('<summary>New features</summary>')
+        );
     });
 });
