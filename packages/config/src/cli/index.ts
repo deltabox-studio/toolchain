@@ -134,25 +134,41 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
             description: 'Run every config generator.',
             options: [{ flags: '-o, --out <dir>', description: 'Base output directory.' }],
             run: async ({ out }) => {
-                const base = resolve(out as string | undefined, engine.root);
-                const written: string[] = [];
-                written.push(engine.writeEnvFile({ output: path.join(base, '.env.example') }));
-                written.push(
-                    ...engine.writeConfigTypes({ outputDir: path.join(base, 'types') }),
-                    ...engine.writeEnvTypes({ outputDir: path.join(base, 'types') }),
-                    ...engine.writeMarkdown({
-                        outputDir: path.join(base, 'docs/reference/configuration'),
-                    })
+                const base = out === undefined ? undefined : path.resolve(out as string);
+                const typesDir = base ? path.join(base, 'types') : resolve(d.typesDir, engine.root);
+                const docsDir = base
+                    ? path.join(base, 'docs/reference/configuration')
+                    : resolve(d.docsDir, path.join(engine.root, 'docs/reference/configuration'));
+                const schemaPath = base
+                    ? path.join(base, 'config.schema.json')
+                    : resolve(d.schemaPath, path.join(engine.root, 'config.schema.json'));
+                const configJsonPath = base
+                    ? path.join(base, 'config.json')
+                    : resolve(d.configJsonPath, path.join(engine.root, 'config.json'));
+                const cliOptionsPath = base
+                    ? path.join(base, 'cli-options.json')
+                    : resolve(d.cliOptionsPath, path.join(engine.root, 'cli-options.json'));
+                const envDir = base ? base : resolve(d.envDir, engine.root);
+
+                const written: string[] = [
+                    engine.writeEnvFile({ output: path.join(envDir, '.env.example') }),
+                    ...engine.writeConfigTypes({ outputDir: typesDir }),
+                    ...engine.writeEnvTypes({ outputDir: typesDir }),
+                    ...engine.writeMarkdown({ outputDir: docsDir }),
+                    await engine.writeJsonSchema({ output: schemaPath }),
+                ];
+                fs.mkdirSync(path.dirname(configJsonPath), { recursive: true });
+                fs.writeFileSync(
+                    configJsonPath,
+                    `${JSON.stringify(engine.buildConfigJson(), null, 4)}\n`,
+                    'utf-8'
                 );
-                written.push(
-                    await engine.writeJsonSchema({ output: path.join(base, 'config.schema.json') })
-                );
-                written.push(
-                    engine.generateCliOptions({
-                        output: path.join(base, 'cli-options.json'),
-                    }) as unknown as string
-                );
-                for (const file of written.filter(f => typeof f === 'string')) {
+                written.push(configJsonPath);
+                fs.mkdirSync(path.dirname(cliOptionsPath), { recursive: true });
+                engine.generateCliOptions({ output: cliOptionsPath });
+                written.push(cliOptionsPath);
+
+                for (const file of written) {
                     logger.info(`Generated ${path.relative(process.cwd(), file)}`);
                 }
             },

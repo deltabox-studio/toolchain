@@ -2,8 +2,8 @@
  * `.env` file generation from the collected config vars.
  */
 
-import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from './collect.js';
-import type { ConfigDef, ConfigSchema } from './types/index.js';
+import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from '../collect.js';
+import type { ConfigDef, ConfigSchema } from '../types/index.js';
 
 export interface EnvFileOptions {
     /** Env vars to include (defaults to all). */

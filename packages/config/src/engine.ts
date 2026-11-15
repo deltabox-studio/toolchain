@@ -8,12 +8,12 @@ import path from 'node:path';
 
 import { collectVars, DEFAULT_ENV_PREFIX } from './collect.js';
 import { type BuildConfigJsonOptions, buildConfigJson, type ConfigJsonDoc } from './config-json.js';
-import { type EnvFileOptions, generateEnvFile } from './env-file.js';
 import {
     type GenerateCliOptionsOptions,
     generateCliOptions,
     type CliOptionDef,
 } from './generators/cli.js';
+import { type EnvFileOptions, generateEnvFile } from './generators/env-file.js';
 import { type GenerateEnvTypesOptions, generateConfigEnv } from './generators/env.js';
 import {
     type GenerateJsonSchemaOptions,
