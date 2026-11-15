@@ -11,7 +11,8 @@ import { withEnabled } from './meta.js';
  */
 export const biomeConfigOptionsSchema = externalConfigSchema<Record<string, unknown>>(
     'Biome configuration options.',
-    'BiomeConfig'
+    'BiomeConfig',
+    'https://biomejs.dev/reference/configuration/'
 );
 
 /** Biome config generation (for consumers that still want a `biome.json`). */

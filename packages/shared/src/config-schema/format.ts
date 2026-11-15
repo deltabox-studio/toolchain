@@ -13,27 +13,32 @@ const toolOptions = <T>(schema: z.ZodType<T>) => z.union([z.boolean(), schema]);
 
 const oxfmtOptions = externalConfigSchema<OxfmtConfig>(
     'Oxfmt configuration options.',
-    'OxfmtConfig'
+    'OxfmtConfig',
+    'https://oxc.rs/docs/guide/usage/formatter/config-file-reference.html'
 );
 
 const oxlintOptions = externalConfigSchema<OxlintConfig>(
     'Oxlint configuration options.',
-    'OxlintConfig'
+    'OxlintConfig',
+    'https://oxc.rs/docs/guide/usage/linter/config-file-reference.html'
 );
 
 const prettierOptions = externalConfigSchema<PrettierConfig>(
     'Prettier configuration options.',
-    'PrettierConfig'
+    'PrettierConfig',
+    'https://prettier.io/docs/options'
 );
 
 const dprintOptions = externalConfigSchema<DprintConfig>(
     'Dprint configuration options.',
-    'DprintConfig'
+    'DprintConfig',
+    'https://dprint.dev/config/'
 );
 
 const eslintOptions = externalConfigSchema<EslintConfig>(
     'ESLint configuration options.',
-    'EslintConfig'
+    'EslintConfig',
+    'https://eslint.org/docs/latest/use/configure/configuration-files'
 );
 
 const jsonObjectOptions = externalConfigSchema<JsonObject>(

@@ -5,7 +5,11 @@ import { externalConfigSchema } from './external.js';
 import { withEnabled } from './meta.js';
 
 const tsconfigOverride = (description: string) =>
-    externalConfigSchema<TsConfigJson>(description, 'TsConfigJson');
+    externalConfigSchema<TsConfigJson>(
+        description,
+        'TsConfigJson',
+        'https://www.typescriptlang.org/tsconfig'
+    );
 
 /** Include/exclude globs for an auto-wiring switch. */
 const tsconfigAutoFilters = z

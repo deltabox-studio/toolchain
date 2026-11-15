@@ -8,6 +8,13 @@ import { z } from 'zod';
  * options), while `tsType` makes the generated types and markdown reference the
  * tool's own exported TypeScript type instead of a generic record.
  */
-export function externalConfigSchema<T>(description: string, tsType: string): z.ZodType<T> {
-    return z.looseObject({}).describe(description).meta({ tsType }) as unknown as z.ZodType<T>;
+export function externalConfigSchema<T>(
+    description: string,
+    tsType: string,
+    see?: string | string[]
+): z.ZodType<T> {
+    return z
+        .looseObject({})
+        .describe(description)
+        .meta({ tsType, ...(see ? { see } : {}) }) as unknown as z.ZodType<T>;
 }

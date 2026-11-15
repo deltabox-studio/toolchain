@@ -15,15 +15,18 @@ const jsonObjectSchema = (description: string) =>
 /** The full workflow shapes generated from the vendored vendor schemas. */
 const githubWorkflowSchema = externalConfigSchema<GitHubWorkflow>(
     'A complete GitHub Actions workflow.',
-    'GitHubWorkflow'
+    'GitHubWorkflow',
+    'https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions'
 );
 const gitlabWorkflowSchema = externalConfigSchema<GitLabCi>(
     'A complete GitLab CI pipeline.',
-    'GitLabCi'
+    'GitLabCi',
+    'https://docs.gitlab.com/ee/ci/yaml/'
 );
 const azureWorkflowSchema = externalConfigSchema<AzurePipelines>(
     'A complete Azure Pipelines pipeline.',
-    'AzurePipelines'
+    'AzurePipelines',
+    'https://learn.microsoft.com/en-us/azure/devops/pipelines/yaml-schema/'
 );
 
 /** A GitHub Actions step (the subset the workflow builder understands). */

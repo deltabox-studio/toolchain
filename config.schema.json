@@ -180,7 +180,8 @@
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "The complete workflow object."
+                    "description": "The complete workflow object.",
+                    "see": "https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions"
                 },
                 "filename": {
                     "type": "string",
@@ -218,7 +219,8 @@
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "The complete pipeline object."
+                    "description": "The complete pipeline object.",
+                    "see": "https://docs.gitlab.com/ee/ci/yaml/"
                 },
                 "filename": {
                     "type": "string",
@@ -256,7 +258,8 @@
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "The complete pipeline object."
+                    "description": "The complete pipeline object.",
+                    "see": "https://learn.microsoft.com/en-us/azure/devops/pipelines/yaml-schema/"
                 },
                 "filename": {
                     "type": "string",
@@ -2049,27 +2052,35 @@
             "type": "object",
             "properties": {
                 "schedule": {
+                    "default": "weekly",
                     "type": "string",
                     "enum": [
                         "daily",
                         "weekly",
                         "monthly"
                     ],
-                    "description": "Dependabot update interval (default `weekly`)."
+                    "description": "Dependabot update interval."
                 },
                 "directories": {
+                    "default": [
+                        "/"
+                    ],
                     "type": "array",
                     "items": {
                         "type": "string"
                     },
-                    "description": "Directories to scan (default `[\"/\"]`)."
+                    "description": "Directories to scan."
                 },
                 "ecosystems": {
+                    "default": [
+                        "github-actions",
+                        "npm"
+                    ],
                     "type": "array",
                     "items": {
                         "type": "string"
                     },
-                    "description": "Package ecosystems (default `[\"github-actions\", \"npm\"]`; `github-actions` keeps `voidzero-dev/setup-vp` and the other actions up to date)."
+                    "description": "Package ecosystems. `github-actions` keeps `voidzero-dev/setup-vp` and the other actions up to date."
                 },
                 "labels": {
                     "type": "array",
@@ -2079,10 +2090,11 @@
                     "description": "Labels added to the update PRs."
                 },
                 "openPullRequestsLimit": {
+                    "default": 5,
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 100,
-                    "description": "Maximum open update PRs per entry (Dependabot default 5)."
+                    "description": "Maximum open update PRs per entry."
                 },
                 "groups": {
                     "type": "object",
@@ -2136,7 +2148,8 @@
                 }
             },
             "additionalProperties": false,
-            "description": "Dependabot version-update automation (`.github/dependabot.yml`). Opt-in by presence."
+            "description": "Dependabot version-update automation (`.github/dependabot.yml`). Opt-in by presence.",
+            "see": "https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file"
         },
         "CustomWorkflowSettings": {
             "anyOf": [
@@ -2297,7 +2310,8 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "Oxfmt configuration options."
+                            "description": "Oxfmt configuration options.",
+                            "see": "https://oxc.rs/docs/guide/usage/formatter/config-file-reference.html"
                         }
                     ],
                     "description": "Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` overrides these (deep merge)."
@@ -2311,7 +2325,8 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "Biome configuration options."
+                            "description": "Biome configuration options.",
+                            "see": "https://biomejs.dev/reference/configuration/"
                         }
                     ],
                     "description": "Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them)."
@@ -2325,7 +2340,8 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "Prettier configuration options."
+                            "description": "Prettier configuration options.",
+                            "see": "https://prettier.io/docs/options"
                         }
                     ],
                     "description": "Prettier options (`true` = defaults, `false` = disabled)."
@@ -2339,7 +2355,8 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "Dprint configuration options."
+                            "description": "Dprint configuration options.",
+                            "see": "https://dprint.dev/config/"
                         }
                     ],
                     "description": "Dprint options (`true` = defaults, `false` = disabled)."
@@ -2398,7 +2415,8 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "Oxlint configuration options."
+                            "description": "Oxlint configuration options.",
+                            "see": "https://oxc.rs/docs/guide/usage/linter/config-file-reference.html"
                         }
                     ],
                     "description": "Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` overrides these (deep merge)."
@@ -2412,7 +2430,8 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "Biome configuration options."
+                            "description": "Biome configuration options.",
+                            "see": "https://biomejs.dev/reference/configuration/"
                         }
                     ],
                     "description": "Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them)."
@@ -2426,7 +2445,8 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "ESLint configuration options."
+                            "description": "ESLint configuration options.",
+                            "see": "https://eslint.org/docs/latest/use/configure/configuration-files"
                         }
                     ],
                     "description": "ESLint options (`true` = defaults, `false` = disabled)."
@@ -2454,7 +2474,8 @@
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "Deep-merged over the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them)."
+                    "description": "Deep-merged over the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).",
+                    "see": "https://biomejs.dev/reference/configuration/"
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
@@ -2784,25 +2805,29 @@
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "Deep-merged into the root base tsconfig (`baseFile`) during sync."
+                    "description": "Deep-merged into the root base tsconfig (`baseFile`) during sync.",
+                    "see": "https://www.typescriptlang.org/tsconfig"
                 },
                 "default": {
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "Deep-merged into every workspace default tsconfig (`defaultFile`) during sync."
+                    "description": "Deep-merged into every workspace default tsconfig (`defaultFile`) during sync.",
+                    "see": "https://www.typescriptlang.org/tsconfig"
                 },
                 "build": {
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "Deep-merged into every workspace build tsconfig (`buildFile`) during sync."
+                    "description": "Deep-merged into every workspace build tsconfig (`buildFile`) during sync.",
+                    "see": "https://www.typescriptlang.org/tsconfig"
                 },
                 "root": {
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "Deep-merged into the root workspaces tsconfig (`rootFile`) during sync."
+                    "description": "Deep-merged into the root workspaces tsconfig (`rootFile`) during sync.",
+                    "see": "https://www.typescriptlang.org/tsconfig"
                 }
             },
             "additionalProperties": false,
@@ -2812,7 +2837,8 @@
             "type": "object",
             "properties": {
                 "tsconfig": {
-                    "description": "The tsconfig the config loader uses (default true: the nearest `tsconfig.json`). A string selects a different file (relative to the project root); false disables tsconfig resolution.",
+                    "default": true,
+                    "description": "The tsconfig the config loader uses. `true` selects the nearest `tsconfig.json`; a string selects a different file (relative to the project root); `false` disables tsconfig resolution.",
                     "type": [
                         "boolean",
                         "string"
@@ -2828,7 +2854,8 @@
                 }
             },
             "additionalProperties": false,
-            "description": "How `dbx.config.*` files are imported (tsconfig discovery)."
+            "description": "How `dbx.config.*` files are imported (tsconfig discovery).",
+            "see": "https://tsx.is"
         },
         "ToolchainTemplatesConfig": {
             "type": "object",
@@ -3048,7 +3075,8 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "Oxfmt configuration options."
+                            "description": "Oxfmt configuration options.",
+                            "see": "https://oxc.rs/docs/guide/usage/formatter/config-file-reference.html"
                         }
                     ],
                     "description": "Oxfmt options; `true` uses the toolchain defaults."
@@ -3062,7 +3090,8 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "Oxlint configuration options."
+                            "description": "Oxlint configuration options.",
+                            "see": "https://oxc.rs/docs/guide/usage/linter/config-file-reference.html"
                         }
                     ],
                     "description": "Oxlint options; `true` uses the toolchain defaults."

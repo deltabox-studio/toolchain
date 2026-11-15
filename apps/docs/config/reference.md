@@ -126,6 +126,7 @@ Workflow vendor for a full `workflow` object (default `github`).
 
 - **Required**
 - **Type**: `AzurePipelines`
+- **See**: https://learn.microsoft.com/en-us/azure/devops/pipelines/yaml-schema/
 
 The complete pipeline object.
 
@@ -1162,26 +1163,30 @@ The toolchain sync workflow (`sync.yml`).
 ### `dependabot`
 
 - **Type**: `boolean | ToolchainDependabotConfig`
+- **See**: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
 Dependabot version-update automation (`.github/dependabot.yml`).
 
 #### `schedule`
 
 - **Type**: `'daily' | 'weekly' | 'monthly'`
+- **Default**: `"weekly"`
 
-Dependabot update interval (default `weekly`).
+Dependabot update interval.
 
 #### `directories`
 
 - **Type**: `Array<string>`
+- **Default**: `["/"]`
 
-Directories to scan (default `["/"]`).
+Directories to scan.
 
 #### `ecosystems`
 
 - **Type**: `Array<string>`
+- **Default**: `["github-actions","npm"]`
 
-Package ecosystems (default `["github-actions", "npm"]`; `github-actions` keeps `voidzero-dev/setup-vp` and the other actions up to date).
+Package ecosystems. `github-actions` keeps `voidzero-dev/setup-vp` and the other actions up to date.
 
 #### `labels`
 
@@ -1192,8 +1197,9 @@ Labels added to the update PRs.
 #### `openPullRequestsLimit`
 
 - **Type**: `number`
+- **Default**: `5`
 
-Maximum open update PRs per entry (Dependabot default 5).
+Maximum open update PRs per entry.
 
 #### `groups`
 
@@ -1829,24 +1835,28 @@ Exact setting keys (eg. `editor.defaultFormatter`) to omit.
 ### `oxc`
 
 - **Type**: `boolean | OxfmtConfig`
+- **See**: https://oxc.rs/docs/guide/usage/formatter/config-file-reference.html
 
 Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` overrides these (deep merge).
 
 ### `biome`
 
 - **Type**: `boolean | BiomeConfig`
+- **See**: https://biomejs.dev/reference/configuration/
 
 Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
 
 ### `prettier`
 
 - **Type**: `boolean | PrettierConfig`
+- **See**: https://prettier.io/docs/options
 
 Prettier options (`true` = defaults, `false` = disabled).
 
 ### `dprint`
 
 - **Type**: `boolean | DprintConfig`
+- **See**: https://dprint.dev/config/
 
 Dprint options (`true` = defaults, `false` = disabled).
 
@@ -1887,18 +1897,21 @@ Exact setting keys (eg. `editor.defaultFormatter`) to omit.
 ### `oxc`
 
 - **Type**: `boolean | OxlintConfig`
+- **See**: https://oxc.rs/docs/guide/usage/linter/config-file-reference.html
 
 Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` overrides these (deep merge).
 
 ### `biome`
 
 - **Type**: `boolean | BiomeConfig`
+- **See**: https://biomejs.dev/reference/configuration/
 
 Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
 
 ### `eslint`
 
 - **Type**: `boolean | EslintConfig`
+- **See**: https://eslint.org/docs/latest/use/configure/configuration-files
 
 ESLint options (`true` = defaults, `false` = disabled).
 
@@ -1929,6 +1942,7 @@ Write the Biome VS Code settings (default true).
 ### `overrides`
 
 - **Type**: `BiomeConfig`
+- **See**: https://biomejs.dev/reference/configuration/
 
 Deep-merged over the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
 
@@ -2125,24 +2139,28 @@ Managed overrides deep-merged into the base/root/default/build tsconfig files du
 #### `base`
 
 - **Type**: `TsConfigJson`
+- **See**: https://www.typescriptlang.org/tsconfig
 
 Deep-merged into the root base tsconfig (`baseFile`) during sync.
 
 #### `default`
 
 - **Type**: `TsConfigJson`
+- **See**: https://www.typescriptlang.org/tsconfig
 
 Deep-merged into every workspace default tsconfig (`defaultFile`) during sync.
 
 #### `build`
 
 - **Type**: `TsConfigJson`
+- **See**: https://www.typescriptlang.org/tsconfig
 
 Deep-merged into every workspace build tsconfig (`buildFile`) during sync.
 
 #### `root`
 
 - **Type**: `TsConfigJson`
+- **See**: https://www.typescriptlang.org/tsconfig
 
 Deep-merged into the root workspaces tsconfig (`rootFile`) during sync.
 
@@ -2162,11 +2180,14 @@ Regenerate this section's managed files during `dbx sync` (default true). When f
 
 How `dbx.config.*` files are imported (tsconfig discovery).
 
+- **See**: https://tsx.is
+
 ### `tsconfig`
 
 - **Type**: `boolean | string`
+- **Default**: `true`
 
-The tsconfig the config loader uses (default true: the nearest `tsconfig.json`). A string selects a different file (relative to the project root); false disables tsconfig resolution.
+The tsconfig the config loader uses. `true` selects the nearest `tsconfig.json`; a string selects a different file (relative to the project root); `false` disables tsconfig resolution.
 
 ### `enabled`
 
@@ -2363,12 +2384,14 @@ Module specifier used to import `resolveVite` in runtime shims (default `vite-pl
 ### `fmt`
 
 - **Type**: `boolean | OxfmtConfig`
+- **See**: https://oxc.rs/docs/guide/usage/formatter/config-file-reference.html
 
 Oxfmt options; `true` uses the toolchain defaults.
 
 ### `lint`
 
 - **Type**: `boolean | OxlintConfig`
+- **See**: https://oxc.rs/docs/guide/usage/linter/config-file-reference.html
 
 Oxlint options; `true` uses the toolchain defaults.
 

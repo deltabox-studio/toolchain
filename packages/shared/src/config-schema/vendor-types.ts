@@ -9,7 +9,7 @@
  * so unknown/newer options still typecheck (and known keys still autocomplete).
  */
 
-/** Prettier's `Options` (the `.prettierrc` shape). */
+/** Prettier's `Options` (the `.prettierrc` shape). @see https://prettier.io/docs/options */
 export interface PrettierConfig {
     /** Wrap prose to this width. */
     proseWrap?: 'always' | 'never' | 'preserve';
@@ -98,7 +98,7 @@ export interface EslintLinterOptions {
     reportUnusedDisableDirectives?: boolean | 'off' | 'warn' | 'error' | 0 | 1 | 2;
 }
 
-/** ESLint's flat config object (`Linter.Config`). */
+/** ESLint's flat config object (`Linter.Config`). @see https://eslint.org/docs/latest/use/configure/configuration-files */
 export interface EslintConfig {
     /** A name for this config object (useful in errors and tooling). */
     name?: string;
@@ -130,6 +130,8 @@ export interface EslintConfig {
 /**
  * Dprint's `dprint.json` configuration: global layout options plus arbitrary
  * per-language/plugin sections.
+ *
+ * @see https://dprint.dev/config/
  */
 export interface DprintConfig {
     /** The project type (used by dprint's sponsor check). */

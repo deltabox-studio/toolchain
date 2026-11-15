@@ -13,12 +13,13 @@ export const loaderConfigSchema = withEnabled(
         tsconfig: z
             .union([z.boolean(), z.string()])
             .describe(
-                'The tsconfig the config loader uses (default true: the nearest `tsconfig.json`). ' +
-                    'A string selects a different file (relative to the project root); false ' +
-                    'disables tsconfig resolution.'
+                'The tsconfig the config loader uses. `true` selects the nearest ' +
+                    '`tsconfig.json`; a string selects a different file (relative to the project ' +
+                    'root); `false` disables tsconfig resolution.'
             )
+            .default(true)
             .optional(),
     })
 )
     .describe('How `dbx.config.*` files are imported (tsconfig discovery).')
-    .meta({ id: 'ToolchainLoaderConfig' });
+    .meta({ id: 'ToolchainLoaderConfig', see: 'https://tsx.is' });

@@ -7,12 +7,14 @@ import { withEnabled } from './meta.js';
 
 const oxfmtOptions = externalConfigSchema<OxfmtConfig>(
     'Oxfmt configuration options.',
-    'OxfmtConfig'
+    'OxfmtConfig',
+    'https://oxc.rs/docs/guide/usage/formatter/config-file-reference.html'
 );
 
 const oxlintOptions = externalConfigSchema<OxlintConfig>(
     'Oxlint configuration options.',
-    'OxlintConfig'
+    'OxlintConfig',
+    'https://oxc.rs/docs/guide/usage/linter/config-file-reference.html'
 );
 
 /**
