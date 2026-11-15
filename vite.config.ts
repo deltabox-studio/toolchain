@@ -303,7 +303,19 @@ export default defineConfig({
                     },
                     // Dependabot keeps the actions (incl. `setup-vp`) and npm
                     // dependencies up to date. Opt-in like every workflow.
-                    dependabot: true,
+                    // Group the routine minor/patch npm updates, but keep Vite+
+                    // (the toolchain's core peer) as its own reviewable PR.
+                    dependabot: {
+                        schedule: 'weekly',
+                        labels: ['deps'],
+                        openPullRequestsLimit: 10,
+                        groups: {
+                            'minor-and-patch': {
+                                'exclude-patterns': ['vite', 'vite-plus'],
+                                'update-types': ['minor', 'patch'],
+                            },
+                        },
+                    },
                     // Keep the hand-written CI checks on top of the generated
                     // workflow (commitlint + `sync --check --recursive` + build come first).
                     ci: {

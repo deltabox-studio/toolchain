@@ -5,7 +5,19 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    labels: [deps]
+    open-pull-requests-limit: 10
+    groups:
+      minor-and-patch:
+        exclude-patterns: [vite, vite-plus]
+        update-types: [minor, patch]
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
+    labels: [deps]
+    open-pull-requests-limit: 10
+    groups:
+      minor-and-patch:
+        exclude-patterns: [vite, vite-plus]
+        update-types: [minor, patch]
