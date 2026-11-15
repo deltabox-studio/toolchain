@@ -102,7 +102,11 @@ export interface ToolchainCiConfig {
     issues?: WorkflowSetting;
     /** The toolchain sync workflow (`sync.yml`). */
     sync?: WorkflowSetting;
-    /** Dependabot version-update automation (`.github/dependabot.yml`). */
+    /**
+     * Dependabot version-update automation (`.github/dependabot.yml`).
+     *
+     * @see https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+     */
     dependabot?: boolean | ToolchainDependabotConfig;
     /**
      * Additional custom workflows, keyed by id (eg. `custom.my-workflow`). Each id writes
@@ -129,6 +133,8 @@ export interface GitHubWorkflowSetting {
      * The complete workflow object.
      *
      * @required
+     *
+     * @see https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions
      */
     workflow: GitHubWorkflow;
     /** Override the generated file name. */
@@ -155,6 +161,8 @@ export interface GitLabWorkflowSetting {
      * The complete pipeline object.
      *
      * @required
+     *
+     * @see https://docs.gitlab.com/ee/ci/yaml/
      */
     workflow: GitLabCi;
     /** Override the generated file name. */
@@ -181,6 +189,8 @@ export interface AzureWorkflowSetting {
      * The complete pipeline object.
      *
      * @required
+     *
+     * @see https://learn.microsoft.com/en-us/azure/devops/pipelines/yaml-schema/
      */
     workflow: AzurePipelines;
     /** Override the generated file name. */
@@ -854,18 +864,32 @@ export type ChangelogWorkflowSetting =
     | CiChangelogConfig;
 
 export interface ToolchainDependabotConfig {
-    /** Dependabot update interval (default `weekly`). */
+    /**
+     * Dependabot update interval.
+     *
+     * @default 'weekly'
+     */
     schedule?: 'daily' | 'weekly' | 'monthly';
-    /** Directories to scan (default `["/"]`). */
+    /**
+     * Directories to scan.
+     *
+     * @default ['/']
+     */
     directories?: Array<string>;
     /**
-     * Package ecosystems (default `["github-actions", "npm"]`; `github-actions` keeps
-     * `voidzero-dev/setup-vp` and the other actions up to date).
+     * Package ecosystems. `github-actions` keeps `voidzero-dev/setup-vp` and the other actions up to
+     * date.
+     *
+     * @default ['github-actions', 'npm']
      */
     ecosystems?: Array<string>;
     /** Labels added to the update PRs. */
     labels?: Array<string>;
-    /** Maximum open update PRs per entry (Dependabot default 5). */
+    /**
+     * Maximum open update PRs per entry.
+     *
+     * @default 5
+     */
     openPullRequestsLimit?: number;
     /** Dependabot update groups, keyed by group name. */
     groups?: Record<
@@ -950,16 +974,28 @@ export interface ToolchainFmtConfig {
     /**
      * Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` overrides these
      * (deep merge).
+     *
+     * @see https://oxc.rs/docs/guide/usage/formatter/config-file-reference.html
      */
     oxc?: boolean | OxfmtConfig;
     /**
      * Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated
      * `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
+     *
+     * @see https://biomejs.dev/reference/configuration/
      */
     biome?: boolean | BiomeConfig;
-    /** Prettier options (`true` = defaults, `false` = disabled). */
+    /**
+     * Prettier options (`true` = defaults, `false` = disabled).
+     *
+     * @see https://prettier.io/docs/options
+     */
     prettier?: boolean | PrettierConfig;
-    /** Dprint options (`true` = defaults, `false` = disabled). */
+    /**
+     * Dprint options (`true` = defaults, `false` = disabled).
+     *
+     * @see https://dprint.dev/config/
+     */
     dprint?: boolean | DprintConfig;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
@@ -986,14 +1022,22 @@ export interface ToolchainLintConfig {
     /**
      * Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` overrides these
      * (deep merge).
+     *
+     * @see https://oxc.rs/docs/guide/usage/linter/config-file-reference.html
      */
     oxc?: boolean | OxlintConfig;
     /**
      * Biome linter options (`true` = defaults, `false` = disabled); merged into the generated
      * `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
+     *
+     * @see https://biomejs.dev/reference/configuration/
      */
     biome?: boolean | BiomeConfig;
-    /** ESLint options (`true` = defaults, `false` = disabled). */
+    /**
+     * ESLint options (`true` = defaults, `false` = disabled).
+     *
+     * @see https://eslint.org/docs/latest/use/configure/configuration-files
+     */
     eslint?: boolean | EslintConfig;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
@@ -1011,6 +1055,8 @@ export interface ToolchainBiomeConfig {
     /**
      * Deep-merged over the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace
      * them).
+     *
+     * @see https://biomejs.dev/reference/configuration/
      */
     overrides?: BiomeConfig;
     /** Enable/disable this section (default: enabled when defined). */
@@ -1160,20 +1206,38 @@ export interface ToolchainTsconfigAutoSetting {
 }
 
 export interface ToolchainTsconfigOverrides {
-    /** Deep-merged into the root base tsconfig (`baseFile`) during sync. */
+    /**
+     * Deep-merged into the root base tsconfig (`baseFile`) during sync.
+     *
+     * @see https://www.typescriptlang.org/tsconfig
+     */
     base?: TsConfigJson;
-    /** Deep-merged into every workspace default tsconfig (`defaultFile`) during sync. */
+    /**
+     * Deep-merged into every workspace default tsconfig (`defaultFile`) during sync.
+     *
+     * @see https://www.typescriptlang.org/tsconfig
+     */
     default?: TsConfigJson;
-    /** Deep-merged into every workspace build tsconfig (`buildFile`) during sync. */
+    /**
+     * Deep-merged into every workspace build tsconfig (`buildFile`) during sync.
+     *
+     * @see https://www.typescriptlang.org/tsconfig
+     */
     build?: TsConfigJson;
-    /** Deep-merged into the root workspaces tsconfig (`rootFile`) during sync. */
+    /**
+     * Deep-merged into the root workspaces tsconfig (`rootFile`) during sync.
+     *
+     * @see https://www.typescriptlang.org/tsconfig
+     */
     root?: TsConfigJson;
 }
 
 export interface ToolchainLoaderConfig {
     /**
-     * The tsconfig the config loader uses (default true: the nearest `tsconfig.json`). A string
-     * selects a different file (relative to the project root); false disables tsconfig resolution.
+     * The tsconfig the config loader uses. `true` selects the nearest `tsconfig.json`; a string
+     * selects a different file (relative to the project root); `false` disables tsconfig resolution.
+     *
+     * @default true
      */
     tsconfig?: boolean | string;
     /** Enable/disable this section (default: enabled when defined). */
@@ -1417,7 +1481,11 @@ export interface ToolchainConfigSections {
     biome?: boolean | ToolchainBiomeConfig;
     /** Workspace tsconfig generation (path aliases + project references). */
     tsconfig?: boolean | ToolchainTsconfigConfig;
-    /** How `dbx.config.*` files are imported (tsconfig discovery). */
+    /**
+     * How `dbx.config.*` files are imported (tsconfig discovery).
+     *
+     * @see https://tsx.is
+     */
     loader?: boolean | ToolchainLoaderConfig;
     /** Template sources / scaffolding. */
     templates?: boolean | ToolchainTemplatesConfig;
