@@ -959,51 +959,11 @@
                                         "type": "string"
                                     },
                                     {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "type": "string",
-                                                "description": "The CC type (required for object entries in an array)."
-                                            },
-                                            "title": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "string"
-                                                    },
-                                                    {
-                                                        "description": "A custom group title callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Custom heading title (or callback; TS/JS configs only)."
-                                            },
-                                            "order": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "number"
-                                                    },
-                                                    {
-                                                        "description": "A custom group order callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Sort position; lower comes first (or callback; TS/JS configs only)."
-                                            },
-                                            "hidden": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "boolean"
-                                                    },
-                                                    {
-                                                        "description": "A custom group hidden callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Omit this group from the rendered changelog (or callback; TS/JS only)."
-                                            }
-                                        },
-                                        "additionalProperties": false,
-                                        "description": "One Conventional-Commits group."
+                                        "$ref": "#/$defs/ChangelogGroupOptions"
                                     }
                                 ]
-                            }
+                            },
+                            "description": "An ordered list of CC types or group objects."
                         },
                         {
                             "type": "object",
@@ -1016,54 +976,14 @@
                                         "type": "string"
                                     },
                                     {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "type": "string",
-                                                "description": "The CC type (required for object entries in an array)."
-                                            },
-                                            "title": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "string"
-                                                    },
-                                                    {
-                                                        "description": "A custom group title callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Custom heading title (or callback; TS/JS configs only)."
-                                            },
-                                            "order": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "number"
-                                                    },
-                                                    {
-                                                        "description": "A custom group order callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Sort position; lower comes first (or callback; TS/JS configs only)."
-                                            },
-                                            "hidden": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "boolean"
-                                                    },
-                                                    {
-                                                        "description": "A custom group hidden callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Omit this group from the rendered changelog (or callback; TS/JS only)."
-                                            }
-                                        },
-                                        "additionalProperties": false,
-                                        "description": "One Conventional-Commits group."
+                                        "$ref": "#/$defs/ChangelogGroupOptions"
                                     },
                                     {
                                         "type": "boolean"
                                     }
                                 ]
-                            }
+                            },
+                            "description": "A CC type to title/options/visibility record."
                         },
                         {
                             "description": "A custom group builder (TS/JS configs only)."
@@ -1197,98 +1117,12 @@
                             "description": "Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice."
                         },
                         {
-                            "type": "object",
-                            "properties": {
-                                "target": {
-                                    "type": "string",
-                                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
-                                },
-                                "include": {
-                                    "anyOf": [
-                                        {
-                                            "type": "string"
-                                        },
-                                        {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    ],
-                                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
-                                },
-                                "exclude": {
-                                    "anyOf": [
-                                        {
-                                            "type": "string"
-                                        },
-                                        {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    ],
-                                    "description": "Skip workspaces whose repo-relative directory matches these globs."
-                                },
-                                "options": {
-                                    "type": "string",
-                                    "pattern": "^[0-9A-Za-z-]+$",
-                                    "description": "Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice."
-                                }
-                            },
-                            "required": [
-                                "options"
-                            ],
-                            "additionalProperties": false
+                            "$ref": "#/$defs/ChangelogTargetedPrerelease"
                         },
                         {
                             "type": "array",
                             "items": {
-                                "type": "object",
-                                "properties": {
-                                    "target": {
-                                        "type": "string",
-                                        "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
-                                    },
-                                    "include": {
-                                        "anyOf": [
-                                            {
-                                                "type": "string"
-                                            },
-                                            {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "string"
-                                                }
-                                            }
-                                        ],
-                                        "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
-                                    },
-                                    "exclude": {
-                                        "anyOf": [
-                                            {
-                                                "type": "string"
-                                            },
-                                            {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "string"
-                                                }
-                                            }
-                                        ],
-                                        "description": "Skip workspaces whose repo-relative directory matches these globs."
-                                    },
-                                    "options": {
-                                        "type": "string",
-                                        "pattern": "^[0-9A-Za-z-]+$",
-                                        "description": "Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice."
-                                    }
-                                },
-                                "required": [
-                                    "options"
-                                ],
-                                "additionalProperties": false
+                                "$ref": "#/$defs/ChangelogTargetedPrerelease"
                             }
                         }
                     ],
@@ -1303,97 +1137,16 @@
                                     "$ref": "#/$defs/ChangelogBumpRule"
                                 },
                                 {
-                                    "type": "object",
-                                    "properties": {
-                                        "target": {
-                                            "type": "string",
-                                            "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
-                                        },
-                                        "include": {
-                                            "anyOf": [
-                                                {
-                                                    "type": "string"
-                                                },
-                                                {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "string"
-                                                    }
-                                                }
-                                            ],
-                                            "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
-                                        },
-                                        "exclude": {
-                                            "anyOf": [
-                                                {
-                                                    "type": "string"
-                                                },
-                                                {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "string"
-                                                    }
-                                                }
-                                            ],
-                                            "description": "Skip workspaces whose repo-relative directory matches these globs."
-                                        },
-                                        "options": {
-                                            "$ref": "#/$defs/ChangelogBumpRule"
-                                        }
-                                    },
-                                    "required": [
-                                        "options"
-                                    ],
-                                    "additionalProperties": false
+                                    "$ref": "#/$defs/ChangelogTargetedBump"
                                 },
                                 {
                                     "type": "array",
                                     "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "target": {
-                                                "type": "string",
-                                                "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
-                                            },
-                                            "include": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "string"
-                                                    },
-                                                    {
-                                                        "type": "array",
-                                                        "items": {
-                                                            "type": "string"
-                                                        }
-                                                    }
-                                                ],
-                                                "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
-                                            },
-                                            "exclude": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "string"
-                                                    },
-                                                    {
-                                                        "type": "array",
-                                                        "items": {
-                                                            "type": "string"
-                                                        }
-                                                    }
-                                                ],
-                                                "description": "Skip workspaces whose repo-relative directory matches these globs."
-                                            },
-                                            "options": {
-                                                "$ref": "#/$defs/ChangelogBumpRule"
-                                            }
-                                        },
-                                        "required": [
-                                            "options"
-                                        ],
-                                        "additionalProperties": false
+                                        "$ref": "#/$defs/ChangelogTargetedBump"
                                     }
                                 }
-                            ]
+                            ],
+                            "description": "A bump rule globally, or per-target via `{ target, include, exclude, options }`."
                         },
                         "minor": {
                             "anyOf": [
@@ -1401,97 +1154,16 @@
                                     "$ref": "#/$defs/ChangelogBumpRule"
                                 },
                                 {
-                                    "type": "object",
-                                    "properties": {
-                                        "target": {
-                                            "type": "string",
-                                            "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
-                                        },
-                                        "include": {
-                                            "anyOf": [
-                                                {
-                                                    "type": "string"
-                                                },
-                                                {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "string"
-                                                    }
-                                                }
-                                            ],
-                                            "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
-                                        },
-                                        "exclude": {
-                                            "anyOf": [
-                                                {
-                                                    "type": "string"
-                                                },
-                                                {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "string"
-                                                    }
-                                                }
-                                            ],
-                                            "description": "Skip workspaces whose repo-relative directory matches these globs."
-                                        },
-                                        "options": {
-                                            "$ref": "#/$defs/ChangelogBumpRule"
-                                        }
-                                    },
-                                    "required": [
-                                        "options"
-                                    ],
-                                    "additionalProperties": false
+                                    "$ref": "#/$defs/ChangelogTargetedBump"
                                 },
                                 {
                                     "type": "array",
                                     "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "target": {
-                                                "type": "string",
-                                                "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
-                                            },
-                                            "include": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "string"
-                                                    },
-                                                    {
-                                                        "type": "array",
-                                                        "items": {
-                                                            "type": "string"
-                                                        }
-                                                    }
-                                                ],
-                                                "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
-                                            },
-                                            "exclude": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "string"
-                                                    },
-                                                    {
-                                                        "type": "array",
-                                                        "items": {
-                                                            "type": "string"
-                                                        }
-                                                    }
-                                                ],
-                                                "description": "Skip workspaces whose repo-relative directory matches these globs."
-                                            },
-                                            "options": {
-                                                "$ref": "#/$defs/ChangelogBumpRule"
-                                            }
-                                        },
-                                        "required": [
-                                            "options"
-                                        ],
-                                        "additionalProperties": false
+                                        "$ref": "#/$defs/ChangelogTargetedBump"
                                     }
                                 }
-                            ]
+                            ],
+                            "description": "A bump rule globally, or per-target via `{ target, include, exclude, options }`."
                         },
                         "patch": {
                             "anyOf": [
@@ -1499,97 +1171,16 @@
                                     "$ref": "#/$defs/ChangelogBumpRule"
                                 },
                                 {
-                                    "type": "object",
-                                    "properties": {
-                                        "target": {
-                                            "type": "string",
-                                            "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
-                                        },
-                                        "include": {
-                                            "anyOf": [
-                                                {
-                                                    "type": "string"
-                                                },
-                                                {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "string"
-                                                    }
-                                                }
-                                            ],
-                                            "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
-                                        },
-                                        "exclude": {
-                                            "anyOf": [
-                                                {
-                                                    "type": "string"
-                                                },
-                                                {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "string"
-                                                    }
-                                                }
-                                            ],
-                                            "description": "Skip workspaces whose repo-relative directory matches these globs."
-                                        },
-                                        "options": {
-                                            "$ref": "#/$defs/ChangelogBumpRule"
-                                        }
-                                    },
-                                    "required": [
-                                        "options"
-                                    ],
-                                    "additionalProperties": false
+                                    "$ref": "#/$defs/ChangelogTargetedBump"
                                 },
                                 {
                                     "type": "array",
                                     "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "target": {
-                                                "type": "string",
-                                                "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
-                                            },
-                                            "include": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "string"
-                                                    },
-                                                    {
-                                                        "type": "array",
-                                                        "items": {
-                                                            "type": "string"
-                                                        }
-                                                    }
-                                                ],
-                                                "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
-                                            },
-                                            "exclude": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "string"
-                                                    },
-                                                    {
-                                                        "type": "array",
-                                                        "items": {
-                                                            "type": "string"
-                                                        }
-                                                    }
-                                                ],
-                                                "description": "Skip workspaces whose repo-relative directory matches these globs."
-                                            },
-                                            "options": {
-                                                "$ref": "#/$defs/ChangelogBumpRule"
-                                            }
-                                        },
-                                        "required": [
-                                            "options"
-                                        ],
-                                        "additionalProperties": false
+                                        "$ref": "#/$defs/ChangelogTargetedBump"
                                     }
                                 }
-                            ]
+                            ],
+                            "description": "A bump rule globally, or per-target via `{ target, include, exclude, options }`."
                         }
                     },
                     "additionalProperties": false,
@@ -1602,96 +1193,12 @@
                             "description": "Apply a bump once per matching change instead of once per run (default false)."
                         },
                         {
-                            "type": "object",
-                            "properties": {
-                                "target": {
-                                    "type": "string",
-                                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
-                                },
-                                "include": {
-                                    "anyOf": [
-                                        {
-                                            "type": "string"
-                                        },
-                                        {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    ],
-                                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
-                                },
-                                "exclude": {
-                                    "anyOf": [
-                                        {
-                                            "type": "string"
-                                        },
-                                        {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    ],
-                                    "description": "Skip workspaces whose repo-relative directory matches these globs."
-                                },
-                                "options": {
-                                    "type": "boolean",
-                                    "description": "Apply a bump once per matching change instead of once per run (default false)."
-                                }
-                            },
-                            "required": [
-                                "options"
-                            ],
-                            "additionalProperties": false
+                            "$ref": "#/$defs/ChangelogTargetedAllowOverBump"
                         },
                         {
                             "type": "array",
                             "items": {
-                                "type": "object",
-                                "properties": {
-                                    "target": {
-                                        "type": "string",
-                                        "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
-                                    },
-                                    "include": {
-                                        "anyOf": [
-                                            {
-                                                "type": "string"
-                                            },
-                                            {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "string"
-                                                }
-                                            }
-                                        ],
-                                        "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
-                                    },
-                                    "exclude": {
-                                        "anyOf": [
-                                            {
-                                                "type": "string"
-                                            },
-                                            {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "string"
-                                                }
-                                            }
-                                        ],
-                                        "description": "Skip workspaces whose repo-relative directory matches these globs."
-                                    },
-                                    "options": {
-                                        "type": "boolean",
-                                        "description": "Apply a bump once per matching change instead of once per run (default false)."
-                                    }
-                                },
-                                "required": [
-                                    "options"
-                                ],
-                                "additionalProperties": false
+                                "$ref": "#/$defs/ChangelogTargetedAllowOverBump"
                             }
                         }
                     ],
@@ -1704,96 +1211,12 @@
                             "$ref": "#/$defs/ChangelogCommitFormatConfig"
                         },
                         {
-                            "type": "object",
-                            "properties": {
-                                "target": {
-                                    "type": "string",
-                                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
-                                },
-                                "include": {
-                                    "anyOf": [
-                                        {
-                                            "type": "string"
-                                        },
-                                        {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    ],
-                                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
-                                },
-                                "exclude": {
-                                    "anyOf": [
-                                        {
-                                            "type": "string"
-                                        },
-                                        {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    ],
-                                    "description": "Skip workspaces whose repo-relative directory matches these globs."
-                                },
-                                "options": {
-                                    "description": "Commit message formatting/credit options (with an optional formatter callback).",
-                                    "$ref": "#/$defs/ChangelogCommitFormatConfig"
-                                }
-                            },
-                            "required": [
-                                "options"
-                            ],
-                            "additionalProperties": false
+                            "$ref": "#/$defs/ChangelogTargetedCommit"
                         },
                         {
                             "type": "array",
                             "items": {
-                                "type": "object",
-                                "properties": {
-                                    "target": {
-                                        "type": "string",
-                                        "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
-                                    },
-                                    "include": {
-                                        "anyOf": [
-                                            {
-                                                "type": "string"
-                                            },
-                                            {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "string"
-                                                }
-                                            }
-                                        ],
-                                        "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
-                                    },
-                                    "exclude": {
-                                        "anyOf": [
-                                            {
-                                                "type": "string"
-                                            },
-                                            {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "string"
-                                                }
-                                            }
-                                        ],
-                                        "description": "Skip workspaces whose repo-relative directory matches these globs."
-                                    },
-                                    "options": {
-                                        "description": "Commit message formatting/credit options (with an optional formatter callback).",
-                                        "$ref": "#/$defs/ChangelogCommitFormatConfig"
-                                    }
-                                },
-                                "required": [
-                                    "options"
-                                ],
-                                "additionalProperties": false
+                                "$ref": "#/$defs/ChangelogTargetedCommit"
                             }
                         }
                     ],
@@ -1816,116 +1239,12 @@
                             "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
                         },
                         {
-                            "type": "object",
-                            "properties": {
-                                "target": {
-                                    "type": "string",
-                                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
-                                },
-                                "include": {
-                                    "anyOf": [
-                                        {
-                                            "type": "string"
-                                        },
-                                        {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    ],
-                                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
-                                },
-                                "exclude": {
-                                    "anyOf": [
-                                        {
-                                            "type": "string"
-                                        },
-                                        {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    ],
-                                    "description": "Skip workspaces whose repo-relative directory matches these globs."
-                                },
-                                "options": {
-                                    "anyOf": [
-                                        {
-                                            "type": "string"
-                                        },
-                                        {
-                                            "$ref": "#/$defs/ChangelogProviderConfig"
-                                        },
-                                        {
-                                            "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
-                                        }
-                                    ],
-                                    "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
-                                }
-                            },
-                            "required": [
-                                "options"
-                            ],
-                            "additionalProperties": false
+                            "$ref": "#/$defs/ChangelogTargetedProvider"
                         },
                         {
                             "type": "array",
                             "items": {
-                                "type": "object",
-                                "properties": {
-                                    "target": {
-                                        "type": "string",
-                                        "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
-                                    },
-                                    "include": {
-                                        "anyOf": [
-                                            {
-                                                "type": "string"
-                                            },
-                                            {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "string"
-                                                }
-                                            }
-                                        ],
-                                        "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
-                                    },
-                                    "exclude": {
-                                        "anyOf": [
-                                            {
-                                                "type": "string"
-                                            },
-                                            {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "string"
-                                                }
-                                            }
-                                        ],
-                                        "description": "Skip workspaces whose repo-relative directory matches these globs."
-                                    },
-                                    "options": {
-                                        "anyOf": [
-                                            {
-                                                "type": "string"
-                                            },
-                                            {
-                                                "$ref": "#/$defs/ChangelogProviderConfig"
-                                            },
-                                            {
-                                                "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
-                                            }
-                                        ],
-                                        "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
-                                    }
-                                },
-                                "required": [
-                                    "options"
-                                ],
-                                "additionalProperties": false
+                                "$ref": "#/$defs/ChangelogTargetedProvider"
                             }
                         }
                     ],
@@ -1943,6 +1262,53 @@
                 "individual"
             ],
             "description": "Where the changelog version bump is applied."
+        },
+        "ChangelogTargetedPrerelease": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "type": "string",
+                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                },
+                "include": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                },
+                "options": {
+                    "type": "string",
+                    "pattern": "^[0-9A-Za-z-]+$",
+                    "description": "Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice."
+                }
+            },
+            "required": [
+                "options"
+            ],
+            "additionalProperties": false,
+            "description": "The option value plus the targets it applies to."
         },
         "ChangelogBumpRule": {
             "anyOf": [
@@ -2025,6 +1391,97 @@
             "additionalProperties": false,
             "description": "A declarative bump matcher."
         },
+        "ChangelogTargetedBump": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "type": "string",
+                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                },
+                "include": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                },
+                "options": {
+                    "$ref": "#/$defs/ChangelogBumpRule"
+                }
+            },
+            "required": [
+                "options"
+            ],
+            "additionalProperties": false,
+            "description": "The option value plus the targets it applies to."
+        },
+        "ChangelogTargetedAllowOverBump": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "type": "string",
+                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                },
+                "include": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                },
+                "options": {
+                    "type": "boolean",
+                    "description": "Apply a bump once per matching change instead of once per run (default false)."
+                }
+            },
+            "required": [
+                "options"
+            ],
+            "additionalProperties": false,
+            "description": "The option value plus the targets it applies to."
+        },
         "ChangelogDetailsConfig": {
             "anyOf": [
                 {
@@ -2058,27 +1515,10 @@
                                     "type": "boolean"
                                 },
                                 {
-                                    "type": "object",
-                                    "properties": {
-                                        "title": {
-                                            "type": "string",
-                                            "description": "Custom `<summary>` text."
-                                        },
-                                        "expanded": {
-                                            "type": "boolean",
-                                            "description": "Render the collapsible open by default."
-                                        },
-                                        "minCommits": {
-                                            "type": "integer",
-                                            "minimum": 0,
-                                            "maximum": 9007199254740991,
-                                            "description": "Minimum entries in the section before wrapping (nested overrides the top-level default)."
-                                        }
-                                    },
-                                    "additionalProperties": false
+                                    "$ref": "#/$defs/ChangelogDetailsOptions"
                                 }
                             ],
-                            "description": "Enable/disable this collapsible, optionally with a title/expanded state."
+                            "description": "Wrap commit description paragraphs in a nested collapsible (default true)."
                         },
                         "body": {
                             "anyOf": [
@@ -2086,24 +1526,7 @@
                                     "type": "boolean"
                                 },
                                 {
-                                    "type": "object",
-                                    "properties": {
-                                        "title": {
-                                            "type": "string",
-                                            "description": "Custom `<summary>` text."
-                                        },
-                                        "expanded": {
-                                            "type": "boolean",
-                                            "description": "Render the collapsible open by default."
-                                        },
-                                        "minCommits": {
-                                            "type": "integer",
-                                            "minimum": 0,
-                                            "maximum": 9007199254740991,
-                                            "description": "Minimum entries in the section before wrapping (nested overrides the top-level default)."
-                                        }
-                                    },
-                                    "additionalProperties": false
+                                    "$ref": "#/$defs/ChangelogDetailsOptions"
                                 }
                             ],
                             "description": "Wrap the version body in a collapsible titled Release Notes (default outside release mode; requires 10 commits by default)."
@@ -2114,27 +1537,10 @@
                                     "type": "boolean"
                                 },
                                 {
-                                    "type": "object",
-                                    "properties": {
-                                        "title": {
-                                            "type": "string",
-                                            "description": "Custom `<summary>` text."
-                                        },
-                                        "expanded": {
-                                            "type": "boolean",
-                                            "description": "Render the collapsible open by default."
-                                        },
-                                        "minCommits": {
-                                            "type": "integer",
-                                            "minimum": 0,
-                                            "maximum": 9007199254740991,
-                                            "description": "Minimum entries in the section before wrapping (nested overrides the top-level default)."
-                                        }
-                                    },
-                                    "additionalProperties": false
+                                    "$ref": "#/$defs/ChangelogDetailsOptions"
                                 }
                             ],
-                            "description": "Enable/disable this collapsible, optionally with a title/expanded state."
+                            "description": "Wrap the release-mode entry in a collapsible titled Release Notes."
                         },
                         "intro": {
                             "anyOf": [
@@ -2142,27 +1548,10 @@
                                     "type": "boolean"
                                 },
                                 {
-                                    "type": "object",
-                                    "properties": {
-                                        "title": {
-                                            "type": "string",
-                                            "description": "Custom `<summary>` text."
-                                        },
-                                        "expanded": {
-                                            "type": "boolean",
-                                            "description": "Render the collapsible open by default."
-                                        },
-                                        "minCommits": {
-                                            "type": "integer",
-                                            "minimum": 0,
-                                            "maximum": 9007199254740991,
-                                            "description": "Minimum entries in the section before wrapping (nested overrides the top-level default)."
-                                        }
-                                    },
-                                    "additionalProperties": false
+                                    "$ref": "#/$defs/ChangelogDetailsOptions"
                                 }
                             ],
-                            "description": "Enable/disable this collapsible, optionally with a title/expanded state."
+                            "description": "Wrap the intro text in a collapsible."
                         },
                         "outro": {
                             "anyOf": [
@@ -2170,27 +1559,10 @@
                                     "type": "boolean"
                                 },
                                 {
-                                    "type": "object",
-                                    "properties": {
-                                        "title": {
-                                            "type": "string",
-                                            "description": "Custom `<summary>` text."
-                                        },
-                                        "expanded": {
-                                            "type": "boolean",
-                                            "description": "Render the collapsible open by default."
-                                        },
-                                        "minCommits": {
-                                            "type": "integer",
-                                            "minimum": 0,
-                                            "maximum": 9007199254740991,
-                                            "description": "Minimum entries in the section before wrapping (nested overrides the top-level default)."
-                                        }
-                                    },
-                                    "additionalProperties": false
+                                    "$ref": "#/$defs/ChangelogDetailsOptions"
                                 }
                             ],
-                            "description": "Enable/disable this collapsible, optionally with a title/expanded state."
+                            "description": "Wrap the outro text in a collapsible."
                         },
                         "footer": {
                             "anyOf": [
@@ -2198,27 +1570,10 @@
                                     "type": "boolean"
                                 },
                                 {
-                                    "type": "object",
-                                    "properties": {
-                                        "title": {
-                                            "type": "string",
-                                            "description": "Custom `<summary>` text."
-                                        },
-                                        "expanded": {
-                                            "type": "boolean",
-                                            "description": "Render the collapsible open by default."
-                                        },
-                                        "minCommits": {
-                                            "type": "integer",
-                                            "minimum": 0,
-                                            "maximum": 9007199254740991,
-                                            "description": "Minimum entries in the section before wrapping (nested overrides the top-level default)."
-                                        }
-                                    },
-                                    "additionalProperties": false
+                                    "$ref": "#/$defs/ChangelogDetailsOptions"
                                 }
                             ],
-                            "description": "Enable/disable this collapsible, optionally with a title/expanded state."
+                            "description": "Wrap the package-changes footer in a collapsible."
                         },
                         "breaking": {
                             "anyOf": [
@@ -2226,27 +1581,10 @@
                                     "type": "boolean"
                                 },
                                 {
-                                    "type": "object",
-                                    "properties": {
-                                        "title": {
-                                            "type": "string",
-                                            "description": "Custom `<summary>` text."
-                                        },
-                                        "expanded": {
-                                            "type": "boolean",
-                                            "description": "Render the collapsible open by default."
-                                        },
-                                        "minCommits": {
-                                            "type": "integer",
-                                            "minimum": 0,
-                                            "maximum": 9007199254740991,
-                                            "description": "Minimum entries in the section before wrapping (nested overrides the top-level default)."
-                                        }
-                                    },
-                                    "additionalProperties": false
+                                    "$ref": "#/$defs/ChangelogDetailsOptions"
                                 }
                             ],
-                            "description": "Enable/disable this collapsible, optionally with a title/expanded state."
+                            "description": "Wrap the breaking-changes section in a collapsible."
                         },
                         "types": {
                             "anyOf": [
@@ -2256,24 +1594,7 @@
                                             "type": "boolean"
                                         },
                                         {
-                                            "type": "object",
-                                            "properties": {
-                                                "title": {
-                                                    "type": "string",
-                                                    "description": "Custom `<summary>` text."
-                                                },
-                                                "expanded": {
-                                                    "type": "boolean",
-                                                    "description": "Render the collapsible open by default."
-                                                },
-                                                "minCommits": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 9007199254740991,
-                                                    "description": "Minimum entries in the section before wrapping (nested overrides the top-level default)."
-                                                }
-                                            },
-                                            "additionalProperties": false
+                                            "$ref": "#/$defs/ChangelogDetailsOptions"
                                         }
                                     ],
                                     "description": "Enable/disable this collapsible, optionally with a title/expanded state."
@@ -2290,74 +1611,12 @@
                         "custom": {
                             "anyOf": [
                                 {
-                                    "anyOf": [
-                                        {
-                                            "description": "A string or regular expression (TS/JS configs only for RegExp)."
-                                        },
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "start": {
-                                                    "description": "The opening marker."
-                                                },
-                                                "end": {
-                                                    "description": "The closing marker."
-                                                },
-                                                "title": {
-                                                    "type": "string",
-                                                    "description": "Custom `<summary>` text."
-                                                },
-                                                "expanded": {
-                                                    "type": "boolean",
-                                                    "description": "Render the collapsible open by default."
-                                                },
-                                                "minCommits": {
-                                                    "type": "integer",
-                                                    "minimum": 0,
-                                                    "maximum": 9007199254740991,
-                                                    "description": "Minimum entries in the matched region before wrapping."
-                                                }
-                                            },
-                                            "additionalProperties": false
-                                        }
-                                    ],
-                                    "description": "A custom collapsible matcher."
+                                    "$ref": "#/$defs/ChangelogDetailsCustom"
                                 },
                                 {
                                     "type": "array",
                                     "items": {
-                                        "anyOf": [
-                                            {
-                                                "description": "A string or regular expression (TS/JS configs only for RegExp)."
-                                            },
-                                            {
-                                                "type": "object",
-                                                "properties": {
-                                                    "start": {
-                                                        "description": "The opening marker."
-                                                    },
-                                                    "end": {
-                                                        "description": "The closing marker."
-                                                    },
-                                                    "title": {
-                                                        "type": "string",
-                                                        "description": "Custom `<summary>` text."
-                                                    },
-                                                    "expanded": {
-                                                        "type": "boolean",
-                                                        "description": "Render the collapsible open by default."
-                                                    },
-                                                    "minCommits": {
-                                                        "type": "integer",
-                                                        "minimum": 0,
-                                                        "maximum": 9007199254740991,
-                                                        "description": "Minimum entries in the matched region before wrapping."
-                                                    }
-                                                },
-                                                "additionalProperties": false
-                                            }
-                                        ],
-                                        "description": "A custom collapsible matcher."
+                                        "$ref": "#/$defs/ChangelogDetailsCustom"
                                     }
                                 }
                             ],
@@ -2371,6 +1630,62 @@
                 }
             ],
             "description": "Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables descriptions, release notes, breaking changes and type sections; use an object or `false` to opt out."
+        },
+        "ChangelogDetailsOptions": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "Custom `<summary>` text."
+                },
+                "expanded": {
+                    "type": "boolean",
+                    "description": "Render the collapsible open by default."
+                },
+                "minCommits": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991,
+                    "description": "Minimum entries in the section before wrapping (nested overrides the top-level default)."
+                }
+            },
+            "additionalProperties": false,
+            "description": "Collapsible presentation: summary text, expanded state and minimum entry count."
+        },
+        "ChangelogDetailsCustom": {
+            "anyOf": [
+                {
+                    "description": "A string or regular expression (TS/JS configs only for RegExp)."
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Custom `<summary>` text."
+                        },
+                        "expanded": {
+                            "type": "boolean",
+                            "description": "Render the collapsible open by default."
+                        },
+                        "minCommits": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991,
+                            "description": "Minimum entries in the section before wrapping (nested overrides the top-level default)."
+                        },
+                        "start": {
+                            "description": "The opening marker."
+                        },
+                        "end": {
+                            "description": "The closing marker."
+                        }
+                    },
+                    "additionalProperties": false,
+                    "description": "A start/end marker pair with optional presentation options."
+                }
+            ],
+            "description": "A custom collapsible matcher."
         },
         "ChangelogCommitFormatConfig": {
             "type": "object",
@@ -2401,6 +1716,52 @@
             "additionalProperties": false,
             "description": "Commit message formatting/credit options."
         },
+        "ChangelogTargetedCommit": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "type": "string",
+                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                },
+                "include": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                },
+                "options": {
+                    "description": "Commit message formatting/credit options (with an optional formatter callback).",
+                    "$ref": "#/$defs/ChangelogCommitFormatConfig"
+                }
+            },
+            "required": [
+                "options"
+            ],
+            "additionalProperties": false,
+            "description": "The option value plus the targets it applies to."
+        },
         "ChangelogProviderConfig": {
             "type": "object",
             "properties": {
@@ -2418,6 +1779,62 @@
             ],
             "additionalProperties": false,
             "description": "A custom changelog provider object."
+        },
+        "ChangelogTargetedProvider": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "type": "string",
+                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                },
+                "include": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                },
+                "options": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "$ref": "#/$defs/ChangelogProviderConfig"
+                        },
+                        {
+                            "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
+                        }
+                    ],
+                    "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
+                }
+            },
+            "required": [
+                "options"
+            ],
+            "additionalProperties": false,
+            "description": "The option value plus the targets it applies to."
         },
         "ChangelogVersioning": {
             "anyOf": [
@@ -2560,6 +1977,50 @@
                 }
             ],
             "description": "A changelog intro/outro entry or an array of entries (`Arrayable`)."
+        },
+        "ChangelogGroupOptions": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "description": "The CC type (required for object entries in an array)."
+                },
+                "title": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "description": "A custom group title callback (TS/JS configs only)."
+                        }
+                    ],
+                    "description": "Custom heading title (or callback; TS/JS configs only)."
+                },
+                "order": {
+                    "anyOf": [
+                        {
+                            "type": "number"
+                        },
+                        {
+                            "description": "A custom group order callback (TS/JS configs only)."
+                        }
+                    ],
+                    "description": "Sort position; lower comes first (or callback; TS/JS configs only)."
+                },
+                "hidden": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "description": "A custom group hidden callback (TS/JS configs only)."
+                        }
+                    ],
+                    "description": "Omit this group from the rendered changelog (or callback; TS/JS only)."
+                }
+            },
+            "additionalProperties": false,
+            "description": "One Conventional-Commits group."
         },
         "ChangelogWorkflowSetting": {
             "anyOf": [
@@ -2737,51 +2198,11 @@
                                         "type": "string"
                                     },
                                     {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "type": "string",
-                                                "description": "The CC type (required for object entries in an array)."
-                                            },
-                                            "title": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "string"
-                                                    },
-                                                    {
-                                                        "description": "A custom group title callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Custom heading title (or callback; TS/JS configs only)."
-                                            },
-                                            "order": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "number"
-                                                    },
-                                                    {
-                                                        "description": "A custom group order callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Sort position; lower comes first (or callback; TS/JS configs only)."
-                                            },
-                                            "hidden": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "boolean"
-                                                    },
-                                                    {
-                                                        "description": "A custom group hidden callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Omit this group from the rendered changelog (or callback; TS/JS only)."
-                                            }
-                                        },
-                                        "additionalProperties": false,
-                                        "description": "One Conventional-Commits group."
+                                        "$ref": "#/$defs/ChangelogGroupOptions"
                                     }
                                 ]
-                            }
+                            },
+                            "description": "An ordered list of CC types or group objects."
                         },
                         {
                             "type": "object",
@@ -2794,54 +2215,14 @@
                                         "type": "string"
                                     },
                                     {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "type": "string",
-                                                "description": "The CC type (required for object entries in an array)."
-                                            },
-                                            "title": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "string"
-                                                    },
-                                                    {
-                                                        "description": "A custom group title callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Custom heading title (or callback; TS/JS configs only)."
-                                            },
-                                            "order": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "number"
-                                                    },
-                                                    {
-                                                        "description": "A custom group order callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Sort position; lower comes first (or callback; TS/JS configs only)."
-                                            },
-                                            "hidden": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "boolean"
-                                                    },
-                                                    {
-                                                        "description": "A custom group hidden callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Omit this group from the rendered changelog (or callback; TS/JS only)."
-                                            }
-                                        },
-                                        "additionalProperties": false,
-                                        "description": "One Conventional-Commits group."
+                                        "$ref": "#/$defs/ChangelogGroupOptions"
                                     },
                                     {
                                         "type": "boolean"
                                     }
                                 ]
-                            }
+                            },
+                            "description": "A CC type to title/options/visibility record."
                         },
                         {
                             "description": "A custom group builder (TS/JS configs only)."

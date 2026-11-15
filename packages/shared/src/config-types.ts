@@ -470,26 +470,8 @@ export interface CiChangelogConfig {
      * hidden }`, a type->title/options record, or a callback (TS/JS configs only).
      */
     groups?:
-        | Array<
-              | string
-              | {
-                    type?: string;
-                    title?: string | ((ctx: ChangelogGroupContext) => string);
-                    order?: number | ((ctx: ChangelogGroupContext) => number);
-                    hidden?: boolean | ((ctx: ChangelogGroupContext) => boolean);
-                }
-          >
-        | Record<
-              string & {},
-              | string
-              | {
-                    type?: string;
-                    title?: string | ((ctx: ChangelogGroupContext) => string);
-                    order?: number | ((ctx: ChangelogGroupContext) => number);
-                    hidden?: boolean | ((ctx: ChangelogGroupContext) => boolean);
-                }
-              | boolean
-          >
+        | Array<string | ChangelogGroupOptions>
+        | Record<string & {}, string | ChangelogGroupOptions | boolean>
         | ((ctx: ChangelogGroupsContext) => ChangelogGroupsSetting);
     /**
      * How breaking changes are detected: `conventional` (default: a `!` in the CC subject or a
@@ -549,124 +531,59 @@ export interface ChangelogVersioningConfig {
      */
     workspaces?: Array<string>;
     /** The prerelease tag globally, or per-target via `{ target, options }`. */
-    prerelease?:
-        | string
-        | {
-              target?: string;
-              include?: string | Array<string>;
-              exclude?: string | Array<string>;
-              options: string;
-          }
-        | Array<{
-              target?: string;
-              include?: string | Array<string>;
-              exclude?: string | Array<string>;
-              options: string;
-          }>;
+    prerelease?: string | ChangelogTargetedPrerelease | Array<ChangelogTargetedPrerelease>;
     /**
      * Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{
      * target, options }`.
      */
     bump?: {
-        major?:
-            | ChangelogBumpRule
-            | {
-                  target?: string;
-                  include?: string | Array<string>;
-                  exclude?: string | Array<string>;
-                  options: ChangelogBumpRule;
-              }
-            | Array<{
-                  target?: string;
-                  include?: string | Array<string>;
-                  exclude?: string | Array<string>;
-                  options: ChangelogBumpRule;
-              }>;
-        minor?:
-            | ChangelogBumpRule
-            | {
-                  target?: string;
-                  include?: string | Array<string>;
-                  exclude?: string | Array<string>;
-                  options: ChangelogBumpRule;
-              }
-            | Array<{
-                  target?: string;
-                  include?: string | Array<string>;
-                  exclude?: string | Array<string>;
-                  options: ChangelogBumpRule;
-              }>;
-        patch?:
-            | ChangelogBumpRule
-            | {
-                  target?: string;
-                  include?: string | Array<string>;
-                  exclude?: string | Array<string>;
-                  options: ChangelogBumpRule;
-              }
-            | Array<{
-                  target?: string;
-                  include?: string | Array<string>;
-                  exclude?: string | Array<string>;
-                  options: ChangelogBumpRule;
-              }>;
+        /** A bump rule globally, or per-target via `{ target, include, exclude, options }`. */
+        major?: ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>;
+        /** A bump rule globally, or per-target via `{ target, include, exclude, options }`. */
+        minor?: ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>;
+        /** A bump rule globally, or per-target via `{ target, include, exclude, options }`. */
+        patch?: ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>;
     };
     /** Enable over-bumping globally, or per-target via `{ target, options }`. */
     allowOverBump?:
         | boolean
-        | {
-              target?: string;
-              include?: string | Array<string>;
-              exclude?: string | Array<string>;
-              options: boolean;
-          }
-        | Array<{
-              target?: string;
-              include?: string | Array<string>;
-              exclude?: string | Array<string>;
-              options: boolean;
-          }>;
+        | ChangelogTargetedAllowOverBump
+        | Array<ChangelogTargetedAllowOverBump>;
     /** Commit formatting globally, or per-target via `{ target, options }`. */
-    commit?:
-        | ChangelogCommitFormatConfig
-        | {
-              target?: string;
-              include?: string | Array<string>;
-              exclude?: string | Array<string>;
-              options: ChangelogCommitFormatConfig;
-          }
-        | Array<{
-              target?: string;
-              include?: string | Array<string>;
-              exclude?: string | Array<string>;
-              options: ChangelogCommitFormatConfig;
-          }>;
+    commit?: ChangelogCommitFormatConfig | ChangelogTargetedCommit | Array<ChangelogTargetedCommit>;
     /** The provider globally, or per-target via `{ target, options }`. */
     provider?:
         | string
         | ChangelogProviderConfig
         | ((ctx: ChangelogProviderContext) => string | void)
-        | {
-              target?: string;
-              include?: string | Array<string>;
-              exclude?: string | Array<string>;
-              options:
-                  | string
-                  | ChangelogProviderConfig
-                  | ((ctx: ChangelogProviderContext) => string | void);
-          }
-        | Array<{
-              target?: string;
-              include?: string | Array<string>;
-              exclude?: string | Array<string>;
-              options:
-                  | string
-                  | ChangelogProviderConfig
-                  | ((ctx: ChangelogProviderContext) => string | void);
-          }>;
+        | ChangelogTargetedProvider
+        | Array<ChangelogTargetedProvider>;
 }
 
 export type ChangelogVersioningTarget = 'uniform' | 'root-only' | 'individual';
+
+export interface ChangelogTargetedPrerelease {
+    /**
+     * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
+     * When omitted the entry applies to every target.
+     */
+    target?: string;
+    /**
+     * Only apply to workspaces whose repo-relative directory matches one of these globs
+     * (tsconfig-style include).
+     */
+    include?: string | Array<string>;
+    /** Skip workspaces whose repo-relative directory matches these globs. */
+    exclude?: string | Array<string>;
+    /**
+     * Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at
+     * `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so
+     * the suffix is never appended twice.
+     *
+     * @required
+     */
+    options: string;
+}
 
 export type ChangelogBumpRule =
     | boolean
@@ -697,44 +614,83 @@ export interface ChangelogBumpRuleMatch {
     match?: string;
 }
 
+export interface ChangelogTargetedBump {
+    /**
+     * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
+     * When omitted the entry applies to every target.
+     */
+    target?: string;
+    /**
+     * Only apply to workspaces whose repo-relative directory matches one of these globs
+     * (tsconfig-style include).
+     */
+    include?: string | Array<string>;
+    /** Skip workspaces whose repo-relative directory matches these globs. */
+    exclude?: string | Array<string>;
+    /**
+     * A bump rule: a matcher/callback or a list of matchers/callbacks.
+     *
+     * @required
+     */
+    options: ChangelogBumpRule;
+}
+
+export interface ChangelogTargetedAllowOverBump {
+    /**
+     * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
+     * When omitted the entry applies to every target.
+     */
+    target?: string;
+    /**
+     * Only apply to workspaces whose repo-relative directory matches one of these globs
+     * (tsconfig-style include).
+     */
+    include?: string | Array<string>;
+    /** Skip workspaces whose repo-relative directory matches these globs. */
+    exclude?: string | Array<string>;
+    /**
+     * Apply a bump once per matching change instead of once per run (default false).
+     *
+     * @required
+     */
+    options: boolean;
+}
+
 export type ChangelogDetailsConfig =
     | boolean
     | {
           enabled?: boolean;
           lifecycle: 'after' | 'before';
           minCommits?: number;
-          descriptions?: boolean | { title?: string; expanded?: boolean; minCommits?: number };
-          body?: boolean | { title?: string; expanded?: boolean; minCommits?: number };
-          releaseNotes?: boolean | { title?: string; expanded?: boolean; minCommits?: number };
-          intro?: boolean | { title?: string; expanded?: boolean; minCommits?: number };
-          outro?: boolean | { title?: string; expanded?: boolean; minCommits?: number };
-          footer?: boolean | { title?: string; expanded?: boolean; minCommits?: number };
-          breaking?: boolean | { title?: string; expanded?: boolean; minCommits?: number };
-          types?:
-              | boolean
-              | { title?: string; expanded?: boolean; minCommits?: number }
-              | Array<string>;
-          custom?:
-              | RegExp
-              | string
-              | {
-                    start?: RegExp | string;
-                    end?: RegExp | string;
-                    title?: string;
-                    expanded?: boolean;
-                    minCommits?: number;
-                }
-              | Array<
-                    | RegExp
-                    | string
-                    | {
-                          start?: RegExp | string;
-                          end?: RegExp | string;
-                          title?: string;
-                          expanded?: boolean;
-                          minCommits?: number;
-                      }
-                >;
+          descriptions?: boolean | ChangelogDetailsOptions;
+          body?: boolean | ChangelogDetailsOptions;
+          releaseNotes?: boolean | ChangelogDetailsOptions;
+          intro?: boolean | ChangelogDetailsOptions;
+          outro?: boolean | ChangelogDetailsOptions;
+          footer?: boolean | ChangelogDetailsOptions;
+          breaking?: boolean | ChangelogDetailsOptions;
+          types?: boolean | ChangelogDetailsOptions | Array<string>;
+          custom?: ChangelogDetailsCustom | Array<ChangelogDetailsCustom>;
+      };
+
+export interface ChangelogDetailsOptions {
+    /** Custom `<summary>` text. */
+    title?: string;
+    /** Render the collapsible open by default. */
+    expanded?: boolean;
+    /** Minimum entries in the section before wrapping (nested overrides the top-level default). */
+    minCommits?: number;
+}
+
+export type ChangelogDetailsCustom =
+    | RegExp
+    | string
+    | {
+          title?: string;
+          expanded?: boolean;
+          minCommits?: number;
+          start?: RegExp | string;
+          end?: RegExp | string;
       };
 
 export interface ChangelogCommitFormatConfig {
@@ -755,6 +711,27 @@ export interface ChangelogCommitFormatConfig {
     details?: ChangelogDetailsConfig;
 }
 
+export interface ChangelogTargetedCommit {
+    /**
+     * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
+     * When omitted the entry applies to every target.
+     */
+    target?: string;
+    /**
+     * Only apply to workspaces whose repo-relative directory matches one of these globs
+     * (tsconfig-style include).
+     */
+    include?: string | Array<string>;
+    /** Skip workspaces whose repo-relative directory matches these globs. */
+    exclude?: string | Array<string>;
+    /**
+     * Commit message formatting/credit options (with an optional formatter callback).
+     *
+     * @required
+     */
+    options: ChangelogCommitFormatConfig;
+}
+
 export interface ChangelogProviderConfig {
     /**
      * The provider id.
@@ -768,6 +745,27 @@ export interface ChangelogProviderConfig {
      * @required
      */
     run: (ctx: ChangelogProviderContext) => string | void;
+}
+
+export interface ChangelogTargetedProvider {
+    /**
+     * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
+     * When omitted the entry applies to every target.
+     */
+    target?: string;
+    /**
+     * Only apply to workspaces whose repo-relative directory matches one of these globs
+     * (tsconfig-style include).
+     */
+    include?: string | Array<string>;
+    /** Skip workspaces whose repo-relative directory matches these globs. */
+    exclude?: string | Array<string>;
+    /**
+     * `default`, `changesets`, a provider id, or a custom provider/callback.
+     *
+     * @required
+     */
+    options: string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void);
 }
 
 export type ChangelogVersioning = boolean | ChangelogVersioningConfig;
@@ -826,6 +824,17 @@ export interface ChangelogTextFileEntry {
 }
 
 export type ChangelogTextSetting = ChangelogTextEntry | Array<ChangelogTextEntry>;
+
+export interface ChangelogGroupOptions {
+    /** The CC type (required for object entries in an array). */
+    type?: string;
+    /** Custom heading title (or callback; TS/JS configs only). */
+    title?: string | ((ctx: ChangelogGroupContext) => string);
+    /** Sort position; lower comes first (or callback; TS/JS configs only). */
+    order?: number | ((ctx: ChangelogGroupContext) => number);
+    /** Omit this group from the rendered changelog (or callback; TS/JS only). */
+    hidden?: boolean | ((ctx: ChangelogGroupContext) => boolean);
+}
 
 export type ChangelogWorkflowSetting =
     | boolean
@@ -900,26 +909,8 @@ export interface ChangelogConfig {
      * hidden }`, a type->title/options record, or a callback (TS/JS configs only).
      */
     groups?:
-        | Array<
-              | string
-              | {
-                    type?: string;
-                    title?: string | ((ctx: ChangelogGroupContext) => string);
-                    order?: number | ((ctx: ChangelogGroupContext) => number);
-                    hidden?: boolean | ((ctx: ChangelogGroupContext) => boolean);
-                }
-          >
-        | Record<
-              string & {},
-              | string
-              | {
-                    type?: string;
-                    title?: string | ((ctx: ChangelogGroupContext) => string);
-                    order?: number | ((ctx: ChangelogGroupContext) => number);
-                    hidden?: boolean | ((ctx: ChangelogGroupContext) => boolean);
-                }
-              | boolean
-          >
+        | Array<string | ChangelogGroupOptions>
+        | Record<string & {}, string | ChangelogGroupOptions | boolean>
         | ((ctx: ChangelogGroupsContext) => ChangelogGroupsSetting);
     /**
      * How breaking changes are detected: `conventional` (default: a `!` in the CC subject or a

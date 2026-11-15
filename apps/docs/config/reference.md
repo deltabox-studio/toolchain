@@ -652,7 +652,7 @@ Glob patterns selecting the workspaces to version (relative to the root). Defaul
 
 ##### `prerelease`
 
-- **Type**: `string | object | Array<object>`
+- **Type**: `string | ChangelogTargetedPrerelease | Array<ChangelogTargetedPrerelease>`
 
 The prerelease tag globally, or per-target via `{ target, options }`.
 
@@ -689,7 +689,9 @@ Custom bump rules for major/minor/patch (matchers or callbacks), globally or per
 
 ###### `major`
 
-- **Type**: `ChangelogBumpRule | object | Array<object>`
+- **Type**: `ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>`
+
+A bump rule globally, or per-target via `{ target, include, exclude, options }`.
 
 ###### `breaking`
 
@@ -760,65 +762,19 @@ A bump rule: a matcher/callback or a list of matchers/callbacks.
 
 ###### `minor`
 
-- **Type**: `ChangelogBumpRule | object | Array<object>`
+- **Type**: `ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>`
 
-###### `target`
-
-- **Type**: `string`
-
-A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
-
-###### `include`
-
-- **Type**: `string | Array<string>`
-
-Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
-
-###### `exclude`
-
-- **Type**: `string | Array<string>`
-
-Skip workspaces whose repo-relative directory matches these globs.
-
-###### `options`
-
-- **Required**
-- **Type**: `ChangelogBumpRule`
-
-A bump rule: a matcher/callback or a list of matchers/callbacks.
+A bump rule globally, or per-target via `{ target, include, exclude, options }`.
 
 ###### `patch`
 
-- **Type**: `ChangelogBumpRule | object | Array<object>`
+- **Type**: `ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>`
 
-###### `target`
-
-- **Type**: `string`
-
-A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
-
-###### `include`
-
-- **Type**: `string | Array<string>`
-
-Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
-
-###### `exclude`
-
-- **Type**: `string | Array<string>`
-
-Skip workspaces whose repo-relative directory matches these globs.
-
-###### `options`
-
-- **Required**
-- **Type**: `ChangelogBumpRule`
-
-A bump rule: a matcher/callback or a list of matchers/callbacks.
+A bump rule globally, or per-target via `{ target, include, exclude, options }`.
 
 ##### `allowOverBump`
 
-- **Type**: `boolean | object | Array<object>`
+- **Type**: `boolean | ChangelogTargetedAllowOverBump | Array<ChangelogTargetedAllowOverBump>`
 
 Enable over-bumping globally, or per-target via `{ target, options }`.
 
@@ -849,7 +805,7 @@ Apply a bump once per matching change instead of once per run (default false).
 
 ##### `commit`
 
-- **Type**: `ChangelogCommitFormatConfig | object | Array<object>`
+- **Type**: `ChangelogCommitFormatConfig | ChangelogTargetedCommit | Array<ChangelogTargetedCommit>`
 
 Commit formatting globally, or per-target via `{ target, options }`.
 
@@ -911,9 +867,9 @@ Default minimum entries for every details section (a nested minCommits wins; the
 
 ###### `descriptions`
 
-- **Type**: `boolean | object`
+- **Type**: `boolean | ChangelogDetailsOptions`
 
-Enable/disable this collapsible, optionally with a title/expanded state.
+Wrap commit description paragraphs in a nested collapsible (default true).
 
 ###### `title`
 
@@ -935,153 +891,51 @@ Minimum entries in the section before wrapping (nested overrides the top-level d
 
 ###### `body`
 
-- **Type**: `boolean | object`
+- **Type**: `boolean | ChangelogDetailsOptions`
 
 Wrap the version body in a collapsible titled Release Notes (default outside release mode; requires 10 commits by default).
 
-###### `title`
-
-- **Type**: `string`
-
-Custom `<summary>` text.
-
-###### `expanded`
-
-- **Type**: `boolean`
-
-Render the collapsible open by default.
-
-###### `minCommits`
-
-- **Type**: `number`
-
-Minimum entries in the section before wrapping (nested overrides the top-level default).
-
 ###### `releaseNotes`
 
-- **Type**: `boolean | object`
+- **Type**: `boolean | ChangelogDetailsOptions`
 
-Enable/disable this collapsible, optionally with a title/expanded state.
-
-###### `title`
-
-- **Type**: `string`
-
-Custom `<summary>` text.
-
-###### `expanded`
-
-- **Type**: `boolean`
-
-Render the collapsible open by default.
-
-###### `minCommits`
-
-- **Type**: `number`
-
-Minimum entries in the section before wrapping (nested overrides the top-level default).
+Wrap the release-mode entry in a collapsible titled Release Notes.
 
 ###### `intro`
 
-- **Type**: `boolean | object`
+- **Type**: `boolean | ChangelogDetailsOptions`
 
-Enable/disable this collapsible, optionally with a title/expanded state.
-
-###### `title`
-
-- **Type**: `string`
-
-Custom `<summary>` text.
-
-###### `expanded`
-
-- **Type**: `boolean`
-
-Render the collapsible open by default.
-
-###### `minCommits`
-
-- **Type**: `number`
-
-Minimum entries in the section before wrapping (nested overrides the top-level default).
+Wrap the intro text in a collapsible.
 
 ###### `outro`
 
-- **Type**: `boolean | object`
+- **Type**: `boolean | ChangelogDetailsOptions`
 
-Enable/disable this collapsible, optionally with a title/expanded state.
-
-###### `title`
-
-- **Type**: `string`
-
-Custom `<summary>` text.
-
-###### `expanded`
-
-- **Type**: `boolean`
-
-Render the collapsible open by default.
-
-###### `minCommits`
-
-- **Type**: `number`
-
-Minimum entries in the section before wrapping (nested overrides the top-level default).
+Wrap the outro text in a collapsible.
 
 ###### `footer`
 
-- **Type**: `boolean | object`
+- **Type**: `boolean | ChangelogDetailsOptions`
 
-Enable/disable this collapsible, optionally with a title/expanded state.
-
-###### `title`
-
-- **Type**: `string`
-
-Custom `<summary>` text.
-
-###### `expanded`
-
-- **Type**: `boolean`
-
-Render the collapsible open by default.
-
-###### `minCommits`
-
-- **Type**: `number`
-
-Minimum entries in the section before wrapping (nested overrides the top-level default).
+Wrap the package-changes footer in a collapsible.
 
 ###### `breaking`
 
-- **Type**: `boolean | object`
+- **Type**: `boolean | ChangelogDetailsOptions`
 
-Enable/disable this collapsible, optionally with a title/expanded state.
-
-###### `title`
-
-- **Type**: `string`
-
-Custom `<summary>` text.
-
-###### `expanded`
-
-- **Type**: `boolean`
-
-Render the collapsible open by default.
-
-###### `minCommits`
-
-- **Type**: `number`
-
-Minimum entries in the section before wrapping (nested overrides the top-level default).
+Wrap the breaking-changes section in a collapsible.
 
 ###### `types`
 
-- **Type**: `boolean | object | Array<string>`
+- **Type**: `boolean | ChangelogDetailsOptions | Array<string>`
 
 Wrap these CC type sections (all types when `true`; enabled by default).
+
+###### `custom`
+
+- **Type**: `ChangelogDetailsCustom | Array<ChangelogDetailsCustom>`
+
+Wrap matching text (the match or `start` match becomes the summary).
 
 ###### `title`
 
@@ -1100,12 +954,6 @@ Render the collapsible open by default.
 - **Type**: `number`
 
 Minimum entries in the section before wrapping (nested overrides the top-level default).
-
-###### `custom`
-
-- **Type**: `RegExp | string | object | Array<RegExp | string | object>`
-
-Wrap matching text (the match or `start` match becomes the summary).
 
 ###### `start`
 
@@ -1118,24 +966,6 @@ The opening marker.
 - **Type**: `RegExp | string`
 
 The closing marker.
-
-###### `title`
-
-- **Type**: `string`
-
-Custom `<summary>` text.
-
-###### `expanded`
-
-- **Type**: `boolean`
-
-Render the collapsible open by default.
-
-###### `minCommits`
-
-- **Type**: `number`
-
-Minimum entries in the matched region before wrapping.
 
 ###### `target`
 
@@ -1164,7 +994,7 @@ Commit message formatting/credit options (with an optional formatter callback).
 
 ##### `provider`
 
-- **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void) | object | Array<object>`
+- **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void) | ChangelogTargetedProvider | Array<ChangelogTargetedProvider>`
 
 The provider globally, or per-target via `{ target, options }`.
 
@@ -1265,7 +1095,7 @@ Write the Conventional-Commits VS Code settings (default true).
 
 #### `groups`
 
-- **Type**: `Array<string | object> | Record<string, string | object | boolean> | ((ctx: ChangelogGroupsContext) => ChangelogGroupsSetting)`
+- **Type**: `Array<string | ChangelogGroupOptions> | Record<string, string | ChangelogGroupOptions | boolean> | ((ctx: ChangelogGroupsContext) => ChangelogGroupsSetting)`
 
 Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback (TS/JS configs only).
 
@@ -1473,7 +1303,7 @@ Glob patterns selecting the workspaces to version (relative to the root). Defaul
 
 #### `prerelease`
 
-- **Type**: `string | object | Array<object>`
+- **Type**: `string | ChangelogTargetedPrerelease | Array<ChangelogTargetedPrerelease>`
 
 The prerelease tag globally, or per-target via `{ target, options }`.
 
@@ -1510,7 +1340,9 @@ Custom bump rules for major/minor/patch (matchers or callbacks), globally or per
 
 ##### `major`
 
-- **Type**: `ChangelogBumpRule | object | Array<object>`
+- **Type**: `ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>`
+
+A bump rule globally, or per-target via `{ target, include, exclude, options }`.
 
 ###### `breaking`
 
@@ -1581,65 +1413,19 @@ A bump rule: a matcher/callback or a list of matchers/callbacks.
 
 ##### `minor`
 
-- **Type**: `ChangelogBumpRule | object | Array<object>`
+- **Type**: `ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>`
 
-###### `target`
-
-- **Type**: `string`
-
-A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
-
-###### `include`
-
-- **Type**: `string | Array<string>`
-
-Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
-
-###### `exclude`
-
-- **Type**: `string | Array<string>`
-
-Skip workspaces whose repo-relative directory matches these globs.
-
-###### `options`
-
-- **Required**
-- **Type**: `ChangelogBumpRule`
-
-A bump rule: a matcher/callback or a list of matchers/callbacks.
+A bump rule globally, or per-target via `{ target, include, exclude, options }`.
 
 ##### `patch`
 
-- **Type**: `ChangelogBumpRule | object | Array<object>`
+- **Type**: `ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>`
 
-###### `target`
-
-- **Type**: `string`
-
-A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
-
-###### `include`
-
-- **Type**: `string | Array<string>`
-
-Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
-
-###### `exclude`
-
-- **Type**: `string | Array<string>`
-
-Skip workspaces whose repo-relative directory matches these globs.
-
-###### `options`
-
-- **Required**
-- **Type**: `ChangelogBumpRule`
-
-A bump rule: a matcher/callback or a list of matchers/callbacks.
+A bump rule globally, or per-target via `{ target, include, exclude, options }`.
 
 #### `allowOverBump`
 
-- **Type**: `boolean | object | Array<object>`
+- **Type**: `boolean | ChangelogTargetedAllowOverBump | Array<ChangelogTargetedAllowOverBump>`
 
 Enable over-bumping globally, or per-target via `{ target, options }`.
 
@@ -1670,7 +1456,7 @@ Apply a bump once per matching change instead of once per run (default false).
 
 #### `commit`
 
-- **Type**: `ChangelogCommitFormatConfig | object | Array<object>`
+- **Type**: `ChangelogCommitFormatConfig | ChangelogTargetedCommit | Array<ChangelogTargetedCommit>`
 
 Commit formatting globally, or per-target via `{ target, options }`.
 
@@ -1732,9 +1518,9 @@ Default minimum entries for every details section (a nested minCommits wins; the
 
 ###### `descriptions`
 
-- **Type**: `boolean | object`
+- **Type**: `boolean | ChangelogDetailsOptions`
 
-Enable/disable this collapsible, optionally with a title/expanded state.
+Wrap commit description paragraphs in a nested collapsible (default true).
 
 ###### `title`
 
@@ -1756,153 +1542,51 @@ Minimum entries in the section before wrapping (nested overrides the top-level d
 
 ###### `body`
 
-- **Type**: `boolean | object`
+- **Type**: `boolean | ChangelogDetailsOptions`
 
 Wrap the version body in a collapsible titled Release Notes (default outside release mode; requires 10 commits by default).
 
-###### `title`
-
-- **Type**: `string`
-
-Custom `<summary>` text.
-
-###### `expanded`
-
-- **Type**: `boolean`
-
-Render the collapsible open by default.
-
-###### `minCommits`
-
-- **Type**: `number`
-
-Minimum entries in the section before wrapping (nested overrides the top-level default).
-
 ###### `releaseNotes`
 
-- **Type**: `boolean | object`
+- **Type**: `boolean | ChangelogDetailsOptions`
 
-Enable/disable this collapsible, optionally with a title/expanded state.
-
-###### `title`
-
-- **Type**: `string`
-
-Custom `<summary>` text.
-
-###### `expanded`
-
-- **Type**: `boolean`
-
-Render the collapsible open by default.
-
-###### `minCommits`
-
-- **Type**: `number`
-
-Minimum entries in the section before wrapping (nested overrides the top-level default).
+Wrap the release-mode entry in a collapsible titled Release Notes.
 
 ###### `intro`
 
-- **Type**: `boolean | object`
+- **Type**: `boolean | ChangelogDetailsOptions`
 
-Enable/disable this collapsible, optionally with a title/expanded state.
-
-###### `title`
-
-- **Type**: `string`
-
-Custom `<summary>` text.
-
-###### `expanded`
-
-- **Type**: `boolean`
-
-Render the collapsible open by default.
-
-###### `minCommits`
-
-- **Type**: `number`
-
-Minimum entries in the section before wrapping (nested overrides the top-level default).
+Wrap the intro text in a collapsible.
 
 ###### `outro`
 
-- **Type**: `boolean | object`
+- **Type**: `boolean | ChangelogDetailsOptions`
 
-Enable/disable this collapsible, optionally with a title/expanded state.
-
-###### `title`
-
-- **Type**: `string`
-
-Custom `<summary>` text.
-
-###### `expanded`
-
-- **Type**: `boolean`
-
-Render the collapsible open by default.
-
-###### `minCommits`
-
-- **Type**: `number`
-
-Minimum entries in the section before wrapping (nested overrides the top-level default).
+Wrap the outro text in a collapsible.
 
 ###### `footer`
 
-- **Type**: `boolean | object`
+- **Type**: `boolean | ChangelogDetailsOptions`
 
-Enable/disable this collapsible, optionally with a title/expanded state.
-
-###### `title`
-
-- **Type**: `string`
-
-Custom `<summary>` text.
-
-###### `expanded`
-
-- **Type**: `boolean`
-
-Render the collapsible open by default.
-
-###### `minCommits`
-
-- **Type**: `number`
-
-Minimum entries in the section before wrapping (nested overrides the top-level default).
+Wrap the package-changes footer in a collapsible.
 
 ###### `breaking`
 
-- **Type**: `boolean | object`
+- **Type**: `boolean | ChangelogDetailsOptions`
 
-Enable/disable this collapsible, optionally with a title/expanded state.
-
-###### `title`
-
-- **Type**: `string`
-
-Custom `<summary>` text.
-
-###### `expanded`
-
-- **Type**: `boolean`
-
-Render the collapsible open by default.
-
-###### `minCommits`
-
-- **Type**: `number`
-
-Minimum entries in the section before wrapping (nested overrides the top-level default).
+Wrap the breaking-changes section in a collapsible.
 
 ###### `types`
 
-- **Type**: `boolean | object | Array<string>`
+- **Type**: `boolean | ChangelogDetailsOptions | Array<string>`
 
 Wrap these CC type sections (all types when `true`; enabled by default).
+
+###### `custom`
+
+- **Type**: `ChangelogDetailsCustom | Array<ChangelogDetailsCustom>`
+
+Wrap matching text (the match or `start` match becomes the summary).
 
 ###### `title`
 
@@ -1921,12 +1605,6 @@ Render the collapsible open by default.
 - **Type**: `number`
 
 Minimum entries in the section before wrapping (nested overrides the top-level default).
-
-###### `custom`
-
-- **Type**: `RegExp | string | object | Array<RegExp | string | object>`
-
-Wrap matching text (the match or `start` match becomes the summary).
 
 ###### `start`
 
@@ -1939,24 +1617,6 @@ The opening marker.
 - **Type**: `RegExp | string`
 
 The closing marker.
-
-###### `title`
-
-- **Type**: `string`
-
-Custom `<summary>` text.
-
-###### `expanded`
-
-- **Type**: `boolean`
-
-Render the collapsible open by default.
-
-###### `minCommits`
-
-- **Type**: `number`
-
-Minimum entries in the matched region before wrapping.
 
 ##### `target`
 
@@ -1985,7 +1645,7 @@ Commit message formatting/credit options (with an optional formatter callback).
 
 #### `provider`
 
-- **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void) | object | Array<object>`
+- **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void) | ChangelogTargetedProvider | Array<ChangelogTargetedProvider>`
 
 The provider globally, or per-target via `{ target, options }`.
 
@@ -2086,7 +1746,7 @@ Write the Conventional-Commits VS Code settings (default true).
 
 ### `groups`
 
-- **Type**: `Array<string | object> | Record<string, string | object | boolean> | ((ctx: ChangelogGroupsContext) => ChangelogGroupsSetting)`
+- **Type**: `Array<string | ChangelogGroupOptions> | Record<string, string | ChangelogGroupOptions | boolean> | ((ctx: ChangelogGroupsContext) => ChangelogGroupsSetting)`
 
 Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order, hidden }`, a type->title/options record, or a callback (TS/JS configs only).
 
