@@ -56,6 +56,23 @@ export function sortPackageExports(packageJsonPath: string): boolean {
     return true;
 }
 
+type HooksObject = Exclude<NonNullable<PackUserConfig['hooks']>, (...args: never[]) => unknown>;
+type BuildDoneHook = NonNullable<HooksObject['build:done']>;
+
+/** Sort the built package's `exports` keys, unless running in development. */
+const sortPackageExportsHook: BuildDoneHook = ctx => {
+    try {
+        if (process.env.NODE_ENV === 'development') return;
+        const packageJsonPath = ctx.options.pkg?.packageJsonPath;
+        if (!packageJsonPath) return;
+        if (sortPackageExports(packageJsonPath)) {
+            globalLogger.success('package.json exports keys sorted!');
+        }
+    } catch (e) {
+        globalLogger.error('Failed to sort package.json exports keys:', e);
+    }
+};
+
 /**
  * The shared tsdown base configuration. Kept project-agnostic: the ASCII/banner
  * branding is opt-in via {@link createPostBanner} and consumer metadata.
@@ -85,18 +102,7 @@ export const baseTsdownConfig: PackUserConfig = {
     },
     plugins: [createNodeModulesLeakReporter()],
     hooks: {
-        'build:done': ctx => {
-            try {
-                if (process.env.NODE_ENV === 'development') return;
-                const packageJsonPath = ctx.options.pkg?.packageJsonPath;
-                if (!packageJsonPath) return;
-                if (sortPackageExports(packageJsonPath)) {
-                    globalLogger.success('package.json exports keys sorted!');
-                }
-            } catch (e) {
-                globalLogger.error('Failed to sort package.json exports keys:', e);
-            }
-        },
+        'build:done': sortPackageExportsHook,
     },
 };
 
@@ -136,31 +142,50 @@ export function createPostBanner(
     };
 }
 
-/** Options for {@link createTsdownConfig} beyond the pack config and banner. */
+/** Options for {@link createTsdownConfig}. */
 export interface CreateTsdownConfigOptions {
+    /** Per-project tsdown overrides merged over {@link baseTsdownConfig}. */
+    overrides?: PackUserConfig;
+    /** Branding for the generated `outputOptions.postBanner` hook. */
+    banner?: PostBannerOptions;
     /**
      * Configure the absolute `node_modules` leak reporter, or `false` to remove
      * it. Defaults to `{ level: 'error' }`.
      */
     nodeModulesLeakReporter?: NodeModulesLeakReporterOptions | false;
+    /**
+     * Sort the built package's `exports` keys after the build. Defaults to
+     * `true`; set to `false` to leave `package.json` untouched.
+     */
+    sortPackageExports?: boolean;
 }
 
 /**
  * Create a tsdown config by merging the base config with per-project overrides
  * and an optional branded post banner.
  */
-export function createTsdownConfig(
-    overrides: PackUserConfig = {},
-    banner?: PostBannerOptions,
-    options: CreateTsdownConfigOptions = {}
-): PackUserConfig {
+export function createTsdownConfig(options: CreateTsdownConfigOptions = {}): PackUserConfig {
+    const overrides = options.overrides ?? {};
     const config: PackUserConfig = { ...baseTsdownConfig, ...overrides };
-    if (banner) {
+    if (options.banner) {
         config.outputOptions = {
             ...baseTsdownConfig.outputOptions,
             ...overrides.outputOptions,
-            postBanner: createPostBanner(banner),
+            postBanner: createPostBanner(options.banner),
         };
+    }
+
+    if (options.sortPackageExports === false) {
+        const hooks =
+            config.hooks && typeof config.hooks === 'object'
+                ? (config.hooks as Record<string, unknown>)
+                : undefined;
+        if (hooks && hooks['build:done'] === sortPackageExportsHook) {
+            const rest = { ...hooks };
+            delete rest['build:done'];
+            if (Object.keys(rest).length > 0) config.hooks = rest as PackUserConfig['hooks'];
+            else delete config.hooks;
+        }
     }
 
     // Keep the base reporter (reconfigured, or removed) and append consumer

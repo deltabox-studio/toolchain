@@ -99,7 +99,7 @@ describe('tsdown config helpers', () => {
     it('does not bake absolute node_modules paths into emitted d.ts', async () => {
         const dir = typeFestFixture();
         try {
-            await build(createTsdownConfig(fixtureConfig(dir)));
+            await build(createTsdownConfig({ overrides: fixtureConfig(dir) }));
 
             const dts = fs.readFileSync(path.join(dir, 'dist', 'index.d.ts'), 'utf8');
             expect(dts).toContain('from "type-fest"');
@@ -115,11 +115,13 @@ describe('tsdown config helpers', () => {
             await expect(
                 build(
                     createTsdownConfig({
-                        ...fixtureConfig(dir),
-                        // Reproduce the old `/node_modules/` dts externalization.
-                        deps: {
-                            neverBundle: [/(^node:)|\/tests\/|node_modules/],
-                            dts: { neverBundle: [/node_modules/] },
+                        overrides: {
+                            ...fixtureConfig(dir),
+                            // Reproduce the old `/node_modules/` dts externalization.
+                            deps: {
+                                neverBundle: [/(^node:)|\/tests\/|node_modules/],
+                                dts: { neverBundle: [/node_modules/] },
+                            },
                         },
                     })
                 )
@@ -134,17 +136,16 @@ describe('tsdown config helpers', () => {
         try {
             await expect(
                 build(
-                    createTsdownConfig(
-                        {
+                    createTsdownConfig({
+                        overrides: {
                             ...fixtureConfig(dir),
                             deps: {
                                 neverBundle: [/(^node:)|\/tests\/|node_modules/],
                                 dts: { neverBundle: [/node_modules/] },
                             },
                         },
-                        undefined,
-                        { nodeModulesLeakReporter: { when: 'closeBundle' } }
-                    )
+                        nodeModulesLeakReporter: { when: 'closeBundle' },
+                    })
                 )
             ).rejects.toThrow(/Absolute node_modules path/);
         } finally {
@@ -153,7 +154,7 @@ describe('tsdown config helpers', () => {
     });
 
     it('merges overrides', () => {
-        const config = createTsdownConfig({ format: ['cjs'], minify: false });
+        const config = createTsdownConfig({ overrides: { format: ['cjs'], minify: false } });
         expect(config.format).toEqual(['cjs']);
         expect(config.minify).toBe(false);
         expect(config.platform).toBe('node');
@@ -168,15 +169,23 @@ describe('tsdown config helpers', () => {
     });
 
     it('attaches the banner when requested', () => {
-        const config = createTsdownConfig({}, { name: 'Acme' });
+        const config = createTsdownConfig({ banner: { name: 'Acme' } });
         expect(typeof (config.outputOptions as any)?.postBanner).toBe('function');
     });
 
-    it('sort hook exists', () => {
+    it('attaches the sort hook by default', () => {
         const hooks = baseTsdownConfig.hooks as any;
         expect(typeof hooks['build:done']).toBe('function');
         // ensure the hook does not throw on a minimal ctx
         expect(() => hooks['build:done']({ options: {} })).not.toThrow();
+
+        const config = createTsdownConfig();
+        expect(typeof (config.hooks as any)['build:done']).toBe('function');
+    });
+
+    it('can disable the sort hook', () => {
+        const config = createTsdownConfig({ sortPackageExports: false });
+        expect((config.hooks as any)?.['build:done']).toBeUndefined();
     });
 
     it('vi is available for future spies', () => {
@@ -328,11 +337,12 @@ describe('node_modules leak reporter', () => {
         const plugins = (createTsdownConfig().plugins ?? []) as { name?: string }[];
         expect(plugins.some(plugin => plugin.name === NODE_MODULES_LEAK_REPORTER)).toBe(true);
 
-        const disabled = (createTsdownConfig({}, undefined, { nodeModulesLeakReporter: false })
-            .plugins ?? []) as { name?: string }[];
+        const disabled = (createTsdownConfig({ nodeModulesLeakReporter: false }).plugins ?? []) as {
+            name?: string;
+        }[];
         expect(disabled.some(plugin => plugin.name === NODE_MODULES_LEAK_REPORTER)).toBe(false);
 
-        const configured = (createTsdownConfig({}, undefined, {
+        const configured = (createTsdownConfig({
             nodeModulesLeakReporter: { level: 'warn' },
         }).plugins ?? []) as { name?: string }[];
         expect(
