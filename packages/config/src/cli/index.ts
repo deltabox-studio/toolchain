@@ -67,7 +67,10 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
                 { flags: '--env', description: 'Also write the env type files.' },
             ],
             run: ({ out, env }) => {
-                const outDir = resolve(out as string | undefined, d.typesDir ?? engine.root);
+                const outDir = resolve(
+                    out as string | undefined,
+                    d.typesDir ?? path.join(engine.root, 'types')
+                );
                 const written = engine.writeConfigTypes({ outputDir: outDir });
                 if (env) written.push(...engine.writeEnvTypes({ outputDir: outDir }));
                 for (const file of written)
@@ -135,7 +138,9 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
             options: [{ flags: '-o, --out <dir>', description: 'Base output directory.' }],
             run: async ({ out }) => {
                 const base = out === undefined ? undefined : path.resolve(out as string);
-                const typesDir = base ? path.join(base, 'types') : resolve(d.typesDir, engine.root);
+                const typesDir = base
+                    ? path.join(base, 'types')
+                    : resolve(d.typesDir, path.join(engine.root, 'types'));
                 const docsDir = base
                     ? path.join(base, 'docs/reference/configuration')
                     : resolve(d.docsDir, path.join(engine.root, 'docs/reference/configuration'));

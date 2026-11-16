@@ -104,51 +104,118 @@ interface Candidate {
     kind: 'file' | 'package.json';
 }
 
-function findCandidate(options: LoadConfigOptions): Candidate | undefined {
+/** Every candidate in priority order (config files, then package.json, per location). */
+function findCandidates(options: LoadConfigOptions): Candidate[] {
     const cwd = path.resolve(options.cwd ?? process.cwd());
     const names = options.names ?? DEFAULT_CONFIG_NAMES;
     const locations = options.locations ?? DEFAULT_CONFIG_LOCATIONS;
+    const out: Candidate[] = [];
     for (const location of locations) {
         const dir = path.resolve(cwd, location);
         for (const name of names) {
             const file = realpath(path.join(dir, name), true);
-            if (fs.existsSync(file)) return { file, kind: 'file' };
+            if (fs.existsSync(file)) out.push({ file, kind: 'file' });
         }
         const pkg = readPackageJsonConfig(dir, options.packageJsonKeys);
-        if (pkg) return { file: pkg.file, value: pkg.value, key: pkg.key, kind: 'package.json' };
+        if (pkg) out.push({ file: pkg.file, value: pkg.value, key: pkg.key, kind: 'package.json' });
     }
-    return undefined;
+    return out;
 }
 
-/** Load a config synchronously (JSON / CJS / package.json only). */
-export function loadConfigSync<T = unknown>(
-    options: LoadConfigOptions<T> = {}
-): LoadedConfig<T> | undefined {
-    const candidate = findCandidate(options);
-    if (!candidate) {
-        if (options.required) throw new Error('No config file found.');
-        return undefined;
-    }
+function findCandidate(options: LoadConfigOptions): Candidate | undefined {
+    return findCandidates(options)[0];
+}
+
+function isPromise(value: unknown): value is Promise<unknown> {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        typeof (value as { then?: unknown }).then === 'function'
+    );
+}
+
+function loaded<T>(
+    options: LoadConfigOptions<T>,
+    candidate: Candidate,
+    value: unknown
+): LoadedConfig<T> {
     if (candidate.kind === 'package.json') {
         return {
-            config: validate(options.schema, candidate.value),
+            config: validate(options.schema, value),
             path: candidate.file,
             source: 'package.json',
             ...(candidate.key ? { key: candidate.key } : {}),
         };
     }
-    const extension = path.extname(candidate.file).toLowerCase();
-    if (['.ts', '.mts', '.cts'].includes(extension)) {
+    return { config: validate(options.schema, value), path: candidate.file, source: 'file' };
+}
+
+/** Load a config synchronously (JSON / CJS / package.json, or a sync `loader`). */
+export function loadConfigSync<T = unknown>(
+    options: LoadConfigOptions<T> = {}
+): LoadedConfig<T> | undefined {
+    const candidates = findCandidates(options);
+    if (candidates.length === 0) {
+        if (options.required) throw new Error('No config file found.');
+        return undefined;
+    }
+    const typescript: string[] = [];
+    const unsupported: string[] = [];
+    let lastError: unknown;
+    for (const candidate of candidates) {
+        if (candidate.kind === 'package.json') {
+            return loaded(options, candidate, candidate.value);
+        }
+        if (options.loader) {
+            const value = options.loader(candidate.file);
+            if (isPromise(value)) {
+                throw new Error(
+                    `The custom loader returned a promise for ${candidate.file}; use \`loadConfigAsync\`.`
+                );
+            }
+            return loaded(options, candidate, value);
+        }
+        const extension = path.extname(candidate.file).toLowerCase();
+        if (['.ts', '.mts', '.cts'].includes(extension)) {
+            typescript.push(candidate.file);
+            continue;
+        }
+        if (extension === '.json') {
+            const value = JSON.parse(
+                fs.readFileSync(candidate.file, 'utf-8').replace(/^\uFEFF/, '')
+            );
+            return loaded(options, candidate, value);
+        }
+        if (['.js', '.cjs', '.mjs'].includes(extension)) {
+            try {
+                const require = createRequire(import.meta.url);
+                if (options.fresh) {
+                    try {
+                        delete require.cache[candidate.file];
+                    } catch {
+                        // not a require-cached module
+                    }
+                }
+                const required = require(candidate.file) as { default?: unknown };
+                return loaded(options, candidate, required.default ?? required);
+            } catch (error) {
+                lastError = error;
+                continue;
+            }
+        }
+        unsupported.push(candidate.file);
+    }
+    if (typescript.length > 0) {
         throw new Error(
-            `Cannot load a TypeScript config synchronously (${candidate.file}); use \`loadConfigAsync\` or pass a \`loader\`.`
+            `Cannot load a TypeScript config synchronously (${typescript[0]}); use \`loadConfigAsync\` or pass a synchronous \`loader\`.`
         );
     }
-    const value =
-        extension === '.json'
-            ? JSON.parse(fs.readFileSync(candidate.file, 'utf-8').replace(/^\uFEFF/, ''))
-            : ((createRequire(import.meta.url)(candidate.file) as { default?: unknown }).default ??
-              createRequire(import.meta.url)(candidate.file));
-    return { config: validate(options.schema, value), path: candidate.file, source: 'file' };
+    if (unsupported.length > 0) {
+        throw new Error(
+            `Unsupported config file synchronously (${unsupported[0]}); use \`loadConfigAsync\` or pass a \`loader\`.`
+        );
+    }
+    throw lastError ?? new Error('No config file could be loaded synchronously.');
 }
 
 /** Import a config module natively (JS/JSON), optionally through a custom loader. */
@@ -156,6 +223,14 @@ async function importConfig(file: string, options: LoadConfigOptions): Promise<u
     if (options.loader) return options.loader(file);
     if (file.endsWith('.json')) {
         return JSON.parse(fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, ''));
+    }
+    if (options.fresh) {
+        // CJS modules are cached by require, which an ESM query cannot bust.
+        try {
+            delete createRequire(import.meta.url).cache[file];
+        } catch {
+            // not a require-cached module
+        }
     }
     const url = pathToFileURL(file).href;
     const specifier = options.fresh ? `${url}?dbx=${Date.now()}` : url;

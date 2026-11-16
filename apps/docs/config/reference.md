@@ -653,7 +653,7 @@ Glob patterns selecting the workspaces to version (relative to the root). Defaul
 
 ##### `prerelease`
 
-- **Type**: `string | ChangelogTargetedPrerelease | Array<ChangelogTargetedPrerelease>`
+- **Type**: `ChangelogTargetedPrerelease | Array<ChangelogTargetedPrerelease | string> | string`
 
 The prerelease tag globally, or per-target via `{ target, options }`.
 
@@ -690,9 +690,34 @@ Custom bump rules for major/minor/patch (matchers or callbacks), globally or per
 
 ###### `major`
 
-- **Type**: `ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>`
+- **Type**: `ChangelogTargetedBump | Array<ChangelogTargetedBump | ChangelogBumpRule> | ChangelogBumpRule`
 
 A bump rule globally, or per-target via `{ target, include, exclude, options }`.
+
+###### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+- **Required**
+- **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
 
 ###### `breaking`
 
@@ -736,46 +761,21 @@ Match this regular expression.
 
 Match this substring.
 
-###### `target`
-
-- **Type**: `string`
-
-A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
-
-###### `include`
-
-- **Type**: `string | Array<string>`
-
-Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
-
-###### `exclude`
-
-- **Type**: `string | Array<string>`
-
-Skip workspaces whose repo-relative directory matches these globs.
-
-###### `options`
-
-- **Required**
-- **Type**: `ChangelogBumpRule`
-
-A bump rule: a matcher/callback or a list of matchers/callbacks.
-
 ###### `minor`
 
-- **Type**: `ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>`
+- **Type**: `ChangelogTargetedBump | Array<ChangelogTargetedBump | ChangelogBumpRule> | ChangelogBumpRule`
 
 A bump rule globally, or per-target via `{ target, include, exclude, options }`.
 
 ###### `patch`
 
-- **Type**: `ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>`
+- **Type**: `ChangelogTargetedBump | Array<ChangelogTargetedBump | ChangelogBumpRule> | ChangelogBumpRule`
 
 A bump rule globally, or per-target via `{ target, include, exclude, options }`.
 
 ##### `allowOverBump`
 
-- **Type**: `boolean | ChangelogTargetedAllowOverBump | Array<ChangelogTargetedAllowOverBump>`
+- **Type**: `ChangelogTargetedAllowOverBump | Array<ChangelogTargetedAllowOverBump | boolean> | boolean`
 
 Enable over-bumping globally, or per-target via `{ target, options }`.
 
@@ -806,9 +806,34 @@ Apply a bump once per matching change instead of once per run (default false).
 
 ##### `commit`
 
-- **Type**: `ChangelogCommitFormatConfig | ChangelogTargetedCommit | Array<ChangelogTargetedCommit>`
+- **Type**: `ChangelogTargetedCommit | Array<ChangelogTargetedCommit | ChangelogCommitFormatConfig> | ChangelogCommitFormatConfig`
 
 Commit formatting globally, or per-target via `{ target, options }`.
+
+###### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+- **Required**
+- **Type**: `ChangelogCommitFormatConfig`
+
+Commit message formatting/credit options (with an optional formatter callback).
 
 ###### `author`
 
@@ -968,50 +993,11 @@ The opening marker.
 
 The closing marker.
 
-###### `target`
-
-- **Type**: `string`
-
-A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
-
-###### `include`
-
-- **Type**: `string | Array<string>`
-
-Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
-
-###### `exclude`
-
-- **Type**: `string | Array<string>`
-
-Skip workspaces whose repo-relative directory matches these globs.
-
-###### `options`
-
-- **Required**
-- **Type**: `ChangelogCommitFormatConfig`
-
-Commit message formatting/credit options (with an optional formatter callback).
-
 ##### `provider`
 
-- **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void) | ChangelogTargetedProvider | Array<ChangelogTargetedProvider>`
+- **Type**: `ChangelogTargetedProvider | Array<ChangelogTargetedProvider | string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)> | string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
 
 The provider globally, or per-target via `{ target, options }`.
-
-###### `id`
-
-- **Required**
-- **Type**: `string`
-
-The provider id.
-
-###### `run`
-
-- **Required**
-- **Type**: `((ctx: ChangelogProviderContext) => string | void)`
-
-A custom provider callback returning the changelog body (TS/JS configs only).
 
 ###### `target`
 
@@ -1037,6 +1023,20 @@ Skip workspaces whose repo-relative directory matches these globs.
 - **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
 
 `default`, `changesets`, a provider id, or a custom provider/callback.
+
+###### `id`
+
+- **Required**
+- **Type**: `string`
+
+The provider id.
+
+###### `run`
+
+- **Required**
+- **Type**: `((ctx: ChangelogProviderContext) => string | void)`
+
+A custom provider callback returning the changelog body (TS/JS configs only).
 
 #### `intro`
 
@@ -1309,7 +1309,7 @@ Glob patterns selecting the workspaces to version (relative to the root). Defaul
 
 #### `prerelease`
 
-- **Type**: `string | ChangelogTargetedPrerelease | Array<ChangelogTargetedPrerelease>`
+- **Type**: `ChangelogTargetedPrerelease | Array<ChangelogTargetedPrerelease | string> | string`
 
 The prerelease tag globally, or per-target via `{ target, options }`.
 
@@ -1346,9 +1346,34 @@ Custom bump rules for major/minor/patch (matchers or callbacks), globally or per
 
 ##### `major`
 
-- **Type**: `ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>`
+- **Type**: `ChangelogTargetedBump | Array<ChangelogTargetedBump | ChangelogBumpRule> | ChangelogBumpRule`
 
 A bump rule globally, or per-target via `{ target, include, exclude, options }`.
+
+###### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+###### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+###### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+###### `options`
+
+- **Required**
+- **Type**: `ChangelogBumpRule`
+
+A bump rule: a matcher/callback or a list of matchers/callbacks.
 
 ###### `breaking`
 
@@ -1392,46 +1417,21 @@ Match this regular expression.
 
 Match this substring.
 
-###### `target`
-
-- **Type**: `string`
-
-A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
-
-###### `include`
-
-- **Type**: `string | Array<string>`
-
-Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
-
-###### `exclude`
-
-- **Type**: `string | Array<string>`
-
-Skip workspaces whose repo-relative directory matches these globs.
-
-###### `options`
-
-- **Required**
-- **Type**: `ChangelogBumpRule`
-
-A bump rule: a matcher/callback or a list of matchers/callbacks.
-
 ##### `minor`
 
-- **Type**: `ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>`
+- **Type**: `ChangelogTargetedBump | Array<ChangelogTargetedBump | ChangelogBumpRule> | ChangelogBumpRule`
 
 A bump rule globally, or per-target via `{ target, include, exclude, options }`.
 
 ##### `patch`
 
-- **Type**: `ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>`
+- **Type**: `ChangelogTargetedBump | Array<ChangelogTargetedBump | ChangelogBumpRule> | ChangelogBumpRule`
 
 A bump rule globally, or per-target via `{ target, include, exclude, options }`.
 
 #### `allowOverBump`
 
-- **Type**: `boolean | ChangelogTargetedAllowOverBump | Array<ChangelogTargetedAllowOverBump>`
+- **Type**: `ChangelogTargetedAllowOverBump | Array<ChangelogTargetedAllowOverBump | boolean> | boolean`
 
 Enable over-bumping globally, or per-target via `{ target, options }`.
 
@@ -1462,9 +1462,34 @@ Apply a bump once per matching change instead of once per run (default false).
 
 #### `commit`
 
-- **Type**: `ChangelogCommitFormatConfig | ChangelogTargetedCommit | Array<ChangelogTargetedCommit>`
+- **Type**: `ChangelogTargetedCommit | Array<ChangelogTargetedCommit | ChangelogCommitFormatConfig> | ChangelogCommitFormatConfig`
 
 Commit formatting globally, or per-target via `{ target, options }`.
+
+##### `target`
+
+- **Type**: `string`
+
+A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
+
+##### `include`
+
+- **Type**: `string | Array<string>`
+
+Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
+
+##### `exclude`
+
+- **Type**: `string | Array<string>`
+
+Skip workspaces whose repo-relative directory matches these globs.
+
+##### `options`
+
+- **Required**
+- **Type**: `ChangelogCommitFormatConfig`
+
+Commit message formatting/credit options (with an optional formatter callback).
 
 ##### `author`
 
@@ -1624,50 +1649,11 @@ The opening marker.
 
 The closing marker.
 
-##### `target`
-
-- **Type**: `string`
-
-A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target.
-
-##### `include`
-
-- **Type**: `string | Array<string>`
-
-Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include).
-
-##### `exclude`
-
-- **Type**: `string | Array<string>`
-
-Skip workspaces whose repo-relative directory matches these globs.
-
-##### `options`
-
-- **Required**
-- **Type**: `ChangelogCommitFormatConfig`
-
-Commit message formatting/credit options (with an optional formatter callback).
-
 #### `provider`
 
-- **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void) | ChangelogTargetedProvider | Array<ChangelogTargetedProvider>`
+- **Type**: `ChangelogTargetedProvider | Array<ChangelogTargetedProvider | string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)> | string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
 
 The provider globally, or per-target via `{ target, options }`.
-
-##### `id`
-
-- **Required**
-- **Type**: `string`
-
-The provider id.
-
-##### `run`
-
-- **Required**
-- **Type**: `((ctx: ChangelogProviderContext) => string | void)`
-
-A custom provider callback returning the changelog body (TS/JS configs only).
 
 ##### `target`
 
@@ -1693,6 +1679,20 @@ Skip workspaces whose repo-relative directory matches these globs.
 - **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
 
 `default`, `changesets`, a provider id, or a custom provider/callback.
+
+##### `id`
+
+- **Required**
+- **Type**: `string`
+
+The provider id.
+
+##### `run`
+
+- **Required**
+- **Type**: `((ctx: ChangelogProviderContext) => string | void)`
+
+A custom provider callback returning the changelog body (TS/JS configs only).
 
 ### `intro`
 

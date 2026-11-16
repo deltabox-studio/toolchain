@@ -1115,18 +1115,27 @@
                 "prerelease": {
                     "anyOf": [
                         {
-                            "type": "string",
-                            "pattern": "^[0-9A-Za-z-]+$",
-                            "description": "Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice."
-                        },
-                        {
                             "$ref": "#/$defs/ChangelogTargetedPrerelease"
                         },
                         {
                             "type": "array",
                             "items": {
-                                "$ref": "#/$defs/ChangelogTargetedPrerelease"
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/$defs/ChangelogTargetedPrerelease"
+                                    },
+                                    {
+                                        "type": "string",
+                                        "pattern": "^[0-9A-Za-z-]+$",
+                                        "description": "Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice."
+                                    }
+                                ]
                             }
+                        },
+                        {
+                            "type": "string",
+                            "pattern": "^[0-9A-Za-z-]+$",
+                            "description": "Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice."
                         }
                     ],
                     "description": "The prerelease tag globally, or per-target via `{ target, options }`."
@@ -1137,16 +1146,23 @@
                         "major": {
                             "anyOf": [
                                 {
-                                    "$ref": "#/$defs/ChangelogBumpRule"
-                                },
-                                {
                                     "$ref": "#/$defs/ChangelogTargetedBump"
                                 },
                                 {
                                     "type": "array",
                                     "items": {
-                                        "$ref": "#/$defs/ChangelogTargetedBump"
+                                        "anyOf": [
+                                            {
+                                                "$ref": "#/$defs/ChangelogTargetedBump"
+                                            },
+                                            {
+                                                "$ref": "#/$defs/ChangelogBumpRule"
+                                            }
+                                        ]
                                     }
+                                },
+                                {
+                                    "$ref": "#/$defs/ChangelogBumpRule"
                                 }
                             ],
                             "description": "A bump rule globally, or per-target via `{ target, include, exclude, options }`."
@@ -1154,16 +1170,23 @@
                         "minor": {
                             "anyOf": [
                                 {
-                                    "$ref": "#/$defs/ChangelogBumpRule"
-                                },
-                                {
                                     "$ref": "#/$defs/ChangelogTargetedBump"
                                 },
                                 {
                                     "type": "array",
                                     "items": {
-                                        "$ref": "#/$defs/ChangelogTargetedBump"
+                                        "anyOf": [
+                                            {
+                                                "$ref": "#/$defs/ChangelogTargetedBump"
+                                            },
+                                            {
+                                                "$ref": "#/$defs/ChangelogBumpRule"
+                                            }
+                                        ]
                                     }
+                                },
+                                {
+                                    "$ref": "#/$defs/ChangelogBumpRule"
                                 }
                             ],
                             "description": "A bump rule globally, or per-target via `{ target, include, exclude, options }`."
@@ -1171,16 +1194,23 @@
                         "patch": {
                             "anyOf": [
                                 {
-                                    "$ref": "#/$defs/ChangelogBumpRule"
-                                },
-                                {
                                     "$ref": "#/$defs/ChangelogTargetedBump"
                                 },
                                 {
                                     "type": "array",
                                     "items": {
-                                        "$ref": "#/$defs/ChangelogTargetedBump"
+                                        "anyOf": [
+                                            {
+                                                "$ref": "#/$defs/ChangelogTargetedBump"
+                                            },
+                                            {
+                                                "$ref": "#/$defs/ChangelogBumpRule"
+                                            }
+                                        ]
                                     }
+                                },
+                                {
+                                    "$ref": "#/$defs/ChangelogBumpRule"
                                 }
                             ],
                             "description": "A bump rule globally, or per-target via `{ target, include, exclude, options }`."
@@ -1192,17 +1222,25 @@
                 "allowOverBump": {
                     "anyOf": [
                         {
-                            "type": "boolean",
-                            "description": "Apply a bump once per matching change instead of once per run (default false)."
-                        },
-                        {
                             "$ref": "#/$defs/ChangelogTargetedAllowOverBump"
                         },
                         {
                             "type": "array",
                             "items": {
-                                "$ref": "#/$defs/ChangelogTargetedAllowOverBump"
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/$defs/ChangelogTargetedAllowOverBump"
+                                    },
+                                    {
+                                        "type": "boolean",
+                                        "description": "Apply a bump once per matching change instead of once per run (default false)."
+                                    }
+                                ]
                             }
+                        },
+                        {
+                            "type": "boolean",
+                            "description": "Apply a bump once per matching change instead of once per run (default false)."
                         }
                     ],
                     "description": "Enable over-bumping globally, or per-target via `{ target, options }`."
@@ -1210,23 +1248,58 @@
                 "commit": {
                     "anyOf": [
                         {
-                            "description": "Commit message formatting/credit options (with an optional formatter callback).",
-                            "$ref": "#/$defs/ChangelogCommitFormatConfig"
-                        },
-                        {
                             "$ref": "#/$defs/ChangelogTargetedCommit"
                         },
                         {
                             "type": "array",
                             "items": {
-                                "$ref": "#/$defs/ChangelogTargetedCommit"
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/$defs/ChangelogTargetedCommit"
+                                    },
+                                    {
+                                        "description": "Commit message formatting/credit options (with an optional formatter callback).",
+                                        "$ref": "#/$defs/ChangelogCommitFormatConfig"
+                                    }
+                                ]
                             }
+                        },
+                        {
+                            "description": "Commit message formatting/credit options (with an optional formatter callback).",
+                            "$ref": "#/$defs/ChangelogCommitFormatConfig"
                         }
                     ],
                     "description": "Commit formatting globally, or per-target via `{ target, options }`."
                 },
                 "provider": {
                     "anyOf": [
+                        {
+                            "$ref": "#/$defs/ChangelogTargetedProvider"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/$defs/ChangelogTargetedProvider"
+                                    },
+                                    {
+                                        "anyOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "$ref": "#/$defs/ChangelogProviderConfig"
+                                            },
+                                            {
+                                                "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
+                                            }
+                                        ],
+                                        "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
+                                    }
+                                ]
+                            }
+                        },
                         {
                             "anyOf": [
                                 {
@@ -1240,15 +1313,6 @@
                                 }
                             ],
                             "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
-                        },
-                        {
-                            "$ref": "#/$defs/ChangelogTargetedProvider"
-                        },
-                        {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/$defs/ChangelogTargetedProvider"
-                            }
                         }
                     ],
                     "description": "The provider globally, or per-target via `{ target, options }`."
@@ -1305,6 +1369,51 @@
                     "type": "string",
                     "pattern": "^[0-9A-Za-z-]+$",
                     "description": "Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice."
+                }
+            },
+            "required": [
+                "options"
+            ],
+            "additionalProperties": false,
+            "description": "The option value plus the targets it applies to."
+        },
+        "ChangelogTargetedBump": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "type": "string",
+                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                },
+                "include": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                },
+                "options": {
+                    "$ref": "#/$defs/ChangelogBumpRule"
                 }
             },
             "required": [
@@ -1394,51 +1503,6 @@
             "additionalProperties": false,
             "description": "A declarative bump matcher."
         },
-        "ChangelogTargetedBump": {
-            "type": "object",
-            "properties": {
-                "target": {
-                    "type": "string",
-                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
-                },
-                "include": {
-                    "anyOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    ],
-                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
-                },
-                "exclude": {
-                    "anyOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    ],
-                    "description": "Skip workspaces whose repo-relative directory matches these globs."
-                },
-                "options": {
-                    "$ref": "#/$defs/ChangelogBumpRule"
-                }
-            },
-            "required": [
-                "options"
-            ],
-            "additionalProperties": false,
-            "description": "The option value plus the targets it applies to."
-        },
         "ChangelogTargetedAllowOverBump": {
             "type": "object",
             "properties": {
@@ -1477,6 +1541,52 @@
                 "options": {
                     "type": "boolean",
                     "description": "Apply a bump once per matching change instead of once per run (default false)."
+                }
+            },
+            "required": [
+                "options"
+            ],
+            "additionalProperties": false,
+            "description": "The option value plus the targets it applies to."
+        },
+        "ChangelogTargetedCommit": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "type": "string",
+                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                },
+                "include": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                },
+                "options": {
+                    "description": "Commit message formatting/credit options (with an optional formatter callback).",
+                    "$ref": "#/$defs/ChangelogCommitFormatConfig"
                 }
             },
             "required": [
@@ -1719,70 +1829,6 @@
             "additionalProperties": false,
             "description": "Commit message formatting/credit options."
         },
-        "ChangelogTargetedCommit": {
-            "type": "object",
-            "properties": {
-                "target": {
-                    "type": "string",
-                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
-                },
-                "include": {
-                    "anyOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    ],
-                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
-                },
-                "exclude": {
-                    "anyOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    ],
-                    "description": "Skip workspaces whose repo-relative directory matches these globs."
-                },
-                "options": {
-                    "description": "Commit message formatting/credit options (with an optional formatter callback).",
-                    "$ref": "#/$defs/ChangelogCommitFormatConfig"
-                }
-            },
-            "required": [
-                "options"
-            ],
-            "additionalProperties": false,
-            "description": "The option value plus the targets it applies to."
-        },
-        "ChangelogProviderConfig": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "string",
-                    "description": "The provider id."
-                },
-                "run": {
-                    "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
-                }
-            },
-            "required": [
-                "id",
-                "run"
-            ],
-            "additionalProperties": false,
-            "description": "A custom changelog provider object."
-        },
         "ChangelogTargetedProvider": {
             "type": "object",
             "properties": {
@@ -1838,6 +1884,24 @@
             ],
             "additionalProperties": false,
             "description": "The option value plus the targets it applies to."
+        },
+        "ChangelogProviderConfig": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "The provider id."
+                },
+                "run": {
+                    "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
+                }
+            },
+            "required": [
+                "id",
+                "run"
+            ],
+            "additionalProperties": false,
+            "description": "A custom changelog provider object."
         },
         "ChangelogVersioning": {
             "anyOf": [

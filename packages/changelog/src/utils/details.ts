@@ -460,14 +460,18 @@ function wrapBody(lines: string[], details: ResolvedDetails): string[] {
     if (start >= end) return lines;
     let inner = lines.slice(start, end).join('\n');
     const count = countCommitEntries(inner);
+    let releaseWrapped = false;
     if (details.releaseNotes.enabled && detailsEnabled(details.releaseNotes, count)) {
         inner = renderDetails(
             details.releaseNotes.title ?? DEFAULT_TITLES.releaseNotes,
             inner,
             details.releaseNotes.expanded === true
         );
+        releaseWrapped = true;
     }
-    if (details.body.enabled && detailsEnabled(details.body, count)) {
+    // Release mode already wraps the entry; a second body wrapper would nest
+    // two identical "Release Notes" summaries.
+    if (!releaseWrapped && details.body.enabled && detailsEnabled(details.body, count)) {
         inner = renderDetails(
             details.body.title ?? DEFAULT_TITLES.releaseNotes,
             inner,

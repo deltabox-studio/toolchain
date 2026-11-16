@@ -550,33 +550,50 @@ export interface ChangelogVersioningConfig {
      */
     workspaces?: Array<string>;
     /** The prerelease tag globally, or per-target via `{ target, options }`. */
-    prerelease?: string | ChangelogTargetedPrerelease | Array<ChangelogTargetedPrerelease>;
+    prerelease?: ChangelogTargetedPrerelease | Array<ChangelogTargetedPrerelease | string> | string;
     /**
      * Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{
      * target, options }`.
      */
     bump?: {
         /** A bump rule globally, or per-target via `{ target, include, exclude, options }`. */
-        major?: ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>;
+        major?:
+            | ChangelogTargetedBump
+            | Array<ChangelogTargetedBump | ChangelogBumpRule>
+            | ChangelogBumpRule;
         /** A bump rule globally, or per-target via `{ target, include, exclude, options }`. */
-        minor?: ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>;
+        minor?:
+            | ChangelogTargetedBump
+            | Array<ChangelogTargetedBump | ChangelogBumpRule>
+            | ChangelogBumpRule;
         /** A bump rule globally, or per-target via `{ target, include, exclude, options }`. */
-        patch?: ChangelogBumpRule | ChangelogTargetedBump | Array<ChangelogTargetedBump>;
+        patch?:
+            | ChangelogTargetedBump
+            | Array<ChangelogTargetedBump | ChangelogBumpRule>
+            | ChangelogBumpRule;
     };
     /** Enable over-bumping globally, or per-target via `{ target, options }`. */
     allowOverBump?:
-        | boolean
         | ChangelogTargetedAllowOverBump
-        | Array<ChangelogTargetedAllowOverBump>;
+        | Array<ChangelogTargetedAllowOverBump | boolean>
+        | boolean;
     /** Commit formatting globally, or per-target via `{ target, options }`. */
-    commit?: ChangelogCommitFormatConfig | ChangelogTargetedCommit | Array<ChangelogTargetedCommit>;
+    commit?:
+        | ChangelogTargetedCommit
+        | Array<ChangelogTargetedCommit | ChangelogCommitFormatConfig>
+        | ChangelogCommitFormatConfig;
     /** The provider globally, or per-target via `{ target, options }`. */
     provider?:
+        | ChangelogTargetedProvider
+        | Array<
+              | ChangelogTargetedProvider
+              | string
+              | ChangelogProviderConfig
+              | ((ctx: ChangelogProviderContext) => string | void)
+          >
         | string
         | ChangelogProviderConfig
-        | ((ctx: ChangelogProviderContext) => string | void)
-        | ChangelogTargetedProvider
-        | Array<ChangelogTargetedProvider>;
+        | ((ctx: ChangelogProviderContext) => string | void);
 }
 
 export type ChangelogVersioningTarget = 'uniform' | 'root-only' | 'individual';
@@ -602,6 +619,27 @@ export interface ChangelogTargetedPrerelease {
      * @required
      */
     options: string;
+}
+
+export interface ChangelogTargetedBump {
+    /**
+     * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
+     * When omitted the entry applies to every target.
+     */
+    target?: string;
+    /**
+     * Only apply to workspaces whose repo-relative directory matches one of these globs
+     * (tsconfig-style include).
+     */
+    include?: string | Array<string>;
+    /** Skip workspaces whose repo-relative directory matches these globs. */
+    exclude?: string | Array<string>;
+    /**
+     * A bump rule: a matcher/callback or a list of matchers/callbacks.
+     *
+     * @required
+     */
+    options: ChangelogBumpRule;
 }
 
 export type ChangelogBumpRule =
@@ -633,27 +671,6 @@ export interface ChangelogBumpRuleMatch {
     match?: string;
 }
 
-export interface ChangelogTargetedBump {
-    /**
-     * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
-     * When omitted the entry applies to every target.
-     */
-    target?: string;
-    /**
-     * Only apply to workspaces whose repo-relative directory matches one of these globs
-     * (tsconfig-style include).
-     */
-    include?: string | Array<string>;
-    /** Skip workspaces whose repo-relative directory matches these globs. */
-    exclude?: string | Array<string>;
-    /**
-     * A bump rule: a matcher/callback or a list of matchers/callbacks.
-     *
-     * @required
-     */
-    options: ChangelogBumpRule;
-}
-
 export interface ChangelogTargetedAllowOverBump {
     /**
      * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
@@ -673,6 +690,27 @@ export interface ChangelogTargetedAllowOverBump {
      * @required
      */
     options: boolean;
+}
+
+export interface ChangelogTargetedCommit {
+    /**
+     * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
+     * When omitted the entry applies to every target.
+     */
+    target?: string;
+    /**
+     * Only apply to workspaces whose repo-relative directory matches one of these globs
+     * (tsconfig-style include).
+     */
+    include?: string | Array<string>;
+    /** Skip workspaces whose repo-relative directory matches these globs. */
+    exclude?: string | Array<string>;
+    /**
+     * Commit message formatting/credit options (with an optional formatter callback).
+     *
+     * @required
+     */
+    options: ChangelogCommitFormatConfig;
 }
 
 export type ChangelogDetailsConfig =
@@ -730,42 +768,6 @@ export interface ChangelogCommitFormatConfig {
     details?: ChangelogDetailsConfig;
 }
 
-export interface ChangelogTargetedCommit {
-    /**
-     * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
-     * When omitted the entry applies to every target.
-     */
-    target?: string;
-    /**
-     * Only apply to workspaces whose repo-relative directory matches one of these globs
-     * (tsconfig-style include).
-     */
-    include?: string | Array<string>;
-    /** Skip workspaces whose repo-relative directory matches these globs. */
-    exclude?: string | Array<string>;
-    /**
-     * Commit message formatting/credit options (with an optional formatter callback).
-     *
-     * @required
-     */
-    options: ChangelogCommitFormatConfig;
-}
-
-export interface ChangelogProviderConfig {
-    /**
-     * The provider id.
-     *
-     * @required
-     */
-    id: string;
-    /**
-     * A custom provider callback returning the changelog body (TS/JS configs only).
-     *
-     * @required
-     */
-    run: (ctx: ChangelogProviderContext) => string | void;
-}
-
 export interface ChangelogTargetedProvider {
     /**
      * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
@@ -785,6 +787,21 @@ export interface ChangelogTargetedProvider {
      * @required
      */
     options: string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void);
+}
+
+export interface ChangelogProviderConfig {
+    /**
+     * The provider id.
+     *
+     * @required
+     */
+    id: string;
+    /**
+     * A custom provider callback returning the changelog body (TS/JS configs only).
+     *
+     * @required
+     */
+    run: (ctx: ChangelogProviderContext) => string | void;
 }
 
 export type ChangelogVersioning = boolean | ChangelogVersioningConfig;

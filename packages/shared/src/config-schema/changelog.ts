@@ -112,7 +112,12 @@ function changelogTargetedOption<T extends z.ZodTypeAny>(base: T, id: string) {
         })
         .describe('The option value plus the targets it applies to.')
         .meta({ id });
-    return z.union([base, scoped, z.array(scoped)]);
+    // The scoped form comes first: the base may be an all-optional object
+    // (bump matchers / commit formatting), which would otherwise match
+    // `{ target, options }` first and strip the two scoped keys. Arrays keep
+    // the same per-entry order so a mixed `['feat', { target, options }]`
+    // preserves the scoped entry instead of falling into the base array branch.
+    return z.union([scoped, z.array(z.union([scoped, base])), base]);
 }
 
 /** commitlint output location plus the Conventional-Commits allow-lists. */

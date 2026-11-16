@@ -425,3 +425,19 @@ describe('details minCommits', () => {
         expect(two).toContain('<summary><strong>Release Notes</strong></summary>');
     });
 });
+
+describe('release mode with an explicit body', () => {
+    it('does not nest two identical Release Notes summaries', () => {
+        const entry = [
+            '## 1.0.0',
+            '',
+            ...Array.from({ length: 10 }, (_, index) => `- thing ${index}`),
+        ].join('\n');
+        const out = applyDetailsToEntry(
+            entry,
+            resolveDetails({ body: { minCommits: 0 }, releaseNotes: { minCommits: 0 } }, true)
+        );
+        expect(out.match(/<summary><strong>Release Notes<\/strong><\/summary>/g)).toHaveLength(1);
+        expect(out.match(/<details>/g)).toHaveLength(1);
+    });
+});

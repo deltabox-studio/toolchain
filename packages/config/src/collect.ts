@@ -202,10 +202,14 @@ function validateCollected(defs: ConfigDef[], options: CollectOptions): void {
     const triggers = new Set<CollectTrigger>(
         options.errorOptions?.triggers ?? ['missing-required', 'empty-value']
     );
-    const tree = parseEnvTree(options.envSource ?? {}, options.envPrefix ?? DEFAULT_ENV_PREFIX);
+    const source = options.envSource ?? {};
+    const tree = parseEnvTree(source, options.envPrefix ?? DEFAULT_ENV_PREFIX);
     for (const def of defs) {
         if (!def.name) continue;
-        const value = readEnvPath(tree, def.meta?.envPath ?? def.meta?.path ?? def.path);
+        // The env var name is authoritative; the dotted path only shapes the
+        // config object and need not match the env name's segments.
+        const value =
+            source[def.name] !== undefined ? source[def.name] : readEnvPath(tree, pathOf(def));
         if (value === undefined && def.required && triggers.has('missing-required')) {
             report(`Missing required config \`${def.path}\` (${def.name}).`, def, options);
         }
@@ -228,20 +232,23 @@ export function collect(schema: ConfigSchema, options: CollectOptions = {}): Con
     for (const [scopeName, scopeSchema] of Object.entries(scopes)) {
         const before = out.length;
         walkSchema(scopeSchema, out, scopeName, envPrefix, options);
+        // Two leaves in the same schema scope may declare the same env name;
+        // keep the first. Different scopes keep sharing the env var name even
+        // when their `meta.scope` label is identical.
+        const additions = out.splice(before);
+        const seen = new Set<string>();
+        for (const def of additions) {
+            if (def.name) {
+                if (seen.has(def.name)) continue;
+                seen.add(def.name);
+            }
+            out.push(def);
+        }
         for (let i = before; i < out.length; i++) {
             if (!out[i]!.scope || out[i]!.scope === 'default') out[i]!.scope = scopeName;
         }
     }
-    // Two leaves may declare the same env name; keep the first so generated
-    // interfaces/env files do not contain duplicate members.
-    const seen = new Set<string>();
-    const unique = out.filter(def => {
-        if (!def.name) return true;
-        if (seen.has(def.name)) return false;
-        seen.add(def.name);
-        return true;
-    });
-    const filtered = options.filter === undefined ? unique : unique.filter(options.filter);
+    const filtered = options.filter === undefined ? out : out.filter(options.filter);
     validateCollected(filtered, options);
     return filtered;
 }
