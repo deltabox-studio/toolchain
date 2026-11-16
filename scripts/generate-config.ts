@@ -20,7 +20,7 @@ import { configSchema, dbxConfigSchema, logger } from '@deltabox/toolchain/share
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const engine = createConfigEngine({ schema: configSchema });
 
-const markdown = engine.generateConfigMarkdown({
+const markdown = engine.markdown.generate({
     combined: true,
     title: 'dbx.config',
     intro: [
@@ -57,7 +57,7 @@ const example = [
 ].join('\n');
 const markdownIndex = markdown;
 if (!markdownIndex) {
-    throw new Error('generateConfigMarkdown did not produce an index.md entry.');
+    throw new Error('markdown.generate did not produce an index.md entry.');
 }
 fs.writeFileSync(docsPath, `${markdownIndex.trimEnd()}\n${example}`, 'utf-8');
 

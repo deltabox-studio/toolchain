@@ -3,6 +3,34 @@ import type { ConfigMeta } from './meta.js';
 /** The value type a config value resolves to. */
 export type ConfigValueType = 'string' | 'number' | 'boolean' | 'array' | 'object';
 
+/** Every value kind config validation can address. */
+export type ConfigValueKind =
+    | 'boolean'
+    | 'number'
+    | 'string'
+    | 'array'
+    | 'object'
+    | 'enum'
+    | 'union'
+    | 'tuple'
+    | 'record'
+    | 'map'
+    | 'set'
+    | 'date'
+    | 'bigint'
+    | 'symbol'
+    | 'null'
+    | 'undefined'
+    | 'void'
+    | 'never'
+    | 'any'
+    | 'unknown'
+    | 'literal'
+    | 'promise'
+    | 'function'
+    | 'file'
+    | 'custom';
+
 /** A collected config definition (env/cli metadata is optional). */
 export interface ConfigDef {
     /** The env var name, when the value is env-backed. */
@@ -18,6 +46,8 @@ export interface ConfigDef {
     public?: boolean;
     scope: string;
     type?: ConfigValueType;
+    /** The schema value kind (used by the error filters). */
+    kind?: ConfigValueKind;
     /** The raw config metadata attached to the schema leaf. */
     meta?: ConfigMeta;
 }

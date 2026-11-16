@@ -1,5 +1,26 @@
+import type { ZodType } from 'zod';
+
 import type { ConfigGroup } from './definition.js';
 import type { ConfigSchema } from './schema.js';
+
+/**
+ * The scope names a schema exposes as statically known keys.
+ *
+ * A scope map (`{ server, cli }`) yields its own keys; a single Zod schema, an
+ * array of schemas or an untyped schema yields `string` because its scopes are
+ * resolved at runtime.
+ */
+export type ConfigScopeKeys<TSchema> = TSchema extends ZodType
+    ? string
+    : TSchema extends readonly unknown[]
+      ? string
+      : TSchema extends Record<string, unknown>
+        ? 'type' extends keyof TSchema
+            ? string
+            : 'properties' extends keyof TSchema
+              ? string
+              : Extract<keyof TSchema, string>
+        : string;
 
 /**
  * Flatten the schema by `n` levels.
@@ -19,9 +40,9 @@ export type ConfigEngineFlatten =
     | { maxDepth: number; level?: never };
 
 /** Options shared by every generator. */
-export interface ConfigEngineOptions {
+export interface ConfigEngineOptions<TSchema extends ConfigSchema = ConfigSchema> {
     /** The scopes to walk, keyed by scope name (eg. `{ server, frontend, cli }`). */
-    schema: ConfigSchema;
+    schema: TSchema;
     /** The env-var prefix (eg. `MYAPP_`). Kept as a replacement token in code. */
     envPrefix?: string;
     /**

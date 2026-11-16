@@ -9,7 +9,7 @@ import { type ParseArgsOptionsConfig, parseArgs } from 'node:util';
 
 import { formatCliFlag } from '@deltabox/toolchain/shared';
 
-import { type CollectOptions, collect, DEFAULT_ENV_PREFIX } from '../collect.js';
+import { type CollectOptions, collectDefinitions, DEFAULT_ENV_PREFIX } from '../collect.js';
 import type { ConfigSchema } from '../types/index.js';
 
 /** Flag-shaping options shared by every CLI helper. */
@@ -77,7 +77,7 @@ export function generateCliOptions(
 ): CliOptionDef[] {
     const scope = options.scope ?? 'cli';
     const defs: CliOptionDef[] = [];
-    for (const def of collect(schema, {
+    for (const def of collectDefinitions(schema, {
         envPrefix: options.envPrefix,
         envPathOf: options.envPathOf,
     }).filter(v => v.scope === scope && (v.name || v.cliFlag))) {

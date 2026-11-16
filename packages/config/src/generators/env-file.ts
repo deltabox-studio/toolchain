@@ -2,7 +2,7 @@
  * `.env` file generation from the collected config vars.
  */
 
-import { type CollectOptions, collect, DEFAULT_ENV_PREFIX } from '../collect.js';
+import { type CollectOptions, collectDefinitions, DEFAULT_ENV_PREFIX } from '../collect.js';
 import type { ConfigDef, ConfigSchema } from '../types/index.js';
 
 export interface EnvFileOptions {
@@ -44,7 +44,7 @@ function formatDefaultValue(def: ConfigDef): string {
 export function generateEnvFile(schema: ConfigSchema, options: EnvFileOptions = {}): string {
     const envPrefix = options.envPrefix ?? DEFAULT_ENV_PREFIX;
     const sep = options.scopeSeparator ?? '----';
-    const vars = collect(schema, { envPrefix, envPathOf: options.envPathOf }).filter(
+    const vars = collectDefinitions(schema, { envPrefix, envPathOf: options.envPathOf }).filter(
         def => def.name !== undefined
     );
     const scopeNames = options.scopes ?? [...new Set(vars.map(def => def.scope))];

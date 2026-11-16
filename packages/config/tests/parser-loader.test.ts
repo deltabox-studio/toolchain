@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { configCommands } from '../src/cli/index.js';
 import {
     collect,
+    collectDefinitions,
     ConfigParseError,
     createConfigFile,
     loadConfig,
@@ -59,22 +60,22 @@ afterEach(() => {
 
 describe('collect options', () => {
     it('limits the walk with maxDepth', () => {
-        const defs = collect(envSchema, { envPrefix: 'APP_', maxDepth: 2 });
+        const defs = collectDefinitions(envSchema, { envPrefix: 'APP_', maxDepth: 2 });
         expect(defs.map(def => def.name)).toEqual([
             'APP_HOST',
             'APP_PORT',
             'APP_DEBUG',
             'APP_TAGS',
         ]);
-        expect(collect(envSchema, { envPrefix: 'APP_', maxDepth: 1 }).map(def => def.name)).toEqual(
-            []
-        );
+        expect(
+            collectDefinitions(envSchema, { envPrefix: 'APP_', maxDepth: 1 }).map(def => def.name)
+        ).toEqual([]);
     });
 
     it('filters by glob and predicate', () => {
-        const glob = collect(envSchema, { envPrefix: 'APP_', include: 'base.host' });
+        const glob = collectDefinitions(envSchema, { envPrefix: 'APP_', include: 'base.host' });
         expect(glob.map(def => def.name)).toEqual(['APP_HOST']);
-        const predicate = collect(envSchema, {
+        const predicate = collectDefinitions(envSchema, {
             envPrefix: 'APP_',
             exclude: def => def.path.endsWith('tags'),
         });
@@ -87,19 +88,10 @@ describe('collect options', () => {
                 token: z.string().meta({ envName: 'APP_TOKEN', required: true }),
             }),
         });
+        expect(collectDefinitions(named).map(def => def.name)).toEqual(['APP_TOKEN']);
         expect(
-            collect(named, {
-                envSource: { APP_TOKEN: 'x' },
-                validate: true,
-                errorOptions: { level: 'throw' },
-            }).map(def => def.name)
-        ).toEqual(['APP_TOKEN']);
-        expect(
-            collect(named, {
+            collectDefinitions(named, {
                 envPrefix: null,
-                envSource: { APP_TOKEN: 'x' },
-                validate: true,
-                errorOptions: { level: 'throw' },
             }).map(def => def.name)
         ).toEqual(['APP_TOKEN']);
     });
@@ -113,9 +105,9 @@ describe('collect options', () => {
                 envPrefix: 'APP_',
                 envSource: {},
                 validate: true,
-                errorOptions: { level: 'throw', triggers: ['missing-required'] },
+                errorOptions: { errorLevel: 'throw' },
             })
-        ).toThrow(/Missing required config/);
+        ).toThrow(ConfigParseError);
     });
 });
 
@@ -168,7 +160,7 @@ describe('parseEnvConfig', () => {
                 { APP_TOKEN: 'x' },
                 {
                     validate: true,
-                    errorOptions: { level: 'throw' },
+                    errorOptions: { errorLevel: 'throw' },
                 }
             )
         ).toEqual({ base: { token: 'x' } });
@@ -388,13 +380,19 @@ describe('bug regressions', () => {
         const typeDirs: string[] = [];
         const engine = {
             root: cwd,
-            writeConfigTypes: ({ outputDir }: { outputDir: string }) => {
-                typeDirs.push(outputDir);
-                return [];
+            types: {
+                write: ({ outputDir }: { outputDir: string }) => {
+                    typeDirs.push(outputDir);
+                    return [];
+                },
             },
-            writeEnvTypes: ({ outputDir }: { outputDir: string }) => {
-                typeDirs.push(outputDir);
-                return [];
+            env: {
+                types: {
+                    write: ({ outputDir }: { outputDir: string }) => {
+                        typeDirs.push(outputDir);
+                        return [];
+                    },
+                },
             },
         };
         const command = configCommands({ engine: engine as never }).find(
@@ -409,19 +407,25 @@ describe('bug regressions', () => {
         const typeDirs: string[] = [];
         const engine = {
             root: cwd,
-            writeEnvFile: ({ output }: { output: string }) => output,
-            writeConfigTypes: ({ outputDir }: { outputDir: string }) => {
-                typeDirs.push(outputDir);
-                return [];
+            env: {
+                write: ({ output }: { output: string }) => output,
+                types: {
+                    write: ({ outputDir }: { outputDir: string }) => {
+                        typeDirs.push(outputDir);
+                        return [];
+                    },
+                },
             },
-            writeEnvTypes: ({ outputDir }: { outputDir: string }) => {
-                typeDirs.push(outputDir);
-                return [];
+            types: {
+                write: ({ outputDir }: { outputDir: string }) => {
+                    typeDirs.push(outputDir);
+                    return [];
+                },
             },
-            writeMarkdown: () => [],
-            writeJsonSchema: async ({ output }: { output: string }) => output,
-            buildConfigJson: () => ({ env: [] }),
-            generateCliOptions: () => [],
+            markdown: { write: () => [] },
+            jsonSchema: { write: async ({ output }: { output: string }) => output },
+            configJson: { build: () => ({ env: [] }) },
+            cli: { write: ({ output }: { output: string }) => output },
         };
         const all = configCommands({ engine: engine as never }).find(
             command => command.name === 'config:all'
@@ -468,7 +472,7 @@ describe('session 9 hunt 2 regressions', () => {
             server: z.object({ port: z.number().meta({ envName: 'APP_PORT', scope: 'same' }) }),
             client: z.object({ port: z.number().meta({ envName: 'APP_PORT', scope: 'same' }) }),
         };
-        expect(collect(sameMeta).map(def => def.name)).toEqual(['APP_PORT', 'APP_PORT']);
+        expect(collectDefinitions(sameMeta).map(def => def.name)).toEqual(['APP_PORT', 'APP_PORT']);
 
         expect(
             parseEnvConfig(

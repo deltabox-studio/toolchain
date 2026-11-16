@@ -7,15 +7,15 @@ is the living example: its types are committed at
 For the engine/standalone call forms and the full option list per generator, see
 [Generate](/guide/config-generator/generate).
 
-## Config types — `generateConfigTypes()` / `writeConfigTypes()`
+## Config types — `engine.types` / `generateConfigTypes()`
 
 Named `interface`s (and `type` aliases for enums/unions) with jsdoc taken from
 `.describe()`. Unions and refs stay named, so nested objects are referenced
 rather than inlined:
 
 ```ts
-// engine.generateConfigTypes() -> { server: "...", cli: "..." }
-engine.writeConfigTypes({ outputDir: 'types' }); // types/server.ts, types/cli.ts
+// engine.types.generate() -> { server: "...", cli: "..." }
+engine.types.write({ outputDir: 'types' }); // types/server.ts, types/cli.ts
 ```
 
 ```ts
@@ -41,12 +41,12 @@ export interface ServerConfig {
 }
 ```
 
-## Markdown — `writeMarkdown()`
+## Markdown — `engine.markdown` / `generateConfigMarkdown()`
 
 One reference page per scope plus an index listing the required/core env vars:
 
 ```ts
-engine.writeMarkdown({ outputDir: 'docs/reference/configuration' });
+engine.markdown.write({ outputDir: 'docs/reference/configuration' });
 // docs/reference/configuration/server.md, .../index.md
 ```
 
@@ -67,24 +67,24 @@ scope. `generateConfigTypes`, `generateConfigMarkdown` and `generateConfigEnv`
 return file contents and only write when `outputDir`/`output` is a string;
 `false` explicitly disables writing.
 
-## Env — `renderEnvFile()` / `writeEnvFile()`
+## Env — `engine.env` / `generateEnvFile()`
 
 A `.env.example`; secrets are emitted commented out so operators fill them in:
 
 ```sh
-engine.writeEnvFile({ output: '.env.example' });
+engine.env.write({ output: '.env.example' });
 
 # ---- SERVER ----
 MYAPP_HOST=localhost
 # MYAPP_AUTH_PASSWORD=
 ```
 
-## JSON Schema — `generateJsonSchema()` / `writeJsonSchema()`
+## JSON Schema — `engine.jsonSchema` / `generateConfigJsonSchema()`
 
 The resolved untyped JSON Schema for every scope, for editor autocomplete:
 
 ```ts
-await engine.writeJsonSchema({ output: 'config.schema.json' });
+await engine.jsonSchema.write({ output: 'config.schema.json' });
 ```
 
 ## CLI docs — `generateCliDocs()`

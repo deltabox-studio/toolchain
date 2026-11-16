@@ -141,9 +141,9 @@ export const engine = createConfigEngine({
     root: process.cwd(),
 });
 
-await engine.writeJsonSchema({ output: 'config.schema.json' });
-engine.writeEnvFile({ output: '.env.example' });
-engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
+await engine.jsonSchema.write({ output: 'config.schema.json' });
+engine.env.write({ output: '.env.example' });
+engine.markdown.write({ outputDir: 'docs/reference/configuration' });
 ```
 
 It also generates the TypeScript types — named interfaces with jsdoc from
@@ -151,7 +151,7 @@ It also generates the TypeScript types — named interfaces with jsdoc from
 inlined:
 
 ```ts
-engine.writeConfigTypes({ outputDir: 'types' });
+engine.types.write({ outputDir: 'types' });
 ```
 
 ```ts

@@ -9,7 +9,7 @@ import type { Schema } from 'untyped';
 
 import { sanitizeText, titleCase } from '@deltabox/toolchain/shared';
 
-import { type CollectOptions, collect, DEFAULT_ENV_PREFIX } from '../collect.js';
+import { type CollectOptions, collectDefinitions, DEFAULT_ENV_PREFIX } from '../collect.js';
 import {
     isSchemaType,
     isZodSchema,
@@ -385,7 +385,7 @@ function renderConfigIndex(schema: ConfigSchema, options: RenderMarkdownOptions 
     for (const [scopeName, scopeSchema] of Object.entries(scopes)) {
         collectSchemaEnvVars(splitBaseSchema(scopeSchema, baseGroup).base, scopeName, core);
     }
-    for (const def of collect(schema, {
+    for (const def of collectDefinitions(schema, {
         envPrefix: options.envPrefix,
         envPathOf: options.envPathOf,
     })) {

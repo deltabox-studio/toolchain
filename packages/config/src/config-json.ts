@@ -3,7 +3,7 @@
  * tooling to list every available configuration variable.
  */
 
-import { type CollectOptions, collect } from './collect.js';
+import { type CollectOptions, collectDefinitions } from './collect.js';
 import type { ConfigSchema } from './types/index.js';
 
 /** A serialized env var entry in `config.json`. */
@@ -39,7 +39,7 @@ export function buildConfigJson(
     schema: ConfigSchema,
     options: BuildConfigJsonOptions = {}
 ): ConfigJsonDoc {
-    const vars = collect(schema, {
+    const vars = collectDefinitions(schema, {
         envPrefix: options.envPrefix,
         envPathOf: options.envPathOf,
     }).filter(def => def.name);

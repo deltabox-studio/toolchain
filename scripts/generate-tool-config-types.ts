@@ -65,7 +65,7 @@ for (const spec of specs) {
     const sanitized = sanitizeJsonSchema(raw) as Parameters<typeof z.fromJSONSchema>[0];
     const schema = z.fromJSONSchema(sanitized).meta({ id: spec.id });
     const engine = createConfigEngine({ schema });
-    const types = engine.generateConfigTypes();
+    const types = engine.types.generate();
     const generated = types[spec.id];
     if (!generated) throw new Error(`${spec.schema} did not generate a ${spec.id} type.`);
     const helpers = Object.entries(types)

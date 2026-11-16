@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { collect, generateCliDocs } from '@deltabox/toolchain/config';
+import { collectDefinitions, generateCliDocs } from '@deltabox/toolchain/config';
 import { toolchainConfigSchema } from '@deltabox/toolchain/shared';
 
 import { builtinCommands } from '../src/cli/index.js';
@@ -30,9 +30,10 @@ function esc(value: string): string {
 }
 
 function renderEnv(): string {
-    const vars = collect({ toolchain: toolchainConfigSchema }, { envPrefix: 'DBX_' }).filter(
-        variable => variable.name
-    );
+    const vars = collectDefinitions(
+        { toolchain: toolchainConfigSchema },
+        { envPrefix: 'DBX_' }
+    ).filter(variable => variable.name);
     const lines = [
         '---',
         'title: Environment variables',
