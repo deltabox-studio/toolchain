@@ -89,8 +89,9 @@
                     "description": "Node version for CI/templates, eg. `22` (not `package.json` `engines`)."
                 },
                 "packageManager": {
+                    "default": "yarn",
                     "type": "string",
-                    "description": "Package manager name, written as `<name>@<version>` (default `yarn`)."
+                    "description": "Package manager name, written as `<name>@<version>`."
                 },
                 "packageManagerVersion": {
                     "type": "string",
@@ -101,12 +102,14 @@
                     "description": "One-line description (`package.json` `description`)."
                 },
                 "inherit": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Inherit the parent project metadata (default true). Set false to keep this project metadata independent of the root config (other sections still merge normally)."
+                    "description": "Inherit the parent project metadata. Set false to keep this project metadata independent of the root config (other sections still merge normally)."
                 },
                 "manageConfigless": {
+                    "default": false,
                     "type": "boolean",
-                    "description": "Manage projects that have no dbx.config.* of their own by inheriting the nearest ancestor config (default false). Disabled by default so configless projects are never touched unless explicitly opted in."
+                    "description": "Manage projects that have no dbx.config.* of their own by inheriting the nearest ancestor config. Disabled by default so configless projects are never touched unless explicitly opted in."
                 }
             },
             "additionalProperties": false,
@@ -345,12 +348,14 @@
                     "description": "Override the generated workflow file name (eg. `deploy.yml`)."
                 },
                 "dir": {
+                    "default": ".github/workflows",
                     "type": "string",
-                    "description": "Directory for the workflow file (default `.github/workflows`)."
+                    "description": "Directory for the workflow file."
                 },
                 "setup": {
+                    "default": false,
                     "type": "boolean",
-                    "description": "Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false; built-in workflows already include them)."
+                    "description": "Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs; built-in workflows already include them."
                 },
                 "enabled": {
                     "description": "Enable/disable this workflow (default: enabled when present).",
@@ -907,12 +912,14 @@
                     "description": "Override the generated workflow file name (eg. `deploy.yml`)."
                 },
                 "dir": {
+                    "default": ".github/workflows",
                     "type": "string",
-                    "description": "Directory for the workflow file (default `.github/workflows`)."
+                    "description": "Directory for the workflow file."
                 },
                 "setup": {
+                    "default": false,
                     "type": "boolean",
-                    "description": "Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false; built-in workflows already include them)."
+                    "description": "Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs; built-in workflows already include them."
                 },
                 "enabled": {
                     "description": "Enable/disable the changelog workflow and pipeline (default: enabled when present).",
@@ -949,8 +956,9 @@
                     "$ref": "#/$defs/ChangelogTextSetting"
                 },
                 "vscode": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Write the Conventional-Commits VS Code settings (default true)."
+                    "description": "Write the Conventional-Commits VS Code settings."
                 },
                 "groups": {
                     "anyOf": [
@@ -1102,7 +1110,8 @@
             "type": "object",
             "properties": {
                 "target": {
-                    "description": "`uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently (default `uniform`).",
+                    "default": "uniform",
+                    "description": "`uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently.",
                     "$ref": "#/$defs/ChangelogVersioningTarget"
                 },
                 "workspaces": {
@@ -1604,8 +1613,9 @@
                     "type": "object",
                     "properties": {
                         "enabled": {
+                            "default": true,
                             "type": "boolean",
-                            "description": "Enable/disable details wrapping (default true)."
+                            "description": "Enable/disable details wrapping."
                         },
                         "lifecycle": {
                             "default": "after",
@@ -1804,20 +1814,24 @@
             "type": "object",
             "properties": {
                 "author": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Include the `by <author>` credit (default true)."
+                    "description": "Include the `by <author>` credit."
                 },
                 "commitSha": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Include the commit hash link (default true)."
+                    "description": "Include the commit hash link."
                 },
                 "issues": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Include issue/fixes links (default true)."
+                    "description": "Include issue/fixes links."
                 },
                 "authorAvatar": {
+                    "default": false,
                     "type": "boolean",
-                    "description": "Prefix the author with their GitHub avatar (default false)."
+                    "description": "Prefix the author with their GitHub avatar."
                 },
                 "format": {
                     "description": "Fully custom commit line formatter (TS/JS configs only; return the bullet body)."
@@ -1929,8 +1943,9 @@
             "type": "object",
             "properties": {
                 "enabled": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Set false to skip this entry (default true)."
+                    "description": "Set false to skip this entry."
                 },
                 "target": {
                     "type": "string",
@@ -1982,8 +1997,9 @@
             "type": "object",
             "properties": {
                 "enabled": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Set false to skip this entry (default true)."
+                    "description": "Set false to skip this entry."
                 },
                 "target": {
                     "type": "string",
@@ -2169,11 +2185,14 @@
                         "type": "object",
                         "properties": {
                             "patterns": {
+                                "default": [
+                                    "*"
+                                ],
                                 "type": "array",
                                 "items": {
                                     "type": "string"
                                 },
-                                "description": "Package name patterns (default `[\"*\"]`)."
+                                "description": "Package name patterns."
                             },
                             "exclude-patterns": {
                                 "type": "array",
@@ -2195,12 +2214,14 @@
                     "description": "Dependabot update groups, keyed by group name."
                 },
                 "filename": {
+                    "default": "dependabot.yml",
                     "type": "string",
-                    "description": "Override the generated file name (default `dependabot.yml`)."
+                    "description": "Override the generated file name."
                 },
                 "dir": {
+                    "default": ".github",
                     "type": "string",
-                    "description": "Directory for the config (default `.github`)."
+                    "description": "Directory for the config."
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
@@ -2262,8 +2283,9 @@
                     "$ref": "#/$defs/ChangelogTextSetting"
                 },
                 "vscode": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Write the Conventional-Commits VS Code settings (default true)."
+                    "description": "Write the Conventional-Commits VS Code settings."
                 },
                 "groups": {
                     "anyOf": [
@@ -2355,6 +2377,7 @@
             "type": "object",
             "properties": {
                 "vscode": {
+                    "default": false,
                     "anyOf": [
                         {
                             "type": "boolean"
@@ -2363,7 +2386,7 @@
                             "$ref": "#/$defs/ToolchainVscodeSettings"
                         }
                     ],
-                    "description": "Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false; existing keys are kept)."
+                    "description": "Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (existing keys are kept)."
                 },
                 "oxc": {
                     "anyOf": [
@@ -2460,6 +2483,7 @@
             "type": "object",
             "properties": {
                 "vscode": {
+                    "default": false,
                     "anyOf": [
                         {
                             "type": "boolean"
@@ -2468,7 +2492,7 @@
                             "$ref": "#/$defs/ToolchainVscodeSettings"
                         }
                     ],
-                    "description": "Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false; existing keys are kept)."
+                    "description": "Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (existing keys are kept)."
                 },
                 "oxc": {
                     "anyOf": [
@@ -2531,8 +2555,9 @@
             "type": "object",
             "properties": {
                 "vscode": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Write the Biome VS Code settings (default true)."
+                    "description": "Write the Biome VS Code settings."
                 },
                 "overrides": {
                     "type": "object",
@@ -2587,20 +2612,24 @@
                     "description": "Glob(s) to exclude from `glob`. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...)."
                 },
                 "gitignore": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Also respect `.gitignore` files (root + nested) when matching `glob` (default true)."
+                    "description": "Also respect `.gitignore` files (root + nested) when matching `glob`."
                 },
                 "refs": {
+                    "default": false,
                     "type": "boolean",
-                    "description": "Wire project references (default false)."
+                    "description": "Wire project references."
                 },
                 "composite": {
+                    "default": false,
                     "type": "boolean",
-                    "description": "Emit `composite: true` (default false)."
+                    "description": "Emit `composite: true`."
                 },
                 "aliases": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Inject path aliases (default true)."
+                    "description": "Inject path aliases."
                 },
                 "auto": {
                     "anyOf": [
@@ -2640,24 +2669,29 @@
                     "description": "Source directory used to resolve workspace entry points when `package.json` does not declare `exports`/`main`/`types` (default: the workspace's final tsconfig `rootDir`/`baseUrl`, falling back to `src`)."
                 },
                 "indent": {
+                    "default": 4,
                     "type": "number",
-                    "description": "JSON indentation (default 4)."
+                    "description": "JSON indentation."
                 },
                 "rootFile": {
+                    "default": "tsconfig.workspaces.json",
                     "type": "string",
-                    "description": "The workspaces tsconfig file name that holds `paths` + `references` (default `tsconfig.workspaces.json`)."
+                    "description": "The workspaces tsconfig file name that holds `paths` + `references`."
                 },
                 "defaultFile": {
+                    "default": "tsconfig.default.json",
                     "type": "string",
-                    "description": "The workspace default tsconfig file name that the generator expands (default `tsconfig.default.json`)."
+                    "description": "The workspace default tsconfig file name that the generator expands."
                 },
                 "buildFile": {
+                    "default": "tsconfig.build.json",
                     "type": "string",
-                    "description": "The workspace build tsconfig file name (default `tsconfig.build.json`)."
+                    "description": "The workspace build tsconfig file name."
                 },
                 "baseFile": {
+                    "default": "tsconfig.base.json",
                     "type": "string",
-                    "description": "The root base tsconfig file name (default `tsconfig.base.json`)."
+                    "description": "The root base tsconfig file name."
                 },
                 "extends": {
                     "type": "object",
@@ -2832,8 +2866,9 @@
                     "description": "Prefix for generated aliases instead of the package scope (eg. `@` produces `@/<package>` and `@/<package>/<subpath>`)."
                 },
                 "devMode": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Resolve generated aliases to source files (default true). Set false to point at the distributed files instead."
+                    "description": "Resolve generated aliases to source files. Set false to point at the distributed files instead."
                 },
                 "dist": {
                     "type": "string",
@@ -3112,19 +3147,21 @@
             "type": "object",
             "properties": {
                 "config": {
-                    "description": "Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or an absolute path inside it).",
+                    "default": true,
+                    "description": "Write the managed Vite config. A string sets its file name/path (relative to the project, or an absolute path inside it).",
                     "type": [
                         "boolean",
                         "string"
                     ]
                 },
                 "shim": {
+                    "default": "runtime",
                     "type": "string",
                     "enum": [
                         "runtime",
                         "static"
                     ],
-                    "description": "How the generated `vite.config.ts` is rendered. `runtime` (default) loads the config from `dbx.config.*`; `static` serializes it into the file so the shim does not import `@deltabox/toolchain` (it then needs no built `dist`)."
+                    "description": "How the generated `vite.config.ts` is rendered. `runtime` loads the config from `dbx.config.*`; `static` serializes it into the file so the shim does not import `@deltabox/toolchain` (it then needs no built `dist`)."
                 },
                 "shimImport": {
                     "type": "string",
@@ -3176,8 +3213,9 @@
             "type": "object",
             "properties": {
                 "debounce": {
+                    "default": 150,
                     "type": "number",
-                    "description": "Debounce window in ms (default 150)."
+                    "description": "Debounce window in ms."
                 },
                 "exclude": {
                     "anyOf": [
@@ -3194,8 +3232,9 @@
                     "description": "Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...)."
                 },
                 "gitignore": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Also respect `.gitignore` files (root + nested) when watching (default true)."
+                    "description": "Also respect `.gitignore` files (root + nested) when watching."
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
@@ -3261,6 +3300,7 @@
             "type": "object",
             "properties": {
                 "level": {
+                    "default": "info",
                     "type": "string",
                     "enum": [
                         "debug",
@@ -3269,15 +3309,17 @@
                         "error",
                         "silent"
                     ],
-                    "description": "Minimum level to print (default `info`)."
+                    "description": "Minimum level to print."
                 },
                 "color": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Force colours on/off (default: on; `--no-color` disables)."
+                    "description": "Force colours on/off; `--no-color` disables."
                 },
                 "name": {
+                    "default": "dbx",
                     "type": "string",
-                    "description": "Prefix non-indented lines with `<name>:` (default `dbx`)."
+                    "description": "Prefix non-indented lines with `<name>:`."
                 },
                 "suppress": {
                     "anyOf": [

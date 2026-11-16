@@ -69,21 +69,29 @@ export interface ToolchainProjectConfig {
     repo?: string;
     /** Node version for CI/templates, eg. `22` (not `package.json` `engines`). */
     nodeVersion?: string;
-    /** Package manager name, written as `<name>@<version>` (default `yarn`). */
+    /**
+     * Package manager name, written as `<name>@<version>`.
+     *
+     * @default 'yarn'
+     */
     packageManager?: string;
     /** Package manager version, eg. `4.17.1`. */
     packageManagerVersion?: string;
     /** One-line description (`package.json` `description`). */
     description?: string;
     /**
-     * Inherit the parent project metadata (default true). Set false to keep this project metadata
-     * independent of the root config (other sections still merge normally).
+     * Inherit the parent project metadata. Set false to keep this project metadata independent of the
+     * root config (other sections still merge normally).
+     *
+     * @default true
      */
     inherit?: boolean;
     /**
-     * Manage projects that have no dbx.config.* of their own by inheriting the nearest ancestor config
-     * (default false). Disabled by default so configless projects are never touched unless explicitly
-     * opted in.
+     * Manage projects that have no dbx.config.* of their own by inheriting the nearest ancestor
+     * config. Disabled by default so configless projects are never touched unless explicitly opted
+     * in.
+     *
+     * @default false
      */
     manageConfigless?: boolean;
 }
@@ -237,11 +245,17 @@ export interface WorkflowOptions {
     tokens?: WorkflowTokens;
     /** Override the generated workflow file name (eg. `deploy.yml`). */
     filename?: string;
-    /** Directory for the workflow file (default `.github/workflows`). */
+    /**
+     * Directory for the workflow file.
+     *
+     * @default '.github/workflows'
+     */
     dir?: string;
     /**
-     * Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false;
-     * built-in workflows already include them).
+     * Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs; built-in
+     * workflows already include them.
+     *
+     * @default false
      */
     setup?: boolean;
     /** Enable/disable this workflow (default: enabled when present). */
@@ -452,11 +466,17 @@ export interface CiChangelogConfig {
     tokens?: WorkflowTokens;
     /** Override the generated workflow file name (eg. `deploy.yml`). */
     filename?: string;
-    /** Directory for the workflow file (default `.github/workflows`). */
+    /**
+     * Directory for the workflow file.
+     *
+     * @default '.github/workflows'
+     */
     dir?: string;
     /**
-     * Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false;
-     * built-in workflows already include them).
+     * Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs; built-in
+     * workflows already include them.
+     *
+     * @default false
      */
     setup?: boolean;
     /** Enable/disable the changelog workflow and pipeline (default: enabled when present). */
@@ -482,7 +502,11 @@ export interface CiChangelogConfig {
      * (workspaces/root).
      */
     outro?: ChangelogTextSetting;
-    /** Write the Conventional-Commits VS Code settings (default true). */
+    /**
+     * Write the Conventional-Commits VS Code settings.
+     *
+     * @default true
+     */
     vscode?: boolean;
     /**
      * Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order,
@@ -540,7 +564,7 @@ export interface ChangelogCommitlintConfig {
 export interface ChangelogVersioningConfig {
     /**
      * `uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root
-     * only; `individual` bumps each changed workspace independently (default `uniform`).
+     * only; `individual` bumps each changed workspace independently.
      */
     target?: ChangelogVersioningTarget;
     /**
@@ -751,13 +775,29 @@ export type ChangelogDetailsCustom =
       };
 
 export interface ChangelogCommitFormatConfig {
-    /** Include the `by <author>` credit (default true). */
+    /**
+     * Include the `by <author>` credit.
+     *
+     * @default true
+     */
     author?: boolean;
-    /** Include the commit hash link (default true). */
+    /**
+     * Include the commit hash link.
+     *
+     * @default true
+     */
     commitSha?: boolean;
-    /** Include issue/fixes links (default true). */
+    /**
+     * Include issue/fixes links.
+     *
+     * @default true
+     */
     issues?: boolean;
-    /** Prefix the author with their GitHub avatar (default false). */
+    /**
+     * Prefix the author with their GitHub avatar.
+     *
+     * @default false
+     */
     authorAvatar?: boolean;
     /** Fully custom commit line formatter (TS/JS configs only; return the bullet body). */
     format?: (ctx: ChangelogCommitFormatContext) => string;
@@ -809,7 +849,11 @@ export type ChangelogVersioning = boolean | ChangelogVersioningConfig;
 export type ChangelogTextEntry = ChangelogTextContentEntry | ChangelogTextFileEntry;
 
 export interface ChangelogTextContentEntry {
-    /** Set false to skip this entry (default true). */
+    /**
+     * Set false to skip this entry.
+     *
+     * @default true
+     */
     enabled?: boolean;
     /**
      * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
@@ -834,7 +878,11 @@ export interface ChangelogTextContentEntry {
 }
 
 export interface ChangelogTextFileEntry {
-    /** Set false to skip this entry (default true). */
+    /**
+     * Set false to skip this entry.
+     *
+     * @default true
+     */
     enabled?: boolean;
     /**
      * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
@@ -917,9 +965,17 @@ export interface ToolchainDependabotConfig {
             'update-types'?: Array<string>;
         }
     >;
-    /** Override the generated file name (default `dependabot.yml`). */
+    /**
+     * Override the generated file name.
+     *
+     * @default 'dependabot.yml'
+     */
     filename?: string;
-    /** Directory for the config (default `.github`). */
+    /**
+     * Directory for the config.
+     *
+     * @default '.github'
+     */
     dir?: string;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
@@ -952,7 +1008,11 @@ export interface ChangelogConfig {
      * (workspaces/root).
      */
     outro?: ChangelogTextSetting;
-    /** Write the Conventional-Commits VS Code settings (default true). */
+    /**
+     * Write the Conventional-Commits VS Code settings.
+     *
+     * @default true
+     */
     vscode?: boolean;
     /**
      * Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order,
@@ -984,8 +1044,8 @@ export interface ChangelogConfig {
 
 export interface ToolchainFmtConfig {
     /**
-     * Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false;
-     * existing keys are kept).
+     * Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (existing keys
+     * are kept).
      */
     vscode?: boolean | ToolchainVscodeSettings;
     /**
@@ -1032,8 +1092,8 @@ export interface ToolchainVscodeSettings {
 
 export interface ToolchainLintConfig {
     /**
-     * Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false;
-     * existing keys are kept).
+     * Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (existing keys
+     * are kept).
      */
     vscode?: boolean | ToolchainVscodeSettings;
     /**
@@ -1067,7 +1127,11 @@ export interface ToolchainLintConfig {
 
 /** @deprecated use `toolchain.fmt.biome` / `toolchain.lint.biome`. Still writes `biome.json`. */
 export interface ToolchainBiomeConfig {
-    /** Write the Biome VS Code settings (default true). */
+    /**
+     * Write the Biome VS Code settings.
+     *
+     * @default true
+     */
     vscode?: boolean;
     /**
      * Deep-merged over the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace
@@ -1096,13 +1160,29 @@ export interface ToolchainTsconfigConfig {
      * `dist`, `build`, ...).
      */
     exclude?: string | Array<string>;
-    /** Also respect `.gitignore` files (root + nested) when matching `glob` (default true). */
+    /**
+     * Also respect `.gitignore` files (root + nested) when matching `glob`.
+     *
+     * @default true
+     */
     gitignore?: boolean;
-    /** Wire project references (default false). */
+    /**
+     * Wire project references.
+     *
+     * @default false
+     */
     refs?: boolean;
-    /** Emit `composite: true` (default false). */
+    /**
+     * Emit `composite: true`.
+     *
+     * @default false
+     */
     composite?: boolean;
-    /** Inject path aliases (default true). */
+    /**
+     * Inject path aliases.
+     *
+     * @default true
+     */
     aliases?: boolean;
     /**
      * Auto-generate the root workspaces tsconfig paths/references from the project graph (default
@@ -1124,21 +1204,35 @@ export interface ToolchainTsconfigConfig {
      * back to `src`).
      */
     autoSrcDir?: 'src' | '.' | (string & {});
-    /** JSON indentation (default 4). */
+    /**
+     * JSON indentation.
+     *
+     * @default 4
+     */
     indent?: number;
     /**
-     * The workspaces tsconfig file name that holds `paths` + `references` (default
-     * `tsconfig.workspaces.json`).
+     * The workspaces tsconfig file name that holds `paths` + `references`.
+     *
+     * @default 'tsconfig.workspaces.json'
      */
     rootFile?: string;
     /**
-     * The workspace default tsconfig file name that the generator expands (default
-     * `tsconfig.default.json`).
+     * The workspace default tsconfig file name that the generator expands.
+     *
+     * @default 'tsconfig.default.json'
      */
     defaultFile?: string;
-    /** The workspace build tsconfig file name (default `tsconfig.build.json`). */
+    /**
+     * The workspace build tsconfig file name.
+     *
+     * @default 'tsconfig.build.json'
+     */
     buildFile?: string;
-    /** The root base tsconfig file name (default `tsconfig.base.json`). */
+    /**
+     * The root base tsconfig file name.
+     *
+     * @default 'tsconfig.base.json'
+     */
     baseFile?: string;
     /** Per-file `extends` overrides for generated/scaffolded tsconfig templates. */
     extends?: {
@@ -1201,8 +1295,9 @@ export interface ToolchainTsconfigAliasAutoSetting {
      */
     prefix?: '@' | (string & {});
     /**
-     * Resolve generated aliases to source files (default true). Set false to point at the distributed
-     * files instead.
+     * Resolve generated aliases to source files. Set false to point at the distributed files instead.
+     *
+     * @default true
      */
     devMode?: boolean;
     /**
@@ -1381,14 +1476,22 @@ export type ToolchainViteConfig = Omit<ViteUserConfig, 'fmt' | 'lint'> & {
 };
 
 export interface ToolchainWatchConfig {
-    /** Debounce window in ms (default 150). */
+    /**
+     * Debounce window in ms.
+     *
+     * @default 150
+     */
     debounce?: number;
     /**
      * Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modules`, `.dbx`,
      * `dist`, `build`, ...).
      */
     exclude?: string | Array<string>;
-    /** Also respect `.gitignore` files (root + nested) when watching (default true). */
+    /**
+     * Also respect `.gitignore` files (root + nested) when watching.
+     *
+     * @default true
+     */
     gitignore?: boolean;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;

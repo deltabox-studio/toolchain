@@ -47,15 +47,18 @@ export const loggerConfigSchema = withEnabled(
     z.object({
         level: z
             .enum(['debug', 'info', 'warn', 'error', 'silent'])
-            .describe('Minimum level to print (default `info`).')
+            .describe('Minimum level to print.')
+            .default('info')
             .optional(),
         color: z
             .boolean()
-            .describe('Force colours on/off (default: on; `--no-color` disables).')
+            .describe('Force colours on/off; `--no-color` disables.')
+            .default(true)
             .optional(),
         name: z
             .string()
-            .describe('Prefix non-indented lines with `<name>:` (default `dbx`).')
+            .describe('Prefix non-indented lines with `<name>:`.')
+            .default('dbx')
             .optional(),
         suppress: z
             .union([z.string(), z.array(z.string())])

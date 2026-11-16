@@ -33,17 +33,19 @@ export const viteConfigSchema = withEnabled(
         config: z
             .union([z.boolean(), z.string()])
             .describe(
-                'Write the managed Vite config (default true). A string sets its file name/path ' +
+                'Write the managed Vite config. A string sets its file name/path ' +
                     '(relative to the project, or an absolute path inside it).'
             )
+            .default(true)
             .optional(),
         shim: z
             .enum(['runtime', 'static'])
             .describe(
-                'How the generated `vite.config.ts` is rendered. `runtime` (default) loads the ' +
+                'How the generated `vite.config.ts` is rendered. `runtime` loads the ' +
                     'config from `dbx.config.*`; `static` serializes it into the file so the shim ' +
                     'does not import `@deltabox/toolchain` (it then needs no built `dist`).'
             )
+            .default('runtime')
             .optional(),
         shimImport: z
             .string()

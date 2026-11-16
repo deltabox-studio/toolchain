@@ -65,7 +65,7 @@ const changelogTargetSelectorShape = {
 /** A plain string intro/outro entry. */
 const changelogTextContentEntrySchema = z
     .object({
-        enabled: z.boolean().describe('Set false to skip this entry (default true).').optional(),
+        enabled: z.boolean().describe('Set false to skip this entry.').default(true).optional(),
         ...changelogTargetSelectorShape,
         content: z.string().describe('The text inserted into the changelog entry.'),
         file: z.never().optional().describe('Not allowed with `content`.'),
@@ -75,7 +75,7 @@ const changelogTextContentEntrySchema = z
 /** A file-backed intro/outro entry. */
 const changelogTextFileEntrySchema = z
     .object({
-        enabled: z.boolean().describe('Set false to skip this entry (default true).').optional(),
+        enabled: z.boolean().describe('Set false to skip this entry.').default(true).optional(),
         ...changelogTargetSelectorShape,
         content: z.never().optional().describe('Not allowed with `file`.'),
         file: z
@@ -170,12 +170,13 @@ const changelogIssueInfoSchema = z.object({
 
 /** The non-callback commit formatting/credit options. */
 const changelogCommitFormatShape = {
-    author: z.boolean().describe('Include the `by <author>` credit (default true).').optional(),
-    commitSha: z.boolean().describe('Include the commit hash link (default true).').optional(),
-    issues: z.boolean().describe('Include issue/fixes links (default true).').optional(),
+    author: z.boolean().describe('Include the `by <author>` credit.').default(true).optional(),
+    commitSha: z.boolean().describe('Include the commit hash link.').default(true).optional(),
+    issues: z.boolean().describe('Include issue/fixes links.').default(true).optional(),
     authorAvatar: z
         .boolean()
-        .describe('Prefix the author with their GitHub avatar (default false).')
+        .describe('Prefix the author with their GitHub avatar.')
+        .default(false)
         .optional(),
 };
 
@@ -249,7 +250,8 @@ export const changelogDetailsConfigSchema = z
         z.object({
             enabled: z
                 .boolean()
-                .describe('Enable/disable details wrapping (default true).')
+                .describe('Enable/disable details wrapping.')
+                .default(true)
                 .optional(),
             lifecycle: z
                 .enum(['after', 'before'])
@@ -428,8 +430,9 @@ export const changelogVersioningConfigSchema = z
             .describe(
                 '`uniform` bumps the root and every workspace to one shared version; ' +
                     '`root-only` bumps the root only; `individual` bumps each changed ' +
-                    'workspace independently (default `uniform`).'
+                    'workspace independently.'
             )
+            .default('uniform')
             .optional(),
         workspaces: z
             .array(z.string())
@@ -653,7 +656,8 @@ const changelogPipelineShape = {
         .optional(),
     vscode: z
         .boolean()
-        .describe('Write the Conventional-Commits VS Code settings (default true).')
+        .describe('Write the Conventional-Commits VS Code settings.')
+        .default(true)
         .optional(),
     groups: changelogGroupsSettingSchema.optional(),
     breaking: changelogBreakingSettingSchema.optional(),

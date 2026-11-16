@@ -226,14 +226,16 @@ export const workflowOptionsSchema = withEnabled(
             .optional(),
         dir: z
             .string()
-            .describe('Directory for the workflow file (default `.github/workflows`).')
+            .describe('Directory for the workflow file.')
+            .default('.github/workflows')
             .optional(),
         setup: z
             .boolean()
             .describe(
                 'Inject the shared checkout/Node/Corepack/install steps into custom workflow ' +
-                    'jobs (default false; built-in workflows already include them).'
+                    'jobs; built-in workflows already include them.'
             )
+            .default(false)
             .optional(),
     }),
     'Enable/disable this workflow (default: enabled when present).'

@@ -86,9 +86,10 @@ const tsconfigAliasAutoFilters = tsconfigAutoFilters
         devMode: z
             .boolean()
             .describe(
-                'Resolve generated aliases to source files (default true). Set false to point at ' +
-                    'the distributed files instead.'
+                'Resolve generated aliases to source files. Set false to point at the ' +
+                    'distributed files instead.'
             )
+            .default(true)
             .optional(),
         dist: z
             .string()
@@ -127,14 +128,12 @@ export const tsconfigConfigSchema = withEnabled(
             .optional(),
         gitignore: z
             .boolean()
-            .describe(
-                'Also respect `.gitignore` files (root + nested) when matching `glob` ' +
-                    '(default true).'
-            )
+            .describe('Also respect `.gitignore` files (root + nested) when matching `glob`.')
+            .default(true)
             .optional(),
-        refs: z.boolean().describe('Wire project references (default false).').optional(),
-        composite: z.boolean().describe('Emit `composite: true` (default false).').optional(),
-        aliases: z.boolean().describe('Inject path aliases (default true).').optional(),
+        refs: z.boolean().describe('Wire project references.').default(false).optional(),
+        composite: z.boolean().describe('Emit `composite: true`.').default(false).optional(),
+        aliases: z.boolean().describe('Inject path aliases.').default(true).optional(),
         auto: tsconfigAliasAutoSetting(
             'Auto-generate the root workspaces tsconfig paths/references from the project graph ' +
                 '(default false). Set true to derive them from the project graph; set false to ' +
@@ -158,28 +157,26 @@ export const tsconfigConfigSchema = withEnabled(
             )
             .meta({ tsType: "'src' | '.' | (string & {})" })
             .optional(),
-        indent: z.number().describe('JSON indentation (default 4).').optional(),
+        indent: z.number().describe('JSON indentation.').default(4).optional(),
         rootFile: z
             .string()
-            .describe(
-                'The workspaces tsconfig file name that holds `paths` + `references` ' +
-                    '(default `tsconfig.workspaces.json`).'
-            )
+            .describe('The workspaces tsconfig file name that holds `paths` + `references`.')
+            .default('tsconfig.workspaces.json')
             .optional(),
         defaultFile: z
             .string()
-            .describe(
-                'The workspace default tsconfig file name that the generator expands ' +
-                    '(default `tsconfig.default.json`).'
-            )
+            .describe('The workspace default tsconfig file name that the generator expands.')
+            .default('tsconfig.default.json')
             .optional(),
         buildFile: z
             .string()
-            .describe('The workspace build tsconfig file name (default `tsconfig.build.json`).')
+            .describe('The workspace build tsconfig file name.')
+            .default('tsconfig.build.json')
             .optional(),
         baseFile: z
             .string()
-            .describe('The root base tsconfig file name (default `tsconfig.base.json`).')
+            .describe('The root base tsconfig file name.')
+            .default('tsconfig.base.json')
             .optional(),
         extends: z
             .object({

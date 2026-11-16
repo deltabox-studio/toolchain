@@ -78,8 +78,9 @@ Node version for CI/templates, eg. `22` (not `package.json` `engines`).
 ### `packageManager`
 
 - **Type**: `string`
+- **Default**: `"yarn"`
 
-Package manager name, written as `<name>@<version>` (default `yarn`).
+Package manager name, written as `<name>@<version>`.
 
 ### `packageManagerVersion`
 
@@ -96,14 +97,16 @@ One-line description (`package.json` `description`).
 ### `inherit`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Inherit the parent project metadata (default true). Set false to keep this project metadata independent of the root config (other sections still merge normally).
+Inherit the parent project metadata. Set false to keep this project metadata independent of the root config (other sections still merge normally).
 
 ### `manageConfigless`
 
 - **Type**: `boolean`
+- **Default**: `false`
 
-Manage projects that have no dbx.config.* of their own by inheriting the nearest ancestor config (default false). Disabled by default so configless projects are never touched unless explicitly opted in.
+Manage projects that have no dbx.config.* of their own by inheriting the nearest ancestor config. Disabled by default so configless projects are never touched unless explicitly opted in.
 
 ## `ci`
 
@@ -139,14 +142,16 @@ Override the generated workflow file name (eg. `deploy.yml`).
 #### `dir`
 
 - **Type**: `string`
+- **Default**: `".github/workflows"`
 
-Directory for the workflow file (default `.github/workflows`).
+Directory for the workflow file.
 
 #### `setup`
 
 - **Type**: `boolean`
+- **Default**: `false`
 
-Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false; built-in workflows already include them).
+Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs; built-in workflows already include them.
 
 #### `enabled`
 
@@ -558,14 +563,16 @@ Override the generated workflow file name (eg. `deploy.yml`).
 #### `dir`
 
 - **Type**: `string`
+- **Default**: `".github/workflows"`
 
-Directory for the workflow file (default `.github/workflows`).
+Directory for the workflow file.
 
 #### `setup`
 
 - **Type**: `boolean`
+- **Default**: `false`
 
-Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false; built-in workflows already include them).
+Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs; built-in workflows already include them.
 
 #### `enabled`
 
@@ -642,8 +649,9 @@ Automatic version bumping on changelog generation (default `true`).
 ##### `target`
 
 - **Type**: `'uniform' | 'root-only' | 'individual'`
+- **Default**: `"uniform"`
 
-`uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently (default `uniform`).
+`uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently.
 
 ##### `workspaces`
 
@@ -838,26 +846,30 @@ Commit message formatting/credit options (with an optional formatter callback).
 ###### `author`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Include the `by <author>` credit (default true).
+Include the `by <author>` credit.
 
 ###### `commitSha`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Include the commit hash link (default true).
+Include the commit hash link.
 
 ###### `issues`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Include issue/fixes links (default true).
+Include issue/fixes links.
 
 ###### `authorAvatar`
 
 - **Type**: `boolean`
+- **Default**: `false`
 
-Prefix the author with their GitHub avatar (default false).
+Prefix the author with their GitHub avatar.
 
 ###### `format`
 
@@ -874,8 +886,9 @@ Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enable
 ###### `enabled`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Enable/disable details wrapping (default true).
+Enable/disable details wrapping.
 
 ###### `lifecycle`
 
@@ -1047,8 +1060,9 @@ Opt-in text inserted at the start of the new changelog entry, globally or for ma
 ##### `enabled`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Set false to skip this entry (default true).
+Set false to skip this entry.
 
 ##### `target`
 
@@ -1091,8 +1105,9 @@ Opt-in text appended to the new changelog entry, globally or for matching target
 #### `vscode`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Write the Conventional-Commits VS Code settings (default true).
+Write the Conventional-Commits VS Code settings.
 
 #### `groups`
 
@@ -1210,14 +1225,16 @@ Dependabot update groups, keyed by group name.
 #### `filename`
 
 - **Type**: `string`
+- **Default**: `"dependabot.yml"`
 
-Override the generated file name (default `dependabot.yml`).
+Override the generated file name.
 
 #### `dir`
 
 - **Type**: `string`
+- **Default**: `".github"`
 
-Directory for the config (default `.github`).
+Directory for the config.
 
 #### `enabled`
 
@@ -1298,8 +1315,9 @@ Automatic version bumping on changelog generation (default `true`).
 #### `target`
 
 - **Type**: `'uniform' | 'root-only' | 'individual'`
+- **Default**: `"uniform"`
 
-`uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently (default `uniform`).
+`uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently.
 
 #### `workspaces`
 
@@ -1494,26 +1512,30 @@ Commit message formatting/credit options (with an optional formatter callback).
 ##### `author`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Include the `by <author>` credit (default true).
+Include the `by <author>` credit.
 
 ##### `commitSha`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Include the commit hash link (default true).
+Include the commit hash link.
 
 ##### `issues`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Include issue/fixes links (default true).
+Include issue/fixes links.
 
 ##### `authorAvatar`
 
 - **Type**: `boolean`
+- **Default**: `false`
 
-Prefix the author with their GitHub avatar (default false).
+Prefix the author with their GitHub avatar.
 
 ##### `format`
 
@@ -1530,8 +1552,9 @@ Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enable
 ###### `enabled`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Enable/disable details wrapping (default true).
+Enable/disable details wrapping.
 
 ###### `lifecycle`
 
@@ -1703,8 +1726,9 @@ Opt-in text inserted at the start of the new changelog entry, globally or for ma
 #### `enabled`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Set false to skip this entry (default true).
+Set false to skip this entry.
 
 #### `target`
 
@@ -1747,8 +1771,9 @@ Opt-in text appended to the new changelog entry, globally or for matching target
 ### `vscode`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Write the Conventional-Commits VS Code settings (default true).
+Write the Conventional-Commits VS Code settings.
 
 ### `groups`
 
@@ -1817,8 +1842,9 @@ Formatter configuration: Oxc/Biome configs, editor defaults and source-tool opti
 ### `vscode`
 
 - **Type**: `boolean | ToolchainVscodeSettings`
+- **Default**: `false`
 
-Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false; existing keys are kept).
+Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (existing keys are kept).
 
 #### `overrides`
 
@@ -1879,8 +1905,9 @@ Linter configuration: Oxc/Biome configs, editor defaults and ESLint options.
 ### `vscode`
 
 - **Type**: `boolean | ToolchainVscodeSettings`
+- **Default**: `false`
 
-Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false; existing keys are kept).
+Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (existing keys are kept).
 
 #### `overrides`
 
@@ -1936,8 +1963,9 @@ Biome config generation (for consumers that still want a `biome.json`).
 ### `vscode`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Write the Biome VS Code settings (default true).
+Write the Biome VS Code settings.
 
 ### `overrides`
 
@@ -1977,26 +2005,30 @@ Glob(s) to exclude from `glob`. Defaults to the common ignored paths (`node_modu
 ### `gitignore`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Also respect `.gitignore` files (root + nested) when matching `glob` (default true).
+Also respect `.gitignore` files (root + nested) when matching `glob`.
 
 ### `refs`
 
 - **Type**: `boolean`
+- **Default**: `false`
 
-Wire project references (default false).
+Wire project references.
 
 ### `composite`
 
 - **Type**: `boolean`
+- **Default**: `false`
 
-Emit `composite: true` (default false).
+Emit `composite: true`.
 
 ### `aliases`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Inject path aliases (default true).
+Inject path aliases.
 
 ### `auto`
 
@@ -2037,8 +2069,9 @@ Prefix for generated aliases instead of the package scope (eg. `@` produces `@/<
 #### `devMode`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Resolve generated aliases to source files (default true). Set false to point at the distributed files instead.
+Resolve generated aliases to source files. Set false to point at the distributed files instead.
 
 #### `dist`
 
@@ -2079,32 +2112,37 @@ Source directory used to resolve workspace entry points when `package.json` does
 ### `indent`
 
 - **Type**: `number`
+- **Default**: `4`
 
-JSON indentation (default 4).
+JSON indentation.
 
 ### `rootFile`
 
 - **Type**: `string`
+- **Default**: `"tsconfig.workspaces.json"`
 
-The workspaces tsconfig file name that holds `paths` + `references` (default `tsconfig.workspaces.json`).
+The workspaces tsconfig file name that holds `paths` + `references`.
 
 ### `defaultFile`
 
 - **Type**: `string`
+- **Default**: `"tsconfig.default.json"`
 
-The workspace default tsconfig file name that the generator expands (default `tsconfig.default.json`).
+The workspace default tsconfig file name that the generator expands.
 
 ### `buildFile`
 
 - **Type**: `string`
+- **Default**: `"tsconfig.build.json"`
 
-The workspace build tsconfig file name (default `tsconfig.build.json`).
+The workspace build tsconfig file name.
 
 ### `baseFile`
 
 - **Type**: `string`
+- **Default**: `"tsconfig.base.json"`
 
-The root base tsconfig file name (default `tsconfig.base.json`).
+The root base tsconfig file name.
 
 ### `extends`
 
@@ -2366,14 +2404,16 @@ The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.
 ### `config`
 
 - **Type**: `boolean | string`
+- **Default**: `true`
 
-Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or an absolute path inside it).
+Write the managed Vite config. A string sets its file name/path (relative to the project, or an absolute path inside it).
 
 ### `shim`
 
 - **Type**: `'runtime' | 'static'`
+- **Default**: `"runtime"`
 
-How the generated `vite.config.ts` is rendered. `runtime` (default) loads the config from `dbx.config.*`; `static` serializes it into the file so the shim does not import `@deltabox/toolchain` (it then needs no built `dist`).
+How the generated `vite.config.ts` is rendered. `runtime` loads the config from `dbx.config.*`; `static` serializes it into the file so the shim does not import `@deltabox/toolchain` (it then needs no built `dist`).
 
 ### `shimImport`
 
@@ -2414,8 +2454,9 @@ Watch behaviour for `dbx watch`.
 ### `debounce`
 
 - **Type**: `number`
+- **Default**: `150`
 
-Debounce window in ms (default 150).
+Debounce window in ms.
 
 ### `exclude`
 
@@ -2426,8 +2467,9 @@ Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modu
 ### `gitignore`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Also respect `.gitignore` files (root + nested) when watching (default true).
+Also respect `.gitignore` files (root + nested) when watching.
 
 ### `enabled`
 
@@ -2494,20 +2536,23 @@ Logging level, colours and prefix for toolchain output.
 ### `level`
 
 - **Type**: `'debug' | 'info' | 'warn' | 'error' | 'silent'`
+- **Default**: `"info"`
 
-Minimum level to print (default `info`).
+Minimum level to print.
 
 ### `color`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
-Force colours on/off (default: on; `--no-color` disables).
+Force colours on/off; `--no-color` disables.
 
 ### `name`
 
 - **Type**: `string`
+- **Default**: `"dbx"`
 
-Prefix non-indented lines with `<name>:` (default `dbx`).
+Prefix non-indented lines with `<name>:`.
 
 ### `suppress`
 

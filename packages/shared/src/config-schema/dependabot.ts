@@ -4,7 +4,7 @@ import { withEnabled } from './meta.js';
 
 /** A single Dependabot group (eg. all patch/minor updates together). */
 const dependabotGroupSchema = z.object({
-    patterns: z.array(z.string()).describe('Package name patterns (default `["*"]`).').optional(),
+    patterns: z.array(z.string()).describe('Package name patterns.').default(['*']).optional(),
     'exclude-patterns': z
         .array(z.string())
         .describe('Package name patterns to exclude.')
@@ -50,9 +50,10 @@ export const dependabotConfigSchema = withEnabled(
             .optional(),
         filename: z
             .string()
-            .describe('Override the generated file name (default `dependabot.yml`).')
+            .describe('Override the generated file name.')
+            .default('dependabot.yml')
             .optional(),
-        dir: z.string().describe('Directory for the config (default `.github`).').optional(),
+        dir: z.string().describe('Directory for the config.').default('.github').optional(),
     })
 )
     .describe(

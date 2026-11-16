@@ -67,8 +67,9 @@ const vscodeSetting = z
     .union([z.boolean(), vscodeSettingsSchema])
     .describe(
         'Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` ' +
-            '(default false; existing keys are kept).'
+            '(existing keys are kept).'
     )
+    .default(false)
     .optional();
 
 /**

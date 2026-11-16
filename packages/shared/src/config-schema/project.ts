@@ -39,7 +39,8 @@ export const projectConfigSchema = z
             .optional(),
         packageManager: z
             .string()
-            .describe('Package manager name, written as `<name>@<version>` (default `yarn`).')
+            .describe('Package manager name, written as `<name>@<version>`.')
+            .default('yarn')
             .optional(),
         packageManagerVersion: z
             .string()
@@ -52,18 +53,20 @@ export const projectConfigSchema = z
         inherit: z
             .boolean()
             .describe(
-                'Inherit the parent project metadata (default true). Set false to keep ' +
-                    'this project metadata independent of the root config (other sections ' +
-                    'still merge normally).'
+                'Inherit the parent project metadata. Set false to keep this project ' +
+                    'metadata independent of the root config (other sections still merge ' +
+                    'normally).'
             )
+            .default(true)
             .optional(),
         manageConfigless: z
             .boolean()
             .describe(
                 'Manage projects that have no dbx.config.* of their own by inheriting the ' +
-                    'nearest ancestor config (default false). Disabled by default so configless ' +
-                    'projects are never touched unless explicitly opted in.'
+                    'nearest ancestor config. Disabled by default so configless projects are ' +
+                    'never touched unless explicitly opted in.'
             )
+            .default(false)
             .optional(),
     })
     .describe(
