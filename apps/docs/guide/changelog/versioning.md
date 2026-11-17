@@ -123,6 +123,12 @@ release. Entries are grouped by the declaring package (one top-level bullet per
 package, with each changed dependency nested under it). Pass
 `--no-package-changes-section` to omit the footer.
 
+`--format-only` recomputes each released entry's footer from its release refs.
+The newest entry is usually unreleased, so its footer compares the working tree
+with the previous release — the same diff `dbx changelog` wrote. A tagged newest
+entry keeps its ref-to-ref diff and never picks up uncommitted dependency
+changes.
+
 ## Custom bump rules
 
 `versioning.bump` maps `major`, `minor` and `patch` to a matcher.
