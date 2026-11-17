@@ -15,6 +15,7 @@ import {
     createCli,
     extractLogOptions,
     extractUpdateCheck,
+    MACHINE_OUTPUT_COMMANDS,
     runCli,
     withDefaultVite,
 } from '../src/cli/index.js';
@@ -330,6 +331,13 @@ describe('update check', () => {
             argv: ['node', 'dbx', 'run', '--', '--no-update-check'],
             updateCheck: true,
         });
+    });
+
+    it('never prints the notice for commands that own stdout', () => {
+        // The notice would corrupt the JSON-RPC stream (`mcp:serve`) or the
+        // default-JSON output (`template:info`).
+        expect(MACHINE_OUTPUT_COMMANDS.has('mcp:serve')).toBe(true);
+        expect(MACHINE_OUTPUT_COMMANDS.has('template:info')).toBe(true);
     });
 });
 

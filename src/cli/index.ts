@@ -195,6 +195,13 @@ export function extractUpdateCheck(
 }
 
 /**
+ * Commands whose stdout must stay machine-readable. The update notice is human
+ * output on stdout, so it is suppressed for these (`mcp:serve` is a JSON-RPC
+ * stream; `template:info` prints JSON by default).
+ */
+export const MACHINE_OUTPUT_COMMANDS = new Set(['template:info', 'mcp:serve']);
+
+/**
  * Build the `dbx` commander program.
  *
  * Commander's own help/error output is routed through the shared logger so it
@@ -303,7 +310,7 @@ export async function runCli(argv: string[] = process.argv): Promise<void> {
     const commandNames = builtinCommandNames(commands);
     const wantsHelp = argv.some(arg => arg === '--help' || arg === '-h' || arg === '--version');
     // The notice is human output on stdout; never let it corrupt machine output.
-    const machineCommands = new Set(['template:info']);
+    const machineCommands = MACHINE_OUTPUT_COMMANDS;
     const machineFlags = new Set([
         '--json',
         '--alias',
