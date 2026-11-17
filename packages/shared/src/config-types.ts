@@ -1348,8 +1348,6 @@ export interface ToolchainLoaderConfig {
     /**
      * The tsconfig the config loader uses. `true` selects the nearest `tsconfig.json`; a string
      * selects a different file (relative to the project root); `false` disables tsconfig resolution.
-     *
-     * @default true
      */
     tsconfig?: boolean | string;
     /** Enable/disable this section (default: enabled when defined). */

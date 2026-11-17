@@ -35,7 +35,9 @@ export interface OxlintConfig {
    *
    * @allowExtraKeys true
    */
-  env?: any;
+  env?: {
+    [key: string]: any;
+  };
   /**
    * Configurations that this configuration file extends (inherits from).
    *
@@ -58,7 +60,9 @@ export interface OxlintConfig {
    *
    * @allowExtraKeys true
    */
-  globals?: any;
+  globals?: {
+    [key: string]: any;
+  };
   /** Globs to ignore during linting. Patterns use gitignore-style matching, rooted at the directory containing the configuration file. Files outside that directory cannot be matched; patterns containing `..` are rejected as a configuration error. */
   ignorePatterns?: Array<string>;
   /**
@@ -2001,7 +2005,9 @@ export interface OxlintConfig {
        */
       overrideReplacesDocs?: boolean;
       /** @allowExtraKeys true */
-      tagNamePreference?: any;
+      tagNamePreference?: {
+        [key: string]: any;
+      };
     };
     /**
      * Configure JSX A11y plugin rules.
@@ -2030,7 +2036,9 @@ export interface OxlintConfig {
        *
        * @allowExtraKeys true
        */
-      attributes?: any;
+      attributes?: {
+        [key: string]: any;
+      };
       /**
        * To have your custom components be checked as DOM elements, you can provide a mapping of your component names to the DOM element name.
        *
@@ -2051,7 +2059,9 @@ export interface OxlintConfig {
        *
        * @allowExtraKeys true
        */
-      components?: any;
+      components?: {
+        [key: string]: any;
+      };
       /**
        * An optional setting that define the prop your code uses to create polymorphic components. This setting will be used to determine the element type in rules that require semantic context.
        *
