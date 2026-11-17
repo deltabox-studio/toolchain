@@ -188,6 +188,18 @@ export function tsconfigToolArgs(args: Record<string, unknown>): string[] {
     return argv;
 }
 
+/** The argv for the `dbx_changelog` tool (`from`/`to` become a `--range`). */
+export function changelogToolArgs(args: Record<string, unknown>): string[] {
+    const argv = ['changelog'];
+    const from = stringArg(args, 'from');
+    const to = stringArg(args, 'to');
+    if (from && to) argv.push('--range', `${from}..${to}`);
+    else if (from) argv.push('--range', `${from}..HEAD`);
+    else if (to) argv.push('--range', to);
+    if (boolArg(args, 'dryRun')) argv.push('--dry-run');
+    return argv;
+}
+
 /** The default tool catalog. */
 export function defaultMcpTools(): McpTool[] {
     return [
@@ -277,13 +289,7 @@ export function defaultMcpTools(): McpTool[] {
                 dryRun: { type: 'boolean', description: 'Preview without writing.' },
             }),
             async handler(args, context) {
-                const argv = ['changelog'];
-                const from = stringArg(args, 'from');
-                const to = stringArg(args, 'to');
-                if (from) argv.push('--from', from);
-                if (to) argv.push('--to', to);
-                if (boolArg(args, 'dryRun')) argv.push('--dry-run');
-                return resultOf(await runDbx(argv, context.cwd));
+                return resultOf(await runDbx(changelogToolArgs(args), context.cwd));
             },
         },
         {
@@ -336,7 +342,6 @@ export function defaultMcpTools(): McpTool[] {
             inputSchema: schema(
                 {
                     workflow: { type: 'string', description: 'Workflow id or file name.' },
-                    provider: { type: 'string', description: 'github, gitlab or azure.' },
                 },
                 ['workflow']
             ),
@@ -347,10 +352,7 @@ export function defaultMcpTools(): McpTool[] {
                         isError: true,
                         content: [{ type: 'text', text: '`workflow` required' }],
                     };
-                const argv = ['workflow', workflow];
-                const provider = stringArg(args, 'provider');
-                if (provider) argv.push('--provider', provider);
-                return resultOf(await runDbx(argv, context.cwd));
+                return resultOf(await runDbx(['workflow', workflow], context.cwd));
             },
         },
         {

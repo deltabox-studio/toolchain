@@ -1,15 +1,17 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { Readable, Writable } from 'node:stream';
 
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import mcpPkg from '../package.json' with { type: 'json' };
 import { createServeServer } from '../src/cli/index.js';
 import { installMcp, listMcpProviders } from '../src/install.js';
-import { createMcpServer, MCP_PROTOCOL_VERSION } from '../src/protocol.js';
+import { createMcpServer, MCP_PROTOCOL_VERSION, serveStdio } from '../src/protocol.js';
 import {
     ALLOWED_COMMANDS,
+    changelogToolArgs,
     defaultMcpTools,
     resolveDbxInvocation,
     tsconfigToolArgs,
@@ -141,6 +143,45 @@ describe('MCP tool arguments', () => {
         expect(tsconfigToolArgs({ list: true })).toEqual(['tsconfig', '--json']);
         expect(tsconfigToolArgs({})).toEqual(['tsconfig']);
     });
+
+    it('turns from/to into the changelog command `--range`', () => {
+        expect(changelogToolArgs({ from: 'a', to: 'b' })).toEqual(['changelog', '--range', 'a..b']);
+        expect(changelogToolArgs({ from: 'a' })).toEqual(['changelog', '--range', 'a..HEAD']);
+        expect(changelogToolArgs({ to: 'b', dryRun: true })).toEqual([
+            'changelog',
+            '--range',
+            'b',
+            '--dry-run',
+        ]);
+        expect(changelogToolArgs({})).toEqual(['changelog']);
+    });
+
+    it('does not advertise flags the workflow command does not support', () => {
+        const workflow = defaultMcpTools().find(tool => tool.name === 'dbx_workflow');
+        expect(Object.keys(workflow?.inputSchema.properties ?? {})).toEqual(['workflow']);
+    });
+});
+
+describe('MCP stdio robustness', () => {
+    it('rejects a non-object JSON line and keeps serving', async () => {
+        const input = Readable.from(['null\n', '{"jsonrpc":"2.0","id":2,"method":"ping"}\n']);
+        let stdout = '';
+        const output = new Writable({
+            write(chunk, _encoding, callback) {
+                stdout += String(chunk);
+                callback();
+            },
+        });
+
+        await serveStdio(server(), input as never, output as never);
+
+        const lines = stdout
+            .trim()
+            .split('\n')
+            .map(line => JSON.parse(line) as Record<string, unknown>);
+        expect(lines[0]).toMatchObject({ id: null, error: { code: -32600 } });
+        expect(lines[1]).toMatchObject({ id: 2, result: {} });
+    });
 });
 
 describe('MCP installers', () => {
@@ -204,5 +245,42 @@ describe('MCP installers', () => {
             command: ['dbx', 'mcp:serve'],
             enabled: true,
         });
+    });
+
+    it('preserves other servers and settings in a JSONC config', () => {
+        const cwd = makeTmp();
+        const configPath = path.join(cwd, '.vscode', 'mcp.json');
+        fs.mkdirSync(path.dirname(configPath), { recursive: true });
+        fs.writeFileSync(
+            configPath,
+            `{
+    // Keep the user's existing servers.
+    "servers": {
+        "other": { "type": "stdio", "command": "other-server", "args": [] }
+    },
+    "inputs": []
+}
+`
+        );
+
+        installMcp({ provider: 'vscode', cwd });
+
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as {
+            servers: Record<string, { command?: string }>;
+            inputs: unknown[];
+        };
+        expect(Object.keys(config.servers).sort()).toEqual(['deltabox', 'other']);
+        expect(config.servers.other).toMatchObject({ command: 'other-server' });
+        expect(config.inputs).toEqual([]);
+    });
+
+    it('refuses to overwrite an unparseable config', () => {
+        const cwd = makeTmp();
+        const configPath = path.join(cwd, '.vscode', 'mcp.json');
+        fs.mkdirSync(path.dirname(configPath), { recursive: true });
+        fs.writeFileSync(configPath, '{ not json');
+
+        expect(() => installMcp({ provider: 'vscode', cwd })).toThrow(/cannot parse/);
+        expect(fs.readFileSync(configPath, 'utf-8')).toBe('{ not json');
     });
 });

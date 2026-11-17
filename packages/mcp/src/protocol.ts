@@ -155,14 +155,30 @@ export async function serveStdio(
                 if (!line) continue;
                 let message: JsonRpcRequest;
                 try {
-                    message = JSON.parse(line) as JsonRpcRequest;
+                    const parsed = JSON.parse(line) as unknown;
+                    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+                        write(failure(null, -32600, 'invalid request'));
+                        continue;
+                    }
+                    message = parsed as JsonRpcRequest;
                 } catch {
                     write(failure(null, -32700, 'parse error'));
                     continue;
                 }
-                void server.handle(message).then(response => {
-                    if (response) write(response);
-                });
+                void server
+                    .handle(message)
+                    .then(response => {
+                        if (response) write(response);
+                    })
+                    .catch(error => {
+                        write(
+                            failure(
+                                null,
+                                -32603,
+                                error instanceof Error ? error.message : String(error)
+                            )
+                        );
+                    });
             }
         });
         input.on('error', reject);

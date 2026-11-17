@@ -10,6 +10,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { readJsoncFile } from '@deltabox/toolchain/shared';
+
 /** A supported install scope. */
 export type McpScope = 'project' | 'global';
 
@@ -164,16 +166,23 @@ export interface InstallMcpResult {
     skillPath?: string;
 }
 
-/** Read a JSON file, returning `{}` for a missing/invalid file. */
+/**
+ * Read a JSON/JSONC config file, returning `{}` only for a missing file.
+ *
+ * VS Code's `mcp.json` is JSONC, so comments and trailing commas are accepted.
+ * An existing file that still cannot be parsed (or is not an object) throws:
+ * rewriting it from an empty object would delete the user's other settings.
+ */
 function readJson(file: string): Record<string, unknown> {
-    try {
-        const parsed = JSON.parse(fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, '')) as unknown;
-        return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-            ? (parsed as Record<string, unknown>)
-            : {};
-    } catch {
-        return {};
+    if (!fs.existsSync(file)) return {};
+    const parsed = readJsoncFile<unknown>(file);
+    if (parsed === undefined) {
+        throw new Error(`cannot parse ${file} as JSON/JSONC; refusing to overwrite it.`);
     }
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        throw new Error(`${file} does not contain a JSON object; refusing to overwrite it.`);
+    }
+    return parsed as Record<string, unknown>;
 }
 
 function writeFile(file: string, content: string): void {
