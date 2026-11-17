@@ -23,6 +23,10 @@ const commands = configCommands({
 // register `commands` on your commander program
 ```
 
+> These commands are library-only: `dbx` itself does not register a `config:*`
+> group, because each command needs a `ConfigEngine` bound to your schema. Add
+> the returned commands to your own program.
+
 The `config:*` commands generate config artifacts; they do not write the CLI
 reference. For that, pass the command descriptors your CLI registers to
 [`generateCliDocs()`](/guide/config-generator/generate#cli-docs).

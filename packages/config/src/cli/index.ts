@@ -6,6 +6,9 @@
  * import { configCommands } from '@deltabox/toolchain/config';
  * program.addCommand(...)
  * ```
+ *
+ * Deliberately library-only: the `dbx` root CLI does not register a `config:*`
+ * group, because every command needs a consumer-bound {@link ConfigEngine}.
  */
 
 import fs from 'node:fs';

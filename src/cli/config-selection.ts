@@ -74,8 +74,14 @@ export function extractConfigSelection(
                 rest.push(arg);
                 continue;
             }
-            const value = argv[++index];
-            if (value !== undefined) found.config = value;
+            const value = argv[index + 1];
+            if (value !== undefined && value !== '--' && !value.startsWith('-')) {
+                found.config = value;
+                index += 1;
+            } else {
+                // Missing value: leave the flag for commander to report.
+                rest.push(arg);
+            }
         } else if (arg.startsWith('--config=')) {
             found.config = arg.slice('--config='.length);
         } else {

@@ -61,7 +61,15 @@ function toolingAliases(commands: ToolchainCommand[]): ToolchainCommand[] {
     return out;
 }
 
-/** The commands built into the root CLI (config commands need a consumer engine). */
+/**
+ * The commands built into the root CLI.
+ *
+ * The config generator's `config:*` commands are deliberately **not** registered
+ * here: they are bound to a consumer's `ConfigEngine` (its schema and root),
+ * which the root CLI cannot construct. `configCommands()` remains a library API
+ * for a project that exposes its own config; `dbx` itself generates its
+ * artifacts with `yarn config:generate`.
+ */
 export function builtinCommands(config?: ToolchainConfig): ToolchainCommand[] {
     const vite = withToolingRouting(viteCommands());
     return [
@@ -136,8 +144,11 @@ export function extractLogOptions(
         } else if (arg === '--color') {
             options.color = true;
         } else if (arg === '--log-level') {
-            const value = argv[++index];
-            if (value !== undefined) options.level = normalizeLogLevel(value);
+            const value = argv[index + 1];
+            if (value !== undefined && value !== '--' && !value.startsWith('-')) {
+                options.level = normalizeLogLevel(value);
+                index += 1;
+            }
         } else if (arg.startsWith('--log-level=')) {
             options.level = normalizeLogLevel(arg.slice('--log-level='.length));
         } else {
@@ -272,6 +283,11 @@ export async function runCli(argv: string[] = process.argv): Promise<void> {
     setLogOverrides(options);
     if (selection.config !== undefined && selection.noConfig) {
         logger.error('`--config` and `--no-config` cannot be used together.');
+        process.exitCode = 1;
+        return;
+    }
+    if (selection.config !== undefined && selection.config.trim() === '') {
+        logger.error('`--config` requires a non-empty file path.');
         process.exitCode = 1;
         return;
     }

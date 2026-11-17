@@ -68,6 +68,14 @@ describe('dbx CLI', () => {
         expect(names).toContain('lint');
     });
 
+    it('does not register the consumer-bound config commands', () => {
+        // Deliberate: `configCommands()` needs a consumer `ConfigEngine`, so the
+        // root CLI never exposes a `config:*` group. A project registers them
+        // on its own program instead.
+        const names = builtinCommands().map(c => c.name);
+        expect(names.some(name => name.startsWith('config:'))).toBe(false);
+    });
+
     it('builds a program with the expected subcommands', () => {
         const program = createCli();
         const registered = program.commands.map(c => c.name());
@@ -153,6 +161,31 @@ describe('config selection flags', () => {
             selection: {},
         });
     });
+
+    it('does not consume a following flag as the config path', () => {
+        const argv = (value: string): string[] => ['node', 'dbx', ...value.split(' ')];
+        expect(extractConfigSelection(argv('--config --no-config sync'))).toEqual({
+            argv: ['node', 'dbx', '--config', 'sync'],
+            selection: { noConfig: true },
+        });
+        expect(extractConfigSelection(argv('--config -- sync'))).toEqual({
+            argv: ['node', 'dbx', '--config', '--', 'sync'],
+            selection: {},
+        });
+    });
+
+    it('rejects an empty --config value', async () => {
+        const error = vi.spyOn(logger, 'error').mockImplementation(() => {});
+        const previous = process.exitCode;
+        try {
+            await runCli(['node', 'dbx', '--config=', 'sync']);
+            expect(error).toHaveBeenCalledWith(expect.stringContaining('non-empty file path'));
+            expect(process.exitCode).toBe(1);
+        } finally {
+            process.exitCode = previous;
+            error.mockRestore();
+        }
+    });
 });
 
 describe('default Vite+ command', () => {
@@ -212,6 +245,17 @@ describe('logger flag pre-scan', () => {
         expect(extractLogOptions(argv('run', '--', '--color', '--log-level=debug'))).toEqual({
             argv: ['node', 'dbx', 'run', '--', '--color', '--log-level=debug'],
             options: {},
+        });
+    });
+
+    it('does not consume a following flag as the log level', () => {
+        expect(extractLogOptions(argv('--log-level', '--no-color'))).toEqual({
+            argv: ['node', 'dbx'],
+            options: { color: false },
+        });
+        expect(extractLogOptions(argv('--log-level', 'warn', '--no-color'))).toEqual({
+            argv: ['node', 'dbx'],
+            options: { level: 'warn', color: false },
         });
     });
 });
