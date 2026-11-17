@@ -258,6 +258,26 @@ describe('createConfigEngine', () => {
         expect(Object.keys(engine.types.generate())).toEqual(['server', 'cli']);
     });
 
+    it('reports the files write() creates with a custom extension', () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-engine-ext-'));
+        try {
+            const engine = createConfigEngine({
+                schema: z.object({ port: z.number() }),
+                root: cwd,
+            });
+            const written = engine.types.write({
+                outputDir: path.join(cwd, 'types'),
+                extension: 'mts',
+            });
+
+            expect(written.length).toBeGreaterThan(0);
+            for (const file of written) expect(fs.existsSync(file)).toBe(true);
+            expect(written.every(file => file.endsWith('.mts'))).toBe(true);
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
+    });
+
     it('preserves the passed schema type', () => {
         const schema = z.object({ port: z.number() });
         const engine = createConfigEngine({ schema });

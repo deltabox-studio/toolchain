@@ -252,7 +252,10 @@ export function createConfigEngine<const TSchema extends ConfigSchema>(
             generate: generateTypes,
             write: opts => {
                 const contents = generateTypes(opts);
-                return Object.keys(contents).map(scope => path.join(opts.outputDir, `${scope}.ts`));
+                const extension = opts.extension ?? 'ts';
+                return Object.keys(contents).map(scope =>
+                    path.join(opts.outputDir, `${scope}.${extension}`)
+                );
             },
         },
         markdown: {
