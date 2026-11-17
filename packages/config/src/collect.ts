@@ -134,6 +134,8 @@ function zodKind(schema: ZodType, seen = new Set<unknown>()): ConfigValueKind | 
 
 function schemaKind(schema: ZodType | Schema): ConfigValueKind | undefined {
     if (isZodSchema(schema)) return zodKind(schema);
+    const kind = (schema as Schema & { configKind?: unknown }).configKind;
+    if (typeof kind === 'string') return kind as ConfigValueKind;
     const type = (schema as Schema).type;
     if (typeof type === 'string') return type as ConfigValueKind;
     if (Array.isArray(type))
@@ -141,13 +143,57 @@ function schemaKind(schema: ZodType | Schema): ConfigValueKind | undefined {
     return normalizeJsonType(type) as ConfigValueKind | undefined;
 }
 
-/** Convert a simple `*`/`**` glob to a regular expression. */
+/**
+ * Convert a dotted-path glob to a regular expression. `*` matches one segment,
+ * `**` any number of segments, `?` one non-dot character, and `[...]`/`{a,b}`
+ * are supported without nesting.
+ */
 export function globToRegExp(pattern: string): RegExp {
-    const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
-    const source = escaped
-        .replace(/\*\*/g, '\u0000')
-        .replace(/\*/g, '[^.]*')
-        .replace(/\u0000/g, '.*');
+    const escape = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    let source = '';
+    let index = 0;
+    while (index < pattern.length) {
+        const char = pattern[index]!;
+        if (char === '*') {
+            if (pattern[index + 1] === '*') {
+                source += '.*';
+                index += 2;
+            } else {
+                source += '[^.]*';
+                index += 1;
+            }
+        } else if (char === '?') {
+            source += '[^.]';
+            index += 1;
+        } else if (char === '[') {
+            const end = pattern.indexOf(']', index + 1);
+            if (end === -1) {
+                source += '\\[';
+                index += 1;
+            } else {
+                const body = pattern.slice(index + 1, end);
+                const translated = body.startsWith('!') ? `^${body.slice(1)}` : body;
+                source += `(?:(?!\\.)[${translated}])`;
+                index = end + 1;
+            }
+        } else if (char === '{') {
+            const end = pattern.indexOf('}', index + 1);
+            if (end === -1) {
+                source += '\\{';
+                index += 1;
+            } else {
+                const alternatives = pattern
+                    .slice(index + 1, end)
+                    .split(',')
+                    .map(alternative => escape(alternative));
+                source += `(?:${alternatives.join('|')})`;
+                index = end + 1;
+            }
+        } else {
+            source += escape(char);
+            index += 1;
+        }
+    }
     return new RegExp(`^${source}$`);
 }
 
@@ -179,7 +225,8 @@ function walkSchema(
     scope: string,
     envPrefix: string,
     options: CollectOptions,
-    pathParts: string[] = []
+    pathParts: string[] = [],
+    inheritedDefault?: unknown
 ): void {
     const depth = pathParts.length;
     if (options.maxDepth !== undefined && depth > options.maxDepth) return;
@@ -200,20 +247,24 @@ function walkSchema(
                   .replace(/_/g, '-')}`
             : undefined);
     const fallbackDefault = children ? defaultFromChildren(children) : undefined;
+    const ownDefault = schemaDefault(schema);
+    const effectiveDefault = ownDefault !== undefined ? ownDefault : inheritedDefault;
     const fallbackType = children ? 'object' : schemaType(schema);
     const kind = schemaKind(schema);
 
     if (!children || envName || meta?.cliFlag) {
+        const defaultValue =
+            ownDefault !== undefined
+                ? ownDefault
+                : inheritedDefault !== undefined
+                  ? inheritedDefault
+                  : fallbackDefault;
         const def: ConfigDef = {
             path: path || (meta?.id ?? 'config'),
             ...(envName ? { name: envName } : {}),
             ...(cliFlag ? { cliFlag } : {}),
             ...(meta?.description ? { description: meta.description } : {}),
-            ...(schemaDefault(schema) !== undefined
-                ? { default: schemaDefault(schema) }
-                : fallbackDefault !== undefined
-                  ? { default: fallbackDefault }
-                  : {}),
+            ...(defaultValue !== undefined ? { default: defaultValue } : {}),
             ...(meta?.required ? { required: true } : {}),
             ...(meta?.secret ? { secret: true } : {}),
             ...(meta?.public ? { public: true } : {}),
@@ -226,7 +277,11 @@ function walkSchema(
     }
     if (!children) return;
     for (const [key, child] of Object.entries(children)) {
-        walkSchema(child, out, scope, envPrefix, options, [...pathParts, key]);
+        const childDefault =
+            effectiveDefault !== undefined && isPlainRecord(effectiveDefault)
+                ? (effectiveDefault as Record<string, unknown>)[key]
+                : undefined;
+        walkSchema(child, out, scope, envPrefix, options, [...pathParts, key], childDefault);
     }
 }
 
@@ -468,7 +523,9 @@ function collectCliValues(entries: ScopedDef[], argv: string[]): Map<ScopedDef, 
         const token = argv[index]!;
         if (token === '--') break;
         if (!token.startsWith('-')) continue;
-        const [flag, inline] = token.includes('=') ? token.split('=', 2) : [token, undefined];
+        const equals = token.indexOf('=');
+        const flag = equals === -1 ? token : token.slice(0, equals);
+        const inline = equals === -1 ? undefined : token.slice(equals + 1);
         const entriesForFlag = flag ? byFlag.get(flag) : undefined;
         if (!entriesForFlag || entriesForFlag.length === 0) continue;
         const def = entriesForFlag[0]!.def;

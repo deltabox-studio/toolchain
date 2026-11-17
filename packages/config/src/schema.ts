@@ -17,6 +17,7 @@ import type {
     ConfigSchemaInput,
     ConfigSchemaMap,
     ConfigSchemaType,
+    ConfigValueKind,
 } from './types/index.js';
 
 /** A JSON Schema node produced by `z.toJSONSchema`. */
@@ -34,6 +35,7 @@ interface JsonSchemaNode {
     $ref?: string;
     $defs?: Record<string, JsonSchemaNode>;
     items?: JsonSchemaNode;
+    prefixItems?: JsonSchemaNode[];
     additionalProperties?: JsonSchemaNode | boolean;
     propertyNames?: JsonSchemaNode;
     env?: string;
@@ -289,8 +291,40 @@ function jsonType(node: JsonSchemaNode): string {
     }
     if (node.anyOf || node.oneOf) return 'any';
     if (node.enum) return 'string';
-    if (Array.isArray(node.type)) return node.type.find(t => t !== 'null') ?? 'string';
-    return node.type ?? 'string';
+    if (Array.isArray(node.type)) {
+        const types = [...new Set(node.type.filter(type => type !== 'null'))];
+        return types.length === 1 ? types[0]! : 'any';
+    }
+    return node.type ?? 'unknown';
+}
+
+/** The config value kind a JSON Schema node describes, when it is distinctive. */
+function jsonKind(node: JsonSchemaNode): ConfigValueKind | undefined {
+    if (node.$ref) return undefined;
+    if (node.const !== undefined) return 'literal';
+    if (Array.isArray(node.enum) && node.enum.length > 0) return 'enum';
+    if (node.anyOf || node.oneOf) return 'union';
+    if (Array.isArray(node.type)) {
+        const types = new Set(node.type.filter(type => type !== 'null'));
+        if (types.size > 1) return 'union';
+    }
+    const type = Array.isArray(node.type) ? node.type.find(item => item !== 'null') : node.type;
+    if (type === 'array') return node.prefixItems ? 'tuple' : 'array';
+    if (type === 'object') {
+        if (
+            !node.properties &&
+            node.additionalProperties !== undefined &&
+            node.additionalProperties !== false
+        ) {
+            return 'record';
+        }
+        return node.properties ? 'object' : 'record';
+    }
+    if (type === undefined) return 'unknown';
+    if (type === 'integer') return 'number';
+    return ['string', 'number', 'boolean', 'null'].includes(type)
+        ? (type as ConfigValueKind)
+        : undefined;
 }
 
 /** Metadata that can be attached to a node or to the `$ref`/union it points at. */
@@ -442,6 +476,8 @@ function jsonNodeToDefinition(
         const out: Record<string, unknown> = fieldRequired
             ? { $schema: { tags: ['@required'] } }
             : {};
+        if (node.defaultValue !== undefined) out.$default = node.defaultValue;
+        else if (node.default !== undefined) out.$default = node.default;
         if (node.description) {
             out.$schema = {
                 ...(out.$schema as object | undefined),
@@ -468,11 +504,13 @@ function jsonNodeToDefinition(
     }
 
     const resolvedType = jsonType(node);
+    const kind = jsonKind(node);
     const out: Record<string, unknown> = {};
     if (node.defaultValue !== undefined) out.$default = node.defaultValue;
     else if (node.default !== undefined) out.$default = node.default;
     out.$schema = {
         type: resolvedType,
+        ...(kind ? { configKind: kind } : {}),
         tsType: renderTsType(node, defs),
         ...(resolvedType === 'array' ? { items: { type: jsonType(node.items ?? {}) } } : {}),
         ...(fieldRequired ? { tags: ['@required'] } : {}),
@@ -572,10 +610,18 @@ function resolveUntypedNode(
         return schema;
     }
 
-    const schema: Record<string, unknown> = {
-        ...(node.$schema as object | undefined),
-        id: schemaId,
-    };
+    const source = (node.$schema as Record<string, unknown> | undefined) ?? {};
+    const { configKind, ...rest } = source;
+    const schema: Record<string, unknown> = { ...rest, id: schemaId };
+    if (typeof configKind === 'string') {
+        // Generation-only marker: keep it off the enumerable schema so the
+        // untyped type/JSON-schema generators never emit it.
+        Object.defineProperty(schema, 'configKind', {
+            value: configKind,
+            enumerable: false,
+            configurable: true,
+        });
+    }
     ctx.cache.set(id, schema);
     const childKeys = Object.keys(node).filter(
         key => key !== '$resolve' && key !== '$schema' && key !== '$default'
@@ -622,9 +668,10 @@ export function resolveUntypedSchema(input: Record<string, unknown>): Schema {
 export function normalizeJsonSchemaMetadata(node: unknown): void {
     if (!node || typeof node !== 'object' || Array.isArray(node)) return;
     const record = node as Record<string, unknown>;
-    // `tsType` is a generation-only marker (for types/markdown); it is not a
-    // JSON Schema keyword, so keep the editor schema clean.
+    // `tsType`/`configKind` are generation-only markers (for types/markdown);
+    // they are not JSON Schema keywords, so keep the editor schema clean.
     delete record.tsType;
+    delete record.configKind;
     if (typeof record.deprecated === 'string') {
         record.deprecationMessage = record.deprecated;
         record.deprecated = true;

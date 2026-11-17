@@ -5,6 +5,7 @@
  */
 
 import fs from 'node:fs';
+import path from 'node:path';
 import { type ParseArgsOptionsConfig, parseArgs } from 'node:util';
 
 import { formatCliFlag } from '@deltabox/toolchain/shared';
@@ -97,6 +98,7 @@ export function generateCliOptions(
     }
 
     if (typeof options.output === 'string') {
+        fs.mkdirSync(path.dirname(options.output), { recursive: true });
         fs.writeFileSync(options.output, `${JSON.stringify(defs, null, 4)}\n`, 'utf-8');
     }
 

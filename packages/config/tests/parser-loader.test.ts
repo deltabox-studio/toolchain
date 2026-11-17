@@ -195,6 +195,17 @@ describe('parseCliConfig', () => {
         expect(config.base.host).toBe('x');
         expect(config.base.port).toBe(1);
     });
+
+    it('keeps = inside inline values', () => {
+        const values = z.object({
+            token: z.string().meta({ envName: 'APP_TOKEN', cliFlag: '--token' }),
+            url: z.string().meta({ envName: 'APP_URL', cliFlag: '--url' }),
+        });
+        expect(parseCliConfig(values, ['--token=abc==', '--url=https://x.test/?a=b'])).toEqual({
+            token: 'abc==',
+            url: 'https://x.test/?a=b',
+        });
+    });
 });
 
 describe('parseConfig', () => {

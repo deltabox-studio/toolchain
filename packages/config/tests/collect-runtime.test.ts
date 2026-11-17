@@ -10,7 +10,10 @@ import type { Logger } from '@deltabox/toolchain-shared';
 import type { RewriteMessageContext } from '../src/index.js';
 import {
     collect,
+    collectDefinitions,
     ConfigParseError,
+    generateEnv,
+    generateEnvFile,
     loadConfig,
     loadConfigAsync,
     loadConfigSync,
@@ -331,5 +334,95 @@ describe('collect type helpers', () => {
     it('merges override types and keeps the schema shape', () => {
         const config = parseEnvConfig(schema, {}, {});
         expectTypeOf(config.base.port).toEqualTypeOf<number>();
+    });
+});
+
+describe('bug regressions (hunt #8)', () => {
+    it('applies parent object defaults to children', () => {
+        const schema = z.object({
+            a: z.object({ b: z.string(), c: z.number().default(2) }).default({ b: 'y', c: 2 }),
+            plain: z.object({ d: z.string().default('z') }),
+        });
+        expect(collectDefinitions(schema).find(def => def.path === 'a.b')?.default).toBe('y');
+        expect(collect(schema, { envPrefix: null, envSource: {}, argv: [] })).toEqual({
+            a: { b: 'y', c: 2 },
+            plain: { d: 'z' },
+        });
+        expect(parseEnvConfig(schema, {})).toEqual({
+            a: { b: 'y', c: 2 },
+            plain: { d: 'z' },
+        });
+    });
+
+    it('generates env vars for path-derived names', () => {
+        const schema = z.object({
+            host: z.string().default('localhost'),
+            port: z.number().default(3000),
+            flags: z.array(z.string()).default([]),
+            rec: z.record(z.string(), z.string()),
+        });
+        const content = generateEnvFile(schema);
+        expect(content).toContain('APP_HOST=localhost');
+        expect(content).toContain('APP_PORT=3000');
+        expect(content).toContain('APP_FLAGS=');
+        expect(content).not.toContain('APP_REC=');
+        expect(
+            generateEnvFile(schema, { values: { APP_HOST: 'x' }, include: ['APP_HOST'] })
+        ).toContain('APP_HOST=x');
+
+        // The generated typings agree with the env file: path-derived names are
+        // included, complex leaves without a name are not.
+        const types = generateEnv(schema);
+        expect(types).toContain('APP_HOST?: string;');
+        expect(types).toContain('APP_FLAGS?: string;');
+        expect(types).not.toContain('APP_REC');
+    });
+
+    it('quotes generated env values so they round-trip', () => {
+        const schema = z.object({
+            url: z.string().default('https://example.com/path#fragment'),
+            multi: z.string().default('line1\nline2'),
+            spaced: z.string().default('  hello  '),
+        });
+        const content = generateEnvFile(schema, { envPrefix: 'APP_' });
+
+        expect(content).toContain("APP_URL='https://example.com/path#fragment'");
+        expect(content).toContain("APP_MULTI='line1\nline2'");
+        expect(content).toContain("APP_SPACED='  hello  '");
+    });
+
+    it('keeps distinctive schema kinds', () => {
+        const kinds = Object.fromEntries(
+            collectDefinitions(
+                z.object({
+                    map: z.map(z.string(), z.number()),
+                    set: z.set(z.string()),
+                    union: z.union([z.string(), z.number()]),
+                    record: z.record(z.string(), z.string()),
+                    literal: z.literal('x'),
+                    enum: z.enum(['a', 'b']),
+                    any: z.any(),
+                })
+            ).map(def => [def.path, def.kind])
+        );
+        expect(kinds.map).not.toBe('string');
+        expect(kinds.set).not.toBe('string');
+        expect(kinds.union).toBe('union');
+        expect(kinds.record).toBe('record');
+        expect(kinds.literal).toBe('literal');
+        expect(kinds.enum).toBe('enum');
+        expect(kinds.any).toBe('unknown');
+    });
+
+    it('supports ? [] {} in include/exclude globs', () => {
+        const schema = z.object({
+            base: z.object({ host: z.string(), port: z.number() }),
+            other: z.string(),
+        });
+        const paths = (pattern: string): string[] =>
+            collectDefinitions(schema, { include: pattern }).map(def => def.path);
+        expect(paths('base.h?st')).toEqual(['base.host']);
+        expect(paths('base.[hp]ost')).toEqual(['base.host']);
+        expect(paths('{base.host,other}')).toEqual(['base.host', 'other']);
     });
 });

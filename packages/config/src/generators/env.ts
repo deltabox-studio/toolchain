@@ -8,6 +8,7 @@ import fs from 'node:fs';
 
 import { type CollectOptions, collectDefinitions, DEFAULT_ENV_PREFIX } from '../collect.js';
 import type { ConfigSchema } from '../types/index.js';
+import { envNameOf, isEnvVariable } from './env-file.js';
 import { resolveGeneratedFile } from './output.js';
 
 export interface GenerateEnvTypesOptions {
@@ -49,9 +50,9 @@ export function generateEnv(schema: ConfigSchema, options: GenerateEnvTypesOptio
     const envInterface = options.envInterfaceName ?? 'AppEnv';
     const viteEnvInterface = options.viteEnvInterfaceName ?? 'AppViteEnv';
 
-    const vars = collectDefinitions(schema, { envPrefix, envPathOf: options.envPathOf }).filter(
-        def => def.name
-    );
+    const vars = collectDefinitions(schema, { envPrefix, envPathOf: options.envPathOf })
+        .filter(isEnvVariable)
+        .map(def => ({ ...def, name: envNameOf(def, envPrefix) }));
     const serverVars = vars.filter(def => def.scope !== 'frontend');
     const viteVars = vars.filter(def => def.public);
 

@@ -118,6 +118,18 @@ describe('generators', () => {
         expect(parser.parse(['--base-url', 'http://x']).values['base-url']).toBe('http://x');
     });
 
+    it('writes CLI options into a missing nested directory', () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-cli-out-'));
+        try {
+            const output = path.join(cwd, 'nested', 'cli-options.json');
+            const defs = generateCliOptions(scopes, { envPrefix: 'MYAPP_', output });
+
+            expect(JSON.parse(fs.readFileSync(output, 'utf-8'))).toEqual(defs);
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
+    });
+
     it('renders custom command descriptors', () => {
         const commands: ToolchainCommand[] = [
             {
