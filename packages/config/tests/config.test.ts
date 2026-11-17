@@ -298,10 +298,10 @@ describe('createConfigEngine', () => {
             Record<'server.md' | 'cli.md' | 'index.md', string>
         >();
         expectTypeOf(engine.env.types.generate()).toEqualTypeOf<
-            Record<'env.ts' | 'env.d.ts', string>
+            Record<'env.ts' | 'dbx-env.d.ts', string>
         >();
         expectTypeOf(engine.env.types.generate({ envFile: 'custom.ts' })).toEqualTypeOf<
-            Record<'custom.ts' | 'env.d.ts', string>
+            Record<'custom.ts' | 'dbx-env.d.ts', string>
         >();
         const schemaDoc = await engine.jsonSchema.generate();
         expectTypeOf(schemaDoc.properties).toEqualTypeOf<Record<'server' | 'cli', unknown>>();

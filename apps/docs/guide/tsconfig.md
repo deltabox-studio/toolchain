@@ -76,7 +76,7 @@ reads. Everything else is optional and, if you prefer, renameable (see
   that extends its own default, but there are no shared `paths`/`references` to
   wire.
 
-The `{{envTypesFile}}` token in the templates (default `src/env.d.ts`) is
+The `{{envTypesFile}}` token in the templates (default `src/dbx-env.d.ts`) is
 resolved when a project is scaffolded, so a generated config's `include` points
 at the project's env types file.
 

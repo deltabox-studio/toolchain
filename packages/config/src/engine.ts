@@ -33,7 +33,7 @@ import type {
 /** The file keys `generateConfigEnv` returns for the given options. */
 type EnvTypeFileKeys<O> =
     | (O extends { envFile: infer F } ? (F extends string ? F : 'env.ts') : 'env.ts')
-    | (O extends { dtsFile: infer F } ? (F extends string ? F : 'env.d.ts') : 'env.d.ts');
+    | (O extends { dtsFile: infer F } ? (F extends string ? F : 'dbx-env.d.ts') : 'dbx-env.d.ts');
 
 /** The file keys `generateConfigMarkdown` returns for the given options. */
 type MarkdownFileKeys<TSchema, O> = O extends { combined: true }

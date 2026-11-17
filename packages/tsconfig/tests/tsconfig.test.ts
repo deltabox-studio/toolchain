@@ -21,9 +21,14 @@ describe('tsconfig templates', () => {
         }
     });
 
+    it('defaults the env types file to src/dbx-env.d.ts', () => {
+        expect(JSON.parse(renderTsconfigDefault()).include).toContain('src/dbx-env.d.ts');
+        expect(JSON.parse(renderTsconfigBuild()).include).toContain('src/dbx-env.d.ts');
+    });
+
     it('honours a custom env types file', () => {
-        const content = renderTsconfigDefault({ envTypesFile: 'types/env.d.ts' });
-        expect(JSON.parse(content).include).toContain('types/env.d.ts');
+        const content = renderTsconfigDefault({ envTypesFile: 'types/custom-env.d.ts' });
+        expect(JSON.parse(content).include).toContain('types/custom-env.d.ts');
     });
 
     it('renders every template keyed by file name', () => {

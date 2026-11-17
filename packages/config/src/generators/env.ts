@@ -22,7 +22,7 @@ export interface GenerateEnvTypesOptions {
     viteEnvInterfaceName?: string;
     /** The generated types file name (default `env.ts`). */
     envFile?: string;
-    /** The generated ambient file name (default `env.d.ts`). */
+    /** The generated ambient file name (default `dbx-env.d.ts`). */
     dtsFile?: string;
     /** The import specifier the `.d.ts` uses for the env types. */
     importPath?: string;
@@ -120,7 +120,7 @@ export function generateConfigEnv(
     options: GenerateEnvTypesOptions = {}
 ): Record<string, string> {
     const envFile = options.envFile ?? 'env.ts';
-    const dtsFile = options.dtsFile ?? 'env.d.ts';
+    const dtsFile = options.dtsFile ?? 'dbx-env.d.ts';
     const contents = {
         [envFile]: generateEnv(schema, options),
         [dtsFile]: generateEnvDts(options),

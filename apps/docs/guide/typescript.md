@@ -52,7 +52,7 @@ Zod's `.meta()` is typed by default, but the toolchain adds its own fields
 `public`, `defaultValue`). Add the ambient declaration once in a project-wide
 `.d.ts`:
 
-```ts [env.d.ts]
+```ts [globals.d.ts]
 /// <reference types="@deltabox/toolchain/globals" />
 ```
 

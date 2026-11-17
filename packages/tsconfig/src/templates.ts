@@ -10,7 +10,7 @@ export const tsconfigDefaultTemplate = defaultTemplate;
 export const tsconfigBuildTemplate = buildTemplate;
 
 /** The default replacement values for the tsconfig templates. */
-export const DEFAULT_TSCONFIG_REPLACEMENTS = { envTypesFile: 'src/env.d.ts' } as const;
+export const DEFAULT_TSCONFIG_REPLACEMENTS = { envTypesFile: 'src/dbx-env.d.ts' } as const;
 
 /** The `extends` value to write into one generated template. */
 export type TsconfigExtends = string | string[] | false;

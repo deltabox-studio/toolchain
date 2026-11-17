@@ -50,10 +50,10 @@ Options: `include`/`exclude` (env names), `values` (default overrides),
 `scopes`, `bare`, `extra` (raw `NAME=value` lines), `header`, `scopeSeparator`.
 Secrets are emitted commented out.
 
-## Env types — `env.ts` + `env.d.ts`
+## Env types — `env.ts` + `dbx-env.d.ts`
 
 ```ts
-engine.env.types.write({ outputDir: 'types' }); // types/env.ts, types/env.d.ts
+engine.env.types.write({ outputDir: 'types' }); // types/env.ts, types/dbx-env.d.ts
 ```
 
 ```ts
@@ -68,7 +68,7 @@ const files = generateConfigEnv(schema, {
     augmentVite: true,
     envComment: 'Runtime configuration.',
 });
-// files: { 'env.ts': '...', 'env.d.ts': '...' }
+// files: { 'env.ts': '...', 'dbx-env.d.ts': '...' }
 ```
 
 Options: `envFile`/`dtsFile` (file names), `header`, `envHeader`, `dtsHeader`,

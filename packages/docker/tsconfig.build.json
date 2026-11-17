@@ -2,7 +2,7 @@
     "extends": "./tsconfig.default.json",
     "include": [
         "src",
-        "src/env.d.ts",
+        "src/dbx-env.d.ts",
         "apps/*/src",
         "packages/*/src",
         "scripts",
