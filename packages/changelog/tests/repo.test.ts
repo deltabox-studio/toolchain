@@ -96,4 +96,23 @@ describe('repoSlug', () => {
             fs.rmSync(root, { recursive: true, force: true });
         }
     });
+
+    it('keeps dots in the repository name', () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-repo-slug-dot-'));
+        try {
+            fs.writeFileSync(
+                path.join(root, 'package.json'),
+                JSON.stringify({
+                    name: 'next',
+                    repository: { url: 'https://github.com/vercel/next.js.git' },
+                })
+            );
+            process.chdir(root);
+
+            expect(repoSlug()).toBe('vercel/next.js');
+        } finally {
+            process.chdir(originalCwd);
+            fs.rmSync(root, { recursive: true, force: true });
+        }
+    });
 });

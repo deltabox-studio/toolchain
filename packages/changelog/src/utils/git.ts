@@ -99,7 +99,9 @@ export function isReleaseCommit(subject: string): boolean {
 
 /** The `owner/name` slug of a GitHub URL, or undefined. */
 function githubSlug(url: string): string | undefined {
-    const match = url.match(/(?:github\.com[/:])([^/]+)\/([^/.]+?)(?:\.git)?$/);
+    // Repository names may contain dots (`next.js`); only a trailing `.git`
+    // clone suffix is stripped.
+    const match = url.match(/(?:github\.com[/:])([^/]+)\/(.+?)(?:\.git)?$/);
     if (match?.[1] && match[2]) return `${match[1]}/${match[2]}`;
     return undefined;
 }

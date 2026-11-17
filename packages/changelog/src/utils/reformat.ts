@@ -78,7 +78,7 @@ export function parseExistingChangelog(content: string): ExistingEntry[] {
             continue;
         }
         if (inPackageChanges) continue;
-        if (line.startsWith('- ')) {
+        if (/^[-*+]\s+/.test(line)) {
             current.bullets.push(line);
             current.bodies!.push([]);
             collectingBody = true;
@@ -138,7 +138,7 @@ function reformatEntry(
     const details = resolved.lifecycle === 'before' ? resolved : undefined;
     const items: GroupedItem[] = [];
     for (const [index, line] of entry.bullets.entries()) {
-        const stripped = line.replace(/^-\s+/, '');
+        const stripped = line.replace(/^[-*+]\s+/, '');
         const hash = bulletHash(line);
         // Parse the ORIGINAL commit message when available: the changelog line
         // has bold/markdown applied that would otherwise corrupt CC parsing.

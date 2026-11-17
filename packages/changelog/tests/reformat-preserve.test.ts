@@ -39,6 +39,25 @@ describe('reformatChangelogContent hand corrections', () => {
         expect(out).toContain('<summary><strong>See more...</strong></summary>');
     });
 
+    it('keeps entries written with * and + bullets', () => {
+        const content = [
+            '# Changelog',
+            '',
+            '## 1.0.0 (January 2026)',
+            '',
+            '* feat: first',
+            '+ fix: second',
+            '- chore: third',
+        ].join('\n');
+
+        const out = reformatChangelogContent(content, 'x/y');
+
+        expect(out).toContain('First');
+        expect(out).toContain('Second');
+        expect(out).toContain('Third');
+        expect(out).not.toContain('No description provided.');
+    });
+
     it('fills in a description when the existing entry has none', () => {
         const content = [
             '# Changelog',

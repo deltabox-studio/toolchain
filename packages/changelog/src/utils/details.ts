@@ -386,7 +386,15 @@ function wrapDescriptions(lines: string[], toggle: DetailsToggle): string[] {
 
 function findSectionEnd(lines: string[], start: number): number {
     let end = start + 1;
-    while (end < lines.length && !/^#{2,3}\s/.test(lines[end]!)) end += 1;
+    while (
+        end < lines.length &&
+        !/^#{2,3}\s/.test(lines[end]!) &&
+        // Release markers delimit the entry, not a section: never swallow them
+        // into a collapsible block.
+        !lines[end]!.includes('<!-- release:')
+    ) {
+        end += 1;
+    }
     return end;
 }
 

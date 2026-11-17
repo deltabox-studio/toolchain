@@ -46,6 +46,20 @@ describe('changelog details', () => {
         expect(ten).not.toMatch(/<summary><h[1-6]>/);
     });
 
+    it('keeps release markers outside the section details', () => {
+        const output = applyDetailsToEntry(
+            renderChangelogEntry('1.0.0', buildSummary(records)),
+            resolveDetails(true)
+        );
+
+        const start = output.indexOf('<!-- release:start -->');
+        const end = output.indexOf('<!-- release:end -->');
+        expect(start).toBeGreaterThan(-1);
+        expect(end).toBeGreaterThan(-1);
+        expect(start).toBeLessThan(output.indexOf('<details>'));
+        expect(end).toBeGreaterThan(output.lastIndexOf('</details>'));
+    });
+
     it('uses Release Notes in both release and non-release modes', () => {
         const release = applyDetailsToEntry(
             renderChangelogEntry('1.0.0', buildSummary(records, { release: true })),
