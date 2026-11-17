@@ -113,7 +113,53 @@ const fromFile = parseConfig(schema, loaded?.config);
 createConfigFile({ name: 'myapp.config.ts', content: '{ enabled: true }' });
 ```
 
+The loader also accepts the same tsconfig, ancestor and filter options as the
+built-in one:
+
+```ts
+const loaded = await loadConfig({
+    parser: schema,
+    configFileOptions: {
+        filename: 'myapp.config',
+        commonLocation: [{ path: '.' }, { cwd: 'packages', path: '*/' }],
+        // Resolve TS imports through this tsconfig (`false` disables it).
+        tsconfig: 'tsconfig.loader.json',
+        // Search ancestors when nothing is found at cwd (stops at `.git`).
+        parent: true,
+        // Skip files that are not valid candidates for this loader.
+        accept: file => !file.endsWith('.shim.ts'),
+    },
+});
+```
+
+The object API accepts `tsconfig`, `parent` and `accept` directly instead of
+nesting them in `configFileOptions`. `findConfigFile` and
+`findParentConfigFile` run the same discovery without loading anything.
+
+Discovery defaults to `.`, `config` and `configs`, matching the built-in loader.
+`commonLocation.path` globs support `*`, `**`, `?`, simple `[...]` character
+classes and `{a,b}` alternatives. A function export is resolved when a
+`parser`/`schema` is passed; without one the raw export is returned, so a caller
+can supply its own environment (as the dbx plugin probe does).
+
 `collect(schema, options)` lists every config leaf (env/CLI metadata) and
 accepts `envPrefix`, `include`/`exclude`, `maxDepth`, and `validate` with
 `errorOptions` for required/empty values. `loadConfigSync` handles JSON and
 CommonJS only; use `loadConfigAsync` (or a custom `loader`) for TypeScript.
+
+### Scaffolding formats
+
+`createConfigFile` infers the format from the file name (or takes an explicit
+`type`): `file` (TypeScript/JavaScript `defineConfig`), `json`, `yaml`, `env`
+(`KEY=value` lines) and `cli` (`--flag=value` lines). Object `content` is
+serialized for the chosen format, and `defaults`/`overrides` merge under/over it:
+
+```ts
+createConfigFile({
+    name: 'myapp.config.yaml',
+    content: { project: { name: 'acme' } },
+    defaults: { project: { license: 'MIT' } },
+});
+
+createConfigFile({ name: '.env.example', content: { APP_HOST: 'localhost' } });
+```

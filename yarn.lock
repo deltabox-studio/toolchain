@@ -581,7 +581,9 @@ __metadata:
     "@types/lodash": "catalog:"
     "@types/node": "catalog:"
     fastify: "catalog:"
+    js-yaml: "npm:^4.1.0"
     lodash: "catalog:"
+    tsx: "catalog:"
     type-fest: "catalog:"
     typescript: "catalog:"
     untyped: "npm:^2.0.0"
@@ -594,6 +596,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@deltabox/toolchain-core@workspace:packages/core"
   dependencies:
+    "@deltabox/toolchain-config": "workspace:*"
     "@deltabox/toolchain-pack": "workspace:*"
     "@deltabox/toolchain-shared": "workspace:*"
     "@types/node": "catalog:"

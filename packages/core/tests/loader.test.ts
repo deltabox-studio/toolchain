@@ -9,6 +9,7 @@ import { sectionConfig } from '@deltabox/toolchain/shared';
 import {
     findConfigFile,
     findParentConfigFile,
+    isDbxPluginConfig,
     loadToolchainConfig,
     mergeToolchainConfig,
 } from '../src/loader.js';
@@ -56,6 +57,24 @@ describe('loadToolchainConfig', () => {
         expect(loaded.path).toBeUndefined();
         expect(loaded.tokens.name).toBe('app');
         expect(loaded.tokens.packageManager).toBe('yarn');
+    });
+
+    it('does not inherit an ancestor config when --config is explicit', async () => {
+        const root = tmp();
+        const child = path.join(root, 'packages', 'app');
+        fs.mkdirSync(child, { recursive: true });
+        writeJson(path.join(root, 'dbx.config.json'), {
+            toolchain: { project: { license: 'MIT', author: 'Root Author' } },
+        });
+        writeJson(path.join(child, 'alt.config.json'), {
+            toolchain: { project: { name: 'alt-name' } },
+        });
+
+        const loaded = await loadToolchainConfig(child, { config: 'alt.config.json' });
+
+        expect(loaded.path).toBe(path.join(child, 'alt.config.json'));
+        expect(loaded.parentPath).toBeUndefined();
+        expect(loaded.config.project).toEqual({ name: 'alt-name' });
     });
 
     it('accepts a workspace-scoped enabled value', async () => {
@@ -848,6 +867,51 @@ describe('dbx() plugin config', () => {
         const loaded = await loadToolchainConfig(cwd);
         expect(loaded.plugin).toBe(true);
         expect(loaded.config.project?.name).toBe('from-function');
+    });
+
+    it('detects the published vite-plugin-dbx import through an alias', async () => {
+        const cwd = tmp();
+        const stub = path.join(cwd, 'node_modules', 'vite-plugin-dbx');
+        fs.mkdirSync(stub, { recursive: true });
+        fs.writeFileSync(
+            path.join(stub, 'package.json'),
+            JSON.stringify({ name: 'vite-plugin-dbx', type: 'module', exports: './index.js' })
+        );
+        fs.writeFileSync(path.join(stub, 'index.js'), 'export const dbx = options => options;\n');
+        const body = [
+            "import { dbx as pluginFactory } from 'vite-plugin-dbx';",
+            'const marker = Symbol.for("@deltabox/toolchain/vite-plugin");',
+            'const plugin = { name: "plugin" };',
+            'plugin[marker] = { toolchain: { project: { name: "alias-app" } } };',
+            'pluginFactory({ toolchain: {} });',
+            'export default { plugins: [plugin] };',
+            '',
+        ].join('\n');
+        fs.writeFileSync(path.join(cwd, 'vite.config.mjs'), body);
+
+        expect(isDbxPluginConfig(path.join(cwd, 'vite.config.mjs'))).toBe(true);
+        const loaded = await loadToolchainConfig(cwd);
+        expect(loaded.plugin).toBe(true);
+        expect(loaded.config.project?.name).toBe('alias-app');
+    });
+
+    it('passes a synthetic serve env to a config function', async () => {
+        const cwd = tmp();
+        const body = [
+            'const marker = Symbol.for("@deltabox/toolchain/vite-plugin");',
+            'const plugin = { name: "deltabox-toolchain" };',
+            'export default env => {',
+            '    if (env.mode !== "development") throw new Error("missing mode");',
+            '    plugin[marker] = { toolchain: { project: { name: env.command } } };',
+            '    return { plugins: [plugin] };',
+            '};',
+            '',
+        ].join('\n');
+        fs.writeFileSync(path.join(cwd, 'vite.config.mjs'), body);
+
+        const loaded = await loadToolchainConfig(cwd);
+        expect(loaded.plugin).toBe(true);
+        expect(loaded.config.project?.name).toBe('serve');
     });
 
     it('merges a dbx.config under the plugin config', async () => {
