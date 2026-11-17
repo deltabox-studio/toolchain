@@ -59,6 +59,15 @@ function repoPath(cwd: string, target: string): string {
     return relative.startsWith('.') ? relative : `./${relative}`;
 }
 
+/**
+ * Canonical form used to compare reference paths, so a hand-written
+ * `packages/a/tsconfig.json` and the generated `./packages/a/tsconfig.json` are
+ * the same reference.
+ */
+function normalizeReferencePath(value: string): string {
+    return value.replace(/\\/g, '/').replace(/^\.\//, '');
+}
+
 function normalizeSrcDir(value: string): string {
     const normalized = posix(value).replace(/^\.\//, '').replace(/\/+$/, '');
     return normalized === '' ? '.' : normalized;
@@ -488,7 +497,7 @@ export function buildAutoTsconfig(
     const managedReferences = new Set<string>();
     const workspaceByTsconfig = new Map(
         workspaces.map(workspace => [
-            repoPath(options.cwd, workspace.targetTsconfigPath),
+            normalizeReferencePath(repoPath(options.cwd, workspace.targetTsconfigPath)),
             workspace,
         ])
     );
@@ -498,14 +507,15 @@ export function buildAutoTsconfig(
     // workspace must not keep a stale reference from a hand-written file. With
     // refs auto-wiring off, hand-written references are left untouched.
     references = references.filter(reference => {
-        const normalized = reference.path.replace(/\\/g, '/').replace(/^\.\//, './');
+        const normalized = normalizeReferencePath(reference.path);
         const workspace = workspaceByTsconfig.get(normalized);
         if (!workspace) return true;
         const switches = resolveAutoSwitches(workspace.options as Record<string, unknown>);
         if (!switches.refsAuto.enabled) return true;
         // Filter the reference path the auto run would emit, not the workspace
         // directory (so `include`/`exclude` see the generated result).
-        if (!matchesAutoFilter(normalized, switches.refsAuto)) return true;
+        const generated = repoPath(options.cwd, workspace.targetTsconfigPath);
+        if (!matchesAutoFilter(generated, switches.refsAuto)) return true;
         // A workspace without a default tsconfig has no generated project to
         // reference (eg. a docs app or a test fixture with only a package.json).
         if (!fs.existsSync(workspace.defaultTsconfigPath)) return false;
@@ -559,6 +569,7 @@ export function buildAutoTsconfig(
         const reference = {
             path: repoPath(options.cwd, workspace.targetTsconfigPath),
         };
+        const canonical = normalizeReferencePath(reference.path);
         if (
             refsEnabled &&
             composite &&
@@ -566,11 +577,20 @@ export function buildAutoTsconfig(
             fs.existsSync(workspace.defaultTsconfigPath) &&
             matchesAutoFilter(reference.path, switches.refsAuto)
         ) {
-            const existing = references.find(item => item.path === reference.path);
-            if (!existing || previous.references.includes(reference.path)) {
-                references = references.filter(item => item.path !== reference.path);
-                references.push(existing ? { ...existing, ...reference } : reference);
-                managedReferences.add(reference.path);
+            const existing = references.find(
+                item => normalizeReferencePath(item.path) === canonical
+            );
+            const managedBefore = previous.references.some(
+                item => normalizeReferencePath(item) === canonical
+            );
+            if (!existing || managedBefore) {
+                references = references.filter(
+                    item => normalizeReferencePath(item.path) !== canonical
+                );
+                references.push(
+                    existing && managedBefore ? { ...existing, ...reference } : reference
+                );
+                managedReferences.add(canonical);
             }
         }
     }
@@ -580,8 +600,9 @@ export function buildAutoTsconfig(
         if (!managedPaths.has(key)) delete paths[key];
     }
     for (const reference of previous.references) {
-        if (!managedReferences.has(reference)) {
-            references = references.filter(item => item.path !== reference);
+        const canonical = normalizeReferencePath(reference);
+        if (!managedReferences.has(canonical)) {
+            references = references.filter(item => normalizeReferencePath(item.path) !== canonical);
         }
     }
 

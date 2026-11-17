@@ -292,6 +292,26 @@ describe('tsconfig auto alias rewriting', () => {
             path: './packages/foo/tsconfig.json',
         });
     });
+
+    it('recognises a reference written without a leading ./', async () => {
+        const cwd = makeRepo({ references: [{ path: 'packages/foo/tsconfig.json' }] });
+        const result = await run(cwd, { auto: true });
+        const references = (result.autoConfig.references ?? []).map(reference =>
+            reference.path.replace(/^\.\//, '')
+        );
+
+        expect(references).not.toContain('packages/foo/tsconfig.json');
+    });
+
+    it('does not duplicate an active reference written without a leading ./', async () => {
+        const cwd = makeRepo({ references: [{ path: 'packages/foo/tsconfig.json' }] });
+        const result = await run(cwd, { auto: true, composite: true, refs: true });
+        const references = (result.autoConfig.references ?? []).map(reference =>
+            reference.path.replace(/^\.\//, '')
+        );
+
+        expect(references.filter(path => path === 'packages/foo/tsconfig.json')).toHaveLength(1);
+    });
 });
 
 describe('tsconfig alias discovery modes', () => {
