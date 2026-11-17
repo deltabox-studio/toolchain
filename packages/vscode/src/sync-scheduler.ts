@@ -54,6 +54,9 @@ export class SyncScheduler {
 
     /** Run immediately (manual trigger), bypassing debounce + suppression. */
     async runNow(): Promise<void> {
+        // A pending debounce is absorbed by the manual run, not repeated after it.
+        clearTimeout(this.timer);
+        this.timer = undefined;
         await this.execute();
     }
 

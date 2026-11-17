@@ -77,6 +77,18 @@ describe('SyncScheduler', () => {
         scheduler.dispose();
     });
 
+    it('absorbs a pending debounce when runNow is called', async () => {
+        const run = vi.fn(async () => {});
+        const scheduler = new SyncScheduler({ debounceMs: 100, run });
+
+        scheduler.notify();
+        await scheduler.runNow();
+        await vi.advanceTimersByTimeAsync(1000);
+
+        expect(run).toHaveBeenCalledTimes(1);
+        scheduler.dispose();
+    });
+
     it('reports state transitions', async () => {
         const states: string[] = [];
         const scheduler = new SyncScheduler({
