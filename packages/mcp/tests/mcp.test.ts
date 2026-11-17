@@ -8,7 +8,12 @@ import mcpPkg from '../package.json' with { type: 'json' };
 import { createServeServer } from '../src/cli/index.js';
 import { installMcp, listMcpProviders } from '../src/install.js';
 import { createMcpServer, MCP_PROTOCOL_VERSION } from '../src/protocol.js';
-import { ALLOWED_COMMANDS, defaultMcpTools, resolveDbxInvocation } from '../src/tools.js';
+import {
+    ALLOWED_COMMANDS,
+    defaultMcpTools,
+    resolveDbxInvocation,
+    tsconfigToolArgs,
+} from '../src/tools.js';
 
 const dirs: string[] = [];
 
@@ -128,6 +133,13 @@ describe('MCP protocol', () => {
         expect(response).toMatchObject({ result: { isError: true } });
         expect(ALLOWED_COMMANDS.has('sync')).toBe(true);
         expect(ALLOWED_COMMANDS.has('rm')).toBe(false);
+    });
+});
+
+describe('MCP tool arguments', () => {
+    it("uses the tsconfig command's supported read-only flag", () => {
+        expect(tsconfigToolArgs({ list: true })).toEqual(['tsconfig', '--json']);
+        expect(tsconfigToolArgs({})).toEqual(['tsconfig']);
     });
 });
 

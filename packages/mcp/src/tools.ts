@@ -181,6 +181,13 @@ function stringArrayArg(args: Record<string, unknown>, key: string): string[] | 
     return strings.length > 0 ? strings : undefined;
 }
 
+/** The argv for the `dbx_tsconfig` tool (`--json` is the command's print mode). */
+export function tsconfigToolArgs(args: Record<string, unknown>): string[] {
+    const argv = ['tsconfig'];
+    if (boolArg(args, 'list')) argv.push('--json');
+    return argv;
+}
+
 /** The default tool catalog. */
 export function defaultMcpTools(): McpTool[] {
     return [
@@ -320,9 +327,7 @@ export function defaultMcpTools(): McpTool[] {
                 list: { type: 'boolean', description: 'Print rather than write.' },
             }),
             async handler(args, context) {
-                const argv = ['tsconfig'];
-                if (boolArg(args, 'list')) argv.push('--list');
-                return resultOf(await runDbx(argv, context.cwd));
+                return resultOf(await runDbx(tsconfigToolArgs(args), context.cwd));
             },
         },
         {
