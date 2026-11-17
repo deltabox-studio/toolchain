@@ -27,7 +27,7 @@ import type { Plugin, ViteUserConfig } from 'vite-plus';
 
 import {
     loadToolchainConfig,
-    mergeToolchainConfig,
+    mergePluginLayer,
     resolveFmtCustomGroups,
 } from '@deltabox/toolchain/core';
 import {
@@ -157,6 +157,34 @@ export function runDbx(
         child.on('error', () => resolve(1));
         child.on('exit', code => resolve(code ?? 0));
     });
+}
+
+/**
+ * Wrap a one-shot run so a request that arrives while it is in flight triggers
+ * exactly one more run when the current one finishes. Used by the plugin's
+ * debounced watch sync: dropping such a request would leave the generated files
+ * stale until the next change.
+ */
+export function createSerializedRunner(run: () => Promise<number>): () => Promise<number> {
+    let busy = false;
+    let pending = false;
+    return async () => {
+        if (busy) {
+            pending = true;
+            return 0;
+        }
+        busy = true;
+        let code = 0;
+        try {
+            do {
+                pending = false;
+                code = await run();
+            } while (pending);
+        } finally {
+            busy = false;
+        }
+        return code;
+    };
 }
 
 /** Quote a value for a shell command line when it needs it. */
@@ -344,17 +372,8 @@ export function dbx(options: DbxPluginOptions = {}): Plugin {
 
     let root = options.cwd ?? process.cwd();
     let timer: ReturnType<typeof setTimeout> | undefined;
-    let busy = false;
 
-    const syncNow = async (): Promise<number> => {
-        if (busy) return 0;
-        busy = true;
-        try {
-            return await runDbx(['sync'], root);
-        } finally {
-            busy = false;
-        }
-    };
+    const syncNow = createSerializedRunner(() => runDbx(['sync'], root));
 
     const schedule = (): void => {
         if (timer) clearTimeout(timer);
@@ -377,7 +396,7 @@ export function dbx(options: DbxPluginOptions = {}): Plugin {
                     skipPluginProbe: true,
                 });
                 toolchain = hasInline
-                    ? mergeToolchainConfig(loaded.config, inline as ToolchainConfig)
+                    ? mergePluginLayer(loaded.config, inline as ToolchainConfig)
                     : loaded.config;
             } catch {
                 // Keep the inline config when no dbx.config can be loaded.

@@ -590,6 +590,43 @@ describe('resolveVite', () => {
         ]);
     });
 
+    it('includes top-level fmt/lint options in the Vite config', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'dbx.config.json'),
+            JSON.stringify({
+                toolchain: {
+                    fmt: { oxc: { tabWidth: 2, singleQuote: true } },
+                    lint: { oxc: { rules: { eqeqeq: 'error' } } },
+                    vite: { config: true },
+                },
+            })
+        );
+        const config = (await resolveVite({ cwd: dir })) as {
+            fmt: { tabWidth: number; singleQuote: boolean; printWidth: number };
+            lint: { rules: Record<string, string> };
+        };
+        expect(config.fmt.tabWidth).toBe(2);
+        expect(config.fmt.singleQuote).toBe(true);
+        expect(config.fmt.printWidth).toBe(DEFAULT_FMT_RULES.printWidth);
+        expect(config.lint.rules.eqeqeq).toBe('error');
+    });
+
+    it('lets `vite.fmt` override the top-level fmt.oxc options', async () => {
+        const config = (await resolveVite({
+            toolchain: { fmt: { oxc: { tabWidth: 2 } }, vite: { fmt: { semi: false } } },
+        })) as { fmt: { tabWidth: number; semi: boolean } };
+        expect(config.fmt.tabWidth).toBe(2);
+        expect(config.fmt.semi).toBe(false);
+    });
+
+    it('keeps `vite.fmt: false` as the final opt-out', async () => {
+        const config = (await resolveVite({
+            toolchain: { fmt: { oxc: { tabWidth: 2 } }, vite: { fmt: false } },
+        })) as { fmt: unknown };
+        expect(config.fmt).toBe(false);
+    });
+
     it('throws when no dbx.config.* exists', async () => {
         await expect(resolveVite({ cwd: makeTmp() })).rejects.toThrow(/dbx\.config/);
     });

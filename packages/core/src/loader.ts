@@ -394,7 +394,7 @@ function parentSection(parent: ToolchainConfig, section: InheritedSection): unkn
  * this keeps the base's sections: a plugin that only sets `project` must not
  * drop the project's own `fmt`/`lint` from `dbx.config.*`.
  */
-function mergePluginLayer(base: ToolchainConfig, layer: ToolchainConfig): ToolchainConfig {
+export function mergePluginLayer(base: ToolchainConfig, layer: ToolchainConfig): ToolchainConfig {
     const result: Record<string, unknown> = { ...base };
     for (const [key, value] of Object.entries(layer)) {
         if (value === undefined) continue;
