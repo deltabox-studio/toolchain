@@ -241,6 +241,22 @@ describe('migrate --target vite', () => {
         expect(out).toContain('test: {}');
         expect(out).toContain('fmt: {');
     });
+
+    it('merges into an existing vite.config.mts instead of creating vite.config.ts', () => {
+        const dir = makeTmp();
+        const mts = path.join(dir, 'vite.config.mts');
+        fs.writeFileSync(
+            mts,
+            "import { defineConfig } from 'vite-plus';\n\nexport default defineConfig({\n    server: { port: 4321 },\n});\n",
+            'utf-8'
+        );
+
+        const file = renderViteTarget(dir, { fmt: { semi: false } });
+        expect(file.path).toBe(mts);
+        expect(file.content).toContain('server: { port: 4321 }');
+        expect(file.content).toContain('semi: false');
+        expect(fs.existsSync(path.join(dir, 'vite.config.ts'))).toBe(false);
+    });
 });
 
 describe('registry', () => {
