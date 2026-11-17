@@ -201,6 +201,29 @@ export function extractUpdateCheck(
  */
 export const MACHINE_OUTPUT_COMMANDS = new Set(['template:info', 'mcp:serve']);
 
+/** Flags whose output must stay machine-readable (no update notice). */
+export const MACHINE_OUTPUT_FLAGS = new Set([
+    '--json',
+    '--alias',
+    '--paths',
+    '--references',
+    '--release-notes',
+]);
+
+/** Whether the update notice must be suppressed for this argv. */
+export function suppressesUpdateNotice(
+    argv: string[],
+    machineCommands: ReadonlySet<string> = MACHINE_OUTPUT_COMMANDS
+): boolean {
+    const wantsHelp = argv.some(
+        arg => arg === '--help' || arg === '-h' || arg === '--version' || arg === '-V'
+    );
+    const wantsJson =
+        argv.some(arg => MACHINE_OUTPUT_FLAGS.has(arg)) ||
+        (argv[2] !== undefined && machineCommands.has(argv[2]));
+    return wantsHelp || wantsJson;
+}
+
 /**
  * Build the `dbx` commander program.
  *
@@ -308,20 +331,8 @@ export async function runCli(argv: string[] = process.argv): Promise<void> {
     });
     const commands = builtinCommands(registration.config);
     const commandNames = builtinCommandNames(commands);
-    const wantsHelp = argv.some(arg => arg === '--help' || arg === '-h' || arg === '--version');
     // The notice is human output on stdout; never let it corrupt machine output.
-    const machineCommands = MACHINE_OUTPUT_COMMANDS;
-    const machineFlags = new Set([
-        '--json',
-        '--alias',
-        '--paths',
-        '--references',
-        '--release-notes',
-    ]);
-    const wantsJson =
-        rest3.some(arg => machineFlags.has(arg)) ||
-        (rest3[2] !== undefined && machineCommands.has(rest3[2]));
-    if (!wantsHelp && !wantsJson) runUpdateCheck(rootPkg.version, updateCheck);
+    if (!suppressesUpdateNotice(rest3)) runUpdateCheck(rootPkg.version, updateCheck);
     await createCli(commands).parseAsync(withDefaultVite(rest3, commandNames));
 }
 

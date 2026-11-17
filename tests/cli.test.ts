@@ -17,6 +17,7 @@ import {
     extractUpdateCheck,
     MACHINE_OUTPUT_COMMANDS,
     runCli,
+    suppressesUpdateNotice,
     withDefaultVite,
 } from '../src/cli/index.js';
 import { isPassthroughCommand } from '../src/cli/register.js';
@@ -338,6 +339,15 @@ describe('update check', () => {
         // default-JSON output (`template:info`).
         expect(MACHINE_OUTPUT_COMMANDS.has('mcp:serve')).toBe(true);
         expect(MACHINE_OUTPUT_COMMANDS.has('template:info')).toBe(true);
+    });
+
+    it('suppresses the notice for -V, --version and machine flags', () => {
+        expect(suppressesUpdateNotice(argv('-V'))).toBe(true);
+        expect(suppressesUpdateNotice(argv('--version'))).toBe(true);
+        expect(suppressesUpdateNotice(argv('--help'))).toBe(true);
+        expect(suppressesUpdateNotice(argv('changelog', '--release-notes', '1.0.0'))).toBe(true);
+        expect(suppressesUpdateNotice(argv('mcp:serve'))).toBe(true);
+        expect(suppressesUpdateNotice(argv('sync'))).toBe(false);
     });
 });
 
