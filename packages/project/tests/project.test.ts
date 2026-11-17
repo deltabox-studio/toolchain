@@ -435,6 +435,37 @@ describe('project scaffolding', () => {
         expect(fs.existsSync(path.join(dir, 'dbx.config.ts'))).toBe(false);
     });
 
+    it('keeps plugin-mode projects in the graph it rewrites', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'package.json'),
+            JSON.stringify({ name: 'acme', workspaces: ['packages/*'] })
+        );
+        const plugin = path.join(dir, 'packages', 'a');
+        fs.mkdirSync(plugin, { recursive: true });
+        fs.writeFileSync(path.join(plugin, 'package.json'), JSON.stringify({ name: '@acme/a' }));
+        fs.writeFileSync(
+            path.join(plugin, 'vite.config.ts'),
+            "import { dbx } from 'vite-plugin-dbx';\n\nexport default { plugins: [dbx({})] };\n"
+        );
+        const plain = path.join(dir, 'packages', 'b');
+        fs.mkdirSync(plain, { recursive: true });
+        fs.writeFileSync(path.join(plain, 'package.json'), JSON.stringify({ name: '@acme/b' }));
+
+        const result = generateProjectConfigs({ root: dir });
+
+        expect(result.created).toContain('packages/b');
+        const graph = JSON.parse(
+            fs.readFileSync(path.join(dir, '.dbx', 'toolchain', 'projects.json'), 'utf-8')
+        );
+        expect(graph.dbxProjects.map((project: { dir: string }) => project.dir).sort()).toEqual([
+            '.',
+            'packages/a',
+            'packages/b',
+        ]);
+        expect(graph.order.sort()).toEqual(['.', 'packages/a', 'packages/b']);
+    });
+
     it('writes only the project graph when skipConfig is set', () => {
         const dir = makeTmp();
         fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'acme' }));

@@ -316,7 +316,12 @@ export function generateProjectConfigs(
             node.hasConfig = true;
             node.config = path.relative(options.root, config.configPath).replace(/\\/g, '/');
         }
-        graph.dbxProjects = graph.projects.filter(project => project.hasConfig);
+        // Match `buildProjectGraph`: a dbx project is configured by a file or a
+        // `dbx()` plugin. Config generation only adds files, so plugin projects
+        // must stay in the graph it rewrites.
+        graph.dbxProjects = graph.projects.filter(
+            project => project.hasConfig || project.hasPlugin
+        );
         graph.order = orderProjects(graph.dbxProjects);
         graph.generatedAt = new Date().toISOString();
         graphPath = writeProjectGraph(options.root, graph);
