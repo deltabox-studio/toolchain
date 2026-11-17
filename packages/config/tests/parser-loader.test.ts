@@ -363,6 +363,29 @@ describe('bug regressions', () => {
         expect(source).not.toContain('(    {');
     });
 
+    it('fails instead of falling back when a higher-priority JS config is broken', () => {
+        const cwd = tempDir();
+        fs.writeFileSync(path.join(cwd, 'dbx.config.js'), 'module.exports = {');
+        fs.writeFileSync(path.join(cwd, 'dbx.config.json'), '{"a":2}');
+
+        expect(() => loadConfigSync({ cwd })).toThrow();
+    });
+
+    it('does not merge ambient env into a file load with a parser', async () => {
+        const cwd = tempDir();
+        fs.writeFileSync(path.join(cwd, 'dbx.config.json'), '{}');
+        process.env.APP_PORT = '999';
+        try {
+            const loaded = await loadConfig({
+                cwd,
+                parser: z.object({ port: z.number().default(1) }),
+            });
+            expect(loaded?.config).toEqual({ port: 1 });
+        } finally {
+            delete process.env.APP_PORT;
+        }
+    });
+
     it('uses a synchronous loader and falls back past a TS config', () => {
         const loaded = tempDir();
         fs.writeFileSync(path.join(loaded, 'dbx.config.anything'), 'ignored');

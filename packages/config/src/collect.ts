@@ -13,7 +13,7 @@ import type { ZodType } from 'zod';
 
 import { deepMerge, getLogger } from '@deltabox/toolchain-shared';
 
-import { parseEnvTree, readEnvPath } from './env.js';
+import { envVarNameOf, parseEnvTree, readEnvPath } from './env.js';
 import { ConfigParseError } from './errors.js';
 import { isSchemaType, isZodSchema, metaOf, normalizeConfigSchema } from './schema.js';
 import type {
@@ -97,6 +97,19 @@ function schemaType(schema: ZodType | Schema): ConfigValueType | undefined {
         }
     }
     return normalizeJsonType((schema as Schema).type);
+}
+
+function arrayItemType(schema: ZodType | Schema): ConfigValueType | undefined {
+    if (isZodSchema(schema)) {
+        try {
+            const json = schema.toJSONSchema() as { items?: { type?: unknown } };
+            return normalizeJsonType(json.items?.type);
+        } catch {
+            return undefined;
+        }
+    }
+    const items = (schema as Schema).items as { type?: unknown } | undefined;
+    return normalizeJsonType(items?.type);
 }
 
 function schemaDefault(schema: ZodType | Schema): unknown {
@@ -250,6 +263,7 @@ function walkSchema(
     const ownDefault = schemaDefault(schema);
     const effectiveDefault = ownDefault !== undefined ? ownDefault : inheritedDefault;
     const fallbackType = children ? 'object' : schemaType(schema);
+    const itemType = fallbackType === 'array' ? arrayItemType(schema) : undefined;
     const kind = schemaKind(schema);
 
     if (!children || envName || meta?.cliFlag) {
@@ -270,6 +284,7 @@ function walkSchema(
             ...(meta?.public ? { public: true } : {}),
             ...(meta?.scope ? { scope: meta.scope } : { scope }),
             ...(fallbackType ? { type: fallbackType } : {}),
+            ...(itemType ? { items: itemType } : {}),
             ...(kind ? { kind } : {}),
             ...(meta ? { meta } : {}),
         };
@@ -402,11 +417,27 @@ function coerce(value: string, def: ConfigDef): unknown {
             const number = Number(value);
             return Number.isFinite(number) ? number : value;
         }
-        case 'array':
-            return value
+        case 'array': {
+            const items = value
                 .split(',')
                 .map(item => item.trim())
                 .filter(Boolean);
+            if (def.items === 'number') {
+                return items.map(item => {
+                    const number = Number(item);
+                    return Number.isFinite(number) ? number : item;
+                });
+            }
+            if (def.items === 'boolean') {
+                return items.map(item => {
+                    const normalized = item.toLowerCase();
+                    if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+                    if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+                    return item;
+                });
+            }
+            return items;
+        }
         default:
             return value;
     }
@@ -593,8 +624,12 @@ function buildFromSources(
         if (raw === undefined && sources.includes('env')) {
             const named = def.name ? envSource[def.name] : undefined;
             const path = def.meta?.envPath ?? def.meta?.path ?? def.path;
+            const generated = envSource[envVarNameOf(path, prefix)];
             const value =
-                named !== undefined ? named : (readEnvPath(envTree, path) as string | undefined);
+                named ??
+                generated ??
+                (readEnvPath(envTree, path.toLowerCase()) as string | undefined) ??
+                (readEnvPath(envTree, path.toLowerCase().replace(/_/g, '.')) as string | undefined);
             raw = typeof value === 'string' && value.trim() !== '' ? value : undefined;
         }
         if (raw !== undefined && raw.trim() !== '') {

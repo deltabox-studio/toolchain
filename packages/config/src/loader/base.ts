@@ -56,7 +56,14 @@ function parseLoaded(options: AnyLoadInput, value: unknown): unknown {
             overrides && value && typeof value === 'object' && typeof overrides === 'object'
                 ? deepMerge(value as Record<string, any>, overrides)
                 : (overrides ?? value);
-        return parseConfig(parse.parser, merged as never, parse as ParseConfigOptions);
+        return parseConfig(
+            parse.parser,
+            merged as never,
+            {
+                ...parse,
+                source: 'file',
+            } as ParseConfigOptions
+        );
     }
     const schema = (options as LoadConfigOptions<unknown>).schema;
     return schema ? schema.parse(value) : value;
@@ -138,7 +145,7 @@ export function loadConfigSync(options: AnyLoadInput = {}): LoadedConfig<any> | 
                     | undefined;
             } catch (error) {
                 lastError = error;
-                continue;
+                throw error;
             }
             const value =
                 requiredModule && typeof requiredModule === 'object' && 'default' in requiredModule

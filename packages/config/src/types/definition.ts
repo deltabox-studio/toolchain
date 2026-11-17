@@ -46,6 +46,8 @@ export interface ConfigDef {
     public?: boolean;
     scope: string;
     type?: ConfigValueType;
+    /** The element type for `array` definitions. */
+    items?: ConfigValueType;
     /** The schema value kind (used by the error filters). */
     kind?: ConfigValueKind;
     /** The raw config metadata attached to the schema leaf. */

@@ -222,6 +222,40 @@ describe('parse wrappers', () => {
     });
 });
 
+describe('env name and array coercion', () => {
+    it('reads the env names generated from camelCase and underscore paths', () => {
+        const generated = z.object({
+            logLevel: z.string().default('info'),
+            nestedThing: z.object({ someValue: z.number().default(1) }),
+            pdf_options: z.object({ paper: z.string().default('a4') }),
+        });
+
+        expect(
+            parseEnvConfig(generated, {
+                APP_LOGLEVEL: 'debug',
+                APP_NESTEDTHING_SOMEVALUE: '5',
+                APP_PDF_OPTIONS_PAPER: 'letter',
+            })
+        ).toEqual({
+            logLevel: 'debug',
+            nestedThing: { someValue: 5 },
+            pdf_options: { paper: 'letter' },
+        });
+    });
+
+    it('coerces array elements to the declared item type', () => {
+        const arrays = z.object({
+            ports: z.array(z.number()).default([]),
+            flags: z.array(z.boolean()).default([]),
+        });
+
+        expect(parseEnvConfig(arrays, { APP_PORTS: '1,2', APP_FLAGS: 'true,no' })).toEqual({
+            ports: [1, 2],
+            flags: [true, false],
+        });
+    });
+});
+
 describe('loadConfig options', () => {
     it('loads through configFileOptions and a parser', async () => {
         const cwd = tempDir();
