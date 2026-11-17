@@ -362,6 +362,15 @@ export function spawnCli(cwd: string, args: string[], options: SpawnOptions = {}
 }
 
 /**
+ * Quote a path for an integrated-terminal command line. The terminal runs a
+ * shell, unlike {@link spawnCli}, so a local `.cmd`/`.bin` shim with spaces in
+ * its path must be quoted to stay one token.
+ */
+function shellPath(value: string): string {
+    return /\s/u.test(value) ? `"${value}"` : value;
+}
+
+/**
  * The shell command that runs the resolved CLI in `cwd`, for an integrated
  * terminal. Unlike `spawnCli`, which runs inside the extension host (where VS
  * Code sets `ELECTRON_RUN_AS_NODE=1`, so `process.execPath` executes as Node),
@@ -375,19 +384,21 @@ export function cliInvocation(cwd: string): string {
     const project = projectDbx(cwd);
     const pinned = configuredVersion();
     if (pinned) {
-        if (project && projectToolchainVersion(cwd) === pinned)
-            return project.args.length ? `node "${project.args[0]}"` : project.exe;
+        if (project && projectToolchainVersion(cwd) === pinned) return projectInvocation(project);
         const bundled = bundledCliEntry();
         if (bundled && extensionVersion() === pinned) return `node "${bundled}"`;
         return `${IS_WINDOWS ? 'npx.cmd' : 'npx'} --yes @deltabox/toolchain@${pinned}`;
     }
-    if (dbxSource === 'project' && project) {
-        return project.args.length ? `node "${project.args[0]}"` : project.exe;
-    }
+    if (dbxSource === 'project' && project) return projectInvocation(project);
     const bundled = bundledCliEntry();
     if (bundled) return `node "${bundled}"`;
-    if (project) return project.args.length ? `node "${project.args[0]}"` : project.exe;
+    if (project) return projectInvocation(project);
     return `${IS_WINDOWS ? 'npx.cmd' : 'npx'} --yes ${pinnedToolchainSpec()}`;
+}
+
+/** The terminal command for a resolved project CLI. */
+function projectInvocation(project: CliCommand): string {
+    return project.args.length ? `node "${project.args[0]}"` : shellPath(project.exe);
 }
 
 export interface CapturedResult {

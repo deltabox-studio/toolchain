@@ -29,6 +29,7 @@ import type * as vscode from 'vscode';
 
 import {
     bundledCliEntry,
+    cliInvocation,
     getDbxSource,
     initDbxSource,
     projectDbx,
@@ -186,5 +187,21 @@ describe('dbx source selection', () => {
         mock.folders = [{ uri: { fsPath: nested } }];
 
         expect(projectDbx(nested)).toEqual({ exe: shim, args: [] });
+    });
+
+    it('quotes a project shim path with spaces in the terminal command', () => {
+        const root = path.join(tmp(), 'with space');
+        fs.mkdirSync(root, { recursive: true });
+        const shim = path.join(
+            root,
+            'node_modules',
+            '.bin',
+            process.platform === 'win32' ? 'dbx.cmd' : 'dbx'
+        );
+        write(shim);
+        mock.folders = [{ uri: { fsPath: root } }];
+
+        expect(projectDbx(root)).toEqual({ exe: shim, args: [] });
+        expect(cliInvocation(root)).toBe(`"${shim}"`);
     });
 });
