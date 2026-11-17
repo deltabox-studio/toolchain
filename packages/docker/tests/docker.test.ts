@@ -55,6 +55,8 @@ describe('docker plans', () => {
         expect(dockerfile).not.toContain('vp install --frozen-lockfile');
         expect(dockerfile).toContain('vp env which node');
         expect(dockerfile).toContain('USER nobody');
+        expect(dockerfile).toContain('ENV HOST=0.0.0.0');
+        expect(dockerfile).toContain('ENV PORT=3000');
         expect(dockerfile).toContain('EXPOSE 3000');
         expect(dockerfile).toContain('HEALTHCHECK');
         expect(dockerfile).toContain('CMD ["node", "dist/index.js"]');
@@ -74,7 +76,7 @@ describe('docker plans', () => {
 
         const dockerfile = renderDockerfile(plan);
         expect(dockerfile).toContain('ghcr.io/voidzero-dev/vite-plus');
-        expect(dockerfile).toContain('RUN vp build');
+        expect(dockerfile).toContain('RUN vp run build');
         expect(dockerfile).toContain('/usr/share/nginx/html');
         expect(dockerfile).toContain('wget -qO- http://127.0.0.1:8080/');
     });
@@ -229,6 +231,48 @@ describe('docker plans', () => {
         expect(dockerfile).toContain('USER node');
     });
 
+    it('skips the build step when package.json has no build script', () => {
+        const cwd = project({ name: 'noscript', scripts: { start: 'node server.js' } });
+        const plan = resolveDockerPlan({ cwd });
+
+        expect(plan.hasBuildScript).toBe(false);
+        const dockerfile = renderDockerfile(plan);
+        expect(dockerfile).not.toMatch(/RUN (?:yarn|npm|pnpm|bun) run build/);
+        expect(dockerfile).toContain('CMD ["node", "dist/index.js"]');
+    });
+
+    it('treats a plain Vite app as a static site', () => {
+        const cwd = project({ name: 'viteapp', scripts: { build: 'vite build' } });
+        const plan = resolveDockerPlan({ cwd });
+
+        expect(plan.runtime).toBe('static');
+        const dockerfile = renderDockerfile(plan);
+        expect(dockerfile).toContain('RUN yarn run build');
+        expect(dockerfile).toContain('COPY --from=build /app/dist /usr/share/nginx/html');
+        expect(dockerfile).not.toContain('CMD ["node"');
+    });
+
+    it('publishes the server port and binds all interfaces', () => {
+        const cwd = project({
+            name: 'svc-port',
+            scripts: { build: 'tsc', start: 'node dist/index.js' },
+        });
+        const plan = resolveDockerPlan({ cwd, port: 8081, compose: true });
+
+        const dockerfile = renderDockerfile(plan);
+        expect(dockerfile).toContain('ENV HOST=0.0.0.0');
+        expect(dockerfile).toContain('ENV PORT=8081');
+        expect(dockerfile).toContain('EXPOSE 8081');
+        expect(renderCompose(plan)).toContain('- "8081:8081"');
+    });
+
+    it('reconfigures nginx when a static site uses a non-default port', () => {
+        const cwd = project({ name: 'docs-port', scripts: { build: 'vitepress build docs' } });
+        const plan = resolveDockerPlan({ cwd, port: 3000 });
+
+        expect(renderDockerfile(plan)).toContain('s/8080/3000/g');
+    });
+
     it('honours config overrides and writes the optional compose file', () => {
         const cwd = project({ name: 'svc', scripts: { start: 'node dist/index.js' } });
         const files = dockerFiles({
@@ -307,9 +351,9 @@ describe('docker dependency sources', () => {
             '.yarn/patches',
         ]);
         const dockerfile = renderDockerfile(plan);
-        expect(dockerfile).toContain(
-            'COPY package.json yarn.lock .yarnrc.yml .yarn/releases .yarn/patches ./'
-        );
+        expect(dockerfile).toContain('COPY package.json yarn.lock .yarnrc.yml ./');
+        expect(dockerfile).toContain('COPY .yarn/releases ./.yarn/releases');
+        expect(dockerfile).toContain('COPY .yarn/patches ./.yarn/patches');
     });
 
     it('keeps the minimal Yarn COPY list without a `.yarn` directory', () => {

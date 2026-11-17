@@ -91,6 +91,8 @@ export interface DockerPlan {
     runtimeImage: string;
     /** The sources `COPY`ed before installing dependencies (only existing files). */
     installSources: string[];
+    /** Whether `package.json` declares a `build` script. */
+    hasBuildScript: boolean;
 }
 
 /** The header prepended to every generated Docker artifact. */
@@ -186,8 +188,23 @@ function nodeInstall(packageManager: string, production = false, frozen = true):
 /** The build command for a runtime/package manager. */
 function buildCommand(plan: DockerPlan): string {
     if (plan.runtime === 'bun') return 'bun run build';
-    if (plan.vitePlus) return 'vp build';
+    if (plan.vitePlus) return 'vp run build';
     return plan.packageManager === 'npm' ? 'npm run build' : `${plan.packageManager} run build`;
+}
+
+/** The directory sources that must keep their path (Docker flattens `COPY dir ./`). */
+const DIRECTORY_SOURCES = new Set(['.yarn/releases', '.yarn/patches', '.yarn/plugins']);
+
+/** The `COPY` lines for the pre-install sources, preserving directory names. */
+function copySourceLines(plan: DockerPlan, chown?: string): string[] {
+    const prefix = chown ? `COPY --chown=${chown} ` : 'COPY ';
+    const files = plan.installSources.filter(source => !DIRECTORY_SOURCES.has(source));
+    const lines: string[] = [];
+    if (files.length > 0) lines.push(`${prefix}${files.join(' ')} ./`);
+    for (const source of plan.installSources) {
+        if (DIRECTORY_SOURCES.has(source)) lines.push(`${prefix}${source} ./${source}`);
+    }
+    return lines;
 }
 
 /** The install command for a Vite+ image. */
@@ -228,7 +245,7 @@ export function resolveDockerPlan(options: DockerPlanOptions): DockerPlan {
     else if (build.includes('vitepress')) runtime = 'static';
     else if (build.startsWith('bun ') || start.startsWith('bun ')) runtime = 'bun';
     else if (start) runtime = 'node';
-    else if (build.includes('vp build')) runtime = 'static';
+    else if (build.includes('vp build') || build.includes('vite build')) runtime = 'static';
     else runtime = 'node';
 
     // The package manager is the single source of truth for both the COPY
@@ -281,6 +298,7 @@ export function resolveDockerPlan(options: DockerPlanOptions): DockerPlan {
                     ? 'debian:bookworm-slim'
                     : `node:${nodeVersion}-bookworm-slim`),
         installSources: installSources(packageManager, options.cwd),
+        hasBuildScript: build.trim().length > 0,
     };
     plan.user = plan.user || defaultUser({ ...plan, vitePlus });
     return plan;
@@ -299,7 +317,7 @@ function buildStage(plan: DockerPlan): string[] {
         lines.push(
             `FROM node:${plan.nodeVersion}-bookworm-slim AS deps`,
             'WORKDIR /app',
-            `COPY ${plan.installSources.join(' ')} ./`,
+            ...copySourceLines(plan),
             `RUN ${nodeInstall(plan.packageManager, false, frozen)}`,
             ''
         );
@@ -307,12 +325,12 @@ function buildStage(plan: DockerPlan): string[] {
     lines.push(`FROM ${plan.baseImage} AS build`, 'WORKDIR /app', '');
     if (plan.vitePlus && plan.runtime !== 'bun') {
         lines.push(
-            `COPY --chown=vp:vp ${plan.installSources.join(' ')} ./`,
+            ...copySourceLines(plan, 'vp:vp'),
             `RUN ${vitePlusInstall(false, frozen)}`,
             '',
-            'COPY --chown=vp:vp . .',
-            `RUN ${buildCommand(plan)}`
+            'COPY --chown=vp:vp . .'
         );
+        if (plan.hasBuildScript) lines.push(`RUN ${buildCommand(plan)}`);
         return lines;
     }
     if (nodeDeps) {
@@ -321,18 +339,18 @@ function buildStage(plan: DockerPlan): string[] {
             // files (`.pnp.cjs`, `.yarn`) reach the build stage.
             'COPY --from=deps /app ./',
             '',
-            'COPY . .',
-            `RUN ${buildCommand(plan)}`
+            'COPY . .'
         );
+        if (plan.hasBuildScript) lines.push(`RUN ${buildCommand(plan)}`);
         return lines;
     }
     lines.push(
-        `COPY ${plan.installSources.join(' ')} ./`,
+        ...copySourceLines(plan),
         `RUN ${nodeInstall(plan.packageManager, false, frozen)}`,
         '',
-        'COPY . .',
-        `RUN ${buildCommand(plan)}`
+        'COPY . .'
     );
+    if (plan.hasBuildScript) lines.push(`RUN ${buildCommand(plan)}`);
     return lines;
 }
 
@@ -341,8 +359,11 @@ function staticRuntime(plan: DockerPlan): string[] {
     const lines = [
         `FROM ${plan.runtimeImage} AS runtime`,
         `COPY --from=build /app/${plan.output} /usr/share/nginx/html`,
-        `EXPOSE ${plan.port}`,
     ];
+    if (plan.port !== 8080) {
+        lines.push(`RUN sed -i "s/8080/${plan.port}/g" /etc/nginx/conf.d/default.conf`);
+    }
+    lines.push(`EXPOSE ${plan.port}`);
     if (plan.healthcheck) lines.push(healthcheckCommand(plan));
     return lines;
 }
@@ -353,6 +374,8 @@ function serverRuntime(plan: DockerPlan): string[] {
         `FROM ${plan.runtimeImage} AS runtime`,
         'WORKDIR /app',
         'ENV NODE_ENV=production',
+        'ENV HOST=0.0.0.0',
+        `ENV PORT=${plan.port}`,
     ];
     if (plan.vitePlus && plan.runtime === 'node') {
         lines.push(
@@ -390,7 +413,7 @@ export function renderDockerfile(plan: DockerPlan): string {
             '',
             `FROM ${plan.baseImage} AS deps`,
             'WORKDIR /app',
-            `COPY --chown=vp:vp ${plan.installSources.join(' ')} ./`,
+            ...copySourceLines(plan, 'vp:vp'),
             `RUN ${vitePlusInstall(true, hasLockfile(plan.installSources))}`
         );
     }

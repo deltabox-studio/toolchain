@@ -326,6 +326,25 @@ describe('scaffolding', () => {
         expect(fs.existsSync(path.join(out, 'pnpm-workspace.yaml'))).toBe(true);
     });
 
+    it('copies generated package-manager config before the container install', async () => {
+        const out = makeTmp();
+        const template = BUILTIN_TEMPLATES.find(candidate => candidate.id === 'express');
+        if (!template) throw new Error('missing builtin');
+
+        await scaffoldTemplate(template, {
+            cwd: out,
+            tokens: { name: 'acme', packageManager: 'yarn' },
+            containerize: true,
+        });
+
+        const dockerfile = fs.readFileSync(path.join(out, 'Dockerfile'), 'utf-8');
+        expect(fs.existsSync(path.join(out, '.yarnrc.yml'))).toBe(true);
+        expect(dockerfile).toMatch(/COPY --chown=vp:vp [^\n]*\.yarnrc\.yml/);
+        expect(dockerfile).toContain('RUN vp run build');
+        expect(dockerfile).not.toMatch(/^RUN vp build$/m);
+        expect(dockerfile).toContain('ENV HOST=0.0.0.0');
+    });
+
     it('does not reuse the configured version when packageManager is overridden', async () => {
         const out = makeTmp();
         const template = BUILTIN_TEMPLATES.find(candidate => candidate.id === 'project');

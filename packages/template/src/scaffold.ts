@@ -278,24 +278,6 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
             );
         }
     }
-    if (options.containerize) {
-        const docker = containerRuntime(template);
-        if (docker) {
-            files.push(
-                ...dockerFiles({
-                    cwd: options.cwd,
-                    projectName: name,
-                    vitePlus: true,
-                    ...(packageManager ? { packageManager } : {}),
-                    ...(metadata.nodeVersion ? { nodeVersion: metadata.nodeVersion } : {}),
-                    runtime: docker.runtime,
-                    ...(docker.output ? { output: docker.output } : {}),
-                    // Every containerized scaffold ships a local compose file.
-                    compose: true,
-                })
-            );
-        }
-    }
     const written = writeGeneratedFiles(files, options.cwd, { force: options.force === true });
     if (template.builtin !== 'folder') {
         ensureToolingDependencies({
@@ -312,6 +294,28 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
             scope,
             options.tsconfigRootFile
         );
+    }
+    if (options.containerize) {
+        const docker = containerRuntime(template);
+        if (docker) {
+            written.push(
+                ...writeGeneratedFiles(
+                    dockerFiles({
+                        cwd: options.cwd,
+                        projectName: name,
+                        vitePlus: true,
+                        ...(packageManager ? { packageManager } : {}),
+                        ...(metadata.nodeVersion ? { nodeVersion: metadata.nodeVersion } : {}),
+                        runtime: docker.runtime,
+                        ...(docker.output ? { output: docker.output } : {}),
+                        // Every containerized scaffold ships a local compose file.
+                        compose: true,
+                    }),
+                    options.cwd,
+                    { force: options.force === true }
+                )
+            );
+        }
     }
     return { written };
 }
