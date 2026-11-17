@@ -9,7 +9,9 @@
 type YamlValue = string | number | boolean | null | YamlValue[] | { [key: string & {}]: YamlValue };
 
 const BOOLEAN_LIKE = /^(?:true|false|yes|no|on|off|null|~)$/i;
-const NUMBER_LIKE = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/;
+const NUMBER_LIKE =
+    /^(?:[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?|[-+]?0[xX][0-9a-fA-F]+|[-+]?0[bB][01]+|[-+]?0[oO][0-7]+|[-+]?\.(?:inf|nan))$/i;
+const DATE_LIKE = /^\d{4}-\d{2}-\d{2}(?:[Tt ].*)?$/;
 
 function isMap(value: unknown): value is Record<string & {}, YamlValue> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -17,7 +19,8 @@ function isMap(value: unknown): value is Record<string & {}, YamlValue> {
 
 function quotable(s: string): boolean {
     if (s === '') return true;
-    if (BOOLEAN_LIKE.test(s) || NUMBER_LIKE.test(s)) return true;
+    if (BOOLEAN_LIKE.test(s) || NUMBER_LIKE.test(s) || DATE_LIKE.test(s)) return true;
+    if (s.endsWith(':')) return true;
     if (/^[\s\-?:,[\]{}#&*!|>%@`"']/.test(s)) return true;
     if (/\s$/.test(s)) return true;
     if (s.includes(': ') || s.includes(' #') || s.includes('\t')) return true;

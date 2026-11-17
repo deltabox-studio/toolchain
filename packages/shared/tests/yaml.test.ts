@@ -65,4 +65,18 @@ describe('toYaml escaping edge cases', () => {
         expect(toYaml({ run: 'echo one\necho two' })).toContain('run: |-');
         expect(toYaml({ run: 'echo one\necho two\n' })).toContain('run: |');
     });
+
+    it('quotes scalars ending in a colon', () => {
+        expect(toYaml({ name: 'Deploy:' })).toContain('name: "Deploy:"');
+        expect(toYaml({ script: ['echo done:'] })).toContain('script: ["echo done:"]');
+    });
+
+    it('quotes non-decimal numbers and date-like strings', () => {
+        const yaml = toYaml({ a: '0x10', b: '0b101', c: '0o17', d: '2020-01-01', e: '.inf' });
+        expect(yaml).toContain('a: "0x10"');
+        expect(yaml).toContain('b: "0b101"');
+        expect(yaml).toContain('c: "0o17"');
+        expect(yaml).toContain('d: "2020-01-01"');
+        expect(yaml).toContain('e: ".inf"');
+    });
 });
