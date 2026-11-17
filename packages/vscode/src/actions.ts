@@ -79,57 +79,6 @@ export function actionGroups(): PromptAction[] {
             'Remove generated files and the manifest.'
         ),
 
-        // Config
-        action(
-            'config.env',
-            'Generate config env file',
-            'Config',
-            'deltabox.toolchain.configEnv',
-            'Run `dbx config:env`.'
-        ),
-        action(
-            'config.types',
-            'Generate config types',
-            'Config',
-            'deltabox.toolchain.configTypes',
-            'Run `dbx config:types`.'
-        ),
-        action(
-            'config.schema',
-            'Generate config schema',
-            'Config',
-            'deltabox.toolchain.configSchema',
-            'Run `dbx config:schema`.'
-        ),
-        action(
-            'config.docs',
-            'Generate config docs',
-            'Config',
-            'deltabox.toolchain.configDocs',
-            'Run `dbx config:markdown`.'
-        ),
-        action(
-            'config.all',
-            'Generate all configs',
-            'Config',
-            'deltabox.toolchain.configAll',
-            'Run `dbx config:all`.'
-        ),
-        action(
-            'config.json',
-            'Generate config JSON',
-            'Config',
-            'deltabox.toolchain.configJson',
-            'Run `dbx config:json`.'
-        ),
-        action(
-            'config.cli',
-            'Generate CLI reference',
-            'Config',
-            'deltabox.toolchain.configCli',
-            'Run `dbx config:cli`.'
-        ),
-
         // MCP
         action(
             'mcp.install',

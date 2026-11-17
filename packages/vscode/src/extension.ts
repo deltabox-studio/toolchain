@@ -1019,27 +1019,6 @@ export function activate(context: vscode.ExtensionContext): void {
             const code = await runRootCli(['changelog', '--release-notes', version]);
             if (code === 0) output.show();
         }),
-        vscode.commands.registerCommand('deltabox.toolchain.configEnv', () =>
-            runRootCli(['config:env'])
-        ),
-        vscode.commands.registerCommand('deltabox.toolchain.configTypes', () =>
-            runRootCli(['config:types'])
-        ),
-        vscode.commands.registerCommand('deltabox.toolchain.configSchema', () =>
-            runRootCli(['config:schema'])
-        ),
-        vscode.commands.registerCommand('deltabox.toolchain.configDocs', () =>
-            runRootCli(['config:markdown'])
-        ),
-        vscode.commands.registerCommand('deltabox.toolchain.configAll', () =>
-            runRootCli(['config:all'])
-        ),
-        vscode.commands.registerCommand('deltabox.toolchain.configJson', () =>
-            runRootCli(['config:json'])
-        ),
-        vscode.commands.registerCommand('deltabox.toolchain.configCli', () =>
-            runRootCli(['config:cli'])
-        ),
         vscode.commands.registerCommand('deltabox.toolchain.mcpList', () =>
             runRootCli(['mcp:list'])
         ),
