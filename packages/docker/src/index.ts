@@ -150,6 +150,12 @@ function installSources(packageManager: string, cwd: string): string[] {
         default:
             if (has('yarn.lock')) sources.push('yarn.lock');
             if (has('.yarnrc.yml')) sources.push('.yarnrc.yml');
+            // Yarn 4 re-executes the binary named by `yarnPath` and reads
+            // patches/plugins from `.yarn/`; those sources must exist before the
+            // install step (the full `COPY . .` only runs later).
+            for (const dir of ['.yarn/releases', '.yarn/patches', '.yarn/plugins']) {
+                if (has(dir)) sources.push(dir);
+            }
     }
     return sources;
 }
@@ -257,7 +263,10 @@ export function resolveDockerPlan(options: DockerPlanOptions): DockerPlan {
         user: options.user ?? '',
         baseImage:
             options.baseImage ??
-            (runtime === 'bun'
+            // A Node runtime that installs/builds with Bun still needs the Bun
+            // image for the build stage (the Node image has no `bun`). A Vite+
+            // project keeps the Vite+ image: `vp install` resolves Bun itself.
+            (runtime === 'bun' || (!vitePlus && packageManager === 'bun')
                 ? 'oven/bun:1'
                 : vitePlus
                   ? VITE_PLUS_IMAGE

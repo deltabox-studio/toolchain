@@ -261,3 +261,70 @@ describe('docker plans', () => {
         expect(dockerImageName('!!!')).toBe('app');
     });
 });
+
+describe('docker dependency sources', () => {
+    it('builds a Node runtime with the Bun image when Bun is the package manager', () => {
+        const cwd = project({
+            name: 'node-bun',
+            packageManager: 'bun@1.3.0',
+            scripts: { build: 'tsc', start: 'node dist/index.js' },
+        });
+
+        const plan = resolveDockerPlan({ cwd });
+        expect(plan.runtime).toBe('node');
+        expect(plan.packageManager).toBe('bun');
+        expect(plan.baseImage).toBe('oven/bun:1');
+        expect(plan.runtimeImage).toBe('node:22-bookworm-slim');
+
+        const dockerfile = renderDockerfile(plan);
+        expect(dockerfile).toContain('FROM oven/bun:1 AS build');
+        expect(dockerfile).not.toContain('FROM node:22-bookworm-slim AS build');
+        expect(dockerfile).toContain('RUN bun install');
+        expect(dockerfile).toContain('RUN bun run build');
+    });
+
+    it('copies the Yarn release/patches directories before installing', () => {
+        const cwd = project({
+            name: 'yarn-path',
+            packageManager: 'yarn@4.17.1',
+            scripts: { build: 'tsc', start: 'node dist/index.js' },
+        });
+        fs.writeFileSync(path.join(cwd, 'yarn.lock'), '');
+        fs.writeFileSync(
+            path.join(cwd, '.yarnrc.yml'),
+            'yarnPath: .yarn/releases/yarn-4.17.1.cjs\nnodeLinker: node-modules\n'
+        );
+        fs.mkdirSync(path.join(cwd, '.yarn', 'releases'), { recursive: true });
+        fs.writeFileSync(path.join(cwd, '.yarn', 'releases', 'yarn-4.17.1.cjs'), '');
+        fs.mkdirSync(path.join(cwd, '.yarn', 'patches'), { recursive: true });
+
+        const plan = resolveDockerPlan({ cwd });
+        expect(plan.installSources).toEqual([
+            'package.json',
+            'yarn.lock',
+            '.yarnrc.yml',
+            '.yarn/releases',
+            '.yarn/patches',
+        ]);
+        const dockerfile = renderDockerfile(plan);
+        expect(dockerfile).toContain(
+            'COPY package.json yarn.lock .yarnrc.yml .yarn/releases .yarn/patches ./'
+        );
+    });
+
+    it('keeps the minimal Yarn COPY list without a `.yarn` directory', () => {
+        const cwd = project({
+            name: 'yarn-plain',
+            packageManager: 'yarn@4.17.1',
+            scripts: { build: 'tsc', start: 'node dist/index.js' },
+        });
+        fs.writeFileSync(path.join(cwd, 'yarn.lock'), '');
+        fs.writeFileSync(path.join(cwd, '.yarnrc.yml'), 'nodeLinker: node-modules\n');
+
+        expect(resolveDockerPlan({ cwd }).installSources).toEqual([
+            'package.json',
+            'yarn.lock',
+            '.yarnrc.yml',
+        ]);
+    });
+});
