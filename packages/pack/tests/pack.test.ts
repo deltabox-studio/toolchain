@@ -78,6 +78,30 @@ describe('cleanup', () => {
         const removed = cleanup('build', ['**/node_modules/**'], { silent: true });
         expect(removed).toEqual([]);
     });
+
+    it('ignores the VS Code test runtime and the git directory', () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-cleanup-'));
+        try {
+            const files = [
+                'dist/app.js',
+                '.vscode-test/vscode-1/resources/app/extensions/x/dist/x.js',
+                '.git/dist/objects/x',
+            ];
+            for (const file of files) {
+                fs.mkdirSync(path.dirname(path.join(cwd, file)), { recursive: true });
+                fs.writeFileSync(path.join(cwd, file), 'x');
+            }
+
+            const removed = cleanup('build', ['**/dist/'], { cwd, silent: true });
+
+            expect(removed).toEqual(['dist']);
+            expect(fs.existsSync(path.join(cwd, 'dist'))).toBe(false);
+            expect(fs.existsSync(path.join(cwd, '.vscode-test'))).toBe(true);
+            expect(fs.existsSync(path.join(cwd, '.git', 'dist'))).toBe(true);
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
+    });
 });
 
 describe('tsdown config helpers', () => {
@@ -352,6 +376,29 @@ describe('node_modules leak reporter', () => {
 });
 
 describe('sortPackageExports', () => {
+    it('keeps null export blockers', () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-tsdown-'));
+        const file = path.join(dir, 'package.json');
+        fs.writeFileSync(
+            file,
+            JSON.stringify({
+                name: 'x',
+                exports: { '.': null, './package.json': null, './a': './dist/a.js' },
+            })
+        );
+        try {
+            expect(sortPackageExports(file)).toBe(true);
+            const pkg = JSON.parse(fs.readFileSync(file, 'utf8')) as {
+                exports: Record<string, string | null>;
+            };
+            expect(pkg.exports['.']).toBeNull();
+            expect(pkg.exports['./package.json']).toBeNull();
+            expect(pkg.exports['./a']).toBe('./dist/a.js');
+        } finally {
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
     it('writes the sorted exports back to package.json', () => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-tsdown-'));
         const file = path.join(dir, 'package.json');

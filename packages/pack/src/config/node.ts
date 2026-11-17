@@ -46,12 +46,12 @@ export function sortPackageExports(packageJsonPath: string): boolean {
         './package.json': pkgField,
         ...rest
     } = sorted as Record<string, unknown>;
-    raw.exports = {
-        ...(rootField ? { '.': rootField } : {}),
-        ...(typesField ? { './types': typesField } : {}),
-        ...rest,
-        ...(pkgField ? { './package.json': pkgField } : {}),
-    };
+    const ordered: Record<string, unknown> = {};
+    if (rootField !== undefined) ordered['.'] = rootField;
+    if (typesField !== undefined) ordered['./types'] = typesField;
+    Object.assign(ordered, rest);
+    if (pkgField !== undefined) ordered['./package.json'] = pkgField;
+    raw.exports = ordered;
     fs.writeFileSync(packageJsonPath, `${JSON.stringify(raw, null, 4)}\n`, 'utf-8');
     return true;
 }

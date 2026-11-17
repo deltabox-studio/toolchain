@@ -33,7 +33,7 @@ export function cleanup(
     const files = new Glob(list, {
         cwd,
         dot: true,
-        ignore: options.ignore ?? ['**/node_modules/**'],
+        ignore: options.ignore ?? ['**/node_modules/**', '**/.git/**', '**/.vscode-test/**'],
     }).walkSync();
 
     if (!files.length) {
