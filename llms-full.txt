@@ -3995,8 +3995,19 @@ Server images run as a non-root user and get a `HEALTHCHECK` that requests
 The dependency-install stage copies only sources that exist when the Dockerfile
 is generated: `package.json` plus the project's lockfile/workspace files
 (`yarn.lock`/`.yarnrc.yml`, `pnpm-lock.yaml`/`pnpm-workspace.yaml`,
-`package-lock.json`, `bun.lock`/`bun.lockb`). No `.node-version` file is assumed,
-and a missing lockfile is never `COPY`ed, so a fresh scaffold builds.
+`package-lock.json`, `bun.lock`/`bun.lockb`). A Vite+ project also copies an
+existing `.node-version` before `vp install`, so Vite+ selects the same Node.js
+version in the image. No lockfile is assumed, and a missing lockfile is never
+`COPY`ed, so a fresh scaffold builds.
+
+The generated `.dockerignore` matches dependencies and build output at any
+depth (`**/node_modules`, `**/dist`, the configured output directory, ...), so
+nested workspace copies are excluded from the build context too.
+
+Yarn Plug'n'Play projects do not get `node_modules`. Their runtime image copies
+the generated `.pnp.cjs` (or `.pnp.js`), an optional `.pnp.loader.mjs`, and
+`.yarn`, then starts Node with `--require ./.pnp.cjs` (and
+`--experimental-loader` when the loader exists).
 
 The declared package manager is the single source of truth: `packageManager` in
 `package.json` (or the `packageManager` option) drives both the copied lockfiles

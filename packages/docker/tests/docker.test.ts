@@ -9,6 +9,7 @@ import {
     dockerImageName,
     renderCompose,
     renderDockerfile,
+    renderDockerignore,
     resolveDockerPlan,
 } from '../src/index.js';
 
@@ -370,5 +371,84 @@ describe('docker dependency sources', () => {
             'yarn.lock',
             '.yarnrc.yml',
         ]);
+    });
+
+    it('copies `.node-version` before the Vite+ install', () => {
+        const cwd = project({
+            name: 'vite-node',
+            packageManager: 'yarn@4.17.1',
+            scripts: { build: 'vp pack', start: 'node dist/index.js' },
+        });
+        fs.writeFileSync(path.join(cwd, '.node-version'), '22.10.0\n');
+
+        const plan = resolveDockerPlan({ cwd, vitePlus: true });
+        expect(plan.installSources).toContain('.node-version');
+
+        const dockerfile = renderDockerfile(plan);
+        const copyAt = dockerfile.indexOf('COPY --chown=vp:vp package.json .node-version ./');
+        const installAt = dockerfile.indexOf('RUN vp install');
+        expect(copyAt).toBeGreaterThan(-1);
+        expect(copyAt).toBeLessThan(installAt);
+    });
+
+    it('copies the Yarn PnP runtime instead of `node_modules`', () => {
+        const cwd = project({
+            name: 'yarn-pnp',
+            packageManager: 'yarn@4.17.1',
+            scripts: { build: 'tsc', start: 'node dist/index.js' },
+        });
+        fs.writeFileSync(path.join(cwd, 'yarn.lock'), '');
+        fs.writeFileSync(path.join(cwd, '.yarnrc.yml'), 'nodeLinker: pnp\n');
+        fs.writeFileSync(path.join(cwd, '.pnp.cjs'), '');
+        fs.writeFileSync(path.join(cwd, '.pnp.loader.mjs'), '');
+        fs.mkdirSync(path.join(cwd, '.yarn', 'cache'), { recursive: true });
+
+        const plan = resolveDockerPlan({ cwd });
+        expect(plan.pnp).toEqual({
+            entry: '.pnp.cjs',
+            loader: '.pnp.loader.mjs',
+            files: ['.pnp.cjs', '.pnp.loader.mjs', '.yarn'],
+        });
+
+        const dockerfile = renderDockerfile(plan);
+        expect(dockerfile).not.toContain('COPY --from=build /app/node_modules ./node_modules');
+        expect(dockerfile).toContain('COPY --from=build /app/.pnp.cjs ./.pnp.cjs');
+        expect(dockerfile).toContain('COPY --from=build /app/.pnp.loader.mjs ./.pnp.loader.mjs');
+        expect(dockerfile).toContain('COPY --from=build /app/.yarn ./.yarn');
+        expect(dockerfile).toContain(
+            'CMD ["node", "--require", "./.pnp.cjs", "--experimental-loader", "./.pnp.loader.mjs", "dist/index.js"]'
+        );
+
+        const viteDockerfile = renderDockerfile(resolveDockerPlan({ cwd, vitePlus: true }));
+        expect(viteDockerfile).toContain('COPY --from=deps /app/.pnp.cjs ./.pnp.cjs');
+        expect(viteDockerfile).not.toContain('/app/node_modules');
+    });
+
+    it('ignores a stale PnP resolver when the linker is node-modules', () => {
+        const cwd = project({
+            name: 'yarn-stale-pnp',
+            packageManager: 'yarn@4.17.1',
+            scripts: { build: 'tsc', start: 'node dist/index.js' },
+        });
+        fs.writeFileSync(path.join(cwd, 'yarn.lock'), '');
+        fs.writeFileSync(path.join(cwd, '.yarnrc.yml'), 'nodeLinker: node-modules\n');
+        fs.writeFileSync(path.join(cwd, '.pnp.cjs'), '');
+
+        const plan = resolveDockerPlan({ cwd });
+        expect(plan.pnp).toBeUndefined();
+        expect(renderDockerfile(plan)).toContain(
+            'COPY --from=build /app/node_modules ./node_modules'
+        );
+    });
+
+    it('ignores nested workspace dependencies and build output', () => {
+        const cwd = project({ name: 'monorepo', scripts: { start: 'node dist/index.js' } });
+        const ignore = renderDockerignore(resolveDockerPlan({ cwd, output: 'packages/app/dist' }));
+
+        expect(ignore).toContain('**/node_modules');
+        expect(ignore).toContain('**/dist');
+        expect(ignore).toContain('**/packages/app/dist');
+        expect(ignore).toContain('**/.env');
+        expect(ignore).toContain('!**/.env.example');
     });
 });
