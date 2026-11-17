@@ -80,3 +80,12 @@ describe('sync command without a managed config', () => {
         });
     });
 });
+
+describe('sync command flag combinations', () => {
+    it('rejects --recursive with --watch instead of ignoring --watch', async () => {
+        const cwd = tmp();
+        await expect(
+            syncCommand().run?.({ recursive: true, watch: true }, context(cwd))
+        ).rejects.toThrow(/--recursive.*--watch/);
+    });
+});

@@ -88,6 +88,12 @@ export function syncCommand(): ToolchainCommand {
                     : undefined;
             const format = formatSetting(opts);
 
+            if (opts.recursive && opts.watch) {
+                throw new Error(
+                    '`--recursive` cannot be combined with `--watch` yet; run `dbx watch` in each project instead.'
+                );
+            }
+
             if (context.configError) {
                 if (json) {
                     logger.raw(
