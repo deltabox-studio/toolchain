@@ -21,6 +21,7 @@ import {
 import {
     applyReplacements,
     type GeneratedFile,
+    isIgnoredPath,
     type Replacements,
     spawnCross,
 } from '@deltabox/toolchain/shared';
@@ -30,7 +31,7 @@ import { readTemplateManifest } from './local.js';
 import type { Template, TemplateAction, TemplateActionContext } from './types/index.js';
 
 /** Files/dirs never copied from a local template. */
-const DEFAULT_IGNORE = new Set([
+const DEFAULT_IGNORE = [
     'node_modules',
     '.git',
     'dist',
@@ -38,7 +39,35 @@ const DEFAULT_IGNORE = new Set([
     '.dbx',
     '.DS_Store',
     'template.json',
-]);
+];
+
+/**
+ * Expand template ignore entries into path globs. A slash-less entry matches at
+ * any depth (like `.gitignore`), and a directory entry also covers its
+ * contents; explicit paths/globs keep their relative scope.
+ */
+function ignorePatterns(entries: readonly string[]): string[] {
+    const patterns: string[] = [];
+    for (const raw of entries) {
+        const entry = raw
+            .replace(/\\/g, '/')
+            .replace(/^\.\//, '')
+            .replace(/^\/+/, '')
+            .replace(/\/+$/, '');
+        if (!entry) continue;
+        for (const variant of entry.includes('/') ? [entry] : [`**/${entry}`]) {
+            patterns.push(variant);
+            if (!variant.endsWith('/**')) patterns.push(`${variant}/**`);
+        }
+    }
+    return patterns;
+}
+
+/** Whether a file's bytes are binary (a NUL byte or invalid UTF-8). */
+function isBinaryFile(buffer: Buffer): boolean {
+    if (buffer.includes(0)) return true;
+    return !Buffer.from(buffer.toString('utf-8'), 'utf-8').equals(buffer);
+}
 
 export interface ScaffoldOptions {
     /** Where the files are written. */
@@ -287,23 +316,24 @@ function scaffoldLocal(template: Template, options: ScaffoldOptions): ScaffoldRe
     const dir = template.dir;
     if (!dir) throw new Error(`Local template "${template.id}" has no directory.`);
     const manifest = readTemplateManifest(dir);
-    const ignore = new Set([...DEFAULT_IGNORE, ...(manifest?.ignore ?? [])]);
+    const ignores = [...DEFAULT_IGNORE, ...(manifest?.ignore ?? [])];
     // The action modules are scaffolding logic, not template content.
     for (const action of template.actions ?? []) {
-        if (action.module) ignore.add(action.module.replace(/\\/g, '/'));
+        if (action.module) ignores.push(action.module.replace(/\\/g, '/'));
     }
+    const ignore = ignorePatterns(ignores);
     const open = template.tokens?.open ?? '{{';
     const close = template.tokens?.close ?? '}}';
     const tokens = replacementMap(options);
     const overwrite = options.force === true || options.overwrite === true;
-    const pending: { target: string; content: string }[] = [];
+    const pending: { target: string; content: string | Buffer }[] = [];
     const root = path.resolve(options.cwd);
 
     const walk = (relative: string): void => {
         const abs = path.join(dir, relative);
         for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
-            if (ignore.has(entry.name)) continue;
             const childRelative = relative ? `${relative}/${entry.name}` : entry.name;
+            if (isIgnoredPath(childRelative, ignore)) continue;
             if (entry.isDirectory()) {
                 walk(childRelative);
                 continue;
@@ -321,8 +351,14 @@ function scaffoldLocal(template: Template, options: ScaffoldOptions): ScaffoldRe
                 throw new Error(`refusing to write outside ${root}: ${target}`);
             }
             if (!overwrite && fs.existsSync(target)) continue;
-            const content = fs.readFileSync(path.join(dir, childRelative), 'utf-8');
-            pending.push({ target, content: applyReplacements(content, tokens, { open, close }) });
+            const source = path.join(dir, childRelative);
+            const buffer = fs.readFileSync(source);
+            pending.push({
+                target,
+                content: isBinaryFile(buffer)
+                    ? buffer
+                    : applyReplacements(buffer.toString('utf-8'), tokens, { open, close }),
+            });
         }
     };
     walk('');
@@ -332,7 +368,7 @@ function scaffoldLocal(template: Template, options: ScaffoldOptions): ScaffoldRe
     const written: string[] = [];
     for (const file of pending) {
         fs.mkdirSync(path.dirname(file.target), { recursive: true });
-        fs.writeFileSync(file.target, file.content, 'utf-8');
+        fs.writeFileSync(file.target, file.content);
         written.push(file.target);
     }
     return { written };

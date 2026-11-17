@@ -372,6 +372,68 @@ describe('scaffolding', () => {
         // the manifest is never copied
         expect(fs.existsSync(path.join(out, 'template.json'))).toBe(false);
     });
+
+    it('honours nested paths and globs in a local template ignore list', async () => {
+        const root = makeTmp();
+        const tpl = path.join(root, 'tpl');
+        writeTemplate(
+            tpl,
+            { name: 'T', ignore: ['private/secret.txt', '*.md'] },
+            {
+                'keep.txt': 'keep',
+                'notes.md': 'notes',
+                'nested/more.md': 'more',
+                'private/secret.txt': 'secret',
+            }
+        );
+        const out = makeTmp();
+        const [template] = loadLocalTemplates(root);
+        if (!template) throw new Error('missing local template');
+
+        await scaffoldTemplate(template, { cwd: out });
+
+        expect(fs.existsSync(path.join(out, 'keep.txt'))).toBe(true);
+        expect(fs.existsSync(path.join(out, 'notes.md'))).toBe(false);
+        expect(fs.existsSync(path.join(out, 'nested', 'more.md'))).toBe(false);
+        expect(fs.existsSync(path.join(out, 'private', 'secret.txt'))).toBe(false);
+    });
+
+    it('does not copy a nested action module from a local template', async () => {
+        const root = makeTmp();
+        const tpl = path.join(root, 'tpl');
+        writeTemplate(
+            tpl,
+            { name: 'T', actions: [{ id: 'setup', module: 'actions/setup.mjs' }] },
+            {
+                'keep.txt': 'keep',
+                'actions/setup.mjs': 'export default () => {};\n',
+            }
+        );
+        const out = makeTmp();
+        const [template] = loadLocalTemplates(root);
+        if (!template) throw new Error('missing local template');
+
+        await scaffoldTemplate(template, { cwd: out });
+
+        expect(fs.existsSync(path.join(out, 'keep.txt'))).toBe(true);
+        expect(fs.existsSync(path.join(out, 'actions', 'setup.mjs'))).toBe(false);
+    });
+
+    it('copies a binary asset byte-for-byte', async () => {
+        const root = makeTmp();
+        const tpl = path.join(root, 'tpl');
+        writeTemplate(tpl, { name: 'T' }, { 'README.md': '# {{name}}\n' });
+        const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0xff, 0x10, 0x80]);
+        fs.writeFileSync(path.join(tpl, 'logo.png'), bytes);
+        const out = makeTmp();
+        const [template] = loadLocalTemplates(root);
+        if (!template) throw new Error('missing local template');
+
+        await scaffoldTemplate(template, { cwd: out, tokens: { name: 'acme' } });
+
+        expect(fs.readFileSync(path.join(out, 'logo.png')).equals(bytes)).toBe(true);
+        expect(fs.readFileSync(path.join(out, 'README.md'), 'utf-8')).toBe('# acme\n');
+    });
 });
 
 describe('workspace scaffold path validation', () => {
