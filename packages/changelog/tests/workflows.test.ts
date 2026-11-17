@@ -523,6 +523,34 @@ describe('workflow config', () => {
         expect(files['azure-pipelines.yml']).toContain('yarn build');
     });
 
+    it('does not duplicate existing Azure Node/install steps', () => {
+        const files = renderWorkflows(
+            {},
+            {
+                ci: {
+                    provider: 'azure',
+                    setup: true,
+                    workflow: {
+                        jobs: [
+                            {
+                                job: 'build',
+                                steps: [
+                                    { task: 'UseNode@1', inputs: { version: '20' } },
+                                    { script: 'yarn install --immutable' },
+                                    { script: 'yarn build' },
+                                ],
+                            },
+                        ],
+                    },
+                },
+            }
+        );
+        const yml = files['azure-pipelines.yml']!;
+        expect((yml.match(/task: UseNode@1/g) ?? []).length).toBe(1);
+        expect((yml.match(/yarn install --immutable/g) ?? []).length).toBe(1);
+        expect(yml).toContain('version: "20"');
+    });
+
     it('keeps vendor workflows as-is without setup', () => {
         const files = renderWorkflows(
             {},

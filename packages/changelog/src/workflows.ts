@@ -480,7 +480,22 @@ function missingAzureSteps(
     steps: readonly unknown[],
     tokens: Replacements
 ): Record<string, unknown>[] {
-    if (!tokens.vitePlus) return azureSetupSteps(tokens);
+    if (!tokens.vitePlus) {
+        const hasNode = steps.some(step => isPlainObject(step) && step.task === 'UseNode@1');
+        const hasInstall = steps.some(
+            step =>
+                isPlainObject(step) &&
+                typeof step.script === 'string' &&
+                /\b(?:corepack|npm\s+(?:ci|install)|yarn\s+install|pnpm\s+install|bun\s+install|vp\s+install)\b/.test(
+                    step.script
+                )
+        );
+        return azureSetupSteps(tokens).filter(step => {
+            if (isPlainObject(step) && step.task === 'UseNode@1') return !hasNode;
+            if (isPlainObject(step) && typeof step.script === 'string') return !hasInstall;
+            return true;
+        });
+    }
     const hasCheckout = steps.some(step => isPlainObject(step) && step.checkout !== undefined);
     const hasSetupVp = steps.some(
         step =>
