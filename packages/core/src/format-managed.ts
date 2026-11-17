@@ -37,6 +37,8 @@ export interface ManagedFormatOptions {
     setting?: ManagedFormatSetting;
     /** The loaded config (its `fmt` section selects the formatter). */
     config?: ToolchainConfig;
+    /** Read-only run (eg. `sync --check`): never let the formatter write. */
+    check?: boolean;
 }
 
 export interface ManagedFormatCommand {
@@ -135,15 +137,24 @@ function resolveBinary(cwd: string, bin: string, pkg: string): { exe: string; ar
     };
 }
 
-/** The default formatter command for a tool (fix or check mode). */
+/**
+ * The default formatter command for a tool (fix or check mode). The managed
+ * files are always passed explicitly so a formatter only touches what the sync
+ * produced (and `format.exclude` is honoured); `check` mode never asks it to
+ * write.
+ */
 export function managedFormatCommand(
     cwd: string,
     formatter: { tool: FormatterTool; vitePlus: boolean },
-    fix: boolean
+    fix: boolean,
+    files: string[] = []
 ): ManagedFormatCommand {
     if (formatter.tool === 'oxc' && formatter.vitePlus) {
         const vp = resolveBinary(cwd, 'vp', 'vite-plus');
-        return { exe: vp.exe, args: [...vp.args, 'fmt', ...(fix ? [] : ['--check'])] };
+        return {
+            exe: vp.exe,
+            args: [...vp.args, 'fmt', ...(fix ? [] : ['--check']), ...files],
+        };
     }
     const { bin, pkg } =
         formatter.tool === 'oxc'
@@ -160,7 +171,7 @@ export function managedFormatCommand(
                 : fix
                   ? []
                   : ['--check'];
-    return { exe: resolved.exe, args: [...resolved.args, ...args] };
+    return { exe: resolved.exe, args: [...resolved.args, ...args, ...files] };
 }
 
 /** Split a command string into tokens, honouring single/double quotes. */
@@ -250,7 +261,14 @@ export async function formatManagedFiles(
         command = commandOverride(formatting.command, targets);
     } else {
         if (!formatter) return { ran: false };
-        command = managedFormatCommand(cwd, formatter, formatting.fix);
+        // A check run must never let the formatter write, even when the config
+        // opted into fix mode for normal syncs.
+        command = managedFormatCommand(
+            cwd,
+            formatter,
+            options.check === true ? false : formatting.fix,
+            targets
+        );
     }
     const code = await runCommand(command, cwd);
     return { ran: true, command, code };

@@ -284,6 +284,7 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
             const formatted = await formatManagedFiles(cwd, formatTargets, {
                 setting: options.format,
                 config,
+                check: options.check === true,
             });
             if (formatted.ran && formatted.code !== 0) {
                 log(`  ! formatter exited ${formatted.code}; managed files may be unformatted.`);

@@ -47,6 +47,35 @@ function command(cwd: string): string {
     return `node ${formatterScript(cwd)} {files}`;
 }
 
+/**
+ * A local `oxfmt` shim that records its argv and only formats the files it was
+ * given (nothing when `--check` is present). Installed in `node_modules/.bin`
+ * so the built-in formatter resolution picks it up on every platform.
+ */
+function fakeOxfmt(cwd: string): string {
+    const script = [
+        "import fs from 'node:fs';",
+        "import path from 'node:path';",
+        "import { fileURLToPath } from 'node:url';",
+        'const args = process.argv.slice(2);',
+        'const dir = path.dirname(fileURLToPath(import.meta.url));',
+        "fs.writeFileSync(path.join(dir, 'args.json'), JSON.stringify(args));",
+        "const check = args.includes('--check');",
+        "for (const file of args.filter(arg => !arg.startsWith('-'))) {",
+        '    if (check) continue;',
+        "    const text = fs.readFileSync(file, 'utf-8');",
+        '    fs.writeFileSync(file, `// formatted\\n${text}`);',
+        '}',
+        '',
+    ].join('\n');
+    const bin = path.join(cwd, 'node_modules', '.bin');
+    write(path.join(bin, 'oxfmt.js'), script);
+    write(path.join(bin, 'oxfmt'), `#!/usr/bin/env node\n${script}`);
+    fs.chmodSync(path.join(bin, 'oxfmt'), 0o755);
+    write(path.join(bin, 'oxfmt.cmd'), '@echo off\r\nnode "%~dp0oxfmt.js" %*\r\n');
+    return path.join(bin, 'args.json');
+}
+
 describe('managed-file formatting', () => {
     it('is opt-in and honours the config', () => {
         expect(resolveManagedFormatting()).toEqual({ enabled: false, fix: true, exclude: [] });
@@ -80,6 +109,28 @@ describe('managed-file formatting', () => {
         const formatter = detectManagedFormatter(cwd)!;
         expect(managedFormatCommand(cwd, formatter, true).args).toContain('--write');
         expect(managedFormatCommand(cwd, formatter, false).args).toContain('--check');
+        expect(managedFormatCommand(cwd, formatter, true, ['a.ts']).args).toContain('a.ts');
+        expect(managedFormatCommand(cwd, formatter, false, ['a.ts']).args).toEqual(
+            expect.arrayContaining(['--check', 'a.ts'])
+        );
+    });
+
+    it('passes only the managed, non-excluded files to a built-in formatter', async () => {
+        const cwd = tmp();
+        const argsFile = fakeOxfmt(cwd);
+        write(path.join(cwd, 'a.ts'), 'a\n');
+        write(path.join(cwd, 'b.ts'), 'b\n');
+        write(path.join(cwd, 'unrelated.ts'), 'unrelated\n');
+
+        const result = await formatManagedFiles(cwd, ['a.ts', 'b.ts'], {
+            config: { fmt: { oxc: true }, sync: { format: { exclude: ['b.ts'] } } },
+        });
+
+        expect(result.ran).toBe(true);
+        expect(JSON.parse(fs.readFileSync(argsFile, 'utf-8'))).toEqual(['a.ts']);
+        expect(fs.readFileSync(path.join(cwd, 'a.ts'), 'utf-8')).toBe('// formatted\na\n');
+        expect(fs.readFileSync(path.join(cwd, 'b.ts'), 'utf-8')).toBe('b\n');
+        expect(fs.readFileSync(path.join(cwd, 'unrelated.ts'), 'utf-8')).toBe('unrelated\n');
     });
 
     it('runs a command override on the selected files and skips excluded ones', async () => {
@@ -148,5 +199,32 @@ describe('managed-file formatting', () => {
         expect(result.upToDate).toBe(false);
         expect(result.changed).toEqual(['a.ts']);
         expect(fs.readFileSync(path.join(cwd, 'a.ts'), 'utf-8')).toBe('old\n');
+    });
+
+    it('never runs a built-in formatter in fix mode during --check', async () => {
+        const cwd = tmp();
+        const argsFile = fakeOxfmt(cwd);
+        write(path.join(cwd, 'managed.ts'), 'old\n');
+        write(path.join(cwd, 'unrelated.ts'), 'unrelated\n');
+        const task: SyncTask = {
+            name: 'x',
+            run: () => [{ path: 'managed.ts', content: 'new\n' }],
+        };
+
+        const result = await runSync({
+            tasks: [task],
+            cwd,
+            config: { fmt: { oxc: true }, sync: { format: true } },
+            tokens: {},
+            check: true,
+            quiet: true,
+        });
+
+        expect(result.changed).toEqual(['managed.ts']);
+        expect(fs.readFileSync(path.join(cwd, 'managed.ts'), 'utf-8')).toBe('old\n');
+        expect(fs.readFileSync(path.join(cwd, 'unrelated.ts'), 'utf-8')).toBe('unrelated\n');
+        const args = JSON.parse(fs.readFileSync(argsFile, 'utf-8')) as string[];
+        expect(args).toEqual(expect.arrayContaining(['--check', 'managed.ts']));
+        expect(args).not.toContain('unrelated.ts');
     });
 });
