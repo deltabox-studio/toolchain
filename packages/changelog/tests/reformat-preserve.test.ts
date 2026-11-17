@@ -14,6 +14,7 @@ vi.mock('../src/utils/git.js', async importOriginal => {
     };
 });
 
+import { bulletHash } from '../src/utils/git.js';
 import { reformatChangelogContent } from '../src/utils/reformat.js';
 
 describe('reformatChangelogContent hand corrections', () => {
@@ -37,6 +38,23 @@ describe('reformatChangelogContent hand corrections', () => {
         expect(out).not.toContain('**feat(server):**');
         expect(out.match(/#abc1234/g)).toHaveLength(1);
         expect(out).toContain('<summary><strong>See more...</strong></summary>');
+    });
+
+    it('keeps the CC group and credit for an unlinked hash', () => {
+        const content = [
+            '# Changelog',
+            '',
+            '## 1.0.0 (January 2026)',
+            '',
+            '- Add a thing (#abc1234 by T)',
+        ].join('\n');
+
+        const out = reformatChangelogContent(content, undefined);
+
+        expect(out).toContain('<summary>New features</summary>');
+        expect(out).toContain('(#abc1234 by T)');
+        expect(out.match(/#abc1234/g)).toHaveLength(1);
+        expect(bulletHash('- Add a thing (#abc1234 by T)')).toBe('abc1234');
     });
 
     it('keeps entries written with * and + bullets', () => {

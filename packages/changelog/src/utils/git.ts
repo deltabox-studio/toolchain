@@ -667,8 +667,10 @@ export function readPriorAuthors(range: string, oldestHash?: string): Set<string
 
 /** The commit hash referenced by a changelog bullet (for date derivation). */
 export function bulletHash(text: string): string | undefined {
-    const match = /\[(#[0-9a-fA-F]{6,40})\]\([^)]*\)/.exec(text);
-    return match?.[1]?.replace('#', '');
+    const linked = /\[(#[0-9a-fA-F]{6,40})\]\([^)]*\)/.exec(text);
+    if (linked) return linked[1]?.replace('#', '');
+    const bare = /(?:^|[\s(])#([0-9a-fA-F]{7,40})\b/.exec(text);
+    return bare?.[1];
 }
 
 function gitTagDate(version: string): string | undefined {

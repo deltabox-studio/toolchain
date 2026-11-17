@@ -14,7 +14,11 @@ import {
     renderGroups,
 } from './format.js';
 import { bulletHash, deriveVersionDate, readCommit, repoSlug } from './git.js';
-import { packageChangesForVersion } from './packages.js';
+import {
+    packageChangesForCurrent,
+    packageChangesForVersion,
+    resolveVersionRef,
+} from './packages.js';
 import { changelogFiles, repoRoot } from './repo.js';
 import type { ChangelogGroupsSetting, ExistingEntry, GroupedItem } from './types.js';
 import { renderChangelogEntry } from './version.js';
@@ -97,11 +101,11 @@ export function parseExistingChangelog(content: string): ExistingEntry[] {
 
 /** The `([#hash](...) by <author>)(fixes ...)` credit suffix of a bullet. */
 function creditSuffix(text: string): string {
-    const idx = text.lastIndexOf('([#');
-    if (idx === -1) return '';
-    const tail = text.slice(idx);
-    const match = /^(\(\[#[^\]]+\]\([^)]*\) by [^)]*\)\)?)(?:\(fixes [^)]*\)\)?)?/.exec(tail);
-    return match?.[0] ?? '';
+    const match =
+        /\((?:\[#[0-9a-fA-F]{6,40}\]\([^)]*\)|#[0-9a-fA-F]{7,40}) by [^)]*\)(?:\(fixes [^)]*\))?\s*$/.exec(
+            text
+        );
+    return match?.[0].trimEnd() ?? '';
 }
 
 /** Convert an entry's nested description lines into unwrapped paragraphs. */
@@ -205,10 +209,16 @@ export function reformatChangelogContent(
     const rendered = entries
         .map((entry, index) => {
             const previous = entries[index + 1];
-            const changes =
-                includePackageChanges && previous
-                    ? packageChangesForVersion(entry.version, previous.version)
-                    : '';
+            let changes = '';
+            if (includePackageChanges && previous) {
+                changes = packageChangesForVersion(entry.version, previous.version);
+                // The newest entry is usually unreleased (no tag/version commit
+                // yet), so its footer is the working tree against the previous
+                // release, matching how `dbx changelog` generated it.
+                if (index === 0 && !resolveVersionRef(entry.version)) {
+                    changes = packageChangesForCurrent(previous.version);
+                }
+            }
             return reformatEntry(
                 entry,
                 repo,
