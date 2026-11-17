@@ -6511,10 +6511,56 @@ const fromFile = parseConfig(schema, loaded?.config);
 createConfigFile({ name: 'myapp.config.ts', content: '{ enabled: true }' });
 ```
 
+The loader also accepts the same tsconfig, ancestor and filter options as the
+built-in one:
+
+```ts
+const loaded = await loadConfig({
+    parser: schema,
+    configFileOptions: {
+        filename: 'myapp.config',
+        commonLocation: [{ path: '.' }, { cwd: 'packages', path: '*/' }],
+        // Resolve TS imports through this tsconfig (`false` disables it).
+        tsconfig: 'tsconfig.loader.json',
+        // Search ancestors when nothing is found at cwd (stops at `.git`).
+        parent: true,
+        // Skip files that are not valid candidates for this loader.
+        accept: file => !file.endsWith('.shim.ts'),
+    },
+});
+```
+
+The object API accepts `tsconfig`, `parent` and `accept` directly instead of
+nesting them in `configFileOptions`. `findConfigFile` and
+`findParentConfigFile` run the same discovery without loading anything.
+
+Discovery defaults to `.`, `config` and `configs`, matching the built-in loader.
+`commonLocation.path` globs support `*`, `**`, `?`, simple `[...]` character
+classes and `{a,b}` alternatives. A function export is resolved when a
+`parser`/`schema` is passed; without one the raw export is returned, so a caller
+can supply its own environment (as the dbx plugin probe does).
+
 `collect(schema, options)` lists every config leaf (env/CLI metadata) and
 accepts `envPrefix`, `include`/`exclude`, `maxDepth`, and `validate` with
 `errorOptions` for required/empty values. `loadConfigSync` handles JSON and
 CommonJS only; use `loadConfigAsync` (or a custom `loader`) for TypeScript.
+
+### Scaffolding formats
+
+`createConfigFile` infers the format from the file name (or takes an explicit
+`type`): `file` (TypeScript/JavaScript `defineConfig`), `json`, `yaml`, `env`
+(`KEY=value` lines) and `cli` (`--flag=value` lines). Object `content` is
+serialized for the chosen format, and `defaults`/`overrides` merge under/over it:
+
+```ts
+createConfigFile({
+    name: 'myapp.config.yaml',
+    content: { project: { name: 'acme' } },
+    defaults: { project: { license: 'MIT' } },
+});
+
+createConfigFile({ name: '.env.example', content: { APP_HOST: 'localhost' } });
+```
 
 ---
 
@@ -7083,6 +7129,10 @@ const commands = configCommands({
 // register `commands` on your commander program
 ```
 
+> These commands are library-only: `dbx` itself does not register a `config:*`
+> group, because each command needs a `ConfigEngine` bound to your schema. Add
+> the returned commands to your own program.
+
 The `config:*` commands generate config artifacts; they do not write the CLI
 reference. For that, pass the command descriptors your CLI registers to
 [`generateCliDocs()`](/guide/config-generator/generate#cli-docs).
@@ -7189,33 +7239,33 @@ url: https://toolchain.deltabox.studio/guide/config-generator/generate.md
 
 Every generator has two forms:
 
-* **Bound engine** — `engine.generateConfigTypes()` injects the engine's
+* **Bound engine** — `engine.types.generate()` injects the engine's
   `envPrefix`, `baseGroup`, `root` and `envPathOf`.
 * **Standalone** — `generateConfigTypes(schema, options)` takes those options
   explicitly, for one-off scripts and tests.
 
-`write*` methods write to disk and return the written paths. The `generate*`
-methods return the content and only write when you pass `outputDir`/`output`
+The grouped `.write` methods write to disk and return the written paths. The
+grouped `.generate` methods return the content and only write when you pass `outputDir`/`output`
 (a string); `false` disables writing.
 
 ## At a glance
 
 | Output         | Engine                                                       | Standalone                                                |
 | -------------- | ------------------------------------------------------------ | --------------------------------------------------------- |
-| `.env.example` | `engine.generateEnvFile()` / `engine.writeEnvFile()`         | `generateEnvFile()`                                       |
-| Env types      | `engine.generateConfigEnv()` / `engine.writeEnvTypes()`      | `generateConfigEnv()`                                     |
-| Config types   | `engine.generateConfigTypes()` / `engine.writeConfigTypes()` | `generateConfigTypes()`                                   |
-| Markdown       | `engine.generateConfigMarkdown()` / `engine.writeMarkdown()` | `generateConfigMarkdown()`                                |
-| JSON Schema    | `engine.generateJsonSchema()` / `engine.writeJsonSchema()`   | `generateConfigJsonSchema()` / `generateJsonSchemaFile()` |
-| Metadata JSON  | `engine.buildConfigJson()`                                   | `buildConfigJson()`                                       |
-| CLI options    | `engine.generateConfigCli()` / `generateCliOptions()`        | `generateCliOptions()`                                    |
+| `.env.example` | `engine.env.generate()` / `engine.env.write()`               | `generateEnvFile()`                                       |
+| Env types      | `engine.env.types.generate()` / `engine.env.types.write()`   | `generateConfigEnv()`                                     |
+| Config types   | `engine.types.generate()` / `engine.types.write()`           | `generateConfigTypes()`                                   |
+| Markdown       | `engine.markdown.generate()` / `engine.markdown.write()`     | `generateConfigMarkdown()`                                |
+| JSON Schema    | `engine.jsonSchema.generate()` / `engine.jsonSchema.write()` | `generateConfigJsonSchema()` / `generateJsonSchemaFile()` |
+| Metadata JSON  | `engine.configJson.build()`                                  | `buildConfigJson()`                                       |
+| CLI options    | `engine.cli.generate()` / `engine.cli.write()`               | `generateCliOptions()`                                    |
 | CLI docs       | —                                                            | `generateCliDocs()`                                       |
 | Formatting     | —                                                            | `formatGenerated()`                                       |
 
 ## Env file — `.env.example`
 
 ```ts
-engine.writeEnvFile({ output: '.env.example' });
+engine.env.write({ output: '.env.example' });
 ```
 
 Standalone, with the common options:
@@ -7240,7 +7290,7 @@ Secrets are emitted commented out.
 ## Env types — `env.ts` + `env.d.ts`
 
 ```ts
-engine.writeEnvTypes({ outputDir: 'types' }); // types/env.ts, types/env.d.ts
+engine.env.types.write({ outputDir: 'types' }); // types/env.ts, types/env.d.ts
 ```
 
 ```ts
@@ -7264,7 +7314,7 @@ Options: `envFile`/`dtsFile` (file names), `header`, `envHeader`, `dtsHeader`,
 ## Config types
 
 ```ts
-engine.writeConfigTypes({ outputDir: 'types' });
+engine.types.write({ outputDir: 'types' });
 ```
 
 Standalone, with hand-written overrides and aliases:
@@ -7297,7 +7347,7 @@ at the top), `extension`, `header`, and the `include*` annotation flags.
 ## Markdown
 
 ```ts
-engine.writeMarkdown({ outputDir: 'docs/reference/configuration' });
+engine.markdown.write({ outputDir: 'docs/reference/configuration' });
 ```
 
 ```ts
@@ -7322,8 +7372,8 @@ equivalents and footer links.
 ## JSON Schema
 
 ```ts
-const doc = await engine.generateJsonSchema();
-await engine.writeJsonSchema({ output: 'config.schema.json' });
+const doc = await engine.jsonSchema.generate();
+await engine.jsonSchema.write({ output: 'config.schema.json' });
 ```
 
 ```ts
@@ -7344,7 +7394,7 @@ Both functions are async. `generateConfigJsonSchema` returns the document;
 ## Config metadata JSON
 
 ```ts
-const metadata = engine.buildConfigJson();
+const metadata = engine.configJson.build();
 fs.writeFileSync('config.json', `${JSON.stringify(metadata, null, 4)}\n`);
 ```
 
@@ -7364,8 +7414,8 @@ Secrets never include a default.
 ## CLI options
 
 ```ts
-const defs = engine.generateConfigCli({ scope: 'cli' });
-// engine.generateCliOptions() is an alias.
+const defs = engine.cli.generate({ scope: 'cli' });
+// engine.cli.generate() is an alias.
 ```
 
 ```ts
@@ -7478,7 +7528,7 @@ const engine = createConfigEngine({
     baseGroup: 'base',
 });
 
-engine.generateConfigMarkdown(); // uses the bound options
+engine.markdown.generate(); // uses the bound options
 
 generateConfigMarkdown(schema, {
     envPrefix: 'MYAPP_',
@@ -7504,15 +7554,15 @@ is the living example: its types are committed at
 For the engine/standalone call forms and the full option list per generator, see
 [Generate](/guide/config-generator/generate).
 
-## Config types — `generateConfigTypes()` / `writeConfigTypes()`
+## Config types — `engine.types` / `generateConfigTypes()`
 
 Named `interface`s (and `type` aliases for enums/unions) with jsdoc taken from
 `.describe()`. Unions and refs stay named, so nested objects are referenced
 rather than inlined:
 
 ```ts
-// engine.generateConfigTypes() -> { server: "...", cli: "..." }
-engine.writeConfigTypes({ outputDir: 'types' }); // types/server.ts, types/cli.ts
+// engine.types.generate() -> { server: "...", cli: "..." }
+engine.types.write({ outputDir: 'types' }); // types/server.ts, types/cli.ts
 ```
 
 ```ts
@@ -7538,12 +7588,12 @@ export interface ServerConfig {
 }
 ```
 
-## Markdown — `writeMarkdown()`
+## Markdown — `engine.markdown` / `generateConfigMarkdown()`
 
 One reference page per scope plus an index listing the required/core env vars:
 
 ```ts
-engine.writeMarkdown({ outputDir: 'docs/reference/configuration' });
+engine.markdown.write({ outputDir: 'docs/reference/configuration' });
 // docs/reference/configuration/server.md, .../index.md
 ```
 
@@ -7564,24 +7614,24 @@ scope. `generateConfigTypes`, `generateConfigMarkdown` and `generateConfigEnv`
 return file contents and only write when `outputDir`/`output` is a string;
 `false` explicitly disables writing.
 
-## Env — `renderEnvFile()` / `writeEnvFile()`
+## Env — `engine.env` / `generateEnvFile()`
 
 A `.env.example`; secrets are emitted commented out so operators fill them in:
 
 ```sh
-engine.writeEnvFile({ output: '.env.example' });
+engine.env.write({ output: '.env.example' });
 
 # ---- SERVER ----
 MYAPP_HOST=localhost
 # MYAPP_AUTH_PASSWORD=
 ```
 
-## JSON Schema — `generateJsonSchema()` / `writeJsonSchema()`
+## JSON Schema — `engine.jsonSchema` / `generateConfigJsonSchema()`
 
 The resolved untyped JSON Schema for every scope, for editor autocomplete:
 
 ```ts
-await engine.writeJsonSchema({ output: 'config.schema.json' });
+await engine.jsonSchema.write({ output: 'config.schema.json' });
 ```
 
 ## CLI docs — `generateCliDocs()`
