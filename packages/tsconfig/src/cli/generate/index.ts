@@ -317,7 +317,12 @@ export async function generateWorkspaceTsconfigs(
     });
     const existing = fs.existsSync(rootTsconfigPath) ? readTsconfig(rootTsconfigPath) : undefined;
     const previousAuto = options.previousAuto ?? readAutoState(autoStateFile);
-    const auto = buildAutoTsconfig(workspaces, { cwd, existing, previous: previousAuto });
+    const auto = buildAutoTsconfig(workspaces, {
+        cwd,
+        baseDir: path.dirname(rootTsconfigPath),
+        existing,
+        previous: previousAuto,
+    });
     const baseAutoConfig = auto.config;
     const autoConfig = rootOptions.overrides?.root
         ? mergeOverride(baseAutoConfig, rootOptions.overrides.root)

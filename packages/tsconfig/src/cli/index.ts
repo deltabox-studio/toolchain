@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import {
     logger,
     regenerateEnabled,
@@ -160,11 +163,19 @@ export function tsconfigCommands(): ToolchainCommand[] {
                 }
 
                 if (opts.json === true || selectors.length > 0) {
+                    const configuredRoot = fs.existsSync(path.resolve(cwd, rootFile))
+                        ? rootFile
+                        : undefined;
                     const resolved = resolveTsconfig({
                         cwd,
                         root,
-                        ...(opts.tsconfig ? { tsconfig: opts.tsconfig as string } : {}),
+                        ...(opts.tsconfig
+                            ? { tsconfig: opts.tsconfig as string }
+                            : configuredRoot
+                              ? { tsconfig: configuredRoot }
+                              : {}),
                         ...(opts.extends === false ? { extends: false } : {}),
+                        ...(t.overrides?.root ? { overrides: t.overrides.root } : {}),
                     });
                     const alias = resolved.alias.map(serializeTsconfigAlias);
                     const pick = (key: 'alias' | 'paths' | 'references') =>

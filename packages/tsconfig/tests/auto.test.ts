@@ -2,10 +2,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it, vi } from 'vite-plus/test';
 
-import type { ToolchainConfig } from '@deltabox/toolchain/shared';
+import { logger, type ToolchainConfig } from '@deltabox/toolchain/shared';
 
+import { tsconfigCommands } from '../src/cli/index.js';
 import { generateWorkspaceTsconfigs, tsconfigSyncTask } from '../src/index.js';
 
 function tmp(): string {
@@ -72,6 +73,22 @@ describe('tsconfig auto alias rewriting', () => {
         const keys = Object.keys(pathsOf(await run(cwd, { auto: true })));
         const sorted = [...keys].sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
         expect(keys).toEqual(sorted);
+    });
+
+    it('writes paths relative to a nested rootFile', async () => {
+        const cwd = makeRepo();
+        const result = await run(cwd, {
+            auto: true,
+            composite: true,
+            refs: true,
+            rootFile: 'config/tsconfig.workspaces.json',
+        });
+        const paths = pathsOf(result);
+
+        expect(paths['@acme/foo']).toEqual(['../packages/foo/src/index.ts']);
+        expect(
+            (result.autoConfig.references ?? []).map(reference => reference.path).sort()
+        ).toEqual(['../packages/bar/tsconfig.json', '../packages/foo/tsconfig.json']);
     });
 
     it('rewrites generated keys with string patterns', async () => {
@@ -482,5 +499,40 @@ describe('tsconfig section gating', () => {
         // The root still aliases foo, but only generates the other workspace.
         expect(result.results.map(item => item.dirnameRelative)).toEqual(['packages/bar']);
         expect(pathsOf(result)['@acme/foo']).toEqual(['./packages/foo/src/index.ts']);
+    });
+});
+
+describe('tsconfig --json rootFile', () => {
+    it('reads the configured rootFile when there is no root tsconfig.json', async () => {
+        const cwd = makeRepo();
+        writeJson(path.join(cwd, 'config', 'tsconfig.workspaces.json'), {
+            compilerOptions: { paths: { '@acme/foo': ['../packages/foo/src/index.ts'] } },
+        });
+        const command = tsconfigCommands().find(candidate => candidate.name === 'tsconfig');
+        if (!command) throw new Error('missing tsconfig command');
+
+        const raw = vi.spyOn(logger, 'raw').mockImplementation(() => {});
+        try {
+            await command.run(
+                { json: true },
+                {
+                    cwd,
+                    projectType: 'project',
+                    config: {
+                        tsconfig: { auto: true, rootFile: 'config/tsconfig.workspaces.json' },
+                    },
+                    tokens: {},
+                    syncTasks: [],
+                }
+            );
+            const output = JSON.parse(String(raw.mock.calls.at(-1)?.[0])) as {
+                paths: Record<string, string[]>;
+            };
+            expect(output.paths['@acme/foo']).toEqual([
+                path.resolve(cwd, 'packages/foo/src/index.ts'),
+            ]);
+        } finally {
+            raw.mockRestore();
+        }
     });
 });

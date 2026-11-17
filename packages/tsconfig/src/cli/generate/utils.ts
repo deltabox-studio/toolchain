@@ -97,7 +97,7 @@ export function generateTsconfig(options: {
             ? monorepoConfig !== undefined
                 ? resolveTsconfigConfig(
                       monorepoConfig,
-                      cwd,
+                      path.dirname(monorepoTsconfigPath),
                       overrides?.root ? { overrides: overrides.root } : {}
                   )
                 : resolveTsconfig({

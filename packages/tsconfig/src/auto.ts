@@ -36,6 +36,8 @@ export interface TsconfigAutoState {
 export interface AutoTsconfigOptions {
     /** Repo root. */
     cwd: string;
+    /** Directory the root workspaces tsconfig lives in (default: `cwd`). */
+    baseDir?: string;
     /** The parsed root workspaces tsconfig (custom entries are preserved). */
     existing?: TsConfigJson;
     /** The previous auto state (from `.dbx/toolchain/tsconfig-auto.json`). */
@@ -489,6 +491,7 @@ export function buildAutoTsconfig(
     options: AutoTsconfigOptions
 ): AutoTsconfigResult {
     const config = structuredClone(options.existing ?? {}) as TsConfigJson;
+    const baseDir = options.baseDir ?? options.cwd;
     const compilerOptions = { ...config.compilerOptions };
     const paths: Record<string, string[]> = { ...compilerOptions.paths };
     let references = [...(config.references ?? [])];
@@ -497,7 +500,7 @@ export function buildAutoTsconfig(
     const managedReferences = new Set<string>();
     const workspaceByTsconfig = new Map(
         workspaces.map(workspace => [
-            normalizeReferencePath(repoPath(options.cwd, workspace.targetTsconfigPath)),
+            normalizeReferencePath(repoPath(baseDir, workspace.targetTsconfigPath)),
             workspace,
         ])
     );
@@ -514,7 +517,7 @@ export function buildAutoTsconfig(
         if (!switches.refsAuto.enabled) return true;
         // Filter the reference path the auto run would emit, not the workspace
         // directory (so `include`/`exclude` see the generated result).
-        const generated = repoPath(options.cwd, workspace.targetTsconfigPath);
+        const generated = repoPath(baseDir, workspace.targetTsconfigPath);
         if (!matchesAutoFilter(generated, switches.refsAuto)) return true;
         // A workspace without a default tsconfig has no generated project to
         // reference (eg. a docs app or a test fixture with only a package.json).
@@ -549,7 +552,7 @@ export function buildAutoTsconfig(
                     : {}),
             };
             const generated = rewriteAliasPaths(
-                resolveWorkspaceAliases(workspace, options.cwd, settings),
+                resolveWorkspaceAliases(workspace, baseDir, settings),
                 rewrite
             );
             for (const [key, target] of Object.entries(generated)) {
@@ -567,7 +570,7 @@ export function buildAutoTsconfig(
         const refsEnabled = workspace.options.refs !== false && switches.refsAuto.enabled;
         const composite = workspace.options.composite === true;
         const reference = {
-            path: repoPath(options.cwd, workspace.targetTsconfigPath),
+            path: repoPath(baseDir, workspace.targetTsconfigPath),
         };
         const canonical = normalizeReferencePath(reference.path);
         if (
