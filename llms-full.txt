@@ -5207,6 +5207,12 @@ release. Entries are grouped by the declaring package (one top-level bullet per
 package, with each changed dependency nested under it). Pass
 `--no-package-changes-section` to omit the footer.
 
+`--format-only` recomputes each released entry's footer from its release refs.
+The newest entry is usually unreleased, so its footer compares the working tree
+with the previous release — the same diff `dbx changelog` wrote. A tagged newest
+entry keeps its ref-to-ref diff and never picks up uncommitted dependency
+changes.
+
 ## Custom bump rules
 
 `versioning.bump` maps `major`, `minor` and `patch` to a matcher.
@@ -7287,10 +7293,10 @@ Options: `include`/`exclude` (env names), `values` (default overrides),
 `scopes`, `bare`, `extra` (raw `NAME=value` lines), `header`, `scopeSeparator`.
 Secrets are emitted commented out.
 
-## Env types — `env.ts` + `env.d.ts`
+## Env types — `env.ts` + `dbx-env.d.ts`
 
 ```ts
-engine.env.types.write({ outputDir: 'types' }); // types/env.ts, types/env.d.ts
+engine.env.types.write({ outputDir: 'types' }); // types/env.ts, types/dbx-env.d.ts
 ```
 
 ```ts
@@ -7305,7 +7311,7 @@ const files = generateConfigEnv(schema, {
     augmentVite: true,
     envComment: 'Runtime configuration.',
 });
-// files: { 'env.ts': '...', 'env.d.ts': '...' }
+// files: { 'env.ts': '...', 'dbx-env.d.ts': '...' }
 ```
 
 Options: `envFile`/`dtsFile` (file names), `header`, `envHeader`, `dtsHeader`,
@@ -9936,7 +9942,7 @@ reads. Everything else is optional and, if you prefer, renameable (see
   that extends its own default, but there are no shared `paths`/`references` to
   wire.
 
-The `{{envTypesFile}}` token in the templates (default `src/env.d.ts`) is
+The `{{envTypesFile}}` token in the templates (default `src/dbx-env.d.ts`) is
 resolved when a project is scaffolded, so a generated config's `include` points
 at the project's env types file.
 
@@ -10637,7 +10643,7 @@ Zod's `.meta()` is typed by default, but the toolchain adds its own fields
 `public`, `defaultValue`). Add the ambient declaration once in a project-wide
 `.d.ts`:
 
-```ts [env.d.ts]
+```ts [globals.d.ts]
 /// <reference types="@deltabox/toolchain/globals" />
 ```
 
