@@ -45,6 +45,8 @@ import {
     loadTemplates,
     readTemplateRegistry,
     removeTemplateSource,
+    resolveTemplateSources,
+    templatePolicy,
 } from '../registry.js';
 import { scaffoldTemplate } from '../scaffold.js';
 import type { Template, TemplateKind, TemplateManifest, TemplateVariable } from '../types/index.js';
@@ -122,16 +124,33 @@ export function templateCommands(): ToolchainCommand[] {
             run: async (opts, context) => {
                 const cwd = (opts.cwd as string | undefined) ?? context.cwd;
                 if (opts.global) {
-                    const global = await loadGlobalTemplates(cwd);
+                    const policy = templatePolicy(context.config);
+                    const global = await loadGlobalTemplates(cwd, policy);
+                    const online = Boolean(opts.online) && !opts.offline;
+                    const resolved = online
+                        ? await resolveTemplateSources(global.sources, {
+                              cwd,
+                              online: true,
+                              ...(policy ? { policy } : {}),
+                          })
+                        : [];
+                    const kind = opts.kind as string | undefined;
+                    const merged = new Map<string, Template>();
+                    for (const template of [...global.templates, ...resolved]) {
+                        if (!merged.has(template.id)) merged.set(template.id, template);
+                    }
+                    const selected = [...merged.values()].filter(
+                        template => kind === undefined || template.kind === kind
+                    );
                     if (opts.json) {
-                        logger.raw(JSON.stringify(global.templates.map(toJson), null, 4));
+                        logger.raw(JSON.stringify(selected.map(toJson), null, 4));
                         return;
                     }
-                    if (global.templates.length === 0) {
+                    if (selected.length === 0) {
                         logger.info('no global templates found.');
                         return;
                     }
-                    for (const template of global.templates)
+                    for (const template of selected)
                         logger.info(`  ${template.id.padEnd(24)} ${template.name}`);
                     return;
                 }
@@ -762,6 +781,7 @@ export function templateCommands(): ToolchainCommand[] {
                     tsconfigRootFile: tsconfig?.rootFile ?? 'tsconfig.workspaces.json',
                     toolVersions: parseToolVersions(opts.toolVersion as string[] | undefined),
                     containerize: Boolean(opts.containerize),
+                    ...(opts.json ? { machine: true } : {}),
                 });
 
                 if (opts.json) {

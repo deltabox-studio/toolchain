@@ -88,6 +88,11 @@ export interface ScaffoldOptions {
     toolVersions?: Record<string, string>;
     /** Also write Docker artifacts (default false). */
     containerize?: boolean;
+    /**
+     * Route action output to stderr instead of stdout, for machine-readable runs
+     * (`--json`): the scaffold result must be the only thing on stdout.
+     */
+    machine?: boolean;
 }
 
 export interface ScaffoldResult {
@@ -386,7 +391,15 @@ async function scaffoldViaVp(
     if (locate) args.push(locate);
     const name = options.tokens?.name;
     if (name) args.push(String(name));
-    const result = await runVp(args, { cwd: options.cwd });
+    const result = await runVp(args, {
+        cwd: options.cwd,
+        ...(options.machine ? { mode: 'capture' as const } : {}),
+    });
+    if (options.machine) {
+        // Never let `vp create` output corrupt the JSON result on stdout.
+        if (result.stdout) process.stderr.write(result.stdout);
+        if (result.stderr) process.stderr.write(result.stderr);
+    }
     if (result.code !== 0 || !options.containerize) return { written: [], code: result.code };
 
     // `vp create` writes into a folder named after the project (or the current
@@ -406,12 +419,15 @@ async function scaffoldViaVp(
     return { written, code: result.code };
 }
 
-/** Run a command to completion (inherited stdio). Resolves with the exit code. */
-function runCommand(cmd: string, args: string[], cwd: string): Promise<number> {
+/** Run a command to completion. Machine runs keep the child's stdout off our stdout. */
+function runCommand(cmd: string, args: string[], cwd: string, machine = false): Promise<number> {
     return new Promise<number>(resolve => {
         let child: ReturnType<typeof spawnCross>;
         try {
-            child = spawnCross(cmd, args, { cwd, stdio: 'inherit' });
+            child = spawnCross(cmd, args, {
+                cwd,
+                stdio: machine ? ['ignore', 'ignore', 'inherit'] : 'inherit',
+            });
         } catch {
             resolve(1);
             return;
@@ -422,9 +438,13 @@ function runCommand(cmd: string, args: string[], cwd: string): Promise<number> {
 }
 
 /** Run a shell command in `cwd` (for a template's `command` action). */
-function runShell(command: string, cwd: string): Promise<number> {
+function runShell(command: string, cwd: string, machine = false): Promise<number> {
     return new Promise<number>(resolve => {
-        const child = spawn(command, { cwd, stdio: 'inherit', shell: true });
+        const child = spawn(command, {
+            cwd,
+            stdio: machine ? ['ignore', 'ignore', 'inherit'] : 'inherit',
+            shell: true,
+        });
         child.on('error', () => resolve(1));
         child.on('exit', code => resolve(code ?? 0));
     });
@@ -443,7 +463,11 @@ function actionContext(template: Template, options: ScaffoldOptions): TemplateAc
         tokens,
         variables,
         packageManager: String(tokens.packageManager ?? 'yarn'),
-        log: message => console.log(message),
+        // Machine-readable runs (`--json`) must keep stdout clean.
+        log: message =>
+            options.machine
+                ? process.stderr.write(`${message}\n`)
+                : process.stdout.write(`${message}\n`),
     };
 }
 
@@ -456,7 +480,12 @@ async function runAction(
 ): Promise<void> {
     if (action.builtin === 'install') {
         ctx.log(`Installing dependencies with ${ctx.packageManager}…`);
-        const code = await runCommand(ctx.packageManager, ['install'], options.cwd);
+        const code = await runCommand(
+            ctx.packageManager,
+            ['install'],
+            options.cwd,
+            options.machine === true
+        );
         if (code !== 0) {
             throw new Error(`\`${ctx.packageManager} install\` failed with exit code ${code}.`);
         }
@@ -482,7 +511,7 @@ async function runAction(
         return;
     }
     if (action.command) {
-        const code = await runShell(action.command, options.cwd);
+        const code = await runShell(action.command, options.cwd, options.machine === true);
         if (code !== 0) {
             throw new Error(`template command failed with exit code ${code}: ${action.command}`);
         }

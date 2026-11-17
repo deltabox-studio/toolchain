@@ -1650,3 +1650,66 @@ describe('emulate: quality-of-life templates', () => {
         TIMEOUT * 2
     );
 });
+
+describe('emulate: template action output', () => {
+    it(
+        'keeps create --json stdout parseable when an action is noisy',
+        async () => {
+            const ws = scratch('action-output');
+            const tpl = path.join(ws, 'tpl');
+            fs.mkdirSync(path.join(tpl, 'actions'), { recursive: true });
+            fs.writeFileSync(
+                path.join(tpl, 'template.json'),
+                JSON.stringify({
+                    name: 'Noisy',
+                    kind: 'folder',
+                    actions: [
+                        { id: 'log', module: 'actions/log.mjs' },
+                        { id: 'noise', command: 'echo NOISE' },
+                    ],
+                })
+            );
+            fs.writeFileSync(
+                path.join(tpl, 'actions', 'log.mjs'),
+                "export default ctx => ctx.log('ACTION-LOG');\n"
+            );
+            fs.writeFileSync(path.join(tpl, 'keep.txt'), 'keep\n');
+
+            const added = await dbx(ws, [
+                'template:add',
+                tpl,
+                '--no-global',
+                '--id',
+                'noisy',
+                '--cwd',
+                ws,
+            ]);
+            expect(added.code, added.stderr).toBe(0);
+
+            const result = await dbx(ws, [
+                'create',
+                '--template',
+                'noisy',
+                '--name',
+                'demo',
+                '--cwd',
+                ws,
+                '--out',
+                'out',
+                '--json',
+                '--action',
+                'log',
+                '--action',
+                'noise',
+            ]);
+            expect(result.code, result.stderr).toBe(0);
+
+            const parsed = JSON.parse(result.stdout) as { ranActions?: string[] };
+            expect(parsed.ranActions).toEqual(['log', 'noise']);
+            expect(result.stdout).not.toContain('ACTION-LOG');
+            expect(result.stdout).not.toContain('NOISE');
+            expect(result.stderr).toContain('ACTION-LOG');
+        },
+        TIMEOUT
+    );
+});

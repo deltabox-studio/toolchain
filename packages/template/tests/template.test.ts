@@ -4,6 +4,8 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
+import { logger } from '@deltabox/toolchain/shared';
+
 import {
     addTemplateSource,
     BUILTIN_TEMPLATES,
@@ -398,6 +400,25 @@ describe('scaffolding', () => {
         expect(fs.existsSync(path.join(out, 'private', 'secret.txt'))).toBe(false);
     });
 
+    it('matches brace alternatives in a local template ignore list', async () => {
+        const root = makeTmp();
+        const tpl = path.join(root, 'tpl');
+        writeTemplate(
+            tpl,
+            { name: 'T', ignore: ['**/*.{md,txt}'] },
+            { 'a.md': 'a', 'b.txt': 'b', 'c.ts': 'c' }
+        );
+        const out = makeTmp();
+        const [template] = loadLocalTemplates(root);
+        if (!template) throw new Error('missing local template');
+
+        await scaffoldTemplate(template, { cwd: out });
+
+        expect(fs.existsSync(path.join(out, 'a.md'))).toBe(false);
+        expect(fs.existsSync(path.join(out, 'b.txt'))).toBe(false);
+        expect(fs.existsSync(path.join(out, 'c.ts'))).toBe(true);
+    });
+
     it('does not copy a nested action module from a local template', async () => {
         const root = makeTmp();
         const tpl = path.join(root, 'tpl');
@@ -445,5 +466,70 @@ describe('workspace scaffold path validation', () => {
             scaffoldTemplate(template, { cwd: out, tokens: { name: '../..' } })
         ).rejects.toThrow(/relative to the root/);
         expect(fs.readdirSync(out)).toEqual([]);
+    });
+});
+
+describe('template:list --global', () => {
+    function withHome(home: string, fn: () => Promise<void>): Promise<void> {
+        const previousProfile = process.env.USERPROFILE;
+        const previousHome = process.env.HOME;
+        process.env.USERPROFILE = home;
+        process.env.HOME = home;
+        const restore = (): void => {
+            if (previousProfile === undefined) delete process.env.USERPROFILE;
+            else process.env.USERPROFILE = previousProfile;
+            if (previousHome === undefined) delete process.env.HOME;
+            else process.env.HOME = previousHome;
+        };
+        return fn().finally(restore);
+    }
+
+    it('applies the registry policy and the kind filter', async () => {
+        const home = makeTmp();
+        const tplDir = path.join(home, '.dbx', 'toolchain', '.registry', 'templates', 'foo');
+        fs.mkdirSync(tplDir, { recursive: true });
+        fs.writeFileSync(
+            path.join(tplDir, 'template.json'),
+            JSON.stringify({ name: 'Foo', kind: 'folder' })
+        );
+        const project = makeTmp();
+        const raw = vi.spyOn(logger, 'raw').mockImplementation(() => {});
+
+        const list = async (
+            options: Record<string, unknown>,
+            config: Record<string, unknown>
+        ): Promise<Array<{ id: string }>> => {
+            const command = templateCommands().find(
+                candidate => candidate.name === 'template:list'
+            );
+            if (!command) throw new Error('missing template:list');
+            raw.mockClear();
+            await withHome(home, async () => {
+                await command.run({ cwd: project, global: true, json: true, ...options }, {
+                    cwd: project,
+                    projectType: 'project',
+                    config,
+                    tokens: {},
+                } as never);
+            });
+            return JSON.parse(raw.mock.calls[0]![0] as string) as Array<{ id: string }>;
+        };
+
+        try {
+            expect((await list({ kind: 'folder' }, {})).map(t => t.id)).toEqual(['foo']);
+            expect((await list({ kind: 'project' }, {})).map(t => t.id)).toEqual([]);
+            expect(
+                (
+                    await list(
+                        {},
+                        {
+                            registry: { templates: { deny: [`${home.replace(/\\/g, '/')}/**`] } },
+                        }
+                    )
+                ).map(t => t.id)
+            ).toEqual([]);
+        } finally {
+            raw.mockRestore();
+        }
     });
 });
