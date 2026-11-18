@@ -1,6 +1,6 @@
 import type { GeneratedFile } from '@deltabox/toolchain/shared';
 
-import type { ProjectContext } from '../typescript.js';
+import type { ProjectContext } from '../types/index.js';
 import { BUN, bunTsconfig, file, readme, recipe, VERSIONS } from './shared.js';
 
 export function bun(ctx: ProjectContext): GeneratedFile[] {

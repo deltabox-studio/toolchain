@@ -1,6 +1,6 @@
 import type { GeneratedFile } from '@deltabox/toolchain/shared';
 
-import type { ProjectContext } from '../typescript.js';
+import type { ProjectContext } from '../types/index.js';
 import { bun } from './bun.js';
 import { express } from './express.js';
 import { fastify } from './fastify.js';

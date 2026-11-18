@@ -1,7 +1,8 @@
 import type { GeneratedFile } from '@deltabox/toolchain/shared';
 import { renderTsconfigDefault } from '@deltabox/toolchain/tsconfig';
 
-import { createRootProjectFiles, type ProjectContext } from '../typescript.js';
+import type { ProjectContext } from '../types/index.js';
+import { createRootProjectFiles } from '../typescript.js';
 
 export const TSX = {
     dev: 'tsx watch src/index.ts',

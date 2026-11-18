@@ -4,6 +4,12 @@ import { resolve } from 'node:path';
 import { type ChangelogBreakingSetting, logger } from '@deltabox/toolchain/shared';
 import type { ChangelogConfig } from '@deltabox/toolchain/shared';
 
+import type {
+    ChangelogGroupsSetting,
+    ChangelogProviderSetting,
+    CommitFormatOptions,
+    CommitRecord,
+} from '../types/index.js';
 import { applyDetailsToEntry, resolveDetails } from './details.js';
 import { formatChangelogFile } from './format.js';
 import { readCommits, repoSlug } from './git.js';
@@ -12,12 +18,6 @@ import { packageChangesForCurrent } from './packages.js';
 import { formatExistingChangelogs, parseExistingChangelog } from './reformat.js';
 import { discoverWorkspaceDirs, isCommitReleased, readReleasedHashes, repoRoot } from './repo.js';
 import { buildSummary } from './summary.js';
-import type {
-    ChangelogGroupsSetting,
-    ChangelogProviderSetting,
-    CommitFormatOptions,
-    CommitRecord,
-} from './types.js';
 import { prependChangelogEntry, renderChangelogEntry } from './version.js';
 
 /** Per-target option resolvers for workspace changelog entries. */

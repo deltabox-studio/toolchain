@@ -12,8 +12,8 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
+import type { LoaderExtension } from '../types/loader.js';
 import { shouldFallbackToTsx } from './tsconfig.js';
-import type { LoaderExtension } from './types.js';
 
 /** The loader kind for a file extension. */
 export function extensionKind(file: string): LoaderExtension | undefined {

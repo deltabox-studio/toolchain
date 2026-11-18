@@ -7,9 +7,9 @@ import {
     sanitizeText,
 } from '@deltabox/toolchain/shared';
 
+import type { AuthorInfo, BumpType, CommitRecord, IssueInfo } from '../types/index.js';
 import { isBreakingCommit } from './breaking.js';
 import { repoRoot } from './repo.js';
-import type { AuthorInfo, BumpType, CommitRecord, IssueInfo } from './types.js';
 
 /** Read the commits in a git range (optionally limited to path(s)), newest first. */
 export function readCommits(range: string, path?: string | string[]): CommitRecord[] {

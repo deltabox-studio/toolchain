@@ -1,6 +1,6 @@
 import type { GeneratedFile } from '@deltabox/toolchain/shared';
 
-import type { ProjectContext } from '../typescript.js';
+import type { ProjectContext } from '../types/index.js';
 import { file, readme, recipe } from './shared.js';
 
 export function ollamaChat(ctx: ProjectContext): GeneratedFile[] {

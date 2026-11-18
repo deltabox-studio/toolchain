@@ -19,9 +19,8 @@ import { tsconfigFileNames, type TsconfigExtendsOptions } from '@deltabox/toolch
 
 import { hasCatalog } from '../catalogs.js';
 import { generateProjectConfigs } from '../config.js';
+import type { ConfigExtension, ConfigLanguage } from '../types/index.js';
 import {
-    type ConfigExtension,
-    type ConfigLanguage,
     createMonorepoRootFiles,
     createRootProjectFiles,
     createWorkspaceFiles,

@@ -9,13 +9,13 @@ import {
     readJsonFile,
 } from '@deltabox/toolchain/shared';
 
+import type { BumpType, CommitRecord } from '../types/index.js';
 import { isBreakingCommit } from './breaking.js';
 import { parseCcSubject } from './format.js';
 import { deriveBump, readCommits } from './git.js';
 import { relatedWorkspacePaths } from './graph.js';
 import { globWorkspaces, isCommitReleased, readReleasedHashes, repoRoot } from './repo.js';
 import { resolveScopedOption } from './target.js';
-import type { BumpType, CommitRecord } from './types.js';
 import { bumpVersion } from './version.js';
 
 /** The configured custom bump rules (major/minor/patch only, possibly targeted). */

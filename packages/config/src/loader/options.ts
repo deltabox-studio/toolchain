@@ -3,7 +3,11 @@
 import path from 'node:path';
 
 import type { ConfigSchema } from '../types/index.js';
-import type { ConfigParentSearch, LoadConfigFileOptions, LoadConfigOptions } from './types.js';
+import type {
+    ConfigParentSearch,
+    LoadConfigFileOptions,
+    LoadConfigOptions,
+} from '../types/loader.js';
 
 /** The config files the loader looks for, in priority order. */
 export const DEFAULT_CONFIG_NAMES = [

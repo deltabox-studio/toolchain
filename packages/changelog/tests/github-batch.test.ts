@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import type { CommitRecord } from '../src/utils/types.js';
+import type { CommitRecord } from '../src/types/index.js';
 
 type GitUtils = typeof import('../src/utils/git.js');
 

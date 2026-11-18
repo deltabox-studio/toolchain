@@ -1,0 +1,25 @@
+/** Changelog settings shared with the toolchain config schema. */
+
+export type {
+    ChangelogAuthorInfo,
+    ChangelogBreakingCommit,
+    ChangelogBreakingSetting,
+    ChangelogBumpRuleCallbackContext,
+    ChangelogBumpRuleContext,
+    ChangelogCommitFormatContext,
+    ChangelogCommitFormatOptions,
+    ChangelogCommitRecord,
+    ChangelogGroupConfig,
+    ChangelogGroupContext,
+    ChangelogGroupEntry,
+    ChangelogGroupHidden,
+    ChangelogGroupItem,
+    ChangelogGroupOrder,
+    ChangelogGroupsContext,
+    ChangelogGroupsSetting,
+    ChangelogGroupTitle,
+    ChangelogIssueInfo,
+    ChangelogProvider,
+    ChangelogProviderContext,
+    ChangelogProviderSetting,
+} from '@deltabox/toolchain/shared';

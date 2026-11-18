@@ -1,6 +1,6 @@
 import type { GeneratedFile } from '@deltabox/toolchain/shared';
 
-import type { ProjectContext } from '../typescript.js';
+import type { ProjectContext } from '../types/index.js';
 import { CONTENT_TYPES, file, readme, recipe, TSX, VERSIONS } from './shared.js';
 
 export function renderS3Server(minio: boolean): string {

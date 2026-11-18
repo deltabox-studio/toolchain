@@ -2,8 +2,6 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 import { logger, sanitizeText } from '@deltabox/toolchain/shared';
 
-import { detailsEnabled, renderDetails, type ResolvedDetails } from './details.js';
-import { hasCompleteGitHistory, readCommit } from './git.js';
 import type {
     ChangelogGroupConfig,
     ChangelogGroupContext,
@@ -15,7 +13,9 @@ import type {
     GroupedItem,
     GroupedRule,
     ParsedCommit,
-} from './types.js';
+} from '../types/index.js';
+import { detailsEnabled, renderDetails, type ResolvedDetails } from './details.js';
+import { hasCompleteGitHistory, readCommit } from './git.js';
 
 const RULE_TITLES: Record<string, string> = {
     feat: 'New features',

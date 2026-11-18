@@ -5,7 +5,7 @@ import type { TsConfigJson } from 'type-fest';
 
 import { logger } from '@deltabox/toolchain/shared';
 
-import { mergeOverride, type TsconfigOverrides } from '../../overrides.js';
+import { mergeOverride } from '../../overrides.js';
 import {
     assertTsconfigChain,
     flattenRemoteTsconfig,
@@ -13,8 +13,8 @@ import {
     resolveTsconfig,
     resolveTsconfigConfig,
     resolveTsconfigFilePatterns,
-    type ResolvedTsconfig,
 } from '../../resolve.js';
+import type { ResolvedTsconfig, TsconfigOverrides } from '../../types/index.js';
 
 export type GeneratedTsconfigResult = ReturnType<typeof generateTsconfig>;
 

@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 import { logger } from '@deltabox/toolchain/shared';
 
+import type { BumpType } from '../types/index.js';
 import {
     countCommitEntries,
     detailsEnabled,
@@ -11,7 +12,6 @@ import {
     type DetailsToggle,
 } from './details.js';
 import { discoverWorkspaceDirs, repoRoot } from './repo.js';
-import type { BumpType } from './types.js';
 
 /** `June 2026` for a date. */
 export function monthYear(date: Date): string {

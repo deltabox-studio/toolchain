@@ -1,5 +1,12 @@
 import type { ChangelogBreakingSetting } from '@deltabox/toolchain/shared';
 
+import type {
+    AuthorInfo,
+    ChangelogGroupsSetting,
+    CommitFormatOptions,
+    CommitRecord,
+    GroupedItem,
+} from '../types/index.js';
 import { isBreakingCommit } from './breaking.js';
 import {
     detailsEnabled,
@@ -18,13 +25,6 @@ import {
     repoSlug,
     resolveAuthorInfo,
 } from './git.js';
-import type {
-    AuthorInfo,
-    ChangelogGroupsSetting,
-    CommitFormatOptions,
-    CommitRecord,
-    GroupedItem,
-} from './types.js';
 
 /**
  * Render a commit reference for a changelog bullet. With a resolvable repo slug

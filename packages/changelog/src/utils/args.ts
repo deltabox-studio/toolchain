@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 
-import type { CliOptions } from './types.js';
+import type { CliOptions } from '../types/index.js';
 
 /** Parse the CLI argv into the pipeline options. */
 export function parseArgsCli(argv: string[]): CliOptions {

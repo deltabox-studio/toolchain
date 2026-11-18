@@ -18,17 +18,13 @@ import { generateWorkspaceTsconfigs } from './cli/generate/index.js';
 import { tsconfigFileNames } from './files.js';
 import {
     addedOverrideLeaves,
-    type AppliedOverride,
     applyOverride,
     hasOverrideKeys,
     isAppliedOverride,
     mergeOverride,
-    type OverridesState,
     recordOverrideSnapshot,
     removedOverrideLeaves,
     revertOverride,
-    type TsconfigOverrideKind,
-    type TsconfigOverrides,
 } from './overrides.js';
 import { parseTsconfig } from './resolve.js';
 import {
@@ -41,6 +37,12 @@ import {
     toRepoRelative,
 } from './snapshots.js';
 import { renderTsconfigBuild } from './templates.js';
+import type {
+    AppliedOverride,
+    OverridesState,
+    TsconfigOverrideKind,
+    TsconfigOverrides,
+} from './types/index.js';
 
 export type { TsconfigFileNames } from './files.js';
 export { tsconfigFileNames } from './files.js';

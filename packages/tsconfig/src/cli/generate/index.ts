@@ -27,8 +27,9 @@ import {
     type TsconfigAutoState,
 } from '../../auto.js';
 import { tsconfigFileNames } from '../../files.js';
-import { mergeOverride, type TsconfigOverrides } from '../../overrides.js';
+import { mergeOverride } from '../../overrides.js';
 import { readTsconfig, prefetchTsconfigExtends } from '../../resolve.js';
+import type { TsconfigOverrides } from '../../types/index.js';
 import {
     resolveAutoSwitches,
     resolveTsconfigWorkspaces,

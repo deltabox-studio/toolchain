@@ -5,3 +5,4 @@ export * from './remote.js';
 export * from './snapshots.js';
 export * from './sync.js';
 export * from './templates.js';
+export * from './types/index.js';

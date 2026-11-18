@@ -13,14 +13,10 @@ import {
 } from '@deltabox/toolchain/shared';
 
 import { generateWorkspaceTsconfigs } from '../cli/generate/index.js';
-import {
-    hasOverrideKeys,
-    TSCONFIG_OVERRIDE_KINDS,
-    type TsconfigOverrideKind,
-    type TsconfigOverrides,
-} from '../overrides.js';
+import { hasOverrideKeys, TSCONFIG_OVERRIDE_KINDS } from '../overrides.js';
 import { resolveTsconfigAsync, serializeTsconfigAlias } from '../resolve.js';
 import { restoreTsconfigOverrides } from '../snapshots.js';
+import type { TsconfigOverrideKind, TsconfigOverrides } from '../types/index.js';
 
 /**
  * The `tsconfig` command. Defaults come from `dbx.config.tsconfig.*`

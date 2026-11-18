@@ -8,7 +8,8 @@
  * error instead of silently disappearing.
  */
 
-import { parseTsconfig, type TsconfigJson } from './resolve.js';
+import { parseTsconfig } from './resolve.js';
+import type { TsconfigJson } from './types/index.js';
 
 const remoteTsconfigCache = new Map<string, TsconfigJson>();
 const pendingFetches = new Map<string, Promise<TsconfigJson>>();

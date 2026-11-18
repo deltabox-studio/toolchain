@@ -18,11 +18,20 @@ import {
     renderTsconfigBase,
     renderTsconfigBuild,
     renderTsconfigDefault,
-    type TsconfigExtendsOptions,
 } from '@deltabox/toolchain/tsconfig';
 
 import rootPkg from '../../../package.json' with { type: 'json' };
 import { renderPnpmWorkspace, renderYarnrc, supportsCatalogs } from './catalogs.js';
+import type {
+    ConfigExtension,
+    ConfigLanguage,
+    MonorepoRootContext,
+    PluginViteConfigOptions,
+    ProjectContext,
+    RootOxcFiles,
+    WorkspaceContext,
+    WriteGeneratedFilesOptions,
+} from './types/index.js';
 
 /**
  * The dev dependencies every scaffolded package gets, pinned to the toolchain's
@@ -139,69 +148,14 @@ function workspacesField(
     return globs;
 }
 
-/** The replacement values a project scaffold understands. */
-export interface ProjectContext {
-    /** The project/package name (unscoped). */
-    name: string;
-    /** The npm scope, eg. `@acme`. */
-    scope?: string;
-    /** Package description. */
-    description?: string;
-    /** Package author. */
-    author?: string;
-    /** SPDX license id. */
-    license?: string;
-    /** Project homepage. */
-    homepage?: string;
-    /** Repository URL. */
-    repo?: string;
-    /** Repository URL (legacy alias for {@link repo}). */
-    repoUrl?: string;
-    /** Node engine range. */
-    nodeVersion?: string;
-    /** Package manager version. */
-    packageManagerVersion?: string;
-    /** Yarn version (legacy alias for {@link packageManagerVersion}). */
-    yarnVersion?: string;
-    /** Package manager name. */
-    packageManager?: string;
-    /** The project kind written into the scaffolded `dbx.config.ts`. */
-    type?: ProjectType;
-    /** The scaffold flavour (an application gets Vite entry files/scripts). */
-    kind?: 'project' | 'application';
-    /** Write `fmt.oxc` / `lint.oxc` defaults (and the Oxc config files). */
-    oxc?: boolean;
-    /**
-     * Oxc config files already present above the scaffold root. The matching
-     * local file + `dbx.config.ts` opt-in are omitted so the root owns them.
-     */
-    rootOxc?: RootOxcFiles;
-    /** Write a `dbx.config.ts` (default true). */
-    includeConfig?: boolean;
-    /** Per-file `extends` overrides for the scaffolded tsconfig templates. */
-    tsconfigExtends?: TsconfigExtendsOptions;
-    /** Extra runtime dependencies merged into `dependencies`. */
-    dependencies?: Record<string, string>;
-    /** Extra dev dependencies merged over the scaffold's toolchain ones. */
-    extraDevDependencies?: Record<string, string>;
-    /** Scripts merged over (or replacing) the scaffold's default scripts. */
-    scripts?: Record<string, string>;
-}
-
-/** Oxc config files found in an ancestor of a scaffold output directory. */
-export interface RootOxcFiles {
-    fmt: boolean;
-    lint: boolean;
-}
-
-/** The language a generated `dbx.config.*` uses. */
-export type ConfigLanguage = 'ts' | 'js';
-
 /** Every supported generated config extension. */
-export const CONFIG_EXTENSIONS = ['ts', 'mts', 'js', 'mjs', 'cjs'] as const;
-
-/** The extensions a generated `dbx.config.*` can use. */
-export type ConfigExtension = (typeof CONFIG_EXTENSIONS)[number];
+export const CONFIG_EXTENSIONS = [
+    'ts',
+    'mts',
+    'js',
+    'mjs',
+    'cjs',
+] as const satisfies readonly ConfigExtension[];
 
 /** The default generated config extension. */
 export const DEFAULT_CONFIG_EXTENSION = 'ts' as const;
@@ -459,16 +413,6 @@ ${sections.join('\n')}
 `;
 }
 
-export interface PluginViteConfigOptions {
-    ctx: ProjectContext;
-    type: ProjectType;
-    /** `defaults` writes `fmt: { oxc: true }`; `inherit` opts into a parent. */
-    fmt?: 'defaults' | 'inherit' | false;
-    lint?: 'defaults' | 'inherit' | false;
-    catalogs?: Record<string, string>;
-    flavor?: 'application' | 'library' | 'monorepo-root' | 'workspace';
-}
-
 /**
  * Render the scaffold's `vite.config.*`: Vite+ loads it, and `dbx()` carries the
  * toolchain config inline so the project does not need a `dbx.config.*`.
@@ -647,13 +591,6 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
         { path: 'README.md', content: `# ${ctx.name}\n` },
         ...catalogFiles(ctx.packageManager, false),
     ];
-}
-
-export interface MonorepoRootContext extends ProjectContext {
-    /** The workspaces to wire into the monorepo tsconfig. */
-    workspaces: MonorepoWorkspace[];
-    /** The workspace globs (default `['packages/*']`). */
-    workspaceGlobs?: string[];
 }
 
 /** Files for a monorepo root (workspaces + monorepo tsconfig). */
@@ -881,15 +818,6 @@ export function upsertWorkspaceTsconfig(
     return true;
 }
 
-export interface WorkspaceContext extends ProjectContext {
-    /** The workspace name (unscoped), eg. `core`. */
-    wsName: string;
-    /** The workspace directory relative to the root, eg. `packages/core`. */
-    wsDir: string;
-    /** Reference the root catalog for dev deps (`catalog:`) instead of pinning. */
-    useCatalog?: boolean;
-}
-
 /** Files for a monorepo workspace package. */
 export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
     // Only reference `catalog:` when the workspace's package manager actually
@@ -1008,11 +936,6 @@ export function renderGitignore(): string {
         '!.yarn/versions',
         '',
     ].join('\n');
-}
-
-export interface WriteGeneratedFilesOptions {
-    /** Overwrite files that already exist (default false). */
-    force?: boolean;
 }
 
 function isInside(root: string, target: string): boolean {

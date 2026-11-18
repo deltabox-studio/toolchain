@@ -6,13 +6,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import type { ConfigCandidate, ConfigParentSearch } from '../types/loader.js';
 import {
     acceptFile,
     type AnyLoadInput,
     normalizeConfigFileOptions,
     type ResolvedConfigFileOptions,
 } from './options.js';
-import type { ConfigCandidate, ConfigParentSearch } from './types.js';
 
 /** The result of a discovery pass. */
 export interface DiscoveredConfig {

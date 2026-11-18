@@ -2,7 +2,8 @@
 
 import type { ZodType } from 'zod';
 
-import type { ConfigSchema, ParseConfigOptions } from '../types/index.js';
+import type { ParseConfigOptions } from './collect.js';
+import type { ConfigSchema } from './schema.js';
 
 /** Where a resolved config came from. */
 export type ConfigSourceKind = 'file' | 'package.json' | 'none';

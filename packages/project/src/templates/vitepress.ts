@@ -1,6 +1,7 @@
 import type { GeneratedFile } from '@deltabox/toolchain/shared';
 
-import { type ProjectContext, renderGitignore } from '../typescript.js';
+import type { ProjectContext } from '../types/index.js';
+import { renderGitignore } from '../typescript.js';
 import { file, readme, recipe, VERSIONS } from './shared.js';
 
 export function vitePress(ctx: ProjectContext): GeneratedFile[] {

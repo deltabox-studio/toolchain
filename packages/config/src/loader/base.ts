@@ -13,16 +13,16 @@ import { deepMerge } from '@deltabox/toolchain-shared';
 
 import { parseConfig } from '../parser.js';
 import type { ConfigSchema, ParseConfigOptions, ResolvedConfig } from '../types/index.js';
-import { discoverConfig } from './discover.js';
-import { extensionKind, importModule, parseJson, parseYamlAsync, parseYamlSync } from './import.js';
-import { invokeAsyncLoader, invokeSyncLoader, isPromise, selectLoader } from './loaders.js';
-import { type AnyLoadInput, resolveTsconfigSetting } from './options.js';
 import type {
     LoadConfigFileOptions,
     LoadConfigOptions,
     LoadedConfig,
     LoaderOptions,
-} from './types.js';
+} from '../types/loader.js';
+import { discoverConfig } from './discover.js';
+import { extensionKind, importModule, parseJson, parseYamlAsync, parseYamlSync } from './import.js';
+import { invokeAsyncLoader, invokeSyncLoader, isPromise, selectLoader } from './loaders.js';
+import { type AnyLoadInput, resolveTsconfigSetting } from './options.js';
 
 /**
  * Resolve a Vite-style function export when the caller asked to parse the

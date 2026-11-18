@@ -77,6 +77,11 @@ import {
     resolveCommitlintEnabled,
 } from '@deltabox/toolchain/shared';
 
+import type {
+    ChangelogGroupsSetting,
+    ChangelogProviderSetting,
+    CommitFormatOptions,
+} from './types/index.js';
 import { parseArgsCli } from './utils/args.js';
 import { applyDetailsToEntry, resolveDetails } from './utils/details.js';
 import { isGitRepository, isReleaseCommit, lastReleaseRef, readCommits } from './utils/git.js';
@@ -97,11 +102,6 @@ import {
 } from './utils/repo.js';
 import { buildSummary } from './utils/summary.js';
 import { resolveScopedOption, resolveTextSetting } from './utils/target.js';
-import type {
-    ChangelogGroupsSetting,
-    ChangelogProviderSetting,
-    CommitFormatOptions,
-} from './utils/types.js';
 import {
     insertNewEntry,
     renderChangelogEntry,

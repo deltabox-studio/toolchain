@@ -2,7 +2,7 @@
 
 import { createRequire } from 'node:module';
 
-import type { LoaderConfig, LoaderExtension, LoaderSetting, LoaderValue } from './types.js';
+import type { LoaderConfig, LoaderExtension, LoaderSetting, LoaderValue } from '../types/loader.js';
 
 /** Whether a value is a promise-like. */
 export function isPromise(value: unknown): value is Promise<unknown> {

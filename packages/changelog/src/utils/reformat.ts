@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 import { type ChangelogBreakingSetting, logger } from '@deltabox/toolchain/shared';
 
+import type { ChangelogGroupsSetting, ExistingEntry, GroupedItem } from '../types/index.js';
 import { isBreakingCommit } from './breaking.js';
 import { applyDetailsToEntry, resolveDetails } from './details.js';
 import {
@@ -20,7 +21,6 @@ import {
     resolveVersionRef,
 } from './packages.js';
 import { changelogFiles, repoRoot } from './repo.js';
-import type { ChangelogGroupsSetting, ExistingEntry, GroupedItem } from './types.js';
 import { renderChangelogEntry } from './version.js';
 
 /** A version heading: `## 1.2.3`, `## [1.2.3]`, `## v1.2.3`, prereleases, dates. */

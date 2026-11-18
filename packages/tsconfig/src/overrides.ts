@@ -10,41 +10,20 @@
 
 import { isDeepStrictEqual } from 'node:util';
 
-import type { TsConfigJson } from 'type-fest';
-
-import type { ToolchainTsconfigOverrides } from '@deltabox/toolchain/shared';
+import type {
+    AppliedOverride,
+    OverrideLeaf,
+    RevertOverrideResult,
+    TsconfigOverrideKind,
+} from './types/index.js';
 
 /** Every override kind, in the order the sync task applies them. */
-export const TSCONFIG_OVERRIDE_KINDS = ['base', 'root', 'default', 'build'] as const;
-
-/** The file an override targets. */
-export type TsconfigOverrideKind = (typeof TSCONFIG_OVERRIDE_KINDS)[number];
-
-/** The `tsconfig.overrides` config section. */
-export type TsconfigOverrides = ToolchainTsconfigOverrides;
-
-/** One applied override, as recorded in the manifest. */
-export interface AppliedOverride {
-    kind: TsconfigOverrideKind;
-    override: TsConfigJson;
-}
-
-/** Applied overrides keyed by repo-relative file path. */
-export type OverridesState = Record<string, AppliedOverride>;
-
-/** A leaf value set by an override, addressed by its object path. */
-export interface OverrideLeaf {
-    path: string[];
-    value: unknown;
-}
-
-/** The outcome of {@link revertOverride}. */
-export interface RevertOverrideResult {
-    /** Dotted keys that were removed or restored to their snapshot value. */
-    reverted: string[];
-    /** Dotted keys left alone because they changed after the override applied them. */
-    kept: string[];
-}
+export const TSCONFIG_OVERRIDE_KINDS = [
+    'base',
+    'root',
+    'default',
+    'build',
+] as const satisfies readonly TsconfigOverrideKind[];
 
 type JsonObject = Record<string, unknown>;
 
