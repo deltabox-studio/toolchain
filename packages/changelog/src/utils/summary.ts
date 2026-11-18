@@ -291,7 +291,7 @@ export function buildSummary(records: CommitRecord[], options: BuildSummaryOptio
         detailsEnabled(details.releaseNotes, records.length)
     ) {
         return renderDetails(
-            details.releaseNotes.title ?? '**Release Notes**',
+            details.releaseNotes.title ?? '**Release notes**',
             custom,
             details.releaseNotes.expanded === true
         );

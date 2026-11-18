@@ -126,7 +126,7 @@ export function changelogCommands(): ToolchainCommand[] {
                 { flags: '--format-only', description: 'Only regroup existing changelogs.' },
                 {
                     flags: '--release',
-                    description: 'Release mode: wrap the entry as `**Release Notes**`.',
+                    description: 'Release mode: wrap the entry as `**Release notes**`.',
                 },
                 {
                     flags: '--intro <text>',

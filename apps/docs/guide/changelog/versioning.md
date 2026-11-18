@@ -228,8 +228,9 @@ out.
   as a collapsible whose summary is `**See more...**`.
 - `breaking` (default on) wraps the breaking section; the summary names the
   section, so the duplicate heading is not repeated inside.
-- The version stays a normal `##` heading. The body details summary is
-  `**Release Notes**` in both release and non-release modes.
+- The version stays a normal `##` heading. Release mode wraps the body with the
+  `**Release notes**` summary and `details.body` is opt-out there; in
+  non-release mode `details.body` is opt-in.
 - `intro`/`outro`/`footer` are opt-in wrappers; `types` (default on) wraps the
   CC type sections, leaving the generated `Package changes`/`New contributors`
   footers alone.
@@ -246,7 +247,7 @@ ci: {
             commit: {
                 details: {
                     descriptions: { title: 'More', expanded: true },
-                    releaseNotes: { title: 'Release Notes' },
+                    releaseNotes: { title: 'Release notes' },
                     intro: true,
                     outro: true,
                     footer: true,
@@ -261,7 +262,7 @@ ci: {
 ```
 
 - `descriptions` uses `See more...` by default and only applies when the commit has a body; the collapsible is nested under the commit bullet.
-- `releaseNotes`/`body` use `Release Notes` by default; `breaking`/`types` use the section title (bold for breaking).
+- `releaseNotes`/`body` use `Release notes` by default; `breaking`/`types` use the section title (bold for breaking).
 - `intro`, `outro` and `footer` keep inline summaries.
 - `types` (default on) wraps CC type sections (all types when `true`), using the section title by default.
 - `minCommits` on a toggle skips the collapsible until that section has at least
@@ -281,6 +282,6 @@ Every flag also accepts `{ title?: string; expanded?: boolean }`.
 - `before`: details are applied while the entry is rendered.
 
 `details.body` wraps the whole version body in a collapsible titled
-`Release Notes`. It is on by default outside release mode and requires at least
-10 commits (`minCommits`) unless overridden. Release mode uses
-`details.releaseNotes` with the same title.
+`Release notes`. It is opt-in in non-release mode and opt-out in release mode,
+and requires at least 10 commits (`minCommits`) when enabled unless overridden.
+Release mode uses `details.releaseNotes` with the same title by default.

@@ -27,23 +27,49 @@ const manyRecords = [
 ];
 
 describe('changelog details', () => {
-    it('enables the body details only at 10 commits by default', () => {
+    it('keeps the body opt-in and gates it at 10 commits', () => {
         const one = applyDetailsToEntry(
             renderChangelogEntry('1.0.0', buildSummary(records)),
             resolveDetails(true)
         );
         expect(one).toContain('## 1.0.0');
-        expect(one).not.toContain('<summary><strong>Release Notes</strong></summary>');
+        expect(one).not.toContain('<summary><strong>Release notes</strong></summary>');
         expect(one).toContain('<summary><strong>BREAKING CHANGES</strong></summary>');
         expect(one).toContain('<summary><strong>See more...</strong></summary>');
         expect(one).toContain('A longer explanation of the thing.');
 
         const ten = applyDetailsToEntry(
             renderChangelogEntry('1.0.0', buildSummary(manyRecords)),
-            resolveDetails(true)
+            resolveDetails({ body: true })
         );
-        expect(ten).toContain('<summary><strong>Release Notes</strong></summary>');
+        expect(ten).toContain('<summary><strong>Release notes</strong></summary>');
         expect(ten).not.toMatch(/<summary><h[1-6]>/);
+    });
+
+    it('keeps the body opt-out in release mode and opt-in otherwise', () => {
+        expect(resolveDetails(true, true).body).toMatchObject({
+            enabled: true,
+            title: '**Release notes**',
+        });
+        expect(resolveDetails(true).body.enabled).toBe(false);
+        expect(resolveDetails({ body: false }, true).body.enabled).toBe(false);
+
+        const entry = [
+            '## 1.0.0',
+            '',
+            ...Array.from({ length: 10 }, (_, index) => `- thing ${index}`),
+        ].join('\n');
+        const releaseBody = applyDetailsToEntry(
+            entry,
+            resolveDetails({ releaseNotes: false, breaking: false, descriptions: false }, true)
+        );
+        expect(releaseBody).toContain('<summary><strong>Release notes</strong></summary>');
+
+        const normalBody = applyDetailsToEntry(
+            entry,
+            resolveDetails({ releaseNotes: false, breaking: false, descriptions: false })
+        );
+        expect(normalBody).not.toContain('<summary><strong>Release notes</strong></summary>');
     });
 
     it('keeps release markers outside the section details', () => {
@@ -60,13 +86,13 @@ describe('changelog details', () => {
         expect(end).toBeGreaterThan(output.lastIndexOf('</details>'));
     });
 
-    it('uses Release Notes in both release and non-release modes', () => {
+    it('uses Release notes in release mode only', () => {
         const release = applyDetailsToEntry(
             renderChangelogEntry('1.0.0', buildSummary(records, { release: true })),
             resolveDetails(true, true)
         );
         expect(release).toContain('## 1.0.0');
-        expect(release).toContain('<summary><strong>Release Notes</strong></summary>');
+        expect(release).toContain('<summary><strong>Release notes</strong></summary>');
         expect(release).not.toContain('<summary>1.0.0</summary>');
         expect(release).not.toMatch(/<summary><h[1-6]>/);
 
@@ -75,7 +101,7 @@ describe('changelog details', () => {
             resolveDetails(true)
         );
         expect(normal).toContain('## 1.0.0');
-        expect(normal).not.toContain('<summary><strong>Release Notes</strong></summary>');
+        expect(normal).not.toContain('<summary><strong>Release notes</strong></summary>');
         expect(normal).not.toContain('<summary>1.0.0</summary>');
     });
 
@@ -142,7 +168,7 @@ describe('changelog details', () => {
             })
         );
         expect(entry).toContain('## 1.2.3');
-        expect(entry).toContain('<summary><strong>Release Notes</strong></summary>');
+        expect(entry).toContain('<summary><strong>Release notes</strong></summary>');
         expect(entry).toContain('Body');
     });
 
@@ -185,7 +211,7 @@ describe('changelog details', () => {
             },
         });
         expect(summary).toContain('<details>');
-        expect(summary).toContain('<summary><strong>Release Notes</strong></summary>');
+        expect(summary).toContain('<summary><strong>Release notes</strong></summary>');
         expect(summary).toContain('<summary><strong>BREAKING CHANGES</strong></summary>');
         expect(summary).not.toContain('### Breaking Changes');
     });
@@ -267,7 +293,7 @@ describe('details after formatting', () => {
             { body: { minCommits: 0 }, releaseNotes: false, breaking: false, descriptions: true }
         );
         expect(formatted).toContain('## 1.0.0');
-        expect(formatted).toContain('<summary><strong>Release Notes</strong></summary>');
+        expect(formatted).toContain('<summary><strong>Release notes</strong></summary>');
         expect(formatted).toContain('<summary><strong>See more...</strong></summary>');
     });
 
@@ -430,18 +456,18 @@ describe('details minCommits', () => {
             renderChangelogEntry('1.0.0', '- one'),
             resolveDetails({ releaseNotes: { minCommits: 2 } }, true)
         );
-        expect(one).not.toContain('<summary><strong>Release Notes</strong></summary>');
+        expect(one).not.toContain('<summary><strong>Release notes</strong></summary>');
 
         const two = applyDetailsToEntry(
             renderChangelogEntry('1.0.0', '- one\n- two'),
             resolveDetails({ releaseNotes: { minCommits: 2 } }, true)
         );
-        expect(two).toContain('<summary><strong>Release Notes</strong></summary>');
+        expect(two).toContain('<summary><strong>Release notes</strong></summary>');
     });
 });
 
 describe('release mode with an explicit body', () => {
-    it('does not nest two identical Release Notes summaries', () => {
+    it('does not nest two identical Release notes summaries', () => {
         const entry = [
             '## 1.0.0',
             '',
@@ -451,7 +477,7 @@ describe('release mode with an explicit body', () => {
             entry,
             resolveDetails({ body: { minCommits: 0 }, releaseNotes: { minCommits: 0 } }, true)
         );
-        expect(out.match(/<summary><strong>Release Notes<\/strong><\/summary>/g)).toHaveLength(1);
+        expect(out.match(/<summary><strong>Release notes<\/strong><\/summary>/g)).toHaveLength(1);
         expect(out.match(/<details>/g)).toHaveLength(1);
     });
 });

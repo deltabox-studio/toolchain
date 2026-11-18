@@ -33,7 +33,7 @@ export interface ResolvedDetails {
 }
 
 const DEFAULT_TITLES = {
-    releaseNotes: '**Release Notes**',
+    releaseNotes: '**Release notes**',
     descriptions: '**See more...**',
     intro: '**Intro**',
     outro: '**Outro**',
@@ -152,7 +152,7 @@ export function resolveDetails(value: unknown, release = false): ResolvedDetails
             enabled: true,
             lifecycle: 'after',
             descriptions: { enabled: true, title: DEFAULT_TITLES.descriptions },
-            body: { enabled: !release, title: DEFAULT_TITLES.releaseNotes, minCommits: 10 },
+            body: { enabled: release, title: DEFAULT_TITLES.releaseNotes, minCommits: 10 },
             releaseNotes: {
                 enabled: release,
                 title: DEFAULT_TITLES.releaseNotes,
@@ -186,7 +186,7 @@ export function resolveDetails(value: unknown, release = false): ResolvedDetails
         descriptions: toggle(record.descriptions, DEFAULT_TITLES.descriptions, false, configMin),
         body:
             record.body === undefined
-                ? { enabled: !release, title: DEFAULT_TITLES.releaseNotes, minCommits: bodyMin }
+                ? { enabled: release, title: DEFAULT_TITLES.releaseNotes, minCommits: bodyMin }
                 : toggle(record.body, DEFAULT_TITLES.releaseNotes, false, bodyMin),
         releaseNotes,
         intro: toggle(record.intro, DEFAULT_TITLES.intro, false, configMin),
@@ -478,7 +478,7 @@ function wrapBody(lines: string[], details: ResolvedDetails): string[] {
         releaseWrapped = true;
     }
     // Release mode already wraps the entry; a second body wrapper would nest
-    // two identical "Release Notes" summaries.
+    // two identical "Release notes" summaries.
     if (!releaseWrapped && details.body.enabled && detailsEnabled(details.body, count)) {
         inner = renderDetails(
             details.body.title ?? DEFAULT_TITLES.releaseNotes,
