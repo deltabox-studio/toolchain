@@ -21,6 +21,7 @@
                     "type": "object",
                     "properties": {
                         "disabled": {
+                            "default": false,
                             "type": "boolean",
                             "description": "Disable the toolchain for this scope (default false)."
                         },
@@ -165,6 +166,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -195,6 +197,7 @@
                     "description": "Directory for the generated file."
                 },
                 "setup": {
+                    "default": false,
                     "type": "boolean",
                     "description": "Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow is written as-is)."
                 },
@@ -234,6 +237,7 @@
                     "description": "Directory for the generated file."
                 },
                 "setup": {
+                    "default": false,
                     "type": "boolean",
                     "description": "Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow is written as-is)."
                 },
@@ -273,6 +277,7 @@
                     "description": "Directory for the generated file."
                 },
                 "setup": {
+                    "default": false,
                     "type": "boolean",
                     "description": "Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow is written as-is)."
                 },
@@ -292,6 +297,7 @@
             "type": "object",
             "properties": {
                 "provider": {
+                    "default": "github",
                     "type": "string",
                     "const": "github",
                     "description": "Workflow vendor for a full `workflow` object (default `github`)."
@@ -363,6 +369,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -856,6 +863,7 @@
             "type": "object",
             "properties": {
                 "provider": {
+                    "default": "github",
                     "type": "string",
                     "const": "github",
                     "description": "Workflow vendor for a full `workflow` object (default `github`)."
@@ -927,6 +935,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 },
                 "branches": {
@@ -1100,6 +1109,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -1652,7 +1662,7 @@
                                     "$ref": "#/$defs/ChangelogDetailsOptions"
                                 }
                             ],
-                            "description": "Wrap the version body in a collapsible titled Release Notes (default outside release mode; requires 10 commits by default)."
+                            "description": "Wrap the version body in a collapsible titled Release notes (default false; enabled by default in release mode; requires 10 commits by default)."
                         },
                         "releaseNotes": {
                             "anyOf": [
@@ -1663,7 +1673,7 @@
                                     "$ref": "#/$defs/ChangelogDetailsOptions"
                                 }
                             ],
-                            "description": "Wrap the release-mode entry in a collapsible titled Release Notes."
+                            "description": "Wrap the release-mode entry in a collapsible titled Release notes."
                         },
                         "intro": {
                             "anyOf": [
@@ -2408,6 +2418,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -2546,6 +2557,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -2633,6 +2645,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -2724,6 +2737,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -2751,6 +2765,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -2947,6 +2962,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -3133,6 +3149,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -3156,6 +3173,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -3259,6 +3277,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -3321,6 +3340,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -3387,6 +3407,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -3426,6 +3447,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -3474,6 +3496,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -3566,6 +3589,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -3585,6 +3609,7 @@
                 },
                 "regenerate": {
                     "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },

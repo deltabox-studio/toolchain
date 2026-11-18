@@ -126,6 +126,8 @@ export interface ToolchainCiConfig {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
 }
@@ -152,6 +154,8 @@ export interface GitHubWorkflowSetting {
     /**
      * Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow
      * is written as-is).
+     *
+     * @default false
      */
     setup?: boolean;
     /** Enable/disable this workflow (default: enabled when present). */
@@ -180,6 +184,8 @@ export interface GitLabWorkflowSetting {
     /**
      * Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow
      * is written as-is).
+     *
+     * @default false
      */
     setup?: boolean;
     /** Enable/disable this workflow (default: enabled when present). */
@@ -208,6 +214,8 @@ export interface AzureWorkflowSetting {
     /**
      * Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow
      * is written as-is).
+     *
+     * @default false
      */
     setup?: boolean;
     /** Enable/disable this workflow (default: enabled when present). */
@@ -215,7 +223,11 @@ export interface AzureWorkflowSetting {
 }
 
 export interface WorkflowOptions {
-    /** Workflow vendor for a full `workflow` object (default `github`). */
+    /**
+     * Workflow vendor for a full `workflow` object (default `github`).
+     *
+     * @default 'github'
+     */
     provider?: 'github';
     /** Replace `on.push.branches`. */
     pushBranches?: Array<string>;
@@ -263,6 +275,8 @@ export interface WorkflowOptions {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
 }
@@ -436,7 +450,11 @@ export type WorkflowSetting =
     | WorkflowOptions;
 
 export interface CiChangelogConfig {
-    /** Workflow vendor for a full `workflow` object (default `github`). */
+    /**
+     * Workflow vendor for a full `workflow` object (default `github`).
+     *
+     * @default 'github'
+     */
     provider?: 'github';
     /** Replace `on.push.branches`. */
     pushBranches?: Array<string>;
@@ -484,6 +502,8 @@ export interface CiChangelogConfig {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
     /** Branches the generated workflows target. */
@@ -557,6 +577,8 @@ export interface ChangelogCommitlintConfig {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
 }
@@ -1022,6 +1044,8 @@ export interface ToolchainDependabotConfig {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
 }
@@ -1078,6 +1102,8 @@ export interface ChangelogConfig {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
 }
@@ -1119,6 +1145,8 @@ export interface ToolchainFmtConfig {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
 }
@@ -1161,6 +1189,8 @@ export interface ToolchainLintConfig {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
 }
@@ -1185,6 +1215,8 @@ export interface ToolchainBiomeConfig {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
 }
@@ -1310,6 +1342,8 @@ export interface ToolchainTsconfigConfig {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
 }
@@ -1404,6 +1438,8 @@ export interface ToolchainLoaderConfig {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
 }
@@ -1416,6 +1452,8 @@ export interface ToolchainTemplatesConfig {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
 }
@@ -1479,6 +1517,8 @@ export interface ToolchainRegistryConfig {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
 }
@@ -1503,6 +1543,8 @@ export interface ToolchainCatalogsConfig {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
 }
@@ -1545,6 +1587,8 @@ export interface ToolchainWatchConfig {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
 }
@@ -1562,6 +1606,8 @@ export interface ToolchainSyncConfig {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
 }
@@ -1589,6 +1635,8 @@ export interface ToolchainProvidersConfig {
     /**
      * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
      * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
      */
     regenerate?: boolean;
 }

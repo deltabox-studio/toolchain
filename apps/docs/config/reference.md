@@ -122,6 +122,7 @@ The CI checks workflow (`ci.yml`).
 
 - **Required**
 - **Type**: `'github'`
+- **Default**: `"github"`
 
 Workflow vendor for a full `workflow` object (default `github`).
 
@@ -497,6 +498,7 @@ Exact `voidzero-dev/setup-vp` version or commit SHA to pin.
 #### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -509,6 +511,7 @@ The changelog/version workflow (`changelog.yml`) plus the changelog pipeline con
 #### `provider`
 
 - **Type**: `'github'`
+- **Default**: `"github"`
 
 Workflow vendor for a full `workflow` object (default `github`).
 
@@ -583,6 +586,7 @@ Enable/disable the changelog workflow and pipeline (default: enabled when presen
 #### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -637,6 +641,7 @@ Enable commitlint (default true when the changelog is enabled). Set false to gen
 ##### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -931,13 +936,13 @@ Minimum entries in the section before wrapping (nested overrides the top-level d
 
 - **Type**: `boolean | ChangelogDetailsOptions`
 
-Wrap the version body in a collapsible titled Release Notes (default outside release mode; requires 10 commits by default).
+Wrap the version body in a collapsible titled Release notes (default false; enabled by default in release mode; requires 10 commits by default).
 
 ###### `releaseNotes`
 
 - **Type**: `boolean | ChangelogDetailsOptions`
 
-Wrap the release-mode entry in a collapsible titled Release Notes.
+Wrap the release-mode entry in a collapsible titled Release notes.
 
 ###### `intro`
 
@@ -1306,6 +1311,7 @@ Enable/disable this section (default: enabled when defined).
 #### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -1324,6 +1330,7 @@ Enable/disable this section (default: enabled when defined).
 ### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -1364,6 +1371,7 @@ Enable commitlint (default true when the changelog is enabled). Set false to gen
 #### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -1658,13 +1666,13 @@ Minimum entries in the section before wrapping (nested overrides the top-level d
 
 - **Type**: `boolean | ChangelogDetailsOptions`
 
-Wrap the version body in a collapsible titled Release Notes (default outside release mode; requires 10 commits by default).
+Wrap the version body in a collapsible titled Release notes (default false; enabled by default in release mode; requires 10 commits by default).
 
 ###### `releaseNotes`
 
 - **Type**: `boolean | ChangelogDetailsOptions`
 
-Wrap the release-mode entry in a collapsible titled Release Notes.
+Wrap the release-mode entry in a collapsible titled Release notes.
 
 ###### `intro`
 
@@ -1892,6 +1900,7 @@ Enable/disable this section (default: enabled when defined).
 ### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -1955,6 +1964,7 @@ Enable/disable this section (default: enabled when defined).
 ### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -2011,6 +2021,7 @@ Enable/disable this section (default: enabled when defined).
 ### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -2043,6 +2054,7 @@ Enable/disable this section (default: enabled when defined).
 ### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -2278,6 +2290,7 @@ Enable/disable this section (default: enabled when defined).
 ### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -2303,6 +2316,7 @@ Enable/disable this section (default: enabled when defined).
 ### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -2393,6 +2407,7 @@ Enable/disable this section (default: enabled when defined).
 ### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -2433,6 +2448,7 @@ Enable/disable this section (default: enabled when defined).
 ### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -2461,6 +2477,7 @@ Enable/disable this section (default: enabled when defined).
 ### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -2511,6 +2528,7 @@ Enable/disable this section (default: enabled when defined).
 ### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -2547,6 +2565,7 @@ Enable/disable this section (default: enabled when defined).
 ### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -2593,6 +2612,7 @@ Enable/disable this section (default: enabled when defined).
 ### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -2698,6 +2718,7 @@ Enable/disable this section (default: enabled when defined).
 ### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
@@ -2720,6 +2741,7 @@ Enable/disable this section (default: enabled when defined).
 ### `regenerate`
 
 - **Type**: `boolean`
+- **Default**: `true`
 
 Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
 
