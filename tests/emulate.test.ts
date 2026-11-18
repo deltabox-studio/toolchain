@@ -277,8 +277,8 @@ describe('emulate: CLI + templates', () => {
                     expect(config).toContain('catalogs:');
                 } else {
                     // npm has no catalogs, and a single Bun project has nowhere to
-                    // declare one -> both pin.
-                    expect(pkg.devDependencies['@deltabox/toolchain']).toMatch(/^\^\d/);
+                    // declare one -> both pin an exact toolchain version.
+                    expect(pkg.devDependencies['@deltabox/toolchain']).toMatch(/^\d+\.\d+\.\d+/);
                     expect(hasYarnrc || hasPnpmWs).toBe(false);
                     expect(config).not.toContain('catalogs:');
                 }
