@@ -246,10 +246,9 @@ export function tsconfigSyncTask(): SyncTask {
             for (const result of results) {
                 if (hasOverrideKeys(overrides.build)) continue;
                 if (fs.existsSync(result.targetTsconfigBuildPath)) continue;
-                const defaultName = path.basename(result.tsconfigPath);
                 files.push({
                     path: rel(ctx.cwd, result.targetTsconfigBuildPath),
-                    content: renderTsconfigBuild({}, `./${defaultName}`),
+                    content: renderTsconfigBuild({}, './tsconfig.json'),
                     track: false,
                     format: false,
                 });

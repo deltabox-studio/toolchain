@@ -432,6 +432,7 @@ export function renderToolchainConfig(
         : undefined;
     const sections = [
         `        project: {\n${project}\n        },`,
+        ...(ctx.type === 'monorepo-root' ? ['        tsconfig: true,'] : []),
         ...(catalogs ? [catalogs] : []),
         ...(fmtOxc ? ['        fmt: { oxc: true },'] : []),
         ...(lintOxc ? ['        lint: { oxc: true },'] : []),
@@ -518,6 +519,9 @@ export function renderPluginViteConfig(options: PluginViteConfigOptions): string
     };
     const fmt = oxc(options.fmt);
     const lint = oxc(options.lint);
+    // Only a monorepo root owns the shared workspaces tsconfig; single-project
+    // and workspace scaffolds keep the task opt-in.
+    const tsconfig = flavor === 'monorepo-root' ? '                tsconfig: true,' : undefined;
 
     const testInclude =
         flavor === 'monorepo-root'
@@ -537,6 +541,7 @@ ${project}
                 },
 ${[
     catalogs,
+    tsconfig,
     fmt ? `                fmt: ${fmt},` : undefined,
     lint ? `                lint: ${lint},` : undefined,
 ]
@@ -964,7 +969,10 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
         },
         {
             path: 'tsconfig.build.json',
-            content: renderWorkspaceTsconfig(false, ctx.tsconfigExtends?.build),
+            content: renderWorkspaceTsconfig(
+                false,
+                ctx.tsconfigExtends?.build ?? './tsconfig.json'
+            ),
         },
         { path: 'tsconfig.json', content: renderWorkspaceTsconfig() },
     ];

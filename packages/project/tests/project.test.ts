@@ -19,6 +19,7 @@ import {
     projectCommands,
     projectSyncTask,
     renderGitignore,
+    renderToolchainConfig,
     renderYarnrc,
     SCAFFOLD_CATALOG,
     upsertWorkspaceTsconfig,
@@ -194,6 +195,13 @@ describe('project scaffolding', () => {
         });
         const mono = JSON.parse(files.find(f => f.path === 'tsconfig.workspaces.json')!.content);
         expect(mono.compilerOptions.paths['@acme/core']).toEqual(['./packages/core/src/index.ts']);
+        expect(mono.compilerOptions).toEqual({
+            composite: false,
+            paths: {
+                '@acme/core': ['./packages/core/src/index.ts'],
+                '@acme/core/*': ['./packages/core/src/*'],
+            },
+        });
         expect(mono.references).toEqual([{ path: './packages/core/tsconfig.json' }]);
         // No turbo: no turbo.json, no turbo devDependency, no turbo scripts.
         expect(files.map(f => f.path)).not.toContain('turbo.json');
@@ -214,6 +222,28 @@ describe('project scaffolding', () => {
         const pkg = JSON.parse(files.find(file => file.path === 'package.json')!.content);
         expect(pkg.scripts.build).toContain('dbx run');
         expect(pkg.scripts.typecheck).toContain('dbx run');
+    });
+
+    it('enables the tsconfig task only for the monorepo root template', () => {
+        const root = createMonorepoRootFiles({ name: 'acme', workspaces: [] });
+        const rootConfig = root.find(file => file.path === 'vite.config.ts')!.content;
+        expect(rootConfig).toContain('tsconfig: true');
+
+        for (const files of [
+            createRootProjectFiles({ name: 'app' }),
+            createWorkspaceFiles({ name: 'acme', wsName: 'core', wsDir: 'packages/core' }),
+        ]) {
+            expect(files.find(file => file.path === 'vite.config.ts')!.content).not.toContain(
+                'tsconfig: true'
+            );
+        }
+
+        expect(renderToolchainConfig({ name: 'acme', type: 'monorepo-root' })).toContain(
+            'tsconfig: true'
+        );
+        expect(renderToolchainConfig({ name: 'app', type: 'project' })).not.toContain(
+            'tsconfig: true'
+        );
     });
 
     it('adds a workspace to tsconfig.workspaces.json', () => {
@@ -326,6 +356,9 @@ describe('project scaffolding', () => {
         expect(vite).toContain("from 'vite-plugin-dbx'");
         expect(vite).not.toMatch(/\brun:\s*\{/);
         expect(files.some(f => f.path === 'tsdown.config.ts')).toBe(false);
+        expect(JSON.parse(files.find(f => f.path === 'tsconfig.build.json')!.content).extends).toBe(
+            './tsconfig.json'
+        );
     });
 
     it('writes the inherited project metadata into package.json and vite.config.ts', () => {
@@ -741,12 +774,14 @@ describe('project:init CLI', () => {
         if (!command?.run) throw new Error('missing project:init command');
         const out = makeTmp();
 
-        expect(() =>
-            command.run!(
-                { name: 'bad', out, packageManager: 'pnpmx' },
-                { cwd: out, projectType: 'project', config: {}, tokens: {} }
+        await expect(
+            Promise.resolve(
+                command.run!(
+                    { name: 'bad', out, packageManager: 'pnpmx' },
+                    { cwd: out, projectType: 'project', config: {}, tokens: {} }
+                )
             )
-        ).toThrow(/invalid package manager/);
+        ).rejects.toThrow(/invalid package manager/);
         expect(fs.existsSync(path.join(out, 'package.json'))).toBe(false);
     });
 

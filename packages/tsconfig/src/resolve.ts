@@ -11,6 +11,14 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import { mergeOverride } from './overrides.js';
+import {
+    fetchRemoteTsconfig,
+    getCachedRemoteTsconfig,
+    isRemoteUrl,
+    normalizeRemoteUrl,
+    readRemoteTsconfig,
+    remoteExtendsCandidates,
+} from './remote.js';
 
 /** A Vite/Vitest compatible alias entry. */
 export interface TsconfigAlias {
@@ -185,8 +193,58 @@ function isFile(file: string): boolean {
     }
 }
 
-/** Resolve an `extends` specifier to a tsconfig file. */
-function resolveExtends(specifier: string, fromDir: string): string | undefined {
+/** Whether an `extends` specifier points at a remote URL. */
+function isRemoteSpecifier(specifier: string): boolean {
+    return isRemoteUrl(specifier);
+}
+
+/** Read a tsconfig (local or prefetched remote) with a useful failure message. */
+function readConfig(file: string): TsconfigJson {
+    if (isRemoteUrl(file)) return readRemoteTsconfig(file);
+    try {
+        return readTsconfig(file);
+    } catch (error) {
+        throw new Error(
+            `Cannot parse tsconfig "${file}": ${error instanceof Error ? error.message : String(error)}`
+        );
+    }
+}
+
+/** Normalize a local path or remote URL to a chain key. */
+function normalizeRef(file: string): string {
+    return isRemoteUrl(file) ? normalizeRemoteUrl(file) : path.resolve(file);
+}
+
+/** The directory/base URL of a config reference. */
+function refDir(ref: string): string {
+    return isRemoteUrl(ref) ? normalizeRemoteUrl('.', ref) : path.dirname(ref);
+}
+
+/** Resolve a path/reference relative to a local directory or remote URL. */
+function resolveRef(base: string, target: string): string {
+    if (isRemoteUrl(target)) return normalizeRemoteUrl(target);
+    if (isRemoteUrl(base)) return normalizeRemoteUrl(target, base);
+    return path.resolve(base, target);
+}
+
+/** Render a resolved target relative to a local directory or remote URL. */
+function relativeRef(base: string, absolute: string): string {
+    if (isRemoteUrl(base)) {
+        if (isRemoteUrl(absolute)) {
+            const from = new URL(base);
+            const to = new URL(absolute);
+            if (from.origin === to.origin) {
+                const relative = path.posix.relative(from.pathname, to.pathname) || './';
+                return `${relative.startsWith('.') ? relative : `./${relative}`}${to.search}${to.hash}`;
+            }
+        }
+        return absolute;
+    }
+    return path.relative(base, absolute).replace(/\\/g, '/');
+}
+
+/** The local candidates for an `extends` specifier. */
+function localExtendsCandidates(specifier: string, fromDir: string): string[] {
     const require = createRequire(path.join(fromDir, '__dbx_tsconfig__.js'));
     const candidates: string[] = [];
 
@@ -217,7 +275,45 @@ function resolveExtends(specifier: string, fromDir: string): string | undefined 
         }
     }
 
-    return candidates.find(isFile);
+    return candidates;
+}
+
+/** Resolve a local/package `extends` specifier to a file. */
+function resolveLocalExtends(
+    specifier: string,
+    fromDir: string,
+    assumeFiles?: ReadonlySet<string>
+): string | undefined {
+    return localExtendsCandidates(specifier, fromDir).find(
+        candidate => assumeFiles?.has(path.resolve(candidate)) || isFile(candidate)
+    );
+}
+
+/** Resolve a cached remote `extends` specifier, or its first candidate. */
+function resolveRemoteExtends(specifier: string, fromUrl?: string): string {
+    const candidates = remoteExtendsCandidates(specifier, fromUrl);
+    return candidates.find(candidate => getCachedRemoteTsconfig(candidate)) ?? candidates[0]!;
+}
+
+/**
+ * Resolve an `extends` specifier to a local file or remote URL. A remote config
+ * resolves relative paths against its URL and bare package names against the
+ * local config directory that introduced it.
+ */
+function resolveExtends(
+    specifier: string,
+    fromDir: string,
+    assumeFiles?: ReadonlySet<string>,
+    packageDir?: string
+): string | undefined {
+    if (isRemoteSpecifier(specifier)) return resolveRemoteExtends(specifier);
+    if (isRemoteUrl(fromDir)) {
+        if (specifier.startsWith('.') || specifier.startsWith('/')) {
+            return resolveRemoteExtends(specifier, fromDir);
+        }
+        return packageDir ? resolveLocalExtends(specifier, packageDir, assumeFiles) : undefined;
+    }
+    return resolveLocalExtends(specifier, fromDir, assumeFiles);
 }
 
 function extendsList(config: TsconfigJson): string[] {
@@ -225,25 +321,267 @@ function extendsList(config: TsconfigJson): string[] {
     return config.extends ? [config.extends] : [];
 }
 
-function loadChain(file: string, seen: Set<string>): LoadedTsconfig[] {
-    const absolute = path.resolve(file);
+function loadChain(
+    file: string,
+    seen: Set<string>,
+    assumeFiles?: ReadonlySet<string>,
+    packageDir?: string
+): LoadedTsconfig[] {
+    const absolute = normalizeRef(file);
     if (seen.has(absolute)) return [];
     seen.add(absolute);
 
-    const config = readTsconfig(absolute);
-    const dir = path.dirname(absolute);
+    const config = readConfig(absolute);
+    const dir = refDir(absolute);
+    const nextPackageDir = isRemoteUrl(absolute) ? packageDir : dir;
     const chain: LoadedTsconfig[] = [{ file: absolute, dir, config }];
 
     // Later entries in an `extends` array override earlier ones, and the child
     // always wins, so load them in reverse precedence order.
     for (const specifier of [...extendsList(config)].reverse()) {
-        const resolved = resolveExtends(specifier, dir);
+        const resolved = resolveExtends(specifier, dir, assumeFiles, nextPackageDir);
         if (!resolved) {
             throw new Error(`Cannot resolve tsconfig "extends": "${specifier}" from ${absolute}`);
         }
-        chain.push(...loadChain(resolved, seen));
+        const normalized = normalizeRef(resolved);
+        if (assumeFiles?.has(normalized)) continue;
+        chain.push(...loadChain(normalized, seen, assumeFiles, nextPackageDir));
     }
     return chain;
+}
+
+/**
+ * Throw when `file` or any config in its `extends` chain is missing or cannot be
+ * parsed. Remote configs must have been prefetched. A caller may pass files it
+ * is about to generate (eg. a managed `tsconfig.json` a build config extends).
+ */
+export function assertTsconfigChain(
+    file: string,
+    options: { assumeFiles?: Iterable<string>; packageDir?: string } = {}
+): void {
+    const assumeFiles = new Set(
+        [...(options.assumeFiles ?? [])].map(candidate => normalizeRef(candidate))
+    );
+    const absolute = normalizeRef(file);
+    loadChain(
+        absolute,
+        new Set(),
+        assumeFiles,
+        options.packageDir ?? (isRemoteUrl(absolute) ? process.cwd() : path.dirname(absolute))
+    );
+}
+
+export interface PrefetchTsconfigOptions {
+    /** Directory used to resolve package `extends` inside remote configs. */
+    packageDir?: string;
+    /** Files that will be generated on this run (assumed to exist). */
+    assumeFiles?: Iterable<string>;
+}
+
+/** Fetch one remote config candidate set, trying `.json`/directory fallbacks. */
+async function fetchRemoteCandidate(candidates: string[]): Promise<{
+    url: string;
+    config: TsconfigJson;
+}> {
+    let lastError: unknown;
+    for (const candidate of candidates) {
+        const cached = getCachedRemoteTsconfig(candidate);
+        if (cached) return { url: candidate, config: cached };
+        try {
+            return { url: candidate, config: await fetchRemoteTsconfig(candidate) };
+        } catch (error) {
+            lastError = error;
+        }
+    }
+    throw lastError instanceof Error
+        ? lastError
+        : new Error(`Cannot resolve remote tsconfig "${candidates[0] ?? ''}"`);
+}
+
+async function prefetchRemoteChain(
+    specifier: string,
+    fromUrl: string | undefined,
+    packageDir: string,
+    seenRemote: Set<string>,
+    seenLocal: Set<string>,
+    assumeFiles: ReadonlySet<string>
+): Promise<void> {
+    const candidates = remoteExtendsCandidates(specifier, fromUrl);
+    const { url, config } = await fetchRemoteCandidate(candidates);
+    if (seenRemote.has(url)) return;
+    seenRemote.add(url);
+
+    for (const nested of [...extendsList(config)].reverse()) {
+        if (isRemoteSpecifier(nested)) {
+            await prefetchRemoteChain(
+                nested,
+                undefined,
+                packageDir,
+                seenRemote,
+                seenLocal,
+                assumeFiles
+            );
+        } else if (nested.startsWith('.') || nested.startsWith('/')) {
+            await prefetchRemoteChain(nested, url, packageDir, seenRemote, seenLocal, assumeFiles);
+        } else {
+            const resolved = resolveLocalExtends(nested, packageDir, assumeFiles);
+            if (!resolved) {
+                throw new Error(
+                    `Cannot resolve tsconfig "extends": "${nested}" from ${url} (package specifiers in remote configs resolve from ${packageDir})`
+                );
+            }
+            await prefetchLocalChain(resolved, packageDir, seenLocal, seenRemote, assumeFiles);
+        }
+    }
+}
+
+async function prefetchLocalChain(
+    file: string,
+    packageDir: string,
+    seenLocal: Set<string>,
+    seenRemote: Set<string>,
+    assumeFiles: ReadonlySet<string>
+): Promise<void> {
+    const absolute = path.resolve(file);
+    if (seenLocal.has(absolute)) return;
+    seenLocal.add(absolute);
+
+    const config = readConfig(absolute);
+    for (const specifier of [...extendsList(config)].reverse()) {
+        if (isRemoteSpecifier(specifier)) {
+            await prefetchRemoteChain(
+                specifier,
+                undefined,
+                packageDir,
+                seenRemote,
+                seenLocal,
+                assumeFiles
+            );
+            continue;
+        }
+        const resolved = resolveLocalExtends(specifier, path.dirname(absolute), assumeFiles);
+        if (!resolved) {
+            throw new Error(`Cannot resolve tsconfig "extends": "${specifier}" from ${absolute}`);
+        }
+        if (assumeFiles.has(normalizeRef(resolved))) continue;
+        await prefetchLocalChain(resolved, packageDir, seenLocal, seenRemote, assumeFiles);
+    }
+}
+
+/**
+ * Download every remote config reachable from `files` before sync resolution.
+ * Remote relative `extends` paths are followed against their own URL.
+ */
+export async function prefetchTsconfigExtends(
+    files: Iterable<string>,
+    options: PrefetchTsconfigOptions = {}
+): Promise<void> {
+    const packageDir = path.resolve(options.packageDir ?? process.cwd());
+    const assumeFiles = new Set(
+        [...(options.assumeFiles ?? [])].map(candidate => normalizeRef(candidate))
+    );
+    const seenLocal = new Set<string>();
+    const seenRemote = new Set<string>();
+    for (const file of files) {
+        if (isRemoteUrl(file)) {
+            await prefetchRemoteChain(
+                file,
+                undefined,
+                packageDir,
+                seenRemote,
+                seenLocal,
+                assumeFiles
+            );
+        } else {
+            await prefetchLocalChain(file, packageDir, seenLocal, seenRemote, assumeFiles);
+        }
+    }
+}
+
+/** Async {@link assertTsconfigChain} that prefetches remote configs first. */
+export async function assertTsconfigChainAsync(
+    file: string,
+    options: { assumeFiles?: Iterable<string>; packageDir?: string } = {}
+): Promise<void> {
+    await prefetchTsconfigExtends([file], {
+        ...(options.packageDir ? { packageDir: options.packageDir } : {}),
+        ...(options.assumeFiles ? { assumeFiles: options.assumeFiles } : {}),
+    });
+    assertTsconfigChain(file, options);
+}
+
+/** Compiler options whose values are paths (meaningless from a remote tree). */
+const REMOTE_PATH_OPTIONS = new Set([
+    'baseUrl',
+    'declarationDir',
+    'outDir',
+    'paths',
+    'rootDir',
+    'rootDirs',
+    'tsBuildInfoFile',
+]);
+
+/**
+ * Flatten a config chain that contains remote configs into a local-only object.
+ * Remote compiler options are merged in, except path-valued options (which
+ * describe the remote tree). Returns `undefined` when the chain has no remote
+ * config, so callers can keep the live local `extends` chain.
+ *
+ * Callers use this only when the user opts into inlining a remote chain (see the
+ * `flattenRemoteExtends` option); the generated config must still apply its own
+ * settings on top so flattening never overrides them.
+ */
+export function flattenRemoteTsconfig(file: string): TsconfigJson | undefined {
+    const absolute = normalizeRef(file);
+    const chain = loadChain(
+        absolute,
+        new Set(),
+        undefined,
+        isRemoteUrl(absolute) ? process.cwd() : path.dirname(absolute)
+    );
+    if (!chain.some(entry => isRemoteUrl(entry.file))) return undefined;
+
+    let merged: TsconfigJson = {};
+    for (const entry of [...chain].reverse()) {
+        const config = structuredClone(entry.config);
+        delete config.extends;
+        if (isRemoteUrl(entry.file)) {
+            const options = config.compilerOptions ? { ...config.compilerOptions } : undefined;
+            if (options) {
+                for (const key of REMOTE_PATH_OPTIONS) {
+                    delete (options as Record<string, unknown>)[key];
+                }
+            }
+            merged = {
+                ...merged,
+                ...(options && Object.keys(options).length > 0
+                    ? {
+                          compilerOptions: mergeOverride(
+                              merged.compilerOptions ?? {},
+                              options as Record<string, unknown>
+                          ),
+                      }
+                    : {}),
+            };
+        } else {
+            merged = {
+                ...merged,
+                ...config,
+                ...(config.compilerOptions
+                    ? {
+                          compilerOptions: mergeOverride(
+                              merged.compilerOptions ?? {},
+                              config.compilerOptions as Record<string, unknown>
+                          ),
+                      }
+                    : {}),
+            };
+        }
+    }
+    if (merged.compilerOptions && Object.keys(merged.compilerOptions).length === 0) {
+        delete merged.compilerOptions;
+    }
+    return merged;
 }
 
 /** Find `<root>/tsconfig.json`, else the nearest one above `cwd`. */
@@ -339,11 +677,11 @@ function loadConfigChain(
     if (!followExtends) return chain;
     seen.add(absolute);
     for (const specifier of [...extendsList(config)].reverse()) {
-        const resolved = resolveExtends(specifier, dir);
+        const resolved = resolveExtends(specifier, dir, undefined, dir);
         if (!resolved) {
             throw new Error(`Cannot resolve tsconfig "extends": "${specifier}" from ${absolute}`);
         }
-        chain.push(...loadChain(resolved, seen));
+        chain.push(...loadChain(resolved, seen, undefined, dir));
     }
     return chain;
 }
@@ -360,8 +698,8 @@ function resolveChain(
     const baseUrlEntry = chain.find(entry => entry.config.compilerOptions?.baseUrl !== undefined);
 
     const pathsBase = baseUrlEntry
-        ? path.resolve(baseUrlEntry.dir, baseUrlEntry.config.compilerOptions?.baseUrl ?? '.')
-        : (pathsEntry?.dir ?? path.dirname(file));
+        ? resolveRef(baseUrlEntry.dir, baseUrlEntry.config.compilerOptions?.baseUrl ?? '.')
+        : (pathsEntry?.dir ?? refDir(file));
 
     // Longest/most specific keys first, so a shorter prefix never shadows a
     // longer entry (eg. `@acme/core` before `@acme`).
@@ -372,22 +710,18 @@ function resolveChain(
     for (const [key, value] of pathEntries) {
         const targets = (Array.isArray(value) ? value : [value]) as string[];
         paths[key] = targets.map(target => {
-            const absolute = path.resolve(pathsBase, target);
-            return relativePaths
-                ? path.relative(pathsBase, absolute).replace(/\\/g, '/')
-                : absolute;
+            const absolute = resolveRef(pathsBase, target);
+            return relativePaths ? relativeRef(pathsBase, absolute) : absolute;
         });
     }
 
     const references: TsconfigReference[] = (referencesEntry?.config.references ?? []).map(
         reference => {
-            const dirBase = referencesEntry?.dir ?? path.dirname(file);
-            const absolute = path.resolve(dirBase, reference.path);
+            const dirBase = referencesEntry?.dir ?? refDir(file);
+            const absolute = resolveRef(dirBase, reference.path);
             return {
                 ...reference,
-                path: relativePaths
-                    ? path.relative(dirBase, absolute).replace(/\\/g, '/')
-                    : absolute,
+                path: relativePaths ? relativeRef(dirBase, absolute) : absolute,
             };
         }
     );
@@ -430,14 +764,23 @@ export function resolveTsconfigCompilerOption(
     file: string,
     key: 'rootDir' | 'baseUrl' | 'outDir'
 ): string | undefined {
-    if (!isFile(file)) return undefined;
-    const chain = loadChain(path.resolve(file), new Set());
+    if (!isRemoteUrl(file) && !isFile(file)) return undefined;
+    const absolute = normalizeRef(file);
+    const chain = loadChain(
+        absolute,
+        new Set(),
+        undefined,
+        isRemoteUrl(absolute) ? process.cwd() : path.dirname(absolute)
+    );
+    // Remote `rootDir`/`baseUrl` describes the remote tree, not the local
+    // workspace; only local entries can infer the local source directory.
     const entry = chain.find(candidate => {
+        if (isRemoteUrl(candidate.file)) return false;
         const value = candidate.config.compilerOptions?.[key];
         return typeof value === 'string' && value.length > 0;
     });
     if (!entry) return undefined;
-    return path.resolve(entry.dir, entry.config.compilerOptions?.[key] as string);
+    return resolveRef(entry.dir, entry.config.compilerOptions?.[key] as string);
 }
 
 /**
@@ -461,19 +804,28 @@ export interface TsconfigFilePatterns {
  * (shallow) patterns so generation never fails on a broken inherited config.
  */
 export function resolveTsconfigFilePatterns(file: string): TsconfigFilePatterns {
+    const absolute = normalizeRef(file);
     let chain: LoadedTsconfig[];
     try {
-        chain = loadChain(path.resolve(file), new Set());
+        chain = loadChain(
+            absolute,
+            new Set(),
+            undefined,
+            isRemoteUrl(absolute) ? process.cwd() : path.dirname(absolute)
+        );
     } catch {
-        const absolute = path.resolve(file);
-        chain = [{ file: absolute, dir: path.dirname(absolute), config: readTsconfig(absolute) }];
+        chain = [{ file: absolute, dir: refDir(absolute), config: readConfig(absolute) }];
     }
     const stringArray = (value: unknown): string[] | undefined =>
         Array.isArray(value)
             ? value.filter((item): item is string => typeof item === 'string')
             : undefined;
-    const includeEntry = chain.find(entry => stringArray(entry.config.include) !== undefined);
-    const excludeEntry = chain.find(entry => stringArray(entry.config.exclude) !== undefined);
+    // Remote `include`/`exclude` patterns are relative to the remote tree;
+    // hoisting them into a local generated config would point at the wrong
+    // directory, so only local entries participate.
+    const localChain = chain.filter(entry => !isRemoteUrl(entry.file));
+    const includeEntry = localChain.find(entry => stringArray(entry.config.include) !== undefined);
+    const excludeEntry = localChain.find(entry => stringArray(entry.config.exclude) !== undefined);
     const include = includeEntry ? stringArray(includeEntry.config.include) : undefined;
     const exclude = excludeEntry ? stringArray(excludeEntry.config.exclude) : undefined;
     return {
@@ -489,12 +841,15 @@ export function resolveTsconfig(options: ResolveTsconfigOptions = {}): ResolvedT
     const cwd = path.resolve(options.cwd ?? process.cwd());
     const root = path.resolve(options.root ?? cwd);
     const file = options.tsconfig
-        ? path.resolve(root, options.tsconfig)
+        ? isRemoteUrl(options.tsconfig)
+            ? normalizeRemoteUrl(options.tsconfig)
+            : path.resolve(root, options.tsconfig)
         : detectTsconfig(cwd, root);
     const followExtends = options.extends !== false;
+    const packageDir = isRemoteUrl(file) ? cwd : path.dirname(file);
     const chain = followExtends
-        ? loadChain(file, new Set())
-        : [{ file, dir: path.dirname(file), config: readTsconfig(file) }];
+        ? loadChain(file, new Set(), undefined, packageDir)
+        : [{ file, dir: refDir(file), config: readConfig(file) }];
     if (options.overrides && chain[0]) {
         chain[0] = {
             ...chain[0],
@@ -502,4 +857,26 @@ export function resolveTsconfig(options: ResolveTsconfigOptions = {}): ResolvedT
         };
     }
     return resolveChain(chain, file, !!options.relativePaths, options.strict !== false);
+}
+
+/**
+ * Async {@link resolveTsconfig} that prefetches remote `extends` chains first.
+ * Use this (or {@link prefetchTsconfigExtends}) whenever a config may extend an
+ * `http(s)` URL.
+ */
+export async function resolveTsconfigAsync(
+    options: ResolveTsconfigOptions = {}
+): Promise<ResolvedTsconfig> {
+    if (options.extends === false) return resolveTsconfig(options);
+    const cwd = path.resolve(options.cwd ?? process.cwd());
+    const root = path.resolve(options.root ?? cwd);
+    const file = options.tsconfig
+        ? isRemoteUrl(options.tsconfig)
+            ? normalizeRemoteUrl(options.tsconfig)
+            : path.resolve(root, options.tsconfig)
+        : detectTsconfig(cwd, root);
+    await prefetchTsconfigExtends([file], {
+        packageDir: isRemoteUrl(file) ? cwd : path.dirname(file),
+    });
+    return resolveTsconfig(options);
 }

@@ -9,6 +9,7 @@ import {
     type ToolchainCommand,
     type ToolchainTsconfigConfig,
     warningMessage,
+    withSpinner,
 } from '@deltabox/toolchain/shared';
 
 import { generateWorkspaceTsconfigs } from '../cli/generate/index.js';
@@ -18,7 +19,7 @@ import {
     type TsconfigOverrideKind,
     type TsconfigOverrides,
 } from '../overrides.js';
-import { resolveTsconfig, serializeTsconfigAlias } from '../resolve.js';
+import { resolveTsconfigAsync, serializeTsconfigAlias } from '../resolve.js';
 import { restoreTsconfigOverrides } from '../snapshots.js';
 
 /**
@@ -36,6 +37,11 @@ export function tsconfigCommands(): ToolchainCommand[] {
                 { flags: '--no-aliases', description: 'Skip path aliases.' },
                 { flags: '--composite', description: 'Emit composite + references.' },
                 { flags: '--refs', description: 'Wire project references.' },
+                {
+                    flags: '--flatten-remote-extends',
+                    description:
+                        'Inline compiler options inherited from a remote http(s) extends chain (existing settings win).',
+                },
                 {
                     flags: '--auto',
                     description:
@@ -166,7 +172,7 @@ export function tsconfigCommands(): ToolchainCommand[] {
                     const configuredRoot = fs.existsSync(path.resolve(cwd, rootFile))
                         ? rootFile
                         : undefined;
-                    const resolved = resolveTsconfig({
+                    const resolved = await resolveTsconfigAsync({
                         cwd,
                         root,
                         ...(opts.tsconfig
@@ -203,6 +209,9 @@ export function tsconfigCommands(): ToolchainCommand[] {
                 if (opts.aliases !== undefined) overrides.aliases = Boolean(opts.aliases);
                 if (opts.composite !== undefined) overrides.composite = Boolean(opts.composite);
                 if (opts.refs !== undefined) overrides.refs = Boolean(opts.refs);
+                if (opts.flattenRemoteExtends !== undefined) {
+                    overrides.flattenRemoteExtends = Boolean(opts.flattenRemoteExtends);
+                }
                 if (opts.auto !== undefined) overrides.auto = Boolean(opts.auto);
                 if (opts.autoAliases !== undefined) {
                     overrides.aliasAuto = Boolean(opts.autoAliases);
@@ -232,11 +241,18 @@ export function tsconfigCommands(): ToolchainCommand[] {
                     }
                 }
 
-                const generated = await generateWorkspaceTsconfigs({
-                    cwd,
-                    config: context.config,
-                    overrides,
-                });
+                const generated = await withSpinner(
+                    () =>
+                        generateWorkspaceTsconfigs({
+                            cwd,
+                            config: context.config,
+                            overrides,
+                        }),
+                    {
+                        start: 'Generating workspace tsconfigs...',
+                        success: 'Generated workspace tsconfigs.',
+                    }
+                );
                 if (generated.skipped) {
                     logger.warn(
                         'toolchain.tsconfig is not enabled in dbx.config; skipping the tsconfig task.'

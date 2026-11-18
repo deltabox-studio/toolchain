@@ -302,22 +302,27 @@ describe('tsconfig auto alias rewriting', () => {
         expect(result.autoState.references).toEqual([]);
     });
 
-    it('removes references to non-composite workspaces when refs auto is on', async () => {
+    it('treats refs auto as composite and keeps workspace references', async () => {
         const cwd = makeRepo({ references: [{ path: './packages/foo/tsconfig.json' }] });
         const result = await run(cwd, { auto: true });
-        expect(result.autoConfig.references ?? []).not.toContainEqual({
+        expect(result.autoConfig.references).toContainEqual({
             path: './packages/foo/tsconfig.json',
+        });
+        expect(result.autoConfig.references).toContainEqual({
+            path: './packages/bar/tsconfig.json',
         });
     });
 
     it('recognises a reference written without a leading ./', async () => {
-        const cwd = makeRepo({ references: [{ path: 'packages/foo/tsconfig.json' }] });
+        const cwd = makeRepo({
+            workspaces: ['foo'],
+            references: [{ path: 'packages/foo/tsconfig.json' }],
+        });
         const result = await run(cwd, { auto: true });
-        const references = (result.autoConfig.references ?? []).map(reference =>
-            reference.path.replace(/^\.\//, '')
-        );
+        const references = result.autoConfig.references ?? [];
 
-        expect(references).not.toContain('packages/foo/tsconfig.json');
+        expect(references).toHaveLength(1);
+        expect(references[0]?.path.replace(/^\.\//, '')).toBe('packages/foo/tsconfig.json');
     });
 
     it('does not duplicate an active reference written without a leading ./', async () => {

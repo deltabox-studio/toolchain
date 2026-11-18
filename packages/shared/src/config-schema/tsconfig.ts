@@ -134,6 +134,17 @@ export const tsconfigConfigSchema = withEnabled(
         refs: z.boolean().describe('Wire project references.').default(false).optional(),
         composite: z.boolean().describe('Emit `composite: true`.').default(false).optional(),
         aliases: z.boolean().describe('Inject path aliases.').default(true).optional(),
+        flattenRemoteExtends: z
+            .boolean()
+            .describe(
+                'Inline the compiler options inherited from a remote `http(s)` `extends` chain ' +
+                    'into the generated workspace configs (default false). Useful when a tool ' +
+                    'cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` ' +
+                    'are skipped because they describe the remote tree. Settings the generated ' +
+                    'config already defines always win.'
+            )
+            .default(false)
+            .optional(),
         auto: tsconfigAliasAutoSetting(
             'Auto-generate the root workspaces tsconfig paths/references from the project graph ' +
                 '(default false). Set true to derive them from the project graph; set false to ' +

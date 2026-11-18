@@ -1,13 +1,6 @@
 {
     "compilerOptions": {
-        "composite": true,
-        "types": [
-            "node"
-        ],
-        "allowJs": true,
-        "noEmit": false,
-        "declaration": true,
-        "emitDeclarationOnly": true,
+        "composite": false,
         "paths": {
             "vite-plugin-dbx/package.json": [
                 "./packages/vite/package.json"

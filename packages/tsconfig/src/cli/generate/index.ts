@@ -22,13 +22,18 @@ import {
 import {
     autoStatePath,
     buildAutoTsconfig,
+    buildRootWorkspacesBaseline,
     readAutoState,
     type TsconfigAutoState,
 } from '../../auto.js';
 import { tsconfigFileNames } from '../../files.js';
 import { mergeOverride, type TsconfigOverrides } from '../../overrides.js';
-import { readTsconfig } from '../../resolve.js';
-import { resolveTsconfigWorkspaces, type TsconfigWorkspace } from '../../workspaces.js';
+import { readTsconfig, prefetchTsconfigExtends } from '../../resolve.js';
+import {
+    resolveAutoSwitches,
+    resolveTsconfigWorkspaces,
+    type TsconfigWorkspace,
+} from '../../workspaces.js';
 import { type GeneratedTsconfigResult, generateTsconfig } from './utils.js';
 
 export interface GenerateTsconfigsOptions {
@@ -40,6 +45,8 @@ export interface GenerateTsconfigsOptions {
     composite?: boolean;
     /** Wire project references between workspaces (default false). */
     refs?: boolean;
+    /** Inline compiler options inherited from a remote `extends` chain (default false). */
+    flattenRemoteExtends?: boolean;
     /** JSON indentation (default 4). */
     indent?: number;
     /** The glob(s) for the workspace default tsconfig files. */
@@ -114,6 +121,15 @@ export function generateTsconfigs(
         );
         for (const workspace of workspaces) {
             const workspaceOptions = workspace.options;
+            const switches = resolveAutoSwitches(workspaceOptions as Record<string, unknown>);
+            const refsEnabled =
+                workspaceOptions.refs === true ||
+                (workspaceOptions.refs !== false && switches.refsAuto.enabled);
+            // `composite` is dynamic: project references require it, and
+            // `refs`/`refsAuto` decide whether they are wired. Only when both
+            // are disabled does the workspaces tsconfig value apply (the
+            // generator falls back to it).
+            const composite = refsEnabled ? true : workspaceOptions.composite;
             results.push(
                 generateTsconfig({
                     cwd,
@@ -125,8 +141,9 @@ export function generateTsconfigs(
                     targetTsconfigBuildPath: workspace.buildTsconfigPath,
                     indent,
                     aliases: workspaceOptions.aliases !== false,
-                    refs: workspaceOptions.refs === true,
-                    composite: workspaceOptions.composite === true,
+                    refs: refsEnabled,
+                    flattenRemoteExtends: workspaceOptions.flattenRemoteExtends === true,
+                    ...(composite !== undefined ? { composite } : {}),
                     ...(options.monorepoConfig ? { monorepoConfig: options.monorepoConfig } : {}),
                     write,
                     log: say,
@@ -176,6 +193,7 @@ export function generateTsconfigs(
                     disableComposite: !enableComposite,
                     ignoreAliases: !enableAliases,
                     ignoreReferences: !enableReferences,
+                    flattenRemoteExtends: options.flattenRemoteExtends === true,
                     ...(options.monorepoConfig ? { monorepoConfig: options.monorepoConfig } : {}),
                     write,
                     log: say,
@@ -315,7 +333,37 @@ export async function generateWorkspaceTsconfigs(
         ...(rootOptions.exclude !== undefined ? { exclude: rootOptions.exclude } : {}),
         ...(rootOptions.gitignore !== undefined ? { gitignore: rootOptions.gitignore } : {}),
     });
-    const existing = fs.existsSync(rootTsconfigPath) ? readTsconfig(rootTsconfigPath) : undefined;
+    // Download remote `extends` chains before the synchronous resolver runs. A
+    // build config may point at a managed `tsconfig.json` generated this run.
+    await prefetchTsconfigExtends(
+        [
+            ...(fs.existsSync(rootTsconfigPath) ? [rootTsconfigPath] : []),
+            ...workspaces
+                .filter(workspace => workspace.enabled)
+                .flatMap(workspace => [
+                    ...(fs.existsSync(workspace.defaultTsconfigPath)
+                        ? [workspace.defaultTsconfigPath]
+                        : []),
+                    ...(fs.existsSync(workspace.buildTsconfigPath)
+                        ? [workspace.buildTsconfigPath]
+                        : []),
+                ]),
+        ],
+        {
+            packageDir: cwd,
+            assumeFiles: workspaces.map(workspace => workspace.targetTsconfigPath),
+        }
+    );
+    const existingPathExists = fs.existsSync(rootTsconfigPath);
+    // Only restore a missing workspaces file when there is something to wire:
+    // an empty project must stay empty (and `sync --check` quiet).
+    const rootMissing =
+        !existingPathExists && workspaces.some(workspace => workspace.enabled && !workspace.isRoot);
+    const existing = existingPathExists
+        ? readTsconfig(rootTsconfigPath)
+        : rootMissing
+          ? buildRootWorkspacesBaseline(workspaces, cwd, path.dirname(rootTsconfigPath))
+          : undefined;
     const previousAuto = options.previousAuto ?? readAutoState(autoStateFile);
     const auto = buildAutoTsconfig(workspaces, {
         cwd,
@@ -332,11 +380,13 @@ export async function generateWorkspaceTsconfigs(
     const rootContent = `${JSON.stringify(autoConfig, null, indent)}\n`;
     const autoStateContent = `${JSON.stringify(auto.state, null, indent)}\n`;
     const hasAuto =
+        rootMissing ||
         auto.state.paths.length > 0 ||
         auto.state.references.length > 0 ||
         fs.existsSync(rootTsconfigPath) ||
         Boolean(rootOptions.overrides?.root);
     const rootChanged = !isDeepStrictEqual(existing ?? {}, baseAutoConfig);
+    const shouldWriteRoot = rootMissing || (hasAuto && rootChanged);
     const writeState =
         options.writeSidecar !== false &&
         (fs.existsSync(autoStateFile) ||
@@ -361,7 +411,7 @@ export async function generateWorkspaceTsconfigs(
     });
 
     if (options.write !== false) {
-        if (hasAuto && rootChanged) {
+        if (shouldWriteRoot) {
             fs.mkdirSync(path.dirname(rootTsconfigPath), { recursive: true });
             fs.writeFileSync(rootTsconfigPath, rootContent, 'utf-8');
         }
@@ -382,7 +432,7 @@ export async function generateWorkspaceTsconfigs(
         baseRootContent,
         autoStatePath: autoStateFile,
         autoStateContent,
-        writeRoot: hasAuto && rootChanged,
+        writeRoot: shouldWriteRoot,
         writeState,
     };
 }
@@ -395,6 +445,7 @@ export function runTsconfigCli(argv: string[] = process.argv.slice(2)): void {
             aliases: { type: 'boolean', short: 'a', default: true },
             composite: { type: 'boolean', short: 'c', default: false },
             refs: { type: 'boolean', short: 'r', default: false },
+            'flatten-remote-extends': { type: 'boolean', default: false },
             indent: { type: 'string', short: 'i', default: '4' },
             glob: { type: 'string', multiple: true },
             exclude: { type: 'string', multiple: true },
@@ -409,6 +460,7 @@ export function runTsconfigCli(argv: string[] = process.argv.slice(2)): void {
         aliases: options.aliases,
         composite: options.composite,
         refs: options.refs,
+        flattenRemoteExtends: options['flatten-remote-extends'],
         indent: Number.parseInt(options.indent, 10),
         ...(options.glob ? { glob: options.glob } : {}),
         ...(options.exclude ? { exclude: options.exclude } : {}),

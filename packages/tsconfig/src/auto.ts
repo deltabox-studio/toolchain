@@ -485,6 +485,43 @@ export function resolveWorkspaceAliases(
     return paths;
 }
 
+/**
+ * The baseline content for a missing workspaces tsconfig: the scaffold defaults
+ * (`composite: false`) plus an alias/reference for every workspace that the
+ * project graph can generate. Auto-wiring may refine it on the same run, but a
+ * missing file is restored even when `auto` is disabled.
+ */
+export function buildRootWorkspacesBaseline(
+    workspaces: TsconfigWorkspace[],
+    cwd: string,
+    baseDir: string = cwd
+): TsConfigJson {
+    const paths: Record<string, string[]> = {};
+    const references: Array<{ path: string }> = [];
+    const seen = new Set<string>();
+    for (const workspace of workspaces) {
+        if (!workspace.enabled || workspace.isRoot) continue;
+        if (workspace.packageName && workspace.options.aliases !== false) {
+            Object.assign(
+                paths,
+                resolveWorkspaceAliases(workspace, baseDir, { modes: ['project-structure'] })
+            );
+        }
+        if (workspace.options.refs === false || !fs.existsSync(workspace.defaultTsconfigPath)) {
+            continue;
+        }
+        const referencePath = repoPath(baseDir, workspace.targetTsconfigPath);
+        const canonical = normalizeReferencePath(referencePath);
+        if (seen.has(canonical)) continue;
+        seen.add(canonical);
+        references.push({ path: referencePath });
+    }
+    return {
+        compilerOptions: { composite: false, paths },
+        ...(references.length > 0 ? { references } : {}),
+    };
+}
+
 /** Build the auto paths/references and merge them into `existing`. */
 export function buildAutoTsconfig(
     workspaces: TsconfigWorkspace[],
@@ -522,10 +559,7 @@ export function buildAutoTsconfig(
         // A workspace without a default tsconfig has no generated project to
         // reference (eg. a docs app or a test fixture with only a package.json).
         if (!fs.existsSync(workspace.defaultTsconfigPath)) return false;
-        const active =
-            workspace.enabled &&
-            workspace.options.refs !== false &&
-            workspace.options.composite === true;
+        const active = workspace.enabled && workspace.options.refs !== false;
         if (!active) return false;
         managedReferences.add(normalized);
         return true;
@@ -568,14 +602,12 @@ export function buildAutoTsconfig(
         }
 
         const refsEnabled = workspace.options.refs !== false && switches.refsAuto.enabled;
-        const composite = workspace.options.composite === true;
         const reference = {
             path: repoPath(baseDir, workspace.targetTsconfigPath),
         };
         const canonical = normalizeReferencePath(reference.path);
         if (
             refsEnabled &&
-            composite &&
             !workspace.isRoot &&
             fs.existsSync(workspace.defaultTsconfigPath) &&
             matchesAutoFilter(reference.path, switches.refsAuto)

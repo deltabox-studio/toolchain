@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import type { SyncContext, ToolchainConfig } from '@deltabox/toolchain/shared';
 
-import { generateTsconfigs, tsconfigSyncTask } from '../src/index.js';
+import { generateTsconfigs, generateWorkspaceTsconfigs, tsconfigSyncTask } from '../src/index.js';
 
 function tmp(): string {
     return fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-tsconfig-'));
@@ -359,6 +359,175 @@ describe('tsconfigSyncTask', () => {
             'packages/cli/tsconfig.json',
             'packages/core/tsconfig.json',
         ]);
+    });
+});
+
+describe('scaffolded workspace compiler options', () => {
+    function writeMonorepoWorkspace(cwd: string, composite = true): void {
+        writeJson(path.join(cwd, 'package.json'), {
+            name: '@acme/root',
+            private: true,
+            workspaces: ['packages/*'],
+        });
+        writeJson(path.join(cwd, 'tsconfig.workspaces.json'), {
+            compilerOptions: {
+                composite,
+                types: ['node'],
+                allowJs: true,
+                noEmit: false,
+                declaration: true,
+                emitDeclarationOnly: true,
+                strict: true,
+                paths: { '@acme/core': ['./packages/core/src/index.ts'] },
+            },
+        });
+        writeJson(path.join(cwd, 'packages/core/package.json'), { name: '@acme/core' });
+        writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {});
+    }
+
+    it('copies the workspaces compilerOptions and keeps its composite when refs are off', async () => {
+        const cwd = tmp();
+        writeMonorepoWorkspace(cwd);
+
+        const result = await generateWorkspaceTsconfigs({
+            cwd,
+            config: { tsconfig: {} },
+            write: false,
+            writeSidecar: false,
+        });
+        const core = result.results.find(
+            item => item.dirnameRelative === 'packages/core'
+        )!.newTsconfig;
+
+        expect(core.compilerOptions).toMatchObject({
+            composite: true,
+            types: ['node'],
+            allowJs: true,
+            noEmit: false,
+            declaration: true,
+            emitDeclarationOnly: true,
+            strict: true,
+        });
+    });
+
+    it('copies a disabled workspaces composite when refs are off', async () => {
+        const cwd = tmp();
+        writeMonorepoWorkspace(cwd, false);
+
+        const result = await generateWorkspaceTsconfigs({
+            cwd,
+            config: { tsconfig: {} },
+            write: false,
+            writeSidecar: false,
+        });
+        const core = result.results.find(
+            item => item.dirnameRelative === 'packages/core'
+        )!.newTsconfig;
+
+        expect(core.compilerOptions?.composite).toBe(false);
+        expect(core.compilerOptions?.strict).toBe(true);
+    });
+
+    it('derives composite from refs instead of the workspaces value', async () => {
+        const cwd = tmp();
+        writeMonorepoWorkspace(cwd, false);
+
+        const result = await generateWorkspaceTsconfigs({
+            cwd,
+            config: { tsconfig: { refs: true } },
+            write: false,
+            writeSidecar: false,
+        });
+        const core = result.results.find(
+            item => item.dirnameRelative === 'packages/core'
+        )!.newTsconfig;
+
+        expect(core.compilerOptions?.composite).toBe(true);
+    });
+});
+
+describe('missing managed tsconfig files', () => {
+    it('regenerates a missing workspaces tsconfig from the project graph', async () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'package.json'), {
+            name: '@acme/root',
+            private: true,
+            workspaces: ['packages/*'],
+        });
+        writeJson(path.join(cwd, 'packages/core/package.json'), { name: '@acme/core' });
+        writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {});
+        fs.mkdirSync(path.join(cwd, 'packages/core/src'), { recursive: true });
+        fs.writeFileSync(path.join(cwd, 'packages/core/src/index.ts'), 'export {};\n');
+        const rootFile = path.join(cwd, 'tsconfig.workspaces.json');
+
+        const result = await generateWorkspaceTsconfigs({
+            cwd,
+            config: { tsconfig: {} },
+            write: true,
+            writeSidecar: false,
+        });
+
+        expect(result.writeRoot).toBe(true);
+        expect(fs.existsSync(rootFile)).toBe(true);
+        expect(JSON.parse(fs.readFileSync(rootFile, 'utf-8'))).toEqual({
+            compilerOptions: {
+                composite: false,
+                paths: {
+                    '@acme/core': ['./packages/core/src/index.ts'],
+                    '@acme/core/*': ['./packages/core/src/*'],
+                },
+            },
+            references: [{ path: './packages/core/tsconfig.json' }],
+        });
+        expect(fs.existsSync(path.join(cwd, 'packages/core/tsconfig.json'))).toBe(true);
+    });
+});
+
+describe('broken tsconfig extends', () => {
+    it('fails when a workspace default extends a missing config', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {
+            extends: '../../tsconfig.base.json',
+        });
+
+        expect(() => generateTsconfigs({ cwd, log: false, write: false })).toThrow(
+            /Cannot resolve tsconfig "extends": "\.\.\/\.\.\/tsconfig\.base\.json"/
+        );
+    });
+
+    it('fails when a workspace build config extends a missing config', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {});
+        writeJson(path.join(cwd, 'packages/core/tsconfig.build.json'), {
+            extends: './missing.json',
+        });
+
+        expect(() => generateTsconfigs({ cwd, log: false, write: false })).toThrow(
+            /Cannot resolve tsconfig "extends": "\.\/missing\.json"/
+        );
+    });
+
+    it('fails when the workspaces config extends a missing config', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'tsconfig.workspaces.json'), {
+            extends: './tsconfig.base.json',
+        });
+        writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {});
+
+        expect(() => generateTsconfigs({ cwd, log: false, write: false })).toThrow(
+            /Cannot resolve tsconfig "extends": "\.\/tsconfig\.base\.json"/
+        );
+    });
+
+    it('requires remote extends to be prefetched before generation', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {
+            extends: 'https://example.com/tsconfig.json',
+        });
+
+        expect(() => generateTsconfigs({ cwd, log: false, write: false })).toThrow(
+            /was not prefetched/
+        );
     });
 });
 

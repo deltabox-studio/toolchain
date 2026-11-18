@@ -38,6 +38,8 @@ describe('tsconfig templates', () => {
             'tsconfig.build.json',
             'tsconfig.default.json',
         ]);
+        // The build config layers the managed editor config, not the source default.
+        expect(JSON.parse(templates['tsconfig.build.json']!).extends).toBe('./tsconfig.json');
     });
 
     it('overrides the extends field per template', () => {

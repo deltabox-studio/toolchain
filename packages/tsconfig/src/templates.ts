@@ -90,7 +90,7 @@ export interface MonorepoTsconfigOptions {
     workspaces: MonorepoWorkspace[];
     /** Extra compiler options to merge in. */
     compilerOptions?: Record<string, unknown>;
-    /** Enable `composite` for the generated monorepo config (default true). */
+    /** Enable `composite` for the generated monorepo config (default false). */
     composite?: boolean;
 }
 
@@ -105,12 +105,7 @@ export function buildMonorepoTsconfig(options: MonorepoTsconfigOptions): Record<
     }
     return {
         compilerOptions: {
-            composite: options.composite ?? true,
-            types: ['node'],
-            allowJs: true,
-            noEmit: false,
-            declaration: true,
-            emitDeclarationOnly: true,
+            composite: options.composite ?? false,
             ...options.compilerOptions,
             paths,
         },

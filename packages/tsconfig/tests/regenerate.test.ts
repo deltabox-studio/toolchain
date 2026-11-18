@@ -106,9 +106,9 @@ describe('tsconfig regeneration', () => {
 
         expect(fs.existsSync(path.join(cwd, 'packages/a/tsconfig.json'))).toBe(true);
         expect(fs.existsSync(path.join(cwd, 'packages/a/tsconfig.dist.json'))).toBe(true);
-        // The seeded build config extends the custom default file.
+        // The seeded build config extends the managed tsconfig.
         expect(readJson(path.join(cwd, 'packages/a/tsconfig.dist.json')).extends).toBe(
-            './tsconfig.src.json'
+            './tsconfig.json'
         );
     });
 
