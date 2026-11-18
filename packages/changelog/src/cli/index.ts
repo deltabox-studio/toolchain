@@ -6,6 +6,7 @@ import {
     resolveToolchainEnabled,
     type ToolchainCommand,
     type ToolchainConfig,
+    withSpinner,
 } from '@deltabox/toolchain/shared';
 
 import { runWorkflows, workflowTargets } from '../run-workflows.js';
@@ -148,7 +149,7 @@ export function changelogCommands(): ToolchainCommand[] {
                     description: 'Skip the package-changes footer.',
                 },
             ],
-            run: (opts, context) => {
+            run: async (opts, context) => {
                 const argv: string[] = [];
                 if (opts.range) argv.push('--range', String(opts.range));
                 if (opts.dryRun) argv.push('--dry-run');
@@ -169,10 +170,18 @@ export function changelogCommands(): ToolchainCommand[] {
                 if (opts.packageChangesSection === false) {
                     argv.push('--no-package-changes-section');
                 }
-                runChangelog(argv, resolveChangelogConfig(context.config), {
-                    enabled: resolveToolchainEnabled(context.config).enabled,
-                    regenerate: changelogRegenerateEnabled(context.config),
-                });
+                await withSpinner(
+                    async () => {
+                        runChangelog(argv, resolveChangelogConfig(context.config), {
+                            enabled: resolveToolchainEnabled(context.config).enabled,
+                            regenerate: changelogRegenerateEnabled(context.config),
+                        });
+                    },
+                    {
+                        start: 'Generating the changelog...',
+                        success: 'Generated the changelog.',
+                    }
+                );
             },
         },
     ];

@@ -12,6 +12,7 @@ export * from './project.js';
 export * from './provider.js';
 export * from './registry-policy.js';
 export * from './run.js';
+export * from './spinner.js';
 export * from './string-utils.js';
 export * from './template.js';
 export * from './toolchain.js';

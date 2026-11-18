@@ -10,7 +10,7 @@ import {
     runWatch,
     writeProjectGraph,
 } from '@deltabox/toolchain/core';
-import { logger, type ToolchainCommand } from '@deltabox/toolchain/shared';
+import { logger, type ToolchainCommand, withSpinner } from '@deltabox/toolchain/shared';
 
 import { defaultSyncTasks } from '../../sync.js';
 import { getConfigSelection } from '../config-selection.js';
@@ -132,19 +132,26 @@ export function syncCommand(): ToolchainCommand {
                     }
                     // A configless project is skipped unless it was opted in.
                     if (!loaded.managed) continue;
-                    const result = await runSync({
-                        tasks: defaultSyncTasks(),
-                        only,
-                        cwd: dir,
-                        projectType: loaded.projectType,
-                        config: loaded.config,
-                        ownConfig: loaded.ownConfig,
-                        tokens: loaded.tokens,
-                        ...(loaded.plugin ? { plugin: true } : {}),
-                        check,
-                        quiet,
-                        ...(format ? { format } : {}),
-                    });
+                    const result = await withSpinner(
+                        () =>
+                            runSync({
+                                tasks: defaultSyncTasks(),
+                                only,
+                                cwd: dir,
+                                projectType: loaded.projectType,
+                                config: loaded.config,
+                                ownConfig: loaded.ownConfig,
+                                tokens: loaded.tokens,
+                                ...(loaded.plugin ? { plugin: true } : {}),
+                                check,
+                                quiet,
+                                ...(format ? { format } : {}),
+                            }),
+                        {
+                            start: `Syncing ${relDir === '.' ? 'the root' : relDir}...`,
+                            success: `Synced ${relDir === '.' ? 'the root' : relDir}.`,
+                        }
+                    );
                     results.push({ dir: relDir, result });
                     if (check && !result.upToDate) process.exitCode = 1;
                 }
@@ -208,13 +215,17 @@ export function syncCommand(): ToolchainCommand {
                 return;
             }
 
-            const result = await runSync({
-                ...watchOptions(context),
-                only,
-                check,
-                quiet,
-                ...(format ? { format } : {}),
-            });
+            const result = await withSpinner(
+                () =>
+                    runSync({
+                        ...watchOptions(context),
+                        only,
+                        check,
+                        quiet,
+                        ...(format ? { format } : {}),
+                    }),
+                { start: 'Syncing...', success: 'Synced.' }
+            );
             if (check && !result.upToDate) process.exitCode = 1;
 
             // Keep the project graph fresh for the IDE/other tools (`--check`

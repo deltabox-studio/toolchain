@@ -17,6 +17,7 @@ import {
     type Replacements,
     sectionConfig,
     type ToolchainCommand,
+    withSpinner,
 } from '@deltabox/toolchain/shared';
 
 import {
@@ -772,17 +773,26 @@ export function templateCommands(): ToolchainCommand[] {
                 const tsconfig = sectionConfig(context.config.tsconfig) as
                     | { rootFile?: string }
                     | undefined;
-                const result = await scaffoldTemplate(template, {
-                    cwd: out,
-                    tokens,
-                    variables,
-                    actions: [...actions],
-                    force: Boolean(opts.force),
-                    tsconfigRootFile: tsconfig?.rootFile ?? 'tsconfig.workspaces.json',
-                    toolVersions: parseToolVersions(opts.toolVersion as string[] | undefined),
-                    containerize: Boolean(opts.containerize),
-                    ...(opts.json ? { machine: true } : {}),
-                });
+                const result = await withSpinner(
+                    () =>
+                        scaffoldTemplate(template, {
+                            cwd: out,
+                            tokens,
+                            variables,
+                            actions: [...actions],
+                            force: Boolean(opts.force),
+                            tsconfigRootFile: tsconfig?.rootFile ?? 'tsconfig.workspaces.json',
+                            toolVersions: parseToolVersions(
+                                opts.toolVersion as string[] | undefined
+                            ),
+                            containerize: Boolean(opts.containerize),
+                            ...(opts.json ? { machine: true } : {}),
+                        }),
+                    {
+                        start: `Scaffolding ${template.id}...`,
+                        success: `Scaffolded ${template.id}.`,
+                    }
+                );
 
                 if (opts.json) {
                     logger.raw(JSON.stringify({ template: template.id, out, ...result }, null, 4));

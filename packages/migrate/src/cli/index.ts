@@ -15,6 +15,7 @@ import {
     sectionEnabled,
     type ToolchainCommand,
     type ToolingSelection,
+    withSpinner,
 } from '@deltabox/toolchain/shared';
 
 import { diffFiles, hasPending } from '../check.js';
@@ -282,15 +283,22 @@ export function migrateCommands(): ToolchainCommand[] {
                     const run = async (migration: ToolchainMigration): Promise<void> => {
                         results.push({
                             dir,
-                            result: await migration.run({
-                                cwd: dir,
-                                write,
-                                online,
-                                target: dirTarget,
-                                ignoreViteConfigFile: Boolean(opts.ignoreViteConfigFile),
-                                ignoreManagedFiles: Boolean(opts.ignoreManagedFiles),
-                                ignoreChangelog: Boolean(opts.ignoreChangelog),
-                            }),
+                            result: await withSpinner(
+                                () =>
+                                    migration.run({
+                                        cwd: dir,
+                                        write,
+                                        online,
+                                        target: dirTarget,
+                                        ignoreViteConfigFile: Boolean(opts.ignoreViteConfigFile),
+                                        ignoreManagedFiles: Boolean(opts.ignoreManagedFiles),
+                                        ignoreChangelog: Boolean(opts.ignoreChangelog),
+                                    }),
+                                {
+                                    start: `Migrating ${migration.id}...`,
+                                    success: `Migrated ${migration.id}.`,
+                                }
+                            ),
                         });
                     };
 

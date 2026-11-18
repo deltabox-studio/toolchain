@@ -46,6 +46,23 @@ toolchain: {
             groups: {
                 minor: { 'update-types': ['minor', 'patch'] },
             },
+            // Allow only the packages you actually want updated...
+            allow: {
+                npm: [
+                    { 'dependency-name': 'vite' },
+                    { 'dependency-name': 'vite-plus' },
+                ],
+                'github-actions': [{ 'dependency-name': '*' }],
+            },
+            // ...and never cross a major version automatically.
+            ignore: {
+                npm: [
+                    {
+                        'dependency-name': '*',
+                        'update-types': ['version-update:semver-major'],
+                    },
+                ],
+            },
             dir: '.github', // default
             filename: 'dependabot.yml', // default
         },
@@ -53,16 +70,18 @@ toolchain: {
 }
 ```
 
-| Option                  | Default                     | What it does                             |
-| ----------------------- | --------------------------- | ---------------------------------------- |
-| `schedule`              | `weekly`                    | `daily`, `weekly` or `monthly`.          |
-| `directories`           | `['/']`                     | Directories to scan.                     |
-| `ecosystems`            | `['github-actions', 'npm']` | Package ecosystems.                      |
-| `labels`                | none                        | Labels added to the update PRs.          |
-| `openPullRequestsLimit` | Dependabot default (5)      | Maximum open update PRs per entry.       |
-| `groups`                | none                        | Update groups (patterns / update types). |
-| `dir` / `filename`      | `.github/dependabot.yml`    | Generated path overrides.                |
-| `enabled`               | `true` when present         | Set `false` to opt out explicitly.       |
+| Option                  | Default                     | What it does                                    |
+| ----------------------- | --------------------------- | ----------------------------------------------- |
+| `schedule`              | `weekly`                    | `daily`, `weekly` or `monthly`.                 |
+| `directories`           | `['/']`                     | Directories to scan.                            |
+| `ecosystems`            | `['github-actions', 'npm']` | Package ecosystems.                             |
+| `labels`                | none                        | Labels added to the update PRs.                 |
+| `openPullRequestsLimit` | Dependabot default (5)      | Maximum open update PRs per entry.              |
+| `groups`                | none                        | Update groups (patterns / update types).        |
+| `allow`                 | none                        | Allow rules (an array, or keyed by ecosystem).  |
+| `ignore`                | none                        | Ignore rules (an array, or keyed by ecosystem). |
+| `dir` / `filename`      | `.github/dependabot.yml`    | Generated path overrides.                       |
+| `enabled`               | `true` when present         | Set `false` to opt out explicitly.              |
 
 A hand-written `.github/dependabot.yml` without the generated header is left
 untouched and reported as a conflict, exactly like a hand-written workflow.

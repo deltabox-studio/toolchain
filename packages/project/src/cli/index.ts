@@ -13,6 +13,7 @@ import {
     sectionConfig,
     type ToolchainCommand,
     type ToolchainCommandContext,
+    withSpinner,
 } from '@deltabox/toolchain/shared';
 import { tsconfigFileNames, type TsconfigExtendsOptions } from '@deltabox/toolchain/tsconfig';
 
@@ -239,7 +240,7 @@ export function projectCommands(): ToolchainCommand[] {
                 },
                 ...CONFIG_OPTIONS,
             ],
-            run: (opts, context) => {
+            run: async (opts, context) => {
                 const out = (opts.out as string) ?? context.cwd;
                 const name = resolveName(requireName(opts, context.config, out, context.cwd), out);
                 const tsconfigExtends = scaffoldTsconfigExtends(context.config);
@@ -261,7 +262,10 @@ export function projectCommands(): ToolchainCommand[] {
                     rootOxc: findRootOxcFiles(out),
                     ...(tsconfigExtends ? { tsconfigExtends } : {}),
                 });
-                const written = writeGeneratedFiles(files, out, { force: Boolean(opts.force) });
+                const written = await withSpinner(
+                    async () => writeGeneratedFiles(files, out, { force: Boolean(opts.force) }),
+                    { start: 'Writing project files...', success: 'Wrote project files.' }
+                );
                 if (opts.containerize) {
                     written.push(
                         ...writeDockerFiles({
@@ -297,7 +301,7 @@ export function projectCommands(): ToolchainCommand[] {
                 TOOL_VERSION_OPTION,
                 ...CONFIG_OPTIONS,
             ],
-            run: (opts, context) => {
+            run: async (opts, context) => {
                 const out = (opts.out as string) ?? context.cwd;
                 const name = resolveName(requireName(opts, context.config, out, context.cwd), out);
                 const scope =
@@ -340,7 +344,10 @@ export function projectCommands(): ToolchainCommand[] {
                         }).map(f => ({ ...f, path: `packages/core/${f.path}` }))
                     );
                 }
-                const written = writeGeneratedFiles(files, out, { force: Boolean(opts.force) });
+                const written = await withSpinner(
+                    async () => writeGeneratedFiles(files, out, { force: Boolean(opts.force) }),
+                    { start: 'Writing project files...', success: 'Wrote project files.' }
+                );
                 ensureToolingDependencies({
                     cwd: out,
                     selection: { fmt: 'oxc', lint: 'oxc' },
@@ -419,7 +426,10 @@ export function projectCommands(): ToolchainCommand[] {
                     ...(tsconfigExtends ? { tsconfigExtends } : {}),
                 }).map(file => ({ ...file, path: `${wsDir}/${file.path}` }));
 
-                const written = writeGeneratedFiles(files, root, { force: Boolean(opts.force) });
+                const written = await withSpinner(
+                    async () => writeGeneratedFiles(files, root, { force: Boolean(opts.force) }),
+                    { start: 'Writing project files...', success: 'Wrote project files.' }
+                );
                 ensureToolingDependencies({
                     cwd: path.join(root, wsDir),
                     root,

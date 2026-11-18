@@ -1,6 +1,6 @@
 /** The `dbx mcp:*` commands. */
 
-import { logger, type ToolchainCommand } from '@deltabox/toolchain/shared';
+import { logger, type ToolchainCommand, withSpinner } from '@deltabox/toolchain/shared';
 
 import mcpPkg from '../../package.json' with { type: 'json' };
 import { installMcp, listMcpProviders, type McpProviderId, type McpScope } from '../install.js';
@@ -53,14 +53,21 @@ function installCommand(): ToolchainCommand {
             if (scope !== 'project' && scope !== 'global') {
                 throw new Error('--scope must be `project` or `global`.');
             }
-            const result = installMcp({
-                provider,
-                scope,
-                cwd: (opts.cwd as string | undefined) ?? context.cwd,
-                ...(opts.dir ? { dir: String(opts.dir) } : {}),
-                ...(opts.command ? { command: String(opts.command) } : {}),
-                skills: opts.skills !== false,
-            });
+            const result = await withSpinner(
+                async () =>
+                    installMcp({
+                        provider,
+                        scope,
+                        cwd: (opts.cwd as string | undefined) ?? context.cwd,
+                        ...(opts.dir ? { dir: String(opts.dir) } : {}),
+                        ...(opts.command ? { command: String(opts.command) } : {}),
+                        skills: opts.skills !== false,
+                    }),
+                {
+                    start: `Installing the dbx MCP server for ${provider}...`,
+                    success: `Installed the dbx MCP server for ${provider}.`,
+                }
+            );
             if (opts.json) {
                 logger.raw(JSON.stringify(result, null, 4));
                 return;

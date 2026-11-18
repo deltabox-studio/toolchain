@@ -309,6 +309,30 @@ export default defineConfig({
                         schedule: 'weekly',
                         labels: ['deps'],
                         openPullRequestsLimit: 10,
+                        // Keep the core Vite/Vite+ peer surface reviewable, and
+                        // never let an automatic update cross a major version.
+                        allow: {
+                            npm: [
+                                { 'dependency-name': 'vite' },
+                                { 'dependency-name': 'vite-plus' },
+                                { 'dependency-name': 'vite-plugin-*' },
+                            ],
+                            'github-actions': [{ 'dependency-name': '*' }],
+                        },
+                        ignore: {
+                            npm: [
+                                {
+                                    'dependency-name': '*',
+                                    'update-types': ['version-update:semver-major'],
+                                },
+                            ],
+                            'github-actions': [
+                                {
+                                    'dependency-name': '*',
+                                    'update-types': ['version-update:semver-major'],
+                                },
+                            ],
+                        },
                         groups: {
                             'minor-and-patch': {
                                 'exclude-patterns': ['vite', 'vite-plus'],

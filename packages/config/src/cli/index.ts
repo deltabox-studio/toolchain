@@ -14,7 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { logger, type ToolchainCommand } from '@deltabox/toolchain/shared';
+import { logger, type ToolchainCommand, withSpinner } from '@deltabox/toolchain/shared';
 
 import type { ConfigEngine } from '../engine.js';
 
@@ -48,7 +48,7 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
     const { engine } = ctx;
     const d = ctx.defaults ?? {};
 
-    return [
+    const commands: ToolchainCommand[] = [
         {
             name: 'config:env',
             description: 'Generate .env.example from the config schemas.',
@@ -182,4 +182,13 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
             },
         },
     ];
+
+    return commands.map(command => ({
+        ...command,
+        run: (args, context) =>
+            withSpinner(() => Promise.resolve(command.run(args, context)), {
+                start: command.description,
+                success: command.description,
+            }),
+    }));
 }

@@ -170,6 +170,7 @@ Generate workspace tsconfig.json files from the default tsconfig (aliases + refe
 - `--no-aliases` — Skip path aliases.
 - `--composite` — Emit composite + references.
 - `--refs` — Wire project references.
+- `--flatten-remote-extends` — Inline compiler options inherited from a remote http(s) extends chain (existing settings win).
 - `--auto` — Auto-wire the root workspaces tsconfig paths/references from the project graph (default false).
 - `--no-auto` — Only use the paths/references already in the root workspaces tsconfig.
 - `--auto-aliases` — Auto-wire path aliases (defaults to --auto).

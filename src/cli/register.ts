@@ -6,6 +6,7 @@ import {
     logger,
     setLogConfig,
     setLogOverrides,
+    setSpinnerEnabled,
     type ToolchainCommand,
     type ToolchainCommandContext,
 } from '@deltabox/toolchain/shared';
@@ -98,6 +99,7 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                 provided.releaseNotes !== undefined;
             const framed = !cmd.passthrough && !machine && provided.quiet !== true;
             const label = `${command.parent?.name() ?? ''} ${cmd.name}`.trim();
+            setSpinnerEnabled(framed ? undefined : false);
             if (framed) intro(label);
             try {
                 // Load the config for every command (a passthrough reads the
@@ -135,6 +137,8 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                 logger.error(message);
                 if (framed) outro('Failed');
                 process.exitCode = 1;
+            } finally {
+                setSpinnerEnabled(undefined);
             }
         });
     }

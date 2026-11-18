@@ -741,7 +741,7 @@ export type ChangelogDetailsConfig =
     | boolean
     | {
           enabled?: boolean;
-          lifecycle: 'after' | 'before';
+          lifecycle?: 'after' | 'before';
           minCommits?: number;
           descriptions?: boolean | ChangelogDetailsOptions;
           body?: boolean | ChangelogDetailsOptions;
@@ -966,6 +966,46 @@ export interface ToolchainDependabotConfig {
         }
     >;
     /**
+     * Rules for every ecosystem (an array) or keyed by package ecosystem (eg. `{ npm: [...] }`; `*` is
+     * the fallback).
+     */
+    allow?:
+        | Array<{
+              'dependency-name': string;
+              'dependency-type'?: 'direct' | 'indirect' | 'production' | 'development';
+              'update-types'?: Array<string>;
+              versions?: Array<string>;
+          }>
+        | Record<
+              string & {},
+              Array<{
+                  'dependency-name': string;
+                  'dependency-type'?: 'direct' | 'indirect' | 'production' | 'development';
+                  'update-types'?: Array<string>;
+                  versions?: Array<string>;
+              }>
+          >;
+    /**
+     * Rules for every ecosystem (an array) or keyed by package ecosystem (eg. `{ npm: [...] }`; `*` is
+     * the fallback).
+     */
+    ignore?:
+        | Array<{
+              'dependency-name': string;
+              'dependency-type'?: 'direct' | 'indirect' | 'production' | 'development';
+              'update-types'?: Array<string>;
+              versions?: Array<string>;
+          }>
+        | Record<
+              string & {},
+              Array<{
+                  'dependency-name': string;
+                  'dependency-type'?: 'direct' | 'indirect' | 'production' | 'development';
+                  'update-types'?: Array<string>;
+                  versions?: Array<string>;
+              }>
+          >;
+    /**
      * Override the generated file name.
      *
      * @default 'dependabot.yml'
@@ -1184,6 +1224,15 @@ export interface ToolchainTsconfigConfig {
      * @default true
      */
     aliases?: boolean;
+    /**
+     * Inline the compiler options inherited from a remote `http(s)` `extends` chain into the generated
+     * workspace configs (default false). Useful when a tool cannot follow a remote URL; path-valued
+     * options such as `paths`/`baseUrl` are skipped because they describe the remote tree. Settings
+     * the generated config already defines always win.
+     *
+     * @default false
+     */
+    flattenRemoteExtends?: boolean;
     /**
      * Auto-generate the root workspaces tsconfig paths/references from the project graph (default
      * false). Set true to derive them from the project graph; set false to only use the entries you

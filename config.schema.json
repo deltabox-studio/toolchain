@@ -1746,9 +1746,6 @@
                             "description": "Wrap matching text (the match or `start` match becomes the summary)."
                         }
                     },
-                    "required": [
-                        "lifecycle"
-                    ],
                     "additionalProperties": false
                 }
             ],
@@ -2213,6 +2210,188 @@
                     },
                     "description": "Dependabot update groups, keyed by group name."
                 },
+                "allow": {
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "dependency-name": {
+                                        "type": "string",
+                                        "description": "Dependency name or `*` pattern."
+                                    },
+                                    "dependency-type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "direct",
+                                            "indirect",
+                                            "production",
+                                            "development"
+                                        ],
+                                        "description": "Restrict the rule to a dependency type."
+                                    },
+                                    "update-types": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "description": "Update types (eg. `version-update:semver-major`)."
+                                    },
+                                    "versions": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "description": "Version ranges to allow/ignore."
+                                    }
+                                },
+                                "required": [
+                                    "dependency-name"
+                                ],
+                                "additionalProperties": false
+                            }
+                        },
+                        {
+                            "type": "object",
+                            "propertyNames": {
+                                "type": "string"
+                            },
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "dependency-name": {
+                                            "type": "string",
+                                            "description": "Dependency name or `*` pattern."
+                                        },
+                                        "dependency-type": {
+                                            "type": "string",
+                                            "enum": [
+                                                "direct",
+                                                "indirect",
+                                                "production",
+                                                "development"
+                                            ],
+                                            "description": "Restrict the rule to a dependency type."
+                                        },
+                                        "update-types": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "description": "Update types (eg. `version-update:semver-major`)."
+                                        },
+                                        "versions": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "description": "Version ranges to allow/ignore."
+                                        }
+                                    },
+                                    "required": [
+                                        "dependency-name"
+                                    ],
+                                    "additionalProperties": false
+                                }
+                            }
+                        }
+                    ],
+                    "description": "Rules for every ecosystem (an array) or keyed by package ecosystem (eg. `{ npm: [...] }`; `*` is the fallback)."
+                },
+                "ignore": {
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "dependency-name": {
+                                        "type": "string",
+                                        "description": "Dependency name or `*` pattern."
+                                    },
+                                    "dependency-type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "direct",
+                                            "indirect",
+                                            "production",
+                                            "development"
+                                        ],
+                                        "description": "Restrict the rule to a dependency type."
+                                    },
+                                    "update-types": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "description": "Update types (eg. `version-update:semver-major`)."
+                                    },
+                                    "versions": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "description": "Version ranges to allow/ignore."
+                                    }
+                                },
+                                "required": [
+                                    "dependency-name"
+                                ],
+                                "additionalProperties": false
+                            }
+                        },
+                        {
+                            "type": "object",
+                            "propertyNames": {
+                                "type": "string"
+                            },
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "dependency-name": {
+                                            "type": "string",
+                                            "description": "Dependency name or `*` pattern."
+                                        },
+                                        "dependency-type": {
+                                            "type": "string",
+                                            "enum": [
+                                                "direct",
+                                                "indirect",
+                                                "production",
+                                                "development"
+                                            ],
+                                            "description": "Restrict the rule to a dependency type."
+                                        },
+                                        "update-types": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "description": "Update types (eg. `version-update:semver-major`)."
+                                        },
+                                        "versions": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "description": "Version ranges to allow/ignore."
+                                        }
+                                    },
+                                    "required": [
+                                        "dependency-name"
+                                    ],
+                                    "additionalProperties": false
+                                }
+                            }
+                        }
+                    ],
+                    "description": "Rules for every ecosystem (an array) or keyed by package ecosystem (eg. `{ npm: [...] }`; `*` is the fallback)."
+                },
                 "filename": {
                     "default": "dependabot.yml",
                     "type": "string",
@@ -2630,6 +2809,11 @@
                     "default": true,
                     "type": "boolean",
                     "description": "Inject path aliases."
+                },
+                "flattenRemoteExtends": {
+                    "default": false,
+                    "type": "boolean",
+                    "description": "Inline the compiler options inherited from a remote `http(s)` `extends` chain into the generated workspace configs (default false). Useful when a tool cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` are skipped because they describe the remote tree. Settings the generated config already defines always win."
                 },
                 "auto": {
                     "anyOf": [

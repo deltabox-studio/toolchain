@@ -892,7 +892,6 @@ Enable/disable details wrapping.
 
 ###### `lifecycle`
 
-- **Required**
 - **Type**: `'after' | 'before'`
 - **Default**: `"after"`
 
@@ -1221,6 +1220,68 @@ Maximum open update PRs per entry.
 - **Type**: `Record<string, object>`
 
 Dependabot update groups, keyed by group name.
+
+#### `allow`
+
+- **Type**: `Array<object> | Record<string, Array<object>>`
+
+Rules for every ecosystem (an array) or keyed by package ecosystem (eg. `{ npm: [...] }`; `*` is the fallback).
+
+##### `dependency-name`
+
+- **Required**
+- **Type**: `string`
+
+Dependency name or `*` pattern.
+
+##### `dependency-type`
+
+- **Type**: `'direct' | 'indirect' | 'production' | 'development'`
+
+Restrict the rule to a dependency type.
+
+##### `update-types`
+
+- **Type**: `Array<string>`
+
+Update types (eg. `version-update:semver-major`).
+
+##### `versions`
+
+- **Type**: `Array<string>`
+
+Version ranges to allow/ignore.
+
+#### `ignore`
+
+- **Type**: `Array<object> | Record<string, Array<object>>`
+
+Rules for every ecosystem (an array) or keyed by package ecosystem (eg. `{ npm: [...] }`; `*` is the fallback).
+
+##### `dependency-name`
+
+- **Required**
+- **Type**: `string`
+
+Dependency name or `*` pattern.
+
+##### `dependency-type`
+
+- **Type**: `'direct' | 'indirect' | 'production' | 'development'`
+
+Restrict the rule to a dependency type.
+
+##### `update-types`
+
+- **Type**: `Array<string>`
+
+Update types (eg. `version-update:semver-major`).
+
+##### `versions`
+
+- **Type**: `Array<string>`
+
+Version ranges to allow/ignore.
 
 #### `filename`
 
@@ -1558,7 +1619,6 @@ Enable/disable details wrapping.
 
 ###### `lifecycle`
 
-- **Required**
 - **Type**: `'after' | 'before'`
 - **Default**: `"after"`
 
@@ -2029,6 +2089,13 @@ Emit `composite: true`.
 - **Default**: `true`
 
 Inject path aliases.
+
+### `flattenRemoteExtends`
+
+- **Type**: `boolean`
+- **Default**: `false`
+
+Inline the compiler options inherited from a remote `http(s)` `extends` chain into the generated workspace configs (default false). Useful when a tool cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` are skipped because they describe the remote tree. Settings the generated config already defines always win.
 
 ### `auto`
 

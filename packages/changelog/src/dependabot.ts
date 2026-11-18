@@ -34,6 +34,17 @@ export function dependabotFilePath(setting: ToolchainDependabotConfig = {}): str
     return dir ? `${dir}/${filename}` : filename;
 }
 
+/** Resolve the allow/ignore rules for one ecosystem. */
+function rulesFor(
+    rules: ToolchainDependabotConfig['allow'] | ToolchainDependabotConfig['ignore'],
+    ecosystem: string
+): unknown[] | undefined {
+    if (!rules) return undefined;
+    if (Array.isArray(rules)) return rules.length > 0 ? rules : undefined;
+    const selected = rules[ecosystem] ?? rules['*'];
+    return selected && selected.length > 0 ? selected : undefined;
+}
+
 /** Render the Dependabot config. */
 export function renderDependabot(setting: ToolchainDependabotConfig = {}): string {
     const schedule = setting.schedule ?? 'weekly';
@@ -45,18 +56,24 @@ export function renderDependabot(setting: ToolchainDependabotConfig = {}): strin
             : [...DEPENDABOT_ECOSYSTEMS];
 
     const updates = directories.flatMap(directory =>
-        ecosystems.map(ecosystem => ({
-            'package-ecosystem': ecosystem,
-            directory,
-            schedule: { interval: schedule },
-            ...(setting.labels && setting.labels.length > 0 ? { labels: setting.labels } : {}),
-            ...(setting.openPullRequestsLimit
-                ? { 'open-pull-requests-limit': setting.openPullRequestsLimit }
-                : {}),
-            ...(setting.groups && Object.keys(setting.groups).length > 0
-                ? { groups: setting.groups }
-                : {}),
-        }))
+        ecosystems.map(ecosystem => {
+            const allow = rulesFor(setting.allow, ecosystem);
+            const ignore = rulesFor(setting.ignore, ecosystem);
+            return {
+                'package-ecosystem': ecosystem,
+                directory,
+                schedule: { interval: schedule },
+                ...(setting.labels && setting.labels.length > 0 ? { labels: setting.labels } : {}),
+                ...(setting.openPullRequestsLimit
+                    ? { 'open-pull-requests-limit': setting.openPullRequestsLimit }
+                    : {}),
+                ...(setting.groups && Object.keys(setting.groups).length > 0
+                    ? { groups: setting.groups }
+                    : {}),
+                ...(allow ? { allow } : {}),
+                ...(ignore ? { ignore } : {}),
+            };
+        })
     );
 
     return toYaml({ version: 2, updates } as unknown as Record<string, YamlValue>);

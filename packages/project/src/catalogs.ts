@@ -23,8 +23,7 @@ import {
  * A marker line placed at the top of a catalog file so the sync task knows the
  * toolchain owns it (and refuses to overwrite a hand-written one).
  */
-export const CATALOG_MARKER =
-    '# Managed by @deltabox/toolchain (catalogs) - edit dbx.config.* and run `dbx sync`.';
+export const CATALOG_MARKER = '# Managed by @deltabox/toolchain (catalogs).';
 
 /** Package managers that support catalogs. */
 export const CATALOG_PACKAGE_MANAGERS = ['yarn', 'pnpm', 'bun'] as const;

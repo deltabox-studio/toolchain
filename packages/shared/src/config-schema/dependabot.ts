@@ -15,6 +15,27 @@ const dependabotGroupSchema = z.object({
         .optional(),
 });
 
+/** A Dependabot allow/ignore rule. */
+const dependabotRuleSchema = z.object({
+    'dependency-name': z.string().describe('Dependency name or `*` pattern.'),
+    'dependency-type': z
+        .enum(['direct', 'indirect', 'production', 'development'])
+        .describe('Restrict the rule to a dependency type.')
+        .optional(),
+    'update-types': z
+        .array(z.string())
+        .describe('Update types (eg. `version-update:semver-major`).')
+        .optional(),
+    versions: z.array(z.string()).describe('Version ranges to allow/ignore.').optional(),
+});
+
+/** Allow/ignore rules applied to every ecosystem, or keyed by ecosystem. */
+const dependabotRulesSchema = z
+    .union([z.array(dependabotRuleSchema), z.record(z.string(), z.array(dependabotRuleSchema))])
+    .describe(
+        'Rules for every ecosystem (an array) or keyed by package ecosystem (eg. `{ npm: [...] }`; `*` is the fallback).'
+    );
+
 /**
  * `.github/dependabot.yml` version-update automation. Enabled by presence; like
  * every other CI workflow it is opt-in.
@@ -48,6 +69,8 @@ export const dependabotConfigSchema = withEnabled(
             .record(z.string(), dependabotGroupSchema)
             .describe('Dependabot update groups, keyed by group name.')
             .optional(),
+        allow: dependabotRulesSchema.optional(),
+        ignore: dependabotRulesSchema.optional(),
         filename: z
             .string()
             .describe('Override the generated file name.')
