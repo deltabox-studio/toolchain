@@ -217,7 +217,11 @@ export async function resolveTemplateSources(
                 break;
             }
             case 'local': {
-                for (const template of loadLocalTemplates(source.locate, source.id)) add(template);
+                for (const template of loadLocalTemplates(
+                    path.resolve(options.cwd, source.locate),
+                    source.id
+                ))
+                    add(template);
                 break;
             }
             case 'git': {
