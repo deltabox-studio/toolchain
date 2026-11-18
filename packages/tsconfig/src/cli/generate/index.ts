@@ -221,7 +221,14 @@ export function generateTsconfigs(
 
         if (config.references?.length) {
             config.references = config.references.filter(ref => {
-                const refTsconfigPath = path.resolve(dirname, ref.path);
+                const refTarget = path.resolve(dirname, ref.path);
+                // TypeScript accepts a project reference to a directory that
+                // holds a `tsconfig.json` (the common form). Normalize it to
+                // the file so the in-memory results and disk can be inspected.
+                const refTsconfigPath =
+                    fs.existsSync(refTarget) && fs.statSync(refTarget).isDirectory()
+                        ? path.join(refTarget, 'tsconfig.json')
+                        : refTarget;
                 const generated = generatedByPath.get(refTsconfigPath);
                 let composite: unknown;
                 if (generated) {

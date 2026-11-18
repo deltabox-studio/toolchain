@@ -65,6 +65,27 @@ describe('generateTsconfigs', () => {
         expect(core.newTsconfig.references).toEqual([{ path: '../cli/tsconfig.json' }]);
     });
 
+    it('handles directory project references and drops self references', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'tsconfig.workspaces.json'), {
+            compilerOptions: { composite: true },
+            references: [{ path: './packages/core' }, { path: './packages/cli' }],
+        });
+        writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {});
+        writeJson(path.join(cwd, 'packages/cli/tsconfig.default.json'), {});
+
+        const results = generateTsconfigs({
+            cwd,
+            refs: true,
+            composite: true,
+            log: false,
+            write: false,
+        });
+        const core = results.find(r => r.dirnameRelative === 'packages/core')!;
+        expect(core.newTsconfig.references).toEqual([{ path: '../cli' }]);
+        expect(core.newTsconfig.references).not.toContainEqual({ path: './' });
+    });
+
     it('wires references on the first dry run (generated targets may not exist yet)', () => {
         const cwd = tmp();
         writeMonorepo(cwd);

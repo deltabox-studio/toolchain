@@ -316,7 +316,10 @@ function toWorkspacePath(
     const absolute = path.resolve(target);
     const workspace = path.resolve(dirname);
     const targetDir = path.dirname(absolute);
-    const inWorkspace = targetDir === workspace || targetDir.startsWith(`${workspace}${path.sep}`);
+    const inWorkspace =
+        absolute === workspace ||
+        targetDir === workspace ||
+        targetDir.startsWith(`${workspace}${path.sep}`);
 
     if (inWorkspace && dirnameRelative !== '.') return undefined;
 
