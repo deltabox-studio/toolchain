@@ -32,10 +32,10 @@ import { renderPnpmWorkspace, renderYarnrc, supportsCatalogs } from './catalogs.
  * fresh consumer never sees a dangling `catalog:`).
  */
 const CATALOG: Record<string, string> = {
-    '@deltabox/toolchain': `^${rootPkg.version}`,
-    '@types/node': '^22.10.2',
-    typescript: '^6.0.3',
-    'vite-plugin-dbx': `^${rootPkg.version}`,
+    '@deltabox/toolchain': rootPkg.version,
+    '@types/node': '~22.10.2',
+    typescript: '~6.0.3',
+    'vite-plugin-dbx': rootPkg.version,
     'vite-plus': '1.2.0',
 };
 

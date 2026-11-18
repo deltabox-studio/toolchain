@@ -83,6 +83,23 @@ describe('config.schema.json', () => {
         expect(validate({ toolchain: {} })).toBe(true);
         expect(validate({ toolchain: { tsconfig: true } })).toBe(true);
         expect(validate({ toolchain: { tsconfig: { flattenRemoteExtends: true } } })).toBe(true);
+        expect(
+            validate({
+                toolchain: {
+                    ci: {
+                        dependabot: {
+                            allow: { npm: [{ 'dependency-name': 'vite' }] },
+                            ignore: [
+                                {
+                                    'dependency-name': '*',
+                                    'update-types': ['version-update:semver-major'],
+                                },
+                            ],
+                        },
+                    },
+                },
+            })
+        ).toBe(true);
 
         expect(validate({ toolchain: { notASection: true } })).toBe(false);
         expect(validate({ toolchain: { tsconfig: { flattenRemoteExtends: 'yes' } } })).toBe(false);

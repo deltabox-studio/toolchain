@@ -516,17 +516,24 @@ export function projectCommands(): ToolchainCommand[] {
                     }
                 }
 
-                const result = generateProjectConfigs({
-                    root,
-                    ...(opts.include ? { include: opts.include as string[] } : {}),
-                    ...(opts.exclude ? { exclude: opts.exclude as string[] } : {}),
-                    ...(opts.type ? { type: opts.type as ProjectType } : {}),
-                    force: Boolean(opts.force),
-                    dryRun: Boolean(opts.dryRun),
-                    ...(skipConfig ? { skipConfig: true } : {}),
-                    ...(language ? { language } : {}),
-                    ...(extension ? { extension } : {}),
-                });
+                const result = await withSpinner(
+                    async () =>
+                        generateProjectConfigs({
+                            root,
+                            ...(opts.include ? { include: opts.include as string[] } : {}),
+                            ...(opts.exclude ? { exclude: opts.exclude as string[] } : {}),
+                            ...(opts.type ? { type: opts.type as ProjectType } : {}),
+                            force: Boolean(opts.force),
+                            dryRun: Boolean(opts.dryRun),
+                            ...(skipConfig ? { skipConfig: true } : {}),
+                            ...(language ? { language } : {}),
+                            ...(extension ? { extension } : {}),
+                        }),
+                    {
+                        start: 'Generating project configs...',
+                        success: 'Generated project configs.',
+                    }
+                );
 
                 if (opts.json) {
                     logger.raw(JSON.stringify(result, null, 4));

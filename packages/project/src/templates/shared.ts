@@ -20,15 +20,15 @@ export const BUN = {
 
 /** The dependencies of the current template ecosystem (checked 2026-11). */
 export const VERSIONS = {
-    express: '^5.3.0',
-    '@types/express': '^5.0.6',
-    fastify: '^5.12.8',
-    '@orpc/server': '^1.16.1',
-    zod: '^4.3.0',
-    '@aws-sdk/client-s3': '^3.1165.0',
-    '@types/bun': '^1.4.4',
-    tsx: '^4.23.15',
-    vitepress: '^1.6.4',
+    express: '~5.3.0',
+    '@types/express': '~5.0.6',
+    fastify: '~5.12.8',
+    '@orpc/server': '~1.16.1',
+    zod: '~4.3.0',
+    '@aws-sdk/client-s3': '~3.1165.0',
+    '@types/bun': '~1.4.4',
+    tsx: '~4.23.15',
+    vitepress: '~1.6.4',
 } as const;
 
 /** A generated file (path + content). */

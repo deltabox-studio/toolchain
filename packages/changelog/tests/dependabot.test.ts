@@ -55,6 +55,17 @@ describe('dependabot config', () => {
         expect((yaml.match(/version-update:semver-major/g) ?? []).length).toBe(2);
     });
 
+    it('falls back to the `*` ecosystem rules and omits empty entries', () => {
+        const yaml = renderDependabot({
+            ecosystems: ['github-actions', 'npm'],
+            allow: { '*': [{ 'dependency-name': 'vite' }] },
+            ignore: { npm: [] },
+        });
+
+        expect((yaml.match(/dependency-name: vite/g) ?? []).length).toBe(2);
+        expect(yaml).not.toContain('ignore:');
+    });
+
     it('resolves safe file paths', () => {
         expect(dependabotFilePath()).toBe(DEPENDABOT_FILE);
         expect(dependabotFilePath({ dir: '.github', filename: 'updates.yml' })).toBe(

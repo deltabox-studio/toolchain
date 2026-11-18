@@ -150,6 +150,7 @@ export function syncCommand(): ToolchainCommand {
                         {
                             start: `Syncing ${relDir === '.' ? 'the root' : relDir}...`,
                             success: `Synced ${relDir === '.' ? 'the root' : relDir}.`,
+                            enabled: quiet ? false : undefined,
                         }
                     );
                     results.push({ dir: relDir, result });
@@ -224,7 +225,7 @@ export function syncCommand(): ToolchainCommand {
                         quiet,
                         ...(format ? { format } : {}),
                     }),
-                { start: 'Syncing...', success: 'Synced.' }
+                { start: 'Syncing...', success: 'Synced.', enabled: quiet ? false : undefined }
             );
             if (check && !result.upToDate) process.exitCode = 1;
 

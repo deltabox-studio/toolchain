@@ -206,33 +206,33 @@ describe('scaffolding', () => {
         {
             id: 'vitepress',
             files: ['docs/index.md', 'docs/.vitepress/config.ts'],
-            devDependencies: { vitepress: expect.stringMatching(/^\^1\.6\./) },
+            devDependencies: { vitepress: expect.stringMatching(/^~1\.6\./) },
             dev: /^vitepress dev docs$/,
         },
         {
             id: 'express',
             files: ['src/app.ts', 'src/index.ts'],
-            dependencies: { express: expect.stringMatching(/^\^5\./) },
+            dependencies: { express: expect.stringMatching(/^~5\./) },
             dev: /^tsx watch/,
         },
         {
             id: 'fastify',
             files: ['src/app.ts', 'src/index.ts'],
-            dependencies: { fastify: expect.stringMatching(/^\^5\./) },
+            dependencies: { fastify: expect.stringMatching(/^~5\./) },
             dev: /^tsx watch/,
         },
         {
             id: 'bun',
             files: ['src/app.ts', 'src/index.ts'],
-            devDependencies: { '@types/bun': expect.stringMatching(/^\^1\./) },
+            devDependencies: { '@types/bun': expect.stringMatching(/^~1\./) },
             dev: /^bun --watch/,
         },
         {
             id: 'orpc',
             files: ['src/router.ts', 'src/index.ts'],
             dependencies: {
-                '@orpc/server': expect.stringMatching(/^\^1\./),
-                zod: expect.stringMatching(/^\^4\./),
+                '@orpc/server': expect.stringMatching(/^~1\./),
+                zod: expect.stringMatching(/^~4\./),
             },
             dev: /^tsx watch/,
         },
@@ -244,19 +244,19 @@ describe('scaffolding', () => {
         {
             id: 'file-server-s3',
             files: ['src/server.ts', 'src/index.ts', '.env.example'],
-            dependencies: { '@aws-sdk/client-s3': expect.stringMatching(/^\^3\./) },
+            dependencies: { '@aws-sdk/client-s3': expect.stringMatching(/^~3\./) },
             dev: /^tsx watch/,
         },
         {
             id: 'file-server-minio',
             files: ['src/server.ts', 'src/index.ts', '.env.example'],
-            dependencies: { '@aws-sdk/client-s3': expect.stringMatching(/^\^3\./) },
+            dependencies: { '@aws-sdk/client-s3': expect.stringMatching(/^~3\./) },
             dev: /^tsx watch/,
         },
         {
             id: 'file-server-bun-s3',
             files: ['src/app.ts', 'src/index.ts', '.env.example'],
-            devDependencies: { '@types/bun': expect.stringMatching(/^\^1\./) },
+            devDependencies: { '@types/bun': expect.stringMatching(/^~1\./) },
             dev: /^bun --watch/,
         },
         {
@@ -320,7 +320,7 @@ describe('scaffolding', () => {
             dependencies: Record<string, string>;
             devDependencies: Record<string, string>;
         };
-        expect(pkg.dependencies.express).toMatch(/^\^5\./);
+        expect(pkg.dependencies.express).toMatch(/^~5\./);
         expect(pkg.devDependencies.typescript).toBe('catalog:');
         expect(pkg.devDependencies['vite-plus']).toBe('catalog:');
         expect(fs.existsSync(path.join(out, 'pnpm-workspace.yaml'))).toBe(true);

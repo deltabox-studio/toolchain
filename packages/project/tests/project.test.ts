@@ -599,7 +599,9 @@ describe('project scaffolding', () => {
     it('pins a single Bun project (nowhere to declare the catalog)', () => {
         const files = createRootProjectFiles({ name: 'x', packageManager: 'bun' });
         const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
-        expect(pkg.devDependencies['@deltabox/toolchain']).toMatch(/^\^/);
+        expect(pkg.devDependencies['@deltabox/toolchain']).toBe(
+            SCAFFOLD_CATALOG['@deltabox/toolchain']
+        );
         expect(pkg.workspaces).toBeUndefined();
         expect(files.find(f => f.path === 'vite.config.ts')!.content).not.toContain('catalogs:');
     });
@@ -749,7 +751,7 @@ describe('project scaffolding', () => {
             fs.readFileSync(new URL('../../../package.json', import.meta.url), 'utf-8')
         ) as { version: string; devDependencies?: Record<string, string> };
 
-        expect(SCAFFOLD_CATALOG['@deltabox/toolchain']).toBe(`^${rootPkg.version}`);
+        expect(SCAFFOLD_CATALOG['@deltabox/toolchain']).toBe(rootPkg.version);
         expect(SCAFFOLD_CATALOG).not.toHaveProperty('@biomejs/biome');
         for (const [name, version] of Object.entries(SCAFFOLD_CATALOG)) {
             if (name === '@deltabox/toolchain') continue;
@@ -757,7 +759,10 @@ describe('project scaffolding', () => {
             const fromDev = rootPkg.devDependencies?.[name];
             const expected =
                 fromCatalog ?? (fromDev && fromDev !== 'catalog:' ? fromDev : undefined);
-            if (expected) expect(version, name).toBe(expected);
+            if (expected) {
+                const core = (value: string) => value.replace(/^[\^~]/, '');
+                expect(core(version), name).toBe(core(expected));
+            }
         }
     });
 
