@@ -203,6 +203,7 @@ export const workflowOptionsSchema = withEnabled(
         provider: z
             .literal('github')
             .describe('Workflow vendor for a full `workflow` object (default `github`).')
+            .default('github')
             .optional(),
         pushBranches: z.array(z.string()).describe('Replace `on.push.branches`.').optional(),
         pullRequestBranches: z
@@ -253,6 +254,7 @@ const vendorWorkflowFields = {
             'Inject the provider-specific checkout/Node/Corepack/install setup ' +
                 '(default false: the workflow is written as-is).'
         )
+        .default(false)
         .optional(),
     enabled: z
         .boolean()

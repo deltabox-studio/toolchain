@@ -72,6 +72,7 @@ const enabledConfigSchema = z
             disabled: z
                 .boolean()
                 .describe('Disable the toolchain for this scope (default false).')
+                .default(false)
                 .optional(),
             scope: z
                 .enum(['global', 'workspace'])
