@@ -259,7 +259,8 @@ export const changelogDetailsConfigSchema = z
                     'Apply details after the changelog formatting pipeline (default `after`, so ' +
                         'custom searches regex-match the formatted text) or before it (`before`).'
                 )
-                .default('after'),
+                .default('after')
+                .optional(),
             minCommits: z
                 .number()
                 .int()

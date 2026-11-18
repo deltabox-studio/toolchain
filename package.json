@@ -101,6 +101,7 @@
         "@deltabox/toolchain-tsconfig": "workspace:*",
         "@types/node": "catalog:",
         "@typescript/native-preview": "catalog:",
+        "ajv": "^8.20.0",
         "cross-env": "catalog:",
         "dotenv": "catalog:",
         "husky": "^9.1.7",

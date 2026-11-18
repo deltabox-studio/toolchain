@@ -130,7 +130,7 @@ export interface ConfigEngineJsonSchemaDoc<TScope extends string = string> {
     type: 'object';
     /** One property per config scope. */
     properties: Record<TScope, unknown>;
-    /** The scopes the document requires. */
+    /** The scopes the document requires (empty: config sections are opt-in by presence). */
     required: TScope[];
 }
 

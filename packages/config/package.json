@@ -25,6 +25,7 @@
         "@deltabox/toolchain-pack": "workspace:*",
         "@types/lodash": "catalog:",
         "@types/node": "catalog:",
+        "ajv": "^8.20.0",
         "fastify": "catalog:",
         "js-yaml": "^4.1.0",
         "typescript": "catalog:",

@@ -580,6 +580,7 @@ __metadata:
     "@deltabox/toolchain-shared": "workspace:*"
     "@types/lodash": "catalog:"
     "@types/node": "catalog:"
+    ajv: "npm:^8.20.0"
     fastify: "catalog:"
     js-yaml: "npm:^4.1.0"
     lodash: "catalog:"
@@ -798,6 +799,7 @@ __metadata:
     "@deltabox/toolchain-tsconfig": "workspace:*"
     "@types/node": "catalog:"
     "@typescript/native-preview": "catalog:"
+    ajv: "npm:^8.20.0"
     commander: "npm:^14.0.0"
     cross-env: "catalog:"
     dotenv: "catalog:"
@@ -3400,7 +3402,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ajv@npm:^8.0.0, ajv@npm:^8.11.0, ajv@npm:^8.12.0":
+"ajv@npm:^8.0.0, ajv@npm:^8.11.0, ajv@npm:^8.12.0, ajv@npm:^8.20.0":
   version: 8.20.0
   resolution: "ajv@npm:8.20.0"
   dependencies:
