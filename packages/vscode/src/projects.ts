@@ -3,12 +3,13 @@ import path from 'node:path';
 
 import * as vscode from 'vscode';
 
+import { readJson, readManifest } from './manifest.js';
 import { DEFAULT_TSCONFIG_FILES, type TsconfigFileNames } from './watch-inputs.js';
+
+export { type ProjectManifest, readManifest } from './manifest.js';
 
 const CONFIG_PREFIX = 'dbx.config.';
 const PROJECT_GROUPS = ['packages', 'apps', 'sdk'];
-const MANIFEST = path.join('.dbx', 'toolchain', 'manifest.json');
-const TIMESTAMPS = path.join('.dbx', 'toolchain', 'timestamps.json');
 
 export interface Project {
     kind: 'project';
@@ -60,43 +61,9 @@ interface ProjectGraphFile {
     packageManager?: string;
 }
 
-function readJson<T>(file: string): T | undefined {
-    try {
-        return JSON.parse(fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, '')) as T;
-    } catch {
-        return undefined;
-    }
-}
-
 /** Read the generated project graph for a root, if present. */
 export function readProjectGraph(root: string): ProjectGraphFile | undefined {
     return readJson<ProjectGraphFile>(path.join(root, '.dbx', 'toolchain', 'projects.json'));
-}
-
-/** The tracked/generated file manifest for a project. */
-export interface ProjectManifest {
-    files: string[];
-    syncedAt?: string;
-    /** Workflow paths dbx left untouched, mapped to the config key that owns them. */
-    workflowConflicts?: Record<string, string>;
-}
-
-/** Read the tracked/generated file manifest for a project dir, if present. */
-export function readManifest(dir: string): ProjectManifest {
-    const doc = readJson<{
-        files?: string[];
-        syncedAt?: string;
-        workflowConflicts?: Record<string, string>;
-    }>(path.join(dir, MANIFEST));
-    // The last-sync time lives in its own (gitignored) file; fall back to a
-    // legacy inline `syncedAt` until the next sync migrates it.
-    const timestamps = readJson<{ syncedAt?: string }>(path.join(dir, TIMESTAMPS));
-    const syncedAt = timestamps?.syncedAt ?? doc?.syncedAt;
-    return {
-        files: doc?.files ?? [],
-        ...(syncedAt ? { syncedAt } : {}),
-        ...(doc?.workflowConflicts ? { workflowConflicts: doc.workflowConflicts } : {}),
-    };
 }
 
 function hasToolchainConfig(dir: string): boolean {
@@ -264,12 +231,44 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeN
         this.emitter.fire(undefined);
     }
 
-    getChildren(element?: ProjectTreeNode): ProjectTreeNode[] {
-        if (!element) {
-            if (this.groups.length === 0) this.groups = discoverProjectGroups();
-            return this.groups;
+    /** Load (and cache) the discovered groups once per refresh. */
+    private ensureGroups(): ProjectGroup[] {
+        if (this.groups.length === 0) this.groups = discoverProjectGroups();
+        return this.groups;
+    }
+
+    /** The stable project node for a directory (used by `treeView.reveal`). */
+    findProject(dir: string): Project | undefined {
+        const target = path.resolve(dir);
+        for (const group of this.ensureGroups()) {
+            const project = group.projects.find(
+                candidate => path.resolve(candidate.dir) === target
+            );
+            if (project) return project;
         }
+        return undefined;
+    }
+
+    /** Every discovered project (cached until the next refresh). */
+    projects(): Project[] {
+        return this.ensureGroups().flatMap(group => group.projects);
+    }
+
+    getChildren(element?: ProjectTreeNode): ProjectTreeNode[] {
+        if (!element) return this.ensureGroups();
         return element.kind === 'group' ? element.projects : [];
+    }
+
+    /**
+     * The parent group a project belongs to. `TreeView.reveal` uses this to
+     * expand the ancestors of a node that is not currently loaded.
+     */
+    getParent(element: ProjectTreeNode): ProjectTreeNode | undefined {
+        if (element.kind === 'group') return undefined;
+        const target = path.resolve(element.dir);
+        return this.ensureGroups().find(group =>
+            group.projects.some(project => path.resolve(project.dir) === target)
+        );
     }
 
     getTreeItem(node: ProjectTreeNode): vscode.TreeItem {

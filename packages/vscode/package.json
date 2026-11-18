@@ -607,6 +607,18 @@
                 "contents": "No managed files yet. Run [Sync active project](command:deltabox.toolchain.sync)."
             }
         ],
+        "colors": [
+            {
+                "id": "deltabox.managedFileForeground",
+                "description": "Foreground color (and `dbx` badge) for files managed by the deltabox toolchain.",
+                "defaults": {
+                    "dark": "#1763D6CC",
+                    "light": "#174D9FCC",
+                    "highContrast": "#3794FFFF",
+                    "highContrastLight": "#174D9FCC"
+                }
+            }
+        ],
         "configuration": {
             "title": "deltabox toolchain",
             "properties": {
@@ -634,6 +646,11 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Generate Docker artifacts when scaffolding a new project (also prompted per create). Disabled by default."
+                },
+                "deltabox.toolchain.decorateManagedFiles": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show a `dbx` badge and the `deltabox.managedFileForeground` color on files recorded in the project manifests."
                 },
                 "deltabox.toolchain.enableFormatImportGroupDefaults": {
                     "type": "boolean",

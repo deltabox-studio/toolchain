@@ -72,6 +72,21 @@ actions, scoped to that project:
   including the config.
 - **Go to project** — reveal the project in the Explorer.
 
+## File Explorer decorations and project reveal
+
+Every file recorded in a project's `.dbx/toolchain/manifest.json` gets a `dbx`
+badge and the contributed blue label color in the File Explorer. The decoration
+refreshes after a sync (and from **Refresh files**), and can be turned off with
+`deltabox.toolchain.decorateManagedFiles`. VS Code has no contribution point
+that overrides a single file's icon inside the active file icon theme, so the
+badge plus label color is the supported marker; changing the icon itself would
+require switching the whole workbench icon theme.
+
+Switching the active editor selects the deepest project that owns the file in
+the **Projects** view and expands its workspace group. Files outside every
+project are ignored, the reveal never takes focus, and the listener is disposed
+with the extension.
+
 ## Providers, templates and Vite+ in the editor
 
 The **Providers** and **Templates** views read `dbx providers --json` and `dbx template:list --json`, so adding one surfaces it in the UI automatically.
@@ -205,6 +220,7 @@ Each item names the config key to opt out with, and opens the existing file.
 | `deltabox.toolchain.command`                         | `sync`          | The command to run on change.                                                                              |
 | `deltabox.toolchain.manageConfigless`                | `false`         | Manage projects without their own `dbx.config.*` (passes `--configless` to sync/watch).                    |
 | `deltabox.toolchain.enableFormatImportGroupDefaults` | `true`          | Add the resolved workspace `sortImports` custom group when syncing; set `false` to manage groups yourself. |
+| `deltabox.toolchain.decorateManagedFiles`            | `true`          | Show a `dbx` badge and blue label color on files recorded in the project manifests.                        |
 | `deltabox.toolchain.watch`                           | `[]` (resolved) | Inputs that trigger a sync (empty = resolved from the config).                                             |
 | `deltabox.toolchain.version`                         | `""` (auto)     | Pin the `@deltabox/toolchain` version this workspace runs.                                                 |
 | `deltabox.registrySearchPaths`                       | `[]`            | Template registry search paths (dirs or `http(s)` URLs).                                                   |

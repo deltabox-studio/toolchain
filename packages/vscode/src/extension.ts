@@ -23,8 +23,10 @@ import { createScaffoldCommands } from './commands/scaffold.js';
 import { createSyncCommands } from './commands/sync.js';
 import { createTsconfigCommand } from './commands/tsconfig.js';
 import { createWorkflowCommands } from './commands/workflows.js';
+import { ManagedFileDecorationProvider } from './decorations.js';
 import { type EnabledConfigValue, type EnabledScope, resolveEnabledState } from './enabled.js';
 import { type HomeAction, HomeViewProvider } from './home-view.js';
+import { deepestProjectDir } from './managed-files.js';
 import {
     discoverProjectGroups,
     discoverProjects,
@@ -160,6 +162,10 @@ export function activate(context: vscode.ExtensionContext): void {
     const filesView = vscode.window.createTreeView(FILES_VIEW_ID, {
         treeDataProvider: files,
         showCollapseAll: true,
+    });
+
+    const decorations = new ManagedFileDecorationProvider({
+        enabled: () => config().get<boolean>('decorateManagedFiles', true),
     });
 
     const providers = new ProviderTreeProvider(() => workspaceRoots()[0]);
@@ -300,6 +306,8 @@ export function activate(context: vscode.ExtensionContext): void {
         let removed: RemovedFile[] = [];
         if (result.code === 0) {
             clearFailure(cwd, args);
+            // The manifests changed: redraw the managed-file decorations.
+            decorations.refresh();
             try {
                 const parsed = JSON.parse(result.stdout) as {
                     removedFiles?: RemovedFile[];
@@ -536,11 +544,32 @@ export function activate(context: vscode.ExtensionContext): void {
     const refreshViews = (): void => {
         tree.refresh();
         files.refresh();
+        decorations.refresh();
         home.refresh();
         updateContextKeys();
         void providers.refresh();
         void templates.refresh();
         void registries.refresh();
+    };
+
+    // The last project revealed from the active editor. Resetting it on a tree
+    // refresh makes the next editor switch reveal the (rebuilt) project node
+    // without re-revealing the same node on every keystroke/focus change.
+    let revealedProject: string | undefined;
+
+    /** Reveal the deepest project that owns the active editor's file. */
+    const revealActiveProject = async (editor?: vscode.TextEditor): Promise<void> => {
+        if (!editor || editor.document.uri.scheme !== 'file') return;
+        const dir = deepestProjectDir(editor.document.uri.fsPath, tree.projects());
+        if (!dir || dir === revealedProject) return;
+        const node = tree.findProject(dir);
+        if (!node) return;
+        revealedProject = dir;
+        try {
+            await treeView.reveal(node, { select: true, focus: false, expand: true });
+        } catch {
+            // The view can be disposed or the tree refreshed mid-reveal.
+        }
     };
 
     /**
@@ -882,6 +911,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     break;
                 case 'refreshFiles':
                     await files.refresh();
+                    decorations.refresh();
                     break;
                 case 'addProvider':
                     await addProvider();
@@ -938,6 +968,14 @@ export function activate(context: vscode.ExtensionContext): void {
         actionsView,
         templatesView,
         registriesView,
+        decorations,
+        vscode.window.registerFileDecorationProvider(decorations),
+        tree.onDidChangeTreeData(() => {
+            revealedProject = undefined;
+        }),
+        vscode.window.onDidChangeActiveTextEditor(editor => {
+            void revealActiveProject(editor);
+        }),
         vscode.commands.registerCommand('deltabox.toolchain.sync', syncCommands.syncActive),
         vscode.commands.registerCommand('deltabox.toolchain.syncAll', syncCommands.syncAll),
         vscode.commands.registerCommand(
@@ -959,7 +997,10 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('deltabox.toolchain.selectVersion', () => selectVersion()),
         vscode.commands.registerCommand('deltabox.toolchain.scaffold', scaffold),
         vscode.commands.registerCommand('deltabox.toolchain.refresh', refreshGraph),
-        vscode.commands.registerCommand('deltabox.toolchain.refreshFiles', () => files.refresh()),
+        vscode.commands.registerCommand('deltabox.toolchain.refreshFiles', () => {
+            files.refresh();
+            decorations.refresh();
+        }),
         vscode.commands.registerCommand(
             'deltabox.toolchain.checkProject',
             async (node?: Project) => {
@@ -1141,6 +1182,11 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('deltabox.toolchain.toggle', async () => {
             await setEnabledForScope('workspace', !currentEnabledState().workspaceEnabled);
         }),
+        vscode.workspace.onDidChangeWorkspaceFolders(() => {
+            decorations.refresh();
+            tree.refresh();
+            updateContextKeys();
+        }),
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('deltabox.registrySearchPaths')) {
                 void syncGlobalTemplatePaths().then(() => templates.refresh());
@@ -1152,6 +1198,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 });
             }
             if (!e.affectsConfiguration(SECTION)) return;
+            decorations.refresh();
             void refreshEnabledConfig().then(() => {
                 enabled = getEnabled();
                 void rebuildWatchers();
@@ -1181,6 +1228,7 @@ export function activate(context: vscode.ExtensionContext): void {
     void rebuildWatchers();
     setStatus('idle');
     updateContextKeys();
+    void revealActiveProject(vscode.window.activeTextEditor);
     void providers.refresh();
     void syncGlobalTemplatePaths(true).then(() => templates.refresh());
     void syncGlobalProviderPaths(true).then(() => providers.refresh());
