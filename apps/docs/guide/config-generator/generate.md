@@ -22,7 +22,9 @@ grouped `.generate` methods return the content and only write when you pass `out
 | JSON Schema    | `engine.jsonSchema.generate()` / `engine.jsonSchema.write()` | `generateConfigJsonSchema()` / `generateJsonSchemaFile()` |
 | Metadata JSON  | `engine.configJson.build()`                                  | `buildConfigJson()`                                       |
 | CLI options    | `engine.cli.generate()` / `engine.cli.write()`               | `generateCliOptions()`                                    |
-| CLI docs       | —                                                            | `generateCliDocs()`                                       |
+| CLI docs       | `engine.markdown.cli.generate()` / `.write()`                | `generateCliDocs()`                                       |
+| Env docs       | `engine.markdown.env.generate()` / `.write()`                | `generateEnvMarkdown()`                                   |
+| Markdown page  | `engine.markdown.file.generate()` / `.write()`               | `generateMarkdownFile()`                                  |
 | Formatting     | —                                                            | `formatGenerated()`                                       |
 
 ## Env file — `.env.example`
@@ -153,6 +155,19 @@ const path = await generateJsonSchemaFile(schema, { output: 'config.schema.json'
 
 Both functions are async. `generateConfigJsonSchema` returns the document;
 `generateJsonSchemaFile` writes it and returns the path.
+
+`preserveDefs: true` keeps Zod's document-level `$ref`/`$defs` graph instead of
+inlining every scope (the `$defs` tables are hoisted to the document root).
+`scopeDescriptions` adds a description to a generated scope property, and
+`additionalProperties` sets the root constraint:
+
+```ts
+const doc = await engine.jsonSchema.generate({
+    preserveDefs: true,
+    additionalProperties: false,
+    scopeDescriptions: { server: 'Server settings.' },
+});
+```
 
 ## Config metadata JSON
 
