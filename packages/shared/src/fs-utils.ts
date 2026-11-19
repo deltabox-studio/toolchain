@@ -6,12 +6,27 @@ import { deepMerge, isPlainObject, isUnsafeKey } from './object-utils.js';
 /** VS Code arrays that are additive rather than replaced. */
 const UNION_ARRAY_KEYS = new Set(['recommendations', 'extensions']);
 
+/**
+ * Read text, normalizing the BOMs editors and PowerShell commonly write:
+ * UTF-8 (`EF BB BF`) is stripped, UTF-16LE/BE are decoded.
+ */
+function readText(file: string): string {
+    const buffer = fs.readFileSync(file);
+    if (buffer.length >= 2 && buffer[0] === 0xff && buffer[1] === 0xfe) {
+        return buffer.subarray(2).toString('utf16le');
+    }
+    if (buffer.length >= 2 && buffer[0] === 0xfe && buffer[1] === 0xff) {
+        const swapped = Buffer.from(buffer.subarray(2));
+        swapped.swap16();
+        return swapped.toString('utf16le');
+    }
+    return buffer.toString('utf-8').replace(/^\uFEFF/, '');
+}
+
 /** Read + parse a JSON file, returning `undefined` when it is missing/invalid. */
 export function readJsonFile<T = Record<string, unknown>>(file: string): T | undefined {
     try {
-        // Strip a UTF-8 BOM: editors/PowerShell often write one, and JSON.parse
-        // rejects it.
-        return JSON.parse(fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, '')) as T;
+        return JSON.parse(readText(file)) as T;
     } catch {
         return undefined;
     }
@@ -59,7 +74,25 @@ function stripJsonc(text: string): string {
         }
         if (char === ',') {
             let next = index + 1;
-            while (next < text.length && /\s/.test(text[next]!)) next += 1;
+            // Look past whitespace *and* comments: `1, // note\n}` is a
+            // trailing comma once the comment is stripped.
+            for (;;) {
+                while (next < text.length && /\s/.test(text[next]!)) next += 1;
+                if (text[next] === '/' && text[next + 1] === '/') {
+                    next += 2;
+                    while (next < text.length && text[next] !== '\n') next += 1;
+                    continue;
+                }
+                if (text[next] === '/' && text[next + 1] === '*') {
+                    next += 2;
+                    while (next < text.length && !(text[next] === '*' && text[next + 1] === '/')) {
+                        next += 1;
+                    }
+                    next += 2;
+                    continue;
+                }
+                break;
+            }
             if (text[next] === '}' || text[next] === ']') continue;
         }
         out += char;
@@ -70,7 +103,7 @@ function stripJsonc(text: string): string {
 /** Read + parse a JSONC file (comments and trailing commas allowed). */
 export function readJsoncFile<T = Record<string, unknown>>(file: string): T | undefined {
     try {
-        return JSON.parse(stripJsonc(fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, ''))) as T;
+        return JSON.parse(stripJsonc(readText(file))) as T;
     } catch {
         return undefined;
     }
@@ -107,7 +140,11 @@ export function mergeJsonAt(
     indent = 4
 ): string {
     const file = path.resolve(cwd, relative);
-    const original = fs.existsSync(file) ? fs.readFileSync(file, 'utf-8') : undefined;
+    const raw = fs.existsSync(file) ? fs.readFileSync(file) : undefined;
+    // Keep a UTF-8 BOM when the file had one (the editor-aware insert path
+    // understands it; the full rewrite would otherwise drop it).
+    const utf8Bom = raw !== undefined && raw[0] === 0xef && raw[1] === 0xbb && raw[2] === 0xbf;
+    const original = raw === undefined ? undefined : `${utf8Bom ? '\uFEFF' : ''}${readText(file)}`;
     const existing =
         original === undefined ? {} : readJsoncAt<Record<string, unknown>>(cwd, relative);
     if (existing === undefined || !isPlainObject(existing)) {
@@ -125,7 +162,7 @@ export function mergeJsonAt(
         const edited = insertMissingJsonc(original, existing, patch);
         if (edited !== undefined) return edited;
     }
-    return toJson(merged, indent);
+    return `${utf8Bom ? '\uFEFF' : ''}${toJson(merged, indent)}`;
 }
 
 function mergeWithArrays(
@@ -339,30 +376,27 @@ export function insertMissingJsonc(
     patch: Record<string, unknown>,
     options: { ignoreExisting?: boolean } = {}
 ): string | undefined {
+    // The parser is position-based: keep a leading BOM out of its way and put
+    // it back on the result (readers strip it, but writers may have kept it).
+    const bom = original.startsWith('\uFEFF') ? '\uFEFF' : '';
+    const text = bom ? original.slice(1) : original;
     let root: JsoncNode;
     try {
-        root = parseJsoncValue(original, 0);
+        root = parseJsoncValue(text, 0);
     } catch {
         return undefined;
     }
     if (root.type !== 'object') return undefined;
     const edits: { at: number; text: string }[] = [];
     if (
-        !collectJsoncAdditions(
-            original,
-            root,
-            existing,
-            patch,
-            edits,
-            options.ignoreExisting ?? false
-        )
+        !collectJsoncAdditions(text, root, existing, patch, edits, options.ignoreExisting ?? false)
     ) {
         return undefined;
     }
     if (edits.length === 0) return original;
     // Apply from the end so earlier offsets stay valid.
     edits.sort((a, b) => b.at - a.at);
-    let out = original;
+    let out = text;
     for (const edit of edits) out = out.slice(0, edit.at) + edit.text + out.slice(edit.at);
-    return out;
+    return bom + out;
 }

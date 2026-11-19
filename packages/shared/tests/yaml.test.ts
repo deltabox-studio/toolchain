@@ -71,6 +71,24 @@ describe('toYaml escaping edge cases', () => {
         expect(toYaml({ script: ['echo done:'] })).toContain('script: ["echo done:"]');
     });
 
+    it('quotes flow indicators inside inline arrays', () => {
+        expect(toYaml({ paths: ['src/**/*.{ts,tsx}'] })).toContain('paths: ["src/**/*.{ts,tsx}"]');
+        expect(toYaml({ labels: ['deps,js', 'backend'] })).toContain(
+            'labels: ["deps,js", backend]'
+        );
+        expect(toYaml({ a: ['x]y', 'z{w'] })).toContain('a: ["x]y", "z{w"]');
+    });
+
+    it('uses an indentation indicator for indented or blank first lines', () => {
+        expect(toYaml({ run: '  a\nb' })).toContain('run: |2-');
+        expect(toYaml({ a: '\n   \nx' })).toContain('a: |2-');
+    });
+
+    it('keeps extra trailing newlines with + chomping', () => {
+        expect(toYaml({ a: 'x\n\n\n' })).toContain('a: |+');
+        expect(toYaml({ a: '\n' })).toContain('a: |2+');
+    });
+
     it('quotes non-decimal numbers and date-like strings', () => {
         const yaml = toYaml({ a: '0x10', b: '0b101', c: '0o17', d: '2020-01-01', e: '.inf' });
         expect(yaml).toContain('a: "0x10"');

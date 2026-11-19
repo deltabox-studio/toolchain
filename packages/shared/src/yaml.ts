@@ -17,11 +17,14 @@ function isMap(value: unknown): value is Record<string & {}, YamlValue> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function quotable(s: string): boolean {
+function quotable(s: string, flow = false): boolean {
     if (s === '') return true;
     if (BOOLEAN_LIKE.test(s) || NUMBER_LIKE.test(s) || DATE_LIKE.test(s)) return true;
     if (s.endsWith(':')) return true;
     if (/^[\s\-?:,[\]{}#&*!|>%@`"']/.test(s)) return true;
+    // Inside a flow sequence (`[a, b]`) flow indicators are structural wherever
+    // they appear, not only at the start.
+    if (flow && /[,[\]{}]/.test(s)) return true;
     if (/\s$/.test(s)) return true;
     if (s.includes(': ') || s.includes(' #') || s.includes('\t')) return true;
     if (s.includes('${{')) return true;
@@ -37,11 +40,11 @@ function escapeQuoted(value: string): string {
         .replace(/\n/g, '\\n');
 }
 
-function scalar(value: string | number | boolean | null): string {
+function scalar(value: string | number | boolean | null, flow = false): string {
     if (value === null) return 'null';
     if (typeof value === 'boolean') return value ? 'true' : 'false';
     if (typeof value === 'number') return String(value);
-    if (quotable(value)) return `"${escapeQuoted(value)}"`;
+    if (quotable(value, flow)) return `"${escapeQuoted(value)}"`;
     return value;
 }
 
@@ -93,11 +96,20 @@ function emitArray(values: YamlValue[], indent: number): string[] {
 }
 
 function emitStringBlock(value: string, indent: number, pad: string, key: string): string[] {
-    const trailingNewline = value.endsWith('\n');
-    const body = trailingNewline ? value.slice(0, -1) : value;
-    const lines = [`${pad}${key}: ${trailingNewline ? '|' : '|-'}`];
-    for (const line of body.split('\n'))
-        lines.push(line === '' ? '' : `${' '.repeat(indent + 2)}${line}`);
+    const trailing = (value.match(/\n+$/) ?? [''])[0].length;
+    const body = trailing > 0 ? value.slice(0, -trailing) : value;
+    const content = body.split('\n');
+    // YAML infers block indentation from the first non-empty line. An explicit
+    // indicator keeps the document valid when that line is blank or indented.
+    const firstNonEmpty = content.find(line => line.trim() !== '');
+    const firstIndent = firstNonEmpty?.match(/^ */)?.[0].length ?? 0;
+    const indicator = content[0] === '' || firstIndent > 0 ? '2' : '';
+    // `|` clips to one trailing newline; `|+` keeps the extra ones.
+    const keep = trailing > 1 || (trailing === 1 && body === '') ? '+' : trailing === 0 ? '-' : '';
+    const lines = [`${pad}${key}: |${indicator}${keep}`];
+    for (const line of content) lines.push(line === '' ? '' : `${' '.repeat(indent + 2)}${line}`);
+    // `|+` keeps every trailing line break, so emit the ones stripped above.
+    for (let index = 1; index < trailing; index += 1) lines.push('');
     return lines;
 }
 
@@ -115,7 +127,9 @@ function emitMap(map: Record<string, YamlValue>, indent: number): string[] {
             if (value.length === 0) {
                 lines.push(`${pad}${key}: []`);
             } else if (value.every(isScalar) && inlineArrayLength(value) <= 60) {
-                lines.push(`${pad}${key}: [${value.map(v => scalar(scalarOf(v))).join(', ')}]`);
+                lines.push(
+                    `${pad}${key}: [${value.map(v => scalar(scalarOf(v), true)).join(', ')}]`
+                );
             } else {
                 lines.push(`${pad}${key}:`);
                 lines.push(...emitArray(value, indent + 2));

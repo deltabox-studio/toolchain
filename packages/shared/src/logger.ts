@@ -108,6 +108,33 @@ export function stripAnsi(text: string): string {
 /** A clack `log.*` renderer. */
 type ClackLog = (message: string, opts?: LogMessageOptions) => void;
 
+/**
+ * Hooks run around every built-in log write. The spinner registers a pause/
+ * resume pair here so its animation is cleared before a log line is printed and
+ * restored afterwards instead of being overwritten by it.
+ */
+export interface LogWriteHooks {
+    before?(): void;
+    after?(): void;
+}
+
+let writeHooks: LogWriteHooks | undefined;
+
+/** Register (or clear) the hooks that bracket every log write. */
+export function setLogWriteHooks(hooks?: LogWriteHooks): void {
+    writeHooks = hooks;
+}
+
+/** Run a write with the active spinner paused/resumed around it. */
+function withWriteHooks(write: () => void): void {
+    writeHooks?.before?.();
+    try {
+        write();
+    } finally {
+        writeHooks?.after?.();
+    }
+}
+
 /** Normalize the suppression option into an array. */
 function suppressionList(value: LoggerOptions['suppress']): LogSuppression[] {
     if (value === undefined) return [];
@@ -132,7 +159,14 @@ function suppressionMatches(
     message: string,
     id: string | undefined
 ): boolean {
-    if (rule instanceof RegExp) return rule.test(message) || (id ? rule.test(id) : false);
+    if (rule instanceof RegExp) {
+        // A stateful `g`/`y` regex would alternate matches between calls.
+        rule.lastIndex = 0;
+        if (rule.test(message)) return true;
+        if (!id) return false;
+        rule.lastIndex = 0;
+        return rule.test(id);
+    }
     const regex = slashRegex(rule);
     if (regex) return regex.test(message) || (id ? regex.test(id) : false);
     const needle = rule.toLowerCase();
@@ -172,26 +206,26 @@ export function createLogger(options: LoggerOptions = {}): Logger {
         return {
             level,
             colors,
-            raw: (message = '') => custom.raw(message),
-            rawError: (message = '') => custom.rawError(message),
-            write: (channel, text) => custom.write(channel, text),
+            raw: (message = '') => withWriteHooks(() => custom.raw(message)),
+            rawError: (message = '') => withWriteHooks(() => custom.rawError(message)),
+            write: (channel, text) => withWriteHooks(() => custom.write(channel, text)),
             debug: (message = '') => {
-                if (threshold <= LEVELS.debug) custom.debug(message);
+                if (threshold <= LEVELS.debug) withWriteHooks(() => custom.debug(message));
             },
             info: (message = '') => {
-                if (threshold <= LEVELS.info) custom.info(message);
+                if (threshold <= LEVELS.info) withWriteHooks(() => custom.info(message));
             },
             success: (message = '') => {
-                if (threshold <= LEVELS.info) custom.success(message);
+                if (threshold <= LEVELS.info) withWriteHooks(() => custom.success(message));
             },
             warn: (message = '', id?: string) => {
                 if (threshold <= LEVELS.warn && !isSuppressed(message, id)) {
-                    custom.warn(message, id);
+                    withWriteHooks(() => custom.warn(message, id));
                 }
             },
             error: (message = '', id?: string) => {
                 if (threshold <= LEVELS.error && !isSuppressed(message, id)) {
-                    custom.error(message, id);
+                    withWriteHooks(() => custom.error(message, id));
                 }
             },
         };
@@ -200,33 +234,42 @@ export function createLogger(options: LoggerOptions = {}): Logger {
     return {
         level,
         colors,
-        raw: (message = '') => {
-            process.stdout.write(`${message}\n`);
-        },
-        rawError: (message = '') => {
-            process.stderr.write(`${message}\n`);
-        },
-        write: (channel, text) => {
-            if (channel === 'err') process.stderr.write(text);
-            else process.stdout.write(text);
-        },
+        raw: (message = '') =>
+            withWriteHooks(() => {
+                process.stdout.write(`${message}\n`);
+            }),
+        rawError: (message = '') =>
+            withWriteHooks(() => {
+                process.stderr.write(`${message}\n`);
+            }),
+        write: (channel, text) =>
+            withWriteHooks(() => {
+                if (channel === 'err') process.stderr.write(text);
+                else process.stdout.write(text);
+            }),
         debug: (message = '') => {
-            if (threshold <= LEVELS.debug) render(clackLog.message, message);
+            if (threshold <= LEVELS.debug) {
+                withWriteHooks(() => render(clackLog.message, message));
+            }
         },
         info: (message = '') => {
-            if (threshold <= LEVELS.info) render(clackLog.info, message);
+            if (threshold <= LEVELS.info) {
+                withWriteHooks(() => render(clackLog.info, message));
+            }
         },
         success: (message = '') => {
-            if (threshold <= LEVELS.info) render(clackLog.success, message);
+            if (threshold <= LEVELS.info) {
+                withWriteHooks(() => render(clackLog.success, message));
+            }
         },
         warn: (message = '', id?: string) => {
             if (threshold <= LEVELS.warn && !isSuppressed(message, id)) {
-                render(clackLog.warn, withId(message, id), process.stderr);
+                withWriteHooks(() => render(clackLog.warn, withId(message, id), process.stderr));
             }
         },
         error: (message = '', id?: string) => {
             if (threshold <= LEVELS.error && !isSuppressed(message, id)) {
-                render(clackLog.error, withId(message, id), process.stderr);
+                withWriteHooks(() => render(clackLog.error, withId(message, id), process.stderr));
             }
         },
     };
@@ -247,6 +290,7 @@ let configOptions: LoggerOptions = {};
 let overrideOptions: LoggerOptions = {};
 
 function pick(options: LoggerConfig | boolean | undefined): LoggerOptions {
+    if (options === false) return { level: 'silent' };
     if (!options || typeof options !== 'object') return {};
     if (options.enabled === false) return { level: 'silent' };
     return {
@@ -258,11 +302,18 @@ function pick(options: LoggerConfig | boolean | undefined): LoggerOptions {
     };
 }
 
+/** The environment before dbx first forced a colour (restored on reset). */
+let colorEnvSnapshot: { NO_COLOR?: string; FORCE_COLOR?: string } | undefined;
+
 /**
  * Apply the resolved colour to the environment so clack (Node's `util.styleText`)
  * honours it: `FORCE_COLOR` when on, `NO_COLOR` when off.
  */
 function applyColorEnv(color: boolean): void {
+    colorEnvSnapshot ??= {
+        ...(process.env.NO_COLOR !== undefined ? { NO_COLOR: process.env.NO_COLOR } : {}),
+        ...(process.env.FORCE_COLOR !== undefined ? { FORCE_COLOR: process.env.FORCE_COLOR } : {}),
+    };
     if (color) {
         delete process.env.NO_COLOR;
         process.env.FORCE_COLOR = '1';
@@ -272,19 +323,33 @@ function applyColorEnv(color: boolean): void {
     }
 }
 
+/** Undo a forced colour (config reset): `NO_COLOR`/`FORCE_COLOR` go back to the caller's values. */
+function restoreColorEnv(): void {
+    if (!colorEnvSnapshot) return;
+    for (const key of ['NO_COLOR', 'FORCE_COLOR'] as const) {
+        const value = colorEnvSnapshot[key];
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+    }
+    colorEnvSnapshot = undefined;
+}
+
 /**
- * Rebuild the active logger. `applyColor` is `false` for the initial (module
- * load) instance so merely importing the logger never mutates the host's colour
- * environment — only an explicit configuration (the CLI, or `configureLogger`)
- * does, and that defaults colour to on.
+ * Rebuild the active logger. Importing the logger never mutates the host's
+ * colour environment, and neither does an ordinary config load: only an
+ * explicit `color` setting (the CLI, a config section, or `configureLogger`)
+ * writes `FORCE_COLOR`/`NO_COLOR`, so `NO_COLOR` from the environment survives
+ * and keeps suppressing spinners and colour.
  */
-function build(applyColor = true): Logger {
+function build(): Logger {
     const options: LoggerOptions = { name: DEFAULT_NAME, ...configOptions, ...overrideOptions };
-    if (applyColor && options.color === undefined) options.color = true;
+    // Dropping an explicit colour setting must restore the caller's environment
+    // (an external `NO_COLOR` was snapshotted, not deleted for good).
+    if (typeof options.color !== 'boolean') restoreColorEnv();
     return createLogger(options);
 }
 
-let active = build(false);
+let active = build();
 
 /** Apply the `logger` section from the loaded `dbx.config.*`. */
 export function setLogConfig(options: LoggerConfig | boolean | undefined): void {
