@@ -1,8 +1,28 @@
 # Changelog
 
-## 3.0.0-beta.8 (November 2026)
+## 3.0.0-beta.9 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Documentation</summary>
+
+- Refresh the generated llms bundle ([#e3beaac](https://github.com/deltabox-studio/toolchain/commit/e3beaac) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Chores</summary>
+
+#### Ci
+- Bump setup-vp to v1.22.0 ([#9c32cae](https://github.com/deltabox-studio/toolchain/commit/9c32cae) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.8 (November 2026)
 
 <details>
 <summary>Chores</summary>
@@ -295,9 +315,6 @@
 - `@deltabox/toolchain-docs`
   - `vitepress-plugin-group-icons` `^1.8.1` → `^1.8.2`
   - `vitepress-plugin-llms` `^1.14.0` → `^1.15.0`
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.7 (November 2026)
 
