@@ -2857,7 +2857,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/vscode@npm:^1.146.0":
+"@types/vscode@npm:^1.85.0":
   version: 1.146.0
   resolution: "@types/vscode@npm:1.146.0"
   checksum: 10c0/b283a6ae158e893bce7f212d4bc59e64b380549bc54f89c8439047ec238a245b89657ea6f2d6bb344a8745321b6199a24f6a310a01beef409976b9a3ba8c793a
@@ -9407,7 +9407,7 @@ __metadata:
     "@deltabox/toolchain-pack": "workspace:*"
     "@types/mocha": "npm:^10.0.10"
     "@types/node": "catalog:"
-    "@types/vscode": "npm:^1.146.0"
+    "@types/vscode": "npm:^1.85.0"
     "@vscode/test-cli": "npm:^0.0.15"
     "@vscode/test-electron": "npm:^3.1.0"
     typescript: "catalog:"
