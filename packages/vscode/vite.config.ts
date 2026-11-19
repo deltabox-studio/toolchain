@@ -2,16 +2,15 @@ import { fileURLToPath } from 'node:url';
 
 import { defineConfig } from 'vite-plus';
 
-import { dbx } from 'vite-plugin-dbx';
-
 import { baseTsdownConfig } from '../pack/src/config/node.js';
 import { workspaceSourceAliases } from '../pack/src/config/workspace.js';
-import { workspaceTasks } from '../../scripts/workspace-vite.js';
+import { resolveDbxPlugin, workspaceTasks } from '../../scripts/workspace-vite.js';
 
 /** Repo root (this config lives in `packages/vscode/`). */
 const root = fileURLToPath(new URL('../..', import.meta.url));
 /** Resolve a repo-relative path to an absolute one. */
 const src = (file: string): string => fileURLToPath(new URL(`../../${file}`, import.meta.url));
+const dbx = resolveDbxPlugin();
 
 /**
  * Two packages are produced here:
@@ -27,7 +26,7 @@ const src = (file: string): string => fileURLToPath(new URL(`../../${file}`, imp
  * `vp pack` builds both; `-F extension` / `-F dbx` selects one.
  */
 export default defineConfig({
-    plugins: [dbx({ toolchain: { fmt: true, lint: true } })],
+    plugins: dbx ? [dbx({ toolchain: { fmt: true, lint: true } })] : [],
     resolve: { tsconfigPaths: true },
     pack: [
         {

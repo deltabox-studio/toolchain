@@ -1,7 +1,7 @@
+import { createRequire } from 'node:module';
+
 import type { ViteUserConfig } from 'vite-plus';
 import type { PackUserConfig } from 'vite-plus/pack';
-
-import { dbx } from 'vite-plugin-dbx';
 
 import { baseTsdownConfig } from '../packages/pack/src/config/node.js';
 import { workspacePackageAliases } from '../packages/pack/src/config/workspace.js';
@@ -11,6 +11,25 @@ export const ALL_WORKSPACES = [/^@deltabox\/toolchain[-\/]/];
 export const SHARED_ONLY = [/^@deltabox\/toolchain[-\/]shared/];
 
 type WorkspaceTasks = NonNullable<NonNullable<ViteUserConfig['run']>['tasks']>;
+
+const require = createRequire(import.meta.url);
+
+/**
+ * Load the `dbx()` dogfood plugin lazily.
+ *
+ * The workspace package resolves through its `exports` field (`dist/index.js`),
+ * which does not exist yet on a clean checkout: `vp run` loads every package
+ * config before building anything. Config loading must not fail at that point.
+ * The explicit `pack`/`run` options below keep the build deterministic when the
+ * plugin is unavailable; once the package is built, the plugin is used again.
+ */
+export function resolveDbxPlugin(): typeof import('vite-plugin-dbx').dbx | undefined {
+    try {
+        return (require('vite-plugin-dbx') as typeof import('vite-plugin-dbx')).dbx;
+    } catch {
+        return undefined;
+    }
+}
 
 /** The standard workspace task set (build goes through `vp pack`). */
 export function workspaceTasks(): WorkspaceTasks {
@@ -54,16 +73,19 @@ export interface WorkspaceViteOptions {
 /**
  * A workspace's hand-written plugin-mode `vite.config.ts`.
  *
- * Each package dogfoods the `dbx()` plugin (instead of a generated shim) so the
- * pack config can keep using the shared `baseTsdownConfig` / alias helpers —
- * functions and regexes that a generated static config cannot serialize. The
+ * Each package dogfoods the `dbx()` plugin once the workspace package has been
+ * built, so the pack config can keep using the shared `baseTsdownConfig` / alias
+ * helpers — functions and regexes that a generated static config cannot
+ * serialize. On a clean checkout the plugin cannot resolve until the first
+ * build, so config loading falls back to the explicit `pack`/`run` options. The
  * plugin also derives the root `fmt`/`lint` sections, and the package opts into
  * both through its `dbx.config.ts`.
  */
 export function workspaceViteConfig(options: WorkspaceViteOptions): ViteUserConfig {
     const { entry, alwaysBundle = SHARED_ONLY, exports: exportsOption } = options;
+    const dbx = resolveDbxPlugin();
     return {
-        plugins: [dbx({ toolchain: { fmt: true, lint: true } })],
+        plugins: dbx ? [dbx({ toolchain: { fmt: true, lint: true } })] : [],
         resolve: { tsconfigPaths: true },
         pack: {
             ...baseTsdownConfig,
