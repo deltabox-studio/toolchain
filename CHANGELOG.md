@@ -1,8 +1,21 @@
 # Changelog
 
-## 3.0.0-beta.0 (November 2026)
+## 3.0.0-beta.1 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Vite
+- Load build configs on a clean checkout ([#22812b8](https://github.com/deltabox-studio/toolchain/commit/22812b8) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.0 (November 2026)
 
 <details>
 <summary><strong>BREAKING CHANGES</strong></summary>
@@ -485,9 +498,6 @@
   - `tsdown` `catalog:`
   - `vite` `catalog:`
   - `vitest` `catalog:`
-
-<!-- release:end -->
-
 
 ## 2.6.1 (November 2026)
 
