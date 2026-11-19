@@ -1226,6 +1226,51 @@ Maximum open update PRs per entry.
 
 Dependabot update groups, keyed by group name.
 
+#### `security`
+
+- **Type**: `boolean | ToolchainDependabotSecurityConfig`
+
+Security updates: enable Dependabot security updates, group vulnerability PRs and apply a severity threshold. Requires a repository admin token for the generated workflow.
+
+##### `enabled`
+
+- **Type**: `boolean`
+
+Enable or disable the security-update automation.
+
+##### `vulnerabilities`
+
+- **Type**: `boolean | object`
+
+Open PRs for vulnerable dependencies. Enabled by default when `security` is set; set false to disable Dependabot security updates.
+
+###### `severity`
+
+- **Type**: `'low' | 'moderate' | 'medium' | 'high' | 'critical' | 'all' | Array<'low' | 'moderate' | 'medium' | 'high' | 'critical' | 'all'>`
+- **Default**: `"all"`
+
+Only keep vulnerability PRs at or above this severity (or exactly the listed severities). `all` keeps every alert. `moderate` is accepted as an alias for GitHub's `medium`.
+
+##### `pr`
+
+- **Type**: `object`
+
+Pull-request strategy for security updates.
+
+###### `strategy`
+
+- **Type**: `'grouped' | 'individual'`
+- **Default**: `"grouped"`
+
+Group security updates into one PR per ecosystem (default) or one PR per update.
+
+##### `workflow`
+
+- **Type**: `boolean`
+- **Default**: `true`
+
+Generate the workflow that enables Dependabot security updates and applies the severity threshold. Default true.
+
 #### `allow`
 
 - **Type**: `Array<object> | Record<string, Array<object>>`

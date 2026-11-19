@@ -142,6 +142,10 @@ hand-written object.
 | Toolchain  | `sync.yml`       | [Sync](/guide/ci/sync)                    |
 | Dependabot | `dependabot.yml` | [Dependabot](/guide/ci/dependabot)        |
 
+`ci.dependabot.security` additionally writes
+`.github/workflows/dependabot-security.yml` to enable GitHub's native security
+updates and apply a severity threshold.
+
 Extra workflows can be defined under `toolchain.ci.custom.<id>` (for example
 `ci.custom.deploy` writes `.github/workflows/deploy.yml`, or the vendor default
 when it sets `provider`). Each accepts the same workflow forms, plus `filename`
