@@ -327,7 +327,7 @@ Scaffold a single-package TypeScript project.
 * `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
 * `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
 * `--containerize` — Also generate Docker artifacts (Dockerfile + .dockerignore).
-* `--no-config` — Skip the dbx.config.ts file.
+* `--no-project-config` — Skip the generated vite.config.ts file (the project config).
 * `--type ‹type›` — Project type: project | monorepo-root | monorepo-workspace.
 * `--force` — Overwrite existing files in the output directory.
 
@@ -341,7 +341,7 @@ Scaffold a monorepo root (add --example for one example workspace).
 * `--example` — Also scaffold one example workspace package.
 * `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
 * `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
-* `--no-config` — Skip the dbx.config.ts file.
+* `--no-project-config` — Skip the generated vite.config.ts file (the project config).
 * `--type ‹type›` — Project type: project | monorepo-root | monorepo-workspace.
 * `--force` — Overwrite existing files in the output directory.
 
@@ -355,7 +355,7 @@ Scaffold a monorepo workspace package into an existing monorepo root.
 * `-d, --dir ‹dir›` — Workspace dir relative to the root (default: packages/\<name>).
 * `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
 * `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
-* `--no-config` — Skip the dbx.config.ts file.
+* `--no-project-config` — Skip the generated vite.config.ts file (the project config).
 * `--type ‹type›` — Project type: project | monorepo-root | monorepo-workspace.
 * `--force` — Overwrite existing files in the output directory.
 
@@ -720,7 +720,36 @@ The toolchain config is file/CLI backed; a schema leaf opts into an
 environment variable with `.meta({ env: "..." })` (see the
 [Config Generator](/guide/config-generator/describe-a-scope)).
 
-No environment-backed toolchain settings are declared.
+| Variable                            | Scope     | Default | Description                                                                                                                                                                                |
+| ----------------------------------- | --------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DBX_PROJECT_REGENERATE`            | toolchain | —       | Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.                         |
+| `DBX_PROJECT_NAME`                  | toolchain | —       | The unscoped project name (written as `&lt;scope&gt;/&lt;name&gt;`).                                                                                                                       |
+| `DBX_PROJECT_SCOPE`                 | toolchain | —       | The npm scope, eg. `@acme`.                                                                                                                                                                |
+| `DBX_PROJECT_AUTHOR`                | toolchain | —       | Package author (`package.json` `author`).                                                                                                                                                  |
+| `DBX_PROJECT_LICENSE`               | toolchain | —       | SPDX license id (`package.json` `license`).                                                                                                                                                |
+| `DBX_PROJECT_HOMEPAGE`              | toolchain | —       | Project homepage (`package.json` `homepage`).                                                                                                                                              |
+| `DBX_PROJECT_REPO`                  | toolchain | —       | Repository URL (`package.json` `repository`). For a workspace it also resolves to the workspace path (`repository.directory`).                                                             |
+| `DBX_PROJECT_NODEVERSION`           | toolchain | —       | Node version for CI/templates, eg. `22` (not `package.json` `engines`).                                                                                                                    |
+| `DBX_PROJECT_PACKAGEMANAGER`        | toolchain | `yarn`  | Package manager name, written as `&lt;name&gt;@&lt;version&gt;`.                                                                                                                           |
+| `DBX_PROJECT_PACKAGEMANAGERVERSION` | toolchain | —       | Package manager version, eg. `4.17.1`.                                                                                                                                                     |
+| `DBX_PROJECT_DESCRIPTION`           | toolchain | —       | One-line description (`package.json` `description`).                                                                                                                                       |
+| `DBX_PROJECT_INHERIT`               | toolchain | `true`  | Inherit the parent project metadata. Set false to keep this project metadata independent of the root config (other sections still merge normally).                                         |
+| `DBX_PROJECT_MANAGECONFIGLESS`      | toolchain | `false` | Manage projects that have no dbx.config.\* of their own by inheriting the nearest ancestor config. Disabled by default so configless projects are never touched unless explicitly opted in. |
+| `DBX_CI`                            | toolchain | `{}`    | GitHub Actions workflows to generate (CI, release, issues, changelog, sync).                                                                                                               |
+| `DBX_CHANGELOG`                     | toolchain | `{}`    | Manual changelog pipeline options for `dbx changelog`, the VS Code actions and the API. `ci.changelog` inherits these options.                                                             |
+| `DBX_FMT`                           | toolchain | `{}`    | Formatter configuration: Oxc/Biome options, editor defaults and tools.                                                                                                                     |
+| `DBX_LINT`                          | toolchain | `{}`    | Linter configuration: Oxc/Biome/ESLint options and editor defaults.                                                                                                                        |
+| `DBX_BIOME`                         | toolchain | `{}`    | Biome config generation (for consumers that still want a `biome.json`).                                                                                                                    |
+| `DBX_TSCONFIG`                      | toolchain | `{}`    | Workspace tsconfig generation (path aliases + project references).                                                                                                                         |
+| `DBX_LOADER`                        | toolchain | `{}`    | How `dbx.config.*` files are imported (tsconfig discovery).                                                                                                                                |
+| `DBX_TEMPLATES`                     | toolchain | `{}`    | Template sources / scaffolding.                                                                                                                                                            |
+| `DBX_REGISTRY`                      | toolchain | `{}`    | Allow/deny host and path globs for template/provider registries.                                                                                                                           |
+| `DBX_CATALOGS`                      | toolchain | `{}`    | Package catalogs written to the package manager catalog file (`catalog:`).                                                                                                                 |
+| `DBX_VITE`                          | toolchain | `{}`    | The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.                                                                                                                |
+| `DBX_WATCH`                         | toolchain | `{}`    | Watch behaviour for `dbx watch`.                                                                                                                                                           |
+| `DBX_SYNC`                          | toolchain | `{}`    | `dbx sync` behaviour (formatting of the generated managed files).                                                                                                                          |
+| `DBX_LOGGER`                        | toolchain | `{}`    | Logging level, colours and prefix for toolchain output.                                                                                                                                    |
+| `DBX_PROVIDERS`                     | toolchain | `{}`    | Provider command behaviour (eg. colour for the passthrough commands).                                                                                                                      |
 
 ---
 
@@ -11254,54 +11283,54 @@ url: https://toolchain.deltabox.studio/CHANGELOG.md
 
 ## 2.6.1 (November 2026)
 
-### Bug fixes
-
 #### Changelog
 
 * Scope package changes by package name ([#0ee9b9e](https://github.com/deltabox-studio/toolchain/commit/0ee9b9e) by [T0chi](https://github.com/T0chi))
+
   * key dependency changes by the declaring package.json name so workspace-specific pins (eg. the docs site's Vite 5) are reported under that workspace
-  * scope the catalog to the root package name; keep workspace catalog: refs unresolved so a catalog bump is reported once
-  * add regression tests and regenerate every CHANGELOG.md with the scoped footer
+    * scope the catalog to the root package name; keep workspace catalog: refs unresolved so a catalog bump is reported once
+    * add regression tests and regenerate every CHANGELOG.md with the scoped footer
 
 ## 2.6.0 (November 2026)
 
-### New features
-
 * Route fmt/lint to the active tool and opt scaffolds into catalogs ([#76df575](https://github.com/deltabox-studio/toolchain/commit/76df575) by [T0chi](https://github.com/T0chi))
+
   * dbx fmt/lint resolve the configured/discovered formatter or linter (oxc > biome > prettier > dprint; oxc > biome > eslint) and run it, falling back to the vp/Oxc passthrough
-  * project:init/create scaffolds add the catalogs section for the catalog file they write, so dbx sync owns it instead of leaving the managed file orphaned
-  * document the active-tool routing and add the dedicated package catalogs guide
+    * project:init/create scaffolds add the catalogs section for the catalog file they write, so dbx sync owns it instead of leaving the managed file orphaned
+    * document the active-tool routing and add the dedicated package catalogs guide
 
 ## 2.5.0 (November 2026)
-
-### New features
 
 #### Config
 
 * Add a reusable CLI docs generator ([#900566a](https://github.com/deltabox-studio/toolchain/commit/900566a) by [T0chi](https://github.com/T0chi))
+
   * add generateCliDocs(commands, options?) for custom command descriptors
-  * use it to render the dbx CLI reference
-  * document generating docs for a consumer's own command list
-  * cover hidden/duplicate commands, args/options and custom prefix/title
+    * use it to render the dbx CLI reference
+    * document generating docs for a consumer's own command list
+    * cover hidden/duplicate commands, args/options and custom prefix/title
+
 * Add self-contained vendor types and `tsconfig` auto/`rewriteAlias` schemas ([#31c47a9](https://github.com/deltabox-studio/toolchain/commit/31c47a9) by [T0chi](https://github.com/T0chi))
 
 #### Changelog
 
 * Inject provider setup into custom and vendor workflows ([#b6b240f](https://github.com/deltabox-studio/toolchain/commit/b6b240f) by [T0chi](https://github.com/T0chi))
+
   * add an opt-in setup flag to custom workflow options and vendor settings
-  * GitHub injects the missing checkout/Node/Corepack/install steps
-  * GitLab adds a Node image + before_script; Azure adds UseNode@1 + install
-  * avoid duplicating setup steps the workflow already defines
-  * resolve vendor workflow tokens from the default token set
+    * GitHub injects the missing checkout/Node/Corepack/install steps
+    * GitLab adds a Node image + before_script; Azure adds UseNode@1 + install
+    * avoid duplicating setup steps the workflow already defines
+    * resolve vendor workflow tokens from the default token set
 
 #### Biome
 
 * Add array removal directives and resolve toolchain debt ([#da100c8](https://github.com/deltabox-studio/toolchain/commit/da100c8) by [T0chi](https://github.com/T0chi))
+
   * add $remove: / $reset array directives with a resolver step for biome.json
-  * fix peer warnings (declare vite, filter the stale VitePress plugin peer)
-  * replace the RULE_MAP cast with an Object.hasOwn guard
-  * add a direct extension env-propagation test
-  * drop the 30s real-git changelog timeout
+    * fix peer warnings (declare vite, filter the stale VitePress plugin peer)
+    * replace the RULE_MAP cast with an Object.hasOwn guard
+    * add a direct extension env-propagation test
+    * drop the 30s real-git changelog timeout
 
 #### Cli
 
@@ -11315,71 +11344,73 @@ url: https://toolchain.deltabox.studio/CHANGELOG.md
 
 * Auto-wire aliases/references with `rewriteAlias` and gating ([#124f4b5](https://github.com/deltabox-studio/toolchain/commit/124f4b5) by [T0chi](https://github.com/T0chi))
 
-### Bug fixes
-
 #### Cli
 
 * Sync and watch configless projects with the inherited config ([#346060d](https://github.com/deltabox-studio/toolchain/commit/346060d) by [T0chi](https://github.com/T0chi))
+
   * The command context did not expose the ancestor config path, so dbx sync/watch in a nested project without its own dbx.config.\* warned and did nothing. Pass parentPath through the context and allow both commands when it is set. The VS Code Sync all compensation now works for configless projects, while sync --recursive stays config-bearing-only and is documented as such.
 
-### Documentation
+- Document watcher scoping and project identity inheritance ([#074bfcd](https://github.com/deltabox-studio/toolchain/commit/074bfcd) by [T0chi](https://github.com/T0chi))
 
-* Document watcher scoping and project identity inheritance ([#074bfcd](https://github.com/deltabox-studio/toolchain/commit/074bfcd) by [T0chi](https://github.com/T0chi))
   * Update the VS Code auto-sync section and the project guide to match the implementation: watchers are root-scoped and sync only the changed root; project name/scope/description/type are never inherited. Regenerate llms-full.txt.
 
 #### Tsconfig
 
 * Note that refsAuto requires tsc --build ([#74a25b2](https://github.com/deltabox-studio/toolchain/commit/74a25b2) by [T0chi](https://github.com/T0chi))
+
   * Project references are only followed by tsc --build; tsc -p --noEmit ignores them. Document the refsAuto requirement and why this repo keeps the references hand-written (refsAuto: false).
 
 #### Config
 
 * Document every generator and generateCliDocs ([#28f812e](https://github.com/deltabox-studio/toolchain/commit/28f812e) by [T0chi](https://github.com/T0chi))
+
   * add engine + standalone examples for each generator
-  * document CLI docs, post-processing and advanced options
-  * cross-link generateCliDocs from the config-generator index and CLI commands
+    * document CLI docs, post-processing and advanced options
+    * cross-link generateCliDocs from the config-generator index and CLI commands
 
 #### Vscode
 
 * Expand the extension guide and README ([#942aa55](https://github.com/deltabox-studio/toolchain/commit/942aa55) by [T0chi](https://github.com/T0chi))
+
   * Restore the updated provider/template sections, settings and auto-sync documentation in both the guide and the extension README.
 
 ## 2.4.0 (November 2026)
 
-### New features
-
 #### Shared
 
 * Improve workflow config autocomplete ([#5babd18](https://github.com/deltabox-studio/toolchain/commit/5babd18) by [T0chi](https://github.com/T0chi))
+
   * Add typed WorkflowTriggers, WorkflowExtra and WorkflowTokens shapes so known workflow keys are suggested, and regenerate the config types, schema and reference.
+
 * Expose formatter and linter ignore defaults ([#5f2c8b1](https://github.com/deltabox-studio/toolchain/commit/5f2c8b1) by [T0chi](https://github.com/T0chi))
+
   * Export DEFAULT_FMT_IGNORE_PATTERNS and DEFAULT_LINT_IGNORE_PATTERNS alongside DEFAULT_IGNORE_PATTERNS, and document how to extend them.
 
 #### Project
 
 * Add config generation options and migration routing ([#c658b0d](https://github.com/deltabox-studio/toolchain/commit/c658b0d) by [T0chi](https://github.com/T0chi))
+
   * Support --skip-config, --language and --config-extension, write the project graph before configs, generate TS/JS configs, and route migrated fmt/lint into toolchain.vite only when the existing Vite config owns them.
 
 #### Vscode
 
 * Add tooling actions and config generation ([#31da418](https://github.com/deltabox-studio/toolchain/commit/31da418) by [T0chi](https://github.com/T0chi))
+
   * Add the format import-group setting, migrate/global Home actions, and config generation prompts (TS/JS, graph-only) that also work from the Command Palette.
 
 #### Core
 
 * Add import sorting defaults and workspace groups ([#1c5f5a3](https://github.com/deltabox-studio/toolchain/commit/1c5f5a3) by [T0chi](https://github.com/T0chi))
-  * Enable sortImports by default, resolve a workspace custom group from the project graph, and inject it into resolveVite, vite sync and tooling normalization.
 
-### Bug fixes
+  * Enable sortImports by default, resolve a workspace custom group from the project graph, and inject it into resolveVite, vite sync and tooling normalization.
 
 #### Shared
 
 * Repair PowerShell backtick artifacts in changelogs ([#61ced92](https://github.com/deltabox-studio/toolchain/commit/61ced92) by [T0chi](https://github.com/T0chi))
+
   * Repair paired \code\ and lone trailing identifier backslashes back to inline code while leaving paths and regexes alone, and correct the affected 2.3.1-2.3.3 entries.
 
 ## 2.3.0 (November 2026)
-
-### New features
 
 #### Changelog
 
@@ -11388,8 +11419,6 @@ url: https://toolchain.deltabox.studio/CHANGELOG.md
 #### Config
 
 * Type tool options and changelog callbacks ([#10bd933](https://github.com/deltabox-studio/toolchain/commit/10bd933) by [T0chi](https://github.com/T0chi))
-
-### Bug fixes
 
 #### Config
 
@@ -11407,15 +11436,11 @@ url: https://toolchain.deltabox.studio/CHANGELOG.md
 
 * Restore `PowerShell`-escaped letters ([#4d2be6a](https://github.com/deltabox-studio/toolchain/commit/4d2be6a) by [T0chi](https://github.com/T0chi))
 
-### Documentation
-
-* Document vendor workflows, typed builders and `--format-only` ([#eb66982](https://github.com/deltabox-studio/toolchain/commit/eb66982) by [T0chi](https://github.com/T0chi))
+- Document vendor workflows, typed builders and `--format-only` ([#eb66982](https://github.com/deltabox-studio/toolchain/commit/eb66982) by [T0chi](https://github.com/T0chi))
 
 #### Changelog
 
 * Document `formatLine` ([#61e28ec](https://github.com/deltabox-studio/toolchain/commit/61e28ec) by [T0chi](https://github.com/T0chi))
-
-### Chores
 
 #### Config
 

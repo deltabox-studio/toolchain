@@ -4,81 +4,188 @@
 
 <!-- release:start -->
 
-### Bug fixes
+<details>
+<summary>Bug fixes</summary>
+
 #### Changelog
 - Scope package changes by package name ([#0ee9b9e](https://github.com/deltabox-studio/toolchain/commit/0ee9b9e) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
   - key dependency changes by the declaring package.json name so workspace-specific pins (eg. the docs site's Vite 5) are reported under that workspace
-  - scope the catalog to the root package name; keep workspace catalog: refs unresolved so a catalog bump is reported once
-  - add regression tests and regenerate every CHANGELOG.md with the scoped footer
+    - scope the catalog to the root package name; keep workspace catalog: refs unresolved so a catalog bump is reported once
+    - add regression tests and regenerate every CHANGELOG.md with the scoped footer
+
+  </details>
+
+</details>
 
 <!-- release:end -->
 
 
 ## 2.5.0 (November 2026)
 
-### New features
+<details>
+<summary>New features</summary>
+
 #### Changelog
 - Inject provider setup into custom and vendor workflows ([#b6b240f](https://github.com/deltabox-studio/toolchain/commit/b6b240f) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
   - add an opt-in setup flag to custom workflow options and vendor settings
-  - GitHub injects the missing checkout/Node/Corepack/install steps
-  - GitLab adds a Node image + before_script; Azure adds UseNode@1 + install
-  - avoid duplicating setup steps the workflow already defines
-  - resolve vendor workflow tokens from the default token set
+    - GitHub injects the missing checkout/Node/Corepack/install steps
+    - GitLab adds a Node image + before_script; Azure adds UseNode@1 + install
+    - avoid duplicating setup steps the workflow already defines
+    - resolve vendor workflow tokens from the default token set
+
+  </details>
+
 #### Biome
 - Add array removal directives and resolve toolchain debt ([#da100c8](https://github.com/deltabox-studio/toolchain/commit/da100c8) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
   - add $remove: / $reset array directives with a resolver step for biome.json
-  - fix peer warnings (declare vite, filter the stale VitePress plugin peer)
-  - replace the RULE_MAP cast with an Object.hasOwn guard
-  - add a direct extension env-propagation test
-  - drop the 30s real-git changelog timeout
+    - fix peer warnings (declare vite, filter the stale VitePress plugin peer)
+    - replace the RULE_MAP cast with an Object.hasOwn guard
+    - add a direct extension env-propagation test
+    - drop the 30s real-git changelog timeout
+
+  </details>
+
 #### Tsconfig
 - Auto-wire aliases/references with `rewriteAlias` and gating ([#124f4b5](https://github.com/deltabox-studio/toolchain/commit/124f4b5) by [T0chi](https://github.com/T0chi))
-### Refactors
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
 - Use `@deltabox/toolchain/<name>` import subpaths and workspace-aware tsdown aliases ([#691445a](https://github.com/deltabox-studio/toolchain/commit/691445a) by [T0chi](https://github.com/T0chi))
+
 #### Config
 - Use string & {} for open index signatures ([#11665c0](https://github.com/deltabox-studio/toolchain/commit/11665c0) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
   - Emit [key: string & {}] from the config generator and use it in hand-written open maps, keeping known keys visible to autocomplete. Zod cannot express this key type, so the generator remains the post-processing point.
-  - Also make the workflow filename/token defaults literal constants.
+    - Also make the workflow filename/token defaults literal constants.
+
+  </details>
+
+</details>
+
 
 ## 2.4.0 (November 2026)
 
-### Chores
+<details>
+<summary>Chores</summary>
+
 - Regenerate managed configs for import sorting ([#ce7a2e6](https://github.com/deltabox-studio/toolchain/commit/ce7a2e6) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
   - Regenerate .oxfmtrc.json and every workspace vite.config.ts with the resolved sortImports workspace group.
+
+  </details>
+
+</details>
+
 
 ## 2.3.3 (November 2026)
 
-### Bug fixes
+<details>
+<summary>Bug fixes</summary>
+
 #### Ci
 - Disable setup-node auto-cache so Corepack can enable Yarn ([#571f896](https://github.com/deltabox-studio/toolchain/commit/571f896) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
   - actions/setup-node@v5 now auto-caches from the packageManager field and runs \yarn cache dir\ before the Enable Corepack step, so every job failed with the global Yarn 1.22.22 error. Set package-manager-cache: false on every setup-node step; Corepack still enables the pinned Yarn/pnpm before install.
-### Chores
+
+  </details>
+
+</details>
+
+<details>
+<summary>Chores</summary>
+
 #### Ci
 - Bump checkout and setup-node actions to v5 ([#485f29d](https://github.com/deltabox-studio/toolchain/commit/485f29d) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
   - The runner warns that actions/checkout@v4 and actions/setup-node@v4 target Node 20 and are forced onto Node 24. Bump the generated workflows (and the dogfood config) to v5.
+
+  </details>
+
+</details>
+
 
 ## 2.3.1 (November 2026)
 
-### Bug fixes
+<details>
+<summary>Bug fixes</summary>
+
 #### Vite
 - Use the Oxlint rule name react/exhaustive-deps ([#ea02ef7](https://github.com/deltabox-studio/toolchain/commit/ea02ef7) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
   - The dogfood config used the legacy ESLint name, so the generated Oxc configs carried both spellings. Rename it to the name in the vendored Oxlint schema and add a guard that every default rule exists there.
+
+  </details>
+
 #### Changelog
 - Keep hash links when git history is incomplete ([#182b68a](https://github.com/deltabox-studio/toolchain/commit/182b68a) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
   - A shallow clone or no-git checkout cannot resolve every referenced commit, so valid hashes were left unlinked. Fall back to treating letter-containing refs as commits when history is incomplete, and mock the numeric-hash fixture so the tests do not depend on the checkout's history.
+
+  </details>
+
 #### Ci
 - Check and regenerate nested workspace configs recursively ([#711c7b4](https://github.com/deltabox-studio/toolchain/commit/711c7b4) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
   - The generated schema types are formatted at printWidth 300 and excluded from the formatter, but the ignore patterns were repo-root-relative. Per-workspace vp fmt resolves them from each package directory, so yarn format reformatted biome-config.ts and failed the artifact check. Use **/ globs and make the generated CI/sync workflows run dbx sync --check --recursive so stale workspace configs are caught and regenerated.
+
+  </details>
+
+</details>
+
 
 ## 2.3.0 (November 2026)
 
-### New features
+<details>
+<summary>New features</summary>
+
 #### Changelog
 - Dispatch workflows with their vendor CLI ([#eea38ae](https://github.com/deltabox-studio/toolchain/commit/eea38ae) by [T0chi](https://github.com/T0chi))
+
 #### Config
 - Accept complete GitHub, GitLab and Azure workflows ([#070a7f2](https://github.com/deltabox-studio/toolchain/commit/070a7f2) by [T0chi](https://github.com/T0chi))
 - Type tool options and changelog callbacks ([#10bd933](https://github.com/deltabox-studio/toolchain/commit/10bd933) by [T0chi](https://github.com/T0chi))
-### Bug fixes
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
 #### Changelog
 - Fix workflow staging, `commitlint` and YAML escaping ([#1bb19ad](https://github.com/deltabox-studio/toolchain/commit/1bb19ad) by [T0chi](https://github.com/T0chi))
 - Preserve formatting, links and workspace history ([#af5c5dc](https://github.com/deltabox-studio/toolchain/commit/af5c5dc) by [T0chi](https://github.com/T0chi))
@@ -87,3 +194,5 @@
 - Resolve hash links and preserve descriptions ([#7633d24](https://github.com/deltabox-studio/toolchain/commit/7633d24) by [T0chi](https://github.com/T0chi))
 - Keep numeric hashes as commits and bold breaking markers ([#0521aee](https://github.com/deltabox-studio/toolchain/commit/0521aee) by [T0chi](https://github.com/T0chi))
 - Unwrap descriptions and keep list items ([#0dc4bda](https://github.com/deltabox-studio/toolchain/commit/0dc4bda) by [T0chi](https://github.com/T0chi))
+
+</details>
