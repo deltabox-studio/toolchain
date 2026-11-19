@@ -165,15 +165,17 @@ export interface RunChangelogOptions {
 }
 
 /**
- * Run the changelog pipeline (bump versions + write changelogs). `changelog` is
- * the consumer's `toolchain.ci.changelog` config (threaded from `dbx changelog`);
- * the standalone bin runs with the defaults (`versioning: true`, uniform).
+ * The changelog pipeline as a generator of phases. `runChangelog` drains it
+ * synchronously; `runChangelogAsync` yields to the event loop between phases so
+ * a spinner keeps painting during long git/format work.
  */
-export function runChangelog(
+function* changelogSteps(
     argv: string[] = process.argv.slice(2),
     changelog?: ChangelogConfig,
     runOptions: RunChangelogOptions = {}
-): void {
+): Generator<void, void, void> {
+    // Let a caller paint its first spinner frame before the first blocking phase.
+    yield;
     const options = parseArgsCli(argv);
     // Machine-readable release body (used by the generated release workflow).
     // It is derived from git alone and needs no toolchain config, so it must
@@ -203,6 +205,7 @@ export function runChangelog(
                 options.dryRun ? ' (dry run)' : ''
             }.`
         );
+        yield;
         formatExistingChangelogs(
             options.dryRun,
             options.packageChanges,
@@ -312,6 +315,7 @@ export function runChangelog(
     const outroFor = (dir: string): string | undefined =>
         resolveTextSetting(outroSetting, dir, rootDir, rootDir);
     if (!options.dryRun && provider === 'changesets') {
+        yield;
         const result = spawnSync('npx', ['--yes', 'changeset', 'version'], {
             cwd: repoRoot(),
             stdio: 'inherit',
@@ -329,6 +333,7 @@ export function runChangelog(
     if (released.size > 0) {
         records = records.filter(record => !isCommitReleased(record.hash, released));
     }
+    yield;
     if (records.length === 0) {
         if (reformatAll) {
             // `--processing-method all` with an empty range is the supported way
@@ -337,6 +342,7 @@ export function runChangelog(
             logger.info(
                 'No new commits since the last release; reformatting the existing changelogs.'
             );
+            yield;
             formatExistingChangelogs(
                 options.dryRun,
                 options.packageChanges,
@@ -378,6 +384,7 @@ export function runChangelog(
         if (typeof custom === 'string') summary = custom;
     }
 
+    yield;
     const plan = planVersions({
         versioning,
         rootVersion: current,
@@ -388,6 +395,7 @@ export function runChangelog(
         ...(breaking !== undefined ? { breaking } : {}),
     });
     const next = plan.rootVersion;
+    yield;
 
     if (options.dryRun) {
         const root = repoRoot();
@@ -457,6 +465,7 @@ export function runChangelog(
         return;
     }
 
+    yield;
     for (const [dir, version] of plan.writes) writePackageVersion(dir, version);
     writeChangelogs(
         next,
@@ -488,12 +497,51 @@ export function runChangelog(
         },
         changelog
     );
+    yield;
     if (versioning.enabled) {
         logger.info(`Bumped ${current} -> ${next} (${type}) from ${records.length} commit(s).`);
     } else {
         logger.info(
             `Wrote changelogs for ${next} (${type}) from ${records.length} commit(s); versioning disabled.`
         );
+    }
+}
+
+/** How long to wait before the first phase so an active spinner paints a frame. */
+const FIRST_SPINNER_FRAME_MS = 90;
+
+function pause(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Run the changelog pipeline synchronously (the library and bin entry point).
+ * `changelog` is the consumer's `toolchain.ci.changelog` config (threaded from
+ * `dbx changelog`); the standalone bin runs with the defaults.
+ */
+export function runChangelog(
+    argv: string[] = process.argv.slice(2),
+    changelog?: ChangelogConfig,
+    runOptions: RunChangelogOptions = {}
+): void {
+    // Drain the phase generator; the yields only matter to the async runner.
+    for (const phase of changelogSteps(argv, changelog, runOptions)) void phase;
+}
+
+/**
+ * Run the changelog pipeline while yielding to the event loop between phases,
+ * so the CLI spinner keeps painting instead of freezing on a synchronous run.
+ */
+export async function runChangelogAsync(
+    argv: string[] = process.argv.slice(2),
+    changelog?: ChangelogConfig,
+    runOptions: RunChangelogOptions = {}
+): Promise<void> {
+    let first = true;
+    for (const phase of changelogSteps(argv, changelog, runOptions)) {
+        void phase;
+        await pause(first ? FIRST_SPINNER_FRAME_MS : 0);
+        first = false;
     }
 }
 

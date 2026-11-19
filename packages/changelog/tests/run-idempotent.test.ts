@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test';
 
-import { runChangelog } from '../src/run.js';
+import { runChangelog, runChangelogAsync } from '../src/run.js';
 
 function git(cwd: string, ...args: string[]): string {
     return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
@@ -58,6 +58,23 @@ describe('runChangelog idempotency', () => {
             process.chdir(originalCwd);
             fs.rmSync(other, { recursive: true, force: true });
         }
+    });
+
+    it('runs through the async (yielding) runner', async () => {
+        let ticks = 0;
+        const timer = setInterval(() => {
+            ticks += 1;
+        }, 10);
+        try {
+            await runChangelogAsync([]);
+        } finally {
+            clearInterval(timer);
+        }
+
+        // The pipeline yielded to the event loop, so a spinner can animate.
+        expect(ticks).toBeGreaterThan(0);
+        expect(readVersion(dir)).toBe('0.2.0');
+        expect(readChangelog(dir).toLowerCase()).toContain('first feature');
     });
 
     it('treats a second run with no new commits as a no-op', () => {

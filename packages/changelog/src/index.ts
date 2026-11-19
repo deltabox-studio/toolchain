@@ -1,5 +1,5 @@
 export * from './dependabot.js';
-export { main, runChangelog } from './run.js';
+export { main, runChangelog, runChangelogAsync } from './run.js';
 export * from './run-workflows.js';
 export * from './sync.js';
 export * from './templates.js';

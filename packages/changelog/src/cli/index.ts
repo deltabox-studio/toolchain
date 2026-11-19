@@ -10,7 +10,7 @@ import {
 } from '@deltabox/toolchain/shared';
 
 import { runWorkflows, workflowTargets } from '../run-workflows.js';
-import { runChangelog } from '../run.js';
+import { runChangelogAsync } from '../run.js';
 
 /**
  * Whether `dbx changelog` should write. The manual command is configured by
@@ -172,7 +172,7 @@ export function changelogCommands(): ToolchainCommand[] {
                 }
                 await withSpinner(
                     async () => {
-                        runChangelog(argv, resolveChangelogConfig(context.config), {
+                        await runChangelogAsync(argv, resolveChangelogConfig(context.config), {
                             enabled: resolveToolchainEnabled(context.config).enabled,
                             regenerate: changelogRegenerateEnabled(context.config),
                         });
