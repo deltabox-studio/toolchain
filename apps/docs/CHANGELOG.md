@@ -1,8 +1,28 @@
 # Changelog
 
-## 3.0.0-beta.5 (November 2026)
+## 3.0.0-beta.6 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Documentation</summary>
+
+- Reorganize the documentation navigation ([#342de5a](https://github.com/deltabox-studio/toolchain/commit/342de5a) by [T0chi](https://github.com/T0chi))
+- Document the Vite plugin and Vite+ commands ([#95c1e66](https://github.com/deltabox-studio/toolchain/commit/95c1e66) by [T0chi](https://github.com/T0chi))
+- Expand the v3 migration guide ([#9a6d0d0](https://github.com/deltabox-studio/toolchain/commit/9a6d0d0) by [T0chi](https://github.com/T0chi))
+
+#### Vscode
+- Sync the extension reference ([#9824034](https://github.com/deltabox-studio/toolchain/commit/9824034) by [T0chi](https://github.com/T0chi))
+
+#### Config
+- Revamp the configuration overview ([#fe4137e](https://github.com/deltabox-studio/toolchain/commit/fe4137e) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.5 (November 2026)
 
 <details>
 <summary>Chores</summary>
@@ -11,9 +31,6 @@
 - Bump setup-vp to v1.22.0 ([#9c32cae](https://github.com/deltabox-studio/toolchain/commit/9c32cae) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.4 (November 2026)
 

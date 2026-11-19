@@ -1,8 +1,20 @@
 # Changelog
 
-## 3.0.0-beta.1 (November 2026)
+## 3.0.0-beta.2 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Documentation</summary>
+
+- Document the Vite plugin and Vite+ commands ([#95c1e66](https://github.com/deltabox-studio/toolchain/commit/95c1e66) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.1 (November 2026)
 
 <details>
 <summary>Chores</summary>
@@ -10,9 +22,6 @@
 - Add the codegen keyword to the package manifests ([#5e608fe](https://github.com/deltabox-studio/toolchain/commit/5e608fe) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.0 (November 2026)
 

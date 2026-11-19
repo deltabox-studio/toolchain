@@ -1,8 +1,30 @@
 # Changelog
 
-## 3.0.0-beta.9 (November 2026)
+## 3.0.0-beta.10 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Documentation</summary>
+
+- Refresh the generated llms bundles ([#dcf052b](https://github.com/deltabox-studio/toolchain/commit/dcf052b) by [T0chi](https://github.com/T0chi))
+- Reorder the README introduction ([#df3b5b0](https://github.com/deltabox-studio/toolchain/commit/df3b5b0) by [T0chi](https://github.com/T0chi))
+- Reorganize the documentation navigation ([#342de5a](https://github.com/deltabox-studio/toolchain/commit/342de5a) by [T0chi](https://github.com/T0chi))
+- Document the Vite plugin and Vite+ commands ([#95c1e66](https://github.com/deltabox-studio/toolchain/commit/95c1e66) by [T0chi](https://github.com/T0chi))
+- Expand the v3 migration guide ([#9a6d0d0](https://github.com/deltabox-studio/toolchain/commit/9a6d0d0) by [T0chi](https://github.com/T0chi))
+
+#### Vscode
+- Sync the extension reference ([#9824034](https://github.com/deltabox-studio/toolchain/commit/9824034) by [T0chi](https://github.com/T0chi))
+
+#### Config
+- Revamp the configuration overview ([#fe4137e](https://github.com/deltabox-studio/toolchain/commit/fe4137e) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.9 (November 2026)
 
 <details>
 <summary>Documentation</summary>
@@ -18,9 +40,6 @@
 - Bump setup-vp to v1.22.0 ([#9c32cae](https://github.com/deltabox-studio/toolchain/commit/9c32cae) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.8 (November 2026)
 

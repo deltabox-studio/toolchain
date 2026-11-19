@@ -1,8 +1,21 @@
 # Changelog
 
-## 3.0.0-beta.3 (November 2026)
+## 3.0.0-beta.4 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Documentation</summary>
+
+#### Vscode
+- Sync the extension reference ([#9824034](https://github.com/deltabox-studio/toolchain/commit/9824034) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.3 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -11,9 +24,6 @@
 - Drop allowImportingTsExtensions from the integration test config ([#c241654](https://github.com/deltabox-studio/toolchain/commit/c241654) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.2 (November 2026)
 
