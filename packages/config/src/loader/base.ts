@@ -9,7 +9,7 @@
 
 import { createRequire } from 'node:module';
 
-import { deepMerge } from '@deltabox/toolchain-shared';
+import { deepMerge } from '@deltabox/toolchain/shared';
 
 import { parseConfig } from '../parser.js';
 import type { ConfigSchema, ParseConfigOptions, ResolvedConfig } from '../types/index.js';

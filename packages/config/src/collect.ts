@@ -11,7 +11,7 @@
 import type { Schema } from 'untyped';
 import type { ZodType } from 'zod';
 
-import { deepMerge, getLogger } from '@deltabox/toolchain-shared';
+import { deepMerge, getLogger } from '@deltabox/toolchain/shared';
 
 import { envVarNameOf, parseEnvTree, readEnvPath } from './env.js';
 import { ConfigParseError } from './errors.js';

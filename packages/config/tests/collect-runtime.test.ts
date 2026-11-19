@@ -5,7 +5,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, expectTypeOf, it } from 'vite-plus/test';
 import { z } from 'zod';
 
-import type { Logger } from '@deltabox/toolchain-shared';
+import type { Logger } from '@deltabox/toolchain/shared';
 
 import type { RewriteMessageContext } from '../src/index.js';
 import {

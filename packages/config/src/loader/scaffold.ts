@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { deepMerge } from '@deltabox/toolchain-shared';
+import { deepMerge } from '@deltabox/toolchain/shared';
 
 /** The config-file formats the scaffold can emit. */
 export type ConfigFileType = 'file' | 'json' | 'yaml' | 'env' | 'cli';

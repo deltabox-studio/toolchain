@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { readJsoncFile } from '@deltabox/toolchain-shared';
+import { readJsoncFile } from '@deltabox/toolchain/shared';
 
 /** The `baseUrl`/`paths` a tsconfig (and its relative `extends`) resolves with. */
 export interface TsconfigResolutionOptions {

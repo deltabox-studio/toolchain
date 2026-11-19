@@ -6,7 +6,7 @@ import {
     findParentConfigFile as findParentConfigFileIn,
     findTsconfigFile,
     loadConfigAsync,
-} from '@deltabox/toolchain-config';
+} from '@deltabox/toolchain/config';
 import {
     assertWorkspaceEnabledScope,
     collectDbxPluginDescriptors,

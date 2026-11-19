@@ -1,4 +1,4 @@
-import type { Logger } from '@deltabox/toolchain-shared';
+import type { Logger } from '@deltabox/toolchain/shared';
 
 import type { ConfigDef, ConfigValueKind, ConfigValueType } from './definition.js';
 
