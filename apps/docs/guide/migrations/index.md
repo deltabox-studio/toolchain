@@ -20,6 +20,14 @@ dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
 `dbx migrate` is a dry-run unless you pass `--write` (or `--check`). `--from`
 is repeatable; `--from all` (or omitting it) selects every detected source.
 
+## Upgrading from v2
+
+See the [v2 → v3 migration guide](/guide/migrations/v2-v3).
+
+## Upgrading from v1
+
+See the [v1 → v2 migration guide](/guide/migrations/v1-v2).
+
 ## Sources
 
 | Source     | Notes                                                                                                                                                        |
@@ -200,11 +208,3 @@ console.log(result.unmapped);
 `oxfmt --migrate biome`-style tools cover formatter options only; the pieces the
 upstream tools skip (Biome `organizeImports`, Biome linter rules, Dprint) are
 handled here.
-
-## Upgrading from v2
-
-See the [v2 → v3 migration guide](/guide/migrations/v2-v3).
-
-## Upgrading from v1
-
-See the [v1 → v2 migration guide](/guide/migrations/v1-v2).
