@@ -2,7 +2,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
+
+import { logger } from '@deltabox/toolchain/shared';
 
 import {
     addTemplateSource,
@@ -15,6 +17,7 @@ import {
     readTemplateRegistry,
     removeTemplateSource,
     scaffoldTemplate,
+    templateCommands,
     writeTemplateManifest,
 } from '../src/index.js';
 
@@ -167,6 +170,21 @@ describe('template authoring', () => {
     });
 });
 
+describe('create CLI', () => {
+    it('rejects an unknown template id without --online', async () => {
+        const command = templateCommands().find(candidate => candidate.name === 'create');
+        if (!command?.run) throw new Error('missing create command');
+        const out = makeTmp();
+
+        await expect(
+            command.run(
+                { template: 'not-a-template', out, json: true },
+                { cwd: out, projectType: 'project', config: {}, tokens: {} }
+            )
+        ).rejects.toThrow(/not found/);
+    });
+});
+
 describe('scaffolding', () => {
     it('creates a builtin TypeScript project', async () => {
         const out = makeTmp();
@@ -175,7 +193,156 @@ describe('scaffolding', () => {
         const result = await scaffoldTemplate(template, { cwd: out, tokens: { name: 'acme' } });
         expect(result.written.length).toBeGreaterThan(0);
         expect(fs.existsSync(path.join(out, 'package.json'))).toBe(true);
-        expect(fs.existsSync(path.join(out, 'dbx.config.ts'))).toBe(true);
+        expect(fs.existsSync(path.join(out, 'vite.config.ts'))).toBe(true);
+    });
+
+    const PROJECT_TEMPLATE_CASES: {
+        id: string;
+        files: string[];
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+        dev: RegExp;
+    }[] = [
+        {
+            id: 'vitepress',
+            files: ['docs/index.md', 'docs/.vitepress/config.ts'],
+            devDependencies: { vitepress: expect.stringMatching(/^~1\.6\./) },
+            dev: /^vitepress dev docs$/,
+        },
+        {
+            id: 'express',
+            files: ['src/app.ts', 'src/index.ts'],
+            dependencies: { express: expect.stringMatching(/^~5\./) },
+            dev: /^tsx watch/,
+        },
+        {
+            id: 'fastify',
+            files: ['src/app.ts', 'src/index.ts'],
+            dependencies: { fastify: expect.stringMatching(/^~5\./) },
+            dev: /^tsx watch/,
+        },
+        {
+            id: 'bun',
+            files: ['src/app.ts', 'src/index.ts'],
+            devDependencies: { '@types/bun': expect.stringMatching(/^~1\./) },
+            dev: /^bun --watch/,
+        },
+        {
+            id: 'orpc',
+            files: ['src/router.ts', 'src/index.ts'],
+            dependencies: {
+                '@orpc/server': expect.stringMatching(/^~1\./),
+                zod: expect.stringMatching(/^~4\./),
+            },
+            dev: /^tsx watch/,
+        },
+        {
+            id: 'file-server',
+            files: ['src/server.ts', 'src/index.ts', 'public/index.html'],
+            dev: /^tsx watch/,
+        },
+        {
+            id: 'file-server-s3',
+            files: ['src/server.ts', 'src/index.ts', '.env.example'],
+            dependencies: { '@aws-sdk/client-s3': expect.stringMatching(/^~3\./) },
+            dev: /^tsx watch/,
+        },
+        {
+            id: 'file-server-minio',
+            files: ['src/server.ts', 'src/index.ts', '.env.example'],
+            dependencies: { '@aws-sdk/client-s3': expect.stringMatching(/^~3\./) },
+            dev: /^tsx watch/,
+        },
+        {
+            id: 'file-server-bun-s3',
+            files: ['src/app.ts', 'src/index.ts', '.env.example'],
+            devDependencies: { '@types/bun': expect.stringMatching(/^~1\./) },
+            dev: /^bun --watch/,
+        },
+        {
+            id: 'file-server-rclone',
+            files: ['src/server.ts', 'src/index.ts'],
+            dev: /^tsx watch/,
+        },
+        {
+            id: 'ollama-chat',
+            files: ['index.html', 'src/main.ts', 'src/style.css', 'src/ollama.ts'],
+            dev: /^vp dev$/,
+        },
+    ];
+
+    for (const testCase of PROJECT_TEMPLATE_CASES) {
+        it(`scaffolds the ${testCase.id} built-in project template`, async () => {
+            const out = makeTmp();
+            const template = BUILTIN_TEMPLATES.find(candidate => candidate.id === testCase.id);
+            if (!template) throw new Error(`missing builtin ${testCase.id}`);
+
+            await scaffoldTemplate(template, {
+                cwd: out,
+                tokens: { name: 'acme', packageManager: 'yarn' },
+            });
+
+            for (const relative of testCase.files) {
+                expect(fs.existsSync(path.join(out, relative)), relative).toBe(true);
+            }
+            // Every template keeps the plugin-first Vite+ config.
+            expect(fs.existsSync(path.join(out, 'vite.config.ts'))).toBe(true);
+
+            const pkg = JSON.parse(fs.readFileSync(path.join(out, 'package.json'), 'utf-8')) as {
+                scripts: Record<string, string>;
+                dependencies?: Record<string, string>;
+                devDependencies: Record<string, string>;
+            };
+            expect(pkg.scripts.dev, 'dev script').toMatch(testCase.dev);
+            expect(pkg.scripts.build).toBeTruthy();
+            expect(pkg.scripts.typecheck).toBeTruthy();
+            if (testCase.dependencies) {
+                expect(pkg.dependencies).toMatchObject(testCase.dependencies);
+            }
+            if (testCase.devDependencies) {
+                expect(pkg.devDependencies).toMatchObject(testCase.devDependencies);
+            }
+        });
+    }
+
+    it('pins template dependencies while keeping the toolchain in the catalog', async () => {
+        const out = makeTmp();
+        const template = BUILTIN_TEMPLATES.find(candidate => candidate.id === 'express');
+        if (!template) throw new Error('missing builtin');
+
+        await scaffoldTemplate(template, {
+            cwd: out,
+            tokens: { name: 'acme' },
+            variables: { packageManager: 'pnpm' },
+        });
+
+        const pkg = JSON.parse(fs.readFileSync(path.join(out, 'package.json'), 'utf-8')) as {
+            dependencies: Record<string, string>;
+            devDependencies: Record<string, string>;
+        };
+        expect(pkg.dependencies.express).toMatch(/^~5\./);
+        expect(pkg.devDependencies.typescript).toBe('catalog:');
+        expect(pkg.devDependencies['vite-plus']).toBe('catalog:');
+        expect(fs.existsSync(path.join(out, 'pnpm-workspace.yaml'))).toBe(true);
+    });
+
+    it('copies generated package-manager config before the container install', async () => {
+        const out = makeTmp();
+        const template = BUILTIN_TEMPLATES.find(candidate => candidate.id === 'express');
+        if (!template) throw new Error('missing builtin');
+
+        await scaffoldTemplate(template, {
+            cwd: out,
+            tokens: { name: 'acme', packageManager: 'yarn' },
+            containerize: true,
+        });
+
+        const dockerfile = fs.readFileSync(path.join(out, 'Dockerfile'), 'utf-8');
+        expect(fs.existsSync(path.join(out, '.yarnrc.yml'))).toBe(true);
+        expect(dockerfile).toMatch(/COPY --chown=vp:vp [^\n]*\.yarnrc\.yml/);
+        expect(dockerfile).toContain('RUN vp run build');
+        expect(dockerfile).not.toMatch(/^RUN vp build$/m);
+        expect(dockerfile).toContain('ENV HOST=0.0.0.0');
     });
 
     it('does not reuse the configured version when packageManager is overridden', async () => {
@@ -203,7 +370,7 @@ describe('scaffolding', () => {
             cwd: out,
             tokens: { name: 'web', description: 'The root project' },
         });
-        const config = fs.readFileSync(path.join(out, 'packages/web/dbx.config.ts'), 'utf-8');
+        const config = fs.readFileSync(path.join(out, 'packages/web/vite.config.ts'), 'utf-8');
         expect(config).not.toContain('The root project');
     });
 
@@ -226,6 +393,87 @@ describe('scaffolding', () => {
         // the manifest is never copied
         expect(fs.existsSync(path.join(out, 'template.json'))).toBe(false);
     });
+
+    it('honours nested paths and globs in a local template ignore list', async () => {
+        const root = makeTmp();
+        const tpl = path.join(root, 'tpl');
+        writeTemplate(
+            tpl,
+            { name: 'T', ignore: ['private/secret.txt', '*.md'] },
+            {
+                'keep.txt': 'keep',
+                'notes.md': 'notes',
+                'nested/more.md': 'more',
+                'private/secret.txt': 'secret',
+            }
+        );
+        const out = makeTmp();
+        const [template] = loadLocalTemplates(root);
+        if (!template) throw new Error('missing local template');
+
+        await scaffoldTemplate(template, { cwd: out });
+
+        expect(fs.existsSync(path.join(out, 'keep.txt'))).toBe(true);
+        expect(fs.existsSync(path.join(out, 'notes.md'))).toBe(false);
+        expect(fs.existsSync(path.join(out, 'nested', 'more.md'))).toBe(false);
+        expect(fs.existsSync(path.join(out, 'private', 'secret.txt'))).toBe(false);
+    });
+
+    it('matches brace alternatives in a local template ignore list', async () => {
+        const root = makeTmp();
+        const tpl = path.join(root, 'tpl');
+        writeTemplate(
+            tpl,
+            { name: 'T', ignore: ['**/*.{md,txt}'] },
+            { 'a.md': 'a', 'b.txt': 'b', 'c.ts': 'c' }
+        );
+        const out = makeTmp();
+        const [template] = loadLocalTemplates(root);
+        if (!template) throw new Error('missing local template');
+
+        await scaffoldTemplate(template, { cwd: out });
+
+        expect(fs.existsSync(path.join(out, 'a.md'))).toBe(false);
+        expect(fs.existsSync(path.join(out, 'b.txt'))).toBe(false);
+        expect(fs.existsSync(path.join(out, 'c.ts'))).toBe(true);
+    });
+
+    it('does not copy a nested action module from a local template', async () => {
+        const root = makeTmp();
+        const tpl = path.join(root, 'tpl');
+        writeTemplate(
+            tpl,
+            { name: 'T', actions: [{ id: 'setup', module: 'actions/setup.mjs' }] },
+            {
+                'keep.txt': 'keep',
+                'actions/setup.mjs': 'export default () => {};\n',
+            }
+        );
+        const out = makeTmp();
+        const [template] = loadLocalTemplates(root);
+        if (!template) throw new Error('missing local template');
+
+        await scaffoldTemplate(template, { cwd: out });
+
+        expect(fs.existsSync(path.join(out, 'keep.txt'))).toBe(true);
+        expect(fs.existsSync(path.join(out, 'actions', 'setup.mjs'))).toBe(false);
+    });
+
+    it('copies a binary asset byte-for-byte', async () => {
+        const root = makeTmp();
+        const tpl = path.join(root, 'tpl');
+        writeTemplate(tpl, { name: 'T' }, { 'README.md': '# {{name}}\n' });
+        const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0xff, 0x10, 0x80]);
+        fs.writeFileSync(path.join(tpl, 'logo.png'), bytes);
+        const out = makeTmp();
+        const [template] = loadLocalTemplates(root);
+        if (!template) throw new Error('missing local template');
+
+        await scaffoldTemplate(template, { cwd: out, tokens: { name: 'acme' } });
+
+        expect(fs.readFileSync(path.join(out, 'logo.png')).equals(bytes)).toBe(true);
+        expect(fs.readFileSync(path.join(out, 'README.md'), 'utf-8')).toBe('# acme\n');
+    });
 });
 
 describe('workspace scaffold path validation', () => {
@@ -237,5 +485,70 @@ describe('workspace scaffold path validation', () => {
             scaffoldTemplate(template, { cwd: out, tokens: { name: '../..' } })
         ).rejects.toThrow(/relative to the root/);
         expect(fs.readdirSync(out)).toEqual([]);
+    });
+});
+
+describe('template:list --global', () => {
+    function withHome(home: string, fn: () => Promise<void>): Promise<void> {
+        const previousProfile = process.env.USERPROFILE;
+        const previousHome = process.env.HOME;
+        process.env.USERPROFILE = home;
+        process.env.HOME = home;
+        const restore = (): void => {
+            if (previousProfile === undefined) delete process.env.USERPROFILE;
+            else process.env.USERPROFILE = previousProfile;
+            if (previousHome === undefined) delete process.env.HOME;
+            else process.env.HOME = previousHome;
+        };
+        return fn().finally(restore);
+    }
+
+    it('applies the registry policy and the kind filter', async () => {
+        const home = makeTmp();
+        const tplDir = path.join(home, '.dbx', 'toolchain', '.registry', 'templates', 'foo');
+        fs.mkdirSync(tplDir, { recursive: true });
+        fs.writeFileSync(
+            path.join(tplDir, 'template.json'),
+            JSON.stringify({ name: 'Foo', kind: 'folder' })
+        );
+        const project = makeTmp();
+        const raw = vi.spyOn(logger, 'raw').mockImplementation(() => {});
+
+        const list = async (
+            options: Record<string, unknown>,
+            config: Record<string, unknown>
+        ): Promise<Array<{ id: string }>> => {
+            const command = templateCommands().find(
+                candidate => candidate.name === 'template:list'
+            );
+            if (!command) throw new Error('missing template:list');
+            raw.mockClear();
+            await withHome(home, async () => {
+                await command.run({ cwd: project, global: true, json: true, ...options }, {
+                    cwd: project,
+                    projectType: 'project',
+                    config,
+                    tokens: {},
+                } as never);
+            });
+            return JSON.parse(raw.mock.calls[0]![0] as string) as Array<{ id: string }>;
+        };
+
+        try {
+            expect((await list({ kind: 'folder' }, {})).map(t => t.id)).toEqual(['foo']);
+            expect((await list({ kind: 'project' }, {})).map(t => t.id)).toEqual([]);
+            expect(
+                (
+                    await list(
+                        {},
+                        {
+                            registry: { templates: { deny: [`${home.replace(/\\/g, '/')}/**`] } },
+                        }
+                    )
+                ).map(t => t.id)
+            ).toEqual([]);
+        } finally {
+            raw.mockRestore();
+        }
     });
 });

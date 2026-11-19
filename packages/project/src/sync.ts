@@ -7,6 +7,7 @@ import {
     type PackageJson,
     projectToPackageJson,
     readJsonAt,
+    regenerateEnabled,
     splitPackageName,
     type SyncTask,
 } from '@deltabox/toolchain/shared';
@@ -53,6 +54,7 @@ export function projectSyncTask(): SyncTask {
     return {
         name: 'project',
         enabled: config => config.project !== undefined,
+        regenerate: config => regenerateEnabled(config.project),
         run: ctx => {
             const project = ctx.config.project;
             if (!project) return [];
@@ -72,6 +74,12 @@ export function projectSyncTask(): SyncTask {
             if (merged.name !== undefined && merged.scope === undefined && pkg.name) {
                 const { scope } = splitPackageName(pkg.name);
                 if (scope) merged.scope = scope;
+            }
+            // A monorepo root keeps the scope it already has (the toolchain's
+            // own `@scope/name` root) but an unscoped root never gains one: the
+            // scope names workspace packages, not `acme` itself.
+            if (merged.type === 'monorepo-root' || ctx.projectType === 'monorepo-root') {
+                if (!splitPackageName(pkg.name).scope) delete merged.scope;
             }
             const updates = projectToPackageJson(merged, directory ? { directory } : {}) as Record<
                 string,

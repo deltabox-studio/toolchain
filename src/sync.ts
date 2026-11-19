@@ -8,13 +8,14 @@ import { editorConfigSyncTask, toolingConfigTask, vscodeSyncTask } from '@deltab
 import { catalogsSyncTask, projectSyncTask } from '@deltabox/toolchain/project';
 import {
     changelogSectionEnabled,
+    regenerateEnabled,
     resolveChangelogConfig,
     type SyncTask,
     sectionConfig,
     sectionEnabled,
 } from '@deltabox/toolchain/shared';
 import { tsconfigSyncTask } from '@deltabox/toolchain/tsconfig';
-import { viteSyncTask } from '@deltabox/toolchain/vite';
+import { viteSyncTask } from 'vite-plugin-dbx';
 
 import { toolingDefaultsTask } from './tooling.js';
 
@@ -46,6 +47,9 @@ export function defaultSyncTasks(): SyncTask[] {
                 (changelogSectionEnabled(config) &&
                     resolveChangelogConfig(config)?.vscode !== false) ||
                 (sectionEnabled(config.biome) && sectionConfig(config.biome)?.vscode !== false),
+            regenerate: config =>
+                (changelogSectionEnabled(config) && regenerateEnabled(config.ci)) ||
+                (sectionEnabled(config.biome) && regenerateEnabled(config.biome)),
         }),
     ];
 }

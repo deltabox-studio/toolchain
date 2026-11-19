@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { parseHomeAction } from '../src/home-view.js';
 
@@ -7,6 +7,8 @@ describe('parseHomeAction', () => {
         expect(parseHomeAction({ type: 'ready' })).toEqual({ type: 'ready' });
         expect(parseHomeAction({ type: 'syncAll' })).toEqual({ type: 'syncAll' });
         expect(parseHomeAction({ type: 'syncTsconfig' })).toEqual({ type: 'syncTsconfig' });
+        expect(parseHomeAction({ type: 'fmt' })).toEqual({ type: 'fmt' });
+        expect(parseHomeAction({ type: 'lint' })).toEqual({ type: 'lint' });
         expect(parseHomeAction({ type: 'migrate' })).toEqual({ type: 'migrate' });
         expect(parseHomeAction({ type: 'runProviderCommand' })).toEqual({
             type: 'runProviderCommand',

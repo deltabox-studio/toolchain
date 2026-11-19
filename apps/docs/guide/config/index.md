@@ -1,6 +1,13 @@
 # Configuration
 
-A project is driven by a single `dbx.config.ts`:
+A project is configured in one of two ways:
+
+- the recommended `dbx()` **Vite plugin** in `vite.config.*` (config inline, no
+  `dbx.config.*` needed), or
+- a standalone `dbx.config.ts` when the project does not use Vite.
+
+Both can be combined: `dbx.config.*` is the base and the plugin options merge on
+top. The `@deltabox/toolchain` settings live under the `toolchain` key:
 
 ```ts [dbx.config.ts]
 import { defineConfig } from '@deltabox/toolchain';
@@ -30,8 +37,8 @@ export default defineConfig({
 });
 ```
 
-The `@deltabox/toolchain` settings live under the `toolchain` key, so a
-`dbx.config.ts` can host other dbx concerns alongside it.
+A `dbx.config.ts` can also host other dbx concerns alongside the `toolchain`
+section.
 
 Each section has its own guide: [Project](/guide/project), [CI +
 Changelog](/guide/changelog/), [tsconfig](/guide/tsconfig),
@@ -46,8 +53,10 @@ Changelog](/guide/changelog/), [tsconfig](/guide/tsconfig),
 - [Nested configs](/guide/config/nested-configs) — how a workspace config merges
   over its root.
 - [`defineConfig`](/guide/config/defineconfig) — object, promise or callback.
-- [Config file names](/guide/config/config-file-names) — the file names the loader
-  probes.
+- [Config file names](/guide/config/config-file-names) — the file names the
+  loader probes.
+- [Loader](/guide/config/loader) — the `toolchain.loader` tsconfig options,
+  path aliases, `.js` → `.ts` imports and examples.
 - [Hooks](/guide/config/hooks) — lifecycle hooks in a `.ts`/`.js` config.
 - [Logging](/guide/config/logging) — the logger section and CLI overrides.
 - [Providers](/guide/config/providers) — provider passthrough colour settings.

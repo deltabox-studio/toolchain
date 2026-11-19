@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { Template, TemplateManifest } from './types.js';
+import type { Template, TemplateManifest } from './types/index.js';
 
 /** The manifest file that marks a directory as a local template. */
 export const TEMPLATE_MANIFEST = 'template.json';

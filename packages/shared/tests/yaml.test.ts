@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { toYaml } from '../src/yaml.js';
 
@@ -64,5 +64,37 @@ describe('toYaml escaping edge cases', () => {
     it('uses |- when a block scalar has no trailing newline', () => {
         expect(toYaml({ run: 'echo one\necho two' })).toContain('run: |-');
         expect(toYaml({ run: 'echo one\necho two\n' })).toContain('run: |');
+    });
+
+    it('quotes scalars ending in a colon', () => {
+        expect(toYaml({ name: 'Deploy:' })).toContain('name: "Deploy:"');
+        expect(toYaml({ script: ['echo done:'] })).toContain('script: ["echo done:"]');
+    });
+
+    it('quotes flow indicators inside inline arrays', () => {
+        expect(toYaml({ paths: ['src/**/*.{ts,tsx}'] })).toContain('paths: ["src/**/*.{ts,tsx}"]');
+        expect(toYaml({ labels: ['deps,js', 'backend'] })).toContain(
+            'labels: ["deps,js", backend]'
+        );
+        expect(toYaml({ a: ['x]y', 'z{w'] })).toContain('a: ["x]y", "z{w"]');
+    });
+
+    it('uses an indentation indicator for indented or blank first lines', () => {
+        expect(toYaml({ run: '  a\nb' })).toContain('run: |2-');
+        expect(toYaml({ a: '\n   \nx' })).toContain('a: |2-');
+    });
+
+    it('keeps extra trailing newlines with + chomping', () => {
+        expect(toYaml({ a: 'x\n\n\n' })).toContain('a: |+');
+        expect(toYaml({ a: '\n' })).toContain('a: |2+');
+    });
+
+    it('quotes non-decimal numbers and date-like strings', () => {
+        const yaml = toYaml({ a: '0x10', b: '0b101', c: '0o17', d: '2020-01-01', e: '.inf' });
+        expect(yaml).toContain('a: "0x10"');
+        expect(yaml).toContain('b: "0b101"');
+        expect(yaml).toContain('c: "0o17"');
+        expect(yaml).toContain('d: "2020-01-01"');
+        expect(yaml).toContain('e: ".inf"');
     });
 });

@@ -80,23 +80,26 @@ tasks it skipped. Unknown task names throw.
 The generic Zod/env engine (see the [Config Generator](/guide/config-generator/)
 guide for the full workflow).
 
-| Export                                                                                   | Description                                               |
-| ---------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `createConfigEngine(options)`                                                            | Bind scopes + prefix + root into a reusable engine.       |
-| `configCommands({ engine, defaults? })`                                                  | The `config:*` commands for a consumer's own CLI.         |
-| `formatGenerated(source, options?)`                                                      | Format generated output with Oxfmt (see below).           |
-| `GENERATED_FORMAT_OPTIONS`                                                               | The baseline Oxfmt options used by the generators.        |
-| `parseEnvTree(env, prefix?)` / `envString` / `envInt` / `envBool` / `envList` / `envMap` | The dependency-free runtime loader.                       |
-| `compileZodSchema(schema)`                                                               | Compile a Zod schema for fast repeated parsing.           |
-| `envPathOf(env, prefix?)` / `metaOf(schema)`                                             | Env-name to dotted-path derivation and `.meta()` reading. |
-| `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                    |
-| `generateConfigTypes` / `generateConfigEnv`                                              | Type/env generators (optional disk writes).               |
-| `generateConfigMarkdown` / `generateConfigCli`                                           | Markdown/CLI generators (optional disk writes).           |
-| `generateCliDocs(commands, options?)`                                                    | A CLI reference from `ToolchainCommand` descriptors.      |
-| `generateConfigJsonSchema` / `generateJsonSchemaFile`                                    | JSON Schema generation.                                   |
-| `normalizeJsonSchemaMetadata(node)`                                                      | Normalize Zod JSON Schema metadata for editor schemas.    |
-| `generateEnv` / `generateEnvDts` / `generateConfigEnv`                                   | `.env` / env type generation.                             |
-| `generateCliOptions` / `flagOf` / `cliFlagOf` / `createCliArgsParser`                    | CLI option generation + parsing.                          |
+| Export                                                                                   | Description                                                    |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `createConfigEngine(options)`                                                            | Bind a schema, env prefix, base group and root into an engine. |
+| `parseConfig` / `parseEnvConfig` / `parseCliConfig`                                      | Runtime parsers: env + CLI + overrides, validated.             |
+| `loadConfig` / `loadConfigAsync`                                                         | Discover/import a config file and parse it.                    |
+| `collect(schema, options?)`                                                              | Resolve env + CLI into a typed config (no overrides).          |
+| `configCommands({ engine, defaults? })`                                                  | The `config:*` commands for a consumer's own CLI.              |
+| `formatGenerated(source, options?)`                                                      | Format generated output with Oxfmt (see below).                |
+| `GENERATED_FORMAT_OPTIONS`                                                               | The baseline Oxfmt options used by the generators.             |
+| `parseEnvTree(env, prefix?)` / `envString` / `envInt` / `envBool` / `envList` / `envMap` | Legacy dependency-free tree accessors.                         |
+| `compileZodSchema(schema)`                                                               | Compile a Zod schema for fast repeated parsing.                |
+| `envPathOf(env, prefix?)` / `metaOf(schema)`                                             | Env-name to dotted-path derivation and `.meta()` reading.      |
+| `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                         |
+| `generateConfigTypes` / `generateConfigEnv`                                              | Type/env generators (optional disk writes).                    |
+| `generateConfigMarkdown` / `generateCliOptions`                                          | Markdown/CLI generators (optional disk writes).                |
+| `generateCliDocs(commands, options?)`                                                    | A CLI reference from `ToolchainCommand` descriptors.           |
+| `generateConfigJsonSchema` / `generateJsonSchemaFile`                                    | JSON Schema generation.                                        |
+| `normalizeJsonSchemaMetadata(node)`                                                      | Normalize Zod JSON Schema metadata for editor schemas.         |
+| `generateEnv` / `generateEnvDts` / `generateConfigEnv`                                   | `.env` / env type generation.                                  |
+| `generateCliOptions` / `flagOf` / `cliFlagOf` / `createCliArgsParser`                    | CLI option generation + parsing.                               |
 
 ## `@deltabox/toolchain/vite`
 
@@ -167,7 +170,7 @@ import { toolchainProviders } from '@deltabox/toolchain/providers';
 console.log(toolchainProviders().map(p => p.id));
 ```
 
-## `@deltabox/toolchain/tsdown`
+## `@deltabox/toolchain/pack`
 
 | Export                                                         | Description                                  |
 | -------------------------------------------------------------- | -------------------------------------------- |

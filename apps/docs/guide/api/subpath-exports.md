@@ -9,7 +9,7 @@
 | `@deltabox/toolchain/migrate`   | Pluggable migrations to Oxfmt/Oxlint (Biome, ESLint, Prettier, Dprint).                         |
 | `@deltabox/toolchain/template`  | The builtin/local/online template registry, loading and scaffolding.                            |
 | `@deltabox/toolchain/providers` | The provider registry (`toolchainProviders`) the editor reads.                                  |
-| `@deltabox/toolchain/tsdown`    | The tsdown base config, `createTsdownConfig`, post banner and cleanup.                          |
+| `@deltabox/toolchain/pack`      | The tsdown base config, `createTsdownConfig`, post banner and cleanup.                          |
 | `@deltabox/toolchain/tsconfig`  | The tsconfig sync task, templates and the tsconfig generator.                                   |
 | `@deltabox/toolchain/changelog` | The changelog runner, workflows, commitlint and the changelog sync task.                        |
 | `@deltabox/toolchain/biome`     | The generic Biome config, rendering helpers and the biome sync task.                            |

@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 const { captureCli } = vi.hoisted(() => ({ captureCli: vi.fn() }));
 
@@ -65,6 +65,12 @@ describe('builtin templates', () => {
                 'vite-plus-application',
             ])
         );
+    });
+
+    it('describes the fallback templates without stale tools', () => {
+        for (const template of BUILTIN_TEMPLATES) {
+            expect(template.description ?? '').not.toContain('tsdown');
+        }
     });
 
     it('lets CLI descriptors win and fills missing builtins', () => {

@@ -2,9 +2,15 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 
-import { DBX_TASKS, dbx, dbxTaskCommand, resolveDbx } from '../src/index.js';
+import {
+    createSerializedRunner,
+    DBX_TASKS,
+    dbx,
+    dbxTaskCommand,
+    resolveDbx,
+} from '../src/index.js';
 
 const tmpDirs: string[] = [];
 
@@ -25,6 +31,12 @@ describe('dbx() plugin', () => {
         expect(typeof plugin.buildStart).toBe('function');
         expect(typeof plugin.configResolved).toBe('function');
         expect(typeof plugin.watchChange).toBe('function');
+    });
+
+    it('rejects a global-scoped enabled value in the inline toolchain config', () => {
+        expect(() => dbx({ toolchain: { enabled: { scope: 'global' } } } as never)).toThrow(
+            /workspace/
+        );
     });
 });
 
@@ -110,5 +122,142 @@ describe('dbx resolution', () => {
             expect(resolved.source).toBe('global');
             expect(resolved.exe).toBe(globalBin);
         });
+    });
+});
+
+describe('dbx() plugin config bridge', () => {
+    const MARKER = Symbol.for('@deltabox/toolchain/vite-plugin');
+
+    function withPackage(dir: string, deps: Record<string, unknown>): void {
+        fs.writeFileSync(
+            path.join(dir, 'package.json'),
+            JSON.stringify({ name: 'fixture', private: true, ...deps })
+        );
+    }
+
+    type ConfigHook = (config: Record<string, unknown>, env: unknown) => Promise<unknown> | unknown;
+
+    async function runConfig(
+        dir: string,
+        options: Parameters<typeof dbx>[0],
+        userConfig: Record<string, unknown> = {}
+    ): Promise<Record<string, unknown>> {
+        const plugin = dbx({ cwd: dir, ...options });
+        const hook = plugin.config as unknown as ConfigHook;
+        return ((await hook(userConfig, { command: 'serve', mode: 'development' })) ??
+            {}) as Record<string, unknown>;
+    }
+
+    it('marks itself with the inline toolchain options', () => {
+        const plugin = dbx({ toolchain: { project: { name: 'inline' } } });
+        const descriptor = (plugin as unknown as Record<symbol, { toolchain: unknown }>)[MARKER];
+        const toolchain = descriptor?.toolchain;
+        expect(toolchain).toMatchObject({ project: { name: 'inline' } });
+        expect((toolchain as { vite?: unknown }).vite).toBeUndefined();
+    });
+
+    it('maps the dbx logger and watch sections onto Vite options', async () => {
+        const dir = makeTmp();
+        const result = await runConfig(dir, {
+            toolchain: { logger: { level: 'warn' }, watch: { exclude: '**/ignored/**' } },
+        });
+        expect(result.logLevel).toBe('warn');
+        expect(result.server).toMatchObject({ watch: { ignored: '**/ignored/**' } });
+        // Pure Vite: no Vite+ only keys.
+        expect(result.fmt).toBeUndefined();
+        expect(result.lint).toBeUndefined();
+    });
+
+    it('adds fmt/lint only when Vite+ is declared', async () => {
+        const plain = makeTmp();
+        const plainResult = await runConfig(plain, { toolchain: { fmt: true, lint: true } });
+        expect(plainResult.fmt).toBeUndefined();
+
+        const vitePlus = makeTmp();
+        withPackage(vitePlus, { devDependencies: { 'vite-plus': '^1.0.0' } });
+        const result = await runConfig(vitePlus, { toolchain: { fmt: true, lint: true } });
+        expect(result.fmt).toBeTruthy();
+        expect(result.lint).toBeTruthy();
+    });
+
+    it('reads dbx.config when no inline toolchain is given', async () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'dbx.config.json'),
+            JSON.stringify({ toolchain: { logger: { level: 'error' } } })
+        );
+        const result = await runConfig(dir, {});
+        expect(result.logLevel).toBe('error');
+    });
+
+    it('keeps the dbx.config sections when the inline options only set project', async () => {
+        const dir = makeTmp();
+        withPackage(dir, { devDependencies: { 'vite-plus': '^1.0.0' } });
+        fs.writeFileSync(
+            path.join(dir, 'dbx.config.json'),
+            JSON.stringify({ toolchain: { fmt: { oxc: { tabWidth: 2 } } } })
+        );
+
+        const result = await runConfig(dir, { toolchain: { project: { name: 'app' } } });
+        expect((result.fmt as { tabWidth?: number } | undefined)?.tabWidth).toBe(2);
+    });
+
+    it('still lets inline options override the file', async () => {
+        const dir = makeTmp();
+        withPackage(dir, { devDependencies: { 'vite-plus': '^1.0.0' } });
+        fs.writeFileSync(
+            path.join(dir, 'dbx.config.json'),
+            JSON.stringify({ toolchain: { fmt: { oxc: { tabWidth: 2 } } } })
+        );
+
+        const result = await runConfig(dir, {
+            toolchain: { project: { name: 'app' }, fmt: { oxc: { tabWidth: 8 } } },
+        });
+        expect((result.fmt as { tabWidth?: number } | undefined)?.tabWidth).toBe(8);
+    });
+});
+
+describe('createSerializedRunner', () => {
+    it('runs once more when a request arrives mid-run', async () => {
+        let calls = 0;
+        let release: (() => void) | undefined;
+        const run = createSerializedRunner(
+            () =>
+                new Promise<number>(resolve => {
+                    calls += 1;
+                    release = () => resolve(0);
+                })
+        );
+
+        const first = run();
+        expect(calls).toBe(1);
+        const queued = run();
+        expect(await queued).toBe(0);
+        expect(calls).toBe(1);
+
+        release?.();
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(calls).toBe(2);
+
+        release?.();
+        expect(await first).toBe(0);
+        expect(calls).toBe(2);
+    });
+
+    it('returns the last exit code after a queued run', async () => {
+        const codes = [0, 3];
+        let release: (() => void) | undefined;
+        const run = createSerializedRunner(
+            () =>
+                new Promise<number>(resolve => {
+                    release = () => resolve(codes.shift() ?? 0);
+                })
+        );
+        const first = run();
+        run();
+        release?.();
+        await new Promise(resolve => setTimeout(resolve, 0));
+        release?.();
+        expect(await first).toBe(3);
     });
 });

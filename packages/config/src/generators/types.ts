@@ -21,7 +21,8 @@ import {
     splitBaseSchema,
     zodToSchemaMap,
 } from '../schema.js';
-import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
+import type { ConfigEngineOptions, ConfigSchema } from '../types/index.js';
+import { escapeJsDoc } from './jsdoc.js';
 import { resolveGeneratedFile } from './output.js';
 
 /** The `generateTypes` options shared by every interface. */
@@ -176,25 +177,25 @@ function jsDocTags(
     ) {
         const message =
             typeof meta.deprecationMessage === 'string' ? meta.deprecationMessage.trim() : '';
-        tags.push(message ? `@deprecated ${message}` : '@deprecated');
+        tags.push(message ? `@deprecated ${escapeJsDoc(message)}` : '@deprecated');
     }
     if (options.includeExamples !== false) {
         for (const example of exampleList(meta.example)) {
-            tags.push(`@example ${example}`);
+            tags.push(`@example ${escapeJsDoc(example)}`);
         }
     }
     if (options.includeSince !== false && typeof meta.since === 'string' && meta.since.trim()) {
-        tags.push(`@since ${meta.since.trim()}`);
+        tags.push(`@since ${escapeJsDoc(meta.since.trim())}`);
     }
     if (options.includeSee !== false) {
-        for (const link of exampleList(meta.see)) tags.push(`@see ${link}`);
+        for (const link of exampleList(meta.see)) tags.push(`@see ${escapeJsDoc(link)}`);
     }
     if (
         options.includeRemarks !== false &&
         typeof meta.remarks === 'string' &&
         meta.remarks.trim()
     ) {
-        tags.push(`@remarks ${meta.remarks.trim()}`);
+        tags.push(`@remarks ${escapeJsDoc(meta.remarks.trim())}`);
     }
     if (options.includeExperimental !== false && meta.experimental === true) {
         tags.push('@experimental');
@@ -269,6 +270,7 @@ function withJsDocTags(schema: Schema, options: JsDocOptions): Schema {
         tags.push(`@cli ${source.cliFlag}`);
     }
     const out: Record<string, unknown> = { ...rest };
+    if (typeof out.description === 'string') out.description = escapeJsDoc(out.description);
     // A boolean `required` is metadata; an array is the object's required keys.
     if (requiredMeta) delete out.required;
     if (tags.length > 0) out.tags = tags;

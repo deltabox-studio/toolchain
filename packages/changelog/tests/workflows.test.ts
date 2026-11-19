@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import {
     DEFAULT_WORKFLOW_DIR,
@@ -149,6 +149,46 @@ describe('workflow config', () => {
         expect(bun).toContain('oven-sh/setup-bun@v2');
         expect(bun).toContain('bun install --frozen-lockfile');
         expect(bun).toContain('bunx dbx');
+    });
+
+    it('uses `voidzero-dev/setup-vp` for Vite+ projects', () => {
+        const yaml = renderWorkflow('ci', {
+            tokens: { ...DEFAULT_WORKFLOW_TOKENS, vitePlus: true },
+        })!;
+        expect(yaml).toContain('uses: voidzero-dev/setup-vp@v1.22.0');
+        expect(yaml).toContain('node-version: "22"');
+        expect(yaml).toContain('cache: true');
+        expect(yaml).not.toContain('actions/setup-node');
+        expect(yaml).not.toContain('corepack');
+    });
+
+    it('pins an overridden setup-vp version and lets a workflow opt out', () => {
+        const pinned = renderWorkflow('ci', {
+            tokens: { vitePlus: true, setupVpVersion: 'v1.30.0' },
+        })!;
+        expect(pinned).toContain('uses: voidzero-dev/setup-vp@v1.30.0');
+
+        const optedOut = renderWorkflow('ci', {
+            tokens: { vitePlus: true },
+            config: { tokens: { vitePlus: false } },
+        })!;
+        expect(optedOut).toContain('actions/setup-node@v5');
+        expect(optedOut).not.toContain('setup-vp');
+    });
+
+    it('injects setup-vp into a custom workflow setup for Vite+ projects', () => {
+        const yaml = renderCustomWorkflow('deploy', {
+            tokens: { vitePlus: true },
+            config: {
+                setup: true,
+                triggers: { workflow_dispatch: {} },
+                jobs: {
+                    deploy: { 'runs-on': 'ubuntu-latest', steps: [{ run: 'yarn deploy' }] },
+                },
+            },
+        })!;
+        expect(yaml).toContain('uses: voidzero-dev/setup-vp@v1.22.0');
+        expect(yaml).not.toContain('corepack');
     });
 
     it('renderWorkflows omits disabled workflows', () => {
@@ -369,6 +409,100 @@ describe('workflow config', () => {
         expect(files['.gitlab-ci.yml']).toContain('yarn install --immutable');
     });
 
+    it('injects the setup-vp GitLab template for Vite+ projects', () => {
+        const files = renderWorkflows(
+            { vitePlus: true },
+            {
+                ci: {
+                    provider: 'gitlab',
+                    setup: true,
+                    workflow: {
+                        stages: ['test'],
+                        test: { stage: 'test', script: ['yarn test'] },
+                    },
+                },
+            }
+        );
+        const yml = files['.gitlab-ci.yml']!;
+        expect(yml).toContain(
+            'remote: https://raw.githubusercontent.com/voidzero-dev/setup-vp/v1.22.0/gitlab/setup-vp.yml'
+        );
+        expect(yml).toContain('setup-ref: v1.22.0');
+        expect(yml).toContain('image: node:22');
+        expect(yml).toContain('extends: .setup-vp');
+        expect(yml).not.toContain('corepack');
+        expect(yml).not.toContain('before_script');
+    });
+
+    it('injects the setup-vp Azure template for Vite+ projects', () => {
+        const files = renderWorkflows(
+            { vitePlus: true },
+            {
+                ci: {
+                    provider: 'azure',
+                    setup: true,
+                    workflow: {
+                        trigger: ['main'],
+                        pool: { vmImage: 'ubuntu-latest' },
+                        steps: [{ script: 'yarn build' }],
+                    },
+                },
+            }
+        );
+        const yml = files['azure-pipelines.yml']!;
+        expect(yml).toContain('repository: setupVp');
+        expect(yml).toContain('ref: refs/tags/v1.22.0');
+        expect(yml).toContain('template: azure/setup-vp.yml@setupVp');
+        expect(yml).toContain('setupRef: v1.22.0');
+        expect(yml).toContain('nodeVersion: 22.x');
+        expect(yml).toContain('runInstall: true');
+        expect(yml).toContain('- checkout: self');
+        expect(yml).not.toContain('UseNode@1');
+        expect(yml).not.toContain('corepack');
+    });
+
+    it('injects setup-vp into Azure job arrays', () => {
+        const files = renderWorkflows(
+            { vitePlus: true },
+            {
+                ci: {
+                    provider: 'azure',
+                    setup: true,
+                    workflow: {
+                        jobs: [{ job: 'test', steps: [{ script: 'yarn test' }] }],
+                    },
+                },
+            }
+        );
+        const yml = files['azure-pipelines.yml']!;
+        expect(yml).toContain('jobs:');
+        expect(yml).toContain('- checkout: self');
+        expect(yml).toContain('template: azure/setup-vp.yml@setupVp');
+        expect(yml).toContain('script: yarn test');
+    });
+
+    it('does not duplicate an existing Azure checkout or setup-vp step', () => {
+        const files = renderWorkflows(
+            { vitePlus: true },
+            {
+                ci: {
+                    provider: 'azure',
+                    setup: true,
+                    workflow: {
+                        steps: [
+                            { checkout: 'self' },
+                            { template: 'azure/setup-vp.yml@setupVp', parameters: {} },
+                            { script: 'yarn build' },
+                        ],
+                    },
+                },
+            }
+        );
+        const yml = files['azure-pipelines.yml']!;
+        expect((yml.match(/checkout: self/g) ?? []).length).toBe(1);
+        expect((yml.match(/setup-vp\.yml@setupVp/g) ?? []).length).toBe(1);
+    });
+
     it('injects the Azure setup into a vendor pipeline when asked', () => {
         const files = renderWorkflows(
             {},
@@ -387,6 +521,34 @@ describe('workflow config', () => {
         expect(files['azure-pipelines.yml']).toContain('task: UseNode@1');
         expect(files['azure-pipelines.yml']).toContain('corepack prepare yarn@4.17.1 --activate');
         expect(files['azure-pipelines.yml']).toContain('yarn build');
+    });
+
+    it('does not duplicate existing Azure Node/install steps', () => {
+        const files = renderWorkflows(
+            {},
+            {
+                ci: {
+                    provider: 'azure',
+                    setup: true,
+                    workflow: {
+                        jobs: [
+                            {
+                                job: 'build',
+                                steps: [
+                                    { task: 'UseNode@1', inputs: { version: '20' } },
+                                    { script: 'yarn install --immutable' },
+                                    { script: 'yarn build' },
+                                ],
+                            },
+                        ],
+                    },
+                },
+            }
+        );
+        const yml = files['azure-pipelines.yml']!;
+        expect((yml.match(/task: UseNode@1/g) ?? []).length).toBe(1);
+        expect((yml.match(/yarn install --immutable/g) ?? []).length).toBe(1);
+        expect(yml).toContain('version: "20"');
     });
 
     it('keeps vendor workflows as-is without setup', () => {
@@ -457,5 +619,20 @@ describe('workflow command fixes', () => {
         const files = renderWorkflows({ packageManager: 'yarn' }, { changelog: true });
         expect(files['changelog.yml']).toContain('git add -- "*package.json" "*CHANGELOG.md"');
         expect(files['changelog.yml']).not.toContain('git add -u');
+    });
+
+    it('names the changelog workflow after the resolved branch', () => {
+        const single = renderWorkflow('changelog', {
+            tokens: { mainBranch: 'main', devBranch: 'main' },
+        })!;
+        expect(single).toContain('name: Changelog\n');
+        expect(single).toContain('group: changelog-main');
+        expect(single).not.toContain('Changelog (main)');
+
+        const split = renderWorkflow('changelog', {
+            tokens: { mainBranch: 'main', devBranch: 'dev' },
+        })!;
+        expect(split).toContain('name: Changelog (dev)');
+        expect(split).toContain('group: changelog-dev');
     });
 });

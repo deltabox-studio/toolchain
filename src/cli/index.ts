@@ -15,9 +15,12 @@ import { Command } from 'commander';
 
 import { changelogCommands } from '@deltabox/toolchain/changelog/cli';
 import { loadToolchainConfig } from '@deltabox/toolchain/core';
+import { mcpCommands } from '@deltabox/toolchain/mcp/cli';
 import { migrateCommands } from '@deltabox/toolchain/migrate/cli';
+import { cleanupCommands } from '@deltabox/toolchain/pack/cli';
 import { projectCommands } from '@deltabox/toolchain/project/cli';
 import {
+    cancelActiveSpinner,
     LOG_LEVELS,
     logger,
     normalizeLogLevel,
@@ -29,8 +32,7 @@ import {
 } from '@deltabox/toolchain/shared';
 import { templateCommands } from '@deltabox/toolchain/template/cli';
 import { tsconfigCommands } from '@deltabox/toolchain/tsconfig/cli';
-import { cleanupCommands } from '@deltabox/toolchain/tsdown/cli';
-import { resolveVpCommand, viteCommands } from '@deltabox/toolchain/vite/cli';
+import { resolveVpCommand, viteCommands } from 'vite-plugin-dbx/cli';
 
 import rootPkg from '../../package.json' with { type: 'json' };
 import { syncCommands } from './commands/index.js';
@@ -42,17 +44,46 @@ import { runUpdateCheck } from './update-check.js';
 export { extractConfigSelection } from './config-selection.js';
 export { registerToolchainCommands } from './register.js';
 
-/** The commands built into the root CLI (config commands need a consumer engine). */
+/** The first-class `dbx fmt` / `dbx lint` commands (delegating to the tooling routes). */
+function toolingAliases(commands: ToolchainCommand[]): ToolchainCommand[] {
+    const out: ToolchainCommand[] = [];
+    for (const name of ['fmt', 'lint'] as const) {
+        const command = commands.find(candidate => candidate.name === `vite:${name}`);
+        if (!command) continue;
+        out.push({
+            ...command,
+            name,
+            description:
+                name === 'fmt'
+                    ? 'Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc).'
+                    : 'Lint with the detected linter (Vite+ Oxlint, ESLint or Biome).',
+        });
+    }
+    return out;
+}
+
+/**
+ * The commands built into the root CLI.
+ *
+ * The config generator's `config:*` commands are deliberately **not** registered
+ * here: they are bound to a consumer's `ConfigEngine` (its schema and root),
+ * which the root CLI cannot construct. `configCommands()` remains a library API
+ * for a project that exposes its own config; `dbx` itself generates its
+ * artifacts with `yarn config:generate`.
+ */
 export function builtinCommands(config?: ToolchainConfig): ToolchainCommand[] {
+    const vite = withToolingRouting(viteCommands());
     return [
         ...syncCommands(config),
         ...tsconfigCommands(),
         ...cleanupCommands(),
         ...changelogCommands(),
+        ...mcpCommands(),
         ...migrateCommands(),
         ...projectCommands(),
         ...templateCommands(),
-        ...withToolingRouting(viteCommands()),
+        ...vite,
+        ...toolingAliases(vite),
     ];
 }
 
@@ -114,8 +145,11 @@ export function extractLogOptions(
         } else if (arg === '--color') {
             options.color = true;
         } else if (arg === '--log-level') {
-            const value = argv[++index];
-            if (value !== undefined) options.level = normalizeLogLevel(value);
+            const value = argv[index + 1];
+            if (value !== undefined && value !== '--' && !value.startsWith('-')) {
+                options.level = normalizeLogLevel(value);
+                index += 1;
+            }
         } else if (arg.startsWith('--log-level=')) {
             options.level = normalizeLogLevel(arg.slice('--log-level='.length));
         } else {
@@ -162,6 +196,36 @@ export function extractUpdateCheck(
 }
 
 /**
+ * Commands whose stdout must stay machine-readable. The update notice is human
+ * output on stdout, so it is suppressed for these (`mcp:serve` is a JSON-RPC
+ * stream; `template:info` prints JSON by default).
+ */
+export const MACHINE_OUTPUT_COMMANDS = new Set(['template:info', 'mcp:serve']);
+
+/** Flags whose output must stay machine-readable (no update notice). */
+export const MACHINE_OUTPUT_FLAGS = new Set([
+    '--json',
+    '--alias',
+    '--paths',
+    '--references',
+    '--release-notes',
+]);
+
+/** Whether the update notice must be suppressed for this argv. */
+export function suppressesUpdateNotice(
+    argv: string[],
+    machineCommands: ReadonlySet<string> = MACHINE_OUTPUT_COMMANDS
+): boolean {
+    const wantsHelp = argv.some(
+        arg => arg === '--help' || arg === '-h' || arg === '--version' || arg === '-V'
+    );
+    const wantsJson =
+        argv.some(arg => MACHINE_OUTPUT_FLAGS.has(arg)) ||
+        (argv[2] !== undefined && machineCommands.has(argv[2]));
+    return wantsHelp || wantsJson;
+}
+
+/**
  * Build the `dbx` commander program.
  *
  * Commander's own help/error output is routed through the shared logger so it
@@ -192,14 +256,22 @@ export function createCli(commands: ToolchainCommand[] = builtinCommands()): Com
     program
         .name('dbx')
         .description(
-            'All-in-one project toolchain: configs, tsconfigs, changelogs, CI, templates, scaffolding, migrations.'
+            'A superset of Vite+ with project synchronization, a config generator, tsconfig management, MCP server, CI/changelog automation, providers, catalogs and a VS Code extension. Use it as a Vite plugin or standalone.'
         )
+        // Global options are parsed before the subcommand, so a subcommand can
+        // reuse a name like `--version` (the changelog uses it for the target
+        // version) without the root version flag swallowing it.
+        .enablePositionalOptions()
         .version(rootPkg.version, '-V, --version', 'Output the version number')
         .option('--log-level <level>', `Minimum log level (${LOG_LEVELS.join('|')}).`)
         .option('--no-color', 'Disable coloured output.')
         .option('--no-update-check', 'Do not check for a newer dbx version.')
         .option('--config <file>', 'Use a specific dbx config file.')
         .option('--no-config', 'Ignore discovered config; use CLI flags/env only.')
+        .option(
+            '--configless',
+            'Manage projects without their own dbx.config.* (inherit the nearest config).'
+        )
         .showHelpAfterError();
     // Commander's built-in Help does not colourise; wire its style hooks to the
     // logger's colour set (identity when colours are off, so `--no-color` is plain).
@@ -217,8 +289,25 @@ export function createCli(commands: ToolchainCommand[] = builtinCommands()): Com
     return program;
 }
 
+let interruptHandlerInstalled = false;
+
+/**
+ * Stop the active spinner and exit on Ctrl+C. clack's own SIGINT listener only
+ * cancels its animation and leaves the process running, which made a long sync
+ * print `Canceled` and then keep going.
+ */
+function installInterruptHandler(): void {
+    if (interruptHandlerInstalled) return;
+    interruptHandlerInstalled = true;
+    process.once('SIGINT', () => {
+        cancelActiveSpinner();
+        process.exit(130);
+    });
+}
+
 /** Parse and run the CLI. */
 export async function runCli(argv: string[] = process.argv): Promise<void> {
+    installInterruptHandler();
     // A preliminary command set is enough to classify passthrough operands
     // before the config selection is known; the final set is filtered by the
     // provider registry policy below.
@@ -240,6 +329,16 @@ export async function runCli(argv: string[] = process.argv): Promise<void> {
     );
     setConfigSelection(selection);
     setLogOverrides(options);
+    if (selection.config !== undefined && selection.noConfig) {
+        logger.error('`--config` and `--no-config` cannot be used together.');
+        process.exitCode = 1;
+        return;
+    }
+    if (selection.config !== undefined && selection.config.trim() === '') {
+        logger.error('`--config` requires a non-empty file path.');
+        process.exitCode = 1;
+        return;
+    }
     // Register only the providers allowed by `toolchain.registry.providers`, so
     // a denied provider cannot appear in help/completion. Hooks are skipped:
     // this is a metadata-only load (the command action loads the real context).
@@ -250,20 +349,8 @@ export async function runCli(argv: string[] = process.argv): Promise<void> {
     });
     const commands = builtinCommands(registration.config);
     const commandNames = builtinCommandNames(commands);
-    const wantsHelp = argv.some(arg => arg === '--help' || arg === '-h' || arg === '--version');
     // The notice is human output on stdout; never let it corrupt machine output.
-    const machineCommands = new Set(['template:info']);
-    const machineFlags = new Set([
-        '--json',
-        '--alias',
-        '--paths',
-        '--references',
-        '--release-notes',
-    ]);
-    const wantsJson =
-        rest3.some(arg => machineFlags.has(arg)) ||
-        (rest3[2] !== undefined && machineCommands.has(rest3[2]));
-    if (!wantsHelp && !wantsJson) runUpdateCheck(rootPkg.version, updateCheck);
+    if (!suppressesUpdateNotice(rest3)) runUpdateCheck(rootPkg.version, updateCheck);
     await createCli(commands).parseAsync(withDefaultVite(rest3, commandNames));
 }
 

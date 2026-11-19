@@ -17,11 +17,14 @@ import {
     type DbxConfig,
     deepMerge,
     isPlainObject,
+    resolveOxcFmtConfig,
+    resolveOxcLintConfig,
     resolveTokens,
     sectionConfig,
     type ToolchainConfig,
     type ToolchainConfigSections,
     type ToolchainOxfmtConfig,
+    type ToolchainViteConfig,
 } from '@deltabox/toolchain/shared';
 
 import { viteConfigObject } from './sync.js';
@@ -70,12 +73,20 @@ export async function resolveVite<T extends object = ViteUserConfig>(
         toolchain = loaded.config;
     }
     const baseVite = sectionConfig(toolchain.vite) ?? {};
+    // Resolve fmt/lint exactly like the sync task and the plugin do: the
+    // top-level `toolchain.fmt.oxc` / `toolchain.lint.oxc` options belong in the
+    // Vite config too, with `vite.fmt` / `vite.lint` as overrides.
+    const effective: Record<string, unknown> = { ...baseVite };
+    const fmt = resolveOxcFmtConfig(toolchain);
+    const lint = resolveOxcLintConfig(toolchain);
+    if (fmt !== undefined) effective.fmt = fmt;
+    if (lint !== undefined) effective.lint = lint;
     const vite =
         viteOverride === undefined
-            ? baseVite
-            : deepMerge(baseVite, sectionConfig(viteOverride) ?? {});
+            ? effective
+            : deepMerge(effective, sectionConfig(viteOverride) ?? {});
     const resolved = applyReplacementsDeep(
-        viteConfigObject(vite),
+        viteConfigObject(vite as ToolchainViteConfig),
         resolveTokens(toolchain)
     ) as Record<string, unknown>;
     if (isPlainObject(resolved.fmt)) {

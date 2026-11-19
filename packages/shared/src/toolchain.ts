@@ -13,84 +13,23 @@
  */
 
 import { isVendorWorkflowConfig } from './config-schema/workflow.js';
-import type {
-    ChangelogConfig,
-    CiChangelogConfig,
-    ProjectType,
-    ToolchainCiConfig,
-    ToolchainConfigSections,
-} from './config-types.js';
+import type { ChangelogConfig, CiChangelogConfig, ToolchainCiConfig } from './config-types.js';
 import { deepMerge, isPlainObject } from './object-utils.js';
 import type { Replacements } from './template.js';
-import type { Awaitable } from './types.js';
+import type {
+    DbxConfig,
+    DbxConfigFunction,
+    DbxConfigInput,
+    FormatterTool,
+    LinterTool,
+    ResolvedToolchainEnabled,
+    ToolchainConfig,
+    ToolchainEnabledSetting,
+    ToolchainSection,
+} from './types/index.js';
 
 export * from './config-schema/index.js';
 export * from './config-types.js';
-
-/** A summary of a sync run, handed to {@link ToolchainHooks.afterSync}. */
-export interface SyncSummary {
-    written: string[];
-    changed: string[];
-    removed: string[];
-    upToDate: boolean;
-}
-
-/**
- * Lifecycle hooks, declared as functions in `dbx.config.ts` (so they only work
- * from a `.ts`/`.js` config, not JSON). Return values are awaited.
- */
-export interface ToolchainHooks {
-    /** Runs after the config is loaded + tokens resolved. */
-    afterLoad?: (info: {
-        cwd: string;
-        config: ToolchainConfig;
-        tokens: Replacements;
-        path?: string;
-    }) => Awaitable<void>;
-    /** Runs once before the sync tasks. */
-    beforeSync?: (ctx: SyncContext) => Awaitable<void>;
-    /** Runs before each task. */
-    beforeTask?: (info: { task: SyncTask; ctx: SyncContext }) => Awaitable<void>;
-    /** Runs after each task (with the files it produced, if any). */
-    afterTask?: (info: {
-        task: SyncTask;
-        ctx: SyncContext;
-        files?: ManagedFile[];
-    }) => Awaitable<void>;
-    /** Runs once after the sync tasks with the result summary. */
-    afterSync?: (info: {
-        cwd: string;
-        config: ToolchainConfig;
-        result: SyncSummary;
-    }) => Awaitable<void>;
-    /** Runs on every watch-triggered change. */
-    onChange?: (info: { path?: string }) => Awaitable<void>;
-}
-
-/**
- * The complete tooling configuration a consumer declares (under
- * `dbx.toolchain`).
- *
- * Every section is **opt-in by presence** (see {@link sectionEnabled}): define a
- * section to enable it; omit it to leave that area untouched. Within a defined
- * section, `enabled: false` disables it explicitly.
- */
-export type ToolchainConfig = ToolchainConfigSections & { hooks?: ToolchainHooks };
-
-/**
- * The root shape of a `dbx.config.*` file. The `@deltabox/toolchain` settings
- * live under the `toolchain` key, so `dbx.config` can host other dbx concerns
- * alongside it.
- */
-export interface DbxConfig {
-    toolchain?: ToolchainConfig;
-}
-
-/** A `dbx.config` callback: returns the config synchronously or as a promise. */
-export type DbxConfigFunction = () => DbxConfig | Promise<DbxConfig>;
-
-/** Everything {@link defineConfig} accepts: an object, a promise, or a callback. */
-export type DbxConfigInput = DbxConfig | Promise<DbxConfig> | DbxConfigFunction;
 
 /**
  * Identity helper that gives a config file full type-checking + autocomplete.
@@ -104,12 +43,6 @@ export function defineConfig(config: DbxConfig): DbxConfig;
 export function defineConfig(config: DbxConfigInput): DbxConfigInput {
     return config;
 }
-
-/**
- * A config section that is enabled with `true`, disabled with `false`, or
- * configured with an options object.
- */
-export type ToolchainSection<T> = boolean | T;
 
 /**
  * Whether an optional top-level config section is enabled.
@@ -135,6 +68,50 @@ export function sectionConfig<T extends object>(
     section: ToolchainSection<T> | undefined
 ): T | undefined {
     return section !== undefined && typeof section === 'object' ? section : undefined;
+}
+
+/**
+ * Whether a section's managed files should be regenerated during sync.
+ *
+ * A section only regenerates when it is enabled (opt-in by presence) and does
+ * not opt out with `regenerate: false`. The default is `true`, so existing
+ * configs keep their current behaviour.
+ */
+export function regenerateEnabled(
+    section: boolean | { enabled?: boolean; regenerate?: boolean } | undefined
+): boolean {
+    if (!sectionEnabled(section)) return false;
+    return sectionConfig(section)?.regenerate !== false;
+}
+
+/** Normalize `toolchain.enabled` (`true | false | { disabled, scope }`). */
+export function resolveToolchainEnabled(
+    config: { enabled?: boolean | ToolchainEnabledSetting } | undefined
+): ResolvedToolchainEnabled {
+    const value = config?.enabled;
+    if (value === undefined) return { enabled: true, scope: 'workspace' };
+    if (typeof value === 'boolean') return { enabled: value, scope: 'workspace' };
+    return { enabled: value.disabled !== true, scope: value.scope };
+}
+
+/**
+ * Reject a non-workspace scope in a config file or the Vite plugin's inline
+ * `dbx({ toolchain })` config. Global scope is only settable through the CLI /
+ * programmatic API and the VS Code extension.
+ */
+export function assertWorkspaceEnabledScope(
+    config: { enabled?: boolean | ToolchainEnabledSetting } | undefined,
+    source = 'config'
+): void {
+    const value = config?.enabled;
+    if (value === undefined || typeof value === 'boolean') return;
+    if (value.scope !== 'workspace') {
+        throw new Error(
+            `${source}: \`toolchain.enabled\` only accepts the \`workspace\` scope in config ` +
+                `files and the Vite plugin (got \`${value.scope}\`). Use \`dbx enable/disable ` +
+                '--global\` or the VS Code command to change the global scope.'
+        );
+    }
 }
 
 /** The file names a config loader looks for, in priority order. */
@@ -209,9 +186,6 @@ export function defaultPackageManagerVersion(packageManager: string): string | u
 export const FORMATTER_PRECEDENCE = ['oxc', 'biome', 'prettier', 'dprint'] as const;
 /** Linter tools, highest priority first. */
 export const LINTER_PRECEDENCE = ['oxc', 'biome', 'eslint'] as const;
-
-export type FormatterTool = (typeof FORMATTER_PRECEDENCE)[number];
-export type LinterTool = (typeof LINTER_PRECEDENCE)[number];
 
 function sectionOptions(value: unknown): Record<string, unknown> | undefined {
     return sectionEnabled(value as boolean | object | undefined)
@@ -342,79 +316,4 @@ export function resolveTokens(config: ToolchainConfig = {}): Replacements {
         mainBranch: branches.main[0] ?? 'main',
         devBranch: branches.dev[0] ?? 'main',
     };
-}
-
-/** A file written by a sync task (its parent directory is created as needed). */
-export interface ManagedFile {
-    /** Path relative to the project root. */
-    path: string;
-    /** The file content. */
-    content: string;
-    /**
-     * A comment inserted at the top marking the file as managed (skipped for
-     * JSON files, which are tracked via the manifest instead).
-     */
-    header?: string;
-    /**
-     * Record the file in the manifest (default true). An untracked file is
-     * written and drift-checked like any other, but stays user-owned: it is
-     * never pruned by a later sync or removed by `dbx reset` (eg. a user
-     * tsconfig a `tsconfig.overrides` entry patches).
-     */
-    track?: boolean;
-}
-
-/** The context handed to every {@link SyncTask}. */
-export interface SyncContext {
-    /** The project root. */
-    cwd: string;
-    /** The detected/configured project kind. */
-    projectType: ProjectType;
-    /** The loaded config. */
-    config: ToolchainConfig;
-    /** The project's own (unmerged) config, when loaded. */
-    ownConfig?: ToolchainConfig;
-    /** The resolved replacement tokens. */
-    tokens: Replacements;
-    /** Log a line (respects `--quiet`). */
-    log: (message: string) => void;
-    /** Emit a warning (respects `--quiet` and `logger.suppress`). */
-    warn: (message: string, id?: string) => void;
-    /** Dry run: report drift without writing files (including snapshots). */
-    check?: boolean;
-    /** Repo-relative files the previous sync managed (from the manifest). */
-    managedFiles?: string[];
-    /** Extra manifest metadata tasks can persist between syncs. */
-    manifest?: Record<string, unknown>;
-}
-
-/** A unit of sync work exposed by a package. */
-export interface SyncTask {
-    /** Stable id, used in logs + the manifest. */
-    name: string;
-    /**
-     * Repo-relative globs to watch; a change re-runs this task. The config file
-     * itself is always watched, and re-runs every task. A function derives the
-     * globs from the config (eg. custom tsconfig file names).
-     */
-    watch?: string[] | ((config: ToolchainConfig) => string[]);
-    /**
-     * File names/suffixes the task does **not** own but that may appear in an
-     * older manifest. They are never deleted (even though they are no longer
-     * generated) and are dropped from the manifest, so a consumer can edit them
-     * freely — eg. `tsconfig.build.json`. A function derives them from the config.
-     */
-    keep?: string[] | ((config: ToolchainConfig) => string[]);
-    /** Whether the task runs for the given config (default: always). */
-    enabled?: (config: ToolchainConfig) => boolean;
-    /**
-     * The project kinds the task applies to (default: all). A task is skipped
-     * when the resolved project type is not in this list.
-     */
-    projectTypes?: ProjectType[];
-    /**
-     * Run the task. Returns the managed files to write, and/or performs side
-     * effects directly (eg. the tsconfig task regenerates files itself).
-     */
-    run: (ctx: SyncContext) => Awaitable<ManagedFile[] | void>;
 }

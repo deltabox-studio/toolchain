@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import {
     createLogger,
@@ -125,6 +125,32 @@ describe('logger', () => {
         const log = createLogger({ name: 'dbx', color: false });
         log.warn('careful', 'deprecated.section.biome');
         expect(cap.all()).toContain('[DEPRECATED_SECTION_BIOME] careful');
+    });
+
+    it('treats `logger: false` as silent', () => {
+        setLogConfig(false);
+        expect(getLogger().level).toBe('silent');
+        getLogger().info('nope');
+        expect(cap.all()).toBe('');
+    });
+
+    it('keeps stateful regular-expression suppressions consistent', () => {
+        let hits = 0;
+        const custom = {
+            raw: () => {},
+            rawError: () => {},
+            write: () => {},
+            debug: () => {},
+            info: () => {},
+            success: () => {},
+            warn: () => {
+                hits += 1;
+            },
+            error: () => {},
+        };
+        const log = createLogger({ level: 'warn', logger: custom, suppress: [/needle/g] });
+        for (let index = 0; index < 5; index += 1) log.warn(`message ${index} needle`);
+        expect(hits).toBe(0);
     });
 
     it('suppresses warnings/errors by id, substring or regex', () => {

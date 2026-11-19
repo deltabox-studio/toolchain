@@ -7,15 +7,15 @@ is the living example: its types are committed at
 For the engine/standalone call forms and the full option list per generator, see
 [Generate](/guide/config-generator/generate).
 
-## Config types — `generateConfigTypes()` / `writeConfigTypes()`
+## Config types — `engine.types` / `generateConfigTypes()`
 
 Named `interface`s (and `type` aliases for enums/unions) with jsdoc taken from
 `.describe()`. Unions and refs stay named, so nested objects are referenced
 rather than inlined:
 
 ```ts
-// engine.generateConfigTypes() -> { server: "...", cli: "..." }
-engine.writeConfigTypes({ outputDir: 'types' }); // types/server.ts, types/cli.ts
+// engine.types.generate() -> { server: "...", cli: "..." }
+engine.types.write({ outputDir: 'types' }); // types/server.ts, types/cli.ts
 ```
 
 ```ts
@@ -41,12 +41,12 @@ export interface ServerConfig {
 }
 ```
 
-## Markdown — `writeMarkdown()`
+## Markdown — `engine.markdown` / `generateConfigMarkdown()`
 
 One reference page per scope plus an index listing the required/core env vars:
 
 ```ts
-engine.writeMarkdown({ outputDir: 'docs/reference/configuration' });
+engine.markdown.write({ outputDir: 'docs/reference/configuration' });
 // docs/reference/configuration/server.md, .../index.md
 ```
 
@@ -67,46 +67,74 @@ scope. `generateConfigTypes`, `generateConfigMarkdown` and `generateConfigEnv`
 return file contents and only write when `outputDir`/`output` is a string;
 `false` explicitly disables writing.
 
-## Env — `renderEnvFile()` / `writeEnvFile()`
+## Env — `engine.env` / `generateEnvFile()`
 
 A `.env.example`; secrets are emitted commented out so operators fill them in:
 
-```sh
-engine.writeEnvFile({ output: '.env.example' });
+```ts
+engine.env.write({ output: '.env.example' });
+```
 
+```sh
 # ---- SERVER ----
 MYAPP_HOST=localhost
 # MYAPP_AUTH_PASSWORD=
 ```
 
-## JSON Schema — `generateJsonSchema()` / `writeJsonSchema()`
+## JSON Schema — `engine.jsonSchema` / `generateConfigJsonSchema()`
 
 The resolved untyped JSON Schema for every scope, for editor autocomplete:
 
 ```ts
-await engine.writeJsonSchema({ output: 'config.schema.json' });
+await engine.jsonSchema.write({ output: 'config.schema.json' });
 ```
 
-## CLI docs — `generateCliDocs()`
+## CLI docs - `engine.markdown.cli` / `generateCliDocs()`
 
-`generateCliDocs` is the one generator that does not read the config schema: it
-renders a markdown reference from `ToolchainCommand` descriptors. Pass the command
-list your CLI actually registers, including custom descriptors:
+`generateCliDocs` reads `ToolchainCommand` descriptors rather than the config
+schema: it renders a markdown reference from the commands your CLI actually
+registers. The engine exposes the same generator as
+`engine.markdown.cli.generate()` (and `.write()`):
 
 ```ts
 import { builtinCommands } from '@deltabox/toolchain/cli';
-import { generateCliDocs } from '@deltabox/toolchain/config';
 
-const markdown = generateCliDocs([...builtinCommands(), ...myCommands], {
+const markdown = engine.markdown.cli.generate([...builtinCommands(), ...myCommands], {
     prefix: 'my-cli',
     title: 'CLI reference',
     intro: 'Generated from the registered commands.',
 });
+
+engine.markdown.cli.write(builtinCommands(), { output: 'docs/cli.md' });
 ```
 
-Hidden commands are omitted and duplicate names keep the first descriptor. The
-`dbx` reference itself is generated this way, so a custom command no longer has
-to be added to `builtinCommands()` to be documented.
+The standalone `generateCliDocs(commands, options)` export is equivalent when you
+do not already have an engine. Hidden commands are omitted and duplicate names
+keep the first descriptor. The `dbx` reference itself is generated this way, so a
+custom command no longer has to be added to `builtinCommands()` to be documented.
+
+## Env docs - `engine.markdown.env` / `generateEnvMarkdown()`
+
+`engine.markdown.env.generate()` renders the environment-variable table from
+`engine.collect()`, using the engine's `envPrefix`. `write({ output })` writes the
+page:
+
+```ts
+engine.markdown.env.write({ output: 'docs/env.md' });
+```
+
+## Single pages - `engine.markdown.file` / `generateMarkdownFile()`
+
+`engine.markdown.file` renders one page with frontmatter and a `#` title. The
+body is supplied by the caller, so it is useful for overview/index pages:
+
+```ts
+engine.markdown.file.write({
+    output: 'docs/index.md',
+    title: 'Config types',
+    body: 'The toolchain has three configuration surfaces...',
+});
+```
 
 ## Post-processing
 

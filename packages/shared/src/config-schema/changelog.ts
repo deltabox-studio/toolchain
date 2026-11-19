@@ -31,6 +31,95 @@ export const changelogBranchesConfigSchema = z
     .describe('Branches the generated workflows target.')
     .meta({ id: 'ChangelogBranchesConfig' });
 
+/** Shared target selector for scoped changelog options and text entries. */
+export const changelogTargetSelectorSchema = z
+    .object({
+        target: z
+            .string()
+            .describe(
+                'A workspace path relative to the repository root (`.` for the root), or ' +
+                    'a glob such as `apps/*`. When omitted the entry applies to every target.'
+            )
+            .optional(),
+        include: z
+            .union([z.string(), z.array(z.string())])
+            .describe(
+                'Only apply to workspaces whose repo-relative directory matches one of ' +
+                    'these globs (tsconfig-style include).'
+            )
+            .optional(),
+        exclude: z
+            .union([z.string(), z.array(z.string())])
+            .describe('Skip workspaces whose repo-relative directory matches these globs.')
+            .optional(),
+    })
+    .describe('Selects the workspace/root a changelog option or text entry applies to.')
+    .meta({ id: 'ChangelogTargetSelector' });
+
+const changelogTargetSelectorShape = {
+    target: changelogTargetSelectorSchema.shape.target,
+    include: changelogTargetSelectorSchema.shape.include,
+    exclude: changelogTargetSelectorSchema.shape.exclude,
+};
+
+/** A plain string intro/outro entry. */
+const changelogTextContentEntrySchema = z
+    .object({
+        enabled: z.boolean().describe('Set false to skip this entry.').default(true).optional(),
+        ...changelogTargetSelectorShape,
+        content: z.string().describe('The text inserted into the changelog entry.'),
+        file: z.never().optional().describe('Not allowed with `content`.'),
+    })
+    .meta({ id: 'ChangelogTextContentEntry' });
+
+/** A file-backed intro/outro entry. */
+const changelogTextFileEntrySchema = z
+    .object({
+        enabled: z.boolean().describe('Set false to skip this entry.').default(true).optional(),
+        ...changelogTargetSelectorShape,
+        content: z.never().optional().describe('Not allowed with `file`.'),
+        file: z
+            .string()
+            .describe(
+                'Path to a file containing the text (relative to the repository root or ' +
+                    'absolute). It is read at changelog-generation time.'
+            ),
+    })
+    .meta({ id: 'ChangelogTextFileEntry' });
+
+/** One intro/outro entry. */
+export const changelogTextEntrySchema = z
+    .union([changelogTextContentEntrySchema, changelogTextFileEntrySchema])
+    .describe('A changelog intro/outro entry (`content` or `file`, plus the target selector).')
+    .meta({ id: 'ChangelogTextEntry' });
+
+/** An intro/outro setting: one entry or an array (`Arrayable`). */
+export const changelogTextSettingSchema = z
+    .union([changelogTextEntrySchema, z.array(changelogTextEntrySchema)])
+    .describe('A changelog intro/outro entry or an array of entries (`Arrayable`).')
+    .meta({ id: 'ChangelogTextSetting' });
+
+/**
+ * A scoped option: the base value, or `{ target?, ...selector, options }`.
+ * `id` names the scoped object so generated types reference it instead of
+ * repeating the same inline object for every use.
+ */
+function changelogTargetedOption<T extends z.ZodTypeAny>(base: T, id: string) {
+    const scoped = z
+        .object({
+            ...changelogTargetSelectorShape,
+            options: base,
+        })
+        .describe('The option value plus the targets it applies to.')
+        .meta({ id });
+    // The scoped form comes first: the base may be an all-optional object
+    // (bump matchers / commit formatting), which would otherwise match
+    // `{ target, options }` first and strip the two scoped keys. Arrays keep
+    // the same per-entry order so a mixed `['feat', { target, options }]`
+    // preserves the scoped entry instead of falling into the base array branch.
+    return z.union([scoped, z.array(z.union([scoped, base])), base]);
+}
+
 /** commitlint output location plus the Conventional-Commits allow-lists. */
 export const changelogCommitlintConfigSchema = withEnabled(
     z.object({
@@ -81,12 +170,13 @@ const changelogIssueInfoSchema = z.object({
 
 /** The non-callback commit formatting/credit options. */
 const changelogCommitFormatShape = {
-    author: z.boolean().describe('Include the `by <author>` credit (default true).').optional(),
-    commitSha: z.boolean().describe('Include the commit hash link (default true).').optional(),
-    issues: z.boolean().describe('Include issue/fixes links (default true).').optional(),
+    author: z.boolean().describe('Include the `by <author>` credit.').default(true).optional(),
+    commitSha: z.boolean().describe('Include the commit hash link.').default(true).optional(),
+    issues: z.boolean().describe('Include issue/fixes links.').default(true).optional(),
     authorAvatar: z
         .boolean()
-        .describe('Prefix the author with their GitHub avatar (default false).')
+        .describe('Prefix the author with their GitHub avatar.')
+        .default(false)
         .optional(),
 };
 
@@ -108,11 +198,127 @@ const changelogCommitFormatCallbackSchema = z
     .describe('Fully custom commit line formatter (TS/JS configs only; return the bullet body).')
     .meta({ tsType: '((ctx: ChangelogCommitFormatContext) => string)' });
 
+/** The `<summary>` presentation shared by every details toggle and matcher. */
+const changelogDetailsOptionsShape = {
+    title: z.string().describe('Custom `<summary>` text.').optional(),
+    expanded: z.boolean().describe('Render the collapsible open by default.').optional(),
+    minCommits: z
+        .number()
+        .int()
+        .nonnegative()
+        .describe(
+            'Minimum entries in the section before wrapping (nested overrides the top-level default).'
+        )
+        .optional(),
+};
+
+/** Shared details presentation: custom title, expanded state and minimum count. */
+export const changelogDetailsOptionsSchema = z
+    .object(changelogDetailsOptionsShape)
+    .describe('Collapsible presentation: summary text, expanded state and minimum entry count.')
+    .meta({ id: 'ChangelogDetailsOptions' });
+
+/** One details toggle: `true`/`false` or custom presentation options. */
+export const changelogDetailsToggleSchema = z
+    .union([z.boolean(), changelogDetailsOptionsSchema])
+    .describe('Enable/disable this collapsible, optionally with a title/expanded state.');
+
+/** A regex/string matcher used by `details.custom`. */
+const changelogDetailsPatternSchema = z
+    .custom<RegExp | string>(value => typeof value === 'string' || value instanceof RegExp)
+    .describe('A string or regular expression (TS/JS configs only for RegExp).')
+    .meta({ tsType: 'RegExp | string' });
+
+/** A custom details matcher: a regex/string, or a start/end marker pair. */
+const changelogDetailsCustomSchema = z
+    .union([
+        changelogDetailsPatternSchema,
+        changelogDetailsOptionsSchema
+            .extend({
+                start: changelogDetailsPatternSchema.describe('The opening marker.').optional(),
+                end: changelogDetailsPatternSchema.describe('The closing marker.').optional(),
+            })
+            .describe('A start/end marker pair with optional presentation options.'),
+    ])
+    .describe('A custom collapsible matcher.')
+    .meta({ id: 'ChangelogDetailsCustom' });
+
+/** Markdown `<details>` wrapping for changelog sections and text. */
+export const changelogDetailsConfigSchema = z
+    .union([
+        z.boolean(),
+        z.object({
+            enabled: z
+                .boolean()
+                .describe('Enable/disable details wrapping.')
+                .default(true)
+                .optional(),
+            lifecycle: z
+                .enum(['after', 'before'])
+                .describe(
+                    'Apply details after the changelog formatting pipeline (default `after`, so ' +
+                        'custom searches regex-match the formatted text) or before it (`before`).'
+                )
+                .default('after')
+                .optional(),
+            minCommits: z
+                .number()
+                .int()
+                .nonnegative()
+                .describe(
+                    'Default minimum entries for every details section (a nested minCommits wins; the body defaults to 10).'
+                )
+                .optional(),
+            descriptions: changelogDetailsToggleSchema
+                .describe(
+                    'Wrap commit description paragraphs in a nested collapsible (default true).'
+                )
+                .optional(),
+            body: changelogDetailsToggleSchema
+                .describe(
+                    'Wrap the version body in a collapsible titled Release notes (default false; enabled by default in release mode; requires 10 commits by default).'
+                )
+                .optional(),
+            releaseNotes: changelogDetailsToggleSchema
+                .describe('Wrap the release-mode entry in a collapsible titled Release notes.')
+                .optional(),
+            intro: changelogDetailsToggleSchema
+                .describe('Wrap the intro text in a collapsible.')
+                .optional(),
+            outro: changelogDetailsToggleSchema
+                .describe('Wrap the outro text in a collapsible.')
+                .optional(),
+            footer: changelogDetailsToggleSchema
+                .describe('Wrap the package-changes footer in a collapsible.')
+                .optional(),
+            breaking: changelogDetailsToggleSchema
+                .describe('Wrap the breaking-changes section in a collapsible.')
+                .optional(),
+            types: z
+                .union([changelogDetailsToggleSchema, z.array(z.string())])
+                .describe(
+                    'Wrap these CC type sections (all types when `true`; enabled by default).'
+                )
+                .optional(),
+            custom: z
+                .union([changelogDetailsCustomSchema, z.array(changelogDetailsCustomSchema)])
+                .describe('Wrap matching text (the match or `start` match becomes the summary).')
+                .optional(),
+        }),
+    ])
+    .describe(
+        'Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables ' +
+            'descriptions, release notes, breaking changes and type sections; use an object or ' +
+            '`false` to opt out.'
+    )
+    .meta({ id: 'ChangelogDetailsConfig' });
+
 /** Commit message formatting/credit options (or a custom formatter callback). */
 export const changelogCommitFormatConfigSchema = z
     .object({
         ...changelogCommitFormatShape,
         format: changelogCommitFormatCallbackSchema.optional(),
+        details: changelogDetailsConfigSchema.optional(),
     })
     .describe('Commit message formatting/credit options.')
     .meta({ id: 'ChangelogCommitFormatConfig' });
@@ -212,6 +418,12 @@ export const changelogBumpRuleSchema = z
     .describe('A bump rule: a matcher/callback or a list of matchers/callbacks.')
     .meta({ id: 'ChangelogBumpRule' });
 
+/** A bump rule scoped to a target (`{ target?, include?, exclude?, options }`). */
+const changelogTargetedBumpSchema = changelogTargetedOption(
+    changelogBumpRuleSchema,
+    'ChangelogTargetedBump'
+).describe('A bump rule globally, or per-target via `{ target, include, exclude, options }`.');
+
 /** Options for `ci.changelog.versioning` when configured as an object. */
 export const changelogVersioningConfigSchema = z
     .object({
@@ -219,8 +431,9 @@ export const changelogVersioningConfigSchema = z
             .describe(
                 '`uniform` bumps the root and every workspace to one shared version; ' +
                     '`root-only` bumps the root only; `individual` bumps each changed ' +
-                    'workspace independently (default `uniform`).'
+                    'workspace independently.'
             )
+            .default('uniform')
             .optional(),
         workspaces: z
             .array(z.string())
@@ -230,27 +443,56 @@ export const changelogVersioningConfigSchema = z
                     'there is none the root `package.json` is used on its own.'
             )
             .optional(),
+        prerelease: changelogTargetedOption(
+            z
+                .string()
+                .regex(/^[0-9A-Za-z-]+$/)
+                .describe(
+                    'Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump ' +
+                        'their core and start at `<tag>.0`; existing prereleases keep their ' +
+                        'core and increment the counter for the same tag, so the suffix is ' +
+                        'never appended twice.'
+                ),
+            'ChangelogTargetedPrerelease'
+        )
+            .describe('The prerelease tag globally, or per-target via `{ target, options }`.')
+            .optional(),
         bump: z
             .object({
-                major: changelogBumpRuleSchema.optional(),
-                minor: changelogBumpRuleSchema.optional(),
-                patch: changelogBumpRuleSchema.optional(),
+                major: changelogTargetedBumpSchema.optional(),
+                minor: changelogTargetedBumpSchema.optional(),
+                patch: changelogTargetedBumpSchema.optional(),
             })
-            .describe('Custom bump rules for major/minor/patch (matchers or callbacks).')
-            .optional(),
-        allowOverBump: z
-            .boolean()
             .describe(
-                'Apply a bump once per matching change instead of once per run (default false).'
+                'Custom bump rules for major/minor/patch (matchers or callbacks), globally ' +
+                    'or per-target via `{ target, options }`.'
             )
             .optional(),
-        commit: changelogCommitFormatConfigSchema
-            .describe(
+        allowOverBump: changelogTargetedOption(
+            z
+                .boolean()
+                .describe(
+                    'Apply a bump once per matching change instead of once per run (default false).'
+                ),
+            'ChangelogTargetedAllowOverBump'
+        )
+            .describe('Enable over-bumping globally, or per-target via `{ target, options }`.')
+            .optional(),
+        commit: changelogTargetedOption(
+            changelogCommitFormatConfigSchema.describe(
                 'Commit message formatting/credit options (with an optional formatter callback).'
-            )
+            ),
+            'ChangelogTargetedCommit'
+        )
+            .describe('Commit formatting globally, or per-target via `{ target, options }`.')
             .optional(),
-        provider: changelogProviderSettingSchema
-            .describe('`default`, `changesets`, a provider id, or a custom provider/callback.')
+        provider: changelogTargetedOption(
+            changelogProviderSettingSchema.describe(
+                '`default`, `changesets`, a provider id, or a custom provider/callback.'
+            ),
+            'ChangelogTargetedProvider'
+        )
+            .describe('The provider globally, or per-target via `{ target, options }`.')
             .optional(),
     })
     .describe('Automatic version bumping options.')
@@ -265,13 +507,15 @@ export const changelogVersioningSchema = z
 /** The subset of a grouped changelog item exposed to group callbacks. */
 const changelogGroupItemSchema = z.object({
     parsed: z.object({
-        type: z.string(),
-        scope: z.string().optional(),
-        breaking: z.boolean(),
-        rest: z.string(),
+        type: z.string().describe('The Conventional-Commits type.'),
+        scope: z.string().describe('The Conventional-Commits scope.').optional(),
+        breaking: z.boolean().describe('Whether the commit is a breaking change.'),
+        rest: z.string().describe('The subject after the CC type/scope prefix.'),
     }),
-    text: z.string(),
-    bodyParagraphs: z.array(z.array(z.string())),
+    text: z.string().describe('The rendered commit bullet.'),
+    bodyParagraphs: z
+        .array(z.array(z.string()))
+        .describe('The commit description split into paragraphs of lines.'),
 });
 
 /** The context passed to the whole `groups` callback. */
@@ -323,14 +567,16 @@ export const changelogGroupConfigSchema = z
             .describe('Omit this group from the rendered changelog (or callback; TS/JS only).')
             .optional(),
     })
-    .describe('One Conventional-Commits group.');
+    .describe('One Conventional-Commits group.')
+    .meta({ id: 'ChangelogGroupOptions' });
 
-const changelogGroupsArraySchema = z.array(z.union([z.string(), changelogGroupConfigSchema]));
+const changelogGroupsArraySchema = z
+    .array(z.union([z.string(), changelogGroupConfigSchema]))
+    .describe('An ordered list of CC types or group objects.');
 
-const changelogGroupsRecordSchema = z.record(
-    z.string(),
-    z.union([z.string(), changelogGroupConfigSchema, z.boolean()])
-);
+const changelogGroupsRecordSchema = z
+    .record(z.string(), z.union([z.string(), changelogGroupConfigSchema, z.boolean()]))
+    .describe('A CC type to title/options/visibility record.');
 
 const changelogGroupsCallbackSchema = z
     .function({
@@ -397,9 +643,22 @@ const changelogPipelineShape = {
     versioning: changelogVersioningSchema
         .describe('Automatic version bumping on changelog generation (default `true`).')
         .optional(),
+    intro: changelogTextSettingSchema
+        .describe(
+            'Opt-in text inserted at the start of the new changelog entry, globally or for ' +
+                'matching targets (workspaces/root).'
+        )
+        .optional(),
+    outro: changelogTextSettingSchema
+        .describe(
+            'Opt-in text appended to the new changelog entry, globally or for matching ' +
+                'targets (workspaces/root).'
+        )
+        .optional(),
     vscode: z
         .boolean()
-        .describe('Write the Conventional-Commits VS Code settings (default true).')
+        .describe('Write the Conventional-Commits VS Code settings.')
+        .default(true)
         .optional(),
     groups: changelogGroupsSettingSchema.optional(),
     breaking: changelogBreakingSettingSchema.optional(),

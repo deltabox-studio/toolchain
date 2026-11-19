@@ -9,23 +9,23 @@ import { z } from 'zod';
 export const serverConfig = z.object({
     base: z.object({
         port: z.number().default(3000).meta({
-            env: 'MYAPP_PORT',
+            envName: 'MYAPP_PORT',
             description: 'HTTP port',
         }),
         host: z.string().default('0.0.0.0').meta({
-            env: 'MYAPP_HOST',
+            envName: 'MYAPP_HOST',
             description: 'Bind address',
         }),
     }),
     auth: z.object({
         password: z.string().meta({
-            env: 'MYAPP_AUTH_PASSWORD',
+            envName: 'MYAPP_AUTH_PASSWORD',
             description: 'Admin password',
             required: true,
             secret: true,
         }),
         tokenTtl: z.number().default(3600).meta({
-            env: 'MYAPP_AUTH_TOKEN_TTL',
+            envName: 'MYAPP_AUTH_TOKEN_TTL',
             description: 'Session lifetime (seconds)',
         }),
     }),
@@ -54,4 +54,4 @@ suppress an annotation: `includeRequired`, `includeDeprecated`,
 `includeExamples`, `includeSince`, `includeSee`, `includeRemarks`,
 `includeExperimental`, `includeAlpha`, `includeBeta` — for example
 `generateConfigTypes(..., { includeExamples: false })` or
-`writeMarkdown(..., { includeDeprecated: false })`.
+`generateConfigMarkdown(..., { includeDeprecated: false })`.

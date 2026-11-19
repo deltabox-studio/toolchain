@@ -6,6 +6,7 @@ import {
     logger,
     setLogConfig,
     setLogOverrides,
+    setSpinnerEnabled,
     type ToolchainCommand,
     type ToolchainCommandContext,
 } from '@deltabox/toolchain/shared';
@@ -98,6 +99,7 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                 provided.releaseNotes !== undefined;
             const framed = !cmd.passthrough && !machine && provided.quiet !== true;
             const label = `${command.parent?.name() ?? ''} ${cmd.name}`.trim();
+            setSpinnerEnabled(framed ? undefined : false);
             if (framed) intro(label);
             try {
                 // Load the config for every command (a passthrough reads the
@@ -122,6 +124,10 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                     ...(loaded.path ? { configPath: loaded.path } : {}),
                     ...(loaded.parentPath ? { parentPath: loaded.parentPath } : {}),
                     ...(selection.noConfig ? { noConfig: true } : {}),
+                    ...(loaded.configless ? { configless: true } : {}),
+                    managed: loaded.managed,
+                    ...(loaded.plugin ? { plugin: true } : {}),
+                    ...(loaded.pluginPath ? { pluginPath: loaded.pluginPath } : {}),
                     ...(loaded.error ? { configError: loaded.error } : {}),
                 };
                 await cmd.run(provided, context);
@@ -131,6 +137,8 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                 logger.error(message);
                 if (framed) outro('Failed');
                 process.exitCode = 1;
+            } finally {
+                setSpinnerEnabled(undefined);
             }
         });
     }

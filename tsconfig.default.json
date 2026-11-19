@@ -13,9 +13,7 @@
         "src",
         "scripts",
         "tests",
-        "dbx.config.ts",
-        "tsdown.config.ts",
-        "vitest.config.ts",
+        "vite.config.ts",
         "package.json"
     ]
 }

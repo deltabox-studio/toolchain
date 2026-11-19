@@ -4,8 +4,6 @@ import path from 'node:path';
 import { applyEdits, type FormattingOptions, modify } from 'jsonc-parser';
 
 import {
-    DEFAULT_FMT_RULES,
-    DEFAULT_LINT_RULES,
     DEFAULT_PACKAGE_MANAGER_VERSIONS,
     defaultPackageManagerVersion,
     type GeneratedFile,
@@ -20,11 +18,20 @@ import {
     renderTsconfigBase,
     renderTsconfigBuild,
     renderTsconfigDefault,
-    type TsconfigExtendsOptions,
 } from '@deltabox/toolchain/tsconfig';
 
 import rootPkg from '../../../package.json' with { type: 'json' };
 import { renderPnpmWorkspace, renderYarnrc, supportsCatalogs } from './catalogs.js';
+import type {
+    ConfigExtension,
+    ConfigLanguage,
+    MonorepoRootContext,
+    PluginViteConfigOptions,
+    ProjectContext,
+    RootOxcFiles,
+    WorkspaceContext,
+    WriteGeneratedFilesOptions,
+} from './types/index.js';
 
 /**
  * The dev dependencies every scaffolded package gets, pinned to the toolchain's
@@ -34,13 +41,11 @@ import { renderPnpmWorkspace, renderYarnrc, supportsCatalogs } from './catalogs.
  * fresh consumer never sees a dangling `catalog:`).
  */
 const CATALOG: Record<string, string> = {
-    '@deltabox/toolchain': `^${rootPkg.version}`,
-    '@types/node': '^22.10.2',
-    tsdown: '^0.23.0',
-    typescript: '^6.0.3',
-    vite: '^8.3.0',
-    'vite-plus': '^1.2.0',
-    vitest: '^5.0.0',
+    '@deltabox/toolchain': rootPkg.version,
+    '@types/node': '~22.10.2',
+    typescript: '~6.0.3',
+    'vite-plugin-dbx': rootPkg.version,
+    'vite-plus': '1.2.0',
 };
 
 /** The catalog a scaffolded root writes into its package-manager file. */
@@ -56,6 +61,17 @@ function packageManagerField(
     if (!packageManager) return undefined;
     const resolved = version ?? defaultPackageManagerVersion(packageManager);
     return resolved ? `${packageManager}@${resolved}` : packageManager;
+}
+
+/**
+ * The `packageManager` field a scaffold writes. Mirrors the inline config, which
+ * always defaults to Yarn, so `dbx sync --check` is clean immediately.
+ */
+function scaffoldPackageManager(ctx: ProjectContext): string | undefined {
+    return packageManagerField(
+        ctx.packageManager ?? 'yarn',
+        ctx.packageManagerVersion ?? ctx.yarnVersion
+    );
 }
 
 /** The dev-dependency map for a package manager (catalog refs or pinned). */
@@ -99,7 +115,8 @@ export function scaffoldCatalog(
 function catalogFiles(
     packageManager: string | undefined,
     isMonorepo: boolean,
-    exclude: string[] = []
+    exclude: string[] = [],
+    workspaceGlobs: string[] = ['packages/*']
 ): GeneratedFile[] {
     const catalog = scaffoldCatalog(packageManager, exclude);
     if (!catalog) return [];
@@ -112,7 +129,7 @@ function catalogFiles(
                     path: 'pnpm-workspace.yaml',
                     content: renderPnpmWorkspace(
                         { packages: catalog },
-                        isMonorepo ? ['packages/*'] : undefined
+                        isMonorepo ? workspaceGlobs : undefined
                     ),
                 },
             ];
@@ -132,63 +149,14 @@ function workspacesField(
     return globs;
 }
 
-/** The replacement values a project scaffold understands. */
-export interface ProjectContext {
-    /** The project/package name (unscoped). */
-    name: string;
-    /** The npm scope, eg. `@acme`. */
-    scope?: string;
-    /** Package description. */
-    description?: string;
-    /** Package author. */
-    author?: string;
-    /** SPDX license id. */
-    license?: string;
-    /** Project homepage. */
-    homepage?: string;
-    /** Repository URL. */
-    repo?: string;
-    /** Repository URL (legacy alias for {@link repo}). */
-    repoUrl?: string;
-    /** Node engine range. */
-    nodeVersion?: string;
-    /** Package manager version. */
-    packageManagerVersion?: string;
-    /** Yarn version (legacy alias for {@link packageManagerVersion}). */
-    yarnVersion?: string;
-    /** Package manager name. */
-    packageManager?: string;
-    /** The project kind written into the scaffolded `dbx.config.ts`. */
-    type?: ProjectType;
-    /** The scaffold flavour (an application gets Vite entry files/scripts). */
-    kind?: 'project' | 'application';
-    /** Write `fmt.oxc` / `lint.oxc` defaults (and the Oxc config files). */
-    oxc?: boolean;
-    /**
-     * Oxc config files already present above the scaffold root. The matching
-     * local file + `dbx.config.ts` opt-in are omitted so the root owns them.
-     */
-    rootOxc?: RootOxcFiles;
-    /** Write a `dbx.config.ts` (default true). */
-    includeConfig?: boolean;
-    /** Per-file `extends` overrides for the scaffolded tsconfig templates. */
-    tsconfigExtends?: TsconfigExtendsOptions;
-}
-
-/** Oxc config files found in an ancestor of a scaffold output directory. */
-export interface RootOxcFiles {
-    fmt: boolean;
-    lint: boolean;
-}
-
-/** The language a generated `dbx.config.*` uses. */
-export type ConfigLanguage = 'ts' | 'js';
-
 /** Every supported generated config extension. */
-export const CONFIG_EXTENSIONS = ['ts', 'mts', 'js', 'mjs', 'cjs'] as const;
-
-/** The extensions a generated `dbx.config.*` can use. */
-export type ConfigExtension = (typeof CONFIG_EXTENSIONS)[number];
+export const CONFIG_EXTENSIONS = [
+    'ts',
+    'mts',
+    'js',
+    'mjs',
+    'cjs',
+] as const satisfies readonly ConfigExtension[];
 
 /** The default generated config extension. */
 export const DEFAULT_CONFIG_EXTENSION = 'ts' as const;
@@ -237,6 +205,11 @@ export function configUsesEsm(extension: ConfigExtension, packageType?: string):
  * Find the nearest ancestor that owns Oxc config files. The walk stops at the
  * repository boundary (`.git`) so a nested project cannot inherit files from an
  * unrelated checkout above it.
+ *
+ * A v3 project declares `fmt`/`lint` in its toolchain config instead of
+ * standalone files, so an ancestor `dbx.config.*` (or a `vite.config.*` that
+ * uses the `dbx()` plugin) also counts as an owner when it declares either
+ * section.
  */
 export function findRootOxcFiles(start: string): RootOxcFiles {
     const root = path.resolve(start);
@@ -244,8 +217,9 @@ export function findRootOxcFiles(start: string): RootOxcFiles {
     if (fs.existsSync(path.join(root, '.git'))) return { fmt: false, lint: false };
     let dir = path.dirname(root);
     for (;;) {
-        const fmt = fs.existsSync(path.join(dir, '.oxfmtrc.json'));
-        const lint = fs.existsSync(path.join(dir, '.oxlintrc.json'));
+        const config = configOxcOwner(dir);
+        const fmt = fs.existsSync(path.join(dir, '.oxfmtrc.json')) || config?.fmt === true;
+        const lint = fs.existsSync(path.join(dir, '.oxlintrc.json')) || config?.lint === true;
         if (fmt || lint) return { fmt, lint };
         if (fs.existsSync(path.join(dir, '.git'))) break;
         const parent = path.dirname(dir);
@@ -255,9 +229,65 @@ export function findRootOxcFiles(start: string): RootOxcFiles {
     return { fmt: false, lint: false };
 }
 
+/** The toolchain config files a project can use to declare `fmt`/`lint`. */
+const DBX_CONFIG_FILE_NAMES = [
+    'dbx.config.ts',
+    'dbx.config.mts',
+    'dbx.config.cts',
+    'dbx.config.js',
+    'dbx.config.mjs',
+    'dbx.config.cjs',
+    'dbx.config.json',
+] as const;
+
+const VITE_CONFIG_FILE_NAMES = [
+    'vite.config.ts',
+    'vite.config.mts',
+    'vite.config.cts',
+    'vite.config.js',
+    'vite.config.mjs',
+    'vite.config.cjs',
+] as const;
+
+/** A Vite config that uses the `dbx()` plugin. */
+const DBX_PLUGIN_SOURCE = /vite-plugin-dbx['"]|@deltabox\/toolchain(?:\/vite)?['"]|\bdbx\s*\(/;
+
+/** The `fmt`/`lint` sections a directory's toolchain config declares. */
+function configOxcOwner(dir: string): RootOxcFiles | undefined {
+    for (const name of DBX_CONFIG_FILE_NAMES) {
+        const file = path.join(dir, name);
+        if (!fs.existsSync(file)) continue;
+        const declared = declaredOxc(fs.readFileSync(file, 'utf-8'));
+        if (declared) return declared;
+    }
+    for (const name of VITE_CONFIG_FILE_NAMES) {
+        const file = path.join(dir, name);
+        if (!fs.existsSync(file)) continue;
+        const source = fs.readFileSync(file, 'utf-8');
+        if (!DBX_PLUGIN_SOURCE.test(source)) continue;
+        const declared = declaredOxc(source);
+        if (declared) return declared;
+    }
+    return undefined;
+}
+
+/** Whether a config source declares a `fmt`/`lint` section. */
+function declaredOxc(source: string): RootOxcFiles | undefined {
+    const fmt = /\bfmt\s*:/.test(source);
+    const lint = /\blint\s*:/.test(source);
+    return fmt || lint ? { fmt, lint } : undefined;
+}
+
 /** The token replacements derived from a {@link ProjectContext}. */
 function tokens(ctx: ProjectContext): Replacements {
-    const { tsconfigExtends: _tsconfigExtends, rootOxc: _rootOxc, ...tokens } = ctx;
+    const {
+        tsconfigExtends: _tsconfigExtends,
+        rootOxc: _rootOxc,
+        dependencies: _dependencies,
+        extraDevDependencies: _extraDevDependencies,
+        scripts: _scripts,
+        ...tokens
+    } = ctx;
     return tokens;
 }
 
@@ -276,7 +306,7 @@ function packageMetadata(ctx: ProjectContext): Record<string, unknown> {
 const json = (value: unknown, indent = 4): string => `${JSON.stringify(value, null, indent)}\n`;
 
 /** Render a TypeScript string literal in the repo's single-quote style. */
-function quote(value: string): string {
+export function quote(value: string): string {
     return `'${value
         .replace(/\\/g, '\\\\')
         .replace(/'/g, "\\'")
@@ -287,7 +317,7 @@ function quote(value: string): string {
 }
 
 /** Escape text for the generated application HTML title. */
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
     return value
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -297,12 +327,6 @@ function escapeHtml(value: string): string {
 }
 
 /** The Oxfmt/Oxlint config files the Oxc VS Code extension reads. */
-const OXC_FMT_SCHEMA = './node_modules/oxfmt/configuration_schema.json';
-const OXC_LINT_SCHEMA = './node_modules/oxlint/configuration_schema.json';
-
-function renderOxcConfig(schema: string, config: unknown): string {
-    return `${JSON.stringify({ $schema: schema, ...(config as object) }, null, 4)}\n`;
-}
 
 /** A minimal source entry so `tsdown` has an input and the scaffold builds. */
 export function renderSourceEntry(): string {
@@ -347,7 +371,7 @@ export function renderApplicationHtml(name: string): string {
 /** A smoke test paired with {@link renderSourceEntry}. */
 export function renderSourceTest(): string {
     return [
-        "import { describe, expect, it } from 'vitest';",
+        "import { describe, expect, it } from 'vite-plus/test';",
         '',
         "import { greet } from '../src/index.js';",
         '',
@@ -405,8 +429,8 @@ export function renderToolchainConfig(
         .join('\n');
 
     // Sections are opt-in by presence. Every scaffold declares its `project`
-    // identity; the Oxc defaults are opt-out and drive the managed `.oxfmtrc.json`
-    // / `.oxlintrc.json` files on `dbx sync`.
+    // identity; the Oxc `fmt`/`lint` defaults live in the root `vite.config.*`
+    // (Vite+ recommended) rather than in standalone `.oxfmtrc.json` files.
     const fmtOxc = ctx.fmtOxc ?? ctx.oxc === true;
     const lintOxc = ctx.lintOxc ?? ctx.oxc === true;
     // Opt the scaffold into the catalog it writes, so `dbx sync` owns the
@@ -418,6 +442,7 @@ export function renderToolchainConfig(
         : undefined;
     const sections = [
         `        project: {\n${project}\n        },`,
+        ...(ctx.type === 'monorepo-root' ? ['        tsconfig: true,'] : []),
         ...(catalogs ? [catalogs] : []),
         ...(fmtOxc ? ['        fmt: { oxc: true },'] : []),
         ...(lintOxc ? ['        lint: { oxc: true },'] : []),
@@ -444,6 +469,97 @@ ${sections.join('\n')}
 `;
 }
 
+/**
+ * Render the scaffold's `vite.config.*`: Vite+ loads it, and `dbx()` carries the
+ * toolchain config inline so the project does not need a `dbx.config.*`.
+ * Vitest (`test`) also lives here. Tasks are intentionally not declared: every
+ * command is a `package.json` script, and Vite+ rejects a task that shadows one.
+ */
+export function renderPluginViteConfig(options: PluginViteConfigOptions): string {
+    const { ctx, type } = options;
+    const flavor = options.flavor ?? 'library';
+    const entries: [string, string][] = [
+        ['type', type],
+        ['name', ctx.name],
+    ];
+    if (ctx.scope) entries.push(['scope', ctx.scope]);
+    if (ctx.description) entries.push(['description', ctx.description]);
+    if (ctx.author) entries.push(['author', ctx.author]);
+    if (ctx.license) entries.push(['license', ctx.license]);
+    if (ctx.homepage) entries.push(['homepage', ctx.homepage]);
+    const repo = ctx.repo ?? ctx.repoUrl;
+    if (repo) entries.push(['repo', repo]);
+    entries.push(['nodeVersion', ctx.nodeVersion ?? '22']);
+    const packageManager = ctx.packageManager ?? 'yarn';
+    entries.push(['packageManager', packageManager]);
+    const pmVersion =
+        ctx.packageManagerVersion ??
+        ctx.yarnVersion ??
+        defaultPackageManagerVersion(packageManager);
+    if (pmVersion) entries.push(['packageManagerVersion', pmVersion]);
+
+    const project = entries
+        .map(([key, value]) => `                    ${key}: ${quote(value)},`)
+        .join('\n');
+    const catalogs = options.catalogs
+        ? [
+              '                catalogs: {',
+              '                    packages: {',
+              ...Object.entries(options.catalogs).map(
+                  ([name, range]) => `                        ${quote(name)}: ${quote(range)},`
+              ),
+              '                    },',
+              '                },',
+          ].join('\n')
+        : undefined;
+    const oxc = (value: 'defaults' | 'inherit' | false | undefined): string | undefined => {
+        if (value === 'defaults') return '{ oxc: true }';
+        // `inherit`/`false` leave the section out. Emitting `fmt: true` /
+        // `lint: true` would select the shared defaults instead of inheriting
+        // the root's options, so a nested workspace must not declare it.
+        return undefined;
+    };
+    const fmt = oxc(options.fmt);
+    const lint = oxc(options.lint);
+    // Only a monorepo root owns the shared workspaces tsconfig; single-project
+    // and workspace scaffolds keep the task opt-in.
+    const tsconfig = flavor === 'monorepo-root' ? '                tsconfig: true,' : undefined;
+
+    const testInclude =
+        flavor === 'monorepo-root'
+            ? "['packages/**/tests/**/*.test.ts']"
+            : "['tests/**/*.test.ts']";
+
+    return `import { defineConfig } from 'vite-plus';
+
+import { dbx } from 'vite-plugin-dbx';
+
+export default defineConfig({
+    plugins: [
+        dbx({
+            toolchain: {
+                project: {
+${project}
+                },
+${[
+    catalogs,
+    tsconfig,
+    fmt ? `                fmt: ${fmt},` : undefined,
+    lint ? `                lint: ${lint},` : undefined,
+]
+    .filter(Boolean)
+    .join('\n')}
+            },
+        }),
+    ],
+    test: {
+        include: ${testInclude},
+        environment: 'node',
+    },
+});
+`;
+}
+
 /** A minimal tsconfig.json that extends the default template. */
 export function renderWorkspaceTsconfig(
     composite = false,
@@ -458,49 +574,37 @@ export function renderWorkspaceTsconfig(
 /** Files for a single-package TypeScript project (tsconfig + tooling). */
 export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
     const application = ctx.kind === 'application';
-    // `--no-config` means nothing manages the Oxc files, so don't create them.
+    // A skipped project config means nothing manages the Oxc files, so don't
+    // create them.
     // A nested project inside a root that already owns the matching Oxc file
     // inherits the root config instead of shadowing it.
     const allowOxc = ctx.oxc !== false && ctx.includeConfig !== false;
     const withFmt = allowOxc && ctx.rootOxc?.fmt !== true;
     const withLint = allowOxc && ctx.rootOxc?.lint !== true;
     const catalog = scaffoldCatalog(ctx.packageManager, application ? ['tsdown'] : []);
+    const pmField = scaffoldPackageManager(ctx);
     const pkg = {
         name: ctx.scope ? `${ctx.scope}/${ctx.name}` : ctx.name,
         version: '0.1.0',
         private: true,
         type: 'module',
         ...packageMetadata(ctx),
-        scripts: application
-            ? {
-                  dev: 'vite',
-                  build: 'vite build',
-                  preview: 'vite preview',
-                  format: 'dbx fmt',
-                  lint: 'dbx lint --fix',
-                  test: 'vitest run',
-                  typecheck: 'tsc -p tsconfig.json --noEmit',
-              }
-            : {
-                  build: 'tsdown',
-                  format: 'dbx fmt',
-                  lint: 'dbx lint --fix',
-                  test: 'vitest run',
-                  typecheck: 'tsc -p tsconfig.json --noEmit',
-              },
-        devDependencies: devDependencies(
-            ctx.packageManager,
-            catalogDefined(ctx.packageManager, false),
-            application ? ['tsdown'] : []
-        ),
-        ...(packageManagerField(ctx.packageManager, ctx.packageManagerVersion ?? ctx.yarnVersion)
-            ? {
-                  packageManager: packageManagerField(
-                      ctx.packageManager,
-                      ctx.packageManagerVersion ?? ctx.yarnVersion
-                  ),
-              }
-            : {}),
+        scripts: {
+            ...(application
+                ? { dev: 'vp dev', build: 'vp build', preview: 'vp preview' }
+                : { build: 'vp pack' }),
+            format: 'dbx fmt',
+            lint: 'dbx lint --fix',
+            test: 'vp test',
+            typecheck: 'tsc -p tsconfig.json --noEmit',
+            ...ctx.scripts,
+        },
+        ...(ctx.dependencies ? { dependencies: ctx.dependencies } : {}),
+        devDependencies: {
+            ...devDependencies(ctx.packageManager, catalogDefined(ctx.packageManager, false)),
+            ...ctx.extraDevDependencies,
+        },
+        ...(pmField ? { packageManager: pmField } : {}),
         engines: { node: ctx.nodeVersion ? `>=${ctx.nodeVersion}` : '>=22' },
     };
 
@@ -509,13 +613,14 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
             ? []
             : [
                   {
-                      path: 'dbx.config.ts',
-                      content: renderToolchainConfig({
-                          ...ctx,
+                      path: 'vite.config.ts',
+                      content: renderPluginViteConfig({
+                          ctx,
                           type: ctx.type ?? 'project',
-                          fmtOxc: withFmt,
-                          lintOxc: withLint,
+                          fmt: withFmt ? 'defaults' : ctx.rootOxc?.fmt ? 'inherit' : false,
+                          lint: withLint ? 'defaults' : ctx.rootOxc?.lint ? 'inherit' : false,
                           ...(catalog ? { catalogs: catalog } : {}),
+                          flavor: application ? 'application' : 'library',
                       }),
                   },
               ]),
@@ -541,39 +646,21 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
             content: renderTsconfigBuild(tokens(ctx), ctx.tsconfigExtends?.build),
         },
         { path: 'tsconfig.json', content: renderWorkspaceTsconfig() },
-        ...(withFmt
-            ? [
-                  {
-                      path: '.oxfmtrc.json',
-                      content: renderOxcConfig(OXC_FMT_SCHEMA, DEFAULT_FMT_RULES),
-                  },
-              ]
-            : []),
-        ...(withLint
-            ? [
-                  {
-                      path: '.oxlintrc.json',
-                      content: renderOxcConfig(OXC_LINT_SCHEMA, DEFAULT_LINT_RULES),
-                  },
-              ]
-            : []),
         { path: '.gitignore', content: renderGitignore() },
         { path: 'README.md', content: `# ${ctx.name}\n` },
-        ...catalogFiles(ctx.packageManager, false, application ? ['tsdown'] : []),
+        ...catalogFiles(ctx.packageManager, false),
     ];
-}
-
-export interface MonorepoRootContext extends ProjectContext {
-    /** The workspaces to wire into the monorepo tsconfig. */
-    workspaces: MonorepoWorkspace[];
-    /** The workspace globs (default `['packages/*']`). */
-    workspaceGlobs?: string[];
 }
 
 /** Files for a monorepo root (workspaces + monorepo tsconfig). */
 export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile[] {
     const withOxc = ctx.oxc !== false && ctx.includeConfig !== false;
+    const workspaceGlobs = ctx.workspaceGlobs ?? ['packages/*'];
+    const filters = workspaceGlobs
+        .map(glob => `--filter "./${glob.replace(/^\.?\//, '')}"`)
+        .join(' ');
     const catalog = scaffoldCatalog(ctx.packageManager);
+    const pmField = scaffoldPackageManager(ctx);
     const pkg = {
         name: ctx.name,
         version: '0.1.0',
@@ -581,25 +668,18 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
         type: 'module',
         ...packageMetadata(ctx),
         scripts: {
-            build: 'dbx run --filter "./packages/*" build',
-            test: 'dbx run --filter "./packages/*" test',
-            typecheck: 'dbx run --filter "./packages/*" typecheck',
+            build: `dbx run ${filters} build`,
+            test: `dbx run ${filters} test`,
+            typecheck: `dbx run ${filters} typecheck`,
             format: 'dbx fmt',
             lint: 'dbx lint --fix',
         },
-        workspaces: workspacesField(ctx.packageManager, ctx.workspaceGlobs ?? ['packages/*']),
+        workspaces: workspacesField(ctx.packageManager, workspaceGlobs),
         devDependencies: devDependencies(
             ctx.packageManager,
             catalogDefined(ctx.packageManager, true)
         ),
-        ...(packageManagerField(ctx.packageManager, ctx.packageManagerVersion ?? ctx.yarnVersion)
-            ? {
-                  packageManager: packageManagerField(
-                      ctx.packageManager,
-                      ctx.packageManagerVersion ?? ctx.yarnVersion
-                  ),
-              }
-            : {}),
+        ...(pmField ? { packageManager: pmField } : {}),
         engines: { node: ctx.nodeVersion ? `>=${ctx.nodeVersion}` : '>=22' },
     };
 
@@ -608,12 +688,14 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
             ? []
             : [
                   {
-                      path: 'dbx.config.ts',
-                      content: renderToolchainConfig({
-                          ...ctx,
+                      path: 'vite.config.ts',
+                      content: renderPluginViteConfig({
+                          ctx,
                           type: ctx.type ?? 'monorepo-root',
-                          oxc: withOxc,
+                          fmt: withOxc ? 'defaults' : false,
+                          lint: withOxc ? 'defaults' : false,
                           ...(catalog ? { catalogs: catalog } : {}),
+                          flavor: 'monorepo-root',
                       }),
                   },
               ]),
@@ -637,21 +719,9 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
                 files: [],
             }),
         },
-        ...(withOxc
-            ? [
-                  {
-                      path: '.oxfmtrc.json',
-                      content: renderOxcConfig(OXC_FMT_SCHEMA, DEFAULT_FMT_RULES),
-                  },
-                  {
-                      path: '.oxlintrc.json',
-                      content: renderOxcConfig(OXC_LINT_SCHEMA, DEFAULT_LINT_RULES),
-                  },
-              ]
-            : []),
         { path: '.gitignore', content: renderGitignore() },
         { path: 'README.md', content: `# ${ctx.name}\n` },
-        ...catalogFiles(ctx.packageManager, true),
+        ...catalogFiles(ctx.packageManager, true, [], workspaceGlobs),
     ];
 }
 
@@ -811,21 +881,13 @@ export function upsertWorkspaceTsconfig(
     return true;
 }
 
-export interface WorkspaceContext extends ProjectContext {
-    /** The workspace name (unscoped), eg. `core`. */
-    wsName: string;
-    /** The workspace directory relative to the root, eg. `packages/core`. */
-    wsDir: string;
-    /** Reference the root catalog for dev deps (`catalog:`) instead of pinning. */
-    useCatalog?: boolean;
-}
-
 /** Files for a monorepo workspace package. */
 export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
     // Only reference `catalog:` when the workspace's package manager actually
     // writes a catalog (npm has none; Bun's lives in the monorepo package.json).
     const useCatalog = ctx.useCatalog === true && catalogDefined(ctx.packageManager, true);
     const dev = useCatalog ? devDependencies(ctx.packageManager, true) : { ...CATALOG };
+    const pmField = scaffoldPackageManager(ctx);
     const pkg = {
         name: ctx.scope ? `${ctx.scope}/${ctx.wsName}` : ctx.wsName,
         version: '0.1.0',
@@ -844,13 +906,14 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
         sideEffects: false,
         files: ['dist'],
         scripts: {
-            build: 'tsdown',
+            build: 'vp pack',
             format: 'dbx fmt',
             lint: 'dbx lint --fix',
-            test: 'vitest run',
+            test: 'vp test',
             typecheck: 'tsc -p tsconfig.build.json --noEmit',
         },
         devDependencies: dev,
+        ...(pmField ? { packageManager: pmField } : {}),
         ...(ctx.nodeVersion ? { engines: { node: `>=${ctx.nodeVersion}` } } : {}),
         publishConfig: { access: 'public', provenance: true },
     };
@@ -862,13 +925,15 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
             ? []
             : [
                   {
-                      path: 'dbx.config.ts',
-                      content: renderToolchainConfig({
-                          ...ctx,
+                      path: 'vite.config.ts',
+                      content: renderPluginViteConfig({
                           // A workspace config describes the workspace, not the root it
                           // was scaffolded from.
-                          name: ctx.wsName,
+                          ctx: { ...ctx, name: ctx.wsName },
                           type: ctx.type ?? 'monorepo-workspace',
+                          fmt: 'inherit',
+                          lint: 'inherit',
+                          flavor: 'workspace',
                       }),
                   },
               ]),
@@ -890,18 +955,17 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
                     moduleResolution: 'NodeNext',
                     types: ['node'],
                 },
-                include: ['src', 'tests', 'tsdown.config.ts', 'vitest.config.ts'],
+                include: ['src', 'tests', 'vite.config.ts'],
             }),
         },
         {
             path: 'tsconfig.build.json',
-            content: renderWorkspaceTsconfig(false, ctx.tsconfigExtends?.build),
+            content: renderWorkspaceTsconfig(
+                false,
+                ctx.tsconfigExtends?.build ?? './tsconfig.json'
+            ),
         },
         { path: 'tsconfig.json', content: renderWorkspaceTsconfig() },
-        {
-            path: 'tsdown.config.ts',
-            content: `import { defineConfig } from 'tsdown';\n\nimport { baseTsdownConfig } from '@deltabox/toolchain/tsdown';\n\nexport default defineConfig({\n    ...baseTsdownConfig,\n    entry: { index: 'src/index.ts' },\n    // Keep the explicit package.json exports (types + import conditions).\n    exports: false,\n});\n`,
-        },
     ];
 }
 
@@ -937,9 +1001,32 @@ export function renderGitignore(): string {
     ].join('\n');
 }
 
-export interface WriteGeneratedFilesOptions {
-    /** Overwrite files that already exist (default false). */
-    force?: boolean;
+/** Whether a value is a valid unscoped npm package name. */
+export function isValidPackageName(name: string): boolean {
+    return /^[a-z0-9][a-z0-9._-]*$/.test(name) && name !== '.' && name !== '..';
+}
+
+/** A filesystem path with symlinks resolved, or `undefined` when it cannot be. */
+function realPath(value: string): string | undefined {
+    try {
+        return fs.realpathSync.native(value);
+    } catch {
+        try {
+            return fs.realpathSync(value);
+        } catch {
+            return undefined;
+        }
+    }
+}
+
+/** Whether a path exists, without following a final symlink. */
+function entryExists(value: string): boolean {
+    try {
+        fs.lstatSync(value);
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 function isInside(root: string, target: string): boolean {
@@ -952,10 +1039,45 @@ function isInside(root: string, target: string): boolean {
 }
 
 /**
+ * Reject a target that escapes `root`, following symlinks/junctions. The lexical
+ * check catches `..` paths; the real-path check catches a link under the output
+ * directory that points elsewhere (which would otherwise let a scaffold write
+ * outside the root).
+ */
+export function assertPathInside(root: string, target: string): void {
+    const resolvedRoot = path.resolve(root);
+    const resolvedTarget = path.resolve(target);
+    if (!isInside(resolvedRoot, resolvedTarget)) {
+        throw new Error(`refusing to write outside ${resolvedRoot}: ${resolvedTarget}`);
+    }
+
+    // Resolve the nearest existing ancestor, then re-append the missing tail.
+    // `lstat` (not `existsSync`) also sees a broken symlink, which must be
+    // rejected: writing through it would create a file outside the root.
+    let probe = resolvedTarget;
+    const tail: string[] = [];
+    while (!entryExists(probe)) {
+        const parent = path.dirname(probe);
+        if (parent === probe) break;
+        tail.unshift(path.basename(probe));
+        probe = parent;
+    }
+    const realRoot = realPath(resolvedRoot) ?? resolvedRoot;
+    const realProbe = realPath(probe);
+    if (!realProbe) {
+        throw new Error(`refusing to write through an unresolvable link: ${probe}`);
+    }
+    const realTarget = path.resolve(realProbe, ...tail);
+    if (!isInside(realRoot, realTarget)) {
+        throw new Error(`refusing to write outside ${resolvedRoot}: ${resolvedTarget}`);
+    }
+}
+
+/**
  * Write generated files under `cwd`, creating directories as needed. A target
- * outside `cwd` is rejected, and an existing file is never overwritten unless
- * `force` is set, so a scaffold cannot escape its output directory or silently
- * clobber a user's files.
+ * outside `cwd` (including through a symlink/junction) is rejected, and an
+ * existing file is never overwritten unless `force` is set, so a scaffold cannot
+ * escape its output directory or silently clobber a user's files.
  */
 export function writeGeneratedFiles(
     files: GeneratedFile[],
@@ -966,9 +1088,7 @@ export function writeGeneratedFiles(
     const targets = files.map(file => path.resolve(root, file.path));
     const seen = new Map<string, string>();
     for (const target of targets) {
-        if (!isInside(root, target)) {
-            throw new Error(`refusing to write outside ${root}: ${target}`);
-        }
+        assertPathInside(root, target);
         const key = process.platform === 'win32' ? target.toLowerCase() : target;
         const previous = seen.get(key);
         if (previous !== undefined) {
@@ -988,6 +1108,7 @@ export function writeGeneratedFiles(
             );
         }
     }
+    if (options.dryRun === true) return targets;
 
     const written: string[] = [];
     for (const [index, target] of targets.entries()) {

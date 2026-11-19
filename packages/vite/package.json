@@ -1,7 +1,7 @@
 {
-    "name": "@deltabox/toolchain-vite",
-    "version": "2.6.1",
-    "description": "Vite+ provider: wraps the `vp` binary as `dbx vite:*` commands, exposes the Vite+ toolchain and manages its vite.config.ts.",
+    "name": "vite-plugin-dbx",
+    "version": "3.0.0-beta.2",
+    "description": "Plugin for Vite/Vite+ with rich extras: project synchronization, a config generator, tsconfig management, MCP server, CI/changelog automation, providers, catalogs and managed files.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
         "type": "git",
@@ -10,27 +10,40 @@
     },
     "license": "MPL-2.0",
     "type": "module",
+    "sideEffects": false,
     "files": [
-        "dist"
+        "dist",
+        "README.md"
     ],
-    "private": true,
+    "keywords": [
+        "vite",
+        "vite-plus",
+        "vite-plugin",
+        "plugin",
+        "dbx",
+        "deltabox",
+        "toolchain",
+        "codegen",
+        "config",
+        "sync",
+        "formatter",
+        "linter"
+    ],
     "dependencies": {
         "@deltabox/toolchain-core": "workspace:*",
         "@deltabox/toolchain-shared": "workspace:*"
     },
     "devDependencies": {
-        "@deltabox/toolchain-tsdown": "workspace:*",
+        "@deltabox/toolchain-pack": "workspace:*",
         "@types/node": "catalog:",
-        "tsdown": "catalog:",
         "typescript": "catalog:",
-        "vite": "catalog:",
-        "vitest": "catalog:"
+        "vite-plus": "catalog:"
     },
     "peerDependencies": {
-        "vite": ">=5"
+        "vite-plus": ">=1"
     },
     "peerDependenciesMeta": {
-        "vite": {
+        "vite-plus": {
             "optional": true
         }
     },
@@ -38,6 +51,10 @@
         ".": "./dist/index.js",
         "./cli": "./dist/cli/index.js",
         "./package.json": "./package.json"
+    },
+    "publishConfig": {
+        "access": "public",
+        "provenance": true
     },
     "homepage": "https://toolchain.deltabox.studio",
     "packageManager": "yarn@4.17.1"

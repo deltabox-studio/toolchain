@@ -23,25 +23,15 @@ import type {
     MigrationResult,
     ToolchainMigration,
     UnmappedItem,
-} from './types.js';
-import { findTopLevelValue, findViteMergeObject, matchBracket } from './vite-target.js';
+} from './types/index.js';
+import {
+    findTopLevelValue,
+    findViteConfig,
+    findViteMergeObject,
+    matchBracket,
+} from './vite-target.js';
 
-/** The root Vite config file names, in priority order. */
-export const VITE_CONFIG_FILES = [
-    'vite.config.ts',
-    'vite.config.mts',
-    'vite.config.js',
-    'vite.config.mjs',
-] as const;
-
-/** The Vite config in `cwd`, if present. */
-export function findViteConfig(cwd: string): string | undefined {
-    for (const name of VITE_CONFIG_FILES) {
-        const file = path.join(cwd, name);
-        if (fs.existsSync(file)) return file;
-    }
-    return undefined;
-}
+export { findViteConfig, VITE_CONFIG_FILES } from './vite-target.js';
 
 /** The nearest `dbx.config.*` in `cwd`, if present. */
 export function findDbxConfig(cwd: string): string | undefined {
@@ -465,7 +455,7 @@ function isManagedShim(source: string): boolean {
     // The shim calls `resolveVite(...)` (possibly with a generic type argument).
     return (
         /resolveVite\s*(?:<[^>]*>)?\s*\(/.test(source) &&
-        source.includes('@deltabox/toolchain/vite')
+        /@deltabox\/toolchain\/vite|vite-plugin-dbx/.test(source)
     );
 }
 

@@ -17,7 +17,9 @@ export default defineConfig({
 ```
 
 `dbx sync` regenerates the managed `tsconfig.json` files and tracks them in
-`.dbx/toolchain/manifest.json`; `dbx sync --check` is the CI gate. See
+`.dbx/toolchain/manifest.json`; `dbx sync --check` is the CI gate. A scaffolded
+monorepo root enables `tsconfig` by default; single-project and workspace
+scaffolds leave it opt-in. See
 [Configuration](/guide/config/opt-in-by-presence) for the opt-in-by-presence
 shorthand (`tsconfig: true` enables the defaults).
 
@@ -73,10 +75,11 @@ reads. Everything else is optional and, if you prefer, renameable (see
 - **No `tsconfig.build.json`**: builds simply use another config; it is never
   required or rewritten.
 - **No `tsconfig.workspaces.json`**: each workspace still gets a `tsconfig.json`
-  that extends its own default, but there are no shared `paths`/`references` to
-  wire.
+  that extends its own default. When the project graph has workspaces, a missing
+  workspaces file is regenerated from the graph (aliases + references); with no
+  workspaces there is nothing to wire.
 
-The `{{envTypesFile}}` token in the templates (default `src/env.d.ts`) is
+The `{{envTypesFile}}` token in the templates (default `src/dbx-env.d.ts`) is
 resolved when a project is scaffolded, so a generated config's `include` points
 at the project's env types file.
 
@@ -88,44 +91,48 @@ imports such as `@acme/core` resolve directly to `packages/core/src`. That is
 what gives go-to-definition, inline diagnostics and fast editor feedback against
 the real workspace source.
 
-`tsconfig.build.json` intentionally extends `tsconfig.default.json`, **not**
-`tsconfig.json`, so it does not get those path aliases. A build (`tsc -p
-tsconfig.build.json`, `tsdown`, ...) therefore treats sibling workspaces as
-packages (resolved through `node_modules` / project references) instead of
-treating their source as part of the current package. Keeping them as packages
-matters: aliasing them into the build graph would compile/bundle another
-workspace's source into the output and increase the package size.
+`tsconfig.build.json` layers the managed `tsconfig.json` by default, so it
+inherits the workspace `paths` aliases. A build (`tsc -p tsconfig.build.json`,
+`tsdown`, ...) can therefore resolve sibling workspaces directly to source
+instead of through `node_modules` / project references. That keeps build and
+editor resolution consistent.
 
-You can opt into build-time aliases by changing the build config to
+If you do **not** want sibling source in the build graph, point the build config
+back at the source default:
 
 ```json [tsconfig.build.json]
 {
-    "extends": "./tsconfig.json",
+    "extends": "./tsconfig.default.json",
     "include": ["src"]
 }
 ```
 
-It works, but sibling workspace source now participates in the build graph, so
-only do it when that is what you want.
+That treats sibling workspaces as packages only, which can reduce bundle size.
+Only do it when that is what you want.
 
 ## Options
 
-| Option        | Type                                 | Default                    | Description                                                         |
-| ------------- | ------------------------------------ | -------------------------- | ------------------------------------------------------------------- |
-| `enabled`     | `boolean`                            | enabled when defined       | Master switch (only meaningful with `project.type: monorepo-root`). |
-| `aliases`     | `boolean`                            | `true`                     | Inject `compilerOptions.paths` from the workspaces config.          |
-| `refs`        | `boolean`                            | `false`                    | Wire project references between workspaces.                         |
-| `composite`   | `boolean`                            | `false`                    | Emit `composite: true` on the generated configs.                    |
-| `glob`        | `string \| string[]`                 | `**/tsconfig.default.json` | Glob(s) for the workspace default tsconfig files to expand.         |
-| `exclude`     | `string \| string[]`                 | common ignored paths       | Glob(s) excluded from `glob`.                                       |
-| `gitignore`   | `boolean`                            | `true`                     | Respect `.gitignore` files (root + nested).                         |
-| `defaultFile` | `string`                             | `tsconfig.default.json`    | The workspace default tsconfig file name.                           |
-| `buildFile`   | `string`                             | `tsconfig.build.json`      | The workspace build tsconfig file name.                             |
-| `indent`      | `number`                             | `4`                        | JSON indentation of the generated files.                            |
-| `rootFile`    | `string`                             | `tsconfig.workspaces.json` | The workspaces tsconfig file name.                                  |
-| `baseFile`    | `string`                             | `tsconfig.base.json`       | The root base tsconfig file name (the `overrides.base` target).     |
-| `extends`     | `{ base?, default?, build? }`        | template defaults          | Per-file `extends` overrides for scaffolded tsconfig templates.     |
-| `overrides`   | `{ base?, default?, build?, root? }` | none                       | Managed deep-merge overrides applied to the user-owned tsconfigs.   |
+| Option                 | Type                                 | Default                    | Description                                                         |
+| ---------------------- | ------------------------------------ | -------------------------- | ------------------------------------------------------------------- |
+| `enabled`              | `boolean`                            | enabled when defined       | Master switch (only meaningful with `project.type: monorepo-root`). |
+| `aliases`              | `boolean`                            | `true`                     | Inject `compilerOptions.paths` from the workspaces config.          |
+| `refs`                 | `boolean`                            | `false`                    | Wire project references between workspaces.                         |
+| `composite`            | `boolean`                            | `false`                    | Fallback `composite` value when `refs`/`refsAuto` are both off.     |
+| `flattenRemoteExtends` | `boolean`                            | `false`                    | Inline compiler options inherited from a remote `extends` chain.    |
+| `auto`                 | `boolean \| object`                  | `false`                    | Auto-generate the workspaces paths/references from the graph.       |
+| `aliasAuto`            | `boolean \| object`                  | `auto`                     | Auto-generate aliases (`modes`, `prefix`, `devMode`, `dist`, ...).  |
+| `refsAuto`             | `boolean \| object`                  | `auto`                     | Auto-generate project references.                                   |
+| `autoSrcDir`           | `string`                             | `src`                      | Source dir used when resolving package entry points.                |
+| `glob`                 | `string \| string[]`                 | `**/tsconfig.default.json` | Glob(s) for the workspace default tsconfig files to expand.         |
+| `exclude`              | `string \| string[]`                 | common ignored paths       | Glob(s) excluded from `glob`.                                       |
+| `gitignore`            | `boolean`                            | `true`                     | Respect `.gitignore` files (root + nested).                         |
+| `defaultFile`          | `string`                             | `tsconfig.default.json`    | The workspace default tsconfig file name.                           |
+| `buildFile`            | `string`                             | `tsconfig.build.json`      | The workspace build tsconfig file name.                             |
+| `indent`               | `number`                             | `4`                        | JSON indentation of the generated files.                            |
+| `rootFile`             | `string`                             | `tsconfig.workspaces.json` | The workspaces tsconfig file name.                                  |
+| `baseFile`             | `string`                             | `tsconfig.base.json`       | The root base tsconfig file name (the `overrides.base` target).     |
+| `extends`              | `{ base?, default?, build? }`        | template defaults          | Per-file `extends` overrides for scaffolded tsconfig templates.     |
+| `overrides`            | `{ base?, default?, build?, root? }` | none                       | Managed deep-merge overrides applied to the user-owned tsconfigs.   |
 
 ### `aliases`
 
@@ -144,19 +151,110 @@ project is invalid). This is what lets `tsc -b` build the graph in order.
 
 ### `composite`
 
-When on, the generated configs spread the workspaces tsconfig's
-`compilerOptions` (including `composite: true`, `declaration`,
-`emitDeclarationOnly`, ...) and merge its `types`. Leave it off unless you build
-the graph with `tsc --build`.
+Every generated `tsconfig.json` copies the workspaces tsconfig's
+`compilerOptions` (for example `types`, `declaration`, `noEmit`, `paths`).
+`composite` is the exception: it is derived from `refs` / `refsAuto` because a
+project must be composite when it is referenced. When both are off, the
+workspaces tsconfig's `composite` value is copied instead. Leave it off unless
+you build the graph with `tsc --build`; `composite` requires every imported file
+to be part of a referenced project, so `tsc -p --noEmit` is happier without it.
+
+### `auto` / `aliasAuto`
+
+`auto` derives both the workspaces `paths` and `references` from the project
+graph. `aliasAuto` controls only the aliases and defaults to `auto`; `refsAuto`
+controls only the references. Every one is opt-in (`false` by default for
+`auto`) and preserves keys you wrote yourself: only entries a previous auto run
+managed are updated or removed.
+
+The alias object accepts:
+
+| Option                | Type                                                                                 | Default                   | Description                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------ | ------------------------- | --------------------------------------------------------------------------- |
+| `modes`               | `'auto' \| 'exports' \| 'project-structure' \| ('exports' \| 'project-structure')[]` | `auto`                    | How aliases are discovered.                                                 |
+| `prefix`              | `string` (eg. `@`)                                                                   | package name              | Base key for generated aliases (`@` → `@/<package>` and `@/<package>/*`).   |
+| `devMode`             | `boolean`                                                                            | `true`                    | Resolve `exports` to source files; `false` points at the distributed files. |
+| `dist`                | `string`                                                                             | tsconfig `outDir`, `dist` | Output directory used for the source/dist mapping.                          |
+| `rewriteAlias`        | `Record<string, string> \| Rule[]`                                                   | none                      | Rewrite generated alias keys (`$1`, `$2`, ... capture groups).              |
+| `include` / `exclude` | `string[]`                                                                           | none                      | Filter aliases by their generated keys.                                     |
+
+`modes` values:
+
+- **`auto`** — use `exports`/`types`/`main` when they resolve to usable source,
+  otherwise scan the project structure.
+- **`exports`** — only `package.json` `exports` (falling back to `types`/`main`
+  for the package root).
+- **`project-structure`** — scan the workspace source tree (`index.*` files and a
+  wildcard).
+- **an array** — combine both; an earlier mode wins when keys collide.
+
+#### Visual example: input → generated paths
+
+Given `packages/core/package.json`:
+
+```json
+{
+    "name": "@acme/core",
+    "exports": {
+        ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+        "./utils": { "types": "./dist/utils.d.ts", "import": "./dist/utils.js" }
+    }
+}
+```
+
+and `packages/core/tsconfig.default.json`:
+
+```json
+{ "compilerOptions": { "rootDir": "src", "outDir": "dist" } }
+```
+
+this config:
+
+```ts
+tsconfig: {
+    auto: { modes: 'exports', devMode: true },
+}
+```
+
+produces these entries in `tsconfig.workspaces.json` (then rebased into each
+workspace's generated `tsconfig.json`):
+
+```json
+{
+    "compilerOptions": {
+        "paths": {
+            "@acme/core": ["./packages/core/src/index.ts"],
+            "@acme/core/utils": ["./packages/core/src/utils.ts"],
+            "@acme/core/*": ["./packages/core/src/*"]
+        }
+    }
+}
+```
+
+With `devMode: false` the same exports resolve to the distributed files instead:
+
+```json
+{
+    "@acme/core": ["./packages/core/dist/index.js"],
+    "@acme/core/utils": ["./packages/core/dist/utils.js"],
+    "@acme/core/*": ["./packages/core/dist/*"]
+}
+```
+
+With `prefix: '@'` the keys become `@/core`, `@/core/utils` and `@/core/*`
+(the prefix replaces the package scope, not the package name). `rewriteAlias`
+runs against those final generated keys, so
+`{ "^@/core/utils$": "@/core/helpers" }` renames that one alias.
 
 ### `refsAuto`
 
 `refsAuto` derives the workspaces `references` from the project graph. It
-defaults to `auto`; `refs` must also be enabled and each referenced workspace
-must be `composite`. References are only followed by `tsc --build` (`tsc -b`);
-**`tsc -p --noEmit` ignores them**. If your typecheck runs `tsc -p --noEmit`
-(as this repo's does), keep `refsAuto: false` and maintain the `references` in
-`tsconfig.workspaces.json` by hand, or switch the check to `tsc -b`.
+defaults to `auto`; `refs` must also be enabled. Wired workspaces get
+`composite: true` automatically. References are only followed by `tsc --build`
+(`tsc -b`); **`tsc -p --noEmit` ignores them**. If your typecheck runs
+`tsc -p --noEmit` (as this repo's does), keep `refsAuto: false` and maintain the
+`references` in `tsconfig.workspaces.json` by hand, or switch the check to
+`tsc -b`.
 
 ### `glob`
 
@@ -349,12 +447,42 @@ For each workspace matched by `glob`, the generator:
 1. reads its default tsconfig and, when present, the workspaces tsconfig;
 2. writes a sibling `tsconfig.json` that `extends: './<defaultFile>'`, layering
    the workspaces `compilerOptions` (aliases/types) and `references` on top;
-3. leaves `tsconfig.build.json` alone — it is a user-owned input, like the
+3. seeds a missing `tsconfig.build.json` with `extends: './tsconfig.json'`, but
+   leaves an existing build config alone — it is a user-owned input, like the
    default tsconfig.
 
 Because the output only ever `extends` the default and adds the workspaces
 wiring, your workspace-specific options stay in the default tsconfig (the file
 the generator reads, not the one it writes).
+
+A missing or unparseable local/package config anywhere in the default,
+workspaces, or build `extends` chain fails the sync with a clear error (for
+example `Cannot resolve tsconfig "extends": "./tsconfig.base.json"` or
+`Cannot parse tsconfig ".../tsconfig.base.json": ...`). Remote `http(s)` extends
+are fetched (see below); `data:` URLs are not supported.
+
+### Remote extends
+
+A local config may extend an `http(s)` URL. `dbx sync`, `dbx tsconfig` and
+`dbx tsconfig --json` prefetch the remote chain first, resolving nested relative
+`extends` paths against the remote URL. Extends-array precedence and per-field
+inheritance match local configs.
+
+Generated workspace configs keep `extends: './tsconfig.default.json'` by
+default; the resolver still follows the remote chain for the paths, references
+and shared compiler options it infers. Set `flattenRemoteExtends: true` (or pass
+`--flatten-remote-extends`) to inline the `compilerOptions` inherited from the
+remote chain instead. Path-valued options such as `paths` / `baseUrl` are always
+skipped because they describe the remote tree, and every setting the generated
+config already defines wins, so flattening never overrides local defaults,
+workspaces options or managed overrides.
+
+Package specifiers inside a remote config resolve from the local project.
+
+Programmatic callers using the synchronous resolver must call
+`prefetchTsconfigExtends()` first, or use `resolveTsconfigAsync()` /
+`assertTsconfigChainAsync()`; an unprefetched remote reference fails with a
+clear error.
 
 ## Warnings
 
@@ -440,10 +568,72 @@ dbx tsconfig --root packages/app  # root used for detection + relative tsconfig
 dbx tsconfig --no-extends         # only the selected file
 ```
 
-The output is machine-clean JSON (absolute paths). Exact `alias` keys are strings;
-wildcards are anchored regular expressions (rendered as `/.../` strings in the
-CLI JSON), so `@acme/core` never captures `@acme/core-utils`. Exact keys sort
-before wildcards.
+The output is machine-clean JSON (absolute paths). Aliases are anchored
+regular expressions by default (`strict`, from exact keys to wildcards), so
+`@acme/core` never captures `@acme/core-utils`; they serialize as
+`{ source, flags }` so JSON keeps the pattern. With `strict: false`, exact keys
+stay plain strings (wildcards remain regexes). Use `deserializeTsconfigAlias` to
+turn an alias back into a `RegExp`. Aliases and `paths` keys are sorted
+descending, so the longest/most specific entry comes first.
+
+### Visual example: resolved aliases
+
+Input `tsconfig.json`:
+
+```json
+{
+    "compilerOptions": {
+        "paths": {
+            "@acme/core": ["./packages/core/src/index.ts"],
+            "@acme/core-utils": ["./packages/core-utils/src/index.ts"],
+            "@acme/core-utils/deep": ["./packages/core-utils-deep/src/index.ts"],
+            "@acme/core.lib": ["./packages/core-lib/src/index.ts"],
+            "@acme/*": ["./packages/*/src/index.ts"]
+        }
+    }
+}
+```
+
+`dbx tsconfig --json` output (shortened replacements):
+
+```json
+{
+    "alias": [
+        {
+            "find": { "source": "^@acme\\/core\\.lib$", "flags": "" },
+            "replacement": ".../core-lib/src/index.ts"
+        },
+        {
+            "find": { "source": "^@acme\\/core-utils\\/deep$", "flags": "" },
+            "replacement": ".../core-utils-deep/src/index.ts"
+        },
+        {
+            "find": { "source": "^@acme\\/core-utils$", "flags": "" },
+            "replacement": ".../core-utils/src/index.ts"
+        },
+        {
+            "find": { "source": "^@acme\\/core$", "flags": "" },
+            "replacement": ".../core/src/index.ts"
+        },
+        {
+            "find": { "source": "^@acme\\/(.*)$", "flags": "" },
+            "replacement": ".../packages/$1/src/index.ts"
+        }
+    ],
+    "paths": {
+        "@acme/core.lib": [".../core-lib/src/index.ts"],
+        "@acme/core-utils/deep": [".../core-utils-deep/src/index.ts"],
+        "@acme/core-utils": [".../core-utils/src/index.ts"],
+        "@acme/core": [".../core/src/index.ts"],
+        "@acme/*": [".../packages/*/src/index.ts"]
+    },
+    "references": []
+}
+```
+
+Exact keys are escaped (`core.lib` → `core\\.lib`) and anchored, and the
+prefix-extended keys sort before their shorter prefix. The same order applies to
+`paths`, so consumers that iterate it see the most specific key first.
 
 ## Programmatic API
 
@@ -452,6 +642,9 @@ import {
     generateTsconfigs,
     runTsconfigCli,
     resolveTsconfig,
+    serializeTsconfigAlias,
+    deserializeTsconfigAlias,
+    serializeResolvedTsconfig,
     readTsconfig,
     renderTsconfigBase,
     renderTsconfigDefault,
@@ -465,25 +658,29 @@ import {
 } from '@deltabox/toolchain/tsconfig';
 ```
 
-| Export                                                                 | Description                                             |
-| ---------------------------------------------------------------------- | ------------------------------------------------------- |
-| `generateTsconfigs(options)`                                           | Expand every default tsconfig (dry-run-able).           |
-| `runTsconfigCli(argv?)`                                                | The `dbx tsconfig` entry point.                         |
-| `resolveTsconfig(options?)`                                            | Resolve `{ alias, paths, references }` (extends-aware). |
-| `readTsconfig(file)`                                                   | Read a JSONC tsconfig (comments + trailing commas).     |
-| `renderTsconfigBase` / `renderTsconfigDefault` / `renderTsconfigBuild` | Render a template with replacements.                    |
-| `renderTsconfigTemplates(replacements?)`                               | Render every template keyed by file name.               |
-| `buildMonorepoTsconfig(options)` / `renderMonorepoTsconfig(options)`   | The workspaces config (object / JSON text).             |
-| `tsconfigSyncTask()`                                                   | The sync task wired into `dbx sync`.                    |
-| `tsconfigFileNames(config)`                                            | The configured base/root/default/build file names.      |
-| `restoreTsconfigOverrides(options)`                                    | Remove applied overrides (`{ cwd, kind?, dryRun? }`).   |
-| `applyOverride` / `mergeOverride` / `revertOverride`                   | The deep-merge + snapshot-aware revert helpers.         |
-| `getSnapshot` / `setSnapshot` / `deleteSnapshot`                       | Read/write the manifest snapshot tree by relative path. |
+| Export                                                                 | Description                                                       |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `generateTsconfigs(options)`                                           | Expand every default tsconfig (dry-run-able).                     |
+| `runTsconfigCli(argv?)`                                                | The `dbx tsconfig` entry point.                                   |
+| `resolveTsconfig(options?)`                                            | Resolve `{ alias, paths, references }` (extends-aware).           |
+| `serializeTsconfigAlias(alias)` / `deserializeTsconfigAlias(alias)`    | Convert aliases to/from their JSON-safe `{ source, flags }` form. |
+| `serializeResolvedTsconfig(resolved)`                                  | Serialize a whole resolved config for JSON transport.             |
+| `readTsconfig(file)`                                                   | Read a JSONC tsconfig (comments + trailing commas).               |
+| `renderTsconfigBase` / `renderTsconfigDefault` / `renderTsconfigBuild` | Render a template with replacements.                              |
+| `renderTsconfigTemplates(replacements?)`                               | Render every template keyed by file name.                         |
+| `buildMonorepoTsconfig(options)` / `renderMonorepoTsconfig(options)`   | The workspaces config (object / JSON text).                       |
+| `tsconfigSyncTask()`                                                   | The sync task wired into `dbx sync`.                              |
+| `tsconfigFileNames(config)`                                            | The configured base/root/default/build file names.                |
+| `restoreTsconfigOverrides(options)`                                    | Remove applied overrides (`{ cwd, kind?, dryRun? }`).             |
+| `applyOverride` / `mergeOverride` / `revertOverride`                   | The deep-merge + snapshot-aware revert helpers.                   |
+| `getSnapshot` / `setSnapshot` / `deleteSnapshot`                       | Read/write the manifest snapshot tree by relative path.           |
 
-`resolveTsconfig` accepts `{ tsconfig, cwd, root, extends, overrides }`: `tsconfig` is
-resolved from `root` (default `cwd`), and `extends` defaults to `true`. Paths are
-resolved against the defining config's `baseUrl` (or its directory), matching
-TypeScript.
+`resolveTsconfig` accepts `{ tsconfig, cwd, root, relativePaths, strict, extends, overrides }`:
+`tsconfig` is resolved from `root` (default `cwd`), `extends` defaults to `true`, and
+`relativePaths` (default `false`) returns paths relative to the config that defines
+them. `strict` (default `true`) anchors exact aliases as `^...$` regexes; `false`
+keeps exact aliases as plain strings. `paths` are resolved against the defining
+config's `baseUrl` (or its directory), matching TypeScript.
 
 `generateTsconfigs` returns one result per workspace (with `newTsconfig`,
 `originalConfig`, ...); pass `write: false` for a dry run. The task-level

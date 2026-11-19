@@ -1,24 +1,25 @@
-import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import {
     type ChangelogBreakingSetting,
     type ChangelogBumpRuleContext,
     type ChangelogConfig,
-    type ChangelogVersioningConfig,
     logger,
+    readJsonFile,
 } from '@deltabox/toolchain/shared';
 
+import type { BumpType, CommitRecord } from '../types/index.js';
 import { isBreakingCommit } from './breaking.js';
 import { parseCcSubject } from './format.js';
 import { deriveBump, readCommits } from './git.js';
 import { relatedWorkspacePaths } from './graph.js';
-import { repoRoot } from './repo.js';
-import type { BumpType, CommitRecord } from './types.js';
+import { globWorkspaces, isCommitReleased, readReleasedHashes, repoRoot } from './repo.js';
+import { resolveScopedOption } from './target.js';
 import { bumpVersion } from './version.js';
 
-/** The configured custom bump rules (major/minor/patch only). */
-type BumpRules = NonNullable<ChangelogVersioningConfig['bump']>;
+/** The configured custom bump rules (major/minor/patch only, possibly targeted). */
+type BumpRules = Record<string, unknown>;
 
 /** How/where a changelog run applies its version bump. */
 export type VersioningTarget = 'uniform' | 'root-only' | 'individual';
@@ -31,10 +32,12 @@ export interface ResolvedVersioning {
     target: VersioningTarget;
     /** Explicit workspace globs (when configured). */
     workspaces?: string[];
-    /** Custom bump rules keyed by version index. */
+    /** Opt into a prerelease cycle (eg. `beta`, `rc`), globally or per target. */
+    prerelease?: unknown;
+    /** Custom bump rules keyed by version index (globally or per target). */
     bump?: BumpRules;
-    /** Apply a bump per matching change instead of once. */
-    allowOverBump?: boolean;
+    /** Apply a bump per matching change instead of once (globally or per target). */
+    allowOverBump?: unknown;
     /** Changelog provider id, callback, or custom provider object. */
     provider?: unknown;
     /** Commit formatting options. */
@@ -56,8 +59,11 @@ export function resolveVersioning(changelog?: ChangelogConfig): ResolvedVersioni
         enabled: true,
         target: versioning.target ?? 'uniform',
         ...(versioning.workspaces ? { workspaces: versioning.workspaces } : {}),
+        ...(versioning.prerelease ? { prerelease: versioning.prerelease } : {}),
         ...(versioning.bump ? { bump: versioning.bump } : {}),
-        ...(versioning.allowOverBump ? { allowOverBump: true } : {}),
+        ...(versioning.allowOverBump !== undefined
+            ? { allowOverBump: versioning.allowOverBump }
+            : {}),
         ...(versioning.provider ? { provider: versioning.provider } : {}),
         ...(versioning.commit ? { commit: versioning.commit } : {}),
     };
@@ -75,14 +81,8 @@ export interface VersionPackages {
 
 /** Read the `version` field of a directory's `package.json` (if any). */
 export function readPackageVersion(dir: string): string | undefined {
-    try {
-        const pkg = JSON.parse(readFileSync(resolve(dir, 'package.json'), 'utf8')) as {
-            version?: unknown;
-        };
-        return typeof pkg.version === 'string' ? pkg.version : undefined;
-    } catch {
-        return undefined;
-    }
+    const pkg = readJsonFile<{ version?: unknown }>(resolve(dir, 'package.json'));
+    return typeof pkg?.version === 'string' ? pkg.version : undefined;
 }
 
 /** Write `version` into a directory's `package.json` in place (minimal diff). */
@@ -106,36 +106,23 @@ export function discoverVersionPackages(workspaces?: string[], root = repoRoot()
     const rootHasPackage = existsSync(resolve(root, 'package.json'));
     let patterns = workspaces;
     if (patterns === undefined && rootHasPackage) {
-        try {
-            const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as {
-                workspaces?: unknown;
-            };
-            const value = pkg.workspaces;
-            // Yarn/npm use an array; Bun uses `{ packages, catalog }`.
-            patterns = Array.isArray(value)
-                ? value.filter((entry): entry is string => typeof entry === 'string')
-                : value &&
-                    typeof value === 'object' &&
-                    Array.isArray((value as { packages?: unknown }).packages)
-                  ? ((value as { packages: unknown[] }).packages.filter(
-                        (entry): entry is string => typeof entry === 'string'
-                    ) as string[])
-                  : undefined;
-        } catch {
-            patterns = undefined;
-        }
+        const pkg = readJsonFile<{ workspaces?: unknown }>(resolve(root, 'package.json'));
+        const value = pkg?.workspaces;
+        // Yarn/npm use an array; Bun uses `{ packages, catalog }`.
+        patterns = Array.isArray(value)
+            ? value.filter((entry): entry is string => typeof entry === 'string')
+            : value &&
+                typeof value === 'object' &&
+                Array.isArray((value as { packages?: unknown }).packages)
+              ? ((value as { packages: unknown[] }).packages.filter(
+                    (entry): entry is string => typeof entry === 'string'
+                ) as string[])
+              : undefined;
     }
 
     const dirs = new Set<string>();
-    for (const pattern of patterns ?? []) {
-        if (pattern === '.') {
-            dirs.add(root);
-            continue;
-        }
-        for (const match of globSync(pattern, { cwd: root })) {
-            const dir = resolve(root, match);
-            if (existsSync(resolve(dir, 'package.json'))) dirs.add(dir);
-        }
+    for (const dir of globWorkspaces(patterns ?? [], root)) {
+        if (existsSync(resolve(dir, 'package.json'))) dirs.add(dir);
     }
     dirs.delete(root);
 
@@ -283,6 +270,45 @@ export interface PlanVersionsOptions {
  * A disabled `versioning` writes no `package.json` but still heads the
  * changelogs as `uniform` would, so the entries stay complete.
  */
+/** Resolve the prerelease tag for a directory. */
+export function prereleaseFor(
+    versioning: ResolvedVersioning,
+    dir: string,
+    root: string
+): string | undefined {
+    const value = resolveScopedOption<string>(
+        versioning.prerelease as string | undefined,
+        dir,
+        root
+    );
+    return typeof value === 'string' ? value : undefined;
+}
+
+/** Resolve `allowOverBump` for a directory. */
+export function overBumpFor(versioning: ResolvedVersioning, dir: string, root: string): boolean {
+    return (
+        resolveScopedOption<boolean>(versioning.allowOverBump as boolean | undefined, dir, root) ===
+        true
+    );
+}
+
+/** Resolve the major/minor/patch bump rules for a directory. */
+export function bumpRulesFor(
+    rules: BumpRules | undefined,
+    dir: string,
+    root: string
+): BumpRules | undefined {
+    if (!rules) return undefined;
+    const out: BumpRules = {};
+    for (const level of ['major', 'minor', 'patch'] as const) {
+        const value = rules[level];
+        if (value === undefined) continue;
+        const resolved = resolveScopedOption<unknown>(value as never, dir, root, value);
+        if (resolved !== undefined) out[level] = resolved;
+    }
+    return Object.keys(out).length > 0 ? out : undefined;
+}
+
 export function planVersions(options: PlanVersionsOptions): VersionPlan {
     const { versioning, bump, range } = options;
     const root = options.root ?? repoRoot();
@@ -293,7 +319,11 @@ export function planVersions(options: PlanVersionsOptions): VersionPlan {
         options.commitsFor ??
         ((dir: string) => readCommits(range, relatedWorkspacePaths(dir, root)));
 
-    const rootVersion = bumpVersion(options.rootVersion, bump);
+    const rootVersion = bumpVersion(
+        options.rootVersion,
+        bump,
+        prereleaseFor(versioning, root, root)
+    );
     const writes = new Map<string, string>();
     const entries = new Map<string, string>();
     // A disabled pipeline behaves like `uniform` for the changelog headings.
@@ -303,15 +333,29 @@ export function planVersions(options: PlanVersionsOptions): VersionPlan {
 
     if (target === 'individual') {
         for (const dir of workspaces) {
-            const commits = commitsFor(dir);
+            // A second run re-reads the whole range; drop commits this
+            // workspace's own changelog already lists so an old `feat` cannot
+            // re-bump it and an untouched workspace is skipped entirely.
+            const released = readReleasedHashes(resolve(dir, 'CHANGELOG.md'));
+            const commits = commitsFor(dir).filter(
+                record => !isCommitReleased(record.hash, released)
+            );
             if (commits.length === 0) continue;
             const next = bumpVersion(
                 readPackageVersion(dir) ?? '0.0.0',
-                deriveCustomBump(commits, options.bumpRules, options.allowOverBump, {
-                    env: process.env,
-                    logger,
-                    ...(options.breaking !== undefined ? { breaking: options.breaking } : {}),
-                })
+                deriveCustomBump(
+                    commits,
+                    bumpRulesFor(versioning.bump ?? options.bumpRules, dir, root),
+                    versioning.allowOverBump !== undefined
+                        ? overBumpFor(versioning, dir, root)
+                        : options.allowOverBump === true,
+                    {
+                        env: process.env,
+                        logger,
+                        ...(options.breaking !== undefined ? { breaking: options.breaking } : {}),
+                    }
+                ),
+                prereleaseFor(versioning, dir, root)
             );
             entries.set(dir, next);
             if (versioning.enabled) writes.set(dir, next);

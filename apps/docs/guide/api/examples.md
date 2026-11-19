@@ -21,8 +21,7 @@ console.log(toolchainProviders().map(p => p.id));
 
 // Sync only the tsconfig task (eg. after a build changed package exports)
 import { defaultSyncTasks, loadToolchainConfig, runSync } from '@deltabox/toolchain';
-// Config engine
-import { createConfigEngine } from '@deltabox/toolchain/config';
+
 const loaded = await loadToolchainConfig(process.cwd());
 await runSync({
     tasks: defaultSyncTasks(),
@@ -32,4 +31,10 @@ await runSync({
     tokens: loaded.tokens,
     projectType: loaded.projectType,
 });
+
+// Config engine: bind the schema once, then generate or parse with it
+import { createConfigEngine, parseEnvConfig } from '@deltabox/toolchain/config';
+
+const engine = createConfigEngine({ schema, envPrefix: 'MYAPP_' });
+const runtimeConfig = parseEnvConfig(engine.schema, process.env, { envPrefix: 'MYAPP_' });
 ```

@@ -1,0 +1,110 @@
+import type { ProjectType } from '../config-types.js';
+import type { Replacements } from '../template.js';
+import type { Awaitable } from './common.js';
+import type { SyncTask } from './sync.js';
+import type { ToolchainConfig } from './toolchain.js';
+
+/** A CLI option a tooling command exposes (framework-agnostic). */
+export interface ToolchainOption {
+    /** Commander-style flags, eg. `-o, --out <path>`. */
+    flags: string;
+    /** Human-readable description. */
+    description: string;
+    /** Optional default value (stringified). */
+    default?: string;
+    /** Collect repeated occurrences into an array (eg. `--from a --from b`). */
+    multiple?: boolean;
+}
+
+/**
+ * The context handed to every command after the consumer's
+ * `dbx.config.*` has been loaded, so a command can derive its defaults
+ * from the config; explicit CLI flags override those defaults.
+ */
+export interface ToolchainCommandContext {
+    /** The project root the config was loaded from. */
+    cwd: string;
+    /** The detected/configured project kind. */
+    projectType: ProjectType;
+    /** The loaded tooling config (empty object when none was found). */
+    config: ToolchainConfig;
+    /** The project's own (unmerged) config, when loaded from a file. */
+    ownConfig?: ToolchainConfig;
+    /** The resolved replacement tokens. */
+    tokens: Replacements;
+    /** The config file that was loaded, if any. */
+    configPath?: string;
+    /** The inherited ancestor config file, when this project has no config of its own. */
+    parentPath?: string;
+    /** Whether config discovery was disabled (`dbx --no-config`). */
+    noConfig?: boolean;
+    /** Whether this project has no config of its own but an ancestor config. */
+    configless?: boolean;
+    /**
+     * Whether the toolchain should manage this project. Config-bearing projects
+     * are always managed; configless projects only when opted in (`--configless`
+     * or `project.manageConfigless`).
+     */
+    managed?: boolean;
+    /** Whether the config came from a `dbx()` Vite/Vite+ plugin. */
+    plugin?: boolean;
+    /** The `vite.config.*` that carries the plugin, when {@link plugin}. */
+    pluginPath?: string;
+    /**
+     * Set when a `dbx.config.*` file failed to import (the CLI loads configs
+     * tolerantly so unrelated commands still work). Commands that cannot operate
+     * without a valid config (eg. `sync`) fail on it.
+     */
+    configError?: string;
+    /**
+     * The managed-file sync tasks `dbx sync` runs. Supplied by the CLI (which
+     * aggregates the packages) so a package command such as `migrate` can
+     * regenerate managed files without depending on every sync package. Absent
+     * when a command is driven programmatically.
+     */
+    syncTasks?: SyncTask[];
+}
+
+/** A positional argument a command accepts. */
+export interface ToolchainArgument {
+    /** The argument name (also its key in the run `args` object). */
+    name: string;
+    /** Human-readable description. */
+    description: string;
+    /** Accept one value (default) or many (variadic, collected into an array). */
+    variadic?: boolean;
+    /** Whether the argument is required (default true). */
+    required?: boolean;
+}
+
+/**
+ * A framework-agnostic command description. Packages export these (eg.
+ * `configCommands()`) and the root `dbx` CLI registers them with
+ * commander, so packages never depend on a CLI framework. `args` contains only
+ * the flags explicitly passed on the command line (so config defaults apply
+ * otherwise); `context` carries the loaded config.
+ */
+export interface ToolchainCommand<Args extends Record<string, unknown> = Record<string, unknown>> {
+    /** The command name, eg. `config` or `generate`. */
+    name: string;
+    /** Human-readable description. */
+    description: string;
+    /** Positional arguments the command accepts. */
+    args?: ToolchainArgument[];
+    /** Options the command accepts. */
+    options?: ToolchainOption[];
+    /**
+     * Forward every operand (including unknown flags) to the command instead of
+     * parsing them. Used by provider passthrough commands (eg. `vite:dev`), which
+     * hand their raw argv to the wrapped binary. The raw operands arrive under
+     * the `args` key of the run argument (typed `string[]`).
+     */
+    passthrough?: boolean;
+    /**
+     * Omit the command from generated documentation. Used by provider
+     * passthroughs, whose names depend on the consumer's registry.
+     */
+    hidden?: boolean;
+    /** Run the command with the CLI-provided options + the loaded config. */
+    run: (args: Args, context: ToolchainCommandContext) => Awaitable<void>;
+}

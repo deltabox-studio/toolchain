@@ -1,20 +1,22 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import {
     logger,
+    regenerateEnabled,
+    resolveToolchainEnabled,
     sectionConfig,
     type ToolchainCommand,
     type ToolchainTsconfigConfig,
     warningMessage,
+    withSpinner,
 } from '@deltabox/toolchain/shared';
 
-import { generateWorkspaceTsconfigs } from '../cli/generate/index.js';
-import {
-    hasOverrideKeys,
-    TSCONFIG_OVERRIDE_KINDS,
-    type TsconfigOverrideKind,
-    type TsconfigOverrides,
-} from '../overrides.js';
-import { resolveTsconfig } from '../resolve.js';
+import { generateWorkspaceTsconfigs, parseTsconfigIndent } from '../cli/generate/index.js';
+import { hasOverrideKeys, TSCONFIG_OVERRIDE_KINDS } from '../overrides.js';
+import { resolveTsconfigAsync, serializeTsconfigAlias } from '../resolve.js';
 import { restoreTsconfigOverrides } from '../snapshots.js';
+import type { TsconfigOverrideKind, TsconfigOverrides } from '../types/index.js';
 
 /**
  * The `tsconfig` command. Defaults come from `dbx.config.tsconfig.*`
@@ -31,6 +33,11 @@ export function tsconfigCommands(): ToolchainCommand[] {
                 { flags: '--no-aliases', description: 'Skip path aliases.' },
                 { flags: '--composite', description: 'Emit composite + references.' },
                 { flags: '--refs', description: 'Wire project references.' },
+                {
+                    flags: '--flatten-remote-extends',
+                    description:
+                        'Inline compiler options inherited from a remote http(s) extends chain (existing settings win).',
+                },
                 {
                     flags: '--auto',
                     description:
@@ -123,6 +130,12 @@ export function tsconfigCommands(): ToolchainCommand[] {
                 const selectors = (['alias', 'paths', 'references'] as const).filter(
                     key => opts[key] === true
                 );
+                // Validate eagerly so an invalid value never reaches
+                // `JSON.stringify` (NaN produces minified output).
+                const indent =
+                    opts.indent !== undefined
+                        ? parseTsconfigIndent(String(opts.indent))
+                        : undefined;
 
                 const restore = opts.restore;
                 if (restore !== undefined && restore !== false) {
@@ -157,26 +170,52 @@ export function tsconfigCommands(): ToolchainCommand[] {
                     return;
                 }
 
+                if (
+                    opts.json !== true &&
+                    selectors.length === 0 &&
+                    (opts.root !== undefined ||
+                        opts.tsconfig !== undefined ||
+                        opts.extends === false)
+                ) {
+                    throw new Error(
+                        '`--root`, `--tsconfig` and `--no-extends` require `--json`, `--alias`, `--paths` or `--references`.'
+                    );
+                }
+
                 if (opts.json === true || selectors.length > 0) {
-                    const resolved = resolveTsconfig({
+                    const configuredRoot = fs.existsSync(path.resolve(cwd, rootFile))
+                        ? rootFile
+                        : undefined;
+                    const resolved = await resolveTsconfigAsync({
                         cwd,
                         root,
-                        ...(opts.tsconfig ? { tsconfig: opts.tsconfig as string } : {}),
+                        ...(opts.tsconfig
+                            ? { tsconfig: opts.tsconfig as string }
+                            : configuredRoot
+                              ? { tsconfig: configuredRoot }
+                              : {}),
                         ...(opts.extends === false ? { extends: false } : {}),
+                        ...(t.overrides?.root ? { overrides: t.overrides.root } : {}),
                     });
+                    const alias = resolved.alias.map(serializeTsconfigAlias);
+                    const pick = (key: 'alias' | 'paths' | 'references') =>
+                        key === 'alias' ? alias : resolved[key];
                     const output =
                         selectors.length === 0
-                            ? resolved
+                            ? {
+                                  alias,
+                                  paths: resolved.paths,
+                                  references: resolved.references,
+                              }
                             : selectors.length === 1
-                              ? resolved[selectors[0] as keyof typeof resolved]
-                              : Object.fromEntries(selectors.map(key => [key, resolved[key]]));
-                    logger.raw(
-                        JSON.stringify(
-                            output,
-                            (_key, value) => (value instanceof RegExp ? String(value) : value),
-                            4
-                        )
-                    );
+                              ? pick(selectors[0] as 'alias' | 'paths' | 'references')
+                              : Object.fromEntries(
+                                    selectors.map(key => [
+                                        key,
+                                        pick(key as 'alias' | 'paths' | 'references'),
+                                    ])
+                                );
+                    logger.raw(JSON.stringify(output, null, 4));
                     return;
                 }
 
@@ -184,15 +223,16 @@ export function tsconfigCommands(): ToolchainCommand[] {
                 if (opts.aliases !== undefined) overrides.aliases = Boolean(opts.aliases);
                 if (opts.composite !== undefined) overrides.composite = Boolean(opts.composite);
                 if (opts.refs !== undefined) overrides.refs = Boolean(opts.refs);
+                if (opts.flattenRemoteExtends !== undefined) {
+                    overrides.flattenRemoteExtends = Boolean(opts.flattenRemoteExtends);
+                }
                 if (opts.auto !== undefined) overrides.auto = Boolean(opts.auto);
                 if (opts.autoAliases !== undefined) {
                     overrides.aliasAuto = Boolean(opts.autoAliases);
                 }
                 if (opts.autoRefs !== undefined) overrides.refsAuto = Boolean(opts.autoRefs);
                 if (opts.autoSrcDir !== undefined) overrides.autoSrcDir = String(opts.autoSrcDir);
-                if (opts.indent !== undefined) {
-                    overrides.indent = Number.parseInt(String(opts.indent), 10);
-                }
+                if (indent !== undefined) overrides.indent = indent;
                 if (opts.glob !== undefined) overrides.glob = opts.glob as string[];
                 if (opts.exclude !== undefined) overrides.exclude = opts.exclude as string[];
                 if (opts.gitignore !== undefined) overrides.gitignore = Boolean(opts.gitignore);
@@ -200,11 +240,31 @@ export function tsconfigCommands(): ToolchainCommand[] {
                 overrides.buildFile = buildFile;
                 overrides.rootFile = rootFile;
 
-                const generated = await generateWorkspaceTsconfigs({
-                    cwd,
-                    config: context.config,
-                    overrides,
-                });
+                if (opts.restore === undefined) {
+                    if (!resolveToolchainEnabled(context.config).enabled) {
+                        logger.warn('toolchain is disabled; skipping tsconfig generation.');
+                        return;
+                    }
+                    if (!regenerateEnabled(context.config.tsconfig)) {
+                        logger.warn(
+                            'toolchain.tsconfig.regenerate is false; skipping tsconfig generation.'
+                        );
+                        return;
+                    }
+                }
+
+                const generated = await withSpinner(
+                    () =>
+                        generateWorkspaceTsconfigs({
+                            cwd,
+                            config: context.config,
+                            overrides,
+                        }),
+                    {
+                        start: 'Generating workspace tsconfigs...',
+                        success: 'Generated workspace tsconfigs.',
+                    }
+                );
                 if (generated.skipped) {
                     logger.warn(
                         'toolchain.tsconfig is not enabled in dbx.config; skipping the tsconfig task.'

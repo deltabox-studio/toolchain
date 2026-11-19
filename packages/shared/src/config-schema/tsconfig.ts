@@ -5,7 +5,11 @@ import { externalConfigSchema } from './external.js';
 import { withEnabled } from './meta.js';
 
 const tsconfigOverride = (description: string) =>
-    externalConfigSchema<TsConfigJson>(description, 'TsConfigJson');
+    externalConfigSchema<TsConfigJson>(
+        description,
+        'TsConfigJson',
+        'https://www.typescriptlang.org/tsconfig'
+    );
 
 /** Include/exclude globs for an auto-wiring switch. */
 const tsconfigAutoFilters = z
@@ -51,10 +55,49 @@ const tsconfigAliasRewrite = z
     )
     .meta({ tsType: 'ToolchainTsconfigAliasRewrite' });
 
+/** How auto-wiring discovers a workspace's aliases. */
+const tsconfigAliasMode = z
+    .union([
+        z.literal('auto'),
+        z.literal('exports'),
+        z.literal('project-structure'),
+        z.array(z.union([z.literal('exports'), z.literal('project-structure')])),
+    ])
+    .describe(
+        'Alias discovery: `auto` (exports, then the project structure), `exports` (package.json ' +
+            'exports/types/main only), `project-structure` (scan the source tree), or an array ' +
+            'combining `exports` and `project-structure`.'
+    );
+
 /** Include/exclude globs plus an alias rewrite for alias auto-wiring. */
 const tsconfigAliasAutoFilters = tsconfigAutoFilters
     .extend({
         rewriteAlias: tsconfigAliasRewrite.optional(),
+
+        modes: tsconfigAliasMode.optional(),
+        prefix: z
+            .string()
+            .describe(
+                'Prefix for generated aliases instead of the package scope (eg. `@` produces ' +
+                    '`@/<package>` and `@/<package>/<subpath>`).'
+            )
+            .meta({ tsType: "'@' | (string & {})" })
+            .optional(),
+        devMode: z
+            .boolean()
+            .describe(
+                'Resolve generated aliases to source files. Set false to point at the ' +
+                    'distributed files instead.'
+            )
+            .default(true)
+            .optional(),
+        dist: z
+            .string()
+            .describe(
+                'Output directory used to map source/dist targets (default: the workspace ' +
+                    "tsconfig's `outDir`, then `dist`)."
+            )
+            .optional(),
     })
     .meta({ id: 'ToolchainTsconfigAliasAutoSetting' });
 
@@ -85,22 +128,33 @@ export const tsconfigConfigSchema = withEnabled(
             .optional(),
         gitignore: z
             .boolean()
-            .describe(
-                'Also respect `.gitignore` files (root + nested) when matching `glob` ' +
-                    '(default true).'
-            )
+            .describe('Also respect `.gitignore` files (root + nested) when matching `glob`.')
+            .default(true)
             .optional(),
-        refs: z.boolean().describe('Wire project references (default false).').optional(),
-        composite: z.boolean().describe('Emit `composite: true` (default false).').optional(),
-        aliases: z.boolean().describe('Inject path aliases (default true).').optional(),
+        refs: z.boolean().describe('Wire project references.').default(false).optional(),
+        composite: z.boolean().describe('Emit `composite: true`.').default(false).optional(),
+        aliases: z.boolean().describe('Inject path aliases.').default(true).optional(),
+        flattenRemoteExtends: z
+            .boolean()
+            .describe(
+                'Inline the compiler options inherited from a remote `http(s)` `extends` chain ' +
+                    'into the generated workspace configs (default false). Useful when a tool ' +
+                    'cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` ' +
+                    'are skipped because they describe the remote tree. Settings the generated ' +
+                    'config already defines always win.'
+            )
+            .default(false)
+            .optional(),
         auto: tsconfigAliasAutoSetting(
             'Auto-generate the root workspaces tsconfig paths/references from the project graph ' +
                 '(default false). Set true to derive them from the project graph; set false to ' +
-                'only use the entries you define yourself.'
+                'only use the entries you define yourself. An object additionally accepts ' +
+                '`include`/`exclude`, `rewriteAlias`, `modes`, `prefix`, `devMode` and `dist`.'
         ).optional(),
         aliasAuto: tsconfigAliasAutoSetting(
             'Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). ' +
-                'Accepts the same `include`/`exclude`/`rewriteAlias` object as `auto`.'
+                'Accepts the same `include`/`exclude`/`rewriteAlias`/`modes`/`prefix`/`devMode`/' +
+                '`dist` object as `auto`.'
         ).optional(),
         refsAuto: tsconfigAutoSetting(
             'Auto-generate project references (defaults to `auto`; `refs` must also be enabled).'
@@ -114,28 +168,26 @@ export const tsconfigConfigSchema = withEnabled(
             )
             .meta({ tsType: "'src' | '.' | (string & {})" })
             .optional(),
-        indent: z.number().describe('JSON indentation (default 4).').optional(),
+        indent: z.number().describe('JSON indentation.').default(4).optional(),
         rootFile: z
             .string()
-            .describe(
-                'The workspaces tsconfig file name that holds `paths` + `references` ' +
-                    '(default `tsconfig.workspaces.json`).'
-            )
+            .describe('The workspaces tsconfig file name that holds `paths` + `references`.')
+            .default('tsconfig.workspaces.json')
             .optional(),
         defaultFile: z
             .string()
-            .describe(
-                'The workspace default tsconfig file name that the generator expands ' +
-                    '(default `tsconfig.default.json`).'
-            )
+            .describe('The workspace default tsconfig file name that the generator expands.')
+            .default('tsconfig.default.json')
             .optional(),
         buildFile: z
             .string()
-            .describe('The workspace build tsconfig file name (default `tsconfig.build.json`).')
+            .describe('The workspace build tsconfig file name.')
+            .default('tsconfig.build.json')
             .optional(),
         baseFile: z
             .string()
-            .describe('The root base tsconfig file name (default `tsconfig.base.json`).')
+            .describe('The root base tsconfig file name.')
+            .default('tsconfig.base.json')
             .optional(),
         extends: z
             .object({

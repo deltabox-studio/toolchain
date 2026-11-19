@@ -2,22 +2,25 @@ import path from 'node:path';
 
 import { cancel, confirm, isCancel, select } from '@clack/prompts';
 
-import { loadToolchainConfig } from '@deltabox/toolchain/core';
+import { ensureToolingDependencies, loadToolchainConfig } from '@deltabox/toolchain/core';
+import { writeDockerFiles } from '@deltabox/toolchain/docker';
 import {
+    DEFAULT_PACKAGE_MANAGER_VERSIONS,
     logger,
+    parseToolVersions,
     type ProjectType,
     type Replacements,
     sectionConfig,
     type ToolchainCommand,
     type ToolchainCommandContext,
+    withSpinner,
 } from '@deltabox/toolchain/shared';
 import { tsconfigFileNames, type TsconfigExtendsOptions } from '@deltabox/toolchain/tsconfig';
 
 import { hasCatalog } from '../catalogs.js';
 import { generateProjectConfigs } from '../config.js';
+import type { ConfigExtension, ConfigLanguage } from '../types/index.js';
 import {
-    type ConfigExtension,
-    type ConfigLanguage,
     createMonorepoRootFiles,
     createRootProjectFiles,
     createWorkspaceFiles,
@@ -30,7 +33,10 @@ import {
 } from '../typescript.js';
 
 const CONFIG_OPTIONS = [
-    { flags: '--no-config', description: 'Skip the dbx.config.ts file.' },
+    {
+        flags: '--no-project-config',
+        description: 'Skip the generated vite.config.ts file (the project config).',
+    },
     {
         flags: '--type <type>',
         description: 'Project type: project | monorepo-root | monorepo-workspace.',
@@ -42,6 +48,13 @@ const CONFIG_OPTIONS = [
 const PACKAGE_MANAGER_OPTION = {
     flags: '--package-manager <pm>',
     description: 'Package manager: yarn (default) | pnpm | npm | bun.',
+};
+
+/** Override a provisioned formatter/linter dependency version (repeatable). */
+const TOOL_VERSION_OPTION = {
+    flags: '--tool-version <name@range>',
+    description: 'Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.',
+    multiple: true,
 };
 
 /** The valid `project.type` values. */
@@ -101,6 +114,28 @@ function projectDefaults(
     };
 }
 
+/** Whether `out` is the current project or a directory inside it. */
+function scaffoldInPlace(out: string, cwd: string): boolean {
+    const relative = path.relative(path.resolve(cwd), path.resolve(out));
+    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+/**
+ * Metadata a scaffold inherits. Only a project scaffolded **into** the current
+ * project inherits its identity (description, author, repo, ...); `--out`
+ * elsewhere keeps just the environment settings and never stamps the wrong
+ * scope/author onto an unrelated project.
+ */
+function scaffoldDefaults(
+    context: ToolchainCommandContext,
+    out: string,
+    options: { description?: boolean } = {}
+): Record<string, string> {
+    if (scaffoldInPlace(out, context.cwd)) return projectDefaults(context.tokens, options);
+    const nodeVersion = tokenText(context.tokens.nodeVersion);
+    return nodeVersion ? { nodeVersion } : {};
+}
+
 /** Resolve the scaffold's package manager (+ its matching version). */
 function scaffoldPackageManager(
     opts: Record<string, unknown>,
@@ -108,6 +143,12 @@ function scaffoldPackageManager(
 ): Record<string, string> {
     const configured = tokenText(tokens.packageManager);
     const packageManager = (opts.packageManager as string | undefined) ?? configured ?? 'yarn';
+    const supported = Object.keys(DEFAULT_PACKAGE_MANAGER_VERSIONS);
+    if (!supported.includes(packageManager)) {
+        throw new Error(
+            `invalid package manager "${packageManager}" (expected ${supported.join(' | ')}).`
+        );
+    }
     const version =
         packageManager === configured
             ? (tokenText(tokens.packageManagerVersion) ?? tokenText(tokens.yarnVersion))
@@ -119,20 +160,28 @@ function scaffoldPackageManager(
 }
 
 /**
- * Resolve the project name for a scaffold. A name is **required**: it comes from
- * `--name` or `project.name` in `dbx.config.*`, otherwise the scaffold fails.
+ * Resolve the project name for a scaffold. An explicit `--name` always wins;
+ * otherwise a scaffold **into** the current project inherits `project.name` from
+ * `dbx.config.*`. A scaffold `--out` elsewhere never inherits the parent
+ * project's name — it uses the target directory basename instead.
  */
 function requireName(
     opts: Record<string, unknown>,
-    config: ToolchainCommandContext['config']
+    config: ToolchainCommandContext['config'],
+    out: string,
+    cwd: string
 ): string {
-    const name = String(opts.name ?? config.project?.name ?? '').trim();
-    if (!name) {
-        throw new Error(
-            'a project name is required: pass `--name <name>` or set `project.name` in dbx.config.*.'
-        );
+    const explicit = tokenText(opts.name);
+    if (explicit) return explicit;
+    if (scaffoldInPlace(out, cwd)) {
+        const configured = String(config.project?.name ?? '').trim();
+        if (configured) return configured;
     }
-    return name;
+    const base = path.basename(path.resolve(out));
+    if (base) return base;
+    throw new Error(
+        'a project name is required: pass `--name <name>` or set `project.name` in dbx.config.*.'
+    );
 }
 
 /**
@@ -186,26 +235,64 @@ export function projectCommands(): ToolchainCommand[] {
                 { flags: '-s, --scope <scope>', description: 'npm scope, eg. @acme.' },
                 { flags: '-o, --out <dir>', description: 'Output directory (default: cwd).' },
                 PACKAGE_MANAGER_OPTION,
+                TOOL_VERSION_OPTION,
+                {
+                    flags: '--containerize',
+                    description: 'Also generate Docker artifacts (Dockerfile + .dockerignore).',
+                },
                 ...CONFIG_OPTIONS,
             ],
-            run: (opts, context) => {
+            run: async (opts, context) => {
                 const out = (opts.out as string) ?? context.cwd;
-                const name = resolveName(requireName(opts, context.config), out);
+                const name = resolveName(requireName(opts, context.config, out, context.cwd), out);
                 const tsconfigExtends = scaffoldTsconfigExtends(context.config);
-                const scope = (opts.scope as string | undefined) ?? tokenText(context.tokens.scope);
+                const scope =
+                    (opts.scope as string | undefined) ??
+                    (scaffoldInPlace(out, context.cwd)
+                        ? tokenText(context.tokens.scope)
+                        : undefined);
+                const packageManager = scaffoldPackageManager(opts, context.tokens);
                 const files = createRootProjectFiles({
-                    ...projectDefaults(context.tokens),
+                    ...scaffoldDefaults(context, out),
                     name,
                     ...(scope ? { scope } : {}),
-                    ...scaffoldPackageManager(opts, context.tokens),
+                    ...packageManager,
                     type: resolveType(opts, 'project'),
-                    includeConfig: context.noConfig
-                        ? false
-                        : ((opts.config as boolean | undefined) ?? true),
+                    includeConfig: (opts.projectConfig as boolean | undefined) ?? true,
                     rootOxc: findRootOxcFiles(out),
                     ...(tsconfigExtends ? { tsconfigExtends } : {}),
                 });
-                const written = writeGeneratedFiles(files, out, { force: Boolean(opts.force) });
+                const written = await withSpinner(
+                    async () => writeGeneratedFiles(files, out, { force: Boolean(opts.force) }),
+                    { start: 'Writing project files...', success: 'Wrote project files.' }
+                );
+                if (opts.containerize) {
+                    // `project:init` scaffolds a library/root (no server entry
+                    // point), so a Node server image would exit immediately.
+                    const docker = writeDockerFiles({
+                        cwd: out,
+                        projectName: name,
+                        vitePlus: true,
+                        runtime: 'node',
+                        runnableServer: false,
+                        ...(packageManager.packageManager
+                            ? { packageManager: packageManager.packageManager }
+                            : {}),
+                        compose: true,
+                        force: Boolean(opts.force),
+                    });
+                    if (docker.length === 0) {
+                        logger.warn(
+                            'no Docker artifacts written: this project has no server entry point (use a server template, eg. `dbx create --template express`).'
+                        );
+                    }
+                    written.push(...docker);
+                }
+                ensureToolingDependencies({
+                    cwd: out,
+                    selection: { fmt: 'oxc', lint: 'oxc' },
+                    versions: parseToolVersions(opts.toolVersion as string[] | undefined),
+                });
                 for (const file of written) logger.info(`Created ${file}`);
             },
         },
@@ -218,25 +305,26 @@ export function projectCommands(): ToolchainCommand[] {
                 { flags: '-o, --out <dir>', description: 'Output directory (default: cwd).' },
                 { flags: '--example', description: 'Also scaffold one example workspace package.' },
                 PACKAGE_MANAGER_OPTION,
+                TOOL_VERSION_OPTION,
                 ...CONFIG_OPTIONS,
             ],
-            run: (opts, context) => {
+            run: async (opts, context) => {
                 const out = (opts.out as string) ?? context.cwd;
-                const name = resolveName(requireName(opts, context.config), out);
+                const name = resolveName(requireName(opts, context.config, out, context.cwd), out);
                 const scope =
                     (opts.scope as string | undefined) ??
-                    tokenText(context.tokens.scope) ??
+                    (scaffoldInPlace(out, context.cwd)
+                        ? tokenText(context.tokens.scope)
+                        : undefined) ??
                     `@${name}`;
-                const includeConfig = context.noConfig
-                    ? false
-                    : ((opts.config as boolean | undefined) ?? true);
+                const includeConfig = (opts.projectConfig as boolean | undefined) ?? true;
                 const rootType = resolveType(opts, 'monorepo-root');
                 const withExample = Boolean(opts.example);
                 const packageManager = scaffoldPackageManager(opts, context.tokens);
                 const tsconfigExtends = scaffoldTsconfigExtends(context.config);
 
                 const files = createMonorepoRootFiles({
-                    ...projectDefaults(context.tokens),
+                    ...scaffoldDefaults(context, out),
                     name,
                     scope,
                     type: rootType,
@@ -248,7 +336,7 @@ export function projectCommands(): ToolchainCommand[] {
                 if (withExample) {
                     files.push(
                         ...createWorkspaceFiles({
-                            ...projectDefaults(context.tokens, { description: false }),
+                            ...scaffoldDefaults(context, out, { description: false }),
                             name,
                             scope,
                             wsName: 'core',
@@ -261,7 +349,15 @@ export function projectCommands(): ToolchainCommand[] {
                         }).map(f => ({ ...f, path: `packages/core/${f.path}` }))
                     );
                 }
-                const written = writeGeneratedFiles(files, out, { force: Boolean(opts.force) });
+                const written = await withSpinner(
+                    async () => writeGeneratedFiles(files, out, { force: Boolean(opts.force) }),
+                    { start: 'Writing project files...', success: 'Wrote project files.' }
+                );
+                ensureToolingDependencies({
+                    cwd: out,
+                    selection: { fmt: 'oxc', lint: 'oxc' },
+                    versions: parseToolVersions(opts.toolVersion as string[] | undefined),
+                });
                 for (const file of written) logger.info(`Created ${file}`);
             },
         },
@@ -277,6 +373,7 @@ export function projectCommands(): ToolchainCommand[] {
                     description: 'Workspace dir relative to the root (default: packages/<name>).',
                 },
                 PACKAGE_MANAGER_OPTION,
+                TOOL_VERSION_OPTION,
                 ...CONFIG_OPTIONS,
             ],
             run: async (opts, context) => {
@@ -310,9 +407,7 @@ export function projectCommands(): ToolchainCommand[] {
                 // Validate before writing anything: `--dir .` / `..` must never
                 // overwrite the monorepo root (or another package) with `--force`.
                 workspaceDirForTsconfig(wsDir);
-                const includeConfig = context.noConfig
-                    ? false
-                    : ((opts.config as boolean | undefined) ?? true);
+                const includeConfig = (opts.projectConfig as boolean | undefined) ?? true;
                 const type = resolveType(opts, 'monorepo-workspace');
                 const packageManager = scaffoldPackageManager(opts, rootTokens);
                 const tsconfigExtends = scaffoldTsconfigExtends(config);
@@ -334,7 +429,16 @@ export function projectCommands(): ToolchainCommand[] {
                     ...(tsconfigExtends ? { tsconfigExtends } : {}),
                 }).map(file => ({ ...file, path: `${wsDir}/${file.path}` }));
 
-                const written = writeGeneratedFiles(files, root, { force: Boolean(opts.force) });
+                const written = await withSpinner(
+                    async () => writeGeneratedFiles(files, root, { force: Boolean(opts.force) }),
+                    { start: 'Writing project files...', success: 'Wrote project files.' }
+                );
+                ensureToolingDependencies({
+                    cwd: path.join(root, wsDir),
+                    root,
+                    selection: { fmt: 'oxc', lint: 'oxc' },
+                    versions: parseToolVersions(opts.toolVersion as string[] | undefined),
+                });
                 upsertWorkspaceTsconfig(
                     root,
                     { alias: name, dir: wsDir },
@@ -415,17 +519,24 @@ export function projectCommands(): ToolchainCommand[] {
                     }
                 }
 
-                const result = generateProjectConfigs({
-                    root,
-                    ...(opts.include ? { include: opts.include as string[] } : {}),
-                    ...(opts.exclude ? { exclude: opts.exclude as string[] } : {}),
-                    ...(opts.type ? { type: opts.type as ProjectType } : {}),
-                    force: Boolean(opts.force),
-                    dryRun: Boolean(opts.dryRun),
-                    ...(skipConfig ? { skipConfig: true } : {}),
-                    ...(language ? { language } : {}),
-                    ...(extension ? { extension } : {}),
-                });
+                const result = await withSpinner(
+                    async () =>
+                        generateProjectConfigs({
+                            root,
+                            ...(opts.include ? { include: opts.include as string[] } : {}),
+                            ...(opts.exclude ? { exclude: opts.exclude as string[] } : {}),
+                            ...(opts.type ? { type: opts.type as ProjectType } : {}),
+                            force: Boolean(opts.force),
+                            dryRun: Boolean(opts.dryRun),
+                            ...(skipConfig ? { skipConfig: true } : {}),
+                            ...(language ? { language } : {}),
+                            ...(extension ? { extension } : {}),
+                        }),
+                    {
+                        start: 'Generating project configs...',
+                        success: 'Generated project configs.',
+                    }
+                );
 
                 if (opts.json) {
                     logger.raw(JSON.stringify(result, null, 4));

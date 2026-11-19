@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import {
     addGlobalTemplate,
@@ -98,5 +98,17 @@ describe('global template registry', () => {
         const global = await loadGlobalTemplates();
         expect(global.sources).toContainEqual({ type: 'git', locate: 'https://github.com/x/y' });
         expect(fetchMock).toHaveBeenCalledWith('https://example.com/templates.json');
+    });
+
+    it('skips remote registries when offline', async () => {
+        writeGlobalCliConfig({
+            registrySearchPaths: ['https://example.com/templates.json'],
+        });
+        const fetchMock = vi.fn();
+        vi.stubGlobal('fetch', fetchMock);
+
+        const global = await loadGlobalTemplates(undefined, undefined, { online: false });
+        expect(global.sources).toEqual([]);
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 });

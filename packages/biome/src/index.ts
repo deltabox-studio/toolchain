@@ -6,6 +6,7 @@ import {
     type ToolchainConfig,
     sectionConfig,
     sectionEnabled,
+    regenerateEnabled,
 } from '@deltabox/toolchain/shared';
 
 import biomeConfigJson from './config.json' with { type: 'json' };
@@ -193,6 +194,16 @@ export function biomeSyncTask(): SyncTask {
                 (lint?.biome !== undefined && lint.biome !== false)
             );
         },
+        regenerate: config =>
+            regenerateEnabled(config.biome) ||
+            (sectionEnabled(config.fmt) &&
+                regenerateEnabled(config.fmt) &&
+                sectionConfig(config.fmt)?.biome !== undefined &&
+                sectionConfig(config.fmt)?.biome !== false) ||
+            (sectionEnabled(config.lint) &&
+                regenerateEnabled(config.lint) &&
+                sectionConfig(config.lint)?.biome !== undefined &&
+                sectionConfig(config.lint)?.biome !== false),
         run: ctx => {
             const fmt = sectionEnabled(ctx.config.fmt) ? sectionConfig(ctx.config.fmt) : undefined;
             const lint = sectionEnabled(ctx.config.lint)

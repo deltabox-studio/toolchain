@@ -211,12 +211,35 @@ function configuredPackageName(
     const scope = project.scope ?? existing.scope;
     return scope ? `${scope}/${project.name}` : project.name;
 }
+/** How auto-wiring discovers the aliases a workspace contributes. */
+export type AliasDiscoveryMode = 'auto' | 'exports' | 'project-structure';
+
 /** The effective `auto` switch, its include/exclude filters and alias rewrite. */
 export interface AutoSwitch {
     enabled: boolean;
     include: string[];
     exclude: string[];
     rewriteAlias?: ToolchainTsconfigAliasRewrite;
+    /** Alias discovery modes (`auto`, or a combination of the explicit modes). */
+    modes?: AliasDiscoveryMode[];
+    /** Base key for generated aliases (default: the package name). */
+    prefix?: string;
+    /** Resolve export targets to source files (default true). */
+    devMode?: boolean;
+    /** Output directory used for dist/source mapping. */
+    dist?: string;
+}
+
+/** Normalize the `modes` option (`auto` or an array of explicit modes). */
+function parseAliasModes(value: unknown): AliasDiscoveryMode[] | undefined {
+    const valid = new Set<AliasDiscoveryMode>(['auto', 'exports', 'project-structure']);
+    const items = Array.isArray(value) ? value : value === undefined ? [] : [value];
+    const modes = items.filter(
+        (item): item is AliasDiscoveryMode =>
+            typeof item === 'string' && valid.has(item as AliasDiscoveryMode)
+    );
+    if (modes.length === 0) return undefined;
+    return [...new Set(modes)];
 }
 
 function autoSwitch(value: unknown, fallback: boolean): AutoSwitch {
@@ -227,7 +250,12 @@ function autoSwitch(value: unknown, fallback: boolean): AutoSwitch {
             include?: unknown;
             exclude?: unknown;
             rewriteAlias?: unknown;
+            modes?: unknown;
+            prefix?: unknown;
+            devMode?: unknown;
+            dist?: unknown;
         };
+        const modes = parseAliasModes(record.modes);
         return {
             enabled: true,
             include: Array.isArray(record.include)
@@ -239,6 +267,12 @@ function autoSwitch(value: unknown, fallback: boolean): AutoSwitch {
             ...(record.rewriteAlias !== undefined
                 ? { rewriteAlias: record.rewriteAlias as ToolchainTsconfigAliasRewrite }
                 : {}),
+            ...(modes ? { modes } : {}),
+            ...(typeof record.prefix === 'string' && record.prefix
+                ? { prefix: record.prefix }
+                : {}),
+            ...(typeof record.devMode === 'boolean' ? { devMode: record.devMode } : {}),
+            ...(typeof record.dist === 'string' && record.dist ? { dist: record.dist } : {}),
         };
     }
     return { enabled: fallback, include: [], exclude: [] };

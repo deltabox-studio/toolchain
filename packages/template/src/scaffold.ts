@@ -3,12 +3,24 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { ensureToolingDependencies } from '@deltabox/toolchain/core';
 import {
+    type DockerRuntime,
+    dockerFiles,
+    resolveDockerPlan,
+    writeDockerFiles,
+} from '@deltabox/toolchain/docker';
+import {
+    assertPathInside,
     createMonorepoRootFiles,
+    createProjectTemplateFiles,
     createRootProjectFiles,
     createWorkspaceFiles,
+    DEFAULT_PACKAGE_MANAGER_VERSIONS,
     findRootOxcFiles,
     hasCatalog,
+    isProjectTemplateId,
+    isValidPackageName,
     SCAFFOLD_CATALOG,
     upsertWorkspaceTsconfig,
     workspaceDirForTsconfig,
@@ -17,16 +29,18 @@ import {
 import {
     applyReplacements,
     type GeneratedFile,
+    isIgnoredPath,
+    readJsonAt,
     type Replacements,
     spawnCross,
 } from '@deltabox/toolchain/shared';
-import { runVp } from '@deltabox/toolchain/vite';
+import { runVp } from 'vite-plugin-dbx';
 
 import { readTemplateManifest } from './local.js';
-import type { Template, TemplateAction, TemplateActionContext } from './types.js';
+import type { Template, TemplateAction, TemplateActionContext } from './types/index.js';
 
 /** Files/dirs never copied from a local template. */
-const DEFAULT_IGNORE = new Set([
+const DEFAULT_IGNORE = [
     'node_modules',
     '.git',
     'dist',
@@ -34,7 +48,35 @@ const DEFAULT_IGNORE = new Set([
     '.dbx',
     '.DS_Store',
     'template.json',
-]);
+];
+
+/**
+ * Expand template ignore entries into path globs. A slash-less entry matches at
+ * any depth (like `.gitignore`), and a directory entry also covers its
+ * contents; explicit paths/globs keep their relative scope.
+ */
+function ignorePatterns(entries: readonly string[]): string[] {
+    const patterns: string[] = [];
+    for (const raw of entries) {
+        const entry = raw
+            .replace(/\\/g, '/')
+            .replace(/^\.\//, '')
+            .replace(/^\/+/, '')
+            .replace(/\/+$/, '');
+        if (!entry) continue;
+        for (const variant of entry.includes('/') ? [entry] : [`**/${entry}`]) {
+            patterns.push(variant);
+            if (!variant.endsWith('/**')) patterns.push(`${variant}/**`);
+        }
+    }
+    return patterns;
+}
+
+/** Whether a file's bytes are binary (a NUL byte or invalid UTF-8). */
+function isBinaryFile(buffer: Buffer): boolean {
+    if (buffer.includes(0)) return true;
+    return !Buffer.from(buffer.toString('utf-8'), 'utf-8').equals(buffer);
+}
 
 export interface ScaffoldOptions {
     /** Where the files are written. */
@@ -51,6 +93,15 @@ export interface ScaffoldOptions {
     actions?: string[];
     /** The monorepo workspaces tsconfig name (workspace scaffolds). */
     tsconfigRootFile?: string;
+    /** Version overrides for the provisioned formatter/linter dependencies. */
+    toolVersions?: Record<string, string>;
+    /** Also write Docker artifacts (default false). */
+    containerize?: boolean;
+    /**
+     * Route action output to stderr instead of stdout, for machine-readable runs
+     * (`--json`): the scaffold result must be the only thing on stdout.
+     */
+    machine?: boolean;
 }
 
 export interface ScaffoldResult {
@@ -89,6 +140,106 @@ function projectContext(tokens: Record<string, unknown>): Record<string, string>
     };
 }
 
+/** Per-template Docker customisation layered over the generic plan. */
+interface ContainerSpec {
+    runtime: DockerRuntime;
+    output?: string;
+    /** Extra runtime assets (eg. the local file server's `public/`). */
+    assets?: string[];
+    /** Runtime system packages (eg. `rclone`). */
+    runtimePackages?: string[];
+    /** HTTP path the healthcheck requests (default `/`). */
+    healthcheckPath?: string;
+    /** Disable the healthcheck when the server has no reliable GET endpoint. */
+    healthcheck?: boolean;
+}
+
+/** The Docker runtime a builtin template produces (undefined = not containerized). */
+function containerRuntime(template: Template): ContainerSpec | undefined {
+    switch (template.builtin) {
+        case 'vitepress':
+            return { runtime: 'static', output: 'docs/.vitepress/dist' };
+        case 'application':
+        case 'ollama-chat':
+            return { runtime: 'static', output: 'dist' };
+        case 'bun':
+            return { runtime: 'bun', output: 'dist', healthcheckPath: '/health' };
+        case 'file-server-bun-s3':
+            return { runtime: 'bun', output: 'dist' };
+        case 'express':
+        case 'fastify':
+            return { runtime: 'node', output: 'dist', healthcheckPath: '/health' };
+        case 'file-server':
+            return {
+                runtime: 'node',
+                output: 'dist',
+                assets: ['public'],
+                healthcheckPath: '/index.html',
+            };
+        case 'file-server-s3':
+        case 'file-server-minio':
+            return { runtime: 'node', output: 'dist' };
+        case 'file-server-rclone':
+            return { runtime: 'node', output: 'dist', runtimePackages: ['rclone'] };
+        case 'orpc':
+            // The oRPC server only answers `/rpc` POSTs; a GET healthcheck would
+            // fail, so the container stays up without one.
+            return { runtime: 'node', output: 'dist', healthcheck: false };
+        default:
+            // `single` and the monorepo/folder templates are libraries or roots:
+            // they have no server entry point, so no image is emitted.
+            return undefined;
+    }
+}
+
+/** Validate the template's required inputs before any file is written. */
+function validateTemplateInputs(template: Template, options: ScaffoldOptions): void {
+    const values = replacementMap(options);
+    for (const variable of template.variables ?? []) {
+        const raw = values[variable.name];
+        // A declared default satisfies a required input (it is what an
+        // interactive/non-interactive run would use).
+        const value =
+            raw === undefined || raw === null || raw === ''
+                ? (variable.default ?? '')
+                : String(raw);
+        if (variable.required && value.trim() === '') {
+            throw new Error(
+                `template "${template.id}" requires variable "${variable.name}" (pass --var ${variable.name}=<value>).`
+            );
+        }
+        if (value !== '' && variable.options && !variable.options.includes(value)) {
+            throw new Error(
+                `invalid value "${value}" for template variable "${variable.name}" (expected one of: ${variable.options.join(', ')}).`
+            );
+        }
+    }
+}
+
+/** Validate the project name and package manager before writing a builtin. */
+function validateBuiltinInputs(
+    name: string,
+    scope: string | undefined,
+    packageManager: string | undefined
+): void {
+    if (!isValidPackageName(name)) {
+        throw new Error(
+            `invalid project name "${name}" (use a lowercase npm package name: letters, digits, ".", "_" or "-").`
+        );
+    }
+    if (scope !== undefined && !/^@[a-z0-9][a-z0-9._-]*$/.test(scope)) {
+        throw new Error(`invalid npm scope "${scope}" (expected @scope with a lowercase name).`);
+    }
+    if (
+        packageManager !== undefined &&
+        !Object.keys(DEFAULT_PACKAGE_MANAGER_VERSIONS).includes(packageManager)
+    ) {
+        throw new Error(
+            `invalid package manager "${packageManager}" (expected ${Object.keys(DEFAULT_PACKAGE_MANAGER_VERSIONS).join(' | ')}).`
+        );
+    }
+}
+
 /** Scaffold from one of the local generators (builtin templates). */
 function scaffoldBuiltin(template: Template, options: ScaffoldOptions): ScaffoldResult {
     const tokens = replacementMap(options);
@@ -111,6 +262,8 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
     // A workspace describes itself, not the root it is scaffolded from.
     const { description: _description, ...workspaceMetadata } = metadata;
     const files: GeneratedFile[] = [];
+    let toolingCwd = options.cwd;
+    let toolingRoot: string | undefined;
 
     switch (template.builtin) {
         case 'monorepo-root': {
@@ -160,6 +313,8 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
             // Validate before writing: a name like `../..` must never target the
             // monorepo root (or another package) with `--force`.
             const dir = workspaceDirForTsconfig(`packages/${name}`);
+            toolingCwd = path.join(options.cwd, dir);
+            toolingRoot = options.cwd;
             files.push(
                 ...createWorkspaceFiles({
                     ...workspaceMetadata,
@@ -184,28 +339,83 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
             break;
         }
         default: {
-            // `single` + `application`: a root package project.
+            const projectContext = {
+                ...metadata,
+                name,
+                ...(scope ? { scope } : {}),
+                type: 'project' as const,
+                includeConfig,
+                rootOxc: findRootOxcFiles(options.cwd),
+                ...(packageManager ? { packageManager } : {}),
+            };
+            // `single` + `application`: a root package project; the built-in
+            // project templates layer their own files/deps over the same scaffold.
             files.push(
-                ...createRootProjectFiles({
-                    ...metadata,
-                    name,
-                    ...(scope ? { scope } : {}),
-                    type: 'project',
-                    kind: template.builtin === 'application' ? 'application' : 'project',
-                    includeConfig,
-                    rootOxc: findRootOxcFiles(options.cwd),
-                    ...(packageManager ? { packageManager } : {}),
-                })
+                ...(template.builtin && isProjectTemplateId(template.builtin)
+                    ? createProjectTemplateFiles(template.builtin, projectContext)
+                    : createRootProjectFiles({
+                          ...projectContext,
+                          kind: template.builtin === 'application' ? 'application' : 'project',
+                      }))
             );
         }
     }
+    if (template.builtin !== 'folder') {
+        validateBuiltinInputs(name, scope, packageManager);
+    }
+    const docker = options.containerize ? containerRuntime(template) : undefined;
+    const dockerOptions = docker
+        ? {
+              cwd: options.cwd,
+              projectName: name,
+              vitePlus: true,
+              ...(packageManager ? { packageManager } : {}),
+              ...(metadata.nodeVersion ? { nodeVersion: metadata.nodeVersion } : {}),
+              runtime: docker.runtime,
+              ...(docker.output ? { output: docker.output } : {}),
+              ...(docker.assets ? { assets: docker.assets } : {}),
+              ...(docker.runtimePackages ? { runtimePackages: docker.runtimePackages } : {}),
+              ...(docker.healthcheckPath ? { healthcheckPath: docker.healthcheckPath } : {}),
+              ...(docker.healthcheck === false ? { healthcheck: false } : {}),
+              // Every containerized scaffold ships a local compose file.
+              compose: true,
+          }
+        : undefined;
+
+    // Preflight the project files and their Docker artifacts together, so a
+    // Docker collision (eg. a hand-written Dockerfile) aborts before any
+    // project file is written instead of leaving a partial scaffold.
+    if (dockerOptions) {
+        writeGeneratedFiles([...files, ...dockerFiles(dockerOptions)], options.cwd, {
+            force: options.force === true,
+            dryRun: true,
+        });
+    }
+
     const written = writeGeneratedFiles(files, options.cwd, { force: options.force === true });
+    if (template.builtin !== 'folder') {
+        ensureToolingDependencies({
+            cwd: toolingCwd,
+            ...(toolingRoot ? { root: toolingRoot } : {}),
+            selection: { fmt: 'oxc', lint: 'oxc' },
+            ...(options.toolVersions ? { versions: options.toolVersions } : {}),
+        });
+    }
     if (template.builtin === 'monorepo-workspace') {
         upsertWorkspaceTsconfig(
             options.cwd,
             { alias: name, dir: workspaceDirForTsconfig(`packages/${name}`) },
             scope,
             options.tsconfigRootFile
+        );
+    }
+    if (dockerOptions) {
+        // Recompute after the project files exist so the plan's install sources
+        // include generated files (eg. `.yarnrc.yml`).
+        written.push(
+            ...writeGeneratedFiles(dockerFiles(dockerOptions), options.cwd, {
+                force: options.force === true,
+            })
         );
     }
     return { written };
@@ -216,23 +426,24 @@ function scaffoldLocal(template: Template, options: ScaffoldOptions): ScaffoldRe
     const dir = template.dir;
     if (!dir) throw new Error(`Local template "${template.id}" has no directory.`);
     const manifest = readTemplateManifest(dir);
-    const ignore = new Set([...DEFAULT_IGNORE, ...(manifest?.ignore ?? [])]);
+    const ignores = [...DEFAULT_IGNORE, ...(manifest?.ignore ?? [])];
     // The action modules are scaffolding logic, not template content.
     for (const action of template.actions ?? []) {
-        if (action.module) ignore.add(action.module.replace(/\\/g, '/'));
+        if (action.module) ignores.push(action.module.replace(/\\/g, '/'));
     }
+    const ignore = ignorePatterns(ignores);
     const open = template.tokens?.open ?? '{{';
     const close = template.tokens?.close ?? '}}';
     const tokens = replacementMap(options);
     const overwrite = options.force === true || options.overwrite === true;
-    const pending: { target: string; content: string }[] = [];
+    const pending: { target: string; content: string | Buffer }[] = [];
     const root = path.resolve(options.cwd);
 
     const walk = (relative: string): void => {
         const abs = path.join(dir, relative);
         for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
-            if (ignore.has(entry.name)) continue;
             const childRelative = relative ? `${relative}/${entry.name}` : entry.name;
+            if (isIgnoredPath(childRelative, ignore)) continue;
             if (entry.isDirectory()) {
                 walk(childRelative);
                 continue;
@@ -241,17 +452,17 @@ function scaffoldLocal(template: Template, options: ScaffoldOptions): ScaffoldRe
                 root,
                 applyReplacements(childRelative, tokens, { open, close })
             );
-            const normalizedRoot = process.platform === 'win32' ? root.toLowerCase() : root;
-            const normalizedTarget = process.platform === 'win32' ? target.toLowerCase() : target;
-            if (
-                normalizedTarget !== normalizedRoot &&
-                !normalizedTarget.startsWith(`${normalizedRoot}${path.sep}`)
-            ) {
-                throw new Error(`refusing to write outside ${root}: ${target}`);
-            }
+            // Reject `..` targets and links under the output that escape it.
+            assertPathInside(root, target);
             if (!overwrite && fs.existsSync(target)) continue;
-            const content = fs.readFileSync(path.join(dir, childRelative), 'utf-8');
-            pending.push({ target, content: applyReplacements(content, tokens, { open, close }) });
+            const source = path.join(dir, childRelative);
+            const buffer = fs.readFileSync(source);
+            pending.push({
+                target,
+                content: isBinaryFile(buffer)
+                    ? buffer
+                    : applyReplacements(buffer.toString('utf-8'), tokens, { open, close }),
+            });
         }
     };
     walk('');
@@ -261,34 +472,84 @@ function scaffoldLocal(template: Template, options: ScaffoldOptions): ScaffoldRe
     const written: string[] = [];
     for (const file of pending) {
         fs.mkdirSync(path.dirname(file.target), { recursive: true });
-        fs.writeFileSync(file.target, file.content, 'utf-8');
+        fs.writeFileSync(file.target, file.content);
         written.push(file.target);
     }
     return { written };
 }
 
 /** Delegate an online/Vite+ template to `vp create`. */
+/** Forward a git source's `ref` to `vp create` (`<locate>#<ref>`). */
+function sourceLocate(template: Template): string {
+    const { locate, ref, subdir, type } = template.source;
+    const withRef = type === 'git' && ref ? `${locate}#${ref}` : locate;
+    return subdir ? `${withRef}/${subdir}` : withRef;
+}
+
 async function scaffoldViaVp(
     template: Template,
     options: ScaffoldOptions
 ): Promise<ScaffoldResult> {
-    const locate = template.source.subdir
-        ? `${template.source.locate}/${template.source.subdir}`
-        : template.source.locate;
+    const locate = sourceLocate(template);
     const args = ['create'];
     if (locate) args.push(locate);
     const name = options.tokens?.name;
     if (name) args.push(String(name));
-    const result = await runVp(args, { cwd: options.cwd });
-    return { written: [], code: result.code };
+    // A custom npm registry is forwarded through the environment `vp create`
+    // reads (it resolves create packages through npm's config); `ref` is part of
+    // the locate above.
+    const registry = template.source.registry;
+    const result = await runVp(args, {
+        cwd: options.cwd,
+        // Creation targets an empty directory: allow the npx fallback even when
+        // the target does not (yet) declare `vite-plus`.
+        allowNpx: true,
+        ...(registry ? { env: { npm_config_registry: registry } } : {}),
+        ...(options.machine ? { mode: 'capture' as const } : {}),
+    });
+    if (options.machine) {
+        // Never let `vp create` output corrupt the JSON result on stdout.
+        if (result.stdout) process.stderr.write(result.stdout);
+        if (result.stderr) process.stderr.write(result.stderr);
+    }
+    if (result.code !== 0 || !options.containerize) return { written: [], code: result.code };
+
+    // `vp create` writes into a folder named after the project (or the current
+    // directory for an interactive create); write the Docker artifacts there.
+    const candidates = [...(name ? [path.join(options.cwd, String(name))] : []), options.cwd];
+    const dir = candidates.find(candidate => fs.existsSync(path.join(candidate, 'package.json')));
+    if (!dir) return { written: [], code: result.code };
+    const dockerOptions = {
+        cwd: dir,
+        ...(name ? { projectName: String(name) } : {}),
+        ...(options.tokens?.packageManager
+            ? { packageManager: String(options.tokens.packageManager) }
+            : {}),
+        compose: true,
+    };
+    // A Vite+ library (`vp pack`, no `start`) has no runnable entry point: skip
+    // the server image, while a static site still gets its nginx image.
+    const pkg = readJsonAt<{ scripts?: Record<string, string> }>(dir, 'package.json');
+    const hasStart = Boolean(pkg?.scripts?.start?.trim());
+    const runtime = resolveDockerPlan(dockerOptions).runtime;
+    const written = writeDockerFiles({
+        ...dockerOptions,
+        runnableServer: hasStart || runtime === 'static',
+        // Never clobber a hand-written Dockerfile unless the caller asked for it.
+        force: options.force === true,
+    });
+    return { written, code: result.code };
 }
 
-/** Run a command to completion (inherited stdio). Resolves with the exit code. */
-function runCommand(cmd: string, args: string[], cwd: string): Promise<number> {
+/** Run a command to completion. Machine runs keep the child's stdout off our stdout. */
+function runCommand(cmd: string, args: string[], cwd: string, machine = false): Promise<number> {
     return new Promise<number>(resolve => {
         let child: ReturnType<typeof spawnCross>;
         try {
-            child = spawnCross(cmd, args, { cwd, stdio: 'inherit' });
+            child = spawnCross(cmd, args, {
+                cwd,
+                stdio: machine ? ['ignore', 'ignore', 'inherit'] : 'inherit',
+            });
         } catch {
             resolve(1);
             return;
@@ -299,9 +560,13 @@ function runCommand(cmd: string, args: string[], cwd: string): Promise<number> {
 }
 
 /** Run a shell command in `cwd` (for a template's `command` action). */
-function runShell(command: string, cwd: string): Promise<number> {
+function runShell(command: string, cwd: string, machine = false): Promise<number> {
     return new Promise<number>(resolve => {
-        const child = spawn(command, { cwd, stdio: 'inherit', shell: true });
+        const child = spawn(command, {
+            cwd,
+            stdio: machine ? ['ignore', 'ignore', 'inherit'] : 'inherit',
+            shell: true,
+        });
         child.on('error', () => resolve(1));
         child.on('exit', code => resolve(code ?? 0));
     });
@@ -320,7 +585,11 @@ function actionContext(template: Template, options: ScaffoldOptions): TemplateAc
         tokens,
         variables,
         packageManager: String(tokens.packageManager ?? 'yarn'),
-        log: message => console.log(message),
+        // Machine-readable runs (`--json`) must keep stdout clean.
+        log: message =>
+            options.machine
+                ? process.stderr.write(`${message}\n`)
+                : process.stdout.write(`${message}\n`),
     };
 }
 
@@ -333,7 +602,12 @@ async function runAction(
 ): Promise<void> {
     if (action.builtin === 'install') {
         ctx.log(`Installing dependencies with ${ctx.packageManager}…`);
-        const code = await runCommand(ctx.packageManager, ['install'], options.cwd);
+        const code = await runCommand(
+            ctx.packageManager,
+            ['install'],
+            options.cwd,
+            options.machine === true
+        );
         if (code !== 0) {
             throw new Error(`\`${ctx.packageManager} install\` failed with exit code ${code}.`);
         }
@@ -359,7 +633,7 @@ async function runAction(
         return;
     }
     if (action.command) {
-        const code = await runShell(action.command, options.cwd);
+        const code = await runShell(action.command, options.cwd, options.machine === true);
         if (code !== 0) {
             throw new Error(`template command failed with exit code ${code}: ${action.command}`);
         }
@@ -385,6 +659,9 @@ export async function scaffoldTemplate(
     template: Template,
     options: ScaffoldOptions
 ): Promise<ScaffoldResult> {
+    // Enforce the template's declared inputs before writing anything: a missing
+    // required value would otherwise leave literal `{{var}}` placeholders.
+    validateTemplateInputs(template, options);
     if (template.builtin) {
         const result = scaffoldBuiltin(template, options);
         const ranActions = await runActions(template, options);

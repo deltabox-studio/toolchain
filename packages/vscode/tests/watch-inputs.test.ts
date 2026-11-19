@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import {
     DEFAULT_TSCONFIG_FILES,
@@ -13,7 +13,12 @@ import {
 describe('watch inputs', () => {
     it('falls back to the default inputs and tsconfig names', () => {
         expect(defaultWatchInputs()).toEqual({
-            globs: ['dbx.config.*', 'tsconfig.workspaces.json', 'tsconfig.default.json'],
+            globs: [
+                'dbx.config.*',
+                'vite.config.*',
+                'tsconfig.workspaces.json',
+                'tsconfig.default.json',
+            ],
             tsconfig: DEFAULT_TSCONFIG_FILES,
         });
     });
@@ -51,6 +56,7 @@ describe('watch inputs', () => {
         ];
         expect(planWatchTargets(undefined, roots)).toEqual([
             { glob: 'dbx.config.*', base: '/repo/a', root: '/repo/a' },
+            { glob: 'vite.config.*', base: '/repo/a', root: '/repo/a' },
             { glob: 'tsconfig.workspaces.json', base: '/repo/a', root: '/repo/a' },
             { glob: 'tsconfig.default.json', base: '/repo/a', root: '/repo/a' },
             { glob: 'dbx.config.*', base: '/repo/b', root: '/repo/b' },

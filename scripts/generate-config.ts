@@ -10,17 +10,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import {
-    createConfigEngine,
-    normalizeJsonSchemaMetadata,
-    toJsonSchemaSafe,
-} from '@deltabox/toolchain/config';
-import { configSchema, dbxConfigSchema, logger } from '@deltabox/toolchain/shared';
+import { createConfigEngine } from '@deltabox/toolchain/config';
+import { configSchema, logger, toolchainConfigSchema } from '@deltabox/toolchain/shared';
 
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const engine = createConfigEngine({ schema: configSchema });
+const schemaEngine = createConfigEngine({
+    schema: { toolchain: toolchainConfigSchema },
+    root,
+});
 
-const markdown = engine.generateConfigMarkdown({
+const markdown = engine.markdown.generate({
     combined: true,
     title: 'dbx.config',
     intro: [
@@ -57,18 +57,21 @@ const example = [
 ].join('\n');
 const markdownIndex = markdown;
 if (!markdownIndex) {
-    throw new Error('generateConfigMarkdown did not produce an index.md entry.');
+    throw new Error('markdown.generate did not produce an index.md entry.');
 }
 fs.writeFileSync(docsPath, `${markdownIndex.trimEnd()}\n${example}`, 'utf-8');
 
-const jsonSchema = toJsonSchemaSafe(dbxConfigSchema, {
-    unrepresentable: 'any',
-}) as Record<string, unknown>;
-normalizeJsonSchemaMetadata(jsonSchema);
-jsonSchema.$id = 'https://deltabox.studio/schemas/dbx.config.json';
-jsonSchema.title = 'dbx.config';
-jsonSchema.description =
-    'The dbx configuration model (the @deltabox/toolchain settings live under `toolchain`).';
+const jsonSchema = await schemaEngine.jsonSchema.generate({
+    preserveDefs: true,
+    additionalProperties: false,
+    scopeDescriptions: {
+        toolchain: 'The `@deltabox/toolchain` settings (every section is opt-in by presence).',
+    },
+    id: 'https://deltabox.studio/schemas/dbx.config.json',
+    title: 'dbx.config',
+    description:
+        'The dbx configuration model (the @deltabox/toolchain settings live under `toolchain`).',
+});
 const schemaPath = path.join(root, 'config.schema.json');
 fs.writeFileSync(schemaPath, `${JSON.stringify(jsonSchema, null, 4)}\n`, 'utf-8');
 

@@ -40,21 +40,43 @@ export function workspaceRoots(): string[] {
     return (vscode.workspace.workspaceFolders ?? []).map(folder => folder.uri.fsPath);
 }
 
-/** The built entry of a workspace-local `@deltabox/toolchain`, if installed. */
-function localCliEntry(cwd: string): string | undefined {
-    for (const dir of [cwd, ...workspaceRoots()]) {
-        const entry = path.join(
-            dir,
-            'node_modules',
-            '@deltabox',
-            'toolchain',
-            'dist',
-            'cli',
-            'index.js'
-        );
-        if (fs.existsSync(entry)) return entry;
-    }
-    return undefined;
+/**
+ * The directories to search for a project `dbx`: `cwd` and every workspace
+ * root, walking up to the repository boundary (the nearest `.git`) so a
+ * toolchain hoisted to a monorepo root is found from a nested workspace. Every
+ * workspace root is considered, not just the first one.
+ */
+function searchDirs(cwd: string): string[] {
+    const dirs: string[] = [];
+    const seen = new Set<string>();
+    const add = (start: string): void => {
+        let dir = path.resolve(start);
+        for (;;) {
+            if (seen.has(dir)) break;
+            seen.add(dir);
+            dirs.push(dir);
+            if (fs.existsSync(path.join(dir, '.git'))) break;
+            const parent = path.dirname(dir);
+            if (parent === dir) break;
+            dir = parent;
+        }
+    };
+    for (const root of [cwd, ...workspaceRoots()]) add(root);
+    return dirs;
+}
+
+/** The built entry of a workspace-local `@deltabox/toolchain` in `dir`, if installed. */
+function localCliEntry(dir: string): string | undefined {
+    const entry = path.join(
+        dir,
+        'node_modules',
+        '@deltabox',
+        'toolchain',
+        'dist',
+        'cli',
+        'index.js'
+    );
+    return fs.existsSync(entry) ? entry : undefined;
 }
 
 /**
@@ -106,17 +128,19 @@ export function formatImportGroupDefaultsEnv(): NodeJS.ProcessEnv {
 
 /** The `@deltabox/toolchain` version installed in the project (if any). */
 export function projectToolchainVersion(cwd: string = process.cwd()): string | undefined {
-    for (const dir of [cwd, ...workspaceRoots()]) {
+    for (const dir of searchDirs(cwd)) {
         try {
             const pkg = JSON.parse(
-                fs.readFileSync(
-                    path.join(dir, 'node_modules', '@deltabox', 'toolchain', 'package.json'),
-                    'utf-8'
-                )
+                fs
+                    .readFileSync(
+                        path.join(dir, 'node_modules', '@deltabox', 'toolchain', 'package.json'),
+                        'utf-8'
+                    )
+                    .replace(/^\uFEFF/, '')
             ) as { version?: unknown };
             if (typeof pkg.version === 'string' && pkg.version) return pkg.version;
         } catch {
-            // Try the next workspace root.
+            // Try the next directory.
         }
     }
     return undefined;
@@ -130,15 +154,15 @@ export function extensionVersion(): string | undefined {
 /**
  * Which `dbx` the extension should prefer: the project's own
  * `@deltabox/toolchain` (`'project'`) or the extension's bundled `dbx.cjs`
- * (`'extension'`). The default is the extension, so an unresolved or declined
- * setup always falls back to a known-good CLI.
+ * (`'extension'`). The project's version wins by default; the extension bundle is
+ * only the fallback when the workspace has no local install.
  */
 export type DbxSource = 'project' | 'extension';
 
 /** The `workspaceState` key the chosen source is persisted under. */
 const DBX_SOURCE_KEY = 'deltabox.dbxSource';
 
-let dbxSource: DbxSource = 'extension';
+let dbxSource: DbxSource = 'project';
 
 /** Set the preferred `dbx` source (the extension persists it per workspace). */
 export function setDbxSource(source: DbxSource): void {
@@ -152,10 +176,12 @@ export function getDbxSource(): DbxSource {
 
 /** The workspace-local `dbx`: the built `@deltabox/toolchain` entry or a `.bin` shim. */
 export function projectDbx(cwd: string): CliCommand | undefined {
-    const entry = localCliEntry(cwd);
-    if (entry) return { exe: process.execPath, args: [entry] };
     const names = IS_WINDOWS ? ['dbx.cmd', 'dbx.exe', 'dbx.ps1', 'dbx'] : ['dbx'];
-    for (const dir of [cwd, ...workspaceRoots()]) {
+    for (const dir of searchDirs(cwd)) {
+        // Prefer a nearer install: a `.bin` shim in this directory must win over
+        // a built hoisted entry further up.
+        const entry = localCliEntry(dir);
+        if (entry) return { exe: process.execPath, args: [entry] };
         for (const name of names) {
             const bin = path.join(dir, 'node_modules', '.bin', name);
             if (fs.existsSync(bin)) return { exe: bin, args: [] };
@@ -241,16 +267,21 @@ export async function selectVersion(): Promise<void> {
 }
 
 /**
- * Detect the current workspace's own `dbx` and, when the extension also ships a
- * bundled one, ask the user once which to run. The choice is remembered per
- * workspace; dismissing the notification falls back to the extension's CLI.
+ * Detect the current workspace's own `dbx` and default to it. When the extension
+ * also ships a bundled one and the versions differ, ask the user once which to
+ * run; dismissing the notification keeps the project's CLI. The choice is
+ * remembered per workspace.
  */
 export async function initDbxSource(context: vscode.ExtensionContext): Promise<void> {
     const bundled = bundledCliEntry();
     const root = workspaceRoots()[0] ?? process.cwd();
     const project = projectDbx(root);
-    if (!bundled || !project) {
-        dbxSource = project ? 'project' : 'extension';
+    if (!project) {
+        dbxSource = 'extension';
+        return;
+    }
+    if (!bundled) {
+        dbxSource = 'project';
         return;
     }
     const stored = context.workspaceState.get<DbxSource>(DBX_SOURCE_KEY);
@@ -258,15 +289,14 @@ export async function initDbxSource(context: vscode.ExtensionContext): Promise<v
         dbxSource = stored;
         return;
     }
-    // Only ask when the project pins a different version than the extension (or
-    // the version is otherwise unknown); otherwise prefer the bundled CLI.
+    // The project's own CLI is the default. Only a version mismatch needs the
+    // user's attention, and dismissing the prompt keeps the project's version.
     const projectVersion = projectToolchainVersion(root);
     const extension = extensionVersion();
-    if (!projectVersion || !extension || projectVersion === extension) {
-        dbxSource = 'extension';
-        return;
+    dbxSource = 'project';
+    if (projectVersion && extension && projectVersion !== extension) {
+        dbxSource = (await promptDbxSource(projectVersion, extension)) ?? 'project';
     }
-    dbxSource = (await promptDbxSource(projectVersion, extension)) ?? 'extension';
     await context.workspaceState.update(DBX_SOURCE_KEY, dbxSource);
 }
 
@@ -274,7 +304,8 @@ export async function initDbxSource(context: vscode.ExtensionContext): Promise<v
 export async function chooseDbxSource(
     context: vscode.ExtensionContext
 ): Promise<DbxSource | undefined> {
-    const choice = await promptDbxSource();
+    const root = workspaceRoots()[0] ?? process.cwd();
+    const choice = await promptDbxSource(projectToolchainVersion(root), extensionVersion());
     if (!choice) return undefined;
     dbxSource = choice;
     await context.workspaceState.update(DBX_SOURCE_KEY, choice);
@@ -331,6 +362,15 @@ export function spawnCli(cwd: string, args: string[], options: SpawnOptions = {}
 }
 
 /**
+ * Quote a path for an integrated-terminal command line. The terminal runs a
+ * shell, unlike {@link spawnCli}, so a local `.cmd`/`.bin` shim with spaces in
+ * its path must be quoted to stay one token.
+ */
+function shellPath(value: string): string {
+    return /\s/u.test(value) ? `"${value}"` : value;
+}
+
+/**
  * The shell command that runs the resolved CLI in `cwd`, for an integrated
  * terminal. Unlike `spawnCli`, which runs inside the extension host (where VS
  * Code sets `ELECTRON_RUN_AS_NODE=1`, so `process.execPath` executes as Node),
@@ -344,19 +384,21 @@ export function cliInvocation(cwd: string): string {
     const project = projectDbx(cwd);
     const pinned = configuredVersion();
     if (pinned) {
-        if (project && projectToolchainVersion(cwd) === pinned)
-            return project.args.length ? `node "${project.args[0]}"` : project.exe;
+        if (project && projectToolchainVersion(cwd) === pinned) return projectInvocation(project);
         const bundled = bundledCliEntry();
         if (bundled && extensionVersion() === pinned) return `node "${bundled}"`;
         return `${IS_WINDOWS ? 'npx.cmd' : 'npx'} --yes @deltabox/toolchain@${pinned}`;
     }
-    if (dbxSource === 'project' && project) {
-        return project.args.length ? `node "${project.args[0]}"` : project.exe;
-    }
+    if (dbxSource === 'project' && project) return projectInvocation(project);
     const bundled = bundledCliEntry();
     if (bundled) return `node "${bundled}"`;
-    if (project) return project.args.length ? `node "${project.args[0]}"` : project.exe;
+    if (project) return projectInvocation(project);
     return `${IS_WINDOWS ? 'npx.cmd' : 'npx'} --yes ${pinnedToolchainSpec()}`;
+}
+
+/** The terminal command for a resolved project CLI. */
+function projectInvocation(project: CliCommand): string {
+    return project.args.length ? `node "${project.args[0]}"` : shellPath(project.exe);
 }
 
 export interface CapturedResult {

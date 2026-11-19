@@ -62,15 +62,30 @@ export class WatcherManager {
     async rebuild(): Promise<void> {
         if (this.disposed) return;
         const generation = ++this.generation;
-        this.disposeWatchers();
-        if (!this.options.enabled()) return;
+        if (!this.options.enabled()) {
+            this.disposeWatchers();
+            return;
+        }
 
         const userGlobs = this.options.userGlobs();
         const roots = this.options.roots();
-        const resolved = await Promise.all(
-            roots.map(async root => ({ root, inputs: await this.options.resolveInputs(root) }))
-        );
+        let resolved: Array<{ root: string; inputs: WatchInputs }>;
+        try {
+            resolved = await Promise.all(
+                roots.map(async root => ({ root, inputs: await this.options.resolveInputs(root) }))
+            );
+        } catch (error) {
+            // Keep the previous watcher set intact: a transient CLI/config failure
+            // must not leave auto-sync with no watchers at all. The next successful
+            // rebuild (or config change) replaces them.
+            if (!this.disposed && generation === this.generation) {
+                const message = error instanceof Error ? error.message : String(error);
+                this.options.log?.(`dbx: failed to resolve watch inputs: ${message}`);
+            }
+            return;
+        }
         if (this.disposed || generation !== this.generation) return;
+        this.disposeWatchers();
         for (const { root, inputs } of resolved) this.options.onResolved(root, inputs);
 
         for (const target of planWatchTargets(userGlobs, resolved)) {

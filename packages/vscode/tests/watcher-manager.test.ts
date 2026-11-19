@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { DEFAULT_TSCONFIG_FILES, type WatchInputs } from '../src/watch-inputs.js';
 import { WatcherManager } from '../src/watcher-manager.js';
@@ -8,6 +8,7 @@ type Handler = (uri: { fsPath: string }) => void;
 interface MockWatcher {
     pattern: unknown;
     handlers: Record<string, Handler>;
+    disposed: boolean;
     dispose: () => void;
     onDidChange: (handler: Handler) => void;
     onDidCreate: (handler: Handler) => void;
@@ -30,7 +31,10 @@ vi.mock('vscode', () => {
                 const watcher: MockWatcher = {
                     pattern,
                     handlers: {},
-                    dispose: () => {},
+                    disposed: false,
+                    dispose: () => {
+                        watcher.disposed = true;
+                    },
                     onDidChange: handler => {
                         watcher.handlers.change = handler;
                     },
@@ -131,5 +135,29 @@ describe('WatcherManager', () => {
         });
         await user.rebuild();
         expect(mocks.watchers).toHaveLength(0);
+    });
+
+    it('keeps the previous watchers and logs when resolving inputs fails', async () => {
+        let fail = false;
+        const log: string[] = [];
+        const watcher = new WatcherManager({
+            enabled: () => true,
+            userGlobs: () => undefined,
+            roots: () => ['/repo/a'],
+            resolveInputs: async () => {
+                if (fail) throw new Error('dbx watch failed');
+                return inputs(['tsconfig.base.json']);
+            },
+            onResolved: () => {},
+            onChange: () => {},
+            log: message => log.push(message),
+        });
+        await watcher.rebuild();
+        expect(mocks.watchers).toHaveLength(1);
+
+        fail = true;
+        await expect(watcher.rebuild()).resolves.toBeUndefined();
+        expect(mocks.watchers[0]!.disposed).toBe(false);
+        expect(log).toContainEqual(expect.stringContaining('dbx watch failed'));
     });
 });

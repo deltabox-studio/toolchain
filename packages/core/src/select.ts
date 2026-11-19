@@ -34,24 +34,67 @@ export interface SelectProjectsOptions {
 
 const GLOB_CHARS = /[*?[\]{}]/;
 
-const GLOBSTAR = '<<dbx-globstar>>';
+function escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
+/**
+ * Compile a project-filter glob. Supports `**`, `*`, `?`, simple `[...]`
+ * classes and `{a,b}` alternatives; anything else is literal, so a malformed
+ * class cannot throw.
+ */
 function toRegExp(pattern: string): RegExp {
-    const escaped = pattern
-        .replace(/[.+^${}()|\\]/g, '\\$&')
-        .replace(/\*\*/g, GLOBSTAR)
-        .replace(/\*/g, '[^/]*')
-        .replaceAll(GLOBSTAR, '.*')
-        .replace(/\?/g, '.');
-    return new RegExp(`^${escaped}$`, 'i');
+    let source = '';
+    for (let index = 0; index < pattern.length; index++) {
+        const char = pattern[index] as string;
+        if (char === '*') {
+            if (pattern[index + 1] === '*') {
+                source += '.*';
+                index += 1;
+            } else {
+                source += '[^/]*';
+            }
+        } else if (char === '?') {
+            source += '[^/]';
+        } else if (char === '[') {
+            const end = pattern.indexOf(']', index + 1);
+            if (end === -1) {
+                source += '\\[';
+            } else {
+                const body = pattern.slice(index + 1, end);
+                // Glob `[!...]` is a negated class in the usual shells.
+                source += body.startsWith('!') ? `[^${body.slice(1)}]` : `[${body}]`;
+                index = end;
+            }
+        } else if (char === '{') {
+            const end = pattern.indexOf('}', index + 1);
+            if (end === -1) {
+                source += '\\{';
+            } else {
+                const alternatives = pattern
+                    .slice(index + 1, end)
+                    .split(',')
+                    .map(alternative => escapeRegExp(alternative));
+                source += `(?:${alternatives.join('|')})`;
+                index = end;
+            }
+        } else {
+            source += escapeRegExp(char);
+        }
+    }
+    return new RegExp(`^${source}$`, 'i');
 }
 
 /** Match a pattern against a project's relative dir + package name. */
 function matches(project: SelectedProject, pattern: string): boolean {
     const values = [project.rel, project.name ?? '', path.basename(project.rel)];
     if (GLOB_CHARS.test(pattern)) {
-        const re = toRegExp(pattern);
-        return values.some(value => re.test(value));
+        try {
+            const re = toRegExp(pattern);
+            return values.some(value => re.test(value));
+        } catch {
+            // An invalid class/range falls back to the substring semantics.
+        }
     }
     const needle = pattern.toLowerCase();
     return values.some(value => value.toLowerCase().includes(needle));

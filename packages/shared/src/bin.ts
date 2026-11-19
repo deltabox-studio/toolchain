@@ -11,6 +11,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { readJsonAt, readJsonFile } from './fs-utils.js';
+
 /** The published toolchain package name. */
 export const TOOLCHAIN_PACKAGE = '@deltabox/toolchain';
 
@@ -24,20 +26,15 @@ export function findOwnCliEntry(cwd: string = process.cwd()): string | undefined
     for (;;) {
         const pkgPath = path.join(dir, 'package.json');
         if (fs.existsSync(pkgPath)) {
-            try {
-                const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as {
-                    name?: string;
-                    bin?: string | Record<string, string>;
-                };
-                if (pkg.name === TOOLCHAIN_PACKAGE) {
-                    const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.dbx;
-                    if (bin) {
-                        const entry = path.resolve(dir, bin);
-                        if (fs.existsSync(entry)) return entry;
-                    }
+            const pkg = readJsonFile<{ name?: string; bin?: string | Record<string, string> }>(
+                pkgPath
+            );
+            if (pkg?.name === TOOLCHAIN_PACKAGE) {
+                const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.dbx;
+                if (bin) {
+                    const entry = path.resolve(dir, bin);
+                    if (fs.existsSync(entry)) return entry;
                 }
-            } catch {
-                // Ignore a malformed package.json and keep walking up.
             }
         }
         const parent = path.dirname(dir);
@@ -48,12 +45,8 @@ export function findOwnCliEntry(cwd: string = process.cwd()): string | undefined
 
 /** Read the `version` field of a `package.json` (undefined when unreadable). */
 function readPackageVersion(file: string): string | undefined {
-    try {
-        const pkg = JSON.parse(fs.readFileSync(file, 'utf-8')) as { version?: unknown };
-        return typeof pkg.version === 'string' ? pkg.version : undefined;
-    } catch {
-        return undefined;
-    }
+    const pkg = readJsonFile<{ version?: unknown }>(file);
+    return typeof pkg?.version === 'string' ? pkg.version : undefined;
 }
 
 /**
@@ -77,16 +70,9 @@ export function localToolchainVersion(cwd: string = process.cwd()): string | und
 
         const pkgPath = path.join(dir, 'package.json');
         if (ownVersion === undefined && fs.existsSync(pkgPath)) {
-            try {
-                const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as {
-                    name?: string;
-                    version?: unknown;
-                };
-                if (pkg.name === TOOLCHAIN_PACKAGE && typeof pkg.version === 'string') {
-                    ownVersion = pkg.version;
-                }
-            } catch {
-                // Ignore a malformed package.json and keep walking up.
+            const pkg = readJsonAt<{ name?: string; version?: unknown }>(dir, 'package.json');
+            if (pkg?.name === TOOLCHAIN_PACKAGE && typeof pkg.version === 'string') {
+                ownVersion = pkg.version;
             }
         }
 

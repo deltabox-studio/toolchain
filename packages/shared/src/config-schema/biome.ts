@@ -11,13 +11,14 @@ import { withEnabled } from './meta.js';
  */
 export const biomeConfigOptionsSchema = externalConfigSchema<Record<string, unknown>>(
     'Biome configuration options.',
-    'BiomeConfig'
+    'BiomeConfig',
+    'https://biomejs.dev/reference/configuration/'
 );
 
 /** Biome config generation (for consumers that still want a `biome.json`). */
 export const biomeConfigSchema = withEnabled(
     z.object({
-        vscode: z.boolean().describe('Write the Biome VS Code settings (default true).').optional(),
+        vscode: z.boolean().describe('Write the Biome VS Code settings.').default(true).optional(),
         overrides: biomeConfigOptionsSchema
             .describe(
                 'Deep-merged over the generated `biome.json` (arrays union; ' +

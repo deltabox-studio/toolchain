@@ -3,12 +3,14 @@ import path from 'node:path';
 
 import * as vscode from 'vscode';
 
+import { deepestProjectDir } from './managed-files.js';
+import { readJson, readManifest } from './manifest.js';
 import { DEFAULT_TSCONFIG_FILES, type TsconfigFileNames } from './watch-inputs.js';
+
+export { type ProjectManifest, readManifest } from './manifest.js';
 
 const CONFIG_PREFIX = 'dbx.config.';
 const PROJECT_GROUPS = ['packages', 'apps', 'sdk'];
-const MANIFEST = path.join('.dbx', 'toolchain', 'manifest.json');
-const TIMESTAMPS = path.join('.dbx', 'toolchain', 'timestamps.json');
 
 export interface Project {
     kind: 'project';
@@ -24,6 +26,8 @@ export interface Project {
     type: 'monorepo-root' | 'monorepo-workspace' | 'project';
     /** Whether the directory has a `dbx.config.*` (syncable). */
     hasConfig: boolean;
+    /** Whether a `vite.config.*` carries the `dbx()` plugin (plugin mode). */
+    plugin: boolean;
     /** Internal package dependencies (package names). */
     dependencies: string[];
     /** ISO timestamp of the last sync recorded in the project manifest. */
@@ -58,48 +62,32 @@ interface ProjectGraphFile {
     packageManager?: string;
 }
 
-function readJson<T>(file: string): T | undefined {
-    try {
-        return JSON.parse(fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, '')) as T;
-    } catch {
-        return undefined;
-    }
-}
-
 /** Read the generated project graph for a root, if present. */
 export function readProjectGraph(root: string): ProjectGraphFile | undefined {
     return readJson<ProjectGraphFile>(path.join(root, '.dbx', 'toolchain', 'projects.json'));
 }
 
-/** The tracked/generated file manifest for a project. */
-export interface ProjectManifest {
-    files: string[];
-    syncedAt?: string;
-    /** Workflow paths dbx left untouched, mapped to the config key that owns them. */
-    workflowConflicts?: Record<string, string>;
-}
-
-/** Read the tracked/generated file manifest for a project dir, if present. */
-export function readManifest(dir: string): ProjectManifest {
-    const doc = readJson<{
-        files?: string[];
-        syncedAt?: string;
-        workflowConflicts?: Record<string, string>;
-    }>(path.join(dir, MANIFEST));
-    // The last-sync time lives in its own (gitignored) file; fall back to a
-    // legacy inline `syncedAt` until the next sync migrates it.
-    const timestamps = readJson<{ syncedAt?: string }>(path.join(dir, TIMESTAMPS));
-    const syncedAt = timestamps?.syncedAt ?? doc?.syncedAt;
-    return {
-        files: doc?.files ?? [],
-        ...(syncedAt ? { syncedAt } : {}),
-        ...(doc?.workflowConflicts ? { workflowConflicts: doc.workflowConflicts } : {}),
-    };
-}
-
 function hasToolchainConfig(dir: string): boolean {
     try {
         return fs.readdirSync(dir).some(name => name.startsWith(CONFIG_PREFIX));
+    } catch {
+        return false;
+    }
+}
+
+const VITE_CONFIG_PREFIX = 'vite.config.';
+const DBX_PLUGIN_SOURCE = /@deltabox\/toolchain(?:\/vite)?['"]|\bdbx\s*\(/;
+
+/** Whether a hand-written `vite.config.*` in `dir` uses the `dbx()` plugin. */
+function hasVitePluginConfig(dir: string): boolean {
+    try {
+        const file = fs
+            .readdirSync(dir)
+            .find(name => name.startsWith(VITE_CONFIG_PREFIX) && !name.endsWith('.d.ts'));
+        if (!file) return false;
+        const source = fs.readFileSync(path.join(dir, file), 'utf-8');
+        // A generated `resolveVite` shim reads `dbx.config.*`; it is not plugin mode.
+        return DBX_PLUGIN_SOURCE.test(source) && !/resolveVite\s*[<(]/.test(source);
     } catch {
         return false;
     }
@@ -145,7 +133,13 @@ function inferType(dir: string, root: string): Project['type'] {
         : 'project';
 }
 
-function toProject(root: string, dir: string, hasConfig: boolean, dependencies: string[]): Project {
+function toProject(
+    root: string,
+    dir: string,
+    hasConfig: boolean,
+    dependencies: string[],
+    plugin: boolean = false
+): Project {
     const name = packageName(dir);
     const manifest = readManifest(dir);
     // The workspace folder itself resolves to an absolute path; fall back to its
@@ -160,6 +154,7 @@ function toProject(root: string, dir: string, hasConfig: boolean, dependencies: 
         ...(name ? { packageName: name } : {}),
         type: inferType(dir, root),
         hasConfig,
+        plugin,
         dependencies,
         ...(manifest.syncedAt ? { syncedAt: manifest.syncedAt } : {}),
         trackedFiles: manifest.files.length,
@@ -168,9 +163,16 @@ function toProject(root: string, dir: string, hasConfig: boolean, dependencies: 
 
 function fromGraph(root: string, nodes: GraphNode[]): Project[] {
     return nodes
-        .map(node =>
-            toProject(root, path.resolve(root, node.dir), node.hasConfig, node.dependencies ?? [])
-        )
+        .map(node => {
+            const dir = path.resolve(root, node.dir);
+            return toProject(
+                root,
+                dir,
+                node.hasConfig,
+                node.dependencies ?? [],
+                hasVitePluginConfig(dir)
+            );
+        })
         .sort((a, b) => a.label.localeCompare(b.label));
 }
 
@@ -186,7 +188,7 @@ function scanRoot(root: string): Project[] {
     }
     return [...dirs]
         .sort((a, b) => (packageName(a) ?? a).localeCompare(packageName(b) ?? b))
-        .map(dir => toProject(root, dir, hasToolchainConfig(dir), []));
+        .map(dir => toProject(root, dir, hasToolchainConfig(dir), [], hasVitePluginConfig(dir)));
 }
 
 /**
@@ -230,12 +232,44 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeN
         this.emitter.fire(undefined);
     }
 
-    getChildren(element?: ProjectTreeNode): ProjectTreeNode[] {
-        if (!element) {
-            if (this.groups.length === 0) this.groups = discoverProjectGroups();
-            return this.groups;
+    /** Load (and cache) the discovered groups once per refresh. */
+    private ensureGroups(): ProjectGroup[] {
+        if (this.groups.length === 0) this.groups = discoverProjectGroups();
+        return this.groups;
+    }
+
+    /** The stable project node for a directory (used by `treeView.reveal`). */
+    findProject(dir: string): Project | undefined {
+        const target = path.resolve(dir);
+        for (const group of this.ensureGroups()) {
+            const project = group.projects.find(
+                candidate => path.resolve(candidate.dir) === target
+            );
+            if (project) return project;
         }
+        return undefined;
+    }
+
+    /** Every discovered project (cached until the next refresh). */
+    projects(): Project[] {
+        return this.ensureGroups().flatMap(group => group.projects);
+    }
+
+    getChildren(element?: ProjectTreeNode): ProjectTreeNode[] {
+        if (!element) return this.ensureGroups();
         return element.kind === 'group' ? element.projects : [];
+    }
+
+    /**
+     * The parent group a project belongs to. `TreeView.reveal` uses this to
+     * expand the ancestors of a node that is not currently loaded.
+     */
+    getParent(element: ProjectTreeNode): ProjectTreeNode | undefined {
+        if (element.kind === 'group') return undefined;
+        const target = path.resolve(element.dir);
+        return this.ensureGroups().find(group =>
+            group.projects.some(project => path.resolve(project.dir) === target)
+        );
     }
 
     getTreeItem(node: ProjectTreeNode): vscode.TreeItem {
@@ -250,7 +284,11 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeN
         }
 
         const item = new vscode.TreeItem(node.label, vscode.TreeItemCollapsibleState.None);
-        item.description = node.hasConfig ? node.type : `${node.type} · no config`;
+        item.description = node.plugin
+            ? `${node.type} · plugin`
+            : node.hasConfig
+              ? node.type
+              : `${node.type} · no config`;
         item.tooltip = [
             node.packageName ?? node.dir,
             node.dir,
@@ -260,9 +298,14 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeN
             .join('\n');
         item.resourceUri = vscode.Uri.file(node.dir);
         item.iconPath = new vscode.ThemeIcon(
-            node.hasConfig ? 'check' : node.type === 'monorepo-root' ? 'repo' : 'circle-outline'
+            node.hasConfig || node.plugin
+                ? 'check'
+                : node.type === 'monorepo-root'
+                  ? 'repo'
+                  : 'circle-outline'
         );
-        item.contextValue = node.hasConfig ? 'deltabox.project.configured' : 'deltabox.project';
+        item.contextValue =
+            node.hasConfig || node.plugin ? 'deltabox.project.configured' : 'deltabox.project';
         return item;
     }
 }
@@ -282,6 +325,90 @@ export interface TrackedFileNode {
     children?: TrackedFileNode[];
 }
 
+/** Convert an absolute path to a workspace-relative, POSIX display path. */
+function workspaceRelative(root: string, absolute: string): string {
+    return path.relative(path.resolve(root), path.resolve(absolute)).split(path.sep).join('/');
+}
+
+/**
+ * Build the Managed Files tree from every discovered project manifest, not just
+ * the workspace root's manifest. A project records its files relative to its own
+ * directory, so each entry is resolved to an absolute path, deduplicated (a root
+ * manifest may repeat a workspace file), grouped under the deepest owning
+ * project and displayed workspace-relative. Workflow conflicts from every
+ * manifest are merged into one list per workspace.
+ */
+export function trackedFileNodes(workspaces: Iterable<ProjectGroup>): TrackedFileNode[] {
+    const nodes: TrackedFileNode[] = [];
+    for (const workspace of workspaces) {
+        const projects = [...workspace.projects];
+        const sources = new Set<string>([path.resolve(workspace.dir)]);
+        for (const project of projects) sources.add(path.resolve(project.dir));
+
+        const buckets = new Map<string, TrackedFileNode>();
+        const seenFiles = new Set<string>();
+        const files: { absolute: string; label: string }[] = [];
+        const conflicts = new Map<string, string>();
+
+        for (const source of sources) {
+            const manifest = readManifest(source);
+            for (const file of manifest.files) {
+                const absolute = path.resolve(source, file);
+                const key = process.platform === 'win32' ? absolute.toLowerCase() : absolute;
+                if (seenFiles.has(key)) continue;
+                seenFiles.add(key);
+                files.push({
+                    absolute,
+                    label: workspaceRelative(workspace.dir, absolute),
+                });
+            }
+
+            for (const [file, conflict] of Object.entries(manifest.workflowConflicts ?? {})) {
+                const label = workspaceRelative(workspace.dir, path.resolve(source, file));
+                // A root manifest and a project manifest can both record the
+                // same hand-written workflow; keep a single node.
+                if (!conflicts.has(label)) conflicts.set(label, conflict);
+            }
+        }
+
+        files.sort((a, b) => a.label.localeCompare(b.label));
+        for (const { absolute, label } of files) {
+            const ownerDir = path.resolve(deepestProjectDir(absolute, projects) ?? workspace.dir);
+            const owner = projects.find(project => path.resolve(project.dir) === ownerDir);
+            let group = buckets.get(ownerDir);
+            if (!group) {
+                group = {
+                    kind: 'fileGroup',
+                    label: owner?.label ?? path.basename(ownerDir),
+                    root: workspace.dir,
+                    children: [],
+                };
+                buckets.set(ownerDir, group);
+            }
+            group.children?.push({ kind: 'file', label, root: workspace.dir, file: label });
+        }
+
+        nodes.push(...buckets.values());
+        const merged = [...conflicts.entries()].sort(([a], [b]) => a.localeCompare(b));
+        if (merged.length > 0) {
+            nodes.push({
+                kind: 'fileGroup',
+                label: 'Workflow conflicts',
+                root: workspace.dir,
+                conflictGroup: true,
+                children: merged.map(([file, conflict]) => ({
+                    kind: 'file',
+                    label: file,
+                    root: workspace.dir,
+                    file,
+                    conflict,
+                })),
+            });
+        }
+    }
+    return nodes;
+}
+
 /** The tree data provider backing the Tracked Files view. */
 export class TrackedFilesTreeProvider implements vscode.TreeDataProvider<TrackedFileNode> {
     private readonly emitter = new vscode.EventEmitter<TrackedFileNode | undefined>();
@@ -293,63 +420,8 @@ export class TrackedFilesTreeProvider implements vscode.TreeDataProvider<Tracked
         this.emitter.fire(undefined);
     }
 
-    /**
-     * Group every managed file by the project that owns it. A workspace root's
-     * manifest records the files repo-relative, so each file is matched to the
-     * deepest project directory that contains it (falling back to the root
-     * project) — so root-level managed files still show up.
-     */
     private build(): TrackedFileNode[] {
-        const groups: TrackedFileNode[] = [];
-        for (const workspace of discoverProjectGroups()) {
-            const manifest = readManifest(workspace.dir);
-            const files = [...manifest.files].sort((a, b) => a.localeCompare(b));
-            if (files.length === 0 && !manifest.workflowConflicts) continue;
-            // Longest directory first, so `find` returns the deepest owner; the
-            // shortest (the workspace root) is the fallback.
-            const projects = [...workspace.projects].sort((a, b) => b.dir.length - a.dir.length);
-            const rootProject = projects[projects.length - 1];
-            const buckets = new Map<string, TrackedFileNode>();
-            for (const file of files) {
-                const abs = path.resolve(workspace.dir, file);
-                const owner =
-                    projects.find(
-                        project => abs === project.dir || abs.startsWith(project.dir + path.sep)
-                    ) ?? rootProject;
-                const key = owner?.dir ?? workspace.dir;
-                let group = buckets.get(key);
-                if (!group) {
-                    group = {
-                        kind: 'fileGroup',
-                        label: owner?.label ?? path.basename(workspace.dir),
-                        root: workspace.dir,
-                        children: [],
-                    };
-                    buckets.set(key, group);
-                }
-                group.children?.push({ kind: 'file', label: file, root: workspace.dir, file });
-            }
-            groups.push(...buckets.values());
-            const conflicts = Object.entries(manifest.workflowConflicts ?? {}).sort(([a], [b]) =>
-                a.localeCompare(b)
-            );
-            if (conflicts.length > 0) {
-                groups.push({
-                    kind: 'fileGroup',
-                    label: 'Workflow conflicts',
-                    root: workspace.dir,
-                    conflictGroup: true,
-                    children: conflicts.map(([file, conflict]) => ({
-                        kind: 'file',
-                        label: file,
-                        root: workspace.dir,
-                        file,
-                        conflict,
-                    })),
-                });
-            }
-        }
-        return groups;
+        return trackedFileNodes(discoverProjectGroups());
     }
 
     getChildren(element?: TrackedFileNode): TrackedFileNode[] {

@@ -2,33 +2,35 @@
 
 Every generator has two forms:
 
-- **Bound engine** — `engine.generateConfigTypes()` injects the engine's
+- **Bound engine** — `engine.types.generate()` injects the engine's
   `envPrefix`, `baseGroup`, `root` and `envPathOf`.
 - **Standalone** — `generateConfigTypes(schema, options)` takes those options
   explicitly, for one-off scripts and tests.
 
-`write*` methods write to disk and return the written paths. The `generate*`
-methods return the content and only write when you pass `outputDir`/`output`
+The grouped `.write` methods write to disk and return the written paths. The
+grouped `.generate` methods return the content and only write when you pass `outputDir`/`output`
 (a string); `false` disables writing.
 
 ## At a glance
 
 | Output         | Engine                                                       | Standalone                                                |
 | -------------- | ------------------------------------------------------------ | --------------------------------------------------------- |
-| `.env.example` | `engine.generateEnvFile()` / `engine.writeEnvFile()`         | `generateEnvFile()`                                       |
-| Env types      | `engine.generateConfigEnv()` / `engine.writeEnvTypes()`      | `generateConfigEnv()`                                     |
-| Config types   | `engine.generateConfigTypes()` / `engine.writeConfigTypes()` | `generateConfigTypes()`                                   |
-| Markdown       | `engine.generateConfigMarkdown()` / `engine.writeMarkdown()` | `generateConfigMarkdown()`                                |
-| JSON Schema    | `engine.generateJsonSchema()` / `engine.writeJsonSchema()`   | `generateConfigJsonSchema()` / `generateJsonSchemaFile()` |
-| Metadata JSON  | `engine.buildConfigJson()`                                   | `buildConfigJson()`                                       |
-| CLI options    | `engine.generateConfigCli()` / `generateCliOptions()`        | `generateCliOptions()`                                    |
-| CLI docs       | —                                                            | `generateCliDocs()`                                       |
+| `.env.example` | `engine.env.generate()` / `engine.env.write()`               | `generateEnvFile()`                                       |
+| Env types      | `engine.env.types.generate()` / `engine.env.types.write()`   | `generateConfigEnv()`                                     |
+| Config types   | `engine.types.generate()` / `engine.types.write()`           | `generateConfigTypes()`                                   |
+| Markdown       | `engine.markdown.generate()` / `engine.markdown.write()`     | `generateConfigMarkdown()`                                |
+| JSON Schema    | `engine.jsonSchema.generate()` / `engine.jsonSchema.write()` | `generateConfigJsonSchema()` / `generateJsonSchemaFile()` |
+| Metadata JSON  | `engine.configJson.build()`                                  | `buildConfigJson()`                                       |
+| CLI options    | `engine.cli.generate()` / `engine.cli.write()`               | `generateCliOptions()`                                    |
+| CLI docs       | `engine.markdown.cli.generate()` / `.write()`                | `generateCliDocs()`                                       |
+| Env docs       | `engine.markdown.env.generate()` / `.write()`                | `generateEnvMarkdown()`                                   |
+| Markdown page  | `engine.markdown.file.generate()` / `.write()`               | `generateMarkdownFile()`                                  |
 | Formatting     | —                                                            | `formatGenerated()`                                       |
 
 ## Env file — `.env.example`
 
 ```ts
-engine.writeEnvFile({ output: '.env.example' });
+engine.env.write({ output: '.env.example' });
 ```
 
 Standalone, with the common options:
@@ -50,10 +52,10 @@ Options: `include`/`exclude` (env names), `values` (default overrides),
 `scopes`, `bare`, `extra` (raw `NAME=value` lines), `header`, `scopeSeparator`.
 Secrets are emitted commented out.
 
-## Env types — `env.ts` + `env.d.ts`
+## Env types — `env.ts` + `dbx-env.d.ts`
 
 ```ts
-engine.writeEnvTypes({ outputDir: 'types' }); // types/env.ts, types/env.d.ts
+engine.env.types.write({ outputDir: 'types' }); // types/env.ts, types/dbx-env.d.ts
 ```
 
 ```ts
@@ -68,7 +70,7 @@ const files = generateConfigEnv(schema, {
     augmentVite: true,
     envComment: 'Runtime configuration.',
 });
-// files: { 'env.ts': '...', 'env.d.ts': '...' }
+// files: { 'env.ts': '...', 'dbx-env.d.ts': '...' }
 ```
 
 Options: `envFile`/`dtsFile` (file names), `header`, `envHeader`, `dtsHeader`,
@@ -77,7 +79,7 @@ Options: `envFile`/`dtsFile` (file names), `header`, `envHeader`, `dtsHeader`,
 ## Config types
 
 ```ts
-engine.writeConfigTypes({ outputDir: 'types' });
+engine.types.write({ outputDir: 'types' });
 ```
 
 Standalone, with hand-written overrides and aliases:
@@ -110,7 +112,7 @@ at the top), `extension`, `header`, and the `include*` annotation flags.
 ## Markdown
 
 ```ts
-engine.writeMarkdown({ outputDir: 'docs/reference/configuration' });
+engine.markdown.write({ outputDir: 'docs/reference/configuration' });
 ```
 
 ```ts
@@ -135,8 +137,8 @@ equivalents and footer links.
 ## JSON Schema
 
 ```ts
-const doc = await engine.generateJsonSchema();
-await engine.writeJsonSchema({ output: 'config.schema.json' });
+const doc = await engine.jsonSchema.generate();
+await engine.jsonSchema.write({ output: 'config.schema.json' });
 ```
 
 ```ts
@@ -154,10 +156,23 @@ const path = await generateJsonSchemaFile(schema, { output: 'config.schema.json'
 Both functions are async. `generateConfigJsonSchema` returns the document;
 `generateJsonSchemaFile` writes it and returns the path.
 
+`preserveDefs: true` keeps Zod's document-level `$ref`/`$defs` graph instead of
+inlining every scope (the `$defs` tables are hoisted to the document root).
+`scopeDescriptions` adds a description to a generated scope property, and
+`additionalProperties` sets the root constraint:
+
+```ts
+const doc = await engine.jsonSchema.generate({
+    preserveDefs: true,
+    additionalProperties: false,
+    scopeDescriptions: { server: 'Server settings.' },
+});
+```
+
 ## Config metadata JSON
 
 ```ts
-const metadata = engine.buildConfigJson();
+const metadata = engine.configJson.build();
 fs.writeFileSync('config.json', `${JSON.stringify(metadata, null, 4)}\n`);
 ```
 
@@ -177,8 +192,8 @@ Secrets never include a default.
 ## CLI options
 
 ```ts
-const defs = engine.generateConfigCli({ scope: 'cli' });
-// engine.generateCliOptions() is an alias.
+const defs = engine.cli.generate({ scope: 'cli' });
+// engine.cli.generate() is an alias.
 ```
 
 ```ts
@@ -291,7 +306,7 @@ const engine = createConfigEngine({
     baseGroup: 'base',
 });
 
-engine.generateConfigMarkdown(); // uses the bound options
+engine.markdown.generate(); // uses the bound options
 
 generateConfigMarkdown(schema, {
     envPrefix: 'MYAPP_',

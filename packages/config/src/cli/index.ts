@@ -6,12 +6,15 @@
  * import { configCommands } from '@deltabox/toolchain/config';
  * program.addCommand(...)
  * ```
+ *
+ * Deliberately library-only: the `dbx` root CLI does not register a `config:*`
+ * group, because every command needs a consumer-bound {@link ConfigEngine}.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { logger, type ToolchainCommand } from '@deltabox/toolchain/shared';
+import { logger, type ToolchainCommand, withSpinner } from '@deltabox/toolchain/shared';
 
 import type { ConfigEngine } from '../engine.js';
 
@@ -45,7 +48,7 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
     const { engine } = ctx;
     const d = ctx.defaults ?? {};
 
-    return [
+    const commands: ToolchainCommand[] = [
         {
             name: 'config:env',
             description: 'Generate .env.example from the config schemas.',
@@ -55,7 +58,7 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
                     resolve(out as string | undefined, d.envDir ?? engine.root),
                     '.env.example'
                 );
-                engine.writeEnvFile({ output });
+                engine.env.write({ output });
                 logger.info(`Generated ${path.relative(process.cwd(), output)}`);
             },
         },
@@ -67,9 +70,12 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
                 { flags: '--env', description: 'Also write the env type files.' },
             ],
             run: ({ out, env }) => {
-                const outDir = resolve(out as string | undefined, d.typesDir ?? engine.root);
-                const written = engine.writeConfigTypes({ outputDir: outDir });
-                if (env) written.push(...engine.writeEnvTypes({ outputDir: outDir }));
+                const outDir = resolve(
+                    out as string | undefined,
+                    d.typesDir ?? path.join(engine.root, 'types')
+                );
+                const written = engine.types.write({ outputDir: outDir });
+                if (env) written.push(...engine.env.types.write({ outputDir: outDir }));
                 for (const file of written)
                     logger.info(`Generated ${path.relative(process.cwd(), file)}`);
             },
@@ -83,7 +89,7 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
                     out as string | undefined,
                     d.configJsonPath ?? path.join(engine.root, 'config.json')
                 );
-                const doc = engine.buildConfigJson();
+                const doc = engine.configJson.build();
                 fs.mkdirSync(path.dirname(output), { recursive: true });
                 fs.writeFileSync(output, `${JSON.stringify(doc, null, 4)}\n`, 'utf-8');
                 logger.info(`Generated ${path.relative(process.cwd(), output)}`);
@@ -98,7 +104,7 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
                     out as string | undefined,
                     d.schemaPath ?? path.join(engine.root, 'config.schema.json')
                 );
-                await engine.writeJsonSchema({ output });
+                await engine.jsonSchema.write({ output });
                 logger.info(`Generated ${path.relative(process.cwd(), output)}`);
             },
         },
@@ -111,7 +117,7 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
                     out as string | undefined,
                     d.docsDir ?? path.join(engine.root, 'docs/reference/configuration')
                 );
-                const written = engine.writeMarkdown({ outputDir: outDir });
+                const written = engine.markdown.write({ outputDir: outDir });
                 for (const file of written)
                     logger.info(`Generated ${path.relative(process.cwd(), file)}`);
             },
@@ -125,7 +131,7 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
                     out as string | undefined,
                     d.cliOptionsPath ?? path.join(engine.root, 'cli-options.json')
                 );
-                engine.generateCliOptions({ output });
+                engine.cli.write({ output });
                 logger.info(`Generated ${path.relative(process.cwd(), output)}`);
             },
         },
@@ -134,28 +140,55 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
             description: 'Run every config generator.',
             options: [{ flags: '-o, --out <dir>', description: 'Base output directory.' }],
             run: async ({ out }) => {
-                const base = resolve(out as string | undefined, engine.root);
-                const written: string[] = [];
-                written.push(engine.writeEnvFile({ output: path.join(base, '.env.example') }));
-                written.push(
-                    ...engine.writeConfigTypes({ outputDir: path.join(base, 'types') }),
-                    ...engine.writeEnvTypes({ outputDir: path.join(base, 'types') }),
-                    ...engine.writeMarkdown({
-                        outputDir: path.join(base, 'docs/reference/configuration'),
-                    })
+                const base = out === undefined ? undefined : path.resolve(out as string);
+                const typesDir = base
+                    ? path.join(base, 'types')
+                    : resolve(d.typesDir, path.join(engine.root, 'types'));
+                const docsDir = base
+                    ? path.join(base, 'docs/reference/configuration')
+                    : resolve(d.docsDir, path.join(engine.root, 'docs/reference/configuration'));
+                const schemaPath = base
+                    ? path.join(base, 'config.schema.json')
+                    : resolve(d.schemaPath, path.join(engine.root, 'config.schema.json'));
+                const configJsonPath = base
+                    ? path.join(base, 'config.json')
+                    : resolve(d.configJsonPath, path.join(engine.root, 'config.json'));
+                const cliOptionsPath = base
+                    ? path.join(base, 'cli-options.json')
+                    : resolve(d.cliOptionsPath, path.join(engine.root, 'cli-options.json'));
+                const envDir = base ? base : resolve(d.envDir, engine.root);
+
+                const written: string[] = [
+                    engine.env.write({ output: path.join(envDir, '.env.example') }),
+                    ...engine.types.write({ outputDir: typesDir }),
+                    ...engine.env.types.write({ outputDir: typesDir }),
+                    ...engine.markdown.write({ outputDir: docsDir }),
+                    await engine.jsonSchema.write({ output: schemaPath }),
+                ];
+                fs.mkdirSync(path.dirname(configJsonPath), { recursive: true });
+                fs.writeFileSync(
+                    configJsonPath,
+                    `${JSON.stringify(engine.configJson.build(), null, 4)}\n`,
+                    'utf-8'
                 );
-                written.push(
-                    await engine.writeJsonSchema({ output: path.join(base, 'config.schema.json') })
-                );
-                written.push(
-                    engine.generateCliOptions({
-                        output: path.join(base, 'cli-options.json'),
-                    }) as unknown as string
-                );
-                for (const file of written.filter(f => typeof f === 'string')) {
+                written.push(configJsonPath);
+                fs.mkdirSync(path.dirname(cliOptionsPath), { recursive: true });
+                engine.cli.write({ output: cliOptionsPath });
+                written.push(cliOptionsPath);
+
+                for (const file of written) {
                     logger.info(`Generated ${path.relative(process.cwd(), file)}`);
                 }
             },
         },
     ];
+
+    return commands.map(command => ({
+        ...command,
+        run: (args, context) =>
+            withSpinner(() => Promise.resolve(command.run(args, context)), {
+                start: command.description,
+                success: command.description,
+            }),
+    }));
 }

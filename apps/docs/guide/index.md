@@ -4,10 +4,11 @@
 
 # Getting Started
 
-`@deltabox/toolchain` is an all-in-one project toolchain. You drop a
-`dbx.config.ts` at a repo root and the toolchain generates and manages
-your configs, tsconfigs, changelogs, CI and more — from the CLI, the programmatic
-API and the VS Code extension.
+`@deltabox/toolchain` is a superset of [Vite+](https://viteplus.dev). It keeps the
+Vite+ workflow and adds project synchronization, a config generator, tsconfig
+management, an MCP server, CI and changelog automation, providers, catalogs and a
+VS Code extension. Use it as a Vite/Vite+ plugin or standalone — from the CLI, the
+programmatic API and the VS Code extension.
 
 ## Install
 
@@ -63,7 +64,20 @@ also accepts flags (`--name`, `--kind`, ...) for scripted use.
 
 ## Create a config
 
-Scaffold a config for a project that does not have one yet:
+Add the `dbx()` plugin to `vite.config.ts` (recommended, no `dbx.config.*` needed):
+
+```ts
+import { dbx } from '@deltabox/toolchain/vite';
+
+export default {
+    plugins: [dbx({ toolchain: { fmt: true, lint: true } })],
+};
+```
+
+See [Vite plugin](/guide/vite-plugin) for the install steps and what the plugin
+does.
+
+Or, for a project that does not use Vite, scaffold a standalone config:
 
 ```sh
 dbx project:config        # detect + write dbx.config.ts
@@ -84,7 +98,7 @@ dbx create --template project --name my-app --out ./my-app
 ```sh
 dbx sync              # write managed files
 dbx sync --check      # CI: fail if files are out of date
-dbx sync --recursive  # every project with its own dbx.config.*, in dependency order
+dbx sync --recursive  # every managed project, in dependency order
 dbx sync --only tsconfig  # only refresh tsconfig aliases/references
 dbx watch             # re-sync on change
 ```
@@ -137,6 +151,7 @@ that area untouched.
 - [Providers (Vite+)](/guide/providers)
 - [Package scripts](/guide/scripts)
 - [Templates](/guide/templates)
+- [Docker](/guide/docker)
 - [Migrations](/guide/migrations/)
 - [Programmatic API](/guide/api/)
 - [LLMs](/llms)

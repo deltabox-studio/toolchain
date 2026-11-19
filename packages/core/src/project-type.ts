@@ -45,7 +45,11 @@ export function detectProjectType(cwd: string, files: TsconfigFileNames = {}): P
         return 'monorepo-root';
     }
     if (fs.existsSync(path.join(cwd, defaultFile))) {
-        return 'monorepo-workspace';
+        // Every scaffold writes `tsconfig.default.json`; the standalone root also
+        // owns `tsconfig.base.json`, while a workspace inherits it from above.
+        if (!fs.existsSync(path.join(cwd, 'tsconfig.base.json'))) {
+            return 'monorepo-workspace';
+        }
     }
     return 'project';
 }

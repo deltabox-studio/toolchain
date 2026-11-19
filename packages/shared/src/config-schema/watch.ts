@@ -5,7 +5,7 @@ import { withEnabled } from './meta.js';
 /** Watch behaviour for `dbx watch`. */
 export const watchConfigSchema = withEnabled(
     z.object({
-        debounce: z.number().describe('Debounce window in ms (default 150).').optional(),
+        debounce: z.number().describe('Debounce window in ms.').default(150).optional(),
         exclude: z
             .union([z.string(), z.array(z.string())])
             .describe(
@@ -15,9 +15,8 @@ export const watchConfigSchema = withEnabled(
             .optional(),
         gitignore: z
             .boolean()
-            .describe(
-                'Also respect `.gitignore` files (root + nested) when watching (default true).'
-            )
+            .describe('Also respect `.gitignore` files (root + nested) when watching.')
+            .default(true)
             .optional(),
     })
 )

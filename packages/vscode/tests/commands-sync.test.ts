@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import type { Project } from '../src/projects.js';
 
@@ -28,6 +28,7 @@ function project(dir: string, hasConfig: boolean): Project {
         relativePath: dir,
         type: 'project',
         hasConfig,
+        plugin: false,
         dependencies: [],
         trackedFiles: 0,
     };
@@ -41,6 +42,7 @@ function deps(overrides: Record<string, unknown> = {}): Parameters<typeof create
         workspaceRoots: () => ['/repo'],
         refreshGraph: vi.fn(async () => {}),
         refreshViews: vi.fn(),
+        afterSync: vi.fn(async () => {}),
         runRoots: vi.fn(async () => [0]),
         runProjects: vi.fn(async () => [0]),
         selectedProjects: () => [],
@@ -54,8 +56,8 @@ describe('createSyncCommands', () => {
         mocks.projects = [];
     });
 
-    it('syncs configless projects after the recursive pass', async () => {
-        mocks.projects = [project('/repo/packages/a', false)];
+    it('syncs every managed project through the recursive pass', async () => {
+        mocks.projects = [project('/repo/packages/a', true), project('/repo/packages/b', false)];
         const runRoots = vi.fn(async () => [0]);
         const runProjects = vi.fn(async () => [0]);
         const commands = createSyncCommands(deps({ runRoots, runProjects }));
@@ -63,17 +65,18 @@ describe('createSyncCommands', () => {
         await commands.syncAll();
 
         expect(runRoots).toHaveBeenCalledWith(['sync', '--recursive']);
-        expect(runProjects).toHaveBeenCalledWith(mocks.projects, ['sync']);
+        // Configless projects are handled by the CLI (only when opted in), not
+        // by a separate extension-side pass.
+        expect(runProjects).not.toHaveBeenCalled();
     });
 
-    it('does not run the configless pass when every project has a config', async () => {
-        mocks.projects = [project('/repo/packages/a', true)];
-        const runProjects = vi.fn(async () => [0]);
-        const commands = createSyncCommands(deps({ runProjects }));
+    it('runs the shared post-sync hook after a manual sync', async () => {
+        const afterSync = vi.fn(async () => {});
+        const commands = createSyncCommands(deps({ afterSync }));
 
-        await commands.syncAll();
+        await commands.syncActive();
 
-        expect(runProjects).not.toHaveBeenCalled();
+        expect(afterSync).toHaveBeenCalledTimes(1);
     });
 
     it('warns when syncSelected has no selection', async () => {

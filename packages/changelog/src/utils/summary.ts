@@ -1,8 +1,23 @@
 import type { ChangelogBreakingSetting } from '@deltabox/toolchain/shared';
 
+import type {
+    AuthorInfo,
+    ChangelogGroupsSetting,
+    CommitFormatOptions,
+    CommitRecord,
+    GroupedItem,
+} from '../types/index.js';
 import { isBreakingCommit } from './breaking.js';
+import {
+    detailsEnabled,
+    renderDetails,
+    resolveDetails,
+    wrapCustomDetails,
+    type ResolvedDetails,
+} from './details.js';
 import { capitalize, formatBody, groupItems, parseCcSubject, renderGroups } from './format.js';
 import {
+    prefetchGitHubMetadata,
     readPriorAuthors,
     recordIssues,
     renderAuthor,
@@ -10,13 +25,6 @@ import {
     repoSlug,
     resolveAuthorInfo,
 } from './git.js';
-import type {
-    AuthorInfo,
-    ChangelogGroupsSetting,
-    CommitFormatOptions,
-    CommitRecord,
-    GroupedItem,
-} from './types.js';
 
 /**
  * Render a commit reference for a changelog bullet. With a resolvable repo slug
@@ -52,6 +60,8 @@ export interface BuildSummaryOptions {
     groups?: ChangelogGroupsSetting;
     /** How breaking changes are detected (default: Conventional Commits). */
     breaking?: ChangelogBreakingSetting;
+    /** Whether this is the release-mode changelog (Release Notes details). */
+    release?: boolean;
 }
 
 type BumpGroup = 'major' | 'minor' | 'patch';
@@ -111,13 +121,29 @@ function commitItem(
     };
 }
 
-function renderItem(item: GroupedItem): string[] {
+function renderItem(item: GroupedItem, details?: ResolvedDetails): string[] {
     const lines = [item.text];
+    if (item.bodyParagraphs.length === 0) return lines;
+    const body: string[] = [];
     for (const paragraph of item.bodyParagraphs) {
         const [first, ...rest] = paragraph;
         if (!first) continue;
-        lines.push(`  - ${first}`);
-        lines.push(...rest.map(line => `    ${line}`));
+        body.push(`  - ${first}`);
+        body.push(...rest.map(line => `    ${line}`));
+    }
+    if (
+        details?.enabled &&
+        details.descriptions.enabled &&
+        detailsEnabled(details.descriptions, item.bodyParagraphs.length)
+    ) {
+        const title = details.descriptions.title ?? '**See more...**';
+        lines.push(
+            ...renderDetails(title, body.join('\n'), details.descriptions.expanded === true)
+                .split('\n')
+                .map(line => (line ? `  ${line}` : line))
+        );
+    } else {
+        lines.push(...body);
     }
     return lines;
 }
@@ -126,7 +152,8 @@ function renderItem(item: GroupedItem): string[] {
 function buildFallbackSummary(
     records: CommitRecord[],
     commit?: CommitFormatOptions,
-    breaking?: ChangelogBreakingSetting
+    breaking?: ChangelogBreakingSetting,
+    details?: ResolvedDetails
 ): string {
     const repo = repoSlug();
     const groups = new Map<BumpGroup, GroupedItem[]>();
@@ -142,8 +169,9 @@ function buildFallbackSummary(
     for (const group of BUMP_GROUPS) {
         const items = groups.get(group);
         if (!items || items.length === 0) continue;
+        if (lines.length > 0) lines.push('');
         lines.push(`### ${BUMP_TITLES[group]}`);
-        for (const item of items) lines.push(...renderItem(item));
+        for (const item of items) lines.push(...renderItem(item, details));
     }
     return lines.join('\n');
 }
@@ -226,9 +254,18 @@ function renderNewContributors(
 /** Render the grouped changelog summary for a set of commits. */
 export function buildSummary(records: CommitRecord[], options: BuildSummaryOptions = {}): string {
     const repo = repoSlug();
+    // Resolve GitHub metadata in batched requests before rendering any commit.
+    prefetchGitHubMetadata({
+        ...(repo !== undefined ? { repo } : {}),
+        ...(options.range !== undefined ? { range: options.range } : {}),
+        commits: records,
+    });
+    const resolved = resolveDetails(options.commit?.details, options.release === true);
+    // `lifecycle: 'after'` applies details to the fully formatted entry instead.
+    const details = resolved.lifecycle === 'after' ? resolveDetails(false) : resolved;
     const summary =
         options.commitlint === false
-            ? buildFallbackSummary(records, options.commit, options.breaking)
+            ? buildFallbackSummary(records, options.commit, options.breaking, details)
             : renderGroups(
                   groupItems(
                       records.map(record => {
@@ -242,8 +279,22 @@ export function buildSummary(records: CommitRecord[], options: BuildSummaryOptio
                           });
                       }),
                       options.groups
-                  )
+                  ),
+                  details
               );
     const contributors = renderNewContributors(records, repo, options);
-    return contributors ? `${summary}\n\n${contributors}` : summary;
+    const body = contributors ? `${summary}\n\n${contributors}` : summary;
+    const custom = wrapCustomDetails(body, details);
+    if (
+        details.enabled &&
+        details.releaseNotes.enabled &&
+        detailsEnabled(details.releaseNotes, records.length)
+    ) {
+        return renderDetails(
+            details.releaseNotes.title ?? '**Release notes**',
+            custom,
+            details.releaseNotes.expanded === true
+        );
+    }
+    return custom;
 }

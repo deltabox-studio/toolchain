@@ -1,7 +1,7 @@
 {
     "name": "@deltabox/toolchain-changelog",
-    "version": "2.6.1",
-    "description": "Conventional-Commits changelog + versioning pipeline, commitlint and CI templates.",
+    "version": "3.0.0-beta.3",
+    "description": "Conventional-Commits changelog and versioning pipeline with commitlint, changelog formatting/rendering and CI workflow templates.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
         "type": "git",
@@ -16,19 +16,16 @@
     "scripts": {
         "generate:workflows": "tsx scripts/generate-workflows.ts"
     },
-    "private": true,
     "dependencies": {
         "@deltabox/toolchain-shared": "workspace:*"
     },
     "devDependencies": {
-        "@deltabox/toolchain-tsdown": "workspace:*",
+        "@deltabox/toolchain-pack": "workspace:*",
         "@types/node": "catalog:",
-        "tsdown": "catalog:",
         "tsx": "catalog:",
         "type-fest": "catalog:",
         "typescript": "catalog:",
-        "vite": "catalog:",
-        "vitest": "catalog:"
+        "vite-plus": "catalog:"
     },
     "exports": {
         ".": "./dist/index.js",
@@ -39,5 +36,20 @@
     },
     "bin": "./dist/bin.js",
     "homepage": "https://toolchain.deltabox.studio",
-    "packageManager": "yarn@4.17.1"
+    "packageManager": "yarn@4.17.1",
+    "keywords": [
+        "changelog",
+        "conventional-commits",
+        "commitlint",
+        "versioning",
+        "release",
+        "ci",
+        "dbx",
+        "deltabox",
+        "toolchain"
+    ],
+    "publishConfig": {
+        "access": "public",
+        "provenance": true
+    }
 }

@@ -6,8 +6,10 @@
 
 import fs from 'node:fs';
 
-import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from '../collect.js';
-import type { ConfigSchema } from '../types.js';
+import { type CollectOptions, collectDefinitions, DEFAULT_ENV_PREFIX } from '../collect.js';
+import type { ConfigSchema } from '../types/index.js';
+import { envNameOf, isEnvVariable } from './env-file.js';
+import { escapeInlineJsDoc } from './jsdoc.js';
 import { resolveGeneratedFile } from './output.js';
 
 export interface GenerateEnvTypesOptions {
@@ -21,7 +23,7 @@ export interface GenerateEnvTypesOptions {
     viteEnvInterfaceName?: string;
     /** The generated types file name (default `env.ts`). */
     envFile?: string;
-    /** The generated ambient file name (default `env.d.ts`). */
+    /** The generated ambient file name (default `dbx-env.d.ts`). */
     dtsFile?: string;
     /** The import specifier the `.d.ts` uses for the env types. */
     importPath?: string;
@@ -36,11 +38,11 @@ export interface GenerateEnvTypesOptions {
     /** Add a `declare module 'vite'` augmentation to the `.d.ts`. */
     augmentVite?: boolean;
     /** Custom env-name -> dotted-path derivation. */
-    envPathOf?: CollectVarsOptions['envPathOf'];
+    envPathOf?: CollectOptions['envPathOf'];
 }
 
 function headerComment(custom?: string): string {
-    return custom ?? 'Generated env typing — DO NOT EDIT.';
+    return escapeInlineJsDoc(custom ?? 'Generated env typing — DO NOT EDIT.');
 }
 
 /** Render the `env.ts` content (the env + vite-env interfaces). */
@@ -49,21 +51,19 @@ export function generateEnv(schema: ConfigSchema, options: GenerateEnvTypesOptio
     const envInterface = options.envInterfaceName ?? 'AppEnv';
     const viteEnvInterface = options.viteEnvInterfaceName ?? 'AppViteEnv';
 
-    const vars = collectVars(schema, envPrefix, { envPathOf: options.envPathOf }).filter(
-        def => def.name
-    );
+    const vars = collectDefinitions(schema, { envPrefix, envPathOf: options.envPathOf })
+        .filter(isEnvVariable)
+        .map(def => ({ ...def, name: envNameOf(def, envPrefix) }));
     const serverVars = vars.filter(def => def.scope !== 'frontend');
     const viteVars = vars.filter(def => def.public);
 
     const lines: string[] = options.envHeader
         ? [options.envHeader, '']
         : [`/**`, ` * ${headerComment(options.header)}`, ` */`, ''];
-    lines.push(
-        `/** ${options.envComment ?? 'Environment variables typed on `process.env`.'} */`,
-        `export interface ${envInterface} {`
-    );
+    const envComment = options.envComment ?? 'Environment variables typed on `process.env`.';
+    lines.push(`/** ${escapeInlineJsDoc(envComment)} */`, `export interface ${envInterface} {`);
     for (const def of serverVars) {
-        lines.push(`    /** ${(def.description ?? '').replace(/\n/g, ' ')} */`);
+        lines.push(`    /** ${escapeInlineJsDoc(def.description ?? '')} */`);
         lines.push(`    ${def.name}?: string;`);
     }
     lines.push('}');
@@ -71,7 +71,7 @@ export function generateEnv(schema: ConfigSchema, options: GenerateEnvTypesOptio
     lines.push('/** Public frontend environment variables typed on `import.meta.env`. */');
     lines.push(`export interface ${viteEnvInterface} {`);
     for (const def of viteVars) {
-        lines.push(`    /** ${(def.description ?? '').replace(/\n/g, ' ')} */`);
+        lines.push(`    /** ${escapeInlineJsDoc(def.description ?? '')} */`);
         lines.push(`    ${def.name}?: string;`);
     }
     lines.push('}');
@@ -82,7 +82,14 @@ export function generateEnv(schema: ConfigSchema, options: GenerateEnvTypesOptio
 export function generateEnvDts(options: GenerateEnvTypesOptions = {}): string {
     const envInterface = options.envInterfaceName ?? 'AppEnv';
     const viteEnvInterface = options.viteEnvInterfaceName ?? 'AppViteEnv';
-    const importPath = options.importPath ?? './env.js';
+    // The ambient file imports the env module next to it; derive its name from
+    // a customized `envFile` so the generated types still compile.
+    const envBase = (options.envFile ?? 'env.ts')
+        .replace(/\\/g, '/')
+        .split('/')
+        .pop()!
+        .replace(/\.[^.]+$/, '');
+    const importPath = options.importPath ?? `./${envBase}.js`;
     const header = options.dtsHeader
         ? `${options.dtsHeader}\n`
         : `/**
@@ -119,7 +126,7 @@ export function generateConfigEnv(
     options: GenerateEnvTypesOptions = {}
 ): Record<string, string> {
     const envFile = options.envFile ?? 'env.ts';
-    const dtsFile = options.dtsFile ?? 'env.d.ts';
+    const dtsFile = options.dtsFile ?? 'dbx-env.d.ts';
     const contents = {
         [envFile]: generateEnv(schema, options),
         [dtsFile]: generateEnvDts(options),

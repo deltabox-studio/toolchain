@@ -9,20 +9,25 @@ interface VersionHeading {
     index: number;
 }
 
-/** Normalize a tag to its semver version (`v1.2.3`, `@scope/pkg@1.2.3` -> `1.2.3`). */
+/** Normalize a tag to its semver version (`v1.2.3`, `@scope/pkg@1.2.3-beta.1` -> `1.2.3-beta.1`). */
 export function normalizeReleaseVersion(tag: string): string | undefined {
-    const match = /(?:^|@)v?(\d+\.\d+\.\d+)$/.exec(tag.trim());
+    const match = /(?:^|@)v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/.exec(tag.trim());
     return match?.[1];
 }
 
 function versionHeadings(changelog: string): VersionHeading[] {
     const headings: VersionHeading[] = [];
-    const pattern = /^##\s+(\d+\.\d+\.\d+)(?:\s|$)/gm;
-    for (const match of changelog.matchAll(pattern)) {
-        if (match.index === undefined) continue;
-        headings.push({ version: match[1]!, index: match.index });
+    const patterns = [
+        /^##\s+(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?:\s|$)/gm,
+        /^<details>\n\n?<summary><h2>(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?:\s*\([^)]*\))?<\/h2><\/summary>/gm,
+    ];
+    for (const pattern of patterns) {
+        for (const match of changelog.matchAll(pattern)) {
+            if (match.index === undefined) continue;
+            headings.push({ version: match[1]!, index: match.index });
+        }
     }
-    return headings;
+    return headings.sort((a, b) => a.index - b.index);
 }
 
 /**

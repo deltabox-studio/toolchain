@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import { findOwnCliEntry, localToolchainVersion } from '../src/index.js';
 
@@ -36,6 +36,17 @@ describe('findOwnCliEntry', () => {
         expect(findOwnCliEntry(makeTmp())).toBeUndefined();
     });
 
+    it('reads a package.json written with a UTF-8 BOM', () => {
+        const dir = makeTmp();
+        fs.writeFileSync(
+            path.join(dir, 'package.json'),
+            `\uFEFF${JSON.stringify({ name: '@deltabox/toolchain', bin: { dbx: './dist/cli/index.js' } })}`
+        );
+        fs.mkdirSync(path.join(dir, 'dist', 'cli'), { recursive: true });
+        fs.writeFileSync(path.join(dir, 'dist', 'cli', 'index.js'), '');
+        expect(findOwnCliEntry(dir)).toBe(path.join(dir, 'dist', 'cli', 'index.js'));
+    });
+
     it('ignores a toolchain package whose bin is missing on disk', () => {
         const dir = makeTmp();
         fs.writeFileSync(
@@ -53,7 +64,7 @@ describe('localToolchainVersion', () => {
         fs.mkdirSync(dep, { recursive: true });
         fs.writeFileSync(
             path.join(dep, 'package.json'),
-            JSON.stringify({ name: '@deltabox/toolchain', version: '9.9.9' })
+            `\uFEFF${JSON.stringify({ name: '@deltabox/toolchain', version: '9.9.9' })}`
         );
         const nested = path.join(dir, 'packages', 'app');
         fs.mkdirSync(nested, { recursive: true });

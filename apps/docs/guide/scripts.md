@@ -57,6 +57,32 @@ husky: Yarn Berry never runs `prepare` on install. Husky hooks have no file
 extension, so on Windows add `.husky/* text eol=lf` to `.gitattributes` — a
 trailing CR silently breaks the hook.
 
+## Vite+ commands with the `dbx()` plugin
+
+When the project uses the `dbx()` Vite plugin (`vite.config.ts`), call Vite+
+directly for the toolchain commands:
+
+```json [package.json]
+{
+    "scripts": {
+        "dev": "vp dev",
+        "build": "vp build",
+        "check": "vp check",
+        "test": "vp test",
+        "dbx:sync": "dbx sync"
+    }
+}
+```
+
+`vp fmt`, `vp lint`, `vp run -r build` and the rest of the Vite+ commands work
+from the repo root; `dbx` still owns `sync`, `watch`, `changelog` and the other
+non-Vite+ commands. `dbx fmt` / `dbx lint` remain the portable form — they route
+to the detected formatter/linter when a project is not on Vite+.
+
+See Vite+ [Built-in commands vs
+scripts](https://viteplus.dev/guide/run#built-in-commands-vs-scripts) for which
+commands are built in and which run `package.json` scripts.
+
 ## Migrate an existing project
 
 1. Add the toolchain + Vite+, and drop what they replace:

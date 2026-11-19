@@ -1,4 +1,5 @@
-export { main, runChangelog } from './run.js';
+export * from './dependabot.js';
+export { main, runChangelog, runChangelogAsync } from './run.js';
 export * from './run-workflows.js';
 export * from './sync.js';
 export * from './templates.js';
@@ -22,7 +23,7 @@ export {
     releaseNotesFromGit,
 } from './utils/release-notes.js';
 export { buildSummary, renderCommitRef } from './utils/summary.js';
-export * from './utils/types.js';
+export * from './types/index.js';
 export { renderChangelogEntry } from './utils/version.js';
 export * from './utils/versioning.js';
 export * from './workflows.js';

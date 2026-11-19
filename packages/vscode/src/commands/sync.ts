@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import * as vscode from 'vscode';
 
-import { discoverProjects, type Project } from '../projects.js';
+import type { Project } from '../projects.js';
 import type { CommandDeps } from './deps.js';
 
 export interface SyncCommands {
@@ -20,25 +20,23 @@ export function createSyncCommands(deps: CommandDeps): SyncCommands {
     const syncActive = async (): Promise<void> => {
         const root = deps.workspaceRoots()[0];
         if (root) await deps.runCli(root, ['sync']);
-        deps.refreshViews();
+        await deps.afterSync();
     };
 
     /**
-     * Sync every discovered project. The CLI's recursive pass covers projects
-     * with their own config (in dependency order); projects that only inherit
-     * the root `dbx.config.*` are synced individually afterwards.
+     * Sync every managed project. The CLI's recursive pass walks the whole
+     * project graph (nested workspaces included) in dependency order and skips
+     * configless projects unless configless management is enabled.
      */
     const syncAll = async (): Promise<void> => {
         await deps.refreshGraph();
         await deps.runRoots(['sync', '--recursive']);
-        const configless = discoverProjects().filter(project => !project.hasConfig);
-        if (configless.length > 0) await deps.runProjects(configless, ['sync']);
-        deps.refreshViews();
+        await deps.afterSync();
     };
 
     const syncTsconfig = async (): Promise<void> => {
         await deps.runRoots(['sync', '--only', 'tsconfig']);
-        deps.refreshViews();
+        await deps.afterSync();
     };
 
     const syncSelected = async (): Promise<void> => {
@@ -50,12 +48,12 @@ export function createSyncCommands(deps: CommandDeps): SyncCommands {
             return;
         }
         await deps.runProjects(projects, ['sync']);
-        deps.refreshViews();
+        await deps.afterSync();
     };
 
     const syncProject = async (project: Project): Promise<void> => {
         await deps.runCli(project.dir, ['sync']);
-        deps.refreshViews();
+        await deps.afterSync();
     };
 
     const checkSync = async (): Promise<void> => {
@@ -98,7 +96,7 @@ export function createSyncCommands(deps: CommandDeps): SyncCommands {
         );
         if (choice === 'Run sync') {
             await deps.runCli(dir, ['sync']);
-            deps.refreshViews();
+            await deps.afterSync();
         } else if (choice === 'Show output') {
             deps.output.show();
         }

@@ -8,27 +8,20 @@
 [![tests](https://img.shields.io/github/actions/workflow/status/deltabox-studio/toolchain/ci.yml?label=tests&logo=github)](https://github.com/deltabox-studio/toolchain/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/@deltabox/toolchain.svg?color=cb3837&label=npm)](https://www.npmjs.com/package/@deltabox/toolchain)
 
-All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.
+**deltabox toolchain** is a superset of [Vite+](https://viteplus.dev): it keeps the Vite+ workflow and adds project synchronization, a config generator, tsconfig management, an MCP server, CI and changelog automation, providers, catalogs and a VS Code extension. Use it as a Vite/Vite+ plugin or standalone.
 
+- **Project synchronization** — keep workspaces, configs, docs and CI up to date.
 - **Save and use templates (local/remote)** so you never have to scaffold the same projects over and over again.
 - **Generate** config types, env variables, cli flags, markdown and JSON schemas, so your codebase stays consistent, validated and well-documented.
-- **Extend or setup** CI for your changelogs, releases, issues etc.
-- **Sync** your entire project so workspaces, docs and CI are always up-to-date.
-- **Plug it into Vite / Vite+** and streamline your DX for your existing Vite setup.
+- **Automate CI, changelogs and releases** for your project and workspaces.
+- **Use it as a Vite/Vite+ plugin or standalone** — the plugin is optional.
+- **Use it from AI agents** over MCP, with one-command installs for Claude, Codex, VS Code, OpenCode and more.
 
 See the [list of features](#features).
 
 See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
 
 Documentation, guides and examples at [toolchain.deltabox.studio](https://toolchain.deltabox.studio/guide).
-
-The video and screenshot below is the VS Code extension. Read more about it at [toolchain.deltabox.studio/guide/vscode](https://toolchain.deltabox.studio/guide/vscode).
-
-https://github.com/user-attachments/assets/a4f1ad75-fedd-40ee-b84d-3365f7025a3e
-
-<div align="left">
-  <img src="./apps/docs/public/vscode-screenshot.png" width="300" />
-</div>
 
 ## Table of contents
 
@@ -39,6 +32,7 @@ https://github.com/user-attachments/assets/a4f1ad75-fedd-40ee-b84d-3365f7025a3e
     - [Quickstart](#quickstart)
     - [Config generator](#config-generator)
     - [Vite / Vite+ plugin](#vite--vite-plugin)
+    - [MCP](#mcp)
     - [CLI](#cli)
     - [Programmatic API](#programmatic-api)
     - [VS Code extension](#vs-code-extension)
@@ -48,19 +42,31 @@ https://github.com/user-attachments/assets/a4f1ad75-fedd-40ee-b84d-3365f7025a3e
 
 ## Features
 
+- **Project synchronization**
 - **Config-driven**
 - **Config generator**
-- **Vite / Vite+ plugin**
+- **Vite / Vite+ plugin (optional)**
 - **Changelogs & releases**
-- **tsconfig generation**
+- **CI automation**
+- **tsconfig management**
 - **Providers**
+- **Catalogs**
 - **Templates**
 - **Migrations**
+- **MCP server**
+- **VS Code extension**
 - **Editor first**
 - **Monorepo aware**
-- **Auto sync**
 
 See more at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
+
+The video and screenshot below is the VS Code extension. Read more about it at [toolchain.deltabox.studio/guide/vscode](https://toolchain.deltabox.studio/guide/vscode).
+
+https://github.com/user-attachments/assets/a4f1ad75-fedd-40ee-b84d-3365f7025a3e
+
+<div align="left">
+  <img src="./apps/docs/public/vscode-screenshot.png" width="300" />
+</div>
 
 ## Install
 
@@ -112,6 +118,13 @@ there is **opt-in by presence**: `section: true` enables it with defaults,
 `section: false` disables it, and `section: { ... }` configures it.
 See the [configuration reference](https://toolchain.deltabox.studio/config/reference).
 
+v3 adds a top-level [`toolchain.enabled`](https://toolchain.deltabox.studio/guide/migrations/v2-v3#toolchain-enable-disable)
+switch, a per-section `regenerate` flag, lifecycle
+[hooks](https://toolchain.deltabox.studio/guide/config/hooks) (`beforeVersion` /
+`afterVersion`) and [Dependabot security
+updates](https://toolchain.deltabox.studio/guide/ci/dependabot)
+(`ci.dependabot.security`).
+
 ## Config generator
 
 The same Zod-first approach powers a standalone config engine. Describe your
@@ -124,21 +137,19 @@ import { z } from 'zod';
 import { createConfigEngine } from '@deltabox/toolchain/config';
 
 export const engine = createConfigEngine({
-    scopes: {
-        server: {
-            zodSchema: z.object({
-                port: z.number().default(3000).meta({ env: 'MYAPP_PORT' }),
-            }),
-        },
+    schema: {
+        server: z.object({
+            port: z.number().default(3000).meta({ envName: 'MYAPP_PORT' }),
+        }),
     },
     envPrefix: 'MYAPP_',
     baseGroup: 'base',
     root: process.cwd(),
 });
 
-await engine.writeJsonSchema({ output: 'config.schema.json' });
-engine.writeEnvFile({ output: '.env.example' });
-engine.writeMarkdown({ outDir: 'docs/reference/configuration' });
+await engine.jsonSchema.write({ output: 'config.schema.json' });
+engine.env.write({ output: '.env.example' });
+engine.markdown.write({ outputDir: 'docs/reference/configuration' });
 ```
 
 It also generates the TypeScript types — named interfaces with jsdoc from
@@ -146,7 +157,7 @@ It also generates the TypeScript types — named interfaces with jsdoc from
 inlined:
 
 ```ts
-engine.writeConfigTypes({ outputDir: 'types' });
+engine.types.write({ outputDir: 'types' });
 ```
 
 ```ts
@@ -157,17 +168,29 @@ export interface ServerConfig {
 }
 ```
 
-At runtime the same package loads it back — `parseEnvTree` folds the `PREFIX_*`
-variables into a tree and the typed accessors read it (schema validation is just
-a `.parse()` away):
+At runtime the same package loads it back: `parseEnvConfig`, `parseCliConfig`
+and `parseConfig` read the declared `envName`s and CLI flags, merge overrides
+and validate the result through the schema, so it matches the generated types:
 
 ```ts
-import { envInt, envString, parseEnvTree } from '@deltabox/toolchain/config';
+import { parseCliConfig, parseConfig, parseEnvConfig } from '@deltabox/toolchain/config';
 
-const tree = parseEnvTree(process.env, 'MYAPP_');
-const port = envInt(tree, 'port', 3000);
-const host = envString(tree, 'host', '0.0.0.0');
+// env only: MYAPP_PORT=8080 -> { port: 8080, host: '0.0.0.0' }
+const fromEnv = parseEnvConfig(serverSchema, process.env, { envPrefix: 'MYAPP_' });
+
+// env + CLI (`--port 8080`), with overrides merged on top
+const config = parseConfig(serverSchema, { host: '127.0.0.1' }, { envPrefix: 'MYAPP_' });
+
+// CLI only, from an explicit argv
+const fromCli = parseCliConfig(serverSchema, process.argv.slice(2), { envPrefix: 'MYAPP_' });
 ```
+
+Pass the engine's full `schema` instead of one scope to get the nested
+`{ server: { ... } }` shape. Env typings are generated the same way
+(`engine.env.types.write()`, which writes `env.ts` and the ambient
+`dbx-env.d.ts`). For file-backed configs, `loadConfig` / `loadConfigAsync`
+discover and import `dbx.config.*` (TS, JS, JSON or YAML) and resolve it through
+the same schema.
 
 See the [config generator
 guide](https://toolchain.deltabox.studio/guide/config-generator) for loading,
@@ -183,30 +206,70 @@ guide](https://toolchain.deltabox.studio/guide/config-generator).
 
 ## Vite / Vite+ plugin
 
-`@deltabox/toolchain` ships a Vite plugin, so a Vite (or Vite+) project can run
-dbx as part of its own pipeline — no separate `dbx sync` step:
+`@deltabox/toolchain` ships a Vite/Vite+ plugin, so a Vite project can use dbx
+without a separate `dbx.config.*` or a separate `dbx sync` step. Put the
+toolchain config inline in the plugin:
 
 ```ts
 // vite.config.ts
-import { defineConfig } from 'vite'; // or 'vite-plus'
+import { defineConfig } from 'vite-plus'; // or 'vite'
 
 import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
 
 export default defineConfig({
-    plugins: [dbx()],
+    plugins: [
+        dbx({
+            toolchain: {
+                project: { name: 'my-app', scope: '@acme' },
+                fmt: { oxc: true },
+                lint: { oxc: true },
+                ci: { sync: true },
+                changelog: { preset: 'conventional' },
+            },
+        }),
+    ],
     run: { tasks: { ...DBX_TASKS } },
     // your usual Vite / Vite+ config
 });
 ```
 
-- The `dbx()` plugin runs `dbx sync` before the dev server / build, or
-  `dbx sync --check` in CI (which fails the build when generated files are out of
-  date), and re-syncs when a `dbx.config.*` / `tsconfig.*.json` input changes.
+- The `dbx()` plugin carries the toolchain config inline. The CLI reads it back
+  from `vite.config.*`, so `dbx sync`, `dbx projects`, the VS Code extension and
+  every other dbx command work with **plugin-only** projects. A `dbx.config.*`
+  is optional, and if both exist the plugin config is merged on top.
+- The plugin derives Vite options from the dbx sections: `logger` drives
+  `logLevel`/`customLogger`, `watch` drives `server.watch`, and (on Vite+ only)
+  `fmt`/`lint` drive the Vite+ formatter/linter. Pure Vite works without any
+  Vite+ API.
+- dbx never manages `vite.config.*` in plugin mode — the plugin lives there.
+- The plugin runs `dbx sync` before the dev server / build, or `dbx sync --check`
+  in CI (which fails the build when generated files are out of date), and
+  re-syncs when a `vite.config.*`, `dbx.config.*` or `tsconfig.*.json` input
+  changes.
 - `run: { tasks: { ...DBX_TASKS } }` additionally exposes `vp run dbx:sync` /
   `vp run dbx:check` (Vite+ reads `run.tasks` from the static config, which a
   plugin cannot add). Drop the `run` block if you don't want those tasks.
 
 See the [providers guide](https://toolchain.deltabox.studio/guide/providers).
+
+## MCP
+
+Every public dbx capability is also available over MCP. Run the server directly:
+
+```sh
+dbx mcp:serve
+```
+
+or install it (with a `deltabox` skill) into your AI harness/editor:
+
+```sh
+dbx mcp:install --provider claude
+dbx mcp:install --provider vscode --scope global
+```
+
+Builtin providers: `claude`, `codex`, `vscode`, `opencode`, `pi`, and `custom`
+(a directory you choose). `dbx mcp:list` prints the exact files. The VS Code
+extension exposes the same installer from its command palette.
 
 ## CLI
 
@@ -239,9 +302,12 @@ See [packages/vscode/README.md](./packages/vscode/README.md) to learn more about
 ## Development
 
 This repo is a Yarn 4 workspace. Vite+ (`vp`) drives format, lint, test and the
-task runner from the root `vite.config.ts`. The generated shims are dogfooded
-with `vite.shim: 'static'`, so `vp` loads them without a built package; Vite and
-Vitest resolve workspace imports through `resolve.tsconfigPaths`.
+task runner from the root `vite.config.ts`, which dogfoods the `dbx()` plugin —
+there is no root `dbx.config.ts`, `vitest.config.ts` or `tsdown.config.ts`. The
+toolchain config lives in the plugin's `toolchain` option; Vitest and the
+published package build live in the standard `test` and `pack` fields. Workspace
+packages still use generated static shims; Vite and Vitest resolve workspace
+imports through `resolve.tsconfigPaths`.
 
 ```sh
 yarn install        # fresh checkout
@@ -251,7 +317,7 @@ yarn check          # Oxfmt + Oxlint check (no writes)
 yarn check:fix      # same, auto-fixing every workspace + the root
 yarn format         # `vp fmt`
 yarn lint           # `vp lint --fix`
-yarn build          # packages via `vp run` + root tsdown
+yarn build          # packages + root via `vp run` (root pack config)
 yarn test           # builds, then package + root tests
 yarn test:clean     # remove leftover emulation temp workspaces
 ```

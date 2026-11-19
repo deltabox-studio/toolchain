@@ -1,20 +1,20 @@
 {
     "name": "@deltabox/toolchain-docs",
-    "version": "2.6.1",
+    "version": "3.0.0-beta.6",
     "private": true,
     "type": "module",
-    "description": "Documentation site for @deltabox/toolchain (VitePress).",
+    "description": "Documentation site for deltabox toolchain — a superset of Vite+ with project synchronization, a config generator, tsconfig management, MCP server, CI/changelog automation, providers, catalogs and a VS Code extension.",
     "scripts": {
         "dev": "vitepress dev",
         "build": "vitepress build && node scripts/copy-llms.mjs",
         "preview": "vitepress preview"
     },
     "devDependencies": {
-        "vite": "^5.4.14",
+        "vite": "^6.4.5",
         "vite-plugin-vitepress-auto-sidebar": "^1.7.1",
         "vitepress": "^1.6.4",
         "vitepress-carbon": "^1.7.0",
-        "vitepress-plugin-group-icons": "^1.8.1",
-        "vitepress-plugin-llms": "^1.14.0"
+        "vitepress-plugin-group-icons": "^1.8.2",
+        "vitepress-plugin-llms": "^1.15.0"
     }
 }

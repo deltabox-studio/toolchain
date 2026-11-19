@@ -17,7 +17,8 @@ import type {
     ConfigSchemaInput,
     ConfigSchemaMap,
     ConfigSchemaType,
-} from './types.js';
+    ConfigValueKind,
+} from './types/index.js';
 
 /** A JSON Schema node produced by `z.toJSONSchema`. */
 interface JsonSchemaNode {
@@ -34,6 +35,7 @@ interface JsonSchemaNode {
     $ref?: string;
     $defs?: Record<string, JsonSchemaNode>;
     items?: JsonSchemaNode;
+    prefixItems?: JsonSchemaNode[];
     additionalProperties?: JsonSchemaNode | boolean;
     propertyNames?: JsonSchemaNode;
     env?: string;
@@ -141,6 +143,8 @@ function unrepresentableValue(ctx: {
 /** Options for {@link toJsonSchemaSafe}. */
 export interface ToJsonSchemaSafeOptions {
     target?: 'draft-2020-12' | 'draft-07' | 'draft-04' | 'openapi-3.0' | (string & {});
+    /** Generate an input schema (defaults optional) or an output schema. */
+    io?: 'input' | 'output';
     /** Use `'any'`/`'throw'` to skip the function-aware default handler. */
     unrepresentable?: 'throw' | 'any';
 }
@@ -289,8 +293,40 @@ function jsonType(node: JsonSchemaNode): string {
     }
     if (node.anyOf || node.oneOf) return 'any';
     if (node.enum) return 'string';
-    if (Array.isArray(node.type)) return node.type.find(t => t !== 'null') ?? 'string';
-    return node.type ?? 'string';
+    if (Array.isArray(node.type)) {
+        const types = [...new Set(node.type.filter(type => type !== 'null'))];
+        return types.length === 1 ? types[0]! : 'any';
+    }
+    return node.type ?? 'unknown';
+}
+
+/** The config value kind a JSON Schema node describes, when it is distinctive. */
+function jsonKind(node: JsonSchemaNode): ConfigValueKind | undefined {
+    if (node.$ref) return undefined;
+    if (node.const !== undefined) return 'literal';
+    if (Array.isArray(node.enum) && node.enum.length > 0) return 'enum';
+    if (node.anyOf || node.oneOf) return 'union';
+    if (Array.isArray(node.type)) {
+        const types = new Set(node.type.filter(type => type !== 'null'));
+        if (types.size > 1) return 'union';
+    }
+    const type = Array.isArray(node.type) ? node.type.find(item => item !== 'null') : node.type;
+    if (type === 'array') return node.prefixItems ? 'tuple' : 'array';
+    if (type === 'object') {
+        if (
+            !node.properties &&
+            node.additionalProperties !== undefined &&
+            node.additionalProperties !== false
+        ) {
+            return 'record';
+        }
+        return node.properties ? 'object' : 'record';
+    }
+    if (type === undefined) return 'unknown';
+    if (type === 'integer') return 'number';
+    return ['string', 'number', 'boolean', 'null'].includes(type)
+        ? (type as ConfigValueKind)
+        : undefined;
 }
 
 /** Metadata that can be attached to a node or to the `$ref`/union it points at. */
@@ -442,20 +478,27 @@ function jsonNodeToDefinition(
         const out: Record<string, unknown> = fieldRequired
             ? { $schema: { tags: ['@required'] } }
             : {};
+        if (node.defaultValue !== undefined) out.$default = node.defaultValue;
+        else if (node.default !== undefined) out.$default = node.default;
         if (node.description) {
             out.$schema = {
                 ...(out.$schema as object | undefined),
                 description: node.description,
             };
         }
-        const meta = nodeMeta(node, defs);
-        if (meta.deprecated !== undefined || meta.example !== undefined) {
-            out.$schema = { ...(out.$schema as object | undefined), ...meta };
-        }
+        // Object-level metadata (since/see/secret/env/...) must survive just like
+        // it does on leaves; only spreading it for deprecated/example was a bug.
+        out.$schema = {
+            ...(out.$schema as object | undefined),
+            ...nodeMeta(node, defs),
+            ...(node.scope ? { scope: node.scope } : {}),
+            ...(node.secret ? { secret: true } : {}),
+            ...(node.public ? { public: true } : {}),
+        };
         for (const [key, child] of Object.entries(node.properties)) {
             out[key] = jsonNodeToDefinition(
                 child,
-                (node.required as string[] | undefined)?.includes(key) ?? false,
+                Array.isArray(node.required) && (node.required as string[]).includes(key),
                 defs
             );
         }
@@ -468,11 +511,13 @@ function jsonNodeToDefinition(
     }
 
     const resolvedType = jsonType(node);
+    const kind = jsonKind(node);
     const out: Record<string, unknown> = {};
     if (node.defaultValue !== undefined) out.$default = node.defaultValue;
     else if (node.default !== undefined) out.$default = node.default;
     out.$schema = {
         type: resolvedType,
+        ...(kind ? { configKind: kind } : {}),
         tsType: renderTsType(node, defs),
         ...(resolvedType === 'array' ? { items: { type: jsonType(node.items ?? {}) } } : {}),
         ...(fieldRequired ? { tags: ['@required'] } : {}),
@@ -572,10 +617,18 @@ function resolveUntypedNode(
         return schema;
     }
 
-    const schema: Record<string, unknown> = {
-        ...(node.$schema as object | undefined),
-        id: schemaId,
-    };
+    const source = (node.$schema as Record<string, unknown> | undefined) ?? {};
+    const { configKind, ...rest } = source;
+    const schema: Record<string, unknown> = { ...rest, id: schemaId };
+    if (typeof configKind === 'string') {
+        // Generation-only marker: keep it off the enumerable schema so the
+        // untyped type/JSON-schema generators never emit it.
+        Object.defineProperty(schema, 'configKind', {
+            value: configKind,
+            enumerable: false,
+            configurable: true,
+        });
+    }
     ctx.cache.set(id, schema);
     const childKeys = Object.keys(node).filter(
         key => key !== '$resolve' && key !== '$schema' && key !== '$default'
@@ -618,13 +671,98 @@ export function resolveUntypedSchema(input: Record<string, unknown>): Schema {
     return resolveUntypedNode(input, '', { root: input, cache }) as Schema;
 }
 
-/** Normalize Zod's JSON Schema metadata into standard JSON Schema fields. */
+/** Keys that are only meaningful to the untyped/type generators, not JSON Schema. */
+const NON_JSON_SCHEMA_KEYS = [
+    'id',
+    'tsType',
+    'configKind',
+    'tags',
+    'allowExtraKeys',
+    'env',
+    'envName',
+    'envPath',
+    'path',
+    'cliFlag',
+    'cliFlagShort',
+    'typeName',
+    'scope',
+    'secret',
+    'public',
+    'envDefault',
+    '$resolve',
+] as const;
+
+/** JSON Schema keywords that hold child schemas keyed by name. */
+const SCHEMA_MAP_KEYWORDS = [
+    'properties',
+    '$defs',
+    'definitions',
+    'patternProperties',
+    'dependentSchemas',
+] as const;
+
+/** JSON Schema keywords that hold one child schema. */
+const SCHEMA_NODE_KEYWORDS = [
+    'items',
+    'additionalItems',
+    'additionalProperties',
+    'contains',
+    'contentSchema',
+    'propertyNames',
+    'not',
+    'if',
+    'then',
+    'else',
+    'unevaluatedItems',
+    'unevaluatedProperties',
+] as const;
+
+/** JSON Schema keywords that hold an array of child schemas. */
+const SCHEMA_LIST_KEYWORDS = ['anyOf', 'oneOf', 'allOf', 'prefixItems'] as const;
+
+/**
+ * Normalize a generated JSON Schema node in place:
+ *
+ * - drop legacy `id` anchors (`$id`/`$anchor` are the 2020-12 identifiers);
+ * - turn the untyped `any`/`unknown` pseudo-types into an unconstrained schema;
+ * - drop generation-only keys (`tsType`, `configKind`, `tags`, env metadata, ...);
+ * - normalize `example` -> `examples` and a string `deprecated` -> boolean +
+ *   `deprecationMessage` (the VS Code annotation).
+ *
+ * Traversal is schema-aware: `default` values are user data and stay untouched.
+ */
 export function normalizeJsonSchemaMetadata(node: unknown): void {
     if (!node || typeof node !== 'object' || Array.isArray(node)) return;
     const record = node as Record<string, unknown>;
-    // `tsType` is a generation-only marker (for types/markdown); it is not a
-    // JSON Schema keyword, so keep the editor schema clean.
-    delete record.tsType;
+    for (const key of NON_JSON_SCHEMA_KEYS) delete record[key];
+    if (record.type === 'any' || record.type === 'unknown') {
+        delete record.type;
+    } else if (Array.isArray(record.type)) {
+        const types = record.type.filter(
+            (type): type is string => type !== 'any' && type !== 'unknown'
+        );
+        if (types.length === 0) delete record.type;
+        else record.type = types.length === 1 ? types[0] : types;
+    }
+    // A boolean `required` is untyped's env metadata; the parent object's
+    // `required` string array is the JSON Schema constraint.
+    if (typeof record.required === 'boolean') delete record.required;
+    // A property with a generated default may be omitted by the config input;
+    // JSON Schema `default` is only an annotation, so drop it from `required`.
+    if (Array.isArray(record.required) && record.properties) {
+        const properties = record.properties as Record<string, unknown>;
+        const required = record.required.filter(name => {
+            const property = properties[String(name)];
+            return !(
+                property &&
+                typeof property === 'object' &&
+                !Array.isArray(property) &&
+                'default' in property
+            );
+        });
+        if (required.length === 0) delete record.required;
+        else record.required = required;
+    }
     if (typeof record.deprecated === 'string') {
         record.deprecationMessage = record.deprecated;
         record.deprecated = true;
@@ -634,7 +772,7 @@ export function normalizeJsonSchemaMetadata(node: unknown): void {
         delete record.example;
         record.examples = Array.isArray(example) ? example : [example];
     }
-    for (const key of ['properties', '$defs']) {
+    for (const key of SCHEMA_MAP_KEYWORDS) {
         const map = record[key];
         if (map && typeof map === 'object' && !Array.isArray(map)) {
             for (const child of Object.values(map as Record<string, unknown>)) {
@@ -642,8 +780,22 @@ export function normalizeJsonSchemaMetadata(node: unknown): void {
             }
         }
     }
-    for (const key of ['items', 'additionalProperties']) normalizeJsonSchemaMetadata(record[key]);
-    for (const key of ['anyOf', 'oneOf', 'allOf']) {
+    for (const key of SCHEMA_NODE_KEYWORDS) {
+        const child = record[key];
+        if (Array.isArray(child)) {
+            for (const item of child) normalizeJsonSchemaMetadata(item);
+        } else {
+            normalizeJsonSchemaMetadata(child);
+        }
+    }
+    // Draft-07 `dependencies` values are either a string array or a schema.
+    const dependencies = record.dependencies;
+    if (dependencies && typeof dependencies === 'object' && !Array.isArray(dependencies)) {
+        for (const child of Object.values(dependencies as Record<string, unknown>)) {
+            if (!Array.isArray(child)) normalizeJsonSchemaMetadata(child);
+        }
+    }
+    for (const key of SCHEMA_LIST_KEYWORDS) {
         const list = record[key];
         if (Array.isArray(list)) for (const child of list) normalizeJsonSchemaMetadata(child);
     }

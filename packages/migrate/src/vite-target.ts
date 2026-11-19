@@ -12,9 +12,26 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { MigrationFile } from './types.js';
+import type { MigrationFile } from './types/index.js';
 
 type Json = Record<string, unknown>;
+
+/** The root Vite config file names, in priority order. */
+export const VITE_CONFIG_FILES = [
+    'vite.config.ts',
+    'vite.config.mts',
+    'vite.config.js',
+    'vite.config.mjs',
+] as const;
+
+/** The Vite config in `cwd`, if present. */
+export function findViteConfig(cwd: string): string | undefined {
+    for (const name of VITE_CONFIG_FILES) {
+        const file = path.join(cwd, name);
+        if (fs.existsSync(file)) return file;
+    }
+    return undefined;
+}
 
 const IDENT = /^[A-Za-z_$][\w$]*$/;
 
@@ -194,19 +211,19 @@ export function mergeViteConfig(
     return out;
 }
 
-/** The merged `vite.config.ts` for `cwd` (path + content), without writing it. */
+/** The merged Vite config for `cwd` (path + content), without writing it. */
 export function renderViteTarget(
     cwd: string,
     sections: { fmt?: Json; lint?: Json }
 ): MigrationFile {
-    const file = path.join(cwd, 'vite.config.ts');
+    const file = findViteConfig(cwd) ?? path.join(cwd, 'vite.config.ts');
     const existing = fs.existsSync(file)
         ? fs.readFileSync(file, 'utf-8').replace(/^\uFEFF/, '')
         : undefined;
     return { path: file, content: mergeViteConfig(existing, sections) };
 }
 
-/** Write the merged config to `<cwd>/vite.config.ts` and return its path. */
+/** Write the merged config to the project's `vite.config.*` and return its path. */
 export function writeViteTarget(
     cwd: string,
     sections: { fmt?: Json; lint?: Json },

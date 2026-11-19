@@ -8,6 +8,7 @@
 import type { ToolchainProvider, ToolchainProviderAction } from '@deltabox/toolchain/shared';
 
 import { VP_COMMANDS, viteCommandName } from './commands.js';
+import { hasVitePlus } from './vp.js';
 
 /** Curated actions for the VS Code extension (a useful subset of vp commands). */
 const ACTIONS: ToolchainProviderAction[] = [
@@ -41,7 +42,7 @@ const ACTIONS: ToolchainProviderAction[] = [
  * Build the Vite+ provider descriptor. The command list mirrors {@link VP_COMMANDS}
  * so the CLI and the extension stay in sync automatically.
  */
-export function viteProvider(): ToolchainProvider {
+export function viteProvider(cwd: string = process.cwd()): ToolchainProvider {
     return {
         id: 'vite-plus',
         name: 'Vite+',
@@ -49,6 +50,7 @@ export function viteProvider(): ToolchainProvider {
             'The unified web toolchain (Vite, Vitest, Oxlint, Oxfmt, Rolldown, tsdown) via `vp`.',
         homepage: 'https://viteplus.dev',
         binary: 'vp',
+        available: hasVitePlus(cwd),
         commands: VP_COMMANDS.map(command => ({
             name: viteCommandName(command.name),
             subcommand: command.name,

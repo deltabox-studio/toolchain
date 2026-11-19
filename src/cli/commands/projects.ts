@@ -13,8 +13,14 @@ export function projectsCommand(): ToolchainCommand {
             { flags: '--json', description: 'Print the graph as JSON.' },
         ],
         run: (opts, context) => {
+            const rawMaxDepth = String(opts.maxDepth ?? '5').trim();
+            if (!/^\d+$/.test(rawMaxDepth)) {
+                throw new Error(
+                    `invalid --max-depth "${rawMaxDepth}" (expected a non-negative integer).`
+                );
+            }
             const graph = buildProjectGraph(context.cwd, {
-                maxDepth: Number.parseInt(String(opts.maxDepth ?? '5'), 10),
+                maxDepth: Number(rawMaxDepth),
             });
             if (opts.write !== false) writeProjectGraph(context.cwd, graph);
             if (opts.json) {

@@ -8,6 +8,7 @@ import {
     type ManagedFile,
     type SyncContext,
     type SyncTask,
+    regenerateEnabled,
     sectionConfig,
     sectionEnabled,
     warningMessage,
@@ -16,18 +17,10 @@ import {
 import { generateWorkspaceTsconfigs } from './cli/generate/index.js';
 import { tsconfigFileNames } from './files.js';
 import {
-    addedOverrideLeaves,
-    type AppliedOverride,
-    applyOverride,
     hasOverrideKeys,
     isAppliedOverride,
     mergeOverride,
-    type OverridesState,
-    recordOverrideSnapshot,
-    removedOverrideLeaves,
-    revertOverride,
-    type TsconfigOverrideKind,
-    type TsconfigOverrides,
+    reconcileOverride,
 } from './overrides.js';
 import { parseTsconfig } from './resolve.js';
 import {
@@ -39,6 +32,13 @@ import {
     stringifyTsconfig,
     toRepoRelative,
 } from './snapshots.js';
+import { renderTsconfigBuild } from './templates.js';
+import type {
+    AppliedOverride,
+    OverridesState,
+    TsconfigOverrideKind,
+    TsconfigOverrides,
+} from './types/index.js';
 
 export type { TsconfigFileNames } from './files.js';
 export { tsconfigFileNames } from './files.js';
@@ -123,19 +123,16 @@ function syncOverrides(ctx: SyncContext, targets: OverrideTarget[], indent: numb
 
         const text = target.content ?? fs.readFileSync(target.file, 'utf-8');
         const before = parseTsconfig(text) as Record<string, unknown>;
-        const data = structuredClone(before);
         const existing = getSnapshot(snapshots, relative);
-        const snapshot = (existing !== undefined ? existing : structuredClone(before)) as Record<
-            string,
-            unknown
-        >;
 
-        // Drop what the previous override set that the new one no longer does.
-        const { kept } = revertOverride(
-            data,
-            removedOverrideLeaves(previous?.override, next),
-            snapshot
-        );
+        // Drop what the previous override set that the new one no longer does,
+        // record the leaves the new one adds, then apply the next override.
+        const { data, snapshot, kept } = reconcileOverride({
+            before,
+            ...(previous ? { previous } : {}),
+            ...(next ? { next } : {}),
+            ...(existing !== undefined ? { snapshot: existing } : {}),
+        });
         for (const key of kept) {
             ctx.warn(
                 warningMessage('tsconfig.override-edited', { file: relative, key }),
@@ -144,10 +141,8 @@ function syncOverrides(ctx: SyncContext, targets: OverrideTarget[], indent: numb
         }
 
         if (next) {
-            recordOverrideSnapshot(snapshot, data, addedOverrideLeaves(previous?.override, next));
-            setSnapshot(snapshots, relative, snapshot);
+            if (snapshot) setSnapshot(snapshots, relative, snapshot);
             nextState[relative] = { kind: target.kind, override: structuredClone(next) };
-            applyOverride(data, next);
         } else {
             deleteSnapshot(snapshots, relative);
         }
@@ -185,6 +180,7 @@ export function tsconfigSyncTask(): SyncTask {
         // inherited, so a plain workspace still has no section and is skipped.
         projectTypes: ['monorepo-root', 'monorepo-workspace'],
         enabled: config => sectionEnabled(config.tsconfig),
+        regenerate: config => regenerateEnabled(config.tsconfig),
         watch: config => {
             const names = tsconfigFileNames(config);
             return [names.rootFile, `**/${names.defaultFile}`];
@@ -199,16 +195,23 @@ export function tsconfigSyncTask(): SyncTask {
             const indent = t.indent ?? 4;
             const glob = t.glob ?? `**/${defaultFile}`;
             const overrides: TsconfigOverrides = t.overrides ?? {};
-            const generated = await generateWorkspaceTsconfigs({
-                cwd: ctx.cwd,
-                config: ctx.config,
-                write: false,
-                writeSidecar: false,
-                previousAuto: ctx.manifest?.tsconfigAuto as
-                    | { paths: string[]; references: string[] }
-                    | undefined,
-            });
-            const results = generated.results;
+            const previousAuto = ctx.manifest?.tsconfigAuto as
+                | { paths: string[]; references: string[] }
+                | undefined;
+            const generate = (contents?: Map<string, string>) =>
+                generateWorkspaceTsconfigs({
+                    cwd: ctx.cwd,
+                    config: ctx.config,
+                    write: false,
+                    writeSidecar: false,
+                    ...(previousAuto ? { previousAuto } : {}),
+                    // A second pass reads the override-patched contents: the
+                    // overrides are already applied there, and applying them
+                    // again would resurrect a removed/changed value.
+                    ...(contents ? { fileContents: contents, applyOverrides: false } : {}),
+                });
+            let generated = await generate();
+            let results = generated.results;
 
             if (results.length === 0) {
                 // Nothing to wire: warn only when the config implies workspaces
@@ -230,10 +233,65 @@ export function tsconfigSyncTask(): SyncTask {
                 }
             }
 
+            // Reconcile overrides BEFORE the final generation pass. The first
+            // generation sees the files as they are on disk (still carrying an
+            // override removed or changed in this run); feeding the patched
+            // contents into a second pass makes the run converge immediately
+            // instead of leaving a stale generated file for the next `--check`.
+            const targets: OverrideTarget[] = [
+                { file: path.resolve(ctx.cwd, baseFile), kind: 'base', override: overrides.base },
+                {
+                    file: workspacesFile,
+                    kind: 'root',
+                    override: overrides.root,
+                    content: generated.baseRootContent,
+                },
+            ];
+            for (const result of results) {
+                targets.push({
+                    file: result.tsconfigPath,
+                    kind: 'default',
+                    override: overrides.default,
+                });
+                targets.push({
+                    file: result.targetTsconfigBuildPath,
+                    kind: 'build',
+                    override: overrides.build,
+                });
+            }
+            const overrideFiles = syncOverrides(ctx, targets, indent);
+            if (overrideFiles.length > 0) {
+                const contents = new Map<string, string>();
+                for (const file of overrideFiles) {
+                    contents.set(path.resolve(ctx.cwd, file.path), file.content);
+                }
+                generated = await generate(contents);
+                results = generated.results;
+            }
+
             const files: ManagedFile[] = results.map(result => ({
                 path: rel(ctx.cwd, result.targetTsconfigPath),
                 content: `${JSON.stringify(result.newTsconfig, null, indent)}\n`,
             }));
+
+            // The build tsconfig is user-owned: seed it from the workspace
+            // template only when it is missing, and never rewrite an existing
+            // one. The custom `buildFile`/`defaultFile` names are honoured. An
+            // explicit `overrides.build` on a missing file still warns instead
+            // of silently creating it (the override may be a config mistake).
+            for (const result of results) {
+                if (hasOverrideKeys(overrides.build)) continue;
+                if (fs.existsSync(result.targetTsconfigBuildPath)) continue;
+                files.push({
+                    path: rel(ctx.cwd, result.targetTsconfigBuildPath),
+                    content: renderTsconfigBuild({}, './tsconfig.json', {
+                        workspace: true,
+                        indent,
+                    }),
+                    track: false,
+                    format: false,
+                });
+            }
 
             // A nested workspace with its own `tsconfig` section owns its
             // generated file. Keep it untracked so a root sync neither rewrites
@@ -268,34 +326,15 @@ export function tsconfigSyncTask(): SyncTask {
                     delete ctx.manifest.tsconfigAuto;
                 }
             }
-
-            const targets: OverrideTarget[] = [
-                { file: path.resolve(ctx.cwd, baseFile), kind: 'base', override: overrides.base },
-                {
-                    file: workspacesFile,
-                    kind: 'root',
-                    override: overrides.root,
-                    content: generated.baseRootContent,
-                },
-            ];
-            for (const result of results) {
-                targets.push({
-                    file: result.tsconfigPath,
-                    kind: 'default',
-                    override: overrides.default,
-                });
-                targets.push({
-                    file: result.targetTsconfigBuildPath,
-                    kind: 'build',
-                    override: overrides.build,
-                });
-            }
-            files.push(...syncOverrides(ctx, targets, indent));
+            files.push(...overrideFiles);
 
             if (results.length > 0) {
                 ctx.log(`tsconfig: regenerated ${results.length} workspace tsconfig(s).`);
             }
-            return files;
+            // The generator already writes these in their final form (custom
+            // `indent` included); the generic post-write formatter must not
+            // reformat them again.
+            return files.map(file => ({ ...file, format: false }));
         },
     };
 }

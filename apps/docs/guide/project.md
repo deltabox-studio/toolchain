@@ -55,7 +55,9 @@ is a different concern from the published `engines.node` range.
 ## Workspace inheritance
 
 A non-root `dbx.config.*` is merged over the nearest ancestor config (see
-[Configuration → Nested configs](/guide/config/nested-configs)). For `project`
+[Configuration → Nested configs](/guide/config/nested-configs)). Tooling
+sections are strictly opt-in for nested configs; `project` metadata is the
+exception because it is metadata, not a task section. For `project`
 specifically:
 
 - **Identity fields are never inherited**: `name`, `scope`, `description` and
@@ -70,6 +72,11 @@ specifically:
   stay shared.
 - **`inherit: false`** opts out entirely: the project keeps only its own `project`
   and ignores the parent's (useful for an unrelated package inside the tree).
+- **`manageConfigless: true`** opts into managing projects that have no
+  `dbx.config.*` of their own. It is repository-scoped (set it on the root
+  config) and is **disabled by default**: configless projects are discovered
+  but never synced or generated for unless you opt in. See
+  [Configless projects](/guide/config/nested-configs#configless-projects).
 
 ```ts [packages/web/dbx.config.ts]
 export default defineConfig({
@@ -113,9 +120,11 @@ section still generates correct tokens from its existing metadata.
 `dbx project:init`, `dbx project:init:monorepo` and
 `dbx project:init:workspace` read `project` as their defaults, and:
 
-- **`name` is required** (from `--name` or `project.name`) — a
-  scaffold fails with a clear error when it is missing. A workspace always needs
-  an explicit `--name` (the root's name is not the workspace name).
+- **`name`** comes from `--name`, or from `project.name` when the scaffold writes
+  **into** the current project. A scaffold `--out` elsewhere never inherits the
+  parent project's name — it uses the target directory's basename instead (pass
+  `--name` to override). A workspace always needs an explicit `--name` (the
+  root's name is not the workspace name).
 - **`--type` must be valid** (`project`, `monorepo-root` or `monorepo-workspace`)
   when passed explicitly; an invalid value is rejected. A `project.type` in the
   config still drives `dbx sync` detection, but scaffolding deliberately ignores

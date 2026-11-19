@@ -10,7 +10,7 @@ export const tsconfigDefaultTemplate = defaultTemplate;
 export const tsconfigBuildTemplate = buildTemplate;
 
 /** The default replacement values for the tsconfig templates. */
-export const DEFAULT_TSCONFIG_REPLACEMENTS = { envTypesFile: 'src/env.d.ts' } as const;
+export const DEFAULT_TSCONFIG_REPLACEMENTS = { envTypesFile: 'src/dbx-env.d.ts' } as const;
 
 /** The `extends` value to write into one generated template. */
 export type TsconfigExtends = string | string[] | false;
@@ -61,17 +61,33 @@ export function renderTsconfigDefault(
     )}\n`;
 }
 
+/** A build config shaped for a workspace (its own `src`, not repo-wide globs). */
+const workspaceBuildTemplate = {
+    extends: './tsconfig.json',
+    include: ['src', '{{envTypesFile}}'],
+    exclude: ['**/dist', '**/node_modules'],
+};
+
+export interface RenderTsconfigBuildOptions {
+    /** JSON indentation (default 4). */
+    indent?: number | string;
+    /** Use workspace-relative include globs instead of the repo-root template. */
+    workspace?: boolean;
+}
+
 export function renderTsconfigBuild(
     replacements: Replacements = {},
-    extendsValue?: TsconfigExtends
+    extendsValue?: TsconfigExtends,
+    options: RenderTsconfigBuildOptions = {}
 ): string {
+    const template = options.workspace ? workspaceBuildTemplate : tsconfigBuildTemplate;
     return `${JSON.stringify(
-        applyReplacementsDeep(withExtends(tsconfigBuildTemplate, extendsValue), {
+        applyReplacementsDeep(withExtends(template, extendsValue), {
             ...DEFAULT_TSCONFIG_REPLACEMENTS,
             ...replacements,
         }),
         null,
-        4
+        options.indent ?? 4
     )}\n`;
 }
 
@@ -90,7 +106,7 @@ export interface MonorepoTsconfigOptions {
     workspaces: MonorepoWorkspace[];
     /** Extra compiler options to merge in. */
     compilerOptions?: Record<string, unknown>;
-    /** Enable `composite` for the generated monorepo config (default true). */
+    /** Enable `composite` for the generated monorepo config (default false). */
     composite?: boolean;
 }
 
@@ -105,12 +121,7 @@ export function buildMonorepoTsconfig(options: MonorepoTsconfigOptions): Record<
     }
     return {
         compilerOptions: {
-            composite: options.composite ?? true,
-            types: ['node'],
-            allowJs: true,
-            noEmit: false,
-            declaration: true,
-            emitDeclarationOnly: true,
+            composite: options.composite ?? false,
             ...options.compilerOptions,
             paths,
         },

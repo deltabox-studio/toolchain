@@ -16,7 +16,7 @@ import {
     type ToolchainConfig,
     type ToolchainProvider,
 } from '@deltabox/toolchain/shared';
-import { viteProvider } from '@deltabox/toolchain/vite';
+import { viteProvider } from 'vite-plugin-dbx';
 
 export type {
     ToolchainProvider,
@@ -24,7 +24,7 @@ export type {
     ToolchainProviderCommand,
 } from '@deltabox/toolchain/shared';
 export { providerActions } from '@deltabox/toolchain/shared';
-export { viteProvider } from '@deltabox/toolchain/vite';
+export { viteProvider } from 'vite-plugin-dbx';
 
 /** The provider source policy from `toolchain.registry.providers`. */
 export function providerPolicy(config?: ToolchainConfig): RegistryPolicy | undefined {
@@ -32,10 +32,10 @@ export function providerPolicy(config?: ToolchainConfig): RegistryPolicy | undef
     return sectionConfig(config.registry)?.providers;
 }
 
-function withBuiltins(providers: ToolchainProvider[]): ToolchainProvider[] {
+function withBuiltins(providers: ToolchainProvider[], cwd: string): ToolchainProvider[] {
     const seen = new Set<string>();
     const out: ToolchainProvider[] = [];
-    for (const provider of [viteProvider(), ...providers]) {
+    for (const provider of [viteProvider(cwd), ...providers]) {
         if (seen.has(provider.id)) continue;
         seen.add(provider.id);
         out.push({ ...provider, actions: providerActions(provider) });
@@ -53,7 +53,7 @@ export function toolchainProviders(
     cwd: string = process.cwd(),
     config?: ToolchainConfig
 ): ToolchainProvider[] {
-    return withBuiltins(readAllProvidersSync(cwd, providerPolicy(config)));
+    return withBuiltins(readAllProvidersSync(cwd, providerPolicy(config)), cwd);
 }
 
 /** Like {@link toolchainProviders}, but also fetches remote registries. */
@@ -61,5 +61,5 @@ export async function loadToolchainProviders(
     cwd: string = process.cwd(),
     config?: ToolchainConfig
 ): Promise<ToolchainProvider[]> {
-    return withBuiltins(await readAllProviders(cwd, providerPolicy(config)));
+    return withBuiltins(await readAllProviders(cwd, providerPolicy(config)), cwd);
 }

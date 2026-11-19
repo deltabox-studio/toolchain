@@ -13,10 +13,19 @@ import path from 'node:path';
 import { globSync } from 'glob';
 import type { TsConfigJson } from 'type-fest';
 
-import type { PackageJson, ToolchainTsconfigAliasRewrite } from '@deltabox/toolchain/shared';
+import {
+    type PackageJson,
+    splitPackageName,
+    type ToolchainTsconfigAliasRewrite,
+} from '@deltabox/toolchain/shared';
 
 import { resolveTsconfigCompilerOption } from './resolve.js';
-import { matchesAutoFilter, resolveAutoSwitches, type TsconfigWorkspace } from './workspaces.js';
+import {
+    type AliasDiscoveryMode,
+    matchesAutoFilter,
+    resolveAutoSwitches,
+    type TsconfigWorkspace,
+} from './workspaces.js';
 
 /** The keys auto-wiring owns in the root workspaces tsconfig. */
 export interface TsconfigAutoState {
@@ -27,6 +36,8 @@ export interface TsconfigAutoState {
 export interface AutoTsconfigOptions {
     /** Repo root. */
     cwd: string;
+    /** Directory the root workspaces tsconfig lives in (default: `cwd`). */
+    baseDir?: string;
     /** The parsed root workspaces tsconfig (custom entries are preserved). */
     existing?: TsConfigJson;
     /** The previous auto state (from `.dbx/toolchain/tsconfig-auto.json`). */
@@ -50,9 +61,140 @@ function repoPath(cwd: string, target: string): string {
     return relative.startsWith('.') ? relative : `./${relative}`;
 }
 
+/**
+ * Canonical form used to compare reference paths, so a hand-written
+ * `packages/a/tsconfig.json` and the generated `./packages/a/tsconfig.json` are
+ * the same reference.
+ */
+function normalizeReferencePath(value: string): string {
+    return value.replace(/\\/g, '/').replace(/^\.\//, '');
+}
+
 function normalizeSrcDir(value: string): string {
     const normalized = posix(value).replace(/^\.\//, '').replace(/\/+$/, '');
     return normalized === '' ? '.' : normalized;
+}
+
+/** How the auto-wiring should resolve a workspace's aliases. */
+export interface WorkspaceAliasSettings {
+    /** Discovery modes (default `auto`). */
+    modes?: AliasDiscoveryMode[];
+    /** Base key for generated aliases (default: the package name). */
+    prefix?: string;
+    /** Resolve exports to source files (default true). */
+    devMode?: boolean;
+    /** Output directory for source/dist mapping (default: tsconfig `outDir`, then `dist`). */
+    dist?: string;
+}
+
+const DEFAULT_DIST_DIR = 'dist';
+
+/** The effective discovery modes (`auto` when unset). */
+function aliasModes(settings: WorkspaceAliasSettings): AliasDiscoveryMode[] {
+    return settings.modes && settings.modes.length > 0 ? settings.modes : ['auto'];
+}
+
+/** The alias base key (a `prefix` + the unscoped package name, else the package name). */
+function aliasBase(
+    workspace: TsconfigWorkspace,
+    settings: WorkspaceAliasSettings
+): string | undefined {
+    if (!workspace.packageName) return undefined;
+    if (!settings.prefix) return workspace.packageName;
+    const prefix = settings.prefix.replace(/\/+$/, '');
+    const { name } = splitPackageName(workspace.packageName);
+    return name ? `${prefix}/${name}` : workspace.packageName;
+}
+
+/** Whether `target` is inside `dir`. */
+function isInside(target: string, dir: string): boolean {
+    const relative = path.relative(dir, target);
+    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+/** Strip a JS/TS output extension (including `.d.ts`) from a target path. */
+function withoutOutputExtension(value: string): string {
+    return value.replace(/\.d\.[cm]?ts$/, '').replace(/\.[cm]?[jt]sx?$/, '');
+}
+
+/** Source-file candidates for a stem (the file itself or its index). */
+function sourceCandidates(stem: string): string[] {
+    const extensions = [...SOURCE_EXTENSIONS, 'mts', 'cts'];
+    return [
+        ...extensions.map(extension => `${stem}.${extension}`),
+        ...extensions.map(extension => path.join(stem, `index.${extension}`)),
+    ];
+}
+
+/** The configured output directory (relative to the workspace). */
+function workspaceDistDir(workspace: TsconfigWorkspace, settings: WorkspaceAliasSettings): string {
+    const configured =
+        settings.dist ?? resolveTsconfigCompilerOption(workspace.defaultTsconfigPath, 'outDir');
+    return normalizeSrcDir(configured ?? DEFAULT_DIST_DIR);
+}
+
+/** Map a `dist` target back to its source file (dev mode). */
+function distToSourceTarget(
+    target: string,
+    workspace: TsconfigWorkspace,
+    cwd: string,
+    srcDir: string,
+    distDir: string
+): string | undefined {
+    const absolute = path.resolve(workspace.dir, target);
+    const distAbs = path.resolve(workspace.dir, distDir);
+    if (!isInside(absolute, distAbs)) return undefined;
+    const relative = withoutOutputExtension(posix(path.relative(distAbs, absolute)));
+    const stem = path.resolve(workspace.dir, srcDir, relative);
+    const found = sourceCandidates(stem).find(file => fs.existsSync(file));
+    return found ? repoPath(cwd, found) : undefined;
+}
+
+/** Map a source target to its distributed file (when dev mode is off). */
+function sourceToDistTarget(
+    target: string,
+    workspace: TsconfigWorkspace,
+    cwd: string,
+    srcDir: string,
+    distDir: string
+): string | undefined {
+    const absolute = path.resolve(workspace.dir, target);
+    const srcAbs = path.resolve(workspace.dir, srcDir);
+    if (!isInside(absolute, srcAbs)) return undefined;
+    const relative = withoutOutputExtension(posix(path.relative(srcAbs, absolute))) || 'index';
+    return repoPath(cwd, path.resolve(workspace.dir, distDir, `${relative}.js`));
+}
+
+/** Whether an export target points at a non-source build output. */
+function isBuildTarget(target: string, distDir: string): boolean {
+    return (
+        isInside(path.resolve('/_', target), path.resolve('/_', distDir)) ||
+        /(^|\/)(build|out|lib|coverage)\//.test(posix(target)) ||
+        /\.d\.[cm]?ts$/.test(target)
+    );
+}
+
+/** Resolve one package export target according to `devMode`/`dist`. */
+function resolveExportTarget(
+    target: string,
+    workspace: TsconfigWorkspace,
+    settings: WorkspaceAliasSettings,
+    cwd: string,
+    srcDir: string,
+    distDir: string
+): string | undefined {
+    const devMode = settings.devMode !== false;
+    if (devMode) {
+        const source = distToSourceTarget(target, workspace, cwd, srcDir, distDir);
+        if (source) return source;
+        // A build output we cannot map back to source is not a usable dev alias.
+        return isBuildTarget(target, distDir)
+            ? undefined
+            : normalizeTarget(cwd, workspace.dir, target);
+    }
+    const distributed = sourceToDistTarget(target, workspace, cwd, srcDir, distDir);
+    if (distributed) return distributed;
+    return normalizeTarget(cwd, workspace.dir, target);
 }
 
 /** The source directory for a workspace (config override > rootDir/baseUrl > src). */
@@ -83,7 +225,7 @@ function exportTarget(value: unknown): string | undefined {
     }
     if (!value || typeof value !== 'object') return undefined;
     const record = value as Record<string, unknown>;
-    for (const key of ['types', 'import', 'default', 'require', 'node', 'browser']) {
+    for (const key of ['import', 'default', 'require', 'node', 'browser', 'types']) {
         const target = exportTarget(record[key]);
         if (target) return target;
     }
@@ -121,24 +263,19 @@ function normalizeTarget(cwd: string, workspaceDir: string, target: string): str
 
 function aliasFor(
     entries: Array<{ key: string; target: string }>,
-    packageName: string,
+    base: string,
     cwd: string,
-    workspaceDir: string
-) {
+    workspaceDir: string,
+    resolveTarget: (target: string) => string | undefined
+): Record<string, string[]> {
     const paths: Record<string, string[]> = {};
     for (const entry of entries) {
-        const key = entry.key ? `${packageName}/${entry.key}` : packageName;
-        paths[key] = [normalizeTarget(cwd, workspaceDir, entry.target)];
+        const target = resolveTarget(entry.target);
+        if (!target) continue;
+        const key = entry.key ? `${base}/${entry.key}` : base;
+        paths[key] = [target];
     }
     return paths;
-}
-
-/** Skip build artifacts in package exports/main/types; source scanning handles them. */
-function isSourceTarget(target: string): boolean {
-    const normalized = target.replace(/\\/g, '/');
-    if (/(^|\/)(dist|build|out|lib|coverage)\//.test(normalized)) return false;
-    if (/\.d\.[cm]?ts$/.test(normalized)) return false;
-    return true;
 }
 
 interface CompiledAliasRewrite {
@@ -193,69 +330,88 @@ function rewriteAliasPaths(
     return rewritten;
 }
 
-/** Resolve a package's root entry (source `types`/`main`, then `src/index.*`). */
+/** Map a discovered source file to its target (source in dev mode, dist otherwise). */
+function resolveSourceFileTarget(
+    absolute: string,
+    workspace: TsconfigWorkspace,
+    settings: WorkspaceAliasSettings,
+    cwd: string,
+    srcDir: string,
+    distDir: string
+): string {
+    if (settings.devMode !== false) return repoPath(cwd, absolute);
+    const relative = posix(path.relative(workspace.dir, absolute));
+    return sourceToDistTarget(relative, workspace, cwd, srcDir, distDir) ?? repoPath(cwd, absolute);
+}
+
+/** Resolve a package's root entry (types/main, then `src/index.*`). */
 function resolvePackageRootAlias(
     workspace: TsconfigWorkspace,
     pkg: PackageJson,
+    settings: WorkspaceAliasSettings,
+    cwd: string,
     srcDir: string,
-    cwd: string
+    distDir: string
 ): string | undefined {
     const types = (pkg as { types?: unknown }).types;
     const entry = typeof types === 'string' ? types : (pkg as { main?: unknown }).main;
-    if (typeof entry === 'string' && isSourceTarget(entry)) {
-        return normalizeTarget(cwd, workspace.dir, entry);
+    if (typeof entry === 'string') {
+        const resolved = resolveExportTarget(entry, workspace, settings, cwd, srcDir, distDir);
+        if (resolved) return resolved;
     }
     const srcAbs = path.resolve(workspace.dir, srcDir);
     const entryFile = SOURCE_EXTENSIONS.map(ext => path.join(srcAbs, `index.${ext}`)).find(file =>
         fs.existsSync(file)
     );
-    return entryFile ? repoPath(cwd, entryFile) : undefined;
+    return entryFile
+        ? resolveSourceFileTarget(entryFile, workspace, settings, cwd, srcDir, distDir)
+        : undefined;
 }
 
-/** Resolve the aliases a workspace contributes (package exports/main/types/scan). */
-export function resolveWorkspaceAliases(
+/** Aliases derived from `package.json` `exports`/`types`/`main`. */
+function collectExportAliases(
     workspace: TsconfigWorkspace,
-    cwd: string
+    base: string,
+    settings: WorkspaceAliasSettings,
+    cwd: string,
+    srcDir: string,
+    distDir: string
 ): Record<string, string[]> {
-    const packageName = workspace.packageName;
-    if (!packageName) return {};
     const pkg = workspace.packageJson ?? ({} as PackageJson);
-    const srcDir = resolveWorkspaceSrcDir(workspace);
-    const paths: Record<string, string[]> = {};
-
-    const exported = exportEntries((pkg as { exports?: unknown }).exports).filter(entry =>
-        isSourceTarget(entry.target)
+    const entries = exportEntries((pkg as { exports?: unknown }).exports);
+    const paths = aliasFor(entries, base, cwd, workspace.dir, target =>
+        resolveExportTarget(target, workspace, settings, cwd, srcDir, distDir)
     );
-    if (exported.length > 0) {
-        Object.assign(paths, aliasFor(exported, packageName, cwd, workspace.dir));
-        // `exports` may only expose non-source targets (eg. `./dist/index.js`)
-        // plus `./package.json`; still wire the package root from source.
-        if (!paths[packageName]) {
-            const root = resolvePackageRootAlias(workspace, pkg, srcDir, cwd);
-            if (root) paths[packageName] = [root];
-        }
-        // A package root without an explicit wildcard still benefits from one.
-        if (!paths[`${packageName}/*`] && srcDir) {
-            paths[`${packageName}/*`] = [repoPath(cwd, path.resolve(workspace.dir, srcDir, '*'))];
-        }
-        return paths;
+    if (!paths[base]) {
+        const root = resolvePackageRootAlias(workspace, pkg, settings, cwd, srcDir, distDir);
+        if (root) paths[base] = [root];
     }
-
-    const root = resolvePackageRootAlias(workspace, pkg, srcDir, cwd);
-    if (root) {
-        paths[packageName] = [root];
-        if (srcDir) {
-            paths[`${packageName}/*`] = [repoPath(cwd, path.resolve(workspace.dir, srcDir, '*'))];
-        }
-        return paths;
+    // A package root without an explicit wildcard still benefits from one.
+    if (!paths[`${base}/*`] && srcDir) {
+        const wildcardBase = settings.devMode === false ? distDir : srcDir;
+        paths[`${base}/*`] = [repoPath(cwd, path.resolve(workspace.dir, wildcardBase, '*'))];
     }
+    return paths;
+}
 
+/** Aliases derived from the workspace source tree (index files + wildcard). */
+function collectProjectStructureAliases(
+    workspace: TsconfigWorkspace,
+    base: string,
+    settings: WorkspaceAliasSettings,
+    cwd: string,
+    srcDir: string,
+    distDir: string
+): Record<string, string[]> {
+    const paths: Record<string, string[]> = {};
     const srcAbs = path.resolve(workspace.dir, srcDir);
     const entryFile = SOURCE_EXTENSIONS.map(ext => path.join(srcAbs, `index.${ext}`)).find(file =>
         fs.existsSync(file)
     );
     if (entryFile) {
-        paths[packageName] = [repoPath(cwd, entryFile)];
+        paths[base] = [
+            resolveSourceFileTarget(entryFile, workspace, settings, cwd, srcDir, distDir),
+        ];
     }
 
     // Index directories become explicit aliases; everything else is covered by
@@ -271,15 +427,99 @@ export function resolveWorkspaceAliases(
         const relative = posix(file);
         const directory = path.posix.dirname(relative);
         if (directory === '.') continue;
-        paths[`${packageName}/${directory}`] = [repoPath(cwd, path.join(srcAbs, relative))];
+        paths[`${base}/${directory}`] = [
+            resolveSourceFileTarget(
+                path.join(srcAbs, relative),
+                workspace,
+                settings,
+                cwd,
+                srcDir,
+                distDir
+            ),
+        ];
     }
 
-    if (srcDir === '.') {
-        paths[`${packageName}/*`] = [repoPath(cwd, path.resolve(workspace.dir, '*'))];
-    } else {
-        paths[`${packageName}/*`] = [repoPath(cwd, path.resolve(srcAbs, '*'))];
+    const wildcardBase = settings.devMode === false ? distDir : srcDir;
+    paths[`${base}/*`] = [repoPath(cwd, path.resolve(workspace.dir, wildcardBase, '*'))];
+    return paths;
+}
+
+/** `auto`: exports first, then the project structure when they yield nothing. */
+function collectAutoAliases(
+    workspace: TsconfigWorkspace,
+    base: string,
+    settings: WorkspaceAliasSettings,
+    cwd: string,
+    srcDir: string,
+    distDir: string
+): Record<string, string[]> {
+    const exported = collectExportAliases(workspace, base, settings, cwd, srcDir, distDir);
+    const keys = Object.keys(exported).filter(key => key !== `${base}/*`);
+    return keys.length > 0
+        ? exported
+        : collectProjectStructureAliases(workspace, base, settings, cwd, srcDir, distDir);
+}
+
+/** Resolve the aliases a workspace contributes according to `settings.modes`. */
+export function resolveWorkspaceAliases(
+    workspace: TsconfigWorkspace,
+    cwd: string,
+    settings: WorkspaceAliasSettings = {}
+): Record<string, string[]> {
+    const base = aliasBase(workspace, settings);
+    if (!base) return {};
+    const srcDir = resolveWorkspaceSrcDir(workspace);
+    const distDir = workspaceDistDir(workspace, settings);
+    const paths: Record<string, string[]> = {};
+    for (const mode of aliasModes(settings)) {
+        const generated =
+            mode === 'auto'
+                ? collectAutoAliases(workspace, base, settings, cwd, srcDir, distDir)
+                : mode === 'exports'
+                  ? collectExportAliases(workspace, base, settings, cwd, srcDir, distDir)
+                  : collectProjectStructureAliases(workspace, base, settings, cwd, srcDir, distDir);
+        for (const [key, target] of Object.entries(generated)) {
+            if (!(key in paths)) paths[key] = target;
+        }
     }
     return paths;
+}
+
+/**
+ * The baseline content for a missing workspaces tsconfig: the scaffold defaults
+ * (`composite: false`) plus an alias/reference for every workspace that the
+ * project graph can generate. Auto-wiring may refine it on the same run, but a
+ * missing file is restored even when `auto` is disabled.
+ */
+export function buildRootWorkspacesBaseline(
+    workspaces: TsconfigWorkspace[],
+    cwd: string,
+    baseDir: string = cwd
+): TsConfigJson {
+    const paths: Record<string, string[]> = {};
+    const references: Array<{ path: string }> = [];
+    const seen = new Set<string>();
+    for (const workspace of workspaces) {
+        if (!workspace.enabled || workspace.isRoot) continue;
+        if (workspace.packageName && workspace.options.aliases !== false) {
+            Object.assign(
+                paths,
+                resolveWorkspaceAliases(workspace, baseDir, { modes: ['project-structure'] })
+            );
+        }
+        if (workspace.options.refs === false || !fs.existsSync(workspace.defaultTsconfigPath)) {
+            continue;
+        }
+        const referencePath = repoPath(baseDir, workspace.targetTsconfigPath);
+        const canonical = normalizeReferencePath(referencePath);
+        if (seen.has(canonical)) continue;
+        seen.add(canonical);
+        references.push({ path: referencePath });
+    }
+    return {
+        compilerOptions: { composite: false, paths },
+        ...(references.length > 0 ? { references } : {}),
+    };
 }
 
 /** Build the auto paths/references and merge them into `existing`. */
@@ -288,6 +528,7 @@ export function buildAutoTsconfig(
     options: AutoTsconfigOptions
 ): AutoTsconfigResult {
     const config = structuredClone(options.existing ?? {}) as TsConfigJson;
+    const baseDir = options.baseDir ?? options.cwd;
     const compilerOptions = { ...config.compilerOptions };
     const paths: Record<string, string[]> = { ...compilerOptions.paths };
     let references = [...(config.references ?? [])];
@@ -296,7 +537,7 @@ export function buildAutoTsconfig(
     const managedReferences = new Set<string>();
     const workspaceByTsconfig = new Map(
         workspaces.map(workspace => [
-            repoPath(options.cwd, workspace.targetTsconfigPath),
+            normalizeReferencePath(repoPath(baseDir, workspace.targetTsconfigPath)),
             workspace,
         ])
     );
@@ -306,21 +547,19 @@ export function buildAutoTsconfig(
     // workspace must not keep a stale reference from a hand-written file. With
     // refs auto-wiring off, hand-written references are left untouched.
     references = references.filter(reference => {
-        const normalized = reference.path.replace(/\\/g, '/').replace(/^\.\//, './');
+        const normalized = normalizeReferencePath(reference.path);
         const workspace = workspaceByTsconfig.get(normalized);
         if (!workspace) return true;
         const switches = resolveAutoSwitches(workspace.options as Record<string, unknown>);
         if (!switches.refsAuto.enabled) return true;
         // Filter the reference path the auto run would emit, not the workspace
         // directory (so `include`/`exclude` see the generated result).
-        if (!matchesAutoFilter(normalized, switches.refsAuto)) return true;
+        const generated = repoPath(baseDir, workspace.targetTsconfigPath);
+        if (!matchesAutoFilter(generated, switches.refsAuto)) return true;
         // A workspace without a default tsconfig has no generated project to
         // reference (eg. a docs app or a test fixture with only a package.json).
         if (!fs.existsSync(workspace.defaultTsconfigPath)) return false;
-        const active =
-            workspace.enabled &&
-            workspace.options.refs !== false &&
-            workspace.options.composite === true;
+        const active = workspace.enabled && workspace.options.refs !== false;
         if (!active) return false;
         managedReferences.add(normalized);
         return true;
@@ -334,8 +573,20 @@ export function buildAutoTsconfig(
         const aliasesEnabled = workspace.options.aliases !== false && switches.aliasAuto.enabled;
         if (aliasesEnabled && workspace.packageName) {
             const rewrite = switches.aliasAuto.rewriteAlias ?? switches.auto.rewriteAlias;
+            const settings: WorkspaceAliasSettings = {
+                ...((switches.aliasAuto.modes ?? switches.auto.modes)
+                    ? { modes: switches.aliasAuto.modes ?? switches.auto.modes }
+                    : {}),
+                ...((switches.aliasAuto.prefix ?? switches.auto.prefix)
+                    ? { prefix: switches.aliasAuto.prefix ?? switches.auto.prefix }
+                    : {}),
+                devMode: switches.aliasAuto.devMode ?? switches.auto.devMode ?? true,
+                ...((switches.aliasAuto.dist ?? switches.auto.dist)
+                    ? { dist: switches.aliasAuto.dist ?? switches.auto.dist }
+                    : {}),
+            };
             const generated = rewriteAliasPaths(
-                resolveWorkspaceAliases(workspace, options.cwd),
+                resolveWorkspaceAliases(workspace, baseDir, settings),
                 rewrite
             );
             for (const [key, target] of Object.entries(generated)) {
@@ -351,22 +602,30 @@ export function buildAutoTsconfig(
         }
 
         const refsEnabled = workspace.options.refs !== false && switches.refsAuto.enabled;
-        const composite = workspace.options.composite === true;
         const reference = {
-            path: repoPath(options.cwd, workspace.targetTsconfigPath),
+            path: repoPath(baseDir, workspace.targetTsconfigPath),
         };
+        const canonical = normalizeReferencePath(reference.path);
         if (
             refsEnabled &&
-            composite &&
             !workspace.isRoot &&
             fs.existsSync(workspace.defaultTsconfigPath) &&
             matchesAutoFilter(reference.path, switches.refsAuto)
         ) {
-            const existing = references.find(item => item.path === reference.path);
-            if (!existing || previous.references.includes(reference.path)) {
-                references = references.filter(item => item.path !== reference.path);
-                references.push(existing ? { ...existing, ...reference } : reference);
-                managedReferences.add(reference.path);
+            const existing = references.find(
+                item => normalizeReferencePath(item.path) === canonical
+            );
+            const managedBefore = previous.references.some(
+                item => normalizeReferencePath(item) === canonical
+            );
+            if (!existing || managedBefore) {
+                references = references.filter(
+                    item => normalizeReferencePath(item.path) !== canonical
+                );
+                references.push(
+                    existing && managedBefore ? { ...existing, ...reference } : reference
+                );
+                managedReferences.add(canonical);
             }
         }
     }
@@ -376,12 +635,19 @@ export function buildAutoTsconfig(
         if (!managedPaths.has(key)) delete paths[key];
     }
     for (const reference of previous.references) {
-        if (!managedReferences.has(reference)) {
-            references = references.filter(item => item.path !== reference);
+        const canonical = normalizeReferencePath(reference);
+        if (!managedReferences.has(canonical)) {
+            references = references.filter(item => normalizeReferencePath(item.path) !== canonical);
         }
     }
 
-    if (Object.keys(paths).length > 0) compilerOptions.paths = paths;
+    // Match the resolver/`dbx tsconfig --json` view: the most specific
+    // (longest) key sorts first, so order-sensitive consumers see the same
+    // paths whether they read the file or the JSON output.
+    const sortedPaths = Object.fromEntries(
+        Object.entries(paths).sort(([a], [b]) => (a < b ? 1 : a > b ? -1 : 0))
+    );
+    if (Object.keys(sortedPaths).length > 0) compilerOptions.paths = sortedPaths;
     else delete compilerOptions.paths;
     const next: TsConfigJson = { ...config, compilerOptions };
     if (references.length > 0) next.references = references;

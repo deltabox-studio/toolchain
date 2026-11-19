@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { SyncScheduler } from '../src/sync-scheduler.js';
 
@@ -73,6 +73,18 @@ describe('SyncScheduler', () => {
         const run = vi.fn(async () => {});
         const scheduler = new SyncScheduler({ debounceMs: 100, run });
         await scheduler.runNow();
+        expect(run).toHaveBeenCalledTimes(1);
+        scheduler.dispose();
+    });
+
+    it('absorbs a pending debounce when runNow is called', async () => {
+        const run = vi.fn(async () => {});
+        const scheduler = new SyncScheduler({ debounceMs: 100, run });
+
+        scheduler.notify();
+        await scheduler.runNow();
+        await vi.advanceTimersByTimeAsync(1000);
+
         expect(run).toHaveBeenCalledTimes(1);
         scheduler.dispose();
     });

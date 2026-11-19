@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { MANIFEST_DIR, writeManifest } from '../src/manifest.js';
 import { resetProjects, resetToolchain } from '../src/reset.js';
@@ -12,6 +12,16 @@ function tmp(): string {
 }
 
 describe('resetToolchain', () => {
+    it('skips a manifest entry that is now a directory', () => {
+        const cwd = tmp();
+        fs.mkdirSync(path.join(cwd, 'a.txt'));
+        writeManifest(cwd, ['a.txt'], undefined, { 'a.txt': 'created' });
+        const result = resetToolchain({ cwd });
+        expect(result.skipped).toContain('a.txt');
+        expect(result.removed).not.toContain('a.txt');
+        expect(fs.statSync(path.join(cwd, 'a.txt')).isDirectory()).toBe(true);
+    });
+
     it('runs the restore hook before removing the manifest', () => {
         const cwd = tmp();
         fs.writeFileSync(path.join(cwd, 'a.txt'), 'a');

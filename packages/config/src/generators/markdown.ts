@@ -9,7 +9,7 @@ import type { Schema } from 'untyped';
 
 import { sanitizeText, titleCase } from '@deltabox/toolchain/shared';
 
-import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from '../collect.js';
+import { type CollectOptions, collectDefinitions, DEFAULT_ENV_PREFIX } from '../collect.js';
 import {
     isSchemaType,
     isZodSchema,
@@ -18,8 +18,10 @@ import {
     splitBaseSchema,
     toJsonSchemaSafe,
 } from '../schema.js';
-import type { ConfigEngineOptions, ConfigSchema } from '../types.js';
+import type { ConfigDef, ConfigEngineOptions, ConfigSchema } from '../types/index.js';
 import { type CliFlagOptions, cliFlagLabel } from './cli.js';
+import { envNameOf, isEnvVariable } from './env-file.js';
+import { flattenBaseJsonSchema } from './json.js';
 import { resolveGeneratedFile } from './output.js';
 
 export interface RenderMarkdownFrontmatter {
@@ -56,7 +58,7 @@ export interface RenderMarkdownOptions extends Pick<ConfigEngineOptions, 'baseGr
     /** Shorthand flags keyed by env var name (for the CLI scope). */
     shortFlags?: Record<string, string>;
     /** Custom env-name -> dotted-path derivation. */
-    envPathOf?: CollectVarsOptions['envPathOf'];
+    envPathOf?: CollectOptions['envPathOf'];
     /** Emit `- **Required**` lines (default true). */
     includeRequired?: boolean;
     /** Emit `- **Deprecated**` lines (default true). */
@@ -82,6 +84,28 @@ export interface GenerateMarkdownOptions extends RenderMarkdownOptions {
     title?: string;
     /** Index file name (defaults to `index.md`). */
     indexFilename?: string;
+}
+
+/** Options for a single generated markdown page. */
+export interface GenerateMarkdownFileOptions {
+    /** Page title (frontmatter and `#` heading). */
+    title: string;
+    /** Frontmatter outline levels (default `[2, 3]`). */
+    outline?: number[];
+    /** Page body, rendered below the title. */
+    body: string;
+}
+
+/** Options for the environment-variable reference page. */
+export interface GenerateEnvMarkdownOptions {
+    /** Page title (default `Environment variables`). */
+    title?: string;
+    /** Frontmatter outline levels (default `[2, 3]`). */
+    outline?: number[];
+    /** Intro markdown rendered below the title. */
+    intro?: string;
+    /** Env-var prefix (default `APP_`). */
+    envPrefix?: string;
 }
 
 interface EnvVarRow {
@@ -348,27 +372,17 @@ function formatDefault(value: unknown): string {
     return `\`${String(value)}\``;
 }
 
-function collectSchemaEnvVars(schema: Schema, scope: string, out: EnvVarRow[]): void {
-    for (const raw of Object.values((schema.properties ?? {}) as Record<string, Schema>)) {
-        const child = raw as unknown as SchemaNode;
-        if (child.type === 'object' && child.properties) {
-            collectSchemaEnvVars(raw, scope, out);
-            continue;
-        }
-        const envName = child.envName ?? child.env;
-        if (envName) {
-            const envDefault = child.envDefault ?? child.default;
-            out.push({
-                name: envName,
-                scope,
-                ...(child.description ? { description: child.description } : {}),
-                ...(envDefault !== undefined && !child.secret ? { default: envDefault } : {}),
-                ...(child.required === true ? { required: true } : {}),
-                ...(child.secret ? { secret: true } : {}),
-                ...(child.public ? { public: true } : {}),
-            });
-        }
-    }
+/** A table row for a collected definition (env name included for path-derived vars). */
+function envRowOf(def: ConfigDef, scope: string, envPrefix: string): EnvVarRow {
+    return {
+        name: envNameOf(def, envPrefix),
+        scope,
+        ...(def.description ? { description: def.description } : {}),
+        ...(def.default !== undefined && !def.secret ? { default: def.default } : {}),
+        ...(def.required ? { required: true } : {}),
+        ...(def.secret ? { secret: true } : {}),
+        ...(def.public ? { public: true } : {}),
+    };
 }
 
 /** Render the index file: explains the env convention + lists required/core. */
@@ -377,24 +391,27 @@ function renderConfigIndex(schema: ConfigSchema, options: RenderMarkdownOptions 
     const baseGroup = Array.isArray(options.baseGroup)
         ? String((options.baseGroup as unknown[])[0] ?? 'base')
         : String(options.baseGroup ?? 'base');
+    const envPrefix = options.envPrefix ?? DEFAULT_ENV_PREFIX;
     const labels = options.labels ?? {};
     const required: EnvVarRow[] = [];
     const core: EnvVarRow[] = [];
     const scopes = normalizeConfigSchema(schema);
 
     for (const [scopeName, scopeSchema] of Object.entries(scopes)) {
-        collectSchemaEnvVars(splitBaseSchema(scopeSchema, baseGroup).base, scopeName, core);
+        const { base } = splitBaseSchema(scopeSchema, baseGroup);
+        for (const def of collectDefinitions(base as unknown as ConfigSchema, {
+            envPrefix,
+            envPathOf: options.envPathOf,
+        })) {
+            if (isEnvVariable(def)) core.push(envRowOf(def, scopeName, envPrefix));
+        }
     }
-    for (const def of collectVars(schema, options.envPrefix ?? DEFAULT_ENV_PREFIX, {
+    for (const def of collectDefinitions(schema, {
+        envPrefix,
         envPathOf: options.envPathOf,
     })) {
-        if (def.required && def.name) {
-            required.push({
-                name: def.name,
-                scope: def.scope,
-                ...(def.description ? { description: def.description } : {}),
-                ...(def.default !== undefined && !def.secret ? { default: def.default } : {}),
-            });
+        if (def.required && isEnvVariable(def)) {
+            required.push(envRowOf(def, def.scope, envPrefix));
         }
     }
 
@@ -443,6 +460,64 @@ ${coreNote}
 
 ${table(core)}
 ${references}`;
+}
+
+/** Render a single markdown page with frontmatter and a title. */
+export function generateMarkdownFile(options: GenerateMarkdownFileOptions): string {
+    const outline = options.outline ?? [2, 3];
+    const parts = [
+        ...frontmatterLines({}, options.title, outline),
+        `# ${options.title}`,
+        '',
+        options.body.trim(),
+    ];
+    return `${parts.join('\n').trimEnd()}\n`;
+}
+
+/** Escape a table cell so Vue/Markdown do not parse its content as markup. */
+function escapeTableCell(value: string): string {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\|/g, '\\|')
+        .replace(/\n/g, ' ');
+}
+
+/** Render the environment-variable reference page from collected config defs. */
+export function generateEnvMarkdown(
+    vars: readonly ConfigDef[],
+    options: GenerateEnvMarkdownOptions = {}
+): string {
+    const title = options.title ?? 'Environment variables';
+    const outline = options.outline ?? [2, 3];
+    const intro =
+        options.intro ??
+        [
+            'The toolchain config is file/CLI backed; a schema leaf opts into an',
+            'environment variable with `.meta({ envName: "..." })` (see the',
+            '[Config Generator](/guide/config-generator/describe-a-scope)).',
+        ].join('\n');
+    const envPrefix = options.envPrefix ?? DEFAULT_ENV_PREFIX;
+    const rows = vars
+        .filter(isEnvVariable)
+        .map(variable => ({ ...variable, name: envNameOf(variable, envPrefix) }));
+    const parts = [...frontmatterLines({}, title, outline), `# ${title}`, '', intro, ''];
+    if (rows.length === 0) {
+        parts.push('No environment-backed toolchain settings are declared.');
+    } else {
+        parts.push(
+            '| Variable | Scope | Default | Description |',
+            '| -------- | ----- | ------- | ----------- |',
+            ...rows.map(
+                variable =>
+                    `| \`${variable.name}\` | ${variable.scope} | ${
+                        variable.default === undefined ? '—' : formatDefault(variable.default)
+                    } | ${escapeTableCell(variable.description ?? '')} |`
+            )
+        );
+    }
+    return `${parts.join('\n').trimEnd()}\n`;
 }
 
 /**
@@ -795,6 +870,9 @@ function renderConfigSectionsMarkdown(
     options: RenderConfigFileOptions & RenderMarkdownOptions = {}
 ): string {
     const title = options.title ?? 'Configuration';
+    const baseGroup = Array.isArray(options.baseGroup)
+        ? String((options.baseGroup as unknown[])[0] ?? 'base')
+        : String(options.baseGroup ?? 'base');
     const parts: string[] = [
         ...frontmatterLines(options, title, options.outline ?? [2, 3, 4]),
         `# ${title}`,
@@ -805,7 +883,14 @@ function renderConfigSectionsMarkdown(
         const json = schema as unknown as JsonSchemaJson;
         const defs = json.$defs ?? {};
         // A Zod JSON Schema roots named objects at a `$ref` into `$defs`.
-        const node = resolveJsonRef(json, defs);
+        const resolved = resolveJsonRef(json, defs);
+        // Flatten the base group the same way the per-scope renderer and the
+        // JSON Schema generator do, so the combined reference has one shape.
+        const node = flattenBaseJsonSchema(
+            resolved as unknown as Record<string, unknown>,
+            baseGroup,
+            defs as unknown as Record<string, Record<string, unknown>>
+        ) as unknown as JsonSchemaJson;
         const meta = metaOf(node as unknown as Schema);
         parts.push(`## \`${key}\``, '');
         if (meta?.description) parts.push(meta.description, '');

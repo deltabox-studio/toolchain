@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import * as vscode from 'vscode';
 
+import { ActionsTreeProvider, runActionById, showActionPalette } from './actions-view.js';
 import {
     captureCli,
     chooseDbxSource,
@@ -22,7 +23,10 @@ import { createScaffoldCommands } from './commands/scaffold.js';
 import { createSyncCommands } from './commands/sync.js';
 import { createTsconfigCommand } from './commands/tsconfig.js';
 import { createWorkflowCommands } from './commands/workflows.js';
+import { ManagedFileDecorationProvider } from './decorations.js';
+import { type EnabledConfigValue, type EnabledScope, resolveEnabledState } from './enabled.js';
 import { type HomeAction, HomeViewProvider } from './home-view.js';
+import { deepestProjectDir } from './managed-files.js';
 import {
     discoverProjectGroups,
     discoverProjects,
@@ -32,6 +36,7 @@ import {
     setTsconfigFileNames,
     TrackedFilesTreeProvider,
 } from './projects.js';
+import { pickPaged, vscodePromptHost } from './prompt.js';
 import {
     loadProviders,
     type ProviderCommandNode,
@@ -40,7 +45,7 @@ import {
 } from './providers.js';
 import { RegistryTreeProvider, type RegistryItemNode } from './registries.js';
 import { type SchedulerState, SyncScheduler } from './sync-scheduler.js';
-import { type Template, TemplateTreeProvider } from './templates.js';
+import { loadTemplates, type Template, TemplateTreeProvider } from './templates.js';
 import { defaultWatchInputs, parseWatchInputs, type WatchInputs } from './watch-inputs.js';
 import { WatcherManager } from './watcher-manager.js';
 
@@ -80,8 +85,52 @@ async function resolveWatchInputs(root: string): Promise<WatchInputs> {
     return (result.code === 0 && parseWatchInputs(result.stdout)) || defaultWatchInputs();
 }
 
+/** The project's resolved `toolchain.enabled` value (from the CLI), when known. */
+let enabledConfig: EnabledConfigValue | undefined;
+
+/** Resolve the effective auto-sync state (config wins over `.vscode/settings.json`). */
+function currentEnabledState() {
+    const inspected = config().inspect<boolean>('enabled');
+    return resolveEnabledState(enabledConfig, {
+        ...(inspected?.globalValue !== undefined ? { globalValue: inspected.globalValue } : {}),
+        ...(inspected?.workspaceValue !== undefined
+            ? { workspaceValue: inspected.workspaceValue }
+            : {}),
+        ...(inspected?.workspaceFolderValue !== undefined
+            ? { workspaceFolderValue: inspected.workspaceFolderValue }
+            : {}),
+        ...(inspected?.defaultValue !== undefined ? { defaultValue: inspected.defaultValue } : {}),
+    });
+}
+
 function getEnabled(): boolean {
-    return config().get<boolean>('enabled', true);
+    return currentEnabledState().enabled;
+}
+
+/**
+ * Ask the project's `dbx` for the resolved `toolchain.enabled` value. The CLI
+ * applies the project config plus the global CLI switch, so this is the
+ * authoritative source; the VS Code setting is only the fallback.
+ */
+async function refreshEnabledConfig(): Promise<void> {
+    const root = workspaceRoots()[0];
+    if (!root) {
+        enabledConfig = undefined;
+        return;
+    }
+    try {
+        const result = await captureCli(root, ['enabled', '--json']);
+        if (result.code !== 0) return;
+        const parsed = JSON.parse(result.stdout) as {
+            enabled?: unknown;
+            scope?: unknown;
+        };
+        if (typeof parsed.enabled !== 'boolean') return;
+        const scope = parsed.scope === 'global' ? 'global' : 'workspace';
+        enabledConfig = { enabled: { scope, disabled: !parsed.enabled } };
+    } catch {
+        // No config / CLI failure: fall back to the VS Code setting.
+    }
 }
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -96,6 +145,12 @@ export function activate(context: vscode.ExtensionContext): void {
 
     // Detect the workspace's own `dbx` and ask once which one to run (see cli.ts).
     void initDbxSource(context);
+    // Resolve `toolchain.enabled` from the project config (it wins over settings).
+    void refreshEnabledConfig().then(() => {
+        enabled = getEnabled();
+        void rebuildWatchers();
+        setStatus('idle');
+    });
 
     const tree = new ProjectTreeProvider();
     const treeView = vscode.window.createTreeView(PROJECTS_VIEW_ID, {
@@ -110,9 +165,19 @@ export function activate(context: vscode.ExtensionContext): void {
         showCollapseAll: true,
     });
 
+    const decorations = new ManagedFileDecorationProvider({
+        enabled: () => config().get<boolean>('decorateManagedFiles', true),
+    });
+
     const providers = new ProviderTreeProvider(() => workspaceRoots()[0]);
     const providersView = vscode.window.createTreeView(PROVIDERS_VIEW_ID, {
         treeDataProvider: providers,
+        showCollapseAll: true,
+    });
+
+    const actions = new ActionsTreeProvider();
+    const actionsView = vscode.window.createTreeView('deltabox.actions', {
+        treeDataProvider: actions,
         showCollapseAll: true,
     });
 
@@ -143,12 +208,17 @@ export function activate(context: vscode.ExtensionContext): void {
         const listed = providers.list();
         setContext(
             'deltabox.canSync',
-            projects.some(project => project.hasConfig)
+            projects.some(project => project.hasConfig || project.plugin)
         );
         setContext('deltabox.hasProviders', listed.length > 0);
         setContext(
             'deltabox.hasVite',
-            listed.some(provider => provider.id === 'vite-plus' && provider.commands.length > 0)
+            listed.some(
+                provider =>
+                    provider.id === 'vite-plus' &&
+                    provider.commands.length > 0 &&
+                    provider.available !== false
+            )
         );
     };
 
@@ -184,6 +254,51 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage(`deltabox: restored ${files.length} file(s).`);
     };
 
+    // Commands whose failure is expected to be silent (metadata refreshes) or is
+    // already reported by the caller (`--check`, or the command handler itself).
+    const SILENT_FAILURE_COMMANDS = new Set(['projects', 'watch', 'registry']);
+    const HANDLED_FAILURE_COMMANDS = new Set(['project:config', 'migrate', 'workflow']);
+    const notifiedFailures = new Set<string>();
+
+    /** The stable key for a command (eg. `sync`, `project:config`). */
+    const commandKey = (args: string[]): string => args[0] ?? 'dbx';
+
+    /** Forget a command's previous failure once it succeeds. */
+    const clearFailure = (cwd: string, args: string[]): void => {
+        const prefix = `${cwd}:${commandKey(args)}:`;
+        for (const key of notifiedFailures) {
+            if (key.startsWith(prefix)) notifiedFailures.delete(key);
+        }
+    };
+
+    /**
+     * Show an important CLI failure as a VS Code notification. Failures are
+     * deduplicated per project/command/error so an auto-sync loop does not spam
+     * the user; the output channel still has every run.
+     */
+    const notifyFailure = (cwd: string, args: string[], detail: string): void => {
+        if (
+            args.includes('--check') ||
+            SILENT_FAILURE_COMMANDS.has(commandKey(args)) ||
+            HANDLED_FAILURE_COMMANDS.has(commandKey(args))
+        )
+            return;
+        const firstLine =
+            detail
+                .split(/\r?\n/)
+                .map(line => line.trim())
+                .find(line => line.length > 0) ?? 'command failed';
+        const key = `${cwd}:${commandKey(args)}:${firstLine}`;
+        if (notifiedFailures.has(key)) return;
+        notifiedFailures.add(key);
+        const label = path.basename(cwd) || cwd;
+        void vscode.window
+            .showErrorMessage(`deltabox: ${commandKey(args)} failed in ${label}.`, 'Show output')
+            .then(choice => {
+                if (choice === 'Show output') output.show();
+            });
+    };
+
     /** Sync through the CLI's JSON output so removed files can be restored. */
     const runSyncCli = async (cwd: string, args: string[]): Promise<number> => {
         output.appendLine(`\n> ${cliInvocation(cwd)} ${args.join(' ')} --json  (${cwd})`);
@@ -191,6 +306,9 @@ export function activate(context: vscode.ExtensionContext): void {
         output.append(result.stdout || result.stderr);
         let removed: RemovedFile[] = [];
         if (result.code === 0) {
+            clearFailure(cwd, args);
+            // The manifests changed: redraw the managed-file decorations.
+            decorations.refresh();
             try {
                 const parsed = JSON.parse(result.stdout) as {
                     removedFiles?: RemovedFile[];
@@ -202,23 +320,61 @@ export function activate(context: vscode.ExtensionContext): void {
             } catch {
                 // non-JSON output; nothing to notify
             }
+        } else {
+            notifyFailure(cwd, args, result.stderr || result.stdout);
         }
         await notifyRemovedFiles(cwd, removed);
         return result.code;
     };
 
+    /** Add `--configless` to sync/watch when the workspace opted in. */
+    const withConfigless = (args: string[]): string[] => {
+        if (args[0] !== 'sync' && args[0] !== 'watch') return args;
+        if (!config().get<boolean>('manageConfigless', false)) return args;
+        if (args.includes('--configless')) return args;
+        return [...args, '--configless'];
+    };
+
+    /** Add the managed-file formatting settings to a `sync` invocation. */
+    const withFormatting = (args: string[]): string[] => {
+        if (args[0] !== 'sync') return args;
+        const cfg = config();
+        const out = [...args];
+        if (
+            cfg.get<boolean>('formatManagedFiles', true) === false &&
+            !out.includes('--no-format')
+        ) {
+            out.push('--no-format');
+        }
+        if (
+            cfg.get<boolean>('formatManagedFilesFix', true) === false &&
+            !out.includes('--no-format-fix')
+        ) {
+            out.push('--no-format-fix');
+        }
+        const command = cfg.get<string>('formatManagedFilesCommand', '').trim();
+        if (command && !out.includes('--format-command')) out.push('--format-command', command);
+        const exclude = cfg.get<string[]>('formatManagedFilesExclude', []);
+        if (exclude.length > 0 && !out.includes('--format-exclude')) {
+            out.push('--format-exclude', ...exclude);
+        }
+        return out;
+    };
+
     /** Run `dbx <args>` in `cwd`, streaming output to the channel. */
     const runCli = (cwd: string, args: string[]): Promise<number> => {
-        if (args[0] === 'sync' && !args.includes('--check') && !args.includes('--json')) {
-            return runSyncCli(cwd, args);
+        const cliArgs = withFormatting(withConfigless(args));
+        if (cliArgs[0] === 'sync' && !cliArgs.includes('--check') && !cliArgs.includes('--json')) {
+            return runSyncCli(cwd, cliArgs);
         }
-        output.appendLine(`\n> ${cliInvocation(cwd)} ${args.join(' ')}  (${cwd})`);
+        output.appendLine(`\n> ${cliInvocation(cwd)} ${cliArgs.join(' ')}  (${cwd})`);
         return new Promise<number>(resolve => {
             let proc: ChildProcess;
             try {
-                proc = spawnCli(cwd, args);
+                proc = spawnCli(cwd, cliArgs);
             } catch (error) {
                 output.appendLine(`dbx: ${String(error)}`);
+                notifyFailure(cwd, cliArgs, String(error));
                 resolve(1);
                 return;
             }
@@ -234,6 +390,7 @@ export function activate(context: vscode.ExtensionContext): void {
             proc.on('error', error => {
                 output.appendLine(`dbx: ${String(error)}`);
                 child = undefined;
+                notifyFailure(cwd, cliArgs, `${captured}\n${String(error)}`);
                 resolve(1);
             });
             proc.on('close', (code, signal) => {
@@ -249,7 +406,10 @@ export function activate(context: vscode.ExtensionContext): void {
                             if (choice === 'Show output') output.show();
                         });
                 }
-                resolve(exitCodeOf(code, signal));
+                const exitCode = exitCodeOf(code, signal);
+                if (exitCode === 0) clearFailure(cwd, cliArgs);
+                else notifyFailure(cwd, cliArgs, captured);
+                resolve(exitCode);
             });
         });
     };
@@ -271,6 +431,36 @@ export function activate(context: vscode.ExtensionContext): void {
         return results;
     };
 
+    /** Run a CLI command in the first workspace root and report failures. */
+    const runRootCli = async (args: string[]): Promise<number> => {
+        const root = workspaceRoots()[0] ?? process.cwd();
+        const code = await runCli(root, args);
+        if (code !== 0) {
+            vscode.window.showWarningMessage(
+                `deltabox: \`dbx ${args.join(' ')}\` failed. See the output channel.`
+            );
+            output.show();
+        }
+        return code;
+    };
+
+    /** Prompt for a project name/output directory and run a `project:init*` command. */
+    const initProject = async (command: string): Promise<void> => {
+        const name = await vscode.window.showInputBox({
+            prompt: `Name for the new ${command === 'project:init:monorepo' ? 'monorepo' : 'project'}`,
+            placeHolder: 'my-app',
+        });
+        if (!name) return;
+        const base = workspaceRoots()[0] ?? process.cwd();
+        const out = await vscode.window.showInputBox({
+            prompt: 'Output directory',
+            value: path.join(base, name),
+        });
+        if (!out) return;
+        await runRootCli([command, '--name', name, '--out', out]);
+        void actions.refresh();
+    };
+
     const setStatus = (state: SchedulerState): void => {
         if (!enabled) {
             status.text = '$(circle-slash) dbx';
@@ -283,6 +473,29 @@ export function activate(context: vscode.ExtensionContext): void {
 
     async function rebuildWatchers(): Promise<void> {
         await watcherManager?.rebuild();
+    }
+
+    /**
+     * Toggle auto-sync for one scope. Global updates the VS Code global setting
+     * and the CLI global store; workspace updates `.vscode/settings.json`.
+     */
+    async function setEnabledForScope(scope: EnabledScope, value: boolean): Promise<void> {
+        const target =
+            scope === 'global'
+                ? vscode.ConfigurationTarget.Global
+                : vscode.ConfigurationTarget.Workspace;
+        await config().update('enabled', value, target);
+        const root = workspaceRoots()[0];
+        if (root) {
+            await runCli(root, [value ? 'enable' : 'disable', `--${scope}`]);
+        }
+        // Re-resolve from the CLI/config so the project config keeps precedence.
+        await refreshEnabledConfig();
+        enabled = getEnabled();
+        void rebuildWatchers();
+        setStatus('idle');
+        home.refresh();
+        output.appendLine(`dbx: auto-sync ${value ? 'enabled' : 'disabled'} (${scope} scope).`);
     }
     // Roots with a pending input change. A user glob has no owning root and
     // means "every root"; otherwise only the root whose input changed is synced,
@@ -306,9 +519,7 @@ export function activate(context: vscode.ExtensionContext): void {
             if (roots.length === 0) return;
             const command = config().get<string>('command', 'sync');
             for (const root of roots) await runCli(root, [command]);
-            // The sync may have created/renamed generated tsconfig files: refresh
-            // the concrete watcher set (non-recursive, project-graph based).
-            void rebuildWatchers();
+            await afterSync();
         },
         onStateChange: setStatus,
     });
@@ -329,14 +540,58 @@ export function activate(context: vscode.ExtensionContext): void {
         log: message => output.appendLine(message),
     });
 
-    const refreshViews = (): void => {
+    /** Repaint the views whose data a sync can change (files, projects, home). */
+    const refreshSyncViews = (): void => {
         tree.refresh();
         files.refresh();
+        decorations.refresh();
         home.refresh();
         updateContextKeys();
+    };
+
+    const refreshViews = (): void => {
+        refreshSyncViews();
         void providers.refresh();
         void templates.refresh();
         void registries.refresh();
+    };
+
+    /**
+     * Shared post-sync hook: a sync may have created/renamed generated tsconfig
+     * files (and rewritten manifests), so rebuild the concrete watcher set and
+     * repaint the affected views. Both auto-sync and the manual sync commands go
+     * through this, so neither can drift from the other. Providers, templates and
+     * registries are intentionally not reloaded here: they do not change on a
+     * sync, and reloading templates would hit the network on every auto-sync.
+     */
+    async function afterSync(): Promise<void> {
+        refreshSyncViews();
+        try {
+            await rebuildWatchers();
+        } catch (error) {
+            // A bad watch glob must not turn a completed sync into an error.
+            output.appendLine(`dbx: failed to rebuild watchers: ${String(error)}`);
+        }
+    }
+
+    // The last project revealed from the active editor. Resetting it on a tree
+    // refresh makes the next editor switch reveal the (rebuilt) project node
+    // without re-revealing the same node on every keystroke/focus change.
+    let revealedProject: string | undefined;
+
+    /** Reveal the deepest project that owns the active editor's file. */
+    const revealActiveProject = async (editor?: vscode.TextEditor): Promise<void> => {
+        if (!editor || editor.document.uri.scheme !== 'file') return;
+        const dir = deepestProjectDir(editor.document.uri.fsPath, tree.projects());
+        if (!dir || dir === revealedProject) return;
+        const node = tree.findProject(dir);
+        if (!node) return;
+        revealedProject = dir;
+        try {
+            await treeView.reveal(node, { select: true, focus: false, expand: true });
+        } catch {
+            // The view can be disposed or the tree refreshed mid-reveal.
+        }
     };
 
     /**
@@ -381,6 +636,7 @@ export function activate(context: vscode.ExtensionContext): void {
         workspaceRoots,
         refreshGraph,
         refreshViews,
+        afterSync,
         runRoots,
         runProjects,
         selectedProjects: (): Project[] =>
@@ -406,6 +662,62 @@ export function activate(context: vscode.ExtensionContext): void {
         terminal.sendText(`${cliInvocation(root)} ${command}`);
     };
 
+    /** Install the dbx MCP server + skill into an AI harness/editor. */
+    const installMcp = async (cwd?: string): Promise<void> => {
+        const root = cwd ?? workspaceRoots()[0];
+        if (!root) {
+            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
+            return;
+        }
+        const listed = await captureCli(root, ['mcp:list', '--json']);
+        let providers: { id: string; name: string; description: string }[] = [];
+        try {
+            const parsed = JSON.parse(listed.stdout) as unknown;
+            if (Array.isArray(parsed)) providers = parsed as typeof providers;
+        } catch {
+            providers = [];
+        }
+        if (providers.length === 0) {
+            vscode.window.showWarningMessage('deltabox: the MCP providers could not be loaded.');
+            return;
+        }
+        const provider = await vscode.window.showQuickPick(
+            providers.map(entry => ({
+                label: entry.name,
+                description: entry.id,
+                detail: entry.description,
+                id: entry.id,
+            })),
+            {
+                placeHolder: 'Install the dbx MCP server for which client?',
+                matchOnDescription: true,
+            }
+        );
+        if (!provider) return;
+        const scope = await vscode.window.showQuickPick(
+            [
+                {
+                    label: 'Project',
+                    description: 'Write the config into this workspace.',
+                    value: 'project',
+                },
+                {
+                    label: 'Global',
+                    description: 'Write the config into your user profile.',
+                    value: 'global',
+                },
+            ],
+            { placeHolder: 'Install scope?' }
+        );
+        if (!scope) return;
+        const args = ['mcp:install', '--provider', provider.id, '--scope', scope.value];
+        if ((await runCli(root, args)) === 0) {
+            vscode.window.showInformationMessage(
+                `deltabox: MCP + skill installed for ${provider.label} (${scope.value}).`
+            );
+        }
+    };
+
     /** Pick a Vite+ command from the provider and run it in a terminal. */
     const runVite = async (cwd?: string): Promise<void> => {
         const root = cwd ?? workspaceRoots()[0];
@@ -415,8 +727,10 @@ export function activate(context: vscode.ExtensionContext): void {
         }
         const providers = await loadProviders(root);
         const vite = providers.find(provider => provider.id === 'vite-plus');
-        if (!vite || vite.commands.length === 0) {
-            vscode.window.showWarningMessage('deltabox: the Vite+ provider is unavailable.');
+        if (!vite || vite.commands.length === 0 || vite.available === false) {
+            vscode.window.showWarningMessage(
+                'deltabox: the Vite+ provider is unavailable. Install `vite-plus` in this project to enable it.'
+            );
             return;
         }
         const choice = await vscode.window.showQuickPick(
@@ -462,9 +776,41 @@ export function activate(context: vscode.ExtensionContext): void {
     /** Show a template's descriptor (`dbx template:info --json`) in the output. */
     const showTemplateInfo = async (node?: Template): Promise<void> => {
         const root = workspaceRoots()[0];
-        if (!node || !root) return;
-        const result = await captureCli(root, ['template:info', node.id, '--json', '--cwd', root]);
-        output.appendLine(`\n> dbx template:info ${node.id}`);
+        if (!root) {
+            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
+            return;
+        }
+        let template = node;
+        if (!template) {
+            const listed = await loadTemplates(root);
+            if (listed.length === 0) {
+                vscode.window.showWarningMessage('deltabox: no templates found.');
+                return;
+            }
+            template = await pickPaged(
+                vscodePromptHost(),
+                'Which template should be inspected?',
+                listed.map(candidate => ({
+                    label: candidate.name || candidate.id,
+                    description: candidate.id,
+                    detail: [
+                        candidate.kind,
+                        candidate.online ? 'online' : 'offline',
+                        candidate.type,
+                    ]
+                        .filter(Boolean)
+                        .join(' \u00b7 '),
+                    value: candidate,
+                }))
+            );
+            if (!template) return;
+        }
+        const args = ['template:info', template.id, '--json', '--cwd', root];
+        // Online-only templates are not part of the offline registry, so the
+        // lookup must opt in to remote sources or it reports them as unknown.
+        if (template.online) args.push('--online');
+        const result = await captureCli(root, args);
+        output.appendLine(`\n> dbx template:info ${template.id}`);
         output.append(result.stdout || result.stderr);
         output.show();
     };
@@ -481,12 +827,18 @@ export function activate(context: vscode.ExtensionContext): void {
                 .filter((value): value is string => Boolean(value))
                 .sort();
             const listed = providers.list();
+            const enabledState = currentEnabledState();
             return {
-                enabled,
-                canSync: projects.some(project => project.hasConfig),
+                enabled: enabledState.enabled,
+                globalEnabled: enabledState.globalEnabled,
+                workspaceEnabled: enabledState.workspaceEnabled,
+                canSync: projects.some(project => project.hasConfig || project.plugin),
                 hasProviders: listed.length > 0,
                 hasVite: listed.some(
-                    provider => provider.id === 'vite-plus' && provider.commands.length > 0
+                    provider =>
+                        provider.id === 'vite-plus' &&
+                        provider.commands.length > 0 &&
+                        provider.available !== false
                 ),
                 projects: projects.map(project => ({
                     label: project.label,
@@ -494,6 +846,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     relativePath: project.relativePath,
                     type: project.type,
                     hasConfig: project.hasConfig,
+                    plugin: project.plugin,
                     dependencies: project.dependencies,
                     ...(project.syncedAt ? { syncedAt: project.syncedAt } : {}),
                     trackedFiles: project.trackedFiles,
@@ -519,6 +872,12 @@ export function activate(context: vscode.ExtensionContext): void {
                 case 'syncTsconfig':
                     await vscode.commands.executeCommand(`${SECTION}.syncTsconfig`);
                     break;
+                case 'fmt':
+                    await vscode.commands.executeCommand(`${SECTION}.fmt`);
+                    break;
+                case 'lint':
+                    await vscode.commands.executeCommand(`${SECTION}.lint`);
+                    break;
                 case 'scaffold':
                     await vscode.commands.executeCommand(`${SECTION}.scaffold`);
                     break;
@@ -534,18 +893,32 @@ export function activate(context: vscode.ExtensionContext): void {
                 case 'migrate':
                     await migrateTooling();
                     break;
+                case 'installMcp':
+                    await installMcp();
+                    break;
                 case 'resetToolchain':
                     await resetToolchain();
                     break;
                 case 'toggle':
                     await vscode.commands.executeCommand(`${SECTION}.toggle`);
                     break;
+                case 'actions':
+                    await showActionPalette();
+                    break;
+                case 'toggleGlobal':
+                    await setEnabledForScope('global', !currentEnabledState().globalEnabled);
+                    break;
+                case 'toggleWorkspace':
+                    await setEnabledForScope('workspace', !currentEnabledState().workspaceEnabled);
+                    break;
                 case 'syncProject': {
                     const project = discoverProjects().find(
                         candidate => candidate.dir === action.dir
                     );
-                    if (project) await runProjects([project], ['sync']);
-                    refreshViews();
+                    if (project) {
+                        await runProjects([project], ['sync']);
+                        await afterSync();
+                    }
                     break;
                 }
                 case 'checkProject': {
@@ -595,6 +968,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     break;
                 case 'refreshFiles':
                     await files.refresh();
+                    decorations.refresh();
                     break;
                 case 'addProvider':
                     await addProvider();
@@ -648,14 +1022,25 @@ export function activate(context: vscode.ExtensionContext): void {
         treeView,
         filesView,
         providersView,
+        actionsView,
         templatesView,
         registriesView,
+        decorations,
+        vscode.window.registerFileDecorationProvider(decorations),
+        tree.onDidChangeTreeData(() => {
+            revealedProject = undefined;
+        }),
+        vscode.window.onDidChangeActiveTextEditor(editor => {
+            void revealActiveProject(editor);
+        }),
         vscode.commands.registerCommand('deltabox.toolchain.sync', syncCommands.syncActive),
         vscode.commands.registerCommand('deltabox.toolchain.syncAll', syncCommands.syncAll),
         vscode.commands.registerCommand(
             'deltabox.toolchain.syncTsconfig',
             syncCommands.syncTsconfig
         ),
+        vscode.commands.registerCommand('deltabox.toolchain.fmt', () => runRoots(['fmt'])),
+        vscode.commands.registerCommand('deltabox.toolchain.lint', () => runRoots(['lint'])),
         vscode.commands.registerCommand(
             'deltabox.toolchain.syncSelected',
             syncCommands.syncSelected
@@ -669,7 +1054,10 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('deltabox.toolchain.selectVersion', () => selectVersion()),
         vscode.commands.registerCommand('deltabox.toolchain.scaffold', scaffold),
         vscode.commands.registerCommand('deltabox.toolchain.refresh', refreshGraph),
-        vscode.commands.registerCommand('deltabox.toolchain.refreshFiles', () => files.refresh()),
+        vscode.commands.registerCommand('deltabox.toolchain.refreshFiles', () => {
+            files.refresh();
+            decorations.refresh();
+        }),
         vscode.commands.registerCommand(
             'deltabox.toolchain.checkProject',
             async (node?: Project) => {
@@ -681,6 +1069,9 @@ export function activate(context: vscode.ExtensionContext): void {
             generateCommands.generateConfigs
         ),
         vscode.commands.registerCommand('deltabox.toolchain.migrate', () => migrateTooling()),
+        vscode.commands.registerCommand('deltabox.toolchain.installMcp', (cwd?: string) =>
+            installMcp(cwd)
+        ),
         vscode.commands.registerCommand(
             'deltabox.toolchain.generateConfig',
             async (node?: Project) => {
@@ -698,6 +1089,78 @@ export function activate(context: vscode.ExtensionContext): void {
             runVite(node?.dir)
         ),
         vscode.commands.registerCommand('deltabox.toolchain.createVite', () => createViteProject()),
+        vscode.commands.registerCommand('deltabox.toolchain.actions', () => showActionPalette()),
+        vscode.commands.registerCommand('deltabox.toolchain.actions.run', (id: string) =>
+            runActionById(id)
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.cleanup', () =>
+            runRootCli(['cleanup'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.cleanupTurbo', () =>
+            runRootCli(['cleanup:turbo'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.changelog', () =>
+            runRootCli(['changelog'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.changelogDryRun', () =>
+            runRootCli(['changelog', '--dry-run'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.changelogFormat', () =>
+            runRootCli(['changelog', '--format-only'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.changelogReleaseNotes', async () => {
+            const version = await vscode.window.showInputBox({
+                prompt: 'Released version (for example 1.2.3)',
+                placeHolder: '1.2.3',
+            });
+            if (!version) return;
+            const code = await runRootCli(['changelog', '--release-notes', version]);
+            if (code === 0) output.show();
+        }),
+        vscode.commands.registerCommand('deltabox.toolchain.mcpList', () =>
+            runRootCli(['mcp:list'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.mcpServe', () =>
+            runRootCli(['mcp:serve'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.migrateList', () =>
+            runRootCli(['migrate:list'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.projectConfig', () =>
+            runRootCli(['project:config'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.projects', () =>
+            runRootCli(['projects'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.providersList', () =>
+            runRootCli(['providers'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.watch', () => runRootCli(['watch'])),
+        vscode.commands.registerCommand('deltabox.toolchain.enable', () => runRootCli(['enable'])),
+        vscode.commands.registerCommand('deltabox.toolchain.disable', () =>
+            runRootCli(['disable'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.state', () =>
+            runRootCli(['enabled', '--json'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.templates.list', () =>
+            runRootCli(['template:list'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.templates.registry', () =>
+            runRootCli(['template:registry'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.templates.source', () =>
+            runRootCli(['source'])
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.projectInit', () =>
+            initProject('project:init')
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.projectInitWorkspace', () =>
+            initProject('project:init:workspace')
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.projectInitMonorepo', () =>
+            initProject('project:init:monorepo')
+        ),
         vscode.commands.registerCommand('deltabox.toolchain.templateAdd', () => addTemplate()),
         vscode.commands.registerCommand('deltabox.toolchain.templateRemove', () =>
             removeTemplate()
@@ -774,12 +1237,13 @@ export function activate(context: vscode.ExtensionContext): void {
             if (node) goToProject(node.dir);
         }),
         vscode.commands.registerCommand('deltabox.toolchain.toggle', async () => {
-            enabled = !enabled;
-            await config().update('enabled', enabled, vscode.ConfigurationTarget.Workspace);
+            await setEnabledForScope('workspace', !currentEnabledState().workspaceEnabled);
+        }),
+        vscode.workspace.onDidChangeWorkspaceFolders(() => {
+            // New roots need watchers (and removed roots must drop theirs), and
+            // every view derives its contents from the discovered projects.
+            refreshViews();
             void rebuildWatchers();
-            setStatus('idle');
-            home.refresh();
-            output.appendLine(`dbx: auto-sync ${enabled ? 'enabled' : 'disabled'}.`);
         }),
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('deltabox.registrySearchPaths')) {
@@ -792,10 +1256,13 @@ export function activate(context: vscode.ExtensionContext): void {
                 });
             }
             if (!e.affectsConfiguration(SECTION)) return;
-            enabled = getEnabled();
-            void rebuildWatchers();
-            setStatus('idle');
-            home.refresh();
+            decorations.refresh();
+            void refreshEnabledConfig().then(() => {
+                enabled = getEnabled();
+                void rebuildWatchers();
+                setStatus('idle');
+                home.refresh();
+            });
         }),
         new vscode.Disposable(() => {
             child?.kill();
@@ -819,6 +1286,7 @@ export function activate(context: vscode.ExtensionContext): void {
     void rebuildWatchers();
     setStatus('idle');
     updateContextKeys();
+    void revealActiveProject(vscode.window.activeTextEditor);
     void providers.refresh();
     void syncGlobalTemplatePaths(true).then(() => templates.refresh());
     void syncGlobalProviderPaths(true).then(() => providers.refresh());

@@ -1,8 +1,8 @@
 {
     "name": "toolchain-vscode",
     "displayName": "deltabox toolchain",
-    "description": "All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.",
-    "version": "2.6.1",
+    "description": "VS Code extension for deltabox toolchain and Vite/Vite+ with rich extras: project synchronization, a config generator, tsconfig management, MCP server, CI/changelog automation, providers, catalogs and managed files.",
+    "version": "3.0.0-beta.4",
     "private": true,
     "type": "module",
     "publisher": "deltabox",
@@ -104,6 +104,12 @@
                 "icon": "$(new-file)"
             },
             {
+                "command": "deltabox.toolchain.installMcp",
+                "title": "Install MCP server + skill…",
+                "category": "deltabox",
+                "icon": "$(plug)"
+            },
+            {
                 "command": "deltabox.toolchain.migrate",
                 "title": "Migrate tooling…",
                 "category": "deltabox",
@@ -142,6 +148,27 @@
             {
                 "command": "deltabox.toolchain.toggle",
                 "title": "Toggle auto-sync",
+                "category": "deltabox"
+            },
+            {
+                "command": "deltabox.toolchain.actions",
+                "title": "Show all actions",
+                "category": "deltabox",
+                "icon": "$(list-unordered)"
+            },
+            {
+                "command": "deltabox.toolchain.changelog",
+                "title": "Generate changelog",
+                "category": "deltabox"
+            },
+            {
+                "command": "deltabox.toolchain.cleanup",
+                "title": "Clean build artifacts",
+                "category": "deltabox"
+            },
+            {
+                "command": "deltabox.toolchain.mcpList",
+                "title": "List MCP installations",
                 "category": "deltabox"
             },
             {
@@ -309,6 +336,11 @@
                     "id": "deltabox.projects",
                     "name": "Projects",
                     "contextualTitle": "deltabox projects"
+                },
+                {
+                    "id": "deltabox.actions",
+                    "name": "Actions",
+                    "contextualTitle": "deltabox actions"
                 },
                 {
                     "id": "deltabox.providers",
@@ -575,13 +607,25 @@
                 "contents": "No managed files yet. Run [Sync active project](command:deltabox.toolchain.sync)."
             }
         ],
+        "colors": [
+            {
+                "id": "deltabox.managedFileForeground",
+                "description": "Foreground color (and `dbx` badge) for files managed by the deltabox toolchain.",
+                "defaults": {
+                    "dark": "#1763D6CC",
+                    "light": "#174D9FCC",
+                    "highContrast": "#3794FFFF",
+                    "highContrastLight": "#174D9FCC"
+                }
+            }
+        ],
         "configuration": {
             "title": "deltabox toolchain",
             "properties": {
                 "deltabox.toolchain.enabled": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Auto sync/generate on watched file changes."
+                    "description": "Auto sync/generate on watched file changes. A project's `toolchain.enabled` config takes precedence over this setting."
                 },
                 "deltabox.toolchain.debounce": {
                     "type": "number",
@@ -592,6 +636,44 @@
                     "type": "string",
                     "default": "sync",
                     "description": "The dbx command to run on change."
+                },
+                "deltabox.toolchain.manageConfigless": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Manage projects without their own dbx.config.* by inheriting the nearest ancestor config. Disabled by default so configless projects are left untouched."
+                },
+                "deltabox.toolchain.containerizeTemplates": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Generate Docker artifacts when scaffolding a new project (also prompted per create). Disabled by default."
+                },
+                "deltabox.toolchain.decorateManagedFiles": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show a `dbx` badge and the `deltabox.managedFileForeground` color on files recorded in the project manifests."
+                },
+                "deltabox.toolchain.formatManagedFiles": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Format the managed files written by `dbx sync` (adds `--no-format` when disabled)."
+                },
+                "deltabox.toolchain.formatManagedFilesFix": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Rewrite managed files when formatting instead of running the formatter in check mode (adds `--no-format-fix` when disabled)."
+                },
+                "deltabox.toolchain.formatManagedFilesCommand": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Override the managed-file formatter command (`{files}` expands to the files). Empty uses the formatter the CLI detects."
+                },
+                "deltabox.toolchain.formatManagedFilesExclude": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [],
+                    "description": "Managed files to leave unformatted (globs; passed to `dbx sync --format-exclude`)."
                 },
                 "deltabox.toolchain.enableFormatImportGroupDefaults": {
                     "type": "boolean",
@@ -631,21 +713,19 @@
         }
     },
     "scripts": {
-        "build:extension": "tsdown --config ../../tsdown.bin.config.ts --config-loader unrun && tsdown --no-clean --config-loader unrun",
+        "build:extension": "vp pack",
         "package:vsix": "yarn build:extension && npx --yes @vscode/vsce package --no-dependencies --out deltabox-toolchain.vsix",
         "test:integration": "yarn build:extension && tsc -p tsconfig.test.json && vscode-test"
     },
     "devDependencies": {
-        "@deltabox/toolchain-tsdown": "workspace:*",
+        "@deltabox/toolchain-pack": "workspace:*",
         "@types/mocha": "^10.0.10",
         "@types/node": "catalog:",
         "@types/vscode": "^1.85.0",
         "@vscode/test-cli": "^0.0.15",
         "@vscode/test-electron": "^3.1.0",
-        "tsdown": "catalog:",
         "typescript": "catalog:",
-        "vite": "catalog:",
-        "vitest": "catalog:"
+        "vite-plus": "catalog:"
     },
     "author": "Victor Sango <victor@deltabox.studio>",
     "license": "MPL-2.0",

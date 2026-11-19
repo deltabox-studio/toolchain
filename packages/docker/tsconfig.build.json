@@ -1,0 +1,16 @@
+{
+    "extends": "./tsconfig.default.json",
+    "include": [
+        "src",
+        "src/dbx-env.d.ts",
+        "apps/*/src",
+        "packages/*/src",
+        "scripts",
+        "sdk/*/src"
+    ],
+    "exclude": [
+        "**/dist",
+        "**/node_modules",
+        "docs"
+    ]
+}

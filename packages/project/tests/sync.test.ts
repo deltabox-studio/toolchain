@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { loadToolchainConfig } from '@deltabox/toolchain/core';
 import type { SyncContext, ToolchainConfig } from '@deltabox/toolchain/shared';
@@ -122,7 +122,7 @@ describe('projectSyncTask', () => {
             description: 'The web package',
         });
 
-        const loaded = await loadToolchainConfig(ws);
+        const loaded = await loadToolchainConfig(ws, { manageConfigless: true });
         const files = await projectSyncTask().run({
             ...ctx(ws, loaded.config),
             projectType: loaded.projectType,
@@ -140,6 +140,38 @@ describe('projectSyncTask', () => {
             url: 'git+https://github.com/acme/app.git',
             directory: 'packages/web',
         });
+    });
+
+    it('does not scope a monorepo root package name', async () => {
+        const cwd = tmp();
+        fs.mkdirSync(path.join(cwd, '.git'));
+        writeJson(path.join(cwd, 'package.json'), { name: 'acme' });
+
+        const files = await projectSyncTask().run({
+            ...ctx(cwd, {
+                project: { name: 'acme', scope: '@acme', type: 'monorepo-root' },
+            }),
+            projectType: 'monorepo-root',
+        });
+
+        const pkg = JSON.parse(files!.find(f => f.path === 'package.json')!.content);
+        expect(pkg.name).toBe('acme');
+    });
+
+    it('keeps an already-scoped monorepo root name', async () => {
+        const cwd = tmp();
+        fs.mkdirSync(path.join(cwd, '.git'));
+        writeJson(path.join(cwd, 'package.json'), { name: '@acme/toolchain' });
+
+        const files = await projectSyncTask().run({
+            ...ctx(cwd, {
+                project: { name: 'toolchain', scope: '@acme', type: 'monorepo-root' },
+            }),
+            projectType: 'monorepo-root',
+        });
+
+        const pkg = JSON.parse(files!.find(f => f.path === 'package.json')!.content);
+        expect(pkg.name).toBe('@acme/toolchain');
     });
 
     it('returns nothing when no field is defined', async () => {

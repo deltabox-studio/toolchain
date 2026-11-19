@@ -1,7 +1,31 @@
-import { logger, resolveChangelogConfig, type ToolchainCommand } from '@deltabox/toolchain/shared';
+import {
+    logger,
+    regenerateEnabled,
+    resolveChangelogConfig,
+    resolveCiConfig,
+    resolveToolchainEnabled,
+    type ToolchainCommand,
+    type ToolchainConfig,
+    withSpinner,
+} from '@deltabox/toolchain/shared';
 
 import { runWorkflows, workflowTargets } from '../run-workflows.js';
-import { runChangelog } from '../run.js';
+import { runChangelogAsync } from '../run.js';
+
+/**
+ * Whether `dbx changelog` should write. The manual command is configured by
+ * `toolchain.changelog`, with `ci.changelog` as the CI-side layer; either
+ * section enables it, and either can opt out with `regenerate: false`.
+ */
+export function changelogRegenerateEnabled(config?: ToolchainConfig): boolean {
+    if (regenerateEnabled(config?.changelog)) return true;
+    const ciChangelog = resolveCiConfig(config)?.changelog;
+    // A vendor workflow string still configures the CI-side changelog.
+    if (typeof ciChangelog === 'string') return true;
+    return regenerateEnabled(
+        ciChangelog as { enabled?: boolean; regenerate?: boolean } | undefined
+    );
+}
 
 /** Build the changelog commands (`changelog`, `workflow`). */
 export function changelogCommands(): ToolchainCommand[] {
@@ -101,11 +125,31 @@ export function changelogCommands(): ToolchainCommand[] {
                 },
                 { flags: '--format-only', description: 'Only regroup existing changelogs.' },
                 {
+                    flags: '--release',
+                    description: 'Release mode: wrap the entry as `**Release notes**`.',
+                },
+                {
+                    flags: '--intro <text>',
+                    description: 'Inline intro text for the new changelog entry.',
+                },
+                {
+                    flags: '--intro-file <file>',
+                    description: 'Read the new entry intro text from a file.',
+                },
+                {
+                    flags: '--outro <text>',
+                    description: 'Inline outro text for the new changelog entry.',
+                },
+                {
+                    flags: '--outro-file <file>',
+                    description: 'Read the new entry outro text from a file.',
+                },
+                {
                     flags: '--no-package-changes-section',
                     description: 'Skip the package-changes footer.',
                 },
             ],
-            run: (opts, context) => {
+            run: async (opts, context) => {
                 const argv: string[] = [];
                 if (opts.range) argv.push('--range', String(opts.range));
                 if (opts.dryRun) argv.push('--dry-run');
@@ -118,10 +162,27 @@ export function changelogCommands(): ToolchainCommand[] {
                     argv.push('--processing-method', String(opts.processingMethod));
                 }
                 if (opts.formatOnly) argv.push('--format-only');
+                if (opts.release) argv.push('--release');
+                if (opts.intro) argv.push('--intro', String(opts.intro));
+                if (opts.introFile) argv.push('--intro-file', String(opts.introFile));
+                if (opts.outro) argv.push('--outro', String(opts.outro));
+                if (opts.outroFile) argv.push('--outro-file', String(opts.outroFile));
                 if (opts.packageChangesSection === false) {
                     argv.push('--no-package-changes-section');
                 }
-                runChangelog(argv, resolveChangelogConfig(context.config));
+                await withSpinner(
+                    async () => {
+                        await runChangelogAsync(argv, resolveChangelogConfig(context.config), {
+                            enabled: resolveToolchainEnabled(context.config).enabled,
+                            regenerate: changelogRegenerateEnabled(context.config),
+                            hooks: context.config.hooks,
+                        });
+                    },
+                    {
+                        start: 'Generating the changelog...',
+                        success: 'Generated the changelog.',
+                    }
+                );
             },
         },
     ];

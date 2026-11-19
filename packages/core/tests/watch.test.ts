@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import type { SyncTask } from '@deltabox/toolchain/shared';
 
@@ -41,6 +41,19 @@ describe('resolveWatchInputFiles', () => {
             userGlobs: ['dbx.config.*', '../repo/**/*', 'C:\\repo\\**\\*', '/abs/**/*'],
         });
         expect(result.globs).toEqual(['dbx.config.*']);
+    });
+
+    it('expands glob inputs declared by tasks', async () => {
+        const cwd = tmp();
+        fs.mkdirSync(path.join(cwd, 'packages', 'a'), { recursive: true });
+        fs.writeFileSync(path.join(cwd, 'packages', 'a', 'x.json'), '{}');
+        const task: SyncTask = {
+            name: 'x',
+            watch: ['packages/**/x.json', 'src/**/*.ts'],
+            run: () => [],
+        };
+        const result = await resolveWatchInputFiles({ cwd, config: {}, tasks: [task] });
+        expect(result.globs).toContain('packages/a/x.json');
     });
 
     it('only reports paths inside the project root', async () => {

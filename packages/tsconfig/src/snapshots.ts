@@ -21,16 +21,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 
-import { warningMessage } from '@deltabox/toolchain/shared';
+import { readJsonFile, warningMessage } from '@deltabox/toolchain/shared';
 
-import {
-    isAppliedOverride,
-    type OverridesState,
-    overrideLeaves,
-    revertOverride,
-    type TsconfigOverrideKind,
-} from './overrides.js';
+import { isAppliedOverride, overrideLeaves, revertOverride } from './overrides.js';
 import { parseTsconfig } from './resolve.js';
+import type { OverridesState, TsconfigOverrideKind } from './types/index.js';
 
 /** The nested snapshot tree stored in the manifest. */
 export type SnapshotTree = Record<string, unknown>;
@@ -147,12 +142,9 @@ export function restoreTsconfigOverrides(
     const { cwd, kind, dryRun = false, warn = () => {} } = options;
     const result: RestoreTsconfigOverridesResult = { restored: [], missing: [], kinds: [] };
     const manifestFile = path.join(cwd, TSCONFIG_MANIFEST_PATH);
-    let manifest: JsonObject;
-    try {
-        manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf-8')) as JsonObject;
-    } catch {
-        return result;
-    }
+    if (!fs.existsSync(manifestFile)) return result;
+    const manifest = readJsonFile<JsonObject>(manifestFile);
+    if (!manifest) return result;
     const state = (isObject(manifest.tsconfigOverrides) ? manifest.tsconfigOverrides : {}) as
         | OverridesState
         | JsonObject;

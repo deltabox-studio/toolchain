@@ -3,13 +3,101 @@ import path from 'node:path';
 
 import { cancel, isCancel, multiselect } from '@clack/prompts';
 
-import { loadToolchainConfig, runSync, selectProjects } from '@deltabox/toolchain/core';
-import { logger, type ToolchainCommand } from '@deltabox/toolchain/shared';
+import {
+    ensureToolingDependencies,
+    loadToolchainConfig,
+    runSync,
+    selectProjects,
+} from '@deltabox/toolchain/core';
+import {
+    logger,
+    parseToolVersions,
+    sectionEnabled,
+    type ToolchainCommand,
+    type ToolingSelection,
+    withSpinner,
+} from '@deltabox/toolchain/shared';
 
 import { diffFiles, hasPending } from '../check.js';
 import { listMigrations, migrations } from '../registry.js';
-import type { MigrationResult, MigrateTarget, ToolchainMigration } from '../types.js';
-import { viteConfigHasFmtLint } from '../vite.js';
+import type { MigrationResult, MigrateTarget, ToolchainMigration } from '../types/index.js';
+import { findDbxConfig, viteConfigHasFmtLint } from '../vite.js';
+
+/** Whether the project (or an ancestor) declares Vite+; then fmt/lint belong in vite.config. */
+function usesVitePlus(dir: string): boolean {
+    let current = path.resolve(dir);
+    for (;;) {
+        try {
+            const raw = fs
+                .readFileSync(path.join(current, 'package.json'), 'utf8')
+                .replace(/^\uFEFF/, '');
+            const pkg = JSON.parse(raw) as {
+                dependencies?: Record<string, string>;
+                devDependencies?: Record<string, string>;
+                peerDependencies?: Record<string, string>;
+                optionalDependencies?: Record<string, string>;
+            };
+            const fields = [
+                pkg.dependencies,
+                pkg.devDependencies,
+                pkg.peerDependencies,
+                pkg.optionalDependencies,
+            ];
+            if (fields.some(field => field && 'vite-plus' in field)) return true;
+        } catch {
+            // no package.json here; keep walking
+        }
+        const parent = path.dirname(current);
+        if (parent === current) return false;
+        current = parent;
+    }
+}
+
+/**
+ * Whether a project's effective (inherited) config already owns `fmt`/`lint`,
+ * so a source's intermediate file is obsolete. Uses the resolved config rather
+ * than regex-matching the local file text, so an inherited section, `fmt: false`
+ * or a folded `toolchain.vite` is judged correctly.
+ *
+ * When the config cannot be imported (eg. its `@deltabox/toolchain` import is
+ * not installed yet), fall back to the local file text so `--check` still sees
+ * a config the migration itself just generated.
+ */
+async function ownsFmtLint(dir: string): Promise<{ fmt: boolean; lint: boolean }> {
+    const vite = viteConfigHasFmtLint(dir);
+    const loaded = await loadToolchainConfig(dir, { tolerant: true, skipHooks: true });
+    if (loaded.error) return localOwnsFmtLint(dir, vite);
+    const config = loaded.config;
+    const viteSection = config.vite;
+    const ownVite =
+        viteSection && typeof viteSection === 'object'
+            ? (viteSection as { fmt?: boolean | object; lint?: boolean | object })
+            : undefined;
+    return {
+        fmt: sectionEnabled(config.fmt) || sectionEnabled(ownVite?.fmt) || Boolean(vite?.fmt),
+        lint: sectionEnabled(config.lint) || sectionEnabled(ownVite?.lint) || Boolean(vite?.lint),
+    };
+}
+
+/** A raw-text fallback used only when the resolved config cannot be imported. */
+function localOwnsFmtLint(
+    dir: string,
+    vite: { fmt?: boolean; lint?: boolean } | undefined
+): { fmt: boolean; lint: boolean } {
+    let fmt = Boolean(vite?.fmt);
+    let lint = Boolean(vite?.lint);
+    const dbx = findDbxConfig(dir);
+    if (dbx) {
+        try {
+            const text = fs.readFileSync(dbx, 'utf-8').replace(/^\uFEFF/, '');
+            fmt ||= /\bfmt\s*:\s*(?!false\b)/.test(text);
+            lint ||= /\blint\s*:\s*(?!false\b)/.test(text);
+        } catch {
+            // An unreadable config owns nothing.
+        }
+    }
+    return { fmt, lint };
+}
 
 /** Whether we may prompt (an interactive terminal, not `--json`). */
 function canPrompt(opts: Record<string, unknown>): boolean {
@@ -76,6 +164,12 @@ export function migrateCommands(): ToolchainCommand[] {
                 {
                     flags: '--ignore-changelog',
                     description: 'Skip the changelog task in the post-migration sync.',
+                },
+                {
+                    flags: '--tool-version <name@range>',
+                    description:
+                        'Override a provisioned formatter/linter dependency version (repeatable).',
+                    multiple: true,
                 },
                 { flags: '--json', description: 'Print the result as JSON.' },
             ],
@@ -177,25 +271,34 @@ export function migrateCommands(): ToolchainCommand[] {
                     // `toolchain.fmt`/`toolchain.lint`. An explicit `--target`
                     // always wins.
                     const viteSections = explicitTarget ? undefined : viteConfigHasFmtLint(dir);
+                    const vitePlus = usesVitePlus(dir);
                     const routeToVite =
                         !explicitTarget &&
-                        autoFold('vite') &&
                         target === 'files' &&
-                        Boolean(viteSections && (viteSections.fmt || viteSections.lint));
+                        (vitePlus ||
+                            (autoFold('vite') &&
+                                Boolean(viteSections && (viteSections.fmt || viteSections.lint))));
                     const dirTarget: MigrateTarget = routeToVite ? 'vite' : target;
 
                     const run = async (migration: ToolchainMigration): Promise<void> => {
                         results.push({
                             dir,
-                            result: await migration.run({
-                                cwd: dir,
-                                write,
-                                online,
-                                target: dirTarget,
-                                ignoreViteConfigFile: Boolean(opts.ignoreViteConfigFile),
-                                ignoreManagedFiles: Boolean(opts.ignoreManagedFiles),
-                                ignoreChangelog: Boolean(opts.ignoreChangelog),
-                            }),
+                            result: await withSpinner(
+                                () =>
+                                    migration.run({
+                                        cwd: dir,
+                                        write,
+                                        online,
+                                        target: dirTarget,
+                                        ignoreViteConfigFile: Boolean(opts.ignoreViteConfigFile),
+                                        ignoreManagedFiles: Boolean(opts.ignoreManagedFiles),
+                                        ignoreChangelog: Boolean(opts.ignoreChangelog),
+                                    }),
+                                {
+                                    start: `Migrating ${migration.id}...`,
+                                    success: `Migrated ${migration.id}.`,
+                                }
+                            ),
                         });
                     };
 
@@ -219,9 +322,10 @@ export function migrateCommands(): ToolchainCommand[] {
                         : undefined;
                     if (oxc && oxc.detect(dir)) await run(oxc);
 
-                    const vite = autoFold('vite')
-                        ? migrations().find(migration => migration.id === 'vite-to-toolchain')
-                        : undefined;
+                    const vite =
+                        autoFold('vite') && (!vitePlus || fromAll || selectedFrom.includes('vite'))
+                            ? migrations().find(migration => migration.id === 'vite-to-toolchain')
+                            : undefined;
                     if (vite && vite.detect(dir)) await run(vite);
                 }
 
@@ -255,7 +359,23 @@ export function migrateCommands(): ToolchainCommand[] {
                 ];
 
                 if (check) {
-                    const diffs = results.flatMap(({ result }) => diffFiles(result.files ?? []));
+                    const diffs = (
+                        await Promise.all(
+                            results.map(async ({ dir, result }) => {
+                                // A source's intermediate `.oxfmtrc.json` /
+                                // `.oxlintrc.json` is folded into the final config
+                                // by `--write`; checking for it would never pass.
+                                const owns = await ownsFmtLint(dir);
+                                const files = (result.files ?? []).filter(file => {
+                                    const base = path.basename(file.path);
+                                    if (base === '.oxfmtrc.json') return !owns.fmt;
+                                    if (base === '.oxlintrc.json') return !owns.lint;
+                                    return true;
+                                });
+                                return diffFiles(files);
+                            })
+                        )
+                    ).flat();
                     const pending = diffs.filter(diff => diff.status !== 'same');
                     const removed = results
                         .flatMap(({ result }) => result.removed ?? [])
@@ -276,7 +396,7 @@ export function migrateCommands(): ToolchainCommand[] {
                         for (const file of removed)
                             logger.info(`D  ${path.relative(root, file) || file}`);
                         logger.info(
-                            `${pending.length + removed.length} file(s) out of date — run \`migrate --write\` to apply.`
+                            `${pending.length + removed.length} file(s) out of date - run \`migrate --write\` to apply.`
                         );
                     } else {
                         logger.info('up to date.');
@@ -284,6 +404,69 @@ export function migrateCommands(): ToolchainCommand[] {
                     if (hasPending(diffs) || removed.length > 0) process.exitCode = 1;
                     return;
                 }
+
+                // Migrations only write Oxc configs, so the consumer ends up
+                // using Oxc for whichever kinds were migrated. Add those deps to
+                // the root package.json when every project shares the same tool
+                // set, otherwise to each migrated project (respecting scope).
+                const selectionFor = (dir: string): ToolingSelection => {
+                    const migrated = results
+                        .filter(entry => entry.dir === dir)
+                        .map(entry => entry.result);
+                    return {
+                        ...(migrated.some(entry => entry.oxfmt !== undefined)
+                            ? { fmt: 'oxc' as const }
+                            : {}),
+                        ...(migrated.some(entry => entry.oxlint !== undefined)
+                            ? { lint: 'oxc' as const }
+                            : {}),
+                    };
+                };
+                const provision = (dryRun: boolean): void => {
+                    const entries = changedDirs
+                        .map(dir => ({ dir, selection: selectionFor(dir) }))
+                        .filter(entry => entry.selection.fmt || entry.selection.lint);
+                    if (entries.length === 0) return;
+                    const signature = (selection: ToolingSelection): string =>
+                        `${selection.fmt ?? ''}/${selection.lint ?? ''}`;
+                    const shared =
+                        fs.existsSync(path.join(root, 'package.json')) &&
+                        new Set(entries.map(entry => signature(entry.selection))).size === 1;
+                    const groups = shared
+                        ? [
+                              {
+                                  cwd: root,
+                                  selection: entries[0]!.selection,
+                                  dirs: entries.map(entry => entry.dir),
+                              },
+                          ]
+                        : entries.map(entry => ({
+                              cwd: entry.dir,
+                              selection: entry.selection,
+                              dirs: [entry.dir],
+                          }));
+                    const versions = parseToolVersions(opts.toolVersion as string[] | undefined);
+                    for (const group of groups) {
+                        const result = ensureToolingDependencies({
+                            cwd: group.cwd,
+                            root,
+                            scope: shared ? 'root' : 'project',
+                            selection: group.selection,
+                            versions,
+                            dryRun,
+                        });
+                        if (!result.changed) continue;
+                        const added = Object.entries(result.added)
+                            .map(([name, version]) => `${name}@${version}`)
+                            .join(', ');
+                        const message = `${dryRun ? 'Would add' : 'Added'} devDependencies: ${added} (${result.scope} package.json).`;
+                        for (const { dir, result: migration } of results) {
+                            if (!group.dirs.includes(dir)) continue;
+                            migration.notes = [...(migration.notes ?? []), message];
+                        }
+                    }
+                };
+                provision(!write);
 
                 // `--write` also regenerates the toolchain-managed files (the
                 // post-migration sync), so a migrated project is immediately

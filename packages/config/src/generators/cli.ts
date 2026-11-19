@@ -5,12 +5,14 @@
  */
 
 import fs from 'node:fs';
+import path from 'node:path';
 import { type ParseArgsOptionsConfig, parseArgs } from 'node:util';
 
 import { formatCliFlag } from '@deltabox/toolchain/shared';
 
-import { type CollectVarsOptions, collectVars, DEFAULT_ENV_PREFIX } from '../collect.js';
-import type { ConfigSchema } from '../types.js';
+import { type CollectOptions, collectDefinitions, DEFAULT_ENV_PREFIX } from '../collect.js';
+import type { ConfigSchema } from '../types/index.js';
+import { isEnvVariable } from './env-file.js';
 
 /** Flag-shaping options shared by every CLI helper. */
 export interface CliFlagOptions {
@@ -19,7 +21,7 @@ export interface CliFlagOptions {
     /** Shorthand flags keyed by env var name (eg. `{ APP_TOKEN: 't' }`). */
     shortFlags?: Record<string, string>;
     /** Custom env-name -> dotted-path derivation. */
-    envPathOf?: CollectVarsOptions['envPathOf'];
+    envPathOf?: CollectOptions['envPathOf'];
 }
 
 /** A generated CLI option definition. */
@@ -77,9 +79,10 @@ export function generateCliOptions(
 ): CliOptionDef[] {
     const scope = options.scope ?? 'cli';
     const defs: CliOptionDef[] = [];
-    for (const def of collectVars(schema, options.envPrefix, {
+    for (const def of collectDefinitions(schema, {
+        envPrefix: options.envPrefix,
         envPathOf: options.envPathOf,
-    }).filter(v => v.scope === scope && (v.name || v.cliFlag))) {
+    }).filter(v => v.scope === scope && (v.name || v.cliFlag) && isEnvVariable(v))) {
         const short = def.meta?.cliFlagShort
             ? `-${def.meta.cliFlagShort.replace(/^-/, '')}`
             : cliShortOf(def.name ?? '', options);
@@ -96,6 +99,7 @@ export function generateCliOptions(
     }
 
     if (typeof options.output === 'string') {
+        fs.mkdirSync(path.dirname(options.output), { recursive: true });
         fs.writeFileSync(options.output, `${JSON.stringify(defs, null, 4)}\n`, 'utf-8');
     }
 

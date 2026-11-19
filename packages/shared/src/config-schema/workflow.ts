@@ -1,12 +1,13 @@
 import type { JsonObject } from 'type-fest';
 import { z } from 'zod';
 
+import { dependabotConfigSchema } from './dependabot.js';
 import { externalConfigSchema } from './external.js';
 import type { AzurePipelines } from './generated/azure-pipelines.js';
 import type { GitHubWorkflow } from './generated/github-workflow.js';
 import type { GitLabCi } from './generated/gitlab-ci.js';
 import { configJsonValueSchema } from './json.js';
-import { withEnabled } from './meta.js';
+import { section, withEnabled } from './meta.js';
 
 const jsonObjectSchema = (description: string) =>
     externalConfigSchema<JsonObject>(description, 'JsonObject');
@@ -14,15 +15,18 @@ const jsonObjectSchema = (description: string) =>
 /** The full workflow shapes generated from the vendored vendor schemas. */
 const githubWorkflowSchema = externalConfigSchema<GitHubWorkflow>(
     'A complete GitHub Actions workflow.',
-    'GitHubWorkflow'
+    'GitHubWorkflow',
+    'https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions'
 );
 const gitlabWorkflowSchema = externalConfigSchema<GitLabCi>(
     'A complete GitLab CI pipeline.',
-    'GitLabCi'
+    'GitLabCi',
+    'https://docs.gitlab.com/ee/ci/yaml/'
 );
 const azureWorkflowSchema = externalConfigSchema<AzurePipelines>(
     'A complete Azure Pipelines pipeline.',
-    'AzurePipelines'
+    'AzurePipelines',
+    'https://learn.microsoft.com/en-us/azure/devops/pipelines/yaml-schema/'
 );
 
 /** A GitHub Actions step (the subset the workflow builder understands). */
@@ -178,6 +182,16 @@ export const workflowTokensSchema = z
             .optional(),
         mainBranch: z.string().describe('Main branch (`{{mainBranch}}`).').optional(),
         devBranch: z.string().describe('Dev branch (`{{devBranch}}`).').optional(),
+        vitePlus: z
+            .boolean()
+            .describe(
+                'Use `voidzero-dev/setup-vp` for this workflow (default: detected from the project).'
+            )
+            .optional(),
+        setupVpVersion: z
+            .string()
+            .describe('Exact `voidzero-dev/setup-vp` version or commit SHA to pin.')
+            .optional(),
     })
     .catchall(z.union([z.string(), z.number(), z.boolean()]))
     .describe('Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).')
@@ -189,6 +203,7 @@ export const workflowOptionsSchema = withEnabled(
         provider: z
             .literal('github')
             .describe('Workflow vendor for a full `workflow` object (default `github`).')
+            .default('github')
             .optional(),
         pushBranches: z.array(z.string()).describe('Replace `on.push.branches`.').optional(),
         pullRequestBranches: z
@@ -212,14 +227,16 @@ export const workflowOptionsSchema = withEnabled(
             .optional(),
         dir: z
             .string()
-            .describe('Directory for the workflow file (default `.github/workflows`).')
+            .describe('Directory for the workflow file.')
+            .default('.github/workflows')
             .optional(),
         setup: z
             .boolean()
             .describe(
                 'Inject the shared checkout/Node/Corepack/install steps into custom workflow ' +
-                    'jobs (default false; built-in workflows already include them).'
+                    'jobs; built-in workflows already include them.'
             )
+            .default(false)
             .optional(),
     }),
     'Enable/disable this workflow (default: enabled when present).'
@@ -237,6 +254,7 @@ const vendorWorkflowFields = {
             'Inject the provider-specific checkout/Node/Corepack/install setup ' +
                 '(default false: the workflow is written as-is).'
         )
+        .default(false)
         .optional(),
     enabled: z
         .boolean()
@@ -353,6 +371,9 @@ export const workflowConfigSchema = z
             .optional(),
         sync: workflowSettingSchema
             .describe('The toolchain sync workflow (`sync.yml`).')
+            .optional(),
+        dependabot: section(dependabotConfigSchema)
+            .describe('Dependabot version-update automation (`.github/dependabot.yml`).')
             .optional(),
         custom: z
             .record(z.string(), customWorkflowSettingsSchema)

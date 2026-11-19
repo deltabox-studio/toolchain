@@ -2,7 +2,7 @@ import { copyFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import AutoSidebar from 'vite-plugin-vitepress-auto-sidebar';
-import { defineConfig } from 'vitepress';
+import { type DefaultTheme, defineConfig } from 'vitepress';
 import carbonThemeBaseConfig from 'vitepress-carbon/config';
 import { groupIconMdPlugin, groupIconVitePlugin } from 'vitepress-plugin-group-icons';
 import llmstxt from 'vitepress-plugin-llms';
@@ -27,9 +27,11 @@ const LLMS_DETAILS = [
     '',
     '- **One config.** `dbx.config.ts` exports `{ toolchain: { ...sections } }`; every section is opt-in by presence (`section: true` uses defaults, omit it to leave that area untouched).',
     '- **Sync.** `dbx sync` runs each enabled section and writes the managed files, tracked in `.dbx/toolchain/manifest.json` (the last-sync time lives in the gitignored `.dbx/toolchain/timestamps.json`); `dbx sync --check` is the CI gate. `dbx sync --recursive` syncs every discovered project in dependency order.',
-    '- **Nested configs.** A non-root `dbx.config.*` merges over the nearest ancestor config: objects merge, while scalars and arrays replace; `project.type` and `hooks` are never inherited.',
+    '- **Nested configs.** A non-root `dbx.config.*` only inherits sections it explicitly enables (`fmt`, `lint`, `biome`, `changelog`, `catalogs`, `logger`); `project` metadata is inherited except its identity fields. `ci`, `tsconfig`, `loader`, `templates`, `registry`, `watch`, `providers`, `vite` and `hooks` are never inherited. Configless projects are unmanaged unless `project.manageConfigless` / `--configless` opts in.',
     '- **Project graph.** `dbx projects` writes `.dbx/toolchain/projects.json` (workspace dirs + dependencies), used by `sync --recursive`, the VS Code view and per-workspace changelogs.',
-    '- **Sections.** `project`, `ci` (workflows + changelog), `fmt`, `lint`, `biome`, `tsconfig`, `templates`, `vite`, `watch`, `logger`, `providers`; every workflow under `ci` is opt-in.',
+    '- **Vite plugin.** `dbx()` in `vite.config.*` can carry the whole toolchain config, so a Vite/Vite+ project needs no `dbx.config.*`; the CLI reads the plugin options back. dbx never manages `vite.config.*` in plugin mode, and Vite+ passthrough commands are gated on Vite+ being detected.',
+    '- **MCP.** `dbx mcp:serve` exposes every public dbx API over MCP; `dbx mcp:install` writes the server + skill for Claude, Codex, VS Code, OpenCode, Pi or a custom directory.',
+    '- **Sections.** `project`, `ci` (workflows + changelog), `fmt`, `lint`, `biome`, `tsconfig`, `loader`, `templates`, `vite`, `watch`, `logger`, `providers`; every workflow under `ci` is opt-in.',
     '- **Runtime.** Node ≥ 22.5 and Yarn 4 (corepack); Vite+ (`vp`) resolves at the repo root.',
 ].join('\n');
 
@@ -40,8 +42,34 @@ const INTRODUCTION = {
         { text: 'Getting Started', link: '/guide/' },
         { text: 'Monorepo Guide', link: '/guide/monorepo' },
         { text: 'VS Code Extension', link: '/guide/vscode' },
+        { text: 'Vite+', link: '/guide/vite' },
+        {
+            text: 'Config reference',
+            collapsed: true,
+            items: [
+                { text: 'Overview', link: '/config/' },
+                { text: 'CLI reference', link: '/config/cli' },
+                { text: 'Environment variables', link: '/config/env' },
+                { text: 'dbx.config', link: '/config/reference' },
+            ],
+        },
+        {
+            text: 'Migrations',
+            collapsed: true,
+            items: [
+                { text: 'Overview', link: '/guide/migrations/' },
+                { text: 'Migrating from v1 to v2', link: '/guide/migrations/v1-v2' },
+                { text: 'Migrating from v2 to v3', link: '/guide/migrations/v2-v3' },
+            ],
+        },
         { text: 'LLMs', link: '/llms' },
     ],
+};
+
+/** The first sidebar section on the config and LLMs pages. */
+const HOME = {
+    text: 'Home',
+    items: [{ text: 'Guide', link: '/guide/' }],
 };
 
 /** Generated sidebar links that the hand-picked Introduction already covers. */
@@ -49,6 +77,7 @@ const INTRODUCTION_LINKS = new Set([
     '/guide/index.html',
     '/guide/monorepo.html',
     '/guide/vscode.html',
+    '/guide/vite.html',
     '/llms',
     '/llms.html',
 ]);
@@ -119,7 +148,11 @@ export default defineConfig({
                 // markdown backticks (eg. `defineConfig`) from generated titles.
                 sideBarItemsResolved(items) {
                     return items
-                        .filter(item => !INTRODUCTION_LINKS.has(item.link ?? ''))
+                        .filter(
+                            item =>
+                                !INTRODUCTION_LINKS.has(item.link ?? '') &&
+                                item.text !== 'Migrations'
+                        )
                         .map(item => {
                             const text = item.text?.replaceAll('`', '');
                             const nextText =
@@ -133,7 +166,19 @@ export default defineConfig({
                 },
                 sideBarResolved(data) {
                     const guide = Array.isArray(data['/guide/']) ? data['/guide/'] : [];
-                    data['/guide/'] = [INTRODUCTION, ...guide];
+                    const guideSidebar = [INTRODUCTION, ...guide];
+                    data['/guide/'] = guideSidebar;
+                    // The LLMs page reuses the guide navigation as-is; the
+                    // config reference adds a Home -> Guide section first.
+                    data['/llms'] = guideSidebar;
+                    data['/llms.html'] = guideSidebar;
+                    const configItems = data['/config/'] ?? data['/config'];
+                    const configSidebar = [
+                        HOME,
+                        ...(Array.isArray(configItems) ? configItems : []),
+                    ];
+                    data['/config/'] = configSidebar;
+                    data['/config'] = configSidebar;
                     return data;
                 },
             }) as any,
@@ -145,6 +190,27 @@ export default defineConfig({
                 title: 'deltabox toolchain',
                 description: DESCRIPTION,
                 details: LLMS_DETAILS,
+                // The `/llms` page reuses the guide sidebar (the same array
+                // object as `/guide/`), so drop the aliased copies before the
+                // plugin flattens the sidebar into the llms.txt table of
+                // contents. VitePress still uses the full sidebar config.
+                sidebar: (sidebar: DefaultTheme.Sidebar | undefined) => {
+                    if (!sidebar || Array.isArray(sidebar)) return sidebar;
+                    const seen = new Set<unknown>();
+                    const entries = Object.entries(sidebar as Record<string, unknown>).filter(
+                        ([key, value]) => {
+                            // The Introduction already lists every config page
+                            // under its "Config reference" group.
+                            if (key === '/config/' || key === '/config') return false;
+                            // The LLMs page only mirrors the guide navigation.
+                            if (key === '/llms' || key === '/llms.html') return false;
+                            if (seen.has(value)) return false;
+                            seen.add(value);
+                            return true;
+                        }
+                    );
+                    return Object.fromEntries(entries) as DefaultTheme.Sidebar;
+                },
             }) as any,
             groupIconVitePlugin({
                 customIcon: CODE_ICONS,
@@ -187,8 +253,7 @@ export default defineConfig({
         siteTitle: false,
         nav: [
             { text: 'Guide', link: '/guide/' },
-            { text: 'Config', link: '/config/reference' },
-            { text: 'Providers', link: '/guide/providers' },
+            { text: 'Config', link: '/config/' },
             { text: 'Migrations', link: '/guide/migrations/' },
             {
                 text: `v${pkg.version}`,

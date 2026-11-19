@@ -1,0 +1,50 @@
+{
+    "name": "@deltabox/toolchain-pack",
+    "version": "3.0.0-beta.1",
+    "description": "Build-pack base configuration (tsdown), workspace aliases and cleanup commands used by @deltabox/toolchain.",
+    "author": "Victor Sango <victor@deltabox.studio>",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/deltabox-studio/toolchain.git",
+        "directory": "packages/pack"
+    },
+    "license": "MPL-2.0",
+    "type": "module",
+    "files": [
+        "dist"
+    ],
+    "dependencies": {
+        "@deltabox/toolchain-shared": "workspace:*",
+        "glob": "catalog:"
+    },
+    "devDependencies": {
+        "@types/node": "catalog:",
+        "type-fest": "catalog:",
+        "typescript": "catalog:",
+        "vite-plus": "catalog:"
+    },
+    "peerDependencies": {
+        "vite-plus": ">=1"
+    },
+    "exports": {
+        ".": "./dist/index.js",
+        "./cli": "./dist/cli/index.js",
+        "./config/node": "./dist/config/node.js",
+        "./package.json": "./package.json"
+    },
+    "homepage": "https://toolchain.deltabox.studio",
+    "packageManager": "yarn@4.17.1",
+    "keywords": [
+        "tsdown",
+        "rolldown",
+        "build",
+        "config",
+        "dbx",
+        "deltabox",
+        "toolchain"
+    ],
+    "publishConfig": {
+        "access": "public",
+        "provenance": true
+    }
+}

@@ -38,6 +38,33 @@ export default defineConfig({
 
 A section with neither `packages` nor `named` writes nothing.
 
+### Visual example: config → generated catalog
+
+```ts [dbx.config.ts]
+toolchain: {
+    catalogs: {
+        packages: { react: '^19.0.0', 'react-dom': '^19.0.0' },
+        named: { legacy: { react: '^18.0.0' } },
+    },
+}
+```
+
+With Yarn this writes `.yarnrc.yml`:
+
+```yaml
+nodeLinker: node-modules
+catalog:
+    react: ^19.0.0
+    react-dom: ^19.0.0
+catalogs:
+    legacy:
+        react: ^18.0.0
+```
+
+A workspace then references the default catalog with `"react": "catalog:"` (or
+`"react": "catalog:legacy"` for a named catalog); the package manager resolves
+the actual version from this file.
+
 ## Supported package managers
 
 | Manager | Catalog file          | Notes                                               |

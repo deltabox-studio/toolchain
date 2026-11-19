@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import * as vscode from 'vscode';
 
+import { pickPaged, vscodePromptHost } from '../prompt.js';
 import { loadTemplates, type Template } from '../templates.js';
 import type { CommandDeps } from './deps.js';
 
@@ -177,17 +178,18 @@ export function createScaffoldCommands(deps: CommandDeps): ScaffoldCommands {
             vscode.window.showWarningMessage('deltabox: no Vite+ templates available.');
             return;
         }
-        const picked = await vscode.window.showQuickPick(
+        const picked = await pickPaged(
+            vscodePromptHost(),
+            'Which Vite+ project should be created?',
             vite.map(template => ({
                 label: template.name || template.id,
                 description: template.id,
                 detail: template.description,
-                template,
-            })),
-            { placeHolder: 'Which Vite+ project should be created?', matchOnDetail: true }
+                value: template,
+            }))
         );
         if (!picked) return;
-        await createFromTemplate(picked.template, root);
+        await createFromTemplate(picked, root);
     };
 
     /** Scaffold from a template (optionally preselected from the Templates view). */
@@ -210,7 +212,9 @@ export function createScaffoldCommands(deps: CommandDeps): ScaffoldCommands {
                 vscode.window.showWarningMessage('deltabox: no templates found.');
                 return;
             }
-            const picked = await vscode.window.showQuickPick(
+            const picked = await pickPaged(
+                vscodePromptHost(),
+                'Which template should be used?',
                 listed.map(candidate => ({
                     label: candidate.name || candidate.id,
                     description: candidate.id,
@@ -221,12 +225,11 @@ export function createScaffoldCommands(deps: CommandDeps): ScaffoldCommands {
                     ]
                         .filter(Boolean)
                         .join(' · '),
-                    template: candidate,
-                })),
-                { placeHolder: 'Which template should be used?', matchOnDetail: true }
+                    value: candidate,
+                }))
             );
             if (!picked) return;
-            template = picked.template;
+            template = picked;
         }
 
         const name = await vscode.window.showInputBox({
@@ -283,6 +286,17 @@ export function createScaffoldCommands(deps: CommandDeps): ScaffoldCommands {
             if (picked === 'Yes') actionArgs.push(action.id);
         }
         if (actionArgs.length > 0) baseArgs.push('--action', ...actionArgs);
+
+        // Opt-in Docker artifacts. The setting supplies the default order.
+        const containerizeDefault = vscode.workspace
+            .getConfiguration('deltabox.toolchain')
+            .get<boolean>('containerizeTemplates', false);
+        const containerize = await vscode.window.showQuickPick(
+            containerizeDefault ? ['Yes', 'No'] : ['No', 'Yes'],
+            { placeHolder: 'Containerize with Docker?' }
+        );
+        if (containerize === undefined) return;
+        if (containerize === 'Yes') baseArgs.push('--containerize');
 
         // Run every template through the same pipeline (an argv array, no shell),
         // so a value like an npm `@scope` is never mangled by the terminal's shell
@@ -427,7 +441,7 @@ export function createScaffoldCommands(deps: CommandDeps): ScaffoldCommands {
 
             const args = [kind.command, '--name', wsName, '--root', root, '--dir', dir];
             if (scope) args.push('--scope', scope);
-            if (includeConfig.value === 'no') args.push('--no-config');
+            if (includeConfig.value === 'no') args.push('--no-project-config');
             args.push('--package-manager', packageManager);
 
             const code = await deps.runCli(root, args);
@@ -452,9 +466,18 @@ export function createScaffoldCommands(deps: CommandDeps): ScaffoldCommands {
 
         const args = [kind.command, '--name', finalName];
         if (scope) args.push('--scope', scope);
-        if (includeConfig.value === 'no') args.push('--no-config');
+        if (includeConfig.value === 'no') args.push('--no-project-config');
         if ((kind as { example?: boolean }).example) args.push('--example');
         args.push('--package-manager', packageManager);
+        // Only the single-project flow supports containerization.
+        if (
+            kind.flow === 'project' &&
+            vscode.workspace
+                .getConfiguration('deltabox.toolchain')
+                .get<boolean>('containerizeTemplates', false)
+        ) {
+            args.push('--containerize');
+        }
         args.push('--out', target);
 
         const code = await deps.runCli(target, args);

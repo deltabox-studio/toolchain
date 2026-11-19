@@ -2,10 +2,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { addProjectProviderRegistry } from '@deltabox/toolchain/core';
+import { logger } from '@deltabox/toolchain/shared';
 
+import { projectsCommand } from '../src/cli/commands/projects.js';
 import { providerPassthroughCommands } from '../src/cli/commands/providers.js';
 import { extractConfigSelection } from '../src/cli/config-selection.js';
 import {
@@ -13,6 +15,9 @@ import {
     createCli,
     extractLogOptions,
     extractUpdateCheck,
+    MACHINE_OUTPUT_COMMANDS,
+    runCli,
+    suppressesUpdateNotice,
     withDefaultVite,
 } from '../src/cli/index.js';
 import { isPassthroughCommand } from '../src/cli/register.js';
@@ -61,6 +66,16 @@ describe('dbx CLI', () => {
         expect(names).toContain('cleanup:turbo');
         expect(names).toContain('changelog');
         expect(names).toContain('project:init');
+        expect(names).toContain('fmt');
+        expect(names).toContain('lint');
+    });
+
+    it('does not register the consumer-bound config commands', () => {
+        // Deliberate: `configCommands()` needs a consumer `ConfigEngine`, so the
+        // root CLI never exposes a `config:*` group. A project registers them
+        // on its own program instead.
+        const names = builtinCommands().map(c => c.name);
+        expect(names.some(name => name.startsWith('config:'))).toBe(false);
     });
 
     it('builds a program with the expected subcommands', () => {
@@ -95,9 +110,40 @@ describe('dbx CLI', () => {
         run(['sync', '--help']);
         expect(isPassthroughCommand()).toBe(false);
     });
+
+    it('lets a subcommand reuse a global option name', async () => {
+        const seen: unknown[] = [];
+        const program = createCli([
+            {
+                name: 'changelog',
+                description: 'fake changelog',
+                options: [{ flags: '--version <semver>', description: 'Target version.' }],
+                run: opts => {
+                    seen.push(opts.version);
+                },
+            },
+        ]);
+        program.exitOverride();
+        program.configureOutput({ writeOut: () => {}, writeErr: () => {} });
+        await program.parseAsync(['node', 'dbx', 'changelog', '--version', '1.5.0']);
+        expect(seen).toEqual(['1.5.0']);
+    });
 });
 
 describe('config selection flags', () => {
+    it('rejects --config together with --no-config before loading a config', async () => {
+        const error = vi.spyOn(logger, 'error').mockImplementation(() => {});
+        const previous = process.exitCode;
+        try {
+            await runCli(['node', 'dbx', '--config', 'dbx.custom.ts', '--no-config', 'sync']);
+            expect(error).toHaveBeenCalledWith(expect.stringContaining('cannot be used together'));
+            expect(process.exitCode).toBe(1);
+        } finally {
+            process.exitCode = previous;
+            error.mockRestore();
+        }
+    });
+
     it('extracts --config / --no-config and respects `--`', () => {
         const argv = (value: string): string[] => ['node', 'dbx', ...value.split(' ')];
         expect(extractConfigSelection(argv('--config dbx.config.test.ts sync'))).toEqual({
@@ -117,17 +163,54 @@ describe('config selection flags', () => {
             selection: {},
         });
     });
+
+    it('does not consume a following flag as the config path', () => {
+        const argv = (value: string): string[] => ['node', 'dbx', ...value.split(' ')];
+        expect(extractConfigSelection(argv('--config --no-config sync'))).toEqual({
+            argv: ['node', 'dbx', '--config', 'sync'],
+            selection: { noConfig: true },
+        });
+        expect(extractConfigSelection(argv('--config -- sync'))).toEqual({
+            argv: ['node', 'dbx', '--config', '--', 'sync'],
+            selection: {},
+        });
+    });
+
+    it('rejects an empty --config value', async () => {
+        const error = vi.spyOn(logger, 'error').mockImplementation(() => {});
+        const previous = process.exitCode;
+        try {
+            await runCli(['node', 'dbx', '--config=', 'sync']);
+            expect(error).toHaveBeenCalledWith(expect.stringContaining('non-empty file path'));
+            expect(process.exitCode).toBe(1);
+        } finally {
+            process.exitCode = previous;
+            error.mockRestore();
+        }
+    });
 });
 
 describe('default Vite+ command', () => {
     const argv = (...args: string[]) => ['node', 'dbx', ...args];
 
     it('inserts `vite` for a bare Vite+ command', () => {
-        expect(withDefaultVite(argv('fmt', '--check'))).toEqual(argv('vite', 'fmt', '--check'));
-        expect(withDefaultVite(argv('lint', '--fix'))).toEqual(argv('vite', 'lint', '--fix'));
+        expect(withDefaultVite(argv('dev'))).toEqual(argv('vite', 'dev'));
+        expect(withDefaultVite(argv('build', '--mode', 'production'))).toEqual([
+            'node',
+            'dbx',
+            'vite',
+            'build',
+            '--mode',
+            'production',
+        ]);
         expect(withDefaultVite(argv('run', '-r', 'build'))).toEqual(
             argv('vite', 'run', '-r', 'build')
         );
+    });
+
+    it('keeps the first-class `fmt` and `lint` commands', () => {
+        expect(withDefaultVite(argv('fmt', '--check'))).toEqual(argv('fmt', '--check'));
+        expect(withDefaultVite(argv('lint', '--fix'))).toEqual(argv('lint', '--fix'));
     });
 
     it('defaults a Vite+ alias too', () => {
@@ -166,11 +249,67 @@ describe('logger flag pre-scan', () => {
             options: {},
         });
     });
+
+    it('does not consume a following flag as the log level', () => {
+        expect(extractLogOptions(argv('--log-level', '--no-color'))).toEqual({
+            argv: ['node', 'dbx'],
+            options: { color: false },
+        });
+        expect(extractLogOptions(argv('--log-level', 'warn', '--no-color'))).toEqual({
+            argv: ['node', 'dbx'],
+            options: { level: 'warn', color: false },
+        });
+    });
 });
 
 describe('default sync tasks', () => {
     it('includes the Vite+ sync task', () => {
         expect(defaultSyncTasks().map(task => task.name)).toContain('vite');
+    });
+});
+
+describe('dbx projects --max-depth', () => {
+    function projectTree(): string {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-projects-depth-'));
+        fs.writeFileSync(path.join(cwd, 'package.json'), '{"name":"root","version":"1.0.0"}');
+        fs.mkdirSync(path.join(cwd, 'packages', 'app'), { recursive: true });
+        fs.writeFileSync(
+            path.join(cwd, 'packages', 'app', 'package.json'),
+            '{"name":"app","version":"1.0.0"}'
+        );
+        return cwd;
+    }
+
+    it('rejects a non-numeric depth instead of disabling the limit', () => {
+        const cwd = projectTree();
+        try {
+            expect(() =>
+                projectsCommand().run?.(
+                    { maxDepth: 'abcd', write: false },
+                    { cwd, projectType: 'project', config: {}, tokens: {} }
+                )
+            ).toThrow(/invalid --max-depth/);
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
+    });
+
+    it('scans only the root at depth 0', () => {
+        const cwd = projectTree();
+        const raw = vi.spyOn(logger, 'raw').mockImplementation(() => {});
+        try {
+            projectsCommand().run?.(
+                { maxDepth: '0', write: false, json: true },
+                { cwd, projectType: 'project', config: {}, tokens: {} }
+            );
+            const graph = JSON.parse(raw.mock.calls[0]![0] as string) as {
+                projects: { dir: string }[];
+            };
+            expect(graph.projects.map(project => project.dir)).toEqual(['.']);
+        } finally {
+            raw.mockRestore();
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
     });
 });
 
@@ -193,6 +332,22 @@ describe('update check', () => {
             argv: ['node', 'dbx', 'run', '--', '--no-update-check'],
             updateCheck: true,
         });
+    });
+
+    it('never prints the notice for commands that own stdout', () => {
+        // The notice would corrupt the JSON-RPC stream (`mcp:serve`) or the
+        // default-JSON output (`template:info`).
+        expect(MACHINE_OUTPUT_COMMANDS.has('mcp:serve')).toBe(true);
+        expect(MACHINE_OUTPUT_COMMANDS.has('template:info')).toBe(true);
+    });
+
+    it('suppresses the notice for -V, --version and machine flags', () => {
+        expect(suppressesUpdateNotice(argv('-V'))).toBe(true);
+        expect(suppressesUpdateNotice(argv('--version'))).toBe(true);
+        expect(suppressesUpdateNotice(argv('--help'))).toBe(true);
+        expect(suppressesUpdateNotice(argv('changelog', '--release-notes', '1.0.0'))).toBe(true);
+        expect(suppressesUpdateNotice(argv('mcp:serve'))).toBe(true);
+        expect(suppressesUpdateNotice(argv('sync'))).toBe(false);
     });
 });
 

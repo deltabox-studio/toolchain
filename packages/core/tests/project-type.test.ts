@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { detectProjectType, resolveProjectType } from '../src/project-type.js';
 
@@ -43,6 +43,14 @@ describe('detectProjectType', () => {
         fs.writeFileSync(path.join(cwd, 'package.json'), JSON.stringify({ name: 'pkg' }));
         fs.writeFileSync(path.join(cwd, 'tsconfig.default.json'), '{}');
         expect(detectProjectType(cwd)).toBe('monorepo-workspace');
+    });
+
+    it('keeps a standalone scaffold a project (it owns tsconfig.base.json)', () => {
+        const cwd = tmp();
+        fs.writeFileSync(path.join(cwd, 'package.json'), JSON.stringify({ name: 'pkg' }));
+        fs.writeFileSync(path.join(cwd, 'tsconfig.default.json'), '{}');
+        fs.writeFileSync(path.join(cwd, 'tsconfig.base.json'), '{}');
+        expect(detectProjectType(cwd)).toBe('project');
     });
 
     it('defaults to a single project', () => {

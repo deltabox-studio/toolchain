@@ -1,7 +1,7 @@
 {
     "name": "@deltabox/toolchain-core",
-    "version": "2.6.1",
-    "description": "Loads dbx.config.*, runs the sync tasks and watches key files.",
+    "version": "3.0.0-beta.1",
+    "description": "Core runtime for dbx: loads dbx.config.* and the Vite plugin config, builds the project graph, runs sync tasks, manages manifests and watches inputs.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
         "type": "git",
@@ -13,24 +13,35 @@
     "files": [
         "dist"
     ],
-    "private": true,
     "dependencies": {
+        "@deltabox/toolchain-config": "workspace:*",
         "@deltabox/toolchain-shared": "workspace:*",
         "glob": "catalog:",
         "tsx": "catalog:"
     },
     "devDependencies": {
-        "@deltabox/toolchain-tsdown": "workspace:*",
+        "@deltabox/toolchain-pack": "workspace:*",
         "@types/node": "catalog:",
-        "tsdown": "catalog:",
         "typescript": "catalog:",
-        "vite": "catalog:",
-        "vitest": "catalog:"
+        "vite-plus": "catalog:"
     },
     "exports": {
         ".": "./dist/index.js",
         "./package.json": "./package.json"
     },
     "homepage": "https://toolchain.deltabox.studio",
-    "packageManager": "yarn@4.17.1"
+    "packageManager": "yarn@4.17.1",
+    "keywords": [
+        "dbx",
+        "config-loader",
+        "project-graph",
+        "sync",
+        "watch",
+        "toolchain",
+        "deltabox"
+    ],
+    "publishConfig": {
+        "access": "public",
+        "provenance": true
+    }
 }

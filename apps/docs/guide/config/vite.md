@@ -46,6 +46,29 @@ Everything else under `vite` is Vite+ config (plugins, `test`, `lint`, `fmt`,
 (`ToolchainViteConfig` = Vite's `UserConfig` as augmented by Vite+), so the whole
 Vite+ surface autocompletes in `dbx.config.ts`.
 
+### Nested workspaces
+
+`vite` is **never inherited**. A workspace only has the `vite` config it
+declares itself; a project with no `vite` section keeps its hand-written
+`vite.config.*` untouched. Declare the settings the workspace needs in its own
+config:
+
+```ts [packages/web/dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        vite: {
+            shim: 'static',
+            resolve: { tsconfigPaths: true },
+            run: { tasks: { build: { command: 'tsdown' } } },
+        },
+    },
+});
+```
+
+`vite.fmt` / `vite.lint` are the exception: when the workspace **opts into
+`fmt` / `lint`**, they are hoisted into the top-level `fmt.oxc` / `lint.oxc`
+before inheritance, so shared formatter/linter settings flow down.
+
 ### Static shims
 
 By default the shim calls `resolveVite` at load time (`shim: 'runtime'`). Set
@@ -66,7 +89,7 @@ A static shim imports only `defineConfig`, so Vite+ can load it without a built
 must stay serializable: functions, regexps and class instances are rejected at
 sync time (plugins still work with `shim: 'runtime'`).
 
-Runtime shims import `@deltabox/toolchain/vite` by default. Set
+Runtime shims import `vite-plugin-dbx` by default. Set
 `vite.shimImport` to change that specifier, for example to a local wrapper that
 re-exports `resolveVite`. Relative values are resolved from the repository root
 and rewritten relative to each generated config:

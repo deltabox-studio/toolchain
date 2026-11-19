@@ -4,6 +4,7 @@ import path from 'node:path';
 import {
     type ManagedFile,
     readJsonFile,
+    regenerateEnabled,
     type SyncTask,
     sectionConfig,
     sectionEnabled,
@@ -22,8 +23,7 @@ import {
  * A marker line placed at the top of a catalog file so the sync task knows the
  * toolchain owns it (and refuses to overwrite a hand-written one).
  */
-export const CATALOG_MARKER =
-    '# Managed by @deltabox/toolchain (catalogs) - edit dbx.config.* and run `dbx sync`.';
+export const CATALOG_MARKER = '# Managed by @deltabox/toolchain (catalogs).';
 
 /** Package managers that support catalogs. */
 export const CATALOG_PACKAGE_MANAGERS = ['yarn', 'pnpm', 'bun'] as const;
@@ -149,6 +149,7 @@ export function catalogsSyncTask(): SyncTask {
         // files are read by the package manager and may hold hand-written keys.
         keep: ['.yarnrc.yml', 'pnpm-workspace.yaml'],
         enabled: config => sectionEnabled(config.catalogs),
+        regenerate: config => regenerateEnabled(config.catalogs),
         run: ctx => {
             const config = sectionConfig(ctx.config.catalogs) ?? {};
             // Use the resolved token so a package.json-only project manager

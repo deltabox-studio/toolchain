@@ -46,6 +46,13 @@ export interface Workflow {
     [key: string & {}]: unknown;
 }
 
+/**
+ * The exact `voidzero-dev/setup-vp` release used for Vite+ projects. `setup-vp`
+ * does not publish a moving tag, so a workflow must pin an exact version (or a
+ * commit SHA); consumers can override it with the `setupVpVersion` token.
+ */
+export const DEFAULT_SETUP_VP_VERSION = 'v1.22.0';
+
 /** The default replacement values for the workflow templates. */
 export const DEFAULT_WORKFLOW_TOKENS = {
     nodeVersion: '22',
@@ -56,6 +63,10 @@ export const DEFAULT_WORKFLOW_TOKENS = {
     devBranch: 'main',
     tooling: 'dbx',
     commitlintConfig: 'commitlint.config.mjs',
+    setupVpVersion: DEFAULT_SETUP_VP_VERSION,
+    // Whether the project is a Vite/Vite+ project; the changelog sync task sets
+    // this from the project files (and a consumer can override it per workflow).
+    vitePlus: false,
 } as const;
 
 /** Default file name per workflow id. */
@@ -200,16 +211,34 @@ function cli(tokens: Replacements, bin?: string): string {
     }
 }
 
+/** The pinned `setup-vp` version (or commit SHA) for a workflow. */
+function setupVpVersion(tokens: Replacements): string {
+    return String(tokens.setupVpVersion ?? DEFAULT_SETUP_VP_VERSION);
+}
+
 /** The checkout + package-manager setup/install steps shared by every job. */
 function setupSteps(tokens: Replacements): WorkflowStep[] {
     const packageManager = String(tokens.packageManager ?? 'yarn');
     const version = packageManagerVersion(tokens);
+    const checkout: WorkflowStep = {
+        name: 'Checkout',
+        uses: 'actions/checkout@v5',
+        with: { 'fetch-depth': 0, token: '${{ secrets.GITHUB_TOKEN }}' },
+    };
+    // Vite+ ships `setup-vp`, which installs Vite+, the project's Node.js
+    // version and the package manager, then runs `vp install` (and caches).
+    if (tokens.vitePlus) {
+        return [
+            checkout,
+            {
+                name: 'Setup Vite+',
+                uses: `voidzero-dev/setup-vp@${setupVpVersion(tokens)}`,
+                with: { 'node-version': String(tokens.nodeVersion), cache: true },
+            },
+        ];
+    }
     const setup: WorkflowStep[] = [
-        {
-            name: 'Checkout',
-            uses: 'actions/checkout@v5',
-            with: { 'fetch-depth': 0, token: '${{ secrets.GITHUB_TOKEN }}' },
-        },
+        checkout,
         {
             name: 'Setup Node',
             uses: 'actions/setup-node@v5',
@@ -277,16 +306,18 @@ function missingSetupSteps(steps: readonly unknown[], tokens: Replacements): Wor
     const hasNode = steps.some(step => usesAction(step, 'actions/setup-node'));
     const hasBun = steps.some(step => usesAction(step, 'oven-sh/setup-bun'));
     const hasPnpm = steps.some(step => usesAction(step, 'pnpm/action-setup'));
+    const hasSetupVp = steps.some(step => usesAction(step, 'voidzero-dev/setup-vp'));
     const hasInstall = steps.some(step =>
         runsCommand(
             step,
-            /\b(?:corepack|npm\s+(?:ci|install)|yarn\s+install|pnpm\s+install|bun\s+install)\b/
+            /\b(?:corepack|npm\s+(?:ci|install)|yarn\s+install|pnpm\s+install|bun\s+install|vp\s+install)\b/
         )
     );
     return setupSteps(tokens).filter(step => {
         if (usesAction(step, 'actions/checkout')) return !hasCheckout;
         if (usesAction(step, 'actions/setup-node')) return !hasNode;
         if (usesAction(step, 'oven-sh/setup-bun')) return !hasBun;
+        if (usesAction(step, 'voidzero-dev/setup-vp')) return !hasSetupVp && !hasInstall;
         if (step.name === 'Enable Corepack') return !hasInstall && !hasPnpm;
         if (step.name === 'Install dependencies') return !hasInstall;
         return true;
@@ -321,9 +352,65 @@ function setupCommands(tokens: Replacements): string[] {
     ];
 }
 
+/** Append an entry to a GitLab `include` (a string, array or object). */
+function addGitlabInclude(workflow: Record<string, unknown>, entry: Record<string, unknown>): void {
+    const current = workflow.include;
+    if (current === undefined) workflow.include = [entry];
+    else if (Array.isArray(current)) workflow.include = [...current, entry];
+    else workflow.include = [current, entry];
+}
+
+/** Add a base template to a GitLab job's `extends` (string or array). */
+function addGitlabExtends(job: Record<string, unknown>, name: string): void {
+    const current = job.extends;
+    if (current === undefined) {
+        job.extends = name;
+        return;
+    }
+    if (typeof current === 'string') {
+        if (current !== name) job.extends = [current, name];
+        return;
+    }
+    if (Array.isArray(current) && !current.includes(name)) {
+        job.extends = [...current, name];
+    }
+}
+
+/** Top-level GitLab keys that are not jobs (so `extends` must not be added). */
+const GITLAB_NON_JOB_KEYS = new Set([
+    'stages',
+    'variables',
+    'workflow',
+    'include',
+    'default',
+    'image',
+    'services',
+    'cache',
+    'before_script',
+    'after_script',
+    'spec',
+]);
+
 /** Inject a Node image + `before_script` into a GitLab pipeline. */
 function injectGitlabSetup(workflow: Record<string, unknown>, tokens: Replacements): void {
     const defaults = isPlainObject(workflow.default) ? workflow.default : undefined;
+    if (tokens.vitePlus) {
+        const version = setupVpVersion(tokens);
+        // The remote template installs Vite+ + dependencies (but not Node, so
+        // keep a Node image) and is opted into per job with `extends`.
+        addGitlabInclude(workflow, {
+            remote: `https://raw.githubusercontent.com/voidzero-dev/setup-vp/${version}/gitlab/setup-vp.yml`,
+            inputs: { 'setup-ref': version },
+        });
+        if (workflow.image === undefined && defaults?.image === undefined) {
+            workflow.image = `node:${String(tokens.nodeVersion)}`;
+        }
+        for (const [id, job] of Object.entries(workflow)) {
+            if (id.startsWith('.') || GITLAB_NON_JOB_KEYS.has(id) || !isPlainObject(job)) continue;
+            addGitlabExtends(job, '.setup-vp');
+        }
+        return;
+    }
     const hasBefore =
         Array.isArray(workflow.before_script) ||
         (defaults !== undefined && Array.isArray(defaults.before_script));
@@ -331,6 +418,53 @@ function injectGitlabSetup(workflow: Record<string, unknown>, tokens: Replacemen
     if (workflow.image === undefined && defaults?.image === undefined) {
         workflow.image = `node:${String(tokens.nodeVersion)}`;
     }
+}
+
+/** Add a `setup-vp` repository resource to an Azure pipeline (once). */
+function addAzureResource(workflow: Record<string, unknown>, version: string): void {
+    const entry = {
+        repository: 'setupVp',
+        type: 'github',
+        endpoint: 'github',
+        name: 'voidzero-dev/setup-vp',
+        ref: `refs/tags/${version}`,
+    };
+    const resources = isPlainObject(workflow.resources) ? workflow.resources : undefined;
+    if (!resources) {
+        workflow.resources = { repositories: [entry] };
+        return;
+    }
+    const repositories = resources.repositories;
+    if (Array.isArray(repositories)) {
+        if (!repositories.some(repo => isPlainObject(repo) && repo.repository === 'setupVp')) {
+            resources.repositories = [...repositories, entry];
+        }
+        return;
+    }
+    resources.repositories = [entry];
+}
+
+/** The Node version format the `setup-vp` Azure template expects (`22` -> `22.x`). */
+function azureNodeVersion(tokens: Replacements): string {
+    const value = String(tokens.nodeVersion);
+    return /^\d+$/.test(value) ? `${value}.x` : value;
+}
+
+/** The Azure `setup-vp` template step (plus an explicit checkout). */
+function azureVitePlusSteps(tokens: Replacements): Record<string, unknown>[] {
+    const version = setupVpVersion(tokens);
+    return [
+        { checkout: 'self' },
+        {
+            template: 'azure/setup-vp.yml@setupVp',
+            parameters: {
+                setupRef: version,
+                nodeVersion: azureNodeVersion(tokens),
+                cache: true,
+                runInstall: true,
+            },
+        },
+    ];
 }
 
 /** The Azure `UseNode` + install steps. */
@@ -341,19 +475,55 @@ function azureSetupSteps(tokens: Replacements): Record<string, unknown>[] {
     ];
 }
 
+/** The Azure steps to prepend to a job (skipping any it already defines). */
+function missingAzureSteps(
+    steps: readonly unknown[],
+    tokens: Replacements
+): Record<string, unknown>[] {
+    if (!tokens.vitePlus) {
+        const hasNode = steps.some(step => isPlainObject(step) && step.task === 'UseNode@1');
+        const hasInstall = steps.some(
+            step =>
+                isPlainObject(step) &&
+                typeof step.script === 'string' &&
+                /\b(?:corepack|npm\s+(?:ci|install)|yarn\s+install|pnpm\s+install|bun\s+install|vp\s+install)\b/.test(
+                    step.script
+                )
+        );
+        return azureSetupSteps(tokens).filter(step => {
+            if (isPlainObject(step) && step.task === 'UseNode@1') return !hasNode;
+            if (isPlainObject(step) && typeof step.script === 'string') return !hasInstall;
+            return true;
+        });
+    }
+    const hasCheckout = steps.some(step => isPlainObject(step) && step.checkout !== undefined);
+    const hasSetupVp = steps.some(
+        step =>
+            isPlainObject(step) &&
+            typeof step.template === 'string' &&
+            step.template.includes('setup-vp')
+    );
+    return azureVitePlusSteps(tokens).filter(step => {
+        if (isPlainObject(step) && step.checkout !== undefined) return !hasCheckout;
+        return !hasSetupVp;
+    });
+}
+
 /** Inject the Node + install steps into an Azure pipeline (or each job). */
 function injectAzureSetup(workflow: Record<string, unknown>, tokens: Replacements): void {
-    const steps = azureSetupSteps(tokens);
+    if (tokens.vitePlus) addAzureResource(workflow, setupVpVersion(tokens));
     const jobs = workflow.jobs;
-    if (isPlainObject(jobs)) {
+    if (isPlainObject(jobs) || Array.isArray(jobs)) {
         for (const job of Object.values(jobs)) {
             if (!isPlainObject(job) || !Array.isArray(job.steps)) continue;
-            job.steps = [...steps, ...job.steps];
+            const steps = missingAzureSteps(job.steps, tokens);
+            if (steps.length > 0) job.steps = [...steps, ...job.steps];
         }
         return;
     }
     if (Array.isArray(workflow.steps)) {
-        workflow.steps = [...steps, ...workflow.steps];
+        const steps = missingAzureSteps(workflow.steps, tokens);
+        if (steps.length > 0) workflow.steps = [...steps, ...workflow.steps];
     }
 }
 
@@ -383,6 +553,7 @@ export function defaultWorkflows(
     const engine = cli(tokens);
     const main = String(tokens.mainBranch);
     const dev = String(tokens.devBranch);
+    const changelogName = dev === main ? 'Changelog' : `Changelog (${dev})`;
     const commitlint = options.commitlint !== false;
 
     return {
@@ -418,10 +589,10 @@ export function defaultWorkflows(
             },
         },
         changelog: {
-            name: 'Changelog (dev)',
+            name: changelogName,
             on: { push: { branches: [dev] } },
             permissions: { contents: 'write' },
-            concurrency: { group: 'changelog-dev', 'cancel-in-progress': false },
+            concurrency: { group: `changelog-${dev}`, 'cancel-in-progress': false },
             jobs: {
                 'generate-changelog': {
                     'runs-on': 'ubuntu-latest',
@@ -451,6 +622,9 @@ export function defaultWorkflows(
                                 // Stage only the files this pipeline owns, so a
                                 // stray working-tree change is never committed.
                                 'git add -- "*package.json" "*CHANGELOG.md"',
+                                // The `afterVersion` hook may update the scaffold
+                                // catalog in `.yarnrc.yml`.
+                                'if [ -f .yarnrc.yml ]; then git add .yarnrc.yml; fi',
                                 'git commit -m "chore: version packages ($(node -p "require(\'./package.json\').version"))"',
                                 `git push origin ${dev}`,
                             ].join('\n'),

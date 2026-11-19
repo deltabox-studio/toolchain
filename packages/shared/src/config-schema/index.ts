@@ -8,8 +8,9 @@
  * (`apps/docs/config/reference.md`) plus the editor JSON Schema
  * (`config.schema.json`) are generated from them, so they can never drift.
  *
- * The `hooks` section is not here: it holds functions, which JSON Schema cannot
- * express, so it stays a hand-written TS interface in `toolchain.ts`.
+ * The `hooks` section is a Zod object of function schemas: JSON Schema cannot
+ * express functions, so each callback carries a hand-written `tsType` signature
+ * that the generated types and docs reuse.
  */
 
 import { z } from 'zod';
@@ -19,11 +20,14 @@ import { catalogsConfigSchema } from './catalogs.js';
 import { changelogConfigSchema } from './changelog.js';
 import { ciConfigSchema } from './ci.js';
 import { fmtConfigSchema, lintConfigSchema } from './format.js';
+import { toolchainHooksSchema } from './hooks.js';
+import { loaderConfigSchema } from './loader.js';
 import { loggerConfigSchema } from './logger.js';
 import { section } from './meta.js';
 import { projectConfigSchema } from './project.js';
 import { providersConfigSchema } from './providers.js';
 import { registryConfigSchema } from './registry.js';
+import { syncConfigSchema } from './sync.js';
 import { templatesConfigSchema } from './templates.js';
 import { tsconfigConfigSchema } from './tsconfig.js';
 import { viteConfigSchema } from './vite.js';
@@ -34,7 +38,9 @@ export * from './biome.js';
 export * from './catalogs.js';
 export * from './changelog.js';
 export * from './ci.js';
+export * from './dependabot.js';
 export * from './format.js';
+export * from './hooks.js';
 // Re-export only the public generated types: their internal helper types
 // (`__schemaN`) collide across vendor schemas.
 export type { AzurePipelines } from './generated/azure-pipelines.js';
@@ -44,11 +50,13 @@ export type { GitLabCi } from './generated/gitlab-ci.js';
 export type { OxfmtConfig } from './generated/oxfmt-config.js';
 export type { OxlintConfig } from './generated/oxlint-config.js';
 export * from './json.js';
+export * from './loader.js';
 export * from './logger.js';
 export * from './meta.js';
 export * from './project.js';
 export * from './providers.js';
 export * from './registry.js';
+export * from './sync.js';
 export * from './templates.js';
 export * from './tsconfig.js';
 export * from './vendor-types.js';
@@ -56,9 +64,35 @@ export * from './vite.js';
 export * from './watch.js';
 export * from './workflow.js';
 
+/** A top-level enabled/disabled switch with an API-only global scope. */
+const enabledConfigSchema = z
+    .union([
+        z.boolean(),
+        z.object({
+            disabled: z
+                .boolean()
+                .describe('Disable the toolchain for this scope (default false).')
+                .default(false)
+                .optional(),
+            scope: z
+                .enum(['global', 'workspace'])
+                .describe(
+                    'The scope the value applies to. Config files and the Vite plugin may only ' +
+                        'use `workspace`; `global` is reserved for the CLI/programmatic API and ' +
+                        'the VS Code extension.'
+                ),
+        }),
+    ])
+    .describe(
+        'Enable/disable the toolchain. The shorthand is workspace-scoped; the object form is ' +
+            'reserved for APIs and the VS Code extension.'
+    )
+    .meta({ id: 'ToolchainEnabledConfig' });
+
 /** The full `dbx.config` schema (minus the function-bearing `hooks`). */
 export const toolchainConfigSchema = z
     .object({
+        enabled: enabledConfigSchema.optional(),
         project: projectConfigSchema
             .describe(
                 'Project metadata: canonical `package.json` fields and template tokens ' +
@@ -88,6 +122,9 @@ export const toolchainConfigSchema = z
         tsconfig: section(tsconfigConfigSchema)
             .describe('Workspace tsconfig generation (path aliases + project references).')
             .optional(),
+        loader: section(loaderConfigSchema)
+            .describe('How `dbx.config.*` files are imported (tsconfig discovery).')
+            .optional(),
         templates: section(templatesConfigSchema)
             .describe('Template sources / scaffolding.')
             .optional(),
@@ -101,12 +138,16 @@ export const toolchainConfigSchema = z
             .describe('The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.')
             .optional(),
         watch: section(watchConfigSchema).describe('Watch behaviour for `dbx watch`.').optional(),
+        sync: section(syncConfigSchema)
+            .describe('`dbx sync` behaviour (formatting of the generated managed files).')
+            .optional(),
         logger: section(loggerConfigSchema)
             .describe('Logging level, colours and prefix for toolchain output.')
             .optional(),
         providers: section(providersConfigSchema)
             .describe('Provider command behaviour (eg. colour for the passthrough commands).')
             .optional(),
+        hooks: toolchainHooksSchema.optional(),
     })
     .meta({ id: 'ToolchainConfigSections' });
 
@@ -120,6 +161,7 @@ export const dbxConfigSchema = z
     .meta({ id: 'DbxConfigSections' });
 
 export const configSchema = {
+    enabled: enabledConfigSchema,
     project: projectConfigSchema,
     ci: ciConfigSchema,
     changelog: changelogConfigSchema,
@@ -127,11 +169,13 @@ export const configSchema = {
     lint: lintConfigSchema,
     biome: biomeConfigSchema,
     tsconfig: tsconfigConfigSchema,
+    loader: loaderConfigSchema,
     templates: templatesConfigSchema,
     registry: registryConfigSchema,
     catalogs: catalogsConfigSchema,
     vite: viteConfigSchema,
     watch: watchConfigSchema,
+    sync: syncConfigSchema,
     logger: loggerConfigSchema,
     providers: providersConfigSchema,
 } as const;

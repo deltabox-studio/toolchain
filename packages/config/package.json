@@ -1,7 +1,7 @@
 {
     "name": "@deltabox/toolchain-config",
-    "version": "2.6.1",
-    "description": "Generic Zod/env-backed configuration engine: env parsing, schema walking, and .env/types/markdown/JSON/CLI generators.",
+    "version": "3.0.0-beta.1",
+    "description": "Zod- and env-backed configuration engine: parse environment variables, walk schemas, resolve typed config and generate .env, types, markdown, JSON and CLI output.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
         "type": "git",
@@ -13,23 +13,23 @@
     "files": [
         "dist"
     ],
-    "private": true,
     "dependencies": {
         "@deltabox/toolchain-shared": "workspace:*",
         "lodash": "catalog:",
+        "tsx": "catalog:",
+        "type-fest": "catalog:",
         "untyped": "^2.0.0",
         "zod": "catalog:"
     },
     "devDependencies": {
-        "@deltabox/toolchain-tsdown": "workspace:*",
+        "@deltabox/toolchain-pack": "workspace:*",
         "@types/lodash": "catalog:",
         "@types/node": "catalog:",
+        "ajv": "^8.20.0",
         "fastify": "catalog:",
-        "tsdown": "catalog:",
-        "type-fest": "catalog:",
+        "js-yaml": "^4.1.0",
         "typescript": "catalog:",
-        "vite": "catalog:",
-        "vitest": "catalog:"
+        "vite-plus": "catalog:"
     },
     "exports": {
         ".": "./dist/index.js",
@@ -38,5 +38,21 @@
         "./package.json": "./package.json"
     },
     "homepage": "https://toolchain.deltabox.studio",
-    "packageManager": "yarn@4.17.1"
+    "packageManager": "yarn@4.17.1",
+    "keywords": [
+        "config",
+        "zod",
+        "environment",
+        "env",
+        "schema",
+        "codegen",
+        "typescript",
+        "dbx",
+        "deltabox",
+        "toolchain"
+    ],
+    "publishConfig": {
+        "access": "public",
+        "provenance": true
+    }
 }

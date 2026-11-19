@@ -98,6 +98,50 @@ export function hasVp(cwd: string = process.cwd()): boolean {
     return resolveVp(cwd).source !== 'npx';
 }
 
+/** The package.json fields that declare a dependency. */
+const DEPENDENCY_FIELDS = [
+    'dependencies',
+    'devDependencies',
+    'peerDependencies',
+    'optionalDependencies',
+] as const;
+
+/**
+ * Whether the project declares `vite-plus` in any `package.json` dependency
+ * field. Walks up to the repository boundary so a hoisted workspace dependency
+ * is found. This is the static signal that Vite+ is part of the project, even
+ * before it is installed.
+ */
+export function declaresVitePlus(cwd: string = process.cwd()): boolean {
+    let dir = path.resolve(cwd);
+    for (;;) {
+        try {
+            const pkg = JSON.parse(
+                fs.readFileSync(path.join(dir, 'package.json'), 'utf-8').replace(/^\uFEFF/, '')
+            ) as Record<string, Record<string, string> | undefined>;
+            if (DEPENDENCY_FIELDS.some(field => pkg[field]?.['vite-plus'] !== undefined)) {
+                return true;
+            }
+        } catch {
+            // no/invalid package.json here; keep walking
+        }
+        if (fs.existsSync(path.join(dir, '.git'))) break;
+        const parent = path.dirname(dir);
+        if (parent === dir) break;
+        dir = parent;
+    }
+    return false;
+}
+
+/**
+ * Whether Vite+ is available for a project: declared in its dependencies or
+ * resolvable locally/globally. Pure Vite projects (no `vite-plus`) return
+ * `false`, so Vite+-only passthroughs can be blocked.
+ */
+export function hasVitePlus(cwd: string = process.cwd()): boolean {
+    return declaresVitePlus(cwd) || hasVp(cwd);
+}
+
 export interface RunVpOptions {
     /** The working directory (the project root). */
     cwd?: string;
@@ -116,6 +160,12 @@ export interface RunVpOptions {
      * commands (`vp dev`); set it for one-shot ones so a hang can't linger.
      */
     timeoutMs?: number;
+    /**
+     * Allow the `npx` fallback even when the target project does not declare
+     * `vite-plus` (creation into an empty directory). Passthroughs leave this
+     * off so a pure Vite project never pulls Vite+ in silently.
+     */
+    allowNpx?: boolean;
 }
 
 export interface VpResult {
@@ -134,6 +184,21 @@ export interface VpResult {
 export function runVp(args: string[], options: RunVpOptions = {}): Promise<VpResult> {
     const cwd = options.cwd ?? process.cwd();
     const resolved = resolveVp(cwd);
+    // Vite+ passthroughs are only valid when Vite+ is part of the project (or
+    // installed locally/globally). A pure Vite project must not silently pull
+    // `vite-plus` through npx.
+    const available =
+        options.allowNpx === true || declaresVitePlus(cwd) || resolved.source !== 'npx';
+    if (!available) {
+        return Promise.resolve({
+            code: 1,
+            stdout: '',
+            stderr:
+                'Vite+ (`vite-plus`) is not installed or declared in this project. ' +
+                'Install `vite-plus`, or use plain Vite (`vite dev`, `vite build`, ...).',
+            resolved,
+        });
+    }
     const capture = options.mode === 'capture';
     const env: NodeJS.ProcessEnv = { ...process.env, ...options.env };
     if (options.color === false) {

@@ -64,7 +64,7 @@ export const DEFAULT_FMT_SORT_IMPORTS: FmtSortImports = {
  */
 export const DEFAULT_FMT_RULES = {
     useTabs: false,
-    tabWidth: 4,
+    tabWidth: 2,
     printWidth: 100,
     endOfLine: 'lf',
     insertFinalNewline: true,

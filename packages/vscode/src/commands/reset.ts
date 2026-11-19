@@ -40,8 +40,15 @@ export function createResetCommand(deps: CommandDeps): (targets?: Project[]) => 
         if (confirm !== 'Remove') return;
 
         const args = scope.value === 'all' ? ['reset', '--all'] : ['reset'];
-        await deps.runProjects(selected, args);
+        const codes = await deps.runProjects(selected, args);
         await deps.refreshGraph();
-        vscode.window.showInformationMessage(`deltabox: reset ${selected.length} project(s).`);
+        if (codes.every(code => code === 0)) {
+            vscode.window.showInformationMessage(`deltabox: reset ${selected.length} project(s).`);
+        } else {
+            vscode.window.showWarningMessage(
+                `deltabox: reset failed for ${codes.filter(code => code !== 0).length} project(s). See the output channel.`
+            );
+            deps.output.show();
+        }
     };
 }

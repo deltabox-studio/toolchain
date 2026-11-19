@@ -28,28 +28,19 @@ export const DEFAULT_IGNORE_PATTERNS = [
     '**/.vscode/**',
     '**/.nyc_output/**',
     '**/*.tsbuildinfo',
+    '**/*.lock',
 ] as const;
 
 /**
- * Common paths formatters should leave alone. Starts from the shared build/cache
- * ignores and adds generated JSON/YAML, lockfiles, changelogs and the managed
- * `vite.config.ts` shim.
+ * Common paths formatters should leave alone.
  */
 export const DEFAULT_FMT_IGNORE_PATTERNS = [
     ...DEFAULT_IGNORE_PATTERNS,
     '**/.nuxt/**',
     '**/.svelte-kit/**',
-    '**/.generated/**',
-    '**/generated/**',
-    '**/*.json',
     '**/*.yml',
     '**/*.yaml',
-    '**/*.lock',
     '**/*.min.*',
-    '**/*.gen.*',
-    '**/CHANGELOG.md',
-    'CHANGELOG.proposed.md',
-    '**/vite.config.ts',
 ] as const;
 
 /** Common paths linters should leave alone. */
@@ -57,11 +48,7 @@ export const DEFAULT_LINT_IGNORE_PATTERNS = [
     ...DEFAULT_IGNORE_PATTERNS,
     '**/.nuxt/**',
     '**/.svelte-kit/**',
-    '**/.generated/**',
-    '**/generated/**',
-    '**/*.gen.*',
     '**/*.min.*',
-    '**/vendor/**',
 ] as const;
 
 /** Directory names skipped when scanning for nested `.gitignore` files. */
@@ -114,7 +101,9 @@ function gitignoreLineToGlobs(line: string, dir: string): string[] {
     if (!pattern) return [];
 
     const base = dir ? `${dir}/` : '';
-    const scope = anchored ? base : `${base}**/`;
+    // Git anchors a pattern containing a slash to the gitignore's directory;
+    // only slash-less patterns match at any depth.
+    const scope = anchored || pattern.includes('/') ? base : `${base}**/`;
     const glob = `${scope}${pattern}`;
     // Match the entry itself and (unless it already targets a subtree) its
     // contents, so a directory pattern ignores everything under it.
@@ -190,8 +179,15 @@ export function resolveIgnorePatterns(
     return patterns;
 }
 
-/** Compile a glob into a RegExp (supports `**`, `*`, `?` and literals). */
-function globToRegExp(pattern: string): RegExp {
+/** Characters that are regex-special when they reach the output literally. */
+const REGEXP_SPECIAL = '.+^${}()|[]\\';
+
+/**
+ * Translate one glob into a regexp source. Supports `**`, `*`, `?`, simple
+ * `[...]`/`[!...]` classes and `{a,b}` alternatives (alternatives may contain
+ * globs; braces are not nested).
+ */
+function globSource(pattern: string): string {
     let re = '';
     for (let i = 0; i < pattern.length; i++) {
         const char = pattern[i];
@@ -209,13 +205,39 @@ function globToRegExp(pattern: string): RegExp {
             }
         } else if (char === '?') {
             re += '[^/]';
-        } else if ('.+^${}()|[]\\'.includes(char as string)) {
+        } else if (char === '[') {
+            const end = pattern.indexOf(']', i + 1);
+            if (end === -1) {
+                re += '\\[';
+                continue;
+            }
+            const raw = pattern.slice(i + 1, end);
+            const negated = raw.startsWith('!') || raw.startsWith('^');
+            const body = negated ? raw.slice(1) : raw;
+            // A class never matches a path separator.
+            re += body ? (negated ? `(?:(?!/)[^${body}])` : `(?:(?!/)[${body}])`) : '\\[\\]';
+            i = end;
+        } else if (char === '{') {
+            const end = pattern.indexOf('}', i + 1);
+            if (end === -1) {
+                re += '\\{';
+                continue;
+            }
+            const alternatives = pattern.slice(i + 1, end).split(',');
+            re += `(?:${alternatives.map(alternative => globSource(alternative)).join('|')})`;
+            i = end;
+        } else if (char !== undefined && REGEXP_SPECIAL.includes(char)) {
             re += `\\${char}`;
-        } else {
+        } else if (char !== undefined) {
             re += char;
         }
     }
-    return new RegExp(`^${re}$`);
+    return re;
+}
+
+/** Compile a glob into a RegExp (supports `**`, `*`, `?`, classes and braces). */
+function globToRegExp(pattern: string): RegExp {
+    return new RegExp(`^${globSource(pattern)}$`);
 }
 
 /** Whether a repo-relative path matches any of the ignore globs. */

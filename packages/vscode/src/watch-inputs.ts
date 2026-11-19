@@ -42,6 +42,7 @@ export const DEFAULT_TSCONFIG_FILES: TsconfigFileNames = {
  */
 export const DEFAULT_WATCH_GLOBS = [
     'dbx.config.*',
+    'vite.config.*',
     DEFAULT_TSCONFIG_FILES.rootFile,
     DEFAULT_TSCONFIG_FILES.defaultFile,
 ] as const;

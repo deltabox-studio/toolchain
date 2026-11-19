@@ -1,7 +1,7 @@
 {
     "name": "@deltabox/toolchain-template",
-    "version": "2.6.1",
-    "description": "Custom project/tooling/pipeline template registry: builtin, local and online (npm/git/Vite+) sources.",
+    "version": "3.0.0-beta.1",
+    "description": "Custom project, tooling and pipeline template registry with builtin, local and online (npm/git/Vite+) sources.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
         "type": "git",
@@ -13,21 +13,19 @@
     "files": [
         "dist"
     ],
-    "private": true,
     "dependencies": {
         "@clack/prompts": "catalog:",
         "@deltabox/toolchain-core": "workspace:*",
+        "@deltabox/toolchain-docker": "workspace:*",
         "@deltabox/toolchain-project": "workspace:*",
         "@deltabox/toolchain-shared": "workspace:*",
-        "@deltabox/toolchain-vite": "workspace:*"
+        "vite-plugin-dbx": "workspace:*"
     },
     "devDependencies": {
-        "@deltabox/toolchain-tsdown": "workspace:*",
+        "@deltabox/toolchain-pack": "workspace:*",
         "@types/node": "catalog:",
-        "tsdown": "catalog:",
         "typescript": "catalog:",
-        "vite": "catalog:",
-        "vitest": "catalog:"
+        "vite-plus": "catalog:"
     },
     "exports": {
         ".": "./dist/index.js",
@@ -35,5 +33,19 @@
         "./package.json": "./package.json"
     },
     "homepage": "https://toolchain.deltabox.studio",
-    "packageManager": "yarn@4.17.1"
+    "packageManager": "yarn@4.17.1",
+    "keywords": [
+        "template",
+        "registry",
+        "scaffold",
+        "npm",
+        "git",
+        "dbx",
+        "deltabox",
+        "toolchain"
+    ],
+    "publishConfig": {
+        "access": "public",
+        "provenance": true
+    }
 }

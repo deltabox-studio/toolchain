@@ -7,12 +7,14 @@ import { withEnabled } from './meta.js';
 
 const oxfmtOptions = externalConfigSchema<OxfmtConfig>(
     'Oxfmt configuration options.',
-    'OxfmtConfig'
+    'OxfmtConfig',
+    'https://oxc.rs/docs/guide/usage/formatter/config-file-reference.html'
 );
 
 const oxlintOptions = externalConfigSchema<OxlintConfig>(
     'Oxlint configuration options.',
-    'OxlintConfig'
+    'OxlintConfig',
+    'https://oxc.rs/docs/guide/usage/linter/config-file-reference.html'
 );
 
 /**
@@ -31,23 +33,25 @@ export const viteConfigSchema = withEnabled(
         config: z
             .union([z.boolean(), z.string()])
             .describe(
-                'Write the managed Vite config (default true). A string sets its file name/path ' +
+                'Write the managed Vite config. A string sets its file name/path ' +
                     '(relative to the project, or an absolute path inside it).'
             )
+            .default(true)
             .optional(),
         shim: z
             .enum(['runtime', 'static'])
             .describe(
-                'How the generated `vite.config.ts` is rendered. `runtime` (default) loads the ' +
+                'How the generated `vite.config.ts` is rendered. `runtime` loads the ' +
                     'config from `dbx.config.*`; `static` serializes it into the file so the shim ' +
                     'does not import `@deltabox/toolchain` (it then needs no built `dist`).'
             )
+            .default('runtime')
             .optional(),
         shimImport: z
             .string()
             .describe(
                 'Module specifier used to import `resolveVite` in runtime shims (default ' +
-                    '`@deltabox/toolchain/vite`). A relative path is resolved from the repo root ' +
+                    '`vite-plugin-dbx`, or the umbrella `@deltabox/toolchain/vite`). A relative path is resolved from the repo root ' +
                     'and rewritten relative to each generated config - useful for dogfooding a ' +
                     'source checkout without a built `dist`.'
             )

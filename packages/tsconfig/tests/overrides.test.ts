@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import type { SyncContext, ToolchainTsconfigConfig } from '@deltabox/toolchain/shared';
 
@@ -363,7 +363,9 @@ describe('tsconfig overrides sync', () => {
             overrides: { default: { compilerOptions: { strict: true } } },
         });
         expect(read(path.join(cwd, 'packages/core/tsconfig.default.json')).compilerOptions).toEqual(
-            { target: 'ES2022' }
+            {
+                target: 'ES2022',
+            }
         );
         expect(read(path.join(cwd, 'packages/core/tsconfig.src.json')).compilerOptions).toEqual({
             strict: true,
@@ -371,6 +373,51 @@ describe('tsconfig overrides sync', () => {
         expect(Object.keys(manifest.tsconfigOverrides as object)).toEqual([
             'packages/core/tsconfig.src.json',
         ]);
+    });
+
+    it('reflects a removed default override in the same generated file', async () => {
+        const cwd = monorepo();
+        const generatedFile = path.join(cwd, 'packages/core/tsconfig.json');
+        await sync(cwd, {
+            overrides: {
+                default: { compilerOptions: { paths: { '@old/*': ['./old/*'] } } },
+            },
+        });
+        expect(read(generatedFile).compilerOptions.paths).toEqual({ '@old/*': ['./old/*'] });
+
+        // Removing the override must revert the default file and regenerate
+        // without the stale key in the same run (not the next `--check`).
+        await sync(cwd, {});
+        expect(read(generatedFile).compilerOptions.paths).toBeUndefined();
+
+        // A following check pass must agree with what was written (no drift
+        // hidden until the next run).
+        const check = await sync(cwd, {}, { check: true });
+        const generated = check.files.find(file => file.path === 'packages/core/tsconfig.json');
+        expect(generated?.content).toBe(fs.readFileSync(generatedFile, 'utf-8'));
+    });
+
+    it('replaces a changed default paths override instead of merging both keys', async () => {
+        const cwd = monorepo();
+        const generatedFile = path.join(cwd, 'packages/core/tsconfig.json');
+        await sync(cwd, {
+            overrides: {
+                default: { compilerOptions: { paths: { '@old/*': ['./old/*'] } } },
+            },
+        });
+        await sync(cwd, {
+            overrides: {
+                default: { compilerOptions: { paths: { '@next/*': ['./next/*'] } } },
+            },
+        });
+
+        expect(read(generatedFile).compilerOptions.paths).toEqual({ '@next/*': ['./next/*'] });
+        expect(read(path.join(cwd, 'packages/core/tsconfig.default.json')).compilerOptions).toEqual(
+            {
+                target: 'ES2022',
+                paths: { '@next/*': ['./next/*'] },
+            }
+        );
     });
 
     it('reports drift in check mode without writing', async () => {
@@ -444,6 +491,20 @@ describe('restoreTsconfigOverrides', () => {
         expect(result.restored).toHaveLength(3);
         expect(read(path.join(cwd, 'tsconfig.base.json')).compilerOptions.target).toBe('ES2020');
         expect(fs.readFileSync(path.join(cwd, MANIFEST), 'utf-8')).toBe(before);
+    });
+
+    it('reads a manifest written with a UTF-8 BOM', async () => {
+        const cwd = monorepo();
+        await sync(cwd, { overrides });
+        const file = path.join(cwd, MANIFEST);
+        fs.writeFileSync(file, `\uFEFF${fs.readFileSync(file, 'utf-8')}`, 'utf-8');
+
+        const result = restoreTsconfigOverrides({ cwd });
+        expect(result.restored.sort()).toEqual([
+            'packages/core/tsconfig.build.json',
+            'packages/core/tsconfig.default.json',
+            'tsconfig.base.json',
+        ]);
     });
 
     it('warns and skips a missing file, keeping its manifest entry', async () => {

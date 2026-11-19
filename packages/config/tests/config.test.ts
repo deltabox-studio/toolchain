@@ -2,14 +2,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vite-plus/test';
 import { z } from 'zod';
 
 import { dbxConfigSchema, type ToolchainCommand } from '@deltabox/toolchain/shared';
 
 import {
     buildConfigJson,
-    collectVars,
+    collectDefinitions,
     createCliArgsParser,
     createConfigEngine,
     envBool,
@@ -82,9 +82,9 @@ describe('env tree', () => {
     });
 });
 
-describe('collectVars', () => {
+describe('collect', () => {
     it('collects scoped leaves with env metadata', () => {
-        const vars = collectVars(scopes, 'MYAPP_');
+        const vars = collectDefinitions(scopes, { envPrefix: 'MYAPP_' });
         expect(vars.map(v => v.name)).toContain('MYAPP_HOST');
         const password = vars.find(v => v.name === 'MYAPP_AUTH_PASSWORD');
         expect(password?.secret).toBe(true);
@@ -116,6 +116,18 @@ describe('generators', () => {
         expect(token?.secret).toBe(true);
         const parser = createCliArgsParser(defs);
         expect(parser.parse(['--base-url', 'http://x']).values['base-url']).toBe('http://x');
+    });
+
+    it('writes CLI options into a missing nested directory', () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-cli-out-'));
+        try {
+            const output = path.join(cwd, 'nested', 'cli-options.json');
+            const defs = generateCliOptions(scopes, { envPrefix: 'MYAPP_', output });
+
+            expect(JSON.parse(fs.readFileSync(output, 'utf-8'))).toEqual(defs);
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
     });
 
     it('renders custom command descriptors', () => {
@@ -240,18 +252,185 @@ describe('generators', () => {
 describe('createConfigEngine', () => {
     it('binds a schema and generates', async () => {
         const engine = createConfigEngine({ schema: scopes, envPrefix: 'MYAPP_' });
-        expect(engine.collectVars().length).toBeGreaterThan(0);
-        const schema = await engine.generateJsonSchema();
+        expect(engine.collect().length).toBeGreaterThan(0);
+        const schema = await engine.jsonSchema.generate();
         expect(schema.$id).toBeDefined();
-        expect(Object.keys(engine.generateConfigTypes())).toEqual(['server', 'cli']);
+        expect(Object.keys(engine.types.generate())).toEqual(['server', 'cli']);
+    });
+
+    it('reports the files write() creates with a custom extension', () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-engine-ext-'));
+        try {
+            const engine = createConfigEngine({
+                schema: z.object({ port: z.number() }),
+                root: cwd,
+            });
+            const written = engine.types.write({
+                outputDir: path.join(cwd, 'types'),
+                extension: 'mts',
+            });
+
+            expect(written.length).toBeGreaterThan(0);
+            for (const file of written) expect(fs.existsSync(file)).toBe(true);
+            expect(written.every(file => file.endsWith('.mts'))).toBe(true);
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
+    });
+
+    it('preserves the passed schema type', () => {
+        const schema = z.object({ port: z.number() });
+        const engine = createConfigEngine({ schema });
+        expectTypeOf(engine.schema).toEqualTypeOf<typeof schema>();
+    });
+
+    it('infers scope keys from a scoped schema', async () => {
+        const schema = {
+            server: z.object({ port: z.number() }),
+            cli: z.object({ host: z.string() }),
+        };
+        const engine = createConfigEngine({ schema });
+        expectTypeOf(engine.requiredVars)
+            .parameter(0)
+            .toEqualTypeOf<'server' | 'cli' | undefined>();
+        expectTypeOf(engine.types.generate()).toEqualTypeOf<Record<'server' | 'cli', string>>();
+        expectTypeOf(engine.markdown.generate()).toEqualTypeOf<
+            Record<'server.md' | 'cli.md' | 'index.md', string>
+        >();
+        expectTypeOf(engine.env.types.generate()).toEqualTypeOf<
+            Record<'env.ts' | 'dbx-env.d.ts', string>
+        >();
+        expectTypeOf(engine.env.types.generate({ envFile: 'custom.ts' })).toEqualTypeOf<
+            Record<'custom.ts' | 'dbx-env.d.ts', string>
+        >();
+        const schemaDoc = await engine.jsonSchema.generate();
+        expectTypeOf(schemaDoc.properties).toEqualTypeOf<Record<'server' | 'cli', unknown>>();
+        expectTypeOf(schemaDoc.required).toEqualTypeOf<Array<'server' | 'cli'>>();
+    });
+
+    it('falls back to string keys for a single Zod schema', async () => {
+        const engine = createConfigEngine({ schema: z.object({ port: z.number() }) });
+        expectTypeOf(engine.requiredVars).parameter(0).toEqualTypeOf<string | undefined>();
+        expectTypeOf(engine.types.generate()).toEqualTypeOf<Record<string, string>>();
+        const schemaDoc = await engine.jsonSchema.generate();
+        expectTypeOf(schemaDoc.properties).toEqualTypeOf<Record<string, unknown>>();
+    });
+
+    it('falls back to string keys for untyped and array schemas', () => {
+        const untyped = {
+            type: 'object',
+            properties: { port: { type: 'number' } },
+        } as const;
+        expectTypeOf(createConfigEngine({ schema: untyped }).types.generate()).toEqualTypeOf<
+            Record<string, string>
+        >();
+        const array = [z.object({ port: z.number() })];
+        expectTypeOf(createConfigEngine({ schema: array }).types.generate()).toEqualTypeOf<
+            Record<string, string>
+        >();
+    });
+
+    it('infers readonly scoped maps and special scope names', () => {
+        const engine = createConfigEngine({
+            schema: {
+                'front-end': z.object({ port: z.number() }),
+                server: z.object({ host: z.string() }),
+            } as const,
+        });
+        expectTypeOf(engine.types.generate()).toEqualTypeOf<
+            Record<'front-end' | 'server', string>
+        >();
+        expectTypeOf(engine.markdown.generate({ indexFilename: 'README.md' })).toEqualTypeOf<
+            Record<'front-end.md' | 'server.md' | 'README.md', string>
+        >();
+    });
+
+    it('narrows generated file keys from literal options', () => {
+        const engine = createConfigEngine({
+            schema: {
+                server: z.object({ port: z.number() }),
+                cli: z.object({ host: z.string() }),
+            },
+        });
+        expectTypeOf(engine.markdown.generate({ combined: true })).toEqualTypeOf<
+            Record<'index.md', string>
+        >();
+        expectTypeOf(
+            engine.markdown.generate({ combined: true, indexFilename: 'README.md' })
+        ).toEqualTypeOf<Record<'README.md', string>>();
+        expectTypeOf(
+            engine.env.types.generate({ envFile: 'types.ts', dtsFile: 'types.d.ts' })
+        ).toEqualTypeOf<Record<'types.ts' | 'types.d.ts', string>>();
+    });
+
+    it('renders docs through engine.markdown', () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-engine-docs-'));
+        try {
+            const engine = createConfigEngine({ schema: z.object({}), root: cwd });
+            const file = engine.markdown.file.generate({ title: 'Docs', body: 'Hello.' });
+            expect(file).toContain('# Docs');
+            expect(file).toContain('Hello.');
+
+            const cli = engine.markdown.cli.generate([
+                {
+                    name: 'sync',
+                    description: 'Regenerate managed files.',
+                    run: () => {},
+                    options: [
+                        { flags: '--check', description: 'Report drift instead of writing.' },
+                    ],
+                },
+                {
+                    name: 'hidden',
+                    description: 'Not documented.',
+                    run: () => {},
+                    hidden: true,
+                },
+            ]);
+            expect(cli).toContain('# CLI reference');
+            expect(cli).toContain('`dbx sync`');
+            expect(cli).toContain('`--check`');
+            expect(cli).not.toContain('dbx hidden');
+
+            const env = engine.markdown.env.generate();
+            expect(env).toContain('# Environment variables');
+            expect(env).toContain('No environment-backed toolchain settings');
+
+            const written = engine.markdown.file.write({
+                output: 'docs/index.md',
+                title: 'Index',
+                body: 'Body.',
+            });
+            expect(written).toBe(path.join(cwd, 'docs', 'index.md'));
+            expect(fs.readFileSync(written, 'utf8')).toContain('# Index');
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
+    });
+
+    it('narrows scope options', () => {
+        const engine = createConfigEngine({
+            schema: {
+                server: z.object({ port: z.number() }),
+                cli: z.object({ host: z.string() }),
+            },
+        });
+        expectTypeOf(engine.cli.generate)
+            .parameter(0)
+            .toMatchTypeOf<{ scope?: 'server' | 'cli' } | undefined>();
+        expectTypeOf(engine.types.generate)
+            .parameter(0)
+            .toMatchTypeOf<
+                { interfaceNames?: Partial<Record<'server' | 'cli', string>> } | undefined
+            >();
     });
 });
 
 describe('dbx config schema', () => {
     it('can be lowered to JSON Schema and generated types', async () => {
         const engine = createConfigEngine({ schema: dbxConfigSchema });
-        await expect(engine.generateJsonSchema()).resolves.toBeDefined();
-        expect(() => engine.generateConfigTypes()).not.toThrow();
+        await expect(engine.jsonSchema.generate()).resolves.toBeDefined();
+        expect(() => engine.types.generate()).not.toThrow();
     });
 });
 
@@ -265,7 +444,7 @@ describe('named nested schemas', () => {
     });
 
     it('collects env vars below a named `$ref`', () => {
-        const vars = collectVars({ server: schema }, 'APP_');
+        const vars = collectDefinitions({ server: schema }, { envPrefix: 'APP_' });
         expect(vars.map(variable => variable.name)).toContain('APP_TOKEN');
         expect(vars.find(variable => variable.name === 'APP_TOKEN')?.path).toBe('auth.token');
     });
@@ -299,9 +478,13 @@ describe('secret defaults and envPathOf', () => {
         const schema = z.object({
             baseUrl: z.string().meta({ envName: 'APP_CLI_BASE_URL' }),
         });
-        const vars = collectVars({ server: schema }, 'APP_', {
-            envPathOf: () => 'cli.base.url',
-        });
+        const vars = collectDefinitions(
+            { server: schema },
+            {
+                envPrefix: 'APP_',
+                envPathOf: () => 'cli.base.url',
+            }
+        );
         expect(vars.find(variable => variable.name === 'APP_CLI_BASE_URL')?.path).toBe(
             'cli.base.url'
         );
@@ -321,7 +504,7 @@ describe('duplicate env names', () => {
             a: z.string().meta({ envName: 'APP_TOKEN' }),
             b: z.string().meta({ envName: 'APP_TOKEN' }),
         });
-        const vars = collectVars({ server: schema }, 'APP_');
+        const vars = collectDefinitions({ server: schema }, { envPrefix: 'APP_' });
         expect(vars.filter(variable => variable.name === 'APP_TOKEN')).toHaveLength(1);
     });
 });

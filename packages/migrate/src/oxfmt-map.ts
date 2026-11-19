@@ -8,7 +8,7 @@
  * anything that cannot be represented faithfully.
  */
 
-import type { UnmappedItem } from './types.js';
+import type { UnmappedItem } from './types/index.js';
 
 type Json = Record<string, any>;
 

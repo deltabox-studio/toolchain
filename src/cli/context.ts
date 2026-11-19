@@ -10,7 +10,7 @@ const configCache = new Map<string, Promise<LoadedConfig>>();
 
 export function loadContext(cwd: string): Promise<LoadedConfig> {
     const selection = getConfigSelection();
-    const key = `${cwd}\0${selection.config ?? ''}\0${selection.noConfig ? '1' : '0'}`;
+    const key = `${cwd}\0${selection.config ?? ''}\0${selection.noConfig ? '1' : '0'}\0${selection.manageConfigless ? '1' : '0'}`;
     let cached = configCache.get(key);
     if (!cached) {
         // Tolerant: a broken config must not take down unrelated commands (eg.

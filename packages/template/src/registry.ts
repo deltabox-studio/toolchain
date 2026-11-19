@@ -14,7 +14,7 @@ import { BUILTIN_TEMPLATES } from './builtin.js';
 import { loadGlobalTemplates } from './global.js';
 import { loadLocalTemplates } from './local.js';
 import { detectNpmRegistry, gitTemplate, loadNpmTemplates } from './online.js';
-import type { Template } from './types.js';
+import type { Template } from './types/index.js';
 
 /** Where `template:add` records sources, relative to a project root. */
 export const REGISTRY_DIR = '.dbx/toolchain';
@@ -98,7 +98,7 @@ export function collectSources(options: LoadTemplatesOptions): ToolchainTemplate
 }
 
 /** The template registry policy from `toolchain.registry.templates`. */
-function templatePolicy(config?: ToolchainConfig): RegistryPolicy | undefined {
+export function templatePolicy(config?: ToolchainConfig): RegistryPolicy | undefined {
     if (!config || !sectionEnabled(config.registry)) return undefined;
     return sectionConfig(config.registry)?.templates;
 }
@@ -161,10 +161,40 @@ export async function loadTemplates(options: LoadTemplatesOptions): Promise<Temp
     // project's own sources are loaded first, so a local template wins on an id
     // clash.
     const policy = templatePolicy(options.config);
-    const global = await loadGlobalTemplates(options.cwd, policy);
+    const global = await loadGlobalTemplates(options.cwd, policy, {
+        online: options.online === true,
+    });
     const sources = [...collectSources(options), ...global.sources].filter(source =>
         sourceAllowed(source, options.cwd, policy)
     );
+    for (const template of await resolveTemplateSources(sources, {
+        cwd: options.cwd,
+        online: options.online === true,
+        policy,
+    })) {
+        add(template);
+    }
+
+    for (const template of global.templates) add(template);
+    return out;
+}
+
+/**
+ * Resolve template sources into templates. Local directories are always loaded;
+ * npm, git and remote sources only when `online`. Deduplicated by template id,
+ * in source order.
+ */
+export async function resolveTemplateSources(
+    sources: ToolchainTemplateSource[],
+    options: { cwd: string; online?: boolean; policy?: RegistryPolicy }
+): Promise<Template[]> {
+    const seen = new Set<string>();
+    const out: Template[] = [];
+    const add = (template: Template): void => {
+        if (seen.has(template.id)) return;
+        seen.add(template.id);
+        out.push(template);
+    };
     const queue = [...sources];
     const seenRemote = new Set<string>();
 
@@ -177,7 +207,7 @@ export async function loadTemplates(options: LoadTemplatesOptions): Promise<Temp
                     const fetched = await loadRemoteSources(source.locate);
                     queue.push(
                         ...fetched.filter(candidate =>
-                            sourceAllowed(candidate, options.cwd, policy)
+                            sourceAllowed(candidate, options.cwd, options.policy)
                         )
                     );
                 }
@@ -189,7 +219,15 @@ export async function loadTemplates(options: LoadTemplatesOptions): Promise<Temp
                 break;
             }
             case 'local': {
-                for (const template of loadLocalTemplates(source.locate, source.id)) add(template);
+                for (const template of loadLocalTemplates(
+                    path.resolve(options.cwd, source.locate),
+                    source.id
+                )) {
+                    // A source registered with `--kind` overrides the manifest
+                    // (the manifest describes the contents; the registration
+                    // says how the project uses it).
+                    add(source.kind ? { ...template, kind: source.kind } : template);
+                }
                 break;
             }
             case 'git': {
@@ -221,6 +259,5 @@ export async function loadTemplates(options: LoadTemplatesOptions): Promise<Temp
         }
     }
 
-    for (const template of global.templates) add(template);
     return out;
 }

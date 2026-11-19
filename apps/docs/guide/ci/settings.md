@@ -65,6 +65,61 @@ package manager without changing `project`. Overriding `packageManager` switches
 to that manager's default version unless you also set `packageManagerVersion`
 (or the legacy `yarnVersion` alias).
 
+## Vite+ projects
+
+For a Vite/Vite+ project the generated workflows install `vp` with the
+[`voidzero-dev/setup-vp`](https://viteplus.dev/guide/ci) integration instead of
+the Node/Corepack/package-manager install steps. The GitHub Action also sets up
+the project's Node.js version and the package manager, and runs `vp install`.
+
+A project is detected as Vite/Vite+ when any of these is true:
+
+- its `package.json` declares `vite-plus` (checked up to the repository root, so
+  a hoisted workspace dependency counts);
+- it has a `vite.config.*` at the project root;
+- the toolchain's `vite` section is enabled (the dbx-managed Vite+ mode).
+
+Override the detection per workflow with `tokens.vitePlus` (`true` forces the
+setup-vp path, `false` keeps the Node/Corepack path). `tokens.setupVpVersion`
+pins a different exact `setup-vp` release or commit SHA; the action has no moving
+tag, so always pin an exact version.
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        ci: { tokens: { setupVpVersion: 'v1.30.0' } },
+        sync: { tokens: { vitePlus: false } },
+    },
+}
+```
+
+The other vendors use their own `setup-vp` integration when `setup: true` is set
+on a complete pipeline:
+
+- **GitLab** adds the reusable remote template to `include` (`setup-ref` pinned
+  to the same version) and adds `extends: .setup-vp` to every job. The template
+  does not install Node.js, so the pipeline still gets a `node:<nodeVersion>`
+  image.
+- **Azure** adds the `setupVp` repository resource (`ref` pinned to the version)
+  and the `azure/setup-vp.yml@setupVp` template step with
+  `setupRef`/`nodeVersion`/`cache`/`runInstall`. A job that already defines a
+  checkout or the template step is left alone.
+
+```yaml [.gitlab-ci.yml]
+include:
+    - remote: https://raw.githubusercontent.com/voidzero-dev/setup-vp/v1.22.0/gitlab/setup-vp.yml
+      inputs:
+          setup-ref: v1.22.0
+image: node:22
+test:
+    extends: .setup-vp
+    stage: test
+    script: [yarn test]
+```
+
+Set `tokens.vitePlus: false` on a vendor workflow to keep its Node/Corepack
+setup instead.
+
 ## Raw YAML
 
 A string is used as the workflow file's exact content. It is not merged, not

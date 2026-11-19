@@ -30,6 +30,8 @@ export interface Provider {
     description?: string;
     homepage?: string;
     binary?: string;
+    /** Whether the provider's binary/tooling is available for this project. */
+    available?: boolean;
     commands: ProviderCommand[];
 }
 
@@ -41,8 +43,7 @@ export async function loadProviders(cwd: string): Promise<Provider[]> {
     const result = await captureCli(cwd, ['providers', '--json']);
     if (result.code !== 0) return withBuiltinProviders([]);
     try {
-        const parsed = JSON.parse(result.stdout) as unknown;
-        return withBuiltinProviders(Array.isArray(parsed) ? (parsed as Provider[]) : []);
+        return withBuiltinProviders(normalizeProviders(JSON.parse(result.stdout) as unknown));
     } catch {
         return withBuiltinProviders([]);
     }
@@ -56,10 +57,71 @@ export function providerRegistryPath(root: string): string {
     return path.join(root, REGISTRY);
 }
 
+function asString(value: unknown): string | undefined {
+    return typeof value === 'string' ? value : undefined;
+}
+
+/** Normalize one hand-written command entry, or drop it when it is unusable. */
+function normalizeCommand(value: unknown): ProviderCommand | undefined {
+    if (!value || typeof value !== 'object') return undefined;
+    const command = value as Record<string, unknown>;
+    const name = asString(command.name);
+    if (!name) return undefined;
+    const subcommand = asString(command.subcommand) ?? '';
+    const description = asString(command.description) ?? name;
+    const group = asString(command.group);
+    const aliases = Array.isArray(command.aliases)
+        ? command.aliases.filter((alias): alias is string => typeof alias === 'string')
+        : [];
+    return {
+        name,
+        subcommand,
+        description,
+        ...(group ? { group } : {}),
+        ...(aliases.length > 0 ? { aliases } : {}),
+    };
+}
+
+/** Normalize one registry descriptor (hand-written entries may omit fields). */
+function normalizeProvider(value: unknown): Provider | undefined {
+    if (!value || typeof value !== 'object') return undefined;
+    const provider = value as Record<string, unknown>;
+    const id = asString(provider.id);
+    if (!id) return undefined;
+    const name = asString(provider.name) ?? id;
+    const description = asString(provider.description);
+    const homepage = asString(provider.homepage);
+    const binary = asString(provider.binary);
+    const available = typeof provider.available === 'boolean' ? provider.available : undefined;
+    // The Providers view iterates `commands` unconditionally, so a descriptor
+    // without it (or with junk entries) must never reach the tree.
+    const commands = Array.isArray(provider.commands)
+        ? provider.commands
+              .map(normalizeCommand)
+              .filter((command): command is ProviderCommand => command !== undefined)
+        : [];
+    return {
+        id,
+        name,
+        ...(description ? { description } : {}),
+        ...(homepage ? { homepage } : {}),
+        ...(binary ? { binary } : {}),
+        ...(available !== undefined ? { available } : {}),
+        commands,
+    };
+}
+
+/** Normalize a parsed provider list (invalid entries are dropped). */
+function normalizeProviders(value: unknown): Provider[] {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map(normalizeProvider)
+        .filter((provider): provider is Provider => provider !== undefined);
+}
+
 function readProvidersFile(file: string): Provider[] {
     try {
-        const parsed = JSON.parse(fs.readFileSync(file, 'utf-8')) as unknown;
-        return Array.isArray(parsed) ? (parsed as Provider[]) : [];
+        return normalizeProviders(JSON.parse(fs.readFileSync(file, 'utf-8')) as unknown);
     } catch {
         return [];
     }
@@ -213,16 +275,27 @@ export class ProviderTreeProvider implements vscode.TreeDataProvider<ProviderTre
                       ? vscode.TreeItemCollapsibleState.Expanded
                       : vscode.TreeItemCollapsibleState.Collapsed
             );
-            item.description = node.provider.binary ?? node.provider.id;
+            const unavailable = node.provider.available === false;
+            item.description = [
+                node.provider.binary ?? node.provider.id,
+                unavailable ? 'unavailable' : '',
+            ]
+                .filter(Boolean)
+                .join(' · ');
             item.tooltip = [
                 node.provider.description,
                 node.provider.homepage,
+                unavailable
+                    ? 'Not available in this project. Install the provider (eg. `vite-plus`) to enable it.'
+                    : '',
                 `${node.provider.commands.length} command(s)`,
                 `dbx ${node.provider.id}`,
             ]
                 .filter(Boolean)
                 .join('\n');
-            item.iconPath = new vscode.ThemeIcon(node.custom ? 'plug' : 'extensions');
+            item.iconPath = new vscode.ThemeIcon(
+                unavailable ? 'circle-slash' : node.custom ? 'plug' : 'extensions'
+            );
             item.contextValue = node.custom ? 'deltabox.provider.custom' : 'deltabox.provider';
             return item;
         }
@@ -231,15 +304,22 @@ export class ProviderTreeProvider implements vscode.TreeDataProvider<ProviderTre
             node.command.description,
             vscode.TreeItemCollapsibleState.None
         );
+        const unavailable = node.provider.available === false;
         item.description = `dbx ${node.command.name}`;
-        item.tooltip = `${node.command.description}\n\nvp ${node.command.subcommand}\ndbx ${node.command.name}`;
-        item.iconPath = new vscode.ThemeIcon('play');
-        item.contextValue = 'deltabox.providerCommand';
-        item.command = {
-            command: 'deltabox.toolchain.providers.runCommand',
-            title: 'Run',
-            arguments: [node],
-        };
+        item.tooltip = unavailable
+            ? `${node.command.description}\n\nProvider unavailable in this project.`
+            : `${node.command.description}\n\nvp ${node.command.subcommand}\ndbx ${node.command.name}`;
+        item.iconPath = new vscode.ThemeIcon(unavailable ? 'circle-slash' : 'play');
+        item.contextValue = unavailable
+            ? 'deltabox.providerCommand.unavailable'
+            : 'deltabox.providerCommand';
+        if (!unavailable) {
+            item.command = {
+                command: 'deltabox.toolchain.providers.runCommand',
+                title: 'Run',
+                arguments: [node],
+            };
+        }
         return item;
     }
 }

@@ -17,7 +17,7 @@ import type {
     MigrationContext,
     MigrationResult,
     ToolchainMigration,
-} from './types.js';
+} from './types/index.js';
 import { viteToToolchain } from './vite.js';
 
 /** Every registered migration. */

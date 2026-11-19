@@ -23,17 +23,35 @@ import type { OxfmtConfig } from './config-schema/generated/oxfmt-config.js';
 import type { OxlintConfig } from './config-schema/generated/oxlint-config.js';
 import type { DprintConfig, EslintConfig, PrettierConfig } from './config-schema/vendor-types.js';
 import type { ToolchainLogger } from './logger.js';
+import type { Replacements } from './template.js';
+import type {
+    Awaitable,
+    ManagedFile,
+    SyncContext,
+    SyncSummary,
+    SyncTask,
+    ToolchainConfig,
+} from './types/index.js';
 
 export interface DbxConfigSections {
     /** The `@deltabox/toolchain` settings (every section is opt-in by presence). */
     toolchain?: ToolchainConfigSections;
 }
 
+export type ToolchainEnabledConfig =
+    | boolean
+    | { disabled?: boolean; scope: 'global' | 'workspace' };
+
 export type ProjectType = 'monorepo-root' | 'monorepo-workspace' | 'project';
 
 export interface ToolchainProjectConfig {
     /** The project kind (detected when omitted). */
     type?: ProjectType;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     */
+    regenerate?: boolean;
     /** The unscoped project name (written as `<scope>/<name>`). */
     name?: string;
     /** The npm scope, eg. `@acme`. */
@@ -51,17 +69,31 @@ export interface ToolchainProjectConfig {
     repo?: string;
     /** Node version for CI/templates, eg. `22` (not `package.json` `engines`). */
     nodeVersion?: string;
-    /** Package manager name, written as `<name>@<version>` (default `yarn`). */
+    /**
+     * Package manager name, written as `<name>@<version>`.
+     *
+     * @default 'yarn'
+     */
     packageManager?: string;
     /** Package manager version, eg. `4.17.1`. */
     packageManagerVersion?: string;
     /** One-line description (`package.json` `description`). */
     description?: string;
     /**
-     * Inherit the parent project metadata (default true). Set false to keep this project metadata
-     * independent of the root config (other sections still merge normally).
+     * Inherit the parent project metadata. Set false to keep this project metadata independent of the
+     * root config (other sections still merge normally).
+     *
+     * @default true
      */
     inherit?: boolean;
+    /**
+     * Manage projects that have no dbx.config.* of their own by inheriting the nearest ancestor
+     * config. Disabled by default so configless projects are never touched unless explicitly opted
+     * in.
+     *
+     * @default false
+     */
+    manageConfigless?: boolean;
 }
 
 export interface ToolchainCiConfig {
@@ -79,12 +111,25 @@ export interface ToolchainCiConfig {
     /** The toolchain sync workflow (`sync.yml`). */
     sync?: WorkflowSetting;
     /**
+     * Dependabot version-update automation (`.github/dependabot.yml`).
+     *
+     * @see https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+     */
+    dependabot?: boolean | ToolchainDependabotConfig;
+    /**
      * Additional custom workflows, keyed by id (eg. `custom.my-workflow`). Each id writes
      * `<dir>/<filename ?? id>.yml`.
      */
     custom?: Record<string & {}, CustomWorkflowSettings>;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
 }
 
 export interface GitHubWorkflowSetting {
@@ -98,6 +143,8 @@ export interface GitHubWorkflowSetting {
      * The complete workflow object.
      *
      * @required
+     *
+     * @see https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions
      */
     workflow: GitHubWorkflow;
     /** Override the generated file name. */
@@ -107,6 +154,8 @@ export interface GitHubWorkflowSetting {
     /**
      * Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow
      * is written as-is).
+     *
+     * @default false
      */
     setup?: boolean;
     /** Enable/disable this workflow (default: enabled when present). */
@@ -124,6 +173,8 @@ export interface GitLabWorkflowSetting {
      * The complete pipeline object.
      *
      * @required
+     *
+     * @see https://docs.gitlab.com/ee/ci/yaml/
      */
     workflow: GitLabCi;
     /** Override the generated file name. */
@@ -133,6 +184,8 @@ export interface GitLabWorkflowSetting {
     /**
      * Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow
      * is written as-is).
+     *
+     * @default false
      */
     setup?: boolean;
     /** Enable/disable this workflow (default: enabled when present). */
@@ -150,6 +203,8 @@ export interface AzureWorkflowSetting {
      * The complete pipeline object.
      *
      * @required
+     *
+     * @see https://learn.microsoft.com/en-us/azure/devops/pipelines/yaml-schema/
      */
     workflow: AzurePipelines;
     /** Override the generated file name. */
@@ -159,6 +214,8 @@ export interface AzureWorkflowSetting {
     /**
      * Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow
      * is written as-is).
+     *
+     * @default false
      */
     setup?: boolean;
     /** Enable/disable this workflow (default: enabled when present). */
@@ -166,7 +223,11 @@ export interface AzureWorkflowSetting {
 }
 
 export interface WorkflowOptions {
-    /** Workflow vendor for a full `workflow` object (default `github`). */
+    /**
+     * Workflow vendor for a full `workflow` object (default `github`).
+     *
+     * @default 'github'
+     */
     provider?: 'github';
     /** Replace `on.push.branches`. */
     pushBranches?: Array<string>;
@@ -196,15 +257,28 @@ export interface WorkflowOptions {
     tokens?: WorkflowTokens;
     /** Override the generated workflow file name (eg. `deploy.yml`). */
     filename?: string;
-    /** Directory for the workflow file (default `.github/workflows`). */
+    /**
+     * Directory for the workflow file.
+     *
+     * @default '.github/workflows'
+     */
     dir?: string;
     /**
-     * Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false;
-     * built-in workflows already include them).
+     * Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs; built-in
+     * workflows already include them.
+     *
+     * @default false
      */
     setup?: boolean;
     /** Enable/disable this workflow (default: enabled when present). */
     enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
 }
 
 export interface WorkflowTriggers {
@@ -376,7 +450,11 @@ export type WorkflowSetting =
     | WorkflowOptions;
 
 export interface CiChangelogConfig {
-    /** Workflow vendor for a full `workflow` object (default `github`). */
+    /**
+     * Workflow vendor for a full `workflow` object (default `github`).
+     *
+     * @default 'github'
+     */
     provider?: 'github';
     /** Replace `on.push.branches`. */
     pushBranches?: Array<string>;
@@ -406,48 +484,57 @@ export interface CiChangelogConfig {
     tokens?: WorkflowTokens;
     /** Override the generated workflow file name (eg. `deploy.yml`). */
     filename?: string;
-    /** Directory for the workflow file (default `.github/workflows`). */
+    /**
+     * Directory for the workflow file.
+     *
+     * @default '.github/workflows'
+     */
     dir?: string;
     /**
-     * Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false;
-     * built-in workflows already include them).
+     * Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs; built-in
+     * workflows already include them.
+     *
+     * @default false
      */
     setup?: boolean;
     /** Enable/disable the changelog workflow and pipeline (default: enabled when present). */
     enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
     /** Branches the generated workflows target. */
     branches?: ChangelogBranchesConfig;
     /** Commitlint config; set `false` to disable the Conventional-Commits pipeline. */
     commitlint?: boolean | ChangelogCommitlintConfig;
     /** Automatic version bumping on changelog generation (default `true`). */
     versioning?: ChangelogVersioning;
-    /** Write the Conventional-Commits VS Code settings (default true). */
+    /**
+     * Opt-in text inserted at the start of the new changelog entry, globally or for matching targets
+     * (workspaces/root).
+     */
+    intro?: ChangelogTextSetting;
+    /**
+     * Opt-in text appended to the new changelog entry, globally or for matching targets
+     * (workspaces/root).
+     */
+    outro?: ChangelogTextSetting;
+    /**
+     * Write the Conventional-Commits VS Code settings.
+     *
+     * @default true
+     */
     vscode?: boolean;
     /**
      * Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order,
      * hidden }`, a type->title/options record, or a callback (TS/JS configs only).
      */
     groups?:
-        | Array<
-              | string
-              | {
-                    type?: string;
-                    title?: string | ((ctx: ChangelogGroupContext) => string);
-                    order?: number | ((ctx: ChangelogGroupContext) => number);
-                    hidden?: boolean | ((ctx: ChangelogGroupContext) => boolean);
-                }
-          >
-        | Record<
-              string & {},
-              | string
-              | {
-                    type?: string;
-                    title?: string | ((ctx: ChangelogGroupContext) => string);
-                    order?: number | ((ctx: ChangelogGroupContext) => number);
-                    hidden?: boolean | ((ctx: ChangelogGroupContext) => boolean);
-                }
-              | boolean
-          >
+        | Array<string | ChangelogGroupOptions>
+        | Record<string & {}, string | ChangelogGroupOptions | boolean>
         | ((ctx: ChangelogGroupsContext) => ChangelogGroupsSetting);
     /**
      * How breaking changes are detected: `conventional` (default: a `!` in the CC subject or a
@@ -487,12 +574,19 @@ export interface ChangelogCommitlintConfig {
      * without the Conventional-Commits pipeline.
      */
     enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
 }
 
 export interface ChangelogVersioningConfig {
     /**
      * `uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root
-     * only; `individual` bumps each changed workspace independently (default `uniform`).
+     * only; `individual` bumps each changed workspace independently.
      */
     target?: ChangelogVersioningTarget;
     /**
@@ -501,27 +595,98 @@ export interface ChangelogVersioningConfig {
      * own.
      */
     workspaces?: Array<string>;
-    /** Custom bump rules for major/minor/patch (matchers or callbacks). */
+    /** The prerelease tag globally, or per-target via `{ target, options }`. */
+    prerelease?: ChangelogTargetedPrerelease | Array<ChangelogTargetedPrerelease | string> | string;
+    /**
+     * Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{
+     * target, options }`.
+     */
     bump?: {
-        /** A bump rule: a matcher/callback or a list of matchers/callbacks. */
-        major?: ChangelogBumpRule;
-        /** A bump rule: a matcher/callback or a list of matchers/callbacks. */
-        minor?: ChangelogBumpRule;
-        /** A bump rule: a matcher/callback or a list of matchers/callbacks. */
-        patch?: ChangelogBumpRule;
+        /** A bump rule globally, or per-target via `{ target, include, exclude, options }`. */
+        major?:
+            | ChangelogTargetedBump
+            | Array<ChangelogTargetedBump | ChangelogBumpRule>
+            | ChangelogBumpRule;
+        /** A bump rule globally, or per-target via `{ target, include, exclude, options }`. */
+        minor?:
+            | ChangelogTargetedBump
+            | Array<ChangelogTargetedBump | ChangelogBumpRule>
+            | ChangelogBumpRule;
+        /** A bump rule globally, or per-target via `{ target, include, exclude, options }`. */
+        patch?:
+            | ChangelogTargetedBump
+            | Array<ChangelogTargetedBump | ChangelogBumpRule>
+            | ChangelogBumpRule;
     };
-    /** Apply a bump once per matching change instead of once per run (default false). */
-    allowOverBump?: boolean;
-    /** Commit message formatting/credit options (with an optional formatter callback). */
-    commit?: ChangelogCommitFormatConfig;
-    /** `default`, `changesets`, a provider id, or a custom provider/callback. */
+    /** Enable over-bumping globally, or per-target via `{ target, options }`. */
+    allowOverBump?:
+        | ChangelogTargetedAllowOverBump
+        | Array<ChangelogTargetedAllowOverBump | boolean>
+        | boolean;
+    /** Commit formatting globally, or per-target via `{ target, options }`. */
+    commit?:
+        | ChangelogTargetedCommit
+        | Array<ChangelogTargetedCommit | ChangelogCommitFormatConfig>
+        | ChangelogCommitFormatConfig;
+    /** The provider globally, or per-target via `{ target, options }`. */
     provider?:
+        | ChangelogTargetedProvider
+        | Array<
+              | ChangelogTargetedProvider
+              | string
+              | ChangelogProviderConfig
+              | ((ctx: ChangelogProviderContext) => string | void)
+          >
         | string
         | ChangelogProviderConfig
         | ((ctx: ChangelogProviderContext) => string | void);
 }
 
 export type ChangelogVersioningTarget = 'uniform' | 'root-only' | 'individual';
+
+export interface ChangelogTargetedPrerelease {
+    /**
+     * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
+     * When omitted the entry applies to every target.
+     */
+    target?: string;
+    /**
+     * Only apply to workspaces whose repo-relative directory matches one of these globs
+     * (tsconfig-style include).
+     */
+    include?: string | Array<string>;
+    /** Skip workspaces whose repo-relative directory matches these globs. */
+    exclude?: string | Array<string>;
+    /**
+     * Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at
+     * `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so
+     * the suffix is never appended twice.
+     *
+     * @required
+     */
+    options: string;
+}
+
+export interface ChangelogTargetedBump {
+    /**
+     * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
+     * When omitted the entry applies to every target.
+     */
+    target?: string;
+    /**
+     * Only apply to workspaces whose repo-relative directory matches one of these globs
+     * (tsconfig-style include).
+     */
+    include?: string | Array<string>;
+    /** Skip workspaces whose repo-relative directory matches these globs. */
+    exclude?: string | Array<string>;
+    /**
+     * A bump rule: a matcher/callback or a list of matchers/callbacks.
+     *
+     * @required
+     */
+    options: ChangelogBumpRule;
+}
 
 export type ChangelogBumpRule =
     | boolean
@@ -552,17 +717,138 @@ export interface ChangelogBumpRuleMatch {
     match?: string;
 }
 
+export interface ChangelogTargetedAllowOverBump {
+    /**
+     * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
+     * When omitted the entry applies to every target.
+     */
+    target?: string;
+    /**
+     * Only apply to workspaces whose repo-relative directory matches one of these globs
+     * (tsconfig-style include).
+     */
+    include?: string | Array<string>;
+    /** Skip workspaces whose repo-relative directory matches these globs. */
+    exclude?: string | Array<string>;
+    /**
+     * Apply a bump once per matching change instead of once per run (default false).
+     *
+     * @required
+     */
+    options: boolean;
+}
+
+export interface ChangelogTargetedCommit {
+    /**
+     * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
+     * When omitted the entry applies to every target.
+     */
+    target?: string;
+    /**
+     * Only apply to workspaces whose repo-relative directory matches one of these globs
+     * (tsconfig-style include).
+     */
+    include?: string | Array<string>;
+    /** Skip workspaces whose repo-relative directory matches these globs. */
+    exclude?: string | Array<string>;
+    /**
+     * Commit message formatting/credit options (with an optional formatter callback).
+     *
+     * @required
+     */
+    options: ChangelogCommitFormatConfig;
+}
+
+export type ChangelogDetailsConfig =
+    | boolean
+    | {
+          enabled?: boolean;
+          lifecycle?: 'after' | 'before';
+          minCommits?: number;
+          descriptions?: boolean | ChangelogDetailsOptions;
+          body?: boolean | ChangelogDetailsOptions;
+          releaseNotes?: boolean | ChangelogDetailsOptions;
+          intro?: boolean | ChangelogDetailsOptions;
+          outro?: boolean | ChangelogDetailsOptions;
+          footer?: boolean | ChangelogDetailsOptions;
+          breaking?: boolean | ChangelogDetailsOptions;
+          types?: boolean | ChangelogDetailsOptions | Array<string>;
+          custom?: ChangelogDetailsCustom | Array<ChangelogDetailsCustom>;
+      };
+
+export interface ChangelogDetailsOptions {
+    /** Custom `<summary>` text. */
+    title?: string;
+    /** Render the collapsible open by default. */
+    expanded?: boolean;
+    /** Minimum entries in the section before wrapping (nested overrides the top-level default). */
+    minCommits?: number;
+}
+
+export type ChangelogDetailsCustom =
+    | RegExp
+    | string
+    | {
+          title?: string;
+          expanded?: boolean;
+          minCommits?: number;
+          start?: RegExp | string;
+          end?: RegExp | string;
+      };
+
 export interface ChangelogCommitFormatConfig {
-    /** Include the `by <author>` credit (default true). */
+    /**
+     * Include the `by <author>` credit.
+     *
+     * @default true
+     */
     author?: boolean;
-    /** Include the commit hash link (default true). */
+    /**
+     * Include the commit hash link.
+     *
+     * @default true
+     */
     commitSha?: boolean;
-    /** Include issue/fixes links (default true). */
+    /**
+     * Include issue/fixes links.
+     *
+     * @default true
+     */
     issues?: boolean;
-    /** Prefix the author with their GitHub avatar (default false). */
+    /**
+     * Prefix the author with their GitHub avatar.
+     *
+     * @default false
+     */
     authorAvatar?: boolean;
     /** Fully custom commit line formatter (TS/JS configs only; return the bullet body). */
     format?: (ctx: ChangelogCommitFormatContext) => string;
+    /**
+     * Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables descriptions,
+     * release notes, breaking changes and type sections; use an object or `false` to opt out.
+     */
+    details?: ChangelogDetailsConfig;
+}
+
+export interface ChangelogTargetedProvider {
+    /**
+     * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
+     * When omitted the entry applies to every target.
+     */
+    target?: string;
+    /**
+     * Only apply to workspaces whose repo-relative directory matches one of these globs
+     * (tsconfig-style include).
+     */
+    include?: string | Array<string>;
+    /** Skip workspaces whose repo-relative directory matches these globs. */
+    exclude?: string | Array<string>;
+    /**
+     * `default`, `changesets`, a provider id, or a custom provider/callback.
+     *
+     * @required
+     */
+    options: string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void);
 }
 
 export interface ChangelogProviderConfig {
@@ -582,6 +868,80 @@ export interface ChangelogProviderConfig {
 
 export type ChangelogVersioning = boolean | ChangelogVersioningConfig;
 
+export type ChangelogTextEntry = ChangelogTextContentEntry | ChangelogTextFileEntry;
+
+export interface ChangelogTextContentEntry {
+    /**
+     * Set false to skip this entry.
+     *
+     * @default true
+     */
+    enabled?: boolean;
+    /**
+     * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
+     * When omitted the entry applies to every target.
+     */
+    target?: string;
+    /**
+     * Only apply to workspaces whose repo-relative directory matches one of these globs
+     * (tsconfig-style include).
+     */
+    include?: string | Array<string>;
+    /** Skip workspaces whose repo-relative directory matches these globs. */
+    exclude?: string | Array<string>;
+    /**
+     * The text inserted into the changelog entry.
+     *
+     * @required
+     */
+    content: string;
+    /** Not allowed with `content`. */
+    file?: unknown;
+}
+
+export interface ChangelogTextFileEntry {
+    /**
+     * Set false to skip this entry.
+     *
+     * @default true
+     */
+    enabled?: boolean;
+    /**
+     * A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`.
+     * When omitted the entry applies to every target.
+     */
+    target?: string;
+    /**
+     * Only apply to workspaces whose repo-relative directory matches one of these globs
+     * (tsconfig-style include).
+     */
+    include?: string | Array<string>;
+    /** Skip workspaces whose repo-relative directory matches these globs. */
+    exclude?: string | Array<string>;
+    /** Not allowed with `file`. */
+    content?: unknown;
+    /**
+     * Path to a file containing the text (relative to the repository root or absolute). It is read at
+     * changelog-generation time.
+     *
+     * @required
+     */
+    file: string;
+}
+
+export type ChangelogTextSetting = ChangelogTextEntry | Array<ChangelogTextEntry>;
+
+export interface ChangelogGroupOptions {
+    /** The CC type (required for object entries in an array). */
+    type?: string;
+    /** Custom heading title (or callback; TS/JS configs only). */
+    title?: string | ((ctx: ChangelogGroupContext) => string);
+    /** Sort position; lower comes first (or callback; TS/JS configs only). */
+    order?: number | ((ctx: ChangelogGroupContext) => number);
+    /** Omit this group from the rendered changelog (or callback; TS/JS only). */
+    hidden?: boolean | ((ctx: ChangelogGroupContext) => boolean);
+}
+
 export type ChangelogWorkflowSetting =
     | boolean
     | string
@@ -589,6 +949,150 @@ export type ChangelogWorkflowSetting =
     | GitLabWorkflowSetting
     | AzureWorkflowSetting
     | CiChangelogConfig;
+
+/** @see https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file */
+export interface ToolchainDependabotConfig {
+    /**
+     * Dependabot update interval.
+     *
+     * @default 'weekly'
+     */
+    schedule?: 'daily' | 'weekly' | 'monthly';
+    /**
+     * Directories to scan.
+     *
+     * @default ['/']
+     */
+    directories?: Array<string>;
+    /**
+     * Package ecosystems. `github-actions` keeps `voidzero-dev/setup-vp` and the other actions up to
+     * date.
+     *
+     * @default ['github-actions', 'npm']
+     */
+    ecosystems?: Array<string>;
+    /** Labels added to the update PRs. */
+    labels?: Array<string>;
+    /**
+     * Maximum open update PRs per entry.
+     *
+     * @default 5
+     */
+    openPullRequestsLimit?: number;
+    /** Dependabot update groups, keyed by group name. */
+    groups?: Record<
+        string & {},
+        {
+            'applies-to'?: 'version-updates' | 'security-updates';
+            patterns?: Array<string>;
+            'exclude-patterns'?: Array<string>;
+            'update-types'?: Array<string>;
+        }
+    >;
+    /**
+     * Security updates: enable Dependabot security updates, group vulnerability PRs and apply a
+     * severity threshold. Requires a repository admin token for the generated workflow.
+     */
+    security?: boolean | ToolchainDependabotSecurityConfig;
+    /**
+     * Rules for every ecosystem (an array) or keyed by package ecosystem (eg. `{ npm: [...] }`; `*` is
+     * the fallback).
+     */
+    allow?:
+        | Array<{
+              'dependency-name': string;
+              'dependency-type'?: 'direct' | 'indirect' | 'production' | 'development';
+              'update-types'?: Array<string>;
+              versions?: Array<string>;
+          }>
+        | Record<
+              string & {},
+              Array<{
+                  'dependency-name': string;
+                  'dependency-type'?: 'direct' | 'indirect' | 'production' | 'development';
+                  'update-types'?: Array<string>;
+                  versions?: Array<string>;
+              }>
+          >;
+    /**
+     * Rules for every ecosystem (an array) or keyed by package ecosystem (eg. `{ npm: [...] }`; `*` is
+     * the fallback).
+     */
+    ignore?:
+        | Array<{
+              'dependency-name': string;
+              'dependency-type'?: 'direct' | 'indirect' | 'production' | 'development';
+              'update-types'?: Array<string>;
+              versions?: Array<string>;
+          }>
+        | Record<
+              string & {},
+              Array<{
+                  'dependency-name': string;
+                  'dependency-type'?: 'direct' | 'indirect' | 'production' | 'development';
+                  'update-types'?: Array<string>;
+                  versions?: Array<string>;
+              }>
+          >;
+    /**
+     * Override the generated file name.
+     *
+     * @default 'dependabot.yml'
+     */
+    filename?: string;
+    /**
+     * Directory for the config.
+     *
+     * @default '.github'
+     */
+    dir?: string;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
+}
+
+export interface ToolchainDependabotSecurityConfig {
+    /** Enable or disable the security-update automation. */
+    enabled?: boolean;
+    /**
+     * Open PRs for vulnerable dependencies. Enabled by default when `security` is set; set false to
+     * disable Dependabot security updates.
+     */
+    vulnerabilities?:
+        | boolean
+        | {
+              severity?:
+                  | 'low'
+                  | 'moderate'
+                  | 'medium'
+                  | 'high'
+                  | 'critical'
+                  | 'all'
+                  | Array<'low' | 'moderate' | 'medium' | 'high' | 'critical' | 'all'>;
+          };
+    /** Pull-request strategy for security updates. */
+    pr?: {
+        /**
+         * Group security updates into one PR per ecosystem (default) or one PR per update.
+         *
+         * @default 'grouped'
+         */
+        strategy?: 'grouped' | 'individual';
+    };
+    /**
+     * Generate the workflow that enables Dependabot security updates and applies the severity
+     * threshold. Default true.
+     *
+     * @default true
+     */
+    workflow?: boolean;
+}
 
 export type CustomWorkflowSettings =
     | string
@@ -602,33 +1106,29 @@ export interface ChangelogConfig {
     commitlint?: boolean | ChangelogCommitlintConfig;
     /** Automatic version bumping on changelog generation (default `true`). */
     versioning?: ChangelogVersioning;
-    /** Write the Conventional-Commits VS Code settings (default true). */
+    /**
+     * Opt-in text inserted at the start of the new changelog entry, globally or for matching targets
+     * (workspaces/root).
+     */
+    intro?: ChangelogTextSetting;
+    /**
+     * Opt-in text appended to the new changelog entry, globally or for matching targets
+     * (workspaces/root).
+     */
+    outro?: ChangelogTextSetting;
+    /**
+     * Write the Conventional-Commits VS Code settings.
+     *
+     * @default true
+     */
     vscode?: boolean;
     /**
      * Conventional-Commits group order/titles: an ordered array of CC types or `{ type, title, order,
      * hidden }`, a type->title/options record, or a callback (TS/JS configs only).
      */
     groups?:
-        | Array<
-              | string
-              | {
-                    type?: string;
-                    title?: string | ((ctx: ChangelogGroupContext) => string);
-                    order?: number | ((ctx: ChangelogGroupContext) => number);
-                    hidden?: boolean | ((ctx: ChangelogGroupContext) => boolean);
-                }
-          >
-        | Record<
-              string & {},
-              | string
-              | {
-                    type?: string;
-                    title?: string | ((ctx: ChangelogGroupContext) => string);
-                    order?: number | ((ctx: ChangelogGroupContext) => number);
-                    hidden?: boolean | ((ctx: ChangelogGroupContext) => boolean);
-                }
-              | boolean
-          >
+        | Array<string | ChangelogGroupOptions>
+        | Record<string & {}, string | ChangelogGroupOptions | boolean>
         | ((ctx: ChangelogGroupsContext) => ChangelogGroupsSetting);
     /**
      * How breaking changes are detected: `conventional` (default: a `!` in the CC subject or a
@@ -643,30 +1143,56 @@ export interface ChangelogConfig {
         | ((commit: ChangelogBreakingCommit) => boolean);
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
 }
 
 export interface ToolchainFmtConfig {
     /**
-     * Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false;
-     * existing keys are kept).
+     * Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (existing keys
+     * are kept).
      */
     vscode?: boolean | ToolchainVscodeSettings;
     /**
      * Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` overrides these
      * (deep merge).
+     *
+     * @see https://oxc.rs/docs/guide/usage/formatter/config-file-reference.html
      */
     oxc?: boolean | OxfmtConfig;
     /**
      * Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated
      * `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
+     *
+     * @see https://biomejs.dev/reference/configuration/
      */
     biome?: boolean | BiomeConfig;
-    /** Prettier options (`true` = defaults, `false` = disabled). */
+    /**
+     * Prettier options (`true` = defaults, `false` = disabled).
+     *
+     * @see https://prettier.io/docs/options
+     */
     prettier?: boolean | PrettierConfig;
-    /** Dprint options (`true` = defaults, `false` = disabled). */
+    /**
+     * Dprint options (`true` = defaults, `false` = disabled).
+     *
+     * @see https://dprint.dev/config/
+     */
     dprint?: boolean | DprintConfig;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
 }
 
 export interface ToolchainVscodeSettings {
@@ -678,37 +1204,65 @@ export interface ToolchainVscodeSettings {
 
 export interface ToolchainLintConfig {
     /**
-     * Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false;
-     * existing keys are kept).
+     * Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (existing keys
+     * are kept).
      */
     vscode?: boolean | ToolchainVscodeSettings;
     /**
      * Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` overrides these
      * (deep merge).
+     *
+     * @see https://oxc.rs/docs/guide/usage/linter/config-file-reference.html
      */
     oxc?: boolean | OxlintConfig;
     /**
      * Biome linter options (`true` = defaults, `false` = disabled); merged into the generated
      * `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).
+     *
+     * @see https://biomejs.dev/reference/configuration/
      */
     biome?: boolean | BiomeConfig;
-    /** ESLint options (`true` = defaults, `false` = disabled). */
+    /**
+     * ESLint options (`true` = defaults, `false` = disabled).
+     *
+     * @see https://eslint.org/docs/latest/use/configure/configuration-files
+     */
     eslint?: boolean | EslintConfig;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
 }
 
 /** @deprecated use `toolchain.fmt.biome` / `toolchain.lint.biome`. Still writes `biome.json`. */
 export interface ToolchainBiomeConfig {
-    /** Write the Biome VS Code settings (default true). */
+    /**
+     * Write the Biome VS Code settings.
+     *
+     * @default true
+     */
     vscode?: boolean;
     /**
      * Deep-merged over the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace
      * them).
+     *
+     * @see https://biomejs.dev/reference/configuration/
      */
     overrides?: BiomeConfig;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
 }
 
 export interface ToolchainTsconfigConfig {
@@ -722,23 +1276,49 @@ export interface ToolchainTsconfigConfig {
      * `dist`, `build`, ...).
      */
     exclude?: string | Array<string>;
-    /** Also respect `.gitignore` files (root + nested) when matching `glob` (default true). */
+    /**
+     * Also respect `.gitignore` files (root + nested) when matching `glob`.
+     *
+     * @default true
+     */
     gitignore?: boolean;
-    /** Wire project references (default false). */
+    /**
+     * Wire project references.
+     *
+     * @default false
+     */
     refs?: boolean;
-    /** Emit `composite: true` (default false). */
+    /**
+     * Emit `composite: true`.
+     *
+     * @default false
+     */
     composite?: boolean;
-    /** Inject path aliases (default true). */
+    /**
+     * Inject path aliases.
+     *
+     * @default true
+     */
     aliases?: boolean;
+    /**
+     * Inline the compiler options inherited from a remote `http(s)` `extends` chain into the generated
+     * workspace configs (default false). Useful when a tool cannot follow a remote URL; path-valued
+     * options such as `paths`/`baseUrl` are skipped because they describe the remote tree. Settings
+     * the generated config already defines always win.
+     *
+     * @default false
+     */
+    flattenRemoteExtends?: boolean;
     /**
      * Auto-generate the root workspaces tsconfig paths/references from the project graph (default
      * false). Set true to derive them from the project graph; set false to only use the entries you
-     * define yourself.
+     * define yourself. An object additionally accepts `include`/`exclude`, `rewriteAlias`, `modes`,
+     * `prefix`, `devMode` and `dist`.
      */
     auto?: boolean | ToolchainTsconfigAliasAutoSetting;
     /**
      * Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). Accepts the
-     * same `include`/`exclude`/`rewriteAlias` object as `auto`.
+     * same `include`/`exclude`/`rewriteAlias`/`modes`/`prefix`/`devMode`/`dist` object as `auto`.
      */
     aliasAuto?: boolean | ToolchainTsconfigAliasAutoSetting;
     /** Auto-generate project references (defaults to `auto`; `refs` must also be enabled). */
@@ -749,21 +1329,35 @@ export interface ToolchainTsconfigConfig {
      * back to `src`).
      */
     autoSrcDir?: 'src' | '.' | (string & {});
-    /** JSON indentation (default 4). */
+    /**
+     * JSON indentation.
+     *
+     * @default 4
+     */
     indent?: number;
     /**
-     * The workspaces tsconfig file name that holds `paths` + `references` (default
-     * `tsconfig.workspaces.json`).
+     * The workspaces tsconfig file name that holds `paths` + `references`.
+     *
+     * @default 'tsconfig.workspaces.json'
      */
     rootFile?: string;
     /**
-     * The workspace default tsconfig file name that the generator expands (default
-     * `tsconfig.default.json`).
+     * The workspace default tsconfig file name that the generator expands.
+     *
+     * @default 'tsconfig.default.json'
      */
     defaultFile?: string;
-    /** The workspace build tsconfig file name (default `tsconfig.build.json`). */
+    /**
+     * The workspace build tsconfig file name.
+     *
+     * @default 'tsconfig.build.json'
+     */
     buildFile?: string;
-    /** The root base tsconfig file name (default `tsconfig.base.json`). */
+    /**
+     * The root base tsconfig file name.
+     *
+     * @default 'tsconfig.base.json'
+     */
     baseFile?: string;
     /** Per-file `extends` overrides for generated/scaffolded tsconfig templates. */
     extends?: {
@@ -789,6 +1383,13 @@ export interface ToolchainTsconfigConfig {
     overrides?: ToolchainTsconfigOverrides;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
 }
 
 export interface ToolchainTsconfigAliasAutoSetting {
@@ -809,6 +1410,28 @@ export interface ToolchainTsconfigAliasAutoSetting {
      * from TS/JS configs; JSON configs use string patterns.
      */
     rewriteAlias?: ToolchainTsconfigAliasRewrite;
+    /**
+     * Alias discovery: `auto` (exports, then the project structure), `exports` (package.json
+     * exports/types/main only), `project-structure` (scan the source tree), or an array combining
+     * `exports` and `project-structure`.
+     */
+    modes?: 'auto' | 'exports' | 'project-structure' | Array<'exports' | 'project-structure'>;
+    /**
+     * Prefix for generated aliases instead of the package scope (eg. `@` produces `@/<package>` and
+     * `@/<package>/<subpath>`).
+     */
+    prefix?: '@' | (string & {});
+    /**
+     * Resolve generated aliases to source files. Set false to point at the distributed files instead.
+     *
+     * @default true
+     */
+    devMode?: boolean;
+    /**
+     * Output directory used to map source/dist targets (default: the workspace tsconfig's `outDir`,
+     * then `dist`).
+     */
+    dist?: string;
 }
 
 export interface ToolchainTsconfigAutoSetting {
@@ -822,14 +1445,48 @@ export interface ToolchainTsconfigAutoSetting {
 }
 
 export interface ToolchainTsconfigOverrides {
-    /** Deep-merged into the root base tsconfig (`baseFile`) during sync. */
+    /**
+     * Deep-merged into the root base tsconfig (`baseFile`) during sync.
+     *
+     * @see https://www.typescriptlang.org/tsconfig
+     */
     base?: TsConfigJson;
-    /** Deep-merged into every workspace default tsconfig (`defaultFile`) during sync. */
+    /**
+     * Deep-merged into every workspace default tsconfig (`defaultFile`) during sync.
+     *
+     * @see https://www.typescriptlang.org/tsconfig
+     */
     default?: TsConfigJson;
-    /** Deep-merged into every workspace build tsconfig (`buildFile`) during sync. */
+    /**
+     * Deep-merged into every workspace build tsconfig (`buildFile`) during sync.
+     *
+     * @see https://www.typescriptlang.org/tsconfig
+     */
     build?: TsConfigJson;
-    /** Deep-merged into the root workspaces tsconfig (`rootFile`) during sync. */
+    /**
+     * Deep-merged into the root workspaces tsconfig (`rootFile`) during sync.
+     *
+     * @see https://www.typescriptlang.org/tsconfig
+     */
     root?: TsConfigJson;
+}
+
+/** @see https://tsx.is */
+export interface ToolchainLoaderConfig {
+    /**
+     * The tsconfig the config loader uses. `true` selects the nearest `tsconfig.json`; a string
+     * selects a different file (relative to the project root); `false` disables tsconfig resolution.
+     */
+    tsconfig?: boolean | string;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
 }
 
 export interface ToolchainTemplatesConfig {
@@ -837,6 +1494,13 @@ export interface ToolchainTemplatesConfig {
     sources?: Array<ToolchainTemplateSource>;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
 }
 
 export interface ToolchainTemplateSource {
@@ -895,6 +1559,13 @@ export interface ToolchainRegistryConfig {
     providers?: ToolchainRegistryPolicy;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
 }
 
 export interface ToolchainRegistryPolicy {
@@ -914,6 +1585,13 @@ export interface ToolchainCatalogsConfig {
     named?: Record<string & {}, Record<string & {}, string>>;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
 }
 
 export type ToolchainViteConfig = Omit<ViteUserConfig, 'fmt' | 'lint'> & {
@@ -923,6 +1601,8 @@ export type ToolchainViteConfig = Omit<ViteUserConfig, 'fmt' | 'lint'> & {
     shim?: 'runtime' | 'static';
     /** Module specifier used to import resolveVite in runtime shims. */
     shimImport?: string;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
     /** Oxfmt options; `true` uses the toolchain defaults. */
     fmt?: boolean | NonNullable<ViteUserConfig['fmt']>;
     /** Oxlint options; `true` uses the toolchain defaults. */
@@ -930,17 +1610,51 @@ export type ToolchainViteConfig = Omit<ViteUserConfig, 'fmt' | 'lint'> & {
 };
 
 export interface ToolchainWatchConfig {
-    /** Debounce window in ms (default 150). */
+    /**
+     * Debounce window in ms.
+     *
+     * @default 150
+     */
     debounce?: number;
     /**
      * Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modules`, `.dbx`,
      * `dist`, `build`, ...).
      */
     exclude?: string | Array<string>;
-    /** Also respect `.gitignore` files (root + nested) when watching (default true). */
+    /**
+     * Also respect `.gitignore` files (root + nested) when watching.
+     *
+     * @default true
+     */
     gitignore?: boolean;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
+}
+
+export interface ToolchainSyncConfig {
+    /**
+     * Opt-in formatting of the managed files after generation (default off). `true` uses the defaults,
+     * `false` disables it, and an object tunes `enabled`/`fix`/`command`/`exclude`.
+     */
+    format?:
+        | boolean
+        | { enabled?: boolean; fix?: boolean; command?: string; exclude?: Array<string> };
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
 }
 
 export interface ToolchainLoggerConfig {
@@ -963,9 +1677,62 @@ export interface ToolchainProvidersConfig {
     color?: boolean;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
+     * files are left untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
+}
+
+export interface ToolchainHooks {
+    /** Runs after the config is loaded and its tokens are resolved. */
+    afterLoad?: (info: {
+        cwd: string;
+        config: ToolchainConfig;
+        tokens: Replacements;
+        path?: string;
+    }) => Awaitable<void>;
+    /** Runs once before the sync tasks. */
+    beforeSync?: (ctx: SyncContext) => Awaitable<void>;
+    /** Runs before each sync task. */
+    beforeTask?: (info: { task: SyncTask; ctx: SyncContext }) => Awaitable<void>;
+    /** Runs after each sync task, with the files it produced (if any). */
+    afterTask?: (info: {
+        task: SyncTask;
+        ctx: SyncContext;
+        files?: ManagedFile[];
+    }) => Awaitable<void>;
+    /** Runs once after the sync tasks with the result summary. */
+    afterSync?: (info: {
+        cwd: string;
+        config: ToolchainConfig;
+        result: SyncSummary;
+    }) => Awaitable<void>;
+    /** Runs after the bump is planned and before `dbx changelog` writes versions/changelogs. */
+    beforeVersion?: (info: {
+        cwd: string;
+        version: string;
+        previousVersion: string;
+        changelog?: ChangelogConfig;
+    }) => Awaitable<void>;
+    /** Runs after `dbx changelog` writes the new versions and changelogs. */
+    afterVersion?: (info: {
+        cwd: string;
+        version: string;
+        changelog?: ChangelogConfig;
+    }) => Awaitable<void>;
+    /** Runs on every watch-triggered change. */
+    onChange?: (info: { path?: string }) => Awaitable<void>;
 }
 
 export interface ToolchainConfigSections {
+    /**
+     * Enable/disable the toolchain. The shorthand is workspace-scoped; the object form is reserved for
+     * APIs and the VS Code extension.
+     */
+    enabled?: ToolchainEnabledConfig;
     /** Project metadata: canonical `package.json` fields and template tokens (inherited by workspaces). */
     project?: ToolchainProjectConfig;
     /** GitHub Actions workflows to generate (CI, release, issues, changelog, sync). */
@@ -987,6 +1754,12 @@ export interface ToolchainConfigSections {
     biome?: boolean | ToolchainBiomeConfig;
     /** Workspace tsconfig generation (path aliases + project references). */
     tsconfig?: boolean | ToolchainTsconfigConfig;
+    /**
+     * How `dbx.config.*` files are imported (tsconfig discovery).
+     *
+     * @see https://tsx.is
+     */
+    loader?: boolean | ToolchainLoaderConfig;
     /** Template sources / scaffolding. */
     templates?: boolean | ToolchainTemplatesConfig;
     /** Allow/deny host and path globs for template/provider registries. */
@@ -997,8 +1770,12 @@ export interface ToolchainConfigSections {
     vite?: boolean | ToolchainViteConfig;
     /** Watch behaviour for `dbx watch`. */
     watch?: boolean | ToolchainWatchConfig;
+    /** `dbx sync` behaviour (formatting of the generated managed files). */
+    sync?: boolean | ToolchainSyncConfig;
     /** Logging level, colours and prefix for toolchain output. */
     logger?: boolean | ToolchainLoggerConfig;
     /** Provider command behaviour (eg. colour for the passthrough commands). */
     providers?: boolean | ToolchainProvidersConfig;
+    /** Lifecycle hooks (functions; TS/JS configs only). Return values are awaited. */
+    hooks?: ToolchainHooks;
 }

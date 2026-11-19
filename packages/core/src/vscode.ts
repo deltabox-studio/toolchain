@@ -18,6 +18,8 @@ export interface VscodeSyncOptions {
     extensions?: string[];
     /** Whether the task runs (default: always). */
     enabled?: (config: ToolchainConfig) => boolean;
+    /** Whether the task should regenerate its managed files (default: true). */
+    regenerate?: (config: ToolchainConfig) => boolean;
     /** The project kinds the task applies to (default root + single project). */
     projectTypes?: ProjectType[];
 }
@@ -32,6 +34,7 @@ export function vscodeSyncTask(options: VscodeSyncOptions = {}): SyncTask {
         name: 'vscode',
         projectTypes: options.projectTypes ?? ['monorepo-root', 'project'],
         ...(options.enabled ? { enabled: options.enabled } : {}),
+        ...(options.regenerate ? { regenerate: options.regenerate } : {}),
         run: ctx => {
             const files: ManagedFile[] = [];
             const settings =

@@ -19,7 +19,7 @@ import type {
     MigrationFile,
     MigrationResult,
     ToolchainMigration,
-} from './types.js';
+} from './types/index.js';
 import { serializeTs } from './vite-target.js';
 import {
     foldToolchainSection,

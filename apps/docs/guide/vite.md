@@ -1,5 +1,67 @@
 # Vite+
 
+There are two ways to use dbx with Vite:
+
+- **Plugin mode (recommended):** put the toolchain config inline in the `dbx()`
+  Vite plugin inside `vite.config.*`. No `dbx.config.*` is required, and dbx
+  never manages `vite.config.*` because the plugin lives there.
+- **Config mode:** keep the whole Vite+ config in `dbx.config.*` under
+  `toolchain.vite`, and let `dbx sync` write a thin `vite.config.ts` shim.
+
+Both can be combined: a `dbx.config.*` provides shared config and the plugin
+options are merged on top.
+
+## Plugin mode
+
+```ts [vite.config.ts]
+import { defineConfig } from 'vite-plus'; // or 'vite' for plain Vite
+
+import { dbx } from '@deltabox/toolchain/vite';
+
+export default defineConfig({
+    plugins: [
+        dbx({
+            toolchain: {
+                project: { name: 'my-app', scope: '@acme' },
+                fmt: { oxc: true },
+                lint: { oxc: true },
+                ci: { sync: true },
+                changelog: { preset: 'conventional' },
+            },
+        }),
+    ],
+    // your usual Vite config
+});
+```
+
+The plugin carries the config inline and the dbx CLI (sync, projects, watch and
+the VS Code extension) reads it back from `vite.config.*`. The plugin also
+derives the Vite options from the dbx sections:
+
+| dbx section | Vite option                            |
+| ----------- | -------------------------------------- |
+| `logger`    | `logLevel` / `customLogger`            |
+| `watch`     | `server.watch` (the `exclude` globs)   |
+| `fmt`       | Vite+ `fmt` (only on a Vite+ project)  |
+| `lint`      | Vite+ `lint` (only on a Vite+ project) |
+
+The `vite` section is deliberately omitted from the plugin options: the Vite
+config is the user config in plugin mode. Vite+ keys are only added when the
+project declares `vite-plus`; a pure Vite project gets only standard Vite
+options. Vite+ CLI passthroughs (`dbx vite:*`) are refused unless Vite+ is
+installed/detected.
+
+`dbx sync` runs before the dev server/build (or `dbx sync --check` in CI) and
+re-syncs when `vite.config.*`, `dbx.config.*` or a tsconfig input changes.
+
+Builtin scaffolds (`dbx create`, `dbx project:init`, `dbx project:init:workspace`)
+use plugin mode: they generate a `vite.config.*` with `dbx({ toolchain })`,
+Vitest (`test`) and Vite+ tasks (`run.tasks`) instead of a `dbx.config.*`. The
+scaffolded packages depend on `vite-plus` and use `vp` for build/test, so no
+separate `vitest` or `tsdown` dependency is written.
+
+## Config mode
+
 The `vite` section holds the **entire Vite+ configuration**. Every key is passed
 through verbatim to Vite+, so `dbx.config.*` stays the only hand-authored root
 config; `dbx sync` writes a thin root `vite.config.ts` that resolves it at load
@@ -71,6 +133,29 @@ Set `vite: { config: false }` to leave a hand-written
 `dbx` provider passthrough). `config: 'config/vite.custom.ts'` writes the shim
 there instead (relative to the project, or an absolute path inside it).
 
+## Nested workspaces
+
+`vite` is **never inherited**. A workspace with no `vite` section keeps its
+hand-written `vite.config.*` untouched; `dbx sync` only writes a shim when the
+project declares `vite` itself. Declare the settings the workspace needs in its
+own config:
+
+```ts [packages/web/dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        vite: {
+            shim: 'static',
+            resolve: { tsconfigPaths: true },
+            run: { tasks: { build: { command: 'tsdown' } } },
+        },
+    },
+});
+```
+
+`vite.fmt` / `vite.lint` are the exception: when the workspace opts into `fmt` /
+`lint`, they are hoisted into the top-level `fmt.oxc` / `lint.oxc` before
+inheritance, so shared formatting still flows down.
+
 ## Keep the shim out of Oxfmt
 
 Add the shim to `vite.fmt.ignorePatterns`, otherwise `vp fmt` rewrites the
@@ -84,11 +169,10 @@ vite: {
 }
 ```
 
-In a monorepo, put `**/vite.config.ts` on the **root** config so every
-workspace shim is covered (workspace `fmt` settings are inherited, but an
-`ignorePatterns` array in a workspace replaces the root's list). `dbx migrate
---from vite` adds the ignore for you (see
-[Migrations](/guide/migrations/#vite-config)).
+In a monorepo, put `**/vite.config.ts` on the **root** top-level `fmt.oxc`
+config so every workspace shim is covered (an `ignorePatterns` array in a
+workspace replaces the root's list). `dbx migrate --from vite` adds the ignore
+for you (see [Migrations](/guide/migrations/#vite-config)).
 
 When `fmt` / `lint` are defined, `dbx sync` also writes `.oxfmtrc.json` /
 `.oxlintrc.json` for the Oxc VS Code extension. They are root-only unless a

@@ -15,11 +15,17 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx watch`](#watch)                                   | Sync once, then watch key files and re-sync on change.                                          |
 | [`dbx reset`](#reset)                                   | Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a project.       |
 | [`dbx providers`](#providers)                           | List the tooling providers (Vite+, ...) and their commands.                                     |
+| [`dbx enabled`](#enabled)                               | Print whether the toolchain is enabled for this project (and the scope).                        |
+| [`dbx enable`](#enable)                                 | Enable the toolchain (workspace scope by default).                                              |
+| [`dbx disable`](#disable)                               | Disable the toolchain (workspace scope by default).                                             |
 | [`dbx tsconfig`](#tsconfig)                             | Generate workspace tsconfig.json files from the default tsconfig (aliases + references).        |
 | [`dbx cleanup`](#cleanup)                               | Remove build artifacts (*.tsbuildinfo, dist/).                                                  |
 | [`dbx cleanup:turbo`](#cleanup-turbo)                   | Remove the turbo cache (.turbo/).                                                               |
 | [`dbx workflow`](#workflow)                             | Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).                       |
 | [`dbx changelog`](#changelog)                           | Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.              |
+| [`dbx mcp:serve`](#mcp-serve)                           | Run the dbx MCP server over stdio (for MCP clients).                                            |
+| [`dbx mcp:install`](#mcp-install)                       | Install the dbx MCP server + skill into an AI harness/editor.                                   |
+| [`dbx mcp:list`](#mcp-list)                             | List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).                          |
 | [`dbx migrate`](#migrate)                               | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.* into dbx.config. |
 | [`dbx migrate:list`](#migrate-list)                     | List the registered migrations and whether each is detected.                                    |
 | [`dbx project:init`](#project-init)                     | Scaffold a single-package TypeScript project.                                                   |
@@ -70,6 +76,8 @@ registers. Run `yarn config:docs` after changing a command.
 | [`dbx vite:toolchain`](#vite-toolchain)                 | Vite+: Show Vite+ tool versions.                                                                |
 | [`dbx vite:upgrade`](#vite-upgrade)                     | Vite+: Update `vp` itself.                                                                      |
 | [`dbx vite:implode`](#vite-implode)                     | Vite+: Remove `vp` and all related data.                                                        |
+| [`dbx fmt`](#fmt)                                       | Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc).               |
+| [`dbx lint`](#lint)                                     | Lint with the detected linter (Vite+ Oxlint, ESLint or Biome).                                  |
 
 ## `dbx projects`
 
@@ -86,11 +94,16 @@ Regenerate every managed file from dbx.config.*.
 
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `-q, --quiet` — Only log errors.
+- `--configless` — Manage projects without their own dbx.config.* (inherit the nearest config).
 - `--check` — Do not write; fail if files are out of date.
 - `--watch` — Keep running and re-sync on change.
-- `--recursive` — Sync every project that has its own dbx.config.* in dependency order.
+- `--recursive` — Sync every managed project in dependency order (nested workspaces included; configless projects only with --configless).
 - `--force` — Run even when no dbx.config.* is present.
 - `--only ‹tasks›` — Only run the named sync task(s), comma-separated (eg. `tsconfig`).
+- `--no-format` — Do not format the written managed files.
+- `--no-format-fix` — Run the formatter in check mode instead of rewriting the files.
+- `--format-command ‹command›` — Override the managed-file formatter command (`{files}` expands to the files).
+- `--format-exclude ‹glob...›` — Managed files to leave unformatted (repeatable globs).
 - `--json` — Print the sync result (including removed files) as JSON.
 
 ## `dbx watch`
@@ -99,6 +112,7 @@ Sync once, then watch key files and re-sync on change.
 
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `-q, --quiet` — Only log errors.
+- `--configless` — Manage projects without their own dbx.config.* (inherit the nearest config).
 - `--force` — Run even when no dbx.config.* is present.
 - `--list` — Print the resolved input globs (+ tsconfig file names) instead of watching.
 - `--json` — With --list: print the inputs as JSON.
@@ -124,6 +138,30 @@ List the tooling providers (Vite+, ...) and their commands.
 
 - `--json` — Print the providers (with actions) as JSON.
 
+## `dbx enabled`
+
+Print whether the toolchain is enabled for this project (and the scope).
+
+- `--json` — Print the resolved state as JSON.
+
+## `dbx enable`
+
+Enable the toolchain (workspace scope by default).
+
+- `--global` — Set the global scope (`~/.dbx/toolchain/cli/config.json`).
+- `--workspace` — Set the workspace scope (`.vscode/settings.json`).
+- `--cwd ‹dir›` — Project root (default: cwd).
+- `--json` — Print the result as JSON.
+
+## `dbx disable`
+
+Disable the toolchain (workspace scope by default).
+
+- `--global` — Set the global scope (`~/.dbx/toolchain/cli/config.json`).
+- `--workspace` — Set the workspace scope (`.vscode/settings.json`).
+- `--cwd ‹dir›` — Project root (default: cwd).
+- `--json` — Print the result as JSON.
+
 ## `dbx tsconfig`
 
 Generate workspace tsconfig.json files from the default tsconfig (aliases + references).
@@ -132,6 +170,7 @@ Generate workspace tsconfig.json files from the default tsconfig (aliases + refe
 - `--no-aliases` — Skip path aliases.
 - `--composite` — Emit composite + references.
 - `--refs` — Wire project references.
+- `--flatten-remote-extends` — Inline compiler options inherited from a remote http(s) extends chain (existing settings win).
 - `--auto` — Auto-wire the root workspaces tsconfig paths/references from the project graph (default false).
 - `--no-auto` — Only use the paths/references already in the root workspaces tsconfig.
 - `--auto-aliases` — Auto-wire path aliases (defaults to --auto).
@@ -192,7 +231,37 @@ Scan commits, derive the semver bump and update the CHANGELOG.md files + version
 - `--release-notes ‹semver›` — Print the release body for this version and exit.
 - `--processing-method ‹method›` — `latest` (default), `all`, or a git range.
 - `--format-only` — Only regroup existing changelogs.
+- `--release` — Release mode: wrap the entry as `**Release notes**`.
+- `--intro ‹text›` — Inline intro text for the new changelog entry.
+- `--intro-file ‹file›` — Read the new entry intro text from a file.
+- `--outro ‹text›` — Inline outro text for the new changelog entry.
+- `--outro-file ‹file›` — Read the new entry outro text from a file.
 - `--no-package-changes-section` — Skip the package-changes footer.
+
+## `dbx mcp:serve`
+
+Run the dbx MCP server over stdio (for MCP clients).
+
+- `--cwd ‹dir›` — Project root (default: cwd).
+
+## `dbx mcp:install`
+
+Install the dbx MCP server + skill into an AI harness/editor.
+
+- `--provider ‹id›` — claude, codex, vscode, opencode, pi or custom.
+- `--scope ‹scope›` — project (default) or global.
+- `--cwd ‹dir›` — Project root (default: cwd).
+- `--dir ‹dir›` — Custom directory (for --provider custom).
+- `--command ‹command›` — Client command (default `dbx`).
+- `--no-skills` — Do not write the skill/instructions file.
+- `--json` — Print the written paths as JSON.
+
+## `dbx mcp:list`
+
+List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).
+
+- `--cwd ‹dir›` — Project root (default: cwd).
+- `--json` — Print the providers as JSON.
 
 ## `dbx migrate`
 
@@ -210,6 +279,7 @@ Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.* i
 - `--ignore-vite-config-file` — Do not remove the folded `vite.config.*`.
 - `--ignore-managed-files` — Skip the post-migration sync (leave the toolchain-managed files as-is).
 - `--ignore-changelog` — Skip the changelog task in the post-migration sync.
+- `--tool-version ‹name@range›` — Override a provisioned formatter/linter dependency version (repeatable).
 - `--json` — Print the result as JSON.
 
 ## `dbx migrate:list`
@@ -227,7 +297,9 @@ Scaffold a single-package TypeScript project.
 - `-s, --scope ‹scope›` — npm scope, eg. @acme.
 - `-o, --out ‹dir›` — Output directory (default: cwd).
 - `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
-- `--no-config` — Skip the dbx.config.ts file.
+- `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
+- `--containerize` — Also generate Docker artifacts (Dockerfile + .dockerignore).
+- `--no-project-config` — Skip the generated vite.config.ts file (the project config).
 - `--type ‹type›` — Project type: project \| monorepo-root \| monorepo-workspace.
 - `--force` — Overwrite existing files in the output directory.
 
@@ -240,7 +312,8 @@ Scaffold a monorepo root (add --example for one example workspace).
 - `-o, --out ‹dir›` — Output directory (default: cwd).
 - `--example` — Also scaffold one example workspace package.
 - `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
-- `--no-config` — Skip the dbx.config.ts file.
+- `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
+- `--no-project-config` — Skip the generated vite.config.ts file (the project config).
 - `--type ‹type›` — Project type: project \| monorepo-root \| monorepo-workspace.
 - `--force` — Overwrite existing files in the output directory.
 
@@ -253,7 +326,8 @@ Scaffold a monorepo workspace package into an existing monorepo root.
 - `-r, --root ‹dir›` — Monorepo root (default: cwd).
 - `-d, --dir ‹dir›` — Workspace dir relative to the root (default: packages/&lt;name&gt;).
 - `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
-- `--no-config` — Skip the dbx.config.ts file.
+- `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
+- `--no-project-config` — Skip the generated vite.config.ts file (the project config).
 - `--type ‹type›` — Project type: project \| monorepo-root \| monorepo-workspace.
 - `--force` — Overwrite existing files in the output directory.
 
@@ -372,8 +446,10 @@ Scaffold a project from a template (builtin, local or Vite+).
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--var ‹pair...›` — Template variables as key=value (repeatable).
 - `--action ‹id...›` — Action id to run after scaffolding (repeatable).
+- `--tool-version ‹name@range›` — Override a provisioned formatter/linter dependency version (repeatable).
 - `--online` — Resolve online templates too.
 - `--force` — Overwrite existing files in the output directory.
+- `--containerize` — Also generate Docker artifacts (Dockerfile + .dockerignore).
 - `--json` — Print the result as JSON.
 
 ## `dbx vite`
@@ -589,5 +665,17 @@ Vite+: Update `vp` itself.
 ## `dbx vite:implode`
 
 Vite+: Remove `vp` and all related data.
+
+- `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
+
+## `dbx fmt`
+
+Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc).
+
+- `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
+
+## `dbx lint`
+
+Lint with the detected linter (Vite+ Oxlint, ESLint or Biome).
 
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).

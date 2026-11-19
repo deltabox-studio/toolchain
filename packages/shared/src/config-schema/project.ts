@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { REGENERATE_DESCRIPTION } from './meta.js';
+
 /** The kind of project a `dbx.config.*` lives in. */
 export const projectTypeSchema = z
     .enum(['monorepo-root', 'monorepo-workspace', 'project'])
@@ -15,6 +17,7 @@ export const projectTypeSchema = z
 export const projectConfigSchema = z
     .object({
         type: projectTypeSchema.optional(),
+        regenerate: z.boolean().optional().describe(REGENERATE_DESCRIPTION),
         name: z
             .string()
             .describe('The unscoped project name (written as `<scope>/<name>`).')
@@ -36,7 +39,8 @@ export const projectConfigSchema = z
             .optional(),
         packageManager: z
             .string()
-            .describe('Package manager name, written as `<name>@<version>` (default `yarn`).')
+            .describe('Package manager name, written as `<name>@<version>`.')
+            .default('yarn')
             .optional(),
         packageManagerVersion: z
             .string()
@@ -49,10 +53,20 @@ export const projectConfigSchema = z
         inherit: z
             .boolean()
             .describe(
-                'Inherit the parent project metadata (default true). Set false to keep ' +
-                    'this project metadata independent of the root config (other sections ' +
-                    'still merge normally).'
+                'Inherit the parent project metadata. Set false to keep this project ' +
+                    'metadata independent of the root config (other sections still merge ' +
+                    'normally).'
             )
+            .default(true)
+            .optional(),
+        manageConfigless: z
+            .boolean()
+            .describe(
+                'Manage projects that have no dbx.config.* of their own by inheriting the ' +
+                    'nearest ancestor config. Disabled by default so configless projects are ' +
+                    'never touched unless explicitly opted in.'
+            )
+            .default(false)
             .optional(),
     })
     .describe(

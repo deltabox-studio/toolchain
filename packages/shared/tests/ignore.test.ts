@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import {
     collectGitignorePatterns,
@@ -30,6 +30,16 @@ describe('isIgnoredPath', () => {
         expect(isIgnoredPath('packages/legacy/index.ts', ['**/legacy/**'])).toBe(true);
         expect(isIgnoredPath('packages/app/index.ts', ['**/legacy/**'])).toBe(false);
     });
+
+    it('matches brace alternatives and character classes', () => {
+        expect(isIgnoredPath('notes/a.md', ['**/*.{md,txt}'])).toBe(true);
+        expect(isIgnoredPath('notes/a.txt', ['**/*.{md,txt}'])).toBe(true);
+        expect(isIgnoredPath('notes/a.ts', ['**/*.{md,txt}'])).toBe(false);
+        expect(isIgnoredPath('a.md', ['**/[ab].md'])).toBe(true);
+        expect(isIgnoredPath('c.md', ['**/[ab].md'])).toBe(false);
+        expect(isIgnoredPath('c.md', ['**/[!ab].md'])).toBe(true);
+        expect(isIgnoredPath('a/notes.md', ['**/*.md'])).toBe(true);
+    });
 });
 
 describe('tool defaults', () => {
@@ -41,10 +51,10 @@ describe('tool defaults', () => {
     });
 
     it('adds the formatter-specific paths', () => {
-        expect(DEFAULT_FMT_IGNORE_PATTERNS).toContain('**/vite.config.ts');
-        expect(DEFAULT_FMT_IGNORE_PATTERNS).toContain('**/*.json');
-        expect(DEFAULT_LINT_IGNORE_PATTERNS).toContain('**/vendor/**');
-        expect(DEFAULT_LINT_IGNORE_PATTERNS).not.toContain('**/vite.config.ts');
+        expect(DEFAULT_FMT_IGNORE_PATTERNS).toContain('**/.nuxt/**');
+        expect(DEFAULT_FMT_IGNORE_PATTERNS).toContain('**/*.lock');
+        expect(DEFAULT_LINT_IGNORE_PATTERNS).toContain('**/*.min.*');
+        expect(DEFAULT_LINT_IGNORE_PATTERNS).toContain('**/.svelte-kit/**');
     });
 });
 
@@ -75,6 +85,20 @@ describe('collectGitignorePatterns', () => {
         expect(isIgnoredPath('generated/x.ts', patterns)).toBe(true);
         // `generated` is anchored, so a nested one is not ignored.
         expect(isIgnoredPath('packages/generated/x.ts', patterns)).toBe(false);
+    });
+
+    it('anchors a gitignore pattern that contains a slash', () => {
+        const cwd = tmp();
+        fs.writeFileSync(path.join(cwd, '.gitignore'), 'config/secrets\n*.log\n');
+
+        const patterns = collectGitignorePatterns(cwd);
+        expect(patterns).toContain('config/secrets');
+        expect(patterns).not.toContain('**/config/secrets');
+        expect(isIgnoredPath('config/secrets/key', patterns)).toBe(true);
+        // Git would not ignore a same-named path deeper in the tree.
+        expect(isIgnoredPath('apps/web/config/secrets/key', patterns)).toBe(false);
+        // A slash-less pattern still matches at any depth.
+        expect(isIgnoredPath('apps/web/debug.log', patterns)).toBe(true);
     });
 
     it('does not follow a self-referential symlink (no runaway walk)', () => {

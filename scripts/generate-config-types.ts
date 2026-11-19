@@ -36,6 +36,8 @@ const overrides = {
     shim?: 'runtime' | 'static';
     /** Module specifier used to import resolveVite in runtime shims. */
     shimImport?: string;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
     /** Oxfmt options; \`true\` uses the toolchain defaults. */
     fmt?: boolean | NonNullable<ViteUserConfig['fmt']>;
     /** Oxlint options; \`true\` uses the toolchain defaults. */
@@ -104,9 +106,11 @@ const imports = [
     "import type { ChangelogGroupContext, ChangelogGroupsContext, ChangelogGroupsSetting } from './changelog-groups.js';",
     "import type { ChangelogBumpRuleCallbackContext, ChangelogCommitFormatContext, ChangelogProviderContext } from './changelog-callbacks.js';",
     "import type { ToolchainLogger } from './logger.js';",
+    "import type { Awaitable, ManagedFile, SyncContext, SyncSummary, SyncTask, ToolchainConfig } from './types/index.js';",
+    "import type { Replacements } from './template.js';",
 ];
 const engine = createConfigEngine({ schema: dbxConfigSchema });
-const types = engine.generateConfigTypes({ overrides, imports });
+const types = engine.types.generate({ overrides, imports });
 const sections = Object.values(types).map(content => content.trimEnd());
 const content = `${[header, imports.join('\n'), ...sections].filter(Boolean).join('\n\n')}\n`;
 

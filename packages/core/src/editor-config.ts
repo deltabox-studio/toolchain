@@ -18,6 +18,7 @@ import {
     isPlainObject,
     LINTER_PRECEDENCE,
     readJsoncFile,
+    regenerateEnabled,
     resolveFmtTool,
     resolveFmtTools,
     resolveLintTool,
@@ -119,14 +120,21 @@ function formatterSettings(tool: string): Record<string, unknown> {
     const languages = FORMATTER_LANGUAGES[tool] ?? FORMATTER_LANGUAGES.prettier ?? [];
     return {
         'editor.defaultFormatter': extension,
+        // One project-wide save hook; the per-language blocks only pick the
+        // formatter, so `editor.formatOnSave` is not duplicated everywhere.
         'editor.formatOnSave': true,
-        ...(tool === 'oxc' ? { 'editor.formatOnSaveMode': 'file' } : {}),
+        ...(tool === 'oxc'
+            ? {
+                  'editor.formatOnSaveMode': 'file',
+                  // Vite+ disables nested Oxfmt configs; tell the Oxc extension too.
+                  'oxc.fmt.disableNestedConfig': true,
+              }
+            : {}),
         ...Object.fromEntries(
             languages.map(language => [
                 `[${language}]`,
                 {
                     'editor.defaultFormatter': extension,
-                    'editor.formatOnSave': true,
                 },
             ])
         ),
@@ -142,6 +150,26 @@ function addMissing(target: Record<string, unknown>, patch: Record<string, unkno
     }
 }
 
+/** Remove a setting by exact key or dotted path (`[typescript].editor...`). */
+function removeSetting(target: Record<string, unknown>, key: string): void {
+    if (Object.prototype.hasOwnProperty.call(target, key)) {
+        delete target[key];
+        return;
+    }
+    // Language keys (`[typescript]`) contain dots in their values, so try each
+    // split from the right until a nested object owns the remainder.
+    for (let index = key.length - 1; index > 0; index--) {
+        if (key[index] !== '.') continue;
+        const head = key.slice(0, index);
+        const tail = key.slice(index + 1);
+        const value = target[head];
+        if (isPlainObject(value)) {
+            removeSetting(value, tail);
+            return;
+        }
+    }
+}
+
 /** Whether `fmt.vscode` / `lint.vscode` is enabled (`true` or an options object). */
 function vscodeEnabled(value: unknown): boolean {
     return value === true || isPlainObject(value);
@@ -149,8 +177,8 @@ function vscodeEnabled(value: unknown): boolean {
 
 /**
  * Apply the `vscode` section's overrides/exclusions to the generated defaults.
- * `exclude` lists exact setting keys (eg. `editor.defaultFormatter` or
- * `[typescript]`) to omit.
+ * `exclude` accepts exact setting keys (`editor.defaultFormatter`, `[typescript]`)
+ * and dotted paths (`[typescript].editor.defaultFormatter`).
  */
 function applyVscodeOptions(
     patch: Record<string, unknown>,
@@ -158,10 +186,9 @@ function applyVscodeOptions(
 ): Record<string, unknown> {
     if (!isPlainObject(value)) return patch;
     const options = value as ToolchainVscodeSettings;
-    let out = options.overrides ? deepMerge(patch, options.overrides) : patch;
+    const out = options.overrides ? deepMerge(patch, options.overrides) : patch;
     for (const key of options.exclude ?? []) {
-        const { [key]: _excluded, ...rest } = out;
-        out = rest;
+        removeSetting(out, key);
     }
     return out;
 }
@@ -226,6 +253,8 @@ export function editorConfigSyncTask(): SyncTask {
             vscodeEnabled(
                 sectionEnabled(config.lint) ? sectionConfig(config.lint)?.vscode : undefined
             ),
+        regenerate: (config: ToolchainConfig) =>
+            regenerateEnabled(config.fmt) || regenerateEnabled(config.lint),
         run: ctx => {
             const fmt = resolveFmtTool(ctx.config);
             const lint = resolveLintTool(ctx.config);

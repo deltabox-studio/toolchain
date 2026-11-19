@@ -5,7 +5,7 @@
 
 import fs from 'node:fs';
 
-import type { MigrationFile } from './types.js';
+import type { MigrationFile } from './types/index.js';
 
 export type FileStatus = 'missing' | 'changed' | 'same';
 

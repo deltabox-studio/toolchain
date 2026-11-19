@@ -1,10 +1,10 @@
-﻿import fs from 'node:fs';
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
-import { mergeJsonAt, readJsoncFile } from '../src/index.js';
+import { mergeJsonAt, readJsoncFile, readJsonFile } from '../src/index.js';
 
 describe('mergeJsonAt', () => {
     it('unions recommendations but replaces other arrays', () => {
@@ -68,6 +68,58 @@ describe('mergeJsonAt comments', () => {
                 'source.fixAll.eslint': 'explicit',
                 'source.fixAll.oxc': 'explicit',
             });
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
+    });
+});
+
+describe('JSONC parsing', () => {
+    it('accepts a trailing comma followed by a comment', () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-jsonc-'));
+        try {
+            const file = path.join(cwd, 'settings.json');
+            fs.writeFileSync(file, '{\n    "a": 1, // keep me\n}\n');
+            expect(readJsoncFile<Record<string, unknown>>(file)).toEqual({ a: 1 });
+            const merged = mergeJsonAt(cwd, 'settings.json', { b: 2 }, 2);
+            expect(merged).toContain('// keep me');
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
+    });
+});
+
+describe('BOM handling', () => {
+    it('preserves comments when the JSONC file starts with a BOM', () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-merge-'));
+        try {
+            fs.mkdirSync(path.join(cwd, '.vscode'));
+            const file = path.join(cwd, '.vscode/settings.json');
+            fs.writeFileSync(
+                file,
+                '\uFEFF{\n    // keep this\n    "editor.formatOnSave": true\n}\n'
+            );
+            const out = mergeJsonAt(cwd, '.vscode/settings.json', {
+                'editor.defaultFormatter': 'oxc.oxc-vscode',
+            });
+            expect(out).toContain('// keep this');
+            expect(out.startsWith('\uFEFF')).toBe(true);
+            fs.writeFileSync(file, out);
+            expect(readJsoncFile<Record<string, unknown>>(file)).toEqual({
+                'editor.formatOnSave': true,
+                'editor.defaultFormatter': 'oxc.oxc-vscode',
+            });
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
+    });
+
+    it('reads UTF-16LE JSON written by PowerShell', () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-json-'));
+        try {
+            const file = path.join(cwd, 'package.json');
+            fs.writeFileSync(file, Buffer.from('\uFEFF{ "a": 1 }', 'utf16le'));
+            expect(readJsonFile<Record<string, unknown>>(file)).toEqual({ a: 1 });
         } finally {
             fs.rmSync(cwd, { recursive: true, force: true });
         }

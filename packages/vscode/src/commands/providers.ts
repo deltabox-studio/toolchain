@@ -315,7 +315,9 @@ export function createProviderRegistryCommands(
                 vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
                 return;
             }
-            const providers = await loadProviders(root);
+            const providers = (await loadProviders(root)).filter(
+                provider => provider.available !== false
+            );
             const commands = providers.flatMap(provider =>
                 provider.commands.map(command => ({
                     label: command.description,
@@ -335,6 +337,10 @@ export function createProviderRegistryCommands(
             if (!picked) return;
             if (picked.command.name === 'vite:create') {
                 await deps.createViteProject(root);
+                return;
+            }
+            if (picked.command.name === 'vite:fmt' || picked.command.name === 'vite:lint') {
+                await deps.runCli(root, [picked.command.name === 'vite:fmt' ? 'fmt' : 'lint']);
                 return;
             }
             deps.openTerminalCommand(root, picked.command.name, `dbx ${picked.command.name}`);
@@ -366,6 +372,13 @@ export function createProviderRegistryCommands(
         // `vite:create` prompts interactively; run it through the extension.
         if (command.name === 'vite:create') {
             await deps.createViteProject(node.root);
+            return;
+        }
+        // Formatting/linting can fail with an actionable diagnostic (eg. no
+        // formatter dependency). Run them through the CLI so the standard error
+        // notification is shown instead of a terminal that only prints it.
+        if (command.name === 'vite:fmt' || command.name === 'vite:lint') {
+            await deps.runCli(node.root, [command.name === 'vite:fmt' ? 'fmt' : 'lint']);
             return;
         }
         deps.openTerminalCommand(node.root, command.name, command.name);

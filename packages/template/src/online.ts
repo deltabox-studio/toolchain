@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import type { ToolchainTemplateSource } from '@deltabox/toolchain/shared';
 
-import type { Template } from './types.js';
+import type { Template } from './types/index.js';
 
 const DEFAULT_REGISTRY = 'https://registry.npmjs.org';
 

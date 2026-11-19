@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 
 // Keep the hash-link tests independent of the checkout's git history (a
 // shallow clone would not contain these commits).
@@ -37,6 +37,7 @@ import {
     splitInlineDescription,
 } from '../src/index.js';
 import { formatChangelogFile } from '../src/utils/format.js';
+import { recordIssues } from '../src/utils/git.js';
 
 const REPO_RANGE = 'HEAD~5..HEAD';
 
@@ -360,6 +361,25 @@ describe('changelog formatting', () => {
         ]);
     });
 
+    it('recognizes fix and fix: issue-closing keywords', () => {
+        const base = { hash: 'a'.repeat(40), author: 'A', authorEmail: '' };
+        expect(recordIssues({ ...base, subject: 'fix #12', body: '' }, undefined)).toEqual([
+            { number: 12 },
+        ]);
+        expect(recordIssues({ ...base, subject: 'fix: #12', body: '' }, undefined)).toEqual([
+            { number: 12 },
+        ]);
+        expect(
+            recordIssues({ ...base, subject: 'feat: add', body: 'fixes #7\ncloses: #8' }, undefined)
+        ).toEqual([{ number: 7 }, { number: 8 }]);
+    });
+
+    it('omits issue-only fix and fix: lines from a description body', () => {
+        expect(formatBody('fix #12')).toEqual([]);
+        expect(formatBody('fix: #12')).toEqual([]);
+        expect(formatBody('fix: #12\nReal description')).toEqual([['Real description']]);
+    });
+
     it('keeps a multi-line conventional footer together', () => {
         const body = [
             '- a list item',
@@ -491,6 +511,31 @@ describe('changelog formatting', () => {
         expect(entries[0]!.bullets.join('\n')).not.toContain('A nested description line.');
         expect(entries[0]!.bullets.join('\n')).not.toContain('some-dep');
     });
+
+    it('parses a details-body version summary', () => {
+        const content = [
+            '# Changelog',
+            '',
+            '<details>',
+            '<summary><h2>0.15.0 (September 2026)</h2></summary>',
+            '',
+            '<!-- release:start -->',
+            '',
+            '- **chore(scripts):** tidy ([#abcdef1](https://github.com/x/y/commit/abcdef1) by [T](https://github.com/T))',
+            '',
+            '<!-- release:end -->',
+            '',
+            '</details>',
+            '',
+            '## 0.14.0',
+            '',
+            '- **feat(server):** add thing',
+        ].join('\n');
+        const entries = parseExistingChangelog(content);
+        expect(entries.map(entry => entry.version)).toEqual(['0.15.0', '0.14.0']);
+        expect(entries[0]!.bullets).toHaveLength(1);
+        expect(entries[0]!.bullets[0]).toContain('tidy');
+    });
 });
 
 describe('formatLine', () => {
@@ -573,9 +618,9 @@ describe('reformatChangelogContent (--format-only)', () => {
         ].join('\n');
         const out = reformatChangelogContent(content, 'x/y');
         expect(out).toContain('## 0.14.0');
-        expect(out).toContain('### New features');
+        expect(out).toContain('<summary>New features</summary>');
         expect(out).toContain('#### Server');
-        expect(out).toContain('### Bug fixes');
+        expect(out).toContain('<summary>Bug fixes</summary>');
         expect(out).toContain('#### Frontend');
         // CC prefix stripped + sentence capitalized
         expect(out).toContain('- Add a thing ([#abcdef1]');
@@ -597,7 +642,9 @@ describe('reformatChangelogContent (--format-only)', () => {
             { type: 'fix', title: 'Bug Fixes' },
             { type: 'feat', title: 'New Features' },
         ]);
-        expect(out.indexOf('### Bug Fixes')).toBeLessThan(out.indexOf('### New Features'));
+        expect(out.indexOf('<summary>Bug Fixes</summary>')).toBeLessThan(
+            out.indexOf('<summary>New Features</summary>')
+        );
         expect(out).toContain('#### Frontend');
         expect(out).toContain('#### Server');
     });

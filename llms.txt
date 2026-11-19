@@ -10,36 +10,49 @@ This file is a concise, link-first overview. For the **full** documentation in a
 
 - **One config.** `dbx.config.ts` exports `{ toolchain: { ...sections } }`; every section is opt-in by presence (`section: true` uses defaults, omit it to leave that area untouched).
 - **Sync.** `dbx sync` runs each enabled section and writes the managed files, tracked in `.dbx/toolchain/manifest.json` (the last-sync time lives in the gitignored `.dbx/toolchain/timestamps.json`); `dbx sync --check` is the CI gate. `dbx sync --recursive` syncs every discovered project in dependency order.
-- **Nested configs.** A non-root `dbx.config.*` merges over the nearest ancestor config: objects merge, while scalars and arrays replace; `project.type` and `hooks` are never inherited.
+- **Nested configs.** A non-root `dbx.config.*` only inherits sections it explicitly enables (`fmt`, `lint`, `biome`, `changelog`, `catalogs`, `logger`); `project` metadata is inherited except its identity fields. `ci`, `tsconfig`, `loader`, `templates`, `registry`, `watch`, `providers`, `vite` and `hooks` are never inherited. Configless projects are unmanaged unless `project.manageConfigless` / `--configless` opts in.
 - **Project graph.** `dbx projects` writes `.dbx/toolchain/projects.json` (workspace dirs + dependencies), used by `sync --recursive`, the VS Code view and per-workspace changelogs.
-- **Sections.** `project`, `ci` (workflows + changelog), `fmt`, `lint`, `biome`, `tsconfig`, `templates`, `vite`, `watch`, `logger`, `providers`; every workflow under `ci` is opt-in.
+- **Vite plugin.** `dbx()` in `vite.config.*` can carry the whole toolchain config, so a Vite/Vite+ project needs no `dbx.config.*`; the CLI reads the plugin options back. dbx never manages `vite.config.*` in plugin mode, and Vite+ passthrough commands are gated on Vite+ being detected.
+- **MCP.** `dbx mcp:serve` exposes every public dbx API over MCP; `dbx mcp:install` writes the server + skill for Claude, Codex, VS Code, OpenCode, Pi or a custom directory.
+- **Sections.** `project`, `ci` (workflows + changelog), `fmt`, `lint`, `biome`, `tsconfig`, `loader`, `templates`, `vite`, `watch`, `logger`, `providers`; every workflow under `ci` is opt-in.
 - **Runtime.** Node ≥ 22.5 and Yarn 4 (corepack); Vite+ (`vp`) resolves at the repo root.
 
 ## Table of Contents
-
-- [Config types](https://toolchain.deltabox.studio/config.md)
-- [CLI reference](https://toolchain.deltabox.studio/config/cli.md)
-- [Environment variables](https://toolchain.deltabox.studio/config/env.md)
-- [dbx.config](https://toolchain.deltabox.studio/config/reference.md)
 
 ### Introduction
 
 - [Getting Started](https://toolchain.deltabox.studio/guide.md)
 - [Monorepo Guide](https://toolchain.deltabox.studio/guide/monorepo.md)
 - [VS Code Extension](https://toolchain.deltabox.studio/guide/vscode.md)
+- [Vite+](https://toolchain.deltabox.studio/guide/vite.md)
 - [LLMs](https://toolchain.deltabox.studio/llms.md)
+
+#### Config reference
+
+- [Overview](https://toolchain.deltabox.studio/config.md)
+- [CLI reference](https://toolchain.deltabox.studio/config/cli.md)
+- [Environment variables](https://toolchain.deltabox.studio/config/env.md)
+- [dbx.config](https://toolchain.deltabox.studio/config/reference.md)
+
+#### Migrations
+
+- [Migrations](https://toolchain.deltabox.studio/guide/migrations.md)
+- [Migrating from v1 to v2](https://toolchain.deltabox.studio/guide/migrations/v1-v2.md)
+- [Migrating from v2 to v3](https://toolchain.deltabox.studio/guide/migrations/v2-v3.md)
 
 - [Package catalogs](https://toolchain.deltabox.studio/guide/catalogs.md)
 - [CLI](https://toolchain.deltabox.studio/guide/cli.md)
+- [Docker](https://toolchain.deltabox.studio/guide/docker.md)
 - [Formatting & linting](https://toolchain.deltabox.studio/guide/formatting.md)
 - [Logger](https://toolchain.deltabox.studio/guide/logger.md)
+- [MCP (Model Context Protocol)](https://toolchain.deltabox.studio/guide/mcp.md)
 - [Project](https://toolchain.deltabox.studio/guide/project.md)
 - [Providers](https://toolchain.deltabox.studio/guide/providers.md)
 - [Package scripts](https://toolchain.deltabox.studio/guide/scripts.md)
 - [Templates](https://toolchain.deltabox.studio/guide/templates.md)
 - [tsconfig](https://toolchain.deltabox.studio/guide/tsconfig.md)
 - [TypeScript](https://toolchain.deltabox.studio/guide/typescript.md)
-- [Vite+](https://toolchain.deltabox.studio/guide/vite.md)
+- [Vite plugin](https://toolchain.deltabox.studio/guide/vite-plugin.md)
 - [Watch](https://toolchain.deltabox.studio/guide/watch.md)
 
 #### Programmatic API
@@ -58,6 +71,7 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [Branches](https://toolchain.deltabox.studio/guide/changelog/branches.md)
 - [CLI](https://toolchain.deltabox.studio/guide/changelog/cli.md)
 - [commitlint](https://toolchain.deltabox.studio/guide/changelog/commitlint.md)
+- [Intro and outro text](https://toolchain.deltabox.studio/guide/changelog/intro-outro.md)
 - [Troubleshooting](https://toolchain.deltabox.studio/guide/changelog/troubleshooting.md)
 - [Versioning](https://toolchain.deltabox.studio/guide/changelog/versioning.md)
 - [Writing commit messages](https://toolchain.deltabox.studio/guide/changelog/writing-commit-messages.md)
@@ -67,6 +81,7 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [CI](https://toolchain.deltabox.studio/guide/ci.md)
 - [Changelog workflow](https://toolchain.deltabox.studio/guide/ci/changelog.md)
 - [CI checks](https://toolchain.deltabox.studio/guide/ci/ci.md)
+- [Dependabot](https://toolchain.deltabox.studio/guide/ci/dependabot.md)
 - [Issues](https://toolchain.deltabox.studio/guide/ci/issues.md)
 - [Releases](https://toolchain.deltabox.studio/guide/ci/releases.md)
 - [Workflow settings](https://toolchain.deltabox.studio/guide/ci/settings.md)
@@ -78,6 +93,7 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [Config file names](https://toolchain.deltabox.studio/guide/config/config-file-names.md)
 - [`defineConfig`](https://toolchain.deltabox.studio/guide/config/defineconfig.md)
 - [Hooks](https://toolchain.deltabox.studio/guide/config/hooks.md)
+- [Loader](https://toolchain.deltabox.studio/guide/config/loader.md)
 - [Logging](https://toolchain.deltabox.studio/guide/config/logging.md)
 - [Nested configs](https://toolchain.deltabox.studio/guide/config/nested-configs.md)
 - [Opt-in by presence](https://toolchain.deltabox.studio/guide/config/opt-in-by-presence.md)
@@ -95,11 +111,6 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [Generated outputs](https://toolchain.deltabox.studio/guide/config-generator/generated-outputs.md)
 - [Load the config at runtime](https://toolchain.deltabox.studio/guide/config-generator/load-the-config.md)
 - [Real-world shape](https://toolchain.deltabox.studio/guide/config-generator/real-world-shape.md)
-
-#### Migrations
-
-- [Migrations](https://toolchain.deltabox.studio/guide/migrations.md)
-- [Migrating from v1 to v2](https://toolchain.deltabox.studio/guide/migrations/v1-v2.md)
 
 ### Other
 

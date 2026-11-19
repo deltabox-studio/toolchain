@@ -1,16 +1,227 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$ref": "#/$defs/DbxConfigSections",
+    "$id": "https://deltabox.studio/schemas/dbx.config.json",
+    "title": "dbx.config",
+    "description": "The dbx configuration model (the @deltabox/toolchain settings live under `toolchain`).",
+    "type": "object",
+    "properties": {
+        "toolchain": {
+            "$ref": "#/$defs/ToolchainConfigSections",
+            "description": "The `@deltabox/toolchain` settings (every section is opt-in by presence)."
+        }
+    },
+    "additionalProperties": false,
     "$defs": {
-        "DbxConfigSections": {
+        "ToolchainConfigSections": {
             "type": "object",
             "properties": {
-                "toolchain": {
-                    "description": "The `@deltabox/toolchain` settings (every section is opt-in by presence).",
-                    "$ref": "#/$defs/ToolchainConfigSections"
+                "enabled": {
+                    "$ref": "#/$defs/ToolchainEnabledConfig"
+                },
+                "project": {
+                    "description": "Project metadata: canonical `package.json` fields and template tokens (inherited by workspaces).",
+                    "$ref": "#/$defs/ToolchainProjectConfig"
+                },
+                "ci": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainCiConfig"
+                        }
+                    ],
+                    "description": "GitHub Actions workflows to generate (CI, release, issues, changelog, sync)."
+                },
+                "changelog": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ChangelogConfig"
+                        }
+                    ],
+                    "description": "Manual changelog pipeline options for `dbx changelog`, the VS Code actions and the API. `ci.changelog` inherits these options."
+                },
+                "fmt": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainFmtConfig"
+                        }
+                    ],
+                    "description": "Formatter configuration: Oxc/Biome options, editor defaults and tools."
+                },
+                "lint": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainLintConfig"
+                        }
+                    ],
+                    "description": "Linter configuration: Oxc/Biome/ESLint options and editor defaults."
+                },
+                "biome": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainBiomeConfig"
+                        }
+                    ],
+                    "description": "Biome config generation (for consumers that still want a `biome.json`)."
+                },
+                "tsconfig": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainTsconfigConfig"
+                        }
+                    ],
+                    "description": "Workspace tsconfig generation (path aliases + project references)."
+                },
+                "loader": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainLoaderConfig"
+                        }
+                    ],
+                    "description": "How `dbx.config.*` files are imported (tsconfig discovery)."
+                },
+                "templates": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainTemplatesConfig"
+                        }
+                    ],
+                    "description": "Template sources / scaffolding."
+                },
+                "registry": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainRegistryConfig"
+                        }
+                    ],
+                    "description": "Allow/deny host and path globs for template/provider registries."
+                },
+                "catalogs": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainCatalogsConfig"
+                        }
+                    ],
+                    "description": "Package catalogs written to the package manager catalog file (`catalog:`)."
+                },
+                "vite": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainViteConfig"
+                        }
+                    ],
+                    "description": "The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it."
+                },
+                "watch": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainWatchConfig"
+                        }
+                    ],
+                    "description": "Watch behaviour for `dbx watch`."
+                },
+                "sync": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainSyncConfig"
+                        }
+                    ],
+                    "description": "`dbx sync` behaviour (formatting of the generated managed files)."
+                },
+                "logger": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainLoggerConfig"
+                        }
+                    ],
+                    "description": "Logging level, colours and prefix for toolchain output."
+                },
+                "providers": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainProvidersConfig"
+                        }
+                    ],
+                    "description": "Provider command behaviour (eg. colour for the passthrough commands)."
+                },
+                "hooks": {
+                    "$ref": "#/$defs/ToolchainHooks"
                 }
             },
             "additionalProperties": false
+        },
+        "ToolchainEnabledConfig": {
+            "anyOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "disabled": {
+                            "default": false,
+                            "type": "boolean",
+                            "description": "Disable the toolchain for this scope (default false)."
+                        },
+                        "scope": {
+                            "type": "string",
+                            "enum": [
+                                "global",
+                                "workspace"
+                            ],
+                            "description": "The scope the value applies to. Config files and the Vite plugin may only use `workspace`; `global` is reserved for the CLI/programmatic API and the VS Code extension."
+                        }
+                    },
+                    "required": [
+                        "scope"
+                    ],
+                    "additionalProperties": false
+                }
+            ],
+            "description": "Enable/disable the toolchain. The shorthand is workspace-scoped; the object form is reserved for APIs and the VS Code extension."
         },
         "ProjectType": {
             "type": "string",
@@ -26,6 +237,10 @@
             "properties": {
                 "type": {
                     "$ref": "#/$defs/ProjectType"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "string",
@@ -56,8 +271,9 @@
                     "description": "Node version for CI/templates, eg. `22` (not `package.json` `engines`)."
                 },
                 "packageManager": {
+                    "default": "yarn",
                     "type": "string",
-                    "description": "Package manager name, written as `<name>@<version>` (default `yarn`)."
+                    "description": "Package manager name, written as `<name>@<version>`."
                 },
                 "packageManagerVersion": {
                     "type": "string",
@@ -68,8 +284,14 @@
                     "description": "One-line description (`package.json` `description`)."
                 },
                 "inherit": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Inherit the parent project metadata (default true). Set false to keep this project metadata independent of the root config (other sections still merge normally)."
+                    "description": "Inherit the parent project metadata. Set false to keep this project metadata independent of the root config (other sections still merge normally)."
+                },
+                "manageConfigless": {
+                    "default": false,
+                    "type": "boolean",
+                    "description": "Manage projects that have no dbx.config.* of their own by inheriting the nearest ancestor config. Disabled by default so configless projects are never touched unless explicitly opted in."
                 }
             },
             "additionalProperties": false,
@@ -98,6 +320,17 @@
                     "description": "The toolchain sync workflow (`sync.yml`).",
                     "$ref": "#/$defs/WorkflowSetting"
                 },
+                "dependabot": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainDependabotConfig"
+                        }
+                    ],
+                    "description": "Dependabot version-update automation (`.github/dependabot.yml`)."
+                },
                 "custom": {
                     "type": "object",
                     "propertyNames": {
@@ -110,6 +343,11 @@
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -128,7 +366,8 @@
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "The complete workflow object."
+                    "description": "The complete workflow object.",
+                    "see": "https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions"
                 },
                 "filename": {
                     "type": "string",
@@ -139,6 +378,7 @@
                     "description": "Directory for the generated file."
                 },
                 "setup": {
+                    "default": false,
                     "type": "boolean",
                     "description": "Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow is written as-is)."
                 },
@@ -166,7 +406,8 @@
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "The complete pipeline object."
+                    "description": "The complete pipeline object.",
+                    "see": "https://docs.gitlab.com/ee/ci/yaml/"
                 },
                 "filename": {
                     "type": "string",
@@ -177,6 +418,7 @@
                     "description": "Directory for the generated file."
                 },
                 "setup": {
+                    "default": false,
                     "type": "boolean",
                     "description": "Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow is written as-is)."
                 },
@@ -204,7 +446,8 @@
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "The complete pipeline object."
+                    "description": "The complete pipeline object.",
+                    "see": "https://learn.microsoft.com/en-us/azure/devops/pipelines/yaml-schema/"
                 },
                 "filename": {
                     "type": "string",
@@ -215,6 +458,7 @@
                     "description": "Directory for the generated file."
                 },
                 "setup": {
+                    "default": false,
                     "type": "boolean",
                     "description": "Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow is written as-is)."
                 },
@@ -234,6 +478,7 @@
             "type": "object",
             "properties": {
                 "provider": {
+                    "default": "github",
                     "type": "string",
                     "const": "github",
                     "description": "Workflow vendor for a full `workflow` object (default `github`)."
@@ -290,15 +535,22 @@
                     "description": "Override the generated workflow file name (eg. `deploy.yml`)."
                 },
                 "dir": {
+                    "default": ".github/workflows",
                     "type": "string",
-                    "description": "Directory for the workflow file (default `.github/workflows`)."
+                    "description": "Directory for the workflow file."
                 },
                 "setup": {
+                    "default": false,
                     "type": "boolean",
-                    "description": "Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false; built-in workflows already include them)."
+                    "description": "Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs; built-in workflows already include them."
                 },
                 "enabled": {
                     "description": "Enable/disable this workflow (default: enabled when present).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -746,6 +998,14 @@
                 "devBranch": {
                     "type": "string",
                     "description": "Dev branch (`{{devBranch}}`)."
+                },
+                "vitePlus": {
+                    "type": "boolean",
+                    "description": "Use `voidzero-dev/setup-vp` for this workflow (default: detected from the project)."
+                },
+                "setupVpVersion": {
+                    "type": "string",
+                    "description": "Exact `voidzero-dev/setup-vp` version or commit SHA to pin."
                 }
             },
             "additionalProperties": {
@@ -784,6 +1044,7 @@
             "type": "object",
             "properties": {
                 "provider": {
+                    "default": "github",
                     "type": "string",
                     "const": "github",
                     "description": "Workflow vendor for a full `workflow` object (default `github`)."
@@ -840,15 +1101,22 @@
                     "description": "Override the generated workflow file name (eg. `deploy.yml`)."
                 },
                 "dir": {
+                    "default": ".github/workflows",
                     "type": "string",
-                    "description": "Directory for the workflow file (default `.github/workflows`)."
+                    "description": "Directory for the workflow file."
                 },
                 "setup": {
+                    "default": false,
                     "type": "boolean",
-                    "description": "Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs (default false; built-in workflows already include them)."
+                    "description": "Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs; built-in workflows already include them."
                 },
                 "enabled": {
                     "description": "Enable/disable the changelog workflow and pipeline (default: enabled when present).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 },
                 "branches": {
@@ -869,9 +1137,18 @@
                     "description": "Automatic version bumping on changelog generation (default `true`).",
                     "$ref": "#/$defs/ChangelogVersioning"
                 },
+                "intro": {
+                    "description": "Opt-in text inserted at the start of the new changelog entry, globally or for matching targets (workspaces/root).",
+                    "$ref": "#/$defs/ChangelogTextSetting"
+                },
+                "outro": {
+                    "description": "Opt-in text appended to the new changelog entry, globally or for matching targets (workspaces/root).",
+                    "$ref": "#/$defs/ChangelogTextSetting"
+                },
                 "vscode": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Write the Conventional-Commits VS Code settings (default true)."
+                    "description": "Write the Conventional-Commits VS Code settings."
                 },
                 "groups": {
                     "anyOf": [
@@ -883,51 +1160,11 @@
                                         "type": "string"
                                     },
                                     {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "type": "string",
-                                                "description": "The CC type (required for object entries in an array)."
-                                            },
-                                            "title": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "string"
-                                                    },
-                                                    {
-                                                        "description": "A custom group title callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Custom heading title (or callback; TS/JS configs only)."
-                                            },
-                                            "order": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "number"
-                                                    },
-                                                    {
-                                                        "description": "A custom group order callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Sort position; lower comes first (or callback; TS/JS configs only)."
-                                            },
-                                            "hidden": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "boolean"
-                                                    },
-                                                    {
-                                                        "description": "A custom group hidden callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Omit this group from the rendered changelog (or callback; TS/JS only)."
-                                            }
-                                        },
-                                        "additionalProperties": false,
-                                        "description": "One Conventional-Commits group."
+                                        "$ref": "#/$defs/ChangelogGroupOptions"
                                     }
                                 ]
-                            }
+                            },
+                            "description": "An ordered list of CC types or group objects."
                         },
                         {
                             "type": "object",
@@ -940,54 +1177,14 @@
                                         "type": "string"
                                     },
                                     {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "type": "string",
-                                                "description": "The CC type (required for object entries in an array)."
-                                            },
-                                            "title": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "string"
-                                                    },
-                                                    {
-                                                        "description": "A custom group title callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Custom heading title (or callback; TS/JS configs only)."
-                                            },
-                                            "order": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "number"
-                                                    },
-                                                    {
-                                                        "description": "A custom group order callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Sort position; lower comes first (or callback; TS/JS configs only)."
-                                            },
-                                            "hidden": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "boolean"
-                                                    },
-                                                    {
-                                                        "description": "A custom group hidden callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Omit this group from the rendered changelog (or callback; TS/JS only)."
-                                            }
-                                        },
-                                        "additionalProperties": false,
-                                        "description": "One Conventional-Commits group."
+                                        "$ref": "#/$defs/ChangelogGroupOptions"
                                     },
                                     {
                                         "type": "boolean"
                                     }
                                 ]
-                            }
+                            },
+                            "description": "A CC type to title/options/visibility record."
                         },
                         {
                             "description": "A custom group builder (TS/JS configs only)."
@@ -1090,6 +1287,11 @@
                 "enabled": {
                     "description": "Enable commitlint (default true when the changelog is enabled). Set false to generate changelogs without the Conventional-Commits pipeline.",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
@@ -1099,7 +1301,8 @@
             "type": "object",
             "properties": {
                 "target": {
-                    "description": "`uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently (default `uniform`).",
+                    "default": "uniform",
+                    "description": "`uniform` bumps the root and every workspace to one shared version; `root-only` bumps the root only; `individual` bumps each changed workspace independently.",
                     "$ref": "#/$defs/ChangelogVersioningTarget"
                 },
                 "workspaces": {
@@ -1109,43 +1312,210 @@
                     },
                     "description": "Glob patterns selecting the workspaces to version (relative to the root). Defaults to the root `package.json` `workspaces` field; when there is none the root `package.json` is used on its own."
                 },
+                "prerelease": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/$defs/ChangelogTargetedPrerelease"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/$defs/ChangelogTargetedPrerelease"
+                                    },
+                                    {
+                                        "type": "string",
+                                        "pattern": "^[0-9A-Za-z-]+$",
+                                        "description": "Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice."
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "type": "string",
+                            "pattern": "^[0-9A-Za-z-]+$",
+                            "description": "Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice."
+                        }
+                    ],
+                    "description": "The prerelease tag globally, or per-target via `{ target, options }`."
+                },
                 "bump": {
                     "type": "object",
                     "properties": {
                         "major": {
-                            "$ref": "#/$defs/ChangelogBumpRule"
+                            "anyOf": [
+                                {
+                                    "$ref": "#/$defs/ChangelogTargetedBump"
+                                },
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "anyOf": [
+                                            {
+                                                "$ref": "#/$defs/ChangelogTargetedBump"
+                                            },
+                                            {
+                                                "$ref": "#/$defs/ChangelogBumpRule"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "$ref": "#/$defs/ChangelogBumpRule"
+                                }
+                            ],
+                            "description": "A bump rule globally, or per-target via `{ target, include, exclude, options }`."
                         },
                         "minor": {
-                            "$ref": "#/$defs/ChangelogBumpRule"
+                            "anyOf": [
+                                {
+                                    "$ref": "#/$defs/ChangelogTargetedBump"
+                                },
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "anyOf": [
+                                            {
+                                                "$ref": "#/$defs/ChangelogTargetedBump"
+                                            },
+                                            {
+                                                "$ref": "#/$defs/ChangelogBumpRule"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "$ref": "#/$defs/ChangelogBumpRule"
+                                }
+                            ],
+                            "description": "A bump rule globally, or per-target via `{ target, include, exclude, options }`."
                         },
                         "patch": {
-                            "$ref": "#/$defs/ChangelogBumpRule"
+                            "anyOf": [
+                                {
+                                    "$ref": "#/$defs/ChangelogTargetedBump"
+                                },
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "anyOf": [
+                                            {
+                                                "$ref": "#/$defs/ChangelogTargetedBump"
+                                            },
+                                            {
+                                                "$ref": "#/$defs/ChangelogBumpRule"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "$ref": "#/$defs/ChangelogBumpRule"
+                                }
+                            ],
+                            "description": "A bump rule globally, or per-target via `{ target, include, exclude, options }`."
                         }
                     },
                     "additionalProperties": false,
-                    "description": "Custom bump rules for major/minor/patch (matchers or callbacks)."
+                    "description": "Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{ target, options }`."
                 },
                 "allowOverBump": {
-                    "type": "boolean",
-                    "description": "Apply a bump once per matching change instead of once per run (default false)."
+                    "anyOf": [
+                        {
+                            "$ref": "#/$defs/ChangelogTargetedAllowOverBump"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/$defs/ChangelogTargetedAllowOverBump"
+                                    },
+                                    {
+                                        "type": "boolean",
+                                        "description": "Apply a bump once per matching change instead of once per run (default false)."
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "type": "boolean",
+                            "description": "Apply a bump once per matching change instead of once per run (default false)."
+                        }
+                    ],
+                    "description": "Enable over-bumping globally, or per-target via `{ target, options }`."
                 },
                 "commit": {
-                    "description": "Commit message formatting/credit options (with an optional formatter callback).",
-                    "$ref": "#/$defs/ChangelogCommitFormatConfig"
+                    "anyOf": [
+                        {
+                            "$ref": "#/$defs/ChangelogTargetedCommit"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/$defs/ChangelogTargetedCommit"
+                                    },
+                                    {
+                                        "description": "Commit message formatting/credit options (with an optional formatter callback).",
+                                        "$ref": "#/$defs/ChangelogCommitFormatConfig"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "description": "Commit message formatting/credit options (with an optional formatter callback).",
+                            "$ref": "#/$defs/ChangelogCommitFormatConfig"
+                        }
+                    ],
+                    "description": "Commit formatting globally, or per-target via `{ target, options }`."
                 },
                 "provider": {
                     "anyOf": [
                         {
-                            "type": "string"
+                            "$ref": "#/$defs/ChangelogTargetedProvider"
                         },
                         {
-                            "$ref": "#/$defs/ChangelogProviderConfig"
+                            "type": "array",
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/$defs/ChangelogTargetedProvider"
+                                    },
+                                    {
+                                        "anyOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "$ref": "#/$defs/ChangelogProviderConfig"
+                                            },
+                                            {
+                                                "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
+                                            }
+                                        ],
+                                        "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
+                                    }
+                                ]
+                            }
                         },
                         {
-                            "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "$ref": "#/$defs/ChangelogProviderConfig"
+                                },
+                                {
+                                    "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
+                                }
+                            ],
+                            "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
                         }
                     ],
-                    "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
+                    "description": "The provider globally, or per-target via `{ target, options }`."
                 }
             },
             "additionalProperties": false,
@@ -1159,6 +1529,98 @@
                 "individual"
             ],
             "description": "Where the changelog version bump is applied."
+        },
+        "ChangelogTargetedPrerelease": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "type": "string",
+                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                },
+                "include": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                },
+                "options": {
+                    "type": "string",
+                    "pattern": "^[0-9A-Za-z-]+$",
+                    "description": "Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core and start at `<tag>.0`; existing prereleases keep their core and increment the counter for the same tag, so the suffix is never appended twice."
+                }
+            },
+            "required": [
+                "options"
+            ],
+            "additionalProperties": false,
+            "description": "The option value plus the targets it applies to."
+        },
+        "ChangelogTargetedBump": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "type": "string",
+                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                },
+                "include": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                },
+                "options": {
+                    "$ref": "#/$defs/ChangelogBumpRule"
+                }
+            },
+            "required": [
+                "options"
+            ],
+            "additionalProperties": false,
+            "description": "The option value plus the targets it applies to."
         },
         "ChangelogBumpRule": {
             "anyOf": [
@@ -1241,31 +1703,389 @@
             "additionalProperties": false,
             "description": "A declarative bump matcher."
         },
+        "ChangelogTargetedAllowOverBump": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "type": "string",
+                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                },
+                "include": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                },
+                "options": {
+                    "type": "boolean",
+                    "description": "Apply a bump once per matching change instead of once per run (default false)."
+                }
+            },
+            "required": [
+                "options"
+            ],
+            "additionalProperties": false,
+            "description": "The option value plus the targets it applies to."
+        },
+        "ChangelogTargetedCommit": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "type": "string",
+                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                },
+                "include": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                },
+                "options": {
+                    "description": "Commit message formatting/credit options (with an optional formatter callback).",
+                    "$ref": "#/$defs/ChangelogCommitFormatConfig"
+                }
+            },
+            "required": [
+                "options"
+            ],
+            "additionalProperties": false,
+            "description": "The option value plus the targets it applies to."
+        },
+        "ChangelogDetailsConfig": {
+            "anyOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "default": true,
+                            "type": "boolean",
+                            "description": "Enable/disable details wrapping."
+                        },
+                        "lifecycle": {
+                            "default": "after",
+                            "type": "string",
+                            "enum": [
+                                "after",
+                                "before"
+                            ],
+                            "description": "Apply details after the changelog formatting pipeline (default `after`, so custom searches regex-match the formatted text) or before it (`before`)."
+                        },
+                        "minCommits": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991,
+                            "description": "Default minimum entries for every details section (a nested minCommits wins; the body defaults to 10)."
+                        },
+                        "descriptions": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "$ref": "#/$defs/ChangelogDetailsOptions"
+                                }
+                            ],
+                            "description": "Wrap commit description paragraphs in a nested collapsible (default true)."
+                        },
+                        "body": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "$ref": "#/$defs/ChangelogDetailsOptions"
+                                }
+                            ],
+                            "description": "Wrap the version body in a collapsible titled Release notes (default false; enabled by default in release mode; requires 10 commits by default)."
+                        },
+                        "releaseNotes": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "$ref": "#/$defs/ChangelogDetailsOptions"
+                                }
+                            ],
+                            "description": "Wrap the release-mode entry in a collapsible titled Release notes."
+                        },
+                        "intro": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "$ref": "#/$defs/ChangelogDetailsOptions"
+                                }
+                            ],
+                            "description": "Wrap the intro text in a collapsible."
+                        },
+                        "outro": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "$ref": "#/$defs/ChangelogDetailsOptions"
+                                }
+                            ],
+                            "description": "Wrap the outro text in a collapsible."
+                        },
+                        "footer": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "$ref": "#/$defs/ChangelogDetailsOptions"
+                                }
+                            ],
+                            "description": "Wrap the package-changes footer in a collapsible."
+                        },
+                        "breaking": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "$ref": "#/$defs/ChangelogDetailsOptions"
+                                }
+                            ],
+                            "description": "Wrap the breaking-changes section in a collapsible."
+                        },
+                        "types": {
+                            "anyOf": [
+                                {
+                                    "anyOf": [
+                                        {
+                                            "type": "boolean"
+                                        },
+                                        {
+                                            "$ref": "#/$defs/ChangelogDetailsOptions"
+                                        }
+                                    ],
+                                    "description": "Enable/disable this collapsible, optionally with a title/expanded state."
+                                },
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            ],
+                            "description": "Wrap these CC type sections (all types when `true`; enabled by default)."
+                        },
+                        "custom": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/$defs/ChangelogDetailsCustom"
+                                },
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/$defs/ChangelogDetailsCustom"
+                                    }
+                                }
+                            ],
+                            "description": "Wrap matching text (the match or `start` match becomes the summary)."
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            ],
+            "description": "Wrap changelog sections/text in markdown `<details>` collapsibles. `true` enables descriptions, release notes, breaking changes and type sections; use an object or `false` to opt out."
+        },
+        "ChangelogDetailsOptions": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "Custom `<summary>` text."
+                },
+                "expanded": {
+                    "type": "boolean",
+                    "description": "Render the collapsible open by default."
+                },
+                "minCommits": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991,
+                    "description": "Minimum entries in the section before wrapping (nested overrides the top-level default)."
+                }
+            },
+            "additionalProperties": false,
+            "description": "Collapsible presentation: summary text, expanded state and minimum entry count."
+        },
+        "ChangelogDetailsCustom": {
+            "anyOf": [
+                {
+                    "description": "A string or regular expression (TS/JS configs only for RegExp)."
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Custom `<summary>` text."
+                        },
+                        "expanded": {
+                            "type": "boolean",
+                            "description": "Render the collapsible open by default."
+                        },
+                        "minCommits": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991,
+                            "description": "Minimum entries in the section before wrapping (nested overrides the top-level default)."
+                        },
+                        "start": {
+                            "description": "The opening marker."
+                        },
+                        "end": {
+                            "description": "The closing marker."
+                        }
+                    },
+                    "additionalProperties": false,
+                    "description": "A start/end marker pair with optional presentation options."
+                }
+            ],
+            "description": "A custom collapsible matcher."
+        },
         "ChangelogCommitFormatConfig": {
             "type": "object",
             "properties": {
                 "author": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Include the `by <author>` credit (default true)."
+                    "description": "Include the `by <author>` credit."
                 },
                 "commitSha": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Include the commit hash link (default true)."
+                    "description": "Include the commit hash link."
                 },
                 "issues": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Include issue/fixes links (default true)."
+                    "description": "Include issue/fixes links."
                 },
                 "authorAvatar": {
+                    "default": false,
                     "type": "boolean",
-                    "description": "Prefix the author with their GitHub avatar (default false)."
+                    "description": "Prefix the author with their GitHub avatar."
                 },
                 "format": {
                     "description": "Fully custom commit line formatter (TS/JS configs only; return the bullet body)."
+                },
+                "details": {
+                    "$ref": "#/$defs/ChangelogDetailsConfig"
                 }
             },
             "additionalProperties": false,
             "description": "Commit message formatting/credit options."
+        },
+        "ChangelogTargetedProvider": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "type": "string",
+                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                },
+                "include": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                },
+                "options": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "$ref": "#/$defs/ChangelogProviderConfig"
+                        },
+                        {
+                            "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
+                        }
+                    ],
+                    "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
+                }
+            },
+            "required": [
+                "options"
+            ],
+            "additionalProperties": false,
+            "description": "The option value plus the targets it applies to."
         },
         "ChangelogProviderConfig": {
             "type": "object",
@@ -1296,6 +2116,183 @@
             ],
             "description": "Automatic version bumping when a changelog entry is generated."
         },
+        "ChangelogTextEntry": {
+            "anyOf": [
+                {
+                    "$ref": "#/$defs/ChangelogTextContentEntry"
+                },
+                {
+                    "$ref": "#/$defs/ChangelogTextFileEntry"
+                }
+            ],
+            "description": "A changelog intro/outro entry (`content` or `file`, plus the target selector)."
+        },
+        "ChangelogTextContentEntry": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "default": true,
+                    "type": "boolean",
+                    "description": "Set false to skip this entry."
+                },
+                "target": {
+                    "type": "string",
+                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                },
+                "include": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                },
+                "content": {
+                    "type": "string",
+                    "description": "The text inserted into the changelog entry."
+                },
+                "file": {
+                    "description": "Not allowed with `content`.",
+                    "not": {}
+                }
+            },
+            "required": [
+                "content"
+            ],
+            "additionalProperties": false
+        },
+        "ChangelogTextFileEntry": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "default": true,
+                    "type": "boolean",
+                    "description": "Set false to skip this entry."
+                },
+                "target": {
+                    "type": "string",
+                    "description": "A workspace path relative to the repository root (`.` for the root), or a glob such as `apps/*`. When omitted the entry applies to every target."
+                },
+                "include": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Only apply to workspaces whose repo-relative directory matches one of these globs (tsconfig-style include)."
+                },
+                "exclude": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "description": "Skip workspaces whose repo-relative directory matches these globs."
+                },
+                "content": {
+                    "description": "Not allowed with `file`.",
+                    "not": {}
+                },
+                "file": {
+                    "type": "string",
+                    "description": "Path to a file containing the text (relative to the repository root or absolute). It is read at changelog-generation time."
+                }
+            },
+            "required": [
+                "file"
+            ],
+            "additionalProperties": false
+        },
+        "ChangelogTextSetting": {
+            "anyOf": [
+                {
+                    "$ref": "#/$defs/ChangelogTextEntry"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/ChangelogTextEntry"
+                    }
+                }
+            ],
+            "description": "A changelog intro/outro entry or an array of entries (`Arrayable`)."
+        },
+        "ChangelogGroupOptions": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "description": "The CC type (required for object entries in an array)."
+                },
+                "title": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "description": "A custom group title callback (TS/JS configs only)."
+                        }
+                    ],
+                    "description": "Custom heading title (or callback; TS/JS configs only)."
+                },
+                "order": {
+                    "anyOf": [
+                        {
+                            "type": "number"
+                        },
+                        {
+                            "description": "A custom group order callback (TS/JS configs only)."
+                        }
+                    ],
+                    "description": "Sort position; lower comes first (or callback; TS/JS configs only)."
+                },
+                "hidden": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "description": "A custom group hidden callback (TS/JS configs only)."
+                        }
+                    ],
+                    "description": "Omit this group from the rendered changelog (or callback; TS/JS only)."
+                }
+            },
+            "additionalProperties": false,
+            "description": "One Conventional-Commits group."
+        },
         "ChangelogWorkflowSetting": {
             "anyOf": [
                 {
@@ -1318,6 +2315,395 @@
                 }
             ],
             "description": "`true`/`false` to enable/disable, a complete GitHub/GitLab/Azure workflow (with `provider`), the changelog pipeline config object, or a raw YAML string written verbatim as the changelog workflow file."
+        },
+        "ToolchainDependabotConfig": {
+            "type": "object",
+            "properties": {
+                "schedule": {
+                    "default": "weekly",
+                    "type": "string",
+                    "enum": [
+                        "daily",
+                        "weekly",
+                        "monthly"
+                    ],
+                    "description": "Dependabot update interval."
+                },
+                "directories": {
+                    "default": [
+                        "/"
+                    ],
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Directories to scan."
+                },
+                "ecosystems": {
+                    "default": [
+                        "github-actions",
+                        "npm"
+                    ],
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Package ecosystems. `github-actions` keeps `voidzero-dev/setup-vp` and the other actions up to date."
+                },
+                "labels": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Labels added to the update PRs."
+                },
+                "openPullRequestsLimit": {
+                    "default": 5,
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "description": "Maximum open update PRs per entry."
+                },
+                "groups": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                            "applies-to": {
+                                "type": "string",
+                                "enum": [
+                                    "version-updates",
+                                    "security-updates"
+                                ],
+                                "description": "Which update kind this group applies to (default `version-updates`)."
+                            },
+                            "patterns": {
+                                "default": [
+                                    "*"
+                                ],
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "description": "Package name patterns."
+                            },
+                            "exclude-patterns": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "description": "Package name patterns to exclude."
+                            },
+                            "update-types": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "description": "Update types to group (eg. `[\"minor\", \"patch\"]`)."
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "description": "Dependabot update groups, keyed by group name."
+                },
+                "security": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainDependabotSecurityConfig"
+                        }
+                    ],
+                    "description": "Security updates: enable Dependabot security updates, group vulnerability PRs and apply a severity threshold. Requires a repository admin token for the generated workflow."
+                },
+                "allow": {
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "dependency-name": {
+                                        "type": "string",
+                                        "description": "Dependency name or `*` pattern."
+                                    },
+                                    "dependency-type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "direct",
+                                            "indirect",
+                                            "production",
+                                            "development"
+                                        ],
+                                        "description": "Restrict the rule to a dependency type."
+                                    },
+                                    "update-types": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "description": "Update types (eg. `version-update:semver-major`)."
+                                    },
+                                    "versions": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "description": "Version ranges to allow/ignore."
+                                    }
+                                },
+                                "required": [
+                                    "dependency-name"
+                                ],
+                                "additionalProperties": false
+                            }
+                        },
+                        {
+                            "type": "object",
+                            "propertyNames": {
+                                "type": "string"
+                            },
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "dependency-name": {
+                                            "type": "string",
+                                            "description": "Dependency name or `*` pattern."
+                                        },
+                                        "dependency-type": {
+                                            "type": "string",
+                                            "enum": [
+                                                "direct",
+                                                "indirect",
+                                                "production",
+                                                "development"
+                                            ],
+                                            "description": "Restrict the rule to a dependency type."
+                                        },
+                                        "update-types": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "description": "Update types (eg. `version-update:semver-major`)."
+                                        },
+                                        "versions": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "description": "Version ranges to allow/ignore."
+                                        }
+                                    },
+                                    "required": [
+                                        "dependency-name"
+                                    ],
+                                    "additionalProperties": false
+                                }
+                            }
+                        }
+                    ],
+                    "description": "Rules for every ecosystem (an array) or keyed by package ecosystem (eg. `{ npm: [...] }`; `*` is the fallback)."
+                },
+                "ignore": {
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "dependency-name": {
+                                        "type": "string",
+                                        "description": "Dependency name or `*` pattern."
+                                    },
+                                    "dependency-type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "direct",
+                                            "indirect",
+                                            "production",
+                                            "development"
+                                        ],
+                                        "description": "Restrict the rule to a dependency type."
+                                    },
+                                    "update-types": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "description": "Update types (eg. `version-update:semver-major`)."
+                                    },
+                                    "versions": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "description": "Version ranges to allow/ignore."
+                                    }
+                                },
+                                "required": [
+                                    "dependency-name"
+                                ],
+                                "additionalProperties": false
+                            }
+                        },
+                        {
+                            "type": "object",
+                            "propertyNames": {
+                                "type": "string"
+                            },
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "dependency-name": {
+                                            "type": "string",
+                                            "description": "Dependency name or `*` pattern."
+                                        },
+                                        "dependency-type": {
+                                            "type": "string",
+                                            "enum": [
+                                                "direct",
+                                                "indirect",
+                                                "production",
+                                                "development"
+                                            ],
+                                            "description": "Restrict the rule to a dependency type."
+                                        },
+                                        "update-types": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "description": "Update types (eg. `version-update:semver-major`)."
+                                        },
+                                        "versions": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "description": "Version ranges to allow/ignore."
+                                        }
+                                    },
+                                    "required": [
+                                        "dependency-name"
+                                    ],
+                                    "additionalProperties": false
+                                }
+                            }
+                        }
+                    ],
+                    "description": "Rules for every ecosystem (an array) or keyed by package ecosystem (eg. `{ npm: [...] }`; `*` is the fallback)."
+                },
+                "filename": {
+                    "default": "dependabot.yml",
+                    "type": "string",
+                    "description": "Override the generated file name."
+                },
+                "dir": {
+                    "default": ".github",
+                    "type": "string",
+                    "description": "Directory for the config."
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false,
+            "description": "Dependabot automation (`.github/dependabot.yml`, plus optional security updates). Opt-in by presence.",
+            "see": "https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file"
+        },
+        "ToolchainDependabotSecurityConfig": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable or disable the security-update automation."
+                },
+                "vulnerabilities": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "severity": {
+                                    "default": "all",
+                                    "anyOf": [
+                                        {
+                                            "type": "string",
+                                            "enum": [
+                                                "low",
+                                                "moderate",
+                                                "medium",
+                                                "high",
+                                                "critical",
+                                                "all"
+                                            ]
+                                        },
+                                        {
+                                            "minItems": 1,
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "low",
+                                                    "moderate",
+                                                    "medium",
+                                                    "high",
+                                                    "critical",
+                                                    "all"
+                                                ]
+                                            }
+                                        }
+                                    ],
+                                    "description": "Only keep vulnerability PRs at or above this severity (or exactly the listed severities). `all` keeps every alert. `moderate` is accepted as an alias for GitHub's `medium`."
+                                }
+                            },
+                            "additionalProperties": false,
+                            "description": "Narrow vulnerability PRs to a severity threshold."
+                        }
+                    ],
+                    "description": "Open PRs for vulnerable dependencies. Enabled by default when `security` is set; set false to disable Dependabot security updates."
+                },
+                "pr": {
+                    "type": "object",
+                    "properties": {
+                        "strategy": {
+                            "default": "grouped",
+                            "type": "string",
+                            "enum": [
+                                "grouped",
+                                "individual"
+                            ],
+                            "description": "Group security updates into one PR per ecosystem (default) or one PR per update."
+                        }
+                    },
+                    "additionalProperties": false,
+                    "description": "Pull-request strategy for security updates."
+                },
+                "workflow": {
+                    "default": true,
+                    "type": "boolean",
+                    "description": "Generate the workflow that enables Dependabot security updates and applies the severity threshold. Default true."
+                }
+            },
+            "additionalProperties": false,
+            "description": "Dependabot security-update automation."
         },
         "CustomWorkflowSettings": {
             "anyOf": [
@@ -1357,9 +2743,18 @@
                     "description": "Automatic version bumping on changelog generation (default `true`).",
                     "$ref": "#/$defs/ChangelogVersioning"
                 },
+                "intro": {
+                    "description": "Opt-in text inserted at the start of the new changelog entry, globally or for matching targets (workspaces/root).",
+                    "$ref": "#/$defs/ChangelogTextSetting"
+                },
+                "outro": {
+                    "description": "Opt-in text appended to the new changelog entry, globally or for matching targets (workspaces/root).",
+                    "$ref": "#/$defs/ChangelogTextSetting"
+                },
                 "vscode": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Write the Conventional-Commits VS Code settings (default true)."
+                    "description": "Write the Conventional-Commits VS Code settings."
                 },
                 "groups": {
                     "anyOf": [
@@ -1371,51 +2766,11 @@
                                         "type": "string"
                                     },
                                     {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "type": "string",
-                                                "description": "The CC type (required for object entries in an array)."
-                                            },
-                                            "title": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "string"
-                                                    },
-                                                    {
-                                                        "description": "A custom group title callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Custom heading title (or callback; TS/JS configs only)."
-                                            },
-                                            "order": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "number"
-                                                    },
-                                                    {
-                                                        "description": "A custom group order callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Sort position; lower comes first (or callback; TS/JS configs only)."
-                                            },
-                                            "hidden": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "boolean"
-                                                    },
-                                                    {
-                                                        "description": "A custom group hidden callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Omit this group from the rendered changelog (or callback; TS/JS only)."
-                                            }
-                                        },
-                                        "additionalProperties": false,
-                                        "description": "One Conventional-Commits group."
+                                        "$ref": "#/$defs/ChangelogGroupOptions"
                                     }
                                 ]
-                            }
+                            },
+                            "description": "An ordered list of CC types or group objects."
                         },
                         {
                             "type": "object",
@@ -1428,54 +2783,14 @@
                                         "type": "string"
                                     },
                                     {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "type": "string",
-                                                "description": "The CC type (required for object entries in an array)."
-                                            },
-                                            "title": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "string"
-                                                    },
-                                                    {
-                                                        "description": "A custom group title callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Custom heading title (or callback; TS/JS configs only)."
-                                            },
-                                            "order": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "number"
-                                                    },
-                                                    {
-                                                        "description": "A custom group order callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Sort position; lower comes first (or callback; TS/JS configs only)."
-                                            },
-                                            "hidden": {
-                                                "anyOf": [
-                                                    {
-                                                        "type": "boolean"
-                                                    },
-                                                    {
-                                                        "description": "A custom group hidden callback (TS/JS configs only)."
-                                                    }
-                                                ],
-                                                "description": "Omit this group from the rendered changelog (or callback; TS/JS only)."
-                                            }
-                                        },
-                                        "additionalProperties": false,
-                                        "description": "One Conventional-Commits group."
+                                        "$ref": "#/$defs/ChangelogGroupOptions"
                                     },
                                     {
                                         "type": "boolean"
                                     }
                                 ]
-                            }
+                            },
+                            "description": "A CC type to title/options/visibility record."
                         },
                         {
                             "description": "A custom group builder (TS/JS configs only)."
@@ -1518,6 +2833,11 @@
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
@@ -1527,6 +2847,7 @@
             "type": "object",
             "properties": {
                 "vscode": {
+                    "default": false,
                     "anyOf": [
                         {
                             "type": "boolean"
@@ -1535,7 +2856,7 @@
                             "$ref": "#/$defs/ToolchainVscodeSettings"
                         }
                     ],
-                    "description": "Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false; existing keys are kept)."
+                    "description": "Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (existing keys are kept)."
                 },
                 "oxc": {
                     "anyOf": [
@@ -1546,7 +2867,8 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "Oxfmt configuration options."
+                            "description": "Oxfmt configuration options.",
+                            "see": "https://oxc.rs/docs/guide/usage/formatter/config-file-reference.html"
                         }
                     ],
                     "description": "Oxfmt options (`true` = defaults, `false` = disabled). `toolchain.vite.fmt` overrides these (deep merge)."
@@ -1560,7 +2882,8 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "Biome configuration options."
+                            "description": "Biome configuration options.",
+                            "see": "https://biomejs.dev/reference/configuration/"
                         }
                     ],
                     "description": "Biome formatter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them)."
@@ -1574,7 +2897,8 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "Prettier configuration options."
+                            "description": "Prettier configuration options.",
+                            "see": "https://prettier.io/docs/options"
                         }
                     ],
                     "description": "Prettier options (`true` = defaults, `false` = disabled)."
@@ -1588,13 +2912,19 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "Dprint configuration options."
+                            "description": "Dprint configuration options.",
+                            "see": "https://dprint.dev/config/"
                         }
                     ],
                     "description": "Dprint options (`true` = defaults, `false` = disabled)."
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -1624,6 +2954,7 @@
             "type": "object",
             "properties": {
                 "vscode": {
+                    "default": false,
                     "anyOf": [
                         {
                             "type": "boolean"
@@ -1632,7 +2963,7 @@
                             "$ref": "#/$defs/ToolchainVscodeSettings"
                         }
                     ],
-                    "description": "Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (default false; existing keys are kept)."
+                    "description": "Add project-scoped VS Code settings: `true`/`false` or `{ overrides, exclude }` (existing keys are kept)."
                 },
                 "oxc": {
                     "anyOf": [
@@ -1643,7 +2974,8 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "Oxlint configuration options."
+                            "description": "Oxlint configuration options.",
+                            "see": "https://oxc.rs/docs/guide/usage/linter/config-file-reference.html"
                         }
                     ],
                     "description": "Oxlint options (`true` = defaults, `false` = disabled). `toolchain.vite.lint` overrides these (deep merge)."
@@ -1657,7 +2989,8 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "Biome configuration options."
+                            "description": "Biome configuration options.",
+                            "see": "https://biomejs.dev/reference/configuration/"
                         }
                     ],
                     "description": "Biome linter options (`true` = defaults, `false` = disabled); merged into the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them)."
@@ -1671,13 +3004,19 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "ESLint configuration options."
+                            "description": "ESLint configuration options.",
+                            "see": "https://eslint.org/docs/latest/use/configure/configuration-files"
                         }
                     ],
                     "description": "ESLint options (`true` = defaults, `false` = disabled)."
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -1688,17 +3027,24 @@
             "type": "object",
             "properties": {
                 "vscode": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Write the Biome VS Code settings (default true)."
+                    "description": "Write the Biome VS Code settings."
                 },
                 "overrides": {
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "Deep-merged over the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them)."
+                    "description": "Deep-merged over the generated `biome.json` (arrays union; `$remove:`/`$reset` prune or replace them).",
+                    "see": "https://biomejs.dev/reference/configuration/"
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -1739,20 +3085,29 @@
                     "description": "Glob(s) to exclude from `glob`. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...)."
                 },
                 "gitignore": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Also respect `.gitignore` files (root + nested) when matching `glob` (default true)."
+                    "description": "Also respect `.gitignore` files (root + nested) when matching `glob`."
                 },
                 "refs": {
+                    "default": false,
                     "type": "boolean",
-                    "description": "Wire project references (default false)."
+                    "description": "Wire project references."
                 },
                 "composite": {
+                    "default": false,
                     "type": "boolean",
-                    "description": "Emit `composite: true` (default false)."
+                    "description": "Emit `composite: true`."
                 },
                 "aliases": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Inject path aliases (default true)."
+                    "description": "Inject path aliases."
+                },
+                "flattenRemoteExtends": {
+                    "default": false,
+                    "type": "boolean",
+                    "description": "Inline the compiler options inherited from a remote `http(s)` `extends` chain into the generated workspace configs (default false). Useful when a tool cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` are skipped because they describe the remote tree. Settings the generated config already defines always win."
                 },
                 "auto": {
                     "anyOf": [
@@ -1763,7 +3118,7 @@
                             "$ref": "#/$defs/ToolchainTsconfigAliasAutoSetting"
                         }
                     ],
-                    "description": "Auto-generate the root workspaces tsconfig paths/references from the project graph (default false). Set true to derive them from the project graph; set false to only use the entries you define yourself."
+                    "description": "Auto-generate the root workspaces tsconfig paths/references from the project graph (default false). Set true to derive them from the project graph; set false to only use the entries you define yourself. An object additionally accepts `include`/`exclude`, `rewriteAlias`, `modes`, `prefix`, `devMode` and `dist`."
                 },
                 "aliasAuto": {
                     "anyOf": [
@@ -1774,7 +3129,7 @@
                             "$ref": "#/$defs/ToolchainTsconfigAliasAutoSetting"
                         }
                     ],
-                    "description": "Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). Accepts the same `include`/`exclude`/`rewriteAlias` object as `auto`."
+                    "description": "Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). Accepts the same `include`/`exclude`/`rewriteAlias`/`modes`/`prefix`/`devMode`/`dist` object as `auto`."
                 },
                 "refsAuto": {
                     "anyOf": [
@@ -1792,24 +3147,29 @@
                     "description": "Source directory used to resolve workspace entry points when `package.json` does not declare `exports`/`main`/`types` (default: the workspace's final tsconfig `rootDir`/`baseUrl`, falling back to `src`)."
                 },
                 "indent": {
+                    "default": 4,
                     "type": "number",
-                    "description": "JSON indentation (default 4)."
+                    "description": "JSON indentation."
                 },
                 "rootFile": {
+                    "default": "tsconfig.workspaces.json",
                     "type": "string",
-                    "description": "The workspaces tsconfig file name that holds `paths` + `references` (default `tsconfig.workspaces.json`)."
+                    "description": "The workspaces tsconfig file name that holds `paths` + `references`."
                 },
                 "defaultFile": {
+                    "default": "tsconfig.default.json",
                     "type": "string",
-                    "description": "The workspace default tsconfig file name that the generator expands (default `tsconfig.default.json`)."
+                    "description": "The workspace default tsconfig file name that the generator expands."
                 },
                 "buildFile": {
+                    "default": "tsconfig.build.json",
                     "type": "string",
-                    "description": "The workspace build tsconfig file name (default `tsconfig.build.json`)."
+                    "description": "The workspace build tsconfig file name."
                 },
                 "baseFile": {
+                    "default": "tsconfig.base.json",
                     "type": "string",
-                    "description": "The root base tsconfig file name (default `tsconfig.base.json`)."
+                    "description": "The root base tsconfig file name."
                 },
                 "extends": {
                     "type": "object",
@@ -1878,6 +3238,11 @@
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
@@ -1942,6 +3307,51 @@
                         }
                     ],
                     "description": "Rewrite the alias keys auto-wiring generates (custom keys are preserved). Patterns are URL-rewrite style: a string is a regular-expression source and replacements support `$1`, `$2`, ... capture groups. Examples: `{ \"^@acme/(.+)$\": \"@acme/pkg/$1\" }` (string patterns), `[{ pattern: /^@acme\\/(.+)$/, replacement: \"@acme/pkg/$1\" }]` (RegExp patterns), `[{ pattern: [\"^@acme/a$\", \"^@acme/b$\"], replacement: \"@acme/x\" }]` (an array of keys), and an array of such rules (applied in order; the first matching rule wins). `RegExp` patterns are only available from TS/JS configs; JSON configs use string patterns."
+                },
+                "modes": {
+                    "anyOf": [
+                        {
+                            "type": "string",
+                            "const": "auto"
+                        },
+                        {
+                            "type": "string",
+                            "const": "exports"
+                        },
+                        {
+                            "type": "string",
+                            "const": "project-structure"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "type": "string",
+                                        "const": "exports"
+                                    },
+                                    {
+                                        "type": "string",
+                                        "const": "project-structure"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "description": "Alias discovery: `auto` (exports, then the project structure), `exports` (package.json exports/types/main only), `project-structure` (scan the source tree), or an array combining `exports` and `project-structure`."
+                },
+                "prefix": {
+                    "type": "string",
+                    "description": "Prefix for generated aliases instead of the package scope (eg. `@` produces `@/<package>` and `@/<package>/<subpath>`)."
+                },
+                "devMode": {
+                    "default": true,
+                    "type": "boolean",
+                    "description": "Resolve generated aliases to source files. Set false to point at the distributed files instead."
+                },
+                "dist": {
+                    "type": "string",
+                    "description": "Output directory used to map source/dist targets (default: the workspace tsconfig's `outDir`, then `dist`)."
                 }
             },
             "additionalProperties": false
@@ -1973,29 +3383,58 @@
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "Deep-merged into the root base tsconfig (`baseFile`) during sync."
+                    "description": "Deep-merged into the root base tsconfig (`baseFile`) during sync.",
+                    "see": "https://www.typescriptlang.org/tsconfig"
                 },
                 "default": {
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "Deep-merged into every workspace default tsconfig (`defaultFile`) during sync."
+                    "description": "Deep-merged into every workspace default tsconfig (`defaultFile`) during sync.",
+                    "see": "https://www.typescriptlang.org/tsconfig"
                 },
                 "build": {
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "Deep-merged into every workspace build tsconfig (`buildFile`) during sync."
+                    "description": "Deep-merged into every workspace build tsconfig (`buildFile`) during sync.",
+                    "see": "https://www.typescriptlang.org/tsconfig"
                 },
                 "root": {
                     "type": "object",
                     "properties": {},
                     "additionalProperties": {},
-                    "description": "Deep-merged into the root workspaces tsconfig (`rootFile`) during sync."
+                    "description": "Deep-merged into the root workspaces tsconfig (`rootFile`) during sync.",
+                    "see": "https://www.typescriptlang.org/tsconfig"
                 }
             },
             "additionalProperties": false,
             "description": "Managed overrides deep-merged into the base/root/default/build tsconfig files during sync. The originals are snapshotted in the manifest, so removing a key reverts it (restoring the original value when the file defined one)."
+        },
+        "ToolchainLoaderConfig": {
+            "type": "object",
+            "properties": {
+                "tsconfig": {
+                    "default": true,
+                    "description": "The tsconfig the config loader uses. `true` selects the nearest `tsconfig.json`; a string selects a different file (relative to the project root); `false` disables tsconfig resolution.",
+                    "type": [
+                        "boolean",
+                        "string"
+                    ]
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false,
+            "description": "How `dbx.config.*` files are imported (tsconfig discovery).",
+            "see": "https://tsx.is"
         },
         "ToolchainTemplatesConfig": {
             "type": "object",
@@ -2009,6 +3448,11 @@
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -2109,6 +3553,11 @@
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
@@ -2167,6 +3616,11 @@
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
@@ -2176,23 +3630,25 @@
             "type": "object",
             "properties": {
                 "config": {
-                    "description": "Write the managed Vite config (default true). A string sets its file name/path (relative to the project, or an absolute path inside it).",
+                    "default": true,
+                    "description": "Write the managed Vite config. A string sets its file name/path (relative to the project, or an absolute path inside it).",
                     "type": [
                         "boolean",
                         "string"
                     ]
                 },
                 "shim": {
+                    "default": "runtime",
                     "type": "string",
                     "enum": [
                         "runtime",
                         "static"
                     ],
-                    "description": "How the generated `vite.config.ts` is rendered. `runtime` (default) loads the config from `dbx.config.*`; `static` serializes it into the file so the shim does not import `@deltabox/toolchain` (it then needs no built `dist`)."
+                    "description": "How the generated `vite.config.ts` is rendered. `runtime` loads the config from `dbx.config.*`; `static` serializes it into the file so the shim does not import `@deltabox/toolchain` (it then needs no built `dist`)."
                 },
                 "shimImport": {
                     "type": "string",
-                    "description": "Module specifier used to import `resolveVite` in runtime shims (default `@deltabox/toolchain/vite`). A relative path is resolved from the repo root and rewritten relative to each generated config - useful for dogfooding a source checkout without a built `dist`."
+                    "description": "Module specifier used to import `resolveVite` in runtime shims (default `vite-plugin-dbx`, or the umbrella `@deltabox/toolchain/vite`). A relative path is resolved from the repo root and rewritten relative to each generated config - useful for dogfooding a source checkout without a built `dist`."
                 },
                 "fmt": {
                     "anyOf": [
@@ -2203,7 +3659,8 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "Oxfmt configuration options."
+                            "description": "Oxfmt configuration options.",
+                            "see": "https://oxc.rs/docs/guide/usage/formatter/config-file-reference.html"
                         }
                     ],
                     "description": "Oxfmt options; `true` uses the toolchain defaults."
@@ -2217,13 +3674,19 @@
                             "type": "object",
                             "properties": {},
                             "additionalProperties": {},
-                            "description": "Oxlint configuration options."
+                            "description": "Oxlint configuration options.",
+                            "see": "https://oxc.rs/docs/guide/usage/linter/config-file-reference.html"
                         }
                     ],
                     "description": "Oxlint options; `true` uses the toolchain defaults."
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
@@ -2234,8 +3697,9 @@
             "type": "object",
             "properties": {
                 "debounce": {
+                    "default": 150,
                     "type": "number",
-                    "description": "Debounce window in ms (default 150)."
+                    "description": "Debounce window in ms."
                 },
                 "exclude": {
                     "anyOf": [
@@ -2252,21 +3716,77 @@
                     "description": "Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...)."
                 },
                 "gitignore": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Also respect `.gitignore` files (root + nested) when watching (default true)."
+                    "description": "Also respect `.gitignore` files (root + nested) when watching."
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
                     "type": "boolean"
                 }
             },
             "additionalProperties": false,
             "description": "Watch behaviour for `dbx watch`."
         },
+        "ToolchainSyncConfig": {
+            "type": "object",
+            "properties": {
+                "format": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "enabled": {
+                                    "type": "boolean",
+                                    "description": "Format the managed files after writing them (default true once enabled)."
+                                },
+                                "fix": {
+                                    "type": "boolean",
+                                    "description": "Rewrite the managed files with the formatter (default true). Set false to run the formatter in check mode instead."
+                                },
+                                "command": {
+                                    "type": "string",
+                                    "description": "Override the formatter command. `{files}` expands to the managed files (space-separated); when it is absent the files are appended."
+                                },
+                                "exclude": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "description": "Globs of managed files to leave unformatted (per-file opt-out)."
+                                }
+                            },
+                            "additionalProperties": false
+                        }
+                    ],
+                    "description": "Opt-in formatting of the managed files after generation (default off). `true` uses the defaults, `false` disables it, and an object tunes `enabled`/`fix`/`command`/`exclude`."
+                },
+                "enabled": {
+                    "description": "Enable/disable this section (default: enabled when defined).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false,
+            "description": "`dbx sync` behaviour (formatting of the managed files)."
+        },
         "ToolchainLoggerConfig": {
             "type": "object",
             "properties": {
                 "level": {
+                    "default": "info",
                     "type": "string",
                     "enum": [
                         "debug",
@@ -2275,15 +3795,17 @@
                         "error",
                         "silent"
                     ],
-                    "description": "Minimum level to print (default `info`)."
+                    "description": "Minimum level to print."
                 },
                 "color": {
+                    "default": true,
                     "type": "boolean",
-                    "description": "Force colours on/off (default: on; `--no-color` disables)."
+                    "description": "Force colours on/off; `--no-color` disables."
                 },
                 "name": {
+                    "default": "dbx",
                     "type": "string",
-                    "description": "Prefix non-indented lines with `<name>:` (default `dbx`)."
+                    "description": "Prefix non-indented lines with `<name>:`."
                 },
                 "suppress": {
                     "anyOf": [
@@ -2343,6 +3865,11 @@
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
@@ -2358,166 +3885,47 @@
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",
                     "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false,
             "description": "Provider command behaviour (eg. colour for the passthrough commands)."
         },
-        "ToolchainConfigSections": {
+        "ToolchainHooks": {
             "type": "object",
             "properties": {
-                "project": {
-                    "description": "Project metadata: canonical `package.json` fields and template tokens (inherited by workspaces).",
-                    "$ref": "#/$defs/ToolchainProjectConfig"
+                "afterLoad": {
+                    "description": "Runs after the config is loaded and its tokens are resolved."
                 },
-                "ci": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainCiConfig"
-                        }
-                    ],
-                    "description": "GitHub Actions workflows to generate (CI, release, issues, changelog, sync)."
+                "beforeSync": {
+                    "description": "Runs once before the sync tasks."
                 },
-                "changelog": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ChangelogConfig"
-                        }
-                    ],
-                    "description": "Manual changelog pipeline options for `dbx changelog`, the VS Code actions and the API. `ci.changelog` inherits these options."
+                "beforeTask": {
+                    "description": "Runs before each sync task."
                 },
-                "fmt": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainFmtConfig"
-                        }
-                    ],
-                    "description": "Formatter configuration: Oxc/Biome options, editor defaults and tools."
+                "afterTask": {
+                    "description": "Runs after each sync task, with the files it produced (if any)."
                 },
-                "lint": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainLintConfig"
-                        }
-                    ],
-                    "description": "Linter configuration: Oxc/Biome/ESLint options and editor defaults."
+                "afterSync": {
+                    "description": "Runs once after the sync tasks with the result summary."
                 },
-                "biome": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainBiomeConfig"
-                        }
-                    ],
-                    "description": "Biome config generation (for consumers that still want a `biome.json`)."
+                "beforeVersion": {
+                    "description": "Runs after the bump is planned and before `dbx changelog` writes versions/changelogs."
                 },
-                "tsconfig": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainTsconfigConfig"
-                        }
-                    ],
-                    "description": "Workspace tsconfig generation (path aliases + project references)."
+                "afterVersion": {
+                    "description": "Runs after `dbx changelog` writes the new versions and changelogs."
                 },
-                "templates": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainTemplatesConfig"
-                        }
-                    ],
-                    "description": "Template sources / scaffolding."
-                },
-                "registry": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainRegistryConfig"
-                        }
-                    ],
-                    "description": "Allow/deny host and path globs for template/provider registries."
-                },
-                "catalogs": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainCatalogsConfig"
-                        }
-                    ],
-                    "description": "Package catalogs written to the package manager catalog file (`catalog:`)."
-                },
-                "vite": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainViteConfig"
-                        }
-                    ],
-                    "description": "The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it."
-                },
-                "watch": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainWatchConfig"
-                        }
-                    ],
-                    "description": "Watch behaviour for `dbx watch`."
-                },
-                "logger": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainLoggerConfig"
-                        }
-                    ],
-                    "description": "Logging level, colours and prefix for toolchain output."
-                },
-                "providers": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainProvidersConfig"
-                        }
-                    ],
-                    "description": "Provider command behaviour (eg. colour for the passthrough commands)."
+                "onChange": {
+                    "description": "Runs on every watch-triggered change."
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Lifecycle hooks (functions; TS/JS configs only). Return values are awaited."
         }
     },
-    "$id": "https://deltabox.studio/schemas/dbx.config.json",
-    "title": "dbx.config",
-    "description": "The dbx configuration model (the @deltabox/toolchain settings live under `toolchain`)."
+    "required": []
 }

@@ -13,9 +13,11 @@ import {
 } from '@deltabox/toolchain/core';
 import {
     logger,
+    parseToolVersions,
     type Replacements,
     sectionConfig,
     type ToolchainCommand,
+    withSpinner,
 } from '@deltabox/toolchain/shared';
 
 import {
@@ -44,9 +46,11 @@ import {
     loadTemplates,
     readTemplateRegistry,
     removeTemplateSource,
+    resolveTemplateSources,
+    templatePolicy,
 } from '../registry.js';
 import { scaffoldTemplate } from '../scaffold.js';
-import type { Template, TemplateKind, TemplateManifest, TemplateVariable } from '../types.js';
+import type { Template, TemplateKind, TemplateManifest, TemplateVariable } from '../types/index.js';
 
 const CWD_OPTION = { flags: '--cwd <dir>', description: 'Project root (default: cwd).' };
 const KIND_OPTION = {
@@ -121,16 +125,33 @@ export function templateCommands(): ToolchainCommand[] {
             run: async (opts, context) => {
                 const cwd = (opts.cwd as string | undefined) ?? context.cwd;
                 if (opts.global) {
-                    const global = await loadGlobalTemplates(cwd);
+                    const policy = templatePolicy(context.config);
+                    const online = Boolean(opts.online) && !opts.offline;
+                    const global = await loadGlobalTemplates(cwd, policy, { online });
+                    const resolved = online
+                        ? await resolveTemplateSources(global.sources, {
+                              cwd,
+                              online: true,
+                              ...(policy ? { policy } : {}),
+                          })
+                        : [];
+                    const kind = opts.kind as string | undefined;
+                    const merged = new Map<string, Template>();
+                    for (const template of [...global.templates, ...resolved]) {
+                        if (!merged.has(template.id)) merged.set(template.id, template);
+                    }
+                    const selected = [...merged.values()].filter(
+                        template => kind === undefined || template.kind === kind
+                    );
                     if (opts.json) {
-                        logger.raw(JSON.stringify(global.templates.map(toJson), null, 4));
+                        logger.raw(JSON.stringify(selected.map(toJson), null, 4));
                         return;
                     }
-                    if (global.templates.length === 0) {
+                    if (selected.length === 0) {
                         logger.info('no global templates found.');
                         return;
                     }
-                    for (const template of global.templates)
+                    for (const template of selected)
                         logger.info(`  ${template.id.padEnd(24)} ${template.name}`);
                     return;
                 }
@@ -490,6 +511,15 @@ export function templateCommands(): ToolchainCommand[] {
                 const cwd = (opts.cwd as string | undefined) ?? context.cwd;
                 const scope = (opts.scope as string | undefined) ?? 'global';
                 const kind = (opts.kind as string | undefined) ?? 'templates';
+                // Reject typos instead of silently falling back to a different
+                // registry (a bogus scope wrote the project registry; a bogus
+                // kind managed templates).
+                if (scope !== 'global' && scope !== 'project') {
+                    throw new Error(`invalid --scope "${scope}" (expected: project | global).`);
+                }
+                if (kind !== 'templates' && kind !== 'providers') {
+                    throw new Error(`invalid --kind "${kind}" (expected: templates | providers).`);
+                }
                 const change = (opts.add ?? opts.remove) as string | undefined;
                 if (opts.set || opts.clear) {
                     const next = opts.clear ? [] : normalizeSearchPaths(opts.set as string[]);
@@ -583,10 +613,20 @@ export function templateCommands(): ToolchainCommand[] {
                     flags: '--action <id...>',
                     description: 'Action id to run after scaffolding (repeatable).',
                 },
+                {
+                    flags: '--tool-version <name@range>',
+                    description:
+                        'Override a provisioned formatter/linter dependency version (repeatable).',
+                    multiple: true,
+                },
                 { flags: '--online', description: 'Resolve online templates too.' },
                 {
                     flags: '--force',
                     description: 'Overwrite existing files in the output directory.',
+                },
+                {
+                    flags: '--containerize',
+                    description: 'Also generate Docker artifacts (Dockerfile + .dockerignore).',
                 },
                 { flags: '--json', description: 'Print the result as JSON.' },
             ],
@@ -646,7 +686,13 @@ export function templateCommands(): ToolchainCommand[] {
                     template = templates.find(candidate => candidate.kind === kind);
                 }
                 if (!template && id) {
-                    // An unlisted id is treated as a Vite+ template (`vp create <id>`).
+                    if (!opts.online) {
+                        throw new Error(
+                            `template "${id}" not found; see \`dbx template:list\` (pass --online to use a Vite+ template).`
+                        );
+                    }
+                    // An unlisted id with `--online` is a Vite+ template
+                    // (`vp create <id>`).
                     template = {
                         id,
                         name: id,
@@ -736,17 +782,30 @@ export function templateCommands(): ToolchainCommand[] {
                 const tsconfig = sectionConfig(context.config.tsconfig) as
                     | { rootFile?: string }
                     | undefined;
-                const result = await scaffoldTemplate(template, {
-                    cwd: out,
-                    tokens,
-                    variables,
-                    actions: [...actions],
-                    force: Boolean(opts.force),
-                    tsconfigRootFile: tsconfig?.rootFile ?? 'tsconfig.workspaces.json',
-                });
+                const result = await withSpinner(
+                    () =>
+                        scaffoldTemplate(template, {
+                            cwd: out,
+                            tokens,
+                            variables,
+                            actions: [...actions],
+                            force: Boolean(opts.force),
+                            tsconfigRootFile: tsconfig?.rootFile ?? 'tsconfig.workspaces.json',
+                            toolVersions: parseToolVersions(
+                                opts.toolVersion as string[] | undefined
+                            ),
+                            containerize: Boolean(opts.containerize),
+                            ...(opts.json ? { machine: true } : {}),
+                        }),
+                    {
+                        start: `Scaffolding ${template.id}...`,
+                        success: `Scaffolded ${template.id}.`,
+                    }
+                );
 
                 if (opts.json) {
                     logger.raw(JSON.stringify({ template: template.id, out, ...result }, null, 4));
+                    if (result.code) process.exitCode = result.code;
                     return;
                 }
                 if (
@@ -754,7 +813,12 @@ export function templateCommands(): ToolchainCommand[] {
                     template.source.type === 'npm' ||
                     template.source.type === 'git'
                 ) {
-                    if (result.code) process.exitCode = result.code;
+                    if (result.code) {
+                        process.exitCode = result.code;
+                        logger.error(
+                            `template "${template.id}" failed with exit code ${result.code}.`
+                        );
+                    }
                     return;
                 }
                 for (const file of result.written) logger.info(`Created ${file}`);

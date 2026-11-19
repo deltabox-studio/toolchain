@@ -92,3 +92,11 @@ export function envPathOf(env: string, prefix = 'APP_'): string {
         .toLowerCase()
         .replace(/_/g, '.');
 }
+
+/**
+ * Derive the env var name generated for a dotted config path (`logLevel` ->
+ * `APP_LOGLEVEL`). This is the inverse of the name the `.env` generator writes.
+ */
+export function envVarNameOf(path: string, prefix = 'APP_'): string {
+    return `${prefix}${path.replace(/\./g, '_').toUpperCase()}`;
+}

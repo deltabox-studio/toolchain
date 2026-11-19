@@ -145,6 +145,26 @@ toolchain: {
 pipeline options (`ci.changelog: true`, a raw workflow string, or workflow-only
 overrides). Options set explicitly on `ci.changelog` win.
 
+## GitHub metadata
+
+When `gh` is installed and authenticated, a run resolves commit authors, PR
+credit and issue titles/links from GitHub. Lookups are batched so a large range
+stays close to a handful of requests:
+
+- one REST `compare/{base}...{head}` request per scanned range for commit
+  authors;
+- GraphQL `associatedPullRequests` lookups in batches of 100 commits (a PR
+  author wins over the commit author, matching the changelog credit rules);
+- aliased GraphQL issue lookups, 100 issues per request.
+
+Without `gh` (or with `DBX_NO_GH=1`) the pipeline falls back to git metadata and
+plain `#123` references. Commits that no remote-tracking ref reaches are skipped
+(GitHub cannot resolve an unpushed SHA), and terminal client errors (eg. a 404
+for a missing ref) are not retried. Other failures are retried
+`DBX_GH_MAX_RETRIES` times (default 5) with a `DBX_GH_RETRY_DELAY` ms delay
+(default 3000), then `gh` is disabled for the rest of the run. Set `DBX_GH_BIN`
+to point at a different `gh` executable.
+
 ## Where to start
 
 - [CI](/guide/ci/) — the opt-in GitHub workflows (CI checks, changelog, release,

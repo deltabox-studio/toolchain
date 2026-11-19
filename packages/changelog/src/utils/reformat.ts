@@ -3,7 +3,9 @@ import { resolve } from 'node:path';
 
 import { type ChangelogBreakingSetting, logger } from '@deltabox/toolchain/shared';
 
+import type { ChangelogGroupsSetting, ExistingEntry, GroupedItem } from '../types/index.js';
 import { isBreakingCommit } from './breaking.js';
+import { applyDetailsToEntry, resolveDetails } from './details.js';
 import {
     capitalize,
     formatBody,
@@ -13,14 +15,21 @@ import {
     renderGroups,
 } from './format.js';
 import { bulletHash, deriveVersionDate, readCommit, repoSlug } from './git.js';
-import { packageChangesForVersion } from './packages.js';
+import {
+    packageChangesForCurrent,
+    packageChangesForVersion,
+    resolveVersionRef,
+} from './packages.js';
 import { changelogFiles, repoRoot } from './repo.js';
-import type { ChangelogGroupsSetting, ExistingEntry, GroupedItem } from './types.js';
 import { renderChangelogEntry } from './version.js';
 
 /** A version heading: `## 1.2.3`, `## [1.2.3]`, `## v1.2.3`, prereleases, dates. */
 const VERSION_HEADING =
-    /^##\s+\[?v?(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)\]?\s*(?:\([^)]*\))?\s*(?:-\s+.*)?\s*$/;
+    /^##\s+\[?v?(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)\]?\s*(?:\(([^)]*)\))?\s*(?:-\s+.*)?\s*$/;
+
+/** A details-body version summary: `<summary><h2>1.2.3 (January 2026)</h2></summary>`. */
+const VERSION_SUMMARY =
+    /^<summary><h2>\[?v?(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)\]?\s*(?:\(([^)]*)\))?\s*(?:-\s+.*)?<\/h2><\/summary>$/;
 
 /** Whether the changelog has a `## ` section that is not a version heading. */
 function hasUnsupportedHeading(content: string): boolean {
@@ -43,13 +52,28 @@ export function parseExistingChangelog(content: string): ExistingEntry[] {
     // is regenerated from the package manifests, not re-parsed as changelog items.
     let inPackageChanges = false;
     let collectingBody = false;
+    let phase: 'intro' | 'body' | 'outro' = 'intro';
+    const intro: string[] = [];
+    const outro: string[] = [];
     for (const line of content.split('\n')) {
-        const heading = VERSION_HEADING.exec(line);
+        const heading = VERSION_SUMMARY.exec(line) ?? VERSION_HEADING.exec(line);
         if (heading) {
-            current = { version: heading[1]!, bullets: [], bodies: [] };
+            if (current) {
+                if (intro.some(entry => entry.trim())) current.intro = intro.join('\n').trim();
+                if (outro.some(entry => entry.trim())) current.outro = outro.join('\n').trim();
+            }
+            current = {
+                version: heading[1]!,
+                bullets: [],
+                bodies: [],
+                ...(heading[2]?.trim() ? { date: heading[2].trim() } : {}),
+            };
             entries.push(current);
             inPackageChanges = false;
             collectingBody = false;
+            phase = 'intro';
+            intro.length = 0;
+            outro.length = 0;
             continue;
         }
         if (/^##\s+/.test(line)) {
@@ -61,7 +85,33 @@ export function parseExistingChangelog(content: string): ExistingEntry[] {
             continue;
         }
         if (!current) continue;
+        // Generated `<details>`/`<summary>` scaffolding (section, body or
+        // description wrappers) is re-rendered from its contents on every
+        // `--format-only` run; treating it as intro/outro prose would nest a
+        // new wrapper around it each time.
+        if (/^<\/?(?:details|summary)\b/i.test(line.trim())) continue;
+        if (line.includes('<!-- release:start -->')) {
+            phase = 'body';
+            continue;
+        }
+        if (line.includes('<!-- release:end -->')) {
+            phase = 'outro';
+            continue;
+        }
         if (line.includes('<!-- release:')) continue;
+        // A bullet or section starts the body of an old marker-less entry; the
+        // intro only spans the text between the heading and the first content.
+        if (/^[-*+]\s+/.test(line) || /^#{3,4}\s+/.test(line)) {
+            if (phase === 'intro') phase = 'body';
+        }
+        if (phase === 'intro') {
+            intro.push(line);
+            continue;
+        }
+        if (phase === 'outro') {
+            outro.push(line);
+            continue;
+        }
         if (/^###\s+Package changes\s*$/.test(line)) {
             inPackageChanges = true;
             collectingBody = false;
@@ -72,8 +122,17 @@ export function parseExistingChangelog(content: string): ExistingEntry[] {
             collectingBody = false;
             continue;
         }
+        // Scope headings (`#### Core`) are regenerated from the commits, so
+        // drop them instead of leaking them into the entry outro.
+        if (/^####\s+/.test(line)) continue;
         if (inPackageChanges) continue;
-        if (line.startsWith('- ')) {
+        // Standalone prose in the body (eg. the `--outro` paragraph) is not a
+        // commit bullet; keep it instead of dropping it on the next reformat.
+        if (!line.startsWith('  ') && !/^[-*+]\s+/.test(line)) {
+            outro.push(line);
+            continue;
+        }
+        if (/^[-*+]\s+/.test(line)) {
             current.bullets.push(line);
             current.bodies!.push([]);
             collectingBody = true;
@@ -87,26 +146,38 @@ export function parseExistingChangelog(content: string): ExistingEntry[] {
             current.bodies![current.bodies!.length - 1]!.push(line);
         }
     }
+    if (current) {
+        if (intro.some(entry => entry.trim())) current.intro = intro.join('\n').trim();
+        if (outro.some(entry => entry.trim())) current.outro = outro.join('\n').trim();
+    }
     return entries;
 }
 
 /** The `([#hash](...) by <author>)(fixes ...)` credit suffix of a bullet. */
 function creditSuffix(text: string): string {
-    const idx = text.lastIndexOf('([#');
-    if (idx === -1) return '';
-    const tail = text.slice(idx);
-    const match = /^(\(\[#[^\]]+\]\([^)]*\) by [^)]*\)\)?)(?:\(fixes [^)]*\)\)?)?/.exec(tail);
-    return match?.[0] ?? '';
+    const match =
+        /\((?:\[#[0-9a-fA-F]{6,40}\]\([^)]*\)|#[0-9a-fA-F]{7,40}) by [^)]*\)(?:\(fixes [^)]*\))?\s*$/.exec(
+            text
+        );
+    return match?.[0].trimEnd() ?? '';
 }
 
 /** Convert an entry's nested description lines into unwrapped paragraphs. */
 function parseExistingBody(lines: string[]): string[][] {
     const paragraphs: string[][] = [];
     let current: string[] = [];
-    for (const line of lines) {
-        if (line.startsWith('  - ')) {
+    for (const raw of lines) {
+        // A generated `<details>` block is re-rendered from its contents; keeping
+        // the markup would nest a second wrapper on every `--format-only` run.
+        const line = raw
+            .replace(/<\/?details[^>]*>/gi, '')
+            .replace(/<\/?summary[^>]*>/gi, '')
+            .trimEnd();
+        if (/^<\/?(?:details|summary)\b/i.test(raw.trim())) continue;
+        if (!line.trim()) continue;
+        if (line.startsWith('  - ') || line.startsWith('- ')) {
             if (current.length > 0) paragraphs.push([current.join(' ')]);
-            current = [line.slice(4).trim()];
+            current = [line.replace(/^\s*-\s+/, '')];
         } else if (line.startsWith('    ')) {
             current.push(line.slice(4).trim());
         } else if (line.startsWith('  ')) {
@@ -125,11 +196,15 @@ function reformatEntry(
     withMarkers = false,
     packageChanges = '',
     groups?: ChangelogGroupsSetting,
-    breakingSetting?: ChangelogBreakingSetting
+    breakingSetting?: ChangelogBreakingSetting,
+    detailsValue?: unknown,
+    release = false
 ): string {
+    const resolved = resolveDetails(detailsValue, release);
+    const details = resolved.lifecycle === 'before' ? resolved : undefined;
     const items: GroupedItem[] = [];
     for (const [index, line] of entry.bullets.entries()) {
-        const stripped = line.replace(/^-\s+/, '');
+        const stripped = line.replace(/^[-*+]\s+/, '');
         const hash = bulletHash(line);
         // Parse the ORIGINAL commit message when available: the changelog line
         // has bold/markdown applied that would otherwise corrupt CC parsing.
@@ -159,13 +234,22 @@ function reformatEntry(
         items.push({ parsed, breaking, text, bodyParagraphs });
     }
     const date = deriveVersionDate(entry.version, entry.bullets);
-    return renderChangelogEntry(
+    let rendered = renderChangelogEntry(
         entry.version,
-        renderGroups(groupItems(items, groups)),
+        renderGroups(groupItems(items, groups), details),
         date,
         withMarkers,
-        packageChanges
+        packageChanges,
+        entry.intro ?? '',
+        entry.outro ?? ''
     );
+    // Version dates are derived from git tags/commits; when that fails (eg. an
+    // empty range or a shallow clone), keep the date that was already in the
+    // file instead of dropping it on reformat.
+    if (!date && entry.date) {
+        rendered = rendered.replace(/^(##\s+\S+)/, `$1 (${entry.date})`);
+    }
+    return resolved.lifecycle === 'after' ? applyDetailsToEntry(rendered, resolved) : rendered;
 }
 
 /** Backward-reformat an entire changelog file's content (all versions). */
@@ -175,7 +259,9 @@ export function reformatChangelogContent(
     markersOnNewest = false,
     includePackageChanges = false,
     groups?: ChangelogGroupsSetting,
-    breaking?: ChangelogBreakingSetting
+    breaking?: ChangelogBreakingSetting,
+    details?: unknown,
+    release = false
 ): string {
     // An unsupported `##` section (eg. `## Unreleased`) cannot be rendered by the
     // version-based reformatter; leave the file untouched instead of merging its
@@ -193,17 +279,25 @@ export function reformatChangelogContent(
     const rendered = entries
         .map((entry, index) => {
             const previous = entries[index + 1];
-            const changes =
-                includePackageChanges && previous
-                    ? packageChangesForVersion(entry.version, previous.version)
-                    : '';
+            let changes = '';
+            if (includePackageChanges && previous) {
+                changes = packageChangesForVersion(entry.version, previous.version);
+                // The newest entry is usually unreleased (no tag/version commit
+                // yet), so its footer is the working tree against the previous
+                // release, matching how `dbx changelog` generated it.
+                if (index === 0 && !resolveVersionRef(entry.version)) {
+                    changes = packageChangesForCurrent(previous.version);
+                }
+            }
             return reformatEntry(
                 entry,
                 repo,
                 markersOnNewest && index === 0,
                 changes,
                 groups,
-                breaking
+                breaking,
+                details,
+                release
             );
         })
         .filter(Boolean)
@@ -215,7 +309,9 @@ export function reformatChangelogContent(
 export function reformatRootChangelog(
     includePackageChanges = false,
     groups?: ChangelogGroupsSetting,
-    breaking?: ChangelogBreakingSetting
+    breaking?: ChangelogBreakingSetting,
+    details?: unknown,
+    release = false
 ): string {
     const root = repoRoot();
     const file = resolve(root, 'CHANGELOG.md');
@@ -226,7 +322,9 @@ export function reformatRootChangelog(
         false,
         includePackageChanges,
         groups,
-        breaking
+        breaking,
+        details,
+        release
     );
 }
 
@@ -239,7 +337,9 @@ export function formatExistingChangelogs(
     dryRun: boolean,
     packageChanges = false,
     groups?: ChangelogGroupsSetting,
-    breaking?: ChangelogBreakingSetting
+    breaking?: ChangelogBreakingSetting,
+    details?: unknown,
+    release = false
 ): void {
     const rootFile = resolve(repoRoot(), 'CHANGELOG.md');
     for (const file of changelogFiles()) {
@@ -252,7 +352,9 @@ export function formatExistingChangelogs(
             true,
             packageChanges && file === rootFile,
             groups,
-            breaking
+            breaking,
+            details,
+            release
         );
         if (dryRun) {
             const proposed = file.replace(/CHANGELOG\.md$/, 'CHANGELOG.proposed.md');

@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { type PackageJson, readJsonAt, toJson } from '@deltabox/toolchain/shared';
 
-import { findConfigFile } from './loader.js';
+import { findConfigFile, findViteConfigFile, isDbxPluginConfig } from './loader.js';
 
 /** Directory names never descended into during discovery. */
 export const IGNORED_DIRS = new Set([
@@ -30,8 +30,12 @@ export interface ProjectNode {
     dir: string;
     /** Whether the directory contains a `dbx.config.*` file. */
     hasConfig: boolean;
+    /** Whether the directory's `vite.config.*` carries the `dbx()` plugin. */
+    hasPlugin?: boolean;
     /** The dbx config path relative to the root (when present). */
     config?: string;
+    /** The plugin-mode `vite.config.*` path relative to the root (when present). */
+    plugin?: string;
     /** Names of the other discovered projects this one depends on. */
     dependencies: string[];
 }
@@ -110,12 +114,16 @@ export function buildProjectGraph(
     const walk = (dir: string, depth: number): void => {
         const pkg = readJsonAt<PackageJson>(dir, 'package.json');
         const config = findConfigFile(dir);
-        if (pkg || config) {
+        const vite = findViteConfigFile(dir);
+        const plugin = vite && isDbxPluginConfig(vite) ? vite : undefined;
+        if (pkg || config || plugin) {
             const node: ProjectNode = {
                 ...(pkg?.name ? { name: pkg.name } : {}),
                 dir: rel(root, dir),
                 hasConfig: Boolean(config),
+                ...(plugin ? { hasPlugin: true } : {}),
                 ...(config ? { config: rel(root, config) } : {}),
+                ...(plugin ? { plugin: rel(root, plugin) } : {}),
                 dependencies: [],
             };
             nodes.set(dir, node);
@@ -142,7 +150,7 @@ export function buildProjectGraph(
     }
 
     const projects = [...nodes.values()].sort((a, b) => a.dir.localeCompare(b.dir));
-    const dbxProjects = projects.filter(p => p.hasConfig);
+    const dbxProjects = projects.filter(p => p.hasConfig || p.hasPlugin);
 
     return {
         root,

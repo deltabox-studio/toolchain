@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import {
     applyOverrides,
@@ -209,6 +209,60 @@ describe('dbx.config model', () => {
             },
         });
         expect(dbxConfigSchema.safeParse(callbackProvider).success).toBe(true);
+    });
+
+    it('keeps scoped bump and commit options instead of stripping them', () => {
+        const parsed = dbxConfigSchema.parse({
+            toolchain: {
+                changelog: {
+                    versioning: {
+                        bump: {
+                            major: { target: 'packages/a', options: 'feat' },
+                            minor: [{ target: 'packages/b', options: { type: 'fix' } }],
+                        },
+                        commit: { target: 'packages/a', options: { author: false } },
+                    },
+                },
+            },
+        });
+        const changelog = parsed.toolchain?.changelog;
+        if (!changelog || typeof changelog === 'boolean') throw new Error('missing changelog');
+        const versioning = changelog.versioning;
+        if (!versioning || typeof versioning === 'boolean') throw new Error('missing versioning');
+        expect(versioning.bump?.major).toMatchObject({
+            target: 'packages/a',
+            options: 'feat',
+        });
+        expect(versioning.bump?.minor).toEqual([
+            { target: 'packages/b', options: { type: 'fix' } },
+        ]);
+        expect(versioning.commit).toMatchObject({
+            target: 'packages/a',
+            options: { author: false },
+        });
+    });
+
+    it('keeps scoped entries in mixed bump arrays', () => {
+        const parsed = dbxConfigSchema.parse({
+            toolchain: {
+                changelog: {
+                    versioning: {
+                        bump: {
+                            major: ['feat', { target: 'packages/a', options: 'fix' }],
+                            minor: [{ target: 'packages/b', options: 'feat' }, 'fix'],
+                            patch: ['fix', 'perf'],
+                        },
+                    },
+                },
+            },
+        });
+        const changelog = parsed.toolchain?.changelog;
+        if (!changelog || typeof changelog === 'boolean') throw new Error('missing changelog');
+        const versioning = changelog.versioning;
+        if (!versioning || typeof versioning === 'boolean') throw new Error('missing versioning');
+        expect(versioning.bump?.major).toEqual(['feat', { target: 'packages/a', options: 'fix' }]);
+        expect(versioning.bump?.minor).toEqual([{ target: 'packages/b', options: 'feat' }, 'fix']);
+        expect(versioning.bump?.patch).toEqual(['fix', 'perf']);
     });
 
     it('accepts complete GitHub/GitLab/Azure workflow settings', () => {
