@@ -144,13 +144,7 @@ export default defineConfig({
                         vscode: true,
                         // Publishable workspaces are versioned individually: only a
                         // package with commits gets a bump + changelog entry.
-                        // The next major ships through a `beta` channel; an
-                        // existing `beta` version keeps its core and advances the
-                        // counter, so repeated runs never append the tag twice.
-                        versioning: {
-                            target: 'individual',
-                            prerelease: 'beta',
-                        },
+                        versioning: { target: 'individual' },
                         // `dev` has no default: preset it to keep the `dev` -> `main`
                         // flow (pushes to `dev` generate the changelog; `main` releases).
                         branches: { dev: 'dev' },
