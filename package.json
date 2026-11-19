@@ -22,7 +22,7 @@
         "codegen",
         "tsdown",
         "biome",
-        "oxlint",
+        "oxc",
         "vite",
         "viteplus",
         "vite-plus",
