@@ -731,5 +731,32 @@
     "author": "Victor Sango <victor@deltabox.studio>",
     "license": "MPL-2.0",
     "homepage": "https://toolchain.deltabox.studio",
-    "packageManager": "yarn@4.17.1"
+    "packageManager": "yarn@4.17.1",
+    "keywords": [
+        "tooling",
+        "cli",
+        "monorepo",
+        "tsconfig",
+        "codegen",
+        "tsdown",
+        "linter",
+        "formatter",
+        "oxc",
+        "vite-plugin",
+        "vscode-extension",
+        "changelog",
+        "scaffold",
+        "docker",
+        "container",
+        "extension",
+        "zod",
+        "types",
+        "markdown",
+        "environment",
+        "variables",
+        "configuration",
+        "settings",
+        "deltabox",
+        "dbx"
+    ]
 }
