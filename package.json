@@ -19,6 +19,7 @@
         "cli",
         "monorepo",
         "tsconfig",
+        "codegen",
         "tsdown",
         "biome",
         "oxlint",

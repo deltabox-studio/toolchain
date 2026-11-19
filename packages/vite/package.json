@@ -23,6 +23,7 @@
         "dbx",
         "deltabox",
         "toolchain",
+        "codegen",
         "config",
         "sync",
         "formatter",
