@@ -8,20 +8,25 @@
 [![tests](https://img.shields.io/github/actions/workflow/status/deltabox-studio/toolchain/ci.yml?label=tests&logo=github)](https://github.com/deltabox-studio/toolchain/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/@deltabox/toolchain.svg?color=cb3837&label=npm)](https://www.npmjs.com/package/@deltabox/toolchain)
 
-**deltabox toolchain** is a superset of [Vite+](https://viteplus.dev): it keeps the Vite+ workflow and adds project synchronization, a config generator, tsconfig management, an MCP server, CI and changelog automation, providers, catalogs and a VS Code extension. Use it as a Vite/Vite+ plugin or standalone.
+**deltabox toolchain** is a superset of [Vite+](https://viteplus.dev) with:
 
-- **Project synchronization** — keep workspaces, configs, docs and CI up to date.
-- **Save and use templates (local/remote)** so you never have to scaffold the same projects over and over again.
-- **Generate** config types, env variables, cli flags, markdown and JSON schemas, so your codebase stays consistent, validated and well-documented.
-- **Automate CI, changelogs and releases** for your project and workspaces.
-- **Use it as a Vite/Vite+ plugin or standalone** — the plugin is optional.
-- **Use it from AI agents** over MCP, with one-command installs for Claude, Codex, VS Code, OpenCode and more.
+- Project synchronization
+- Config generator
+- Tsconfig management
+- MCP server
+- CI/changelog automation
+- Providers
+- Catalogs
+- A VS Code extension
+- And more...
 
-See the [list of features](#features).
+Use it as a Vite/Vite+ plugin or standalone `dbx.config.*`.
+
+See the [list of features](#features) below.
 
 See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
 
-Documentation, guides and examples at [toolchain.deltabox.studio](https://toolchain.deltabox.studio/guide).
+Documentation, guides and examples at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
 
 ## Table of contents
 
