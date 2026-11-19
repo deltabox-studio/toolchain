@@ -1,23 +1,814 @@
 ---
+url: https://toolchain.deltabox.studio/guide.md
+---
+# Getting Started
+
+`@deltabox/toolchain` is a superset of [Vite+](https://viteplus.dev). It keeps the
+Vite+ workflow and adds project synchronization, a config generator, tsconfig
+management, an MCP server, CI and changelog automation, providers, catalogs and a
+VS Code extension. Use it as a Vite/Vite+ plugin or standalone — from the CLI, the
+programmatic API and the VS Code extension.
+
+## Install
+
+::: code-group
+
+```sh [npm]
+# as a dev dependency in the project you want to manage
+npm install @deltabox/toolchain --save-dev
+```
+
+```sh [yarn]
+# as a dev dependency in the project you want to manage
+yarn add -D @deltabox/toolchain
+```
+
+```sh [pnpm]
+# as a dev dependency in the project you want to manage
+pnpm add -D @deltabox/toolchain
+```
+
+```sh [bun]
+# as a dev dependency in the project you want to manage
+bun add -D @deltabox/toolchain
+```
+
+:::
+
+```sh
+# or for global usage
+npm install -g @deltabox/toolchain
+```
+
+The published package exposes one binary, `dbx`:
+
+```sh
+dbx --help
+```
+
+## Interactive CLI
+
+Commands are flag-driven, but in an interactive terminal (a TTY) a few prompt for
+the values you omit:
+
+```sh
+dbx create                     # pick a template, project name, scope, inputs and actions
+dbx migrate --recursive        # pick which projects to migrate
+```
+
+`dbx migrate` without `--from` still detects the sources automatically; the
+prompt is only for the project selection with `--recursive`. Pass `--json`, pipe
+the command, or supply the flags to run non-interactively. `dbx template:init`
+also accepts flags (`--name`, `--kind`, ...) for scripted use.
+
+## Create a config
+
+Add the `dbx()` plugin to `vite.config.ts` (recommended, no `dbx.config.*` needed):
+
+```ts
+import { dbx } from '@deltabox/toolchain/vite';
+
+export default {
+    plugins: [dbx({ toolchain: { fmt: true, lint: true } })],
+};
+```
+
+See [Vite plugin](/guide/vite-plugin) for the install steps and what the plugin
+does.
+
+Or, for a project that does not use Vite, scaffold a standalone config:
+
+```sh
+dbx project:config        # detect + write dbx.config.ts
+```
+
+Or start from a template:
+
+```sh
+dbx template:list
+dbx create --template project --name my-app --out ./my-app
+```
+
+## Sync
+
+`sync` runs every enabled task and writes the managed files (adding a manifest at
+`.dbx/toolchain/manifest.json`):
+
+```sh
+dbx sync              # write managed files
+dbx sync --check      # CI: fail if files are out of date
+dbx sync --recursive  # every managed project, in dependency order
+dbx sync --only tsconfig  # only refresh tsconfig aliases/references
+dbx watch             # re-sync on change
+```
+
+The generated state lives under `.dbx/`. Add it to `.gitignore`, keeping only
+the manifest (it holds no absolute paths):
+
+```gitignore
+.dbx/*
+!.dbx/toolchain
+.dbx/toolchain/*
+!.dbx/toolchain/manifest.json
+```
+
+`dbx sync` adds this block to an existing `.gitignore` automatically, so you only
+need to add it by hand when the repo has no `.gitignore` yet.
+
+## What gets managed
+
+| Area                                                                | Section in the config         |
+| ------------------------------------------------------------------- | ----------------------------- |
+| GitHub workflows, commitlint, Conventional-Commits VS Code settings | `ci`                          |
+| `biome.json` (formatter/linter)                                     | `fmt.biome` / `lint.biome`    |
+| `.oxfmtrc.json` / `.oxlintrc.json` (Oxc)                            | `fmt.oxc` / `lint.oxc`        |
+| Workspace `tsconfig.json` files (aliases + references)              | `tsconfig`                    |
+| `vite.config.ts` (Vite+ consumers)                                  | `vite`                        |
+| Template sources / scaffolding                                      | `templates`                   |
+| Package catalogs (`.yarnrc.yml` / `pnpm-workspace.yaml`)            | [`catalogs`](/guide/catalogs) |
+| Watch behaviour                                                     | `watch`                       |
+
+Every section is **opt-in by presence**: define it to enable it, omit it to leave
+that area untouched.
+
+## Next
+
+* [Monorepo guide](/guide/monorepo)
+* [CLI reference](/guide/cli)
+* [Configuration reference](/config/reference)
+* [TypeScript](/guide/typescript)
+* [Project](/guide/project)
+* [Package catalogs](/guide/catalogs)
+* [CI](/guide/ci/)
+* [Changelog](/guide/changelog/)
+* [tsconfig](/guide/tsconfig)
+* [Formatting & linting](/guide/formatting)
+* [Vite+](/guide/vite)
+* [Watch](/guide/watch)
+* [Logger](/guide/logger)
+* [Config generator](/guide/config-generator/)
+* [Providers (Vite+)](/guide/providers)
+* [Package scripts](/guide/scripts)
+* [Templates](/guide/templates)
+* [Docker](/guide/docker)
+* [Migrations](/guide/migrations/)
+* [Programmatic API](/guide/api/)
+* [LLMs](/llms)
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/monorepo.md
+---
+# Monorepo Guide
+
+## Project graph
+
+`dbx projects` discovers every workspace package and writes a
+dependency graph to `.dbx/toolchain/projects.json`. The VS Code extension and the
+`sync --recursive` command consume it.
+
+## tsconfig generation
+
+Enable the `tsconfig` section and the toolchain generates each workspace's
+`tsconfig.json` (extending `tsconfig.default.json`) and, for a monorepo root, a
+`tsconfig.workspaces.json` wiring project references and path aliases:
+
+```ts [dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
+        tsconfig: { refs: true, aliases: true, indent: 4 },
+    },
+});
+```
+
+See the [tsconfig guide](/guide/tsconfig) for every option and why the toolchain
+splits the config across several files.
+
+## Scaffolding a monorepo
+
+```sh
+dbx project:init:monorepo --name acme --scope @acme --out .
+dbx project:init:workspace --name utils --scope @acme --root . --dir packages/utils
+```
+
+## Tasks
+
+`deltabox toolchain` (and Vite+ consumers) use **Vite Task** (`dbx run`) instead of Turbo.
+The package graph orders execution via each package's `package.json`
+dependencies.
+
+Each package declares `build`, `typecheck` and `test` in its own
+`dbx.config.*` with explicit cache input/output, so `dbx run` reports cache
+hits (a `package.json` script cannot carry cache config):
+
+```ts [packages/<pkg>/dbx.config.ts]
+import { defineConfig } from '@deltabox/toolchain';
+
+export default defineConfig({
+    toolchain: {
+        vite: {
+            run: {
+                tasks: {
+                    build: {
+                        command: 'tsdown --config-loader unrun',
+                        cache: {
+                            input: [{ auto: true }, '!dist/**', '!**/*.tsbuildinfo'],
+                            output: ['dist/**'],
+                        },
+                    },
+                    typecheck: {
+                        command: 'tsc -p tsconfig.build.json --noEmit',
+                        cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
+                    },
+                    test: {
+                        command: 'vitest run',
+                        cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
+                    },
+                },
+            },
+        },
+    },
+});
+```
+
+The root `package.json` orchestrates them and adds the umbrella build:
+
+```json [package.json]
+{
+    "scripts": {
+        "build": "dbx run --filter \"./packages/*\" build && dbx run build:root",
+        "test": "dbx run --filter \"./packages/*\" test && dbx run test:root"
+    }
+}
+```
+
+`dbx run --filter "./packages/*" build` runs each package's `build` in
+dependency order (excluding the root, which avoids recursion), then `build:root`
+builds the umbrella dist.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/vscode.md
+---
+# VS Code Extension
+
+The `deltabox toolchain` extension provides a sidebar for managing projects.
+
+## Install
+
+Download from the [Visual Studio Code Marketplace](https://marketplace.visualstudio.com/items?itemName=deltabox.toolchain-vscode).
+
+or through the CLI:
+
+```sh
+code --install-extension deltabox.toolchain-vscode
+```
+
+## Commands
+
+| Command                                               | What it does                                                                                                                                                                                             |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sync all / active / selected                          | Run `dbx sync --recursive`, which walks every managed project in dependency order (nested workspaces included). Configless projects are skipped unless `deltabox.toolchain.manageConfigless` is enabled. |
+| Check sync                                            | `sync --check` across the workspace.                                                                                                                                                                     |
+| Sync tsconfig                                         | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).                                                                                                                                |
+| Format project                                        | Run `dbx fmt` with the formatter detected/configured for the project (Oxfmt/Vite+, Prettier, Biome, dprint or standalone Oxc).                                                                           |
+| Lint project                                          | Run `dbx lint` with the linter detected/configured for the project (Oxlint/Vite+, ESLint or Biome).                                                                                                      |
+| Manage tsconfig…                                      | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                                                                                                                                |
+| Scaffold project                                      | Single project, monorepo root (with/without example), workspace, or **From template…**.                                                                                                                  |
+| Generate configs / Generate config                    | Run `project:config` for missing configs (or for one project), or refresh only the project graph; picks TS/JS.                                                                                           |
+| Migrate tooling…                                      | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).                                                                                                                   |
+| Run workflow                                          | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                                                                                                                                    |
+| Run Vite+ command…                                    | QuickPick over the Vite+ provider commands, run in a terminal.                                                                                                                                           |
+| Create Vite+ project…                                 | `vp create` in a terminal.                                                                                                                                                                               |
+| Install MCP server + skill…                           | `dbx mcp:install` with a provider picker (Claude, Codex, VS Code, OpenCode, Pi or a custom directory).                                                                                                   |
+| List MCP installations                                | `dbx mcp:list` — show where the MCP server + skill are installed.                                                                                                                                        |
+| Generate changelog                                    | Run `dbx changelog` in the selected project.                                                                                                                                                             |
+| Clean build artifacts                                 | Remove `dist/` and `*.tsbuildinfo` (`dbx cleanup`).                                                                                                                                                      |
+| Add provider... / Refresh providers                   | Register a custom provider (project or global registry) and reload the provider list.                                                                                                                    |
+| Run command...                                        | Run a provider command (`dbx <command>`) in a terminal (provider tree context menu).                                                                                                                     |
+| Add template… / Remove template…                      | `template:init --add` / `template:list --registry` + `template:remove`.                                                                                                                                  |
+| Add template... / Remove template source...           | Registry actions: add a template source or drop one while keeping the files; **Refresh templates** reloads the list.                                                                                     |
+| Create from template...                               | `dbx create --template <id>` (terminal for online templates; `--online` is added automatically for online sources).                                                                                      |
+| New registry… / Remove registry… / Refresh registries | Manage the provider/template registry search paths and reload the **Registries** view.                                                                                                                   |
+| Choose dbx source… / Select dbx version…              | Pick the project's `dbx` or the bundled CLI, and pin the toolchain version.                                                                                                                              |
+| Refresh projects / Refresh files                      | Rediscover the project graph / reload the **Managed Files** view.                                                                                                                                        |
+| Show all actions                                      | Open the searchable action palette (see [Actions](#actions)).                                                                                                                                            |
+| Reset tooling                                         | Remove generated files / manifest / config.                                                                                                                                                              |
+| Toggle auto-sync                                      | Enable/disable sync-on-change.                                                                                                                                                                           |
+
+Interactive commands (the dev server, `vp create`, online scaffolding) run in an
+integrated terminal at the project root; everything else runs in the output
+channel.
+
+**Format project** and **Lint project** are generic toolchain commands, not
+Vite+ commands: they run `dbx fmt` / `dbx lint`, which route to the
+detected/configured formatter and linter. A project using Prettier, ESLint,
+Biome, dprint or standalone Oxc gets the same actions as a Vite+ project (the
+`vp` passthrough is only used when Oxc is backed by `vite-plus`).
+
+Tree context menus also expose scoped commands that are hidden from the Command
+Palette: **Sync this project**, **Go to project**, **Run the project's Vite+
+command**, **Remove provider**, **Copy provider id**, **Create from template**,
+**Show template info**, **Copy template id**, and the registry item actions
+(**Open registry**, **Add new registry**, **Remove registry**).
+
+## Project menu
+
+Every project card (and every project in the **Projects** tree) exposes the same
+actions, scoped to that project:
+
+* **Sync** / **Check sync** — regenerate / verify the project's managed files.
+* **Generate config** — write a `dbx.config.*` (TS/JS), or refresh only the project graph.
+* **Run workflow…** — trigger one of the project's generated workflows. The picker
+  lists every enabled workflow with its provider and path, and dispatches it
+  through the matching vendor CLI (`gh`, `glab` or `az`).
+* **Run Vite+ command…** — run a `vp` command in that project.
+* **Reset tooling…** — remove the generated files + manifest, or everything
+  including the config.
+* **Go to project** — reveal the project in the Explorer.
+
+## File Explorer decorations and project reveal
+
+Every file recorded in a project's `.dbx/toolchain/manifest.json` gets a `dbx`
+badge and the contributed blue label color in the File Explorer. The decoration
+refreshes after a sync (and from **Refresh files**), and can be turned off with
+`deltabox.toolchain.decorateManagedFiles`. VS Code has no contribution point
+that overrides a single file's icon inside the active file icon theme, so the
+badge plus label color is the supported marker; changing the icon itself would
+require switching the whole workbench icon theme.
+
+Switching the active editor selects the deepest project that owns the file in
+the **Projects** view and expands its workspace group. Files outside every
+project are ignored, the reveal never takes focus, and the listener is disposed
+with the extension.
+
+## Providers, templates and Vite+ in the editor
+
+The **Providers** and **Templates** views read `dbx providers --json` and `dbx template:list --json`, so adding one surfaces it in the UI automatically.
+
+### Plugin mode
+
+A project configured through the `dbx()` Vite plugin (rather than a
+`dbx.config.*`) is detected automatically: the Projects view shows it as
+`plugin`, sync stays enabled, and auto-sync watches `vite.config.*`. The
+extension never manages `vite.config.*` in plugin mode — the CLI's `vite` sync
+task skips it, and config generation skips projects that already have the
+plugin.
+
+Vite+ commands are only enabled when Vite+ is detected for the project. When it
+is not, the provider and its commands are greyed out (`available: false` in
+`dbx providers --json`) and the extension refuses to run them, while plain Vite
+projects keep working normally.
+
+### Add provider...
+
+Writes a custom provider to the default project registry (`.dbx/toolchain/.registry/providers/providers.json`) or the global
+`~/.dbx/toolchain/.registry/providers/` when you choose the global scope, which
+`toolchainProviders()` merges with the built-ins, so a registered provider's
+commands also become `dbx` commands (`dbx <command>`), runnable from the view.
+
+Provider search paths can also be added with the **Registries** view; the
+`deltabox.providerRegistrySearchPaths` setting mirrors them globally.
+
+### Add template...
+
+Runs `template:init --add` and asks whether to add the template to the **global** registry (yes by default), so it is available in every
+project.
+
+See [Global templates](/guide/templates#global-templates).
+
+The
+`deltabox.registrySearchPaths` setting controls the global search paths and is
+kept in sync with the CLI config.
+
+### Remove template source...
+
+Runs `template:list --registry` + `template:remove`.
+
+The **Registries** view (below **Templates**) shows the detected provider and
+template registries as **Providers** / **Templates** roots.
+
+Each item has **Open registry** (the folder in the explorer, or the website for remote URLs), **Add new registry** and **Remove registry** (it only drops the path, keeping the files).
+
+The title bar's **New registry…** / **Remove registry…** actions add or remove
+search paths for either kind, asking whether they are global or project-scoped.
+
+Remote registries are `http(s)` JSON registries: template registries accept
+`{ sources }` or an array of sources; provider registries accept
+`{ providers }` or an array of provider descriptors.
+
+### Create from template...
+
+Prompts for the template's inputs and actions (see
+[Templates](/guide/templates)) before running `dbx create`. Scaffolding also asks
+for a package manager (`yarn` default).
+
+The Home view links to this documentation with **Need help? Go to documentation**.
+
+## Actions
+
+The **Actions** view (below **Projects**) lists every dbx action grouped by area
+(Changelog, CI, Cleanup, MCP, Migrate, Pack, Project, Providers, Registries,
+Sync, Templates, Tools). Groups are collapsed by default and sorted ascending;
+expanding one shows its actions sorted by name. Selecting an action runs its VS
+Code command directly.
+
+The Home view's **More actions…** button opens the same list as a searchable,
+paged QuickPick. Navigation entries (`Go back`, `Next page (n/m)`) are rendered
+before the real choices, and every prompt-based dbx flow (scaffolding, template
+pickers, …) uses the same paging factory. Actions only delegate to their own VS
+Code command; the palette itself never shells out.
+
+## Auto-sync
+
+The Home view shows the current state as a clickable **Auto-sync enabled** /
+**Auto-sync paused** button (the same secondary style as the other quick
+actions). Opening it lists the global and workspace scopes independently, so a
+global value and a workspace value can disagree:
+
+* **Enable/Disable (global)** writes `deltabox.toolchain.enabled` at the global
+  VS Code scope and mirrors the value into the CLI global store
+  (`~/.dbx/toolchain/cli/config.json`, via `dbx enable/disable --global`).
+* **Enable/Disable (workspace)** writes `.vscode/settings.json` through the
+  workspace configuration target (via `dbx enable/disable --workspace`).
+
+A project's `toolchain.enabled` config takes precedence over both settings. The
+extension resolves it through the project's CLI (`dbx enabled --json`), so a
+disabled config keeps auto-sync off even when the VS Code setting is on.
+
+Auto-sync watches input files only. The extension asks the CLI
+(`dbx watch --list --json`) for the concrete, project-graph-resolved files:
+every `dbx.config.*` plus each enabled project's `tsconfig.baseFile`,
+`tsconfig.defaultFile` and the root `tsconfig.rootFile`. Custom file names are
+honoured, nested configs can disable or override their own tsconfig section, and
+the list is refreshed whenever a `dbx.config.*` changes (and after each sync).
+
+Each resolved pattern is scoped to its own workspace root (and a concrete
+nested file is watched from its own directory), so a same-named file in another
+workspace folder or an ancestor can never trigger this root's sync, and VS Code
+does not install a recursive watcher over the whole root (which can hold
+`node_modules` handles during a package-manager link step on Windows). Only the
+root whose input changed is synced. Setting `deltabox.toolchain.watch`
+explicitly replaces the resolved inputs; user globs are matched across every
+workspace folder, absolute/ancestor globs are ignored, and an empty list
+disables watching.
+
+Generated outputs are never watched. The scheduler debounces bursts, allows one sync at a time, queues at most one follow-up, and suppresses events briefly after a run.
+
+When a sync finds no workspace tsconfig files while `tsconfig.refs`/`tsconfig.composite` are on (or a `tsconfig.workspaces.json` is present), the extension surfaces the CLI's warning as a notification (once per session) with a **Show output** action.
+
+When removing a section stops managing a file that dbx created, the sync
+notification lists the removed relative paths and offers **Restore** (write the
+previous content back) or **Close**. A file that existed before dbx first managed
+it is **adopted**: it is unmanaged but never deleted.
+
+The **Managed Files** view also shows a **Workflow conflicts** group for
+hand-written workflows dbx left untouched (the manifest's `workflowConflicts`).
+Each item names the config key to opt out with, and opens the existing file.
+
+## Settings
+
+| Setting                                              | Default         | Description                                                                                                |
+| ---------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------- |
+| `deltabox.toolchain.enabled`                         | `true`          | Auto sync on watched changes. A project's `toolchain.enabled` config takes precedence.                     |
+| `deltabox.toolchain.debounce`                        | `300`           | Debounce (ms) before a sync.                                                                               |
+| `deltabox.toolchain.command`                         | `sync`          | The command to run on change.                                                                              |
+| `deltabox.toolchain.manageConfigless`                | `false`         | Manage projects without their own `dbx.config.*` (passes `--configless` to sync/watch).                    |
+| `deltabox.toolchain.containerizeTemplates`           | `false`         | Generate Docker artifacts when scaffolding a new project (also prompted per create).                       |
+| `deltabox.toolchain.formatManagedFiles`              | `true`          | Format the managed files written by `dbx sync` (adds `--no-format` when disabled).                         |
+| `deltabox.toolchain.formatManagedFilesFix`           | `true`          | Rewrite managed files when formatting instead of check mode (adds `--no-format-fix` when disabled).        |
+| `deltabox.toolchain.formatManagedFilesCommand`       | `""`            | Override the managed-file formatter command (`{files}` expands to the files). Empty = auto-detect.         |
+| `deltabox.toolchain.formatManagedFilesExclude`       | `[]`            | Managed files to leave unformatted (globs; passed to `dbx sync --format-exclude`).                         |
+| `deltabox.toolchain.enableFormatImportGroupDefaults` | `true`          | Add the resolved workspace `sortImports` custom group when syncing; set `false` to manage groups yourself. |
+| `deltabox.toolchain.decorateManagedFiles`            | `true`          | Show a `dbx` badge and blue label color on files recorded in the project manifests.                        |
+| `deltabox.toolchain.watch`                           | `[]` (resolved) | Inputs that trigger a sync (empty = resolved from the config).                                             |
+| `deltabox.toolchain.version`                         | `""` (auto)     | Pin the `@deltabox/toolchain` version this workspace runs.                                                 |
+| `deltabox.registrySearchPaths`                       | `[]`            | Template registry search paths (dirs or `http(s)` URLs).                                                   |
+| `deltabox.providerRegistrySearchPaths`               | `[]`            | Provider registry search paths (JSON files/dirs/URLs).                                                     |
+
+`deltabox.toolchain.enableFormatImportGroupDefaults` (default `true`) adds the
+resolved `workspace` group to Oxfmt's `sortImports.customGroups` when the
+extension syncs or generates configs. Set it to `false` in user or workspace
+settings to keep full control of the import groups. The extension passes the
+effective value to the CLI; direct CLI runs and Vite+ configs also honour the
+workspace-scoped `.vscode/settings.json` value.
+
+When a workspace has its own `@deltabox/toolchain` whose version differs from the
+extension's bundled CLI, the extension asks which to run and shows both detected
+versions. **Select dbx version…** pins a version in the project's
+`.vscode/settings.json` (like TypeScript's version picker); it runs that version
+via `npx` unless the project already installs it.
+
+Project lookup follows the repository boundary: from the open folder (and every
+workspace root in a multi-root workspace) the extension walks up to the nearest
+`.git`, so a toolchain hoisted to the monorepo root is found even when a nested
+workspace package is opened as the folder. The project's own `dbx` stays the
+default; the bundled CLI is only the fallback.
+
+## Command palette
+
+Search for `deltabox:` to find:
+
+* **Sync active project** / **Sync selected projects** / **Sync all projects**
+* **Check sync**
+* **Sync tsconfig**
+* **Manage tsconfig…**
+* **Scaffold project…**
+* **Generate configs…** / **Generate config…**
+* **Migrate tooling…**
+* **Run workflow…**
+* **Run Vite+ command…**
+* **Create Vite+ project…**
+* **Install MCP server + skill…**
+* **List MCP installations**
+* **Generate changelog**
+* **Clean build artifacts**
+* **Add provider...** / **Refresh providers**
+* **Add template…** / **Remove template…**
+* **Add template...** / **Remove template source...** / **Refresh templates**
+* **New registry…** / **Remove registry…** / **Refresh registries**
+* **Choose dbx source…** / **Select dbx version…**
+* **Refresh projects** / **Refresh files**
+* **Show all actions**
+* **Reset tooling…**
+* **Toggle auto-sync**
+
+The project and tree context menus add scoped commands that are intentionally
+hidden from the palette (sync this project, go to project, run the project's
+Vite+ command, remove/copy a provider, template info/copy id, and the registry
+item actions).
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/vite.md
+---
+# Vite+
+
+There are two ways to use dbx with Vite:
+
+* **Plugin mode (recommended):** put the toolchain config inline in the `dbx()`
+  Vite plugin inside `vite.config.*`. No `dbx.config.*` is required, and dbx
+  never manages `vite.config.*` because the plugin lives there.
+* **Config mode:** keep the whole Vite+ config in `dbx.config.*` under
+  `toolchain.vite`, and let `dbx sync` write a thin `vite.config.ts` shim.
+
+Both can be combined: a `dbx.config.*` provides shared config and the plugin
+options are merged on top.
+
+## Plugin mode
+
+```ts [vite.config.ts]
+import { defineConfig } from 'vite-plus'; // or 'vite' for plain Vite
+
+import { dbx } from '@deltabox/toolchain/vite';
+
+export default defineConfig({
+    plugins: [
+        dbx({
+            toolchain: {
+                project: { name: 'my-app', scope: '@acme' },
+                fmt: { oxc: true },
+                lint: { oxc: true },
+                ci: { sync: true },
+                changelog: { preset: 'conventional' },
+            },
+        }),
+    ],
+    // your usual Vite config
+});
+```
+
+The plugin carries the config inline and the dbx CLI (sync, projects, watch and
+the VS Code extension) reads it back from `vite.config.*`. The plugin also
+derives the Vite options from the dbx sections:
+
+| dbx section | Vite option                            |
+| ----------- | -------------------------------------- |
+| `logger`    | `logLevel` / `customLogger`            |
+| `watch`     | `server.watch` (the `exclude` globs)   |
+| `fmt`       | Vite+ `fmt` (only on a Vite+ project)  |
+| `lint`      | Vite+ `lint` (only on a Vite+ project) |
+
+The `vite` section is deliberately omitted from the plugin options: the Vite
+config is the user config in plugin mode. Vite+ keys are only added when the
+project declares `vite-plus`; a pure Vite project gets only standard Vite
+options. Vite+ CLI passthroughs (`dbx vite:*`) are refused unless Vite+ is
+installed/detected.
+
+`dbx sync` runs before the dev server/build (or `dbx sync --check` in CI) and
+re-syncs when `vite.config.*`, `dbx.config.*` or a tsconfig input changes.
+
+Builtin scaffolds (`dbx create`, `dbx project:init`, `dbx project:init:workspace`)
+use plugin mode: they generate a `vite.config.*` with `dbx({ toolchain })`,
+Vitest (`test`) and Vite+ tasks (`run.tasks`) instead of a `dbx.config.*`. The
+scaffolded packages depend on `vite-plus` and use `vp` for build/test, so no
+separate `vitest` or `tsdown` dependency is written.
+
+## Config mode
+
+The `vite` section holds the **entire Vite+ configuration**. Every key is passed
+through verbatim to Vite+, so `dbx.config.*` stays the only hand-authored root
+config; `dbx sync` writes a thin root `vite.config.ts` that resolves it at load
+time.
+
+```ts [dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        vite: {
+            fmt: { semi: true, singleQuote: true },
+            lint: { ignorePatterns: ['dist/**'] },
+            test: { include: ['src/**/*.test.ts'], environment: 'node' },
+            run: { tasks: { build: { command: 'tsdown --config-loader unrun' } } },
+        },
+    },
+});
+```
+
+The section is typed as Vite+'s own config (`ToolchainViteConfig` = Vite's
+`UserConfig` as augmented by Vite+), so the whole Vite+ surface autocompletes in
+`dbx.config.ts`.
+
+## The generated shim
+
+`dbx sync` writes a fixed `vite.config.ts`:
+
+```ts [vite.config.ts]
+import { defineConfig, type ViteUserConfig } from 'vite-plus';
+
+// Generated by @deltabox/toolchain — edit the vite section in dbx.config and run `dbx sync`.
+import { resolveVite } from '@deltabox/toolchain/vite';
+
+export default defineConfig(resolveVite<ViteUserConfig>({ cwd: import.meta.dirname }));
+```
+
+The shim imports `defineConfig` from whichever Vite package the project installs
+— `vite` or `vite-plus` (detected from `package.json`, walking up so a hoisted
+workspace dependency is found). For a plain `vite` project it imports
+`defineConfig, type UserConfig` from `vite` and calls `resolveVite<UserConfig>`,
+so the same shim type-checks against both.
+
+`resolveVite(options?)` resolves the **same-directory** `dbx.config.*` (so a
+nested workspace `vite.config.ts` uses its own config), or the `toolchain` you
+pass, then returns `toolchain.vite`. You can also pass inline overrides with
+`resolveVite({ vite: { ... } })`, which are deep-merged over the loaded section.
+The file never drifts, because the real config stays in `dbx.config.*`.
+
+The root shim must live at the **root**: `vp run`, `vp check` and `vp staged` do
+not accept `--config`, so the shim has to be the file Vite+ loads.
+
+## Options
+
+| Option   | Type                | Default | Description                                     |
+| -------- | ------------------- | ------- | ----------------------------------------------- |
+| `config` | `boolean \| string` | `true`  | Write the managed shim; a string sets its path. |
+
+Everything else under `vite` is Vite+ config (plugins, `test`, `lint`, `fmt`,
+`run.tasks`, ...). `vite.fmt` / `vite.lint` override `toolchain.fmt.oxc` /
+`toolchain.lint.oxc` (deep merge). `fmt: true` / `lint: true` use the shared
+`DEFAULT_FMT_RULES` / `DEFAULT_LINT_RULES`; an options object is merged over
+them. Their ignore lists are exported as `DEFAULT_FMT_IGNORE_PATTERNS` /
+`DEFAULT_LINT_IGNORE_PATTERNS` (both layered over `DEFAULT_IGNORE_PATTERNS`)
+from `@deltabox/toolchain` and `@deltabox/toolchain/shared`, so you can extend
+them instead of repeating the defaults. Import sorting is part of those defaults:
+`sortImports` gets a `workspace` custom group resolved from every dbx project
+(see `resolveFmtCustomGroups`), so workspace packages do not need manual groups.
+Set `vite: { config: false }` to leave a hand-written
+`vite.config.ts` alone (the section is still read for provider colouring and the
+`dbx` provider passthrough). `config: 'config/vite.custom.ts'` writes the shim
+there instead (relative to the project, or an absolute path inside it).
+
+## Nested workspaces
+
+`vite` is **never inherited**. A workspace with no `vite` section keeps its
+hand-written `vite.config.*` untouched; `dbx sync` only writes a shim when the
+project declares `vite` itself. Declare the settings the workspace needs in its
+own config:
+
+```ts [packages/web/dbx.config.ts]
+export default defineConfig({
+    toolchain: {
+        vite: {
+            shim: 'static',
+            resolve: { tsconfigPaths: true },
+            run: { tasks: { build: { command: 'tsdown' } } },
+        },
+    },
+});
+```
+
+`vite.fmt` / `vite.lint` are the exception: when the workspace opts into `fmt` /
+`lint`, they are hoisted into the top-level `fmt.oxc` / `lint.oxc` before
+inheritance, so shared formatting still flows down.
+
+## Keep the shim out of Oxfmt
+
+Add the shim to `vite.fmt.ignorePatterns`, otherwise `vp fmt` rewrites the
+generated file and `dbx sync --check` reports drift:
+
+```ts
+vite: {
+    fmt: {
+        ignorePatterns: ['/vite.config.ts'];
+    }
+}
+```
+
+In a monorepo, put `**/vite.config.ts` on the **root** top-level `fmt.oxc`
+config so every workspace shim is covered (an `ignorePatterns` array in a
+workspace replaces the root's list). `dbx migrate --from vite` adds the ignore
+for you (see [Migrations](/guide/migrations/#vite-config)).
+
+When `fmt` / `lint` are defined, `dbx sync` also writes `.oxfmtrc.json` /
+`.oxlintrc.json` for the Oxc VS Code extension. They are root-only unless a
+workspace config defines its own `fmt` / `lint`.
+
+## Commands
+
+Vite+ commands are reachable directly or through the `vite` namespace, and are
+registered as a provider (see [Providers](/guide/providers)):
+
+```sh
+dbx fmt                 # the active formatter (vp fmt when Oxc)
+dbx run -r build        # forwards to `vp run -r build`
+dbx vite dev            # explicit namespace (always works)
+dbx vite:build          # named alias for `vp build`
+```
+
+A bare `dbx <command>` is forwarded to Vite+ when the name (or a Vite+ alias)
+matches — built-in commands win, so `dbx migrate` stays the toolchain's
+migration. `dbx fmt` / `dbx lint` route to the configured/discovered
+Biome/Prettier/Dprint/ESLint tool, and keep the `vp` passthrough when the active
+tool is Oxc (see [Formatting & linting](/guide/formatting#running-the-active-tool)).
+
+## Programmatic API
+
+```ts
+import {
+    resolveVite,
+    renderViteConfig,
+    viteConfigObject,
+    viteProvider,
+    viteSyncTask,
+} from '@deltabox/toolchain/vite';
+```
+
+| Export                         | Description                                                                       |
+| ------------------------------ | --------------------------------------------------------------------------------- |
+| `resolveVite(options?)`        | Resolve `toolchain.vite` (or a passed `toolchain`), with inline `vite` overrides. |
+| `detectViteSpecifier(cwd)`     | Which package (`vite` / `vite-plus`) the project has, for the shim import.        |
+| `renderViteConfig(specifier?)` | The managed `vite.config.ts` shim source (defaults to `vite-plus`).               |
+| `viteConfigObject(config?)`    | The `vite` section without the toolchain opt-out `config`.                        |
+| `viteSyncTask()`               | The sync task (writes the shim).                                                  |
+| `viteProvider()`               | The Vite+ provider descriptor.                                                    |
+
+See [Configuration](/guide/config/vite) for the `dbx.config` integration and the
+[Providers](/guide/providers) guide for the passthrough commands.
+
+---
+
+---
 url: https://toolchain.deltabox.studio/config.md
 ---
 
-# Config types
+# Overview
 
-The toolchain has three configuration surfaces, all derived from the same Zod
-model:
+There are four ways to configure dbx. They all feed the same toolchain
+model, so a project can combine them.
 
-* **Programmatic** — `defineConfig({ toolchain: { ... } })` in
-  `dbx.config.ts`; typed as `ToolchainConfig` (see the
-  [TypeScript guide](/guide/typescript)).
-* **CLI** — the `dbx` command options, generated from the command descriptors;
-  see the [CLI reference](/config/cli).
-* **Environment** — schema leaves can opt into env vars with
-  `.meta({ envName })`; see the [environment reference](/config/env) and the
-  [Config Generator](/guide/config-generator/).
+## `dbx.config.*`
 
-The exhaustive object reference is [dbx.config](/config/reference); the editor
-JSON Schema is [config.schema.json](https://toolchain.deltabox.studio/config.schema.json).
+A standalone config file (`dbx.config.ts`, `.mts`, `.cts`, `.js`, `.mjs`,
+`.cjs` or `.json`) exports `{ toolchain: { ... } }` with `defineConfig`. It
+is the non-Vite path and is typed as `ToolchainConfig` (see the
+[TypeScript guide](/guide/typescript)). Every section is opt-in by presence.
+
+## Vite plugin
+
+In a Vite or Vite+ project, pass the same `toolchain` object to the `dbx()`
+plugin in `vite.config.*`. The CLI reads it back from the Vite config, so no
+`dbx.config.*` is required. See [Vite plugin](/guide/vite-plugin).
+
+## CLI
+
+`dbx` command flags configure a command for one run. The available options are
+generated from the command descriptors. See the [CLI reference](/config/cli).
+
+## Environment variables
+
+Schema leaves that declare `.meta({ envName })` can be set through env vars (the
+toolchain config uses the `DBX_` prefix). See the
+[environment reference](/config/env) and the
+[Config Generator](/guide/config-generator/).
+
+## Editor JSON Schema
+
+The generated [config.schema.json](https://toolchain.deltabox.studio/config.schema.json)
+gives editors completion and validation for `dbx.config.*`. The exhaustive
+object reference is [dbx.config](/config/reference).
 
 ## Fields
 
@@ -3564,230 +4355,653 @@ export default defineConfig({
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide.md
+url: https://toolchain.deltabox.studio/guide/migrations.md
 ---
-# Getting Started
+# Migrations
 
-`@deltabox/toolchain` is a superset of [Vite+](https://viteplus.dev). It keeps the
-Vite+ workflow and adds project synchronization, a config generator, tsconfig
-management, an MCP server, CI and changelog automation, providers, catalogs and a
-VS Code extension. Use it as a Vite/Vite+ plugin or standalone — from the CLI, the
-programmatic API and the VS Code extension.
-
-## Install
-
-::: code-group
-
-```sh [npm]
-# as a dev dependency in the project you want to manage
-npm install @deltabox/toolchain --save-dev
-```
-
-```sh [yarn]
-# as a dev dependency in the project you want to manage
-yarn add -D @deltabox/toolchain
-```
-
-```sh [pnpm]
-# as a dev dependency in the project you want to manage
-pnpm add -D @deltabox/toolchain
-```
-
-```sh [bun]
-# as a dev dependency in the project you want to manage
-bun add -D @deltabox/toolchain
-```
-
-:::
+`dbx migrate` converts a project's tooling config from another tool to
+**Oxc** (Oxfmt + Oxlint), or folds an existing Oxc/Vite config into
+`dbx.config.*`. Migrations are pluggable — adding a source tool is a
+matter of implementing one interface.
 
 ```sh
-# or for global usage
-npm install -g @deltabox/toolchain
+dbx migrate:list                       # what's available + detected
+dbx migrate --from biome               # dry-run
+dbx migrate --from biome --write       # writes the oxc config
+dbx migrate --from biome --target vite --write
+dbx migrate --from biome --from prettier --write  # several sources
+dbx migrate --from oxc --write         # fold .oxfmtrc/.oxlintrc into dbx.config
+dbx migrate --from all                 # every detected source
+dbx migrate --check                    # CI: exit 1 when the oxc config is stale
+dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
 ```
 
-The published package exposes one binary, `dbx`:
+`dbx migrate` is a dry-run unless you pass `--write` (or `--check`). `--from`
+is repeatable; `--from all` (or omitting it) selects every detected source.
+
+## Upgrading from v2
+
+See the [v2 → v3 migration guide](/guide/migrations/v2-v3).
+
+## Upgrading from v1
+
+See the [v1 → v2 migration guide](/guide/migrations/v1-v2).
+
+## Sources
+
+| Source     | Notes                                                                                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `biome`    | Formatter options, `files.includes` negations → `ignorePatterns`, **`organizeImports.groups` → Oxfmt `sortImports`**, and a curated Biome → Oxlint rule map. |
+| `prettier` | Prettier-compatible options transfer directly; Tailwind/PackageJson plugins detected; `.prettierignore` → `ignorePatterns`.                                  |
+| `eslint`   | JSON configs map rule names + severities (`@typescript-eslint/*` → `typescript/*`); JS/flat configs use `@oxlint/migrate` with `--online --write`.           |
+| `dprint`   | `dprint.json` layout + TypeScript options → Oxfmt.                                                                                                           |
+| `oxc`      | Folds `.oxfmtrc.json` / `.oxlintrc.json` into `dbx.config.*`'s `toolchain.fmt.oxc` / `toolchain.lint.oxc`; `dbx sync` manages them again.                    |
+| `vite`     | Folds a hand-written `vite.config.*` into `dbx.config.*`'s `toolchain.vite` (see below).                                                                     |
+
+## Targets
+
+* `--target files` (default) — writes `.oxfmtrc.json` and `.oxlintrc.json`.
+* `--target vite` — folds the result into an existing `vite.config.ts`
+  (inserting/replacing `fmt` and `lint`), which is what Vite+ reads.
+* The `oxc` source targets `dbx.config.*` (`toolchain.fmt.oxc` /
+  `toolchain.lint.oxc`, or `toolchain.vite.fmt/lint` when `--target vite`).
+
+Unless `--target` is given, formatter/linter migrations route by what the
+existing Vite config already owns:
+
+* If `vite.config.*` (or an existing `toolchain.vite`) defines `fmt`/`lint`, the
+  migrated options are merged into `toolchain.vite.fmt`/`toolchain.vite.lint`,
+  and no top-level `toolchain.fmt`/`toolchain.lint` is created.
+* Otherwise they are folded into the top-level `toolchain.fmt.oxc` /
+  `toolchain.lint.oxc`, and `vite.fmt`/`vite.lint` are left undefined.
+
+## Recursive migration
+
+By default `dbx migrate` only touches the root (`--cwd`, or the current
+directory). `--recursive` walks the discovered projects under the root and
+migrates each one that has a **detected source**:
 
 ```sh
-dbx --help
+dbx migrate --from biome --from prettier --recursive --write
 ```
 
-## Interactive CLI
+On an interactive terminal it first asks which projects to migrate with a
+multi-select — every candidate is listed by its relative path (with its package
+name as a hint), plus an **All projects** option. Non-interactive runs (piped
+output, CI, or `--json`) migrate every candidate without prompting. A project is
+a candidate when a migration matching `--from` (or any migration, for `all`/no
+`--from`) is detected in its directory — so a workspace with its own
+`biome.json` or `vite.config.*` is included, and one without is skipped.
 
-Commands are flag-driven, but in an interactive terminal (a TTY) a few prompt for
-the values you omit:
+## `vite.config`
+
+The `vite` source moves a hand-written `vite.config.*` into `dbx.config.*`'s
+`toolchain.vite`, so the whole Vite+ config lives in the one hand-authored config
+and `dbx sync` writes a thin `vite.config.ts` shim that resolves it at load time:
 
 ```sh
-dbx create                     # pick a template, project name, scope, inputs and actions
-dbx migrate --recursive        # pick which projects to migrate
+dbx migrate --from vite          # dry-run: shows what would fold in
+dbx migrate --from vite --write  # folds the object into toolchain.vite
+dbx sync                         # writes the managed vite.config.ts shim
 ```
 
-`dbx migrate` without `--from` still detects the sources automatically; the
-prompt is only for the project selection with `--recursive`. Pass `--json`, pipe
-the command, or supply the flags to run non-interactively. `dbx template:init`
-also accepts flags (`--name`, `--kind`, ...) for scripted use.
+When the folded config already owns `fmt`, it adds `/vite.config.ts` to
+`toolchain.vite.fmt.ignorePatterns`, so Oxfmt leaves the generated shim alone
+(otherwise `vp fmt` would rewrite it and `dbx sync --check` would report drift).
+When it does not, `vite.fmt` stays undefined; the default fmt ignores already
+cover `**/vite.config.ts`.
 
-## Create a config
+It extracts the object literal passed to `defineConfig(...)` (or the
+default-exported object) with a string-aware, balanced-paren scanner and
+text-splices it into the nearest `dbx.config.*`: it inserts `vite: { ... }`, or
+**deep-merges** into an existing `toolchain.vite` (nested objects are combined;
+arrays and scalars from the vite config win), so its settings are kept. A
+previous `config: false` opt-out is flipped to `config: true`, since the
+hand-written file is being removed. When the config references imports, plugins
+or any non-literal expression it is reported as **unmapped** and nothing is
+written, rather than emitting broken output. A JSON `dbx.config.json` is also
+left alone (the object is folded by hand).
 
-Add the `dbx()` plugin to `vite.config.ts` (recommended, no `dbx.config.*` needed):
+When the project has a `vite.config.*` but **no** `dbx.config.*` (a workspace
+that never had one), the migration creates a fresh `dbx.config.ts` holding the
+folded `toolchain.vite`, wrapped in `defineConfig` from `@deltabox/toolchain`
+(like the scaffold). A workspace resolves that import through the root's
+installed dependency — in a self-hosted repo, via a root `portal:.` self-link.
+
+The now-redundant `vite.config.*` is removed and recreated by `dbx sync` as a
+shim that imports `defineConfig` from the project's own Vite package (`vite` or
+`vite-plus`, detected from `package.json`). Pass `--ignore-vite-config-file` to
+keep the original file.
+
+### Nested configs
+
+In a monorepo, pass `--recursive` to fold **each workspace's** own
+`vite.config.*` into that workspace's `dbx.config.*` (creating one when it is
+missing) instead of the root's:
+
+```sh
+dbx migrate --from vite --recursive --write
+```
+
+Without `--recursive`, only the root's `vite.config.*` is migrated and nested
+ones are left alone. Detection is per project root (a directory with a
+`package.json` or `dbx.config.*`, up to five levels deep), so a `vite.config.*`
+in a deeper subdirectory of a project is not discovered. A workspace with no
+`dbx.config.*` gets a fresh one holding just its `toolchain.vite`; it inherits
+the rest of the config from the nearest ancestor at load time.
+
+## Post-migration sync
+
+A `--write` run finishes by regenerating the project's toolchain-managed files
+(the same files `dbx sync` writes) for every project it changed — so a migrated
+project is immediately consistent, eg. the managed `vite.config.ts` shim appears
+right after folding a hand-written config. Two flags narrow that step:
+
+| Flag                     | Effect                                                                    |
+| ------------------------ | ------------------------------------------------------------------------- |
+| `--ignore-managed-files` | Skip the post-migration sync entirely; managed files are left untouched.  |
+| `--ignore-changelog`     | Run the sync but drop the `changelog` task (workflows, commitlint, hook). |
+
+The sync only runs after `--write`; a dry-run reports what it would do instead.
+
+## Package scripts
+
+`dbx migrate` migrates the tooling **files**; the matching `package.json` scripts
+are a small follow-up. The common swaps:
+
+| Before                   | After                       |
+| ------------------------ | --------------------------- |
+| `biome format --write .` | `dbx fmt`                   |
+| `biome check --fix .`    | `dbx lint --fix`            |
+| `turbo build`            | `dbx run -r build`          |
+| `turbo typecheck`        | `dbx run -r typecheck`      |
+| `turbo test`             | `dbx run -r test`           |
+| `turbo dev`              | `dbx run -r --parallel dev` |
+
+Then drop `@biomejs/biome` + `turbo` (and `biome.json` + `turbo.json`) and add
+`@deltabox/toolchain` + `vite-plus`. The full walkthrough — recommended scripts,
+the dependency diff and per-workspace tasks — is on the
+[Package scripts](/guide/scripts) page.
+
+## CI check
+
+`--check` runs the migrations without writing and exits non-zero when a target
+file is missing or differs from what the migration would produce, so a pipeline
+can require that a repo is fully on Oxc:
+
+```sh
+dbx migrate --check || echo "still on Biome/etc — run migrate --write"
+```
+
+The check resolves the **effective** `dbx.config.*` (including an inherited
+ancestor config), so a workspace that inherits `fmt`/`lint` from the root is not
+asked to keep an intermediate `.oxfmtrc.json` / `.oxlintrc.json`. A disabled
+section (`fmt: false`) does not count as owning the config.
+
+`--online` allows network access: the ESLint migration shells out to
+`@oxlint/migrate` to evaluate JS/flat configs (it writes `.oxlintrc.json`, so it
+runs only together with `--write`).
+
+## Honest output
+
+Anything that cannot be mapped faithfully is reported instead of dropped:
+
+```
+unmapped (7):
+  - organizeImports !lucide*: negated group members are approximated
+  - linter.rules.suspicious.noUnknownAtRules: no Oxlint equivalent
+```
+
+## Programmatic
 
 ```ts
-import { dbx } from 'vite-plugin-dbx';
+import { listMigrations, detectMigrations, runMigration } from '@deltabox/toolchain/migrate';
 
-export default {
-    plugins: [dbx({ toolchain: { fmt: true, lint: true } })],
-};
+const detected = detectMigrations(process.cwd());
+const result = await runMigration('biome', { cwd: process.cwd(), target: 'vite', write: true });
+console.log(result.unmapped);
 ```
 
-Or, for a project that does not use Vite, scaffold a standalone config:
+## Notes
 
-```sh
-dbx project:config        # detect + write dbx.config.ts
-```
-
-Or start from a template:
-
-```sh
-dbx template:list
-dbx create --template project --name my-app --out ./my-app
-```
-
-## Sync
-
-`sync` runs every enabled task and writes the managed files (adding a manifest at
-`.dbx/toolchain/manifest.json`):
-
-```sh
-dbx sync              # write managed files
-dbx sync --check      # CI: fail if files are out of date
-dbx sync --recursive  # every managed project, in dependency order
-dbx sync --only tsconfig  # only refresh tsconfig aliases/references
-dbx watch             # re-sync on change
-```
-
-The generated state lives under `.dbx/`. Add it to `.gitignore`, keeping only
-the manifest (it holds no absolute paths):
-
-```gitignore
-.dbx/*
-!.dbx/toolchain
-.dbx/toolchain/*
-!.dbx/toolchain/manifest.json
-```
-
-`dbx sync` adds this block to an existing `.gitignore` automatically, so you only
-need to add it by hand when the repo has no `.gitignore` yet.
-
-## What gets managed
-
-| Area                                                                | Section in the config         |
-| ------------------------------------------------------------------- | ----------------------------- |
-| GitHub workflows, commitlint, Conventional-Commits VS Code settings | `ci`                          |
-| `biome.json` (formatter/linter)                                     | `fmt.biome` / `lint.biome`    |
-| `.oxfmtrc.json` / `.oxlintrc.json` (Oxc)                            | `fmt.oxc` / `lint.oxc`        |
-| Workspace `tsconfig.json` files (aliases + references)              | `tsconfig`                    |
-| `vite.config.ts` (Vite+ consumers)                                  | `vite`                        |
-| Template sources / scaffolding                                      | `templates`                   |
-| Package catalogs (`.yarnrc.yml` / `pnpm-workspace.yaml`)            | [`catalogs`](/guide/catalogs) |
-| Watch behaviour                                                     | `watch`                       |
-
-Every section is **opt-in by presence**: define it to enable it, omit it to leave
-that area untouched.
-
-## Next
-
-* [Monorepo guide](/guide/monorepo)
-* [CLI reference](/guide/cli)
-* [Configuration reference](/config/reference)
-* [TypeScript](/guide/typescript)
-* [Project](/guide/project)
-* [Package catalogs](/guide/catalogs)
-* [CI](/guide/ci/)
-* [Changelog](/guide/changelog/)
-* [tsconfig](/guide/tsconfig)
-* [Formatting & linting](/guide/formatting)
-* [Vite+](/guide/vite)
-* [Watch](/guide/watch)
-* [Logger](/guide/logger)
-* [Config generator](/guide/config-generator/)
-* [Providers (Vite+)](/guide/providers)
-* [Package scripts](/guide/scripts)
-* [Templates](/guide/templates)
-* [Docker](/guide/docker)
-* [Migrations](/guide/migrations/)
-* [Programmatic API](/guide/api/)
-* [LLMs](/llms)
+`oxfmt --migrate biome`-style tools cover formatter options only; the pieces the
+upstream tools skip (Biome `organizeImports`, Biome linter rules, Dprint) are
+handled here.
 
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/monorepo.md
+url: https://toolchain.deltabox.studio/guide/migrations/v1-v2.md
 ---
-# Monorepo Guide
+# Migrating from v1 to v2
 
-## Project graph
+**v2** focuses on a smaller, schema-driven config-generator API. Most runtime
+features keep working, but the programmatic config-generator surface is a
+breaking change.
 
-`dbx projects` discovers every workspace package and writes a
-dependency graph to `.dbx/toolchain/projects.json`. The VS Code extension and the
-`sync --recursive` command consume it.
+## Breaking changes
 
-## tsconfig generation
+### `ConfigScopes` and `ConfigScopeDef` are gone
 
-Enable the `tsconfig` section and the toolchain generates each workspace's
-`tsconfig.json` (extending `tsconfig.default.json`) and, for a monorepo root, a
-`tsconfig.workspaces.json` wiring project references and path aliases:
+Pass a `ConfigSchema` directly. It accepts a Zod schema, an untyped `Schema`, an
+array of schemas, or a record keyed by scope.
 
-```ts [dbx.config.ts]
+```ts
+// v1
+const engine = createConfigEngine({
+    scopes: {
+        server: { zodSchema: serverConfig },
+        cli: { zodSchema: cliConfig },
+    },
+});
+
+// v2
+const engine = createConfigEngine({
+    schema: { server: serverConfig, cli: cliConfig },
+});
+```
+
+`ConfigSchemaType` is the untyped `Schema` plus the toolchain's `ConfigMeta`.
+
+### Render functions are internal
+
+Use the `generateConfig*` functions or the engine methods. They return generated
+contents and only write when you pass an output directory/path.
+
+```ts
+// v1
+renderConfigTypes(scopes, { outputDir });
+renderScopeMarkdown(scopes, { outDir });
+
+// v2
+generateConfigTypes(schema, { outputDir });
+generateConfigMarkdown(schema, { outputDir });
+```
+
+Set `outputDir: false` (or omit it) to generate without writing.
+
+### Schema maps were removed
+
+`CONFIG_SECTION_SCHEMAS`, `CONFIG_TYPE_SCHEMAS` and
+`CONFIG_SECTION_DESCRIPTIONS` were removed. Use `configSchema` (the section
+schemas) or `dbxConfigSchema`, and read descriptions from each schema's
+`.describe()` / `.meta()`.
+
+### Metadata is the source of truth
+
+Generators read `ConfigMeta` from Zod `.meta()` or from untyped schema nodes.
+`env`/`path` are deprecated in favour of `envName`/`envPath`; `cliFlag` and
+`cliFlagShort` customize CLI flags. Types can use `typeName` / `id` to control
+the generated interface name.
+
+### Collection names
+
+* `collectEnvVars` → `collectVars`
+* `collectRequiredEnvVars` → `collectRequired`
+* `EnvVarDef` → `ConfigDef`
+* `EnvValueType` → `ConfigValueType`
+* engine `requiredEnvVars` → `requiredVars`
+* `writeMarkdown({ outDir })` → `writeMarkdown({ outputDir })`
+
+## Behaviour changes
+
+* `toolchain.fmt` / `toolchain.lint` shorthand (`true` or `{ vscode: ... }`)
+  now infers a tool from installed packages, then VS Code user settings, then
+  falls back to Oxc defaults. Existing user config files are folded through the
+  migration mappings instead of being overwritten.
+* Formatter/linter conflict warnings use `fmt.conflict` / `lint.conflict`.
+  Missing tools warn with `fmt.no-tool` / `lint.no-tool`.
+* `fmt.vscode` / `lint.vscode` only add `editor.defaultFormatter`, language
+  blocks and `editor.codeActionsOnSave`; use `{ overrides, exclude }` to adjust
+  them.
+* A custom logger can be supplied through `toolchain.logger.logger`.
+* Changelog versioning supports custom bump rules/callbacks, over-bump opt-in,
+  provider selection and commit credit/format options.
+
+## tsconfig changes
+
+### Resolve paths/references programmatically or from the CLI
+
+**v2** adds a extends-aware resolver. Use it instead of hand-rolling alias parsing:
+
+```ts
+import { resolveTsconfig } from '@deltabox/toolchain/tsconfig';
+
+const { alias, paths, references } = resolveTsconfig({
+    root: process.cwd(),
+    tsconfig: 'tsconfig.json', // optional; defaults to <root>/tsconfig.json
+});
+```
+
+```sh
+dbx tsconfig --json                       # { alias, paths, references }
+dbx tsconfig --alias                      # Vite/Vitest resolve.alias entries
+dbx tsconfig --paths                      # resolved compilerOptions.paths
+dbx tsconfig --references                 # resolved project references
+dbx tsconfig --tsconfig tsconfig.build.json
+dbx tsconfig --root packages/app --no-extends
+```
+
+The resolver follows `extends` per field: a child can define `paths` while
+inheriting `references` (or the reverse). When a config has no `baseUrl`, its
+relative paths resolve from the config file that declares them.
+
+### Stop editing generated `tsconfig.json` files
+
+`dbx` owns the generated `tsconfig.json`; move customizations to
+`tsconfig.default.json` or `toolchain.tsconfig.overrides` and re-run sync:
+
+```ts
 export default defineConfig({
     toolchain: {
-        project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
-        tsconfig: { refs: true, aliases: true, indent: 4 },
+        tsconfig: {
+            overrides: {
+                base: { compilerOptions: { target: 'ES2022' } },
+                default: { compilerOptions: { strict: true } },
+                build: { compilerOptions: { declaration: true } },
+                root: { compilerOptions: { types: ['node'] } },
+            },
+        },
     },
 });
 ```
 
-See the [tsconfig guide](/guide/tsconfig) for every option and why the toolchain
-splits the config across several files.
-
-## Scaffolding a monorepo
-
 ```sh
-dbx project:init:monorepo --name acme --scope @acme --out .
-dbx project:init:workspace --name utils --scope @acme --root . --dir packages/utils
+dbx sync --recursive
+dbx sync --recursive --check
 ```
 
-## Tasks
+Overrides are deep-merged into the user-owned files (`baseFile`, `rootFile`,
+`defaultFile`, `buildFile`; custom names are honoured). The first time a file is
+patched, its original content is snapshotted in `.dbx/toolchain/manifest.json`
+under `snapshots` (a tree of **relative** paths mirroring the repo), and the
+applied override under `tsconfigOverrides`. Deleting an override key reverts it:
+the original value comes back when the snapshot defines the key, otherwise the
+key is removed (a value edited after the override set it is kept). A missing
+target is skipped with a `tsconfig.missing-file` warning instead of being created.
 
-`deltabox toolchain` (and Vite+ consumers) use **Vite Task** (`dbx run`) instead of Turbo.
-The package graph orders execution via each package's `package.json`
-dependencies.
+```sh
+dbx tsconfig --restore           # remove every applied override now
+dbx tsconfig --restore build     # only base | root | default | build
+```
 
-Each package declares `build`, `typecheck` and `test` in its own
-`dbx.config.*` with explicit cache input/output, so `dbx run` reports cache
-hits (a `package.json` script cannot carry cache config):
+`dbx reset` restores the overrides before it removes the manifest. The patched
+files are never part of the manifest's managed `files`, so neither a sync nor a
+reset deletes them. See [tsconfig → `overrides`](/guide/tsconfig#overrides).
 
-```ts [packages/<pkg>/dbx.config.ts]
-import { defineConfig } from '@deltabox/toolchain';
+`tsconfig.baseFile` (default `tsconfig.base.json`) names the root base tsconfig
+that `overrides.base` targets. Use `tsconfig.extends` to choose what scaffolded
+`tsconfig.base/default/build.json` files extend (for example
+`build: './tsconfig.json'` to reuse path aliases in builds, at the cost of
+pulling workspace source into the build).
 
+### Sync task API
+
+Custom sync tasks can use these additions:
+
+* `SyncTask.watch` / `SyncTask.keep` accept a function of the config
+  (`config => string[]`), so globs can follow configured file names.
+* A `ManagedFile` returned with `track: false` is written and drift-checked like
+  any other, but stays user-owned: it is not recorded in the manifest, never
+  pruned by a later sync and never removed by `dbx reset`.
+* `resolveWatchGlobs(tasks, config, projectType?)` (core) resolves the active
+  tasks' inputs; `dbx watch --list [--json]` prints them, and the VS Code
+  extension watches them (custom tsconfig names included) unless
+  `deltabox.toolchain.watch` is set explicitly. Its default is now `[]`.
+* `SyncContext.manifest` holds task metadata persisted in the manifest between
+  syncs (`snapshots`, `tsconfigOverrides`); `SyncContext.check` is true for
+  `dbx sync --check`.
+
+### Do not hand-add workspace aliases
+
+Keep `paths`/`references` in `tsconfig.workspaces.json`; the generator expands
+them into each workspace. For Vite/Vitest, prefer Vite's native
+`resolve.tsconfigPaths: true`, or pass `resolveTsconfig().alias` to
+`resolve.alias`. If you created a `vitest.aliases.ts` during the transition,
+delete it and use one of those two options.
+
+## Vite and task changes
+
+* Runtime shims are still the default (`vite.shim: 'runtime'`). Static shims
+  (`vite.shim: 'static'`) serialize the config and import only `defineConfig`,
+  useful when loading the shim without a built package.
+* `vite.shimImport` changes the `resolveVite` import specifier for runtime
+  shims. Relative values are resolved from the repo root and rewritten per
+  generated config.
+* `typecheck:ci` was removed; `typecheck` already uses the source tsconfig. Use
+  `yarn typecheck` in CI and delete any `typecheck:ci` scripts or Vite+ tasks.
+* The emulate test suite can be cleaned with `yarn test:clean`.
+
+## Recommended upgrade steps
+
+1. Replace `scopes` with `schema` in `createConfigEngine`.
+2. Replace `render*` imports with `generateConfig*`.
+3. Remove imports of the deleted schema maps; use `configSchema` or individual
+   schema exports.
+4. Rename `env`/`path` metadata to `envName`/`envPath` when convenient (the old
+   names still work).
+5. Remove hand-written `tsconfig.json` aliases and move them to
+   `tsconfig.workspaces.json`; run `dbx sync --recursive`.
+6. Replace any custom tsconfig path parser with `resolveTsconfig()` (or
+   `dbx tsconfig --json`).
+7. Delete `vitest.aliases.ts` if present; enable
+   `resolve.tsconfigPaths: true` or use `resolveTsconfig().alias`.
+8. Replace `typecheck:ci` with `typecheck` in scripts/CI.
+9. Optionally move options you want managed in `tsconfig.base.json` /
+   `tsconfig.workspaces.json` / the workspace default and build tsconfigs into
+   `toolchain.tsconfig.overrides`, and keep committing
+   `.dbx/toolchain/manifest.json` (it now holds their snapshots).
+10. Run `yarn dbx sync`, `yarn config:types`, `yarn typecheck`, `yarn test` and
+    `yarn dbx sync --recursive --check` after upgrading.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/migrations/v2-v3.md
+---
+# Migrating from v2 to v3
+
+**v3** is a correctness and cleanup release.
+
+Full changelog [here](https://github.com/deltabox-studio/toolchain/blob/main/CHANGELOG.md#300-november-2026).
+
+## Table of contents
+
+* [Migrating from v2 to v3](#migrating-from-v2-to-v3)
+  * [The most important breaking changes](#the-most-important-breaking-changes)
+  * [Some of the smaller changes](#some-of-the-smaller-changes)
+  * [Breaking changes](#breaking-changes)
+  * [Behaviour changes](#behaviour-changes)
+  * [Recommended upgrade steps ](#recommended-upgrade-steps)
+
+## The most important breaking changes
+
+* The `tsdown` workspace rename to `pack`.
+* The redesigned config-generator programmatic API.
+* The `dbx()` Vite plugin becoming the preferred config path (available from the `@deltabox/toolchain/vite` subpath as usual).
+* Vite+ (`vite-plus`) as the bundled toolchain with per-package releases.
+* `fmt`/`lint` moving into `vite.config.*` in Vite+ mode.
+
+## Some of the smaller changes
+
+* Improved changelog and release notes formatting.
+* Managed `tsconfig.json` now declaring `include`/`exclude`/`compilerOptions.types` from extended tsconfig.
+* UTF-8 BOM support (great for Windows Powershell users).
+* Dockerfiles that build from a fresh scaffold.
+* Scaffold-only Docker generation.
+* `--online` for online templates.
+* Stricter nested/configless inheritance and VS Code discovery.
+* The `dbx.config.*` format itself is unchanged, so most projects only need to update the dependency and re-run `dbx sync`.
+* Idempotent CI releases.
+
+## Breaking changes
+
+### The `tsdown` workspace is now `pack`
+
+The workspace package `@deltabox/toolchain-tsdown` is renamed to
+`@deltabox/toolchain-pack`, and the umbrella subpath
+`@deltabox/toolchain/tsdown` becomes `@deltabox/toolchain/pack`. The workspace
+directory moves from `packages/tsdown` to `packages/pack` and the commitlint
+scope changes from `tsdown` to `pack`.
+
+The underlying bundler is still tsdown, so the public helper names
+(`baseTsdownConfig`, `createTsdownConfig`, `createPostBanner`) are unchanged. A
+consumer only needs to replace the import specifier:
+
+```ts
+// v3
+import { baseTsdownConfig } from '@deltabox/toolchain/pack';
+// v2
+import { baseTsdownConfig } from '@deltabox/toolchain/tsdown';
+```
+
+Workspace manifests that depended on `@deltabox/toolchain-tsdown` must switch
+the dependency name to `@deltabox/toolchain-pack`.
+
+### The `dbx()` Vite plugin is the default config path
+
+New scaffolds are configured through the `dbx()` Vite plugin. Import it from the
+`@deltabox/toolchain/vite` subpath: `vite-plugin-dbx` is not published yet, so
+the standalone package name is not available to install.
+
+```ts
+import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
+```
+
+The v2 `@deltabox/toolchain-vite` workspace is now `vite-plugin-dbx`, and the
+umbrella subpath `@deltabox/toolchain/vite` re-exports it. A managed
+`vite.config.*` shim is only written when the project declares its own `vite`
+section.
+
+`dbx.config.*` remains fully supported as the non-Vite fallback, so an existing
+`dbx.config.*` project does not need to move. If you generate projects
+programmatically, expect the generated `vite.config.*` to carry the plugin
+instead of a separate `dbx.config.*`.
+
+### Vite+ is the bundled toolchain
+
+**v3** no longer installs `vite`, `vitest` or `tsdown` for you. `vite-plus` is the
+single toolchain dependency and provides `vp` (Vite, Vitest, Oxfmt, Oxlint,
+Rolldown and tsdown). Replace the individual dev dependencies with `vite-plus`
+and use `vp` / `vp run` for those commands.
+
+Workspace packages are released **individually** now: each public `packages/*`
+workspace has its own version and `CHANGELOG.md`, and the release workflow
+publishes any package whose version is not on npm yet. A consumer that depends on
+a published subpackage should track that package's version instead of the
+umbrella's.
+
+### Config generator programmatic API
+
+The engine keeps the v2 `createConfigEngine({ schema })` shape, but v3 reshapes
+the surrounding API:
+
+* The ambient env declarations are now `dbx-env.d.ts` (previously `env.d.ts`).
+  Update the `include`/`files` entries in your tsconfigs if you referenced the
+  old file name.
+* Runtime loading uses `parseConfig`, `parseEnvConfig` and `parseCliConfig`, plus
+  `collect` and `loadConfig` / `loadConfigAsync` for file-backed configs. The old
+  `parseEnvTree` + `envString`/`envInt`/`envBool` accessors and `applyOverrides`
+  remain available, but are legacy; prefer the parsers so env, CLI and overrides
+  are validated through the schema.
+* The engine groups its generators: `engine.env` (and `engine.env.types`),
+  `engine.types`, `engine.markdown`, `engine.cli`, `engine.jsonSchema` and
+  `engine.configJson`. `configCommands({ engine })` now also exposes `config:all`,
+  and the standalone `generateConfig*` functions return content unless you pass an
+  output path.
+* JSON Schema generation can preserve Zod's `$ref`/`$defs` graph
+  (`preserveDefs: true`), and the markdown/CLI generators expose more
+  frontmatter, scope and reference options. Static schema defaults are also new.
+
+If you only consume the generated files, re-run the generators; if you imported
+the engine, update the calls to the grouped API and the runtime parsers.
+
+### Oxc configs live in `vite.config.*` in Vite+ mode
+
+In a Vite+ project, `dbx sync` no longer writes standalone `.oxfmtrc.json` /
+`.oxlintrc.json` files. The formatter and linter options live in the Vite config
+(`toolchain.vite.fmt` / `toolchain.vite.lint`, or the root `fmt`/`lint`
+sections), which Vite+ reads directly.
+
+If an existing Vite+ project has standalone `.oxfmtrc.json` / `.oxlintrc.json`
+files, fold them into the Vite config with `dbx migrate --from oxc --write`;
+`dbx sync` will no longer write or prune them.
+
+### Project templates are one module per template
+
+The monolithic template module is gone. The supported programmatic surface from
+`@deltabox/toolchain/project` (also re-exported by the umbrella) is:
+
+```ts
+import {
+    createProjectTemplateFiles,
+    isProjectTemplateId,
+    PROJECT_TEMPLATE_IDS,
+    type ProjectTemplateId,
+} from '@deltabox/toolchain/project';
+```
+
+Look a template up through `PROJECT_TEMPLATE_IDS` / `createProjectTemplateFiles`
+instead of importing a shared `qol` helper.
+
+### Docker plans expose their copy sources
+
+`resolveDockerPlan()` now returns `installSources` — the exact files the
+Dockerfile copies before installing dependencies. Code that constructs a
+`DockerPlan` by hand must provide it; prefer `resolveDockerPlan()` +
+`dockerFiles()` instead.
+
+## Behaviour changes
+
+### Config inheritance is strictly opt-in
+
+A nested `dbx.config.*` only inherits the sections it explicitly enables
+(`fmt`, `lint`, `biome`, `changelog`, `catalogs`, `logger`); `project` metadata
+is inherited except its identity fields. Projects without their own
+`dbx.config.*` are unmanaged by default — pass `--configless` or set
+`project.manageConfigless: true` to inherit the nearest ancestor config. See
+[Nested configs](/guide/config/nested-configs).
+
+### Online templates need `--online`
+
+`dbx create --template <id>` and the `template:*` commands only resolve online
+(npm/git/Vite+) sources when `--online` is passed. Local and builtin templates
+work without it, and a local-only run never touches the network. Scripts and CI
+that relied on implicit online resolution must add the flag.
+
+### Toolchain enable/disable
+
+A top-level `toolchain.enabled` switch is available. The boolean shorthand is
+workspace-scoped:
+
+```ts
+export default defineConfig({
+    plugins: [dbx({ toolchain: { enabled: false } })],
+});
+```
+
+Config files and the inline `dbx()` plugin only accept the workspace scope; the
+object form (`{ disabled, scope: 'global' | 'workspace' }`) is reserved for the
+CLI/programmatic API and the VS Code extension. `dbx enable`/`dbx disable` choose
+the workspace scope by default; pass `--global` to update
+`~/.dbx/toolchain/cli/config.json`. The project config takes precedence over both
+the CLI workspace setting and `.vscode/settings.json`.
+
+### Dependabot security updates
+
+`toolchain.ci.dependabot` now accepts an opt-in `security` setting. It adds the
+security-update group to `.github/dependabot.yml` and generates
+`.github/workflows/dependabot-security.yml` to enable GitHub's native security
+updates and optionally dismiss alerts below a severity threshold.
+
+```ts
 export default defineConfig({
     toolchain: {
-        vite: {
-            run: {
-                tasks: {
-                    build: {
-                        command: 'tsdown --config-loader unrun',
-                        cache: {
-                            input: [{ auto: true }, '!dist/**', '!**/*.tsbuildinfo'],
-                            output: ['dist/**'],
-                        },
-                    },
-                    typecheck: {
-                        command: 'tsc -p tsconfig.build.json --noEmit',
-                        cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
-                    },
-                    test: {
-                        command: 'vitest run',
-                        cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
-                    },
+        ci: {
+            dependabot: {
+                security: {
+                    vulnerabilities: { severity: 'high' },
+                    pr: { strategy: 'grouped' },
                 },
             },
         },
@@ -3795,420 +5009,112 @@ export default defineConfig({
 });
 ```
 
-The root `package.json` orchestrates them and adds the umbrella build:
-
-```json [package.json]
-{
-    "scripts": {
-        "build": "dbx run --filter \"./packages/*\" build && dbx run build:root",
-        "test": "dbx run --filter \"./packages/*\" test && dbx run test:root"
-    }
-}
-```
-
-`dbx run --filter "./packages/*" build` runs each package's `build` in
-dependency order (excluding the root, which avoids recursion), then `build:root`
-builds the umbrella dist.
-
----
-
----
-url: https://toolchain.deltabox.studio/guide/vscode.md
----
-# VS Code Extension
-
-The `deltabox toolchain` extension provides a sidebar for managing projects.
-
-## Install
-
-Download from the [Visual Studio Code Marketplace](https://marketplace.visualstudio.com/items?itemName=deltabox.toolchain-vscode).
-
-or through the CLI:
-
-```sh
-code --install-extension deltabox.toolchain-vscode
-```
-
-## Commands
-
-| Command                      | What it does                                                                                                                                                                                             |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sync all / active / selected | Run `dbx sync --recursive`, which walks every managed project in dependency order (nested workspaces included). Configless projects are skipped unless `deltabox.toolchain.manageConfigless` is enabled. |
-| Check sync                   | `sync --check` across the workspace.                                                                                                                                                                     |
-| Sync tsconfig                | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).                                                                                                                                |
-| Format project               | Run `dbx fmt` with the formatter detected/configured for the project (Oxfmt/Vite+, Prettier, Biome, dprint or standalone Oxc).                                                                           |
-| Lint project                 | Run `dbx lint` with the linter detected/configured for the project (Oxlint/Vite+, ESLint or Biome).                                                                                                      |
-| Manage tsconfig…             | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                                                                                                                                |
-| Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**.                                                                                                                  |
-| Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.                                                                                                                        |
-| Remove template…             | `template:list --registry` then `template:remove`.                                                                                                                                                       |
-| Generate configs             | `project:config` for missing configs, or refresh the project graph only; picks TS/JS.                                                                                                                    |
-| Generate config              | Per-project `project:config` (also works from the Command Palette).                                                                                                                                      |
-| Migrate tooling…             | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).                                                                                                                   |
-| Run workflow                 | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                                                                                                                                    |
-| Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                                                                                                                                           |
-| Create Vite+ project…        | `vp create` in a terminal.                                                                                                                                                                               |
-| Add provider...              | Register a custom provider (project or global registry).                                                                                                                                                 |
-| Run command...               | Run a provider command (`dbx <command>`) in a terminal.                                                                                                                                                  |
-| Create from template...      | `dbx create --template <id>` (terminal for online templates).                                                                                                                                            |
-| Reset tooling                | Remove generated files / manifest / config.                                                                                                                                                              |
-| Toggle auto-sync             | Enable/disable sync-on-change.                                                                                                                                                                           |
-
-Interactive commands (the dev server, `vp create`, online scaffolding) run in an
-integrated terminal at the project root; everything else runs in the output
-channel.
-
-**Format project** and **Lint project** are generic toolchain commands, not
-Vite+ commands: they run `dbx fmt` / `dbx lint`, which route to the
-detected/configured formatter and linter. A project using Prettier, ESLint,
-Biome, dprint or standalone Oxc gets the same actions as a Vite+ project (the
-`vp` passthrough is only used when Oxc is backed by `vite-plus`).
-
-## Project menu
-
-Every project card (and every project in the **Projects** tree) exposes the same
-actions, scoped to that project:
-
-* **Sync** / **Check sync** — regenerate / verify the project's managed files.
-* **Generate config** — write a `dbx.config.*` (TS/JS), or refresh only the project graph.
-* **Run workflow…** — trigger one of the project's generated workflows. The picker
-  lists every enabled workflow with its provider and path, and dispatches it
-  through the matching vendor CLI (`gh`, `glab` or `az`).
-* **Run Vite+ command…** — run a `vp` command in that project.
-* **Reset tooling…** — remove the generated files + manifest, or everything
-  including the config.
-* **Go to project** — reveal the project in the Explorer.
-
-## File Explorer decorations and project reveal
-
-Every file recorded in a project's `.dbx/toolchain/manifest.json` gets a `dbx`
-badge and the contributed blue label color in the File Explorer. The decoration
-refreshes after a sync (and from **Refresh files**), and can be turned off with
-`deltabox.toolchain.decorateManagedFiles`. VS Code has no contribution point
-that overrides a single file's icon inside the active file icon theme, so the
-badge plus label color is the supported marker; changing the icon itself would
-require switching the whole workbench icon theme.
-
-Switching the active editor selects the deepest project that owns the file in
-the **Projects** view and expands its workspace group. Files outside every
-project are ignored, the reveal never takes focus, and the listener is disposed
-with the extension.
-
-## Providers, templates and Vite+ in the editor
-
-The **Providers** and **Templates** views read `dbx providers --json` and `dbx template:list --json`, so adding one surfaces it in the UI automatically.
-
-### Plugin mode
-
-A project configured through the `dbx()` Vite plugin (rather than a
-`dbx.config.*`) is detected automatically: the Projects view shows it as
-`plugin`, sync stays enabled, and auto-sync watches `vite.config.*`. The
-extension never manages `vite.config.*` in plugin mode — the CLI's `vite` sync
-task skips it, and config generation skips projects that already have the
-plugin.
-
-Vite+ commands are only enabled when Vite+ is detected for the project. When it
-is not, the provider and its commands are greyed out (`available: false` in
-`dbx providers --json`) and the extension refuses to run them, while plain Vite
-projects keep working normally.
-
-### Add provider...
-
-Writes a custom provider to the default project registry (`.dbx/toolchain/.registry/providers/providers.json`) or the global
-`~/.dbx/toolchain/.registry/providers/` when you choose the global scope, which
-`toolchainProviders()` merges with the built-ins, so a registered provider's
-commands also become `dbx` commands (`dbx <command>`), runnable from the view.
-
-Provider search paths can also be added with the **Registries** view; the
-`deltabox.providerRegistrySearchPaths` setting mirrors them globally.
-
-### Add template...
-
-Runs `template:init --add` and asks whether to add the template to the **global** registry (yes by default), so it is available in every
-project.
-
-See [Global templates](/guide/templates#global-templates).
-
-The
-`deltabox.registrySearchPaths` setting controls the global search paths and is
-kept in sync with the CLI config.
-
-### Remove template source...
-
-Runs `template:list --registry` + `template:remove`.
-
-The **Registries** view (below **Templates**) shows the detected provider and
-template registries as **Providers** / **Templates** roots.
-
-Each item has **Open registry** (the folder in the explorer, or the website for remote URLs), **Add new registry** and **Remove registry** (it only drops the path, keeping the files).
-
-The title bar's **New registry…** / **Remove registry…** actions add or remove
-search paths for either kind, asking whether they are global or project-scoped.
-
-Remote registries are `http(s)` JSON registries: template registries accept
-`{ sources }` or an array of sources; provider registries accept
-`{ providers }` or an array of provider descriptors.
-
-### Create from template...
-
-Prompts for the template's inputs and actions (see
-[Templates](/guide/templates)) before running `dbx create`. Scaffolding also asks
-for a package manager (`yarn` default).
-
-The Home view links to this documentation with **Need help? Go to documentation**.
-
-## Actions
-
-The **Actions** view (below **Projects**) lists every dbx action grouped by area
-(Changelog, CI, Cleanup, Config, MCP, Migrate, Pack, Project, Providers,
-Registries, Sync, Templates, Tools). Groups are collapsed by default and sorted
-ascending; expanding one shows its actions sorted by name. Selecting an action
-runs its VS Code command directly.
-
-The Home view's **More actions…** button opens the same list as a searchable,
-paged QuickPick. Navigation entries (`Go back`, `Next page (n/m)`) are rendered
-before the real choices, and every prompt-based dbx flow (scaffolding, template
-pickers, …) uses the same paging factory. Actions only delegate to their own VS
-Code command; the palette itself never shells out.
-
-## Auto-sync
-
-The Home view shows the current state as a clickable **Auto-sync enabled** /
-**Auto-sync paused** button (the same secondary style as the other quick
-actions). Opening it lists the global and workspace scopes independently, so a
-global value and a workspace value can disagree:
-
-* **Enable/Disable (global)** writes `deltabox.toolchain.enabled` at the global
-  VS Code scope and mirrors the value into the CLI global store
-  (`~/.dbx/toolchain/cli/config.json`, via `dbx enable/disable --global`).
-* **Enable/Disable (workspace)** writes `.vscode/settings.json` through the
-  workspace configuration target (via `dbx enable/disable --workspace`).
-
-A project's `toolchain.enabled` config takes precedence over both settings. The
-extension resolves it through the project's CLI (`dbx enabled --json`), so a
-disabled config keeps auto-sync off even when the VS Code setting is on.
-
-Auto-sync watches input files only. The extension asks the CLI
-(`dbx watch --list --json`) for the concrete, project-graph-resolved files:
-every `dbx.config.*` plus each enabled project's `tsconfig.baseFile`,
-`tsconfig.defaultFile` and the root `tsconfig.rootFile`. Custom file names are
-honoured, nested configs can disable or override their own tsconfig section, and
-the list is refreshed whenever a `dbx.config.*` changes (and after each sync).
-
-Each resolved pattern is scoped to its own workspace root (and a concrete
-nested file is watched from its own directory), so a same-named file in another
-workspace folder or an ancestor can never trigger this root's sync, and VS Code
-does not install a recursive watcher over the whole root (which can hold
-`node_modules` handles during a package-manager link step on Windows). Only the
-root whose input changed is synced. Setting `deltabox.toolchain.watch`
-explicitly replaces the resolved inputs; user globs are matched across every
-workspace folder, absolute/ancestor globs are ignored, and an empty list
-disables watching.
-
-Generated outputs are never watched. The scheduler debounces bursts, allows one sync at a time, queues at most one follow-up, and suppresses events briefly after a run.
-
-When a sync finds no workspace tsconfig files while `tsconfig.refs`/`tsconfig.composite` are on (or a `tsconfig.workspaces.json` is present), the extension surfaces the CLI's warning as a notification (once per session) with a **Show output** action.
-
-When removing a section stops managing a file that dbx created, the sync
-notification lists the removed relative paths and offers **Restore** (write the
-previous content back) or **Close**. A file that existed before dbx first managed
-it is **adopted**: it is unmanaged but never deleted.
-
-The **Managed Files** view also shows a **Workflow conflicts** group for
-hand-written workflows dbx left untouched (the manifest's `workflowConflicts`).
-Each item names the config key to opt out with, and opens the existing file.
-
-## Settings
-
-| Setting                                              | Default         | Description                                                                                                |
-| ---------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------- |
-| `deltabox.toolchain.enabled`                         | `true`          | Auto sync on watched changes. A project's `toolchain.enabled` config takes precedence.                     |
-| `deltabox.toolchain.debounce`                        | `300`           | Debounce (ms) before a sync.                                                                               |
-| `deltabox.toolchain.command`                         | `sync`          | The command to run on change.                                                                              |
-| `deltabox.toolchain.manageConfigless`                | `false`         | Manage projects without their own `dbx.config.*` (passes `--configless` to sync/watch).                    |
-| `deltabox.toolchain.enableFormatImportGroupDefaults` | `true`          | Add the resolved workspace `sortImports` custom group when syncing; set `false` to manage groups yourself. |
-| `deltabox.toolchain.decorateManagedFiles`            | `true`          | Show a `dbx` badge and blue label color on files recorded in the project manifests.                        |
-| `deltabox.toolchain.watch`                           | `[]` (resolved) | Inputs that trigger a sync (empty = resolved from the config).                                             |
-| `deltabox.toolchain.version`                         | `""` (auto)     | Pin the `@deltabox/toolchain` version this workspace runs.                                                 |
-| `deltabox.registrySearchPaths`                       | `[]`            | Template registry search paths (dirs or `http(s)` URLs).                                                   |
-| `deltabox.providerRegistrySearchPaths`               | `[]`            | Provider registry search paths (JSON files/dirs/URLs).                                                     |
-
-`deltabox.toolchain.enableFormatImportGroupDefaults` (default `true`) adds the
-resolved `workspace` group to Oxfmt's `sortImports.customGroups` when the
-extension syncs or generates configs. Set it to `false` in user or workspace
-settings to keep full control of the import groups. The extension passes the
-effective value to the CLI; direct CLI runs and Vite+ configs also honour the
-workspace-scoped `.vscode/settings.json` value.
-
-When a workspace has its own `@deltabox/toolchain` whose version differs from the
-extension's bundled CLI, the extension asks which to run and shows both detected
-versions. **Select dbx version…** pins a version in the project's
-`.vscode/settings.json` (like TypeScript's version picker); it runs that version
-via `npx` unless the project already installs it.
-
-Project lookup follows the repository boundary: from the open folder (and every
-workspace root in a multi-root workspace) the extension walks up to the nearest
-`.git`, so a toolchain hoisted to the monorepo root is found even when a nested
-workspace package is opened as the folder. The project's own `dbx` stays the
-default; the bundled CLI is only the fallback.
-
-## Command palette
-
-Search for `deltabox:` to find:
-
-* **Sync active project**
-* **Sync selected projects**
-* **Sync all projects**
-* **Check sync**
-* **Manage tsconfig…**
-* **Scaffold project…**
-* **Add template…**
-* **Remove template…**
-* **Add provider...**
-* **Refresh providers**
-* **Add template...**
-* **Remove template source...**
-* **Refresh templates**
-* **Generate configs…**
-* **Migrate tooling…**
-* **Run workflow…**
-* **Run Vite+ command…**
-* **Run command...**
-* **Create Vite+ project…**
-* **Choose dbx source…**
-* **Reset tooling…**
-* **Refresh projects**
-* **Refresh tracked files**
-* **Select dbx version…**
-* **New registry…**
-* **Remove registry…**
-* **Toggle auto-sync**
-
----
-
----
-url: https://toolchain.deltabox.studio/guide/docker.md
----
-# Docker
-
-`@deltabox/toolchain-docker` generates a deployable, multi-stage `Dockerfile`, a
-`.dockerignore` and a `docker-compose.yaml`. Containerization is **opt-in** and
-happens only when you scaffold: the files are a starting point, not
-`dbx sync`-managed artifacts, so you can edit them freely afterwards.
-
-```sh
-# Add Docker artifacts to a new project
-dbx create --template express --name api --containerize
-
-# Or scaffold with the project command
-dbx project:init --name api --containerize
-```
-
-In VS Code, **Create from template…** asks *Containerize with Docker?*. The
-setting `deltabox.toolchain.containerizeTemplates` supplies the default and is
-used by the curated **Scaffold** flow. Programmatically, pass
-`containerize: true` to `scaffoldTemplate()`.
-
-Every scaffold gets `Dockerfile`, `.dockerignore` and `docker-compose.yaml` for
-local development (`docker compose up --build`).
-
-## Programmatic API
-
-`dockerFiles()` renders the artifacts (without writing), and
-`writeDockerFiles()` writes them to a project:
-
-```ts
-import { dockerFiles, writeDockerFiles } from '@deltabox/toolchain/docker';
-
-const files = dockerFiles({
-    cwd: process.cwd(),
-    image: 'acme/api',
-    tag: 'latest',
-    port: 3000,
-});
-
-const written = writeDockerFiles({
-    cwd: process.cwd(),
-    compose: true,
-    force: true, // overwrite existing artifacts
-});
-```
-
-| Option            | Default                     | What it does                                   |
-| ----------------- | --------------------------- | ---------------------------------------------- |
-| `image`           | project name                | OCI image name.                                |
-| `tag`             | `latest`                    | Image tag.                                     |
-| `port`            | `3000` / `8080`             | Port the runtime image exposes.                |
-| `runtime`         | `auto`                      | `node`, `static`, `bun`, or detect.            |
-| `entry`           | `dist/index.js`             | Built server entry for `node`/`bun` runtimes.  |
-| `output`          | `dist`                      | Build output directory (`static` copies this). |
-| `nodeVersion`     | `engines.node` or `22`      | Node.js version for non-Vite+ images.          |
-| `baseImage`       | Vite+/Bun/Node image        | Override the build-stage image.                |
-| `runtimeImage`    | Debian/Bun/nginx/Node image | Override the runtime image.                    |
-| `user`            | `nobody` / `node` / `bun`   | Runtime user.                                  |
-| `compose`         | `false`                     | Also render `docker-compose.yaml`.             |
-| `healthcheck`     | `true`                      | Add an HTTP `HEALTHCHECK`.                     |
-| `healthcheckPath` | `/`                         | Path the healthcheck requests.                 |
-| `dockerfile`      | `Dockerfile`                | Dockerfile file name.                          |
-| `dockerignore`    | `true`                      | Render `.dockerignore`.                        |
-
-`writeDockerFiles()` does not overwrite existing files unless `force: true`
-(scaffolding passes it for a fresh project). There is no `docker` config section
-and no sync task: the generated files are yours to maintain.
-
-## Images
-
-* **Vite+ projects** build with
-  `ghcr.io/voidzero-dev/vite-plus:latest`, install with `vp install`, build with
-  `vp build`, and copy the resolved Node.js binary into the runtime stage.
-* **Bun projects** use `oven/bun:1` to build and `oven/bun:1-slim` to run.
-* **Other Node projects** use `node:<version>-bookworm-slim`.
-* **Static sites** copy the build output into
-  `nginxinc/nginx-unprivileged:alpine`, so the container runs as a non-root
-  user on port `8080`.
-
-Server images run as a non-root user and get a `HEALTHCHECK` that requests
-`http://127.0.0.1:<port><healthcheckPath>`.
-
-## COPY sources and installs
-
-The dependency-install stage copies only sources that exist when the Dockerfile
-is generated: `package.json` plus the project's lockfile/workspace files
-(`yarn.lock`/`.yarnrc.yml`, `pnpm-lock.yaml`/`pnpm-workspace.yaml`,
-`package-lock.json`, `bun.lock`/`bun.lockb`). A Vite+ project also copies an
-existing `.node-version` before `vp install`, so Vite+ selects the same Node.js
-version in the image. No lockfile is assumed, and a missing lockfile is never
-`COPY`ed, so a fresh scaffold builds.
-
-The generated `.dockerignore` matches dependencies and build output at any
-depth (`**/node_modules`, `**/dist`, the configured output directory, ...), so
-nested workspace copies are excluded from the build context too.
-
-Yarn Plug'n'Play projects do not get `node_modules`. Their runtime image copies
-the generated `.pnp.cjs` (or `.pnp.js`), an optional `.pnp.loader.mjs`, and
-`.yarn`, then starts Node with `--require ./.pnp.cjs` (and
-`--experimental-loader` when the loader exists).
-
-The declared package manager is the single source of truth: `packageManager` in
-`package.json` (or the `packageManager` option) drives both the copied lockfiles
-and the `RUN` command. A Bun-runtime project with no declared manager installs
-with Bun; otherwise the declared manager wins, so `yarn.lock` is never paired
-with `bun install`. When a Bun-runtime project declares yarn/pnpm/npm,
-dependencies install in a `node:<version>` `deps` stage and the Bun image only
-builds (the official Bun image has no npm/corepack). Without a lockfile the
-install runs without a frozen flag (`yarn install`, `pnpm install`,
-`npm install`, `bun install`, `vp install`).
-
-## Detection
-
-With `runtime: 'auto'` the generator reads `package.json`:
-
-* a `vitepress build` script is a **static** site
-  (`docs/.vitepress/dist`);
-* a `bun build`/`bun ...` start script is a **Bun** server;
-* a `start` script is a **Node** server;
-* a `vp build` script without `start` is a **static** app;
-* otherwise it falls back to a **Node** server.
+`security: true` keeps every severity and groups PRs per ecosystem. The workflow
+needs a `DBX_GITHUB_TOKEN` secret with repository admin access to change the
+repository setting; `GITHUB_TOKEN` is used for alert dismissal. Set
+`security: { workflow: false }` to manage the setting yourself, or
+`security: { vulnerabilities: false }` to disable security updates. No migration
+is required: without `security`, the generated `dependabot.yml` and behaviour
+are unchanged.
+
+### Managed-file regeneration
+
+Every managed section now accepts `regenerate?: boolean` (default `true`). Set it
+to `false` to skip that section in `dbx sync`: its files are neither written nor
+drift-checked, and sync does not prune them. User-owned files
+(`tsconfig.workspaces.json`, `tsconfig.build.json`) are only seeded when missing;
+an existing file is never overwritten by the missing-file fallback.
+
+### Changelog versioning
+
+* `versioning.target: 'individual'` is idempotent. Commits already listed in a
+  workspace's `CHANGELOG.md` are filtered out before deriving its bump, and a
+  workspace with no new commits is skipped entirely. Re-running no longer bumps
+  untouched workspaces or re-counts an old `feat` as a new minor.
+* Workspace glob negation (`['packages/*', '!packages/private-*']`) is honoured.
+* A UTF-8 BOM in any `package.json` (common with PowerShell/Notepad) no longer
+  makes `dbx changelog` fail; the same BOM handling applies to local CLI
+  discovery, providers, Prettier detection and the VS Code extension.
+* The `### Package changes` footer now reads Yarn (`.yarnrc.yml`), pnpm
+  (`pnpm-workspace.yaml`) and Bun (`package.json` `workspaces.catalog`) catalogs,
+  including named catalogs.
+* Running changelog from a nested workspace uses the repository root for the
+  fallback commit/issue links instead of the workspace's own `package.json`.
+
+### Docker
+
+* Only files that exist when the Dockerfile is generated are copied:
+  `package.json` plus the project's lockfile/workspace files. `.node-version*` is
+  never assumed, and a missing lockfile is not copied.
+* The declared package manager drives both the copy list and the install command.
+  A Bun-runtime project with no declared manager installs with Bun; otherwise the
+  declared manager wins (so `yarn.lock` is not paired with `bun install`). When a
+  Bun-runtime project declares yarn/pnpm/npm, dependencies install in a
+  `node:<version>` `deps` stage and the Bun image only builds.
+* When there is no lockfile, the install runs without a frozen flag.
+
+### Scaffolding and migrations
+
+* `dbx project:init --out <dir>` (and `project:init:monorepo`) no longer inherits
+  the current project's name when `--name` is omitted; it uses the target
+  directory's basename. The in-place case still inherits `project.name`.
+* `dbx migrate --check` resolves the effective (inherited) config, so a
+  workspace inheriting `fmt`/`lint` from the root is not asked to keep an
+  intermediate `.oxfmtrc.json` / `.oxlintrc.json`. A disabled section
+  (`fmt: false`) does not count as owning the config.
+
+### CLI and VS Code
+
+* `dbx sync --json` always emits a JSON envelope, including when the config
+  failed to load (`{ results: [], upToDate: false, error }`).
+* `dbx projects --max-depth` rejects non-numeric values instead of silently
+  turning the limit into `NaN`; `--max-depth 0` still scans only the root.
+* The VS Code extension walks up to the repository boundary for the project's
+  `dbx`, checks every workspace root in a multi-root workspace, and keeps the
+  project's CLI as the default (the bundled CLI is only the fallback).
+
+### TypeScript declarations
+
+* The shared tsdown base config externalizes declaration imports **as written**
+  (`deps.dts.neverBundle: true`), so emitted `.d.ts` files reference bare
+  package specifiers instead of build-machine absolute `node_modules` paths.
+  Packages whose public types reference another package must declare it in
+  `dependencies` (or `peerDependencies`).
+* The base config also ships a Rolldown leak reporter. It scans emitted JS,
+  declaration and textual asset chunks and fails the build by default when an
+  absolute `node_modules` path appears. Configure it via the third
+  `createTsdownConfig` argument:
+  `{ nodeModulesLeakReporter: { level: 'warn' | 'info' | 'silent', when: 'generateBundle' | 'writeBundle' | 'closeBundle' } }`
+  (or `false` to disable it). `writeBundle` is the default; use `closeBundle`
+  when a later plugin rewrites output in `writeBundle`. Non-fatal levels respect
+  tsdown/rolldown's log level. The plugin is also exported as
+  `createNodeModulesLeakReporter` for use in your own builds.
+
+## Recommended upgrade steps
+
+1. Update `@deltabox/toolchain` to v3 and replace the individual `vite`,
+   `vitest` and `tsdown` dev dependencies with `vite-plus`.
+2. Import the Vite plugin from `@deltabox/toolchain/vite` (not
+   `vite-plugin-dbx`, which is not published yet).
+3. Run `dbx sync --recursive` and commit the regenerated managed files.
+4. Rename generated `env.d.ts` references to `dbx-env.d.ts`, and switch custom
+   runtime loaders to `parseConfig` / `parseEnvConfig` / `parseCliConfig` (or
+   `loadConfigAsync` for files).
+5. Run `dbx sync --recursive --check`, `yarn typecheck`, `yarn lint` and your
+   test suite.
+6. Regenerate Docker artifacts created by v2 (or edit the `COPY` lines to list
+   only files that exist) and rebuild the image once with Docker available.
+7. Replace imports of the old monolithic template helper with
+   `PROJECT_TEMPLATE_IDS` / `createProjectTemplateFiles`.
+8. If you build a `DockerPlan` by hand, add its `installSources` (or switch to
+   `resolveDockerPlan()`).
+9. Re-run `dbx migrate --check` in CI; inherited workspace configs may now pass
+   where v2 reported a false drift.
+10. Add `--online` to any `dbx create --template` / `template:*` script that
+    resolves npm/git/Vite+ sources.
+11. If you use `ci.dependabot`, opt into `security` and add the
+    `DBX_GITHUB_TOKEN` secret (repository admin) before the generated security
+    workflow runs.
 
 ---
 
@@ -8261,6 +9167,132 @@ itself does not expose them.
 ---
 
 ---
+url: https://toolchain.deltabox.studio/guide/docker.md
+---
+# Docker
+
+`@deltabox/toolchain-docker` generates a deployable, multi-stage `Dockerfile`, a
+`.dockerignore` and a `docker-compose.yaml`. Containerization is **opt-in** and
+happens only when you scaffold: the files are a starting point, not
+`dbx sync`-managed artifacts, so you can edit them freely afterwards.
+
+```sh
+# Add Docker artifacts to a new project
+dbx create --template express --name api --containerize
+
+# Or scaffold with the project command
+dbx project:init --name api --containerize
+```
+
+In VS Code, **Create from template…** asks *Containerize with Docker?*. The
+setting `deltabox.toolchain.containerizeTemplates` supplies the default and is
+used by the curated **Scaffold** flow. Programmatically, pass
+`containerize: true` to `scaffoldTemplate()`.
+
+Every scaffold gets `Dockerfile`, `.dockerignore` and `docker-compose.yaml` for
+local development (`docker compose up --build`).
+
+## Programmatic API
+
+`dockerFiles()` renders the artifacts (without writing), and
+`writeDockerFiles()` writes them to a project:
+
+```ts
+import { dockerFiles, writeDockerFiles } from '@deltabox/toolchain/docker';
+
+const files = dockerFiles({
+    cwd: process.cwd(),
+    image: 'acme/api',
+    tag: 'latest',
+    port: 3000,
+});
+
+const written = writeDockerFiles({
+    cwd: process.cwd(),
+    compose: true,
+    force: true, // overwrite existing artifacts
+});
+```
+
+| Option            | Default                     | What it does                                   |
+| ----------------- | --------------------------- | ---------------------------------------------- |
+| `image`           | project name                | OCI image name.                                |
+| `tag`             | `latest`                    | Image tag.                                     |
+| `port`            | `3000` / `8080`             | Port the runtime image exposes.                |
+| `runtime`         | `auto`                      | `node`, `static`, `bun`, or detect.            |
+| `entry`           | `dist/index.js`             | Built server entry for `node`/`bun` runtimes.  |
+| `output`          | `dist`                      | Build output directory (`static` copies this). |
+| `nodeVersion`     | `engines.node` or `22`      | Node.js version for non-Vite+ images.          |
+| `baseImage`       | Vite+/Bun/Node image        | Override the build-stage image.                |
+| `runtimeImage`    | Debian/Bun/nginx/Node image | Override the runtime image.                    |
+| `user`            | `nobody` / `node` / `bun`   | Runtime user.                                  |
+| `compose`         | `false`                     | Also render `docker-compose.yaml`.             |
+| `healthcheck`     | `true`                      | Add an HTTP `HEALTHCHECK`.                     |
+| `healthcheckPath` | `/`                         | Path the healthcheck requests.                 |
+| `dockerfile`      | `Dockerfile`                | Dockerfile file name.                          |
+| `dockerignore`    | `true`                      | Render `.dockerignore`.                        |
+
+`writeDockerFiles()` does not overwrite existing files unless `force: true`
+(scaffolding passes it for a fresh project). There is no `docker` config section
+and no sync task: the generated files are yours to maintain.
+
+## Images
+
+* **Vite+ projects** build with
+  `ghcr.io/voidzero-dev/vite-plus:latest`, install with `vp install`, build with
+  `vp build`, and copy the resolved Node.js binary into the runtime stage.
+* **Bun projects** use `oven/bun:1` to build and `oven/bun:1-slim` to run.
+* **Other Node projects** use `node:<version>-bookworm-slim`.
+* **Static sites** copy the build output into
+  `nginxinc/nginx-unprivileged:alpine`, so the container runs as a non-root
+  user on port `8080`.
+
+Server images run as a non-root user and get a `HEALTHCHECK` that requests
+`http://127.0.0.1:<port><healthcheckPath>`.
+
+## COPY sources and installs
+
+The dependency-install stage copies only sources that exist when the Dockerfile
+is generated: `package.json` plus the project's lockfile/workspace files
+(`yarn.lock`/`.yarnrc.yml`, `pnpm-lock.yaml`/`pnpm-workspace.yaml`,
+`package-lock.json`, `bun.lock`/`bun.lockb`). A Vite+ project also copies an
+existing `.node-version` before `vp install`, so Vite+ selects the same Node.js
+version in the image. No lockfile is assumed, and a missing lockfile is never
+`COPY`ed, so a fresh scaffold builds.
+
+The generated `.dockerignore` matches dependencies and build output at any
+depth (`**/node_modules`, `**/dist`, the configured output directory, ...), so
+nested workspace copies are excluded from the build context too.
+
+Yarn Plug'n'Play projects do not get `node_modules`. Their runtime image copies
+the generated `.pnp.cjs` (or `.pnp.js`), an optional `.pnp.loader.mjs`, and
+`.yarn`, then starts Node with `--require ./.pnp.cjs` (and
+`--experimental-loader` when the loader exists).
+
+The declared package manager is the single source of truth: `packageManager` in
+`package.json` (or the `packageManager` option) drives both the copied lockfiles
+and the `RUN` command. A Bun-runtime project with no declared manager installs
+with Bun; otherwise the declared manager wins, so `yarn.lock` is never paired
+with `bun install`. When a Bun-runtime project declares yarn/pnpm/npm,
+dependencies install in a `node:<version>` `deps` stage and the Bun image only
+builds (the official Bun image has no npm/corepack). Without a lockfile the
+install runs without a frozen flag (`yarn install`, `pnpm install`,
+`npm install`, `bun install`, `vp install`).
+
+## Detection
+
+With `runtime: 'auto'` the generator reads `package.json`:
+
+* a `vitepress build` script is a **static** site
+  (`docs/.vitepress/dist`);
+* a `bun build`/`bun ...` start script is a **Bun** server;
+* a `start` script is a **Node** server;
+* a `vp build` script without `start` is a **static** app;
+* otherwise it falls back to a **Node** server.
+
+---
+
+---
 url: https://toolchain.deltabox.studio/guide/formatting.md
 ---
 # Formatting & linting
@@ -8774,658 +9806,6 @@ The VS Code extension exposes the same flow from **Install MCP server + skill…
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/migrations.md
----
-# Migrations
-
-`dbx migrate` converts a project's tooling config from another tool to
-**Oxc** (Oxfmt + Oxlint), or folds an existing Oxc/Vite config into
-`dbx.config.*`. Migrations are pluggable — adding a source tool is a
-matter of implementing one interface.
-
-```sh
-dbx migrate:list                       # what's available + detected
-dbx migrate --from biome               # dry-run
-dbx migrate --from biome --write       # writes the oxc config
-dbx migrate --from biome --target vite --write
-dbx migrate --from biome --from prettier --write  # several sources
-dbx migrate --from oxc --write         # fold .oxfmtrc/.oxlintrc into dbx.config
-dbx migrate --from all                 # every detected source
-dbx migrate --check                    # CI: exit 1 when the oxc config is stale
-dbx migrate --from eslint --online --write   # flat config via @oxlint/migrate
-```
-
-`dbx migrate` is a dry-run unless you pass `--write` (or `--check`). `--from`
-is repeatable; `--from all` (or omitting it) selects every detected source.
-
-## Sources
-
-| Source     | Notes                                                                                                                                                        |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `biome`    | Formatter options, `files.includes` negations → `ignorePatterns`, **`organizeImports.groups` → Oxfmt `sortImports`**, and a curated Biome → Oxlint rule map. |
-| `prettier` | Prettier-compatible options transfer directly; Tailwind/PackageJson plugins detected; `.prettierignore` → `ignorePatterns`.                                  |
-| `eslint`   | JSON configs map rule names + severities (`@typescript-eslint/*` → `typescript/*`); JS/flat configs use `@oxlint/migrate` with `--online --write`.           |
-| `dprint`   | `dprint.json` layout + TypeScript options → Oxfmt.                                                                                                           |
-| `oxc`      | Folds `.oxfmtrc.json` / `.oxlintrc.json` into `dbx.config.*`'s `toolchain.fmt.oxc` / `toolchain.lint.oxc`; `dbx sync` manages them again.                    |
-| `vite`     | Folds a hand-written `vite.config.*` into `dbx.config.*`'s `toolchain.vite` (see below).                                                                     |
-
-## Targets
-
-* `--target files` (default) — writes `.oxfmtrc.json` and `.oxlintrc.json`.
-* `--target vite` — folds the result into an existing `vite.config.ts`
-  (inserting/replacing `fmt` and `lint`), which is what Vite+ reads.
-* The `oxc` source targets `dbx.config.*` (`toolchain.fmt.oxc` /
-  `toolchain.lint.oxc`, or `toolchain.vite.fmt/lint` when `--target vite`).
-
-Unless `--target` is given, formatter/linter migrations route by what the
-existing Vite config already owns:
-
-* If `vite.config.*` (or an existing `toolchain.vite`) defines `fmt`/`lint`, the
-  migrated options are merged into `toolchain.vite.fmt`/`toolchain.vite.lint`,
-  and no top-level `toolchain.fmt`/`toolchain.lint` is created.
-* Otherwise they are folded into the top-level `toolchain.fmt.oxc` /
-  `toolchain.lint.oxc`, and `vite.fmt`/`vite.lint` are left undefined.
-
-## Recursive migration
-
-By default `dbx migrate` only touches the root (`--cwd`, or the current
-directory). `--recursive` walks the discovered projects under the root and
-migrates each one that has a **detected source**:
-
-```sh
-dbx migrate --from biome --from prettier --recursive --write
-```
-
-On an interactive terminal it first asks which projects to migrate with a
-multi-select — every candidate is listed by its relative path (with its package
-name as a hint), plus an **All projects** option. Non-interactive runs (piped
-output, CI, or `--json`) migrate every candidate without prompting. A project is
-a candidate when a migration matching `--from` (or any migration, for `all`/no
-`--from`) is detected in its directory — so a workspace with its own
-`biome.json` or `vite.config.*` is included, and one without is skipped.
-
-## `vite.config`
-
-The `vite` source moves a hand-written `vite.config.*` into `dbx.config.*`'s
-`toolchain.vite`, so the whole Vite+ config lives in the one hand-authored config
-and `dbx sync` writes a thin `vite.config.ts` shim that resolves it at load time:
-
-```sh
-dbx migrate --from vite          # dry-run: shows what would fold in
-dbx migrate --from vite --write  # folds the object into toolchain.vite
-dbx sync                         # writes the managed vite.config.ts shim
-```
-
-When the folded config already owns `fmt`, it adds `/vite.config.ts` to
-`toolchain.vite.fmt.ignorePatterns`, so Oxfmt leaves the generated shim alone
-(otherwise `vp fmt` would rewrite it and `dbx sync --check` would report drift).
-When it does not, `vite.fmt` stays undefined; the default fmt ignores already
-cover `**/vite.config.ts`.
-
-It extracts the object literal passed to `defineConfig(...)` (or the
-default-exported object) with a string-aware, balanced-paren scanner and
-text-splices it into the nearest `dbx.config.*`: it inserts `vite: { ... }`, or
-**deep-merges** into an existing `toolchain.vite` (nested objects are combined;
-arrays and scalars from the vite config win), so its settings are kept. A
-previous `config: false` opt-out is flipped to `config: true`, since the
-hand-written file is being removed. When the config references imports, plugins
-or any non-literal expression it is reported as **unmapped** and nothing is
-written, rather than emitting broken output. A JSON `dbx.config.json` is also
-left alone (the object is folded by hand).
-
-When the project has a `vite.config.*` but **no** `dbx.config.*` (a workspace
-that never had one), the migration creates a fresh `dbx.config.ts` holding the
-folded `toolchain.vite`, wrapped in `defineConfig` from `@deltabox/toolchain`
-(like the scaffold). A workspace resolves that import through the root's
-installed dependency — in a self-hosted repo, via a root `portal:.` self-link.
-
-The now-redundant `vite.config.*` is removed and recreated by `dbx sync` as a
-shim that imports `defineConfig` from the project's own Vite package (`vite` or
-`vite-plus`, detected from `package.json`). Pass `--ignore-vite-config-file` to
-keep the original file.
-
-### Nested configs
-
-In a monorepo, pass `--recursive` to fold **each workspace's** own
-`vite.config.*` into that workspace's `dbx.config.*` (creating one when it is
-missing) instead of the root's:
-
-```sh
-dbx migrate --from vite --recursive --write
-```
-
-Without `--recursive`, only the root's `vite.config.*` is migrated and nested
-ones are left alone. Detection is per project root (a directory with a
-`package.json` or `dbx.config.*`, up to five levels deep), so a `vite.config.*`
-in a deeper subdirectory of a project is not discovered. A workspace with no
-`dbx.config.*` gets a fresh one holding just its `toolchain.vite`; it inherits
-the rest of the config from the nearest ancestor at load time.
-
-## Post-migration sync
-
-A `--write` run finishes by regenerating the project's toolchain-managed files
-(the same files `dbx sync` writes) for every project it changed — so a migrated
-project is immediately consistent, eg. the managed `vite.config.ts` shim appears
-right after folding a hand-written config. Two flags narrow that step:
-
-| Flag                     | Effect                                                                    |
-| ------------------------ | ------------------------------------------------------------------------- |
-| `--ignore-managed-files` | Skip the post-migration sync entirely; managed files are left untouched.  |
-| `--ignore-changelog`     | Run the sync but drop the `changelog` task (workflows, commitlint, hook). |
-
-The sync only runs after `--write`; a dry-run reports what it would do instead.
-
-## Package scripts
-
-`dbx migrate` migrates the tooling **files**; the matching `package.json` scripts
-are a small follow-up. The common swaps:
-
-| Before                   | After                       |
-| ------------------------ | --------------------------- |
-| `biome format --write .` | `dbx fmt`                   |
-| `biome check --fix .`    | `dbx lint --fix`            |
-| `turbo build`            | `dbx run -r build`          |
-| `turbo typecheck`        | `dbx run -r typecheck`      |
-| `turbo test`             | `dbx run -r test`           |
-| `turbo dev`              | `dbx run -r --parallel dev` |
-
-Then drop `@biomejs/biome` + `turbo` (and `biome.json` + `turbo.json`) and add
-`@deltabox/toolchain` + `vite-plus`. The full walkthrough — recommended scripts,
-the dependency diff and per-workspace tasks — is on the
-[Package scripts](/guide/scripts) page.
-
-## CI check
-
-`--check` runs the migrations without writing and exits non-zero when a target
-file is missing or differs from what the migration would produce, so a pipeline
-can require that a repo is fully on Oxc:
-
-```sh
-dbx migrate --check || echo "still on Biome/etc — run migrate --write"
-```
-
-The check resolves the **effective** `dbx.config.*` (including an inherited
-ancestor config), so a workspace that inherits `fmt`/`lint` from the root is not
-asked to keep an intermediate `.oxfmtrc.json` / `.oxlintrc.json`. A disabled
-section (`fmt: false`) does not count as owning the config.
-
-`--online` allows network access: the ESLint migration shells out to
-`@oxlint/migrate` to evaluate JS/flat configs (it writes `.oxlintrc.json`, so it
-runs only together with `--write`).
-
-## Honest output
-
-Anything that cannot be mapped faithfully is reported instead of dropped:
-
-```
-unmapped (7):
-  - organizeImports !lucide*: negated group members are approximated
-  - linter.rules.suspicious.noUnknownAtRules: no Oxlint equivalent
-```
-
-## Programmatic
-
-```ts
-import { listMigrations, detectMigrations, runMigration } from '@deltabox/toolchain/migrate';
-
-const detected = detectMigrations(process.cwd());
-const result = await runMigration('biome', { cwd: process.cwd(), target: 'vite', write: true });
-console.log(result.unmapped);
-```
-
-## Notes
-
-`oxfmt --migrate biome`-style tools cover formatter options only; the pieces the
-upstream tools skip (Biome `organizeImports`, Biome linter rules, Dprint) are
-handled here.
-
-## Upgrading from v2
-
-See the [v2 → v3 migration guide](/guide/migrations/v2-v3).
-
-## Upgrading from v1
-
-See the [v1 → v2 migration guide](/guide/migrations/v1-v2).
-
----
-
----
-url: https://toolchain.deltabox.studio/guide/migrations/v1-v2.md
----
-# Migrating from v1 to v2
-
-v2 focuses on a smaller, schema-driven config-generator API. Most runtime
-features keep working, but the programmatic config-generator surface is a
-breaking change.
-
-## Breaking changes
-
-### `ConfigScopes` and `ConfigScopeDef` are gone
-
-Pass a `ConfigSchema` directly. It accepts a Zod schema, an untyped `Schema`, an
-array of schemas, or a record keyed by scope.
-
-```ts
-// v1
-const engine = createConfigEngine({
-    scopes: {
-        server: { zodSchema: serverConfig },
-        cli: { zodSchema: cliConfig },
-    },
-});
-
-// v2
-const engine = createConfigEngine({
-    schema: { server: serverConfig, cli: cliConfig },
-});
-```
-
-`ConfigSchemaType` is the untyped `Schema` plus the toolchain's `ConfigMeta`.
-
-### Render functions are internal
-
-Use the `generateConfig*` functions or the engine methods. They return generated
-contents and only write when you pass an output directory/path.
-
-```ts
-// v1
-renderConfigTypes(scopes, { outputDir });
-renderScopeMarkdown(scopes, { outDir });
-
-// v2
-generateConfigTypes(schema, { outputDir });
-generateConfigMarkdown(schema, { outputDir });
-```
-
-Set `outputDir: false` (or omit it) to generate without writing.
-
-### Schema maps were removed
-
-`CONFIG_SECTION_SCHEMAS`, `CONFIG_TYPE_SCHEMAS` and
-`CONFIG_SECTION_DESCRIPTIONS` were removed. Use `configSchema` (the section
-schemas) or `dbxConfigSchema`, and read descriptions from each schema's
-`.describe()` / `.meta()`.
-
-### Metadata is the source of truth
-
-Generators read `ConfigMeta` from Zod `.meta()` or from untyped schema nodes.
-`env`/`path` are deprecated in favour of `envName`/`envPath`; `cliFlag` and
-`cliFlagShort` customize CLI flags. Types can use `typeName` / `id` to control
-the generated interface name.
-
-### Collection names
-
-* `collectEnvVars` → `collectVars`
-* `collectRequiredEnvVars` → `collectRequired`
-* `EnvVarDef` → `ConfigDef`
-* `EnvValueType` → `ConfigValueType`
-* engine `requiredEnvVars` → `requiredVars`
-* `writeMarkdown({ outDir })` → `writeMarkdown({ outputDir })`
-
-## Behaviour changes
-
-* `toolchain.fmt` / `toolchain.lint` shorthand (`true` or `{ vscode: ... }`)
-  now infers a tool from installed packages, then VS Code user settings, then
-  falls back to Oxc defaults. Existing user config files are folded through the
-  migration mappings instead of being overwritten.
-* Formatter/linter conflict warnings use `fmt.conflict` / `lint.conflict`.
-  Missing tools warn with `fmt.no-tool` / `lint.no-tool`.
-* `fmt.vscode` / `lint.vscode` only add `editor.defaultFormatter`, language
-  blocks and `editor.codeActionsOnSave`; use `{ overrides, exclude }` to adjust
-  them.
-* A custom logger can be supplied through `toolchain.logger.logger`.
-* Changelog versioning supports custom bump rules/callbacks, over-bump opt-in,
-  provider selection and commit credit/format options.
-
-## tsconfig changes
-
-### Resolve paths/references programmatically or from the CLI
-
-v2 adds a extends-aware resolver. Use it instead of hand-rolling alias parsing:
-
-```ts
-import { resolveTsconfig } from '@deltabox/toolchain/tsconfig';
-
-const { alias, paths, references } = resolveTsconfig({
-    root: process.cwd(),
-    tsconfig: 'tsconfig.json', // optional; defaults to <root>/tsconfig.json
-});
-```
-
-```sh
-dbx tsconfig --json                       # { alias, paths, references }
-dbx tsconfig --alias                      # Vite/Vitest resolve.alias entries
-dbx tsconfig --paths                      # resolved compilerOptions.paths
-dbx tsconfig --references                 # resolved project references
-dbx tsconfig --tsconfig tsconfig.build.json
-dbx tsconfig --root packages/app --no-extends
-```
-
-The resolver follows `extends` per field: a child can define `paths` while
-inheriting `references` (or the reverse). When a config has no `baseUrl`, its
-relative paths resolve from the config file that declares them.
-
-### Stop editing generated `tsconfig.json` files
-
-`dbx` owns the generated `tsconfig.json`; move customizations to
-`tsconfig.default.json` or `toolchain.tsconfig.overrides` and re-run sync:
-
-```ts
-export default defineConfig({
-    toolchain: {
-        tsconfig: {
-            overrides: {
-                base: { compilerOptions: { target: 'ES2022' } },
-                default: { compilerOptions: { strict: true } },
-                build: { compilerOptions: { declaration: true } },
-                root: { compilerOptions: { types: ['node'] } },
-            },
-        },
-    },
-});
-```
-
-```sh
-dbx sync --recursive
-dbx sync --recursive --check
-```
-
-Overrides are deep-merged into the user-owned files (`baseFile`, `rootFile`,
-`defaultFile`, `buildFile`; custom names are honoured). The first time a file is
-patched, its original content is snapshotted in `.dbx/toolchain/manifest.json`
-under `snapshots` (a tree of **relative** paths mirroring the repo), and the
-applied override under `tsconfigOverrides`. Deleting an override key reverts it:
-the original value comes back when the snapshot defines the key, otherwise the
-key is removed (a value edited after the override set it is kept). A missing
-target is skipped with a `tsconfig.missing-file` warning instead of being created.
-
-```sh
-dbx tsconfig --restore           # remove every applied override now
-dbx tsconfig --restore build     # only base | root | default | build
-```
-
-`dbx reset` restores the overrides before it removes the manifest. The patched
-files are never part of the manifest's managed `files`, so neither a sync nor a
-reset deletes them. See [tsconfig → `overrides`](/guide/tsconfig#overrides).
-
-`tsconfig.baseFile` (default `tsconfig.base.json`) names the root base tsconfig
-that `overrides.base` targets. Use `tsconfig.extends` to choose what scaffolded
-`tsconfig.base/default/build.json` files extend (for example
-`build: './tsconfig.json'` to reuse path aliases in builds, at the cost of
-pulling workspace source into the build).
-
-### Sync task API
-
-Custom sync tasks can use these additions:
-
-* `SyncTask.watch` / `SyncTask.keep` accept a function of the config
-  (`config => string[]`), so globs can follow configured file names.
-* A `ManagedFile` returned with `track: false` is written and drift-checked like
-  any other, but stays user-owned: it is not recorded in the manifest, never
-  pruned by a later sync and never removed by `dbx reset`.
-* `resolveWatchGlobs(tasks, config, projectType?)` (core) resolves the active
-  tasks' inputs; `dbx watch --list [--json]` prints them, and the VS Code
-  extension watches them (custom tsconfig names included) unless
-  `deltabox.toolchain.watch` is set explicitly. Its default is now `[]`.
-* `SyncContext.manifest` holds task metadata persisted in the manifest between
-  syncs (`snapshots`, `tsconfigOverrides`); `SyncContext.check` is true for
-  `dbx sync --check`.
-
-### Do not hand-add workspace aliases
-
-Keep `paths`/`references` in `tsconfig.workspaces.json`; the generator expands
-them into each workspace. For Vite/Vitest, prefer Vite's native
-`resolve.tsconfigPaths: true`, or pass `resolveTsconfig().alias` to
-`resolve.alias`. If you created a `vitest.aliases.ts` during the transition,
-delete it and use one of those two options.
-
-## Vite and task changes
-
-* Runtime shims are still the default (`vite.shim: 'runtime'`). Static shims
-  (`vite.shim: 'static'`) serialize the config and import only `defineConfig`,
-  useful when loading the shim without a built package.
-* `vite.shimImport` changes the `resolveVite` import specifier for runtime
-  shims. Relative values are resolved from the repo root and rewritten per
-  generated config.
-* `typecheck:ci` was removed; `typecheck` already uses the source tsconfig. Use
-  `yarn typecheck` in CI and delete any `typecheck:ci` scripts or Vite+ tasks.
-* The emulate test suite can be cleaned with `yarn test:clean`.
-
-## Recommended upgrade steps
-
-1. Replace `scopes` with `schema` in `createConfigEngine`.
-2. Replace `render*` imports with `generateConfig*`.
-3. Remove imports of the deleted schema maps; use `configSchema` or individual
-   schema exports.
-4. Rename `env`/`path` metadata to `envName`/`envPath` when convenient (the old
-   names still work).
-5. Remove hand-written `tsconfig.json` aliases and move them to
-   `tsconfig.workspaces.json`; run `dbx sync --recursive`.
-6. Replace any custom tsconfig path parser with `resolveTsconfig()` (or
-   `dbx tsconfig --json`).
-7. Delete `vitest.aliases.ts` if present; enable
-   `resolve.tsconfigPaths: true` or use `resolveTsconfig().alias`.
-8. Replace `typecheck:ci` with `typecheck` in scripts/CI.
-9. Optionally move options you want managed in `tsconfig.base.json` /
-   `tsconfig.workspaces.json` / the workspace default and build tsconfigs into
-   `toolchain.tsconfig.overrides`, and keep committing
-   `.dbx/toolchain/manifest.json` (it now holds their snapshots).
-10. Run `yarn dbx sync`, `yarn config:types`, `yarn typecheck`, `yarn test` and
-    `yarn dbx sync --recursive --check` after upgrading.
-
----
-
----
-url: https://toolchain.deltabox.studio/guide/migrations/v2-v3.md
----
-# Migrating from v2 to v3
-
-v3 is a correctness release. It makes releases idempotent, accepts UTF-8 BOM
-files, generates Dockerfiles that build from a fresh scaffold, and fixes
-scaffolding, catalog diffing, migration checks and VS Code discovery. The config
-file format is unchanged: most projects only need to update the dependency and
-re-run sync.
-
-## Breaking changes
-
-### The `tsdown` workspace is now `pack`
-
-The workspace package `@deltabox/toolchain-tsdown` is renamed to
-`@deltabox/toolchain-pack`, and the umbrella subpath
-`@deltabox/toolchain/tsdown` becomes `@deltabox/toolchain/pack`. The workspace
-directory moves from `packages/tsdown` to `packages/pack` and the commitlint
-scope changes from `tsdown` to `pack`.
-
-The underlying bundler is still tsdown, so the public helper names
-(`baseTsdownConfig`, `createTsdownConfig`, `createPostBanner`) are unchanged. A
-consumer only needs to replace the import specifier:
-
-```ts
-// v3
-import { baseTsdownConfig } from '@deltabox/toolchain/pack';
-// v2
-import { baseTsdownConfig } from '@deltabox/toolchain/tsdown';
-```
-
-Workspace manifests that depended on `@deltabox/toolchain-tsdown` must switch
-the dependency name to `@deltabox/toolchain-pack`.
-
-### Vite plugin is the default config path
-
-New scaffolds declare `vite-plugin-dbx` and are configured through the `dbx()`
-Vite plugin. `dbx.config.*` remains fully supported as the non-Vite fallback, so
-an existing `dbx.config.*` project does not need to move. If you generate
-projects programmatically, expect the generated `vite.config.*` to carry the
-plugin instead of a separate `dbx.config.*`.
-
-### Project templates are one module per template
-
-The monolithic template module is gone. The supported programmatic surface from
-`@deltabox/toolchain/project` (also re-exported by the umbrella) is:
-
-```ts
-import {
-    createProjectTemplateFiles,
-    isProjectTemplateId,
-    PROJECT_TEMPLATE_IDS,
-    type ProjectTemplateId,
-} from '@deltabox/toolchain/project';
-```
-
-Look a template up through `PROJECT_TEMPLATE_IDS` / `createProjectTemplateFiles`
-instead of importing a shared `qol` helper.
-
-### Docker plans expose their copy sources
-
-`resolveDockerPlan()` now returns `installSources` — the exact files the
-Dockerfile copies before installing dependencies. Code that constructs a
-`DockerPlan` by hand must provide it; prefer `resolveDockerPlan()` +
-`dockerFiles()` instead.
-
-## Behaviour changes
-
-### Toolchain enable/disable
-
-A top-level `toolchain.enabled` switch is available. The boolean shorthand is
-workspace-scoped:
-
-```ts
-export default defineConfig({
-    plugins: [dbx({ toolchain: { enabled: false } })],
-});
-```
-
-Config files and the inline `dbx()` plugin only accept the workspace scope; the
-object form (`{ disabled, scope: 'global' | 'workspace' }`) is reserved for the
-CLI/programmatic API and the VS Code extension. `dbx enable`/`dbx disable` choose
-the workspace scope by default; pass `--global` to update
-`~/.dbx/toolchain/cli/config.json`. The project config takes precedence over both
-the CLI workspace setting and `.vscode/settings.json`.
-
-### Dependabot security updates
-
-`toolchain.ci.dependabot` now accepts an opt-in `security` setting. It adds the
-security-update group to `.github/dependabot.yml` and generates
-`.github/workflows/dependabot-security.yml` to enable GitHub's native security
-updates and optionally dismiss alerts below a severity threshold.
-
-```ts
-export default defineConfig({
-    toolchain: {
-        ci: {
-            dependabot: {
-                security: {
-                    vulnerabilities: { severity: 'high' },
-                    pr: { strategy: 'grouped' },
-                },
-            },
-        },
-    },
-});
-```
-
-`security: true` keeps every severity and groups PRs per ecosystem. The workflow
-needs a `DBX_GITHUB_TOKEN` secret with repository admin access to change the
-repository setting; `GITHUB_TOKEN` is used for alert dismissal. Set
-`security: { workflow: false }` to manage the setting yourself, or
-`security: { vulnerabilities: false }` to disable security updates. No migration
-is required: without `security`, the generated `dependabot.yml` and behaviour
-are unchanged.
-
-### Managed-file regeneration
-
-Every managed section now accepts `regenerate?: boolean` (default `true`). Set it
-to `false` to skip that section in `dbx sync`: its files are neither written nor
-drift-checked, and sync does not prune them. User-owned files
-(`tsconfig.workspaces.json`, `tsconfig.build.json`) are only seeded when missing;
-an existing file is never overwritten by the missing-file fallback.
-
-### Changelog versioning
-
-* `versioning.target: 'individual'` is idempotent. Commits already listed in a
-  workspace's `CHANGELOG.md` are filtered out before deriving its bump, and a
-  workspace with no new commits is skipped entirely. Re-running no longer bumps
-  untouched workspaces or re-counts an old `feat` as a new minor.
-* Workspace glob negation (`['packages/*', '!packages/private-*']`) is honoured.
-* A UTF-8 BOM in any `package.json` (common with PowerShell/Notepad) no longer
-  makes `dbx changelog` fail; the same BOM handling applies to local CLI
-  discovery, providers, Prettier detection and the VS Code extension.
-* The `### Package changes` footer now reads Yarn (`.yarnrc.yml`), pnpm
-  (`pnpm-workspace.yaml`) and Bun (`package.json` `workspaces.catalog`) catalogs,
-  including named catalogs.
-* Running changelog from a nested workspace uses the repository root for the
-  fallback commit/issue links instead of the workspace's own `package.json`.
-
-### Docker
-
-* Only files that exist when the Dockerfile is generated are copied:
-  `package.json` plus the project's lockfile/workspace files. `.node-version*` is
-  never assumed, and a missing lockfile is not copied.
-* The declared package manager drives both the copy list and the install command.
-  A Bun-runtime project with no declared manager installs with Bun; otherwise the
-  declared manager wins (so `yarn.lock` is not paired with `bun install`). When a
-  Bun-runtime project declares yarn/pnpm/npm, dependencies install in a
-  `node:<version>` `deps` stage and the Bun image only builds.
-* When there is no lockfile, the install runs without a frozen flag.
-
-### Scaffolding and migrations
-
-* `dbx project:init --out <dir>` (and `project:init:monorepo`) no longer inherits
-  the current project's name when `--name` is omitted; it uses the target
-  directory's basename. The in-place case still inherits `project.name`.
-* `dbx migrate --check` resolves the effective (inherited) config, so a
-  workspace inheriting `fmt`/`lint` from the root is not asked to keep an
-  intermediate `.oxfmtrc.json` / `.oxlintrc.json`. A disabled section
-  (`fmt: false`) does not count as owning the config.
-
-### CLI and VS Code
-
-* `dbx sync --json` always emits a JSON envelope, including when the config
-  failed to load (`{ results: [], upToDate: false, error }`).
-* `dbx projects --max-depth` rejects non-numeric values instead of silently
-  turning the limit into `NaN`; `--max-depth 0` still scans only the root.
-* The VS Code extension walks up to the repository boundary for the project's
-  `dbx`, checks every workspace root in a multi-root workspace, and keeps the
-  project's CLI as the default (the bundled CLI is only the fallback).
-
-### TypeScript declarations
-
-* The shared tsdown base config externalizes declaration imports **as written**
-  (`deps.dts.neverBundle: true`), so emitted `.d.ts` files reference bare
-  package specifiers instead of build-machine absolute `node_modules` paths.
-  Packages whose public types reference another package must declare it in
-  `dependencies` (or `peerDependencies`).
-* The base config also ships a Rolldown leak reporter. It scans emitted JS,
-  declaration and textual asset chunks and fails the build by default when an
-  absolute `node_modules` path appears. Configure it via the third
-  `createTsdownConfig` argument:
-  `{ nodeModulesLeakReporter: { level: 'warn' | 'info' | 'silent', when: 'generateBundle' | 'writeBundle' | 'closeBundle' } }`
-  (or `false` to disable it). `writeBundle` is the default; use `closeBundle`
-  when a later plugin rewrites output in `writeBundle`. Non-fatal levels respect
-  tsdown/rolldown's log level. The plugin is also exported as
-  `createNodeModulesLeakReporter` for use in your own builds.
-
-## Recommended upgrade steps
-
-1. Update `@deltabox/toolchain` (and `vite-plugin-dbx` when used) to v3.
-2. Run `dbx sync --recursive` and commit the regenerated managed files.
-3. Run `dbx sync --recursive --check`, `yarn typecheck`, `yarn lint` and your
-   test suite.
-4. Regenerate Docker artifacts created by v2 (or edit the `COPY` lines to list
-   only files that exist) and rebuild the image once with Docker available.
-5. Replace imports of the old monolithic template helper with
-   `PROJECT_TEMPLATE_IDS` / `createProjectTemplateFiles`.
-6. If you build a `DockerPlan` by hand, add its `installSources` (or switch to
-   `resolveDockerPlan()`).
-7. Re-run `dbx migrate --check` in CI; inherited workspace configs may now pass
-   where v2 reported a false drift.
-8. If you use `ci.dependabot`, opt into `security` and add the
-   `DBX_GITHUB_TOKEN` secret (repository admin) before the generated security
-   workflow runs.
-
----
-
----
 url: https://toolchain.deltabox.studio/guide/project.md
 ---
 # Project
@@ -9907,6 +10287,32 @@ linted locally as well as in CI. Use `postinstall` (not `prepare`) to activate
 husky: Yarn Berry never runs `prepare` on install. Husky hooks have no file
 extension, so on Windows add `.husky/* text eol=lf` to `.gitattributes` — a
 trailing CR silently breaks the hook.
+
+## Vite+ commands with the `dbx()` plugin
+
+When the project uses the `dbx()` Vite plugin (`vite.config.ts`), call Vite+
+directly for the toolchain commands:
+
+```json [package.json]
+{
+    "scripts": {
+        "dev": "vp dev",
+        "build": "vp build",
+        "check": "vp check",
+        "test": "vp test",
+        "dbx:sync": "dbx sync"
+    }
+}
+```
+
+`vp fmt`, `vp lint`, `vp run -r build` and the rest of the Vite+ commands work
+from the repo root; `dbx` still owns `sync`, `watch`, `changelog` and the other
+non-Vite+ commands. `dbx fmt` / `dbx lint` remain the portable form — they route
+to the detected formatter/linter when a project is not on Vite+.
+
+See Vite+ [Built-in commands vs
+scripts](https://viteplus.dev/guide/run#built-in-commands-vs-scripts) for which
+commands are built in and which run `package.json` scripts.
 
 ## Migrate an existing project
 
@@ -11250,229 +11656,69 @@ site root, so a `dbx.config.json` gets editor completion. For a TypeScript confi
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/vite.md
+url: https://toolchain.deltabox.studio/guide/vite-plugin.md
 ---
-# Vite+
+# Vite plugin
 
-There are two ways to use dbx with Vite:
+`@deltabox/toolchain` ships the `dbx()` Vite/Vite+ plugin. It carries the whole
+toolchain config inline, so a Vite project does not need a `dbx.config.*`, and it
+runs `dbx sync` before dev/build (or `dbx sync --check` in CI).
 
-* **Plugin mode (recommended):** put the toolchain config inline in the `dbx()`
-  Vite plugin inside `vite.config.*`. No `dbx.config.*` is required, and dbx
-  never manages `vite.config.*` because the plugin lives there.
-* **Config mode:** keep the whole Vite+ config in `dbx.config.*` under
-  `toolchain.vite`, and let `dbx sync` write a thin `vite.config.ts` shim.
+> The plugin is published from the **`@deltabox/toolchain/vite`** subpath. The
+> standalone `vite-plugin-dbx` package is not published yet, so import
+> `@deltabox/toolchain/vite` (not `vite-plugin-dbx`) until it ships.
 
-Both can be combined: a `dbx.config.*` provides shared config and the plugin
-options are merged on top.
+## Install
 
-## Plugin mode
+```sh
+yarn add -D @deltabox/toolchain
+```
 
-```ts [vite.config.ts]
-import { defineConfig } from 'vite-plus'; // or 'vite' for plain Vite
+A Vite+ project also needs `vite-plus` (which provides `vp`, Vite, Vitest, Oxfmt
+and Oxlint); see [Vite+](/guide/vite).
 
-import { dbx } from '@deltabox/toolchain/vite';
+## Use
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite-plus'; // or 'vite'
+
+import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
 
 export default defineConfig({
     plugins: [
         dbx({
             toolchain: {
                 project: { name: 'my-app', scope: '@acme' },
-                fmt: { oxc: true },
-                lint: { oxc: true },
-                ci: { sync: true },
-                changelog: { preset: 'conventional' },
+                fmt: true,
+                lint: true,
+                // ...any other dbx sections
             },
         }),
     ],
-    // your usual Vite config
+    run: { tasks: { ...DBX_TASKS } },
 });
 ```
 
-The plugin carries the config inline and the dbx CLI (sync, projects, watch and
-the VS Code extension) reads it back from `vite.config.*`. The plugin also
-derives the Vite options from the dbx sections:
+## What it does
 
-| dbx section | Vite option                            |
-| ----------- | -------------------------------------- |
-| `logger`    | `logLevel` / `customLogger`            |
-| `watch`     | `server.watch` (the `exclude` globs)   |
-| `fmt`       | Vite+ `fmt` (only on a Vite+ project)  |
-| `lint`      | Vite+ `lint` (only on a Vite+ project) |
+* Loads the inline `toolchain` config (merged over a nearby `dbx.config.*` when
+  one exists).
+* Runs `dbx sync` before the dev server / build, or `dbx sync --check` when `CI`
+  is set.
+* Re-syncs when a dbx input file changes in watch mode.
+* Derives Vite options from the dbx sections: `logger` → `logLevel` /
+  `customLogger`, `watch` → `server.watch`, and `fmt` / `lint` → the Vite+
+  formatter/linter (only when `vite-plus` is installed).
+* Exposes `DBX_TASKS` (`dbx:sync`, `dbx:check`) for `run.tasks` / `vp run`.
 
-The `vite` section is deliberately omitted from the plugin options: the Vite
-config is the user config in plugin mode. Vite+ keys are only added when the
-project declares `vite-plus`; a pure Vite project gets only standard Vite
-options. Vite+ CLI passthroughs (`dbx vite:*`) are refused unless Vite+ is
-installed/detected.
+In a **workspace**, leave `fmt` and `lint` out of the plugin config: the root
+`vite.config.*` owns them and Vite+ applies the root options to the workspace.
+`fmt: true` / `lint: true` there would select the shared defaults instead.
 
-`dbx sync` runs before the dev server/build (or `dbx sync --check` in CI) and
-re-syncs when `vite.config.*`, `dbx.config.*` or a tsconfig input changes.
-
-Builtin scaffolds (`dbx create`, `dbx project:init`, `dbx project:init:workspace`)
-use plugin mode: they generate a `vite.config.*` with `dbx({ toolchain })`,
-Vitest (`test`) and Vite+ tasks (`run.tasks`) instead of a `dbx.config.*`. The
-scaffolded packages depend on `vite-plus` and use `vp` for build/test, so no
-separate `vitest` or `tsdown` dependency is written.
-
-## Config mode
-
-The `vite` section holds the **entire Vite+ configuration**. Every key is passed
-through verbatim to Vite+, so `dbx.config.*` stays the only hand-authored root
-config; `dbx sync` writes a thin root `vite.config.ts` that resolves it at load
-time.
-
-```ts [dbx.config.ts]
-export default defineConfig({
-    toolchain: {
-        vite: {
-            fmt: { semi: true, singleQuote: true },
-            lint: { ignorePatterns: ['dist/**'] },
-            test: { include: ['src/**/*.test.ts'], environment: 'node' },
-            run: { tasks: { build: { command: 'tsdown --config-loader unrun' } } },
-        },
-    },
-});
-```
-
-The section is typed as Vite+'s own config (`ToolchainViteConfig` = Vite's
-`UserConfig` as augmented by Vite+), so the whole Vite+ surface autocompletes in
-`dbx.config.ts`.
-
-## The generated shim
-
-`dbx sync` writes a fixed `vite.config.ts`:
-
-```ts [vite.config.ts]
-import { defineConfig, type ViteUserConfig } from 'vite-plus';
-
-// Generated by @deltabox/toolchain — edit the vite section in dbx.config and run `dbx sync`.
-import { resolveVite } from '@deltabox/toolchain/vite';
-
-export default defineConfig(resolveVite<ViteUserConfig>({ cwd: import.meta.dirname }));
-```
-
-The shim imports `defineConfig` from whichever Vite package the project installs
-— `vite` or `vite-plus` (detected from `package.json`, walking up so a hoisted
-workspace dependency is found). For a plain `vite` project it imports
-`defineConfig, type UserConfig` from `vite` and calls `resolveVite<UserConfig>`,
-so the same shim type-checks against both.
-
-`resolveVite(options?)` resolves the **same-directory** `dbx.config.*` (so a
-nested workspace `vite.config.ts` uses its own config), or the `toolchain` you
-pass, then returns `toolchain.vite`. You can also pass inline overrides with
-`resolveVite({ vite: { ... } })`, which are deep-merged over the loaded section.
-The file never drifts, because the real config stays in `dbx.config.*`.
-
-The root shim must live at the **root**: `vp run`, `vp check` and `vp staged` do
-not accept `--config`, so the shim has to be the file Vite+ loads.
-
-## Options
-
-| Option   | Type                | Default | Description                                     |
-| -------- | ------------------- | ------- | ----------------------------------------------- |
-| `config` | `boolean \| string` | `true`  | Write the managed shim; a string sets its path. |
-
-Everything else under `vite` is Vite+ config (plugins, `test`, `lint`, `fmt`,
-`run.tasks`, ...). `vite.fmt` / `vite.lint` override `toolchain.fmt.oxc` /
-`toolchain.lint.oxc` (deep merge). `fmt: true` / `lint: true` use the shared
-`DEFAULT_FMT_RULES` / `DEFAULT_LINT_RULES`; an options object is merged over
-them. Their ignore lists are exported as `DEFAULT_FMT_IGNORE_PATTERNS` /
-`DEFAULT_LINT_IGNORE_PATTERNS` (both layered over `DEFAULT_IGNORE_PATTERNS`)
-from `@deltabox/toolchain` and `@deltabox/toolchain/shared`, so you can extend
-them instead of repeating the defaults. Import sorting is part of those defaults:
-`sortImports` gets a `workspace` custom group resolved from every dbx project
-(see `resolveFmtCustomGroups`), so workspace packages do not need manual groups.
-Set `vite: { config: false }` to leave a hand-written
-`vite.config.ts` alone (the section is still read for provider colouring and the
-`dbx` provider passthrough). `config: 'config/vite.custom.ts'` writes the shim
-there instead (relative to the project, or an absolute path inside it).
-
-## Nested workspaces
-
-`vite` is **never inherited**. A workspace with no `vite` section keeps its
-hand-written `vite.config.*` untouched; `dbx sync` only writes a shim when the
-project declares `vite` itself. Declare the settings the workspace needs in its
-own config:
-
-```ts [packages/web/dbx.config.ts]
-export default defineConfig({
-    toolchain: {
-        vite: {
-            shim: 'static',
-            resolve: { tsconfigPaths: true },
-            run: { tasks: { build: { command: 'tsdown' } } },
-        },
-    },
-});
-```
-
-`vite.fmt` / `vite.lint` are the exception: when the workspace opts into `fmt` /
-`lint`, they are hoisted into the top-level `fmt.oxc` / `lint.oxc` before
-inheritance, so shared formatting still flows down.
-
-## Keep the shim out of Oxfmt
-
-Add the shim to `vite.fmt.ignorePatterns`, otherwise `vp fmt` rewrites the
-generated file and `dbx sync --check` reports drift:
-
-```ts
-vite: {
-    fmt: {
-        ignorePatterns: ['/vite.config.ts'];
-    }
-}
-```
-
-In a monorepo, put `**/vite.config.ts` on the **root** top-level `fmt.oxc`
-config so every workspace shim is covered (an `ignorePatterns` array in a
-workspace replaces the root's list). `dbx migrate --from vite` adds the ignore
-for you (see [Migrations](/guide/migrations/#vite-config)).
-
-When `fmt` / `lint` are defined, `dbx sync` also writes `.oxfmtrc.json` /
-`.oxlintrc.json` for the Oxc VS Code extension. They are root-only unless a
-workspace config defines its own `fmt` / `lint`.
-
-## Commands
-
-Vite+ commands are reachable directly or through the `vite` namespace, and are
-registered as a provider (see [Providers](/guide/providers)):
-
-```sh
-dbx fmt                 # the active formatter (vp fmt when Oxc)
-dbx run -r build        # forwards to `vp run -r build`
-dbx vite dev            # explicit namespace (always works)
-dbx vite:build          # named alias for `vp build`
-```
-
-A bare `dbx <command>` is forwarded to Vite+ when the name (or a Vite+ alias)
-matches — built-in commands win, so `dbx migrate` stays the toolchain's
-migration. `dbx fmt` / `dbx lint` route to the configured/discovered
-Biome/Prettier/Dprint/ESLint tool, and keep the `vp` passthrough when the active
-tool is Oxc (see [Formatting & linting](/guide/formatting#running-the-active-tool)).
-
-## Programmatic API
-
-```ts
-import {
-    resolveVite,
-    renderViteConfig,
-    viteConfigObject,
-    viteProvider,
-    viteSyncTask,
-} from '@deltabox/toolchain/vite';
-```
-
-| Export                         | Description                                                                       |
-| ------------------------------ | --------------------------------------------------------------------------------- |
-| `resolveVite(options?)`        | Resolve `toolchain.vite` (or a passed `toolchain`), with inline `vite` overrides. |
-| `detectViteSpecifier(cwd)`     | Which package (`vite` / `vite-plus`) the project has, for the shim import.        |
-| `renderViteConfig(specifier?)` | The managed `vite.config.ts` shim source (defaults to `vite-plus`).               |
-| `viteConfigObject(config?)`    | The `vite` section without the toolchain opt-out `config`.                        |
-| `viteSyncTask()`               | The sync task (writes the shim).                                                  |
-| `viteProvider()`               | The Vite+ provider descriptor.                                                    |
-
-See [Configuration](/guide/config/vite) for the `dbx.config` integration and the
-[Providers](/guide/providers) guide for the passthrough commands.
+See [Vite+](/guide/vite) for the full Vite+ integration, the Vite+ provider and
+the `toolchain.vite` options, and the [configuration
+reference](/config/reference) for every section.
 
 ---
 
@@ -11553,6 +11799,12 @@ configures the **CLI** `dbx watch` command.
 url: https://toolchain.deltabox.studio/CHANGELOG.md
 ---
 # Changelog
+
+## 3.0.0-beta.5 (November 2026)
+
+#### Ci
+
+* Bump setup-vp to v1.22.0 ([#9c32cae](https://github.com/deltabox-studio/toolchain/commit/9c32cae) by [T0chi](https://github.com/T0chi))
 
 ## 3.0.0-beta.4 (November 2026)
 

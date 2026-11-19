@@ -19,18 +19,26 @@ This file is a concise, link-first overview. For the **full** documentation in a
 
 ## Table of Contents
 
-- [Config types](https://toolchain.deltabox.studio/config.md)
-- [CLI reference](https://toolchain.deltabox.studio/config/cli.md)
-- [Environment variables](https://toolchain.deltabox.studio/config/env.md)
-- [dbx.config](https://toolchain.deltabox.studio/config/reference.md)
-
 ### Introduction
 
 - [Getting Started](https://toolchain.deltabox.studio/guide.md)
 - [Monorepo Guide](https://toolchain.deltabox.studio/guide/monorepo.md)
 - [VS Code Extension](https://toolchain.deltabox.studio/guide/vscode.md)
-- [Docker](https://toolchain.deltabox.studio/guide/docker.md)
+- [Vite+](https://toolchain.deltabox.studio/guide/vite.md)
 - [LLMs](https://toolchain.deltabox.studio/llms.md)
+
+#### Config reference
+
+- [Overview](https://toolchain.deltabox.studio/config.md)
+- [CLI reference](https://toolchain.deltabox.studio/config/cli.md)
+- [Environment variables](https://toolchain.deltabox.studio/config/env.md)
+- [dbx.config](https://toolchain.deltabox.studio/config/reference.md)
+
+#### Migrations
+
+- [Migrations](https://toolchain.deltabox.studio/guide/migrations.md)
+- [Migrating from v1 to v2](https://toolchain.deltabox.studio/guide/migrations/v1-v2.md)
+- [Migrating from v2 to v3](https://toolchain.deltabox.studio/guide/migrations/v2-v3.md)
 
 - [Package catalogs](https://toolchain.deltabox.studio/guide/catalogs.md)
 - [CLI](https://toolchain.deltabox.studio/guide/cli.md)
@@ -44,7 +52,7 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [Templates](https://toolchain.deltabox.studio/guide/templates.md)
 - [tsconfig](https://toolchain.deltabox.studio/guide/tsconfig.md)
 - [TypeScript](https://toolchain.deltabox.studio/guide/typescript.md)
-- [Vite+](https://toolchain.deltabox.studio/guide/vite.md)
+- [Vite plugin](https://toolchain.deltabox.studio/guide/vite-plugin.md)
 - [Watch](https://toolchain.deltabox.studio/guide/watch.md)
 
 #### Programmatic API
@@ -103,12 +111,6 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [Generated outputs](https://toolchain.deltabox.studio/guide/config-generator/generated-outputs.md)
 - [Load the config at runtime](https://toolchain.deltabox.studio/guide/config-generator/load-the-config.md)
 - [Real-world shape](https://toolchain.deltabox.studio/guide/config-generator/real-world-shape.md)
-
-#### Migrations
-
-- [Migrations](https://toolchain.deltabox.studio/guide/migrations.md)
-- [Migrating from v1 to v2](https://toolchain.deltabox.studio/guide/migrations/v1-v2.md)
-- [Migrating from v2 to v3](https://toolchain.deltabox.studio/guide/migrations/v2-v3.md)
 
 ### Other
 
