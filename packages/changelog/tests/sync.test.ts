@@ -191,7 +191,7 @@ describe('changelogSyncTask', () => {
                 cwd,
             });
             const ci = files?.find(file => file.path === '.github/workflows/ci.yml');
-            expect(ci?.content).toContain('uses: voidzero-dev/setup-vp@v1.21.2');
+            expect(ci?.content).toContain('uses: voidzero-dev/setup-vp@v1.22.0');
             expect(ci?.content).not.toContain('actions/setup-node');
         } finally {
             fs.rmSync(cwd, { recursive: true, force: true });
@@ -207,7 +207,7 @@ describe('changelogSyncTask', () => {
                 cwd,
             });
             const ci = files?.find(file => file.path === '.github/workflows/ci.yml');
-            expect(ci?.content).toContain('voidzero-dev/setup-vp@v1.21.2');
+            expect(ci?.content).toContain('voidzero-dev/setup-vp@v1.22.0');
         } finally {
             fs.rmSync(cwd, { recursive: true, force: true });
         }
@@ -216,7 +216,7 @@ describe('changelogSyncTask', () => {
     it('uses setup-vp in the toolchain Vite+ mode', async () => {
         const files = await changelogSyncTask().run(makeContext({ ci: { ci: true }, vite: true }));
         const ci = files?.find(file => file.path === '.github/workflows/ci.yml');
-        expect(ci?.content).toContain('voidzero-dev/setup-vp@v1.21.2');
+        expect(ci?.content).toContain('voidzero-dev/setup-vp@v1.22.0');
     });
 
     it('keeps the Node/Corepack setup for non-Vite projects', async () => {

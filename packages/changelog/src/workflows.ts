@@ -51,7 +51,7 @@ export interface Workflow {
  * does not publish a moving tag, so a workflow must pin an exact version (or a
  * commit SHA); consumers can override it with the `setupVpVersion` token.
  */
-export const DEFAULT_SETUP_VP_VERSION = 'v1.21.2';
+export const DEFAULT_SETUP_VP_VERSION = 'v1.22.0';
 
 /** The default replacement values for the workflow templates. */
 export const DEFAULT_WORKFLOW_TOKENS = {

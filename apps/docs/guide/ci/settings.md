@@ -107,9 +107,9 @@ on a complete pipeline:
 
 ```yaml [.gitlab-ci.yml]
 include:
-    - remote: https://raw.githubusercontent.com/voidzero-dev/setup-vp/v1.21.2/gitlab/setup-vp.yml
+    - remote: https://raw.githubusercontent.com/voidzero-dev/setup-vp/v1.22.0/gitlab/setup-vp.yml
       inputs:
-          setup-ref: v1.21.2
+          setup-ref: v1.22.0
 image: node:22
 test:
     extends: .setup-vp

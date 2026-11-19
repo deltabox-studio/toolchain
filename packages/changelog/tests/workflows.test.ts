@@ -155,7 +155,7 @@ describe('workflow config', () => {
         const yaml = renderWorkflow('ci', {
             tokens: { ...DEFAULT_WORKFLOW_TOKENS, vitePlus: true },
         })!;
-        expect(yaml).toContain('uses: voidzero-dev/setup-vp@v1.21.2');
+        expect(yaml).toContain('uses: voidzero-dev/setup-vp@v1.22.0');
         expect(yaml).toContain('node-version: "22"');
         expect(yaml).toContain('cache: true');
         expect(yaml).not.toContain('actions/setup-node');
@@ -187,7 +187,7 @@ describe('workflow config', () => {
                 },
             },
         })!;
-        expect(yaml).toContain('uses: voidzero-dev/setup-vp@v1.21.2');
+        expect(yaml).toContain('uses: voidzero-dev/setup-vp@v1.22.0');
         expect(yaml).not.toContain('corepack');
     });
 
@@ -425,9 +425,9 @@ describe('workflow config', () => {
         );
         const yml = files['.gitlab-ci.yml']!;
         expect(yml).toContain(
-            'remote: https://raw.githubusercontent.com/voidzero-dev/setup-vp/v1.21.2/gitlab/setup-vp.yml'
+            'remote: https://raw.githubusercontent.com/voidzero-dev/setup-vp/v1.22.0/gitlab/setup-vp.yml'
         );
-        expect(yml).toContain('setup-ref: v1.21.2');
+        expect(yml).toContain('setup-ref: v1.22.0');
         expect(yml).toContain('image: node:22');
         expect(yml).toContain('extends: .setup-vp');
         expect(yml).not.toContain('corepack');
@@ -451,9 +451,9 @@ describe('workflow config', () => {
         );
         const yml = files['azure-pipelines.yml']!;
         expect(yml).toContain('repository: setupVp');
-        expect(yml).toContain('ref: refs/tags/v1.21.2');
+        expect(yml).toContain('ref: refs/tags/v1.22.0');
         expect(yml).toContain('template: azure/setup-vp.yml@setupVp');
-        expect(yml).toContain('setupRef: v1.21.2');
+        expect(yml).toContain('setupRef: v1.22.0');
         expect(yml).toContain('nodeVersion: 22.x');
         expect(yml).toContain('runInstall: true');
         expect(yml).toContain('- checkout: self');
