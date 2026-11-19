@@ -102,15 +102,26 @@ export function renderChangelogEntry(
     ]
         .filter(Boolean)
         .join('\n\n');
+    // `lifecycle: 'before'` renders sections before the body (via `buildSummary`)
+    // but still needs the body/release-notes wrapper here.
+    const bodyToggle = d.releaseNotes.enabled ? d.releaseNotes : d.body;
+    const bodyBlock =
+        d.lifecycle === 'before' && detailsEnabled(bodyToggle, entryCount)
+            ? renderDetails(
+                  bodyToggle.title ?? '**Release notes**',
+                  body,
+                  bodyToggle.expanded === true
+              )
+            : body;
     const introSection = introBlock ? `${introBlock}\n\n` : '';
     if (!withMarkers) {
-        return `## ${version}${suffix}\n\n${introSection}${body}`;
+        return `## ${version}${suffix}\n\n${introSection}${bodyBlock}`;
     }
     return `## ${version}${suffix}
 
 ${introSection}<!-- release:start -->
 
-${body}
+${bodyBlock}
 
 <!-- release:end -->`;
 }

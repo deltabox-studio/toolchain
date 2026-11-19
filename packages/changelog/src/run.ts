@@ -118,6 +118,22 @@ import {
 } from './utils/versioning.js';
 import { writeChangelogs } from './utils/write.js';
 
+/** Whether semver `a` is newer than `b` (prereleases sort before releases). */
+function semverGreater(a: string, b: string): boolean {
+    const split = (value: string): [number[], string | undefined] => {
+        const [core, prerelease] = value.split('-', 2);
+        return [core!.split('.').map(part => Number.parseInt(part, 10) || 0), prerelease];
+    };
+    const [aCore, aPre] = split(a);
+    const [bCore, bPre] = split(b);
+    for (let index = 0; index < 3; index += 1) {
+        const difference = (aCore[index] ?? 0) - (bCore[index] ?? 0);
+        if (difference !== 0) return difference > 0;
+    }
+    // A release is newer than its own prerelease.
+    return aPre === undefined && bPre !== undefined;
+}
+
 /** Every commit hash already referenced by a root + workspace changelog. */
 function releasedCommitHashes(): Set<string> {
     const hashes = new Set<string>();
@@ -159,23 +175,25 @@ export function runChangelog(
     runOptions: RunChangelogOptions = {}
 ): void {
     const options = parseArgsCli(argv);
-    if (runOptions.enabled === false) {
-        logger.info('toolchain disabled; skipping changelog.');
-        return;
-    }
-    if (runOptions.regenerate === false && options.releaseNotes === undefined) {
-        logger.info('changelog regeneration disabled; skipping writes.');
-        return;
-    }
-    const groups = changelog?.groups as ChangelogGroupsSetting | undefined;
-    const breaking = changelog?.breaking as ChangelogBreakingSetting | undefined;
-
     // Machine-readable release body (used by the generated release workflow).
+    // It is derived from git alone and needs no toolchain config, so it must
+    // run before the `enabled` guard: printing a decorated info line to stdout
+    // would corrupt the release body.
     if (options.releaseNotes) {
         if (!isGitRepository()) throw new Error('dbx changelog: not a git repository.');
         logger.raw(releaseNotesFromGit(options.releaseNotes));
         return;
     }
+    if (runOptions.enabled === false) {
+        logger.info('toolchain disabled; skipping changelog.');
+        return;
+    }
+    if (runOptions.regenerate === false) {
+        logger.info('changelog regeneration disabled; skipping writes.');
+        return;
+    }
+    const groups = changelog?.groups as ChangelogGroupsSetting | undefined;
+    const breaking = changelog?.breaking as ChangelogBreakingSetting | undefined;
 
     // `--format-only` just regroups the existing changelog files (no bump, no
     // new entry); `--range`/`--dry-run` still apply.
@@ -219,6 +237,7 @@ export function runChangelog(
     // The bump starts from --base-version when provided (e.g. the latest npm
     // version), otherwise from the local package.json version.
     if (!isGitRepository()) throw new Error('dbx changelog: not a git repository.');
+    const versioning = resolveVersioning(changelog);
     const localCurrent = readRootVersion();
     let current = localCurrent;
     if (options.baseVersion) {
@@ -226,6 +245,18 @@ export function runChangelog(
             throw new Error(`Invalid base version: ${options.baseVersion}`);
         }
         current = options.baseVersion.trim();
+    }
+    // With versioning disabled package.json never advances, so seed the bump
+    // from the newest existing heading instead: otherwise every run re-bumps
+    // from the same version and headings go backwards.
+    if (!versioning.enabled && !options.baseVersion) {
+        const file = resolve(repoRoot(), 'CHANGELOG.md');
+        if (existsSync(file)) {
+            const newest = parseExistingChangelog(readFileSync(file, 'utf8'))[0]?.version;
+            if (newest && SEMVER_PATTERN.test(newest) && semverGreater(newest, current)) {
+                current = newest;
+            }
+        }
     }
 
     // `latest` (default) and `<range>` only generate the new entry; `all` also
@@ -241,7 +272,6 @@ export function runChangelog(
         if (boundary) range = `${boundary}..HEAD`;
     }
 
-    const versioning = resolveVersioning(changelog);
     const rootDir = repoRoot();
     const provider = resolveScopedOption<ChangelogProviderSetting | undefined>(
         versioning.provider as never,

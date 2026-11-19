@@ -575,7 +575,7 @@ function extractIssueNumbers(text: string): number[] {
     const numbers = new Set<number>();
     // GitHub's closing keywords: close, closes, closed, fix, fixes, fixed,
     // resolve, resolves, resolved (case-insensitive, optional colon).
-    const regex = /\b(?:close[sd]?|fixe?s|fixed|resolves?|resolved)\b\s*:?\s*#(\d+)/gi;
+    const regex = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s*#(\d+)/gi;
     for (const match of text.matchAll(regex)) {
         const number = Number(match[1]);
         if (Number.isInteger(number)) numbers.add(number);

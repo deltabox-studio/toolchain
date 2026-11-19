@@ -37,6 +37,7 @@ import {
     splitInlineDescription,
 } from '../src/index.js';
 import { formatChangelogFile } from '../src/utils/format.js';
+import { recordIssues } from '../src/utils/git.js';
 
 const REPO_RANGE = 'HEAD~5..HEAD';
 
@@ -358,6 +359,25 @@ describe('changelog formatting', () => {
             ['a bullet to keep'],
             ['**Reviewed-by:** Someone'],
         ]);
+    });
+
+    it('recognizes fix and fix: issue-closing keywords', () => {
+        const base = { hash: 'a'.repeat(40), author: 'A', authorEmail: '' };
+        expect(recordIssues({ ...base, subject: 'fix #12', body: '' }, undefined)).toEqual([
+            { number: 12 },
+        ]);
+        expect(recordIssues({ ...base, subject: 'fix: #12', body: '' }, undefined)).toEqual([
+            { number: 12 },
+        ]);
+        expect(
+            recordIssues({ ...base, subject: 'feat: add', body: 'fixes #7\ncloses: #8' }, undefined)
+        ).toEqual([{ number: 7 }, { number: 8 }]);
+    });
+
+    it('omits issue-only fix and fix: lines from a description body', () => {
+        expect(formatBody('fix #12')).toEqual([]);
+        expect(formatBody('fix: #12')).toEqual([]);
+        expect(formatBody('fix: #12\nReal description')).toEqual([['Real description']]);
     });
 
     it('keeps a multi-line conventional footer together', () => {

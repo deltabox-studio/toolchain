@@ -157,6 +157,30 @@ describe('changelog details', () => {
         expect(wrapped).toContain('after');
     });
 
+    it('opts out of the release-mode wrapper with body: false', () => {
+        const entry = renderChangelogEntry('1.0.0', '- one\n- two');
+        const optedOut = applyDetailsToEntry(entry, resolveDetails({ body: false }, true));
+        expect(optedOut).not.toContain('<summary><strong>Release notes</strong></summary>');
+        expect(optedOut).not.toContain('<details>');
+        expect(optedOut).toContain('- one');
+
+        const defaultRelease = applyDetailsToEntry(entry, resolveDetails(true, true));
+        expect(
+            defaultRelease.match(/<summary><strong>Release notes<\/strong><\/summary>/g)
+        ).toHaveLength(1);
+    });
+
+    it('wraps a body opt-in with lifecycle: before and release markers', () => {
+        const entry = renderChangelogEntry('1.0.0', 'Body', undefined, true, '', '', '', {
+            lifecycle: 'before',
+            body: { minCommits: 0 },
+        });
+        expect(entry.match(/<summary><strong>Release notes<\/strong><\/summary>/g)).toHaveLength(1);
+        expect(entry).toContain('Body');
+        expect(entry.indexOf('<!-- release:start -->')).toBeLessThan(entry.indexOf('<details>'));
+        expect(entry.indexOf('</details>')).toBeLessThan(entry.indexOf('<!-- release:end -->'));
+    });
+
     it('wraps the whole version body with details.body', () => {
         const entry = applyDetailsToEntry(
             renderChangelogEntry('1.2.3', 'Body', undefined, false),

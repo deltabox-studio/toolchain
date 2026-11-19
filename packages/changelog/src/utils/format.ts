@@ -375,7 +375,7 @@ export function formatBody(body: string): string[][] {
         }
         // Issue-only lines (already captured in the commit's "(fixes ...)" suffix).
         const withoutIssueRefs = trimmed.replace(
-            /(?:close[sd]?|fixe?s|fixed|resolves?|resolved)\b\s*:?\s*#\d+\s*[,;]?\s*/gi,
+            /(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s*#\d+\s*[,;]?\s*/gi,
             ''
         );
         if (!withoutIssueRefs.trim()) continue;

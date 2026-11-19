@@ -177,9 +177,14 @@ export function resolveDetails(value: unknown, release = false): ResolvedDetails
     const custom = (Array.isArray(customValue) ? customValue : [customValue])
         .map(item => customMatcher(item, configMin))
         .filter((item): item is DetailsCustomMatcher => item !== undefined);
-    const releaseNotes = release
-        ? toggle(record.releaseNotes, DEFAULT_TITLES.releaseNotes, true, configMin)
-        : { enabled: false, title: DEFAULT_TITLES.releaseNotes };
+    // `details.body: false` opts out of the release-mode wrapper too; an
+    // explicit `releaseNotes` setting still wins.
+    const releaseNotes =
+        release && record.body === false && record.releaseNotes === undefined
+            ? { enabled: false, title: DEFAULT_TITLES.releaseNotes }
+            : release
+              ? toggle(record.releaseNotes, DEFAULT_TITLES.releaseNotes, true, configMin)
+              : { enabled: false, title: DEFAULT_TITLES.releaseNotes };
     return {
         enabled: true,
         lifecycle: record.lifecycle === 'before' ? 'before' : 'after',

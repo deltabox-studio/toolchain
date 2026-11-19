@@ -53,4 +53,8 @@ export interface ExistingEntry {
     bullets: string[];
     /** Nested description lines for each bullet (parallel to `bullets`). */
     bodies?: string[][];
+    /** Text rendered before `<!-- release:start -->`. */
+    intro?: string;
+    /** Text rendered after `<!-- release:end -->`. */
+    outro?: string;
 }

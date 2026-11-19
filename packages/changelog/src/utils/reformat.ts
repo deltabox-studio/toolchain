@@ -52,13 +52,23 @@ export function parseExistingChangelog(content: string): ExistingEntry[] {
     // is regenerated from the package manifests, not re-parsed as changelog items.
     let inPackageChanges = false;
     let collectingBody = false;
+    let phase: 'intro' | 'body' | 'outro' = 'intro';
+    const intro: string[] = [];
+    const outro: string[] = [];
     for (const line of content.split('\n')) {
         const heading = VERSION_SUMMARY.exec(line) ?? VERSION_HEADING.exec(line);
         if (heading) {
+            if (current) {
+                if (intro.some(entry => entry.trim())) current.intro = intro.join('\n').trim();
+                if (outro.some(entry => entry.trim())) current.outro = outro.join('\n').trim();
+            }
             current = { version: heading[1]!, bullets: [], bodies: [] };
             entries.push(current);
             inPackageChanges = false;
             collectingBody = false;
+            phase = 'intro';
+            intro.length = 0;
+            outro.length = 0;
             continue;
         }
         if (/^##\s+/.test(line)) {
@@ -70,7 +80,33 @@ export function parseExistingChangelog(content: string): ExistingEntry[] {
             continue;
         }
         if (!current) continue;
+        // Generated `<details>`/`<summary>` scaffolding (section, body or
+        // description wrappers) is re-rendered from its contents on every
+        // `--format-only` run; treating it as intro/outro prose would nest a
+        // new wrapper around it each time.
+        if (/^<\/?(?:details|summary)\b/i.test(line.trim())) continue;
+        if (line.includes('<!-- release:start -->')) {
+            phase = 'body';
+            continue;
+        }
+        if (line.includes('<!-- release:end -->')) {
+            phase = 'outro';
+            continue;
+        }
         if (line.includes('<!-- release:')) continue;
+        // A bullet or section starts the body of an old marker-less entry; the
+        // intro only spans the text between the heading and the first content.
+        if (/^[-*+]\s+/.test(line) || /^#{3,4}\s+/.test(line)) {
+            if (phase === 'intro') phase = 'body';
+        }
+        if (phase === 'intro') {
+            intro.push(line);
+            continue;
+        }
+        if (phase === 'outro') {
+            outro.push(line);
+            continue;
+        }
         if (/^###\s+Package changes\s*$/.test(line)) {
             inPackageChanges = true;
             collectingBody = false;
@@ -81,7 +117,16 @@ export function parseExistingChangelog(content: string): ExistingEntry[] {
             collectingBody = false;
             continue;
         }
+        // Scope headings (`#### Core`) are regenerated from the commits, so
+        // drop them instead of leaking them into the entry outro.
+        if (/^####\s+/.test(line)) continue;
         if (inPackageChanges) continue;
+        // Standalone prose in the body (eg. the `--outro` paragraph) is not a
+        // commit bullet; keep it instead of dropping it on the next reformat.
+        if (!line.startsWith('  ') && !/^[-*+]\s+/.test(line)) {
+            outro.push(line);
+            continue;
+        }
         if (/^[-*+]\s+/.test(line)) {
             current.bullets.push(line);
             current.bodies!.push([]);
@@ -95,6 +140,10 @@ export function parseExistingChangelog(content: string): ExistingEntry[] {
         if (collectingBody && line.startsWith('  ')) {
             current.bodies![current.bodies!.length - 1]!.push(line);
         }
+    }
+    if (current) {
+        if (intro.some(entry => entry.trim())) current.intro = intro.join('\n').trim();
+        if (outro.some(entry => entry.trim())) current.outro = outro.join('\n').trim();
     }
     return entries;
 }
@@ -112,10 +161,18 @@ function creditSuffix(text: string): string {
 function parseExistingBody(lines: string[]): string[][] {
     const paragraphs: string[][] = [];
     let current: string[] = [];
-    for (const line of lines) {
-        if (line.startsWith('  - ')) {
+    for (const raw of lines) {
+        // A generated `<details>` block is re-rendered from its contents; keeping
+        // the markup would nest a second wrapper on every `--format-only` run.
+        const line = raw
+            .replace(/<\/?details[^>]*>/gi, '')
+            .replace(/<\/?summary[^>]*>/gi, '')
+            .trimEnd();
+        if (/^<\/?(?:details|summary)\b/i.test(raw.trim())) continue;
+        if (!line.trim()) continue;
+        if (line.startsWith('  - ') || line.startsWith('- ')) {
             if (current.length > 0) paragraphs.push([current.join(' ')]);
-            current = [line.slice(4).trim()];
+            current = [line.replace(/^\s*-\s+/, '')];
         } else if (line.startsWith('    ')) {
             current.push(line.slice(4).trim());
         } else if (line.startsWith('  ')) {
@@ -177,7 +234,9 @@ function reformatEntry(
         renderGroups(groupItems(items, groups), details),
         date,
         withMarkers,
-        packageChanges
+        packageChanges,
+        entry.intro ?? '',
+        entry.outro ?? ''
     );
     return resolved.lifecycle === 'after' ? applyDetailsToEntry(rendered, resolved) : rendered;
 }
