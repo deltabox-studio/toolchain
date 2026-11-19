@@ -622,6 +622,9 @@ export function defaultWorkflows(
                                 // Stage only the files this pipeline owns, so a
                                 // stray working-tree change is never committed.
                                 'git add -- "*package.json" "*CHANGELOG.md"',
+                                // The `afterVersion` hook may update the scaffold
+                                // catalog in `.yarnrc.yml`.
+                                'if [ -f .yarnrc.yml ]; then git add .yarnrc.yml; fi',
                                 'git commit -m "chore: version packages ($(node -p "require(\'./package.json\').version"))"',
                                 `git push origin ${dev}`,
                             ].join('\n'),

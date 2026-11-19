@@ -3913,6 +3913,9 @@
                 "afterSync": {
                     "description": "Runs once after the sync tasks with the result summary."
                 },
+                "afterVersion": {
+                    "description": "Runs after `dbx changelog` writes the new versions and changelogs."
+                },
                 "onChange": {
                     "description": "Runs on every watch-triggered change."
                 }

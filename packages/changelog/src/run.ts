@@ -75,6 +75,7 @@ import {
     type ChangelogConfig,
     logger,
     resolveCommitlintEnabled,
+    type ToolchainHooks,
 } from '@deltabox/toolchain/shared';
 
 import type {
@@ -162,6 +163,8 @@ export interface RunChangelogOptions {
     enabled?: boolean;
     /** `ci.regenerate` / `ci.changelog.regenerate` (default true). */
     regenerate?: boolean;
+    /** Top-level `toolchain.hooks` (the `afterVersion` hook runs after a bump). */
+    hooks?: Pick<ToolchainHooks, 'afterVersion'>;
 }
 
 /**
@@ -173,7 +176,7 @@ function* changelogSteps(
     argv: string[] = process.argv.slice(2),
     changelog?: ChangelogConfig,
     runOptions: RunChangelogOptions = {}
-): Generator<void, void, void> {
+): Generator<void | Promise<void>, void, void> {
     // Let a caller paint its first spinner frame before the first blocking phase.
     yield;
     const options = parseArgsCli(argv);
@@ -219,6 +222,7 @@ function* changelogSteps(
 
     // Version override (e.g. a maintainer requested a different version). It
     // only rewrites package versions/changelog headings, so git is not needed.
+    const versioning = resolveVersioning(changelog);
     if (options.version) {
         const localCurrent = readRootVersion();
         const next = options.version.trim();
@@ -233,6 +237,14 @@ function* changelogSteps(
         }
         writeVersion(next);
         retagChangelogs(localCurrent, next);
+        const pending = versioning.enabled
+            ? runOptions.hooks?.afterVersion?.({
+                  cwd: repoRoot(),
+                  version: next,
+                  changelog,
+              })
+            : undefined;
+        if (pending) yield pending;
         logger.info(`Retagged versions ${localCurrent} -> ${next}.`);
         return;
     }
@@ -240,7 +252,6 @@ function* changelogSteps(
     // The bump starts from --base-version when provided (e.g. the latest npm
     // version), otherwise from the local package.json version.
     if (!isGitRepository()) throw new Error('dbx changelog: not a git repository.');
-    const versioning = resolveVersioning(changelog);
     const localCurrent = readRootVersion();
     let current = localCurrent;
     if (options.baseVersion) {
@@ -497,6 +508,14 @@ function* changelogSteps(
         },
         changelog
     );
+    const pendingHook = versioning.enabled
+        ? runOptions.hooks?.afterVersion?.({
+              cwd: repoRoot(),
+              version: next,
+              changelog,
+          })
+        : undefined;
+    if (pendingHook) yield pendingHook;
     yield;
     if (versioning.enabled) {
         logger.info(`Bumped ${current} -> ${next} (${type}) from ${records.length} commit(s).`);
@@ -539,7 +558,7 @@ export async function runChangelogAsync(
 ): Promise<void> {
     let first = true;
     for (const phase of changelogSteps(argv, changelog, runOptions)) {
-        void phase;
+        if (phase) await phase;
         await pause(first ? FIRST_SPINNER_FRAME_MS : 0);
         first = false;
     }

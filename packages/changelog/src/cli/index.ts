@@ -175,6 +175,7 @@ export function changelogCommands(): ToolchainCommand[] {
                         await runChangelogAsync(argv, resolveChangelogConfig(context.config), {
                             enabled: resolveToolchainEnabled(context.config).enabled,
                             regenerate: changelogRegenerateEnabled(context.config),
+                            hooks: context.config.hooks,
                         });
                     },
                     {

@@ -35,6 +35,10 @@ export const toolchainHooksSchema = z
             '(info: { cwd: string; config: ToolchainConfig; result: SyncSummary }) => Awaitable<void>',
             'Runs once after the sync tasks with the result summary.'
         ).optional(),
+        afterVersion: hookCallback(
+            '(info: { cwd: string; version: string; changelog?: ChangelogConfig }) => Awaitable<void>',
+            'Runs after `dbx changelog` writes the new versions and changelogs.'
+        ).optional(),
         onChange: hookCallback(
             '(info: { path?: string }) => Awaitable<void>',
             'Runs on every watch-triggered change.'

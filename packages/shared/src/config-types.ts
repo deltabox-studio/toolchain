@@ -1710,6 +1710,12 @@ export interface ToolchainHooks {
         config: ToolchainConfig;
         result: SyncSummary;
     }) => Awaitable<void>;
+    /** Runs after `dbx changelog` writes the new versions and changelogs. */
+    afterVersion?: (info: {
+        cwd: string;
+        version: string;
+        changelog?: ChangelogConfig;
+    }) => Awaitable<void>;
     /** Runs on every watch-triggered change. */
     onChange?: (info: { path?: string }) => Awaitable<void>;
 }

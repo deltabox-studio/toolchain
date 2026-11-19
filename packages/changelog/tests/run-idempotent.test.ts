@@ -77,6 +77,37 @@ describe('runChangelog idempotency', () => {
         expect(readChangelog(dir).toLowerCase()).toContain('first feature');
     });
 
+    it('runs the afterVersion hook after writing the versions', () => {
+        const versions: string[] = [];
+        runChangelog([], undefined, {
+            hooks: {
+                afterVersion: info => {
+                    versions.push(info.version);
+                    fs.writeFileSync(path.join(dir, 'after-version.txt'), info.version, 'utf8');
+                },
+            },
+        });
+
+        expect(versions).toEqual(['0.2.0']);
+        expect(fs.readFileSync(path.join(dir, 'after-version.txt'), 'utf8')).toBe('0.2.0');
+        expect(readVersion(dir)).toBe('0.2.0');
+    });
+
+    it('awaits an async afterVersion hook through the async runner', async () => {
+        let resolved = false;
+        await runChangelogAsync([], undefined, {
+            hooks: {
+                afterVersion: async () => {
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                    resolved = true;
+                },
+            },
+        });
+
+        expect(resolved).toBe(true);
+        expect(readVersion(dir)).toBe('0.2.0');
+    });
+
     it('treats a second run with no new commits as a no-op', () => {
         runChangelog([]);
         expect(readVersion(dir)).toBe('0.2.0');
