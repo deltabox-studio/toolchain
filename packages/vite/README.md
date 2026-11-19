@@ -9,7 +9,7 @@ A superset of [Vite+](https://viteplus.dev) with:
 - CI/changelog automation
 - Providers
 - Catalogs
-- a VS Code extension 
+- a VS Code extension
 
 Running from inside the Vite / Vite+ pipeline.
 
