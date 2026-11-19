@@ -240,6 +240,17 @@ export default defineConfig({
                                             'else',
                                             '  echo "skip=false" >> "$GITHUB_OUTPUT"',
                                             'fi',
+                                            // Publishing is gated by the registry, not the
+                                            // tag: a run that failed after creating the
+                                            // GitHub Release can be re-dispatched and
+                                            // still publish the missing version.
+                                            'name="$(node -p "require(\'./package.json\').name")"',
+                                            'if npm view "$name@$version" version >/dev/null 2>&1; then',
+                                            '  echo "$name@$version is already published."',
+                                            '  echo "npmPublished=true" >> "$GITHUB_OUTPUT"',
+                                            'else',
+                                            '  echo "npmPublished=false" >> "$GITHUB_OUTPUT"',
+                                            'fi',
                                         ].join('\n'),
                                     },
                                     {
@@ -284,7 +295,7 @@ export default defineConfig({
                                         // bundles npm 10 — without the upgrade the publish
                                         // silently falls back to token auth and fails.
                                         name: 'Upgrade npm for trusted publishing',
-                                        if: "steps.release.outputs.skip == 'false'",
+                                        if: "steps.release.outputs.skip == 'false' || steps.release.outputs.npmPublished == 'false'",
                                         run: 'npm install -g npm@^11.15.1',
                                     },
                                     {
@@ -296,15 +307,26 @@ export default defineConfig({
                                         // the GitHub OIDC token for a short-lived registry
                                         // token and adds provenance automatically. `yarn
                                         // pack` resolves `catalog:`/`workspace:` first.
+                                        //
+                                        // A prerelease must be published under an npm
+                                        // dist-tag (`3.0.0-beta.1` -> `beta`), otherwise
+                                        // npm refuses it; stable releases keep `latest`.
                                         name: 'Publish to npm (fallback: staged)',
-                                        if: "steps.release.outputs.skip == 'false'",
+                                        if: "steps.release.outputs.npmPublished == 'false'",
                                         run: [
+                                            'version="${{ steps.release.outputs.version }}"',
+                                            'if [[ "$version" == *-* ]]; then',
+                                            '  npm_tag="${version#*-}"',
+                                            '  npm_tag="${npm_tag%%[.+]*}"',
+                                            'else',
+                                            '  npm_tag="latest"',
+                                            'fi',
                                             '{{packageManager}} pack --out toolchain.tgz',
-                                            'if npm publish toolchain.tgz --access public; then',
-                                            '  echo "Published to npm."',
+                                            'if npm publish toolchain.tgz --access public --tag "$npm_tag"; then',
+                                            '  echo "Published to npm (tag: $npm_tag)."',
                                             'else',
                                             '  echo "::warning::Direct publish failed; falling back to a staged publish."',
-                                            '  npm stage publish toolchain.tgz --access public',
+                                            '  npm stage publish toolchain.tgz --access public --tag "$npm_tag"',
                                             'fi',
                                         ].join('\n'),
                                     },
@@ -314,7 +336,7 @@ export default defineConfig({
                                         // Private packages (and already-published
                                         // versions) are skipped by the script.
                                         name: 'Publish stale workspace packages',
-                                        if: "steps.release.outputs.skip == 'false'",
+                                        if: "steps.release.outputs.skip == 'false' || steps.release.outputs.npmPublished == 'false'",
                                         run: 'node scripts/publish-workspaces.mjs',
                                     },
                                 ],

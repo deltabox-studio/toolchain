@@ -53,6 +53,13 @@ jobs:
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
+          name="$(node -p "require('./package.json').name")"
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "$name@$version is already published."
+            echo "npmPublished=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "npmPublished=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Package the VS Code extension
         if: steps.release.outputs.skip == 'false'
         run: |-
@@ -78,18 +85,25 @@ jobs:
             --notes-file RELEASE_NOTES.md \
             "packages/vscode/deltabox-toolchain.vsix"
       - name: Upgrade npm for trusted publishing
-        if: steps.release.outputs.skip == 'false'
+        if: steps.release.outputs.skip == 'false' || steps.release.outputs.npmPublished == 'false'
         run: npm install -g npm@^11.15.1
       - name: "Publish to npm (fallback: staged)"
-        if: steps.release.outputs.skip == 'false'
+        if: steps.release.outputs.npmPublished == 'false'
         run: |-
+          version="${{ steps.release.outputs.version }}"
+          if [[ "$version" == *-* ]]; then
+            npm_tag="${version#*-}"
+            npm_tag="${npm_tag%%[.+]*}"
+          else
+            npm_tag="latest"
+          fi
           yarn pack --out toolchain.tgz
-          if npm publish toolchain.tgz --access public; then
-            echo "Published to npm."
+          if npm publish toolchain.tgz --access public --tag "$npm_tag"; then
+            echo "Published to npm (tag: $npm_tag)."
           else
             echo "::warning::Direct publish failed; falling back to a staged publish."
-            npm stage publish toolchain.tgz --access public
+            npm stage publish toolchain.tgz --access public --tag "$npm_tag"
           fi
       - name: Publish stale workspace packages
-        if: steps.release.outputs.skip == 'false'
+        if: steps.release.outputs.skip == 'false' || steps.release.outputs.npmPublished == 'false'
         run: node scripts/publish-workspaces.mjs
