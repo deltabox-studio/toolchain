@@ -1,5 +1,7 @@
 /** The `dbx mcp:*` commands. */
 
+import path from 'node:path';
+
 import { logger, type ToolchainCommand, withSpinner } from '@deltabox/toolchain/shared';
 
 import mcpPkg from '../../package.json' with { type: 'json' };
@@ -9,7 +11,13 @@ import { defaultMcpTools } from '../tools.js';
 
 /** The MCP server for `dbx mcp:serve`, advertising the running package version. */
 export function createServeServer(cwd: string): ReturnType<typeof createMcpServer> {
-    return createMcpServer({ cwd, tools: defaultMcpTools(), version: mcpPkg.version });
+    // A relative `--cwd` is relative to the process, but tool handlers also
+    // spawn with `context.cwd`; an absolute root keeps both consistent.
+    return createMcpServer({
+        cwd: path.resolve(cwd),
+        tools: defaultMcpTools(),
+        version: mcpPkg.version,
+    });
 }
 
 /** `dbx mcp:serve` — run the stdio MCP server for the current project. */

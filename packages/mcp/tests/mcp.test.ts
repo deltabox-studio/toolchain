@@ -5,9 +5,11 @@ import { Readable, Writable } from 'node:stream';
 
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 
+import { readJsoncFile } from '@deltabox/toolchain/shared';
+
 import mcpPkg from '../package.json' with { type: 'json' };
 import { createServeServer } from '../src/cli/index.js';
-import { installMcp, listMcpProviders } from '../src/install.js';
+import { installMcp, listMcpProviders, vscodeUserDir } from '../src/install.js';
 import { createMcpServer, MCP_PROTOCOL_VERSION, serveStdio } from '../src/protocol.js';
 import {
     ALLOWED_COMMANDS,
@@ -32,6 +34,20 @@ afterEach(() => {
 function server(cwd = makeTmp()) {
     return createMcpServer({ cwd, tools: defaultMcpTools(), version: '1.2.3' });
 }
+
+describe('vscodeUserDir', () => {
+    it('uses the platform-specific VS Code user directory', () => {
+        expect(vscodeUserDir('win32', 'C:\\Users\\me', 'C:\\Users\\me\\AppData\\Roaming')).toBe(
+            path.join('C:\\Users\\me\\AppData\\Roaming', 'Code', 'User')
+        );
+        expect(vscodeUserDir('darwin', '/Users/me')).toBe(
+            path.join('/Users/me', 'Library', 'Application Support', 'Code', 'User')
+        );
+        expect(vscodeUserDir('linux', '/home/me')).toBe(
+            path.join('/home/me', '.config', 'Code', 'User')
+        );
+    });
+});
 
 describe('dbx subprocess resolution', () => {
     it('walks up to a workspace root .bin shim', () => {
@@ -265,10 +281,12 @@ describe('MCP installers', () => {
 
         installMcp({ provider: 'vscode', cwd });
 
-        const config = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as {
+        const text = fs.readFileSync(configPath, 'utf-8');
+        expect(text).toContain("// Keep the user's existing servers.");
+        const config = readJsoncFile<{
             servers: Record<string, { command?: string }>;
             inputs: unknown[];
-        };
+        }>(configPath)!;
         expect(Object.keys(config.servers).sort()).toEqual(['deltabox', 'other']);
         expect(config.servers.other).toMatchObject({ command: 'other-server' });
         expect(config.inputs).toEqual([]);

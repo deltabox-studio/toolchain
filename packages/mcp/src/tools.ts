@@ -237,8 +237,11 @@ export function defaultMcpTools(): McpTool[] {
                 const only = stringArrayArg(args, 'only');
                 if (only) argv.push('--only', only.join(','));
                 const cwd = stringArg(args, 'cwd');
-                if (cwd) argv.push('--cwd', cwd);
-                return resultOf(await runDbx(argv, cwd ?? context.cwd));
+                // Resolve once: passing a relative value as both the spawn cwd
+                // and `--cwd` applies it twice (eg. `sub/sub`).
+                const target = cwd ? path.resolve(context.cwd, cwd) : context.cwd;
+                if (cwd) argv.push('--cwd', target);
+                return resultOf(await runDbx(argv, context.cwd));
             },
         },
         {
@@ -248,8 +251,9 @@ export function defaultMcpTools(): McpTool[] {
                 cwd: { type: 'string', description: 'Root to scan.' },
             }),
             async handler(args, context) {
-                const cwd = stringArg(args, 'cwd') ?? context.cwd;
-                return resultOf(await runDbx(['projects', '--json', '--cwd', cwd], context.cwd));
+                const cwd = stringArg(args, 'cwd');
+                const target = cwd ? path.resolve(context.cwd, cwd) : context.cwd;
+                return resultOf(await runDbx(['projects', '--json', '--cwd', target], context.cwd));
             },
         },
         {

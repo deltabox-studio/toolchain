@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { readJsoncFile } from '@deltabox/toolchain/shared';
+import { insertMissingJsonc, readJsoncFile } from '@deltabox/toolchain/shared';
 
 /** A supported install scope. */
 export type McpScope = 'project' | 'global';
@@ -43,12 +43,18 @@ function projectOrGlobal(scope: McpScope, cwd: string, rel: string, global: stri
 }
 
 /** The VS Code user profile directory (platform-aware). */
-function vscodeUserDir(): string {
-    if (process.platform === 'win32') {
-        const appData = process.env.APPDATA ?? path.join(home(), 'AppData', 'Roaming');
-        return path.join(appData, 'Code', 'User');
+export function vscodeUserDir(
+    platform: NodeJS.Platform = process.platform,
+    homeDir: string = home(),
+    appData: string | undefined = process.env.APPDATA
+): string {
+    if (platform === 'win32') {
+        return path.join(appData ?? path.join(homeDir, 'AppData', 'Roaming'), 'Code', 'User');
     }
-    return path.join(home(), '.config', 'Code', 'User');
+    if (platform === 'darwin') {
+        return path.join(homeDir, 'Library', 'Application Support', 'Code', 'User');
+    }
+    return path.join(homeDir, '.config', 'Code', 'User');
 }
 
 /** The builtin provider catalog. */
@@ -190,6 +196,13 @@ function writeFile(file: string, content: string): void {
     fs.writeFileSync(file, content, 'utf-8');
 }
 
+/** The object that holds the provider entries in each JSON dialect. */
+function containerKey(format: McpConfigFormat): string {
+    if (format === 'vscode') return 'servers';
+    if (format === 'opencode') return 'mcp';
+    return 'mcpServers';
+}
+
 /** The JSON entry for a provider. */
 function withEntry(
     current: Record<string, unknown>,
@@ -228,16 +241,57 @@ function withEntry(
     }
 }
 
-/** Append the Codex TOML block when absent (idempotent). */
+/**
+ * Write a JSON provider config while preserving a user's comments when only a
+ * missing entry is added. An unchanged entry never rewrites the file, and an
+ * entry that must change falls back to a full (formatted) rewrite.
+ */
+function writeJsonConfig(
+    file: string,
+    format: McpConfigFormat,
+    command: string,
+    args: string[]
+): void {
+    const current = readJson(file);
+    const next = withEntry(current, format, command, args);
+    if (fs.existsSync(file) && JSON.stringify(next) === JSON.stringify(current)) return;
+
+    if (fs.existsSync(file)) {
+        const original = fs.readFileSync(file, 'utf-8');
+        const key = containerKey(format);
+        const entries = (current[key] as Record<string, unknown> | undefined) ?? {};
+        if (!(MCP_ENTRY_NAME in entries)) {
+            const entry = (next[key] as Record<string, unknown>)[MCP_ENTRY_NAME];
+            const edited = insertMissingJsonc(original, current, {
+                [key]: { [MCP_ENTRY_NAME]: entry },
+            });
+            if (edited !== undefined) {
+                writeFile(file, edited);
+                return;
+            }
+        }
+    }
+    writeFile(file, `${JSON.stringify(next, null, 4)}\n`);
+}
+
+/** Write the Codex TOML block, updating an existing entry in place. */
 function codexToml(current: string, command: string, args: string[]): string {
-    if (/^\[mcp_servers\.deltabox\]/m.test(current)) return current;
     const block = [
         '[mcp_servers.deltabox]',
         `command = ${JSON.stringify(command)}`,
         `args = [${args.map(arg => JSON.stringify(arg)).join(', ')}]`,
-        '',
-    ].join('\n');
-    return current.trim() ? `${current.replace(/\s*$/, '')}\n\n${block}` : block;
+    ];
+    const lines = current.split('\n');
+    const start = lines.findIndex(line => line.trim() === '[mcp_servers.deltabox]');
+    if (start < 0) {
+        const text = block.join('\n');
+        return current.trim() ? `${current.replace(/\s*$/, '')}\n\n${text}\n` : `${text}\n`;
+    }
+    let end = start + 1;
+    while (end < lines.length && !/^\s*\[/.test(lines[end]!)) end += 1;
+    const after = lines.slice(end);
+    if (after.length > 0 && after[0]!.trim() !== '') after.unshift('');
+    return [...lines.slice(0, start), ...block, ...after].join('\n');
 }
 
 /** The skill body installed for a provider. */
@@ -297,10 +351,7 @@ export function installMcp(options: InstallMcpOptions): InstallMcpResult {
         const current = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf-8') : '';
         writeFile(configPath, codexToml(current, command, args));
     } else {
-        writeFile(
-            configPath,
-            `${JSON.stringify(withEntry(readJson(configPath), provider.format, command, args), null, 4)}\n`
-        );
+        writeJsonConfig(configPath, provider.format, command, args);
     }
 
     if (options.skills !== false) {
