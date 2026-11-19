@@ -25,11 +25,11 @@ import { renderChangelogEntry } from './version.js';
 
 /** A version heading: `## 1.2.3`, `## [1.2.3]`, `## v1.2.3`, prereleases, dates. */
 const VERSION_HEADING =
-    /^##\s+\[?v?(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)\]?\s*(?:\([^)]*\))?\s*(?:-\s+.*)?\s*$/;
+    /^##\s+\[?v?(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)\]?\s*(?:\(([^)]*)\))?\s*(?:-\s+.*)?\s*$/;
 
 /** A details-body version summary: `<summary><h2>1.2.3 (January 2026)</h2></summary>`. */
 const VERSION_SUMMARY =
-    /^<summary><h2>\[?v?(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)\]?\s*(?:\([^)]*\))?\s*(?:-\s+.*)?<\/h2><\/summary>$/;
+    /^<summary><h2>\[?v?(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)\]?\s*(?:\(([^)]*)\))?\s*(?:-\s+.*)?<\/h2><\/summary>$/;
 
 /** Whether the changelog has a `## ` section that is not a version heading. */
 function hasUnsupportedHeading(content: string): boolean {
@@ -62,7 +62,12 @@ export function parseExistingChangelog(content: string): ExistingEntry[] {
                 if (intro.some(entry => entry.trim())) current.intro = intro.join('\n').trim();
                 if (outro.some(entry => entry.trim())) current.outro = outro.join('\n').trim();
             }
-            current = { version: heading[1]!, bullets: [], bodies: [] };
+            current = {
+                version: heading[1]!,
+                bullets: [],
+                bodies: [],
+                ...(heading[2]?.trim() ? { date: heading[2].trim() } : {}),
+            };
             entries.push(current);
             inPackageChanges = false;
             collectingBody = false;
@@ -229,7 +234,7 @@ function reformatEntry(
         items.push({ parsed, breaking, text, bodyParagraphs });
     }
     const date = deriveVersionDate(entry.version, entry.bullets);
-    const rendered = renderChangelogEntry(
+    let rendered = renderChangelogEntry(
         entry.version,
         renderGroups(groupItems(items, groups), details),
         date,
@@ -238,6 +243,12 @@ function reformatEntry(
         entry.intro ?? '',
         entry.outro ?? ''
     );
+    // Version dates are derived from git tags/commits; when that fails (eg. an
+    // empty range or a shallow clone), keep the date that was already in the
+    // file instead of dropping it on reformat.
+    if (!date && entry.date) {
+        rendered = rendered.replace(/^(##\s+\S+)/, `$1 (${entry.date})`);
+    }
     return resolved.lifecycle === 'after' ? applyDetailsToEntry(rendered, resolved) : rendered;
 }
 

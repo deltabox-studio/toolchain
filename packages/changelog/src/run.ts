@@ -330,7 +330,24 @@ export function runChangelog(
         records = records.filter(record => !isCommitReleased(record.hash, released));
     }
     if (records.length === 0) {
-        logger.info('No new commits since the last release; nothing to do.');
+        if (reformatAll) {
+            // `--processing-method all` with an empty range is the supported way
+            // to apply the current formatting/details to every existing entry
+            // without bumping a version or prepending a new entry.
+            logger.info(
+                'No new commits since the last release; reformatting the existing changelogs.'
+            );
+            formatExistingChangelogs(
+                options.dryRun,
+                options.packageChanges,
+                groups,
+                breaking,
+                detailsOf(changelog),
+                options.release
+            );
+        } else {
+            logger.info('No new commits since the last release; nothing to do.');
+        }
         return;
     }
     const type = deriveCustomBump(records, rootBumpRules, rootOverBump, {

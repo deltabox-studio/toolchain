@@ -74,6 +74,22 @@ describe('runChangelog idempotency', () => {
         expect(second).toBe(first);
     });
 
+    it('reformats without a new entry when `all` has an empty range', () => {
+        fs.writeFileSync(
+            path.join(dir, 'CHANGELOG.md'),
+            '# Changelog\n\n## 0.2.0 (November 2026)\n\n### Features\n\n- First feature\n'
+        );
+        runChangelog(['--processing-method', 'all', '--range', 'HEAD..HEAD']);
+
+        expect(readVersion(dir)).toBe('0.1.0');
+        const changelog = readChangelog(dir);
+        expect(changelog.match(/^## /gm)).toHaveLength(1);
+        expect(changelog).toContain('## 0.2.0 (November 2026)');
+        // The current details formatting is applied to the existing entry.
+        expect(changelog).toContain('<details>');
+        expect(changelog).toContain('<summary>');
+    });
+
     it('only scans commits after the last version commit', () => {
         runChangelog([]);
         git(dir, 'add', '-A');

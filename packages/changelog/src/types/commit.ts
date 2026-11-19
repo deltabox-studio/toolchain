@@ -57,4 +57,6 @@ export interface ExistingEntry {
     intro?: string;
     /** Text rendered after `<!-- release:end -->`. */
     outro?: string;
+    /** The literal `(Month Year)` heading suffix, kept when it cannot be re-derived. */
+    date?: string;
 }
