@@ -1,8 +1,495 @@
 # Changelog
 
-## 2.6.1 (November 2026)
+## 3.0.0-beta.0 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary><strong>BREAKING CHANGES</strong></summary>
+
+- Resolve the bug-hunt findings ([#f07f951](https://github.com/deltabox-studio/toolchain/commit/f07f951) by [T0chi](https://github.com/T0chi))
+- Stop managing standalone Oxc configs in Vite+ mode ([#781367f](https://github.com/deltabox-studio/toolchain/commit/781367f) by [T0chi](https://github.com/T0chi))
+- Adopt vite-plus only and per-package releases ([#faa6bcb](https://github.com/deltabox-studio/toolchain/commit/faa6bcb) by [T0chi](https://github.com/T0chi))
+
+#### Config
+- Add preserved JSON Schema and markdown docs engine APIs ([#6e3d36c](https://github.com/deltabox-studio/toolchain/commit/6e3d36c) by [T0chi](https://github.com/T0chi))
+- Emit valid schemas and guard generated config validity ([#5fb7667](https://github.com/deltabox-studio/toolchain/commit/5fb7667) by [T0chi](https://github.com/T0chi))
+- Rename the generated ambient env types to `dbx-env.d.ts` ([#078b316](https://github.com/deltabox-studio/toolchain/commit/078b316) by [T0chi](https://github.com/T0chi))
+- Align env parsing and file loading ([#7912425](https://github.com/deltabox-studio/toolchain/commit/7912425) by [T0chi](https://github.com/T0chi))
+- Correct schema conversion and generator output ([#10ff4b1](https://github.com/deltabox-studio/toolchain/commit/10ff4b1) by [T0chi](https://github.com/T0chi))
+- Add runtime config APIs and grouped `ConfigEngine` types ([#b69980e](https://github.com/deltabox-studio/toolchain/commit/b69980e) by [T0chi](https://github.com/T0chi))
+- Add `collect`, parser and config loader APIs ([#4a3b745](https://github.com/deltabox-studio/toolchain/commit/4a3b745) by [T0chi](https://github.com/T0chi))
+- Move file generators and complete `config:all` ([#24de58a](https://github.com/deltabox-studio/toolchain/commit/24de58a) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+- Relabel details summaries and default the release body ([#7ccfc86](https://github.com/deltabox-studio/toolchain/commit/7ccfc86) by [T0chi](https://github.com/T0chi))
+- Group package changes and batch ref reads ([#1a5e8a9](https://github.com/deltabox-studio/toolchain/commit/1a5e8a9) by [T0chi](https://github.com/T0chi))
+- Add collapsible `details` rendering ([#f7d1c6a](https://github.com/deltabox-studio/toolchain/commit/f7d1c6a) by [T0chi](https://github.com/T0chi))
+- Make releases idempotent and prerelease-aware ([#610138b](https://github.com/deltabox-studio/toolchain/commit/610138b) by [T0chi](https://github.com/T0chi))
+- Use `setup-vp` for GitLab and Azure CI ([#268b08b](https://github.com/deltabox-studio/toolchain/commit/268b08b) by [T0chi](https://github.com/T0chi))
+- Generate Vite+ CI with `voidzero-dev/setup-vp` ([#6dbf702](https://github.com/deltabox-studio/toolchain/commit/6dbf702) by [T0chi](https://github.com/T0chi))
+
+#### Cli
+- Finish spinners and conservative scaffold ranges ([#85ea426](https://github.com/deltabox-studio/toolchain/commit/85ea426) by [T0chi](https://github.com/T0chi))
+- Add spinners and Dependabot allow rules ([#fa9ba22](https://github.com/deltabox-studio/toolchain/commit/fa9ba22) by [T0chi](https://github.com/T0chi))
+- Validate conflicting flags and unmanaged sync checks ([#c919b10](https://github.com/deltabox-studio/toolchain/commit/c919b10) by [T0chi](https://github.com/T0chi))
+- Plugin-first config discovery, MCP commands and Vite+ passthroughs ([#20ce187](https://github.com/deltabox-studio/toolchain/commit/20ce187) by [T0chi](https://github.com/T0chi))
+- Add `--configless` managed-project `sync` and `watch` ([#d222742](https://github.com/deltabox-studio/toolchain/commit/d222742) by [T0chi](https://github.com/T0chi))
+
+#### Tsconfig
+- Support remote extends with opt-in flattening ([#44b5c8a](https://github.com/deltabox-studio/toolchain/commit/44b5c8a) by [T0chi](https://github.com/T0chi))
+- Add `strict` aliases and export-aware auto modes ([#fee5091](https://github.com/deltabox-studio/toolchain/commit/fee5091) by [T0chi](https://github.com/T0chi))
+- Serialize regex aliases for JSON transports ([#d7d8caf](https://github.com/deltabox-studio/toolchain/commit/d7d8caf) by [T0chi](https://github.com/T0chi))
+- Hoist include/exclude and respect custom file names ([#e926b8a](https://github.com/deltabox-studio/toolchain/commit/e926b8a) by [T0chi](https://github.com/T0chi))
+
+#### Docker
+- Correct PnP runtimes, nested ignores and Vite+ node versions ([#68eee6f](https://github.com/deltabox-studio/toolchain/commit/68eee6f) by [T0chi](https://github.com/T0chi))
+- Correct container builds and runtime setup ([#0567bcd](https://github.com/deltabox-studio/toolchain/commit/0567bcd) by [T0chi](https://github.com/T0chi))
+- Use the Bun image and copy Yarn install sources ([#bcf0eec](https://github.com/deltabox-studio/toolchain/commit/bcf0eec) by [T0chi](https://github.com/T0chi))
+- Keep COPY sources and installs consistent ([#1ed6b4d](https://github.com/deltabox-studio/toolchain/commit/1ed6b4d) by [T0chi](https://github.com/T0chi))
+- Use neutral headers and Bun-aware copies ([#63b4822](https://github.com/deltabox-studio/toolchain/commit/63b4822) by [T0chi](https://github.com/T0chi))
+- Make Docker generation scaffolding-only ([#8094d92](https://github.com/deltabox-studio/toolchain/commit/8094d92) by [T0chi](https://github.com/T0chi))
+- Allow user-owned files and always add compose ([#51b9ccc](https://github.com/deltabox-studio/toolchain/commit/51b9ccc) by [T0chi](https://github.com/T0chi))
+
+#### Pack
+- Make `createTsdownConfig` options configurable ([#f1a13a7](https://github.com/deltabox-studio/toolchain/commit/f1a13a7) by [T0chi](https://github.com/T0chi))
+- Rename the `tsdown` workspace to `pack` ([#02719e5](https://github.com/deltabox-studio/toolchain/commit/02719e5) by [T0chi](https://github.com/T0chi))
+- Keep declaration imports bare and report path leaks ([#8c2e099](https://github.com/deltabox-studio/toolchain/commit/8c2e099) by [T0chi](https://github.com/T0chi))
+
+#### Project
+- Avoid inheriting the parent name for `--out` scaffolds ([#1513508](https://github.com/deltabox-studio/toolchain/commit/1513508) by [T0chi](https://github.com/T0chi))
+- Correct scaffold dependencies, sync identity and templates ([#a13dae5](https://github.com/deltabox-studio/toolchain/commit/a13dae5) by [T0chi](https://github.com/T0chi))
+- Place fmt/lint in `vite.config` and stop emitting standalone Oxc configs ([#6621669](https://github.com/deltabox-studio/toolchain/commit/6621669) by [T0chi](https://github.com/T0chi))
+- Scaffold the Vite plugin, Vite+ toolchain and publishable packages ([#c9d94fe](https://github.com/deltabox-studio/toolchain/commit/c9d94fe) by [T0chi](https://github.com/T0chi))
+
+#### Vscode
+- Prefer the project `dbx` by default ([#5ae1d94](https://github.com/deltabox-studio/toolchain/commit/5ae1d94) by [T0chi](https://github.com/T0chi))
+
+#### Core
+- Detect plugin projects and correct project typing ([#7780e0d](https://github.com/deltabox-studio/toolchain/commit/7780e0d) by [T0chi](https://github.com/T0chi))
+- Make managed-file formatting opt-in ([#2a7c709](https://github.com/deltabox-studio/toolchain/commit/2a7c709) by [T0chi](https://github.com/T0chi))
+- Format managed files after `dbx sync` ([#fb3d9be](https://github.com/deltabox-studio/toolchain/commit/fb3d9be) by [T0chi](https://github.com/T0chi))
+- Provision the detected formatter/linter dependencies ([#c5cff9f](https://github.com/deltabox-studio/toolchain/commit/c5cff9f) by [T0chi](https://github.com/T0chi))
+- Load plugin configs, manage configless projects and inherit parent plugins ([#9a5c049](https://github.com/deltabox-studio/toolchain/commit/9a5c049) by [T0chi](https://github.com/T0chi))
+- Strict opt-in config inheritance and configless management in `loader.ts` ([#cc38570](https://github.com/deltabox-studio/toolchain/commit/cc38570) by [T0chi](https://github.com/T0chi))
+
+#### Template
+- Report create failures and require `--online` ([#dcc5604](https://github.com/deltabox-studio/toolchain/commit/dcc5604) by [T0chi](https://github.com/T0chi))
+
+#### Vite
+- Rename the package to `vite-plugin-dbx` and default to plugin mode ([#3a2cdcb](https://github.com/deltabox-studio/toolchain/commit/3a2cdcb) by [T0chi](https://github.com/T0chi))
+- Only write a shim when the project declares its own `vite` section ([#fa7de36](https://github.com/deltabox-studio/toolchain/commit/fa7de36) by [T0chi](https://github.com/T0chi))
+
+#### Migrate
+- Migrate tooling to the Vite plugin and Vite+ Oxc setup ([#b2469a8](https://github.com/deltabox-studio/toolchain/commit/b2469a8) by [T0chi](https://github.com/T0chi))
+
+#### Shared
+- Add the dbx plugin contract and shared config updates ([#3790a5e](https://github.com/deltabox-studio/toolchain/commit/3790a5e) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>New features</summary>
+
+#### Ci
+- Add Dependabot security updates ([#467e3eb](https://github.com/deltabox-studio/toolchain/commit/467e3eb) by [T0chi](https://github.com/T0chi))
+
+#### Cli
+- Keep spinners readable and surface passthrough failures ([#747937b](https://github.com/deltabox-studio/toolchain/commit/747937b) by [T0chi](https://github.com/T0chi))
+- Add changelog intro/outro flags and respect `enabled` ([#7d74c71](https://github.com/deltabox-studio/toolchain/commit/7d74c71) by [T0chi](https://github.com/T0chi))
+- Add `dbx enable`/`disable` and `enabled` ([#67ea4c3](https://github.com/deltabox-studio/toolchain/commit/67ea4c3) by [T0chi](https://github.com/T0chi))
+- Add the `test:repo` integration harness runner ([#0317b26](https://github.com/deltabox-studio/toolchain/commit/0317b26) by [T0chi](https://github.com/T0chi))
+
+#### Config
+- Add static schema defaults ([#8e9ae1a](https://github.com/deltabox-studio/toolchain/commit/8e9ae1a) by [T0chi](https://github.com/T0chi))
+- Generate `toolchain.hooks` from function schemas ([#4f6ceeb](https://github.com/deltabox-studio/toolchain/commit/4f6ceeb) by [T0chi](https://github.com/T0chi))
+- Reuse changelog group and option schemas ([#cbd9b54](https://github.com/deltabox-studio/toolchain/commit/cbd9b54) by [T0chi](https://github.com/T0chi))
+- Add `enabled` and `regenerate` controls ([#7f5444a](https://github.com/deltabox-studio/toolchain/commit/7f5444a) by [T0chi](https://github.com/T0chi))
+- Update generated formatting and config generators ([#62897df](https://github.com/deltabox-studio/toolchain/commit/62897df) by [T0chi](https://github.com/T0chi))
+
+#### Vscode
+- Decorate managed files and reveal the active project ([#a6debec](https://github.com/deltabox-studio/toolchain/commit/a6debec) by [T0chi](https://github.com/T0chi))
+- Add scoped auto-sync, the action palette and the Actions view ([#c330378](https://github.com/deltabox-studio/toolchain/commit/c330378) by [T0chi](https://github.com/T0chi))
+- Prompt for Docker when scaffolding ([#3fdfac3](https://github.com/deltabox-studio/toolchain/commit/3fdfac3) by [T0chi](https://github.com/T0chi))
+- Add generic format/lint actions and formatting settings ([#c256de5](https://github.com/deltabox-studio/toolchain/commit/c256de5) by [T0chi](https://github.com/T0chi))
+- Support plugin-mode projects, MCP install and sync UX ([#bfb2588](https://github.com/deltabox-studio/toolchain/commit/bfb2588) by [T0chi](https://github.com/T0chi))
+- Sync notifications, `sync all`, migration target, `manageConfigless` ([#4147500](https://github.com/deltabox-studio/toolchain/commit/4147500) by [T0chi](https://github.com/T0chi))
+
+#### Shared
+- Add static schema defaults ([#3b810d3](https://github.com/deltabox-studio/toolchain/commit/3b810d3) by [T0chi](https://github.com/T0chi))
+- Add `loader` and `project.manageConfigless` config sections ([#1f5e06d](https://github.com/deltabox-studio/toolchain/commit/1f5e06d) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+- Add `minCommits` and nested `See more...` descriptions ([#9fa603b](https://github.com/deltabox-studio/toolchain/commit/9fa603b) by [T0chi](https://github.com/T0chi))
+- Batch GitHub metadata lookups ([#9e90e38](https://github.com/deltabox-studio/toolchain/commit/9e90e38) by [T0chi](https://github.com/T0chi))
+- Fix details formatting and add release mode ([#5fa519f](https://github.com/deltabox-studio/toolchain/commit/5fa519f) by [T0chi](https://github.com/T0chi))
+- Apply details after formatting and add body collapsibles ([#83dd7da](https://github.com/deltabox-studio/toolchain/commit/83dd7da) by [T0chi](https://github.com/T0chi))
+- Add scoped versioning options and changelog `intro`/`outro` ([#09cf5d9](https://github.com/deltabox-studio/toolchain/commit/09cf5d9) by [T0chi](https://github.com/T0chi))
+- Add opt-in `ci.dependabot` version updates ([#18670f7](https://github.com/deltabox-studio/toolchain/commit/18670f7) by [T0chi](https://github.com/T0chi))
+
+#### Template
+- Add opt-in containerization to scaffolds ([#51732a4](https://github.com/deltabox-studio/toolchain/commit/51732a4) by [T0chi](https://github.com/T0chi))
+- Expose the quality-of-life builtins ([#a7a0b3c](https://github.com/deltabox-studio/toolchain/commit/a7a0b3c) by [T0chi](https://github.com/T0chi))
+
+#### Core
+- Wire `@deltabox/toolchain-docker` into the umbrella ([#5322f8b](https://github.com/deltabox-studio/toolchain/commit/5322f8b) by [T0chi](https://github.com/T0chi))
+
+#### Docker
+- Add the `@deltabox/toolchain-docker` package ([#f08cd46](https://github.com/deltabox-studio/toolchain/commit/f08cd46) by [T0chi](https://github.com/T0chi))
+
+#### Project
+- Add quality-of-life template generators ([#85cdd6f](https://github.com/deltabox-studio/toolchain/commit/85cdd6f) by [T0chi](https://github.com/T0chi))
+
+#### Biome,changelog
+- Make the packages publishable and run on vite-plus ([#23c3f41](https://github.com/deltabox-studio/toolchain/commit/23c3f41) by [T0chi](https://github.com/T0chi))
+
+#### Pack
+- Provide the shared pack config and workspace aliases without a tsdown dependency ([#503d021](https://github.com/deltabox-studio/toolchain/commit/503d021) by [T0chi](https://github.com/T0chi))
+
+#### Mcp
+- Add the MCP server, installers and `dbx mcp:*` commands ([#0553843](https://github.com/deltabox-studio/toolchain/commit/0553843) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Changelog
+- Yield between phases so the spinner animates ([#3a82b92](https://github.com/deltabox-studio/toolchain/commit/3a82b92) by [T0chi](https://github.com/T0chi))
+- Reformat existing entries with an empty all range ([#c36f3b2](https://github.com/deltabox-studio/toolchain/commit/c36f3b2) by [T0chi](https://github.com/T0chi))
+- Preserve reformatted entries and release output ([#5f364e0](https://github.com/deltabox-studio/toolchain/commit/5f364e0) by [T0chi](https://github.com/T0chi))
+- Dedupe Azure setup steps in vendor pipelines ([#4752c89](https://github.com/deltabox-studio/toolchain/commit/4752c89) by [T0chi](https://github.com/T0chi))
+- Keep commit groups and package footers when reformatting ([#3bea7ab](https://github.com/deltabox-studio/toolchain/commit/3bea7ab) by [T0chi](https://github.com/T0chi))
+- Keep manual runs, bullets and release markers intact ([#8af8fc7](https://github.com/deltabox-studio/toolchain/commit/8af8fc7) by [T0chi](https://github.com/T0chi))
+- Retry `gh` API calls before falling back ([#def8ce6](https://github.com/deltabox-studio/toolchain/commit/def8ce6) by [T0chi](https://github.com/T0chi))
+- Stop retrying `gh` after a timeout ([#d7f5f0c](https://github.com/deltabox-studio/toolchain/commit/d7f5f0c) by [T0chi](https://github.com/T0chi))
+- Make release runs idempotent and catalog-aware ([#5bc74af](https://github.com/deltabox-studio/toolchain/commit/5bc74af) by [T0chi](https://github.com/T0chi))
+
+#### Config
+- Escape generated JSDoc comments, closes [#41](https://github.com/deltabox-studio/toolchain/issues/41) ([#220d228](https://github.com/deltabox-studio/toolchain/commit/220d228) by [T0chi](https://github.com/T0chi)) (fixes [#41](https://github.com/deltabox-studio/toolchain/issues/41))
+- Harden schema validation and generated output ([#64efa45](https://github.com/deltabox-studio/toolchain/commit/64efa45) by [T0chi](https://github.com/T0chi))
+- Report the written type file extension ([#cf56517](https://github.com/deltabox-studio/toolchain/commit/cf56517) by [T0chi](https://github.com/T0chi))
+- Keep the root package description in sync with the toolchain config ([#cc0438d](https://github.com/deltabox-studio/toolchain/commit/cc0438d) by [T0chi](https://github.com/T0chi))
+
+#### Core
+- Resolve config from source in repo-local runs ([#4022d37](https://github.com/deltabox-studio/toolchain/commit/4022d37) by [T0chi](https://github.com/T0chi))
+- Correct sync checks, manifest paths and watch globs ([#592dbb0](https://github.com/deltabox-studio/toolchain/commit/592dbb0) by [T0chi](https://github.com/T0chi))
+- Support brace and class globs in project filters ([#c16f9ab](https://github.com/deltabox-studio/toolchain/commit/c16f9ab) by [T0chi](https://github.com/T0chi))
+- Scope managed formatting and keep checks read-only ([#f5adccb](https://github.com/deltabox-studio/toolchain/commit/f5adccb) by [T0chi](https://github.com/T0chi))
+- Emit one root `editor.formatOnSave` and support dotted vscode exclusions ([#ef79025](https://github.com/deltabox-studio/toolchain/commit/ef79025) by [T0chi](https://github.com/T0chi))
+
+#### Vscode
+- Repair the action palette and multi-root sync ([#0556f0a](https://github.com/deltabox-studio/toolchain/commit/0556f0a) by [T0chi](https://github.com/T0chi))
+- Validate manifest metadata ([#9e742e8](https://github.com/deltabox-studio/toolchain/commit/9e742e8) by [T0chi](https://github.com/T0chi))
+- Quote shim paths in the terminal command ([#859d08d](https://github.com/deltabox-studio/toolchain/commit/859d08d) by [T0chi](https://github.com/T0chi))
+- Keep watchers when an input resolve fails ([#e11adc5](https://github.com/deltabox-studio/toolchain/commit/e11adc5) by [T0chi](https://github.com/T0chi))
+- Remove config actions that have no CLI command ([#f75ebd0](https://github.com/deltabox-studio/toolchain/commit/f75ebd0) by [T0chi](https://github.com/T0chi))
+- Absorb a pending debounce on manual sync ([#74cde55](https://github.com/deltabox-studio/toolchain/commit/74cde55) by [T0chi](https://github.com/T0chi))
+- Discover hoisted and multi-root project `dbx` ([#4a017b0](https://github.com/deltabox-studio/toolchain/commit/4a017b0) by [T0chi](https://github.com/T0chi))
+
+#### Template
+- Validate scaffolds and forward source metadata ([#7953add](https://github.com/deltabox-studio/toolchain/commit/7953add) by [T0chi](https://github.com/T0chi))
+- Resolve registry sources from the project root ([#be3c94a](https://github.com/deltabox-studio/toolchain/commit/be3c94a) by [T0chi](https://github.com/T0chi))
+- Keep machine output clean and honour registry settings ([#eda93e1](https://github.com/deltabox-studio/toolchain/commit/eda93e1) by [T0chi](https://github.com/T0chi))
+- Honour ignore globs and preserve binary assets ([#c2fd467](https://github.com/deltabox-studio/toolchain/commit/c2fd467) by [T0chi](https://github.com/T0chi))
+
+#### Project
+- Harden scaffolds and make Docker plans template-aware ([#e937042](https://github.com/deltabox-studio/toolchain/commit/e937042) by [T0chi](https://github.com/T0chi))
+- Keep plugin projects in the rewritten graph ([#9f81f8d](https://github.com/deltabox-studio/toolchain/commit/9f81f8d) by [T0chi](https://github.com/T0chi))
+
+#### Tsconfig
+- Reconcile overrides before generation and harden remote extends ([#0fa2caa](https://github.com/deltabox-studio/toolchain/commit/0fa2caa) by [T0chi](https://github.com/T0chi))
+- Support directory and self project references ([#98018b6](https://github.com/deltabox-studio/toolchain/commit/98018b6) by [T0chi](https://github.com/T0chi))
+- Resolve nested root files and honour them in --json ([#d1ce26d](https://github.com/deltabox-studio/toolchain/commit/d1ce26d) by [T0chi](https://github.com/T0chi))
+- Normalize auto-wired reference paths ([#2a0ce95](https://github.com/deltabox-studio/toolchain/commit/2a0ce95) by [T0chi](https://github.com/T0chi))
+- Sort generated paths consistently ([#053d331](https://github.com/deltabox-studio/toolchain/commit/053d331) by [T0chi](https://github.com/T0chi))
+
+#### Mcp
+- Preserve JSONC configs and resolve relative roots ([#46ad6cf](https://github.com/deltabox-studio/toolchain/commit/46ad6cf) by [T0chi](https://github.com/T0chi))
+- Preserve JSONC configs, tool flags and stdio ([#446249a](https://github.com/deltabox-studio/toolchain/commit/446249a) by [T0chi](https://github.com/T0chi))
+- Use the supported tsconfig print flag ([#473738c](https://github.com/deltabox-studio/toolchain/commit/473738c) by [T0chi](https://github.com/T0chi))
+- Advertise the real version and load installed skills ([#1827bc2](https://github.com/deltabox-studio/toolchain/commit/1827bc2) by [T0chi](https://github.com/T0chi))
+
+#### Shared
+- Harden YAML, JSONC and logging helpers ([#ecc793a](https://github.com/deltabox-studio/toolchain/commit/ecc793a) by [T0chi](https://github.com/T0chi))
+- Quote unsafe YAML scalars in the emitter ([#b8c87cf](https://github.com/deltabox-studio/toolchain/commit/b8c87cf) by [T0chi](https://github.com/T0chi))
+- Match brace and class globs and anchor gitignore paths ([#0763205](https://github.com/deltabox-studio/toolchain/commit/0763205) by [T0chi](https://github.com/T0chi))
+- Declare `type-fest` as a dependency ([#7a9e71b](https://github.com/deltabox-studio/toolchain/commit/7a9e71b) by [T0chi](https://github.com/T0chi))
+- Tolerate UTF-8 BOM across JSON readers ([#a021da7](https://github.com/deltabox-studio/toolchain/commit/a021da7) by [T0chi](https://github.com/T0chi))
+
+#### Cli
+- Suppress the update notice for `-V` ([#162b49c](https://github.com/deltabox-studio/toolchain/commit/162b49c) by [T0chi](https://github.com/T0chi))
+- Suppress the update notice for `mcp:serve` ([#0d0e870](https://github.com/deltabox-studio/toolchain/commit/0d0e870) by [T0chi](https://github.com/T0chi))
+- Reject `--recursive --watch` ([#dccc511](https://github.com/deltabox-studio/toolchain/commit/dccc511) by [T0chi](https://github.com/T0chi))
+- Harden flag parsing and document library-only config commands ([#aaaa11a](https://github.com/deltabox-studio/toolchain/commit/aaaa11a) by [T0chi](https://github.com/T0chi))
+- Validate `projects --max-depth` and `sync --json` errors ([#78bb9eb](https://github.com/deltabox-studio/toolchain/commit/78bb9eb) by [T0chi](https://github.com/T0chi))
+
+#### Pack
+- Keep test runtimes and null export blockers ([#777e43e](https://github.com/deltabox-studio/toolchain/commit/777e43e) by [T0chi](https://github.com/T0chi))
+
+#### Migrate
+- Merge into the existing vite config file ([#9d0be5f](https://github.com/deltabox-studio/toolchain/commit/9d0be5f) by [T0chi](https://github.com/T0chi))
+- Resolve inherited config in `--check` ([#1311114](https://github.com/deltabox-studio/toolchain/commit/1311114) by [T0chi](https://github.com/T0chi))
+- Handle BOM input and clean `--check` ([#2860f9b](https://github.com/deltabox-studio/toolchain/commit/2860f9b) by [T0chi](https://github.com/T0chi))
+
+#### Vite
+- Correct shim config resolution and plugin syncing ([#21b0312](https://github.com/deltabox-studio/toolchain/commit/21b0312) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
+- Move public typings into src/types barrels ([#f727890](https://github.com/deltabox-studio/toolchain/commit/f727890) by [T0chi](https://github.com/T0chi))
+- Split package typings into `src/types` barrels ([#45e5032](https://github.com/deltabox-studio/toolchain/commit/45e5032) by [T0chi](https://github.com/T0chi))
+
+#### Config
+- Share the runtime loader with core ([#e84e4e6](https://github.com/deltabox-studio/toolchain/commit/e84e4e6) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+- Regenerate `llms-full.txt` ([#a515500](https://github.com/deltabox-studio/toolchain/commit/a515500) by [T0chi](https://github.com/T0chi))
+- Regenerate the llms bundle ([#a7afae9](https://github.com/deltabox-studio/toolchain/commit/a7afae9) by [T0chi](https://github.com/T0chi))
+- Regenerate the llms output ([#a0a4e6f](https://github.com/deltabox-studio/toolchain/commit/a0a4e6f) by [T0chi](https://github.com/T0chi))
+- Add the v2 to v3 guide and refresh behavior docs ([#c6efc52](https://github.com/deltabox-studio/toolchain/commit/c6efc52) by [T0chi](https://github.com/T0chi))
+- Describe Docker as scaffolding-only ([#8e5c46e](https://github.com/deltabox-studio/toolchain/commit/8e5c46e) by [T0chi](https://github.com/T0chi))
+- Document the opt-in Dependabot config ([#7028669](https://github.com/deltabox-studio/toolchain/commit/7028669) by [T0chi](https://github.com/T0chi))
+- Document Docker support ([#e618041](https://github.com/deltabox-studio/toolchain/commit/e618041) by [T0chi](https://github.com/T0chi))
+- Document the quality-of-life templates ([#a9b62b2](https://github.com/deltabox-studio/toolchain/commit/a9b62b2) by [T0chi](https://github.com/T0chi))
+- Document the GitLab and Azure `setup-vp` setup ([#d385e7d](https://github.com/deltabox-studio/toolchain/commit/d385e7d) by [T0chi](https://github.com/T0chi))
+- Document the Vite+ CI detection and tokens ([#64c394e](https://github.com/deltabox-studio/toolchain/commit/64c394e) by [T0chi](https://github.com/T0chi))
+- Add managed-file examples and refresh generated docs ([#e9dba38](https://github.com/deltabox-studio/toolchain/commit/e9dba38) by [T0chi](https://github.com/T0chi))
+- Describe the plugin-first Vite+ superset and regenerate docs ([#01008f6](https://github.com/deltabox-studio/toolchain/commit/01008f6) by [T0chi](https://github.com/T0chi))
+- Document the config loader, strict opt-in inheritance and configless projects ([#2eff4c8](https://github.com/deltabox-studio/toolchain/commit/2eff4c8) by [T0chi](https://github.com/T0chi))
+
+#### Ci
+- Document security updates in the v3 migration guide ([#1aa7091](https://github.com/deltabox-studio/toolchain/commit/1aa7091) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+- Apply details formatting to historical entries ([#0bfbd98](https://github.com/deltabox-studio/toolchain/commit/0bfbd98) by [T0chi](https://github.com/T0chi))
+- Document package changes on `--format-only` ([#a8b6cdb](https://github.com/deltabox-studio/toolchain/commit/a8b6cdb) by [T0chi](https://github.com/T0chi))
+
+#### Config
+- Refresh generated reference and llms bundle ([#fd2f709](https://github.com/deltabox-studio/toolchain/commit/fd2f709) by [T0chi](https://github.com/T0chi))
+- Refresh generated config artifacts and guides ([#067760e](https://github.com/deltabox-studio/toolchain/commit/067760e) by [T0chi](https://github.com/T0chi))
+- Regenerate schema, types and reference ([#6f48302](https://github.com/deltabox-studio/toolchain/commit/6f48302) by [T0chi](https://github.com/T0chi))
+- Link external schemas and add real defaults ([#04dc8d1](https://github.com/deltabox-studio/toolchain/commit/04dc8d1) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Styles</summary>
+
+- Restore 4-space formatting for tooling dependency files ([#c8f0d4d](https://github.com/deltabox-studio/toolchain/commit/c8f0d4d) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Tests</summary>
+
+- Cover Docker generation and containerized scaffolds ([#90148e1](https://github.com/deltabox-studio/toolchain/commit/90148e1) by [T0chi](https://github.com/T0chi))
+- Cover the quality-of-life templates ([#79822ba](https://github.com/deltabox-studio/toolchain/commit/79822ba) by [T0chi](https://github.com/T0chi))
+- Update Oxc-file expectations for Vite+ config mode ([#4a45455](https://github.com/deltabox-studio/toolchain/commit/4a45455) by [T0chi](https://github.com/T0chi))
+- Cover plugin-mode projects and the vite-plus toolchain ([#626e8ba](https://github.com/deltabox-studio/toolchain/commit/626e8ba) by [T0chi](https://github.com/T0chi))
+
+#### Core
+- Verify resolved import group formatter output ([#51d5a0d](https://github.com/deltabox-studio/toolchain/commit/51d5a0d) by [T0chi](https://github.com/T0chi))
+
+#### Cli
+- Expect exact scaffold toolchain ranges ([#8c54b91](https://github.com/deltabox-studio/toolchain/commit/8c54b91) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+- Keep `gh` lookups offline in test runs ([#06b59d9](https://github.com/deltabox-studio/toolchain/commit/06b59d9) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Chores</summary>
+
+- Update lockfile ([#35bf7f0](https://github.com/deltabox-studio/toolchain/commit/35bf7f0) by [T0chi](https://github.com/T0chi))
+- Normalize imports and docs ([#c7f0d25](https://github.com/deltabox-studio/toolchain/commit/c7f0d25) by [T0chi](https://github.com/T0chi))
+
+#### Shared
+- Regenerate config types and schema artifacts ([#5ffed68](https://github.com/deltabox-studio/toolchain/commit/5ffed68) by [T0chi](https://github.com/T0chi))
+
+#### Config
+- Regenerate the config types ([#e87d3a2](https://github.com/deltabox-studio/toolchain/commit/e87d3a2) by [T0chi](https://github.com/T0chi))
+- Regenerate the schema, types and docs ([#2c4dc1e](https://github.com/deltabox-studio/toolchain/commit/2c4dc1e) by [T0chi](https://github.com/T0chi))
+- Regenerate the CLI docs and llms output ([#cf8661f](https://github.com/deltabox-studio/toolchain/commit/cf8661f) by [T0chi](https://github.com/T0chi))
+- Regenerate the schema, types and docs ([#82ca5c3](https://github.com/deltabox-studio/toolchain/commit/82ca5c3) by [T0chi](https://github.com/T0chi))
+- Generate plain array unions and `details` types ([#486d264](https://github.com/deltabox-studio/toolchain/commit/486d264) by [T0chi](https://github.com/T0chi))
+- Regenerate the schema, types and docs ([#12788f0](https://github.com/deltabox-studio/toolchain/commit/12788f0) by [T0chi](https://github.com/T0chi))
+- Regenerate types and references ([#3c7917a](https://github.com/deltabox-studio/toolchain/commit/3c7917a) by [T0chi](https://github.com/T0chi))
+- Regenerate types and references ([#de928fa](https://github.com/deltabox-studio/toolchain/commit/de928fa) by [T0chi](https://github.com/T0chi))
+
+#### Ci
+- Configure Dependabot groups for the dogfood repo ([#615e253](https://github.com/deltabox-studio/toolchain/commit/615e253) by [T0chi](https://github.com/T0chi))
+- Regenerate the workflows with `setup-vp` ([#1e5f7c3](https://github.com/deltabox-studio/toolchain/commit/1e5f7c3) by [T0chi](https://github.com/T0chi))
+
+#### Tsconfig
+- Regenerate workspace paths ([#4ad047a](https://github.com/deltabox-studio/toolchain/commit/4ad047a) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+### Package changes
+
+#### Added
+- `@deltabox/toolchain`
+  - `@deltabox/toolchain-docker` `workspace:*`
+  - `@deltabox/toolchain-mcp` `workspace:*`
+  - `@deltabox/toolchain-pack` `workspace:*`
+  - `ajv` `^8.20.0`
+  - `vite-plugin-dbx` `^2.6.1`
+- `@deltabox/toolchain-biome`
+  - `@deltabox/toolchain-pack` `workspace:*`
+  - `vite-plus` `catalog:`
+- `@deltabox/toolchain-changelog`
+  - `@deltabox/toolchain-pack` `workspace:*`
+  - `vite-plus` `catalog:`
+- `@deltabox/toolchain-config`
+  - `@deltabox/toolchain-pack` `workspace:*`
+  - `ajv` `^8.20.0`
+  - `js-yaml` `^4.1.0`
+  - `tsx` `catalog:`
+  - `vite-plus` `catalog:`
+- `@deltabox/toolchain-core`
+  - `@deltabox/toolchain-config` `workspace:*`
+  - `@deltabox/toolchain-pack` `workspace:*`
+  - `vite-plus` `catalog:`
+- `@deltabox/toolchain-docker`
+  - `@deltabox/toolchain-pack` `workspace:*`
+  - `@deltabox/toolchain-shared` `workspace:*`
+  - `@types/node` `catalog:`
+  - `typescript` `catalog:`
+  - `vite-plus` `catalog:`
+- `@deltabox/toolchain-mcp`
+  - `@deltabox/toolchain-pack` `workspace:*`
+  - `@deltabox/toolchain-shared` `workspace:*`
+  - `@types/node` `catalog:`
+  - `typescript` `catalog:`
+  - `vite-plus` `catalog:`
+- `@deltabox/toolchain-migrate`
+  - `@deltabox/toolchain-pack` `workspace:*`
+  - `vite-plus` `catalog:`
+- `@deltabox/toolchain-pack`
+  - `@deltabox/toolchain-shared` `workspace:*`
+  - `@types/node` `catalog:`
+  - `glob` `catalog:`
+  - `type-fest` `catalog:`
+  - `typescript` `catalog:`
+  - `vite-plus` `>=1`
+- `@deltabox/toolchain-project`
+  - `@deltabox/toolchain-docker` `workspace:*`
+  - `@deltabox/toolchain-pack` `workspace:*`
+  - `vite-plus` `catalog:`
+- `@deltabox/toolchain-shared`
+  - `vite-plus` `catalog:`
+- `@deltabox/toolchain-template`
+  - `@deltabox/toolchain-docker` `workspace:*`
+  - `@deltabox/toolchain-pack` `workspace:*`
+  - `vite-plugin-dbx` `workspace:*`
+  - `vite-plus` `catalog:`
+- `@deltabox/toolchain-tsconfig`
+  - `@deltabox/toolchain-pack` `workspace:*`
+  - `vite-plus` `catalog:`
+- `toolchain-vscode`
+  - `@deltabox/toolchain-pack` `workspace:*`
+  - `vite-plus` `catalog:`
+- `vite-plugin-dbx`
+  - `@deltabox/toolchain-core` `workspace:*`
+  - `@deltabox/toolchain-pack` `workspace:*`
+  - `@deltabox/toolchain-shared` `workspace:*`
+  - `@types/node` `catalog:`
+  - `typescript` `catalog:`
+  - `vite-plus` `>=1`
+
+#### Updated
+- `@deltabox/toolchain`
+  - `vite-plus` `>=1` → `1.2.0`
+
+#### Removed
+- `@deltabox/toolchain`
+  - `@deltabox/toolchain-tsdown` `workspace:*`
+  - `@deltabox/toolchain-vite` `workspace:*`
+  - `tsdown` `^0.23.0`
+  - `vite` `^8.3.0`
+  - `vitest` `^5.0.0`
+- `@deltabox/toolchain-biome`
+  - `@deltabox/toolchain-tsdown` `workspace:*`
+  - `tsdown` `catalog:`
+  - `vite` `catalog:`
+  - `vitest` `catalog:`
+- `@deltabox/toolchain-changelog`
+  - `@deltabox/toolchain-tsdown` `workspace:*`
+  - `tsdown` `catalog:`
+  - `vite` `catalog:`
+  - `vitest` `catalog:`
+- `@deltabox/toolchain-config`
+  - `@deltabox/toolchain-tsdown` `workspace:*`
+  - `tsdown` `catalog:`
+  - `vite` `catalog:`
+  - `vitest` `catalog:`
+- `@deltabox/toolchain-core`
+  - `@deltabox/toolchain-tsdown` `workspace:*`
+  - `tsdown` `catalog:`
+  - `vite` `catalog:`
+  - `vitest` `catalog:`
+- `@deltabox/toolchain-migrate`
+  - `@deltabox/toolchain-tsdown` `workspace:*`
+  - `tsdown` `catalog:`
+  - `vite` `catalog:`
+  - `vitest` `catalog:`
+- `@deltabox/toolchain-project`
+  - `@deltabox/toolchain-tsdown` `workspace:*`
+  - `tsdown` `catalog:`
+  - `vite` `catalog:`
+  - `vitest` `catalog:`
+- `@deltabox/toolchain-shared`
+  - `tsdown` `catalog:`
+  - `vite` `catalog:`
+  - `vitest` `catalog:`
+- `@deltabox/toolchain-template`
+  - `@deltabox/toolchain-tsdown` `workspace:*`
+  - `@deltabox/toolchain-vite` `workspace:*`
+  - `tsdown` `catalog:`
+  - `vite` `catalog:`
+  - `vitest` `catalog:`
+- `@deltabox/toolchain-tsconfig`
+  - `@deltabox/toolchain-tsdown` `workspace:*`
+  - `tsdown` `catalog:`
+  - `vite` `catalog:`
+  - `vitest` `catalog:`
+- `@deltabox/toolchain-tsdown`
+  - `@deltabox/toolchain-shared` `workspace:*`
+  - `@types/node` `catalog:`
+  - `glob` `catalog:`
+  - `tsdown` `catalog:`
+  - `type-fest` `catalog:`
+  - `typescript` `catalog:`
+  - `vite` `catalog:`
+  - `vitest` `catalog:`
+- `@deltabox/toolchain-vite`
+  - `@deltabox/toolchain-core` `workspace:*`
+  - `@deltabox/toolchain-shared` `workspace:*`
+  - `@deltabox/toolchain-tsdown` `workspace:*`
+  - `@types/node` `catalog:`
+  - `tsdown` `catalog:`
+  - `typescript` `catalog:`
+  - `vite` `>=5`
+  - `vitest` `catalog:`
+- `toolchain-vscode`
+  - `@deltabox/toolchain-tsdown` `workspace:*`
+  - `tsdown` `catalog:`
+  - `vite` `catalog:`
+  - `vitest` `catalog:`
+
+<!-- release:end -->
+
+
+## 2.6.1 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -21,9 +508,6 @@
 
 </details>
 
-<!-- release:end -->
-
-
 ## 2.6.0 (November 2026)
 
 <details>
@@ -41,7 +525,6 @@
   </details>
 
 </details>
-
 
 ## 2.5.0 (November 2026)
 
@@ -305,7 +788,6 @@
 - `toolchain-vscode`
   - `vite` `catalog:`
 
-
 ## 2.4.0 (November 2026)
 
 <details>
@@ -421,7 +903,6 @@
 - `@deltabox/toolchain-project`
   - `@clack/prompts` `catalog:`
 
-
 ## 2.3.4 (November 2026)
 
 <details>
@@ -438,7 +919,6 @@
   </details>
 
 </details>
-
 
 ## 2.3.3 (November 2026)
 
@@ -472,7 +952,6 @@
 
 </details>
 
-
 ## 2.3.2 (November 2026)
 
 <details>
@@ -489,7 +968,6 @@
   </details>
 
 </details>
-
 
 ## 2.3.1 (November 2026)
 
@@ -566,7 +1044,6 @@
   </details>
 
 </details>
-
 
 ## 2.3.0 (November 2026)
 
@@ -689,7 +1166,6 @@
   - `eslint` `catalog:`
   - `prettier` `catalog:`
 
-
 ## 2.2.0 (November 2026)
 
 <details>
@@ -730,7 +1206,6 @@
   - `@vscode/test-cli` `^0.0.15`
   - `@vscode/test-electron` `^3.1.0`
 
-
 ## 2.1.3 (November 2026)
 
 <details>
@@ -748,7 +1223,6 @@
 
 </details>
 
-
 ## 2.1.2 (November 2026)
 
 <details>
@@ -758,7 +1232,6 @@
 - Align Home action icons with provider commands ([#05fd6c8](https://github.com/deltabox-studio/toolchain/commit/05fd6c8) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 2.1.1 (October 2026)
 
@@ -777,7 +1250,6 @@
 
 </details>
 
-
 ## 2.1.0 (October 2026)
 
 <details>
@@ -794,7 +1266,6 @@
   </details>
 
 </details>
-
 
 ## 2.0.1 (October 2026)
 
@@ -854,7 +1325,6 @@
 #### Added
 - `@deltabox/toolchain-docs`
   - `vite-plugin-vitepress-auto-sidebar` `^1.7.1`
-
 
 ## 2.0.0 (October 2026)
 
@@ -1563,7 +2033,6 @@
 - `@deltabox/toolchain-project`
   - `@deltabox/toolchain-biome` `workspace:*`
 
-
 ## 1.11.4 (October 2026)
 
 <details>
@@ -1580,7 +2049,6 @@
 - Rearranged views order ([#0620097](https://github.com/deltabox-studio/toolchain/commit/0620097) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.11.3 (October 2026)
 
@@ -1613,7 +2081,6 @@
 
 </details>
 
-
 ## 1.11.2 (October 2026)
 
 <details>
@@ -1622,7 +2089,6 @@
 - Update `README.md` ([#3e7f4e1](https://github.com/deltabox-studio/toolchain/commit/3e7f4e1) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.11.1 (October 2026)
 
@@ -1713,7 +2179,6 @@
   - `vitepress-carbon` `^1.7.0`
   - `vitepress-plugin-group-icons` `^1.8.1`
 
-
 ## 1.11.0 (October 2026)
 
 <details>
@@ -1792,7 +2257,6 @@
 
 </details>
 
-
 ## 1.10.4 (October 2026)
 
 <details>
@@ -1801,7 +2265,6 @@
 - Removed video preview dimensions ([#322b4b1](https://github.com/deltabox-studio/toolchain/commit/322b4b1) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.10.3 (October 2026)
 
@@ -1841,7 +2304,6 @@
 
 </details>
 
-
 ## 1.10.2 (October 2026)
 
 <details>
@@ -1851,7 +2313,6 @@
 - Updated extension description & more ([#48993f0](https://github.com/deltabox-studio/toolchain/commit/48993f0) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.10.1 (October 2026)
 
@@ -1872,7 +2333,6 @@
   </details>
 
 </details>
-
 
 ## 1.10.0 (October 2026)
 
@@ -1961,7 +2421,6 @@
 
 </details>
 
-
 ## 1.9.2 (October 2026)
 
 <details>
@@ -1970,7 +2429,6 @@
 - Added `llms` entry to the sidebar ([#098cc7e](https://github.com/deltabox-studio/toolchain/commit/098cc7e) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.9.1 (October 2026)
 
@@ -1988,7 +2446,6 @@
   </details>
 
 </details>
-
 
 ## 1.9.0 (October 2026)
 
@@ -2037,7 +2494,6 @@
   </details>
 
 </details>
-
 
 ## 1.8.0 (October 2026)
 
@@ -2229,7 +2685,6 @@
   - `@deltabox/toolchain-core` `workspace:*`
   - `glob` `catalog:`
 
-
 ## 1.7.8 (October 2026)
 
 <details>
@@ -2260,7 +2715,6 @@
   - `typescript` `catalog:`
   - `vitest` `catalog:`
 
-
 ## 1.7.7 (October 2026)
 
 <details>
@@ -2270,7 +2724,6 @@
 - Upload `release-vscode.yml` pipeline ([#3080357](https://github.com/deltabox-studio/toolchain/commit/3080357) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.7.6 (October 2026)
 
@@ -2289,7 +2742,6 @@
 
 </details>
 
-
 ## 1.7.5 (October 2026)
 
 <details>
@@ -2298,7 +2750,6 @@
 - Revert `extend` value to `tsconfig.base.json` for vscode workspace's `tsconfig.default.json` ([#96e021e](https://github.com/deltabox-studio/toolchain/commit/96e021e) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.7.4 (October 2026)
 
@@ -2309,7 +2760,6 @@
 - Extending root `tsconfig.json` instead of root `tsconfig.base.json` ([#9aa9669](https://github.com/deltabox-studio/toolchain/commit/9aa9669) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.7.3 (October 2026)
 
@@ -2336,7 +2786,6 @@
 
 </details>
 
-
 ## 1.7.2 (October 2026)
 
 <details>
@@ -2360,7 +2809,6 @@
 - Remove `azure-pipelines.yml` ([#7965965](https://github.com/deltabox-studio/toolchain/commit/7965965) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.7.1 (October 2026)
 
@@ -2391,7 +2839,6 @@
   - `tsdown` `catalog:`
   - `typescript` `catalog:`
   - `vitest` `catalog:`
-
 
 ## 1.7.0 (October 2026)
 
@@ -2435,7 +2882,6 @@
 
 </details>
 
-
 ## 1.6.1 (October 2026)
 
 <details>
@@ -2452,7 +2898,6 @@
   </details>
 
 </details>
-
 
 ## 1.6.0 (October 2026)
 
@@ -2543,7 +2988,6 @@
 
 </details>
 
-
 ## 1.5.0 (October 2026)
 
 <details>
@@ -2560,7 +3004,6 @@
   </details>
 
 </details>
-
 
 ## 1.4.1 (October 2026)
 
@@ -2588,7 +3031,6 @@
   </details>
 
 </details>
-
 
 ## 1.4.0 (October 2026)
 
@@ -2745,7 +3187,6 @@
 - `@deltabox/toolchain`
   - `vite-plus` `^1.2.0` → `>=1`
 
-
 ## 1.3.1 (October 2026)
 
 <details>
@@ -2756,7 +3197,6 @@
 - Update features descriptions ([#e9c0a6d](https://github.com/deltabox-studio/toolchain/commit/e9c0a6d) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.3.0 (October 2026)
 
@@ -2916,7 +3356,6 @@
 - `@deltabox/toolchain-shared`
   - `picocolors` `catalog:`
 
-
 ## 1.2.8 (October 2026)
 
 <details>
@@ -2933,7 +3372,6 @@
 
 </details>
 
-
 ## 1.2.7 (October 2026)
 
 <details>
@@ -2949,7 +3387,6 @@
   </details>
 
 </details>
-
 
 ## 1.2.6 (October 2026)
 
@@ -2983,7 +3420,6 @@
 
 </details>
 
-
 ## 1.2.5 (October 2026)
 
 <details>
@@ -3001,7 +3437,6 @@
 
 </details>
 
-
 ## 1.2.4 (October 2026)
 
 <details>
@@ -3010,7 +3445,6 @@
 - Update documentation ([#3880aaa](https://github.com/deltabox-studio/toolchain/commit/3880aaa) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.2.3 (October 2026)
 
@@ -3021,7 +3455,6 @@
 
 </details>
 
-
 ## 1.2.2 (October 2026)
 
 <details>
@@ -3030,7 +3463,6 @@
 - Update config generator documentation ([#8305ef8](https://github.com/deltabox-studio/toolchain/commit/8305ef8) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.2.1 (October 2026)
 
@@ -3049,7 +3481,6 @@
 - Update description and tags ([#64b64aa](https://github.com/deltabox-studio/toolchain/commit/64b64aa) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.2.0 (October 2026)
 
@@ -3100,7 +3531,6 @@
 
 </details>
 
-
 ## 1.1.24 (October 2026)
 
 <details>
@@ -3110,7 +3540,6 @@
 
 </details>
 
-
 ## 1.1.23 (October 2026)
 
 <details>
@@ -3119,7 +3548,6 @@
 - Using different logo for the hero ([#552172d](https://github.com/deltabox-studio/toolchain/commit/552172d) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.1.22 (October 2026)
 
@@ -3138,7 +3566,6 @@
   </details>
 
 </details>
-
 
 ## 1.1.21 (October 2026)
 
@@ -3171,7 +3598,6 @@
 
 </details>
 
-
 ## 1.1.20 (October 2026)
 
 <details>
@@ -3189,7 +3615,6 @@
 
 </details>
 
-
 ## 1.1.19 (October 2026)
 
 <details>
@@ -3206,7 +3631,6 @@
   </details>
 
 </details>
-
 
 ## 1.1.18 (October 2026)
 
@@ -3237,7 +3661,6 @@
 
 </details>
 
-
 ## 1.1.17 (October 2026)
 
 <details>
@@ -3255,7 +3678,6 @@
 
 </details>
 
-
 ## 1.1.16 (October 2026)
 
 <details>
@@ -3266,7 +3688,6 @@
 
 </details>
 
-
 ## 1.1.15 (October 2026)
 
 <details>
@@ -3275,7 +3696,6 @@
 - Formatted `README.md` ([#4485c48](https://github.com/deltabox-studio/toolchain/commit/4485c48) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.1.14 (October 2026)
 
@@ -3286,7 +3706,6 @@
 
 </details>
 
-
 ## 1.1.13 (October 2026)
 
 <details>
@@ -3296,7 +3715,6 @@
 
 </details>
 
-
 ## 1.1.12 (October 2026)
 
 <details>
@@ -3305,7 +3723,6 @@
 - Disable npm provenance (unsupported from a private repo) ([#f118193](https://github.com/deltabox-studio/toolchain/commit/f118193) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.1.11 (October 2026)
 
@@ -3326,7 +3743,6 @@
 
 </details>
 
-
 ## 1.1.10 (October 2026)
 
 <details>
@@ -3335,7 +3751,6 @@
 - Removed unnecessary shields ([#1efbe68](https://github.com/deltabox-studio/toolchain/commit/1efbe68) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.1.9 (October 2026)
 
@@ -3354,7 +3769,6 @@
 
 </details>
 
-
 ## 1.1.8 (October 2026)
 
 <details>
@@ -3363,7 +3777,6 @@
 - Hide the site title next to the navbar logo ([#c7935ec](https://github.com/deltabox-studio/toolchain/commit/c7935ec) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.1.7 (October 2026)
 
@@ -3374,7 +3787,6 @@
 
 </details>
 
-
 ## 1.1.6 (October 2026)
 
 <details>
@@ -3383,7 +3795,6 @@
 - Use `box2d.svg` for the navbar/hero logo and `box2d_bg.svg` for the favicon ([#2c7a094](https://github.com/deltabox-studio/toolchain/commit/2c7a094) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.1.5 (October 2026)
 
@@ -3394,7 +3805,6 @@
 - Bump only the version field and stage only owned files ([#8b14cc9](https://github.com/deltabox-studio/toolchain/commit/8b14cc9) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.1.4 (October 2026)
 
@@ -3412,7 +3822,6 @@
 
 </details>
 
-
 ## 1.1.3 (October 2026)
 
 <details>
@@ -3423,7 +3832,6 @@
 
 </details>
 
-
 ## 1.1.2 (October 2026)
 
 <details>
@@ -3433,7 +3841,6 @@
 - Fix `CHANGELOG.md` mojibake and add backticks to code refs ([#6b721eb](https://github.com/deltabox-studio/toolchain/commit/6b721eb) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.1.1 (October 2026)
 
@@ -3466,7 +3873,6 @@
 
 </details>
 
-
 ## 1.1.0 (October 2026)
 
 <details>
@@ -3497,7 +3903,6 @@
 - `@deltabox/toolchain-vite`
   - `vite` `>=5`
 
-
 ## 1.0.8 (October 2026)
 
 <details>
@@ -3514,7 +3919,6 @@
   </details>
 
 </details>
-
 
 ## 1.0.7 (October 2026)
 
@@ -3541,7 +3945,6 @@
 
 </details>
 
-
 ## 1.0.6 (October 2026)
 
 <details>
@@ -3558,7 +3961,6 @@
 
 </details>
 
-
 ## 1.0.5 (October 2026)
 
 <details>
@@ -3567,7 +3969,6 @@
 - Update tagline ([#e1fa86e](https://github.com/deltabox-studio/toolchain/commit/e1fa86e) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.0.4 (October 2026)
 
@@ -3584,7 +3985,6 @@
 - Fix grammar in the package description ([#8a199b8](https://github.com/deltabox-studio/toolchain/commit/8a199b8) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.0.3 (October 2026)
 
@@ -3603,7 +4003,6 @@
 
 </details>
 
-
 ## 1.0.2 (October 2026)
 
 <details>
@@ -3613,7 +4012,6 @@
 - Update the release workflow reference fixture ([#e7efe0a](https://github.com/deltabox-studio/toolchain/commit/e7efe0a) by [T0chi](https://github.com/T0chi))
 
 </details>
-
 
 ## 1.0.1 (October 2026)
 

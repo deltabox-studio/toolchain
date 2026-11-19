@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-tsconfig",
-    "version": "2.6.1",
+    "version": "3.0.0-beta.0",
     "description": "TypeScript config templates plus the tsconfig generator with path-alias, project-reference and include/exclude wiring.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {

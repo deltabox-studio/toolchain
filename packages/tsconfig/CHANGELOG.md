@@ -1,8 +1,78 @@
 # Changelog
 
-## 2.6.1 (November 2026)
+## 3.0.0-beta.0 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary><strong>BREAKING CHANGES</strong></summary>
+
+#### Tsconfig
+- Support remote extends with opt-in flattening ([#44b5c8a](https://github.com/deltabox-studio/toolchain/commit/44b5c8a) by [T0chi](https://github.com/T0chi))
+- Add `strict` aliases and export-aware auto modes ([#fee5091](https://github.com/deltabox-studio/toolchain/commit/fee5091) by [T0chi](https://github.com/T0chi))
+- Serialize regex aliases for JSON transports ([#d7d8caf](https://github.com/deltabox-studio/toolchain/commit/d7d8caf) by [T0chi](https://github.com/T0chi))
+- Hoist include/exclude and respect custom file names ([#e926b8a](https://github.com/deltabox-studio/toolchain/commit/e926b8a) by [T0chi](https://github.com/T0chi))
+
+#### Config
+- Rename the generated ambient env types to `dbx-env.d.ts` ([#078b316](https://github.com/deltabox-studio/toolchain/commit/078b316) by [T0chi](https://github.com/T0chi))
+
+#### Pack
+- Rename the `tsdown` workspace to `pack` ([#02719e5](https://github.com/deltabox-studio/toolchain/commit/02719e5) by [T0chi](https://github.com/T0chi))
+
+#### Core
+- Format managed files after `dbx sync` ([#fb3d9be](https://github.com/deltabox-studio/toolchain/commit/fb3d9be) by [T0chi](https://github.com/T0chi))
+- Strict opt-in config inheritance and configless management in `loader.ts` ([#cc38570](https://github.com/deltabox-studio/toolchain/commit/cc38570) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>New features</summary>
+
+#### Cli
+- Add changelog intro/outro flags and respect `enabled` ([#7d74c71](https://github.com/deltabox-studio/toolchain/commit/7d74c71) by [T0chi](https://github.com/T0chi))
+
+#### Config
+- Add `enabled` and `regenerate` controls ([#7f5444a](https://github.com/deltabox-studio/toolchain/commit/7f5444a) by [T0chi](https://github.com/T0chi))
+
+#### Core
+- Wire `@deltabox/toolchain-docker` into the umbrella ([#5322f8b](https://github.com/deltabox-studio/toolchain/commit/5322f8b) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Tsconfig
+- Reconcile overrides before generation and harden remote extends ([#0fa2caa](https://github.com/deltabox-studio/toolchain/commit/0fa2caa) by [T0chi](https://github.com/T0chi))
+- Support directory and self project references ([#98018b6](https://github.com/deltabox-studio/toolchain/commit/98018b6) by [T0chi](https://github.com/T0chi))
+- Resolve nested root files and honour them in --json ([#d1ce26d](https://github.com/deltabox-studio/toolchain/commit/d1ce26d) by [T0chi](https://github.com/T0chi))
+- Normalize auto-wired reference paths ([#2a0ce95](https://github.com/deltabox-studio/toolchain/commit/2a0ce95) by [T0chi](https://github.com/T0chi))
+- Sort generated paths consistently ([#053d331](https://github.com/deltabox-studio/toolchain/commit/053d331) by [T0chi](https://github.com/T0chi))
+
+#### Shared
+- Tolerate UTF-8 BOM across JSON readers ([#a021da7](https://github.com/deltabox-studio/toolchain/commit/a021da7) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
+- Move public typings into src/types barrels ([#f727890](https://github.com/deltabox-studio/toolchain/commit/f727890) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+#### Changelog
+- Apply details formatting to historical entries ([#0bfbd98](https://github.com/deltabox-studio/toolchain/commit/0bfbd98) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 2.6.1 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -20,9 +90,6 @@
   </details>
 
 </details>
-
-<!-- release:end -->
-
 
 ## 2.5.0 (November 2026)
 
@@ -76,7 +143,6 @@
 
 </details>
 
-
 ## 2.4.0 (November 2026)
 
 <details>
@@ -92,7 +158,6 @@
   </details>
 
 </details>
-
 
 ## 2.3.1 (November 2026)
 
@@ -120,7 +185,6 @@
   </details>
 
 </details>
-
 
 ## 2.3.0 (November 2026)
 

@@ -1,8 +1,76 @@
 # Changelog
 
-## 2.6.1 (November 2026)
+## 3.0.0-beta.0 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary><strong>BREAKING CHANGES</strong></summary>
+
+#### Cli
+- Add spinners and Dependabot allow rules ([#fa9ba22](https://github.com/deltabox-studio/toolchain/commit/fa9ba22) by [T0chi](https://github.com/T0chi))
+
+#### Pack
+- Rename the `tsdown` workspace to `pack` ([#02719e5](https://github.com/deltabox-studio/toolchain/commit/02719e5) by [T0chi](https://github.com/T0chi))
+
+#### Tsconfig
+- Add `strict` aliases and export-aware auto modes ([#fee5091](https://github.com/deltabox-studio/toolchain/commit/fee5091) by [T0chi](https://github.com/T0chi))
+
+#### Core
+- Provision the detected formatter/linter dependencies ([#c5cff9f](https://github.com/deltabox-studio/toolchain/commit/c5cff9f) by [T0chi](https://github.com/T0chi))
+- Strict opt-in config inheritance and configless management in `loader.ts` ([#cc38570](https://github.com/deltabox-studio/toolchain/commit/cc38570) by [T0chi](https://github.com/T0chi))
+
+#### Project
+- Place fmt/lint in `vite.config` and stop emitting standalone Oxc configs ([#6621669](https://github.com/deltabox-studio/toolchain/commit/6621669) by [T0chi](https://github.com/T0chi))
+
+#### Migrate
+- Migrate tooling to the Vite plugin and Vite+ Oxc setup ([#b2469a8](https://github.com/deltabox-studio/toolchain/commit/b2469a8) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>New features</summary>
+
+#### Core
+- Wire `@deltabox/toolchain-docker` into the umbrella ([#5322f8b](https://github.com/deltabox-studio/toolchain/commit/5322f8b) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Tsconfig
+- Reconcile overrides before generation and harden remote extends ([#0fa2caa](https://github.com/deltabox-studio/toolchain/commit/0fa2caa) by [T0chi](https://github.com/T0chi))
+
+#### Migrate
+- Merge into the existing vite config file ([#9d0be5f](https://github.com/deltabox-studio/toolchain/commit/9d0be5f) by [T0chi](https://github.com/T0chi))
+- Resolve inherited config in `--check` ([#1311114](https://github.com/deltabox-studio/toolchain/commit/1311114) by [T0chi](https://github.com/T0chi))
+- Handle BOM input and clean `--check` ([#2860f9b](https://github.com/deltabox-studio/toolchain/commit/2860f9b) by [T0chi](https://github.com/T0chi))
+
+#### Shared
+- Tolerate UTF-8 BOM across JSON readers ([#a021da7](https://github.com/deltabox-studio/toolchain/commit/a021da7) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
+- Split package typings into `src/types` barrels ([#45e5032](https://github.com/deltabox-studio/toolchain/commit/45e5032) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+#### Changelog
+- Apply details formatting to historical entries ([#0bfbd98](https://github.com/deltabox-studio/toolchain/commit/0bfbd98) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 2.6.1 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -20,9 +88,6 @@
   </details>
 
 </details>
-
-<!-- release:end -->
-
 
 ## 2.5.0 (November 2026)
 
@@ -65,7 +130,6 @@
 
 </details>
 
-
 ## 2.4.0 (November 2026)
 
 <details>
@@ -97,7 +161,6 @@
 
 </details>
 
-
 ## 2.3.1 (November 2026)
 
 <details>
@@ -124,7 +187,6 @@
   </details>
 
 </details>
-
 
 ## 2.3.0 (November 2026)
 

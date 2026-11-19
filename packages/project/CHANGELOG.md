@@ -1,8 +1,88 @@
 # Changelog
 
-## 2.6.1 (November 2026)
+## 3.0.0-beta.0 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary><strong>BREAKING CHANGES</strong></summary>
+
+- Stop managing standalone Oxc configs in Vite+ mode ([#781367f](https://github.com/deltabox-studio/toolchain/commit/781367f) by [T0chi](https://github.com/T0chi))
+
+#### Cli
+- Finish spinners and conservative scaffold ranges ([#85ea426](https://github.com/deltabox-studio/toolchain/commit/85ea426) by [T0chi](https://github.com/T0chi))
+- Add spinners and Dependabot allow rules ([#fa9ba22](https://github.com/deltabox-studio/toolchain/commit/fa9ba22) by [T0chi](https://github.com/T0chi))
+
+#### Tsconfig
+- Support remote extends with opt-in flattening ([#44b5c8a](https://github.com/deltabox-studio/toolchain/commit/44b5c8a) by [T0chi](https://github.com/T0chi))
+- Add `strict` aliases and export-aware auto modes ([#fee5091](https://github.com/deltabox-studio/toolchain/commit/fee5091) by [T0chi](https://github.com/T0chi))
+
+#### Pack
+- Rename the `tsdown` workspace to `pack` ([#02719e5](https://github.com/deltabox-studio/toolchain/commit/02719e5) by [T0chi](https://github.com/T0chi))
+
+#### Project
+- Avoid inheriting the parent name for `--out` scaffolds ([#1513508](https://github.com/deltabox-studio/toolchain/commit/1513508) by [T0chi](https://github.com/T0chi))
+- Correct scaffold dependencies, sync identity and templates ([#a13dae5](https://github.com/deltabox-studio/toolchain/commit/a13dae5) by [T0chi](https://github.com/T0chi))
+- Place fmt/lint in `vite.config` and stop emitting standalone Oxc configs ([#6621669](https://github.com/deltabox-studio/toolchain/commit/6621669) by [T0chi](https://github.com/T0chi))
+- Scaffold the Vite plugin, Vite+ toolchain and publishable packages ([#c9d94fe](https://github.com/deltabox-studio/toolchain/commit/c9d94fe) by [T0chi](https://github.com/T0chi))
+
+#### Docker
+- Allow user-owned files and always add compose ([#51b9ccc](https://github.com/deltabox-studio/toolchain/commit/51b9ccc) by [T0chi](https://github.com/T0chi))
+
+#### Core
+- Provision the detected formatter/linter dependencies ([#c5cff9f](https://github.com/deltabox-studio/toolchain/commit/c5cff9f) by [T0chi](https://github.com/T0chi))
+- Strict opt-in config inheritance and configless management in `loader.ts` ([#cc38570](https://github.com/deltabox-studio/toolchain/commit/cc38570) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>New features</summary>
+
+#### Config
+- Add `enabled` and `regenerate` controls ([#7f5444a](https://github.com/deltabox-studio/toolchain/commit/7f5444a) by [T0chi](https://github.com/T0chi))
+
+#### Template
+- Add opt-in containerization to scaffolds ([#51732a4](https://github.com/deltabox-studio/toolchain/commit/51732a4) by [T0chi](https://github.com/T0chi))
+
+#### Core
+- Wire `@deltabox/toolchain-docker` into the umbrella ([#5322f8b](https://github.com/deltabox-studio/toolchain/commit/5322f8b) by [T0chi](https://github.com/T0chi))
+
+#### Project
+- Add quality-of-life template generators ([#85cdd6f](https://github.com/deltabox-studio/toolchain/commit/85cdd6f) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Project
+- Harden scaffolds and make Docker plans template-aware ([#e937042](https://github.com/deltabox-studio/toolchain/commit/e937042) by [T0chi](https://github.com/T0chi))
+- Keep plugin projects in the rewritten graph ([#9f81f8d](https://github.com/deltabox-studio/toolchain/commit/9f81f8d) by [T0chi](https://github.com/T0chi))
+
+#### Tsconfig
+- Reconcile overrides before generation and harden remote extends ([#0fa2caa](https://github.com/deltabox-studio/toolchain/commit/0fa2caa) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
+- Move public typings into src/types barrels ([#f727890](https://github.com/deltabox-studio/toolchain/commit/f727890) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+#### Changelog
+- Apply details formatting to historical entries ([#0bfbd98](https://github.com/deltabox-studio/toolchain/commit/0bfbd98) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 2.6.1 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -21,9 +101,6 @@
 
 </details>
 
-<!-- release:end -->
-
-
 ## 2.6.0 (November 2026)
 
 <details>
@@ -41,7 +118,6 @@
   </details>
 
 </details>
-
 
 ## 2.5.0 (November 2026)
 
@@ -111,7 +187,6 @@
 
 </details>
 
-
 ## 2.4.0 (November 2026)
 
 <details>
@@ -143,7 +218,6 @@
 
 </details>
 
-
 ## 2.3.1 (November 2026)
 
 <details>
@@ -170,7 +244,6 @@
   </details>
 
 </details>
-
 
 ## 2.3.0 (November 2026)
 

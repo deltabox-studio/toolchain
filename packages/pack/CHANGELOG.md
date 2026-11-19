@@ -1,8 +1,49 @@
 # Changelog
 
-## 2.6.1 (November 2026)
+## 3.0.0-beta.0 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary><strong>BREAKING CHANGES</strong></summary>
+
+#### Pack
+- Make `createTsdownConfig` options configurable ([#f1a13a7](https://github.com/deltabox-studio/toolchain/commit/f1a13a7) by [T0chi](https://github.com/T0chi))
+- Rename the `tsdown` workspace to `pack` ([#02719e5](https://github.com/deltabox-studio/toolchain/commit/02719e5) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>New features</summary>
+
+#### Cli
+- Keep spinners readable and surface passthrough failures ([#747937b](https://github.com/deltabox-studio/toolchain/commit/747937b) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Tsconfig
+- Reconcile overrides before generation and harden remote extends ([#0fa2caa](https://github.com/deltabox-studio/toolchain/commit/0fa2caa) by [T0chi](https://github.com/T0chi))
+
+#### Pack
+- Keep test runtimes and null export blockers ([#777e43e](https://github.com/deltabox-studio/toolchain/commit/777e43e) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+#### Changelog
+- Apply details formatting to historical entries ([#0bfbd98](https://github.com/deltabox-studio/toolchain/commit/0bfbd98) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 2.6.1 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -20,9 +61,6 @@
   </details>
 
 </details>
-
-<!-- release:end -->
-
 
 ## 2.5.0 (November 2026)
 
@@ -55,7 +93,6 @@
 
 </details>
 
-
 ## 2.4.0 (November 2026)
 
 <details>
@@ -71,7 +108,6 @@
   </details>
 
 </details>
-
 
 ## 2.3.1 (November 2026)
 
@@ -99,7 +135,6 @@
   </details>
 
 </details>
-
 
 ## 2.3.0 (November 2026)
 

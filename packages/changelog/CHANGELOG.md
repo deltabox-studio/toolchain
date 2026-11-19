@@ -1,8 +1,108 @@
 # Changelog
 
-## 2.6.1 (November 2026)
+## 3.0.0-beta.0 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary><strong>BREAKING CHANGES</strong></summary>
+
+- Resolve the bug-hunt findings ([#f07f951](https://github.com/deltabox-studio/toolchain/commit/f07f951) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+- Relabel details summaries and default the release body ([#7ccfc86](https://github.com/deltabox-studio/toolchain/commit/7ccfc86) by [T0chi](https://github.com/T0chi))
+- Group package changes and batch ref reads ([#1a5e8a9](https://github.com/deltabox-studio/toolchain/commit/1a5e8a9) by [T0chi](https://github.com/T0chi))
+- Add collapsible `details` rendering ([#f7d1c6a](https://github.com/deltabox-studio/toolchain/commit/f7d1c6a) by [T0chi](https://github.com/T0chi))
+- Make releases idempotent and prerelease-aware ([#610138b](https://github.com/deltabox-studio/toolchain/commit/610138b) by [T0chi](https://github.com/T0chi))
+- Use `setup-vp` for GitLab and Azure CI ([#268b08b](https://github.com/deltabox-studio/toolchain/commit/268b08b) by [T0chi](https://github.com/T0chi))
+- Generate Vite+ CI with `voidzero-dev/setup-vp` ([#6dbf702](https://github.com/deltabox-studio/toolchain/commit/6dbf702) by [T0chi](https://github.com/T0chi))
+
+#### Cli
+- Finish spinners and conservative scaffold ranges ([#85ea426](https://github.com/deltabox-studio/toolchain/commit/85ea426) by [T0chi](https://github.com/T0chi))
+- Add spinners and Dependabot allow rules ([#fa9ba22](https://github.com/deltabox-studio/toolchain/commit/fa9ba22) by [T0chi](https://github.com/T0chi))
+
+#### Pack
+- Rename the `tsdown` workspace to `pack` ([#02719e5](https://github.com/deltabox-studio/toolchain/commit/02719e5) by [T0chi](https://github.com/T0chi))
+
+#### Tsconfig
+- Add `strict` aliases and export-aware auto modes ([#fee5091](https://github.com/deltabox-studio/toolchain/commit/fee5091) by [T0chi](https://github.com/T0chi))
+
+#### Core
+- Strict opt-in config inheritance and configless management in `loader.ts` ([#cc38570](https://github.com/deltabox-studio/toolchain/commit/cc38570) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>New features</summary>
+
+#### Ci
+- Add Dependabot security updates ([#467e3eb](https://github.com/deltabox-studio/toolchain/commit/467e3eb) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+- Add `minCommits` and nested `See more...` descriptions ([#9fa603b](https://github.com/deltabox-studio/toolchain/commit/9fa603b) by [T0chi](https://github.com/T0chi))
+- Batch GitHub metadata lookups ([#9e90e38](https://github.com/deltabox-studio/toolchain/commit/9e90e38) by [T0chi](https://github.com/T0chi))
+- Fix details formatting and add release mode ([#5fa519f](https://github.com/deltabox-studio/toolchain/commit/5fa519f) by [T0chi](https://github.com/T0chi))
+- Apply details after formatting and add body collapsibles ([#83dd7da](https://github.com/deltabox-studio/toolchain/commit/83dd7da) by [T0chi](https://github.com/T0chi))
+- Add scoped versioning options and changelog `intro`/`outro` ([#09cf5d9](https://github.com/deltabox-studio/toolchain/commit/09cf5d9) by [T0chi](https://github.com/T0chi))
+- Add opt-in `ci.dependabot` version updates ([#18670f7](https://github.com/deltabox-studio/toolchain/commit/18670f7) by [T0chi](https://github.com/T0chi))
+
+#### Cli
+- Add changelog intro/outro flags and respect `enabled` ([#7d74c71](https://github.com/deltabox-studio/toolchain/commit/7d74c71) by [T0chi](https://github.com/T0chi))
+
+#### Config
+- Add `enabled` and `regenerate` controls ([#7f5444a](https://github.com/deltabox-studio/toolchain/commit/7f5444a) by [T0chi](https://github.com/T0chi))
+
+#### Core
+- Wire `@deltabox/toolchain-docker` into the umbrella ([#5322f8b](https://github.com/deltabox-studio/toolchain/commit/5322f8b) by [T0chi](https://github.com/T0chi))
+
+#### Biome,changelog
+- Make the packages publishable and run on vite-plus ([#23c3f41](https://github.com/deltabox-studio/toolchain/commit/23c3f41) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Changelog
+- Yield between phases so the spinner animates ([#3a82b92](https://github.com/deltabox-studio/toolchain/commit/3a82b92) by [T0chi](https://github.com/T0chi))
+- Reformat existing entries with an empty all range ([#c36f3b2](https://github.com/deltabox-studio/toolchain/commit/c36f3b2) by [T0chi](https://github.com/T0chi))
+- Preserve reformatted entries and release output ([#5f364e0](https://github.com/deltabox-studio/toolchain/commit/5f364e0) by [T0chi](https://github.com/T0chi))
+- Dedupe Azure setup steps in vendor pipelines ([#4752c89](https://github.com/deltabox-studio/toolchain/commit/4752c89) by [T0chi](https://github.com/T0chi))
+- Keep commit groups and package footers when reformatting ([#3bea7ab](https://github.com/deltabox-studio/toolchain/commit/3bea7ab) by [T0chi](https://github.com/T0chi))
+- Keep manual runs, bullets and release markers intact ([#8af8fc7](https://github.com/deltabox-studio/toolchain/commit/8af8fc7) by [T0chi](https://github.com/T0chi))
+- Retry `gh` API calls before falling back ([#def8ce6](https://github.com/deltabox-studio/toolchain/commit/def8ce6) by [T0chi](https://github.com/T0chi))
+- Stop retrying `gh` after a timeout ([#d7f5f0c](https://github.com/deltabox-studio/toolchain/commit/d7f5f0c) by [T0chi](https://github.com/T0chi))
+- Make release runs idempotent and catalog-aware ([#5bc74af](https://github.com/deltabox-studio/toolchain/commit/5bc74af) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
+- Move public typings into src/types barrels ([#f727890](https://github.com/deltabox-studio/toolchain/commit/f727890) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+#### Changelog
+- Apply details formatting to historical entries ([#0bfbd98](https://github.com/deltabox-studio/toolchain/commit/0bfbd98) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Tests</summary>
+
+#### Changelog
+- Keep `gh` lookups offline in test runs ([#06b59d9](https://github.com/deltabox-studio/toolchain/commit/06b59d9) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 2.6.1 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -20,9 +120,6 @@
   </details>
 
 </details>
-
-<!-- release:end -->
-
 
 ## 2.5.0 (November 2026)
 
@@ -80,7 +177,6 @@
 
 </details>
 
-
 ## 2.4.0 (November 2026)
 
 <details>
@@ -96,7 +192,6 @@
   </details>
 
 </details>
-
 
 ## 2.3.3 (November 2026)
 
@@ -129,7 +224,6 @@
   </details>
 
 </details>
-
 
 ## 2.3.1 (November 2026)
 
@@ -167,7 +261,6 @@
   </details>
 
 </details>
-
 
 ## 2.3.0 (November 2026)
 

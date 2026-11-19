@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-pack",
-    "version": "2.6.1",
+    "version": "3.0.0-beta.0",
     "description": "Build-pack base configuration (tsdown), workspace aliases and cleanup commands used by @deltabox/toolchain.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {

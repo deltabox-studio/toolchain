@@ -1,8 +1,74 @@
 # Changelog
 
-## 2.6.1 (November 2026)
+## 3.0.0-beta.0 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary><strong>BREAKING CHANGES</strong></summary>
+
+#### Pack
+- Rename the `tsdown` workspace to `pack` ([#02719e5](https://github.com/deltabox-studio/toolchain/commit/02719e5) by [T0chi](https://github.com/T0chi))
+
+#### Vscode
+- Prefer the project `dbx` by default ([#5ae1d94](https://github.com/deltabox-studio/toolchain/commit/5ae1d94) by [T0chi](https://github.com/T0chi))
+
+#### Tsconfig
+- Add `strict` aliases and export-aware auto modes ([#fee5091](https://github.com/deltabox-studio/toolchain/commit/fee5091) by [T0chi](https://github.com/T0chi))
+
+#### Core
+- Strict opt-in config inheritance and configless management in `loader.ts` ([#cc38570](https://github.com/deltabox-studio/toolchain/commit/cc38570) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>New features</summary>
+
+#### Vscode
+- Decorate managed files and reveal the active project ([#a6debec](https://github.com/deltabox-studio/toolchain/commit/a6debec) by [T0chi](https://github.com/T0chi))
+- Add scoped auto-sync, the action palette and the Actions view ([#c330378](https://github.com/deltabox-studio/toolchain/commit/c330378) by [T0chi](https://github.com/T0chi))
+- Prompt for Docker when scaffolding ([#3fdfac3](https://github.com/deltabox-studio/toolchain/commit/3fdfac3) by [T0chi](https://github.com/T0chi))
+- Add generic format/lint actions and formatting settings ([#c256de5](https://github.com/deltabox-studio/toolchain/commit/c256de5) by [T0chi](https://github.com/T0chi))
+- Support plugin-mode projects, MCP install and sync UX ([#bfb2588](https://github.com/deltabox-studio/toolchain/commit/bfb2588) by [T0chi](https://github.com/T0chi))
+- Sync notifications, `sync all`, migration target, `manageConfigless` ([#4147500](https://github.com/deltabox-studio/toolchain/commit/4147500) by [T0chi](https://github.com/T0chi))
+
+#### Core
+- Wire `@deltabox/toolchain-docker` into the umbrella ([#5322f8b](https://github.com/deltabox-studio/toolchain/commit/5322f8b) by [T0chi](https://github.com/T0chi))
+
+#### Template
+- Expose the quality-of-life builtins ([#a7a0b3c](https://github.com/deltabox-studio/toolchain/commit/a7a0b3c) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Vscode
+- Repair the action palette and multi-root sync ([#0556f0a](https://github.com/deltabox-studio/toolchain/commit/0556f0a) by [T0chi](https://github.com/T0chi))
+- Validate manifest metadata ([#9e742e8](https://github.com/deltabox-studio/toolchain/commit/9e742e8) by [T0chi](https://github.com/T0chi))
+- Quote shim paths in the terminal command ([#859d08d](https://github.com/deltabox-studio/toolchain/commit/859d08d) by [T0chi](https://github.com/T0chi))
+- Keep watchers when an input resolve fails ([#e11adc5](https://github.com/deltabox-studio/toolchain/commit/e11adc5) by [T0chi](https://github.com/T0chi))
+- Remove config actions that have no CLI command ([#f75ebd0](https://github.com/deltabox-studio/toolchain/commit/f75ebd0) by [T0chi](https://github.com/T0chi))
+- Absorb a pending debounce on manual sync ([#74cde55](https://github.com/deltabox-studio/toolchain/commit/74cde55) by [T0chi](https://github.com/T0chi))
+- Discover hoisted and multi-root project `dbx` ([#4a017b0](https://github.com/deltabox-studio/toolchain/commit/4a017b0) by [T0chi](https://github.com/T0chi))
+
+#### Tsconfig
+- Reconcile overrides before generation and harden remote extends ([#0fa2caa](https://github.com/deltabox-studio/toolchain/commit/0fa2caa) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+#### Changelog
+- Apply details formatting to historical entries ([#0bfbd98](https://github.com/deltabox-studio/toolchain/commit/0bfbd98) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 2.6.1 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -20,9 +86,6 @@
   </details>
 
 </details>
-
-<!-- release:end -->
-
 
 ## 2.5.0 (November 2026)
 
@@ -119,7 +182,6 @@
 
 </details>
 
-
 ## 2.4.0 (November 2026)
 
 <details>
@@ -151,7 +213,6 @@
 
 </details>
 
-
 ## 2.3.2 (November 2026)
 
 <details>
@@ -168,7 +229,6 @@
   </details>
 
 </details>
-
 
 ## 2.3.1 (November 2026)
 
@@ -206,7 +266,6 @@
   </details>
 
 </details>
-
 
 ## 2.3.0 (November 2026)
 
