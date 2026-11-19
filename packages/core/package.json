@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-core",
-    "version": "3.0.0-beta.1",
+    "version": "3.0.0-beta.2",
     "private": true,
     "description": "Core runtime for dbx: loads dbx.config.* and the Vite plugin config, builds the project graph, runs sync tasks, manages manifests and watches inputs.",
     "author": "Victor Sango <victor@deltabox.studio>",

@@ -1,8 +1,22 @@
 # Changelog
 
-## 3.0.0-beta.6 (November 2026)
+## 3.0.0-beta.7 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Documentation</summary>
+
+- Add Contribute to the docs navigation ([#c7a32e4](https://github.com/deltabox-studio/toolchain/commit/c7a32e4) by [T0chi](https://github.com/T0chi))
+- Add the contribute guide ([#17c62df](https://github.com/deltabox-studio/toolchain/commit/17c62df) by [T0chi](https://github.com/T0chi))
+- Update migration guide links ([#b58b9fb](https://github.com/deltabox-studio/toolchain/commit/b58b9fb) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.6 (November 2026)
 
 <details>
 <summary>Documentation</summary>
@@ -18,9 +32,6 @@
 - Revamp the configuration overview ([#fe4137e](https://github.com/deltabox-studio/toolchain/commit/fe4137e) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.5 (November 2026)
 

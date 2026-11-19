@@ -1,8 +1,20 @@
 # Changelog
 
-## 3.0.0-beta.0 (November 2026)
+## 3.0.0-beta.1 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Chores</summary>
+
+- Make the workspace packages private ([#3b3c7d6](https://github.com/deltabox-studio/toolchain/commit/3b3c7d6) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.0 (November 2026)
 
 <details>
 <summary><strong>BREAKING CHANGES</strong></summary>
@@ -52,5 +64,3 @@
 - Cover Docker generation and containerized scaffolds ([#90148e1](https://github.com/deltabox-studio/toolchain/commit/90148e1) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->

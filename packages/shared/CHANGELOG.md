@@ -1,8 +1,20 @@
 # Changelog
 
-## 3.0.0-beta.2 (November 2026)
+## 3.0.0-beta.3 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Chores</summary>
+
+- Make the workspace packages private ([#3b3c7d6](https://github.com/deltabox-studio/toolchain/commit/3b3c7d6) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.2 (November 2026)
 
 <details>
 <summary>Documentation</summary>
@@ -10,9 +22,6 @@
 - Align the READMEs and guides with v3 ([#c6487b8](https://github.com/deltabox-studio/toolchain/commit/c6487b8) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.1 (November 2026)
 

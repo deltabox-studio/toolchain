@@ -1,8 +1,30 @@
 # Changelog
 
-## 3.0.0-beta.2 (November 2026)
+## 3.0.0-beta.3 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Documentation</summary>
+
+- Update the Vite plugin README ([#7adb895](https://github.com/deltabox-studio/toolchain/commit/7adb895) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Chores</summary>
+
+- Make the workspace packages private ([#3b3c7d6](https://github.com/deltabox-studio/toolchain/commit/3b3c7d6) by [T0chi](https://github.com/T0chi))
+- Sync the workspace metadata ([#1104d1b](https://github.com/deltabox-studio/toolchain/commit/1104d1b) by [T0chi](https://github.com/T0chi))
+- Sync the Vite package metadata ([#459670b](https://github.com/deltabox-studio/toolchain/commit/459670b) by [T0chi](https://github.com/T0chi))
+- Update the package keywords ([#8554023](https://github.com/deltabox-studio/toolchain/commit/8554023) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.2 (November 2026)
 
 <details>
 <summary>Documentation</summary>
@@ -10,9 +32,6 @@
 - Document the Vite plugin and Vite+ commands ([#95c1e66](https://github.com/deltabox-studio/toolchain/commit/95c1e66) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.1 (November 2026)
 
