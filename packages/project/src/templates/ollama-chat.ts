@@ -1,6 +1,7 @@
 import type { GeneratedFile } from '@deltabox/toolchain/shared';
 
 import type { ProjectContext } from '../types/index.js';
+import { escapeHtml } from '../typescript.js';
 import { file, readme, recipe } from './shared.js';
 
 export function ollamaChat(ctx: ProjectContext): GeneratedFile[] {
@@ -33,7 +34,7 @@ export function ollamaChat(ctx: ProjectContext): GeneratedFile[] {
                     '    <head>',
                     '        <meta charset="UTF-8" />',
                     '        <meta name="viewport" content="width=device-width, initial-scale=1.0" />',
-                    `        <title>${ctx.name}</title>`,
+                    `        <title>${escapeHtml(ctx.name)}</title>`,
                     '    </head>',
                     '    <body>',
                     '        <div id="app"></div>',

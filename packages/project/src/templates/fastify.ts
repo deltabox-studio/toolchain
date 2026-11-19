@@ -1,6 +1,7 @@
 import type { GeneratedFile } from '@deltabox/toolchain/shared';
 
 import type { ProjectContext } from '../types/index.js';
+import { quote } from '../typescript.js';
 import { file, readme, recipe, TSX, VERSIONS } from './shared.js';
 
 export function fastify(ctx: ProjectContext): GeneratedFile[] {
@@ -24,7 +25,7 @@ export function fastify(ctx: ProjectContext): GeneratedFile[] {
                     'export function buildApp(): FastifyInstance {',
                     '    const app = Fastify({ logger: true });',
                     '',
-                    `    app.get('/', async () => ({ name: '${ctx.name}', status: 'ok' }));`,
+                    `    app.get('/', async () => ({ name: ${quote(ctx.name)}, status: 'ok' }));`,
                     "    app.get('/health', async () => ({ status: 'ok' }));",
                     '',
                     '    return app;',

@@ -91,4 +91,9 @@ export interface WorkspaceContext extends ProjectContext {
 export interface WriteGeneratedFilesOptions {
     /** Overwrite files that already exist (default false). */
     force?: boolean;
+    /**
+     * Validate the targets (containment, duplicates, overwrites) without writing.
+     * Used to preflight a scaffold plus its Docker artifacts together.
+     */
+    dryRun?: boolean;
 }

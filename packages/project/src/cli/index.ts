@@ -33,7 +33,10 @@ import {
 } from '../typescript.js';
 
 const CONFIG_OPTIONS = [
-    { flags: '--no-config', description: 'Skip the dbx.config.ts file.' },
+    {
+        flags: '--no-project-config',
+        description: 'Skip the generated vite.config.ts file (the project config).',
+    },
     {
         flags: '--type <type>',
         description: 'Project type: project | monorepo-root | monorepo-workspace.',
@@ -255,9 +258,7 @@ export function projectCommands(): ToolchainCommand[] {
                     ...(scope ? { scope } : {}),
                     ...packageManager,
                     type: resolveType(opts, 'project'),
-                    includeConfig: context.noConfig
-                        ? false
-                        : ((opts.config as boolean | undefined) ?? true),
+                    includeConfig: (opts.projectConfig as boolean | undefined) ?? true,
                     rootOxc: findRootOxcFiles(out),
                     ...(tsconfigExtends ? { tsconfigExtends } : {}),
                 });
@@ -266,19 +267,26 @@ export function projectCommands(): ToolchainCommand[] {
                     { start: 'Writing project files...', success: 'Wrote project files.' }
                 );
                 if (opts.containerize) {
-                    written.push(
-                        ...writeDockerFiles({
-                            cwd: out,
-                            projectName: name,
-                            vitePlus: true,
-                            runtime: 'node',
-                            ...(packageManager.packageManager
-                                ? { packageManager: packageManager.packageManager }
-                                : {}),
-                            compose: true,
-                            force: Boolean(opts.force),
-                        })
-                    );
+                    // `project:init` scaffolds a library/root (no server entry
+                    // point), so a Node server image would exit immediately.
+                    const docker = writeDockerFiles({
+                        cwd: out,
+                        projectName: name,
+                        vitePlus: true,
+                        runtime: 'node',
+                        runnableServer: false,
+                        ...(packageManager.packageManager
+                            ? { packageManager: packageManager.packageManager }
+                            : {}),
+                        compose: true,
+                        force: Boolean(opts.force),
+                    });
+                    if (docker.length === 0) {
+                        logger.warn(
+                            'no Docker artifacts written: this project has no server entry point (use a server template, eg. `dbx create --template express`).'
+                        );
+                    }
+                    written.push(...docker);
                 }
                 ensureToolingDependencies({
                     cwd: out,
@@ -309,9 +317,7 @@ export function projectCommands(): ToolchainCommand[] {
                         ? tokenText(context.tokens.scope)
                         : undefined) ??
                     `@${name}`;
-                const includeConfig = context.noConfig
-                    ? false
-                    : ((opts.config as boolean | undefined) ?? true);
+                const includeConfig = (opts.projectConfig as boolean | undefined) ?? true;
                 const rootType = resolveType(opts, 'monorepo-root');
                 const withExample = Boolean(opts.example);
                 const packageManager = scaffoldPackageManager(opts, context.tokens);
@@ -401,9 +407,7 @@ export function projectCommands(): ToolchainCommand[] {
                 // Validate before writing anything: `--dir .` / `..` must never
                 // overwrite the monorepo root (or another package) with `--force`.
                 workspaceDirForTsconfig(wsDir);
-                const includeConfig = context.noConfig
-                    ? false
-                    : ((opts.config as boolean | undefined) ?? true);
+                const includeConfig = (opts.projectConfig as boolean | undefined) ?? true;
                 const type = resolveType(opts, 'monorepo-workspace');
                 const packageManager = scaffoldPackageManager(opts, rootTokens);
                 const tsconfigExtends = scaffoldTsconfigExtends(config);

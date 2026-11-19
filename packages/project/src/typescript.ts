@@ -115,7 +115,8 @@ export function scaffoldCatalog(
 function catalogFiles(
     packageManager: string | undefined,
     isMonorepo: boolean,
-    exclude: string[] = []
+    exclude: string[] = [],
+    workspaceGlobs: string[] = ['packages/*']
 ): GeneratedFile[] {
     const catalog = scaffoldCatalog(packageManager, exclude);
     if (!catalog) return [];
@@ -128,7 +129,7 @@ function catalogFiles(
                     path: 'pnpm-workspace.yaml',
                     content: renderPnpmWorkspace(
                         { packages: catalog },
-                        isMonorepo ? ['packages/*'] : undefined
+                        isMonorepo ? workspaceGlobs : undefined
                     ),
                 },
             ];
@@ -250,7 +251,7 @@ function packageMetadata(ctx: ProjectContext): Record<string, unknown> {
 const json = (value: unknown, indent = 4): string => `${JSON.stringify(value, null, indent)}\n`;
 
 /** Render a TypeScript string literal in the repo's single-quote style. */
-function quote(value: string): string {
+export function quote(value: string): string {
     return `'${value
         .replace(/\\/g, '\\\\')
         .replace(/'/g, "\\'")
@@ -261,7 +262,7 @@ function quote(value: string): string {
 }
 
 /** Escape text for the generated application HTML title. */
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
     return value
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -516,7 +517,8 @@ export function renderWorkspaceTsconfig(
 /** Files for a single-package TypeScript project (tsconfig + tooling). */
 export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
     const application = ctx.kind === 'application';
-    // `--no-config` means nothing manages the Oxc files, so don't create them.
+    // A skipped project config means nothing manages the Oxc files, so don't
+    // create them.
     // A nested project inside a root that already owns the matching Oxc file
     // inherits the root config instead of shadowing it.
     const allowOxc = ctx.oxc !== false && ctx.includeConfig !== false;
@@ -596,6 +598,10 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
 /** Files for a monorepo root (workspaces + monorepo tsconfig). */
 export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile[] {
     const withOxc = ctx.oxc !== false && ctx.includeConfig !== false;
+    const workspaceGlobs = ctx.workspaceGlobs ?? ['packages/*'];
+    const filters = workspaceGlobs
+        .map(glob => `--filter "./${glob.replace(/^\.?\//, '')}"`)
+        .join(' ');
     const catalog = scaffoldCatalog(ctx.packageManager);
     const pmField = scaffoldPackageManager(ctx);
     const pkg = {
@@ -605,13 +611,13 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
         type: 'module',
         ...packageMetadata(ctx),
         scripts: {
-            build: 'dbx run --filter "./packages/*" build',
-            test: 'dbx run --filter "./packages/*" test',
-            typecheck: 'dbx run --filter "./packages/*" typecheck',
+            build: `dbx run ${filters} build`,
+            test: `dbx run ${filters} test`,
+            typecheck: `dbx run ${filters} typecheck`,
             format: 'dbx fmt',
             lint: 'dbx lint --fix',
         },
-        workspaces: workspacesField(ctx.packageManager, ctx.workspaceGlobs ?? ['packages/*']),
+        workspaces: workspacesField(ctx.packageManager, workspaceGlobs),
         devDependencies: devDependencies(
             ctx.packageManager,
             catalogDefined(ctx.packageManager, true)
@@ -658,7 +664,7 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
         },
         { path: '.gitignore', content: renderGitignore() },
         { path: 'README.md', content: `# ${ctx.name}\n` },
-        ...catalogFiles(ctx.packageManager, true),
+        ...catalogFiles(ctx.packageManager, true, [], workspaceGlobs),
     ];
 }
 
@@ -938,6 +944,34 @@ export function renderGitignore(): string {
     ].join('\n');
 }
 
+/** Whether a value is a valid unscoped npm package name. */
+export function isValidPackageName(name: string): boolean {
+    return /^[a-z0-9][a-z0-9._-]*$/.test(name) && name !== '.' && name !== '..';
+}
+
+/** A filesystem path with symlinks resolved, or `undefined` when it cannot be. */
+function realPath(value: string): string | undefined {
+    try {
+        return fs.realpathSync.native(value);
+    } catch {
+        try {
+            return fs.realpathSync(value);
+        } catch {
+            return undefined;
+        }
+    }
+}
+
+/** Whether a path exists, without following a final symlink. */
+function entryExists(value: string): boolean {
+    try {
+        fs.lstatSync(value);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 function isInside(root: string, target: string): boolean {
     const normalizedRoot = process.platform === 'win32' ? root.toLowerCase() : root;
     const normalizedTarget = process.platform === 'win32' ? target.toLowerCase() : target;
@@ -948,10 +982,45 @@ function isInside(root: string, target: string): boolean {
 }
 
 /**
+ * Reject a target that escapes `root`, following symlinks/junctions. The lexical
+ * check catches `..` paths; the real-path check catches a link under the output
+ * directory that points elsewhere (which would otherwise let a scaffold write
+ * outside the root).
+ */
+export function assertPathInside(root: string, target: string): void {
+    const resolvedRoot = path.resolve(root);
+    const resolvedTarget = path.resolve(target);
+    if (!isInside(resolvedRoot, resolvedTarget)) {
+        throw new Error(`refusing to write outside ${resolvedRoot}: ${resolvedTarget}`);
+    }
+
+    // Resolve the nearest existing ancestor, then re-append the missing tail.
+    // `lstat` (not `existsSync`) also sees a broken symlink, which must be
+    // rejected: writing through it would create a file outside the root.
+    let probe = resolvedTarget;
+    const tail: string[] = [];
+    while (!entryExists(probe)) {
+        const parent = path.dirname(probe);
+        if (parent === probe) break;
+        tail.unshift(path.basename(probe));
+        probe = parent;
+    }
+    const realRoot = realPath(resolvedRoot) ?? resolvedRoot;
+    const realProbe = realPath(probe);
+    if (!realProbe) {
+        throw new Error(`refusing to write through an unresolvable link: ${probe}`);
+    }
+    const realTarget = path.resolve(realProbe, ...tail);
+    if (!isInside(realRoot, realTarget)) {
+        throw new Error(`refusing to write outside ${resolvedRoot}: ${resolvedTarget}`);
+    }
+}
+
+/**
  * Write generated files under `cwd`, creating directories as needed. A target
- * outside `cwd` is rejected, and an existing file is never overwritten unless
- * `force` is set, so a scaffold cannot escape its output directory or silently
- * clobber a user's files.
+ * outside `cwd` (including through a symlink/junction) is rejected, and an
+ * existing file is never overwritten unless `force` is set, so a scaffold cannot
+ * escape its output directory or silently clobber a user's files.
  */
 export function writeGeneratedFiles(
     files: GeneratedFile[],
@@ -962,9 +1031,7 @@ export function writeGeneratedFiles(
     const targets = files.map(file => path.resolve(root, file.path));
     const seen = new Map<string, string>();
     for (const target of targets) {
-        if (!isInside(root, target)) {
-            throw new Error(`refusing to write outside ${root}: ${target}`);
-        }
+        assertPathInside(root, target);
         const key = process.platform === 'win32' ? target.toLowerCase() : target;
         const previous = seen.get(key);
         if (previous !== undefined) {
@@ -984,6 +1051,7 @@ export function writeGeneratedFiles(
             );
         }
     }
+    if (options.dryRun === true) return targets;
 
     const written: string[] = [];
     for (const [index, target] of targets.entries()) {

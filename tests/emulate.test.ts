@@ -550,7 +550,7 @@ describe('emulate: CLI + templates', () => {
     );
 
     it(
-        'honours --no-config when the workspace root differs from cwd',
+        'honours --no-project-config when the workspace root differs from cwd',
         async () => {
             const ws = scratch('workspace-root-no-config');
             const root = path.join(ws, 'root');
@@ -573,19 +573,21 @@ describe('emulate: CLI + templates', () => {
                 root,
                 '--dir',
                 'packages/web',
-                '--no-config',
+                '--no-project-config',
             ]);
             expect(add.code, add.stderr).toBe(0);
+            // The root config still supplies the scope/package manager; only the
+            // generated config/vite files are skipped.
             expect(
                 readJson<{ name: string }>(path.join(root, 'packages/web/package.json')).name
-            ).toBe('@root/web');
+            ).toBe('@target/web');
             expect(fs.existsSync(path.join(root, 'packages/web/vite.config.ts'))).toBe(false);
         },
         TIMEOUT
     );
 
     it(
-        'skips the config and Oxc files with project:init --no-config',
+        'skips the config and Oxc files with project:init --no-project-config',
         async () => {
             const ws = scratch('scaffold-no-config');
             const out = path.join(ws, 'app');
@@ -595,7 +597,7 @@ describe('emulate: CLI + templates', () => {
                 'demo',
                 '--out',
                 out,
-                '--no-config',
+                '--no-project-config',
             ]);
             expect(result.code, result.stderr).toBe(0);
             expect(fs.existsSync(path.join(out, 'package.json'))).toBe(true);
@@ -1644,8 +1646,11 @@ describe('emulate: quality-of-life templates', () => {
                 '--containerize',
             ]);
             expect(projectResult.code, projectResult.stderr).toBe(0);
-            expect(fs.existsSync(path.join(projectDir, 'Dockerfile'))).toBe(true);
-            expect(fs.existsSync(path.join(projectDir, 'docker-compose.yaml'))).toBe(true);
+            // The library scaffold has no server entry point: containerization
+            // warns instead of emitting a Dockerfile that cannot start.
+            expect(projectResult.stderr).toContain('no Docker artifacts written');
+            expect(fs.existsSync(path.join(projectDir, 'Dockerfile'))).toBe(false);
+            expect(fs.existsSync(path.join(projectDir, 'docker-compose.yaml'))).toBe(false);
         },
         TIMEOUT * 2
     );

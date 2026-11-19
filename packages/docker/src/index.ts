@@ -56,6 +56,16 @@ export interface DockerOptions {
     dockerfile?: string;
     /** Write a `.dockerignore` alongside the Dockerfile (default true). */
     dockerignore?: boolean;
+    /** Extra files/directories copied from the build stage into the runtime image. */
+    assets?: string[];
+    /** Runtime system packages installed with `apt-get` (eg. `rclone`). */
+    runtimePackages?: string[];
+    /**
+     * Emit a runnable server image (default true). Set `false` for a library or
+     * other package that has no server entry point: `dockerFiles` then emits no
+     * artifacts at all instead of a broken Node image.
+     */
+    runnableServer?: boolean;
 }
 
 /** Options for planning/rendering the Docker artifacts for a project. */
@@ -103,6 +113,12 @@ export interface DockerPlan {
     installSources: string[];
     /** Whether `package.json` declares a `build` script. */
     hasBuildScript: boolean;
+    /** Extra files/directories copied into the runtime image. */
+    assets: string[];
+    /** Runtime system packages installed with `apt-get`. */
+    runtimePackages: string[];
+    /** Whether the plan emits a runnable server image. */
+    runnableServer: boolean;
     /** Yarn Plug'n'Play runtime files, when the project does not use `node_modules`. */
     pnp?: PnpRuntime;
 }
@@ -276,6 +292,44 @@ function healthcheckCommand(plan: DockerPlan): string {
     return `HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD ["${executable}", "-e", "${code}"]`;
 }
 
+/** Whether a build script produces a static Vite/Vite+ bundle. */
+function isStaticViteBuild(build: string): boolean {
+    return /(?:^|[\s;&|])(?:vite|vp)\s+build(?:\s|$)/.test(build);
+}
+
+/** Whether a start script only previews a static build. */
+function isStaticPreview(start: string): boolean {
+    return /(?:^|[\s;&|])(?:vite|vp)\s+preview(?:\s|$)/.test(start);
+}
+
+/** Validate the asset paths copied into the runtime image. */
+function runtimeAssets(assets: string[] | undefined): string[] {
+    return (assets ?? []).map(asset => {
+        const normalized = asset
+            .replace(/\\/g, '/')
+            .replace(/^\.?\//, '')
+            .replace(/\/+$/, '');
+        if (
+            !normalized ||
+            path.posix.isAbsolute(normalized) ||
+            normalized.split('/').includes('..')
+        ) {
+            throw new Error(`invalid Docker asset path "${asset}" (must be relative to the root).`);
+        }
+        return normalized;
+    });
+}
+
+/** Validate the runtime system packages interpolated into the Dockerfile. */
+function runtimePackages(packages: string[] | undefined): string[] {
+    return (packages ?? []).map(name => {
+        if (!/^[a-z0-9][a-z0-9.+-]*$/i.test(name)) {
+            throw new Error(`invalid runtime package "${name}".`);
+        }
+        return name;
+    });
+}
+
 /** Resolve the Docker plan for a project. */
 export function resolveDockerPlan(options: DockerPlanOptions): DockerPlan {
     const pkg = readJsonAt<PackageJson>(options.cwd, 'package.json');
@@ -289,8 +343,12 @@ export function resolveDockerPlan(options: DockerPlanOptions): DockerPlan {
     if (options.runtime && options.runtime !== 'auto') runtime = options.runtime;
     else if (build.includes('vitepress')) runtime = 'static';
     else if (build.startsWith('bun ') || start.startsWith('bun ')) runtime = 'bun';
+    // A Vite SPA with `start: vite preview` is static: the preview command is
+    // not a server entry point, so a Node image would fail to start. An explicit
+    // `runtime: 'node'` above still wins (a custom server can opt in).
+    else if (isStaticPreview(start) || (!start && isStaticViteBuild(build))) runtime = 'static';
     else if (start) runtime = 'node';
-    else if (build.includes('vp build') || build.includes('vite build')) runtime = 'static';
+    else if (isStaticViteBuild(build)) runtime = 'static';
     else runtime = 'node';
 
     // The package manager is the single source of truth for both the COPY
@@ -345,6 +403,9 @@ export function resolveDockerPlan(options: DockerPlanOptions): DockerPlan {
                     : `node:${nodeVersion}-bookworm-slim`),
         installSources: installSources(packageManager, options.cwd, vitePlus),
         hasBuildScript: build.trim().length > 0,
+        assets: runtimeAssets(options.assets),
+        runtimePackages: runtimePackages(options.runtimePackages),
+        runnableServer: options.runnableServer ?? true,
         ...(pnp ? { pnp } : {}),
     };
     plan.user = plan.user || defaultUser({ ...plan, vitePlus });
@@ -450,6 +511,16 @@ function serverRuntime(plan: DockerPlan): string[] {
             lines.push('COPY --from=build /app/node_modules ./node_modules');
         }
     }
+    for (const asset of plan.assets) {
+        lines.push(`COPY --from=build /app/${asset} ./${asset}`);
+    }
+    // Runtime system packages (eg. `rclone`) need root; install before dropping
+    // to the unprivileged user.
+    if (plan.runtimePackages.length > 0) {
+        lines.push(
+            `RUN apt-get update && apt-get install -y --no-install-recommends ${plan.runtimePackages.join(' ')} && rm -rf /var/lib/apt/lists/*`
+        );
+    }
     lines.push(`USER ${plan.user}`, `EXPOSE ${plan.port}`);
     if (plan.healthcheck) lines.push(healthcheckCommand(plan));
     lines.push(runtimeCommand(plan));
@@ -542,6 +613,9 @@ export function renderCompose(plan: DockerPlan): string {
 /** Render every Docker artifact for a project. */
 export function dockerFiles(options: DockerPlanOptions): DockerFile[] {
     const plan = resolveDockerPlan(options);
+    // A library/non-server package has no runnable entry point: emitting a Node
+    // server image would produce a container that exits immediately.
+    if (!plan.runnableServer) return [];
     const files: DockerFile[] = [{ path: plan.dockerfile, content: renderDockerfile(plan) }];
     if (plan.dockerignore) {
         files.push({ path: '.dockerignore', content: renderDockerignore(plan) });

@@ -1,7 +1,7 @@
 import type { GeneratedFile } from '@deltabox/toolchain/shared';
 
 import type { ProjectContext } from '../types/index.js';
-import { renderGitignore } from '../typescript.js';
+import { quote, renderGitignore } from '../typescript.js';
 import { file, readme, recipe, VERSIONS } from './shared.js';
 
 export function vitePress(ctx: ProjectContext): GeneratedFile[] {
@@ -34,7 +34,7 @@ export function vitePress(ctx: ProjectContext): GeneratedFile[] {
                     'layout: home',
                     '',
                     'hero:',
-                    `    name: ${ctx.name}`,
+                    `    name: ${JSON.stringify(ctx.name)}`,
                     '    text: Documentation',
                     '    tagline: Everything you need to get started.',
                     '    actions:',
@@ -75,8 +75,8 @@ export function vitePress(ctx: ProjectContext): GeneratedFile[] {
                     "import { defineConfig } from 'vitepress';",
                     '',
                     'export default defineConfig({',
-                    `    title: '${ctx.name}',`,
-                    `    description: 'Documentation for ${ctx.name}.',`,
+                    `    title: ${quote(ctx.name)},`,
+                    `    description: ${quote(`Documentation for ${ctx.name}.`)},`,
                     '    cleanUrls: true,',
                     '    themeConfig: {',
                     '        nav: [{ text: "Guide", link: "/guide/getting-started" }],',
@@ -102,7 +102,7 @@ export function vitePress(ctx: ProjectContext): GeneratedFile[] {
                     '',
                     "describe('docs config', () => {",
                     "    it('names the site', () => {",
-                    `        expect(config.title).toBe('${ctx.name}');`,
+                    `        expect(config.title).toBe(${quote(ctx.name)});`,
                     '    });',
                     '});',
                     '',

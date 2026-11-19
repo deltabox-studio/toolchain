@@ -452,3 +452,62 @@ describe('docker dependency sources', () => {
         expect(ignore).toContain('!**/.env.example');
     });
 });
+
+describe('static detection and template-aware plans', () => {
+    it('treats a Vite SPA with `start: vite preview` as static', () => {
+        const cwd = project({
+            name: 'spa',
+            scripts: { build: 'vite build', start: 'vite preview' },
+        });
+        const plan = resolveDockerPlan({ cwd });
+
+        expect(plan.runtime).toBe('static');
+        const dockerfile = renderDockerfile(plan);
+        expect(dockerfile).toContain('/usr/share/nginx/html');
+        expect(dockerfile).not.toContain('CMD ["node"');
+    });
+
+    it('keeps an explicit Node runtime for a custom server', () => {
+        const cwd = project({
+            name: 'spa-server',
+            scripts: { build: 'vite build', start: 'vite preview' },
+        });
+        const plan = resolveDockerPlan({ cwd, runtime: 'node', entry: 'server.js' });
+
+        expect(plan.runtime).toBe('node');
+        expect(renderDockerfile(plan)).toContain('CMD ["node", "server.js"]');
+    });
+
+    it('copies runtime assets, installs runtime packages and honours the health path', () => {
+        const cwd = project({
+            name: 'files',
+            scripts: { build: 'tsc', start: 'node dist/index.js' },
+        });
+        const plan = resolveDockerPlan({
+            cwd,
+            assets: ['public'],
+            runtimePackages: ['rclone'],
+            healthcheckPath: '/index.html',
+        });
+
+        expect(plan.assets).toEqual(['public']);
+        expect(plan.runtimePackages).toEqual(['rclone']);
+        const dockerfile = renderDockerfile(plan);
+        expect(dockerfile).toContain('COPY --from=build /app/public ./public');
+        expect(dockerfile).toContain('apt-get install -y --no-install-recommends rclone');
+        expect(dockerfile).toContain('http://127.0.0.1:3000/index.html');
+    });
+
+    it('does not emit a server image for a library', () => {
+        const cwd = project({ name: 'lib', scripts: { build: 'vp pack' } });
+        expect(dockerFiles({ cwd, runnableServer: false })).toEqual([]);
+    });
+
+    it('rejects unsafe asset paths and package names', () => {
+        const cwd = project({ name: 'unsafe' });
+        expect(() => resolveDockerPlan({ cwd, assets: ['../secrets'] })).toThrow(/asset path/);
+        expect(() => resolveDockerPlan({ cwd, runtimePackages: ['rclone && rm -rf /'] })).toThrow(
+            /runtime package/
+        );
+    });
+});

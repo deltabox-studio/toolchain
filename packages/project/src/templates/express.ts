@@ -1,6 +1,7 @@
 import type { GeneratedFile } from '@deltabox/toolchain/shared';
 
 import type { ProjectContext } from '../types/index.js';
+import { quote } from '../typescript.js';
 import { file, readme, recipe, TSX, VERSIONS } from './shared.js';
 
 export function express(ctx: ProjectContext): GeneratedFile[] {
@@ -27,7 +28,7 @@ export function express(ctx: ProjectContext): GeneratedFile[] {
                     '    app.use(express.json());',
                     '',
                     "    app.get('/', (_req, res) => {",
-                    `        res.json({ name: '${ctx.name}', status: 'ok' });`,
+                    `        res.json({ name: ${quote(ctx.name)}, status: 'ok' });`,
                     '    });',
                     '',
                     "    app.get('/health', (_req, res) => {",
