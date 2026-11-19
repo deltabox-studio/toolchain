@@ -77,15 +77,18 @@ export interface WorkspaceViteOptions {
  * built, so the pack config can keep using the shared `baseTsdownConfig` / alias
  * helpers — functions and regexes that a generated static config cannot
  * serialize. On a clean checkout the plugin cannot resolve until the first
- * build, so config loading falls back to the explicit `pack`/`run` options. The
- * plugin also derives the root `fmt`/`lint` sections, and the package opts into
- * both through its `dbx.config.ts`.
+ * build, so config loading falls back to the explicit `pack`/`run` options.
+ *
+ * The plugin is passed no inline toolchain config: the workspace inherits the
+ * root `fmt`/`lint` sections, so package-local `vp fmt` / `vp lint` use the same
+ * Oxfmt/Oxlint options (and ignore patterns) as the root instead of the
+ * defaults a bare `fmt: true` / `lint: true` would select.
  */
 export function workspaceViteConfig(options: WorkspaceViteOptions): ViteUserConfig {
     const { entry, alwaysBundle = SHARED_ONLY, exports: exportsOption } = options;
     const dbx = resolveDbxPlugin();
     return {
-        plugins: dbx ? [dbx({ toolchain: { fmt: true, lint: true } })] : [],
+        plugins: dbx ? [dbx()] : [],
         resolve: { tsconfigPaths: true },
         pack: {
             ...baseTsdownConfig,

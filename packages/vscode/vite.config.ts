@@ -26,7 +26,7 @@ const dbx = resolveDbxPlugin();
  * `vp pack` builds both; `-F extension` / `-F dbx` selects one.
  */
 export default defineConfig({
-    plugins: dbx ? [dbx({ toolchain: { fmt: true, lint: true } })] : [],
+    plugins: dbx ? [dbx()] : [],
     resolve: { tsconfigPaths: true },
     pack: [
         {
