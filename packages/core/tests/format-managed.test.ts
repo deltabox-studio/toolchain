@@ -201,10 +201,12 @@ describe('managed-file formatting', () => {
         expect(fs.readFileSync(path.join(cwd, 'a.ts'), 'utf-8')).toBe('old\n');
     });
 
-    it('never runs a built-in formatter in fix mode during --check', async () => {
+    it('formats a temporary copy during --check so formatting drift is detected', async () => {
         const cwd = tmp();
         const argsFile = fakeOxfmt(cwd);
-        write(path.join(cwd, 'managed.ts'), 'old\n');
+        // The generated content already matches the file, but the formatter
+        // would rewrite it: --check must still report drift.
+        write(path.join(cwd, 'managed.ts'), 'new\n');
         write(path.join(cwd, 'unrelated.ts'), 'unrelated\n');
         const task: SyncTask = {
             name: 'x',
@@ -220,11 +222,14 @@ describe('managed-file formatting', () => {
             quiet: true,
         });
 
+        expect(result.upToDate).toBe(false);
         expect(result.changed).toEqual(['managed.ts']);
-        expect(fs.readFileSync(path.join(cwd, 'managed.ts'), 'utf-8')).toBe('old\n');
+        expect(fs.readFileSync(path.join(cwd, 'managed.ts'), 'utf-8')).toBe('new\n');
         expect(fs.readFileSync(path.join(cwd, 'unrelated.ts'), 'utf-8')).toBe('unrelated\n');
         const args = JSON.parse(fs.readFileSync(argsFile, 'utf-8')) as string[];
-        expect(args).toEqual(expect.arrayContaining(['--check', 'managed.ts']));
+        // Fix mode (temporary write), never the formatter's own check mode.
+        expect(args).toEqual(expect.arrayContaining(['managed.ts']));
+        expect(args).not.toContain('--check');
         expect(args).not.toContain('unrelated.ts');
     });
 });

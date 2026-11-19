@@ -167,6 +167,91 @@ describe('runSync', () => {
         expect(readManifest(cwd).files).toEqual([]);
     });
 
+    it('canonicalizes untracked paths so they never enter the manifest', async () => {
+        const cwd = tmp();
+        await runSync({
+            tasks: [
+                {
+                    name: 'x',
+                    run: () => [
+                        { path: './user.json', content: '{}', track: false },
+                        { path: path.join(cwd, 'abs-user.json'), content: '{}', track: false },
+                    ],
+                },
+            ],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        expect(readManifest(cwd).files).toEqual([]);
+        await runSync({
+            tasks: [],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        expect(fs.existsSync(path.join(cwd, 'user.json'))).toBe(true);
+        expect(fs.existsSync(path.join(cwd, 'abs-user.json'))).toBe(true);
+    });
+
+    it('applies a managed-file header (except for JSON files)', async () => {
+        const cwd = tmp();
+        await runSync({
+            tasks: [
+                {
+                    name: 'x',
+                    run: () => [
+                        { path: 'a.js', content: 'const a = 1;\n', header: '// managed' },
+                        { path: 'b.json', content: '{}\n', header: '// not json' },
+                    ],
+                },
+            ],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        expect(fs.readFileSync(path.join(cwd, 'a.js'), 'utf-8')).toBe('// managed\nconst a = 1;\n');
+        expect(fs.readFileSync(path.join(cwd, 'b.json'), 'utf-8')).toBe('{}\n');
+    });
+
+    it('ignores a manifest entry that is now a directory', async () => {
+        const cwd = tmp();
+        fs.mkdirSync(path.join(cwd, 'a.txt'));
+        writeManifest(cwd, ['a.txt'], undefined, { 'a.txt': 'created' });
+        const result = await runSync({
+            tasks: [],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        expect(result.removed).toEqual([]);
+        expect(fs.statSync(path.join(cwd, 'a.txt')).isDirectory()).toBe(true);
+    });
+
+    it('drops a kept file from the manifest even when pruning is disabled', async () => {
+        const cwd = tmp();
+        await runSync({
+            tasks: [{ name: 'x', run: () => [{ path: 'custom.build.json', content: '{}' }] }],
+            cwd,
+            config: {},
+            tokens: {},
+            quiet: true,
+        });
+        await runSync({
+            tasks: [{ name: 'x', keep: ['custom.build.json'], run: () => [] }],
+            cwd,
+            config: {},
+            tokens: {},
+            prune: false,
+            quiet: true,
+        });
+        expect(readManifest(cwd).files).not.toContain('custom.build.json');
+    });
+
     it('reports drift in check mode without writing', async () => {
         const cwd = tmp();
         fs.writeFileSync(path.join(cwd, 'a.txt'), 'old');

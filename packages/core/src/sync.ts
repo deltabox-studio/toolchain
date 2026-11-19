@@ -168,22 +168,26 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     // path from a custom generator/provider).
     for (const file of files) resolveManagedPath(cwd, file.path);
 
-    const desired = new Map(
-        files.map(file => {
-            const abs = resolveManagedPath(cwd, file.path);
-            return [norm(path.relative(cwd, abs)), file.content] as const;
-        })
-    );
+    // Canonicalize every task output once: `./a.ts`, `a/../a.ts`, an absolute
+    // path and `a.ts` all name the same managed file, and the manifest must use
+    // one key for all of them.
+    const resolved = files.map(file => {
+        const key = norm(path.relative(cwd, resolveManagedPath(cwd, file.path)));
+        const header =
+            file.header && !/\.json$/i.test(file.path) && !file.content.startsWith(file.header)
+                ? `${file.header}\n`
+                : '';
+        return { ...file, key, content: `${header}${file.content}` };
+    });
+    const desired = new Map(resolved.map(file => [file.key, file.content] as const));
     // Untracked files are written + drift-checked but stay user-owned: they are
     // kept out of the manifest, so they are never pruned or reset.
-    const untracked = new Set(
-        files.filter(file => file.track === false).map(file => norm(file.path))
-    );
+    const untracked = new Set(resolved.filter(file => file.track === false).map(file => file.key));
     // Files a task already writes in their final form (eg. generated
     // tsconfigs): never run the post-write formatter on them, so `--check`
     // compares the generator output directly.
     const unformatted = new Set(
-        files.filter(file => file.format === false).map(file => norm(file.path))
+        resolved.filter(file => file.format === false).map(file => file.key)
     );
 
     // Files a task declares as user-owned (`keep`): never deleted, dropped from
@@ -192,7 +196,7 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
     // currently disabled: disabling a section must not make its kept files
     // deletable.
     const keep = new Set<string>();
-    for (const task of tasks) {
+    for (const task of options.tasks) {
         if (task.projectTypes && !task.projectTypes.includes(projectType)) continue;
         const patterns = typeof task.keep === 'function' ? task.keep(config) : (task.keep ?? []);
         for (const pattern of patterns) keep.add(pattern);
@@ -261,6 +265,13 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
             continue;
         }
         if (!fs.existsSync(abs)) continue;
+        const stat = fs.statSync(abs);
+        if (!stat.isFile()) {
+            // A stale manifest entry that now names a directory must not make
+            // every sync fail (or be deleted).
+            warn(`sync: ignoring "${relative}": it is not a file.`);
+            continue;
+        }
         removed.push(relative);
         removedFiles.push({ path: relative, content: fs.readFileSync(abs, 'utf-8') });
     }
@@ -281,10 +292,14 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
             const formatTargets = [...desired.keys()].filter(
                 relative => !unformatted.has(relative)
             );
+            // Check mode writes the generated content temporarily and formats it
+            // in fix mode, then restores the originals in `finally`. Forcing the
+            // formatter's own `--check` would leave formatting-only drift
+            // invisible (the unformatted output would compare equal to itself).
             const formatted = await formatManagedFiles(cwd, formatTargets, {
                 setting: options.format,
                 config,
-                check: options.check === true,
+                check: false,
             });
             if (formatted.ran && formatted.code !== 0) {
                 log(`  ! formatter exited ${formatted.code}; managed files may be unformatted.`);
@@ -342,7 +357,7 @@ export async function runSync(options: RunSyncOptions): Promise<SyncResult> {
         fs.rmSync(path.resolve(cwd, relative), { force: true });
     }
     const tracked = [...new Set([...(prune ? [] : manifest.files), ...desired.keys()])].filter(
-        relative => !untracked.has(relative)
+        relative => !untracked.has(relative) && !isKept(relative)
     );
     const origins: Record<string, 'created' | 'adopted'> = {};
     for (const relative of tracked) {

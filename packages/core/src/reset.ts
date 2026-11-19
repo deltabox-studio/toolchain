@@ -76,6 +76,12 @@ export function resetToolchain(options: ResetToolchainOptions): ResetToolchainRe
 
     const removeFile = (abs: string, rel: string): void => {
         if (!fs.existsSync(abs)) return;
+        // A stale manifest entry may now name a directory: never remove it (or
+        // make the whole reset fail).
+        if (!fs.statSync(abs).isFile()) {
+            skipped.push(rel);
+            return;
+        }
         if (!dryRun) fs.rmSync(abs, { force: true });
         removed.push(rel);
     };

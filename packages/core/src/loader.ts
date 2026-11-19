@@ -139,12 +139,12 @@ export function findParentConfigFile(cwd: string = process.cwd()): string | unde
 
 /** The Vite config file names, in Vite's own resolution order. */
 export const VITE_CONFIG_FILE_NAMES = [
-    'vite.config.ts',
-    'vite.config.mts',
-    'vite.config.cts',
     'vite.config.js',
     'vite.config.mjs',
+    'vite.config.ts',
     'vite.config.cjs',
+    'vite.config.mts',
+    'vite.config.cts',
 ] as const;
 
 /** Find the first `vite.config.*` at `cwd`, if any. */

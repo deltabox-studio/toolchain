@@ -216,15 +216,13 @@ export async function resolveWatchInputFiles(
         const patterns =
             typeof task.watch === 'function' ? task.watch(options.config) : (task.watch ?? []);
         for (const pattern of patterns) {
-            if (!pattern.includes('**')) {
-                addIfExists(pattern);
+            // Expand real globs (`src/**/*.ts`, `packages/*/x.json`, ...) rather
+            // than only supporting literal paths and a leading `**/`.
+            if (/[*?[\]{}]/.test(pattern)) {
+                for (const file of globSync(pattern, { cwd, nodir: true, ignore })) add(file);
                 continue;
             }
-            const suffix = pattern.replace(/^\*\*\//, '');
-            for (const project of graph.projects) {
-                const prefix = project.dir === '.' ? '' : `${project.dir}/`;
-                addIfExists(`${prefix}${suffix}`);
-            }
+            addIfExists(pattern);
         }
     }
 

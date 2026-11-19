@@ -43,6 +43,19 @@ describe('resolveWatchInputFiles', () => {
         expect(result.globs).toEqual(['dbx.config.*']);
     });
 
+    it('expands glob inputs declared by tasks', async () => {
+        const cwd = tmp();
+        fs.mkdirSync(path.join(cwd, 'packages', 'a'), { recursive: true });
+        fs.writeFileSync(path.join(cwd, 'packages', 'a', 'x.json'), '{}');
+        const task: SyncTask = {
+            name: 'x',
+            watch: ['packages/**/x.json', 'src/**/*.ts'],
+            run: () => [],
+        };
+        const result = await resolveWatchInputFiles({ cwd, config: {}, tasks: [task] });
+        expect(result.globs).toContain('packages/a/x.json');
+    });
+
     it('only reports paths inside the project root', async () => {
         const cwd = tmp();
         fs.writeFileSync(path.join(cwd, 'package.json'), JSON.stringify({ name: 'x' }));

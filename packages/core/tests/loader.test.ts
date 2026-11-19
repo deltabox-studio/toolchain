@@ -9,6 +9,7 @@ import { sectionConfig } from '@deltabox/toolchain/shared';
 import {
     findConfigFile,
     findParentConfigFile,
+    findViteConfigFile,
     isDbxPluginConfig,
     loadToolchainConfig,
     mergeToolchainConfig,
@@ -972,5 +973,14 @@ describe('dbx() plugin config', () => {
         expect(loaded.managed).toBe(true);
         expect(sectionConfig(loaded.config.fmt)?.oxc).toEqual({ tabWidth: 4 });
         expect(loaded.config.project?.author).toBe('Acme');
+    });
+});
+
+describe('findViteConfigFile', () => {
+    it("uses Vite's own config precedence (js before ts)", () => {
+        const cwd = tmp();
+        fs.writeFileSync(path.join(cwd, 'vite.config.ts'), 'export default {};\n');
+        fs.writeFileSync(path.join(cwd, 'vite.config.js'), 'export default {};\n');
+        expect(findViteConfigFile(cwd)).toBe(path.join(cwd, 'vite.config.js'));
     });
 });
