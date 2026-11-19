@@ -40,6 +40,7 @@ https://github.com/user-attachments/assets/a4f1ad75-fedd-40ee-b84d-3365f7025a3e
     - [Quickstart](#quickstart)
     - [Config generator](#config-generator)
     - [Vite / Vite+ plugin](#vite--vite-plugin)
+    - [MCP](#mcp)
     - [CLI](#cli)
     - [Programmatic API](#programmatic-api)
     - [VS Code extension](#vs-code-extension)
