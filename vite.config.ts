@@ -224,6 +224,13 @@ export default defineConfig({
                                         run: [
                                             'version="$(node -p "require(\'./package.json\').version")"',
                                             'echo "version=$version" >> "$GITHUB_OUTPUT"',
+                                            'if [[ "$version" == *-* ]]; then',
+                                            '  echo "prerelease=true" >> "$GITHUB_OUTPUT"',
+                                            '  echo "versionClean=${version%%-*}" >> "$GITHUB_OUTPUT"',
+                                            'else',
+                                            '  echo "prerelease=false" >> "$GITHUB_OUTPUT"',
+                                            '  echo "versionClean=$version" >> "$GITHUB_OUTPUT"',
+                                            'fi',
                                             'if git ls-remote --exit-code --tags origin "v$version" >/dev/null 2>&1; then',
                                             '  echo "Release v$version already exists; skipping."',
                                             '  echo "skip=true" >> "$GITHUB_OUTPUT"',
@@ -235,7 +242,14 @@ export default defineConfig({
                                     {
                                         name: 'Package the VS Code extension',
                                         if: "steps.release.outputs.skip == 'false'",
-                                        run: '{{packageManager}} workspace toolchain-vscode package:vsix',
+                                        run: [
+                                            'if [[ "${{ steps.release.outputs.prerelease }}" == "true" ]]; then',
+                                            '  node -e \'const fs = require("fs"); const p = "packages/vscode/package.json"; const j = JSON.parse(fs.readFileSync(p, "utf8")); j.version = "${{ steps.release.outputs.versionClean }}"; fs.writeFileSync(p, JSON.stringify(j, null, 4) + "\\n");\'',
+                                            '  {{packageManager}} workspace toolchain-vscode package:vsix:prerelease',
+                                            'else',
+                                            '  {{packageManager}} workspace toolchain-vscode package:vsix',
+                                            'fi',
+                                        ].join('\n'),
                                     },
                                     {
                                         name: 'Extract release notes',
