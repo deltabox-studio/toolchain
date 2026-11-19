@@ -11,6 +11,8 @@ export interface CommandDeps {
     workspaceRoots: () => string[];
     refreshGraph: () => Promise<void>;
     refreshViews: () => void;
+    /** Shared post-sync hook (rebuild watchers + repaint every view). */
+    afterSync: () => Promise<void>;
     runRoots: (args: string[]) => Promise<number[]>;
     runProjects: (projects: Project[], args: string[]) => Promise<number[]>;
     /** The projects currently selected in the Projects view. */

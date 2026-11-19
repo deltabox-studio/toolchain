@@ -441,7 +441,7 @@ export function createScaffoldCommands(deps: CommandDeps): ScaffoldCommands {
 
             const args = [kind.command, '--name', wsName, '--root', root, '--dir', dir];
             if (scope) args.push('--scope', scope);
-            if (includeConfig.value === 'no') args.push('--no-config');
+            if (includeConfig.value === 'no') args.push('--no-project-config');
             args.push('--package-manager', packageManager);
 
             const code = await deps.runCli(root, args);
@@ -466,7 +466,7 @@ export function createScaffoldCommands(deps: CommandDeps): ScaffoldCommands {
 
         const args = [kind.command, '--name', finalName];
         if (scope) args.push('--scope', scope);
-        if (includeConfig.value === 'no') args.push('--no-config');
+        if (includeConfig.value === 'no') args.push('--no-project-config');
         if ((kind as { example?: boolean }).example) args.push('--example');
         args.push('--package-manager', packageManager);
         // Only the single-project flow supports containerization.

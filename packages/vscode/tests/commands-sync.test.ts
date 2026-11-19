@@ -42,6 +42,7 @@ function deps(overrides: Record<string, unknown> = {}): Parameters<typeof create
         workspaceRoots: () => ['/repo'],
         refreshGraph: vi.fn(async () => {}),
         refreshViews: vi.fn(),
+        afterSync: vi.fn(async () => {}),
         runRoots: vi.fn(async () => [0]),
         runProjects: vi.fn(async () => [0]),
         selectedProjects: () => [],
@@ -67,6 +68,15 @@ describe('createSyncCommands', () => {
         // Configless projects are handled by the CLI (only when opted in), not
         // by a separate extension-side pass.
         expect(runProjects).not.toHaveBeenCalled();
+    });
+
+    it('runs the shared post-sync hook after a manual sync', async () => {
+        const afterSync = vi.fn(async () => {});
+        const commands = createSyncCommands(deps({ afterSync }));
+
+        await commands.syncActive();
+
+        expect(afterSync).toHaveBeenCalledTimes(1);
     });
 
     it('warns when syncSelected has no selection', async () => {

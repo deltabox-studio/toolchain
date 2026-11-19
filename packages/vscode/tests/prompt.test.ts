@@ -1,9 +1,22 @@
 import { describe, expect, it, vi } from 'vite-plus/test';
 
-vi.mock('vscode', () => ({}));
+const mocks = vi.hoisted(() => ({
+    executeCommand: vi.fn(async () => undefined),
+}));
+
+vi.mock('vscode', () => ({
+    commands: { executeCommand: mocks.executeCommand },
+    window: { showWarningMessage: vi.fn() },
+}));
 
 import { groupedActions } from '../src/actions.js';
-import { pickPaged, promptArguments, type PromptHost, type PromptItem } from '../src/prompt.js';
+import {
+    executePromptAction,
+    pickPaged,
+    promptArguments,
+    type PromptHost,
+    type PromptItem,
+} from '../src/prompt.js';
 
 type Pick = PromptItem<unknown> | { label: string; navigation: { type: string; page?: number } };
 
@@ -86,6 +99,39 @@ describe('arguments', () => {
             },
         ]);
         expect(values).toEqual({ name: 'my-app', install: true, kind: 'b' });
+    });
+});
+
+describe('executing actions', () => {
+    it('invokes a no-argument command with exactly one argument', async () => {
+        mocks.executeCommand.mockClear();
+        const executed = await executePromptAction(host([]), {
+            id: 'tools.refresh',
+            label: 'Refresh projects',
+            group: 'Tools',
+            command: 'deltabox.toolchain.refresh',
+        });
+
+        expect(executed).toBe(true);
+        expect(mocks.executeCommand).toHaveBeenCalledTimes(1);
+        // A bare `{}` would be read by the handler as a project node / cwd.
+        expect(mocks.executeCommand.mock.calls[0]).toHaveLength(1);
+        expect(mocks.executeCommand).toHaveBeenCalledWith('deltabox.toolchain.refresh');
+    });
+
+    it('forwards prompted values when the action declares arguments', async () => {
+        mocks.executeCommand.mockClear();
+        await executePromptAction(host(['my-app']), {
+            id: 'project.init',
+            label: 'Initialize project',
+            group: 'Project',
+            command: 'deltabox.toolchain.projectInit',
+            arguments: [{ name: 'name', description: 'Name', type: 'string', required: true }],
+        });
+
+        expect(mocks.executeCommand).toHaveBeenCalledWith('deltabox.toolchain.projectInit', {
+            name: 'my-app',
+        });
     });
 });
 

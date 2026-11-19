@@ -187,14 +187,20 @@ export async function executePromptAction(
     host: PromptHost,
     action: PromptAction
 ): Promise<boolean> {
-    const values = action.arguments ? await promptArguments(host, action.arguments) : {};
-    if (values === undefined) return false;
+    const declared = action.arguments ?? [];
+    const values = declared.length > 0 ? await promptArguments(host, declared) : undefined;
+    if (declared.length > 0 && values === undefined) return false;
     if (action.run) {
-        await action.run(values, host);
+        await action.run(values ?? {}, host);
         return true;
     }
     if (action.command) {
-        await vscode.commands.executeCommand(action.command, values);
+        // Only forward the values object when the action declares arguments.
+        // Handlers use their first parameter as a project node / cwd, so a bare
+        // `{}` would be treated as a (truthy) value and break argument-less
+        // commands such as `installMcp` and `resetToolchain`.
+        if (values === undefined) await vscode.commands.executeCommand(action.command);
+        else await vscode.commands.executeCommand(action.command, values);
         return true;
     }
     await vscode.window.showWarningMessage(`deltabox: action "${action.label}" has no command.`);

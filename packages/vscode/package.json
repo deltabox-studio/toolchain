@@ -652,6 +652,29 @@
                     "default": true,
                     "description": "Show a `dbx` badge and the `deltabox.managedFileForeground` color on files recorded in the project manifests."
                 },
+                "deltabox.toolchain.formatManagedFiles": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Format the managed files written by `dbx sync` (adds `--no-format` when disabled)."
+                },
+                "deltabox.toolchain.formatManagedFilesFix": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Rewrite managed files when formatting instead of running the formatter in check mode (adds `--no-format-fix` when disabled)."
+                },
+                "deltabox.toolchain.formatManagedFilesCommand": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Override the managed-file formatter command (`{files}` expands to the files). Empty uses the formatter the CLI detects."
+                },
+                "deltabox.toolchain.formatManagedFilesExclude": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [],
+                    "description": "Managed files to leave unformatted (globs; passed to `dbx sync --format-exclude`)."
+                },
                 "deltabox.toolchain.enableFormatImportGroupDefaults": {
                     "type": "boolean",
                     "default": true,

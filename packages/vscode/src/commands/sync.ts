@@ -20,7 +20,7 @@ export function createSyncCommands(deps: CommandDeps): SyncCommands {
     const syncActive = async (): Promise<void> => {
         const root = deps.workspaceRoots()[0];
         if (root) await deps.runCli(root, ['sync']);
-        deps.refreshViews();
+        await deps.afterSync();
     };
 
     /**
@@ -31,12 +31,12 @@ export function createSyncCommands(deps: CommandDeps): SyncCommands {
     const syncAll = async (): Promise<void> => {
         await deps.refreshGraph();
         await deps.runRoots(['sync', '--recursive']);
-        deps.refreshViews();
+        await deps.afterSync();
     };
 
     const syncTsconfig = async (): Promise<void> => {
         await deps.runRoots(['sync', '--only', 'tsconfig']);
-        deps.refreshViews();
+        await deps.afterSync();
     };
 
     const syncSelected = async (): Promise<void> => {
@@ -48,12 +48,12 @@ export function createSyncCommands(deps: CommandDeps): SyncCommands {
             return;
         }
         await deps.runProjects(projects, ['sync']);
-        deps.refreshViews();
+        await deps.afterSync();
     };
 
     const syncProject = async (project: Project): Promise<void> => {
         await deps.runCli(project.dir, ['sync']);
-        deps.refreshViews();
+        await deps.afterSync();
     };
 
     const checkSync = async (): Promise<void> => {
@@ -96,7 +96,7 @@ export function createSyncCommands(deps: CommandDeps): SyncCommands {
         );
         if (choice === 'Run sync') {
             await deps.runCli(dir, ['sync']);
-            deps.refreshViews();
+            await deps.afterSync();
         } else if (choice === 'Show output') {
             deps.output.show();
         }

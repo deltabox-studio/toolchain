@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import * as vscode from 'vscode';
 
+import { deepestProjectDir } from './managed-files.js';
 import { readJson, readManifest } from './manifest.js';
 import { DEFAULT_TSCONFIG_FILES, type TsconfigFileNames } from './watch-inputs.js';
 
@@ -324,6 +325,90 @@ export interface TrackedFileNode {
     children?: TrackedFileNode[];
 }
 
+/** Convert an absolute path to a workspace-relative, POSIX display path. */
+function workspaceRelative(root: string, absolute: string): string {
+    return path.relative(path.resolve(root), path.resolve(absolute)).split(path.sep).join('/');
+}
+
+/**
+ * Build the Managed Files tree from every discovered project manifest, not just
+ * the workspace root's manifest. A project records its files relative to its own
+ * directory, so each entry is resolved to an absolute path, deduplicated (a root
+ * manifest may repeat a workspace file), grouped under the deepest owning
+ * project and displayed workspace-relative. Workflow conflicts from every
+ * manifest are merged into one list per workspace.
+ */
+export function trackedFileNodes(workspaces: Iterable<ProjectGroup>): TrackedFileNode[] {
+    const nodes: TrackedFileNode[] = [];
+    for (const workspace of workspaces) {
+        const projects = [...workspace.projects];
+        const sources = new Set<string>([path.resolve(workspace.dir)]);
+        for (const project of projects) sources.add(path.resolve(project.dir));
+
+        const buckets = new Map<string, TrackedFileNode>();
+        const seenFiles = new Set<string>();
+        const files: { absolute: string; label: string }[] = [];
+        const conflicts = new Map<string, string>();
+
+        for (const source of sources) {
+            const manifest = readManifest(source);
+            for (const file of manifest.files) {
+                const absolute = path.resolve(source, file);
+                const key = process.platform === 'win32' ? absolute.toLowerCase() : absolute;
+                if (seenFiles.has(key)) continue;
+                seenFiles.add(key);
+                files.push({
+                    absolute,
+                    label: workspaceRelative(workspace.dir, absolute),
+                });
+            }
+
+            for (const [file, conflict] of Object.entries(manifest.workflowConflicts ?? {})) {
+                const label = workspaceRelative(workspace.dir, path.resolve(source, file));
+                // A root manifest and a project manifest can both record the
+                // same hand-written workflow; keep a single node.
+                if (!conflicts.has(label)) conflicts.set(label, conflict);
+            }
+        }
+
+        files.sort((a, b) => a.label.localeCompare(b.label));
+        for (const { absolute, label } of files) {
+            const ownerDir = path.resolve(deepestProjectDir(absolute, projects) ?? workspace.dir);
+            const owner = projects.find(project => path.resolve(project.dir) === ownerDir);
+            let group = buckets.get(ownerDir);
+            if (!group) {
+                group = {
+                    kind: 'fileGroup',
+                    label: owner?.label ?? path.basename(ownerDir),
+                    root: workspace.dir,
+                    children: [],
+                };
+                buckets.set(ownerDir, group);
+            }
+            group.children?.push({ kind: 'file', label, root: workspace.dir, file: label });
+        }
+
+        nodes.push(...buckets.values());
+        const merged = [...conflicts.entries()].sort(([a], [b]) => a.localeCompare(b));
+        if (merged.length > 0) {
+            nodes.push({
+                kind: 'fileGroup',
+                label: 'Workflow conflicts',
+                root: workspace.dir,
+                conflictGroup: true,
+                children: merged.map(([file, conflict]) => ({
+                    kind: 'file',
+                    label: file,
+                    root: workspace.dir,
+                    file,
+                    conflict,
+                })),
+            });
+        }
+    }
+    return nodes;
+}
+
 /** The tree data provider backing the Tracked Files view. */
 export class TrackedFilesTreeProvider implements vscode.TreeDataProvider<TrackedFileNode> {
     private readonly emitter = new vscode.EventEmitter<TrackedFileNode | undefined>();
@@ -335,63 +420,8 @@ export class TrackedFilesTreeProvider implements vscode.TreeDataProvider<Tracked
         this.emitter.fire(undefined);
     }
 
-    /**
-     * Group every managed file by the project that owns it. A workspace root's
-     * manifest records the files repo-relative, so each file is matched to the
-     * deepest project directory that contains it (falling back to the root
-     * project) — so root-level managed files still show up.
-     */
     private build(): TrackedFileNode[] {
-        const groups: TrackedFileNode[] = [];
-        for (const workspace of discoverProjectGroups()) {
-            const manifest = readManifest(workspace.dir);
-            const files = [...manifest.files].sort((a, b) => a.localeCompare(b));
-            if (files.length === 0 && !manifest.workflowConflicts) continue;
-            // Longest directory first, so `find` returns the deepest owner; the
-            // shortest (the workspace root) is the fallback.
-            const projects = [...workspace.projects].sort((a, b) => b.dir.length - a.dir.length);
-            const rootProject = projects[projects.length - 1];
-            const buckets = new Map<string, TrackedFileNode>();
-            for (const file of files) {
-                const abs = path.resolve(workspace.dir, file);
-                const owner =
-                    projects.find(
-                        project => abs === project.dir || abs.startsWith(project.dir + path.sep)
-                    ) ?? rootProject;
-                const key = owner?.dir ?? workspace.dir;
-                let group = buckets.get(key);
-                if (!group) {
-                    group = {
-                        kind: 'fileGroup',
-                        label: owner?.label ?? path.basename(workspace.dir),
-                        root: workspace.dir,
-                        children: [],
-                    };
-                    buckets.set(key, group);
-                }
-                group.children?.push({ kind: 'file', label: file, root: workspace.dir, file });
-            }
-            groups.push(...buckets.values());
-            const conflicts = Object.entries(manifest.workflowConflicts ?? {}).sort(([a], [b]) =>
-                a.localeCompare(b)
-            );
-            if (conflicts.length > 0) {
-                groups.push({
-                    kind: 'fileGroup',
-                    label: 'Workflow conflicts',
-                    root: workspace.dir,
-                    conflictGroup: true,
-                    children: conflicts.map(([file, conflict]) => ({
-                        kind: 'file',
-                        label: file,
-                        root: workspace.dir,
-                        file,
-                        conflict,
-                    })),
-                });
-            }
-        }
-        return groups;
+        return trackedFileNodes(discoverProjectGroups());
     }
 
     getChildren(element?: TrackedFileNode): TrackedFileNode[] {

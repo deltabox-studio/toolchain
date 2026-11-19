@@ -36,6 +36,7 @@ import {
     setTsconfigFileNames,
     TrackedFilesTreeProvider,
 } from './projects.js';
+import { pickPaged, vscodePromptHost } from './prompt.js';
 import {
     loadProviders,
     type ProviderCommandNode,
@@ -44,7 +45,7 @@ import {
 } from './providers.js';
 import { RegistryTreeProvider, type RegistryItemNode } from './registries.js';
 import { type SchedulerState, SyncScheduler } from './sync-scheduler.js';
-import { type Template, TemplateTreeProvider } from './templates.js';
+import { loadTemplates, type Template, TemplateTreeProvider } from './templates.js';
 import { defaultWatchInputs, parseWatchInputs, type WatchInputs } from './watch-inputs.js';
 import { WatcherManager } from './watcher-manager.js';
 
@@ -518,9 +519,7 @@ export function activate(context: vscode.ExtensionContext): void {
             if (roots.length === 0) return;
             const command = config().get<string>('command', 'sync');
             for (const root of roots) await runCli(root, [command]);
-            // The sync may have created/renamed generated tsconfig files: refresh
-            // the concrete watcher set (non-recursive, project-graph based).
-            void rebuildWatchers();
+            await afterSync();
         },
         onStateChange: setStatus,
     });
@@ -541,16 +540,39 @@ export function activate(context: vscode.ExtensionContext): void {
         log: message => output.appendLine(message),
     });
 
-    const refreshViews = (): void => {
+    /** Repaint the views whose data a sync can change (files, projects, home). */
+    const refreshSyncViews = (): void => {
         tree.refresh();
         files.refresh();
         decorations.refresh();
         home.refresh();
         updateContextKeys();
+    };
+
+    const refreshViews = (): void => {
+        refreshSyncViews();
         void providers.refresh();
         void templates.refresh();
         void registries.refresh();
     };
+
+    /**
+     * Shared post-sync hook: a sync may have created/renamed generated tsconfig
+     * files (and rewritten manifests), so rebuild the concrete watcher set and
+     * repaint the affected views. Both auto-sync and the manual sync commands go
+     * through this, so neither can drift from the other. Providers, templates and
+     * registries are intentionally not reloaded here: they do not change on a
+     * sync, and reloading templates would hit the network on every auto-sync.
+     */
+    async function afterSync(): Promise<void> {
+        refreshSyncViews();
+        try {
+            await rebuildWatchers();
+        } catch (error) {
+            // A bad watch glob must not turn a completed sync into an error.
+            output.appendLine(`dbx: failed to rebuild watchers: ${String(error)}`);
+        }
+    }
 
     // The last project revealed from the active editor. Resetting it on a tree
     // refresh makes the next editor switch reveal the (rebuilt) project node
@@ -614,6 +636,7 @@ export function activate(context: vscode.ExtensionContext): void {
         workspaceRoots,
         refreshGraph,
         refreshViews,
+        afterSync,
         runRoots,
         runProjects,
         selectedProjects: (): Project[] =>
@@ -753,9 +776,41 @@ export function activate(context: vscode.ExtensionContext): void {
     /** Show a template's descriptor (`dbx template:info --json`) in the output. */
     const showTemplateInfo = async (node?: Template): Promise<void> => {
         const root = workspaceRoots()[0];
-        if (!node || !root) return;
-        const result = await captureCli(root, ['template:info', node.id, '--json', '--cwd', root]);
-        output.appendLine(`\n> dbx template:info ${node.id}`);
+        if (!root) {
+            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
+            return;
+        }
+        let template = node;
+        if (!template) {
+            const listed = await loadTemplates(root);
+            if (listed.length === 0) {
+                vscode.window.showWarningMessage('deltabox: no templates found.');
+                return;
+            }
+            template = await pickPaged(
+                vscodePromptHost(),
+                'Which template should be inspected?',
+                listed.map(candidate => ({
+                    label: candidate.name || candidate.id,
+                    description: candidate.id,
+                    detail: [
+                        candidate.kind,
+                        candidate.online ? 'online' : 'offline',
+                        candidate.type,
+                    ]
+                        .filter(Boolean)
+                        .join(' \u00b7 '),
+                    value: candidate,
+                }))
+            );
+            if (!template) return;
+        }
+        const args = ['template:info', template.id, '--json', '--cwd', root];
+        // Online-only templates are not part of the offline registry, so the
+        // lookup must opt in to remote sources or it reports them as unknown.
+        if (template.online) args.push('--online');
+        const result = await captureCli(root, args);
+        output.appendLine(`\n> dbx template:info ${template.id}`);
         output.append(result.stdout || result.stderr);
         output.show();
     };
@@ -860,8 +915,10 @@ export function activate(context: vscode.ExtensionContext): void {
                     const project = discoverProjects().find(
                         candidate => candidate.dir === action.dir
                     );
-                    if (project) await runProjects([project], ['sync']);
-                    refreshViews();
+                    if (project) {
+                        await runProjects([project], ['sync']);
+                        await afterSync();
+                    }
                     break;
                 }
                 case 'checkProject': {
@@ -1183,9 +1240,10 @@ export function activate(context: vscode.ExtensionContext): void {
             await setEnabledForScope('workspace', !currentEnabledState().workspaceEnabled);
         }),
         vscode.workspace.onDidChangeWorkspaceFolders(() => {
-            decorations.refresh();
-            tree.refresh();
-            updateContextKeys();
+            // New roots need watchers (and removed roots must drop theirs), and
+            // every view derives its contents from the discovered projects.
+            refreshViews();
+            void rebuildWatchers();
         }),
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('deltabox.registrySearchPaths')) {
