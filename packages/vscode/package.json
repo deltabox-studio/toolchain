@@ -715,6 +715,7 @@
     "scripts": {
         "build:extension": "vp pack",
         "package:vsix": "yarn build:extension && npx --yes @vscode/vsce package --no-dependencies --out deltabox-toolchain.vsix",
+        "package:vsix:prerelease": "yarn package:vsix --pre-release",
         "test:integration": "yarn build:extension && tsc -p tsconfig.test.json && vscode-test"
     },
     "devDependencies": {
