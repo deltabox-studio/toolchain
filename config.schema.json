@@ -2372,6 +2372,14 @@
                     "additionalProperties": {
                         "type": "object",
                         "properties": {
+                            "applies-to": {
+                                "type": "string",
+                                "enum": [
+                                    "version-updates",
+                                    "security-updates"
+                                ],
+                                "description": "Which update kind this group applies to (default `version-updates`)."
+                            },
                             "patterns": {
                                 "default": [
                                     "*"
@@ -2400,6 +2408,17 @@
                         "additionalProperties": false
                     },
                     "description": "Dependabot update groups, keyed by group name."
+                },
+                "security": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainDependabotSecurityConfig"
+                        }
+                    ],
+                    "description": "Security updates: enable Dependabot security updates, group vulnerability PRs and apply a severity threshold. Requires a repository admin token for the generated workflow."
                 },
                 "allow": {
                     "anyOf": [
@@ -2604,8 +2623,87 @@
                 }
             },
             "additionalProperties": false,
-            "description": "Dependabot version-update automation (`.github/dependabot.yml`). Opt-in by presence.",
+            "description": "Dependabot automation (`.github/dependabot.yml`, plus optional security updates). Opt-in by presence.",
             "see": "https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file"
+        },
+        "ToolchainDependabotSecurityConfig": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable or disable the security-update automation."
+                },
+                "vulnerabilities": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "severity": {
+                                    "default": "all",
+                                    "anyOf": [
+                                        {
+                                            "type": "string",
+                                            "enum": [
+                                                "low",
+                                                "moderate",
+                                                "medium",
+                                                "high",
+                                                "critical",
+                                                "all"
+                                            ]
+                                        },
+                                        {
+                                            "minItems": 1,
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "low",
+                                                    "moderate",
+                                                    "medium",
+                                                    "high",
+                                                    "critical",
+                                                    "all"
+                                                ]
+                                            }
+                                        }
+                                    ],
+                                    "description": "Only keep vulnerability PRs at or above this severity (or exactly the listed severities). `all` keeps every alert. `moderate` is accepted as an alias for GitHub's `medium`."
+                                }
+                            },
+                            "additionalProperties": false,
+                            "description": "Narrow vulnerability PRs to a severity threshold."
+                        }
+                    ],
+                    "description": "Open PRs for vulnerable dependencies. Enabled by default when `security` is set; set false to disable Dependabot security updates."
+                },
+                "pr": {
+                    "type": "object",
+                    "properties": {
+                        "strategy": {
+                            "default": "grouped",
+                            "type": "string",
+                            "enum": [
+                                "grouped",
+                                "individual"
+                            ],
+                            "description": "Group security updates into one PR per ecosystem (default) or one PR per update."
+                        }
+                    },
+                    "additionalProperties": false,
+                    "description": "Pull-request strategy for security updates."
+                },
+                "workflow": {
+                    "default": true,
+                    "type": "boolean",
+                    "description": "Generate the workflow that enables Dependabot security updates and applies the severity threshold. Default true."
+                }
+            },
+            "additionalProperties": false,
+            "description": "Dependabot security-update automation."
         },
         "CustomWorkflowSettings": {
             "anyOf": [

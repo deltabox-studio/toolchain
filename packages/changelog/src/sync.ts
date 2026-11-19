@@ -17,7 +17,12 @@ import {
     type WorkflowSetting,
 } from '@deltabox/toolchain/shared';
 
-import { dependabotFilePath, renderDependabot } from './dependabot.js';
+import {
+    DEPENDABOT_SECURITY_FILE,
+    dependabotFilePath,
+    renderDependabot,
+    renderDependabotSecurityWorkflow,
+} from './dependabot.js';
 import { renderCommitlintConfig } from './templates.js';
 import {
     isEnabled,
@@ -323,6 +328,31 @@ export function changelogSyncTask(): SyncTask {
                         content: `${WORKFLOW_HEADER}\n${renderDependabot(setting)}`,
                         format: false,
                     });
+
+                    // Security updates are a repository setting, not part of
+                    // dependabot.yml: the generated workflow enables/disables
+                    // them and applies the severity threshold.
+                    const securityWorkflow = renderDependabotSecurityWorkflow(setting);
+                    if (securityWorkflow !== undefined) {
+                        if (workflowPaths.has(DEPENDABOT_SECURITY_FILE)) {
+                            ctx.warn(
+                                `changelog: workflow path "${DEPENDABOT_SECURITY_FILE}" is declared more than once; skipping the duplicate.`
+                            );
+                        } else if (!isManagedWorkflow(DEPENDABOT_SECURITY_FILE)) {
+                            ctx.warn(
+                                `changelog: ${DEPENDABOT_SECURITY_FILE} already exists and is not managed by dbx; leaving it untouched. ` +
+                                    'Set `ci.dependabot.security: { workflow: false }` to keep it explicit.',
+                                'changelog.existing-dependabot-security'
+                            );
+                        } else {
+                            workflowPaths.add(DEPENDABOT_SECURITY_FILE);
+                            files.push({
+                                path: DEPENDABOT_SECURITY_FILE,
+                                content: `${WORKFLOW_HEADER}\n${securityWorkflow}`,
+                                format: false,
+                            });
+                        }
+                    }
                 }
             }
 

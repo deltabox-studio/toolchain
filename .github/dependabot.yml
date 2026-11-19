@@ -11,6 +11,9 @@ updates:
       minor-and-patch:
         exclude-patterns: [vite, vite-plus]
         update-types: [minor, patch]
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
     allow:
       - dependency-name: "*"
     ignore:
@@ -26,10 +29,11 @@ updates:
       minor-and-patch:
         exclude-patterns: [vite, vite-plus]
         update-types: [minor, patch]
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
     allow:
-      - dependency-name: vite
-      - dependency-name: vite-plus
-      - dependency-name: vite-plugin-*
+      - dependency-name: "*"
     ignore:
       - dependency-name: "*"
         update-types: [version-update:semver-major]

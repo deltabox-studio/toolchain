@@ -309,14 +309,12 @@ export default defineConfig({
                         schedule: 'weekly',
                         labels: ['deps'],
                         openPullRequestsLimit: 10,
-                        // Keep the core Vite/Vite+ peer surface reviewable, and
-                        // never let an automatic update cross a major version.
+                        // Allow every package so security updates are not
+                        // restricted; the ignore rules only keep automatic
+                        // version updates out of major bumps. Vite/Vite+ stay
+                        // separate reviewable PRs via the group exclusions.
                         allow: {
-                            npm: [
-                                { 'dependency-name': 'vite' },
-                                { 'dependency-name': 'vite-plus' },
-                                { 'dependency-name': 'vite-plugin-*' },
-                            ],
+                            npm: [{ 'dependency-name': '*' }],
                             'github-actions': [{ 'dependency-name': '*' }],
                         },
                         ignore: {
@@ -339,6 +337,11 @@ export default defineConfig({
                                 'update-types': ['minor', 'patch'],
                             },
                         },
+                        // Open PRs for vulnerable dependencies (grouped per
+                        // ecosystem). The generated workflow enables GitHub's
+                        // security updates; set DBX_GITHUB_TOKEN with admin
+                        // access for the setting to be applied.
+                        security: true,
                     },
                     // Keep the hand-written CI checks on top of the generated
                     // workflow (commitlint + `sync --check --recursive` + build come first).

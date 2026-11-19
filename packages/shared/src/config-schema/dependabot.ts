@@ -4,6 +4,10 @@ import { withEnabled } from './meta.js';
 
 /** A single Dependabot group (eg. all patch/minor updates together). */
 const dependabotGroupSchema = z.object({
+    'applies-to': z
+        .enum(['version-updates', 'security-updates'])
+        .describe('Which update kind this group applies to (default `version-updates`).')
+        .optional(),
     patterns: z.array(z.string()).describe('Package name patterns.').default(['*']).optional(),
     'exclude-patterns': z
         .array(z.string())
@@ -35,6 +39,63 @@ const dependabotRulesSchema = z
     .describe(
         'Rules for every ecosystem (an array) or keyed by package ecosystem (eg. `{ npm: [...] }`; `*` is the fallback).'
     );
+
+/** Severities accepted by the security triage (GitHub uses `medium`; `moderate` is an alias). */
+const dependabotSeveritySchema = z.enum(['low', 'moderate', 'medium', 'high', 'critical', 'all']);
+
+/** Vulnerability PR options: severity threshold or an explicit severity list. */
+const dependabotVulnerabilitiesSchema = z.union([
+    z.boolean(),
+    z
+        .object({
+            severity: z
+                .union([dependabotSeveritySchema, z.array(dependabotSeveritySchema).min(1)])
+                .describe(
+                    'Only keep vulnerability PRs at or above this severity (or exactly the listed severities). ' +
+                        "`all` keeps every alert. `moderate` is accepted as an alias for GitHub's `medium`."
+                )
+                .default('all')
+                .optional(),
+        })
+        .describe('Narrow vulnerability PRs to a severity threshold.'),
+]);
+
+/** Dependabot security-update automation (repository setting + grouped PRs). */
+const dependabotSecuritySchema = z
+    .object({
+        enabled: z
+            .boolean()
+            .describe('Enable or disable the security-update automation.')
+            .optional(),
+        vulnerabilities: dependabotVulnerabilitiesSchema
+            .describe(
+                'Open PRs for vulnerable dependencies. Enabled by default when `security` is set; ' +
+                    'set false to disable Dependabot security updates.'
+            )
+            .optional(),
+        pr: z
+            .object({
+                strategy: z
+                    .enum(['grouped', 'individual'])
+                    .describe(
+                        'Group security updates into one PR per ecosystem (default) or one PR per update.'
+                    )
+                    .default('grouped')
+                    .optional(),
+            })
+            .describe('Pull-request strategy for security updates.')
+            .optional(),
+        workflow: z
+            .boolean()
+            .describe(
+                'Generate the workflow that enables Dependabot security updates and applies the severity threshold. ' +
+                    'Default true.'
+            )
+            .default(true)
+            .optional(),
+    })
+    .describe('Dependabot security-update automation.')
+    .meta({ id: 'ToolchainDependabotSecurityConfig' });
 
 /**
  * `.github/dependabot.yml` version-update automation. Enabled by presence; like
@@ -69,6 +130,13 @@ export const dependabotConfigSchema = withEnabled(
             .record(z.string(), dependabotGroupSchema)
             .describe('Dependabot update groups, keyed by group name.')
             .optional(),
+        security: z
+            .union([z.boolean(), dependabotSecuritySchema])
+            .describe(
+                'Security updates: enable Dependabot security updates, group vulnerability PRs and apply a severity threshold. ' +
+                    'Requires a repository admin token for the generated workflow.'
+            )
+            .optional(),
         allow: dependabotRulesSchema.optional(),
         ignore: dependabotRulesSchema.optional(),
         filename: z
@@ -80,7 +148,7 @@ export const dependabotConfigSchema = withEnabled(
     })
 )
     .describe(
-        'Dependabot version-update automation (`.github/dependabot.yml`). Opt-in by presence.'
+        'Dependabot automation (`.github/dependabot.yml`, plus optional security updates). Opt-in by presence.'
     )
     .meta({
         id: 'ToolchainDependabotConfig',

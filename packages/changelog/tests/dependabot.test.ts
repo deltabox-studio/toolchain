@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { DEPENDABOT_FILE, dependabotFilePath, renderDependabot } from '../src/dependabot.js';
+import {
+    DEPENDABOT_FILE,
+    dependabotFilePath,
+    dismissedSeverities,
+    normalizeDependabotSecurity,
+    renderDependabot,
+    renderDependabotSecurityWorkflow,
+} from '../src/dependabot.js';
 
 describe('dependabot config', () => {
     it('defaults to actions + npm with a weekly schedule', () => {
@@ -73,5 +80,116 @@ describe('dependabot config', () => {
         );
         expect(() => dependabotFilePath({ filename: '../dependabot.yml' })).toThrow('invalid');
         expect(() => dependabotFilePath({ dir: '../outside' })).toThrow('invalid');
+    });
+
+    it('groups security updates when security is enabled', () => {
+        const yaml = renderDependabot({ ecosystems: ['npm'], security: true });
+
+        expect(yaml).toContain('security-updates:');
+        expect(yaml).toContain('applies-to: security-updates');
+        expect(yaml).toContain('patterns:');
+    });
+
+    it('keeps individual security updates when the strategy is individual', () => {
+        const yaml = renderDependabot({
+            ecosystems: ['npm'],
+            security: { pr: { strategy: 'individual' } },
+        });
+
+        expect(yaml).not.toContain('applies-to: security-updates');
+    });
+
+    it('does not override a user-defined security group', () => {
+        const yaml = renderDependabot({
+            ecosystems: ['npm'],
+            security: true,
+            groups: {
+                custom: { 'applies-to': 'security-updates', patterns: ['vite'] },
+            },
+        });
+
+        expect(yaml).toContain('custom:');
+        expect(yaml).not.toMatch(/^\s+security-updates:/m);
+    });
+
+    it('normalizes the security shorthands', () => {
+        expect(normalizeDependabotSecurity(undefined)).toMatchObject({
+            enabled: false,
+            vulnerabilities: false,
+        });
+        expect(normalizeDependabotSecurity(true)).toMatchObject({
+            enabled: true,
+            vulnerabilities: true,
+            severity: 'all',
+            strategy: 'grouped',
+            workflow: true,
+        });
+        expect(normalizeDependabotSecurity({ vulnerabilities: false })).toMatchObject({
+            enabled: true,
+            vulnerabilities: false,
+        });
+        expect(
+            normalizeDependabotSecurity({
+                vulnerabilities: { severity: 'high' },
+                pr: { strategy: 'individual' },
+                workflow: false,
+            })
+        ).toMatchObject({
+            enabled: true,
+            vulnerabilities: true,
+            severity: 'high',
+            strategy: 'individual',
+            workflow: false,
+        });
+        expect(normalizeDependabotSecurity({ enabled: false })).toMatchObject({ enabled: false });
+    });
+
+    it('maps severity thresholds to the alerts to dismiss', () => {
+        expect(dismissedSeverities('all')).toEqual([]);
+        expect(dismissedSeverities('low')).toEqual([]);
+        expect(dismissedSeverities('moderate')).toEqual(['low']);
+        expect(dismissedSeverities('medium')).toEqual(['low']);
+        expect(dismissedSeverities('high')).toEqual(['low', 'medium']);
+        expect(dismissedSeverities('critical')).toEqual(['low', 'medium', 'high']);
+        expect(dismissedSeverities(['high', 'critical'])).toEqual(['low', 'medium']);
+        expect(dismissedSeverities(['all'])).toEqual([]);
+    });
+
+    it('renders the workflow that enables security updates', () => {
+        const yaml = renderDependabotSecurityWorkflow({ schedule: 'daily', security: true });
+
+        expect(yaml).toBeDefined();
+        expect(yaml).toContain('cron: 0 6 * * *');
+        expect(yaml).toContain('automated-security-fixes');
+        expect(yaml).toContain('DBX_GITHUB_TOKEN');
+        expect(yaml).toContain('security-events: write');
+        expect(yaml).not.toContain('dependabot/alerts');
+        expect(yaml).not.toContain('DELETE');
+    });
+
+    it('renders a disable step when vulnerabilities are opted out', () => {
+        const yaml = renderDependabotSecurityWorkflow({
+            security: { vulnerabilities: false },
+        })!;
+
+        expect(yaml).toContain('DELETE');
+        expect(yaml).not.toContain('-X PUT');
+    });
+
+    it('renders the severity triage step', () => {
+        const yaml = renderDependabotSecurityWorkflow({
+            security: { vulnerabilities: { severity: 'high' } },
+        })!;
+
+        expect(yaml).toContain('dependabot/alerts?state=open');
+        expect(yaml).toContain('IN("low", "medium")');
+        expect(yaml).toContain('dismissed_reason=not_used');
+    });
+
+    it('omits the workflow when security is disabled or opted out', () => {
+        expect(renderDependabotSecurityWorkflow()).toBeUndefined();
+        expect(renderDependabotSecurityWorkflow({ security: false })).toBeUndefined();
+        expect(renderDependabotSecurityWorkflow({ security: { enabled: false } })).toBeUndefined();
+        expect(renderDependabotSecurityWorkflow({ security: { workflow: false } })).toBeUndefined();
     });
 });

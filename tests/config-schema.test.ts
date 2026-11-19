@@ -95,6 +95,10 @@ describe('config.schema.json', () => {
                                     'update-types': ['version-update:semver-major'],
                                 },
                             ],
+                            security: {
+                                vulnerabilities: { severity: ['high', 'critical'] },
+                                pr: { strategy: 'individual' },
+                            },
                         },
                     },
                 },

@@ -288,6 +288,34 @@ describe('changelogSyncTask', () => {
         expect(dependabot?.format).toBe(false);
     });
 
+    it('writes the Dependabot security workflow when security is enabled', async () => {
+        const files = await changelogSyncTask().run(
+            makeContext({ ci: { dependabot: { security: true } } })
+        );
+        const dependabot = files?.find(file => file.path === '.github/dependabot.yml');
+        const workflow = files?.find(
+            file => file.path === '.github/workflows/dependabot-security.yml'
+        );
+
+        expect(dependabot?.content).toContain('applies-to: security-updates');
+        expect(workflow).toBeDefined();
+        expect(workflow?.content.startsWith(WORKFLOW_HEADER)).toBe(true);
+        expect(workflow?.content).toContain('automated-security-fixes');
+        expect(workflow?.format).toBe(false);
+    });
+
+    it('omits the Dependabot security workflow when it is opted out', async () => {
+        const files = await changelogSyncTask().run(
+            makeContext({
+                ci: { dependabot: { security: { workflow: false } } },
+            })
+        );
+
+        expect(files?.some(file => file.path === '.github/workflows/dependabot-security.yml')).toBe(
+            false
+        );
+    });
+
     it('leaves Dependabot disabled unless opted in', async () => {
         const files = await changelogSyncTask().run(makeContext({ ci: { ci: true } }));
         expect(files?.some(file => file.path === '.github/dependabot.yml')).toBe(false);

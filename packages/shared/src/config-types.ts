@@ -983,11 +983,17 @@ export interface ToolchainDependabotConfig {
     groups?: Record<
         string & {},
         {
+            'applies-to'?: 'version-updates' | 'security-updates';
             patterns?: Array<string>;
             'exclude-patterns'?: Array<string>;
             'update-types'?: Array<string>;
         }
     >;
+    /**
+     * Security updates: enable Dependabot security updates, group vulnerability PRs and apply a
+     * severity threshold. Requires a repository admin token for the generated workflow.
+     */
+    security?: boolean | ToolchainDependabotSecurityConfig;
     /**
      * Rules for every ecosystem (an array) or keyed by package ecosystem (eg. `{ npm: [...] }`; `*` is
      * the fallback).
@@ -1049,6 +1055,43 @@ export interface ToolchainDependabotConfig {
      * @default true
      */
     regenerate?: boolean;
+}
+
+export interface ToolchainDependabotSecurityConfig {
+    /** Enable or disable the security-update automation. */
+    enabled?: boolean;
+    /**
+     * Open PRs for vulnerable dependencies. Enabled by default when `security` is set; set false to
+     * disable Dependabot security updates.
+     */
+    vulnerabilities?:
+        | boolean
+        | {
+              severity?:
+                  | 'low'
+                  | 'moderate'
+                  | 'medium'
+                  | 'high'
+                  | 'critical'
+                  | 'all'
+                  | Array<'low' | 'moderate' | 'medium' | 'high' | 'critical' | 'all'>;
+          };
+    /** Pull-request strategy for security updates. */
+    pr?: {
+        /**
+         * Group security updates into one PR per ecosystem (default) or one PR per update.
+         *
+         * @default 'grouped'
+         */
+        strategy?: 'grouped' | 'individual';
+    };
+    /**
+     * Generate the workflow that enables Dependabot security updates and applies the severity
+     * threshold. Default true.
+     *
+     * @default true
+     */
+    workflow?: boolean;
 }
 
 export type CustomWorkflowSettings =
