@@ -299,7 +299,7 @@ Scaffold a single-package TypeScript project.
 - `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
 - `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
 - `--containerize` — Also generate Docker artifacts (Dockerfile + .dockerignore).
-- `--no-config` — Skip the dbx.config.ts file.
+- `--no-project-config` — Skip the generated vite.config.ts file (the project config).
 - `--type ‹type›` — Project type: project \| monorepo-root \| monorepo-workspace.
 - `--force` — Overwrite existing files in the output directory.
 
@@ -313,7 +313,7 @@ Scaffold a monorepo root (add --example for one example workspace).
 - `--example` — Also scaffold one example workspace package.
 - `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
 - `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
-- `--no-config` — Skip the dbx.config.ts file.
+- `--no-project-config` — Skip the generated vite.config.ts file (the project config).
 - `--type ‹type›` — Project type: project \| monorepo-root \| monorepo-workspace.
 - `--force` — Overwrite existing files in the output directory.
 
@@ -327,7 +327,7 @@ Scaffold a monorepo workspace package into an existing monorepo root.
 - `-d, --dir ‹dir›` — Workspace dir relative to the root (default: packages/&lt;name&gt;).
 - `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
 - `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
-- `--no-config` — Skip the dbx.config.ts file.
+- `--no-project-config` — Skip the generated vite.config.ts file (the project config).
 - `--type ‹type›` — Project type: project \| monorepo-root \| monorepo-workspace.
 - `--force` — Overwrite existing files in the output directory.
 
