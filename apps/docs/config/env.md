@@ -6,7 +6,7 @@ outline: [2, 3]
 # Environment variables
 
 The toolchain config is file/CLI backed; a schema leaf opts into an
-environment variable with `.meta({ env: "..." })` (see the
+environment variable with `.meta({ envName: "..." })` (see the
 [Config Generator](/guide/config-generator/describe-a-scope)).
 
 | Variable                            | Scope     | Default | Description                                                                                                                                                                                |

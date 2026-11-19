@@ -230,4 +230,33 @@ describe('generated JSDoc', () => {
         expect(types).not.toContain('Danger */ here');
         expect(types).toContain('a *\\/ b');
     });
+
+    it('escapes comment terminators in generated env types', () => {
+        const schema = z.object({
+            server: z.object({
+                watch: z
+                    .string()
+                    .default('src/**/*.ts')
+                    .describe('Files to watch, e.g. src/**/*.ts')
+                    .meta({ envName: 'MYAPP_WATCH' }),
+            }),
+        });
+        const files = generateConfigEnv(schema, {
+            envPrefix: 'MYAPP_',
+            envComment: 'Public env */ comment\non two lines',
+            header: 'Header */ text',
+        });
+        const env = files['env.ts']!;
+        const dts = files['dbx-env.d.ts']!;
+
+        expect(env).toContain('MYAPP_WATCH?: string;');
+        expect(env).toContain('src/**\\/*.ts');
+        expect(env).toContain('Public env *\\/ comment on two lines');
+        expect(env).toContain('Header *\\/ text');
+        expect(env).not.toContain('src/**/*.ts');
+        expect(env).not.toContain('Public env */ comment');
+        expect(env).not.toContain('Header */ text');
+        expect(dts).toContain('Header *\\/ text');
+        expect(dts).not.toContain('Header */ text');
+    });
 });

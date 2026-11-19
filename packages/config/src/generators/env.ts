@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import { type CollectOptions, collectDefinitions, DEFAULT_ENV_PREFIX } from '../collect.js';
 import type { ConfigSchema } from '../types/index.js';
 import { envNameOf, isEnvVariable } from './env-file.js';
+import { escapeInlineJsDoc } from './jsdoc.js';
 import { resolveGeneratedFile } from './output.js';
 
 export interface GenerateEnvTypesOptions {
@@ -41,7 +42,7 @@ export interface GenerateEnvTypesOptions {
 }
 
 function headerComment(custom?: string): string {
-    return custom ?? 'Generated env typing — DO NOT EDIT.';
+    return escapeInlineJsDoc(custom ?? 'Generated env typing — DO NOT EDIT.');
 }
 
 /** Render the `env.ts` content (the env + vite-env interfaces). */
@@ -59,12 +60,10 @@ export function generateEnv(schema: ConfigSchema, options: GenerateEnvTypesOptio
     const lines: string[] = options.envHeader
         ? [options.envHeader, '']
         : [`/**`, ` * ${headerComment(options.header)}`, ` */`, ''];
-    lines.push(
-        `/** ${options.envComment ?? 'Environment variables typed on `process.env`.'} */`,
-        `export interface ${envInterface} {`
-    );
+    const envComment = options.envComment ?? 'Environment variables typed on `process.env`.';
+    lines.push(`/** ${escapeInlineJsDoc(envComment)} */`, `export interface ${envInterface} {`);
     for (const def of serverVars) {
-        lines.push(`    /** ${(def.description ?? '').replace(/\n/g, ' ')} */`);
+        lines.push(`    /** ${escapeInlineJsDoc(def.description ?? '')} */`);
         lines.push(`    ${def.name}?: string;`);
     }
     lines.push('}');
@@ -72,7 +71,7 @@ export function generateEnv(schema: ConfigSchema, options: GenerateEnvTypesOptio
     lines.push('/** Public frontend environment variables typed on `import.meta.env`. */');
     lines.push(`export interface ${viteEnvInterface} {`);
     for (const def of viteVars) {
-        lines.push(`    /** ${(def.description ?? '').replace(/\n/g, ' ')} */`);
+        lines.push(`    /** ${escapeInlineJsDoc(def.description ?? '')} */`);
         lines.push(`    ${def.name}?: string;`);
     }
     lines.push('}');

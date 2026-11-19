@@ -495,7 +495,7 @@ export function generateEnvMarkdown(
         options.intro ??
         [
             'The toolchain config is file/CLI backed; a schema leaf opts into an',
-            'environment variable with `.meta({ env: "..." })` (see the',
+            'environment variable with `.meta({ envName: "..." })` (see the',
             '[Config Generator](/guide/config-generator/describe-a-scope)).',
         ].join('\n');
     const envPrefix = options.envPrefix ?? DEFAULT_ENV_PREFIX;

@@ -22,6 +22,7 @@ import {
     zodToSchemaMap,
 } from '../schema.js';
 import type { ConfigEngineOptions, ConfigSchema } from '../types/index.js';
+import { escapeJsDoc } from './jsdoc.js';
 import { resolveGeneratedFile } from './output.js';
 
 /** The `generateTypes` options shared by every interface. */
@@ -150,11 +151,6 @@ type JsDocOptions = Pick<
     | 'includeEnv'
     | 'includeCli'
 >;
-
-/** Escape text so it cannot terminate the emitted `/** ... *\/` comment early. */
-function escapeJsDoc(text: string): string {
-    return text.replace(/\*\//g, '*\\/');
-}
 
 /** The JSDoc tag lines for a node's required / deprecation / example metadata. */
 function jsDocTags(

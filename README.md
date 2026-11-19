@@ -129,12 +129,10 @@ import { z } from 'zod';
 import { createConfigEngine } from '@deltabox/toolchain/config';
 
 export const engine = createConfigEngine({
-    scopes: {
-        server: {
-            zodSchema: z.object({
-                port: z.number().default(3000).meta({ env: 'MYAPP_PORT' }),
-            }),
-        },
+    schema: {
+        server: z.object({
+            port: z.number().default(3000).meta({ envName: 'MYAPP_PORT' }),
+        }),
     },
     envPrefix: 'MYAPP_',
     baseGroup: 'base',

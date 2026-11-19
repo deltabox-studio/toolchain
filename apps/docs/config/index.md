@@ -14,7 +14,7 @@ model:
 - **CLI** — the `dbx` command options, generated from the command descriptors;
   see the [CLI reference](/config/cli).
 - **Environment** — schema leaves can opt into env vars with
-  `.meta({ env })`; see the [environment reference](/config/env) and the
+  `.meta({ envName })`; see the [environment reference](/config/env) and the
   [Config Generator](/guide/config-generator/).
 
 The exhaustive object reference is [dbx.config](/config/reference); the editor
