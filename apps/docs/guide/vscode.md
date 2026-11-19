@@ -24,28 +24,35 @@ code --install-extension deltabox.toolchain-vscode
 
 ## Commands
 
-| Command                      | What it does                                                                                                                                                                                             |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sync all / active / selected | Run `dbx sync --recursive`, which walks every managed project in dependency order (nested workspaces included). Configless projects are skipped unless `deltabox.toolchain.manageConfigless` is enabled. |
-| Check sync                   | `sync --check` across the workspace.                                                                                                                                                                     |
-| Sync tsconfig                | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).                                                                                                                                |
-| Format project               | Run `dbx fmt` with the formatter detected/configured for the project (Oxfmt/Vite+, Prettier, Biome, dprint or standalone Oxc).                                                                           |
-| Lint project                 | Run `dbx lint` with the linter detected/configured for the project (Oxlint/Vite+, ESLint or Biome).                                                                                                      |
-| Manage tsconfig…             | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                                                                                                                                |
-| Scaffold project             | Single project, monorepo root (with/without example), workspace, or **From template…**.                                                                                                                  |
-| Add template…                | `template:init --add` on a folder you pick; asks whether to register it globally.                                                                                                                        |
-| Remove template…             | `template:list --registry` then `template:remove`.                                                                                                                                                       |
-| Generate configs             | `project:config` for missing configs, or refresh the project graph only; picks TS/JS.                                                                                                                    |
-| Generate config              | Per-project `project:config` (also works from the Command Palette).                                                                                                                                      |
-| Migrate tooling…             | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).                                                                                                                   |
-| Run workflow                 | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                                                                                                                                    |
-| Run Vite+ command…           | QuickPick over the Vite+ provider commands, run in a terminal.                                                                                                                                           |
-| Create Vite+ project…        | `vp create` in a terminal.                                                                                                                                                                               |
-| Add provider...              | Register a custom provider (project or global registry).                                                                                                                                                 |
-| Run command...               | Run a provider command (`dbx <command>`) in a terminal.                                                                                                                                                  |
-| Create from template...      | `dbx create --template <id>` (terminal for online templates).                                                                                                                                            |
-| Reset tooling                | Remove generated files / manifest / config.                                                                                                                                                              |
-| Toggle auto-sync             | Enable/disable sync-on-change.                                                                                                                                                                           |
+| Command                                               | What it does                                                                                                                                                                                             |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sync all / active / selected                          | Run `dbx sync --recursive`, which walks every managed project in dependency order (nested workspaces included). Configless projects are skipped unless `deltabox.toolchain.manageConfigless` is enabled. |
+| Check sync                                            | `sync --check` across the workspace.                                                                                                                                                                     |
+| Sync tsconfig                                         | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).                                                                                                                                |
+| Format project                                        | Run `dbx fmt` with the formatter detected/configured for the project (Oxfmt/Vite+, Prettier, Biome, dprint or standalone Oxc).                                                                           |
+| Lint project                                          | Run `dbx lint` with the linter detected/configured for the project (Oxlint/Vite+, ESLint or Biome).                                                                                                      |
+| Manage tsconfig…                                      | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                                                                                                                                |
+| Scaffold project                                      | Single project, monorepo root (with/without example), workspace, or **From template…**.                                                                                                                  |
+| Generate configs / Generate config                    | Run `project:config` for missing configs (or for one project), or refresh only the project graph; picks TS/JS.                                                                                           |
+| Migrate tooling…                                      | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).                                                                                                                   |
+| Run workflow                                          | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                                                                                                                                    |
+| Run Vite+ command…                                    | QuickPick over the Vite+ provider commands, run in a terminal.                                                                                                                                           |
+| Create Vite+ project…                                 | `vp create` in a terminal.                                                                                                                                                                               |
+| Install MCP server + skill…                           | `dbx mcp:install` with a provider picker (Claude, Codex, VS Code, OpenCode, Pi or a custom directory).                                                                                                   |
+| List MCP installations                                | `dbx mcp:list` — show where the MCP server + skill are installed.                                                                                                                                        |
+| Generate changelog                                    | Run `dbx changelog` in the selected project.                                                                                                                                                             |
+| Clean build artifacts                                 | Remove `dist/` and `*.tsbuildinfo` (`dbx cleanup`).                                                                                                                                                      |
+| Add provider... / Refresh providers                   | Register a custom provider (project or global registry) and reload the provider list.                                                                                                                    |
+| Run command...                                        | Run a provider command (`dbx <command>`) in a terminal (provider tree context menu).                                                                                                                     |
+| Add template… / Remove template…                      | `template:init --add` / `template:list --registry` + `template:remove`.                                                                                                                                  |
+| Add template... / Remove template source...           | Registry actions: add a template source or drop one while keeping the files; **Refresh templates** reloads the list.                                                                                     |
+| Create from template...                               | `dbx create --template <id>` (terminal for online templates; `--online` is added automatically for online sources).                                                                                      |
+| New registry… / Remove registry… / Refresh registries | Manage the provider/template registry search paths and reload the **Registries** view.                                                                                                                   |
+| Choose dbx source… / Select dbx version…              | Pick the project's `dbx` or the bundled CLI, and pin the toolchain version.                                                                                                                              |
+| Refresh projects / Refresh files                      | Rediscover the project graph / reload the **Managed Files** view.                                                                                                                                        |
+| Show all actions                                      | Open the searchable action palette (see [Actions](#actions)).                                                                                                                                            |
+| Reset tooling                                         | Remove generated files / manifest / config.                                                                                                                                                              |
+| Toggle auto-sync                                      | Enable/disable sync-on-change.                                                                                                                                                                           |
 
 Interactive commands (the dev server, `vp create`, online scaffolding) run in an
 integrated terminal at the project root; everything else runs in the output
@@ -56,6 +63,12 @@ Vite+ commands: they run `dbx fmt` / `dbx lint`, which route to the
 detected/configured formatter and linter. A project using Prettier, ESLint,
 Biome, dprint or standalone Oxc gets the same actions as a Vite+ project (the
 `vp` passthrough is only used when Oxc is backed by `vite-plus`).
+
+Tree context menus also expose scoped commands that are hidden from the Command
+Palette: **Sync this project**, **Go to project**, **Run the project's Vite+
+command**, **Remove provider**, **Copy provider id**, **Create from template**,
+**Show template info**, **Copy template id**, and the registry item actions
+(**Open registry**, **Add new registry**, **Remove registry**).
 
 ## Project menu
 
@@ -153,10 +166,10 @@ The Home view links to this documentation with **Need help? Go to documentation*
 ## Actions
 
 The **Actions** view (below **Projects**) lists every dbx action grouped by area
-(Changelog, CI, Cleanup, Config, MCP, Migrate, Pack, Project, Providers,
-Registries, Sync, Templates, Tools). Groups are collapsed by default and sorted
-ascending; expanding one shows its actions sorted by name. Selecting an action
-runs its VS Code command directly.
+(Changelog, CI, Cleanup, MCP, Migrate, Pack, Project, Providers, Registries,
+Sync, Templates, Tools). Groups are collapsed by default and sorted ascending;
+expanding one shows its actions sorted by name. Selecting an action runs its VS
+Code command directly.
 
 The Home view's **More actions…** button opens the same list as a searchable,
 paged QuickPick. Navigation entries (`Go back`, `Next page (n/m)`) are rendered
@@ -219,6 +232,11 @@ Each item names the config key to opt out with, and opens the existing file.
 | `deltabox.toolchain.debounce`                        | `300`           | Debounce (ms) before a sync.                                                                               |
 | `deltabox.toolchain.command`                         | `sync`          | The command to run on change.                                                                              |
 | `deltabox.toolchain.manageConfigless`                | `false`         | Manage projects without their own `dbx.config.*` (passes `--configless` to sync/watch).                    |
+| `deltabox.toolchain.containerizeTemplates`           | `false`         | Generate Docker artifacts when scaffolding a new project (also prompted per create).                       |
+| `deltabox.toolchain.formatManagedFiles`              | `true`          | Format the managed files written by `dbx sync` (adds `--no-format` when disabled).                         |
+| `deltabox.toolchain.formatManagedFilesFix`           | `true`          | Rewrite managed files when formatting instead of check mode (adds `--no-format-fix` when disabled).        |
+| `deltabox.toolchain.formatManagedFilesCommand`       | `""`            | Override the managed-file formatter command (`{files}` expands to the files). Empty = auto-detect.         |
+| `deltabox.toolchain.formatManagedFilesExclude`       | `[]`            | Managed files to leave unformatted (globs; passed to `dbx sync --format-exclude`).                         |
 | `deltabox.toolchain.enableFormatImportGroupDefaults` | `true`          | Add the resolved workspace `sortImports` custom group when syncing; set `false` to manage groups yourself. |
 | `deltabox.toolchain.decorateManagedFiles`            | `true`          | Show a `dbx` badge and blue label color on files recorded in the project manifests.                        |
 | `deltabox.toolchain.watch`                           | `[]` (resolved) | Inputs that trigger a sync (empty = resolved from the config).                                             |
@@ -249,30 +267,31 @@ default; the bundled CLI is only the fallback.
 
 Search for `deltabox:` to find:
 
-- **Sync active project**
-- **Sync selected projects**
-- **Sync all projects**
+- **Sync active project** / **Sync selected projects** / **Sync all projects**
 - **Check sync**
+- **Sync tsconfig**
 - **Manage tsconfig…**
 - **Scaffold project…**
-- **Add template…**
-- **Remove template…**
-- **Add provider...**
-- **Refresh providers**
-- **Add template...**
-- **Remove template source...**
-- **Refresh templates**
-- **Generate configs…**
+- **Generate configs…** / **Generate config…**
 - **Migrate tooling…**
 - **Run workflow…**
 - **Run Vite+ command…**
-- **Run command...**
 - **Create Vite+ project…**
-- **Choose dbx source…**
+- **Install MCP server + skill…**
+- **List MCP installations**
+- **Generate changelog**
+- **Clean build artifacts**
+- **Add provider...** / **Refresh providers**
+- **Add template…** / **Remove template…**
+- **Add template...** / **Remove template source...** / **Refresh templates**
+- **New registry…** / **Remove registry…** / **Refresh registries**
+- **Choose dbx source…** / **Select dbx version…**
+- **Refresh projects** / **Refresh files**
+- **Show all actions**
 - **Reset tooling…**
-- **Refresh projects**
-- **Refresh tracked files**
-- **Select dbx version…**
-- **New registry…**
-- **Remove registry…**
 - **Toggle auto-sync**
+
+The project and tree context menus add scoped commands that are intentionally
+hidden from the palette (sync this project, go to project, run the project's
+Vite+ command, remove/copy a provider, template info/copy id, and the registry
+item actions).
