@@ -3913,6 +3913,9 @@
                 "afterSync": {
                     "description": "Runs once after the sync tasks with the result summary."
                 },
+                "beforeVersion": {
+                    "description": "Runs after the bump is planned and before `dbx changelog` writes versions/changelogs."
+                },
                 "afterVersion": {
                     "description": "Runs after `dbx changelog` writes the new versions and changelogs."
                 },

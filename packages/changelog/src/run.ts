@@ -163,8 +163,8 @@ export interface RunChangelogOptions {
     enabled?: boolean;
     /** `ci.regenerate` / `ci.changelog.regenerate` (default true). */
     regenerate?: boolean;
-    /** Top-level `toolchain.hooks` (the `afterVersion` hook runs after a bump). */
-    hooks?: Pick<ToolchainHooks, 'afterVersion'>;
+    /** Top-level `toolchain.hooks` (the version hooks run around a bump). */
+    hooks?: Pick<ToolchainHooks, 'beforeVersion' | 'afterVersion'>;
 }
 
 /**
@@ -235,15 +235,20 @@ function* changelogSteps(
             logger.info(`[DRY-RUN] Would retag versions ${localCurrent} -> ${next}.`);
             return;
         }
+        const pendingBefore = runOptions.hooks?.beforeVersion?.({
+            cwd: repoRoot(),
+            version: next,
+            previousVersion: localCurrent,
+            changelog,
+        });
+        if (pendingBefore) yield pendingBefore;
         writeVersion(next);
         retagChangelogs(localCurrent, next);
-        const pending = versioning.enabled
-            ? runOptions.hooks?.afterVersion?.({
-                  cwd: repoRoot(),
-                  version: next,
-                  changelog,
-              })
-            : undefined;
+        const pending = runOptions.hooks?.afterVersion?.({
+            cwd: repoRoot(),
+            version: next,
+            changelog,
+        });
         if (pending) yield pending;
         logger.info(`Retagged versions ${localCurrent} -> ${next}.`);
         return;
@@ -476,6 +481,15 @@ function* changelogSteps(
         return;
     }
 
+    const pendingBefore = versioning.enabled
+        ? runOptions.hooks?.beforeVersion?.({
+              cwd: repoRoot(),
+              version: next,
+              previousVersion: current,
+              changelog,
+          })
+        : undefined;
+    if (pendingBefore) yield pendingBefore;
     yield;
     for (const [dir, version] of plan.writes) writePackageVersion(dir, version);
     writeChangelogs(
@@ -544,7 +558,13 @@ export function runChangelog(
     runOptions: RunChangelogOptions = {}
 ): void {
     // Drain the phase generator; the yields only matter to the async runner.
-    for (const phase of changelogSteps(argv, changelog, runOptions)) void phase;
+    for (const phase of changelogSteps(argv, changelog, runOptions)) {
+        if (phase) {
+            throw new Error(
+                'An async version hook was provided; use `runChangelogAsync` to await it.'
+            );
+        }
+    }
 }
 
 /**

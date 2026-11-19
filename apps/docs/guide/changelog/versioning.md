@@ -78,20 +78,26 @@ The tag is a single identifier (`^[0-9A-Za-z-]+$`); the numeric counter is added
 automatically. The same rule applies to `uniform`, `root-only` and `individual`
 targets, including each workspace's own version in `individual` mode.
 
-## Post-bump hooks
+## Version hooks
 
-Use [`toolchain.hooks.afterVersion`](/guide/config/hooks#afterversion) for work
-that must follow a version bump, such as syncing a scaffold catalog:
+Use [`toolchain.hooks.beforeVersion`](/guide/config/hooks#beforeversion) for
+work that must happen before the writes (for example a release guard), and
+[`toolchain.hooks.afterVersion`](/guide/config/hooks#afterversion) for work that
+must follow a version bump, such as syncing a scaffold catalog:
 
 ```ts [dbx.config.ts]
 hooks: {
+    beforeVersion: ({ previousVersion, version }) => {
+        assertReleaseAllowed(previousVersion, version);
+    },
     afterVersion: ({ cwd }) => syncScaffoldCatalog(cwd),
 },
 ```
 
-The hook receives the repository root and the new version; async hooks are
-awaited. The generated changelog workflow stages `.yarnrc.yml` with the bump, so
-the catalog update lands in the same commit.
+Both hooks receive the repository root and the new version (`beforeVersion`
+also receives `previousVersion`); async hooks are awaited. The generated
+changelog workflow stages `.yarnrc.yml` with the bump, so a catalog update lands
+in the same commit.
 
 ## How a run decides its versions
 

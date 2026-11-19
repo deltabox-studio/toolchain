@@ -77,6 +77,63 @@ describe('runChangelog idempotency', () => {
         expect(readChangelog(dir).toLowerCase()).toContain('first feature');
     });
 
+    it('runs the beforeVersion hook before writing the versions', () => {
+        const seen: { version: string; previousVersion: string; atHook: string }[] = [];
+        runChangelog([], undefined, {
+            hooks: {
+                beforeVersion: info => {
+                    seen.push({
+                        version: info.version,
+                        previousVersion: info.previousVersion,
+                        atHook: readVersion(dir),
+                    });
+                },
+            },
+        });
+
+        expect(seen).toEqual([{ version: '0.2.0', previousVersion: '0.1.0', atHook: '0.1.0' }]);
+        expect(readVersion(dir)).toBe('0.2.0');
+    });
+
+    it('aborts before writing when beforeVersion throws', () => {
+        expect(() =>
+            runChangelog([], undefined, {
+                hooks: {
+                    beforeVersion: () => {
+                        throw new Error('stop the release');
+                    },
+                },
+            })
+        ).toThrow('stop the release');
+
+        expect(readVersion(dir)).toBe('0.1.0');
+    });
+
+    it('rejects an async hook through the sync runner', () => {
+        expect(() =>
+            runChangelog([], undefined, {
+                hooks: {
+                    beforeVersion: async () => undefined,
+                },
+            })
+        ).toThrow(/runChangelogAsync/);
+    });
+
+    it('awaits an async beforeVersion hook through the async runner', async () => {
+        let resolved = false;
+        await runChangelogAsync([], undefined, {
+            hooks: {
+                beforeVersion: async () => {
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                    resolved = true;
+                },
+            },
+        });
+
+        expect(resolved).toBe(true);
+        expect(readVersion(dir)).toBe('0.2.0');
+    });
+
     it('runs the afterVersion hook after writing the versions', () => {
         const versions: string[] = [];
         runChangelog([], undefined, {

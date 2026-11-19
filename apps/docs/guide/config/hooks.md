@@ -10,6 +10,8 @@ export default defineConfig({
             beforeSync: ctx => ctx.log('syncing…'),
             afterTask: ({ task, files }) => console.log(task.name, files?.length),
             afterSync: ({ result }) => console.log(result.written.length),
+            beforeVersion: ({ previousVersion, version }) =>
+                console.log(`${previousVersion} -> ${version}`),
             afterVersion: ({ version }) => console.log('released', version),
             onChange: ({ path }) => console.log('changed', path),
         },
@@ -18,6 +20,23 @@ export default defineConfig({
 ```
 
 Return values are awaited.
+
+## `beforeVersion`
+
+`beforeVersion` runs after the bump is planned and **before** `dbx changelog`
+writes the new versions or changelogs. It receives the repository root, the
+planned `version` and the `previousVersion`:
+
+```ts [dbx.config.ts]
+hooks: {
+    beforeVersion: async ({ cwd, previousVersion, version }) => {
+        await assertReleaseAllowed(previousVersion, version, cwd);
+    },
+},
+```
+
+Throwing (or a rejected async hook) aborts the run before any files are
+written. It does not run for `--dry-run`, `--release-notes` or `--format-only`.
 
 ## `afterVersion`
 
@@ -34,7 +53,8 @@ hooks: {
 },
 ```
 
-Async hooks are awaited by the CLI, so a failing hook fails the changelog run
-before the generated workflow commits. The changelog workflow stages
+Async hooks are awaited by the CLI and `runChangelogAsync`; the synchronous
+`runChangelog` wrapper rejects async hooks. A failing hook aborts the changelog
+run before any files are written. The changelog workflow stages
 `.yarnrc.yml` together with `package.json`/`CHANGELOG.md`, so hooks that update a
 scaffold catalog are committed in the same version-bump commit.

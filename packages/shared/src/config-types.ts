@@ -1710,6 +1710,13 @@ export interface ToolchainHooks {
         config: ToolchainConfig;
         result: SyncSummary;
     }) => Awaitable<void>;
+    /** Runs after the bump is planned and before `dbx changelog` writes versions/changelogs. */
+    beforeVersion?: (info: {
+        cwd: string;
+        version: string;
+        previousVersion: string;
+        changelog?: ChangelogConfig;
+    }) => Awaitable<void>;
     /** Runs after `dbx changelog` writes the new versions and changelogs. */
     afterVersion?: (info: {
         cwd: string;
