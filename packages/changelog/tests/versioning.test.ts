@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test';
 
 import type { CommitRecord } from '../src/index.js';
 import { discoverVersionPackages, planVersions, resolveVersioning } from '../src/index.js';
-import { bumpVersion } from '../src/utils/version.js';
+import { bumpVersion, isPrereleaseVersion, stableVersionOf } from '../src/utils/version.js';
 
 describe('resolveVersioning', () => {
     it('defaults to enabled + uniform', () => {
@@ -67,6 +67,34 @@ describe('prerelease versions', () => {
 
     it('rejects a tag that already contains a counter', () => {
         expect(() => bumpVersion('1.0.0', 'minor', 'beta.1')).toThrow(/Invalid prerelease/);
+    });
+
+    it('detects a prerelease and derives its stable core', () => {
+        expect(isPrereleaseVersion('3.0.0-beta.315')).toBe(true);
+        expect(isPrereleaseVersion('3.0.0-rc.0+build.5')).toBe(true);
+        expect(isPrereleaseVersion('3.0.0')).toBe(false);
+        expect(stableVersionOf('3.0.0-beta.315')).toBe('3.0.0');
+        expect(stableVersionOf('0.2.0-rc.1+build')).toBe('0.2.0');
+    });
+
+    it('finishes an unfinished cycle at its stable core', () => {
+        expect(bumpVersion('3.0.0-beta.315', 'patch', undefined, { stableExists: false })).toBe(
+            '3.0.0'
+        );
+        expect(bumpVersion('3.0.0-beta.315', 'minor', undefined, { stableExists: false })).toBe(
+            '3.0.0'
+        );
+        // A stable version has nothing to roll over.
+        expect(bumpVersion('3.0.0', 'patch', undefined, { stableExists: false })).toBe('3.0.1');
+        // An explicit prerelease tag keeps the counter going.
+        expect(bumpVersion('3.0.0-beta.315', 'patch', 'beta', { stableExists: false })).toBe(
+            '3.0.0-beta.316'
+        );
+        // Omitted `stableExists` keeps the plain bump.
+        expect(bumpVersion('3.0.0-beta.315', 'patch')).toBe('3.0.1');
+        expect(bumpVersion('3.0.0-beta.315', 'patch', undefined, { stableExists: true })).toBe(
+            '3.0.1'
+        );
     });
 });
 
@@ -180,6 +208,82 @@ describe('versioning plans', () => {
         expect(plan.writes.get(a)).toBe('0.2.0-beta.2');
         expect(plan.entries.get(a)).toBe('0.2.0-beta.2');
         expect(plan.writes.has(b)).toBe(false);
+    });
+
+    it('rolls a prerelease root over to its stable core when it is missing', () => {
+        const plan = planVersions({
+            versioning: { enabled: true, target: 'uniform' },
+            rootVersion: '3.0.0-beta.315',
+            bump: 'patch',
+            range: 'HEAD',
+            root,
+            stableExists: () => false,
+        });
+        expect(plan.rootVersion).toBe('3.0.0');
+        expect(plan.writes.get(root)).toBe('3.0.0');
+        expect(plan.entries.get(join(root, 'packages', 'a'))).toBe('3.0.0');
+    });
+
+    it('bumps normally when the stable core has already shipped', () => {
+        const plan = planVersions({
+            versioning: { enabled: true, target: 'uniform' },
+            rootVersion: '3.0.0-beta.315',
+            bump: 'patch',
+            range: 'HEAD',
+            root,
+            stableExists: () => true,
+        });
+        expect(plan.rootVersion).toBe('3.0.1');
+    });
+
+    it('keeps the prerelease counter while a tag is configured', () => {
+        const plan = planVersions({
+            versioning: { enabled: true, target: 'uniform', prerelease: 'beta' },
+            rootVersion: '3.0.0-beta.315',
+            bump: 'patch',
+            range: 'HEAD',
+            root,
+            stableExists: () => false,
+        });
+        expect(plan.rootVersion).toBe('3.0.0-beta.316');
+    });
+
+    it('rolls each changed individual workspace over independently', () => {
+        const a = join(root, 'packages', 'a');
+        writeFileSync(
+            join(a, 'package.json'),
+            JSON.stringify({ name: 'a', version: '0.2.0-beta.1' })
+        );
+        const options = {
+            versioning: { enabled: true, target: 'individual' as const },
+            rootVersion: '3.0.0-beta.315',
+            bump: 'patch' as const,
+            range: 'HEAD',
+            root,
+            commitsFor: (dir: string) => (dir === a ? [commit('fix: x')] : []),
+        };
+        const missing = planVersions({ ...options, stableExists: () => false });
+        expect(missing.rootVersion).toBe('3.0.0');
+        expect(missing.writes.get(a)).toBe('0.2.0');
+        expect(missing.entries.get(a)).toBe('0.2.0');
+
+        const existing = planVersions({ ...options, stableExists: () => true });
+        expect(existing.rootVersion).toBe('3.0.1');
+        expect(existing.writes.get(a)).toBe('0.2.1');
+    });
+
+    it('rolls the heading over with versioning disabled', () => {
+        const plan = planVersions({
+            versioning: { enabled: false, target: 'uniform' },
+            rootVersion: '3.0.0-beta.315',
+            bump: 'patch',
+            range: 'HEAD',
+            root,
+            stableExists: () => false,
+        });
+        expect(plan.rootVersion).toBe('3.0.0');
+        expect(plan.writes.size).toBe(0);
+        expect(plan.entries.get(join(root, 'packages', 'a'))).toBe('3.0.0');
     });
 
     it('disabled writes no versions but keeps the changelog headings', () => {

@@ -12,11 +12,12 @@ import {
 import type { BumpType, CommitRecord } from '../types/index.js';
 import { isBreakingCommit } from './breaking.js';
 import { parseCcSubject } from './format.js';
-import { deriveBump, readCommits } from './git.js';
+import { deriveBump, hasReleaseTag, readCommits } from './git.js';
 import { relatedWorkspacePaths } from './graph.js';
+import { parseExistingChangelog } from './reformat.js';
 import { globWorkspaces, isCommitReleased, readReleasedHashes, repoRoot } from './repo.js';
 import { resolveScopedOption } from './target.js';
-import { bumpVersion } from './version.js';
+import { bumpVersion, isPrereleaseVersion, stableVersionOf } from './version.js';
 
 /** The configured custom bump rules (major/minor/patch only, possibly targeted). */
 type BumpRules = Record<string, unknown>;
@@ -239,6 +240,47 @@ export interface VersionPlan {
     entries: Map<string, string>;
 }
 
+/** Whether a stable version was already released for `dir`. */
+export type StableExists = (dir: string, version: string) => boolean;
+
+/** The versions already headed in a directory's changelog (cached). */
+function changelogVersions(dir: string, cache: Map<string, Set<string>>): Set<string> {
+    const cached = cache.get(dir);
+    if (cached) return cached;
+    const versions = new Set<string>();
+    const file = resolve(dir, 'CHANGELOG.md');
+    if (existsSync(file)) {
+        try {
+            for (const entry of parseExistingChangelog(readFileSync(file, 'utf8'))) {
+                versions.add(entry.version);
+            }
+        } catch {
+            // An unreadable changelog cannot vouch for a release.
+        }
+    }
+    cache.set(dir, versions);
+    return versions;
+}
+
+/**
+ * The default release-existence check: a stable version counts as released
+ * when the directory's changelog already has its heading or `v<version>` is a
+ * known tag (locally or on `origin`). Results are cached for the run.
+ */
+export function createStableExists(root: string): StableExists {
+    const changelogCache = new Map<string, Set<string>>();
+    const tagCache = new Map<string, boolean>();
+    return (dir, version) => {
+        if (changelogVersions(dir, changelogCache).has(version)) return true;
+        let tagged = tagCache.get(version);
+        if (tagged === undefined) {
+            tagged = hasReleaseTag(version, root);
+            tagCache.set(version, tagged);
+        }
+        return tagged;
+    };
+}
+
 export interface PlanVersionsOptions {
     versioning: ResolvedVersioning;
     /** The starting root version (`--base-version` when provided). */
@@ -257,6 +299,8 @@ export interface PlanVersionsOptions {
     root?: string;
     /** Read the commits touching a workspace dir (injected for tests). */
     commitsFor?: (dir: string) => CommitRecord[];
+    /** Whether a stable version already exists (injected for tests). */
+    stableExists?: StableExists;
 }
 
 /**
@@ -319,11 +363,21 @@ export function planVersions(options: PlanVersionsOptions): VersionPlan {
         options.commitsFor ??
         ((dir: string) => readCommits(range, relatedWorkspacePaths(dir, root)));
 
-    const rootVersion = bumpVersion(
-        options.rootVersion,
-        bump,
-        prereleaseFor(versioning, root, root)
-    );
+    const stableExists = options.stableExists ?? createStableExists(root);
+    // A prerelease cycle that is being left behind finishes at its stable core
+    // once, as long as that stable version has not shipped yet.
+    const nextVersion = (dir: string, current: string, type: BumpType): string => {
+        const prerelease = prereleaseFor(versioning, dir, root);
+        if (prerelease !== undefined && prerelease.trim() !== '') {
+            return bumpVersion(current, type, prerelease);
+        }
+        if (isPrereleaseVersion(current) && !stableExists(dir, stableVersionOf(current))) {
+            return bumpVersion(current, type, undefined, { stableExists: false });
+        }
+        return bumpVersion(current, type);
+    };
+
+    const rootVersion = nextVersion(root, options.rootVersion, bump);
     const writes = new Map<string, string>();
     const entries = new Map<string, string>();
     // A disabled pipeline behaves like `uniform` for the changelog headings.
@@ -341,7 +395,8 @@ export function planVersions(options: PlanVersionsOptions): VersionPlan {
                 record => !isCommitReleased(record.hash, released)
             );
             if (commits.length === 0) continue;
-            const next = bumpVersion(
+            const next = nextVersion(
+                dir,
                 readPackageVersion(dir) ?? '0.0.0',
                 deriveCustomBump(
                     commits,
@@ -354,8 +409,7 @@ export function planVersions(options: PlanVersionsOptions): VersionPlan {
                         logger,
                         ...(options.breaking !== undefined ? { breaking: options.breaking } : {}),
                     }
-                ),
-                prereleaseFor(versioning, dir, root)
+                )
             );
             entries.set(dir, next);
             if (versioning.enabled) writes.set(dir, next);

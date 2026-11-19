@@ -82,4 +82,78 @@ describe('prerelease changelog versioning end to end', () => {
         expect(rootChangelog).toContain('## 1.1.0-beta.1');
         expect(aChangelog).toContain('## 0.2.0-beta.1');
     });
+
+    it('rolls a disabled prerelease cycle over to its stable core', () => {
+        write(path.join(root, 'package.json'), {
+            name: 'acme',
+            version: '3.0.0-beta.315',
+            private: true,
+            workspaces: ['packages/*'],
+        });
+        write(path.join(root, 'packages', 'a', 'package.json'), {
+            name: '@acme/a',
+            version: '0.2.0-beta.1',
+        });
+
+        runChangelog([], { versioning: { target: 'individual' } });
+
+        expect(versionOf(path.join(root, 'package.json'))).toBe('3.0.0');
+        expect(versionOf(path.join(root, 'packages', 'a', 'package.json'))).toBe('0.2.0');
+        expect(fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8')).toContain('## 3.0.0');
+        expect(fs.readFileSync(path.join(root, 'packages', 'a', 'CHANGELOG.md'), 'utf8')).toContain(
+            '## 0.2.0'
+        );
+    });
+
+    it('bumps normally when the stable core already has a changelog heading', () => {
+        write(path.join(root, 'package.json'), {
+            name: 'acme',
+            version: '3.0.0-beta.315',
+            private: true,
+            workspaces: ['packages/*'],
+        });
+        write(path.join(root, 'packages', 'a', 'package.json'), {
+            name: '@acme/a',
+            version: '0.2.0-beta.1',
+        });
+        fs.writeFileSync(
+            path.join(root, 'CHANGELOG.md'),
+            '# Changelog\n\n## 3.0.0 (November 2026)\n\n- released\n'
+        );
+        fs.writeFileSync(
+            path.join(root, 'packages', 'a', 'CHANGELOG.md'),
+            '# Changelog\n\n## 0.2.0 (November 2026)\n\n- released\n'
+        );
+        fs.writeFileSync(path.join(root, 'packages', 'a', 'a.txt'), 'a2\n');
+        git(root, 'add', '-A');
+        git(root, 'commit', '-m', 'fix(a): follow up');
+
+        runChangelog(['--range', 'HEAD~1..HEAD'], { versioning: { target: 'individual' } });
+
+        expect(versionOf(path.join(root, 'package.json'))).toBe('3.0.1');
+        expect(versionOf(path.join(root, 'packages', 'a', 'package.json'))).toBe('0.2.1');
+    });
+
+    it('bumps normally when the stable core is already tagged', () => {
+        write(path.join(root, 'package.json'), {
+            name: 'acme',
+            version: '3.0.0-beta.315',
+            private: true,
+            workspaces: ['packages/*'],
+        });
+        write(path.join(root, 'packages', 'a', 'package.json'), {
+            name: '@acme/a',
+            version: '0.2.0-beta.1',
+        });
+        git(root, 'tag', 'v3.0.0');
+        git(root, 'tag', 'v0.2.0');
+        fs.writeFileSync(path.join(root, 'packages', 'a', 'a.txt'), 'a2\n');
+        git(root, 'add', '-A');
+        git(root, 'commit', '-m', 'fix(a): follow up');
+
+        runChangelog(['--range', 'HEAD~1..HEAD'], { versioning: { target: 'individual' } });
+
+        expect(versionOf(path.join(root, 'package.json'))).toBe('3.0.1');
+        expect(versionOf(path.join(root, 'packages', 'a', 'package.json'))).toBe('0.2.1');
+    });
 });
