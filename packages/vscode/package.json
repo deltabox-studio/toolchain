@@ -2,7 +2,7 @@
     "name": "toolchain-vscode",
     "displayName": "deltabox toolchain",
     "description": "VS Code extension for deltabox toolchain and Vite/Vite+ with rich extras: project synchronization, a config generator, tsconfig management, MCP server, CI/changelog automation, providers, catalogs and managed files.",
-    "version": "3.0.0-beta.4",
+    "version": "3.0.0-beta.5",
     "private": true,
     "type": "module",
     "publisher": "deltabox",
@@ -715,6 +715,7 @@
     "scripts": {
         "build:extension": "vp pack",
         "package:vsix": "yarn build:extension && npx --yes @vscode/vsce package --no-dependencies --out deltabox-toolchain.vsix",
+        "package:vsix:prerelease": "yarn package:vsix --pre-release",
         "test:integration": "yarn build:extension && tsc -p tsconfig.test.json && vscode-test"
     },
     "devDependencies": {
@@ -730,5 +731,32 @@
     "author": "Victor Sango <victor@deltabox.studio>",
     "license": "MPL-2.0",
     "homepage": "https://toolchain.deltabox.studio",
-    "packageManager": "yarn@4.17.1"
+    "packageManager": "yarn@4.17.1",
+    "keywords": [
+        "tooling",
+        "cli",
+        "monorepo",
+        "tsconfig",
+        "codegen",
+        "tsdown",
+        "linter",
+        "formatter",
+        "oxc",
+        "vite-plugin",
+        "vscode-extension",
+        "changelog",
+        "scaffold",
+        "docker",
+        "container",
+        "extension",
+        "zod",
+        "types",
+        "markdown",
+        "environment",
+        "variables",
+        "configuration",
+        "settings",
+        "deltabox",
+        "dbx"
+    ]
 }

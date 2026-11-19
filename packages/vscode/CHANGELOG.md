@@ -1,8 +1,23 @@
 # Changelog
 
-## 3.0.0-beta.4 (November 2026)
+## 3.0.0-beta.5 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Chores</summary>
+
+- Sync the workspace metadata ([#1104d1b](https://github.com/deltabox-studio/toolchain/commit/1104d1b) by [T0chi](https://github.com/T0chi))
+
+#### Vscode
+- Add the pre-release VSIX script ([#385fa01](https://github.com/deltabox-studio/toolchain/commit/385fa01) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.4 (November 2026)
 
 <details>
 <summary>Documentation</summary>
@@ -11,9 +26,6 @@
 - Sync the extension reference ([#9824034](https://github.com/deltabox-studio/toolchain/commit/9824034) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.3 (November 2026)
 

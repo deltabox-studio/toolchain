@@ -1,6 +1,7 @@
 {
     "name": "@deltabox/toolchain-tsconfig",
-    "version": "3.0.0-beta.1",
+    "version": "3.0.0-beta.2",
+    "private": true,
     "description": "TypeScript config templates plus the tsconfig generator with path-alias, project-reference and include/exclude wiring.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
@@ -35,16 +36,6 @@
     "bin": "./dist/bin.js",
     "homepage": "https://toolchain.deltabox.studio",
     "packageManager": "yarn@4.17.1",
-    "keywords": [
-        "tsconfig",
-        "typescript",
-        "paths",
-        "project-references",
-        "config",
-        "dbx",
-        "deltabox",
-        "toolchain"
-    ],
     "publishConfig": {
         "access": "public",
         "provenance": true

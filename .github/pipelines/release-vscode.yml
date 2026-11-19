@@ -110,6 +110,10 @@ stages:
       displayName: 'Copy changelog from root'
 
     - script: |
+        node -e 'const fs=require("fs");const p="$(extensionWorkspaceDir)/package.json";const j=JSON.parse(fs.readFileSync(p,"utf8"));const v=j.version;if(v.includes("-")){j.version=v.split("-")[0];fs.writeFileSync(p,JSON.stringify(j,null,4)+"\n");console.log("Normalized pre-release "+v+" to "+j.version);}'
+      displayName: 'Normalize a pre-release extension version'
+
+    - script: |
         $(packageManager) build
       displayName: 'Build workspaces and the VSIX extension'
 
@@ -142,6 +146,22 @@ stages:
           - download: current
             artifact: drop
 
+          - checkout: self
+            fetchDepth: 1
+
+          - task: PowerShell@2
+            name: 'PrereleaseStep'
+            displayName: 'Detect a pre-release extension version'
+            inputs:
+              pwsh: true
+              targetType: 'inline'
+              script: |
+                $ErrorActionPreference = 'Stop'
+                $pkg = Get-Content '$(Build.SourcesDirectory)/$(extensionWorkspaceDir)/package.json' -Raw | ConvertFrom-Json
+                $isPrerelease = $pkg.version -match '-'
+                Write-Host "extension version=$($pkg.version) prerelease=$isPrerelease"
+                Write-Host "##vso[task.setvariable variable=prerelease;isOutput=true]$($isPrerelease.ToString().ToLowerInvariant())"
+
           - task: AzureCLI@2
             displayName: 'Publish to the VS Code Marketplace using managed identity'
             inputs:
@@ -150,4 +170,8 @@ stages:
               scriptLocation: inlineScript
               inlineScript: |
                 cd $(Pipeline.Workspace)/drop
-                npx --yes @vscode/vsce publish --packagePath deltabox-toolchain.vsix --azure-credential
+                $params = @('--yes', '@vscode/vsce', 'publish', '--packagePath', 'deltabox-toolchain.vsix', '--azure-credential')
+                if ('$(PrereleaseStep.prerelease)' -eq 'true') {
+                  $params += '--pre-release'
+                }
+                npx @params

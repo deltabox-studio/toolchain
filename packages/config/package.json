@@ -1,6 +1,7 @@
 {
     "name": "@deltabox/toolchain-config",
-    "version": "3.0.0-beta.1",
+    "version": "3.0.0-beta.2",
+    "private": true,
     "description": "Zod- and env-backed configuration engine: parse environment variables, walk schemas, resolve typed config and generate .env, types, markdown, JSON and CLI output.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
@@ -39,18 +40,6 @@
     },
     "homepage": "https://toolchain.deltabox.studio",
     "packageManager": "yarn@4.17.1",
-    "keywords": [
-        "config",
-        "zod",
-        "environment",
-        "env",
-        "schema",
-        "codegen",
-        "typescript",
-        "dbx",
-        "deltabox",
-        "toolchain"
-    ],
     "publishConfig": {
         "access": "public",
         "provenance": true

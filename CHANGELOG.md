@@ -1,8 +1,53 @@
 # Changelog
 
-## 3.0.0-beta.10 (November 2026)
+## 3.0.0-beta.11 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Documentation</summary>
+
+- Refresh the generated llms bundles ([#47a0c34](https://github.com/deltabox-studio/toolchain/commit/47a0c34) by [T0chi](https://github.com/T0chi))
+- Update the Vite plugin README ([#7adb895](https://github.com/deltabox-studio/toolchain/commit/7adb895) by [T0chi](https://github.com/T0chi))
+- Add Contribute to the docs navigation ([#c7a32e4](https://github.com/deltabox-studio/toolchain/commit/c7a32e4) by [T0chi](https://github.com/T0chi))
+- Add the contribute guide ([#17c62df](https://github.com/deltabox-studio/toolchain/commit/17c62df) by [T0chi](https://github.com/T0chi))
+- Update migration guide links ([#b58b9fb](https://github.com/deltabox-studio/toolchain/commit/b58b9fb) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>CI</summary>
+
+#### Vscode
+- Publish pre-release extensions from Azure ([#ce29c2f](https://github.com/deltabox-studio/toolchain/commit/ce29c2f) by [T0chi](https://github.com/T0chi))
+
+#### Release
+- Support pre-release VS Code extensions ([#6e4910e](https://github.com/deltabox-studio/toolchain/commit/6e4910e) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Chores</summary>
+
+- Revert to `beta` versioning ([#cfcd8f3](https://github.com/deltabox-studio/toolchain/commit/cfcd8f3) by [T0chi](https://github.com/T0chi))
+- Make the workspace packages private ([#3b3c7d6](https://github.com/deltabox-studio/toolchain/commit/3b3c7d6) by [T0chi](https://github.com/T0chi))
+- Sync the workspace metadata ([#1104d1b](https://github.com/deltabox-studio/toolchain/commit/1104d1b) by [T0chi](https://github.com/T0chi))
+- Sync the root package metadata ([#aec39e5](https://github.com/deltabox-studio/toolchain/commit/aec39e5) by [T0chi](https://github.com/T0chi))
+- Sync the Vite package metadata ([#459670b](https://github.com/deltabox-studio/toolchain/commit/459670b) by [T0chi](https://github.com/T0chi))
+- Update the package keywords ([#8554023](https://github.com/deltabox-studio/toolchain/commit/8554023) by [T0chi](https://github.com/T0chi))
+- Use the oxc keyword ([#aa24a65](https://github.com/deltabox-studio/toolchain/commit/aa24a65) by [T0chi](https://github.com/T0chi))
+- Add the checkout bootstrap script ([#d49b378](https://github.com/deltabox-studio/toolchain/commit/d49b378) by [T0chi](https://github.com/T0chi))
+- Remove prerelease tag ([#c75bb61](https://github.com/deltabox-studio/toolchain/commit/c75bb61) by [T0chi](https://github.com/T0chi))
+
+#### Vscode
+- Add the pre-release VSIX script ([#385fa01](https://github.com/deltabox-studio/toolchain/commit/385fa01) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.10 (November 2026)
 
 <details>
 <summary>Documentation</summary>
@@ -20,9 +65,6 @@
 - Revamp the configuration overview ([#fe4137e](https://github.com/deltabox-studio/toolchain/commit/fe4137e) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.9 (November 2026)
 

@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain",
-    "version": "3.0.0-beta.10",
+    "version": "3.0.0-beta.11",
     "description": "A superset of Vite+ with rich extras: project synchronization, config generator, tsconfig management, MCP server, CI and changelog automation, providers, catalogs and a VS Code extension. Use it as a Vite plugin or standalone.",
     "homepage": "https://toolchain.deltabox.studio",
     "author": "Victor Sango <victor@deltabox.studio>",
@@ -21,11 +21,11 @@
         "tsconfig",
         "codegen",
         "tsdown",
-        "biome",
-        "oxlint",
-        "vite",
-        "viteplus",
-        "vite-plus",
+        "linter",
+        "formatter",
+        "oxc",
+        "vite-plugin",
+        "vscode-extension",
         "changelog",
         "scaffold",
         "docker",
@@ -63,7 +63,8 @@
         "config:types": "tsx scripts/generate-config-types.ts",
         "dbx": "tsx src/cli/index.ts",
         "commitlint": "commitlint",
-        "postinstall": "node scripts/bootstrap.mjs"
+        "bootstrap": "node scripts/bootstrap.mjs",
+        "postinstall": "yarn bootstrap"
     },
     "publishConfig": {
         "access": "public",
