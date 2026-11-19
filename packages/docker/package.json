@@ -1,6 +1,7 @@
 {
     "name": "@deltabox/toolchain-docker",
     "version": "3.0.0-beta.0",
+    "private": true,
     "description": "Dockerfile, .dockerignore and compose generation for @deltabox/toolchain projects, with Vite+ image support.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
@@ -11,8 +12,7 @@
     "license": "MPL-2.0",
     "type": "module",
     "files": [
-        "dist",
-        "README.md"
+        "dist"
     ],
     "dependencies": {
         "@deltabox/toolchain-shared": "workspace:*"
@@ -29,16 +29,6 @@
     },
     "homepage": "https://toolchain.deltabox.studio",
     "packageManager": "yarn@4.17.1",
-    "keywords": [
-        "docker",
-        "dockerfile",
-        "compose",
-        "container",
-        "vite-plus",
-        "dbx",
-        "deltabox",
-        "toolchain"
-    ],
     "publishConfig": {
         "access": "public",
         "provenance": true

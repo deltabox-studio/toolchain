@@ -1,6 +1,7 @@
 {
     "name": "@deltabox/toolchain-mcp",
     "version": "3.0.0-beta.1",
+    "private": true,
     "description": "Model Context Protocol server and installer exposing the dbx toolchain APIs and skills over JSON-RPC stdio.",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
@@ -29,15 +30,6 @@
     },
     "homepage": "https://toolchain.deltabox.studio",
     "packageManager": "yarn@4.17.1",
-    "keywords": [
-        "mcp",
-        "model-context-protocol",
-        "json-rpc",
-        "server",
-        "dbx",
-        "toolchain",
-        "deltabox"
-    ],
     "publishConfig": {
         "access": "public",
         "provenance": true
