@@ -1,8 +1,36 @@
 # Changelog
 
-## 3.0.0-beta.2 (November 2026)
+## 3.0.0-beta.3 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>New features</summary>
+
+#### Changelog
+- Add the beforeVersion lifecycle hook ([#3f62f0c](https://github.com/deltabox-studio/toolchain/commit/3f62f0c) by [T0chi](https://github.com/T0chi))
+- Add the afterVersion lifecycle hook ([#c927eee](https://github.com/deltabox-studio/toolchain/commit/c927eee) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Chores</summary>
+
+#### Release
+- Add a GitHub release notes reformatter ([#95310f9](https://github.com/deltabox-studio/toolchain/commit/95310f9) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+### Package changes
+
+#### Updated
+- `@deltabox/toolchain`
+  - `vite-plugin-dbx` `^3.0.0-beta.1` → `^3.0.0-beta.2`
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.2 (November 2026)
 
 <details>
 <summary>Chores</summary>
@@ -17,9 +45,6 @@
 #### Updated
 - `@deltabox/toolchain`
   - `vite-plugin-dbx` `^2.6.1` → `^3.0.0-beta.1`
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.1 (November 2026)
 

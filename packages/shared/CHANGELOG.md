@@ -1,8 +1,22 @@
 # Changelog
 
-## 3.0.0-beta.0 (November 2026)
+## 3.0.0-beta.1 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>New features</summary>
+
+#### Changelog
+- Add the beforeVersion lifecycle hook ([#3f62f0c](https://github.com/deltabox-studio/toolchain/commit/3f62f0c) by [T0chi](https://github.com/T0chi))
+- Add the afterVersion lifecycle hook ([#c927eee](https://github.com/deltabox-studio/toolchain/commit/c927eee) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.0 (November 2026)
 
 <details>
 <summary><strong>BREAKING CHANGES</strong></summary>
@@ -140,9 +154,6 @@
 - Regenerate types and references ([#de928fa](https://github.com/deltabox-studio/toolchain/commit/de928fa) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 2.6.1 (November 2026)
 
