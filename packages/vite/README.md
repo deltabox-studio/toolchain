@@ -6,11 +6,14 @@ The plugin carries the whole toolchain config inline, so a Vite project does not
 need a `dbx.config.*` at all, and it can run `dbx sync` before dev/build or
 `dbx sync --check` in CI.
 
+> `vite-plugin-dbx` is not published yet. Import the plugin from
+> `@deltabox/toolchain/vite` until it ships.
+
 ```ts
 // vite.config.ts
 import { defineConfig } from 'vite-plus';
 
-import { dbx, DBX_TASKS } from 'vite-plugin-dbx';
+import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
 
 export default defineConfig({
     plugins: [

@@ -67,12 +67,15 @@ also accepts flags (`--name`, `--kind`, ...) for scripted use.
 Add the `dbx()` plugin to `vite.config.ts` (recommended, no `dbx.config.*` needed):
 
 ```ts
-import { dbx } from 'vite-plugin-dbx';
+import { dbx } from '@deltabox/toolchain/vite';
 
 export default {
     plugins: [dbx({ toolchain: { fmt: true, lint: true } })],
 };
 ```
+
+See [Vite plugin](/guide/vite-plugin) for the install steps and what the plugin
+does.
 
 Or, for a project that does not use Vite, scaffold a standalone config:
 
