@@ -40,6 +40,12 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [Migrating from v1 to v2](https://toolchain.deltabox.studio/guide/migrations/v1-v2.md)
 - [Migrating from v2 to v3](https://toolchain.deltabox.studio/guide/migrations/v2-v3.md)
 
+#### Contribute
+
+- [Overview](https://toolchain.deltabox.studio/contribute.md)
+- [Development](https://toolchain.deltabox.studio/contribute/development.md)
+- [Documentation](https://toolchain.deltabox.studio/contribute/documentation.md)
+
 - [Package catalogs](https://toolchain.deltabox.studio/guide/catalogs.md)
 - [CLI](https://toolchain.deltabox.studio/guide/cli.md)
 - [Docker](https://toolchain.deltabox.studio/guide/docker.md)

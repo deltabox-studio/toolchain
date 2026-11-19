@@ -4803,7 +4803,8 @@ url: https://toolchain.deltabox.studio/guide/migrations/v2-v3.md
 
 **v3** is a correctness and cleanup release.
 
-Full changelog [here](https://github.com/deltabox-studio/toolchain/blob/main/CHANGELOG.md#300-november-2026).
+Release notes [here](https://github.com/deltabox-studio/toolchain/releases/tag/v3.0.1).
+Full changelog [here](https://github.com/deltabox-studio/toolchain/blob/main/CHANGELOG.md#301-november-2026).
 
 ## Table of contents
 
@@ -5141,6 +5142,171 @@ Every page is also available as raw Markdown by appending `.md` to its URL (eg.
 If `https://toolchain.deltabox.studio` is down, the same documentation lives in
 the repository at
 [github.com/deltabox-studio/toolchain/tree/main/apps/docs](https://github.com/deltabox-studio/toolchain/tree/main/apps/docs).
+
+---
+
+---
+url: https://toolchain.deltabox.studio/contribute.md
+---
+
+# Overview
+
+Feel free to contribute to the development or docs.
+
+> PRs from strangers are disabled for safety and work-load reasons.
+>
+> Only maintainers are able to create PRs for now.
+>
+> I only add trusted people as maintainers.
+> You can become a maintainer by forking the repo and for a while create your own worthy PRs with bug fixes/features in the forked repo. Only then, you will be eligible to get reviewed for a maintainer role.
+
+## Guides
+
+* [Development](/contribute/development) covers the fork/clone setup, the local
+  commands and the linter/formatter bootstrap fix.
+* [Documentation](/contribute/documentation) covers writing, previewing and
+  building the docs.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/contribute/development.md
+---
+
+# Development
+
+## Setup
+
+You need to fork **or** clone this repo:
+
+```sh
+gh repo fork deltabox-studio/toolchain # fork
+gh repo clone deltabox-studio/toolchain # clone
+```
+
+The `dev` branch is the main branch, so no need to switch branches.
+
+## Commands
+
+This repo is a Yarn 4 workspace. Vite+ (`vp`) drives format, lint, test and the
+task runner from the root `vite.config.ts`, which dogfoods the `dbx()` plugin.
+There is no root `dbx.config.ts`, `vitest.config.ts` or `tsdown.config.ts`.
+
+The toolchain config lives in the plugin's `toolchain` option; Vitest and the
+published package build live in the standard `test` and `pack` fields.
+
+Each workspace uses a hand-written plugin-mode `vite.config.ts`; Vite and Vitest
+resolve workspace imports through `resolve.tsconfigPaths`.
+
+```sh
+yarn install        # fresh checkout
+yarn dev            # run the CLI from src/ via tsx
+yarn typecheck      # packages + root
+yarn check          # Oxfmt + Oxlint check (no writes)
+yarn check:fix      # same, auto-fixing every workspace + the root
+yarn format         # `vp fmt`
+yarn lint           # `vp lint --fix`
+yarn build          # packages + root via `vp run` (root pack config)
+yarn test           # builds, then package + root tests
+yarn test:clean     # remove leftover emulation temp workspaces
+```
+
+> `vp` resolves only at the repo root, so run these from the root. A full
+> `yarn build` is only needed for the published `dist`/VSIX: typechecks,
+> `vp run`/`fmt`/`lint`/`test`, `yarn dev` and Vitest run from source. The
+> emulate suite spawns the built `dist/cli/index.js` and therefore needs a
+> build.
+
+The VS Code extension's unit tests run with the root Vitest suite. Its
+integration suite launches a real extension host
+(`yarn workspace toolchain-vscode test:integration`); CI runs it under Xvfb in
+the `vscode-integration` job after `ci`. On Windows it cannot run while VS Code
+stable is open.
+
+## Random linter/formatter errors
+
+The root `vite.config.ts` imports the plugin from `@deltabox/toolchain/vite`,
+which resolves through the repo's self-link:
+
+```
+node_modules/@deltabox/toolchain  ->  .  (repo root)
+package.json exports "./vite"     ->  ./dist/vite.js
+```
+
+Deleting every `dist/` removes `dist/vite.js`, so loading `vite.config.ts` fails
+before Oxc/Vite+ can start. Clearing `.vite-temp` will not help.
+
+**Fix:** rebuild the root `dist` without going through `vp` (which itself needs
+the config):
+
+```sh
+yarn bootstrap
+```
+
+This is the checkout bootstrap already used by `postinstall`. It builds the root
+`dist` directly from `scripts/root-pack.ts` using Vite+'s bundled `tsdown`,
+bypassing the config-loading cycle.
+
+**Notes:**
+
+* You only need the root `dist/vite.js` for config loading. The root build
+  inlines workspace sources, so `packages/*/dist` can stay deleted.
+* If you clean all `dist` dirs again, run `yarn bootstrap` (or `yarn install`,
+  which re-runs the `postinstall`) before using the Oxc VS Code extension or
+  `vp`.
+
+## Docs
+
+The docs live in `apps/docs` (VitePress). See
+[Documentation](/contribute/documentation) for the local preview, build and
+writing workflow.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/contribute/documentation.md
+---
+
+# Documentation
+
+Full documentation, guides and examples live at
+[toolchain.deltabox.studio](https://toolchain.deltabox.studio/guide).
+
+The source pages live in `apps/docs` and are built with VitePress.
+
+## Preview locally
+
+```sh
+yarn workspace @deltabox/toolchain-docs dev
+```
+
+## Build
+
+```sh
+yarn docs build
+```
+
+The build also regenerates the LLM bundles (`llms.txt` and `llms-full.txt`) and
+copies them to the repo root.
+
+## Writing pages
+
+* Add Markdown pages under `apps/docs/guide`, `apps/docs/config` or
+  `apps/docs/contribute`.
+* The guide sidebar is generated from the docs tree, so a new page appears in
+  its section automatically. New top-level sections, the navbar and the manual
+  Introduction groups are configured in `apps/docs/.vitepress/config.ts`.
+* The pages under `apps/docs/config` are generated. Run `yarn config:generate`
+  after changing the config schema; do not edit those pages by hand.
+* Run `yarn format` and `yarn docs build` before opening a PR.
+
+See the [VitePress documentation](https://vitepress.dev/) for Markdown syntax
+and theme options.
+
+## Development
+
+See [Development](/contribute/development) for the repo setup, commands and the
+linter/formatter bootstrap fix.
 
 ---
 
@@ -11799,6 +11965,20 @@ configures the **CLI** `dbx watch` command.
 url: https://toolchain.deltabox.studio/CHANGELOG.md
 ---
 # Changelog
+
+## 3.0.0-beta.6 (November 2026)
+
+* Reorganize the documentation navigation ([#342de5a](https://github.com/deltabox-studio/toolchain/commit/342de5a) by [T0chi](https://github.com/T0chi))
+* Document the Vite plugin and Vite+ commands ([#95c1e66](https://github.com/deltabox-studio/toolchain/commit/95c1e66) by [T0chi](https://github.com/T0chi))
+* Expand the v3 migration guide ([#9a6d0d0](https://github.com/deltabox-studio/toolchain/commit/9a6d0d0) by [T0chi](https://github.com/T0chi))
+
+#### Vscode
+
+* Sync the extension reference ([#9824034](https://github.com/deltabox-studio/toolchain/commit/9824034) by [T0chi](https://github.com/T0chi))
+
+#### Config
+
+* Revamp the configuration overview ([#fe4137e](https://github.com/deltabox-studio/toolchain/commit/fe4137e) by [T0chi](https://github.com/T0chi))
 
 ## 3.0.0-beta.5 (November 2026)
 
