@@ -1,8 +1,20 @@
 # Changelog
 
-## 3.0.0-beta.5 (November 2026)
+## 3.0.0-beta.6 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Documentation</summary>
+
+- Add MCP to the README table of contents ([#2d7acfb](https://github.com/deltabox-studio/toolchain/commit/2d7acfb) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.5 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -11,9 +23,6 @@
 - Drop allowImportingTsExtensions from the integration test config ([#c241654](https://github.com/deltabox-studio/toolchain/commit/c241654) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.4 (November 2026)
 
