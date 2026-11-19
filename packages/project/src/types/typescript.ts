@@ -65,7 +65,10 @@ export type ConfigExtension = 'ts' | 'mts' | 'js' | 'mjs' | 'cjs';
 export interface PluginViteConfigOptions {
     ctx: ProjectContext;
     type: ProjectType;
-    /** `defaults` writes `fmt: { oxc: true }`; `inherit` opts into a parent. */
+    /**
+     * `defaults` writes `fmt: { oxc: true }`; `inherit` omits the section so the
+     * root/ancestor config owns it.
+     */
     fmt?: 'defaults' | 'inherit' | false;
     lint?: 'defaults' | 'inherit' | false;
     catalogs?: Record<string, string>;

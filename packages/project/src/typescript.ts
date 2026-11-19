@@ -205,6 +205,11 @@ export function configUsesEsm(extension: ConfigExtension, packageType?: string):
  * Find the nearest ancestor that owns Oxc config files. The walk stops at the
  * repository boundary (`.git`) so a nested project cannot inherit files from an
  * unrelated checkout above it.
+ *
+ * A v3 project declares `fmt`/`lint` in its toolchain config instead of
+ * standalone files, so an ancestor `dbx.config.*` (or a `vite.config.*` that
+ * uses the `dbx()` plugin) also counts as an owner when it declares either
+ * section.
  */
 export function findRootOxcFiles(start: string): RootOxcFiles {
     const root = path.resolve(start);
@@ -212,8 +217,9 @@ export function findRootOxcFiles(start: string): RootOxcFiles {
     if (fs.existsSync(path.join(root, '.git'))) return { fmt: false, lint: false };
     let dir = path.dirname(root);
     for (;;) {
-        const fmt = fs.existsSync(path.join(dir, '.oxfmtrc.json'));
-        const lint = fs.existsSync(path.join(dir, '.oxlintrc.json'));
+        const config = configOxcOwner(dir);
+        const fmt = fs.existsSync(path.join(dir, '.oxfmtrc.json')) || config?.fmt === true;
+        const lint = fs.existsSync(path.join(dir, '.oxlintrc.json')) || config?.lint === true;
         if (fmt || lint) return { fmt, lint };
         if (fs.existsSync(path.join(dir, '.git'))) break;
         const parent = path.dirname(dir);
@@ -221,6 +227,55 @@ export function findRootOxcFiles(start: string): RootOxcFiles {
         dir = parent;
     }
     return { fmt: false, lint: false };
+}
+
+/** The toolchain config files a project can use to declare `fmt`/`lint`. */
+const DBX_CONFIG_FILE_NAMES = [
+    'dbx.config.ts',
+    'dbx.config.mts',
+    'dbx.config.cts',
+    'dbx.config.js',
+    'dbx.config.mjs',
+    'dbx.config.cjs',
+    'dbx.config.json',
+] as const;
+
+const VITE_CONFIG_FILE_NAMES = [
+    'vite.config.ts',
+    'vite.config.mts',
+    'vite.config.cts',
+    'vite.config.js',
+    'vite.config.mjs',
+    'vite.config.cjs',
+] as const;
+
+/** A Vite config that uses the `dbx()` plugin. */
+const DBX_PLUGIN_SOURCE = /vite-plugin-dbx['"]|@deltabox\/toolchain(?:\/vite)?['"]|\bdbx\s*\(/;
+
+/** The `fmt`/`lint` sections a directory's toolchain config declares. */
+function configOxcOwner(dir: string): RootOxcFiles | undefined {
+    for (const name of DBX_CONFIG_FILE_NAMES) {
+        const file = path.join(dir, name);
+        if (!fs.existsSync(file)) continue;
+        const declared = declaredOxc(fs.readFileSync(file, 'utf-8'));
+        if (declared) return declared;
+    }
+    for (const name of VITE_CONFIG_FILE_NAMES) {
+        const file = path.join(dir, name);
+        if (!fs.existsSync(file)) continue;
+        const source = fs.readFileSync(file, 'utf-8');
+        if (!DBX_PLUGIN_SOURCE.test(source)) continue;
+        const declared = declaredOxc(source);
+        if (declared) return declared;
+    }
+    return undefined;
+}
+
+/** Whether a config source declares a `fmt`/`lint` section. */
+function declaredOxc(source: string): RootOxcFiles | undefined {
+    const fmt = /\bfmt\s*:/.test(source);
+    const lint = /\blint\s*:/.test(source);
+    return fmt || lint ? { fmt, lint } : undefined;
 }
 
 /** The token replacements derived from a {@link ProjectContext}. */
@@ -459,7 +514,9 @@ export function renderPluginViteConfig(options: PluginViteConfigOptions): string
         : undefined;
     const oxc = (value: 'defaults' | 'inherit' | false | undefined): string | undefined => {
         if (value === 'defaults') return '{ oxc: true }';
-        if (value === 'inherit') return 'true';
+        // `inherit`/`false` leave the section out. Emitting `fmt: true` /
+        // `lint: true` would select the shared defaults instead of inheriting
+        // the root's options, so a nested workspace must not declare it.
         return undefined;
     };
     const fmt = oxc(options.fmt);

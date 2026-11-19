@@ -123,14 +123,12 @@ describe('project scaffolding', () => {
         expect(paths).not.toContain('.oxfmtrc.json');
         expect(paths).not.toContain('.oxlintrc.json');
         const config = files.find(f => f.path === 'vite.config.ts')!.content;
-        // Opt into the parent's options instead of redefining them locally.
-        expect(config).toContain('fmt: true');
-        expect(config).toContain('lint: true');
-        expect(config).not.toContain('fmt: { oxc: true }');
-        expect(config).not.toContain('lint: { oxc: true }');
+        // Leave fmt/lint to the root config instead of redefining them locally.
+        expect(config).not.toContain('fmt:');
+        expect(config).not.toContain('lint:');
     });
 
-    it('omits only the Oxc tool a nested root already owns', () => {
+    it('keeps only the Oxc tool a nested root does not own', () => {
         const files = createRootProjectFiles({
             name: 'app',
             rootOxc: { fmt: true, lint: false },
@@ -139,9 +137,8 @@ describe('project scaffolding', () => {
         expect(paths).not.toContain('.oxfmtrc.json');
         expect(paths).not.toContain('.oxlintrc.json');
         const config = files.find(f => f.path === 'vite.config.ts')!.content;
-        expect(config).toContain('fmt: true');
+        expect(config).not.toContain('fmt:');
         expect(config).toContain('lint: { oxc: true }');
-        expect(config).not.toContain('fmt: { oxc: true }');
     });
 
     it('finds root Oxc files above a nested scaffold', () => {
@@ -152,6 +149,39 @@ describe('project scaffolding', () => {
         fs.mkdirSync(nested, { recursive: true });
         expect(findRootOxcFiles(nested)).toEqual({ fmt: true, lint: true });
         expect(findRootOxcFiles(root)).toEqual({ fmt: false, lint: false });
+    });
+
+    it('detects a root dbx config that owns fmt/lint', () => {
+        const root = makeTmp();
+        fs.writeFileSync(
+            path.join(root, 'dbx.config.ts'),
+            'export default { toolchain: { fmt: true, lint: true } };\n'
+        );
+        const nested = path.join(root, 'packages', 'app');
+        fs.mkdirSync(nested, { recursive: true });
+        expect(findRootOxcFiles(nested)).toEqual({ fmt: true, lint: true });
+    });
+
+    it('detects a root Vite plugin config that owns fmt/lint', () => {
+        const root = makeTmp();
+        fs.writeFileSync(
+            path.join(root, 'vite.config.ts'),
+            "import { dbx } from 'vite-plugin-dbx';\nexport default {\n    plugins: [dbx({ toolchain: { fmt: { oxc: true } } })],\n};\n"
+        );
+        const nested = path.join(root, 'packages', 'app');
+        fs.mkdirSync(nested, { recursive: true });
+        expect(findRootOxcFiles(nested)).toEqual({ fmt: true, lint: false });
+    });
+
+    it('ignores a Vite config without the dbx plugin', () => {
+        const root = makeTmp();
+        fs.writeFileSync(
+            path.join(root, 'vite.config.ts'),
+            'export default { fmt: true, lint: true };\n'
+        );
+        const nested = path.join(root, 'packages', 'app');
+        fs.mkdirSync(nested, { recursive: true });
+        expect(findRootOxcFiles(nested)).toEqual({ fmt: false, lint: false });
     });
 
     it('creates a Vite app entry for the application flavour', () => {
@@ -355,6 +385,9 @@ describe('project scaffolding', () => {
         const vite = files.find(f => f.path === 'vite.config.ts')!.content;
         expect(vite).toContain("from 'vite-plugin-dbx'");
         expect(vite).not.toMatch(/\brun:\s*\{/);
+        // The root config owns fmt/lint; the workspace must not shadow it.
+        expect(vite).not.toContain('fmt:');
+        expect(vite).not.toContain('lint:');
         expect(files.some(f => f.path === 'tsdown.config.ts')).toBe(false);
         expect(JSON.parse(files.find(f => f.path === 'tsconfig.build.json')!.content).extends).toBe(
             './tsconfig.json'

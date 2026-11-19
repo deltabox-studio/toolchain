@@ -472,10 +472,9 @@ describe('emulate: CLI + templates', () => {
             expect(fs.existsSync(path.join(out, '.oxfmtrc.json'))).toBe(false);
             expect(fs.existsSync(path.join(out, '.oxlintrc.json'))).toBe(false);
             const config = fs.readFileSync(path.join(out, 'vite.config.ts'), 'utf-8');
-            // Opt into the root's Oxc options instead of redefining them.
-            expect(config).toContain('fmt: true');
-            expect(config).toContain('lint: true');
-            expect(config).not.toContain('fmt: { oxc: true }');
+            // Leave fmt/lint to the root config instead of redefining them.
+            expect(config).not.toContain('fmt:');
+            expect(config).not.toContain('lint:');
         },
         TIMEOUT
     );

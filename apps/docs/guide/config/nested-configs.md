@@ -133,3 +133,8 @@ sync, watch and the VS Code extension all see the config with no
 options are merged on top (the plugin layer keeps the sections it does not
 mention). In plugin mode the toolchain never writes or manages
 `vite.config.*`, and it watches the plugin config for changes.
+
+In a **workspace** plugin config, leave `fmt` and `lint` out: the root
+`vite.config.*` already owns them, and Vite+ applies the root options (including
+its `ignorePatterns`) to the workspace. Declaring `fmt: true` / `lint: true`
+there would select the shared defaults instead and shadow the root config.
