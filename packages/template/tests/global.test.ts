@@ -99,4 +99,16 @@ describe('global template registry', () => {
         expect(global.sources).toContainEqual({ type: 'git', locate: 'https://github.com/x/y' });
         expect(fetchMock).toHaveBeenCalledWith('https://example.com/templates.json');
     });
+
+    it('skips remote registries when offline', async () => {
+        writeGlobalCliConfig({
+            registrySearchPaths: ['https://example.com/templates.json'],
+        });
+        const fetchMock = vi.fn();
+        vi.stubGlobal('fetch', fetchMock);
+
+        const global = await loadGlobalTemplates(undefined, undefined, { online: false });
+        expect(global.sources).toEqual([]);
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
 });

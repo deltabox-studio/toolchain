@@ -126,8 +126,8 @@ export function templateCommands(): ToolchainCommand[] {
                 const cwd = (opts.cwd as string | undefined) ?? context.cwd;
                 if (opts.global) {
                     const policy = templatePolicy(context.config);
-                    const global = await loadGlobalTemplates(cwd, policy);
                     const online = Boolean(opts.online) && !opts.offline;
+                    const global = await loadGlobalTemplates(cwd, policy, { online });
                     const resolved = online
                         ? await resolveTemplateSources(global.sources, {
                               cwd,
@@ -511,6 +511,15 @@ export function templateCommands(): ToolchainCommand[] {
                 const cwd = (opts.cwd as string | undefined) ?? context.cwd;
                 const scope = (opts.scope as string | undefined) ?? 'global';
                 const kind = (opts.kind as string | undefined) ?? 'templates';
+                // Reject typos instead of silently falling back to a different
+                // registry (a bogus scope wrote the project registry; a bogus
+                // kind managed templates).
+                if (scope !== 'global' && scope !== 'project') {
+                    throw new Error(`invalid --scope "${scope}" (expected: project | global).`);
+                }
+                if (kind !== 'templates' && kind !== 'providers') {
+                    throw new Error(`invalid --kind "${kind}" (expected: templates | providers).`);
+                }
                 const change = (opts.add ?? opts.remove) as string | undefined;
                 if (opts.set || opts.clear) {
                     const next = opts.clear ? [] : normalizeSearchPaths(opts.set as string[]);

@@ -161,7 +161,9 @@ export async function loadTemplates(options: LoadTemplatesOptions): Promise<Temp
     // project's own sources are loaded first, so a local template wins on an id
     // clash.
     const policy = templatePolicy(options.config);
-    const global = await loadGlobalTemplates(options.cwd, policy);
+    const global = await loadGlobalTemplates(options.cwd, policy, {
+        online: options.online === true,
+    });
     const sources = [...collectSources(options), ...global.sources].filter(source =>
         sourceAllowed(source, options.cwd, policy)
     );
@@ -220,8 +222,12 @@ export async function resolveTemplateSources(
                 for (const template of loadLocalTemplates(
                     path.resolve(options.cwd, source.locate),
                     source.id
-                ))
-                    add(template);
+                )) {
+                    // A source registered with `--kind` overrides the manifest
+                    // (the manifest describes the contents; the registration
+                    // says how the project uses it).
+                    add(source.kind ? { ...template, kind: source.kind } : template);
+                }
                 break;
             }
             case 'git': {

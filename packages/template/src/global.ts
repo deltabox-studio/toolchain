@@ -397,7 +397,8 @@ export async function existingTemplateIds(
 ): Promise<Set<string>> {
     const ids = new Set(BUILTIN_TEMPLATES.map(template => template.id));
     if (options.global === false) return ids;
-    const global = await loadGlobalTemplates(cwd);
+    // Id uniqueness never needs the network.
+    const global = await loadGlobalTemplates(cwd, undefined, { online: false });
     for (const template of global.templates) ids.add(template.id);
     for (const source of [...global.sources, ...readGlobalSources()]) {
         if (source.id) ids.add(source.id);
@@ -494,7 +495,8 @@ export interface GlobalTemplates {
  */
 export async function loadGlobalTemplates(
     cwd?: string,
-    policy?: RegistryPolicy
+    policy?: RegistryPolicy,
+    options: { online?: boolean } = {}
 ): Promise<GlobalTemplates> {
     const { paths: allPaths } = resolveTemplateSearchPaths(cwd);
     const paths = allPaths.filter(entry =>
@@ -509,6 +511,9 @@ export async function loadGlobalTemplates(
     );
     for (const entry of paths) {
         if (isRemoteRegistry(entry)) {
+            // Offline runs never touch a remote registry (even one configured
+            // as a global search path).
+            if (options.online === false) continue;
             try {
                 const response = await fetch(entry);
                 if (!response.ok) continue;

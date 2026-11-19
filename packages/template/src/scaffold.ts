@@ -4,15 +4,23 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { ensureToolingDependencies } from '@deltabox/toolchain/core';
-import { type DockerRuntime, dockerFiles, writeDockerFiles } from '@deltabox/toolchain/docker';
 import {
+    type DockerRuntime,
+    dockerFiles,
+    resolveDockerPlan,
+    writeDockerFiles,
+} from '@deltabox/toolchain/docker';
+import {
+    assertPathInside,
     createMonorepoRootFiles,
     createProjectTemplateFiles,
     createRootProjectFiles,
     createWorkspaceFiles,
+    DEFAULT_PACKAGE_MANAGER_VERSIONS,
     findRootOxcFiles,
     hasCatalog,
     isProjectTemplateId,
+    isValidPackageName,
     SCAFFOLD_CATALOG,
     upsertWorkspaceTsconfig,
     workspaceDirForTsconfig,
@@ -22,6 +30,7 @@ import {
     applyReplacements,
     type GeneratedFile,
     isIgnoredPath,
+    readJsonAt,
     type Replacements,
     spawnCross,
 } from '@deltabox/toolchain/shared';
@@ -131,10 +140,22 @@ function projectContext(tokens: Record<string, unknown>): Record<string, string>
     };
 }
 
+/** Per-template Docker customisation layered over the generic plan. */
+interface ContainerSpec {
+    runtime: DockerRuntime;
+    output?: string;
+    /** Extra runtime assets (eg. the local file server's `public/`). */
+    assets?: string[];
+    /** Runtime system packages (eg. `rclone`). */
+    runtimePackages?: string[];
+    /** HTTP path the healthcheck requests (default `/`). */
+    healthcheckPath?: string;
+    /** Disable the healthcheck when the server has no reliable GET endpoint. */
+    healthcheck?: boolean;
+}
+
 /** The Docker runtime a builtin template produces (undefined = not containerized). */
-function containerRuntime(
-    template: Template
-): { runtime: DockerRuntime; output?: string } | undefined {
+function containerRuntime(template: Template): ContainerSpec | undefined {
     switch (template.builtin) {
         case 'vitepress':
             return { runtime: 'static', output: 'docs/.vitepress/dist' };
@@ -142,19 +163,80 @@ function containerRuntime(
         case 'ollama-chat':
             return { runtime: 'static', output: 'dist' };
         case 'bun':
+            return { runtime: 'bun', output: 'dist', healthcheckPath: '/health' };
         case 'file-server-bun-s3':
             return { runtime: 'bun', output: 'dist' };
-        case 'single':
         case 'express':
         case 'fastify':
-        case 'orpc':
+            return { runtime: 'node', output: 'dist', healthcheckPath: '/health' };
         case 'file-server':
+            return {
+                runtime: 'node',
+                output: 'dist',
+                assets: ['public'],
+                healthcheckPath: '/index.html',
+            };
         case 'file-server-s3':
         case 'file-server-minio':
-        case 'file-server-rclone':
             return { runtime: 'node', output: 'dist' };
+        case 'file-server-rclone':
+            return { runtime: 'node', output: 'dist', runtimePackages: ['rclone'] };
+        case 'orpc':
+            // The oRPC server only answers `/rpc` POSTs; a GET healthcheck would
+            // fail, so the container stays up without one.
+            return { runtime: 'node', output: 'dist', healthcheck: false };
         default:
+            // `single` and the monorepo/folder templates are libraries or roots:
+            // they have no server entry point, so no image is emitted.
             return undefined;
+    }
+}
+
+/** Validate the template's required inputs before any file is written. */
+function validateTemplateInputs(template: Template, options: ScaffoldOptions): void {
+    const values = replacementMap(options);
+    for (const variable of template.variables ?? []) {
+        const raw = values[variable.name];
+        // A declared default satisfies a required input (it is what an
+        // interactive/non-interactive run would use).
+        const value =
+            raw === undefined || raw === null || raw === ''
+                ? (variable.default ?? '')
+                : String(raw);
+        if (variable.required && value.trim() === '') {
+            throw new Error(
+                `template "${template.id}" requires variable "${variable.name}" (pass --var ${variable.name}=<value>).`
+            );
+        }
+        if (value !== '' && variable.options && !variable.options.includes(value)) {
+            throw new Error(
+                `invalid value "${value}" for template variable "${variable.name}" (expected one of: ${variable.options.join(', ')}).`
+            );
+        }
+    }
+}
+
+/** Validate the project name and package manager before writing a builtin. */
+function validateBuiltinInputs(
+    name: string,
+    scope: string | undefined,
+    packageManager: string | undefined
+): void {
+    if (!isValidPackageName(name)) {
+        throw new Error(
+            `invalid project name "${name}" (use a lowercase npm package name: letters, digits, ".", "_" or "-").`
+        );
+    }
+    if (scope !== undefined && !/^@[a-z0-9][a-z0-9._-]*$/.test(scope)) {
+        throw new Error(`invalid npm scope "${scope}" (expected @scope with a lowercase name).`);
+    }
+    if (
+        packageManager !== undefined &&
+        !Object.keys(DEFAULT_PACKAGE_MANAGER_VERSIONS).includes(packageManager)
+    ) {
+        throw new Error(
+            `invalid package manager "${packageManager}" (expected ${Object.keys(DEFAULT_PACKAGE_MANAGER_VERSIONS).join(' | ')}).`
+        );
     }
 }
 
@@ -278,6 +360,38 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
             );
         }
     }
+    if (template.builtin !== 'folder') {
+        validateBuiltinInputs(name, scope, packageManager);
+    }
+    const docker = options.containerize ? containerRuntime(template) : undefined;
+    const dockerOptions = docker
+        ? {
+              cwd: options.cwd,
+              projectName: name,
+              vitePlus: true,
+              ...(packageManager ? { packageManager } : {}),
+              ...(metadata.nodeVersion ? { nodeVersion: metadata.nodeVersion } : {}),
+              runtime: docker.runtime,
+              ...(docker.output ? { output: docker.output } : {}),
+              ...(docker.assets ? { assets: docker.assets } : {}),
+              ...(docker.runtimePackages ? { runtimePackages: docker.runtimePackages } : {}),
+              ...(docker.healthcheckPath ? { healthcheckPath: docker.healthcheckPath } : {}),
+              ...(docker.healthcheck === false ? { healthcheck: false } : {}),
+              // Every containerized scaffold ships a local compose file.
+              compose: true,
+          }
+        : undefined;
+
+    // Preflight the project files and their Docker artifacts together, so a
+    // Docker collision (eg. a hand-written Dockerfile) aborts before any
+    // project file is written instead of leaving a partial scaffold.
+    if (dockerOptions) {
+        writeGeneratedFiles([...files, ...dockerFiles(dockerOptions)], options.cwd, {
+            force: options.force === true,
+            dryRun: true,
+        });
+    }
+
     const written = writeGeneratedFiles(files, options.cwd, { force: options.force === true });
     if (template.builtin !== 'folder') {
         ensureToolingDependencies({
@@ -295,27 +409,14 @@ function scaffoldBuiltin(template: Template, options: ScaffoldOptions): Scaffold
             options.tsconfigRootFile
         );
     }
-    if (options.containerize) {
-        const docker = containerRuntime(template);
-        if (docker) {
-            written.push(
-                ...writeGeneratedFiles(
-                    dockerFiles({
-                        cwd: options.cwd,
-                        projectName: name,
-                        vitePlus: true,
-                        ...(packageManager ? { packageManager } : {}),
-                        ...(metadata.nodeVersion ? { nodeVersion: metadata.nodeVersion } : {}),
-                        runtime: docker.runtime,
-                        ...(docker.output ? { output: docker.output } : {}),
-                        // Every containerized scaffold ships a local compose file.
-                        compose: true,
-                    }),
-                    options.cwd,
-                    { force: options.force === true }
-                )
-            );
-        }
+    if (dockerOptions) {
+        // Recompute after the project files exist so the plan's install sources
+        // include generated files (eg. `.yarnrc.yml`).
+        written.push(
+            ...writeGeneratedFiles(dockerFiles(dockerOptions), options.cwd, {
+                force: options.force === true,
+            })
+        );
     }
     return { written };
 }
@@ -351,14 +452,8 @@ function scaffoldLocal(template: Template, options: ScaffoldOptions): ScaffoldRe
                 root,
                 applyReplacements(childRelative, tokens, { open, close })
             );
-            const normalizedRoot = process.platform === 'win32' ? root.toLowerCase() : root;
-            const normalizedTarget = process.platform === 'win32' ? target.toLowerCase() : target;
-            if (
-                normalizedTarget !== normalizedRoot &&
-                !normalizedTarget.startsWith(`${normalizedRoot}${path.sep}`)
-            ) {
-                throw new Error(`refusing to write outside ${root}: ${target}`);
-            }
+            // Reject `..` targets and links under the output that escape it.
+            assertPathInside(root, target);
             if (!overwrite && fs.existsSync(target)) continue;
             const source = path.join(dir, childRelative);
             const buffer = fs.readFileSync(source);
@@ -384,19 +479,32 @@ function scaffoldLocal(template: Template, options: ScaffoldOptions): ScaffoldRe
 }
 
 /** Delegate an online/Vite+ template to `vp create`. */
+/** Forward a git source's `ref` to `vp create` (`<locate>#<ref>`). */
+function sourceLocate(template: Template): string {
+    const { locate, ref, subdir, type } = template.source;
+    const withRef = type === 'git' && ref ? `${locate}#${ref}` : locate;
+    return subdir ? `${withRef}/${subdir}` : withRef;
+}
+
 async function scaffoldViaVp(
     template: Template,
     options: ScaffoldOptions
 ): Promise<ScaffoldResult> {
-    const locate = template.source.subdir
-        ? `${template.source.locate}/${template.source.subdir}`
-        : template.source.locate;
+    const locate = sourceLocate(template);
     const args = ['create'];
     if (locate) args.push(locate);
     const name = options.tokens?.name;
     if (name) args.push(String(name));
+    // A custom npm registry is forwarded through the environment `vp create`
+    // reads (it resolves create packages through npm's config); `ref` is part of
+    // the locate above.
+    const registry = template.source.registry;
     const result = await runVp(args, {
         cwd: options.cwd,
+        // Creation targets an empty directory: allow the npx fallback even when
+        // the target does not (yet) declare `vite-plus`.
+        allowNpx: true,
+        ...(registry ? { env: { npm_config_registry: registry } } : {}),
         ...(options.machine ? { mode: 'capture' as const } : {}),
     });
     if (options.machine) {
@@ -411,14 +519,24 @@ async function scaffoldViaVp(
     const candidates = [...(name ? [path.join(options.cwd, String(name))] : []), options.cwd];
     const dir = candidates.find(candidate => fs.existsSync(path.join(candidate, 'package.json')));
     if (!dir) return { written: [], code: result.code };
-    const written = writeDockerFiles({
+    const dockerOptions = {
         cwd: dir,
         ...(name ? { projectName: String(name) } : {}),
         ...(options.tokens?.packageManager
             ? { packageManager: String(options.tokens.packageManager) }
             : {}),
         compose: true,
-        force: true,
+    };
+    // A Vite+ library (`vp pack`, no `start`) has no runnable entry point: skip
+    // the server image, while a static site still gets its nginx image.
+    const pkg = readJsonAt<{ scripts?: Record<string, string> }>(dir, 'package.json');
+    const hasStart = Boolean(pkg?.scripts?.start?.trim());
+    const runtime = resolveDockerPlan(dockerOptions).runtime;
+    const written = writeDockerFiles({
+        ...dockerOptions,
+        runnableServer: hasStart || runtime === 'static',
+        // Never clobber a hand-written Dockerfile unless the caller asked for it.
+        force: options.force === true,
     });
     return { written, code: result.code };
 }
@@ -541,6 +659,9 @@ export async function scaffoldTemplate(
     template: Template,
     options: ScaffoldOptions
 ): Promise<ScaffoldResult> {
+    // Enforce the template's declared inputs before writing anything: a missing
+    // required value would otherwise leave literal `{{var}}` placeholders.
+    validateTemplateInputs(template, options);
     if (template.builtin) {
         const result = scaffoldBuiltin(template, options);
         const ranActions = await runActions(template, options);
