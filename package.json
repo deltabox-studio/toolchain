@@ -63,7 +63,8 @@
         "config:types": "tsx scripts/generate-config-types.ts",
         "dbx": "tsx src/cli/index.ts",
         "commitlint": "commitlint",
-        "postinstall": "node scripts/bootstrap.mjs"
+        "bootstrap": "node scripts/bootstrap.mjs",
+        "postinstall": "yarn bootstrap"
     },
     "publishConfig": {
         "access": "public",
