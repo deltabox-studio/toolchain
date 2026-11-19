@@ -1,8 +1,53 @@
 # Changelog
 
-## 3.0.0-beta.2 (November 2026)
+## 3.0.0-beta.3 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Chores</summary>
+
+#### Deps
+- Bump the security-updates group across 1 directory with 3 updates ([#44](https://github.com/deltabox-studio/toolchain/issues/44)) ([#ce9a835](https://github.com/deltabox-studio/toolchain/commit/ce9a835) by [dependabot](https://github.com/dependabot))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - chore(deps): bump the security-updates group across 1 directory with 3 updates
+    - Bumps the security-updates group with 3 updates in the / directory: [vite](https://github.com/vitejs/vite/tree/HEAD/packages/vite), [fast-uri](https://github.com/fastify/fast-uri) and [undici](https://github.com/nodejs/undici).
+    - Updates `vite` from 5.4.21 to 6.4.5
+    - [Release notes](https://github.com/vitejs/vite/releases)
+    - [Changelog](https://github.com/vitejs/vite/blob/v6.4.5/packages/vite/CHANGELOG.md)
+    - [Commits](https://github.com/vitejs/vite/commits/v6.4.5/packages/vite)
+    - Updates `fast-uri` from 3.1.8 to 3.1.9
+    - [Release notes](https://github.com/fastify/fast-uri/releases)
+    - [Commits](https://github.com/fastify/fast-uri/compare/v3.1.8...v3.1.9)
+    - Updates `undici` from 8.11.2 to 8.12.4
+    - [Release notes](https://github.com/nodejs/undici/releases)
+    - [Commits](https://github.com/nodejs/undici/compare/v8.11.2...v8.12.4)
+    - --- updated-dependencies:
+    - dependency-name: fast-uri dependency-version: 3.1.9 dependency-type: indirect dependency-group: security-updates
+    - dependency-name: undici dependency-version: 8.12.4 dependency-type: indirect dependency-group: security-updates
+    - dependency-name: vite dependency-version: 6.4.5 dependency-type: direct:development dependency-group: security-updates ...
+    - **Signed-off-by:** dependabot[bot] <support@github.com>
+    - chore(deps): regenerate the lockfile for the security updates
+    - ---------
+    - **Signed-off-by:** dependabot[bot] <support@github.com>
+    - **Co-authored-by:** dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+    - **Co-authored-by:** T0chi <34287213+T0chi@users.noreply.github.com>
+
+  </details>
+
+</details>
+
+### New contributors
+- [dependabot](https://github.com/dependabot)
+  - Bump the security-updates group across 1 directory with 3 updates ([#44](https://github.com/deltabox-studio/toolchain/issues/44)) ([#ce9a835](https://github.com/deltabox-studio/toolchain/commit/ce9a835))
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.2 (November 2026)
 
 <details>
 <summary>New features</summary>
@@ -18,9 +63,6 @@
 - Align the READMEs and guides with v3 ([#c6487b8](https://github.com/deltabox-studio/toolchain/commit/c6487b8) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.1 (November 2026)
 
