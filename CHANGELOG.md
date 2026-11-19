@@ -1,8 +1,31 @@
 # Changelog
 
-## 3.0.0-beta.11 (November 2026)
+## 3.0.0-beta.12 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Release
+- Publish prereleases with an npm dist-tag ([#ebc3574](https://github.com/deltabox-studio/toolchain/commit/ebc3574) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+- Roll prereleases over to their stable core ([#c27bbb5](https://github.com/deltabox-studio/toolchain/commit/c27bbb5) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+- Streamline the README introduction ([#8076c13](https://github.com/deltabox-studio/toolchain/commit/8076c13) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.11 (November 2026)
 
 <details>
 <summary>Documentation</summary>
@@ -43,9 +66,6 @@
 - Add the pre-release VSIX script ([#385fa01](https://github.com/deltabox-studio/toolchain/commit/385fa01) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.10 (November 2026)
 
