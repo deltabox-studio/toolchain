@@ -54,6 +54,7 @@
         "test": "vp run --filter \"./packages/*\" build && vp run -w build:root && vp run --filter \"./packages/*\" test && vp run -w test:root",
         "test:repo": "tsx scripts/test-repo.ts",
         "test:clean": "node scripts/clean-emulate.mjs",
+        "releases:reformat": "tsx scripts/reformat-github-releases.ts",
         "vp:test": "vp test --run --config vite.config.ts",
         "vp:toolchain": "vp toolchain",
         "config:generate": "tsx scripts/generate-tool-config-types.ts && tsx scripts/generate-workflow-types.ts && tsx scripts/generate-config-types.ts && tsx scripts/generate-config.ts && tsx scripts/generate-config-docs.ts",
