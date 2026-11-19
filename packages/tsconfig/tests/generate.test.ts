@@ -6,7 +6,13 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import type { SyncContext, ToolchainConfig } from '@deltabox/toolchain/shared';
 
-import { generateTsconfigs, generateWorkspaceTsconfigs, tsconfigSyncTask } from '../src/index.js';
+import {
+    generateTsconfigs,
+    generateWorkspaceTsconfigs,
+    parseTsconfigIndent,
+    runTsconfigCli,
+    tsconfigSyncTask,
+} from '../src/index.js';
 
 function tmp(): string {
     return fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-tsconfig-'));
@@ -201,6 +207,54 @@ describe('generateTsconfigs', () => {
         });
         expect(results).toHaveLength(1);
         expect(results[0]!.newTsconfig.extends).toBe('./tsconfig.src.json');
+    });
+});
+
+describe('standalone tsconfig CLI', () => {
+    function inDir<T>(cwd: string, run: () => T): T {
+        const previous = process.cwd();
+        process.chdir(cwd);
+        try {
+            return run();
+        } finally {
+            process.chdir(previous);
+        }
+    }
+
+    it('derives composite from --refs', () => {
+        const cwd = tmp();
+        writeMonorepo(cwd);
+
+        inDir(cwd, () => runTsconfigCli(['--refs']));
+
+        const core = JSON.parse(
+            fs.readFileSync(path.join(cwd, 'packages/core/tsconfig.json'), 'utf-8')
+        );
+        expect(core.compilerOptions.composite).toBe(true);
+        expect(core.references).toEqual([{ path: '../cli/tsconfig.json' }]);
+    });
+
+    it('omits an empty references array', () => {
+        const cwd = tmp();
+        writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {});
+
+        inDir(cwd, () => runTsconfigCli(['--refs']));
+
+        const core = JSON.parse(
+            fs.readFileSync(path.join(cwd, 'packages/core/tsconfig.json'), 'utf-8')
+        );
+        expect(core.references).toBeUndefined();
+        expect(core.compilerOptions.composite).toBe(true);
+    });
+
+    it('validates --indent as a non-negative integer', () => {
+        expect(parseTsconfigIndent('2')).toBe(2);
+        expect(parseTsconfigIndent('0')).toBe(0);
+        expect(parseTsconfigIndent(undefined)).toBe(4);
+        for (const value of ['nope', '-2', '2.5', '']) {
+            expect(() => parseTsconfigIndent(value)).toThrow(/invalid --indent/);
+        }
+        expect(() => runTsconfigCli(['--indent', 'bad'])).toThrow(/invalid --indent/);
     });
 });
 

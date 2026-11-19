@@ -35,6 +35,9 @@
             "@deltabox/toolchain/tsconfig/cli": [
                 "./packages/tsconfig/src/cli/index.ts"
             ],
+            "@deltabox/toolchain/tsconfig/bin": [
+                "./packages/tsconfig/src/bin.ts"
+            ],
             "@deltabox/toolchain/tsconfig/*": [
                 "./packages/tsconfig/src/*"
             ],

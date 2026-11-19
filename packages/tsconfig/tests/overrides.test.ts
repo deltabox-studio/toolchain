@@ -375,6 +375,51 @@ describe('tsconfig overrides sync', () => {
         ]);
     });
 
+    it('reflects a removed default override in the same generated file', async () => {
+        const cwd = monorepo();
+        const generatedFile = path.join(cwd, 'packages/core/tsconfig.json');
+        await sync(cwd, {
+            overrides: {
+                default: { compilerOptions: { paths: { '@old/*': ['./old/*'] } } },
+            },
+        });
+        expect(read(generatedFile).compilerOptions.paths).toEqual({ '@old/*': ['./old/*'] });
+
+        // Removing the override must revert the default file and regenerate
+        // without the stale key in the same run (not the next `--check`).
+        await sync(cwd, {});
+        expect(read(generatedFile).compilerOptions.paths).toBeUndefined();
+
+        // A following check pass must agree with what was written (no drift
+        // hidden until the next run).
+        const check = await sync(cwd, {}, { check: true });
+        const generated = check.files.find(file => file.path === 'packages/core/tsconfig.json');
+        expect(generated?.content).toBe(fs.readFileSync(generatedFile, 'utf-8'));
+    });
+
+    it('replaces a changed default paths override instead of merging both keys', async () => {
+        const cwd = monorepo();
+        const generatedFile = path.join(cwd, 'packages/core/tsconfig.json');
+        await sync(cwd, {
+            overrides: {
+                default: { compilerOptions: { paths: { '@old/*': ['./old/*'] } } },
+            },
+        });
+        await sync(cwd, {
+            overrides: {
+                default: { compilerOptions: { paths: { '@next/*': ['./next/*'] } } },
+            },
+        });
+
+        expect(read(generatedFile).compilerOptions.paths).toEqual({ '@next/*': ['./next/*'] });
+        expect(read(path.join(cwd, 'packages/core/tsconfig.default.json')).compilerOptions).toEqual(
+            {
+                target: 'ES2022',
+                paths: { '@next/*': ['./next/*'] },
+            }
+        );
+    });
+
     it('reports drift in check mode without writing', async () => {
         const cwd = monorepo();
         const { files } = await sync(

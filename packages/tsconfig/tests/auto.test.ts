@@ -507,6 +507,87 @@ describe('tsconfig section gating', () => {
     });
 });
 
+function tsconfigCommand() {
+    const command = tsconfigCommands().find(candidate => candidate.name === 'tsconfig');
+    if (!command) throw new Error('missing tsconfig command');
+    return command;
+}
+
+function commandContext(cwd: string, config: ToolchainConfig) {
+    return {
+        cwd,
+        projectType: 'monorepo-root' as const,
+        config,
+        tokens: {},
+        syncTasks: [],
+    };
+}
+
+describe('tsconfig command overrides', () => {
+    it('records and reverts a root override on apply-then-remove', async () => {
+        const cwd = makeRepo();
+        const rootFile = path.join(cwd, 'tsconfig.workspaces.json');
+        const manifestFile = path.join(cwd, '.dbx/toolchain/manifest.json');
+        const command = tsconfigCommand();
+        const appliedConfig: ToolchainConfig = {
+            tsconfig: { overrides: { root: { compilerOptions: { types: ['node'] } } } },
+        };
+
+        await command.run({}, commandContext(cwd, appliedConfig));
+        expect(JSON.parse(fs.readFileSync(rootFile, 'utf-8')).compilerOptions.types).toEqual([
+            'node',
+        ]);
+        const applied = JSON.parse(fs.readFileSync(manifestFile, 'utf-8')) as {
+            snapshots: Record<string, unknown>;
+            tsconfigOverrides: Record<string, { kind: string }>;
+        };
+        expect(applied.snapshots['tsconfig.workspaces.json']).toEqual({
+            compilerOptions: {},
+        });
+        expect(applied.tsconfigOverrides['tsconfig.workspaces.json']?.kind).toBe('root');
+
+        // Removing the override must revert the user-owned root file using the
+        // snapshot recorded by the previous run.
+        await command.run({}, commandContext(cwd, { tsconfig: {} }));
+        expect(JSON.parse(fs.readFileSync(rootFile, 'utf-8'))).toEqual({
+            compilerOptions: {},
+        });
+        const removed = JSON.parse(fs.readFileSync(manifestFile, 'utf-8')) as {
+            snapshots?: unknown;
+            tsconfigOverrides?: unknown;
+        };
+        expect(removed.snapshots).toBeUndefined();
+        expect(removed.tsconfigOverrides).toBeUndefined();
+    });
+});
+
+describe('tsconfig command flag handling', () => {
+    it('rejects --root/--tsconfig/--no-extends when generating', async () => {
+        const cwd = makeRepo();
+        const command = tsconfigCommand();
+        const context = commandContext(cwd, { tsconfig: {} });
+
+        await expect(command.run({ root: cwd }, context)).rejects.toThrow(
+            /`--root`, `--tsconfig` and `--no-extends` require/
+        );
+        await expect(command.run({ tsconfig: 'tsconfig.json' }, context)).rejects.toThrow(
+            /require `--json`/
+        );
+        await expect(command.run({ extends: false }, context)).rejects.toThrow(/require `--json`/);
+    });
+
+    it('rejects an invalid --indent instead of writing minified JSON', async () => {
+        const cwd = makeRepo();
+        const command = tsconfigCommand();
+        const context = commandContext(cwd, { tsconfig: {} });
+
+        await expect(command.run({ indent: 'garbage' }, context)).rejects.toThrow(
+            /invalid --indent "garbage"/
+        );
+        await expect(command.run({ indent: '-2' }, context)).rejects.toThrow(/invalid --indent/);
+    });
+});
+
 describe('tsconfig --json rootFile', () => {
     it('reads the configured rootFile when there is no root tsconfig.json', async () => {
         const cwd = makeRepo();

@@ -50,6 +50,7 @@
             "@deltabox/toolchain/template/package.json",
             "@deltabox/toolchain/tsconfig",
             "@deltabox/toolchain/tsconfig/*",
+            "@deltabox/toolchain/tsconfig/bin",
             "@deltabox/toolchain/tsconfig/cli",
             "@deltabox/toolchain/tsconfig/cli/generate",
             "@deltabox/toolchain/tsconfig/package.json",

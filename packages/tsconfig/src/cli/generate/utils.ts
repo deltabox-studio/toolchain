@@ -9,14 +9,26 @@ import { mergeOverride } from '../../overrides.js';
 import {
     assertTsconfigChain,
     flattenRemoteTsconfig,
+    parseTsconfig,
     readTsconfig,
     resolveTsconfig,
     resolveTsconfigConfig,
     resolveTsconfigFilePatterns,
+    type TsconfigContents,
 } from '../../resolve.js';
 import type { ResolvedTsconfig, TsconfigOverrides } from '../../types/index.js';
 
 export type GeneratedTsconfigResult = ReturnType<typeof generateTsconfig>;
+
+/** In-memory tsconfig text (absolute path -> JSONC) for a generation pass. */
+function readConfigText(file: string, contents?: TsconfigContents): TsConfigJson {
+    if (!contents) return readTsconfig(file) as TsConfigJson;
+    const text =
+        contents instanceof Map
+            ? contents.get(path.resolve(file))
+            : (contents as Record<string, string>)[path.resolve(file)];
+    return (text !== undefined ? parseTsconfig(text) : readTsconfig(file)) as TsConfigJson;
+}
 
 export function generateTsconfig(options: {
     cwd: string;
@@ -44,6 +56,8 @@ export function generateTsconfig(options: {
     log?: (message: string) => void;
     /** Managed file overrides applied before generating. */
     overrides?: TsconfigOverrides;
+    /** In-memory contents that take precedence over the files on disk. */
+    fileContents?: TsconfigContents;
 }) {
     const {
         cwd,
@@ -65,6 +79,7 @@ export function generateTsconfig(options: {
         write = true,
         log = (message: string) => logger.info(message),
         overrides,
+        fileContents,
     } = options;
     const enableAliases = aliases ?? !ignoreAliases;
     const enableRefs = refs ?? !ignoreReferences;
@@ -104,7 +119,7 @@ export function generateTsconfig(options: {
         const tsconfigMonorepoRaw =
             monorepoConfig ??
             (hasMonorepo
-                ? (readTsconfig(monorepoTsconfigPath) as TsConfigJson)
+                ? readConfigText(monorepoTsconfigPath, fileContents)
                 : ({} as TsConfigJson));
         const tsconfigMonorepo = mergeOverride(tsconfigMonorepoRaw, overrides?.root);
         const monorepoComposite = tsconfigMonorepo.compilerOptions?.composite;
@@ -133,7 +148,7 @@ export function generateTsconfig(options: {
                   })
             : { alias: [], paths: {}, references: [], relativePaths: false, strict: true };
 
-        const tsconfigRaw = readTsconfig(tsconfigPath) as TsConfigJson;
+        const tsconfigRaw = readConfigText(tsconfigPath, fileContents);
         const tsconfig = mergeOverride(tsconfigRaw, overrides?.default) as TsConfigJson;
         // A remote `extends` in the local default cannot be followed by
         // TypeScript itself. Inlining the remote chain is opt-in
@@ -142,13 +157,15 @@ export function generateTsconfig(options: {
         // remote chain for the paths/references it infers. When enabled, the
         // inherited compiler options are written below as a base layer so they
         // never override a setting the generated config already defines.
-        const flattened = flattenRemoteExtends ? flattenRemoteTsconfig(tsconfigPath) : undefined;
+        const flattened = flattenRemoteExtends
+            ? flattenRemoteTsconfig(tsconfigPath, { outDir: dirname, contents: fileContents })
+            : undefined;
         const flattenedOptions = flattened?.compilerOptions
             ? { ...flattened.compilerOptions }
             : undefined;
 
         const tsconfigBuildRaw = tsconfigBuildExists
-            ? (readTsconfig(tsconfigBuildPath) as TsConfigJson)
+            ? readConfigText(tsconfigBuildPath, fileContents)
             : undefined;
         const tsconfigBuild = tsconfigBuildRaw
             ? mergeOverride(tsconfigBuildRaw, overrides?.build)
@@ -192,12 +209,22 @@ export function generateTsconfig(options: {
         const monorepoRest = { ...tsconfigMonorepo };
         delete monorepoRest.references;
         delete monorepoRest.compilerOptions;
-        // Hoist the effective `include` / `exclude` from the extended config
-        // chain into the generated file. TypeScript resolves those patterns
-        // relative to the config that defined them; a generated file that only
-        // `extends` another config can make tools scan the whole tree instead of
-        // the workspace's own sources, so write them out (rebased) explicitly.
-        const inheritedGlobs = resolveTsconfigFilePatterns(tsconfigPath);
+        // Root-only keys describe the workspaces config's own tree; copying them
+        // into every generated workspace file would leave a dangling `extends`
+        // (and repo-wide include/exclude globs) when a remote chain is flattened.
+        delete monorepoRest.extends;
+        delete monorepoRest.include;
+        delete monorepoRest.exclude;
+        delete monorepoRest.files;
+        // Hoist the effective `include` / `exclude` / `files` from the extended
+        // config chain into the generated file. TypeScript resolves those
+        // patterns relative to the config that defined them; a generated file
+        // that only `extends` another config can make tools scan the whole tree
+        // instead of the workspace's own sources, so write them out (rebased).
+        const inheritedGlobs = resolveTsconfigFilePatterns(
+            tsconfigPath,
+            fileContents ? { contents: fileContents } : {}
+        );
         const hoistedInclude = rebasePatterns(
             tsconfig.include ?? inheritedGlobs.include,
             tsconfig.include !== undefined ? dirname : inheritedGlobs.includeDir,
@@ -208,11 +235,17 @@ export function generateTsconfig(options: {
             tsconfig.exclude !== undefined ? dirname : inheritedGlobs.excludeDir,
             dirname
         );
+        const hoistedFiles = rebasePatterns(
+            tsconfig.files ?? inheritedGlobs.files,
+            tsconfig.files !== undefined ? dirname : inheritedGlobs.filesDir,
+            dirname
+        );
         const newTsconfig: TsConfigJson = {
             ...(enableComposite ? monorepoRest : {}),
             ...(flattened ? {} : { extends: `./${tsconfigFilename}` }),
             ...(hoistedInclude ? { include: hoistedInclude } : {}),
             ...(hoistedExclude ? { exclude: hoistedExclude } : {}),
+            ...(hoistedFiles ? { files: hoistedFiles } : {}),
             compilerOptions: {
                 // When a remote chain was flattened, write the inherited
                 // options out (there is no `extends`). They go first: every
@@ -246,7 +279,7 @@ export function generateTsconfig(options: {
                       }
                     : {}),
             },
-            ...(enableRefs ? { references } : {}),
+            ...(enableRefs && references.length > 0 ? { references } : {}),
         };
 
         const newTsconfigBuild: TsConfigJson | undefined = tsconfigBuildExists

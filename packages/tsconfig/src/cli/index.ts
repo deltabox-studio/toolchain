@@ -12,7 +12,7 @@ import {
     withSpinner,
 } from '@deltabox/toolchain/shared';
 
-import { generateWorkspaceTsconfigs } from '../cli/generate/index.js';
+import { generateWorkspaceTsconfigs, parseTsconfigIndent } from '../cli/generate/index.js';
 import { hasOverrideKeys, TSCONFIG_OVERRIDE_KINDS } from '../overrides.js';
 import { resolveTsconfigAsync, serializeTsconfigAlias } from '../resolve.js';
 import { restoreTsconfigOverrides } from '../snapshots.js';
@@ -130,6 +130,12 @@ export function tsconfigCommands(): ToolchainCommand[] {
                 const selectors = (['alias', 'paths', 'references'] as const).filter(
                     key => opts[key] === true
                 );
+                // Validate eagerly so an invalid value never reaches
+                // `JSON.stringify` (NaN produces minified output).
+                const indent =
+                    opts.indent !== undefined
+                        ? parseTsconfigIndent(String(opts.indent))
+                        : undefined;
 
                 const restore = opts.restore;
                 if (restore !== undefined && restore !== false) {
@@ -162,6 +168,18 @@ export function tsconfigCommands(): ToolchainCommand[] {
                         );
                     }
                     return;
+                }
+
+                if (
+                    opts.json !== true &&
+                    selectors.length === 0 &&
+                    (opts.root !== undefined ||
+                        opts.tsconfig !== undefined ||
+                        opts.extends === false)
+                ) {
+                    throw new Error(
+                        '`--root`, `--tsconfig` and `--no-extends` require `--json`, `--alias`, `--paths` or `--references`.'
+                    );
                 }
 
                 if (opts.json === true || selectors.length > 0) {
@@ -214,9 +232,7 @@ export function tsconfigCommands(): ToolchainCommand[] {
                 }
                 if (opts.autoRefs !== undefined) overrides.refsAuto = Boolean(opts.autoRefs);
                 if (opts.autoSrcDir !== undefined) overrides.autoSrcDir = String(opts.autoSrcDir);
-                if (opts.indent !== undefined) {
-                    overrides.indent = Number.parseInt(String(opts.indent), 10);
-                }
+                if (indent !== undefined) overrides.indent = indent;
                 if (opts.glob !== undefined) overrides.glob = opts.glob as string[];
                 if (opts.exclude !== undefined) overrides.exclude = opts.exclude as string[];
                 if (opts.gitignore !== undefined) overrides.gitignore = Boolean(opts.gitignore);

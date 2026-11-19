@@ -61,17 +61,33 @@ export function renderTsconfigDefault(
     )}\n`;
 }
 
+/** A build config shaped for a workspace (its own `src`, not repo-wide globs). */
+const workspaceBuildTemplate = {
+    extends: './tsconfig.json',
+    include: ['src', '{{envTypesFile}}'],
+    exclude: ['**/dist', '**/node_modules'],
+};
+
+export interface RenderTsconfigBuildOptions {
+    /** JSON indentation (default 4). */
+    indent?: number | string;
+    /** Use workspace-relative include globs instead of the repo-root template. */
+    workspace?: boolean;
+}
+
 export function renderTsconfigBuild(
     replacements: Replacements = {},
-    extendsValue?: TsconfigExtends
+    extendsValue?: TsconfigExtends,
+    options: RenderTsconfigBuildOptions = {}
 ): string {
+    const template = options.workspace ? workspaceBuildTemplate : tsconfigBuildTemplate;
     return `${JSON.stringify(
-        applyReplacementsDeep(withExtends(tsconfigBuildTemplate, extendsValue), {
+        applyReplacementsDeep(withExtends(template, extendsValue), {
             ...DEFAULT_TSCONFIG_REPLACEMENTS,
             ...replacements,
         }),
         null,
-        4
+        options.indent ?? 4
     )}\n`;
 }
 

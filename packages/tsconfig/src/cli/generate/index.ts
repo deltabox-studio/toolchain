@@ -2,7 +2,6 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { parseArgs } from 'node:util';
 
@@ -12,11 +11,13 @@ import type { TsConfigJson } from 'type-fest';
 import {
     deepMerge,
     logger,
+    readJsonFile,
     resolveIgnorePatterns,
     sectionConfig,
     sectionEnabled,
     type ToolchainConfig,
     type ToolchainTsconfigConfig,
+    warningMessage,
 } from '@deltabox/toolchain/shared';
 
 import {
@@ -27,9 +28,29 @@ import {
     type TsconfigAutoState,
 } from '../../auto.js';
 import { tsconfigFileNames } from '../../files.js';
-import { mergeOverride } from '../../overrides.js';
-import { readTsconfig, prefetchTsconfigExtends } from '../../resolve.js';
-import type { TsconfigOverrides } from '../../types/index.js';
+import {
+    hasOverrideKeys,
+    isAppliedOverride,
+    mergeOverride,
+    reconcileOverride,
+} from '../../overrides.js';
+import {
+    parseTsconfig,
+    readTsconfig,
+    prefetchTsconfigExtends,
+    type TsconfigContents,
+} from '../../resolve.js';
+import {
+    deleteSnapshot,
+    detectIndent,
+    getSnapshot,
+    setSnapshot,
+    type SnapshotTree,
+    stringifyTsconfig,
+    TSCONFIG_MANIFEST_PATH,
+    toRepoRelative,
+} from '../../snapshots.js';
+import type { OverridesState, TsconfigOverrides } from '../../types/index.js';
 import {
     resolveAutoSwitches,
     resolveTsconfigWorkspaces,
@@ -68,6 +89,8 @@ export interface GenerateTsconfigsOptions {
     write?: boolean;
     /** Managed file overrides applied before generating each workspace. */
     overrides?: TsconfigOverrides;
+    /** In-memory contents (absolute path -> JSONC) that win over files on disk. */
+    fileContents?: TsconfigContents;
     /** Pre-resolved workspaces (project-graph + nested config aware). */
     workspaces?: TsconfigWorkspace[];
     /** In-memory root workspaces tsconfig (auto-wired before generation). */
@@ -149,6 +172,7 @@ export function generateTsconfigs(
                     write,
                     log: say,
                     ...(options.overrides ? { overrides: options.overrides } : {}),
+                    ...(options.fileContents ? { fileContents: options.fileContents } : {}),
                 })
             );
         }
@@ -199,6 +223,7 @@ export function generateTsconfigs(
                     write,
                     log: say,
                     ...(options.overrides ? { overrides: options.overrides } : {}),
+                    ...(options.fileContents ? { fileContents: options.fileContents } : {}),
                 })
             );
         }
@@ -244,6 +269,7 @@ export function generateTsconfigs(
                 const hasCompositeOption = composite !== null && composite !== undefined;
                 return hasCompositeOption && composite !== false;
             });
+            if (config.references.length === 0) delete config.references;
         }
 
         if (write) {
@@ -269,6 +295,14 @@ export interface GenerateWorkspaceTsconfigsOptions {
     autoStateFile?: string;
     /** Write the auto-state sidecar (default true; sync stores it in the manifest instead). */
     writeSidecar?: boolean;
+    /** In-memory contents (absolute path -> JSONC) that win over files on disk. */
+    fileContents?: TsconfigContents;
+    /**
+     * Apply `tsconfig.overrides` while generating (default true). A caller that
+     * already patched the contents passed via `fileContents` disables this so
+     * the same override is not applied twice (and a removed one stays removed).
+     */
+    applyOverrides?: boolean;
 }
 
 export interface GenerateWorkspaceTsconfigsResult {
@@ -343,35 +377,47 @@ export async function generateWorkspaceTsconfigs(
     });
     // Download remote `extends` chains before the synchronous resolver runs. A
     // build config may point at a managed `tsconfig.json` generated this run.
-    await prefetchTsconfigExtends(
-        [
-            ...(fs.existsSync(rootTsconfigPath) ? [rootTsconfigPath] : []),
-            ...workspaces
-                .filter(workspace => workspace.enabled)
-                .flatMap(workspace => [
-                    ...(fs.existsSync(workspace.defaultTsconfigPath)
-                        ? [workspace.defaultTsconfigPath]
-                        : []),
-                    ...(fs.existsSync(workspace.buildTsconfigPath)
-                        ? [workspace.buildTsconfigPath]
-                        : []),
-                ]),
-        ],
-        {
-            packageDir: cwd,
-            assumeFiles: workspaces.map(workspace => workspace.targetTsconfigPath),
-        }
-    );
-    const existingPathExists = fs.existsSync(rootTsconfigPath);
+    // Bare package specifiers inside a remote config resolve from the directory
+    // of the local file that introduced them, exactly like the resolver: in an
+    // isolated (pnpm) install a workspace's dependency is not visible from cwd.
+    const prefetchFiles = [
+        ...(fs.existsSync(rootTsconfigPath) ? [rootTsconfigPath] : []),
+        ...workspaces
+            .filter(workspace => workspace.enabled)
+            .flatMap(workspace => [
+                ...(fs.existsSync(workspace.defaultTsconfigPath)
+                    ? [workspace.defaultTsconfigPath]
+                    : []),
+                ...(fs.existsSync(workspace.buildTsconfigPath)
+                    ? [workspace.buildTsconfigPath]
+                    : []),
+            ]),
+    ];
+    const assumeFiles = workspaces.map(workspace => workspace.targetTsconfigPath);
+    for (const file of prefetchFiles) {
+        await prefetchTsconfigExtends([file], {
+            packageDir: path.dirname(file),
+            assumeFiles,
+        });
+    }
+    const injectedRoot = options.fileContents
+        ? options.fileContents instanceof Map
+            ? options.fileContents.get(path.resolve(rootTsconfigPath))
+            : (options.fileContents as Record<string, string>)[path.resolve(rootTsconfigPath)]
+        : undefined;
+    const existingPathExists = injectedRoot !== undefined || fs.existsSync(rootTsconfigPath);
     // Only restore a missing workspaces file when there is something to wire:
     // an empty project must stay empty (and `sync --check` quiet).
     const rootMissing =
         !existingPathExists && workspaces.some(workspace => workspace.enabled && !workspace.isRoot);
-    const existing = existingPathExists
-        ? readTsconfig(rootTsconfigPath)
-        : rootMissing
-          ? buildRootWorkspacesBaseline(workspaces, cwd, path.dirname(rootTsconfigPath))
-          : undefined;
+    const existing =
+        injectedRoot !== undefined
+            ? (parseTsconfig(injectedRoot) as TsConfigJson)
+            : existingPathExists
+              ? readTsconfig(rootTsconfigPath)
+              : rootMissing
+                ? buildRootWorkspacesBaseline(workspaces, cwd, path.dirname(rootTsconfigPath))
+                : undefined;
     const previousAuto = options.previousAuto ?? readAutoState(autoStateFile);
     const auto = buildAutoTsconfig(workspaces, {
         cwd,
@@ -380,10 +426,69 @@ export async function generateWorkspaceTsconfigs(
         previous: previousAuto,
     });
     const baseAutoConfig = auto.config;
-    const autoConfig = rootOptions.overrides?.root
-        ? mergeOverride(baseAutoConfig, rootOptions.overrides.root)
-        : baseAutoConfig;
     const indent = rootOptions.indent ?? 4;
+    const nextRootOverride = rootOptions.overrides?.root;
+    // A direct CLI write must record what the root file held before the root
+    // override (and reuse it on later runs) so the override can be reverted.
+    // A sync passes `write: false` and reconciles the root through its own
+    // manifest-aware target instead.
+    let autoConfig = baseAutoConfig;
+    let rootReconciled = false;
+    let manifestFile: string | undefined;
+    let manifest: Record<string, unknown> | undefined;
+    const rootRelative = toRepoRelative(cwd, rootTsconfigPath);
+    const manifestPath = path.join(cwd, TSCONFIG_MANIFEST_PATH);
+    if (
+        options.applyOverrides !== false &&
+        options.write !== false &&
+        rootRelative &&
+        (hasOverrideKeys(nextRootOverride) || fs.existsSync(manifestPath))
+    ) {
+        const stored = fs.existsSync(manifestPath)
+            ? (readJsonFile<Record<string, unknown>>(manifestPath) ?? {})
+            : {};
+        const state = (stored.tsconfigOverrides ?? {}) as OverridesState;
+        const snapshots = (stored.snapshots ?? {}) as SnapshotTree;
+        const previous = isAppliedOverride(state[rootRelative]) ? state[rootRelative] : undefined;
+        if (previous || hasOverrideKeys(nextRootOverride)) {
+            const reconciled = reconcileOverride({
+                before: baseAutoConfig as Record<string, unknown>,
+                ...(previous ? { previous } : {}),
+                ...(hasOverrideKeys(nextRootOverride) ? { next: nextRootOverride } : {}),
+                ...(getSnapshot(snapshots, rootRelative) !== undefined
+                    ? { snapshot: getSnapshot(snapshots, rootRelative) }
+                    : {}),
+            });
+            for (const key of reconciled.kept) {
+                logger.warn(
+                    warningMessage('tsconfig.override-edited', { file: rootRelative, key }),
+                    'tsconfig.override-edited'
+                );
+            }
+            autoConfig = reconciled.data as TsConfigJson;
+            rootReconciled = true;
+            if (reconciled.snapshot) setSnapshot(snapshots, rootRelative, reconciled.snapshot);
+            else deleteSnapshot(snapshots, rootRelative);
+            if (hasOverrideKeys(nextRootOverride)) {
+                state[rootRelative] = {
+                    kind: 'root',
+                    override: structuredClone(nextRootOverride) as TsConfigJson,
+                };
+            } else {
+                delete state[rootRelative];
+            }
+            if (Object.keys(state).length > 0) stored.tsconfigOverrides = state;
+            else delete stored.tsconfigOverrides;
+            if (Object.keys(snapshots).length > 0) stored.snapshots = snapshots;
+            else delete stored.snapshots;
+            manifestFile = manifestPath;
+            manifest = stored;
+        }
+    }
+    // A dry run (or a sync's first pass) still sees the configured override.
+    if (!rootReconciled && options.applyOverrides !== false && hasOverrideKeys(nextRootOverride)) {
+        autoConfig = mergeOverride(autoConfig, nextRootOverride);
+    }
     const baseRootContent = `${JSON.stringify(baseAutoConfig, null, indent)}\n`;
     const rootContent = `${JSON.stringify(autoConfig, null, indent)}\n`;
     const autoStateContent = `${JSON.stringify(auto.state, null, indent)}\n`;
@@ -392,8 +497,8 @@ export async function generateWorkspaceTsconfigs(
         auto.state.paths.length > 0 ||
         auto.state.references.length > 0 ||
         fs.existsSync(rootTsconfigPath) ||
-        Boolean(rootOptions.overrides?.root);
-    const rootChanged = !isDeepStrictEqual(existing ?? {}, baseAutoConfig);
+        Boolean(nextRootOverride);
+    const rootChanged = !isDeepStrictEqual(existing ?? {}, autoConfig);
     const shouldWriteRoot = rootMissing || (hasAuto && rootChanged);
     const writeState =
         options.writeSidecar !== false &&
@@ -413,9 +518,10 @@ export async function generateWorkspaceTsconfigs(
         indent,
         write: options.write ?? true,
         log: false,
-        ...(rootOptions.overrides
+        ...(options.applyOverrides !== false && rootOptions.overrides
             ? { overrides: { ...rootOptions.overrides, root: undefined } }
             : {}),
+        ...(options.fileContents ? { fileContents: options.fileContents } : {}),
     });
 
     if (options.write !== false) {
@@ -426,6 +532,17 @@ export async function generateWorkspaceTsconfigs(
         if (writeState) {
             fs.mkdirSync(path.dirname(autoStateFile), { recursive: true });
             fs.writeFileSync(autoStateFile, autoStateContent, 'utf-8');
+        }
+        if (manifestFile && manifest) {
+            fs.mkdirSync(path.dirname(manifestFile), { recursive: true });
+            const existingManifest = fs.existsSync(manifestFile)
+                ? fs.readFileSync(manifestFile, 'utf-8')
+                : '';
+            fs.writeFileSync(
+                manifestFile,
+                stringifyTsconfig(manifest, detectIndent(existingManifest)),
+                'utf-8'
+            );
         }
     }
 
@@ -443,6 +560,19 @@ export async function generateWorkspaceTsconfigs(
         writeRoot: shouldWriteRoot,
         writeState,
     };
+}
+
+/**
+ * Parse the `--indent` value as a non-negative integer. `Number.parseInt`
+ * would silently turn `garbage` into `NaN` (minified JSON) and `2px` into `2`.
+ */
+export function parseTsconfigIndent(value: string | number | undefined, fallback = 4): number {
+    if (value === undefined) return fallback;
+    const text = String(value).trim();
+    if (!/^\d+$/.test(text)) {
+        throw new Error(`invalid --indent "${text}" (expected a non-negative integer).`);
+    }
+    return Number(text);
 }
 
 /** CLI entry (used by the `tsconfig` command). */
@@ -466,10 +596,12 @@ export function runTsconfigCli(argv: string[] = process.argv.slice(2)): void {
 
     generateTsconfigs({
         aliases: options.aliases,
-        composite: options.composite,
+        // Project references require `composite`; derive it from --refs just
+        // like the main `dbx tsconfig` command does.
+        composite: options.composite || options.refs,
         refs: options.refs,
         flattenRemoteExtends: options['flatten-remote-extends'],
-        indent: Number.parseInt(options.indent, 10),
+        indent: parseTsconfigIndent(options.indent),
         ...(options.glob ? { glob: options.glob } : {}),
         ...(options.exclude ? { exclude: options.exclude } : {}),
         gitignore: options.gitignore,
@@ -477,19 +609,4 @@ export function runTsconfigCli(argv: string[] = process.argv.slice(2)): void {
         ...(options['build-file'] ? { buildFile: options['build-file'] } : {}),
         ...(options['root-file'] ? { monorepoTsconfigFilename: options['root-file'] } : {}),
     });
-}
-
-// Run only when executed directly (not when imported by the toolchain, and not
-// when this module is inlined into a single-file bundle where `import.meta.url`
-// resolves to the bundle rather than to this file).
-if (
-    /[\\/]generate[\\/]index\.[cm]?[jt]s$/.test(fileURLToPath(import.meta.url)) &&
-    import.meta.url === pathToFileURL(process.argv[1] ?? '').href
-) {
-    try {
-        runTsconfigCli();
-    } catch (e) {
-        logger.error(`Failed to generate tsconfigs due to: ${e}`);
-        process.exit(1);
-    }
 }

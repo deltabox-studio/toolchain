@@ -7,8 +7,10 @@ import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import {
     clearRemoteTsconfigCache,
+    flattenRemoteTsconfig,
     generateWorkspaceTsconfigs,
     getCachedRemoteTsconfig,
+    prefetchTsconfigExtends,
     resolveTsconfig,
     resolveTsconfigAsync,
     serializeResolvedTsconfig,
@@ -524,6 +526,168 @@ describe('remote tsconfig extends', () => {
             '@acme/core/*': ['../core/src/*'],
         });
         expect(JSON.stringify(app.compilerOptions?.paths)).not.toContain('@remote');
+    });
+
+    it('rebases local ancestor path options when flattening', async () => {
+        const base = await serve({
+            '/remote.json': { compilerOptions: { strict: true } },
+        });
+        const cwd = tmp();
+        write(path.join(cwd, 'tsconfig.base.json'), {
+            compilerOptions: {
+                baseUrl: './src',
+                rootDir: './src',
+                outDir: './dist',
+                paths: { '@local/*': ['generated/*'] },
+            },
+        });
+        const tsconfig = path.join(cwd, 'packages/core/tsconfig.default.json');
+        write(tsconfig, {
+            extends: ['../../tsconfig.base.json', `${base}/remote.json`],
+        });
+        await prefetchTsconfigExtends([tsconfig]);
+
+        const flattened = flattenRemoteTsconfig(tsconfig)!;
+        expect(flattened.compilerOptions).toEqual({
+            strict: true,
+            baseUrl: '../../src',
+            rootDir: '../../src',
+            outDir: '../../dist',
+            paths: { '@local/*': ['./generated/*'] },
+        });
+    });
+
+    it('replaces paths from a nearer local config instead of merging them', async () => {
+        const base = await serve({
+            '/remote.json': { compilerOptions: { strict: true } },
+        });
+        const cwd = tmp();
+        write(path.join(cwd, 'tsconfig.base.json'), {
+            compilerOptions: { paths: { '@base/*': ['./base/*'] } },
+        });
+        write(path.join(cwd, 'tsconfig.mid.json'), {
+            extends: './tsconfig.base.json',
+            compilerOptions: { paths: { '@mid/*': ['./mid/*'] } },
+        });
+        const tsconfig = path.join(cwd, 'packages/core/tsconfig.default.json');
+        write(tsconfig, {
+            extends: ['../../tsconfig.mid.json', `${base}/remote.json`],
+        });
+        await prefetchTsconfigExtends([tsconfig]);
+
+        const flattened = flattenRemoteTsconfig(tsconfig)!;
+        expect(flattened.compilerOptions?.paths).toEqual({ '@mid/*': ['../../mid/*'] });
+    });
+
+    it('hoists top-level files from a local ancestor in a flattened chain', async () => {
+        const base = await serve({
+            '/remote.json': { compilerOptions: { strict: true } },
+        });
+        const cwd = tmp();
+        write(path.join(cwd, 'tsconfig.base.json'), {
+            files: ['src/index.ts', 'generated.ts'],
+        });
+        const tsconfig = path.join(cwd, 'packages/core/tsconfig.default.json');
+        write(tsconfig, {
+            extends: ['../../tsconfig.base.json', `${base}/remote.json`],
+        });
+
+        const result = await generateWorkspaceTsconfigs({
+            cwd,
+            config: { tsconfig: { flattenRemoteExtends: true } },
+            write: false,
+            writeSidecar: false,
+        });
+        const core = result.results.find(
+            item => item.dirnameRelative === 'packages/core'
+        )!.newTsconfig;
+
+        expect(core.files).toEqual(['../../src/index.ts', '../../generated.ts']);
+    });
+
+    it('does not leak the workspaces config extends when flattening', async () => {
+        const base = await serve({
+            '/remote.json': { compilerOptions: { strict: true } },
+        });
+        const cwd = tmp();
+        write(path.join(cwd, 'package.json'), {
+            name: '@acme/root',
+            private: true,
+            workspaces: ['packages/*'],
+        });
+        write(path.join(cwd, 'tsconfig.base.json'), { compilerOptions: { target: 'ES2019' } });
+        write(path.join(cwd, 'tsconfig.workspaces.json'), {
+            extends: './tsconfig.base.json',
+            include: ['root-src'],
+            exclude: ['root-dist'],
+            files: ['root.ts'],
+            compilerOptions: { composite: true },
+        });
+        write(path.join(cwd, 'packages/core/package.json'), { name: '@acme/core' });
+        write(path.join(cwd, 'packages/core/tsconfig.default.json'), {
+            extends: `${base}/remote.json`,
+        });
+
+        const result = await generateWorkspaceTsconfigs({
+            cwd,
+            config: { tsconfig: { flattenRemoteExtends: true, refs: true } },
+            write: false,
+            writeSidecar: false,
+        });
+        const core = result.results.find(
+            item => item.dirnameRelative === 'packages/core'
+        )!.newTsconfig;
+
+        // The root workspaces file's `extends` (and its repo-wide globs) must
+        // not be copied into a generated workspace config.
+        expect(core.extends).toBeUndefined();
+        expect(core.include).toBeUndefined();
+        expect(core.exclude).toBeUndefined();
+        expect(core.files).toBeUndefined();
+        expect(core.compilerOptions?.strict).toBe(true);
+    });
+
+    it('resolves bare package extends from each workspace directory', async () => {
+        const base = await serve({
+            '/remote.json': { extends: '@dbx-fixture/remote-tsconfig' },
+        });
+        const cwd = tmp();
+        write(path.join(cwd, 'package.json'), {
+            name: '@acme/root',
+            private: true,
+            workspaces: ['packages/*'],
+        });
+        write(path.join(cwd, 'packages/core/package.json'), { name: '@acme/core' });
+        // An isolated (pnpm-like) install: the dependency is only visible from
+        // the workspace, never from the repo root.
+        write(
+            path.join(cwd, 'packages/core/node_modules/@dbx-fixture/remote-tsconfig/package.json'),
+            {
+                name: '@dbx-fixture/remote-tsconfig',
+                version: '1.0.0',
+                main: 'tsconfig.json',
+            }
+        );
+        write(
+            path.join(cwd, 'packages/core/node_modules/@dbx-fixture/remote-tsconfig/tsconfig.json'),
+            { compilerOptions: { strict: true } }
+        );
+        write(path.join(cwd, 'packages/core/tsconfig.default.json'), {
+            extends: `${base}/remote.json`,
+        });
+
+        const result = await generateWorkspaceTsconfigs({
+            cwd,
+            config: { tsconfig: { flattenRemoteExtends: true } },
+            write: false,
+            writeSidecar: false,
+        });
+        const core = result.results.find(
+            item => item.dirnameRelative === 'packages/core'
+        )!.newTsconfig;
+
+        expect(core.compilerOptions?.strict).toBe(true);
+        expect(getCachedRemoteTsconfig(`${base}/remote.json`)).toBeDefined();
     });
 });
 

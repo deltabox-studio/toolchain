@@ -27,11 +27,12 @@
     },
     "exports": {
         ".": "./dist/index.js",
+        "./bin": "./dist/bin.js",
         "./cli": "./dist/cli/index.js",
         "./cli/generate": "./dist/cli/generate/index.js",
         "./package.json": "./package.json"
     },
-    "bin": "./dist/cli/generate/index.js",
+    "bin": "./dist/bin.js",
     "homepage": "https://toolchain.deltabox.studio",
     "packageManager": "yarn@4.17.1",
     "keywords": [

@@ -112,6 +112,27 @@ describe('tsconfig regeneration', () => {
         );
     });
 
+    it('seeds a workspace-shaped build config with the configured indent', async () => {
+        const cwd = tmp();
+        scaffold(cwd);
+        await sync(cwd, { tsconfig: { indent: 2 } });
+
+        const buildFile = path.join(cwd, 'packages/a/tsconfig.build.json');
+        const text = fs.readFileSync(buildFile, 'utf-8');
+        const build = readJson(buildFile) as {
+            extends: string;
+            include: string[];
+            exclude: string[];
+        };
+
+        expect(build.extends).toBe('./tsconfig.json');
+        expect(build.include).toEqual(['src', 'src/dbx-env.d.ts']);
+        expect(build.exclude).toEqual(['**/dist', '**/node_modules']);
+        // No repo-root globs, and the configured indentation is honoured.
+        expect(text).not.toContain('packages/*/src');
+        expect(text.split('\n')[1]).toBe('  "extends": "./tsconfig.json",');
+    });
+
     it('never overwrites an existing build tsconfig', async () => {
         const cwd = tmp();
         scaffold(cwd);

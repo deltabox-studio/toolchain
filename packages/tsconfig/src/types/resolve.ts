@@ -98,8 +98,11 @@ export interface PrefetchTsconfigOptions {
 export interface TsconfigFilePatterns {
     include?: string[];
     exclude?: string[];
+    files?: string[];
     /** Directory the `include` patterns are relative to. */
     includeDir?: string;
     /** Directory the `exclude` patterns are relative to. */
     excludeDir?: string;
+    /** Directory the `files` entries are relative to. */
+    filesDir?: string;
 }
