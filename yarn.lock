@@ -740,7 +740,7 @@ __metadata:
     typescript: "catalog:"
     vite-plus: "catalog:"
   bin:
-    toolchain-tsconfig: ./dist/cli/generate/index.js
+    toolchain-tsconfig: ./dist/bin.js
   languageName: unknown
   linkType: soft
 
