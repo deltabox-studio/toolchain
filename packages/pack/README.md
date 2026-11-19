@@ -47,4 +47,4 @@ It is also available through the umbrella subpath `@deltabox/toolchain/pack`.
 
 ## License
 
-MPL-2.0 ? deltabox
+MPL-2.0 © deltabox

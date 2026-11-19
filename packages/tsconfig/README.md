@@ -13,10 +13,10 @@ yarn add -D @deltabox/toolchain-tsconfig
 
 ## Public API
 
-The package root exports its public API. Included modules cover: tsconfig templates and generation (paths, references, include/exclude), `extends` resolution, overrides, snapshots and the sync task.
+The package root exports its public API. Included modules cover: tsconfig templates and generation (paths, references, include/exclude), `extends` resolution (including remote `http(s)` extends chains), overrides, snapshots and the sync task.
 
 It is also available through the umbrella subpath `@deltabox/toolchain/tsconfig`.
 
 ## License
 
-MPL-2.0 ? deltabox
+MPL-2.0 © deltabox

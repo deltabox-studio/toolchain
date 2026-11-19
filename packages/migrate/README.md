@@ -17,6 +17,12 @@ The package root exports its public API. Included modules cover: migration detec
 
 It is also available through the umbrella subpath `@deltabox/toolchain/migrate`.
 
+## Online migrations
+
+ESLint JSON configs are mapped locally. Flat (`eslint.config.js`) and other
+JS configs need `dbx migrate --online --write`, which runs `@oxlint/migrate` so
+the config can be evaluated in Node.
+
 ## License
 
-MPL-2.0 ? deltabox
+MPL-2.0 © deltabox

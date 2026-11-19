@@ -4295,8 +4295,7 @@ console.log(toolchainProviders().map(p => p.id));
 
 // Sync only the tsconfig task (eg. after a build changed package exports)
 import { defaultSyncTasks, loadToolchainConfig, runSync } from '@deltabox/toolchain';
-// Config engine
-import { createConfigEngine } from '@deltabox/toolchain/config';
+
 const loaded = await loadToolchainConfig(process.cwd());
 await runSync({
     tasks: defaultSyncTasks(),
@@ -4306,6 +4305,12 @@ await runSync({
     tokens: loaded.tokens,
     projectType: loaded.projectType,
 });
+
+// Config engine: bind the schema once, then generate or parse with it
+import { createConfigEngine, parseEnvConfig } from '@deltabox/toolchain/config';
+
+const engine = createConfigEngine({ schema, envPrefix: 'MYAPP_' });
+const runtimeConfig = parseEnvConfig(engine.schema, process.env, { envPrefix: 'MYAPP_' });
 ```
 
 ---
@@ -4436,23 +4441,26 @@ tasks it skipped. Unknown task names throw.
 The generic Zod/env engine (see the [Config Generator](/guide/config-generator/)
 guide for the full workflow).
 
-| Export                                                                                   | Description                                               |
-| ---------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `createConfigEngine(options)`                                                            | Bind scopes + prefix + root into a reusable engine.       |
-| `configCommands({ engine, defaults? })`                                                  | The `config:*` commands for a consumer's own CLI.         |
-| `formatGenerated(source, options?)`                                                      | Format generated output with Oxfmt (see below).           |
-| `GENERATED_FORMAT_OPTIONS`                                                               | The baseline Oxfmt options used by the generators.        |
-| `parseEnvTree(env, prefix?)` / `envString` / `envInt` / `envBool` / `envList` / `envMap` | The dependency-free runtime loader.                       |
-| `compileZodSchema(schema)`                                                               | Compile a Zod schema for fast repeated parsing.           |
-| `envPathOf(env, prefix?)` / `metaOf(schema)`                                             | Env-name to dotted-path derivation and `.meta()` reading. |
-| `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                    |
-| `generateConfigTypes` / `generateConfigEnv`                                              | Type/env generators (optional disk writes).               |
-| `generateConfigMarkdown` / `generateConfigCli`                                           | Markdown/CLI generators (optional disk writes).           |
-| `generateCliDocs(commands, options?)`                                                    | A CLI reference from `ToolchainCommand` descriptors.      |
-| `generateConfigJsonSchema` / `generateJsonSchemaFile`                                    | JSON Schema generation.                                   |
-| `normalizeJsonSchemaMetadata(node)`                                                      | Normalize Zod JSON Schema metadata for editor schemas.    |
-| `generateEnv` / `generateEnvDts` / `generateConfigEnv`                                   | `.env` / env type generation.                             |
-| `generateCliOptions` / `flagOf` / `cliFlagOf` / `createCliArgsParser`                    | CLI option generation + parsing.                          |
+| Export                                                                                   | Description                                                    |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `createConfigEngine(options)`                                                            | Bind a schema, env prefix, base group and root into an engine. |
+| `parseConfig` / `parseEnvConfig` / `parseCliConfig`                                      | Runtime parsers: env + CLI + overrides, validated.             |
+| `loadConfig` / `loadConfigAsync`                                                         | Discover/import a config file and parse it.                    |
+| `collect(schema, options?)`                                                              | Resolve env + CLI into a typed config (no overrides).          |
+| `configCommands({ engine, defaults? })`                                                  | The `config:*` commands for a consumer's own CLI.              |
+| `formatGenerated(source, options?)`                                                      | Format generated output with Oxfmt (see below).                |
+| `GENERATED_FORMAT_OPTIONS`                                                               | The baseline Oxfmt options used by the generators.             |
+| `parseEnvTree(env, prefix?)` / `envString` / `envInt` / `envBool` / `envList` / `envMap` | Legacy dependency-free tree accessors.                         |
+| `compileZodSchema(schema)`                                                               | Compile a Zod schema for fast repeated parsing.                |
+| `envPathOf(env, prefix?)` / `metaOf(schema)`                                             | Env-name to dotted-path derivation and `.meta()` reading.      |
+| `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                         |
+| `generateConfigTypes` / `generateConfigEnv`                                              | Type/env generators (optional disk writes).                    |
+| `generateConfigMarkdown` / `generateCliOptions`                                          | Markdown/CLI generators (optional disk writes).                |
+| `generateCliDocs(commands, options?)`                                                    | A CLI reference from `ToolchainCommand` descriptors.           |
+| `generateConfigJsonSchema` / `generateJsonSchemaFile`                                    | JSON Schema generation.                                        |
+| `normalizeJsonSchemaMetadata(node)`                                                      | Normalize Zod JSON Schema metadata for editor schemas.         |
+| `generateEnv` / `generateEnvDts` / `generateConfigEnv`                                   | `.env` / env type generation.                                  |
+| `generateCliOptions` / `flagOf` / `cliFlagOf` / `createCliArgsParser`                    | CLI option generation + parsing.                               |
 
 ## `@deltabox/toolchain/vite`
 
@@ -6755,10 +6763,11 @@ hooks: {
 ```
 
 Async hooks are awaited by the CLI and `runChangelogAsync`; the synchronous
-`runChangelog` wrapper rejects async hooks. A failing hook aborts the changelog
-run before any files are written. The changelog workflow stages
-`.yarnrc.yml` together with `package.json`/`CHANGELOG.md`, so hooks that update a
-scaffold catalog are committed in the same version-bump commit.
+`runChangelog` wrapper rejects async hooks. A failing `beforeVersion` hook aborts
+the run before any files are written (a failing `afterVersion` hook runs after
+the writes). The changelog workflow stages `.yarnrc.yml` together with
+`package.json`/`CHANGELOG.md`, so hooks that update a scaffold catalog are
+committed in the same version-bump commit.
 
 ---
 
@@ -7452,13 +7461,14 @@ CLI reference — all from that one schema.
 
 * [Describe a scope](/guide/config-generator/describe-a-scope) — write the Zod
   schema and its `.meta()`.
-* [Create the engine](/guide/config-generator/create-the-engine) — bind scopes,
-  prefix, base group and root.
+* [Create the engine](/guide/config-generator/create-the-engine) — bind the
+  schema, prefix, base group and root.
 * [Generate](/guide/config-generator/generate) — the generator methods.
 * [CLI commands](/guide/config-generator/cli-commands) — the `config:*` command
   descriptors.
-* [Load the config](/guide/config-generator/load-the-config) — the runtime loader
-  (`parseEnvTree`, `compileZodSchema`, and `applyOverrides` from shared).
+* [Load the config](/guide/config-generator/load-the-config) — the runtime
+  parsers (`parseConfig`, `parseEnvConfig`, `parseCliConfig`) and
+  `loadConfigAsync`.
 * [Generated outputs](/guide/config-generator/generated-outputs) — types,
   markdown, env files, JSON Schema, CLI docs and formatting.
 * [Real-world shape](/guide/config-generator/real-world-shape) — how a consumer
@@ -7513,7 +7523,9 @@ url: https://toolchain.deltabox.studio/guide/config-generator/create-the-engine.
 ---
 # Create the engine
 
-Bind the schema, an env prefix, the base group and the project root once. A\nschema may be a Zod schema, an untyped Schema, an array, or a record keyed by\nscope:
+Bind the schema, an env prefix, the base group and the project root once. The
+schema may be a Zod schema, an untyped Schema, an array, or a record keyed by
+scope:
 
 ```ts
 import { createConfigEngine } from '@deltabox/toolchain/config';
@@ -7552,23 +7564,23 @@ import { z } from 'zod';
 export const serverConfig = z.object({
     base: z.object({
         port: z.number().default(3000).meta({
-            env: 'MYAPP_PORT',
+            envName: 'MYAPP_PORT',
             description: 'HTTP port',
         }),
         host: z.string().default('0.0.0.0').meta({
-            env: 'MYAPP_HOST',
+            envName: 'MYAPP_HOST',
             description: 'Bind address',
         }),
     }),
     auth: z.object({
         password: z.string().meta({
-            env: 'MYAPP_AUTH_PASSWORD',
+            envName: 'MYAPP_AUTH_PASSWORD',
             description: 'Admin password',
             required: true,
             secret: true,
         }),
         tokenTtl: z.number().default(3600).meta({
-            env: 'MYAPP_AUTH_TOKEN_TTL',
+            envName: 'MYAPP_AUTH_TOKEN_TTL',
             description: 'Session lifetime (seconds)',
         }),
     }),
@@ -7597,7 +7609,7 @@ suppress an annotation: `includeRequired`, `includeDeprecated`,
 `includeExamples`, `includeSince`, `includeSee`, `includeRemarks`,
 `includeExperimental`, `includeAlpha`, `includeBeta` — for example
 `generateConfigTypes(..., { includeExamples: false })` or
-`writeMarkdown(..., { includeDeprecated: false })`.
+`generateConfigMarkdown(..., { includeDeprecated: false })`.
 
 ---
 
@@ -8002,9 +8014,11 @@ return file contents and only write when `outputDir`/`output` is a string;
 
 A `.env.example`; secrets are emitted commented out so operators fill them in:
 
-```sh
+```ts
 engine.env.write({ output: '.env.example' });
+```
 
+```sh
 # ---- SERVER ----
 MYAPP_HOST=localhost
 # MYAPP_AUTH_PASSWORD=
@@ -8114,73 +8128,97 @@ url: https://toolchain.deltabox.studio/guide/config-generator/load-the-config.md
 ---
 # Load the config at runtime
 
-Generation is only half of it. The same schema backs a small, dependency-free
-**loader**. `parseEnvTree` folds `PREFIX_*` variables into a nested tree
-(splitting the remainder on `_`), and the typed accessors read dotted paths out
-of it:
+Generation is only half of it: the same schema loads the value back. The runtime
+parsers read the `envName` / `cliFlag` metadata, coerce env and CLI strings,
+merge overrides and validate the result through the schema, so the returned
+object matches the generated types.
 
 ```ts
-import {
-    envBool,
-    envInt,
-    envList,
-    envMap,
-    envString,
-    parseEnvTree,
-} from '@deltabox/toolchain/config';
-import { applyOverrides } from '@deltabox/toolchain/shared';
+import { parseCliConfig, parseConfig, parseEnvConfig } from '@deltabox/toolchain/config';
 
-// MYAPP_HOST, MYAPP_PORT, MYAPP_LOG_PRETTY, ... -> a nested tree
-const tree = parseEnvTree(process.env, 'MYAPP_');
+// MYAPP_HOST, MYAPP_PORT, ... -> { host: '0.0.0.0', port: 3000 }
+const fromEnv = parseEnvConfig(serverConfig, process.env, { envPrefix: 'MYAPP_' });
 
-const config = {
-    host: envString(tree, 'host', '0.0.0.0'),
-    port: envInt(tree, 'port', 3000),
-    pretty: envBool(tree, 'log.pretty', true),
-    corsOrigins: envList(tree, 'cors.origin', []),
-    headers: envMap(tree, 'response.headers.map'), // `Key=value,...` -> record
-};
+// env + CLI (argv defaults to `process.argv.slice(2)`), overrides merged on top
+const config = parseConfig(serverConfig, { host: '127.0.0.1' }, { envPrefix: 'MYAPP_' });
+
+// CLI only: `--port 8080 --host localhost`
+const fromCli = parseCliConfig(serverConfig, process.argv.slice(2), { envPrefix: 'MYAPP_' });
 ```
 
-| Helper                       | Reads                                                |
-| ---------------------------- | ---------------------------------------------------- |
-| `envString(tree, path, fb?)` | string (unset/empty -> fallback)                     |
-| `envInt` / `envBool`         | number / boolean (`true/1/yes/on`, `false/0/no/off`) |
-| `envList`                    | comma-separated list                                 |
-| `envMap`                     | `Key=value,...` into a lowercase-keyed record        |
-| `readEnvPath(tree, path)`    | the raw value at a dotted path                       |
+| Export                                             | Sources                                                  |
+| -------------------------------------------------- | -------------------------------------------------------- |
+| `parseConfig(schema, overrides?, opts?)`           | env + CLI, with `overrides` merged last and validated    |
+| `parseEnvConfig(schema, env?, opts?)`              | env only                                                 |
+| `parseCliConfig(schema, argv?, opts?)`             | CLI only                                                 |
+| `collect(schema, opts?)`                           | env + CLI, no overrides (pass `validate: true` to check) |
+| `loadConfig(options)` / `loadConfigAsync(options)` | a config file, resolved through `parseConfig`            |
 
-Layer typed overrides on top of the env values (a config file, then CLI flags)
-with `applyOverrides`, then validate the result through the scope schema so it is
-guaranteed to match the generated types:
+Async variants (`parseConfigAsync`, `parseEnvConfigAsync`, `parseCliConfigAsync`)
+accept a promise for the env source, argv or overrides; the `*Sync` aliases keep
+the synchronous call shape.
+
+## Scopes
+
+Parsing the engine's `schema` returns the nested `{ server, frontend }` object;
+parsing one scope's schema returns that scope's fields directly:
 
 ```ts
-import { compileZodSchema } from '@deltabox/toolchain/config';
+const scoped = parseEnvConfig(engine.schema, process.env, { envPrefix: 'MYAPP_' });
+// { server: { port: 8080, host: '0.0.0.0' } }
 
-const schemaCompiler = compileZodSchema(serverConfig);
+const server = parseEnvConfig(serverConfig, process.env, { envPrefix: 'MYAPP_' });
+// { port: 8080, host: '0.0.0.0' }
+```
 
-export function loadConfig(env = process.env, file = {}, cli = {}) {
-    const tree = parseEnvTree(env, 'MYAPP_');
-    const fromEnv = {
-        base: {
-            host: envString(tree, 'host', '0.0.0.0'),
-            port: envInt(tree, 'port', 3000),
-        },
-        auth: {
-            password: envString(tree, 'auth.password', ''),
-            tokenTtl: envInt(tree, 'auth.token.ttl', 3600),
-        },
-    };
-    return schemaCompiler.parse(applyOverrides(fromEnv, file, cli));
+## Common options
+
+Every parser shares the collect options:
+
+* `envPrefix` — the prefix stripped from env names (default `APP_`, `null` disables it).
+* `envSource` / `argv` — the env record and argument list to read (defaults to
+  `process.env` and `process.argv.slice(2)`).
+* `include` / `exclude` — path globs (`server.*`, `**.port`) or presence kinds
+  (`required`, `defined`, `undefined`, `null`).
+* `validate` — parse the resolved value through the schema (the `parse*` family
+  defaults to `true`).
+* `errorOptions` — `errorLevel` (`throw`/`warn`/`silent`), `logger`,
+  `rewriteMessage`, `defaultMessage` and `trigger` for validation problems.
+  A thrown problem is a `ConfigParseError`.
+* `envPathOf` — override env-name -> dotted-path derivation (eg. dual prefixes).
+
+Env names come from `.meta({ envName })`; without it, the prefix plus the field
+path is used (`MYAPP_SERVER_PORT`). CLI flags come from `.meta({ cliFlag })`,
+falling back to `--server-port`.
+
+## Load from a file
+
+`loadConfig` / `loadConfigAsync` discover `dbx.config.*` (plus JSON/YAML/custom
+loaders), import it and run the value through `parseConfig`:
+
+```ts
+import { loadConfigAsync } from '@deltabox/toolchain/config';
+
+const loaded = await loadConfigAsync({
+    parser: serverConfig,
+    cwd: process.cwd(),
+    names: ['dbx.config.ts', 'dbx.config.js'],
+    envPrefix: 'MYAPP_',
+});
+
+if (loaded) {
+    console.log(loaded.path, loaded.config); // the config file and the typed value
 }
 ```
 
-A resolver like this is the runtime counterpart of the generators — same schema,
-same defaults, one typed object out.
+Options include `configFileOptions` (filename, extensions, locations,
+`packageJson`, ancestor search), `required`, `overrides`, `fresh` (re-import in
+watch mode), `tsconfig` (path-alias resolution for TS configs) and `loader`.
 
 > The dotted path is the env name with the prefix removed and `_` folded to `.`,
-> so `MYAPP_AUTH_TOKEN_TTL` reads as `auth.token.ttl`. When a field name differs
-> from its env-derived path, map it explicitly in the resolver (as above).
+> so `MYAPP_AUTH_TOKEN_TTL` reads as `auth.token.ttl`. Env names live on the
+> schema as `.meta({ envName })`, so the generated `.env` file and the runtime
+> parser stay in step.
 
 ---
 
@@ -11511,6 +11549,13 @@ url: https://toolchain.deltabox.studio/CHANGELOG.md
 ---
 # Changelog
 
+## 3.0.0-beta.1 (November 2026)
+
+#### Changelog
+
+* Add the beforeVersion lifecycle hook ([#3f62f0c](https://github.com/deltabox-studio/toolchain/commit/3f62f0c) by [T0chi](https://github.com/T0chi))
+* Add the afterVersion lifecycle hook ([#c927eee](https://github.com/deltabox-studio/toolchain/commit/c927eee) by [T0chi](https://github.com/T0chi))
+
 ## 3.0.0-beta.0 (November 2026)
 
 * Resolve the bug-hunt findings ([#f07f951](https://github.com/deltabox-studio/toolchain/commit/f07f951) by [T0chi](https://github.com/T0chi))
@@ -11718,282 +11763,6 @@ url: https://toolchain.deltabox.studio/CHANGELOG.md
   * add engine + standalone examples for each generator
     * document CLI docs, post-processing and advanced options
     * cross-link generateCliDocs from the config-generator index and CLI commands
-
-#### Vscode
-
-* Expand the extension guide and README ([#942aa55](https://github.com/deltabox-studio/toolchain/commit/942aa55) by [T0chi](https://github.com/T0chi))
-
-  * Restore the updated provider/template sections, settings and auto-sync documentation in both the guide and the extension README.
-
-## 2.4.0 (November 2026)
-
-#### Shared
-
-* Improve workflow config autocomplete ([#5babd18](https://github.com/deltabox-studio/toolchain/commit/5babd18) by [T0chi](https://github.com/T0chi))
-
-  * Add typed WorkflowTriggers, WorkflowExtra and WorkflowTokens shapes so known workflow keys are suggested, and regenerate the config types, schema and reference.
-
-* Expose formatter and linter ignore defaults ([#5f2c8b1](https://github.com/deltabox-studio/toolchain/commit/5f2c8b1) by [T0chi](https://github.com/T0chi))
-
-  * Export DEFAULT_FMT_IGNORE_PATTERNS and DEFAULT_LINT_IGNORE_PATTERNS alongside DEFAULT_IGNORE_PATTERNS, and document how to extend them.
-
-#### Project
-
-* Add config generation options and migration routing ([#c658b0d](https://github.com/deltabox-studio/toolchain/commit/c658b0d) by [T0chi](https://github.com/T0chi))
-
-  * Support --skip-config, --language and --config-extension, write the project graph before configs, generate TS/JS configs, and route migrated fmt/lint into toolchain.vite only when the existing Vite config owns them.
-
-#### Vscode
-
-* Add tooling actions and config generation ([#31da418](https://github.com/deltabox-studio/toolchain/commit/31da418) by [T0chi](https://github.com/T0chi))
-
-  * Add the format import-group setting, migrate/global Home actions, and config generation prompts (TS/JS, graph-only) that also work from the Command Palette.
-
-#### Core
-
-* Add import sorting defaults and workspace groups ([#1c5f5a3](https://github.com/deltabox-studio/toolchain/commit/1c5f5a3) by [T0chi](https://github.com/T0chi))
-
-  * Enable sortImports by default, resolve a workspace custom group from the project graph, and inject it into resolveVite, vite sync and tooling normalization.
-
-#### Shared
-
-* Repair PowerShell backtick artifacts in changelogs ([#61ced92](https://github.com/deltabox-studio/toolchain/commit/61ced92) by [T0chi](https://github.com/T0chi))
-
-  * Repair paired \code\ and lone trailing identifier backslashes back to inline code while leaving paths and regexes alone, and correct the affected 2.3.1-2.3.3 entries.
-
-## 2.3.0 (November 2026)
-
-#### Changelog
-
-* Dispatch workflows with their vendor CLI ([#eea38ae](https://github.com/deltabox-studio/toolchain/commit/eea38ae) by [T0chi](https://github.com/T0chi))
-
-#### Config
-
-* Type tool options and changelog callbacks ([#10bd933](https://github.com/deltabox-studio/toolchain/commit/10bd933) by [T0chi](https://github.com/T0chi))
-
-#### Config
-
-* Escape CLI reference tables and fail on missing output ([#15978be](https://github.com/deltabox-studio/toolchain/commit/15978be) by [T0chi](https://github.com/T0chi))
-
-#### Core
-
-* Keep managed paths inside the project root ([#2496bee](https://github.com/deltabox-studio/toolchain/commit/2496bee) by [T0chi](https://github.com/T0chi))
-
-#### Changelog
-
-* Preserve hand-corrected text in `--format-only` ([#2041e5f](https://github.com/deltabox-studio/toolchain/commit/2041e5f) by [T0chi](https://github.com/T0chi))
-
-#### Shared
-
-* Restore `PowerShell`-escaped letters ([#4d2be6a](https://github.com/deltabox-studio/toolchain/commit/4d2be6a) by [T0chi](https://github.com/T0chi))
-
-- Document vendor workflows, typed builders and `--format-only` ([#eb66982](https://github.com/deltabox-studio/toolchain/commit/eb66982) by [T0chi](https://github.com/T0chi))
-
-#### Changelog
-
-* Document `formatLine` ([#61e28ec](https://github.com/deltabox-studio/toolchain/commit/61e28ec) by [T0chi](https://github.com/T0chi))
-
-#### Config
-
-* Regenerate config-types, schema and docs ([#0b0ca20](https://github.com/deltabox-studio/toolchain/commit/0b0ca20) by [T0chi](https://github.com/T0chi))
-
----
-
----
-url: https://toolchain.deltabox.studio/CHANGELOG.proposed.md
----
-# Changelog
-
-## 3.0.0-beta.0 (November 2026)
-
-* Resolve the bug-hunt findings ([#f07f951](https://github.com/deltabox-studio/toolchain/commit/f07f951) by [T0chi](https://github.com/T0chi))
-
-#### Changelog
-
-* Relabel details summaries and default the release body ([#7ccfc86](https://github.com/deltabox-studio/toolchain/commit/7ccfc86) by [T0chi](https://github.com/T0chi))
-* Add collapsible `details` rendering ([#f7d1c6a](https://github.com/deltabox-studio/toolchain/commit/f7d1c6a) by [T0chi](https://github.com/T0chi))
-* Make releases idempotent and prerelease-aware ([#610138b](https://github.com/deltabox-studio/toolchain/commit/610138b) by [T0chi](https://github.com/T0chi))
-
-#### Cli
-
-* Add spinners and Dependabot allow rules ([#fa9ba22](https://github.com/deltabox-studio/toolchain/commit/fa9ba22) by [T0chi](https://github.com/T0chi))
-
-#### Tsconfig
-
-* Support remote extends with opt-in flattening ([#44b5c8a](https://github.com/deltabox-studio/toolchain/commit/44b5c8a) by [T0chi](https://github.com/T0chi))
-* Add `strict` aliases and export-aware auto modes ([#fee5091](https://github.com/deltabox-studio/toolchain/commit/fee5091) by [T0chi](https://github.com/T0chi))
-* Serialize regex aliases for JSON transports ([#d7d8caf](https://github.com/deltabox-studio/toolchain/commit/d7d8caf) by [T0chi](https://github.com/T0chi))
-
-#### Docker
-
-* Correct PnP runtimes, nested ignores and Vite+ node versions ([#68eee6f](https://github.com/deltabox-studio/toolchain/commit/68eee6f) by [T0chi](https://github.com/T0chi))
-* Allow user-owned files and always add compose ([#51b9ccc](https://github.com/deltabox-studio/toolchain/commit/51b9ccc) by [T0chi](https://github.com/T0chi))
-
-#### Config
-
-* Rename the generated ambient env types to `dbx-env.d.ts` ([#078b316](https://github.com/deltabox-studio/toolchain/commit/078b316) by [T0chi](https://github.com/T0chi))
-* Add runtime config APIs and grouped `ConfigEngine` types ([#b69980e](https://github.com/deltabox-studio/toolchain/commit/b69980e) by [T0chi](https://github.com/T0chi))
-* Add `collect`, parser and config loader APIs ([#4a3b745](https://github.com/deltabox-studio/toolchain/commit/4a3b745) by [T0chi](https://github.com/T0chi))
-
-#### Pack
-
-* Rename the `tsdown` workspace to `pack` ([#02719e5](https://github.com/deltabox-studio/toolchain/commit/02719e5) by [T0chi](https://github.com/T0chi))
-
-#### Core
-
-* Make managed-file formatting opt-in ([#2a7c709](https://github.com/deltabox-studio/toolchain/commit/2a7c709) by [T0chi](https://github.com/T0chi))
-* Format managed files after `dbx sync` ([#fb3d9be](https://github.com/deltabox-studio/toolchain/commit/fb3d9be) by [T0chi](https://github.com/T0chi))
-
-#### Vscode
-
-* Decorate managed files and reveal the active project ([#a6debec](https://github.com/deltabox-studio/toolchain/commit/a6debec) by [T0chi](https://github.com/T0chi))
-* Add scoped auto-sync, the action palette and the Actions view ([#c330378](https://github.com/deltabox-studio/toolchain/commit/c330378) by [T0chi](https://github.com/T0chi))
-* Add generic format/lint actions and formatting settings ([#c256de5](https://github.com/deltabox-studio/toolchain/commit/c256de5) by [T0chi](https://github.com/T0chi))
-
-#### Shared
-
-* Add static schema defaults ([#3b810d3](https://github.com/deltabox-studio/toolchain/commit/3b810d3) by [T0chi](https://github.com/T0chi))
-
-#### Config
-
-* Reuse changelog group and option schemas ([#cbd9b54](https://github.com/deltabox-studio/toolchain/commit/cbd9b54) by [T0chi](https://github.com/T0chi))
-
-#### Changelog
-
-* Add `minCommits` and nested `See more...` descriptions ([#9fa603b](https://github.com/deltabox-studio/toolchain/commit/9fa603b) by [T0chi](https://github.com/T0chi))
-* Fix details formatting and add release mode ([#5fa519f](https://github.com/deltabox-studio/toolchain/commit/5fa519f) by [T0chi](https://github.com/T0chi))
-* Apply details after formatting and add body collapsibles ([#83dd7da](https://github.com/deltabox-studio/toolchain/commit/83dd7da) by [T0chi](https://github.com/T0chi))
-* Add scoped versioning options and changelog `intro`/`outro` ([#09cf5d9](https://github.com/deltabox-studio/toolchain/commit/09cf5d9) by [T0chi](https://github.com/T0chi))
-
-#### Cli
-
-* Add changelog intro/outro flags and respect `enabled` ([#7d74c71](https://github.com/deltabox-studio/toolchain/commit/7d74c71) by [T0chi](https://github.com/T0chi))
-* Add `dbx enable`/`disable` and `enabled` ([#67ea4c3](https://github.com/deltabox-studio/toolchain/commit/67ea4c3) by [T0chi](https://github.com/T0chi))
-
-#### Mcp
-
-* Add the MCP server, installers and `dbx mcp:*` commands ([#0553843](https://github.com/deltabox-studio/toolchain/commit/0553843) by [T0chi](https://github.com/T0chi))
-
-#### Config
-
-* Escape generated JSDoc comments, closes [#41](https://github.com/deltabox-studio/toolchain/issues/41) ([#220d228](https://github.com/deltabox-studio/toolchain/commit/220d228) by [T0chi](https://github.com/T0chi)) (fixes [#41](https://github.com/deltabox-studio/toolchain/issues/41))
-
-#### Cli
-
-* Harden flag parsing and document library-only config commands ([#aaaa11a](https://github.com/deltabox-studio/toolchain/commit/aaaa11a) by [T0chi](https://github.com/T0chi))
-
-#### Config
-
-* Share the runtime loader with core ([#e84e4e6](https://github.com/deltabox-studio/toolchain/commit/e84e4e6) by [T0chi](https://github.com/T0chi))
-
-- Add the v2 to v3 guide and refresh behavior docs ([#c6efc52](https://github.com/deltabox-studio/toolchain/commit/c6efc52) by [T0chi](https://github.com/T0chi))
-- Describe Docker as scaffolding-only ([#8e5c46e](https://github.com/deltabox-studio/toolchain/commit/8e5c46e) by [T0chi](https://github.com/T0chi))
-- Document the opt-in Dependabot config ([#7028669](https://github.com/deltabox-studio/toolchain/commit/7028669) by [T0chi](https://github.com/T0chi))
-- Document Docker support ([#e618041](https://github.com/deltabox-studio/toolchain/commit/e618041) by [T0chi](https://github.com/T0chi))
-- Document the quality-of-life templates ([#a9b62b2](https://github.com/deltabox-studio/toolchain/commit/a9b62b2) by [T0chi](https://github.com/T0chi))
-- Document the GitLab and Azure `setup-vp` setup ([#d385e7d](https://github.com/deltabox-studio/toolchain/commit/d385e7d) by [T0chi](https://github.com/T0chi))
-- Document the Vite+ CI detection and tokens ([#64c394e](https://github.com/deltabox-studio/toolchain/commit/64c394e) by [T0chi](https://github.com/T0chi))
-- Add managed-file examples and refresh generated docs ([#e9dba38](https://github.com/deltabox-studio/toolchain/commit/e9dba38) by [T0chi](https://github.com/T0chi))
-- Describe the plugin-first Vite+ superset and regenerate docs ([#01008f6](https://github.com/deltabox-studio/toolchain/commit/01008f6) by [T0chi](https://github.com/T0chi))
-- Document the config loader, strict opt-in inheritance and configless projects ([#2eff4c8](https://github.com/deltabox-studio/toolchain/commit/2eff4c8) by [T0chi](https://github.com/T0chi))
-
-#### Ci
-
-* Document security updates in the v3 migration guide ([#1aa7091](https://github.com/deltabox-studio/toolchain/commit/1aa7091) by [T0chi](https://github.com/T0chi))
-
-#### Changelog
-
-* Apply details formatting to historical entries ([#0bfbd98](https://github.com/deltabox-studio/toolchain/commit/0bfbd98) by [T0chi](https://github.com/T0chi))
-* Document package changes on `--format-only` ([#a8b6cdb](https://github.com/deltabox-studio/toolchain/commit/a8b6cdb) by [T0chi](https://github.com/T0chi))
-
-#### Config
-
-* Refresh generated reference and llms bundle ([#fd2f709](https://github.com/deltabox-studio/toolchain/commit/fd2f709) by [T0chi](https://github.com/T0chi))
-* Refresh generated config artifacts and guides ([#067760e](https://github.com/deltabox-studio/toolchain/commit/067760e) by [T0chi](https://github.com/T0chi))
-* Regenerate schema, types and reference ([#6f48302](https://github.com/deltabox-studio/toolchain/commit/6f48302) by [T0chi](https://github.com/T0chi))
-* Link external schemas and add real defaults ([#04dc8d1](https://github.com/deltabox-studio/toolchain/commit/04dc8d1) by [T0chi](https://github.com/T0chi))
-
-- Normalize imports and docs ([#c7f0d25](https://github.com/deltabox-studio/toolchain/commit/c7f0d25) by [T0chi](https://github.com/T0chi))
-
-#### Config
-
-* Regenerate the schema, types and docs ([#2c4dc1e](https://github.com/deltabox-studio/toolchain/commit/2c4dc1e) by [T0chi](https://github.com/T0chi))
-* Regenerate the CLI docs and llms output ([#cf8661f](https://github.com/deltabox-studio/toolchain/commit/cf8661f) by [T0chi](https://github.com/T0chi))
-* Regenerate the schema, types and docs ([#82ca5c3](https://github.com/deltabox-studio/toolchain/commit/82ca5c3) by [T0chi](https://github.com/T0chi))
-* Generate plain array unions and `details` types ([#486d264](https://github.com/deltabox-studio/toolchain/commit/486d264) by [T0chi](https://github.com/T0chi))
-* Regenerate the schema, types and docs ([#12788f0](https://github.com/deltabox-studio/toolchain/commit/12788f0) by [T0chi](https://github.com/T0chi))
-* Regenerate types and references ([#3c7917a](https://github.com/deltabox-studio/toolchain/commit/3c7917a) by [T0chi](https://github.com/T0chi))
-* Regenerate types and references ([#de928fa](https://github.com/deltabox-studio/toolchain/commit/de928fa) by [T0chi](https://github.com/T0chi))
-
-## 2.6.1 (November 2026)
-
-#### Changelog
-
-* Scope package changes by package name ([#0ee9b9e](https://github.com/deltabox-studio/toolchain/commit/0ee9b9e) by [T0chi](https://github.com/T0chi))
-
-  * key dependency changes by the declaring package.json name so workspace-specific pins (eg. the docs site's Vite 5) are reported under that workspace - scope the catalog to the root package name; keep workspace catalog: refs unresolved so a catalog bump is reported once - add regression tests and regenerate every CHANGELOG.md with the scoped footer
-
-## 2.6.0 (November 2026)
-
-* Route fmt/lint to the active tool and opt scaffolds into catalogs ([#76df575](https://github.com/deltabox-studio/toolchain/commit/76df575) by [T0chi](https://github.com/T0chi))
-
-  * dbx fmt/lint resolve the configured/discovered formatter or linter (oxc > biome > prettier > dprint; oxc > biome > eslint) and run it, falling back to the vp/Oxc passthrough - project:init/create scaffolds add the catalogs section for the catalog file they write, so dbx sync owns it instead of leaving the managed file orphaned - document the active-tool routing and add the dedicated package catalogs guide
-
-## 2.5.0 (November 2026)
-
-#### Config
-
-* Add a reusable CLI docs generator ([#900566a](https://github.com/deltabox-studio/toolchain/commit/900566a) by [T0chi](https://github.com/T0chi))
-
-  * add generateCliDocs(commands, options?) for custom command descriptors - use it to render the dbx CLI reference - document generating docs for a consumer's own command list - cover hidden/duplicate commands, args/options and custom prefix/title
-
-* Add self-contained vendor types and `tsconfig` auto/`rewriteAlias` schemas ([#31c47a9](https://github.com/deltabox-studio/toolchain/commit/31c47a9) by [T0chi](https://github.com/T0chi))
-
-#### Changelog
-
-* Inject provider setup into custom and vendor workflows ([#b6b240f](https://github.com/deltabox-studio/toolchain/commit/b6b240f) by [T0chi](https://github.com/T0chi))
-
-  * add an opt-in setup flag to custom workflow options and vendor settings - GitHub injects the missing checkout/Node/Corepack/install steps - GitLab adds a Node image + before_script; Azure adds UseNode@1 + install - avoid duplicating setup steps the workflow already defines - resolve vendor workflow tokens from the default token set
-
-#### Biome
-
-* Add array removal directives and resolve toolchain debt ([#da100c8](https://github.com/deltabox-studio/toolchain/commit/da100c8) by [T0chi](https://github.com/T0chi))
-
-  * add $remove: / $reset array directives with a resolver step for biome.json - fix peer warnings (declare vite, filter the stale VitePress plugin peer) - replace the RULE_MAP cast with an Object.hasOwn guard - add a direct extension env-propagation test - drop the 30s real-git changelog timeout
-
-#### Cli
-
-* Add `sync --only` task selection and `selectSyncTasks` ([#49d73dd](https://github.com/deltabox-studio/toolchain/commit/49d73dd) by [T0chi](https://github.com/T0chi))
-
-#### Vscode
-
-* Split extension modules and add `syncTsconfig` action ([#f121c47](https://github.com/deltabox-studio/toolchain/commit/f121c47) by [T0chi](https://github.com/T0chi))
-
-#### Tsconfig
-
-* Auto-wire aliases/references with `rewriteAlias` and gating ([#124f4b5](https://github.com/deltabox-studio/toolchain/commit/124f4b5) by [T0chi](https://github.com/T0chi))
-
-#### Cli
-
-* Sync and watch configless projects with the inherited config ([#346060d](https://github.com/deltabox-studio/toolchain/commit/346060d) by [T0chi](https://github.com/T0chi))
-
-  * The command context did not expose the ancestor config path, so dbx sync/watch in a nested project without its own dbx.config.\* warned and did nothing. Pass parentPath through the context and allow both commands when it is set. The VS Code Sync all compensation now works for configless projects, while sync --recursive stays config-bearing-only and is documented as such.
-
-- Document watcher scoping and project identity inheritance ([#074bfcd](https://github.com/deltabox-studio/toolchain/commit/074bfcd) by [T0chi](https://github.com/T0chi))
-
-  * Update the VS Code auto-sync section and the project guide to match the implementation: watchers are root-scoped and sync only the changed root; project name/scope/description/type are never inherited. Regenerate llms-full.txt.
-
-#### Tsconfig
-
-* Note that refsAuto requires tsc --build ([#74a25b2](https://github.com/deltabox-studio/toolchain/commit/74a25b2) by [T0chi](https://github.com/T0chi))
-
-  * Project references are only followed by tsc --build; tsc -p --noEmit ignores them. Document the refsAuto requirement and why this repo keeps the references hand-written (refsAuto: false).
-
-#### Config
-
-* Document every generator and generateCliDocs ([#28f812e](https://github.com/deltabox-studio/toolchain/commit/28f812e) by [T0chi](https://github.com/T0chi))
-
-  * add engine + standalone examples for each generator - document CLI docs, post-processing and advanced options - cross-link generateCliDocs from the config-generator index and CLI commands
 
 #### Vscode
 

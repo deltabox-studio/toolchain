@@ -10,13 +10,14 @@ CLI reference — all from that one schema.
 
 - [Describe a scope](/guide/config-generator/describe-a-scope) — write the Zod
   schema and its `.meta()`.
-- [Create the engine](/guide/config-generator/create-the-engine) — bind scopes,
-  prefix, base group and root.
+- [Create the engine](/guide/config-generator/create-the-engine) — bind the
+  schema, prefix, base group and root.
 - [Generate](/guide/config-generator/generate) — the generator methods.
 - [CLI commands](/guide/config-generator/cli-commands) — the `config:*` command
   descriptors.
-- [Load the config](/guide/config-generator/load-the-config) — the runtime loader
-  (`parseEnvTree`, `compileZodSchema`, and `applyOverrides` from shared).
+- [Load the config](/guide/config-generator/load-the-config) — the runtime
+  parsers (`parseConfig`, `parseEnvConfig`, `parseCliConfig`) and
+  `loadConfigAsync`.
 - [Generated outputs](/guide/config-generator/generated-outputs) — types,
   markdown, env files, JSON Schema, CLI docs and formatting.
 - [Real-world shape](/guide/config-generator/real-world-shape) — how a consumer

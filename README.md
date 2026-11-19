@@ -117,6 +117,13 @@ there is **opt-in by presence**: `section: true` enables it with defaults,
 `section: false` disables it, and `section: { ... }` configures it.
 See the [configuration reference](https://toolchain.deltabox.studio/config/reference).
 
+v3 adds a top-level [`toolchain.enabled`](https://toolchain.deltabox.studio/guide/migrations/v2-v3#toolchain-enable-disable)
+switch, a per-section `regenerate` flag, lifecycle
+[hooks](https://toolchain.deltabox.studio/guide/config/hooks) (`beforeVersion` /
+`afterVersion`) and [Dependabot security
+updates](https://toolchain.deltabox.studio/guide/ci/dependabot)
+(`ci.dependabot.security`).
+
 ## Config generator
 
 The same Zod-first approach powers a standalone config engine. Describe your
@@ -160,17 +167,29 @@ export interface ServerConfig {
 }
 ```
 
-At runtime the same package loads it back — `parseEnvTree` folds the `PREFIX_*`
-variables into a tree and the typed accessors read it (schema validation is just
-a `.parse()` away):
+At runtime the same package loads it back: `parseEnvConfig`, `parseCliConfig`
+and `parseConfig` read the declared `envName`s and CLI flags, merge overrides
+and validate the result through the schema, so it matches the generated types:
 
 ```ts
-import { envInt, envString, parseEnvTree } from '@deltabox/toolchain/config';
+import { parseCliConfig, parseConfig, parseEnvConfig } from '@deltabox/toolchain/config';
 
-const tree = parseEnvTree(process.env, 'MYAPP_');
-const port = envInt(tree, 'port', 3000);
-const host = envString(tree, 'host', '0.0.0.0');
+// env only: MYAPP_PORT=8080 -> { port: 8080, host: '0.0.0.0' }
+const fromEnv = parseEnvConfig(serverSchema, process.env, { envPrefix: 'MYAPP_' });
+
+// env + CLI (`--port 8080`), with overrides merged on top
+const config = parseConfig(serverSchema, { host: '127.0.0.1' }, { envPrefix: 'MYAPP_' });
+
+// CLI only, from an explicit argv
+const fromCli = parseCliConfig(serverSchema, process.argv.slice(2), { envPrefix: 'MYAPP_' });
 ```
+
+Pass the engine's full `schema` instead of one scope to get the nested
+`{ server: { ... } }` shape. Env typings are generated the same way
+(`engine.env.types.write()`, which writes `env.ts` and the ambient
+`dbx-env.d.ts`). For file-backed configs, `loadConfig` / `loadConfigAsync`
+discover and import `dbx.config.*` (TS, JS, JSON or YAML) and resolve it through
+the same schema.
 
 See the [config generator
 guide](https://toolchain.deltabox.studio/guide/config-generator) for loading,
@@ -297,7 +316,7 @@ yarn check          # Oxfmt + Oxlint check (no writes)
 yarn check:fix      # same, auto-fixing every workspace + the root
 yarn format         # `vp fmt`
 yarn lint           # `vp lint --fix`
-yarn build          # packages via `vp run` + root tsdown
+yarn build          # packages + root via `vp run` (root pack config)
 yarn test           # builds, then package + root tests
 yarn test:clean     # remove leftover emulation temp workspaces
 ```

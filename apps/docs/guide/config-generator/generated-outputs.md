@@ -71,9 +71,11 @@ return file contents and only write when `outputDir`/`output` is a string;
 
 A `.env.example`; secrets are emitted commented out so operators fill them in:
 
-```sh
+```ts
 engine.env.write({ output: '.env.example' });
+```
 
+```sh
 # ---- SERVER ----
 MYAPP_HOST=localhost
 # MYAPP_AUTH_PASSWORD=

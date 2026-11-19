@@ -17,6 +17,19 @@ The package root exports its public API. Included modules cover: collectors, env
 
 It is also available through the umbrella subpath `@deltabox/toolchain/config`.
 
+## Runtime
+
+`parseConfig`, `parseEnvConfig` and `parseCliConfig` resolve a schema from env vars, CLI flags and explicit overrides, and validate the result. Env names and flags come from each leaf's `.meta()` (`envName`, `cliFlag`):
+
+```ts
+import { parseConfig, parseEnvConfig } from '@deltabox/toolchain/config';
+
+const fromEnv = parseEnvConfig(schema, process.env, { envPrefix: 'MYAPP_' });
+const config = parseConfig(schema, { host: '127.0.0.1' }, { envPrefix: 'MYAPP_' });
+```
+
+`loadConfig` / `loadConfigAsync` add config-file discovery (TS, JS, JSON and YAML). The legacy `parseEnvTree` / `envString` helpers remain for dependency-free reads. `engine.env.types.write()` generates the `env.ts` and `dbx-env.d.ts` typings.
+
 ## License
 
-MPL-2.0 ? deltabox
+MPL-2.0 © deltabox

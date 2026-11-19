@@ -113,4 +113,3 @@ This file is a concise, link-first overview. For the **full** documentation in a
 ### Other
 
 - [Changelog](https://toolchain.deltabox.studio/CHANGELOG.md)
-- [Changelog](https://toolchain.deltabox.studio/CHANGELOG.proposed.md)

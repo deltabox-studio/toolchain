@@ -17,6 +17,12 @@ The package root exports its public API. Included modules cover: builtin/local/o
 
 It is also available through the umbrella subpath `@deltabox/toolchain/template`.
 
+## Online sources
+
+Online (npm/git/Vite+) sources are opt-in: `template:*` commands and
+`dbx create --template <id>` need `--online` to resolve them, so a local-only run
+never touches the network.
+
 ## License
 
-MPL-2.0 ? deltabox
+MPL-2.0 © deltabox

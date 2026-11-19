@@ -1,69 +1,93 @@
 # Load the config at runtime
 
-Generation is only half of it. The same schema backs a small, dependency-free
-**loader**. `parseEnvTree` folds `PREFIX_*` variables into a nested tree
-(splitting the remainder on `_`), and the typed accessors read dotted paths out
-of it:
+Generation is only half of it: the same schema loads the value back. The runtime
+parsers read the `envName` / `cliFlag` metadata, coerce env and CLI strings,
+merge overrides and validate the result through the schema, so the returned
+object matches the generated types.
 
 ```ts
-import {
-    envBool,
-    envInt,
-    envList,
-    envMap,
-    envString,
-    parseEnvTree,
-} from '@deltabox/toolchain/config';
-import { applyOverrides } from '@deltabox/toolchain/shared';
+import { parseCliConfig, parseConfig, parseEnvConfig } from '@deltabox/toolchain/config';
 
-// MYAPP_HOST, MYAPP_PORT, MYAPP_LOG_PRETTY, ... -> a nested tree
-const tree = parseEnvTree(process.env, 'MYAPP_');
+// MYAPP_HOST, MYAPP_PORT, ... -> { host: '0.0.0.0', port: 3000 }
+const fromEnv = parseEnvConfig(serverConfig, process.env, { envPrefix: 'MYAPP_' });
 
-const config = {
-    host: envString(tree, 'host', '0.0.0.0'),
-    port: envInt(tree, 'port', 3000),
-    pretty: envBool(tree, 'log.pretty', true),
-    corsOrigins: envList(tree, 'cors.origin', []),
-    headers: envMap(tree, 'response.headers.map'), // `Key=value,...` -> record
-};
+// env + CLI (argv defaults to `process.argv.slice(2)`), overrides merged on top
+const config = parseConfig(serverConfig, { host: '127.0.0.1' }, { envPrefix: 'MYAPP_' });
+
+// CLI only: `--port 8080 --host localhost`
+const fromCli = parseCliConfig(serverConfig, process.argv.slice(2), { envPrefix: 'MYAPP_' });
 ```
 
-| Helper                       | Reads                                                |
-| ---------------------------- | ---------------------------------------------------- |
-| `envString(tree, path, fb?)` | string (unset/empty -> fallback)                     |
-| `envInt` / `envBool`         | number / boolean (`true/1/yes/on`, `false/0/no/off`) |
-| `envList`                    | comma-separated list                                 |
-| `envMap`                     | `Key=value,...` into a lowercase-keyed record        |
-| `readEnvPath(tree, path)`    | the raw value at a dotted path                       |
+| Export                                             | Sources                                                  |
+| -------------------------------------------------- | -------------------------------------------------------- |
+| `parseConfig(schema, overrides?, opts?)`           | env + CLI, with `overrides` merged last and validated    |
+| `parseEnvConfig(schema, env?, opts?)`              | env only                                                 |
+| `parseCliConfig(schema, argv?, opts?)`             | CLI only                                                 |
+| `collect(schema, opts?)`                           | env + CLI, no overrides (pass `validate: true` to check) |
+| `loadConfig(options)` / `loadConfigAsync(options)` | a config file, resolved through `parseConfig`            |
 
-Layer typed overrides on top of the env values (a config file, then CLI flags)
-with `applyOverrides`, then validate the result through the scope schema so it is
-guaranteed to match the generated types:
+Async variants (`parseConfigAsync`, `parseEnvConfigAsync`, `parseCliConfigAsync`)
+accept a promise for the env source, argv or overrides; the `*Sync` aliases keep
+the synchronous call shape.
+
+## Scopes
+
+Parsing the engine's `schema` returns the nested `{ server, frontend }` object;
+parsing one scope's schema returns that scope's fields directly:
 
 ```ts
-import { compileZodSchema } from '@deltabox/toolchain/config';
+const scoped = parseEnvConfig(engine.schema, process.env, { envPrefix: 'MYAPP_' });
+// { server: { port: 8080, host: '0.0.0.0' } }
 
-const schemaCompiler = compileZodSchema(serverConfig);
+const server = parseEnvConfig(serverConfig, process.env, { envPrefix: 'MYAPP_' });
+// { port: 8080, host: '0.0.0.0' }
+```
 
-export function loadConfig(env = process.env, file = {}, cli = {}) {
-    const tree = parseEnvTree(env, 'MYAPP_');
-    const fromEnv = {
-        base: {
-            host: envString(tree, 'host', '0.0.0.0'),
-            port: envInt(tree, 'port', 3000),
-        },
-        auth: {
-            password: envString(tree, 'auth.password', ''),
-            tokenTtl: envInt(tree, 'auth.token.ttl', 3600),
-        },
-    };
-    return schemaCompiler.parse(applyOverrides(fromEnv, file, cli));
+## Common options
+
+Every parser shares the collect options:
+
+- `envPrefix` — the prefix stripped from env names (default `APP_`, `null` disables it).
+- `envSource` / `argv` — the env record and argument list to read (defaults to
+  `process.env` and `process.argv.slice(2)`).
+- `include` / `exclude` — path globs (`server.*`, `**.port`) or presence kinds
+  (`required`, `defined`, `undefined`, `null`).
+- `validate` — parse the resolved value through the schema (the `parse*` family
+  defaults to `true`).
+- `errorOptions` — `errorLevel` (`throw`/`warn`/`silent`), `logger`,
+  `rewriteMessage`, `defaultMessage` and `trigger` for validation problems.
+  A thrown problem is a `ConfigParseError`.
+- `envPathOf` — override env-name -> dotted-path derivation (eg. dual prefixes).
+
+Env names come from `.meta({ envName })`; without it, the prefix plus the field
+path is used (`MYAPP_SERVER_PORT`). CLI flags come from `.meta({ cliFlag })`,
+falling back to `--server-port`.
+
+## Load from a file
+
+`loadConfig` / `loadConfigAsync` discover `dbx.config.*` (plus JSON/YAML/custom
+loaders), import it and run the value through `parseConfig`:
+
+```ts
+import { loadConfigAsync } from '@deltabox/toolchain/config';
+
+const loaded = await loadConfigAsync({
+    parser: serverConfig,
+    cwd: process.cwd(),
+    names: ['dbx.config.ts', 'dbx.config.js'],
+    envPrefix: 'MYAPP_',
+});
+
+if (loaded) {
+    console.log(loaded.path, loaded.config); // the config file and the typed value
 }
 ```
 
-A resolver like this is the runtime counterpart of the generators — same schema,
-same defaults, one typed object out.
+Options include `configFileOptions` (filename, extensions, locations,
+`packageJson`, ancestor search), `required`, `overrides`, `fresh` (re-import in
+watch mode), `tsconfig` (path-alias resolution for TS configs) and `loader`.
 
 > The dotted path is the env name with the prefix removed and `_` folded to `.`,
-> so `MYAPP_AUTH_TOKEN_TTL` reads as `auth.token.ttl`. When a field name differs
-> from its env-derived path, map it explicitly in the resolver (as above).
+> so `MYAPP_AUTH_TOKEN_TTL` reads as `auth.token.ttl`. Env names live on the
+> schema as `.meta({ envName })`, so the generated `.env` file and the runtime
+> parser stay in step.

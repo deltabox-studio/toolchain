@@ -54,7 +54,8 @@ hooks: {
 ```
 
 Async hooks are awaited by the CLI and `runChangelogAsync`; the synchronous
-`runChangelog` wrapper rejects async hooks. A failing hook aborts the changelog
-run before any files are written. The changelog workflow stages
-`.yarnrc.yml` together with `package.json`/`CHANGELOG.md`, so hooks that update a
-scaffold catalog are committed in the same version-bump commit.
+`runChangelog` wrapper rejects async hooks. A failing `beforeVersion` hook aborts
+the run before any files are written (a failing `afterVersion` hook runs after
+the writes). The changelog workflow stages `.yarnrc.yml` together with
+`package.json`/`CHANGELOG.md`, so hooks that update a scaffold catalog are
+committed in the same version-bump commit.
