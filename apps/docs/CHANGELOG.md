@@ -1,8 +1,28 @@
 # Changelog
 
-## 3.0.0-beta.1 (November 2026)
+## 3.0.0-beta.2 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>New features</summary>
+
+#### Project
+- Leave fmt and lint to the root in nested scaffolds ([#c646ea5](https://github.com/deltabox-studio/toolchain/commit/c646ea5) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+- Align the READMEs and guides with v3 ([#c6487b8](https://github.com/deltabox-studio/toolchain/commit/c6487b8) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.1 (November 2026)
 
 <details>
 <summary>New features</summary>
@@ -12,9 +32,6 @@
 - Add the afterVersion lifecycle hook ([#c927eee](https://github.com/deltabox-studio/toolchain/commit/c927eee) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.0 (November 2026)
 

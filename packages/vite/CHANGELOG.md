@@ -1,8 +1,20 @@
 # Changelog
 
-## 3.0.0-beta.0 (November 2026)
+## 3.0.0-beta.1 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Chores</summary>
+
+- Add the codegen keyword to the package manifests ([#5e608fe](https://github.com/deltabox-studio/toolchain/commit/5e608fe) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.0 (November 2026)
 
 <details>
 <summary><strong>BREAKING CHANGES</strong></summary>
@@ -68,9 +80,6 @@
 - Normalize imports and docs ([#c7f0d25](https://github.com/deltabox-studio/toolchain/commit/c7f0d25) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 2.6.1 (November 2026)
 

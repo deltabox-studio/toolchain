@@ -1,8 +1,21 @@
 # Changelog
 
-## 3.0.0-beta.1 (November 2026)
+## 3.0.0-beta.2 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Vite
+- Inherit the root fmt and lint config in workspaces ([#b32e8e7](https://github.com/deltabox-studio/toolchain/commit/b32e8e7) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.1 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -11,9 +24,6 @@
 - Load build configs on a clean checkout ([#22812b8](https://github.com/deltabox-studio/toolchain/commit/22812b8) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.0 (November 2026)
 

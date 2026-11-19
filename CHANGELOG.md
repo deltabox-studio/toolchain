@@ -1,8 +1,43 @@
 # Changelog
 
-## 3.0.0-beta.3 (November 2026)
+## 3.0.0-beta.4 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>New features</summary>
+
+#### Project
+- Leave fmt and lint to the root in nested scaffolds ([#c646ea5](https://github.com/deltabox-studio/toolchain/commit/c646ea5) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Vite
+- Inherit the root fmt and lint config in workspaces ([#b32e8e7](https://github.com/deltabox-studio/toolchain/commit/b32e8e7) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+- Align the READMEs and guides with v3 ([#c6487b8](https://github.com/deltabox-studio/toolchain/commit/c6487b8) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Chores</summary>
+
+- Add the codegen keyword to the package manifests ([#5e608fe](https://github.com/deltabox-studio/toolchain/commit/5e608fe) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.3 (November 2026)
 
 <details>
 <summary>New features</summary>
@@ -26,9 +61,6 @@
 #### Updated
 - `@deltabox/toolchain`
   - `vite-plugin-dbx` `^3.0.0-beta.1` → `^3.0.0-beta.2`
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.2 (November 2026)
 

@@ -1,8 +1,20 @@
 # Changelog
 
-## 3.0.0-beta.0 (November 2026)
+## 3.0.0-beta.1 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Documentation</summary>
+
+- Align the READMEs and guides with v3 ([#c6487b8](https://github.com/deltabox-studio/toolchain/commit/c6487b8) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.0 (November 2026)
 
 <details>
 <summary><strong>BREAKING CHANGES</strong></summary>
@@ -85,9 +97,6 @@
 - Verify resolved import group formatter output ([#51d5a0d](https://github.com/deltabox-studio/toolchain/commit/51d5a0d) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 2.6.1 (November 2026)
 
