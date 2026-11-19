@@ -63,6 +63,15 @@ const INTRODUCTION = {
             ],
         },
         { text: 'LLMs', link: '/llms' },
+        {
+            text: 'Contribute',
+            collapsed: true,
+            items: [
+                { text: 'Overview', link: '/contribute/' },
+                { text: 'Development', link: '/contribute/development' },
+                { text: 'Documentation', link: '/contribute/documentation' },
+            ],
+        },
     ],
 };
 
@@ -179,6 +188,13 @@ export default defineConfig({
                     ];
                     data['/config/'] = configSidebar;
                     data['/config'] = configSidebar;
+                    const contributeItems = data['/contribute/'] ?? data['/contribute'];
+                    const contributeSidebar = [
+                        HOME,
+                        ...(Array.isArray(contributeItems) ? contributeItems : []),
+                    ];
+                    data['/contribute/'] = contributeSidebar;
+                    data['/contribute'] = contributeSidebar;
                     return data;
                 },
             }) as any,
@@ -202,6 +218,8 @@ export default defineConfig({
                             // The Introduction already lists every config page
                             // under its "Config reference" group.
                             if (key === '/config/' || key === '/config') return false;
+                            // The Introduction already lists the contribute pages.
+                            if (key === '/contribute/' || key === '/contribute') return false;
                             // The LLMs page only mirrors the guide navigation.
                             if (key === '/llms' || key === '/llms.html') return false;
                             if (seen.has(value)) return false;
@@ -255,6 +273,7 @@ export default defineConfig({
             { text: 'Guide', link: '/guide/' },
             { text: 'Config', link: '/config/' },
             { text: 'Migrations', link: '/guide/migrations/' },
+            { text: 'Contribute', link: '/contribute/' },
             {
                 text: `v${pkg.version}`,
                 items: [
