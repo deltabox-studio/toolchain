@@ -4,74 +4,28 @@
  *
  *   yarn config:docs
  *
- * The CLI page is derived from the same `ToolchainCommand` descriptors the CLI
- * registers, and the env page from the config schemas' `ConfigMeta` (`.meta()`).
+ * All three pages go through `engine.markdown`: the CLI page from the same
+ * `ToolchainCommand` descriptors the CLI registers, and the env page from the
+ * config schemas' `ConfigMeta` (`.meta()`).
  */
 
-import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { collectDefinitions, generateCliDocs } from '@deltabox/toolchain/config';
+import { createConfigEngine } from '@deltabox/toolchain/config';
 import { toolchainConfigSchema } from '@deltabox/toolchain/shared';
 
 import { builtinCommands } from '../src/cli/index.js';
 
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const docsDir = path.join(root, 'apps', 'docs', 'config');
+const engine = createConfigEngine({
+    schema: { toolchain: toolchainConfigSchema },
+    envPrefix: 'DBX_',
+    root,
+});
 
-/** Escape raw `<`/`>` so Vue does not parse option placeholders as tags. */
-function esc(value: string): string {
-    return value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\|/g, '\\|');
-}
-
-function renderEnv(): string {
-    const vars = collectDefinitions(
-        { toolchain: toolchainConfigSchema },
-        { envPrefix: 'DBX_' }
-    ).filter(variable => variable.name);
-    const lines = [
-        '---',
-        'title: Environment variables',
-        'outline: [2, 3]',
-        '---',
-        '',
-        '# Environment variables',
-        '',
-        'The toolchain config is file/CLI backed; a schema leaf opts into an',
-        'environment variable with `.meta({ env: "..." })` (see the',
-        '[Config Generator](/guide/config-generator/describe-a-scope)).',
-        '',
-    ];
-    if (vars.length === 0) {
-        lines.push('No environment-backed toolchain settings are declared.');
-    } else {
-        lines.push(
-            '| Variable | Scope | Default | Description |',
-            '| -------- | ----- | ------- | ----------- |'
-        );
-        for (const variable of vars) {
-            lines.push(
-                `| \`${variable.name}\` | ${variable.scope} | ${variable.default === undefined ? '—' : `\`${String(variable.default)}\``} | ${esc(variable.description ?? '')} |`
-            );
-        }
-    }
-    return `${lines.join('\n').trimEnd()}\n`;
-}
-
-function renderIndex(): string {
-    return `---
-title: Config types
-outline: [2, 3]
----
-
-# Config types
-
-The toolchain has three configuration surfaces, all derived from the same Zod
+const indexBody = `The toolchain has three configuration surfaces, all derived from the same Zod
 model:
 
 - **Programmatic** — \`defineConfig({ toolchain: { ... } })\` in
@@ -90,21 +44,20 @@ JSON Schema is [config.schema.json](https://toolchain.deltabox.studio/config.sch
 
 Every generated page uses the same \`ConfigMeta\` fields: \`description\`,
 \`required\`, \`deprecated\`, \`example\`, \`secret\`, \`scope\`, \`public\`,
-\`defaultValue\`, the env fields \`envName\`, \`envPath\` and more.
-`;
-}
+\`defaultValue\`, the env fields \`envName\`, \`envPath\` and more.`;
 
-fs.mkdirSync(docsDir, { recursive: true });
-fs.writeFileSync(path.join(docsDir, 'index.md'), renderIndex(), 'utf-8');
-fs.writeFileSync(
-    path.join(docsDir, 'cli.md'),
-    generateCliDocs(builtinCommands(), {
-        intro: [
-            'Generated from the same `ToolchainCommand` descriptors the `dbx` binary',
-            'registers. Run `yarn config:docs` after changing a command.',
-        ].join('\n'),
-    }),
-    'utf-8'
-);
-fs.writeFileSync(path.join(docsDir, 'env.md'), renderEnv(), 'utf-8');
+engine.markdown.file.write({
+    output: path.join(docsDir, 'index.md'),
+    title: 'Config types',
+    body: indexBody,
+});
+engine.markdown.cli.write(builtinCommands(), {
+    output: path.join(docsDir, 'cli.md'),
+    intro: [
+        'Generated from the same `ToolchainCommand` descriptors the `dbx` binary',
+        'registers. Run `yarn config:docs` after changing a command.',
+    ].join('\n'),
+});
+engine.markdown.env.write({ output: path.join(docsDir, 'env.md') });
+
 console.log('Generated apps/docs/config/{index,cli,env}.md');

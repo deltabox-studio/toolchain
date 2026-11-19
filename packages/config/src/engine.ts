@@ -6,6 +6,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import type { ToolchainCommand } from '@deltabox/toolchain/shared';
+
 import { collectDefinitions, DEFAULT_ENV_PREFIX } from './collect.js';
 import { type BuildConfigJsonOptions, buildConfigJson, type ConfigJsonDoc } from './config-json.js';
 import {
@@ -13,6 +15,7 @@ import {
     type GenerateCliOptionsOptions,
     generateCliOptions,
 } from './generators/cli.js';
+import { type GenerateCliDocsOptions, generateCliDocs } from './generators/commands.js';
 import { type EnvFileOptions, generateEnvFile } from './generators/env-file.js';
 import { type GenerateEnvTypesOptions, generateConfigEnv } from './generators/env.js';
 import {
@@ -20,7 +23,14 @@ import {
     generateConfigJsonSchema,
     generateJsonSchemaFile,
 } from './generators/json.js';
-import { type GenerateMarkdownOptions, generateConfigMarkdown } from './generators/markdown.js';
+import {
+    type GenerateEnvMarkdownOptions,
+    type GenerateMarkdownFileOptions,
+    type GenerateMarkdownOptions,
+    generateConfigMarkdown,
+    generateEnvMarkdown,
+    generateMarkdownFile,
+} from './generators/markdown.js';
 import { type GenerateTypesOptions, generateConfigTypes } from './generators/types.js';
 import { findProjectRoot } from './root.js';
 import type {
@@ -99,6 +109,31 @@ export interface ConfigEngineTypes<TSchema extends ConfigSchema = ConfigSchema> 
 }
 
 /** Markdown reference generation. */
+/** Rendered markdown pages for CLI commands, env vars and single files. */
+export interface ConfigEngineMarkdownCli {
+    /** Render the command reference page. */
+    generate(commands: readonly ToolchainCommand[], options?: GenerateCliDocsOptions): string;
+    /** Render and write the command reference page; returns the written path. */
+    write(
+        commands: readonly ToolchainCommand[],
+        options: GenerateCliDocsOptions & { output: string }
+    ): string;
+}
+
+export interface ConfigEngineMarkdownEnv {
+    /** Render the environment-variable reference page. */
+    generate(options?: GenerateEnvMarkdownOptions): string;
+    /** Render and write the environment-variable page; returns the written path. */
+    write(options: GenerateEnvMarkdownOptions & { output: string }): string;
+}
+
+export interface ConfigEngineMarkdownFile {
+    /** Render one markdown page with frontmatter and a title. */
+    generate(options: GenerateMarkdownFileOptions): string;
+    /** Render and write one markdown page; returns the written path. */
+    write(options: GenerateMarkdownFileOptions & { output: string }): string;
+}
+
 export interface ConfigEngineMarkdown<TSchema extends ConfigSchema = ConfigSchema> {
     /** Render the markdown reference files, keyed by file name. */
     generate<const O extends ConfigMarkdownOptions<TSchema> = {}>(
@@ -106,6 +141,12 @@ export interface ConfigEngineMarkdown<TSchema extends ConfigSchema = ConfigSchem
     ): Record<MarkdownFileKeys<TSchema, O>, string>;
     /** Render and write the markdown reference files; returns the written paths. */
     write(options: ConfigMarkdownOptions<TSchema> & { outputDir: string }): string[];
+    /** Command reference docs. */
+    cli: ConfigEngineMarkdownCli;
+    /** Environment-variable reference docs. */
+    env: ConfigEngineMarkdownEnv;
+    /** A single generic markdown page. */
+    file: ConfigEngineMarkdownFile;
 }
 
 /** CLI option definition generation. */
@@ -132,6 +173,8 @@ export interface ConfigEngineJsonSchemaDoc<TScope extends string = string> {
     properties: Record<TScope, unknown>;
     /** The scopes the document requires (empty: config sections are opt-in by presence). */
     required: TScope[];
+    /** Reusable definitions when `preserveDefs` is enabled. */
+    $defs?: Record<string, unknown>;
 }
 
 /** JSON Schema document generation. */
@@ -222,6 +265,13 @@ export function createConfigEngine<const TSchema extends ConfigSchema>(
             ...opts,
         }) as unknown as Promise<ConfigEngineJsonSchemaDoc<ConfigScopeKeys<TSchema>>>;
 
+    const writeText = (output: string, content: string): string => {
+        const file = path.resolve(root, output);
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, content, 'utf-8');
+        return file;
+    };
+
     return {
         schema,
         envPrefix,
@@ -263,6 +313,29 @@ export function createConfigEngine<const TSchema extends ConfigSchema>(
             write: opts => {
                 const contents = generateMarkdown(opts);
                 return Object.keys(contents).map(file => path.join(opts.outputDir, file));
+            },
+            cli: {
+                generate: (commands, opts) => generateCliDocs(commands, opts),
+                write: (commands, opts) => {
+                    const { output, ...rest } = opts;
+                    return writeText(output, generateCliDocs(commands, rest));
+                },
+            },
+            env: {
+                generate: opts =>
+                    generateEnvMarkdown(collectDefinitions(schema, { envPrefix, envPathOf }), opts),
+                write: opts => {
+                    const { output, ...rest } = opts;
+                    const definitions = collectDefinitions(schema, { envPrefix, envPathOf });
+                    return writeText(output, generateEnvMarkdown(definitions, rest));
+                },
+            },
+            file: {
+                generate: opts => generateMarkdownFile(opts),
+                write: opts => {
+                    const { output, ...rest } = opts;
+                    return writeText(output, generateMarkdownFile(rest));
+                },
             },
         },
         cli: {

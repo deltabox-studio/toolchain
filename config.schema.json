@@ -1,13 +1,194 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$ref": "#/$defs/DbxConfigSections",
+    "$id": "https://deltabox.studio/schemas/dbx.config.json",
+    "title": "dbx.config",
+    "description": "The dbx configuration model (the @deltabox/toolchain settings live under `toolchain`).",
+    "type": "object",
+    "properties": {
+        "toolchain": {
+            "$ref": "#/$defs/ToolchainConfigSections",
+            "description": "The `@deltabox/toolchain` settings (every section is opt-in by presence)."
+        }
+    },
+    "additionalProperties": false,
     "$defs": {
-        "DbxConfigSections": {
+        "ToolchainConfigSections": {
             "type": "object",
             "properties": {
-                "toolchain": {
-                    "description": "The `@deltabox/toolchain` settings (every section is opt-in by presence).",
-                    "$ref": "#/$defs/ToolchainConfigSections"
+                "enabled": {
+                    "$ref": "#/$defs/ToolchainEnabledConfig"
+                },
+                "project": {
+                    "description": "Project metadata: canonical `package.json` fields and template tokens (inherited by workspaces).",
+                    "$ref": "#/$defs/ToolchainProjectConfig"
+                },
+                "ci": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainCiConfig"
+                        }
+                    ],
+                    "description": "GitHub Actions workflows to generate (CI, release, issues, changelog, sync)."
+                },
+                "changelog": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ChangelogConfig"
+                        }
+                    ],
+                    "description": "Manual changelog pipeline options for `dbx changelog`, the VS Code actions and the API. `ci.changelog` inherits these options."
+                },
+                "fmt": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainFmtConfig"
+                        }
+                    ],
+                    "description": "Formatter configuration: Oxc/Biome options, editor defaults and tools."
+                },
+                "lint": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainLintConfig"
+                        }
+                    ],
+                    "description": "Linter configuration: Oxc/Biome/ESLint options and editor defaults."
+                },
+                "biome": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainBiomeConfig"
+                        }
+                    ],
+                    "description": "Biome config generation (for consumers that still want a `biome.json`)."
+                },
+                "tsconfig": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainTsconfigConfig"
+                        }
+                    ],
+                    "description": "Workspace tsconfig generation (path aliases + project references)."
+                },
+                "loader": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainLoaderConfig"
+                        }
+                    ],
+                    "description": "How `dbx.config.*` files are imported (tsconfig discovery)."
+                },
+                "templates": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainTemplatesConfig"
+                        }
+                    ],
+                    "description": "Template sources / scaffolding."
+                },
+                "registry": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainRegistryConfig"
+                        }
+                    ],
+                    "description": "Allow/deny host and path globs for template/provider registries."
+                },
+                "catalogs": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainCatalogsConfig"
+                        }
+                    ],
+                    "description": "Package catalogs written to the package manager catalog file (`catalog:`)."
+                },
+                "vite": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainViteConfig"
+                        }
+                    ],
+                    "description": "The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it."
+                },
+                "watch": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainWatchConfig"
+                        }
+                    ],
+                    "description": "Watch behaviour for `dbx watch`."
+                },
+                "sync": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainSyncConfig"
+                        }
+                    ],
+                    "description": "`dbx sync` behaviour (formatting of the generated managed files)."
+                },
+                "logger": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainLoggerConfig"
+                        }
+                    ],
+                    "description": "Logging level, colours and prefix for toolchain output."
+                },
+                "providers": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "$ref": "#/$defs/ToolchainProvidersConfig"
+                        }
+                    ],
+                    "description": "Provider command behaviour (eg. colour for the passthrough commands)."
+                },
+                "hooks": {
+                    "$ref": "#/$defs/ToolchainHooks"
                 }
             },
             "additionalProperties": false
@@ -3640,190 +3821,7 @@
             },
             "additionalProperties": false,
             "description": "Lifecycle hooks (functions; TS/JS configs only). Return values are awaited."
-        },
-        "ToolchainConfigSections": {
-            "type": "object",
-            "properties": {
-                "enabled": {
-                    "$ref": "#/$defs/ToolchainEnabledConfig"
-                },
-                "project": {
-                    "description": "Project metadata: canonical `package.json` fields and template tokens (inherited by workspaces).",
-                    "$ref": "#/$defs/ToolchainProjectConfig"
-                },
-                "ci": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainCiConfig"
-                        }
-                    ],
-                    "description": "GitHub Actions workflows to generate (CI, release, issues, changelog, sync)."
-                },
-                "changelog": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ChangelogConfig"
-                        }
-                    ],
-                    "description": "Manual changelog pipeline options for `dbx changelog`, the VS Code actions and the API. `ci.changelog` inherits these options."
-                },
-                "fmt": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainFmtConfig"
-                        }
-                    ],
-                    "description": "Formatter configuration: Oxc/Biome options, editor defaults and tools."
-                },
-                "lint": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainLintConfig"
-                        }
-                    ],
-                    "description": "Linter configuration: Oxc/Biome/ESLint options and editor defaults."
-                },
-                "biome": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainBiomeConfig"
-                        }
-                    ],
-                    "description": "Biome config generation (for consumers that still want a `biome.json`)."
-                },
-                "tsconfig": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainTsconfigConfig"
-                        }
-                    ],
-                    "description": "Workspace tsconfig generation (path aliases + project references)."
-                },
-                "loader": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainLoaderConfig"
-                        }
-                    ],
-                    "description": "How `dbx.config.*` files are imported (tsconfig discovery)."
-                },
-                "templates": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainTemplatesConfig"
-                        }
-                    ],
-                    "description": "Template sources / scaffolding."
-                },
-                "registry": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainRegistryConfig"
-                        }
-                    ],
-                    "description": "Allow/deny host and path globs for template/provider registries."
-                },
-                "catalogs": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainCatalogsConfig"
-                        }
-                    ],
-                    "description": "Package catalogs written to the package manager catalog file (`catalog:`)."
-                },
-                "vite": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainViteConfig"
-                        }
-                    ],
-                    "description": "The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it."
-                },
-                "watch": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainWatchConfig"
-                        }
-                    ],
-                    "description": "Watch behaviour for `dbx watch`."
-                },
-                "sync": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainSyncConfig"
-                        }
-                    ],
-                    "description": "`dbx sync` behaviour (formatting of the generated managed files)."
-                },
-                "logger": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainLoggerConfig"
-                        }
-                    ],
-                    "description": "Logging level, colours and prefix for toolchain output."
-                },
-                "providers": {
-                    "anyOf": [
-                        {
-                            "type": "boolean"
-                        },
-                        {
-                            "$ref": "#/$defs/ToolchainProvidersConfig"
-                        }
-                    ],
-                    "description": "Provider command behaviour (eg. colour for the passthrough commands)."
-                },
-                "hooks": {
-                    "$ref": "#/$defs/ToolchainHooks"
-                }
-            },
-            "additionalProperties": false
         }
     },
-    "$id": "https://deltabox.studio/schemas/dbx.config.json",
-    "title": "dbx.config",
-    "description": "The dbx configuration model (the @deltabox/toolchain settings live under `toolchain`)."
+    "required": []
 }

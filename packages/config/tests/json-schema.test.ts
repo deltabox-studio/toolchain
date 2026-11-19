@@ -94,6 +94,54 @@ describe('generated config JSON Schema', () => {
         expect(doc.required).toEqual([]);
     });
 
+    it('inlines root refs for a schema with a meta id', async () => {
+        const root = z
+            .object({
+                server: z.object({
+                    port: z.number(),
+                    nested: z.object({ token: z.string().optional() }),
+                }),
+            })
+            .meta({ id: 'RootWithId' });
+        const doc = await generateConfigJsonSchema({ config: root });
+        const node = (doc.properties as Record<string, Record<string, unknown>>).config!;
+        const serialized = JSON.stringify(node);
+
+        expect(serialized).not.toContain('"$defs"');
+        expect(serialized).not.toContain('"$schema"');
+        expect(serialized).not.toContain('"$ref"');
+        expect(
+            (node.properties as Record<string, any>).server.properties.nested.properties.token
+        ).toBeDefined();
+    });
+
+    it('preserves document-level defs and scope descriptions', async () => {
+        const scoped = z
+            .object({
+                port: z.number(),
+                nested: z.object({ token: z.string().optional() }),
+            })
+            .meta({ id: 'ServerWithId' });
+        const doc = await generateConfigJsonSchema(
+            { server: scoped },
+            {
+                preserveDefs: true,
+                scopeDescriptions: { server: 'Server options.' },
+            }
+        );
+
+        expect(doc.$defs).toBeDefined();
+        expect(JSON.stringify(doc).match(/"\$schema"/g)).toHaveLength(1);
+        expect(serverNode(doc)).toMatchObject({
+            $ref: '#/$defs/ServerWithId',
+            description: 'Server options.',
+        });
+
+        const validate = createAjv().compile(doc);
+        expect(validate({ server: { port: 1, nested: { token: 'x' } } })).toBe(true);
+        expect(validate({ server: { port: 'nope' } })).toBe(false);
+    });
+
     it('preserves unions, enums, literals, tuples, records and nullable fields', async () => {
         const server = serverNode(await generateConfigJsonSchema({ server: schema }));
         const properties = server.properties as Record<string, Record<string, unknown>>;

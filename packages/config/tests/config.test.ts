@@ -363,6 +363,51 @@ describe('createConfigEngine', () => {
         ).toEqualTypeOf<Record<'types.ts' | 'types.d.ts', string>>();
     });
 
+    it('renders docs through engine.markdown', () => {
+        const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-engine-docs-'));
+        try {
+            const engine = createConfigEngine({ schema: z.object({}), root: cwd });
+            const file = engine.markdown.file.generate({ title: 'Docs', body: 'Hello.' });
+            expect(file).toContain('# Docs');
+            expect(file).toContain('Hello.');
+
+            const cli = engine.markdown.cli.generate([
+                {
+                    name: 'sync',
+                    description: 'Regenerate managed files.',
+                    run: () => {},
+                    options: [
+                        { flags: '--check', description: 'Report drift instead of writing.' },
+                    ],
+                },
+                {
+                    name: 'hidden',
+                    description: 'Not documented.',
+                    run: () => {},
+                    hidden: true,
+                },
+            ]);
+            expect(cli).toContain('# CLI reference');
+            expect(cli).toContain('`dbx sync`');
+            expect(cli).toContain('`--check`');
+            expect(cli).not.toContain('dbx hidden');
+
+            const env = engine.markdown.env.generate();
+            expect(env).toContain('# Environment variables');
+            expect(env).toContain('No environment-backed toolchain settings');
+
+            const written = engine.markdown.file.write({
+                output: 'docs/index.md',
+                title: 'Index',
+                body: 'Body.',
+            });
+            expect(written).toBe(path.join(cwd, 'docs', 'index.md'));
+            expect(fs.readFileSync(written, 'utf8')).toContain('# Index');
+        } finally {
+            fs.rmSync(cwd, { recursive: true, force: true });
+        }
+    });
+
     it('narrows scope options', () => {
         const engine = createConfigEngine({
             schema: {

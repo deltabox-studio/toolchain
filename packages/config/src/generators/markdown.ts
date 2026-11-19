@@ -18,7 +18,7 @@ import {
     splitBaseSchema,
     toJsonSchemaSafe,
 } from '../schema.js';
-import type { ConfigEngineOptions, ConfigSchema } from '../types/index.js';
+import type { ConfigDef, ConfigEngineOptions, ConfigSchema } from '../types/index.js';
 import { type CliFlagOptions, cliFlagLabel } from './cli.js';
 import { resolveGeneratedFile } from './output.js';
 
@@ -82,6 +82,26 @@ export interface GenerateMarkdownOptions extends RenderMarkdownOptions {
     title?: string;
     /** Index file name (defaults to `index.md`). */
     indexFilename?: string;
+}
+
+/** Options for a single generated markdown page. */
+export interface GenerateMarkdownFileOptions {
+    /** Page title (frontmatter and `#` heading). */
+    title: string;
+    /** Frontmatter outline levels (default `[2, 3]`). */
+    outline?: number[];
+    /** Page body, rendered below the title. */
+    body: string;
+}
+
+/** Options for the environment-variable reference page. */
+export interface GenerateEnvMarkdownOptions {
+    /** Page title (default `Environment variables`). */
+    title?: string;
+    /** Frontmatter outline levels (default `[2, 3]`). */
+    outline?: number[];
+    /** Intro markdown rendered below the title. */
+    intro?: string;
 }
 
 interface EnvVarRow {
@@ -444,6 +464,61 @@ ${coreNote}
 
 ${table(core)}
 ${references}`;
+}
+
+/** Render a single markdown page with frontmatter and a title. */
+export function generateMarkdownFile(options: GenerateMarkdownFileOptions): string {
+    const outline = options.outline ?? [2, 3];
+    const parts = [
+        ...frontmatterLines({}, options.title, outline),
+        `# ${options.title}`,
+        '',
+        options.body.trim(),
+    ];
+    return `${parts.join('\n').trimEnd()}\n`;
+}
+
+/** Escape a table cell so Vue/Markdown do not parse its content as markup. */
+function escapeTableCell(value: string): string {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\|/g, '\\|')
+        .replace(/\n/g, ' ');
+}
+
+/** Render the environment-variable reference page from collected config defs. */
+export function generateEnvMarkdown(
+    vars: readonly ConfigDef[],
+    options: GenerateEnvMarkdownOptions = {}
+): string {
+    const title = options.title ?? 'Environment variables';
+    const outline = options.outline ?? [2, 3];
+    const intro =
+        options.intro ??
+        [
+            'The toolchain config is file/CLI backed; a schema leaf opts into an',
+            'environment variable with `.meta({ env: "..." })` (see the',
+            '[Config Generator](/guide/config-generator/describe-a-scope)).',
+        ].join('\n');
+    const rows = vars.filter(variable => variable.name);
+    const parts = [...frontmatterLines({}, title, outline), `# ${title}`, '', intro, ''];
+    if (rows.length === 0) {
+        parts.push('No environment-backed toolchain settings are declared.');
+    } else {
+        parts.push(
+            '| Variable | Scope | Default | Description |',
+            '| -------- | ----- | ------- | ----------- |',
+            ...rows.map(
+                variable =>
+                    `| \`${variable.name}\` | ${variable.scope} | ${
+                        variable.default === undefined ? '—' : formatDefault(variable.default)
+                    } | ${escapeTableCell(variable.description ?? '')} |`
+            )
+        );
+    }
+    return `${parts.join('\n').trimEnd()}\n`;
 }
 
 /**

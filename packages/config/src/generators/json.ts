@@ -50,12 +50,28 @@ function inlineJsonRefs(
             }
             const target = defs[name];
             if (target && !seen.has(name)) {
-                const { $ref: _ref, ...rest } = node;
+                // A schema with a `meta({ id })` is emitted as a root `$ref`
+                // plus a `$defs` table. Drop that document-level metadata too,
+                // so the inlined node is self-contained (a nested `$schema` is
+                // invalid and the leftover table bloats the document).
+                const {
+                    $ref: _ref,
+                    $schema: _schema,
+                    $defs: _defs,
+                    definitions: _definitions,
+                    ...rest
+                } = node;
                 const inlined = inlineJsonRefs(target, defs, new Set([...seen, name]));
                 return { ...(isJsonNode(inlined) ? inlined : {}), ...rest };
             }
         }
-        const { $ref: _ref, ...rest } = node;
+        const {
+            $ref: _ref,
+            $schema: _schema,
+            $defs: _defs,
+            definitions: _definitions,
+            ...rest
+        } = node;
         return rest;
     }
     const out: JsonNode = {};
@@ -115,18 +131,34 @@ function cloneJsonNode(value: unknown): unknown {
     );
 }
 
-/** Lower one scope to a self-contained JSON Schema node. */
-function toJsonScope(value: ConfigSchemaInput, baseGroup: string): JsonNode {
+/** Lower one scope to a JSON Schema node, plus its `$defs` when refs are preserved. */
+function toJsonScope(
+    value: ConfigSchemaInput,
+    baseGroup: string,
+    preserveDefs: boolean
+): { node: JsonNode; defs: Record<string, JsonNode> } {
     if (isZodSchema(value)) {
         const json = toJsonSchemaSafe(value, {
             unrepresentable: 'any',
         }) as JsonNode;
         const defs = isJsonNode(json.$defs) ? (json.$defs as Record<string, JsonNode>) : {};
+        if (preserveDefs) {
+            // Keep the `$ref` graph; the caller hoists `$defs` to the document
+            // root so every `#/$defs/...` reference stays valid.
+            const { $schema: _schema, $defs: _defs, ...rest } = json;
+            return { node: flattenBaseJsonSchema(rest, baseGroup), defs };
+        }
         const inlined = inlineJsonRefs(json, defs);
-        return flattenBaseJsonSchema(isJsonNode(inlined) ? inlined : {}, baseGroup);
+        return {
+            node: flattenBaseJsonSchema(isJsonNode(inlined) ? inlined : {}, baseGroup),
+            defs: {},
+        };
     }
     const schema = cloneJsonNode(value) as unknown as Schema;
-    return flattenBaseSchema(schema, baseGroup) as unknown as JsonNode;
+    return {
+        node: flattenBaseSchema(schema, baseGroup) as unknown as JsonNode,
+        defs: {},
+    };
 }
 
 /** Normalize any supported schema shape into JSON-Schema scope inputs. */
@@ -155,6 +187,16 @@ export interface GenerateJsonSchemaOptions extends Pick<ConfigEngineOptions, 'ba
      * opt-in by presence, so an empty config remains valid.
      */
     requiredScopes?: string[];
+    /**
+     * Keep Zod's document-level `$ref`/`$defs` graph instead of inlining every
+     * reference into its scope (default false). The `$defs` tables are hoisted
+     * to the document root so the references stay valid.
+     */
+    preserveDefs?: boolean;
+    /** Descriptions for the generated scope properties, keyed by scope name. */
+    scopeDescriptions?: Record<string, string>;
+    /** Set the document root's `additionalProperties` constraint. */
+    additionalProperties?: boolean;
 }
 
 /**
@@ -175,11 +217,22 @@ export async function generateConfigJsonSchema(
         : String(options.baseGroup ?? 'base');
     const scopes = jsonSchemaScopes(schema);
     const properties: Record<string, unknown> = {};
+    const defs: Record<string, JsonNode> = {};
+    const preserveDefs = options.preserveDefs === true;
     for (const [scope, value] of Object.entries(scopes)) {
-        const node = Array.isArray(value)
-            ? mergeJsonSchemas(value.map(item => toJsonScope(item, baseGroup)))
-            : toJsonScope(value, baseGroup);
-        normalizeJsonSchemaMetadata(node);
+        const lowered = Array.isArray(value)
+            ? (() => {
+                  const items = value.map(item => toJsonScope(item, baseGroup, preserveDefs));
+                  return {
+                      node: mergeJsonSchemas(items.map(item => item.node)),
+                      defs: Object.assign({}, ...items.map(item => item.defs)),
+                  };
+              })()
+            : toJsonScope(value, baseGroup, preserveDefs);
+        const node = lowered.node;
+        if (preserveDefs) Object.assign(defs, lowered.defs);
+        const description = options.scopeDescriptions?.[scope];
+        if (description) node.description = description;
         properties[scope] = node;
     }
 
@@ -191,8 +244,16 @@ export async function generateConfigJsonSchema(
             options.description ?? 'Every env-var-backed configuration value across all scopes.',
         type: 'object',
         properties,
+        ...(options.additionalProperties !== undefined
+            ? { additionalProperties: options.additionalProperties }
+            : {}),
         required: options.requiredScopes ?? [],
+        ...(options.preserveDefs && Object.keys(defs).length > 0 ? { $defs: defs } : {}),
     };
+    normalizeJsonSchemaMetadata(doc);
+    // Normalization drops empty `required` arrays; the engine contract keeps an
+    // explicit (usually empty) scope list.
+    doc.required = options.requiredScopes ?? [];
 
     if (typeof options.output === 'string') {
         fs.mkdirSync(path.dirname(options.output), { recursive: true });
