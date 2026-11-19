@@ -1,8 +1,27 @@
 # Changelog
 
-## 3.0.0-beta.1 (November 2026)
+## 3.0.0-beta.2 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Chores</summary>
+
+#### Deps
+- Sync the scaffold vite-plugin-dbx catalog ([#b9a87dc](https://github.com/deltabox-studio/toolchain/commit/b9a87dc) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+### Package changes
+
+#### Updated
+- `@deltabox/toolchain`
+  - `vite-plugin-dbx` `^2.6.1` → `^3.0.0-beta.1`
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.1 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -11,9 +30,6 @@
 - Load build configs on a clean checkout ([#22812b8](https://github.com/deltabox-studio/toolchain/commit/22812b8) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.0 (November 2026)
 
