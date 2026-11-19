@@ -950,6 +950,7 @@ export type ChangelogWorkflowSetting =
     | AzureWorkflowSetting
     | CiChangelogConfig;
 
+/** @see https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file */
 export interface ToolchainDependabotConfig {
     /**
      * Dependabot update interval.
@@ -1427,6 +1428,7 @@ export interface ToolchainTsconfigOverrides {
     root?: TsConfigJson;
 }
 
+/** @see https://tsx.is */
 export interface ToolchainLoaderConfig {
     /**
      * The tsconfig the config loader uses. `true` selects the nearest `tsconfig.json`; a string

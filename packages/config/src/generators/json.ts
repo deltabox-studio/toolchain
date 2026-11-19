@@ -82,16 +82,34 @@ function inlineJsonRefs(
     return out;
 }
 
+/** Resolve a local `$ref` (`#/$defs/Name`) against the scope definitions. */
+function resolveLocalRef(node: JsonNode | undefined, defs: Record<string, JsonNode>): JsonNode {
+    if (!node) return {};
+    const ref = typeof node.$ref === 'string' ? node.$ref : undefined;
+    if (!ref?.startsWith('#/$defs/')) return node;
+    return defs[ref.slice('#/$defs/'.length)] ?? node;
+}
+
 /** The JSON Schema equivalent of {@link flattenBaseSchema}. */
-function flattenBaseJsonSchema(node: JsonNode, baseGroup: string): JsonNode {
+export function flattenBaseJsonSchema(
+    node: JsonNode,
+    baseGroup: string,
+    defs: Record<string, JsonNode> = {}
+): JsonNode {
     const properties = node.properties;
     if (!isJsonNode(properties)) return node;
-    const base = properties[baseGroup];
+    const base = resolveLocalRef(properties[baseGroup] as JsonNode, defs);
     if (!isJsonNode(base) || base.type !== 'object' || !isJsonNode(base.properties)) return node;
     const { [baseGroup]: _base, ...rest } = properties;
+    // Only promote the base children when `base` itself is required; otherwise
+    // an omitted base (allowed by Zod) would still require its children.
+    const baseRequired =
+        Array.isArray(node.required) && node.required.some(name => String(name) === baseGroup);
     const required = [
-        ...(Array.isArray(node.required) ? node.required : []),
-        ...(Array.isArray(base.required) ? base.required : []),
+        ...(Array.isArray(node.required)
+            ? node.required.filter(name => String(name) !== baseGroup)
+            : []),
+        ...(baseRequired && Array.isArray(base.required) ? base.required : []),
     ];
     const out: JsonNode = {
         ...node,
@@ -144,9 +162,21 @@ function toJsonScope(
         const defs = isJsonNode(json.$defs) ? (json.$defs as Record<string, JsonNode>) : {};
         if (preserveDefs) {
             // Keep the `$ref` graph; the caller hoists `$defs` to the document
-            // root so every `#/$defs/...` reference stays valid.
+            // root so every `#/$defs/...` reference stays valid. Flatten the
+            // referenced definition too, otherwise the editor schema keeps the
+            // nested `base` object while types/markdown expose it flat.
             const { $schema: _schema, $defs: _defs, ...rest } = json;
-            return { node: flattenBaseJsonSchema(rest, baseGroup), defs };
+            const refName =
+                typeof rest.$ref === 'string' && rest.$ref.startsWith('#/$defs/')
+                    ? rest.$ref.slice('#/$defs/'.length)
+                    : undefined;
+            if (refName && defs[refName]) {
+                defs[refName] = flattenBaseJsonSchema(defs[refName], baseGroup, defs);
+            }
+            return {
+                node: flattenBaseJsonSchema(rest as JsonNode, baseGroup, defs),
+                defs,
+            };
         }
         const inlined = inlineJsonRefs(json, defs);
         return {
@@ -218,6 +248,7 @@ export async function generateConfigJsonSchema(
     const scopes = jsonSchemaScopes(schema);
     const properties: Record<string, unknown> = {};
     const defs: Record<string, JsonNode> = {};
+    const defScopes: Record<string, string> = {};
     const preserveDefs = options.preserveDefs === true;
     for (const [scope, value] of Object.entries(scopes)) {
         const lowered = Array.isArray(value)
@@ -230,7 +261,18 @@ export async function generateConfigJsonSchema(
               })()
             : toJsonScope(value, baseGroup, preserveDefs);
         const node = lowered.node;
-        if (preserveDefs) Object.assign(defs, lowered.defs);
+        if (preserveDefs) {
+            for (const [name, definition] of Object.entries(lowered.defs)) {
+                const existing = defs[name];
+                if (existing && JSON.stringify(existing) !== JSON.stringify(definition)) {
+                    throw new Error(
+                        `duplicate $defs id "${name}" across scopes "${defScopes[name]}" and "${scope}".`
+                    );
+                }
+                defs[name] = definition as JsonNode;
+                defScopes[name] = scope;
+            }
+        }
         const description = options.scopeDescriptions?.[scope];
         if (description) node.description = description;
         properties[scope] = node;

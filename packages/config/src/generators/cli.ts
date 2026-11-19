@@ -12,6 +12,7 @@ import { formatCliFlag } from '@deltabox/toolchain/shared';
 
 import { type CollectOptions, collectDefinitions, DEFAULT_ENV_PREFIX } from '../collect.js';
 import type { ConfigSchema } from '../types/index.js';
+import { isEnvVariable } from './env-file.js';
 
 /** Flag-shaping options shared by every CLI helper. */
 export interface CliFlagOptions {
@@ -81,7 +82,7 @@ export function generateCliOptions(
     for (const def of collectDefinitions(schema, {
         envPrefix: options.envPrefix,
         envPathOf: options.envPathOf,
-    }).filter(v => v.scope === scope && (v.name || v.cliFlag))) {
+    }).filter(v => v.scope === scope && (v.name || v.cliFlag) && isEnvVariable(v))) {
         const short = def.meta?.cliFlagShort
             ? `-${def.meta.cliFlagShort.replace(/^-/, '')}`
             : cliShortOf(def.name ?? '', options);

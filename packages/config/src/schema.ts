@@ -486,14 +486,19 @@ function jsonNodeToDefinition(
                 description: node.description,
             };
         }
-        const meta = nodeMeta(node, defs);
-        if (meta.deprecated !== undefined || meta.example !== undefined) {
-            out.$schema = { ...(out.$schema as object | undefined), ...meta };
-        }
+        // Object-level metadata (since/see/secret/env/...) must survive just like
+        // it does on leaves; only spreading it for deprecated/example was a bug.
+        out.$schema = {
+            ...(out.$schema as object | undefined),
+            ...nodeMeta(node, defs),
+            ...(node.scope ? { scope: node.scope } : {}),
+            ...(node.secret ? { secret: true } : {}),
+            ...(node.public ? { public: true } : {}),
+        };
         for (const [key, child] of Object.entries(node.properties)) {
             out[key] = jsonNodeToDefinition(
                 child,
-                (node.required as string[] | undefined)?.includes(key) ?? false,
+                Array.isArray(node.required) && (node.required as string[]).includes(key),
                 defs
             );
         }

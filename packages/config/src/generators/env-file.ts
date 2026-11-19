@@ -37,9 +37,13 @@ export function envNameOf(def: ConfigDef, envPrefix: string): string {
     return `${envPrefix}${pathOf(def).replace(/\./g, '_').toUpperCase()}`;
 }
 
-/** Whether a definition can be read from / written to an env var. */
+/**
+ * Whether a definition can be read from / written to an env var. Complex kinds
+ * are never env-addressable, even when they carry an explicit `envName`: their
+ * values cannot be represented and parsed back as a single env string.
+ */
 export function isEnvVariable(def: ConfigDef): boolean {
-    return def.name !== undefined || !COMPLEX_KINDS.has(def.kind ?? '');
+    return !COMPLEX_KINDS.has(def.kind ?? '');
 }
 
 function formatDefaultValue(def: ConfigDef): string {

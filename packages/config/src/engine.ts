@@ -233,7 +233,8 @@ export function createConfigEngine<const TSchema extends ConfigSchema>(
     const schema = options.schema;
     const envPrefix = options.envPrefix ?? DEFAULT_ENV_PREFIX;
     const baseGroup = options.baseGroup ?? 'base';
-    const root = options.root ?? findProjectRoot();
+    // Default to the consuming project, not the installed package directory.
+    const root = options.root ?? findProjectRoot(process.cwd());
     const envPathOf = options.envPathOf;
     const baseGroupName = Array.isArray(baseGroup)
         ? String((baseGroup as unknown[])[0] ?? 'base')
@@ -285,34 +286,38 @@ export function createConfigEngine<const TSchema extends ConfigSchema>(
         env: {
             generate: (opts = {}) => generateEnvFile(schema, { envPrefix, envPathOf, ...opts }),
             write: opts => {
+                const output = path.resolve(root, opts.output);
                 const content = generateEnvFile(schema, { envPrefix, envPathOf, ...opts });
-                fs.mkdirSync(path.dirname(opts.output), { recursive: true });
-                fs.writeFileSync(opts.output, content, 'utf-8');
-                return opts.output;
+                fs.mkdirSync(path.dirname(output), { recursive: true });
+                fs.writeFileSync(output, content, 'utf-8');
+                return output;
             },
             types: {
                 generate: generateEnvTypes,
                 write: opts => {
-                    const contents = generateEnvTypes(opts);
-                    return Object.keys(contents).map(file => path.join(opts.outputDir, file));
+                    const outputDir = path.resolve(root, opts.outputDir);
+                    const contents = generateEnvTypes({ ...opts, outputDir });
+                    return Object.keys(contents).map(file => path.join(outputDir, file));
                 },
             },
         },
         types: {
             generate: generateTypes,
             write: opts => {
-                const contents = generateTypes(opts);
+                const outputDir = path.resolve(root, opts.outputDir);
+                const contents = generateTypes({ ...opts, outputDir });
                 const extension = opts.extension ?? 'ts';
                 return Object.keys(contents).map(scope =>
-                    path.join(opts.outputDir, `${scope}.${extension}`)
+                    path.join(outputDir, `${scope}.${extension}`)
                 );
             },
         },
         markdown: {
             generate: generateMarkdown,
             write: opts => {
-                const contents = generateMarkdown(opts);
-                return Object.keys(contents).map(file => path.join(opts.outputDir, file));
+                const outputDir = path.resolve(root, opts.outputDir);
+                const contents = generateMarkdown({ ...opts, outputDir });
+                return Object.keys(contents).map(file => path.join(outputDir, file));
             },
             cli: {
                 generate: (commands, opts) => generateCliDocs(commands, opts),
@@ -323,11 +328,17 @@ export function createConfigEngine<const TSchema extends ConfigSchema>(
             },
             env: {
                 generate: opts =>
-                    generateEnvMarkdown(collectDefinitions(schema, { envPrefix, envPathOf }), opts),
+                    generateEnvMarkdown(collectDefinitions(schema, { envPrefix, envPathOf }), {
+                        envPrefix,
+                        ...opts,
+                    }),
                 write: opts => {
                     const { output, ...rest } = opts;
                     const definitions = collectDefinitions(schema, { envPrefix, envPathOf });
-                    return writeText(output, generateEnvMarkdown(definitions, rest));
+                    return writeText(
+                        output,
+                        generateEnvMarkdown(definitions, { envPrefix, ...rest })
+                    );
                 },
             },
             file: {
@@ -341,13 +352,19 @@ export function createConfigEngine<const TSchema extends ConfigSchema>(
         cli: {
             generate: generateCli,
             write: opts => {
-                generateCli({ ...opts, output: opts.output });
-                return opts.output;
+                const output = path.resolve(root, opts.output);
+                generateCli({ ...opts, output });
+                return output;
             },
         },
         jsonSchema: {
             generate: generateSchema,
-            write: opts => generateJsonSchemaFile(schema, { baseGroup: baseGroupName, ...opts }),
+            write: opts =>
+                generateJsonSchemaFile(schema, {
+                    baseGroup: baseGroupName,
+                    ...opts,
+                    output: path.resolve(root, opts.output),
+                }),
         },
         configJson: {
             build: (opts = {}) => buildConfigJson(schema, { envPrefix, envPathOf, ...opts }),

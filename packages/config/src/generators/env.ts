@@ -83,7 +83,14 @@ export function generateEnv(schema: ConfigSchema, options: GenerateEnvTypesOptio
 export function generateEnvDts(options: GenerateEnvTypesOptions = {}): string {
     const envInterface = options.envInterfaceName ?? 'AppEnv';
     const viteEnvInterface = options.viteEnvInterfaceName ?? 'AppViteEnv';
-    const importPath = options.importPath ?? './env.js';
+    // The ambient file imports the env module next to it; derive its name from
+    // a customized `envFile` so the generated types still compile.
+    const envBase = (options.envFile ?? 'env.ts')
+        .replace(/\\/g, '/')
+        .split('/')
+        .pop()!
+        .replace(/\.[^.]+$/, '');
+    const importPath = options.importPath ?? `./${envBase}.js`;
     const header = options.dtsHeader
         ? `${options.dtsHeader}\n`
         : `/**

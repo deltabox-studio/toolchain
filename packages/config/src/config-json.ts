@@ -3,7 +3,8 @@
  * tooling to list every available configuration variable.
  */
 
-import { type CollectOptions, collectDefinitions } from './collect.js';
+import { type CollectOptions, collectDefinitions, DEFAULT_ENV_PREFIX } from './collect.js';
+import { envNameOf, isEnvVariable } from './generators/env-file.js';
 import type { ConfigSchema } from './types/index.js';
 
 /** A serialized env var entry in `config.json`. */
@@ -39,17 +40,18 @@ export function buildConfigJson(
     schema: ConfigSchema,
     options: BuildConfigJsonOptions = {}
 ): ConfigJsonDoc {
+    const envPrefix = options.envPrefix ?? DEFAULT_ENV_PREFIX;
     const vars = collectDefinitions(schema, {
-        envPrefix: options.envPrefix,
+        envPrefix,
         envPathOf: options.envPathOf,
-    }).filter(def => def.name);
+    }).filter(isEnvVariable);
     return {
         $comment:
             options.comment ??
             'Generated from the config engine — edit the config schemas instead.',
         version: 1,
         env: vars.map(def => ({
-            name: def.name ?? '',
+            name: envNameOf(def, envPrefix),
             path: def.path,
             scope: def.scope,
             ...(def.description ? { description: def.description } : {}),

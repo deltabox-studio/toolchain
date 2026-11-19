@@ -662,12 +662,42 @@ function issuesFromResult(
     }));
 }
 
+/**
+ * Validate an array of schema parts (a scope split across files) and merge the
+ * parsed results. Zod strips the keys another part owns, so validating only the
+ * first part used to drop them.
+ */
+function validateMembers(
+    members: ZodType[],
+    input: unknown,
+    prefix: string
+): { data: Record<string, unknown>; issues: ValidationIssue[] } {
+    let data: Record<string, unknown> = {};
+    const issues: ValidationIssue[] = [];
+    for (const member of members) {
+        const result = member.safeParse(input);
+        if (result.success) {
+            data = deepMerge(data, result.data as Record<string, unknown>) as Record<
+                string,
+                unknown
+            >;
+        } else {
+            issues.push(...issuesFromResult(result, prefix));
+        }
+    }
+    return { data, issues };
+}
+
 /** Validate a resolved config through `schema.safeParse()`. */
 function validateSchema(
     schema: ConfigSchema,
     config: Record<string, unknown>,
     options?: CollectOptions
 ): { data: Record<string, unknown>; issues: ValidationIssue[] } {
+    if (Array.isArray(schema)) {
+        const members = (schema as unknown[]).filter(isZodSchema);
+        return validateMembers(members, config, '');
+    }
     if (isZodSchema(schema)) {
         const result = schema.safeParse(config);
         if (result.success) {
@@ -681,9 +711,16 @@ function validateSchema(
     const filtered = isPathFilter(options?.include) || isPathFilter(options?.exclude);
     for (const [scope, value] of Object.entries(schema as Record<string, ConfigSchema>)) {
         if (config[scope] === undefined && filtered) continue;
-        const parsed = Array.isArray(value) ? value.find(isZodSchema) : value;
-        if (!isZodSchema(parsed)) continue;
-        const result = parsed.safeParse(config[scope] ?? {});
+        if (Array.isArray(value)) {
+            const members = (value as unknown[]).filter(isZodSchema);
+            if (members.length === 0) continue;
+            const result = validateMembers(members, config[scope] ?? {}, scope);
+            if (result.issues.length === 0) data[scope] = result.data;
+            else issues.push(...result.issues);
+            continue;
+        }
+        if (!isZodSchema(value)) continue;
+        const result = value.safeParse(config[scope] ?? {});
         if (result.success) data[scope] = result.data;
         else issues.push(...issuesFromResult(result, scope));
     }

@@ -20,6 +20,8 @@ import {
 } from '../schema.js';
 import type { ConfigDef, ConfigEngineOptions, ConfigSchema } from '../types/index.js';
 import { type CliFlagOptions, cliFlagLabel } from './cli.js';
+import { envNameOf, isEnvVariable } from './env-file.js';
+import { flattenBaseJsonSchema } from './json.js';
 import { resolveGeneratedFile } from './output.js';
 
 export interface RenderMarkdownFrontmatter {
@@ -102,6 +104,8 @@ export interface GenerateEnvMarkdownOptions {
     outline?: number[];
     /** Intro markdown rendered below the title. */
     intro?: string;
+    /** Env-var prefix (default `APP_`). */
+    envPrefix?: string;
 }
 
 interface EnvVarRow {
@@ -368,27 +372,17 @@ function formatDefault(value: unknown): string {
     return `\`${String(value)}\``;
 }
 
-function collectSchemaEnvVars(schema: Schema, scope: string, out: EnvVarRow[]): void {
-    for (const raw of Object.values((schema.properties ?? {}) as Record<string, Schema>)) {
-        const child = raw as unknown as SchemaNode;
-        if (child.type === 'object' && child.properties) {
-            collectSchemaEnvVars(raw, scope, out);
-            continue;
-        }
-        const envName = child.envName ?? child.env;
-        if (envName) {
-            const envDefault = child.envDefault ?? child.default;
-            out.push({
-                name: envName,
-                scope,
-                ...(child.description ? { description: child.description } : {}),
-                ...(envDefault !== undefined && !child.secret ? { default: envDefault } : {}),
-                ...(child.required === true ? { required: true } : {}),
-                ...(child.secret ? { secret: true } : {}),
-                ...(child.public ? { public: true } : {}),
-            });
-        }
-    }
+/** A table row for a collected definition (env name included for path-derived vars). */
+function envRowOf(def: ConfigDef, scope: string, envPrefix: string): EnvVarRow {
+    return {
+        name: envNameOf(def, envPrefix),
+        scope,
+        ...(def.description ? { description: def.description } : {}),
+        ...(def.default !== undefined && !def.secret ? { default: def.default } : {}),
+        ...(def.required ? { required: true } : {}),
+        ...(def.secret ? { secret: true } : {}),
+        ...(def.public ? { public: true } : {}),
+    };
 }
 
 /** Render the index file: explains the env convention + lists required/core. */
@@ -397,25 +391,27 @@ function renderConfigIndex(schema: ConfigSchema, options: RenderMarkdownOptions 
     const baseGroup = Array.isArray(options.baseGroup)
         ? String((options.baseGroup as unknown[])[0] ?? 'base')
         : String(options.baseGroup ?? 'base');
+    const envPrefix = options.envPrefix ?? DEFAULT_ENV_PREFIX;
     const labels = options.labels ?? {};
     const required: EnvVarRow[] = [];
     const core: EnvVarRow[] = [];
     const scopes = normalizeConfigSchema(schema);
 
     for (const [scopeName, scopeSchema] of Object.entries(scopes)) {
-        collectSchemaEnvVars(splitBaseSchema(scopeSchema, baseGroup).base, scopeName, core);
+        const { base } = splitBaseSchema(scopeSchema, baseGroup);
+        for (const def of collectDefinitions(base as unknown as ConfigSchema, {
+            envPrefix,
+            envPathOf: options.envPathOf,
+        })) {
+            if (isEnvVariable(def)) core.push(envRowOf(def, scopeName, envPrefix));
+        }
     }
     for (const def of collectDefinitions(schema, {
-        envPrefix: options.envPrefix,
+        envPrefix,
         envPathOf: options.envPathOf,
     })) {
-        if (def.required && def.name) {
-            required.push({
-                name: def.name,
-                scope: def.scope,
-                ...(def.description ? { description: def.description } : {}),
-                ...(def.default !== undefined && !def.secret ? { default: def.default } : {}),
-            });
+        if (def.required && isEnvVariable(def)) {
+            required.push(envRowOf(def, def.scope, envPrefix));
         }
     }
 
@@ -502,7 +498,10 @@ export function generateEnvMarkdown(
             'environment variable with `.meta({ env: "..." })` (see the',
             '[Config Generator](/guide/config-generator/describe-a-scope)).',
         ].join('\n');
-    const rows = vars.filter(variable => variable.name);
+    const envPrefix = options.envPrefix ?? DEFAULT_ENV_PREFIX;
+    const rows = vars
+        .filter(isEnvVariable)
+        .map(variable => ({ ...variable, name: envNameOf(variable, envPrefix) }));
     const parts = [...frontmatterLines({}, title, outline), `# ${title}`, '', intro, ''];
     if (rows.length === 0) {
         parts.push('No environment-backed toolchain settings are declared.');
@@ -871,6 +870,9 @@ function renderConfigSectionsMarkdown(
     options: RenderConfigFileOptions & RenderMarkdownOptions = {}
 ): string {
     const title = options.title ?? 'Configuration';
+    const baseGroup = Array.isArray(options.baseGroup)
+        ? String((options.baseGroup as unknown[])[0] ?? 'base')
+        : String(options.baseGroup ?? 'base');
     const parts: string[] = [
         ...frontmatterLines(options, title, options.outline ?? [2, 3, 4]),
         `# ${title}`,
@@ -881,7 +883,14 @@ function renderConfigSectionsMarkdown(
         const json = schema as unknown as JsonSchemaJson;
         const defs = json.$defs ?? {};
         // A Zod JSON Schema roots named objects at a `$ref` into `$defs`.
-        const node = resolveJsonRef(json, defs);
+        const resolved = resolveJsonRef(json, defs);
+        // Flatten the base group the same way the per-scope renderer and the
+        // JSON Schema generator do, so the combined reference has one shape.
+        const node = flattenBaseJsonSchema(
+            resolved as unknown as Record<string, unknown>,
+            baseGroup,
+            defs as unknown as Record<string, Record<string, unknown>>
+        ) as unknown as JsonSchemaJson;
         const meta = metaOf(node as unknown as Schema);
         parts.push(`## \`${key}\``, '');
         if (meta?.description) parts.push(meta.description, '');
