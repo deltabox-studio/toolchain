@@ -1,8 +1,21 @@
 # Changelog
 
-## 3.0.0-beta.4 (November 2026)
+## 3.0.0-beta.5 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Vscode
+- Drop allowImportingTsExtensions from the integration test config ([#c241654](https://github.com/deltabox-studio/toolchain/commit/c241654) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.4 (November 2026)
 
 <details>
 <summary>New features</summary>
@@ -33,9 +46,6 @@
 - Add the codegen keyword to the package manifests ([#5e608fe](https://github.com/deltabox-studio/toolchain/commit/5e608fe) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.3 (November 2026)
 

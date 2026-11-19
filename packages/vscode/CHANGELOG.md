@@ -1,8 +1,21 @@
 # Changelog
 
-## 3.0.0-beta.2 (November 2026)
+## 3.0.0-beta.3 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Vscode
+- Drop allowImportingTsExtensions from the integration test config ([#c241654](https://github.com/deltabox-studio/toolchain/commit/c241654) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.2 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -11,9 +24,6 @@
 - Inherit the root fmt and lint config in workspaces ([#b32e8e7](https://github.com/deltabox-studio/toolchain/commit/b32e8e7) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.1 (November 2026)
 
