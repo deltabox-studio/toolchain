@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-docs",
-    "version": "3.0.0-beta.3",
+    "version": "3.0.0-beta.4",
     "private": true,
     "type": "module",
     "description": "Documentation site for deltabox toolchain — a superset of Vite+ with project synchronization, a config generator, tsconfig management, MCP server, CI/changelog automation, providers, catalogs and a VS Code extension.",
