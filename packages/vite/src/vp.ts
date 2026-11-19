@@ -160,6 +160,12 @@ export interface RunVpOptions {
      * commands (`vp dev`); set it for one-shot ones so a hang can't linger.
      */
     timeoutMs?: number;
+    /**
+     * Allow the `npx` fallback even when the target project does not declare
+     * `vite-plus` (creation into an empty directory). Passthroughs leave this
+     * off so a pure Vite project never pulls Vite+ in silently.
+     */
+    allowNpx?: boolean;
 }
 
 export interface VpResult {
@@ -181,7 +187,8 @@ export function runVp(args: string[], options: RunVpOptions = {}): Promise<VpRes
     // Vite+ passthroughs are only valid when Vite+ is part of the project (or
     // installed locally/globally). A pure Vite project must not silently pull
     // `vite-plus` through npx.
-    const available = declaresVitePlus(cwd) || resolved.source !== 'npx';
+    const available =
+        options.allowNpx === true || declaresVitePlus(cwd) || resolved.source !== 'npx';
     if (!available) {
         return Promise.resolve({
             code: 1,

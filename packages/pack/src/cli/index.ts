@@ -1,4 +1,4 @@
-import type { ToolchainCommand } from '@deltabox/toolchain/shared';
+import { type ToolchainCommand, withSpinner } from '@deltabox/toolchain/shared';
 
 import { cleanup } from '../cleanup.js';
 
@@ -15,20 +15,29 @@ export function cleanupCommands(): ToolchainCommand[] {
                 { flags: '--cwd <dir>', description: 'Directory to clean (default: cwd).' },
                 { flags: '--pattern <glob...>', description: 'Override the match globs.' },
             ],
-            run: (opts, context) => {
+            run: async (opts, context) => {
                 const patterns =
                     Array.isArray(opts.pattern) && opts.pattern.length
                         ? (opts.pattern as string[])
                         : ['**/*.tsbuildinfo', '**/dist/'];
-                cleanup('build', patterns, { cwd: context.cwd });
+                await withSpinner(async () => cleanup('build', patterns, { cwd: context.cwd }), {
+                    start: 'Removing build artifacts...',
+                    success: 'Removed build artifacts.',
+                });
             },
         },
         {
             name: 'cleanup:turbo',
             description: 'Remove the turbo cache (.turbo/).',
             options: [{ flags: '--cwd <dir>', description: 'Directory to clean (default: cwd).' }],
-            run: (_opts, context) => {
-                cleanup('turbo cache', ['**/.turbo/'], { cwd: context.cwd });
+            run: async (_opts, context) => {
+                await withSpinner(
+                    async () => cleanup('turbo cache', ['**/.turbo/'], { cwd: context.cwd }),
+                    {
+                        start: 'Removing the turbo cache...',
+                        success: 'Removed the turbo cache.',
+                    }
+                );
             },
         },
     ];

@@ -20,6 +20,7 @@ import { migrateCommands } from '@deltabox/toolchain/migrate/cli';
 import { cleanupCommands } from '@deltabox/toolchain/pack/cli';
 import { projectCommands } from '@deltabox/toolchain/project/cli';
 import {
+    cancelActiveSpinner,
     LOG_LEVELS,
     logger,
     normalizeLogLevel,
@@ -288,8 +289,25 @@ export function createCli(commands: ToolchainCommand[] = builtinCommands()): Com
     return program;
 }
 
+let interruptHandlerInstalled = false;
+
+/**
+ * Stop the active spinner and exit on Ctrl+C. clack's own SIGINT listener only
+ * cancels its animation and leaves the process running, which made a long sync
+ * print `Canceled` and then keep going.
+ */
+function installInterruptHandler(): void {
+    if (interruptHandlerInstalled) return;
+    interruptHandlerInstalled = true;
+    process.once('SIGINT', () => {
+        cancelActiveSpinner();
+        process.exit(130);
+    });
+}
+
 /** Parse and run the CLI. */
 export async function runCli(argv: string[] = process.argv): Promise<void> {
+    installInterruptHandler();
     // A preliminary command set is enough to classify passthrough operands
     // before the config selection is known; the final set is filtered by the
     // provider registry policy below.

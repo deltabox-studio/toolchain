@@ -93,6 +93,16 @@ export function syncCommand(): ToolchainCommand {
                     '`--recursive` cannot be combined with `--watch` yet; run `dbx watch` in each project instead.'
                 );
             }
+            if (opts.watch && opts.check) {
+                throw new Error(
+                    '`--check` cannot be combined with `--watch`; `watch` always writes the files.'
+                );
+            }
+            if (opts.watch && opts.json) {
+                throw new Error(
+                    '`--json` cannot be combined with `--watch`; watch is a live loop.'
+                );
+            }
 
             if (context.configError) {
                 if (json) {

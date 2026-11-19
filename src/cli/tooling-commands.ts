@@ -73,14 +73,26 @@ const VALUE_FLAGS = new Set([
 
 /** Whether `args` contains a positional path (not a flag or flag value). */
 function hasPositional(args: string[]): boolean {
+    let afterFlag = false;
     for (let index = 0; index < args.length; index++) {
         const arg = args[index] as string;
         if (arg === '--') return index < args.length - 1;
         if (VALUE_FLAGS.has(arg)) {
             index++;
+            afterFlag = false;
             continue;
         }
-        if (arg.startsWith('-')) continue;
+        if (arg.startsWith('-')) {
+            afterFlag = true;
+            continue;
+        }
+        // A bare token immediately after an unknown flag is most likely that
+        // flag's value (`--tab-width 2`), not a path. If no real positional is
+        // left, the caller defaults to `.` below.
+        if (afterFlag) {
+            afterFlag = false;
+            continue;
+        }
         return true;
     }
     return false;

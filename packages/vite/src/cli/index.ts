@@ -65,7 +65,13 @@ function passthroughCommand(
                 color,
                 ...(guard ? { env: { [RUN_GUARD_ENV]: guard } } : {}),
             });
-            if (result.code !== 0) process.exitCode = result.code;
+            if (result.code !== 0) {
+                // The early "Vite+ is not installed" branch (and a spawn
+                // failure) returns its message instead of streaming it.
+                if (result.stderr) logger.rawError(result.stderr.trimEnd());
+                else if (result.stdout) logger.raw(result.stdout.trimEnd());
+                process.exitCode = result.code;
+            }
         },
     };
 }

@@ -6,6 +6,7 @@ import {
     type ToolchainConfig,
     type ToolchainProvider,
     type ToolchainProviderCommand,
+    withSpinner,
 } from '@deltabox/toolchain/shared';
 
 import { loadToolchainProviders, providerPolicy } from '../../providers.js';
@@ -84,7 +85,13 @@ export function providerCommands(config?: ToolchainConfig): ToolchainCommand[] {
                 { flags: '--json', description: 'Print the providers (with actions) as JSON.' },
             ],
             run: async (opts, context) => {
-                const providers = await loadToolchainProviders(process.cwd(), context.config);
+                const providers = await withSpinner(
+                    () => loadToolchainProviders(process.cwd(), context.config),
+                    {
+                        start: 'Loading providers...',
+                        success: 'Loaded providers.',
+                    }
+                );
                 if (opts.json) {
                     logger.raw(JSON.stringify(providers, null, 4));
                     return;

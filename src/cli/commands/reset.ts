@@ -1,5 +1,5 @@
 import { resetProjects } from '@deltabox/toolchain/core';
-import { logger, type ToolchainCommand } from '@deltabox/toolchain/shared';
+import { logger, type ToolchainCommand, withSpinner } from '@deltabox/toolchain/shared';
 import { restoreTsconfigOverrides } from '@deltabox/toolchain/tsconfig';
 
 /** `dbx reset` — remove a project's generated files, manifest and/or config. */
@@ -26,7 +26,7 @@ export function resetCommand(): ToolchainCommand {
             { flags: '--dry-run', description: 'Report what would be removed without deleting.' },
             { flags: '--json', description: 'Print the result as JSON.' },
         ],
-        run: (opts, context) => {
+        run: async (opts, context) => {
             const root = (opts.cwd as string | undefined) ?? context.cwd;
             const selectors = opts.all
                 ? { generated: true, manifest: true, config: true }
@@ -36,21 +36,29 @@ export function resetCommand(): ToolchainCommand {
                       ...(opts.config ? { config: true } : {}),
                   };
 
-            const result = resetProjects({
-                root,
-                recursive: Boolean(opts.recursive),
-                dryRun: Boolean(opts.dryRun),
-                // Revert `tsconfig.overrides` while the manifest snapshots still exist.
-                restore: (cwd, { dryRun }) =>
-                    restoreTsconfigOverrides({
-                        cwd,
+            const dryRun = Boolean(opts.dryRun);
+            const result = await withSpinner(
+                async () =>
+                    resetProjects({
+                        root,
+                        recursive: Boolean(opts.recursive),
                         dryRun,
-                        warn: (message, id) => logger.warn(message, id),
-                    }).restored,
-                ...selectors,
-                ...(opts.include ? { include: opts.include as string[] } : {}),
-                ...(opts.exclude ? { exclude: opts.exclude as string[] } : {}),
-            });
+                        // Revert `tsconfig.overrides` while the manifest snapshots still exist.
+                        restore: (cwd, { dryRun }) =>
+                            restoreTsconfigOverrides({
+                                cwd,
+                                dryRun,
+                                warn: (message, id) => logger.warn(message, id),
+                            }).restored,
+                        ...selectors,
+                        ...(opts.include ? { include: opts.include as string[] } : {}),
+                        ...(opts.exclude ? { exclude: opts.exclude as string[] } : {}),
+                    }),
+                {
+                    start: dryRun ? 'Checking generated files...' : 'Removing generated files...',
+                    success: dryRun ? 'Checked generated files.' : 'Removed generated files.',
+                }
+            );
 
             if (opts.json) {
                 logger.raw(JSON.stringify(result, null, 4));
