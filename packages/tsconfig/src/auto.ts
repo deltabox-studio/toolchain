@@ -19,7 +19,7 @@ import {
     type ToolchainTsconfigAliasRewrite,
 } from '@deltabox/toolchain/shared';
 
-import { resolveTsconfigCompilerOption } from './resolve.js';
+import { resolveTsconfigCompilerOption } from './resolve/index.js';
 import {
     type AliasDiscoveryMode,
     matchesAutoFilter,

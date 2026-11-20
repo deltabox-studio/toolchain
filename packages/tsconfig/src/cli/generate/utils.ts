@@ -15,7 +15,7 @@ import {
     resolveTsconfigConfig,
     resolveTsconfigFilePatterns,
     type TsconfigContents,
-} from '../../resolve.js';
+} from '../../resolve/index.js';
 import type { ResolvedTsconfig, TsconfigOverrides } from '../../types/index.js';
 
 export type GeneratedTsconfigResult = ReturnType<typeof generateTsconfig>;

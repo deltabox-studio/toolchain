@@ -15,6 +15,7 @@
         "dist"
     ],
     "dependencies": {
+        "@deltabox/toolchain-config": "workspace:*",
         "@deltabox/toolchain-core": "workspace:*",
         "@deltabox/toolchain-shared": "workspace:*",
         "glob": "catalog:",

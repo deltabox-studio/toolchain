@@ -39,7 +39,7 @@ import {
     readTsconfig,
     prefetchTsconfigExtends,
     type TsconfigContents,
-} from '../../resolve.js';
+} from '../../resolve/index.js';
 import {
     deleteSnapshot,
     detectIndent,
