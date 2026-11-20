@@ -34,6 +34,19 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [Environment variables](https://toolchain.deltabox.studio/config/env.md)
 - [dbx.config](https://toolchain.deltabox.studio/config/reference.md)
 
+#### Config generator
+
+- [Config Generator](https://toolchain.deltabox.studio/guide/config-generator.md)
+- [Describe a scope](https://toolchain.deltabox.studio/guide/config-generator/describe-a-scope.md)
+- [Create the engine](https://toolchain.deltabox.studio/guide/config-generator/create-the-engine.md)
+- [Generate](https://toolchain.deltabox.studio/guide/config-generator/generate.md)
+- [CLI commands](https://toolchain.deltabox.studio/guide/config-generator/cli-commands.md)
+- [Load the config at runtime](https://toolchain.deltabox.studio/guide/config-generator/load-the-config.md)
+- [Generated outputs](https://toolchain.deltabox.studio/guide/config-generator/generated-outputs.md)
+- [API reference](https://toolchain.deltabox.studio/guide/config-generator/api.md)
+- [Client and server configs](https://toolchain.deltabox.studio/guide/config-generator/client-and-server.md)
+- [Real-world shape](https://toolchain.deltabox.studio/guide/config-generator/real-world-shape.md)
+
 #### Migrations
 
 - [Migrations](https://toolchain.deltabox.studio/guide/migrations.md)
@@ -106,17 +119,6 @@ This file is a concise, link-first overview. For the **full** documentation in a
 - [Programmatic API](https://toolchain.deltabox.studio/guide/config/programmatic-api.md)
 - [Providers](https://toolchain.deltabox.studio/guide/config/providers.md)
 - [Vite+](https://toolchain.deltabox.studio/guide/config/vite.md)
-
-#### Config Generator
-
-- [Config Generator](https://toolchain.deltabox.studio/guide/config-generator.md)
-- [CLI commands](https://toolchain.deltabox.studio/guide/config-generator/cli-commands.md)
-- [Create the engine](https://toolchain.deltabox.studio/guide/config-generator/create-the-engine.md)
-- [Describe a scope](https://toolchain.deltabox.studio/guide/config-generator/describe-a-scope.md)
-- [Generate](https://toolchain.deltabox.studio/guide/config-generator/generate.md)
-- [Generated outputs](https://toolchain.deltabox.studio/guide/config-generator/generated-outputs.md)
-- [Load the config at runtime](https://toolchain.deltabox.studio/guide/config-generator/load-the-config.md)
-- [Real-world shape](https://toolchain.deltabox.studio/guide/config-generator/real-world-shape.md)
 
 ### Other
 

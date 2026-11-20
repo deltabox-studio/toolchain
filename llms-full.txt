@@ -276,24 +276,24 @@ code --install-extension deltabox.toolchain-vscode
 | Sync tsconfig                                         | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).                                                                                                                                |
 | Format project                                        | Run `dbx fmt` with the formatter detected/configured for the project (Oxfmt/Vite+, Prettier, Biome, dprint or standalone Oxc).                                                                           |
 | Lint project                                          | Run `dbx lint` with the linter detected/configured for the project (Oxlint/Vite+, ESLint or Biome).                                                                                                      |
-| Manage tsconfig…                                      | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                                                                                                                                |
-| Scaffold project                                      | Single project, monorepo root (with/without example), workspace, or **From template…**.                                                                                                                  |
+| Manage tsconfig...                                      | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                                                                                                                                |
+| Scaffold project                                      | Single project, monorepo root (with/without example), workspace, or **From template...**.                                                                                                                  |
 | Generate configs / Generate config                    | Run `project:config` for missing configs (or for one project), or refresh only the project graph; picks TS/JS.                                                                                           |
-| Migrate tooling…                                      | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).                                                                                                                   |
+| Migrate tooling...                                      | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).                                                                                                                   |
 | Run workflow                                          | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                                                                                                                                    |
-| Run Vite+ command…                                    | QuickPick over the Vite+ provider commands, run in a terminal.                                                                                                                                           |
-| Create Vite+ project…                                 | `vp create` in a terminal.                                                                                                                                                                               |
-| Install MCP server + skill…                           | `dbx mcp:install` with a provider picker (Claude, Codex, VS Code, OpenCode, Pi or a custom directory).                                                                                                   |
+| Run Vite+ command...                                    | QuickPick over the Vite+ provider commands, run in a terminal.                                                                                                                                           |
+| Create Vite+ project...                                 | `vp create` in a terminal.                                                                                                                                                                               |
+| Install MCP server + skill...                           | `dbx mcp:install` with a provider picker (Claude, Codex, VS Code, OpenCode, Pi or a custom directory).                                                                                                   |
 | List MCP installations                                | `dbx mcp:list` — show where the MCP server + skill are installed.                                                                                                                                        |
 | Generate changelog                                    | Run `dbx changelog` in the selected project.                                                                                                                                                             |
 | Clean build artifacts                                 | Remove `dist/` and `*.tsbuildinfo` (`dbx cleanup`).                                                                                                                                                      |
 | Add provider... / Refresh providers                   | Register a custom provider (project or global registry) and reload the provider list.                                                                                                                    |
 | Run command...                                        | Run a provider command (`dbx <command>`) in a terminal (provider tree context menu).                                                                                                                     |
-| Add template… / Remove template…                      | `template:init --add` / `template:list --registry` + `template:remove`.                                                                                                                                  |
+| Add template... / Remove template...                      | `template:init --add` / `template:list --registry` + `template:remove`.                                                                                                                                  |
 | Add template... / Remove template source...           | Registry actions: add a template source or drop one while keeping the files; **Refresh templates** reloads the list.                                                                                     |
 | Create from template...                               | `dbx create --template <id>` (terminal for online templates; `--online` is added automatically for online sources).                                                                                      |
-| New registry… / Remove registry… / Refresh registries | Manage the provider/template registry search paths and reload the **Registries** view.                                                                                                                   |
-| Choose dbx source… / Select dbx version…              | Pick the project's `dbx` or the bundled CLI, and pin the toolchain version.                                                                                                                              |
+| New registry... / Remove registry... / Refresh registries | Manage the provider/template registry search paths and reload the **Registries** view.                                                                                                                   |
+| Choose dbx source... / Select dbx version...              | Pick the project's `dbx` or the bundled CLI, and pin the toolchain version.                                                                                                                              |
 | Refresh projects / Refresh files                      | Rediscover the project graph / reload the **Managed Files** view.                                                                                                                                        |
 | Show all actions                                      | Open the searchable action palette (see [Actions](#actions)).                                                                                                                                            |
 | Reset tooling                                         | Remove generated files / manifest / config.                                                                                                                                                              |
@@ -322,11 +322,11 @@ actions, scoped to that project:
 
 * **Sync** / **Check sync** — regenerate / verify the project's managed files.
 * **Generate config** — write a `dbx.config.*` (TS/JS), or refresh only the project graph.
-* **Run workflow…** — trigger one of the project's generated workflows. The picker
+* **Run workflow...** — trigger one of the project's generated workflows. The picker
   lists every enabled workflow with its provider and path, and dispatches it
   through the matching vendor CLI (`gh`, `glab` or `az`).
-* **Run Vite+ command…** — run a `vp` command in that project.
-* **Reset tooling…** — remove the generated files + manifest, or everything
+* **Run Vite+ command...** — run a `vp` command in that project.
+* **Reset tooling...** — remove the generated files + manifest, or everything
   including the config.
 * **Go to project** — reveal the project in the Explorer.
 
@@ -393,7 +393,7 @@ template registries as **Providers** / **Templates** roots.
 
 Each item has **Open registry** (the folder in the explorer, or the website for remote URLs), **Add new registry** and **Remove registry** (it only drops the path, keeping the files).
 
-The title bar's **New registry…** / **Remove registry…** actions add or remove
+The title bar's **New registry...** / **Remove registry...** actions add or remove
 search paths for either kind, asking whether they are global or project-scoped.
 
 Remote registries are `http(s)` JSON registries: template registries accept
@@ -416,10 +416,10 @@ Sync, Templates, Tools). Groups are collapsed by default and sorted ascending;
 expanding one shows its actions sorted by name. Selecting an action runs its VS
 Code command directly.
 
-The Home view's **More actions…** button opens the same list as a searchable,
+The Home view's **More actions...** button opens the same list as a searchable,
 paged QuickPick. Navigation entries (`Go back`, `Next page (n/m)`) are rendered
 before the real choices, and every prompt-based dbx flow (scaffolding, template
-pickers, …) uses the same paging factory. Actions only delegate to their own VS
+pickers, ...) uses the same paging factory. Actions only delegate to their own VS
 Code command; the palette itself never shells out.
 
 ## Auto-sync
@@ -498,7 +498,7 @@ workspace-scoped `.vscode/settings.json` value.
 
 When a workspace has its own `@deltabox/toolchain` whose version differs from the
 extension's bundled CLI, the extension asks which to run and shows both detected
-versions. **Select dbx version…** pins a version in the project's
+versions. **Select dbx version...** pins a version in the project's
 `.vscode/settings.json` (like TypeScript's version picker); it runs that version
 via `npx` unless the project already installs it.
 
@@ -515,25 +515,25 @@ Search for `deltabox:` to find:
 * **Sync active project** / **Sync selected projects** / **Sync all projects**
 * **Check sync**
 * **Sync tsconfig**
-* **Manage tsconfig…**
-* **Scaffold project…**
-* **Generate configs…** / **Generate config…**
-* **Migrate tooling…**
-* **Run workflow…**
-* **Run Vite+ command…**
-* **Create Vite+ project…**
-* **Install MCP server + skill…**
+* **Manage tsconfig...**
+* **Scaffold project...**
+* **Generate configs...** / **Generate config...**
+* **Migrate tooling...**
+* **Run workflow...**
+* **Run Vite+ command...**
+* **Create Vite+ project...**
+* **Install MCP server + skill...**
 * **List MCP installations**
 * **Generate changelog**
 * **Clean build artifacts**
 * **Add provider...** / **Refresh providers**
-* **Add template…** / **Remove template…**
+* **Add template...** / **Remove template...**
 * **Add template...** / **Remove template source...** / **Refresh templates**
-* **New registry…** / **Remove registry…** / **Refresh registries**
-* **Choose dbx source…** / **Select dbx version…**
+* **New registry...** / **Remove registry...** / **Refresh registries**
+* **Choose dbx source...** / **Select dbx version...**
 * **Refresh projects** / **Refresh files**
 * **Show all actions**
-* **Reset tooling…**
+* **Reset tooling...**
 * **Toggle auto-sync**
 
 The project and tree context menus add scoped commands that are intentionally
@@ -782,14 +782,17 @@ model, so a project can combine them.
 ## `dbx.config.*`
 
 A standalone config file (`dbx.config.ts`, `.mts`, `.cts`, `.js`, `.mjs`,
-`.cjs` or `.json`) exports `{ toolchain: { ... } }` with `defineConfig`. It
-is the non-Vite path and is typed as `ToolchainConfig` (see the
+`.cjs` or `.json`) exports `{ toolchain: { ... } }` with `defineConfig`.
+
+It is the non-Vite path and is typed as `ToolchainConfig` (see the
 [TypeScript guide](/guide/typescript)). Every section is opt-in by presence.
 
 ## Vite plugin
 
 In a Vite or Vite+ project, pass the same `toolchain` object to the `dbx()`
-plugin in `vite.config.*`. The CLI reads it back from the Vite config, so no
+plugin in `vite.config.*`.
+
+The CLI reads it back from the Vite config, so no
 `dbx.config.*` is required. See [Vite plugin](/guide/vite-plugin).
 
 ## CLI
@@ -800,21 +803,39 @@ generated from the command descriptors. See the [CLI reference](/config/cli).
 ## Environment variables
 
 Schema leaves that declare `.meta({ envName })` can be set through env vars (the
-toolchain config uses the `DBX_` prefix). See the
-[environment reference](/config/env) and the
+toolchain config uses the `DBX_` prefix).
+
+See the [environment reference](/config/env) and the
 [Config Generator](/guide/config-generator/).
 
 ## Editor JSON Schema
 
 The generated [config.schema.json](https://toolchain.deltabox.studio/config.schema.json)
-gives editors completion and validation for `dbx.config.*`. The exhaustive
-object reference is [dbx.config](/config/reference).
+gives editors completion and validation for `dbx.config.*`.
 
-## Fields
+The exhaustive object reference is [dbx.config](/config/reference).
 
-Every generated page uses the same `ConfigMeta` fields: `description`,
-`required`, `deprecated`, `example`, `secret`, `scope`, `public`,
-`defaultValue`, the env fields `envName`, `envPath` and more.
+## Types
+
+Find all static types for the configurations
+[here](https://github.com/deltabox-studio/toolchain/blob/main/packages/shared/src/config-types.ts).
+
+### Fields
+
+Every generated config reference page uses the same
+[ConfigMeta](https://github.com/deltabox-studio/toolchain/blob/main/packages/config/src/types/meta.ts)
+fields defined in Zod/Untyped schemas:
+
+* `description`
+* `required`
+* `deprecated`
+* `example`
+* `secret`
+* `scope`
+* `public`
+* `defaultValue`
+* `envName` (the env fields)
+* `envPath` and more.
 
 ---
 
@@ -1047,10 +1068,10 @@ Scan commits, derive the semver bump and update the CHANGELOG.md files + version
 * `--dry-run` — Print the proposed entry without writing.
 * `--version ‹semver›` — Override the version.
 * `--base-version ‹semver›` — Bump from this version instead.
-* `--release-notes ‹semver›` — Print the release body for this version and exit.
+* `--release-body ‹semver›` — Print the release body for this version and exit.
 * `--processing-method ‹method›` — `latest` (default), `all`, or a git range.
 * `--format-only` — Only regroup existing changelogs.
-* `--release` — Release mode: wrap the entry as `**Release notes**`.
+* `--release-body-wrap` — Wrap the generated entry as a `**Release notes**` details block.
 * `--intro ‹text›` — Inline intro text for the new changelog entry.
 * `--intro-file ‹file›` — Read the new entry intro text from a file.
 * `--outro ‹text›` — Inline outro text for the new changelog entry.
@@ -2481,13 +2502,13 @@ Minimum entries in the section before wrapping (nested overrides the top-level d
 
 * **Type**: `boolean | ChangelogDetailsOptions`
 
-Wrap the version body in a collapsible titled Release notes (default false; enabled by default in release mode; requires 10 commits by default).
+Wrap the version body in a collapsible titled Release notes (default false; enabled by default with release body wrapping; requires 10 commits by default).
 
 ###### `releaseNotes`
 
 * **Type**: `boolean | ChangelogDetailsOptions`
 
-Wrap the release-mode entry in a collapsible titled Release notes.
+Wrap the release body entry in a collapsible titled Release notes.
 
 ###### `intro`
 
@@ -3256,13 +3277,13 @@ Minimum entries in the section before wrapping (nested overrides the top-level d
 
 * **Type**: `boolean | ChangelogDetailsOptions`
 
-Wrap the version body in a collapsible titled Release notes (default false; enabled by default in release mode; requires 10 commits by default).
+Wrap the version body in a collapsible titled Release notes (default false; enabled by default with release body wrapping; requires 10 commits by default).
 
 ###### `releaseNotes`
 
 * **Type**: `boolean | ChangelogDetailsOptions`
 
-Wrap the release-mode entry in a collapsible titled Release notes.
+Wrap the release body entry in a collapsible titled Release notes.
 
 ###### `intro`
 
@@ -4355,6 +4376,2136 @@ export default defineConfig({
 ---
 
 ---
+url: https://toolchain.deltabox.studio/guide/config-generator.md
+---
+# Config Generator
+
+`@deltabox/toolchain/config` is a configuration engine.
+
+**A Zod, untyped or plain-value schema is the single source of truth**.
+
+1. Attach metadata with `.meta()` (or use the untyped/plain input)
+2. Then generate the:
+   * Env/config TypeScript types
+   * JSON Schema
+   * markdown reference
+   * config metadata JSON
+   * CLI commands/option definitions
+   * CLI reference
+
+All from that one schema.
+
+## Where to start
+
+* [Describe a scope](/guide/config-generator/describe-a-scope) — write the Zod,
+  untyped or plain schema and its `.meta()`.
+* [Create the engine](/guide/config-generator/create-the-engine) — bind the
+  schema, prefix, base group(s) and root.
+* [Generate](/guide/config-generator/generate) — the generator methods.
+* [CLI commands](/guide/config-generator/cli-commands) — the `config:*` command
+  descriptors.
+* [Load the config](/guide/config-generator/load-the-config) — the runtime
+  parsers and `loadConfig*` (which already parse the loaded file).
+* [Generated outputs](/guide/config-generator/generated-outputs) — types,
+  markdown, env files, JSON Schema, CLI docs and formatting.
+* [Client and server](/guide/config-generator/client-and-server) — split browser
+  and server schemas/engines so bundled code never crosses contexts.
+* [Real-world shape](/guide/config-generator/real-world-shape) — how a consumer
+  binds the engine end-to-end.
+
+```ts
+import { createConfigEngine } from '@deltabox/toolchain/config';
+```
+
+## API reference
+
+Every export, option and code example
+can be found in the full [API reference](/guide/config-generator/api).
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/describe-a-scope.md
+---
+# Describe a scope
+
+Each top-level key is a **scope**; its value is a Zod schema, an untyped
+(JSON-Schema-shaped) schema, a plain object, a primitive, or an array of schema
+parts. A single schema (not keyed by scope) is treated as one `config` scope.
+
+* [Zod](#zod)
+* [Untyped](#untyped)
+* [Plain objects](#plain-objects)
+* [Primitives](#primitives)
+* [Arrays](#arrays)
+* [Base groups](#base-groups)
+
+A schema must satisfy `ConfigSchema`:
+
+```ts
+import type { Schema as SchemaType } from 'untyped';
+import type { ZodType } from 'zod';
+
+/** A resolved untyped schema carrying the config metadata. */
+export type ConfigSchemaType = SchemaType & ConfigMeta;
+
+/** A plain JSON-ish value used as a schema default (`{ port: 3000 }`). */
+export type ConfigPlainValue =
+    | string
+    | number
+    | boolean
+    | bigint
+    | null
+    | undefined
+    | ConfigPlainValue[]
+    | { [key: string]: ConfigPlainValue };
+
+/** A Zod schema, a resolved untyped schema, or a plain value/default. */
+export type ConfigSchemaInput = ZodType | ConfigSchemaType | ConfigPlainValue;
+
+/** A single schema, a list of schemas, or scoped schemas keyed by scope name. */
+export type ConfigSchema<Scope extends ConfigScope = ConfigScope> =
+    | ConfigSchemaInput
+    | ConfigSchemaInput[]
+    | Record<Scope, ConfigSchemaInput | ConfigSchemaInput[]>;
+```
+
+A scope map is the usual shape:
+
+```ts
+export const scopes = {
+    server: serverConfig, // Zod
+    frontend: frontendConfig, // untyped or plain
+    cli: 3000, // primitive
+};
+```
+
+and is used to create the [config engine](/guide/config-generator/create-the-engine).
+
+## Zod
+
+Zod is the richest input: it validates, supplies defaults and carries `.meta()`
+metadata for the generated env/CLI/types/docs.
+
+```ts
+import { z } from 'zod';
+
+export const serverConfig = z.object({
+    base: z.object({
+        port: z.number().default(3000).meta({
+            // ConfigMeta
+            envName: 'MYAPP_PORT',
+            description: 'HTTP port',
+        }),
+        host: z.string().default('0.0.0.0').meta({
+            // ConfigMeta
+            envName: 'MYAPP_HOST',
+            description: 'Bind address',
+        }),
+    }),
+    auth: z.object({
+        password: z.string().meta({
+            // ConfigMeta
+            envName: 'MYAPP_AUTH_PASSWORD',
+            description: 'Admin password',
+            required: true,
+            secret: true,
+        }),
+        tokenTtl: z.number().default(3600).meta({
+            // ConfigMeta
+            envName: 'MYAPP_AUTH_TOKEN_TTL',
+            description: 'Session lifetime (seconds)',
+        }),
+    }),
+});
+```
+
+`z.toJSONSchema` is used internally, so unions, enums, tuples, records and
+nullable values keep their shape in the generated types, markdown and JSON
+Schema. Values JSON Schema cannot represent (functions) can declare
+`.meta({ tsType: '...' })`.
+
+## Untyped
+
+An untyped schema is the resolved JSON-Schema-like shape. It is useful when the
+schema comes from a JSON file, a remote source or hand-written definitions.
+
+```ts
+export const serverConfig = {
+    type: 'object',
+    properties: {
+        base: {
+            type: 'object',
+            properties: {
+                port: {
+                    type: 'number',
+                    default: 3000,
+                    envName: 'MYAPP_PORT',
+                    description: 'HTTP port',
+                },
+                host: { type: 'string', default: '0.0.0.0' },
+            },
+        },
+        auth: {
+            type: 'object',
+            properties: {
+                password: {
+                    type: 'string',
+                    required: true,
+                    secret: true,
+                    envName: 'MYAPP_AUTH_PASSWORD',
+                },
+            },
+        },
+    },
+};
+```
+
+Untyped leaves support the same `ConfigMeta` keys as Zod leaves (`envName`,
+`description`, `required`, `secret`, `cliFlag`, ...), plus `type`, `properties`,
+`required`, `default`, `items`, `enum`, `anyOf`/`oneOf` and `$ref`/`$defs`.
+
+## Plain objects
+
+A plain object uses its values as defaults. The generator infers the leaf types:
+
+```ts
+export const serverConfig = {
+    port: 3000,
+    host: 'localhost',
+    debug: false,
+    tags: ['api', 'web'],
+    auth: {
+        tokenTtl: 3600,
+    },
+};
+```
+
+This is equivalent to an untyped schema whose leaves have `type` and `default`
+set. It is the quickest way to scaffold a config, but it carries no validation
+metadata — use Zod when you need strict validation.
+
+> A plain object inside a scope is read as that scope's **fields**. To declare
+> explicit schema keywords (`type`, `properties`, `envName`, ...) use an untyped
+> schema instead, so the keys are not mistaken for defaults.
+
+## Primitives
+
+Primitive values become defaults inside a plain object:
+
+```ts
+export const serverConfig = {
+    port: 3000, // number
+    host: 'localhost', // string
+    debug: false, // boolean
+};
+```
+
+A whole scope can also be a primitive when it has a single value:
+
+```ts
+const engine = createConfigEngine({
+    schema: { version: '1.0.0' },
+});
+```
+
+The value is exposed under the scope's `config` leaf (`{ version: { config:
+'1.0.0' } }`). For named fields, prefer a plain object or an untyped/Zod schema.
+
+## Arrays
+
+An array of schemas is merged into one scope. This is useful when a scope is
+split across modules:
+
+```ts
+export const serverConfig = [
+    z.object({ host: z.string().default('localhost') }),
+    z.object({ port: z.number().default(3000) }),
+];
+```
+
+Arrays of **plain values** are defaults for a leaf; declare them as an untyped
+schema when you need an array default at the scope root:
+
+```ts
+const tags = { type: 'array', items: { type: 'string' }, default: ['api'] };
+```
+
+## Base groups
+
+The `baseGroup` option hoists a schema's flat fields out of the nested groups in
+the generated outputs. It defaults to `base`:
+
+```ts
+const engine = createConfigEngine({
+    schema: scopes,
+    baseGroup: 'base',
+});
+```
+
+The generated types expose `…Base` and the main interface extends it; the
+markdown and JSON Schema flatten the base fields into the top level.
+
+### Hoist multiple groups
+
+Pass an array to hoist more than one group. The groups are merged in declaration
+order:
+
+```ts
+const engine = createConfigEngine({
+    schema: scopes,
+    baseGroup: ['base', 'server'],
+});
+```
+
+Both `base.port` and `server.host`, for example, become top-level fields in the
+generated `…Base` interface. Use `flatten: true` (or `flatten: { level }`) when
+you want all top-level keys flattened instead of selecting groups.
+
+## Meta
+
+**Only Zod and Untyped can define metadata.**
+
+[Plain objects](#plain-objects), [primitives](#primitives) and [arrays](#arrays) therefore
+does **not** support metadata because they're too simplistic.
+
+> Use Zod or Untyped (JSON-Schema-shaped) schemas to add metadata to config options.
+
+### Description
+
+Descriptions can be used to inline JSDocs, `.env` comments, markdown docs etc.
+for a single configuration in the generated config types/env/cli/markdown/schema.
+
+#### Zod description
+
+They can be defined for a config option in a Zod schema with `.describe(<string>)`
+or `.meta({ description: <string> })`:
+
+```ts
+export const serverConfig = z.object({
+    base: z.object({
+        // using .describe()
+        port: z.number().default(3000).describe('HTTP port'),
+        // using .meta()
+        host: z.string().default('0.0.0.0').meta({
+            description: 'Bind address',
+        }),
+    }),
+});
+```
+
+#### Untyped description
+
+An untyped schema carrying the [config metadata](#other-meta-fields)'s description field:
+
+```ts
+export const serverConfig = {
+    type: 'object',
+    properties: {
+        base: {
+            type: 'object',
+            properties: {
+                port: {
+                    type: 'number',
+                    default: 3000,
+                    description: 'HTTP port', // the description
+                },
+                host: { type: 'string', default: '0.0.0.0' },
+            },
+        },
+    },
+};
+```
+
+### Other meta fields
+
+The [ConfigMeta](https://github.com/deltabox-studio/toolchain/blob/main/packages/config/src/types/meta.ts)
+fields used in the Zod/Untyped schemas:
+
+* `id` (override the name of the generateed type)
+* `typeName` (same as `id`)
+* `public` (safe to expose as public API, true by default)
+* `description`
+* `envName`
+* `env` (deprecated, use `envName` instead)
+* `envPath` (dotted config path)
+* `path` (deprecated, use `envPath` instead)
+* `required`
+* `deprecated`
+* `deprecationMessage`
+* `example`
+* `since`
+* `see`
+* `remarks`
+* `experimental`
+* `alpha`
+* `beta`
+* `secret`
+* `scope`
+* `defaultValue` (when the resolved default differs)
+* `cliFlag`
+* `cliFlagShort`
+
+### Annotations
+
+| Field                             | Adds                                                                                                       | Notes                                             |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `required: true`                  | **JSDocs:**`@required`**Markdown:**`- **Required**` above the `- **Type**` line            |                                                   |
+| `deprecated: true`                | **JSDocs:**`@deprecated`**Markdown:**`- **Deprecated**`                                    | `deprecationMessage: <string>` supplies the text. |
+| `example` (string or array)       | **JSDocs:**&#x4F;ne `@example` tag per value **Markdown:**&#x4F;ne `**Example(s):**` entry per value |                                                   |
+| `since`                           | **JSDocs:**`@since`**Markdown:**`- **Since**`                                              |                                                   |
+| `see`                             | **JSDocs:**`@see`**Markdown:**`- **See**` links                                            |                                                   |
+| `remarks`                         | **JSDocs:**`@remarks`**Markdown:**`**Remarks:**`                                           |                                                   |
+| `experimental` / `alpha` / `beta` | Their stability tags                                                                                       |                                                   |
+
+#### Include or exclude annotations
+
+Each generator accepts the matching `include*` option (all defaults `true`) to
+keep or suppress an annotation:
+
+* `includeRequired`
+* `includeDeprecated`
+* `includeExamples`
+* `includeSince`
+* `includeSee`
+* `includeRemarks`
+* `includeExperimental`
+* `includeAlpha`
+* `includeBeta`
+
+Markdown and type output shows env/CLI equivalents by default.
+
+Disable them with `includeEnv: false` or `includeCli: false` in the [config engine](/guide/config-generator/create-the-engine)'s generator options:
+
+```ts
+engine.markdown.generate({ includeCli: false, includeEnv: false });
+engine.types.generate({ includeEnv: false, includeEnv: false });
+```
+
+## API reference
+
+See the [API reference](/guide/config-generator/api) for the complete list of
+exports and every generator option.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/create-the-engine.md
+---
+# Create the engine
+
+Bind the schema, an env prefix, the base group(s) and the project root once. The
+schema may be a Zod schema, an untyped schema, a plain object/primitive, an array
+or a record keyed by scope:
+
+```ts
+import { createConfigEngine } from '@deltabox/toolchain/config';
+
+export const engine = createConfigEngine({
+    schema: {
+        server: serverConfig,
+        frontend: frontendConfig,
+        cli: cliConfig,
+    },
+    envPrefix: 'MYAPP_',
+    // One group or several; hoisted into the generated `...Base` interface.
+    baseGroup: ['base', 'server'],
+    root: process.cwd(),
+    // Optional: custom env-name -> dotted-path derivation (eg. dual prefixes).
+    envPathOf: env =>
+        env
+            .replace(/^(MYAPP_|VITE_)/, '')
+            .toLowerCase()
+            .replace(/_/g, '.'),
+});
+```
+
+The engine keeps the exact schema type:
+
+```ts
+engine.schema; // typeof mySchema
+engine.envPrefix; // 'MYAPP_'
+engine.baseGroup; // ['base', 'server']
+engine.root; // process.cwd()
+```
+
+## Options
+
+| Option      | Description                                                                            |
+| ----------- | -------------------------------------------------------------------------------------- |
+| `schema`    | Zod, untyped, plain object/primitive, an array or a scoped record.                     |
+| `envPrefix` | Env-var prefix (default `APP_`).                                                       |
+| `baseGroup` | A group name or an array of names to hoist into the `...Base` output (default `base`). |
+| `flatten`   | `true` or `{ level }` / `{ maxDepth }` to flatten top-level keys instead.              |
+| `root`      | Project root for default output paths (defaults to the nearest project).               |
+| `envPathOf` | Custom env-name -> dotted-path derivation.                                             |
+
+## Base groups
+
+With the default `baseGroup: 'base'`, a `base` object is hoisted:
+
+```ts
+const schema = {
+    server: {
+        base: { port: 3000, host: 'localhost' },
+        auth: { tokenTtl: 3600 },
+    },
+};
+```
+
+`port` and `host` become fields of `ServerConfigBase`; `auth` stays a nested
+group.
+
+Pass an array to hoist several groups; they are merged in order:
+
+```ts
+createConfigEngine({
+    schema,
+    baseGroup: ['base', 'auth'],
+});
+```
+
+Now `port`, `host` and `tokenTtl` are all top-level `...Base` fields. The same
+flattening is applied to the markdown and JSON Schema outputs.
+
+## Collect from the engine
+
+```ts
+engine.collect(); // every ConfigDef (env/cli metadata included)
+engine.requiredVars(); // required definitions
+engine.requiredVars('server'); // required definitions in one scope
+```
+
+See the [API reference](/guide/config-generator/api) for every member and
+generator option.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/generate.md
+---
+# Generate
+
+Every generator has two forms:
+
+* **Bound engine** — `engine.types.generate()` injects the engine's
+  `envPrefix`, `baseGroup`, `root` and `envPathOf`.
+* **Standalone** — `generateConfigTypes(schema, options)` takes those options
+  explicitly, for one-off scripts and tests.
+
+The grouped `.write` methods write to disk and return the written paths. The
+grouped `.generate` methods return the content and only write when you pass `outputDir`/`output`
+(a string); `false` disables writing.
+
+## At a glance
+
+| Output         | Engine                                                       | Standalone                                                |
+| -------------- | ------------------------------------------------------------ | --------------------------------------------------------- |
+| `.env.example` | `engine.env.generate()` / `engine.env.write()`               | `generateEnvFile()`                                       |
+| Env types      | `engine.env.types.generate()` / `engine.env.types.write()`   | `generateConfigEnv()`                                     |
+| Config types   | `engine.types.generate()` / `engine.types.write()`           | `generateConfigTypes()`                                   |
+| Markdown       | `engine.markdown.generate()` / `engine.markdown.write()`     | `generateConfigMarkdown()`                                |
+| JSON Schema    | `engine.jsonSchema.generate()` / `engine.jsonSchema.write()` | `generateConfigJsonSchema()` / `generateJsonSchemaFile()` |
+| Metadata JSON  | `engine.configJson.build()`                                  | `buildConfigJson()`                                       |
+| CLI options    | `engine.cli.generate()` / `engine.cli.write()`               | `generateCliOptions()`                                    |
+| Scoped CLI     | `engine.cli.options()`                                       | `generateConfigCliOptions()` / `configCliCommand()`       |
+| CLI docs       | `engine.markdown.cli.generate()` / `.write()`                | `generateCliDocs()`                                       |
+| Env docs       | `engine.markdown.env.generate()` / `.write()`                | `generateEnvMarkdown()`                                   |
+| Markdown page  | `engine.markdown.file.generate()` / `.write()`               | `generateMarkdownFile()`                                  |
+| Formatting     | —                                                            | `formatGenerated()`                                       |
+
+## Env file — `.env.example`
+
+```ts
+engine.env.write({ output: '.env.example' });
+```
+
+Standalone, with the common options:
+
+```ts
+import { generateEnvFile } from '@deltabox/toolchain/config';
+
+const content = generateEnvFile(schema, {
+    envPrefix: 'MYAPP_',
+    header: 'Copy to .env and fill the blanks.',
+    scopes: ['server', 'cli'],
+    exclude: ['MYAPP_INTERNAL_TOKEN'],
+    values: { MYAPP_PORT: '8080' },
+    extra: { MYAPP_FEATURE_FLAG: 'true' },
+});
+```
+
+Options: `include`/`exclude` (env names), `values` (default overrides),
+`scopes`, `bare`, `extra` (raw `NAME=value` lines), `header`, `scopeSeparator`.
+Secrets are emitted commented out.
+
+## Env types — `env.ts` + `dbx-env.d.ts`
+
+```ts
+engine.env.types.write({ outputDir: 'types' }); // types/env.ts, types/dbx-env.d.ts
+```
+
+```ts
+import { generateConfigEnv } from '@deltabox/toolchain/config';
+
+const files = generateConfigEnv(schema, {
+    envPrefix: 'MYAPP_',
+    outputDir: 'types',
+    envInterfaceName: 'AppEnv',
+    viteEnvInterfaceName: 'AppViteEnv',
+    importPath: './env.js',
+    augmentVite: true,
+    envComment: 'Runtime configuration.',
+});
+// files: { 'env.ts': '...', 'dbx-env.d.ts': '...' }
+```
+
+Options: `envFile`/`dtsFile` (file names), `header`, `envHeader`, `dtsHeader`,
+`augmentVite` (a `declare module 'vite'` augmentation).
+
+## Config types
+
+```ts
+engine.types.write({ outputDir: 'types' });
+```
+
+Standalone, with hand-written overrides and aliases:
+
+```ts
+import { generateConfigTypes } from '@deltabox/toolchain/config';
+
+const files = generateConfigTypes(schema, {
+    baseGroup: 'base',
+    outputDir: 'types',
+    interfaceNames: { server: 'ServerConfig' },
+    aliases: { server: 'export type ServerOptions = ServerConfig;' },
+    imports: ["import type { FastifyServerOptions } from 'fastify';"],
+    overrides: {
+        ServerConfig: `export interface ServerConfig {
+    host?: string;
+    port?: number;
+}`,
+    },
+    header: '// Generated — do not edit.',
+    extension: 'ts',
+    includeEnv: false,
+});
+```
+
+Options: `interfaceNames` (per scope), `aliases` (per scope, appended),
+`overrides` (full declaration text, keyed by type name), `imports` (emitted once
+at the top), `extension`, `header`, and the `include*` annotation flags.
+`baseGroup` accepts a string or an array of strings; multiple groups are merged
+into the generated `...Base` interface in declaration order.
+
+## Markdown
+
+```ts
+engine.markdown.write({ outputDir: 'docs/reference/configuration' });
+```
+
+```ts
+import { generateConfigMarkdown } from '@deltabox/toolchain/config';
+
+const files = generateConfigMarkdown(schema, {
+    baseGroup: 'base',
+    envPrefix: 'MYAPP_',
+    outputDir: 'docs/reference/configuration',
+    title: 'Configuration',
+    frontmatter: ctx => `title: ${ctx.options.title ?? 'Configuration'}`,
+    combined: true, // one index.md instead of one file per scope
+    includeEnv: false,
+});
+```
+
+`frontmatter: false` omits the frontmatter, a string replaces the body, and a
+callback builds it from the generator options. `combined: true` renders every
+scope into one file. `cliScope`, `shortFlags` and `references` control the CLI
+equivalents and footer links.
+
+## JSON Schema
+
+```ts
+const doc = await engine.jsonSchema.generate();
+await engine.jsonSchema.write({ output: 'config.schema.json' });
+```
+
+```ts
+import { generateConfigJsonSchema, generateJsonSchemaFile } from '@deltabox/toolchain/config';
+
+const doc = await generateConfigJsonSchema(schema, {
+    baseGroup: 'base',
+    id: 'https://acme.dev/schemas/config.json',
+    title: 'Acme configuration',
+    description: 'Every env-backed setting.',
+});
+const path = await generateJsonSchemaFile(schema, { output: 'config.schema.json' });
+```
+
+Both functions are async. `generateConfigJsonSchema` returns the document;
+`generateJsonSchemaFile` writes it and returns the path.
+
+`preserveDefs: true` keeps Zod's document-level `$ref`/`$defs` graph instead of
+inlining every scope (the `$defs` tables are hoisted to the document root).
+`scopeDescriptions` adds a description to a generated scope property, and
+`additionalProperties` sets the root constraint:
+
+```ts
+const doc = await engine.jsonSchema.generate({
+    preserveDefs: true,
+    additionalProperties: false,
+    scopeDescriptions: { server: 'Server settings.' },
+});
+```
+
+## Config metadata JSON
+
+```ts
+const metadata = engine.configJson.build();
+fs.writeFileSync('config.json', `${JSON.stringify(metadata, null, 4)}\n`);
+```
+
+```ts
+import { buildConfigJson } from '@deltabox/toolchain/config';
+
+const metadata = buildConfigJson(schema, {
+    envPrefix: 'MYAPP_',
+    comment: 'Generated from the config schemas.',
+});
+```
+
+The document contains `$comment`, `version`, and `env[]` entries with the name,
+path, scope, description, default, `required`, `secret` and `public` flags.
+Secrets never include a default.
+
+## CLI options
+
+```ts
+const defs = engine.cli.generate({ scope: 'cli' });
+```
+
+```ts
+import { createCliArgsParser, generateCliOptions } from '@deltabox/toolchain/config';
+
+const defs = generateCliOptions(schema, {
+    envPrefix: 'MYAPP_',
+    scope: 'cli',
+    output: 'cli-options.json',
+});
+const parser = createCliArgsParser(defs);
+parser.parse(['--base-url', 'http://localhost:8080']);
+```
+
+Options: `scope` (default `cli`), `output`, `shortFlags`, `envPathOf`.
+
+## CLI docs
+
+`generateCliDocs(commands, options?)` renders a markdown reference from
+`ToolchainCommand` descriptors. It is standalone because it does not read a
+config schema:
+
+```ts
+import { builtinCommands } from '@deltabox/toolchain/cli';
+import { generateCliDocs } from '@deltabox/toolchain/config';
+
+const markdown = generateCliDocs([...builtinCommands(), ...myCommands], {
+    title: 'CLI reference',
+    intro: 'Generated from the registered commands.',
+    prefix: 'my-cli',
+    outline: [2, 3],
+});
+```
+
+Hidden commands are omitted, duplicate names keep the first descriptor, and
+args/options/defaults are rendered like the `dbx` reference. Pass the result
+through `formatGenerated(..., { fileName: 'cli.md' })` to format it.
+
+## Formatting
+
+```ts
+import { formatGenerated } from '@deltabox/toolchain/config';
+
+const formatted = await formatGenerated(source, {
+    fileName: 'config.ts', // infers the language
+    options: { printWidth: 100 }, // merged over GENERATED_FORMAT_OPTIONS
+});
+```
+
+`formatGenerated` is best-effort: it returns the input unchanged when no
+formatter is available.
+
+## Advanced
+
+### Post-process generated output
+
+Generators return strings or records, so you can transform them before writing:
+
+```ts
+import fs from 'node:fs';
+
+import { formatGenerated, generateConfigTypes } from '@deltabox/toolchain/config';
+
+const files = generateConfigTypes(schema, { baseGroup: 'base' });
+for (const [scope, source] of Object.entries(files)) {
+    const withBanner = `// Generated from schemas/${scope}.ts — do not edit.\n${source}`;
+    const formatted = await formatGenerated(withBanner, { fileName: `${scope}.ts` });
+    fs.mkdirSync('types', { recursive: true });
+    fs.writeFileSync(`types/${scope}.ts`, formatted);
+}
+```
+
+### Custom headers, imports and overrides
+
+```ts
+generateConfigTypes(schema, {
+    header: '/* eslint-disable */',
+    imports: ["import type { AppEnv } from './env.js';"],
+    overrides: {
+        ServerConfig: 'export interface ServerConfig extends BaseServer {}',
+    },
+});
+```
+
+`overrides` is keyed by the generated type name and replaces the whole
+declaration, so keep the `imports`/`header` options handy for types the schema
+cannot express.
+
+### Dry runs
+
+Every generator accepts `outputDir: false` / `output: false`:
+
+```ts
+generateConfigTypes(schema, { outputDir: false });
+await generateConfigJsonSchema(schema, { output: false });
+```
+
+The engine's `write*` methods always write; use the `generate*` methods when you
+only need the content.
+
+### Engine vs standalone
+
+The engine form injects the bound options; the standalone form takes them
+explicitly. They produce the same output:
+
+```ts
+const engine = createConfigEngine({
+    schema,
+    envPrefix: 'MYAPP_',
+    baseGroup: 'base',
+});
+
+engine.markdown.generate(); // uses the bound options
+
+generateConfigMarkdown(schema, {
+    envPrefix: 'MYAPP_',
+    baseGroup: 'base',
+});
+```
+
+See [Generated outputs](/guide/config-generator/generated-outputs) for the shape
+of each file, [CLI commands](/guide/config-generator/cli-commands) for the
+`config:*` descriptors, and the [API reference](/guide/config-generator/api) for
+the complete export list.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/cli-commands.md
+---
+# CLI commands
+
+`configCommands({ engine, defaults })` returns `ToolchainCommand[]` (register them
+on your commander program with `@deltabox/toolchain/cli`):
+
+| Command           | Writes                                       |
+| ----------------- | -------------------------------------------- |
+| `config:env`      | `.env.example`                               |
+| `config:types`    | config types (`--env` also writes env types) |
+| `config:json`     | `config.json` (metadata)                     |
+| `config:schema`   | `config.schema.json`                         |
+| `config:markdown` | the markdown reference                       |
+| `config:cli`      | `cli-options.json`                           |
+| `config:all`      | everything, under one output directory       |
+
+```ts
+import { configCommands } from '@deltabox/toolchain/config';
+
+const commands = configCommands({
+    engine,
+    defaults: { typesDir: 'packages/shared/src/types', docsDir: 'docs/reference' },
+});
+// register `commands` on your commander program
+```
+
+> These commands are library-only: `dbx` itself does not register a `config:*`
+> group, because each command needs a `ConfigEngine` bound to your schema. Add
+> the returned commands to your own program.
+
+The `config:*` commands generate config artifacts; they do not write the CLI
+reference. For that, pass the command descriptors your CLI registers to
+[`generateCliDocs()`](/guide/config-generator/generate#cli-docs).
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/load-the-config.md
+---
+# Load the config at runtime
+
+Generation is only half of it: the same schema loads the value back. The runtime
+parsers read the `envName` / `cliFlag` metadata, coerce env and CLI strings,
+merge overrides and validate the result through the schema, so the returned
+object matches the generated types.
+
+```ts
+import { parseCliConfig, parseConfig, parseEnvConfig } from '@deltabox/toolchain/config';
+
+// MYAPP_HOST, MYAPP_PORT, ... -> { host: '0.0.0.0', port: 3000 }
+const fromEnv = parseEnvConfig(serverConfig, process.env, { envPrefix: 'MYAPP_' });
+
+// env + CLI (argv defaults to `process.argv.slice(2)`), overrides merged on top
+const config = parseConfig(serverConfig, { host: '127.0.0.1' }, { envPrefix: 'MYAPP_' });
+
+// CLI only: `--port 8080 --host localhost`
+const fromCli = parseCliConfig(serverConfig, process.argv.slice(2), { envPrefix: 'MYAPP_' });
+```
+
+| Export                                             | Sources                                                         |
+| -------------------------------------------------- | --------------------------------------------------------------- |
+| `parseConfig(schema, overrides?, opts?)`           | env + CLI, with `overrides` merged last and validated           |
+| `parseEnvConfig(schema, env?, opts?)`              | env only                                                        |
+| `parseCliConfig(schema, argv?, opts?)`             | CLI only                                                        |
+| `collect(schema, opts?)`                           | env + CLI, no overrides (pass `validate: true` to check)        |
+| `loadConfig(options)` / `loadConfigAsync(options)` | a config file, **parsed** through `parser` (no ambient env/CLI) |
+
+Async variants (`parseConfigAsync`, `parseEnvConfigAsync`, `parseCliConfigAsync`)
+accept a promise for the env source, argv or overrides; the `*Sync` aliases keep
+the synchronous call shape.
+
+## Scopes
+
+Parsing the engine's `schema` returns the nested `{ server, frontend }` object;
+parsing one scope's schema returns that scope's fields directly:
+
+```ts
+const scoped = parseEnvConfig(engine.schema, process.env, { envPrefix: 'MYAPP_' });
+// { server: { port: 8080, host: '0.0.0.0' } }
+
+const server = parseEnvConfig(serverConfig, process.env, { envPrefix: 'MYAPP_' });
+// { port: 8080, host: '0.0.0.0' }
+```
+
+The same works for untyped and plain/primitive schemas:
+
+```ts
+const untyped = {
+    type: 'object',
+    properties: {
+        port: { type: 'number', default: 3000, envName: 'MYAPP_PORT' },
+        host: { type: 'string', default: 'localhost' },
+    },
+};
+
+parseEnvConfig(untyped, { MYAPP_PORT: '4000' }); // { port: 4000, host: 'localhost' }
+
+const plain = { server: { port: 3000, host: 'localhost' } };
+parseEnvConfig(plain, { APP_SERVER_PORT: '4000' });
+// { server: { port: 4000, host: 'localhost' } }
+```
+
+## Common options
+
+Every parser shares the collect options:
+
+* `envPrefix` — the prefix stripped from env names (default `APP_`, `null` disables it).
+* `envSource` / `argv` — the env record and argument list to read (defaults to
+  `process.env` and `process.argv.slice(2)`).
+* `include` / `exclude` — path globs (`server.*`, `**.port`) or presence kinds
+  (`required`, `defined`, `undefined`, `null`).
+* `validate` — parse the resolved value through the schema (the `parse*` family
+  defaults to `true`).
+* `errorOptions` — `errorLevel` (`throw`/`warn`/`silent`), `logger`,
+  `rewriteMessage`, `defaultMessage` and `trigger` for validation problems.
+  A thrown problem is a `ConfigParseError`.
+* `envPathOf` — override env-name -> dotted-path derivation (eg. dual prefixes).
+
+Env names come from `.meta({ envName })`; without it, the prefix plus the field
+path is used (`MYAPP_SERVER_PORT`). CLI flags come from `.meta({ cliFlag })`,
+falling back to `--server-port`.
+
+## Load from a file
+
+`loadConfig` / `loadConfigAsync` discover a config file (plus JSON/YAML/custom
+loaders), import it, merge `overrides`, and then **parse the value through the
+passed `parser`** (or validate it through `schema`). This means you do not need
+to call `parseConfig`, `parseEnvConfig`, `parseCliConfig` or
+`parse<...>Config` afterwards — `loadConfig*` already did it.
+
+```ts
+import { loadConfigAsync } from '@deltabox/toolchain/config';
+
+const loaded = await loadConfigAsync({
+    parser: serverConfig,
+    cwd: process.cwd(),
+    // Discovery (flat fields; `configFileOptions` also works)
+    locations: ['.', '.myapp'],
+    names: ['dbx.config.ts', 'dbx.config.js'],
+    // The loaded value is validated/parsed (default true with a parser)
+    validate: true,
+});
+
+if (loaded) {
+    console.log(loaded.path, loaded.config); // the file and the parsed value
+}
+```
+
+`loadConfig*` parses the **file value**; it does not merge ambient env vars or
+CLI args. Use `parseConfig` when you want to read env + CLI instead:
+
+```ts
+import { parseConfig } from '@deltabox/toolchain/config';
+
+const fromEnvAndCli = parseConfig(serverConfig, undefined, { envPrefix: 'MYAPP_' });
+```
+
+Use `overrides` for values that should win over the file:
+
+```ts
+const loaded = await loadConfig({
+    parser: serverConfig,
+    cwd: process.cwd(),
+    overrides: { host: '127.0.0.1' },
+});
+```
+
+Without a `parser`/`schema` the raw loaded value is returned unchanged:
+
+```ts
+const raw = await loadConfig({ cwd: process.cwd() });
+```
+
+Options include `configFileOptions` (filename, extensions, locations,
+`packageJson`, ancestor search), `required`, `overrides`, `fresh` (re-import in
+watch mode), `tsconfig` (path-alias resolution for TS configs) and `loader`.
+`loadConfigSync` supports JSON/YAML/CJS and synchronous loaders;
+`loadConfigAsync` also supports ESM and TypeScript.
+
+> The dotted path is the env name with the prefix removed and `_` folded to `.`,
+> so `MYAPP_AUTH_TOKEN_TTL` reads as `auth.token.ttl`. Env names live on the
+> schema as `.meta({ envName })`, so the generated `.env` file and the runtime
+> parser stay in step.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/generated-outputs.md
+---
+# Generated outputs
+
+Every generator reads from the same Zod, untyped or plain-value schema. The
+engine's own config model is the living example: its types are committed at
+[packages/shared/src/config-types.ts](https://github.com/deltabox-studio/toolchain/blob/main/packages/shared/src/config-types.ts).
+
+For the engine/standalone call forms and the full option list per generator, see
+[Generate](/guide/config-generator/generate). For every export and option, see
+the [API reference](/guide/config-generator/api).
+
+## Config types — `engine.types` / `generateConfigTypes()`
+
+Named `interface`s (and `type` aliases for enums/unions) with jsdoc taken from
+`.describe()`. Unions and refs stay named, so nested objects are referenced
+rather than inlined:
+
+```ts
+// engine.types.generate() -> { server: "...", cli: "..." }
+engine.types.write({ outputDir: 'types' }); // types/server.ts, types/cli.ts
+```
+
+```ts
+// types/server.ts
+export interface ServerConfig {
+    /** Bind host. */
+    host?: string;
+    port?: number;
+    auth?: { password?: string; enabled?: boolean };
+}
+```
+
+An object schema that also accepts arbitrary keys (Zod `.catchall(...)`,
+`.loose()` or `z.looseObject(...)`, ie. `additionalProperties` in the JSON
+Schema) generates an open interface with an index signature, so the extra keys
+stay typed as `unknown` instead of being rejected:
+
+```ts
+export interface ServerConfig {
+    /** Bind host. */
+    host?: string;
+    [key: string]: unknown;
+}
+```
+
+## Markdown — `engine.markdown` / `generateConfigMarkdown()`
+
+One reference page per scope plus an index listing the required/core env vars:
+
+```ts
+engine.markdown.write({ outputDir: 'docs/reference/configuration' });
+// docs/reference/configuration/server.md, .../index.md
+```
+
+See a real full example at [config/reference.md](../../config/reference.md).
+
+Markdown frontmatter is enabled by default. Set `frontmatter: false` to omit it,
+pass a raw string to replace the body, or pass a callback to build it from the
+generator options. The returned string is wrapped in `---` automatically.
+
+```ts
+generateConfigMarkdown(schema, {
+    frontmatter: ctx => `title: ${ctx.options.title ?? 'Configuration'}`,
+});
+```
+
+Use `combined: true` to render every scope into one file instead of one file per
+scope. `generateConfigTypes`, `generateConfigMarkdown` and `generateConfigEnv`
+return file contents and only write when `outputDir`/`output` is a string;
+`false` explicitly disables writing.
+
+## Env — `engine.env` / `generateEnvFile()`
+
+A `.env.example`; secrets are emitted commented out so operators fill them in:
+
+```ts
+engine.env.write({ output: '.env.example' });
+```
+
+```sh
+# ---- SERVER ----
+MYAPP_HOST=localhost
+# MYAPP_AUTH_PASSWORD=
+```
+
+## JSON Schema — `engine.jsonSchema` / `generateConfigJsonSchema()`
+
+The resolved untyped JSON Schema for every scope, for editor autocomplete:
+
+```ts
+await engine.jsonSchema.write({ output: 'config.schema.json' });
+```
+
+## CLI docs - `engine.markdown.cli` / `generateCliDocs()`
+
+`generateCliDocs` reads `ToolchainCommand` descriptors rather than the config
+schema: it renders a markdown reference from the commands your CLI actually
+registers. The engine exposes the same generator as
+`engine.markdown.cli.generate()` (and `.write()`):
+
+```ts
+import { builtinCommands } from '@deltabox/toolchain/cli';
+
+const markdown = engine.markdown.cli.generate([...builtinCommands(), ...myCommands], {
+    prefix: 'my-cli',
+    title: 'CLI reference',
+    intro: 'Generated from the registered commands.',
+});
+
+engine.markdown.cli.write(builtinCommands(), { output: 'docs/cli.md' });
+```
+
+The standalone `generateCliDocs(commands, options)` export is equivalent when you
+do not already have an engine. Hidden commands are omitted and duplicate names
+keep the first descriptor. The `dbx` reference itself is generated this way, so a
+custom command no longer has to be added to `builtinCommands()` to be documented.
+
+## Env docs - `engine.markdown.env` / `generateEnvMarkdown()`
+
+`engine.markdown.env.generate()` renders the environment-variable table from
+`engine.collect()`, using the engine's `envPrefix`. `write({ output })` writes the
+page:
+
+```ts
+engine.markdown.env.write({ output: 'docs/env.md' });
+```
+
+## Single pages - `engine.markdown.file` / `generateMarkdownFile()`
+
+`engine.markdown.file` renders one page with frontmatter and a `#` title. The
+body is supplied by the caller, so it is useful for overview/index pages:
+
+```ts
+engine.markdown.file.write({
+    output: 'docs/index.md',
+    title: 'Config types',
+    body: 'The toolchain has three configuration surfaces...',
+});
+```
+
+## Post-processing
+
+The `generate*` functions return their content, so you can transform it before
+writing (the `write*` methods write immediately):
+
+```ts
+const files = generateConfigTypes(schema);
+for (const [scope, source] of Object.entries(files)) {
+    const sourceWithBanner = `// Generated — do not edit.\n${source}`;
+    await fs.promises.writeFile(`types/${scope}.ts`, sourceWithBanner);
+}
+```
+
+If the transform changes the formatting, run the result through
+[`formatGenerated()`](#formatting--formatgenerated) before writing.
+
+## Formatting — `formatGenerated()`
+
+Generated text is formatted **at generation time**, so a written file is already
+formatted instead of relying on a separate `yarn format` pass. `formatGenerated`
+runs source through Oxfmt, preferring the project-local `vite-plus/fmt` (Oxfmt
+ships with Vite+), then `oxfmt`, and returns the input untouched when no formatter
+is resolvable, so generation never fails on a missing formatter.
+
+```ts
+import { formatGenerated, GENERATED_FORMAT_OPTIONS } from '@deltabox/toolchain/config';
+
+const source = 'export const config={a:1}';
+const formatted = await formatGenerated(source, {
+    fileName: 'config.ts', // infers the language (default `generated.ts`)
+    options: { printWidth: 100 }, // merged over GENERATED_FORMAT_OPTIONS
+});
+```
+
+`GENERATED_FORMAT_OPTIONS` is the baseline Oxfmt config matching the toolchain's
+own `vite.config.ts` (4-space indent, single quotes, `trailingComma: 'es5'`,
+`jsdoc: true`, ...). Pass `options.fileName` to format JSON, markdown or another
+language, and `options.options` to override any single option.
+
+For a full, real example of the generated config types, see
+`packages/shared/src/config-types.ts`.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/api.md
+---
+# API reference
+
+Everything is exported from the `@deltabox/toolchain/config` subpath. The engine
+and the standalone functions share the same schemas and options, so you can start
+with the engine and drop to a single generator when you only need one artifact.
+
+```ts
+import {
+    createConfigEngine,
+    generateConfigTypes,
+    parseConfig,
+    parseEnvConfig,
+    loadConfigAsync,
+} from '@deltabox/toolchain/config';
+```
+
+## Schemas
+
+A schema is a Zod schema, a resolved untyped schema, or a plain value. Plain
+objects and primitives are supported through their defaults.
+
+```ts
+import { z } from 'zod';
+
+// Zod (the richest form: validation + defaults + metadata)
+const zodSchema = z.object({
+    port: z.number().default(3000).meta({ envName: 'MYAPP_PORT' }),
+});
+
+// Untyped/JSON-Schema shape
+const untypedSchema = {
+    type: 'object',
+    properties: {
+        port: { type: 'number', default: 3000, envName: 'MYAPP_PORT' },
+        host: { type: 'string', default: 'localhost' },
+    },
+};
+
+// Plain object (values become defaults)
+const plainObject = {
+    port: 3000,
+    host: 'localhost',
+};
+
+// A primitive scope (the value becomes the default)
+const plainPrimitive = 3000;
+```
+
+A **scope map** keys each top-level entry by scope name:
+
+```ts
+const scopes = {
+    server: zodSchema,
+    frontend: { apiUrl: 'http://localhost:8080' },
+    cli: 3000,
+};
+```
+
+A single schema (Zod or untyped) is treated as one runtime scope named `config`.
+Arrays of schemas are merged into one scope.
+
+```ts
+const engine = createConfigEngine({ schema: scopes, baseGroup: ['base', 'server'] });
+```
+
+The `baseGroup` option accepts a string or an array of strings. Each named group
+is hoisted into the generated `...Base` interface (types) and the flattened
+markdown/JSON Schema shape. Multiple groups are merged in declaration order.
+
+## Engine
+
+`createConfigEngine(options)` binds the schema once and exposes the generators.
+
+```ts
+const engine = createConfigEngine({
+    schema: scopes,
+    envPrefix: 'MYAPP_',
+    baseGroup: ['base', 'server'],
+    root: process.cwd(),
+    envPathOf: env =>
+        env
+            .replace(/^MYAPP_/, '')
+            .toLowerCase()
+            .replace(/_/g, '.'),
+});
+
+engine.schema; // the exact schema passed in
+engine.envPrefix; // 'MYAPP_'
+engine.baseGroup; // ['base', 'server']
+engine.root; // process.cwd()
+```
+
+| Member                  | Returns                                        |
+| ----------------------- | ---------------------------------------------- |
+| `engine.collect()`      | every collected `ConfigDef`                    |
+| `engine.requiredVars()` | the `required` definitions (optionally scoped) |
+
+### `engine.env`
+
+```ts
+const envFile = engine.env.generate({ envPrefix: 'MYAPP_' });
+// MYAPP_PORT=3000
+
+const envTypes = engine.env.types.generate({ outputDir: 'types' });
+// { 'env.ts': '...', 'dbx-env.d.ts': '...' }
+
+engine.env.write({ output: '.env.example' });
+engine.env.types.write({ outputDir: 'types' }); // returns the written paths
+```
+
+### `engine.types`
+
+```ts
+const files = engine.types.generate({ outputDir: 'types' });
+// { server: 'export interface ServerConfig...', cli: '...' }
+
+engine.types.write({ outputDir: 'types', extension: 'mts' });
+```
+
+### `engine.markdown`
+
+```ts
+const commands = [/* your ToolchainCommand descriptors */];
+
+const pages = engine.markdown.generate({ outputDir: 'docs/reference' });
+// { 'server.md': '...', 'cli.md': '...', 'index.md': '...' }
+
+// One combined page instead of one per scope
+engine.markdown.generate({ combined: true }); // { 'index.md': '...' }
+
+// A CLI command reference
+engine.markdown.cli.generate(commands);
+engine.markdown.cli.write(commands, { output: 'docs/cli.md' });
+
+// The environment-variable reference
+engine.markdown.env.generate();
+engine.markdown.env.write({ output: 'docs/env.md' });
+
+// One generic page
+engine.markdown.file.generate({ title: 'Docs', body: 'Hello.' });
+```
+
+### `engine.cli`
+
+```ts
+// Env-backed `cli` scope options
+const options = engine.cli.generate({ scope: 'cli' });
+// [{ flag: '--port', env: 'MYAPP_PORT', type: 'number', ... }]
+
+engine.cli.write({ output: 'cli-options.json' });
+
+// Scoped config commands + options from every config field
+const scoped = engine.cli.options();
+// {
+//   command: { server: { name: 'server', type: 'object', options: [...] }, ... },
+//   commandEntries: [['server', {...}], ...],
+//   options: [...],
+//   optionsEntries: [['--port', {...}], ...],
+// }
+```
+
+### `engine.jsonSchema`
+
+`jsonSchema` is async because Zod's JSON Schema lowering is async.
+
+```ts
+const doc = await engine.jsonSchema.generate({ preserveDefs: true });
+await engine.jsonSchema.write({ output: 'config.schema.json' });
+```
+
+### `engine.configJson`
+
+```ts
+const metadata = engine.configJson.build();
+// { env: [...], cli: [...], config: [...] }
+```
+
+## Standalone generators
+
+Every engine method has a standalone equivalent. They return content unless you
+pass an output path/directory.
+
+```ts
+import {
+    collectDefinitions,
+    formatGenerated,
+    generateCliDocs,
+    generateCliOptions,
+    generateConfigEnv,
+    generateConfigJsonSchema,
+    generateConfigMarkdown,
+    generateConfigTypes,
+    generateEnvFile,
+    generateEnvMarkdown,
+    generateJsonSchemaFile,
+    generateMarkdownFile,
+} from '@deltabox/toolchain/config';
+
+generateEnvFile(schema, { envPrefix: 'MYAPP_' });
+generateConfigEnv(schema, { envPrefix: 'MYAPP_', outputDir: 'types' });
+generateConfigTypes(schema, { outputDir: 'types' });
+generateConfigMarkdown(schema, { outputDir: 'docs/reference' });
+generateEnvMarkdown(collectDefinitions(schema, { envPrefix: 'MYAPP_' }));
+generateMarkdownFile({ title: 'Docs', body: 'Hello.' });
+generateCliOptions(schema, { envPrefix: 'MYAPP_', scope: 'cli' });
+generateCliDocs(commands, { output: 'docs/cli.md' });
+
+await generateConfigJsonSchema(schema, { baseGroup: ['base', 'server'] });
+await generateJsonSchemaFile(schema, { output: 'config.schema.json' });
+
+const formatted = await formatGenerated(source, { fileName: 'config.ts' });
+```
+
+## Runtime collection
+
+`collect` resolves env vars and CLI args into a config object. It does not
+validate unless `validate: true`.
+
+```ts
+import { collect, collectDefinitions, collectRequired } from '@deltabox/toolchain/config';
+
+const config = collect(schema, {
+    envPrefix: 'MYAPP_',
+    envSource: process.env,
+    argv: process.argv.slice(2),
+    validate: true,
+});
+
+const definitions = collectDefinitions(schema, { envPrefix: 'MYAPP_' });
+const required = collectRequired(schema, 'server');
+```
+
+## Runtime parsers
+
+The parsers merge the enabled sources, apply overrides and validate by default.
+All of them accept Zod, untyped and plain/primitive schemas.
+
+```ts
+import {
+    parseCliConfig,
+    parseConfig,
+    parseEnvConfig,
+    parseConfigAsync,
+} from '@deltabox/toolchain/config';
+
+// env + CLI + overrides
+const config = parseConfig(schema, { port: 4000 }, { envPrefix: 'MYAPP_' });
+
+// env only
+parseEnvConfig(schema, process.env, { envPrefix: 'MYAPP_' });
+
+// CLI only: --port 4000 --host localhost
+parseCliConfig(schema, process.argv.slice(2), { envPrefix: 'MYAPP_' });
+
+// Async variants accept promise inputs
+await parseConfigAsync(schema, Promise.resolve({ port: 4000 }));
+```
+
+`ConfigParseError` is thrown when validation fails and
+`errorOptions.errorLevel` is `throw` (the default). Its `issues` array contains
+the validated paths and messages.
+
+## Loaders
+
+`loadConfig*` discover a config file, import it, merge `overrides` and then parse
+the value through the passed `parser` (or `schema`). You do **not** need to call
+`parseConfig`/`parseEnvConfig`/`parseCliConfig` after `loadConfig*`: it already
+did that for you.
+
+```ts
+import { loadConfig, loadConfigAsync, loadConfigSync } from '@deltabox/toolchain/config';
+
+const loaded = await loadConfigAsync({
+    parser: z.object({
+        port: z.number().default(3000),
+        host: z.string().default('localhost'),
+    }),
+    cwd: process.cwd(),
+    names: ['dbx.config.ts', 'dbx.config.js'],
+    locations: ['.', 'config'],
+    envPrefix: 'MYAPP_',
+    validate: true, // default when a parser is provided
+});
+
+loaded?.config; // the parsed + validated value
+loaded?.path; // the file that was loaded
+```
+
+Without a `parser`/`schema`, the raw loaded value is returned:
+
+```ts
+const raw = await loadConfig({ cwd: process.cwd() });
+```
+
+The parser-based loader also accepts the flat discovery fields (`cwd`, `names`,
+`locations`, `packageJsonKeys`, `parent`, `accept`, `tsconfig`, `fresh`) as well
+as `configFileOptions` when you need the full discovery shape.
+
+`loadConfigSync` supports JSON/YAML/CJS and custom synchronous loaders;
+`loadConfigAsync` also supports ESM and TypeScript.
+
+`createConfigFile({ cwd, name?, content?, imports?, overwrite? })` writes a
+starter `dbx.config.ts`.
+
+## Schema utilities
+
+```ts
+import {
+    compileZodSchema,
+    flattenBaseSchema,
+    isSchemaType,
+    isZodSchema,
+    metaOf,
+    normalizeBaseGroups,
+    normalizeConfigSchema,
+    resolveUntypedSchema,
+    splitBaseSchema,
+    toSchemaType,
+    zodToJsonSchema,
+    zodToSchemaMap,
+} from '@deltabox/toolchain/config';
+
+isZodSchema(value); // Zod schema?
+isSchemaType(value); // resolved untyped schema?
+
+toSchemaType(schema); // Zod/plain value -> resolved untyped schema
+resolveUntypedSchema({ port: 3000 }); // -> { properties: { port: { type: 'number', default: 3000 } } }
+normalizeConfigSchema(schema); // -> { [scope]: resolvedSchema }
+zodToJsonSchema(zodSchema); // -> untyped JSON Schema
+zodToSchemaMap(zodSchema); // -> { [typeName]: resolvedSchema }
+compileZodSchema(zodSchema); // best-effort Zod compile
+
+normalizeBaseGroups(['base', 'server']); // ['base', 'server']
+splitBaseSchema(schema, ['base', 'server']); // { base, groups, hasBase }
+flattenBaseSchema(schema, ['base', 'server']); // base fields hoisted
+metaOf(schema); // ConfigMeta | undefined
+```
+
+`renderTsType(node)` and `normalizeJsonSchemaMetadata(node)` are lower-level
+helpers for custom JSON Schema pipelines.
+
+## Environment helpers
+
+```ts
+import {
+    envBool,
+    envInt,
+    envList,
+    envMap,
+    envPathOf,
+    envString,
+    envVarNameOf,
+    parseEnvTree,
+    readEnvPath,
+} from '@deltabox/toolchain/config';
+
+const tree = parseEnvTree(process.env, 'MYAPP_');
+envString(tree, 'host', 'localhost');
+envInt(tree, 'port', 3000);
+envBool(tree, 'debug', false);
+envList(tree, 'tags', []);
+envMap(tree, 'headers.map');
+readEnvPath(tree, 'auth.token');
+
+envPathOf('MYAPP_AUTH_TOKEN', 'MYAPP_'); // auth.token
+envVarNameOf('auth.token', 'MYAPP_'); // MYAPP_AUTH_TOKEN
+```
+
+## CLI generation
+
+`generateConfigCliOptions(schema)` walks the config fields (not just env-backed
+values) and treats each **schema scope as a CLI command**, with its fields as
+options. It returns scoped and flat views:
+
+```ts
+import {
+    configCliCommand,
+    generateConfigCliOptions,
+    toToolchainOptions,
+} from '@deltabox/toolchain/config';
+
+const result = generateConfigCliOptions(scopes, {
+    flags: { 'auto.aliases': '--aliases' }, // optional custom mapping
+    types: { auto: 'boolean' }, // override an ambiguous schema type
+});
+
+result.command.server; // { name: 'server', type: 'object', options: [...] }
+result.commandEntries; // [['server', {...}], ['frontend', {...}]]
+result.options; // every option across every command
+result.optionsEntries; // [['--port', {...}], ...]
+
+const options = toToolchainOptions(result.options);
+// [{ flags: '--port <value>', description: 'HTTP port', default: '3000' }, ...]
+```
+
+`configCliCommand` builds a complete `ToolchainCommand` from the schema, parses
+the provided flags into a validated config and passes it to `run`:
+
+```ts
+import { configCliCommand } from '@deltabox/toolchain/config';
+
+export const serveCommand = configCliCommand({
+    name: 'serve',
+    description: 'Run the API server.',
+    schema: serverConfig,
+    // Extra command-specific options that are not config fields.
+    options: [{ flags: '--json', description: 'Print JSON.' }],
+    run: (values, config, context) => {
+        // `config` is already parsed/validated from `values`.
+        console.log(config, context.config);
+    },
+});
+
+// Register it like any other ToolchainCommand:
+registerToolchainCommands(program, [serveCommand]);
+```
+
+For an existing command, merge generated options into its descriptor:
+
+```ts
+import { generateConfigCliOptions, toToolchainOptions } from '@deltabox/toolchain/config';
+
+const command = {
+    name: 'tsconfig',
+    description: 'Generate workspace tsconfig files.',
+    options: [
+        { flags: '--cwd <dir>', description: 'Project root.' },
+        ...toToolchainOptions(generateConfigCliOptions(tsconfigConfigSchema).options),
+        { flags: '--json', description: 'Print the resolved config.' },
+    ],
+    run: (values, context) => {
+        // values from generated flags are available alongside custom flags
+    },
+};
+```
+
+`configCommands` returns the library `config:*` generator commands; it does not
+add commands to the `dbx` binary.
+
+### `CliOptionDef`
+
+`CliOptionDef` carries the config metadata a CLI builder needs:
+
+| Field         | Purpose                                          |
+| ------------- | ------------------------------------------------ |
+| `flag`        | Long flag (`--auto-aliases`).                    |
+| `short`       | Optional shorthand (`-a`).                       |
+| `env`         | Env var, for env-backed options.                 |
+| `type`        | `string`, `number`, `boolean`, `array`, ...      |
+| `description` | Config description.                              |
+| `default`     | Stringified default.                             |
+| `required`    | Config value is required.                        |
+| `multiple`    | Repeated occurrences collect into an array.      |
+| `choices`     | Allowed enum values, when available.             |
+| `scope`       | Config scope.                                    |
+| `path`        | Dotted config path (`auto.aliases`).             |
+| `parse`       | Coerce one raw CLI string into the config value. |
+
+## Root helpers
+
+```ts
+import { findProjectRoot, monorepoRoot } from '@deltabox/toolchain/config';
+
+findProjectRoot(process.cwd()); // nearest project root
+monorepoRoot(process.cwd()); // nearest workspace root
+```
+
+## Types
+
+All types can be found at
+[packages/config/src/types](https://github.com/deltabox-studio/toolchain/tree/main/packages/config/src/types).
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/client-and-server.md
+---
+# Client and server configs
+
+Config code is often shared between an API and a browser app. The schemas can
+share primitives, but the **engines**, loaders and runtime imports must stay in
+their own context. A client bundle should never pull in `node:fs`, a server
+secret, or the server config engine; a server process should not depend on
+browser-only globals.
+
+The safest structure is one folder per context, each with its own schema entry,
+engine and public import path. Do not put a single barrel `index.ts` above both
+contexts that re-exports their engines or schemas.
+
+## Project layout
+
+```tree
+- name: packages/shared/src/config
+  children:
+    - name: common
+      description: Context-free primitives only
+      children:
+        - name: primitives.ts
+        - name: meta.ts
+    - name: client
+      description: Browser-safe config
+      children:
+        - name: schema
+          children:
+            - name: index.ts
+              description: Client schemas only
+            - name: api.ts
+            - name: telemetry.ts
+        - name: engine.ts
+          description: createConfigEngine(client schemas)
+        - name: index.ts
+          description: Public client entry
+    - name: server
+      description: Server-only config
+      children:
+        - name: schema
+          children:
+            - name: index.ts
+              description: Server schemas only
+            - name: database.ts
+            - name: http.ts
+        - name: engine.ts
+          description: createConfigEngine(server schemas)
+        - name: index.ts
+          description: Public server entry
+    - name: index.ts
+      status: deleted
+      description: Never re-export both contexts
+```
+
+`common/` may be imported by either side, but it must stay free of runtime
+dependencies such as `node:fs`, database clients or browser APIs. Everything
+else is context-specific.
+
+## Server context
+
+### Server schemas
+
+Keep each server schema module focused, and export only server schemas from the
+server schema entry:
+
+```ts
+// packages/shared/src/config/server/schema/database.ts
+import { z } from 'zod';
+
+export const databaseConfig = z.object({
+    url: z.string().meta({
+        envName: 'APP_DATABASE_URL',
+        required: true,
+        secret: true,
+    }),
+    poolSize: z.number().default(10).meta({ envName: 'APP_DATABASE_POOL_SIZE' }),
+});
+```
+
+```ts
+// packages/shared/src/config/server/schema/http.ts
+import { z } from 'zod';
+
+export const httpConfig = z.object({
+    port: z.number().default(3000).meta({ envName: 'APP_HTTP_PORT' }),
+    trustProxy: z.boolean().default(false).meta({ envName: 'APP_HTTP_TRUST_PROXY' }),
+});
+```
+
+```ts
+// packages/shared/src/config/server/schema/index.ts
+export { databaseConfig } from './database.js';
+export { httpConfig } from './http.js';
+```
+
+### Server engine
+
+The server engine imports the server schema entry only:
+
+```ts
+// packages/shared/src/config/server/engine.ts
+import { createConfigEngine } from '@deltabox/toolchain/config';
+
+import * as serverSchema from './schema/index.js';
+
+export const serverConfig = createConfigEngine({
+    schema: {
+        database: serverSchema.databaseConfig,
+        http: serverSchema.httpConfig,
+    },
+    envPrefix: 'APP_',
+});
+```
+
+The public server entry is the only module the server application imports:
+
+```ts
+// packages/shared/src/config/server/index.ts
+export { serverConfig } from './engine.js';
+export * from './schema/index.js';
+```
+
+### Loading server config
+
+Read files and `process.env` in the server process:
+
+```ts
+// apps/api/src/config.ts
+import { loadConfigAsync, parseEnvConfig } from '@acme/shared/config/server';
+import { serverConfig } from '@acme/shared/config/server';
+
+export async function loadServerConfig() {
+    const loaded = await loadConfigAsync({
+        parser: serverConfig.schema,
+        cwd: process.cwd(),
+        names: ['dbx.config.ts', 'dbx.config.js'],
+    });
+
+    if (loaded) return loaded.config;
+
+    return parseEnvConfig(serverConfig.schema, process.env, {
+        envPrefix: 'APP_',
+    });
+}
+```
+
+`loadConfigAsync` can import TypeScript and read the filesystem, so it must not
+appear in a client module graph.
+
+## Client context
+
+### Client schema
+
+Client schemas may only describe browser-visible values. Prefix public values
+with the client-visible prefix (`PUBLIC_`), and keep secrets out entirely:
+
+```ts
+// packages/shared/src/config/client/schema/api.ts
+import { z } from 'zod';
+
+export const apiConfig = z.object({
+    baseUrl: z.string().default('/api').meta({ envName: 'PUBLIC_API_BASE_URL' }),
+    timeout: z.number().default(10_000).meta({ envName: 'PUBLIC_API_TIMEOUT' }),
+});
+```
+
+```ts
+// packages/shared/src/config/client/schema/telemetry.ts
+import { z } from 'zod';
+
+export const telemetryConfig = z.object({
+    enabled: z.boolean().default(false).meta({ envName: 'PUBLIC_TELEMETRY_ENABLED' }),
+});
+```
+
+```ts
+// packages/shared/src/config/client/schema/index.ts
+export { apiConfig } from './api.js';
+export { telemetryConfig } from './telemetry.js';
+```
+
+### Client engine
+
+The client engine imports only the client schema entry:
+
+```ts
+// packages/shared/src/config/client/engine.ts
+import { createConfigEngine } from '@deltabox/toolchain/config';
+
+import * as clientSchema from './schema/index.js';
+
+export const clientConfig = createConfigEngine({
+    schema: {
+        api: clientSchema.apiConfig,
+        telemetry: clientSchema.telemetryConfig,
+    },
+    envPrefix: 'PUBLIC_',
+});
+```
+
+```ts
+// packages/shared/src/config/client/index.ts
+export { clientConfig } from './engine.js';
+export * from './schema/index.js';
+```
+
+### Loading client config
+
+The browser has `import.meta.env`, not `process.env`, and it must not import
+the server engine or `node:fs`:
+
+```ts
+// apps/web/src/config.ts
+import { parseEnvConfig } from '@acme/shared/config/client';
+import { clientConfig } from '@acme/shared/config/client';
+
+export const webConfig = parseEnvConfig(
+    clientConfig.schema,
+    import.meta.env as Record<string, string | undefined>,
+    { envPrefix: 'PUBLIC_' }
+);
+```
+
+Vite/Vite+ only exposes env vars with the configured public prefix; the schema
+above uses `PUBLIC_` consistently. Never put a server secret in a client schema.
+
+## Bundlers
+
+Treeshaking depends on what a module **imports**, not on which exports you
+happen to use. A top-level barrel defeats the split:
+
+```tree
+- name: packages/shared/src/config
+  children:
+    - name: index.ts
+      status: deleted
+      description: Re-exports client + server; every importer pulls both
+    - name: client/index.ts
+      description: Client-only entry
+    - name: server/index.ts
+      description: Server-only entry
+```
+
+Import the context entry explicitly:
+
+```ts
+// Bad: the barrel can load both engines into the same module graph
+import { clientConfig } from '@acme/shared/config';
+// Good: the client graph only sees the client engine
+import { clientConfig } from '@acme/shared/config/client';
+```
+
+Expose separate package subpaths instead of one mixed entry:
+
+```json [package.json]
+{
+    "exports": {
+        "./config/client": "./dist/config/client/index.js",
+        "./config/server": "./dist/config/server/index.js"
+    },
+    "sideEffects": false
+}
+```
+
+### Side effects and boundaries
+
+Treeshaking cannot remove a module with import-time side effects. Keep the config
+modules declarative:
+
+* Do not open database connections, read files or start servers at module load.
+* Do not import `node:*` from the client schema or client engine.
+* Do not import the client engine from the server engine, or vice versa.
+* Keep `createConfigEngine` calls in the context's `engine.ts`; import that file
+  only from the matching side.
+* If a package needs a server-only guard, make the server entry the only one
+  that imports the server dependencies. A client import of the server entry
+  should fail at build time, not silently bundle it.
+
+### A correct import graph
+
+```tree
+- name: apps/web/src/config.ts
+  description: imports @acme/shared/config/client only
+  status: added
+- name: apps/api/src/config.ts
+  description: imports @acme/shared/config/server only
+  status: added
+```
+
+The client bundle never reaches `server/engine.ts`, `server/schema/*` or
+`node:fs`; the server process never reaches `client/schema/*` or
+`import.meta.env` parsing.
+
+## Checklist
+
+* One schema folder and one engine per context.
+* No `config/index.ts` that re-exports both context engines.
+* Client code imports only `config/client`; server code imports only
+  `config/server`.
+* Shared `common` modules are context-free.
+* Client schemas use only public env names and no secrets.
+* Server-only modules are never imported from client code.
+* `sideEffects: false` plus no import-time side effects, so unused context
+  modules are actually removed.
+
+See [Load the config](/guide/config-generator/load-the-config) for the parser
+and loader options, and the [API reference](/guide/config-generator/api) for the
+engine and CLI APIs.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/real-world-shape.md
+---
+# Real-world shape
+
+A real project usually has **two engines**, one per runtime context, rather than
+one engine that mixes server and browser settings:
+
+* a server engine with database, HTTP and secret-bearing schemas;
+* a client engine with public API URLs, feature flags and other browser-safe
+  values.
+
+Keeping them in separate folders and entry points is what lets bundlers drop the
+server engine from the browser bundle (and vice versa). See
+[Client and server](/guide/config-generator/client-and-server) for the full
+layout and bundler guidance.
+
+## Server engine
+
+```ts
+// packages/shared/src/config/server/engine.ts
+import { createConfigEngine } from '@deltabox/toolchain/config';
+
+import * as serverSchema from './schema/index.js';
+
+export const serverConfig = createConfigEngine({
+    schema: {
+        database: serverSchema.databaseConfig,
+        http: serverSchema.httpConfig,
+    },
+    envPrefix: 'APP_',
+    baseGroup: ['base', 'http'],
+    root: monorepoRoot(),
+});
+```
+
+## Client engine
+
+```ts
+// packages/shared/src/config/client/engine.ts
+import { createConfigEngine } from '@deltabox/toolchain/config';
+
+import * as clientSchema from './schema/index.js';
+
+export const clientConfig = createConfigEngine({
+    schema: {
+        api: clientSchema.apiConfig,
+        telemetry: clientSchema.telemetryConfig,
+    },
+    envPrefix: 'PUBLIC_',
+});
+```
+
+## Generation
+
+Run the generators against each engine so each context's `.env.example`, types,
+JSON Schema and markdown reference stay scoped to its own schema:
+
+```ts
+import { configCommands } from '@deltabox/toolchain/config';
+
+import { clientConfig } from './client/engine.js';
+import { serverConfig } from './server/engine.js';
+
+export const commands = [
+    ...configCommands({
+        engine: serverConfig,
+        defaults: { envDir: 'config/server' },
+    }),
+    ...configCommands({
+        engine: clientConfig,
+        defaults: { envDir: 'config/client' },
+    }),
+];
+```
+
+If the project exposes one `config:all` command, call the generators for both
+engines explicitly. Do not build a single engine whose schema imports both
+`server/` and `client/` modules.
+
+## Loading
+
+At runtime, each context loads its own engine:
+
+```ts
+import { serverConfig } from '@acme/shared/config/server';
+
+// apps/api/src/config.ts (server)
+import { loadConfigAsync } from '@deltabox/toolchain/config';
+
+const loaded = await loadConfigAsync({ parser: serverConfig.schema });
+```
+
+```ts
+import { clientConfig } from '@acme/shared/config/client';
+
+// apps/web/src/config.ts (client)
+import { parseEnvConfig } from '@deltabox/toolchain/config';
+
+export const webConfig = parseEnvConfig(
+    clientConfig.schema,
+    import.meta.env as Record<string, string | undefined>,
+    { envPrefix: 'PUBLIC_' }
+);
+```
+
+`loadConfig*` parses the file for you; use `parseEnvConfig`/`parseConfig` when
+you need env or CLI sources directly.
+
+## Keep the boundaries clean
+
+* Import `@acme/shared/config/client` from browser code and
+  `@acme/shared/config/server` from server code.
+* Never create a `packages/shared/src/config/index.ts` that re-exports both
+  engines.
+* Keep shared `common` modules context-free (no `node:*`, no secrets, no
+  browser-only globals).
+* Mark config packages as side-effect free and avoid import-time connections or
+  file reads.
+* Client schemas use public env names only; server secrets never enter the
+  client schema.
+
+These `config:*` commands belong to the consumer's own CLI; `dbx` itself does
+not expose them.
+
+See [Client and server](/guide/config-generator/client-and-server) for the
+complete folder layout, import graph and bundler checklist, and the
+[API reference](/guide/config-generator/api) for every generator and runtime
+export.
+
+---
+
+---
 url: https://toolchain.deltabox.studio/guide/migrations.md
 ---
 # Migrations
@@ -4821,6 +6972,8 @@ Full changelog [here](https://github.com/deltabox-studio/toolchain/blob/main/CHA
 * The redesigned config-generator programmatic API.
 * The `dbx()` Vite plugin becoming the preferred config path (available from the `@deltabox/toolchain/vite` subpath as usual).
 * Vite+ (`vite-plus`) as the bundled toolchain with per-package releases.
+* Vite+ projects configuring `pack`, `test` and `run.tasks` in `vite.config.*`
+  instead of `tsdown.config.*`, `vitest.config.*` and `turbo.json`.
 * `fmt`/`lint` moving into `vite.config.*` in Vite+ mode.
 
 ## Some of the smaller changes
@@ -4845,19 +6998,121 @@ The workspace package `@deltabox/toolchain-tsdown` is renamed to
 directory moves from `packages/tsdown` to `packages/pack` and the commitlint
 scope changes from `tsdown` to `pack`.
 
-The underlying bundler is still tsdown, so the public helper names
-(`baseTsdownConfig`, `createTsdownConfig`, `createPostBanner`) are unchanged. A
-consumer only needs to replace the import specifier:
+The underlying bundler is still tsdown, so `baseTsdownConfig` and
+`createPostBanner` keep their shape. Replace the import specifier:
 
-```ts
-// v3
-import { baseTsdownConfig } from '@deltabox/toolchain/pack';
-// v2
-import { baseTsdownConfig } from '@deltabox/toolchain/tsdown';
+```diff [tsdown.config.ts]
+-import { baseTsdownConfig } from '@deltabox/toolchain/tsdown';
++import { baseTsdownConfig } from '@deltabox/toolchain/pack';
 ```
 
-Workspace manifests that depended on `@deltabox/toolchain-tsdown` must switch
-the dependency name to `@deltabox/toolchain-pack`.
+and the workspace dependency for maintainers/contributors:
+
+```diff [package.json]
+-"@deltabox/toolchain-tsdown": "workspace:*",
++"@deltabox/toolchain-pack": "workspace:*",
+```
+
+`createTsdownConfig` now takes one options object instead of an
+`(overrides, banner)` pair:
+
+```diff [tsdown.config.ts]
+-const config = createTsdownConfig({ format: ['cjs'] }, { name: 'Acme' });
++const config = createTsdownConfig({
++    overrides: { format: ['cjs'] },
++    banner: { name: 'Acme' },
++});
+```
+
+### Vite+ projects: `pack`, `test` and `run.tasks` live in `vite.config.*`
+
+**This only applies when the project uses Vite+** (`vite-plus` and Vite+'s
+`vite.config.*`). If the project is not on Vite+, keep the standalone
+`tsdown.config.*`, `vitest.config.*` and `turbo.json` files as they are.
+
+In a Vite+ project, the bundler, test runner and task runner read their
+configuration from `vite.config.*`. Move each standalone config into the
+matching Vite+ block, then delete the old file:
+
+```diff [tsdown.config.ts → vite.config.ts]
+# tsdown.config.ts
+-import { defineConfig } from 'tsdown';
+-
+-export default defineConfig({
+-    entry: ['src/index.ts'],
+-    dts: true,
+-    format: ['esm', 'cjs'],
+-});
+
+# vite.config.ts
++import { defineConfig } from 'vite-plus';
++
++export default defineConfig({
++    pack: {
++        entry: ['src/index.ts'],
++        dts: true,
++        format: ['esm', 'cjs'],
++    },
++});
+```
+
+```diff [vitest.config.ts → vite.config.ts]
+# vitest.config.ts
+-import { defineConfig } from 'vitest/config';
+-
+-export default defineConfig({
+-    test: {
+-        include: ['src/**/*.test.ts'],
+-        environment: 'node',
+-    },
+-});
+
+# vite.config.ts
++import { defineConfig } from 'vite-plus';
++
++export default defineConfig({
++    test: {
++        include: ['src/**/*.test.ts'],
++        environment: 'node',
++    },
++});
+```
+
+```diff [turbo.json → vite.config.ts]
+# turbo.json
+-{
+-    "tasks": {
+-        "build": {
+-            "dependsOn": ["^build"],
+-            "outputs": ["dist/**"]
+-        }
+-    }
+-}
+
+# vite.config.ts
++import { defineConfig } from 'vite-plus';
++
++export default defineConfig({
++    run: {
++        tasks: {
++            build: {
++                command: 'vp build',
++                cache: { output: ['dist/**'] },
++            },
++        },
++    },
++});
+```
+
+Vite Task derives cross-package order from `package.json` dependencies, so
+turbo's `^build` is not needed. A task name cannot also be a `package.json`
+script: move the script into the task (or keep the script and skip the task
+definition) so the name is declared once.
+
+In a `dbx()` plugin project, add `pack` / `test` / `run.tasks` to the existing
+`defineConfig` next to the `plugins` field; do not replace the plugin config. In config
+mode, put the same keys under `toolchain.vite` in `dbx.config.*` and let
+`dbx sync` write the Vite shim.
 
 ### The `dbx()` Vite plugin is the default config path
 
@@ -4865,14 +7120,38 @@ New scaffolds are configured through the `dbx()` Vite plugin. Import it from the
 `@deltabox/toolchain/vite` subpath: `vite-plugin-dbx` is not published yet, so
 the standalone package name is not available to install.
 
-```ts
-import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
+```diff
+# invalid
+-import { dbx, DBX_TASKS } from '@deltabox/toolchain-vite';
+# correct
++import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
 ```
 
 The v2 `@deltabox/toolchain-vite` workspace is now `vite-plugin-dbx`, and the
 umbrella subpath `@deltabox/toolchain/vite` re-exports it. A managed
 `vite.config.*` shim is only written when the project declares its own `vite`
 section.
+
+In plugin mode the whole toolchain config lives in `vite.config.*`; there is no
+`dbx.config.*` to author:
+
+```diff [vite.config.ts]
++import { defineConfig } from 'vite-plus';
++
++import { dbx } from '@deltabox/toolchain/vite';
++
++export default defineConfig({
++    plugins: [
++        dbx({
++            toolchain: {
++                project: { name: 'app' },
++                fmt: true,
++                lint: true,
++            },
++        }),
++    ],
++});
+```
 
 `dbx.config.*` remains fully supported as the non-Vite fallback, so an existing
 `dbx.config.*` project does not need to move. If you generate projects
@@ -4884,7 +7163,28 @@ instead of a separate `dbx.config.*`.
 **v3** no longer installs `vite`, `vitest` or `tsdown` for you. `vite-plus` is the
 single toolchain dependency and provides `vp` (Vite, Vitest, Oxfmt, Oxlint,
 Rolldown and tsdown). Replace the individual dev dependencies with `vite-plus`
-and use `vp` / `vp run` for those commands.
+and use `vp` / `vp run` for those commands:
+
+```diff [package.json]
+ {
+     "devDependencies": {
+-        "tsdown": "catalog:",
+-        "vite": "catalog:",
+-        "vitest": "catalog:"
++        "vite-plus": "catalog:"
+     },
+     "scripts": {
+-        "build": "tsdown",
+-        "test": "vitest run",
+-        "lint": "oxlint .",
+-        "format": "oxfmt ."
++        "build": "vp build",
++        "test": "vp test",
++        "lint": "vp lint",
++        "format": "vp fmt"
+     }
+ }
+```
 
 Workspace packages are released **individually** now: each public `packages/*`
 workspace has its own version and `CHANGELOG.md`, and the release workflow
@@ -4914,6 +7214,57 @@ the surrounding API:
   (`preserveDefs: true`), and the markdown/CLI generators expose more
   frontmatter, scope and reference options. Static schema defaults are also new.
 
+The `engine.*` generator methods are grouped now:
+
+```diff [scripts/generate-config.ts]
+-engine.writeConfigTypes({ outputDir: 'types' });
++engine.types.write({ outputDir: 'types' });
+
+-engine.writeEnvTypes({ outputDir: 'types' });
++engine.env.types.write({ outputDir: 'types' });
+
+-engine.writeMarkdown({ outputDir: 'docs/reference/configuration' });
++engine.markdown.write({ outputDir: 'docs/reference/configuration' });
+
+-await engine.writeJsonSchema({ output: 'config.schema.json' });
++await engine.jsonSchema.write({ output: 'config.schema.json' });
+
+-engine.buildConfigJson();
++engine.configJson.build();
+```
+
+The runtime side moves from the `parseEnvTree` + `env*` accessors to the schema
+parsers:
+
+```diff [src/config.ts]
+-import { envInt, envString, parseEnvTree } from '@deltabox/toolchain/config';
++import { loadConfigAsync } from '@deltabox/toolchain/config';
+
+-const tree = parseEnvTree(process.env, 'MYAPP_');
+-const serverConfig = {
+-    host: envString(tree, 'host', '0.0.0.0'),
+-    port: envInt(tree, 'port', 3000),
+-};
++const config = await loadConfigAsync({
++    cwd: process.cwd(),
++    parser: serverConfigSchema,
++    source: 'env',
++    envPrefix: 'MYAPP_',
++});
+```
+
+And the ambient env declarations change file name:
+
+```diff [tsconfig.json]
+ {
+     "include": [
+         "src",
+-        "types/env.d.ts"
++        "types/dbx-env.d.ts"
+     ]
+ }
+```
+
 If you only consume the generated files, re-run the generators; if you imported
 the engine, update the calls to the grouped API and the runtime parsers.
 
@@ -4926,7 +7277,35 @@ sections), which Vite+ reads directly.
 
 If an existing Vite+ project has standalone `.oxfmtrc.json` / `.oxlintrc.json`
 files, fold them into the Vite config with `dbx migrate --from oxc --write`;
-`dbx sync` will no longer write or prune them.
+`dbx sync` will no longer write or prune them:
+
+```diff [.oxfmtrc.json]
+-{
+-    "printWidth": 100,
+-    "singleQuote": true
+-}
+```
+
+```diff [.oxlintrc.json]
+-{
+-    "rules": {
+-        "no-console": "warn"
+-    }
+-}
+```
+
+```diff [vite.config.ts]
+ export default defineConfig({
+     plugins: [
+         dbx({
+             toolchain: {
++                fmt: { oxc: { printWidth: 100, singleQuote: true } },
++                lint: { oxc: { rules: { 'no-console': 'warn' } } },
+             },
+         }),
+     ],
+ });
+```
 
 ### Project templates are one module per template
 
@@ -4950,7 +7329,24 @@ instead of importing a shared `qol` helper.
 `resolveDockerPlan()` now returns `installSources` — the exact files the
 Dockerfile copies before installing dependencies. Code that constructs a
 `DockerPlan` by hand must provide it; prefer `resolveDockerPlan()` +
-`dockerFiles()` instead.
+`dockerFiles()` instead:
+
+```diff
+-const plan: DockerPlan = buildPlan();
++const plan = resolveDockerPlan({
++    cwd: process.cwd(),
++    packageManager: 'yarn',
++});
+```
+
+```diff
+ const plan: DockerPlan = {
+     runtime: 'node',
+-    // ...
++    installSources: ['package.json', 'yarn.lock', '.yarnrc.yml'],
++    // ...
+ };
+```
 
 ## Behaviour changes
 
@@ -4958,17 +7354,48 @@ Dockerfile copies before installing dependencies. Code that constructs a
 
 A nested `dbx.config.*` only inherits the sections it explicitly enables
 (`fmt`, `lint`, `biome`, `changelog`, `catalogs`, `logger`); `project` metadata
-is inherited except its identity fields. Projects without their own
-`dbx.config.*` are unmanaged by default — pass `--configless` or set
-`project.manageConfigless: true` to inherit the nearest ancestor config. See
-[Nested configs](/guide/config/nested-configs).
+is inherited except its identity fields.
+
+Projects without their own `dbx.config.*` (or `dbx()` vite plugin in `vite.config.*`) are unmanaged by default;
+pass `--configless` or set `project.manageConfigless: true`
+to inherit the nearest ancestor config.
+
+See [Nested configs](/guide/config/nested-configs).
+
+```diff [packages/web/dbx.config.ts]
+ export default defineConfig({
+     toolchain: {
+         project: { name: 'web' },
++        // v3: a nested config only inherits sections it opts into.
++        fmt: true,
++        lint: true,
+     },
+ });
+```
+
+```diff [dbx.config.ts]
+ export default defineConfig({
+     toolchain: {
+         project: {
++            manageConfigless: true,
+         },
+     },
+ });
+```
 
 ### Online templates need `--online`
 
 `dbx create --template <id>` and the `template:*` commands only resolve online
-(npm/git/Vite+) sources when `--online` is passed. Local and builtin templates
-work without it, and a local-only run never touches the network. Scripts and CI
-that relied on implicit online resolution must add the flag.
+(npm/git/Vite+) sources when `--online` is passed.
+
+Local and builtin templates work without it, and a local-only run never touches the network.
+
+Scripts and CI that relied on implicit online resolution must add the flag:
+
+```diff
+-dbx create --template @acme/template --name app
++dbx create --template @acme/template --name app --online
+```
 
 ### Toolchain enable/disable
 
@@ -4983,10 +7410,12 @@ export default defineConfig({
 
 Config files and the inline `dbx()` plugin only accept the workspace scope; the
 object form (`{ disabled, scope: 'global' | 'workspace' }`) is reserved for the
-CLI/programmatic API and the VS Code extension. `dbx enable`/`dbx disable` choose
-the workspace scope by default; pass `--global` to update
-`~/.dbx/toolchain/cli/config.json`. The project config takes precedence over both
-the CLI workspace setting and `.vscode/settings.json`.
+CLI/programmatic API and the VS Code extension.
+
+`dbx enable`/`dbx disable` choose the workspace scope by default; pass `--global` to update
+`~/.dbx/toolchain/cli/config.json`.
+
+The project config takes precedence over both the CLI workspace setting and `.vscode/settings.json`.
 
 ### Dependabot security updates
 
@@ -4995,25 +7424,26 @@ security-update group to `.github/dependabot.yml` and generates
 `.github/workflows/dependabot-security.yml` to enable GitHub's native security
 updates and optionally dismiss alerts below a severity threshold.
 
-```ts
-export default defineConfig({
-    toolchain: {
-        ci: {
-            dependabot: {
-                security: {
-                    vulnerabilities: { severity: 'high' },
-                    pr: { strategy: 'grouped' },
-                },
-            },
-        },
-    },
-});
+```diff [dbx.config.ts]
+ export default defineConfig({
+     toolchain: {
+         ci: {
+             dependabot: {
++                security: {
++                    vulnerabilities: { severity: 'high' },
++                    pr: { strategy: 'grouped' },
++                },
+             },
+         },
+     },
+ });
 ```
 
 `security: true` keeps every severity and groups PRs per ecosystem. The workflow
 needs a `DBX_GITHUB_TOKEN` secret with repository admin access to change the
-repository setting; `GITHUB_TOKEN` is used for alert dismissal. Set
-`security: { workflow: false }` to manage the setting yourself, or
+repository setting; `GITHUB_TOKEN` is used for alert dismissal.
+
+Set `security: { workflow: false }` to manage the setting yourself, or
 `security: { vulnerabilities: false }` to disable security updates. No migration
 is required: without `security`, the generated `dependabot.yml` and behaviour
 are unchanged.
@@ -5022,9 +7452,19 @@ are unchanged.
 
 Every managed section now accepts `regenerate?: boolean` (default `true`). Set it
 to `false` to skip that section in `dbx sync`: its files are neither written nor
-drift-checked, and sync does not prune them. User-owned files
-(`tsconfig.workspaces.json`, `tsconfig.build.json`) are only seeded when missing;
-an existing file is never overwritten by the missing-file fallback.
+drift-checked, and sync does not prune them.
+
+User-owned files (`tsconfig.workspaces.json`, `tsconfig.build.json`)
+are only seeded when missing; an existing file is never overwritten by the missing-file fallback.
+
+```diff [dbx.config.ts]
+ export default defineConfig({
+     toolchain: {
+-        tsconfig: true,
++        tsconfig: { regenerate: false },
+     },
+ });
+```
 
 ### Changelog versioning
 
@@ -5041,6 +7481,16 @@ an existing file is never overwritten by the missing-file fallback.
   including named catalogs.
 * Running changelog from a nested workspace uses the repository root for the
   fallback commit/issue links instead of the workspace's own `package.json`.
+
+If you version workspaces individually, opt excluded packages out of the glob:
+
+```diff [dbx.config.ts]
+ versioning: {
+     target: 'individual',
+-    workspaces: ['packages/*'],
++    workspaces: ['packages/*', '!packages/private-*'],
+ },
+```
 
 ### Docker
 
@@ -5083,13 +7533,20 @@ an existing file is never overwritten by the missing-file fallback.
   `dependencies` (or `peerDependencies`).
 * The base config also ships a Rolldown leak reporter. It scans emitted JS,
   declaration and textual asset chunks and fails the build by default when an
-  absolute `node_modules` path appears. Configure it via the third
-  `createTsdownConfig` argument:
-  `{ nodeModulesLeakReporter: { level: 'warn' | 'info' | 'silent', when: 'generateBundle' | 'writeBundle' | 'closeBundle' } }`
-  (or `false` to disable it). `writeBundle` is the default; use `closeBundle`
-  when a later plugin rewrites output in `writeBundle`. Non-fatal levels respect
-  tsdown/rolldown's log level. The plugin is also exported as
-  `createNodeModulesLeakReporter` for use in your own builds.
+  absolute `node_modules` path appears. Configure it with the
+  `nodeModulesLeakReporter` option (or `false` to disable it):
+  `{ level: 'warn' | 'info' | 'silent', when: 'generateBundle' | 'writeBundle' | 'closeBundle' }`.
+  `writeBundle` is the default; use `closeBundle` when a later plugin rewrites
+  output in `writeBundle`. Non-fatal levels respect tsdown/rolldown's log level.
+  The plugin is also exported as `createNodeModulesLeakReporter` for use in your
+  own builds.
+
+```diff [tsdown.config.ts]
+ const config = createTsdownConfig({
+     overrides: { format: ['cjs'] },
++    nodeModulesLeakReporter: { level: 'warn', when: 'writeBundle' },
+ });
+```
 
 ## Recommended upgrade steps
 
@@ -5097,51 +7554,27 @@ an existing file is never overwritten by the missing-file fallback.
    `vitest` and `tsdown` dev dependencies with `vite-plus`.
 2. Import the Vite plugin from `@deltabox/toolchain/vite` (not
    `vite-plugin-dbx`, which is not published yet).
-3. Run `dbx sync --recursive` and commit the regenerated managed files.
-4. Rename generated `env.d.ts` references to `dbx-env.d.ts`, and switch custom
+3. If the project uses Vite+, move `tsdown.config.*`, `vitest.config.*` and
+   `turbo.json` into `vite.config.*` as `pack`, `test` and `run.tasks`.
+4. Run `dbx sync --recursive` and commit the regenerated managed files.
+5. Rename generated `env.d.ts` references to `dbx-env.d.ts`, and switch custom
    runtime loaders to `parseConfig` / `parseEnvConfig` / `parseCliConfig` (or
    `loadConfigAsync` for files).
-5. Run `dbx sync --recursive --check`, `yarn typecheck`, `yarn lint` and your
+6. Run `dbx sync --recursive --check`, `yarn typecheck`, `yarn lint` and your
    test suite.
-6. Regenerate Docker artifacts created by v2 (or edit the `COPY` lines to list
+7. Regenerate Docker artifacts created by v2 (or edit the `COPY` lines to list
    only files that exist) and rebuild the image once with Docker available.
-7. Replace imports of the old monolithic template helper with
+8. Replace imports of the old monolithic template helper with
    `PROJECT_TEMPLATE_IDS` / `createProjectTemplateFiles`.
-8. If you build a `DockerPlan` by hand, add its `installSources` (or switch to
+9. If you build a `DockerPlan` by hand, add its `installSources` (or switch to
    `resolveDockerPlan()`).
-9. Re-run `dbx migrate --check` in CI; inherited workspace configs may now pass
-   where v2 reported a false drift.
-10. Add `--online` to any `dbx create --template` / `template:*` script that
+10. Re-run `dbx migrate --check` in CI; inherited workspace configs may now pass
+    where v2 reported a false drift.
+11. Add `--online` to any `dbx create --template` / `template:*` script that
     resolves npm/git/Vite+ sources.
-11. If you use `ci.dependabot`, opt into `security` and add the
+12. If you use `ci.dependabot`, opt into `security` and add the
     `DBX_GITHUB_TOKEN` secret (repository admin) before the generated security
     workflow runs.
-
----
-
----
-url: https://toolchain.deltabox.studio/llms.md
----
-# LLMs
-
-This documentation is published in machine-readable forms so LLMs and coding
-agents can read it efficiently, following the [llms.txt](https://llmstxt.org)
-standard:
-
-* [`/llms.txt`](/llms.txt) — a concise, link-first overview: a short description,
-  how the toolchain works, and a table of contents linking to the Markdown
-  version of every page. Small enough to fit in a context window.
-* [`/llms-full.txt`](/llms-full.txt) — the **entire** documentation concatenated
-  into a single Markdown file, for when an agent wants everything in one fetch.
-
-Every page is also available as raw Markdown by appending `.md` to its URL (eg.
-`/guide/tsconfig.md`).
-
-## When the site is unavailable
-
-If `https://toolchain.deltabox.studio` is down, the same documentation lives in
-the repository at
-[github.com/deltabox-studio/toolchain/tree/main/apps/docs](https://github.com/deltabox-studio/toolchain/tree/main/apps/docs).
 
 ---
 
@@ -5307,6 +7740,32 @@ and theme options.
 
 See [Development](/contribute/development) for the repo setup, commands and the
 linter/formatter bootstrap fix.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/llms.md
+---
+# LLMs
+
+This documentation is published in machine-readable forms so LLMs and coding
+agents can read it efficiently, following the [llms.txt](https://llmstxt.org)
+standard:
+
+* [`/llms.txt`](/llms.txt) — a concise, link-first overview: a short description,
+  how the toolchain works, and a table of contents linking to the Markdown
+  version of every page. Small enough to fit in a context window.
+* [`/llms-full.txt`](/llms-full.txt) — the **entire** documentation concatenated
+  into a single Markdown file, for when an agent wants everything in one fetch.
+
+Every page is also available as raw Markdown by appending `.md` to its URL (eg.
+`/guide/tsconfig.md`).
+
+## When the site is unavailable
+
+If `https://toolchain.deltabox.studio` is down, the same documentation lives in
+the repository at
+[github.com/deltabox-studio/toolchain/tree/main/apps/docs](https://github.com/deltabox-studio/toolchain/tree/main/apps/docs).
 
 ---
 
@@ -6166,7 +8625,7 @@ dbx changelog --dry-run             # preview the root entry
 dbx changelog --range v1.2.0..HEAD  # scan a specific range
 dbx changelog --version 2.0.0       # force a version (retags the changelogs)
 dbx changelog --format-only         # regroup existing changelogs, no bump
-dbx changelog --release-notes 2.0.0 # print the release PR body for a version
+dbx changelog --release-body 2.0.0 # print the release PR body for a version
 ```
 
 The command reads `ci.changelog` and falls back to the manual
@@ -6174,11 +8633,11 @@ The command reads `ci.changelog` and falls back to the manual
 lets a project keep manual/API changelog runs without enabling the CI workflow;
 `ci.changelog` inherits the same options when it does not override them.
 
-The generated `changelog` workflow runs `dbx changelog --range …` on every push
+The generated `changelog` workflow runs `dbx changelog --range ...` on every push
 to the `dev` branches (or `main` when `dev` is unset), so versioning is applied
 from CI as well as locally.
 
-`dbx workflow [id…]` triggers the generated workflows with their vendor CLI
+`dbx workflow [id...]` triggers the generated workflows with their vendor CLI
 (`gh`, `glab` or `az`); with no ids it triggers every workflow you declared under
 `toolchain.ci`. See [Workflows](/guide/cli#workflows).
 
@@ -6246,7 +8705,7 @@ and `feat:` go to major/minor; everything else is a patch), while the package
 changes section (eg. new packages) is kept. This is intentionally less detailed
 than the rule/scope grouping, but it works with any commit-message style.
 
-> The extension's `No "exports" main defined in … conventional-changelog-conventionalcommits …`
+> The extension's `No "exports" main defined in ... conventional-changelog-conventionalcommits ...`
 > error is an upstream commitlint bug (ESM-only parser preset), not a config
 > discovery problem. See [Troubleshooting](/guide/changelog/troubleshooting).
 
@@ -6318,10 +8777,10 @@ url: https://toolchain.deltabox.studio/guide/changelog/troubleshooting.md
 ---
 # Troubleshooting
 
-## `No "exports" main defined in … conventional-changelog-conventionalcommits`
+## `No "exports" main defined in ... conventional-changelog-conventionalcommits`
 
 Seen from the Conventional Commits VS Code extension (`vivaxy.vscode-conventional-commits`),
-usually alongside empty type/scope suggestions and a `The cwd is …` line:
+usually alongside empty type/scope suggestions and a `The cwd is ...` line:
 
 ```
 commitlint: Error: No "exports" main defined in
@@ -6604,9 +9063,9 @@ out.
   as a collapsible whose summary is `**See more...**`.
 * `breaking` (default on) wraps the breaking section; the summary names the
   section, so the duplicate heading is not repeated inside.
-* The version stays a normal `##` heading. Release mode wraps the body with the
-  `**Release notes**` summary and `details.body` is opt-out there; in
-  non-release mode `details.body` is opt-in.
+* The version stays a normal `##` heading. `--release-body-wrap` wraps the body
+  with the `**Release notes**` summary and `details.body` is opt-out there; in
+  non-wrapping mode `details.body` is opt-in.
 * `intro`/`outro`/`footer` are opt-in wrappers; `types` (default on) wraps the
   CC type sections, leaving the generated `Package changes`/`New contributors`
   footers alone.
@@ -6658,9 +9117,10 @@ Every flag also accepts `{ title?: string; expanded?: boolean }`.
 * `before`: details are applied while the entry is rendered.
 
 `details.body` wraps the whole version body in a collapsible titled
-`Release notes`. It is opt-in in non-release mode and opt-out in release mode,
-and requires at least 10 commits (`minCommits`) when enabled unless overridden.
-Release mode uses `details.releaseNotes` with the same title by default.
+`Release notes`. It is opt-in normally and opt-out with
+`--release-body-wrap`, and requires at least 10 commits (`minCommits`) when
+enabled unless overridden. Release body wrapping uses `details.releaseNotes`
+with the same title by default.
 
 ---
 
@@ -6672,7 +9132,7 @@ url: https://toolchain.deltabox.studio/guide/changelog/writing-commit-messages.m
 The changelog is rendered from commit **subjects and bodies**, so what you commit
 is what readers see. Watch out for characters that a **shell** re-interprets —
 especially when a message is drafted by an **AI/LLM** and committed through
-`git commit -m "…"`.
+`git commit -m "..."`.
 
 ## Shell escaping
 
@@ -6680,7 +9140,7 @@ especially when a message is drafted by an **AI/LLM** and committed through
   `` `t `` / `` `b `` become CR / LF / TAB / backspace. A preceding `\` is left
   behind, so `` `resolveVite `` can land in the changelog as a stray `\`, a CR and
   `esolveVite`.
-* **bash** runs an unquoted `` `…` `` as command substitution, and `$(…)` / `${…}`
+* **bash** runs an unquoted `` `...` `` as command substitution, and `$(...)` / `${...}`
   expand before `git` ever sees them.
 
 The result is invisible control characters, stray `\` and dropped letters.
@@ -6695,7 +9155,7 @@ the shell consumed without leaving a trace still cannot be recovered.
 ## Authoring safely
 
 * Prefer a **file over `-m`**: `git commit -F message.txt`, or a quoted heredoc
-  (`git commit -F - <<'EOF' … EOF`) — nothing is re-interpreted. Avoid assembling
+  (`git commit -F - <<'EOF' ... EOF`) — nothing is re-interpreted. Avoid assembling
   multi-line messages inline in PowerShell.
 * When an AI/LLM drafts the message, strip **typographic characters** before
   committing: curly quotes (`’ “ ”`), em/en dashes (`— –`), non-breaking spaces,
@@ -7170,7 +9630,7 @@ is the **aggregated changelog**: every entry from the last released version up t
 the latest one, not just the newest entry. So a release that skips versions
 (eg. `v1.7.0` → `v1.7.8`) still documents `1.7.1`–`1.7.8` in one place.
 
-The body is produced by `dbx changelog --release-notes <version>`, which only
+The body is produced by `dbx changelog --release-body <version>`, which only
 considers tags whose version actually appears in `CHANGELOG.md` (so unrelated
 CI/calendar tags are ignored). For a first release, when there is no prior
 version, it falls back to the newest changelog entry instead of the whole file.
@@ -7572,7 +10032,7 @@ See [Migrations](/guide/migrations/).
 
 ### Workflows
 
-`dbx workflow [id…]` runs every enabled workflow (or the named ids/custom ids/file
+`dbx workflow [id...]` runs every enabled workflow (or the named ids/custom ids/file
 names) with the CLI for its provider:
 
 ```sh
@@ -7788,7 +10248,7 @@ export default defineConfig({
     toolchain: {
         hooks: {
             afterLoad: ({ tokens }) => console.log(tokens),
-            beforeSync: ctx => ctx.log('syncing…'),
+            beforeSync: ctx => ctx.log('syncing...'),
             afterTask: ({ task, files }) => console.log(task.name, files?.length),
             afterSync: ({ result }) => console.log(result.written.length),
             beforeVersion: ({ previousVersion, version }) =>
@@ -7817,12 +10277,12 @@ hooks: {
 ```
 
 Throwing (or a rejected async hook) aborts the run before any files are
-written. It does not run for `--dry-run`, `--release-notes` or `--format-only`.
+written. It does not run for `--dry-run`, `--release-body` or `--format-only`.
 
 ## `afterVersion`
 
 `afterVersion` runs after `dbx changelog` writes the new versions and
-changelogs (it does not run for `--dry-run`, `--release-notes` or
+changelogs (it does not run for `--dry-run`, `--release-body` or
 `--format-only`). It receives the repository root and the new version:
 
 ```ts [dbx.config.ts]
@@ -8524,815 +10984,6 @@ dbx sync                          # writes the managed vite.config.ts shim
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config-generator.md
----
-# Config Generator
-
-`@deltabox/toolchain/config` is a configuration engine. A
-**Zod/untyped schema is the single source of truth**: attach metadata to zod leaves with
-`.meta()`, then generate the env/config TypeScript types, a JSON
-Schema, a markdown reference, config metadata JSON, CLI option definitions and a
-CLI reference — all from that one schema.
-
-## Where to start
-
-* [Describe a scope](/guide/config-generator/describe-a-scope) — write the Zod
-  schema and its `.meta()`.
-* [Create the engine](/guide/config-generator/create-the-engine) — bind the
-  schema, prefix, base group and root.
-* [Generate](/guide/config-generator/generate) — the generator methods.
-* [CLI commands](/guide/config-generator/cli-commands) — the `config:*` command
-  descriptors.
-* [Load the config](/guide/config-generator/load-the-config) — the runtime
-  parsers (`parseConfig`, `parseEnvConfig`, `parseCliConfig`) and
-  `loadConfigAsync`.
-* [Generated outputs](/guide/config-generator/generated-outputs) — types,
-  markdown, env files, JSON Schema, CLI docs and formatting.
-* [Real-world shape](/guide/config-generator/real-world-shape) — how a consumer
-  binds the engine end-to-end.
-
-```ts
-import { createConfigEngine } from '@deltabox/toolchain/config';
-```
-
----
-
----
-url: https://toolchain.deltabox.studio/guide/config-generator/cli-commands.md
----
-# CLI commands
-
-`configCommands({ engine, defaults })` returns `ToolchainCommand[]` (register them
-on your commander program with `@deltabox/toolchain/cli`):
-
-| Command           | Writes                                       |
-| ----------------- | -------------------------------------------- |
-| `config:env`      | `.env.example`                               |
-| `config:types`    | config types (`--env` also writes env types) |
-| `config:json`     | `config.json` (metadata)                     |
-| `config:schema`   | `config.schema.json`                         |
-| `config:markdown` | the markdown reference                       |
-| `config:cli`      | `cli-options.json`                           |
-| `config:all`      | everything, under one output directory       |
-
-```ts
-import { configCommands } from '@deltabox/toolchain/config';
-
-const commands = configCommands({
-    engine,
-    defaults: { typesDir: 'packages/shared/src/types', docsDir: 'docs/reference' },
-});
-// register `commands` on your commander program
-```
-
-> These commands are library-only: `dbx` itself does not register a `config:*`
-> group, because each command needs a `ConfigEngine` bound to your schema. Add
-> the returned commands to your own program.
-
-The `config:*` commands generate config artifacts; they do not write the CLI
-reference. For that, pass the command descriptors your CLI registers to
-[`generateCliDocs()`](/guide/config-generator/generate#cli-docs).
-
----
-
----
-url: https://toolchain.deltabox.studio/guide/config-generator/create-the-engine.md
----
-# Create the engine
-
-Bind the schema, an env prefix, the base group and the project root once. The
-schema may be a Zod schema, an untyped Schema, an array, or a record keyed by
-scope:
-
-```ts
-import { createConfigEngine } from '@deltabox/toolchain/config';
-
-export const engine = createConfigEngine({
-    schema: {
-        server: serverConfig,
-        frontend: frontendConfig,
-        cli: cliConfig,
-    },
-    envPrefix: 'MYAPP_',
-    baseGroup: 'base', // the flat fields hoisted out of the nested groups
-    root: process.cwd(),
-    // Optional: custom env-name -> dotted-path derivation (eg. dual prefixes).
-    envPathOf: env =>
-        env
-            .replace(/^(MYAPP_|VITE_)/, '')
-            .toLowerCase()
-            .replace(/_/g, '.'),
-});
-```
-
----
-
----
-url: https://toolchain.deltabox.studio/guide/config-generator/describe-a-scope.md
----
-# Describe a scope
-
-Each scope is a Zod object. Leaves that are backed by an environment variable
-carry an `.meta()` describing that variable:
-
-```ts
-import { z } from 'zod';
-
-export const serverConfig = z.object({
-    base: z.object({
-        port: z.number().default(3000).meta({
-            envName: 'MYAPP_PORT',
-            description: 'HTTP port',
-        }),
-        host: z.string().default('0.0.0.0').meta({
-            envName: 'MYAPP_HOST',
-            description: 'Bind address',
-        }),
-    }),
-    auth: z.object({
-        password: z.string().meta({
-            envName: 'MYAPP_AUTH_PASSWORD',
-            description: 'Admin password',
-            required: true,
-            secret: true,
-        }),
-        tokenTtl: z.number().default(3600).meta({
-            envName: 'MYAPP_AUTH_TOKEN_TTL',
-            description: 'Session lifetime (seconds)',
-        }),
-    }),
-});
-```
-
-`ConfigMeta` fields: `envName`, `envPath` (dotted config path), `description`,
-`required`, `deprecated`, `deprecationMessage`, `example`, `since`, `see`,
-`remarks`, `experimental`, `alpha`, `beta`, `secret`, `scope`, `public` (safe to
-expose to the browser), `defaultValue` (when the resolved default differs from
-the env default), `cliFlag`, `cliFlagShort`, `typeName` and `id`.
-
-`env` / `path` remain supported as deprecated aliases. Markdown and type output
-show env/CLI equivalents by default; disable them with `includeEnv: false` /
-`includeCli: false`.
-
-`required: true` adds `@required` and `- **Required**` above the markdown
-`- **Type**` line. `deprecated: true` adds `@deprecated` / `- **Deprecated**`;
-`deprecationMessage` supplies the text. `example` (string or array) adds one
-`@example` tag/entry per value under `**Example(s):**`. `since` adds `@since` /
-`- **Since**`, `see` adds `@see` / `- **See**` links, `remarks` adds `@remarks` /
-`**Remarks:**`, and `experimental`/`alpha`/`beta` add their stability tags.
-
-Each generator accepts the matching `include*` flag (all default `true`) to
-suppress an annotation: `includeRequired`, `includeDeprecated`,
-`includeExamples`, `includeSince`, `includeSee`, `includeRemarks`,
-`includeExperimental`, `includeAlpha`, `includeBeta` — for example
-`generateConfigTypes(..., { includeExamples: false })` or
-`generateConfigMarkdown(..., { includeDeprecated: false })`.
-
----
-
----
-url: https://toolchain.deltabox.studio/guide/config-generator/generate.md
----
-# Generate
-
-Every generator has two forms:
-
-* **Bound engine** — `engine.types.generate()` injects the engine's
-  `envPrefix`, `baseGroup`, `root` and `envPathOf`.
-* **Standalone** — `generateConfigTypes(schema, options)` takes those options
-  explicitly, for one-off scripts and tests.
-
-The grouped `.write` methods write to disk and return the written paths. The
-grouped `.generate` methods return the content and only write when you pass `outputDir`/`output`
-(a string); `false` disables writing.
-
-## At a glance
-
-| Output         | Engine                                                       | Standalone                                                |
-| -------------- | ------------------------------------------------------------ | --------------------------------------------------------- |
-| `.env.example` | `engine.env.generate()` / `engine.env.write()`               | `generateEnvFile()`                                       |
-| Env types      | `engine.env.types.generate()` / `engine.env.types.write()`   | `generateConfigEnv()`                                     |
-| Config types   | `engine.types.generate()` / `engine.types.write()`           | `generateConfigTypes()`                                   |
-| Markdown       | `engine.markdown.generate()` / `engine.markdown.write()`     | `generateConfigMarkdown()`                                |
-| JSON Schema    | `engine.jsonSchema.generate()` / `engine.jsonSchema.write()` | `generateConfigJsonSchema()` / `generateJsonSchemaFile()` |
-| Metadata JSON  | `engine.configJson.build()`                                  | `buildConfigJson()`                                       |
-| CLI options    | `engine.cli.generate()` / `engine.cli.write()`               | `generateCliOptions()`                                    |
-| CLI docs       | `engine.markdown.cli.generate()` / `.write()`                | `generateCliDocs()`                                       |
-| Env docs       | `engine.markdown.env.generate()` / `.write()`                | `generateEnvMarkdown()`                                   |
-| Markdown page  | `engine.markdown.file.generate()` / `.write()`               | `generateMarkdownFile()`                                  |
-| Formatting     | —                                                            | `formatGenerated()`                                       |
-
-## Env file — `.env.example`
-
-```ts
-engine.env.write({ output: '.env.example' });
-```
-
-Standalone, with the common options:
-
-```ts
-import { generateEnvFile } from '@deltabox/toolchain/config';
-
-const content = generateEnvFile(schema, {
-    envPrefix: 'MYAPP_',
-    header: 'Copy to .env and fill the blanks.',
-    scopes: ['server', 'cli'],
-    exclude: ['MYAPP_INTERNAL_TOKEN'],
-    values: { MYAPP_PORT: '8080' },
-    extra: { MYAPP_FEATURE_FLAG: 'true' },
-});
-```
-
-Options: `include`/`exclude` (env names), `values` (default overrides),
-`scopes`, `bare`, `extra` (raw `NAME=value` lines), `header`, `scopeSeparator`.
-Secrets are emitted commented out.
-
-## Env types — `env.ts` + `dbx-env.d.ts`
-
-```ts
-engine.env.types.write({ outputDir: 'types' }); // types/env.ts, types/dbx-env.d.ts
-```
-
-```ts
-import { generateConfigEnv } from '@deltabox/toolchain/config';
-
-const files = generateConfigEnv(schema, {
-    envPrefix: 'MYAPP_',
-    outputDir: 'types',
-    envInterfaceName: 'AppEnv',
-    viteEnvInterfaceName: 'AppViteEnv',
-    importPath: './env.js',
-    augmentVite: true,
-    envComment: 'Runtime configuration.',
-});
-// files: { 'env.ts': '...', 'dbx-env.d.ts': '...' }
-```
-
-Options: `envFile`/`dtsFile` (file names), `header`, `envHeader`, `dtsHeader`,
-`augmentVite` (a `declare module 'vite'` augmentation).
-
-## Config types
-
-```ts
-engine.types.write({ outputDir: 'types' });
-```
-
-Standalone, with hand-written overrides and aliases:
-
-```ts
-import { generateConfigTypes } from '@deltabox/toolchain/config';
-
-const files = generateConfigTypes(schema, {
-    baseGroup: 'base',
-    outputDir: 'types',
-    interfaceNames: { server: 'ServerConfig' },
-    aliases: { server: 'export type ServerOptions = ServerConfig;' },
-    imports: ["import type { FastifyServerOptions } from 'fastify';"],
-    overrides: {
-        ServerConfig: `export interface ServerConfig {
-    host?: string;
-    port?: number;
-}`,
-    },
-    header: '// Generated — do not edit.',
-    extension: 'ts',
-    includeEnv: false,
-});
-```
-
-Options: `interfaceNames` (per scope), `aliases` (per scope, appended),
-`overrides` (full declaration text, keyed by type name), `imports` (emitted once
-at the top), `extension`, `header`, and the `include*` annotation flags.
-
-## Markdown
-
-```ts
-engine.markdown.write({ outputDir: 'docs/reference/configuration' });
-```
-
-```ts
-import { generateConfigMarkdown } from '@deltabox/toolchain/config';
-
-const files = generateConfigMarkdown(schema, {
-    baseGroup: 'base',
-    envPrefix: 'MYAPP_',
-    outputDir: 'docs/reference/configuration',
-    title: 'Configuration',
-    frontmatter: ctx => `title: ${ctx.options.title ?? 'Configuration'}`,
-    combined: true, // one index.md instead of one file per scope
-    includeEnv: false,
-});
-```
-
-`frontmatter: false` omits the frontmatter, a string replaces the body, and a
-callback builds it from the generator options. `combined: true` renders every
-scope into one file. `cliScope`, `shortFlags` and `references` control the CLI
-equivalents and footer links.
-
-## JSON Schema
-
-```ts
-const doc = await engine.jsonSchema.generate();
-await engine.jsonSchema.write({ output: 'config.schema.json' });
-```
-
-```ts
-import { generateConfigJsonSchema, generateJsonSchemaFile } from '@deltabox/toolchain/config';
-
-const doc = await generateConfigJsonSchema(schema, {
-    baseGroup: 'base',
-    id: 'https://acme.dev/schemas/config.json',
-    title: 'Acme configuration',
-    description: 'Every env-backed setting.',
-});
-const path = await generateJsonSchemaFile(schema, { output: 'config.schema.json' });
-```
-
-Both functions are async. `generateConfigJsonSchema` returns the document;
-`generateJsonSchemaFile` writes it and returns the path.
-
-`preserveDefs: true` keeps Zod's document-level `$ref`/`$defs` graph instead of
-inlining every scope (the `$defs` tables are hoisted to the document root).
-`scopeDescriptions` adds a description to a generated scope property, and
-`additionalProperties` sets the root constraint:
-
-```ts
-const doc = await engine.jsonSchema.generate({
-    preserveDefs: true,
-    additionalProperties: false,
-    scopeDescriptions: { server: 'Server settings.' },
-});
-```
-
-## Config metadata JSON
-
-```ts
-const metadata = engine.configJson.build();
-fs.writeFileSync('config.json', `${JSON.stringify(metadata, null, 4)}\n`);
-```
-
-```ts
-import { buildConfigJson } from '@deltabox/toolchain/config';
-
-const metadata = buildConfigJson(schema, {
-    envPrefix: 'MYAPP_',
-    comment: 'Generated from the config schemas.',
-});
-```
-
-The document contains `$comment`, `version`, and `env[]` entries with the name,
-path, scope, description, default, `required`, `secret` and `public` flags.
-Secrets never include a default.
-
-## CLI options
-
-```ts
-const defs = engine.cli.generate({ scope: 'cli' });
-// engine.cli.generate() is an alias.
-```
-
-```ts
-import { createCliArgsParser, generateCliOptions } from '@deltabox/toolchain/config';
-
-const defs = generateCliOptions(schema, {
-    envPrefix: 'MYAPP_',
-    scope: 'cli',
-    output: 'cli-options.json',
-});
-const parser = createCliArgsParser(defs);
-parser.parse(['--base-url', 'http://localhost:8080']);
-```
-
-Options: `scope` (default `cli`), `output`, `shortFlags`, `envPathOf`.
-
-## CLI docs
-
-`generateCliDocs(commands, options?)` renders a markdown reference from
-`ToolchainCommand` descriptors. It is standalone because it does not read a
-config schema:
-
-```ts
-import { builtinCommands } from '@deltabox/toolchain/cli';
-import { generateCliDocs } from '@deltabox/toolchain/config';
-
-const markdown = generateCliDocs([...builtinCommands(), ...myCommands], {
-    title: 'CLI reference',
-    intro: 'Generated from the registered commands.',
-    prefix: 'my-cli',
-    outline: [2, 3],
-});
-```
-
-Hidden commands are omitted, duplicate names keep the first descriptor, and
-args/options/defaults are rendered like the `dbx` reference. Pass the result
-through `formatGenerated(..., { fileName: 'cli.md' })` to format it.
-
-## Formatting
-
-```ts
-import { formatGenerated } from '@deltabox/toolchain/config';
-
-const formatted = await formatGenerated(source, {
-    fileName: 'config.ts', // infers the language
-    options: { printWidth: 100 }, // merged over GENERATED_FORMAT_OPTIONS
-});
-```
-
-`formatGenerated` is best-effort: it returns the input unchanged when no
-formatter is available.
-
-## Advanced
-
-### Post-process generated output
-
-Generators return strings or records, so you can transform them before writing:
-
-```ts
-import fs from 'node:fs';
-
-import { formatGenerated, generateConfigTypes } from '@deltabox/toolchain/config';
-
-const files = generateConfigTypes(schema, { baseGroup: 'base' });
-for (const [scope, source] of Object.entries(files)) {
-    const withBanner = `// Generated from schemas/${scope}.ts — do not edit.\n${source}`;
-    const formatted = await formatGenerated(withBanner, { fileName: `${scope}.ts` });
-    fs.mkdirSync('types', { recursive: true });
-    fs.writeFileSync(`types/${scope}.ts`, formatted);
-}
-```
-
-### Custom headers, imports and overrides
-
-```ts
-generateConfigTypes(schema, {
-    header: '/* eslint-disable */',
-    imports: ["import type { AppEnv } from './env.js';"],
-    overrides: {
-        ServerConfig: 'export interface ServerConfig extends BaseServer {}',
-    },
-});
-```
-
-`overrides` is keyed by the generated type name and replaces the whole
-declaration, so keep the `imports`/`header` options handy for types the schema
-cannot express.
-
-### Dry runs
-
-Every generator accepts `outputDir: false` / `output: false`:
-
-```ts
-generateConfigTypes(schema, { outputDir: false });
-await generateConfigJsonSchema(schema, { output: false });
-```
-
-The engine's `write*` methods always write; use the `generate*` methods when you
-only need the content.
-
-### Engine vs standalone
-
-The engine form injects the bound options; the standalone form takes them
-explicitly. They produce the same output:
-
-```ts
-const engine = createConfigEngine({
-    schema,
-    envPrefix: 'MYAPP_',
-    baseGroup: 'base',
-});
-
-engine.markdown.generate(); // uses the bound options
-
-generateConfigMarkdown(schema, {
-    envPrefix: 'MYAPP_',
-    baseGroup: 'base',
-});
-```
-
-See [Generated outputs](/guide/config-generator/generated-outputs) for the shape
-of each file and [CLI commands](/guide/config-generator/cli-commands) for the
-`config:*` descriptors.
-
----
-
----
-url: https://toolchain.deltabox.studio/guide/config-generator/generated-outputs.md
----
-# Generated outputs
-
-Every generator reads from the same Zod or untyped schema. The engine's own config model
-is the living example: its types are committed at
-[packages/shared/src/config-types.ts](https://github.com/deltabox-studio/toolchain/blob/main/packages/shared/src/config-types.ts).
-
-For the engine/standalone call forms and the full option list per generator, see
-[Generate](/guide/config-generator/generate).
-
-## Config types — `engine.types` / `generateConfigTypes()`
-
-Named `interface`s (and `type` aliases for enums/unions) with jsdoc taken from
-`.describe()`. Unions and refs stay named, so nested objects are referenced
-rather than inlined:
-
-```ts
-// engine.types.generate() -> { server: "...", cli: "..." }
-engine.types.write({ outputDir: 'types' }); // types/server.ts, types/cli.ts
-```
-
-```ts
-// types/server.ts
-export interface ServerConfig {
-    /** Bind host. */
-    host?: string;
-    port?: number;
-    auth?: { password?: string; enabled?: boolean };
-}
-```
-
-An object schema that also accepts arbitrary keys (Zod `.catchall(...)`,
-`.loose()` or `z.looseObject(...)`, ie. `additionalProperties` in the JSON
-Schema) generates an open interface with an index signature, so the extra keys
-stay typed as `unknown` instead of being rejected:
-
-```ts
-export interface ServerConfig {
-    /** Bind host. */
-    host?: string;
-    [key: string]: unknown;
-}
-```
-
-## Markdown — `engine.markdown` / `generateConfigMarkdown()`
-
-One reference page per scope plus an index listing the required/core env vars:
-
-```ts
-engine.markdown.write({ outputDir: 'docs/reference/configuration' });
-// docs/reference/configuration/server.md, .../index.md
-```
-
-See a real full example at [config/reference.md](../../config/reference.md).
-
-Markdown frontmatter is enabled by default. Set `frontmatter: false` to omit it,
-pass a raw string to replace the body, or pass a callback to build it from the
-generator options. The returned string is wrapped in `---` automatically.
-
-```ts
-generateConfigMarkdown(schema, {
-    frontmatter: ctx => `title: ${ctx.options.title ?? 'Configuration'}`,
-});
-```
-
-Use `combined: true` to render every scope into one file instead of one file per
-scope. `generateConfigTypes`, `generateConfigMarkdown` and `generateConfigEnv`
-return file contents and only write when `outputDir`/`output` is a string;
-`false` explicitly disables writing.
-
-## Env — `engine.env` / `generateEnvFile()`
-
-A `.env.example`; secrets are emitted commented out so operators fill them in:
-
-```ts
-engine.env.write({ output: '.env.example' });
-```
-
-```sh
-# ---- SERVER ----
-MYAPP_HOST=localhost
-# MYAPP_AUTH_PASSWORD=
-```
-
-## JSON Schema — `engine.jsonSchema` / `generateConfigJsonSchema()`
-
-The resolved untyped JSON Schema for every scope, for editor autocomplete:
-
-```ts
-await engine.jsonSchema.write({ output: 'config.schema.json' });
-```
-
-## CLI docs - `engine.markdown.cli` / `generateCliDocs()`
-
-`generateCliDocs` reads `ToolchainCommand` descriptors rather than the config
-schema: it renders a markdown reference from the commands your CLI actually
-registers. The engine exposes the same generator as
-`engine.markdown.cli.generate()` (and `.write()`):
-
-```ts
-import { builtinCommands } from '@deltabox/toolchain/cli';
-
-const markdown = engine.markdown.cli.generate([...builtinCommands(), ...myCommands], {
-    prefix: 'my-cli',
-    title: 'CLI reference',
-    intro: 'Generated from the registered commands.',
-});
-
-engine.markdown.cli.write(builtinCommands(), { output: 'docs/cli.md' });
-```
-
-The standalone `generateCliDocs(commands, options)` export is equivalent when you
-do not already have an engine. Hidden commands are omitted and duplicate names
-keep the first descriptor. The `dbx` reference itself is generated this way, so a
-custom command no longer has to be added to `builtinCommands()` to be documented.
-
-## Env docs - `engine.markdown.env` / `generateEnvMarkdown()`
-
-`engine.markdown.env.generate()` renders the environment-variable table from
-`engine.collect()`, using the engine's `envPrefix`. `write({ output })` writes the
-page:
-
-```ts
-engine.markdown.env.write({ output: 'docs/env.md' });
-```
-
-## Single pages - `engine.markdown.file` / `generateMarkdownFile()`
-
-`engine.markdown.file` renders one page with frontmatter and a `#` title. The
-body is supplied by the caller, so it is useful for overview/index pages:
-
-```ts
-engine.markdown.file.write({
-    output: 'docs/index.md',
-    title: 'Config types',
-    body: 'The toolchain has three configuration surfaces...',
-});
-```
-
-## Post-processing
-
-The `generate*` functions return their content, so you can transform it before
-writing (the `write*` methods write immediately):
-
-```ts
-const files = generateConfigTypes(schema);
-for (const [scope, source] of Object.entries(files)) {
-    const sourceWithBanner = `// Generated — do not edit.\n${source}`;
-    await fs.promises.writeFile(`types/${scope}.ts`, sourceWithBanner);
-}
-```
-
-If the transform changes the formatting, run the result through
-[`formatGenerated()`](#formatting--formatgenerated) before writing.
-
-## Formatting — `formatGenerated()`
-
-Generated text is formatted **at generation time**, so a written file is already
-formatted instead of relying on a separate `yarn format` pass. `formatGenerated`
-runs source through Oxfmt, preferring the project-local `vite-plus/fmt` (Oxfmt
-ships with Vite+), then `oxfmt`, and returns the input untouched when no formatter
-is resolvable, so generation never fails on a missing formatter.
-
-```ts
-import { formatGenerated, GENERATED_FORMAT_OPTIONS } from '@deltabox/toolchain/config';
-
-const source = 'export const config={a:1}';
-const formatted = await formatGenerated(source, {
-    fileName: 'config.ts', // infers the language (default `generated.ts`)
-    options: { printWidth: 100 }, // merged over GENERATED_FORMAT_OPTIONS
-});
-```
-
-`GENERATED_FORMAT_OPTIONS` is the baseline Oxfmt config matching the toolchain's
-own `vite.config.ts` (4-space indent, single quotes, `trailingComma: 'es5'`,
-`jsdoc: true`, ...). Pass `options.fileName` to format JSON, markdown or another
-language, and `options.options` to override any single option.
-
-For a full, real example of the generated config types, see
-`packages/shared/src/config-types.ts`.
-
----
-
----
-url: https://toolchain.deltabox.studio/guide/config-generator/load-the-config.md
----
-# Load the config at runtime
-
-Generation is only half of it: the same schema loads the value back. The runtime
-parsers read the `envName` / `cliFlag` metadata, coerce env and CLI strings,
-merge overrides and validate the result through the schema, so the returned
-object matches the generated types.
-
-```ts
-import { parseCliConfig, parseConfig, parseEnvConfig } from '@deltabox/toolchain/config';
-
-// MYAPP_HOST, MYAPP_PORT, ... -> { host: '0.0.0.0', port: 3000 }
-const fromEnv = parseEnvConfig(serverConfig, process.env, { envPrefix: 'MYAPP_' });
-
-// env + CLI (argv defaults to `process.argv.slice(2)`), overrides merged on top
-const config = parseConfig(serverConfig, { host: '127.0.0.1' }, { envPrefix: 'MYAPP_' });
-
-// CLI only: `--port 8080 --host localhost`
-const fromCli = parseCliConfig(serverConfig, process.argv.slice(2), { envPrefix: 'MYAPP_' });
-```
-
-| Export                                             | Sources                                                  |
-| -------------------------------------------------- | -------------------------------------------------------- |
-| `parseConfig(schema, overrides?, opts?)`           | env + CLI, with `overrides` merged last and validated    |
-| `parseEnvConfig(schema, env?, opts?)`              | env only                                                 |
-| `parseCliConfig(schema, argv?, opts?)`             | CLI only                                                 |
-| `collect(schema, opts?)`                           | env + CLI, no overrides (pass `validate: true` to check) |
-| `loadConfig(options)` / `loadConfigAsync(options)` | a config file, resolved through `parseConfig`            |
-
-Async variants (`parseConfigAsync`, `parseEnvConfigAsync`, `parseCliConfigAsync`)
-accept a promise for the env source, argv or overrides; the `*Sync` aliases keep
-the synchronous call shape.
-
-## Scopes
-
-Parsing the engine's `schema` returns the nested `{ server, frontend }` object;
-parsing one scope's schema returns that scope's fields directly:
-
-```ts
-const scoped = parseEnvConfig(engine.schema, process.env, { envPrefix: 'MYAPP_' });
-// { server: { port: 8080, host: '0.0.0.0' } }
-
-const server = parseEnvConfig(serverConfig, process.env, { envPrefix: 'MYAPP_' });
-// { port: 8080, host: '0.0.0.0' }
-```
-
-## Common options
-
-Every parser shares the collect options:
-
-* `envPrefix` — the prefix stripped from env names (default `APP_`, `null` disables it).
-* `envSource` / `argv` — the env record and argument list to read (defaults to
-  `process.env` and `process.argv.slice(2)`).
-* `include` / `exclude` — path globs (`server.*`, `**.port`) or presence kinds
-  (`required`, `defined`, `undefined`, `null`).
-* `validate` — parse the resolved value through the schema (the `parse*` family
-  defaults to `true`).
-* `errorOptions` — `errorLevel` (`throw`/`warn`/`silent`), `logger`,
-  `rewriteMessage`, `defaultMessage` and `trigger` for validation problems.
-  A thrown problem is a `ConfigParseError`.
-* `envPathOf` — override env-name -> dotted-path derivation (eg. dual prefixes).
-
-Env names come from `.meta({ envName })`; without it, the prefix plus the field
-path is used (`MYAPP_SERVER_PORT`). CLI flags come from `.meta({ cliFlag })`,
-falling back to `--server-port`.
-
-## Load from a file
-
-`loadConfig` / `loadConfigAsync` discover `dbx.config.*` (plus JSON/YAML/custom
-loaders), import it and run the value through `parseConfig`:
-
-```ts
-import { loadConfigAsync } from '@deltabox/toolchain/config';
-
-const loaded = await loadConfigAsync({
-    parser: serverConfig,
-    cwd: process.cwd(),
-    names: ['dbx.config.ts', 'dbx.config.js'],
-    envPrefix: 'MYAPP_',
-});
-
-if (loaded) {
-    console.log(loaded.path, loaded.config); // the config file and the typed value
-}
-```
-
-Options include `configFileOptions` (filename, extensions, locations,
-`packageJson`, ancestor search), `required`, `overrides`, `fresh` (re-import in
-watch mode), `tsconfig` (path-alias resolution for TS configs) and `loader`.
-
-> The dotted path is the env name with the prefix removed and `_` folded to `.`,
-> so `MYAPP_AUTH_TOKEN_TTL` reads as `auth.token.ttl`. Env names live on the
-> schema as `.meta({ envName })`, so the generated `.env` file and the runtime
-> parser stay in step.
-
----
-
----
-url: https://toolchain.deltabox.studio/guide/config-generator/real-world-shape.md
----
-# Real-world shape
-
-Proxified binds three scopes under a `PROXIFIED_` prefix and reuses the engine
-for every generator:
-
-```ts
-import { createConfigEngine } from '@deltabox/toolchain/config';
-
-export const configEngine = createConfigEngine({
-    schema: {
-        server: serverConfig,
-        frontend: frontendConfig,
-        cli: cliConfig,
-    },
-    envPrefix: 'PROXIFIED_',
-    baseGroup: 'base',
-    root: monorepoRoot(),
-    envPathOf: env => envPathOf(env),
-});
-```
-
-The generators then run from a `config:generate-all` script (built on the
-`configCommands({ engine })` helpers) to keep `.env.example`, the JSON Schema,
-the markdown reference, the types and the CLI options in sync with the schemas.
-
-These `config:*` commands belong to the consumer's own CLI, `dbx`
-itself does not expose them.
-
----
-
----
 url: https://toolchain.deltabox.studio/guide/docker.md
 ---
 # Docker
@@ -9350,7 +11001,7 @@ dbx create --template express --name api --containerize
 dbx project:init --name api --containerize
 ```
 
-In VS Code, **Create from template…** asks *Containerize with Docker?*. The
+In VS Code, **Create from template...** asks *Containerize with Docker?*. The
 setting `deltabox.toolchain.containerizeTemplates` supplies the default and is
 used by the curated **Scaffold** flow. Programmatically, pass
 `containerize: true` to `scaffoldTemplate()`.
@@ -9966,7 +11617,7 @@ dbx mcp:install --provider custom --dir ./tools/mcp
 ...). `--no-skills` writes only the MCP config, and `--json` prints the exact
 paths that were written.
 
-The VS Code extension exposes the same flow from **Install MCP server + skill…**
+The VS Code extension exposes the same flow from **Install MCP server + skill...**
 (and the Home view's Quick Actions).
 
 ---
@@ -10727,7 +12378,7 @@ The **same input pipeline** runs everywhere:
   standard `name`/`scope` first, then the template's own inputs). Pass
   `--var key=value` (repeatable) to skip a prompt.
 * **Programmatic API** — `scaffoldTemplate(template, { cwd, tokens, variables })`.
-* **VS Code** — **Create from template…** prompts for each input (a quick pick
+* **VS Code** — **Create from template...** prompts for each input (a quick pick
   when `options` is set).
 
 The builtin templates use the same pipeline (they declare `name`, `scope`,
@@ -10848,7 +12499,7 @@ default to `.dbx/toolchain/.registry/templates`. `dbx registry [--json]` lists
 the detected template/provider registries, and `dbx registry --add <path> --scope global|project` (or `--remove`) manages them. A remote (`http(s)`)
 registry is a JSON `{ "sources": [...] }` / array of sources. The VS Code
 **Registries** view (below **Templates**) shows the Providers/Templates roots
-with **New registry…** / **Remove registry…** actions; remote registries open in
+with **New registry...** / **Remove registry...** actions; remote registries open in
 the browser. `dbx template:remove --global <id>` removes a stored global
 template.
 
@@ -10904,10 +12555,10 @@ toolchain: {
 
 ## VS Code
 
-The extension drives the same CLI: **From template…** runs `template:list --json`
-then `create`; **Add template…** runs `template:init --add` on a folder you pick
+The extension drives the same CLI: **From template...** runs `template:list --json`
+then `create`; **Add template...** runs `template:init --add` on a folder you pick
 and asks whether to add it to the **global** registry (yes by default);
-**Remove template…** runs `template:list --registry` then `template:remove`. The
+**Remove template...** runs `template:list --registry` then `template:remove`. The
 `deltabox.registrySearchPaths` setting controls the global search paths (see
 [Global templates](#global-templates)).
 
@@ -11965,6 +13616,12 @@ configures the **CLI** `dbx watch` command.
 url: https://toolchain.deltabox.studio/CHANGELOG.md
 ---
 # Changelog
+
+## 3.0.0-beta.7 (November 2026)
+
+* Add Contribute to the docs navigation ([#c7a32e4](https://github.com/deltabox-studio/toolchain/commit/c7a32e4) by [T0chi](https://github.com/T0chi))
+* Add the contribute guide ([#17c62df](https://github.com/deltabox-studio/toolchain/commit/17c62df) by [T0chi](https://github.com/T0chi))
+* Update migration guide links ([#b58b9fb](https://github.com/deltabox-studio/toolchain/commit/b58b9fb) by [T0chi](https://github.com/T0chi))
 
 ## 3.0.0-beta.6 (November 2026)
 
