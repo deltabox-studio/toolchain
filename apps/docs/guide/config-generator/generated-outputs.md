@@ -1,11 +1,12 @@
 # Generated outputs
 
-Every generator reads from the same Zod or untyped schema. The engine's own config model
-is the living example: its types are committed at
+Every generator reads from the same Zod, untyped or plain-value schema. The
+engine's own config model is the living example: its types are committed at
 [packages/shared/src/config-types.ts](https://github.com/deltabox-studio/toolchain/blob/main/packages/shared/src/config-types.ts).
 
 For the engine/standalone call forms and the full option list per generator, see
-[Generate](/guide/config-generator/generate).
+[Generate](/guide/config-generator/generate). For every export and option, see
+the [API reference](/guide/config-generator/api).
 
 ## Config types — `engine.types` / `generateConfigTypes()`
 

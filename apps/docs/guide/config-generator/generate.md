@@ -22,6 +22,7 @@ grouped `.generate` methods return the content and only write when you pass `out
 | JSON Schema    | `engine.jsonSchema.generate()` / `engine.jsonSchema.write()` | `generateConfigJsonSchema()` / `generateJsonSchemaFile()` |
 | Metadata JSON  | `engine.configJson.build()`                                  | `buildConfigJson()`                                       |
 | CLI options    | `engine.cli.generate()` / `engine.cli.write()`               | `generateCliOptions()`                                    |
+| Scoped CLI     | `engine.cli.options()`                                       | `generateConfigCliOptions()` / `configCliCommand()`       |
 | CLI docs       | `engine.markdown.cli.generate()` / `.write()`                | `generateCliDocs()`                                       |
 | Env docs       | `engine.markdown.env.generate()` / `.write()`                | `generateEnvMarkdown()`                                   |
 | Markdown page  | `engine.markdown.file.generate()` / `.write()`               | `generateMarkdownFile()`                                  |
@@ -108,6 +109,8 @@ const files = generateConfigTypes(schema, {
 Options: `interfaceNames` (per scope), `aliases` (per scope, appended),
 `overrides` (full declaration text, keyed by type name), `imports` (emitted once
 at the top), `extension`, `header`, and the `include*` annotation flags.
+`baseGroup` accepts a string or an array of strings; multiple groups are merged
+into the generated `...Base` interface in declaration order.
 
 ## Markdown
 
@@ -193,7 +196,6 @@ Secrets never include a default.
 
 ```ts
 const defs = engine.cli.generate({ scope: 'cli' });
-// engine.cli.generate() is an alias.
 ```
 
 ```ts
@@ -315,5 +317,6 @@ generateConfigMarkdown(schema, {
 ```
 
 See [Generated outputs](/guide/config-generator/generated-outputs) for the shape
-of each file and [CLI commands](/guide/config-generator/cli-commands) for the
-`config:*` descriptors.
+of each file, [CLI commands](/guide/config-generator/cli-commands) for the
+`config:*` descriptors, and the [API reference](/guide/config-generator/api) for
+the complete export list.

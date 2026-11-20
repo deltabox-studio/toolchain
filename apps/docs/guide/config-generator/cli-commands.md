@@ -1,7 +1,7 @@
-# CLI commands
+# CLI commands docs
 
 `configCommands({ engine, defaults })` returns `ToolchainCommand[]` (register them
-on your commander program with `@deltabox/toolchain/cli`):
+on your cli program with `@deltabox/toolchain/cli`) and can be used to generate config artifacts:
 
 | Command           | Writes                                       |
 | ----------------- | -------------------------------------------- |
@@ -20,7 +20,7 @@ const commands = configCommands({
     engine,
     defaults: { typesDir: 'packages/shared/src/types', docsDir: 'docs/reference' },
 });
-// register `commands` on your commander program
+// register `commands` on your cli program
 ```
 
 > These commands are library-only: `dbx` itself does not register a `config:*`
@@ -29,4 +29,4 @@ const commands = configCommands({
 
 The `config:*` commands generate config artifacts; they do not write the CLI
 reference. For that, pass the command descriptors your CLI registers to
-[`generateCliDocs()`](/guide/config-generator/generate#cli-docs).
+[`generateCliDocs()` or `engine.markdown.cli.write()`](/guide/config-generator/generate#cli-docs).
