@@ -124,7 +124,7 @@ export function gitTemplate(source: ToolchainTemplateSource): Template {
 }
 
 /**
- * Parse a `template:add` spec: `type:locate` (eg. `local:./tpl`, `git:https://…`,
+ * Parse a `template:add` spec: `type:locate` (eg. `local:./tpl`, `git:https://...`,
  * `npm:@acme/create`, `npm:create-acme`) or an inferred source (a path that
  * exists -> local, a scoped/create-* package -> npm, a URL/scp -> git).
  */

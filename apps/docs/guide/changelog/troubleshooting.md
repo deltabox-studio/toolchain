@@ -1,9 +1,9 @@
 # Troubleshooting
 
-## `No "exports" main defined in … conventional-changelog-conventionalcommits`
+## `No "exports" main defined in ... conventional-changelog-conventionalcommits`
 
 Seen from the Conventional Commits VS Code extension (`vivaxy.vscode-conventional-commits`),
-usually alongside empty type/scope suggestions and a `The cwd is …` line:
+usually alongside empty type/scope suggestions and a `The cwd is ...` line:
 
 ```
 commitlint: Error: No "exports" main defined in

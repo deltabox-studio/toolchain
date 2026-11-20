@@ -2019,7 +2019,7 @@
   <details>
   <summary><strong>See more...</strong></summary>
 
-  - A new collapsible **Registries** view (below Templates) shows **Providers** and (explorer folder or browser for remote URLs), **Add new registry** (the category's add flow) and **Remove registry** (removes the path, keeps the files). The title bar has **New registry…** / **Remove registry…** (global or project scope), also available in the Home "More actions". Removing a template now offers the stored global templates too (`template:remove --global`).
+  - A new collapsible **Registries** view (below Templates) shows **Providers** and (explorer folder or browser for remote URLs), **Add new registry** (the category's add flow) and **Remove registry** (removes the path, keeps the files). The title bar has **New registry...** / **Remove registry...** (global or project scope), also available in the Home "More actions". Removing a template now offers the stored global templates too (`template:remove --global`).
 
   </details>
 
@@ -2029,8 +2029,8 @@
   <summary><strong>See more...</strong></summary>
 
   - Rename `templatesSearchPaths` to `registrySearchPaths` (VS Code setting, CLI config and code).
-    - Show the detected project/extension `@deltabox/toolchain` versions in the "which dbx?" notification, only ask when they differ, and add a **Select dbx version…** command that pins one in the workspace settings (npx fallback).
-    - Replace the Home "Run Vite+…" quick action with **Add provider…** (also in More actions), prefix More-actions buttons with a play glyph, start Managed Files collapsed, expand the Vite+ provider by default, and drop unused icon resources.
+    - Show the detected project/extension `@deltabox/toolchain` versions in the "which dbx?" notification, only ask when they differ, and add a **Select dbx version...** command that pins one in the workspace settings (npx fallback).
+    - Replace the Home "Run Vite+..." quick action with **Add provider...** (also in More actions), prefix More-actions buttons with a play glyph, start Managed Files collapsed, expand the Vite+ provider by default, and drop unused icon resources.
 
   </details>
 

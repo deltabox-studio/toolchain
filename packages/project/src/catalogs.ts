@@ -153,7 +153,7 @@ export function catalogsSyncTask(): SyncTask {
         run: ctx => {
             const config = sectionConfig(ctx.config.catalogs) ?? {};
             // Use the resolved token so a package.json-only project manager
-            // (`packageManager: "pnpm@…"`) is honoured without a `project` section.
+            // (`packageManager: "pnpm@..."`) is honoured without a `project` section.
             const packageManager = String(ctx.tokens.packageManager ?? 'yarn');
             const catalog: Catalog = {
                 ...(config.packages ? { packages: config.packages } : {}),

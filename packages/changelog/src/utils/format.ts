@@ -469,7 +469,7 @@ function formatHashLinks(line: string, repo: string): string {
 }
 
 /**
- * Normalize `[#N …](url)` and raw `#N` issue refs to the canonical issue link.
+ * Normalize `[#N ...](url)` and raw `#N` issue refs to the canonical issue link.
  * A commit URL is left alone: a numeric-only short hash (`#4033009`) is a valid
  * issue number, but it was already resolved as a commit by {@link formatHashLinks}.
  */

@@ -601,7 +601,7 @@ async function runAction(
     ctx: TemplateActionContext
 ): Promise<void> {
     if (action.builtin === 'install') {
-        ctx.log(`Installing dependencies with ${ctx.packageManager}…`);
+        ctx.log(`Installing dependencies with ${ctx.packageManager}...`);
         const code = await runCommand(
             ctx.packageManager,
             ['install'],

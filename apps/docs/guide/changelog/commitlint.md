@@ -46,6 +46,6 @@ and `feat:` go to major/minor; everything else is a patch), while the package
 changes section (eg. new packages) is kept. This is intentionally less detailed
 than the rule/scope grouping, but it works with any commit-message style.
 
-> The extension's `No "exports" main defined in … conventional-changelog-conventionalcommits …`
+> The extension's `No "exports" main defined in ... conventional-changelog-conventionalcommits ...`
 > error is an upstream commitlint bug (ESM-only parser preset), not a config
 > discovery problem. See [Troubleshooting](/guide/changelog/troubleshooting).

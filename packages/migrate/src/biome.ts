@@ -3,7 +3,7 @@
  *
  * Unlike `oxfmt --migrate biome` (which only maps formatter options), this also
  * maps `files.includes` negations and — crucially — Biome's
- * `assist…organizeImports.groups` to Oxfmt's `sortImports`, plus a curated
+ * `assist...organizeImports.groups` to Oxfmt's `sortImports`, plus a curated
  * Biome-rule -> Oxlint-rule map. It writes `.oxfmtrc.json` + `.oxlintrc.json`.
  */
 

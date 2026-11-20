@@ -145,7 +145,7 @@ The **same input pipeline** runs everywhere:
   standard `name`/`scope` first, then the template's own inputs). Pass
   `--var key=value` (repeatable) to skip a prompt.
 - **Programmatic API** — `scaffoldTemplate(template, { cwd, tokens, variables })`.
-- **VS Code** — **Create from template…** prompts for each input (a quick pick
+- **VS Code** — **Create from template...** prompts for each input (a quick pick
   when `options` is set).
 
 The builtin templates use the same pipeline (they declare `name`, `scope`,
@@ -267,7 +267,7 @@ the detected template/provider registries, and `dbx registry --add <path>
 --scope global|project` (or `--remove`) manages them. A remote (`http(s)`)
 registry is a JSON `{ "sources": [...] }` / array of sources. The VS Code
 **Registries** view (below **Templates**) shows the Providers/Templates roots
-with **New registry…** / **Remove registry…** actions; remote registries open in
+with **New registry...** / **Remove registry...** actions; remote registries open in
 the browser. `dbx template:remove --global <id>` removes a stored global
 template.
 
@@ -323,9 +323,9 @@ toolchain: {
 
 ## VS Code
 
-The extension drives the same CLI: **From template…** runs `template:list --json`
-then `create`; **Add template…** runs `template:init --add` on a folder you pick
+The extension drives the same CLI: **From template...** runs `template:list --json`
+then `create`; **Add template...** runs `template:init --add` on a folder you pick
 and asks whether to add it to the **global** registry (yes by default);
-**Remove template…** runs `template:list --registry` then `template:remove`. The
+**Remove template...** runs `template:list --registry` then `template:remove`. The
 `deltabox.registrySearchPaths` setting controls the global search paths (see
 [Global templates](#global-templates)).

@@ -241,7 +241,7 @@ export async function selectVersion(): Promise<void> {
             picked: current === project,
         });
     items.push({
-        label: '$(cloud-download) Enter a version…',
+        label: '$(cloud-download) Enter a version...',
         description: 'run via npx',
         value: '__custom__',
     });

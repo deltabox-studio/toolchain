@@ -129,7 +129,7 @@ See [Migrations](/guide/migrations/).
 
 ### Workflows
 
-`dbx workflow [id…]` runs every enabled workflow (or the named ids/custom ids/file
+`dbx workflow [id...]` runs every enabled workflow (or the named ids/custom ids/file
 names) with the CLI for its provider:
 
 ```sh
