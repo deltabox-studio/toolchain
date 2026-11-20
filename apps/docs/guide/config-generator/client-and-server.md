@@ -126,9 +126,10 @@ export * from './schema/index.js';
 Read files and `process.env` in the server process:
 
 ```ts
+import { serverConfig } from '@acme/shared/config/server';
+
 // apps/api/src/config.ts
 import { loadConfigAsync, parseEnvConfig } from '@deltabox/toolchain/config';
-import { serverConfig } from '@acme/shared/config/server';
 
 export async function loadServerConfig() {
     // load config from file, cli and env
@@ -213,9 +214,10 @@ The browser has `import.meta.env`, not `process.env`, and it must not import
 the server engine or `node:fs`:
 
 ```ts
+import { clientConfig } from '@acme/shared/config/client';
+
 // apps/web/src/config.ts
 import { parseEnvConfig } from '@deltabox/toolchain/config';
-import { clientConfig } from '@acme/shared/config/client';
 
 export const webConfig = parseEnvConfig(
     clientConfig.schema,
@@ -250,7 +252,6 @@ Import the context entry explicitly:
 // Bad:
 // the barrel can load both engines into the same module graph
 import { clientConfig } from '@acme/shared/config';
-
 // Good:
 // the client graph only sees the client engine
 import { clientConfig } from '@acme/shared/config/client';

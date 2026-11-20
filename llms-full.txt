@@ -269,35 +269,35 @@ code --install-extension deltabox.toolchain-vscode
 
 ## Commands
 
-| Command                                               | What it does                                                                                                                                                                                             |
-| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sync all / active / selected                          | Run `dbx sync --recursive`, which walks every managed project in dependency order (nested workspaces included). Configless projects are skipped unless `deltabox.toolchain.manageConfigless` is enabled. |
-| Check sync                                            | `sync --check` across the workspace.                                                                                                                                                                     |
-| Sync tsconfig                                         | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).                                                                                                                                |
-| Format project                                        | Run `dbx fmt` with the formatter detected/configured for the project (Oxfmt/Vite+, Prettier, Biome, dprint or standalone Oxc).                                                                           |
-| Lint project                                          | Run `dbx lint` with the linter detected/configured for the project (Oxlint/Vite+, ESLint or Biome).                                                                                                      |
-| Manage tsconfig...                                      | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                                                                                                                                |
-| Scaffold project                                      | Single project, monorepo root (with/without example), workspace, or **From template...**.                                                                                                                  |
-| Generate configs / Generate config                    | Run `project:config` for missing configs (or for one project), or refresh only the project graph; picks TS/JS.                                                                                           |
-| Migrate tooling...                                      | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).                                                                                                                   |
-| Run workflow                                          | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                                                                                                                                    |
-| Run Vite+ command...                                    | QuickPick over the Vite+ provider commands, run in a terminal.                                                                                                                                           |
-| Create Vite+ project...                                 | `vp create` in a terminal.                                                                                                                                                                               |
-| Install MCP server + skill...                           | `dbx mcp:install` with a provider picker (Claude, Codex, VS Code, OpenCode, Pi or a custom directory).                                                                                                   |
-| List MCP installations                                | `dbx mcp:list` — show where the MCP server + skill are installed.                                                                                                                                        |
-| Generate changelog                                    | Run `dbx changelog` in the selected project.                                                                                                                                                             |
-| Clean build artifacts                                 | Remove `dist/` and `*.tsbuildinfo` (`dbx cleanup`).                                                                                                                                                      |
-| Add provider... / Refresh providers                   | Register a custom provider (project or global registry) and reload the provider list.                                                                                                                    |
-| Run command...                                        | Run a provider command (`dbx <command>`) in a terminal (provider tree context menu).                                                                                                                     |
+| Command                                                   | What it does                                                                                                                                                                                             |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sync all / active / selected                              | Run `dbx sync --recursive`, which walks every managed project in dependency order (nested workspaces included). Configless projects are skipped unless `deltabox.toolchain.manageConfigless` is enabled. |
+| Check sync                                                | `sync --check` across the workspace.                                                                                                                                                                     |
+| Sync tsconfig                                             | Run `dbx sync --only tsconfig` (refresh aliases/references after builds).                                                                                                                                |
+| Format project                                            | Run `dbx fmt` with the formatter detected/configured for the project (Oxfmt/Vite+, Prettier, Biome, dprint or standalone Oxc).                                                                           |
+| Lint project                                              | Run `dbx lint` with the linter detected/configured for the project (Oxlint/Vite+, ESLint or Biome).                                                                                                      |
+| Manage tsconfig...                                        | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                                                                                                                                |
+| Scaffold project                                          | Single project, monorepo root (with/without example), workspace, or **From template...**.                                                                                                                |
+| Generate configs / Generate config                        | Run `project:config` for missing configs (or for one project), or refresh only the project graph; picks TS/JS.                                                                                           |
+| Migrate tooling...                                        | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).                                                                                                                   |
+| Run workflow                                              | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                                                                                                                                    |
+| Run Vite+ command...                                      | QuickPick over the Vite+ provider commands, run in a terminal.                                                                                                                                           |
+| Create Vite+ project...                                   | `vp create` in a terminal.                                                                                                                                                                               |
+| Install MCP server + skill...                             | `dbx mcp:install` with a provider picker (Claude, Codex, VS Code, OpenCode, Pi or a custom directory).                                                                                                   |
+| List MCP installations                                    | `dbx mcp:list` — show where the MCP server + skill are installed.                                                                                                                                        |
+| Generate changelog                                        | Run `dbx changelog` in the selected project.                                                                                                                                                             |
+| Clean build artifacts                                     | Remove `dist/` and `*.tsbuildinfo` (`dbx cleanup`).                                                                                                                                                      |
+| Add provider... / Refresh providers                       | Register a custom provider (project or global registry) and reload the provider list.                                                                                                                    |
+| Run command...                                            | Run a provider command (`dbx <command>`) in a terminal (provider tree context menu).                                                                                                                     |
 | Add template... / Remove template...                      | `template:init --add` / `template:list --registry` + `template:remove`.                                                                                                                                  |
-| Add template... / Remove template source...           | Registry actions: add a template source or drop one while keeping the files; **Refresh templates** reloads the list.                                                                                     |
-| Create from template...                               | `dbx create --template <id>` (terminal for online templates; `--online` is added automatically for online sources).                                                                                      |
+| Add template... / Remove template source...               | Registry actions: add a template source or drop one while keeping the files; **Refresh templates** reloads the list.                                                                                     |
+| Create from template...                                   | `dbx create --template <id>` (terminal for online templates; `--online` is added automatically for online sources).                                                                                      |
 | New registry... / Remove registry... / Refresh registries | Manage the provider/template registry search paths and reload the **Registries** view.                                                                                                                   |
 | Choose dbx source... / Select dbx version...              | Pick the project's `dbx` or the bundled CLI, and pin the toolchain version.                                                                                                                              |
-| Refresh projects / Refresh files                      | Rediscover the project graph / reload the **Managed Files** view.                                                                                                                                        |
-| Show all actions                                      | Open the searchable action palette (see [Actions](#actions)).                                                                                                                                            |
-| Reset tooling                                         | Remove generated files / manifest / config.                                                                                                                                                              |
-| Toggle auto-sync                                      | Enable/disable sync-on-change.                                                                                                                                                                           |
+| Refresh projects / Refresh files                          | Rediscover the project graph / reload the **Managed Files** view.                                                                                                                                        |
+| Show all actions                                          | Open the searchable action palette (see [Actions](#actions)).                                                                                                                                            |
+| Reset tooling                                             | Remove generated files / manifest / config.                                                                                                                                                              |
+| Toggle auto-sync                                          | Enable/disable sync-on-change.                                                                                                                                                                           |
 
 Interactive commands (the dev server, `vp create`, online scaffolding) run in an
 integrated terminal at the project root; everything else runs in the output
@@ -835,7 +835,9 @@ fields defined in Zod/Untyped schemas:
 * `public`
 * `defaultValue`
 * `envName` (the env fields)
-* `envPath` and more.
+* `envPath`
+* `cli` / `cliCommand` (schema-driven CLI flags and commands)
+* `envExpose` (keep a value CLI-only) and more.
 
 ---
 
@@ -845,7 +847,7 @@ url: https://toolchain.deltabox.studio/config/cli.md
 
 # CLI reference
 
-Generated from the same `ToolchainCommand` descriptors the `dbx` binary
+Generated from the same `CliCommand` descriptors the `dbx` binary
 registers. Run `yarn config:docs` after changing a command.
 
 | Command                                                 | Description                                                                                     |
@@ -932,6 +934,10 @@ Discover projects and write .dbx/toolchain/projects.json.
 
 Regenerate every managed file from dbx.config.\*.
 
+* `--no-format` — Do not format the written managed files.
+* `--no-format-fix` — Run the formatter in check mode instead of rewriting the files.
+* `--format-command ‹value›` — Override the formatter command. `{files}` expands to the managed files (space-separated); when it is absent the files are appended.
+* `--format-exclude ‹value...›` — Globs of managed files to leave unformatted (per-file opt-out).
 * `--cwd ‹dir›` — Project root (default: cwd).
 * `-q, --quiet` — Only log errors.
 * `--configless` — Manage projects without their own dbx.config.\* (inherit the nearest config).
@@ -940,16 +946,15 @@ Regenerate every managed file from dbx.config.\*.
 * `--recursive` — Sync every managed project in dependency order (nested workspaces included; configless projects only with --configless).
 * `--force` — Run even when no dbx.config.\* is present.
 * `--only ‹tasks›` — Only run the named sync task(s), comma-separated (eg. `tsconfig`).
-* `--no-format` — Do not format the written managed files.
-* `--no-format-fix` — Run the formatter in check mode instead of rewriting the files.
-* `--format-command ‹command›` — Override the managed-file formatter command (`{files}` expands to the files).
-* `--format-exclude ‹glob...›` — Managed files to leave unformatted (repeatable globs).
 * `--json` — Print the sync result (including removed files) as JSON.
 
 ## `dbx watch`
 
 Sync once, then watch key files and re-sync on change.
 
+* `--debounce ‹value›` — Debounce window in ms. (default: `150`)
+* `--exclude ‹value...›` — Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
+* `--no-gitignore` — Do not respect .gitignore files.
 * `--cwd ‹dir›` — Project root (default: cwd).
 * `-q, --quiet` — Only log errors.
 * `--configless` — Manage projects without their own dbx.config.\* (inherit the nearest config).
@@ -1006,25 +1011,25 @@ Disable the toolchain (workspace scope by default).
 
 Generate workspace tsconfig.json files from the default tsconfig (aliases + references).
 
-* `--cwd ‹dir›` — Repo root to scan (default: cwd).
-* `--no-aliases` — Skip path aliases.
-* `--composite` — Emit composite + references.
+* `--glob ‹value...›` — Glob(s) for the workspace default tsconfig files. Defaults to matching every `defaultFile` recursively.
+* `--exclude ‹value...›` — Glob(s) to exclude from `glob`. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
+* `--no-gitignore` — Do not respect .gitignore files.
 * `--refs` — Wire project references.
-* `--flatten-remote-extends` — Inline compiler options inherited from a remote http(s) extends chain (existing settings win).
+* `--composite` — Emit `composite: true`.
+* `--no-aliases` — Skip path aliases.
+* `--flatten-remote-extends` — Inline the compiler options inherited from a remote `http(s)` `extends` chain into the generated workspace configs (default false). Useful when a tool cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` are skipped because they describe the remote tree. Settings the generated config already defines always win.
+* `--auto-src-dir ‹value›` — Source directory used to resolve workspace entry points when `package.json` does not declare `exports`/`main`/`types` (default: the workspace's final tsconfig `rootDir`/`baseUrl`, falling back to `src`).
+* `-i, --indent ‹value›` — JSON indentation. (default: `4`)
+* `--root-file ‹value›` — The workspaces tsconfig file name that holds `paths` + `references`. (default: `tsconfig.workspaces.json`)
+* `--default-file ‹value›` — The workspace default tsconfig file name that the generator expands. (default: `tsconfig.default.json`)
+* `--build-file ‹value›` — The workspace build tsconfig file name. (default: `tsconfig.build.json`)
+* `--cwd ‹dir›` — Repo root to scan (default: cwd).
 * `--auto` — Auto-wire the root workspaces tsconfig paths/references from the project graph (default false).
 * `--no-auto` — Only use the paths/references already in the root workspaces tsconfig.
 * `--auto-aliases` — Auto-wire path aliases (defaults to --auto).
 * `--no-auto-aliases` — Do not auto-wire path aliases.
 * `--auto-refs` — Auto-wire project references (defaults to --auto).
 * `--no-auto-refs` — Do not auto-wire project references.
-* `--auto-src-dir ‹dir›` — Source directory for auto entry points (default: the workspace tsconfig rootDir/baseUrl, then src).
-* `-i, --indent ‹n›` — JSON indentation.
-* `--glob ‹glob...›` — Glob(s) for the default tsconfig files.
-* `--exclude ‹glob...›` — Glob(s) to exclude (on top of the common ignored paths).
-* `--no-gitignore` — Do not respect .gitignore files.
-* `--default-file ‹file›` — Default tsconfig file name.
-* `--build-file ‹file›` — Build tsconfig file name.
-* `--root-file ‹file›` — Workspaces tsconfig file name.
 * `--tsconfig ‹file›` — Resolve this tsconfig instead of \<root>/tsconfig.json.
 * `--root ‹dir›` — Root used to detect/resolve the tsconfig (default: cwd).
 * `--json` — Print the resolved { alias, paths, references } object.
@@ -4909,6 +4914,7 @@ grouped `.generate` methods return the content and only write when you pass `out
 | Metadata JSON  | `engine.configJson.build()`                                  | `buildConfigJson()`                                       |
 | CLI options    | `engine.cli.generate()` / `engine.cli.write()`               | `generateCliOptions()`                                    |
 | Scoped CLI     | `engine.cli.options()`                                       | `generateConfigCliOptions()` / `configCliCommand()`       |
+| CLI program    | `engine.cli.program.create()`                                | `generateConfigProgram()`                                 |
 | CLI docs       | `engine.markdown.cli.generate()` / `.write()`                | `generateCliDocs()`                                       |
 | Env docs       | `engine.markdown.env.generate()` / `.write()`                | `generateEnvMarkdown()`                                   |
 | Markdown page  | `engine.markdown.file.generate()` / `.write()`               | `generateMarkdownFile()`                                  |
@@ -5101,7 +5107,7 @@ Options: `scope` (default `cli`), `output`, `shortFlags`, `envPathOf`.
 ## CLI docs
 
 `generateCliDocs(commands, options?)` renders a markdown reference from
-`ToolchainCommand` descriptors. It is standalone because it does not read a
+`CliCommand` descriptors. It is standalone because it does not read a
 config schema:
 
 ```ts
@@ -5212,10 +5218,10 @@ the complete export list.
 ---
 url: https://toolchain.deltabox.studio/guide/config-generator/cli-commands.md
 ---
-# CLI commands
+# CLI commands docs
 
-`configCommands({ engine, defaults })` returns `ToolchainCommand[]` (register them
-on your commander program with `@deltabox/toolchain/cli`):
+`configCommands({ engine, defaults })` returns `CliCommand[]` (register them
+on your cli program with `@deltabox/toolchain/cli`) and can be used to generate config artifacts:
 
 | Command           | Writes                                       |
 | ----------------- | -------------------------------------------- |
@@ -5234,7 +5240,7 @@ const commands = configCommands({
     engine,
     defaults: { typesDir: 'packages/shared/src/types', docsDir: 'docs/reference' },
 });
-// register `commands` on your commander program
+// register `commands` on your cli program
 ```
 
 > These commands are library-only: `dbx` itself does not register a `config:*`
@@ -5243,7 +5249,71 @@ const commands = configCommands({
 
 The `config:*` commands generate config artifacts; they do not write the CLI
 reference. For that, pass the command descriptors your CLI registers to
-[`generateCliDocs()`](/guide/config-generator/generate#cli-docs).
+[`generateCliDocs()` or `engine.markdown.cli.write()`](/guide/config-generator/generate#cli-docs).
+
+## Deriving flags from config fields
+
+When a command flag maps to a config field, generate the option from the schema
+instead of hand-writing its flag, description and default. The recommended
+entry point is `engine.cli.program.create()`:
+
+```ts
+const { commands } = engine.cli.program.create(cmd => [
+    cmd('tsconfig')
+        .description('Generate workspace tsconfig files.')
+        // Genuine runtime flags stay explicit (the escape hatch).
+        .options([
+            { flags: '--cwd <dir>', description: 'Repo root.' },
+            { flags: '--json', description: 'Print the resolved config.' },
+        ])
+        .run(({ config }) => {
+            // `config` is the validated `tsconfig` section.
+        }),
+]);
+```
+
+Config-backed flags are derived recursively: objects and union object branches
+expand to dotted paths (`sync.format` → `--format-*`), scalar arrays become list
+flags, and arrays of objects/records/maps are skipped unless the field defines
+`cli` metadata. Use `engine.cli.program.createCommand(scope, spec)` when you want the
+runtime `values` object inferred from the command's `options` list. Metadata
+lives in the schema:
+
+```ts
+port: z.number().default(3000).meta({ cli: { short: 'p' } }),
+aliases: z.boolean().default(true).meta({
+    cli: { flag: '--no-aliases', type: 'boolean', description: 'Skip path aliases.' },
+}),
+internal: z.string().meta({ cli: false }),
+format: z.union([z.boolean(), z.object({ fix: z.boolean() })]).meta({
+    cliCommand: { name: 'format', description: 'Format the managed files.' },
+}),
+```
+
+`cli: false` removes a field (and its subtree) from generated flags without
+hiding it from env/types/docs. `cliCommand: false` opts a scope out of automatic
+command generation. Env exposure still comes from `envName`/`envPath`; set
+`envExpose: false` for CLI-only values. Runtime-only flags (`--cwd`, `--json`,
+`--force`, `--dry-run`, output selectors) always stay in the command spec; an
+option with a `path` intentionally maps a runtime flag back to a config field.
+
+The lower-level helpers remain available for existing descriptors:
+
+```ts
+import { configCliOptions } from '@deltabox/toolchain/config';
+
+const options = [
+    { flags: '--json', description: 'Print the resolved config.' },
+    ...configCliOptions(tsconfigConfigSchema),
+];
+```
+
+Config defaults are applied by the command context, so only explicitly typed
+flags are forwarded. `configCliCommand` wraps the same generation with parsing
+and validation when the whole command is config-shaped. Use `includePaths` /
+`excludePaths` only as a narrow escape hatch; a flag that is not a config field
+(output mode, `--cwd`, `--restore`, provider options) stays hand-written and
+documented as runtime-only.
 
 ---
 
@@ -5270,13 +5340,21 @@ const config = parseConfig(serverConfig, { host: '127.0.0.1' }, { envPrefix: 'MY
 const fromCli = parseCliConfig(serverConfig, process.argv.slice(2), { envPrefix: 'MYAPP_' });
 ```
 
-| Export                                             | Sources                                                         |
-| -------------------------------------------------- | --------------------------------------------------------------- |
-| `parseConfig(schema, overrides?, opts?)`           | env + CLI, with `overrides` merged last and validated           |
-| `parseEnvConfig(schema, env?, opts?)`              | env only                                                        |
-| `parseCliConfig(schema, argv?, opts?)`             | CLI only                                                        |
-| `collect(schema, opts?)`                           | env + CLI, no overrides (pass `validate: true` to check)        |
-| `loadConfig(options)` / `loadConfigAsync(options)` | a config file, **parsed** through `parser` (no ambient env/CLI) |
+| Export                                                  | Sources                                                  |
+| ------------------------------------------------------- | -------------------------------------------------------- |
+| `parseConfig(schema, overrides?, opts?)`                | env + CLI, with `overrides` merged last and validated    |
+| `parseEnvConfig(schema, env?, opts?)`                   | env only                                                 |
+| `parseCliConfig(schema, argv?, opts?)`                  | CLI only                                                 |
+| `collect(schema, opts?)`                                | env + CLI, no overrides (pass `validate: true` to check) |
+| `loadConfig(options)` / `loadConfigAsync(options)`      | file + env + CLI, then `overrides`, then validation      |
+| `loadEnvConfig*` / `loadCliConfig*` / `loadFileConfig*` | file plus env, CLI or neither                            |
+| `loadConfigSync(options)`                               | the sync subset (JSON/YAML/CJS and sync loaders)         |
+
+`source` accepts one source or an ordered array (`['env', 'cli']`) on both the
+parsers and the loaders. A loader always reads its file; the remaining sources
+layer over it. The precedence is **file -> env -> CLI -> overrides ->
+validation**. Parsers are the pure API: `parseConfig` starts from the value you
+pass as `overrides`, not from a file.
 
 Async variants (`parseConfigAsync`, `parseEnvConfigAsync`, `parseCliConfigAsync`)
 accept a promise for the env source, argv or overrides; the `*Sync` aliases keep
@@ -5336,10 +5414,10 @@ falling back to `--server-port`.
 ## Load from a file
 
 `loadConfig` / `loadConfigAsync` discover a config file (plus JSON/YAML/custom
-loaders), import it, merge `overrides`, and then **parse the value through the
-passed `parser`** (or validate it through `schema`). This means you do not need
-to call `parseConfig`, `parseEnvConfig`, `parseCliConfig` or
-`parse<...>Config` afterwards — `loadConfig*` already did it.
+loaders), import it, layer env vars and CLI args over the file value, merge
+`overrides`, and validate through the passed `parser` (or `schema`). The
+loaders are the preferred loading API; you do **not** need to call `parseConfig`,
+`parseEnvConfig` or `parseCliConfig` afterwards.
 
 ```ts
 import { loadConfigAsync } from '@deltabox/toolchain/config';
@@ -5350,7 +5428,10 @@ const loaded = await loadConfigAsync({
     // Discovery (flat fields; `configFileOptions` also works)
     locations: ['.', '.myapp'],
     names: ['dbx.config.ts', 'dbx.config.js'],
-    // The loaded value is validated/parsed (default true with a parser)
+    envPrefix: 'MYAPP_',
+    // Sources: file -> env -> CLI -> overrides -> validation
+    source: ['file', 'env', 'cli'],
+    overrides: { host: '127.0.0.1' },
     validate: true,
 });
 
@@ -5359,35 +5440,40 @@ if (loaded) {
 }
 ```
 
-`loadConfig*` parses the **file value**; it does not merge ambient env vars or
-CLI args. Use `parseConfig` when you want to read env + CLI instead:
+The source-specific loaders make the intent explicit:
 
 ```ts
-import { parseConfig } from '@deltabox/toolchain/config';
+import { loadCliConfig, loadEnvConfig, loadFileConfig } from '@deltabox/toolchain/config';
 
-const fromEnvAndCli = parseConfig(serverConfig, undefined, { envPrefix: 'MYAPP_' });
+await loadFileConfig({ parser: serverConfig }); // file only
+await loadEnvConfig({ parser: serverConfig }); // file + env
+await loadCliConfig({ parser: serverConfig }); // file + CLI
 ```
 
-Use `overrides` for values that should win over the file:
+Each loader also has `*Sync` and `*Async` variants. Pass `source: 'env'` (or
+`['env', 'cli']`) to `loadConfig*` when you want a custom combination. Unknown
+sources are ignored by the collector, so the loaders remain safe when an
+application only enables one.
 
-```ts
-const loaded = await loadConfig({
-    parser: serverConfig,
-    cwd: process.cwd(),
-    overrides: { host: '127.0.0.1' },
-});
-```
-
-Without a `parser`/`schema` the raw loaded value is returned unchanged:
+Without a `parser`/`schema` the raw file value is returned unchanged (there is
+no schema to map env or CLI names onto):
 
 ```ts
 const raw = await loadConfig({ cwd: process.cwd() });
 ```
 
+### Default file names
+
+The generic config package looks for neutral names: `config.ts`, `config.mts`,
+`config.cts`, `config.js`, `config.mjs`, `config.cjs` and `config.json` in
+`.`, `config` and `configs`. It never defaults to `dbx.config.*`. An
+application that owns a filename passes `names` or
+`configFileOptions: { filename: 'myapp.config' }` explicitly.
+
 Options include `configFileOptions` (filename, extensions, locations,
-`packageJson`, ancestor search), `required`, `overrides`, `fresh` (re-import in
-watch mode), `tsconfig` (path-alias resolution for TS configs) and `loader`.
-`loadConfigSync` supports JSON/YAML/CJS and synchronous loaders;
+`packageJson`, ancestor search), `required`, `overrides`, `source`, `fresh`
+(re-import in watch mode), `tsconfig` (path-alias resolution for TS configs) and
+`loader`. `loadConfigSync` supports JSON/YAML/CJS and synchronous loaders;
 `loadConfigAsync` also supports ESM and TypeScript.
 
 > The dotted path is the env name with the prefix removed and `_` folded to `.`,
@@ -5494,7 +5580,7 @@ await engine.jsonSchema.write({ output: 'config.schema.json' });
 
 ## CLI docs - `engine.markdown.cli` / `generateCliDocs()`
 
-`generateCliDocs` reads `ToolchainCommand` descriptors rather than the config
+`generateCliDocs` reads `CliCommand` descriptors rather than the config
 schema: it renders a markdown reference from the commands your CLI actually
 registers. The engine exposes the same generator as
 `engine.markdown.cli.generate()` (and `.write()`):
@@ -5580,6 +5666,459 @@ language, and `options.options` to override any single option.
 
 For a full, real example of the generated config types, see
 `packages/shared/src/config-types.ts`.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/client-and-server.md
+---
+# Client and server configs
+
+Config code is often shared between an API and a browser app. The schemas can
+share primitives, but for best-practice the **engines**, loaders and runtime imports must stay in
+their own context.
+
+A client bundle should never pull in `node:*` (unless your bundler handles them), a server
+secret, or the server config engine; a server process should not depend on
+browser-only globals.
+
+The safest structure is one folder per context, each with its own schema entry,
+engine and public import path. Do not put a single barrel `index.ts` above both
+contexts that re-exports their engines or schemas.
+
+## Project layout
+
+```tree
+- name: packages/shared/src/config
+  children:
+    - name: common
+      description: Context-free primitives only
+      children:
+        - name: primitives.ts
+        - name: meta.ts
+    - name: client
+      description: Browser-safe config
+      children:
+        - name: schema
+          children:
+            - name: index.ts
+              description: Client schemas only
+            - name: api.ts
+            - name: telemetry.ts
+        - name: engine.ts
+          description: createConfigEngine(client schemas)
+        - name: index.ts
+          description: Public client entry
+    - name: server
+      description: Server-only config
+      children:
+        - name: schema
+          children:
+            - name: index.ts
+              description: Server schemas only
+            - name: database.ts
+            - name: http.ts
+        - name: engine.ts
+          description: createConfigEngine(server schemas)
+        - name: index.ts
+          description: Public server entry
+    - name: index.ts
+      status: deleted
+      description: Never re-export both contexts
+```
+
+`common/` may be imported by either side, but it must stay free of runtime
+dependencies such as `node:fs`, database clients or browser APIs. Everything
+else is context-specific.
+
+## Server context
+
+### Server schemas
+
+Keep each server schema module focused, and export only server schemas from the
+server schema entry:
+
+```ts
+// packages/shared/src/config/server/schema/database.ts
+import { z } from 'zod';
+
+export const databaseConfig = z.object({
+    url: z.string().meta({
+        envName: 'APP_DATABASE_URL',
+        required: true,
+        secret: true,
+    }),
+    poolSize: z.number().default(10).meta({ envName: 'APP_DATABASE_POOL_SIZE' }),
+});
+```
+
+```ts
+// packages/shared/src/config/server/schema/http.ts
+import { z } from 'zod';
+
+export const httpConfig = z.object({
+    port: z.number().default(3000).meta({ envName: 'APP_HTTP_PORT' }),
+    trustProxy: z.boolean().default(false).meta({ envName: 'APP_HTTP_TRUST_PROXY' }),
+});
+```
+
+```ts
+// packages/shared/src/config/server/schema/index.ts
+export { databaseConfig } from './database.js';
+export { httpConfig } from './http.js';
+```
+
+### Server engine
+
+The server engine imports the server schema entry only:
+
+```ts
+// packages/shared/src/config/server/engine.ts
+import { createConfigEngine } from '@deltabox/toolchain/config';
+
+import * as serverSchema from './schema/index.js';
+
+export const serverConfig = createConfigEngine({
+    schema: {
+        database: serverSchema.databaseConfig,
+        http: serverSchema.httpConfig,
+    },
+    envPrefix: 'APP_',
+});
+```
+
+The public server entry is the only module the server application imports:
+
+```ts
+// packages/shared/src/config/server/index.ts
+export { serverConfig } from './engine.js';
+export * from './schema/index.js';
+```
+
+### Loading server config
+
+Read files and `process.env` in the server process:
+
+```ts
+import { serverConfig } from '@acme/shared/config/server';
+
+// apps/api/src/config.ts
+import { loadConfigAsync, parseEnvConfig } from '@deltabox/toolchain/config';
+
+export async function loadServerConfig() {
+    // load config from file, cli and env
+    const loaded = await loadConfigAsync({
+        parser: serverConfig.schema,
+        cwd: process.cwd(),
+        names: ['dbx.config.ts', 'dbx.config.js'],
+    });
+
+    if (loaded) return loaded.config;
+
+    // fallback to env config
+    return parseEnvConfig(serverConfig.schema, process.env, {
+        envPrefix: 'APP_',
+    });
+}
+```
+
+`loadConfigAsync` can import TypeScript and read the filesystem, so it must not
+appear in a client module graph.
+
+## Client context
+
+### Client schema
+
+Client schemas may only describe browser-visible values. Prefix public values
+with the client-visible prefix (`PUBLIC_`), and keep secrets out entirely:
+
+```ts
+// packages/shared/src/config/client/schema/api.ts
+import { z } from 'zod';
+
+export const apiConfig = z.object({
+    baseUrl: z.string().default('/api').meta({ envName: 'PUBLIC_API_BASE_URL' }),
+    timeout: z.number().default(10_000).meta({ envName: 'PUBLIC_API_TIMEOUT' }),
+});
+```
+
+```ts
+// packages/shared/src/config/client/schema/telemetry.ts
+import { z } from 'zod';
+
+export const telemetryConfig = z.object({
+    enabled: z.boolean().default(false).meta({ envName: 'PUBLIC_TELEMETRY_ENABLED' }),
+});
+```
+
+```ts
+// packages/shared/src/config/client/schema/index.ts
+export { apiConfig } from './api.js';
+export { telemetryConfig } from './telemetry.js';
+```
+
+### Client engine
+
+The client engine imports only the client schema entry:
+
+```ts
+// packages/shared/src/config/client/engine.ts
+import { createConfigEngine } from '@deltabox/toolchain/config';
+
+import * as clientSchema from './schema/index.js';
+
+export const clientConfig = createConfigEngine({
+    schema: {
+        api: clientSchema.apiConfig,
+        telemetry: clientSchema.telemetryConfig,
+    },
+    envPrefix: 'PUBLIC_', // or VITE_, NEXT_
+});
+```
+
+```ts
+// packages/shared/src/config/client/index.ts
+export { clientConfig } from './engine.js';
+export * from './schema/index.js';
+```
+
+### Loading client config
+
+The browser has `import.meta.env`, not `process.env`, and it must not import
+the server engine or `node:fs`:
+
+```ts
+import { clientConfig } from '@acme/shared/config/client';
+
+// apps/web/src/config.ts
+import { parseEnvConfig } from '@deltabox/toolchain/config';
+
+export const webConfig = parseEnvConfig(
+    clientConfig.schema,
+    import.meta.env as Record<string, string | undefined>,
+    { envPrefix: 'PUBLIC_' }
+);
+```
+
+Vite/Vite+ only exposes env vars with the configured public prefix; the schema
+above uses `PUBLIC_` consistently. Never put a server secret in a client schema.
+
+## Bundlers
+
+Treeshaking depends on what a module **imports**, not on which exports you
+happen to use. A top-level barrel defeats the split:
+
+```tree
+- name: packages/shared/src/config
+  children:
+    - name: index.ts
+      status: deleted
+      description: Re-exports client + server; every importer pulls both
+    - name: client/index.ts
+      description: Client-only entry
+    - name: server/index.ts
+      description: Server-only entry
+```
+
+Import the context entry explicitly:
+
+```ts
+// Bad:
+// the barrel can load both engines into the same module graph
+import { clientConfig } from '@acme/shared/config';
+// Good:
+// the client graph only sees the client engine
+import { clientConfig } from '@acme/shared/config/client';
+```
+
+Expose separate package subpaths instead of one mixed entry:
+
+```json [package.json]
+{
+    "exports": {
+        "./config/client": "./dist/config/client/index.js",
+        "./config/server": "./dist/config/server/index.js"
+    },
+    "sideEffects": false
+}
+```
+
+### Side effects and boundaries
+
+Treeshaking cannot remove a module with import-time side effects. Keep the config
+modules declarative:
+
+* Do not open database connections, read files or start servers at module load.
+* Do not import `node:*` from the client schema or client engine (unless your bundler handles them).
+* Do not import the client engine from the server engine, or vice versa.
+* Keep `createConfigEngine` calls in the context's `engine.ts`; import that file
+  only from the matching side.
+* If a package needs a server-only guard, make the server entry the only one
+  that imports the server dependencies. A client import of the server entry
+  should fail at build time, not silently bundle it.
+
+### A correct import graph
+
+```tree
+- name: apps/web/src/config.ts
+  description: imports @acme/shared/config/client only
+  status: added
+- name: apps/api/src/config.ts
+  description: imports @acme/shared/config/server only
+  status: added
+```
+
+The client bundle never reaches `server/engine.ts`, `server/schema/*` or
+`node:*` (unless your bundler handles them); the server process never reaches `client/schema/*` or
+`import.meta.env` parsing.
+
+## Checklist
+
+* One schema folder and one engine per context.
+* No `config/index.ts` that re-exports both context engines.
+* Client code imports only `config/client`; server code imports only
+  `config/server`.
+* Shared `common` modules are context-free.
+* Client schemas use only public config options and no secrets.
+* Server-only modules are never imported from client code.
+* `sideEffects: false` plus no import-time side effects, so unused context
+  modules are actually removed.
+
+See [Load the config](/guide/config-generator/load-the-config) for the parser
+and loader options, and the [API reference](/guide/config-generator/api) for the full API.
+
+---
+
+---
+url: https://toolchain.deltabox.studio/guide/config-generator/real-world-shape.md
+---
+# Real-world shape
+
+A real project usually has **two engines**, one per runtime context, rather than
+one engine that mixes server and browser settings:
+
+* a server engine with database, HTTP and secret-bearing schemas;
+* a client engine with public API URLs, feature flags and other browser-safe
+  values.
+
+Keeping them in separate folders and entry points is what lets bundlers drop the
+server engine from the browser bundle (and vice versa). See
+[Client and server](/guide/config-generator/client-and-server) for the full
+layout and bundler guidance.
+
+## Server engine
+
+```ts
+// packages/shared/src/config/server/engine.ts
+import { createConfigEngine } from '@deltabox/toolchain/config';
+
+import * as serverSchema from './schema/index.js';
+
+export const serverConfig = createConfigEngine({
+    schema: {
+        database: serverSchema.databaseConfig,
+        http: serverSchema.httpConfig,
+    },
+    envPrefix: 'APP_',
+    baseGroup: ['base', 'http'],
+    root: monorepoRoot(),
+});
+```
+
+## Client engine
+
+```ts
+// packages/shared/src/config/client/engine.ts
+import { createConfigEngine } from '@deltabox/toolchain/config';
+
+import * as clientSchema from './schema/index.js';
+
+export const clientConfig = createConfigEngine({
+    schema: {
+        api: clientSchema.apiConfig,
+        telemetry: clientSchema.telemetryConfig,
+    },
+    envPrefix: 'PUBLIC_',
+});
+```
+
+## Generation
+
+Run the generators against each engine so each context's `.env.example`, types,
+JSON Schema and markdown reference stay scoped to its own schema:
+
+```ts
+import { configCommands } from '@deltabox/toolchain/config';
+
+import { clientConfig } from './client/engine.js';
+import { serverConfig } from './server/engine.js';
+
+export const commands = [
+    ...configCommands({
+        engine: serverConfig,
+        defaults: { envDir: 'config/server' },
+    }),
+    ...configCommands({
+        engine: clientConfig,
+        defaults: { envDir: 'config/client' },
+    }),
+];
+```
+
+If the project exposes one `config:all` command, call the generators for both
+engines explicitly. Do not build a single engine whose schema imports both
+`server/` and `client/` modules.
+
+## Loading
+
+At runtime, each context loads its own engine:
+
+```ts
+import { serverConfig } from '@acme/shared/config/server';
+
+// apps/api/src/config.ts (server)
+import { loadConfigAsync } from '@deltabox/toolchain/config';
+
+const loaded = await loadConfigAsync({ parser: serverConfig.schema });
+```
+
+```ts
+import { clientConfig } from '@acme/shared/config/client';
+
+// apps/web/src/config.ts (client)
+import { parseEnvConfig } from '@deltabox/toolchain/config';
+
+export const webConfig = parseEnvConfig(
+    clientConfig.schema,
+    import.meta.env as Record<string, string | undefined>,
+    { envPrefix: 'PUBLIC_' }
+);
+```
+
+`loadConfig*` loads a file and layers env/CLI over it (`loadEnvConfig*` and
+`loadCliConfig*` select one explicitly). Use `parseEnvConfig`/`parseCliConfig`/
+`parseConfig` when there is no file and you are parsing a pure source.
+
+## Keep the boundaries clean
+
+* Import `@acme/shared/config/client` from browser code and
+  `@acme/shared/config/server` from server code.
+* Never create a `packages/shared/src/config/index.ts` that re-exports both
+  engines.
+* Keep shared `common` modules context-free (no `node:*` unless your bundler handles them, no secrets, no
+  browser-only globals).
+* Mark config packages as side-effect free and avoid import-time connections or
+  file reads.
+* Client schemas use public config options only; server secrets never enter the
+  client schema.
+
+These `config:*` commands belong to the consumer's own CLI; `dbx` itself does
+not expose them.
+
+See [Client and server](/guide/config-generator/client-and-server) for the
+complete folder layout, import graph and bundler checklist, and the
+[API reference](/guide/config-generator/api) for every generator and runtime
+export.
 
 ---
 
@@ -5708,7 +6247,7 @@ engine.types.write({ outputDir: 'types', extension: 'mts' });
 ### `engine.markdown`
 
 ```ts
-const commands = [/* your ToolchainCommand descriptors */];
+const commands = [/* your CliCommand descriptors */];
 
 const pages = engine.markdown.generate({ outputDir: 'docs/reference' });
 // { 'server.md': '...', 'cli.md': '...', 'index.md': '...' }
@@ -5744,7 +6283,17 @@ const scoped = engine.cli.options();
 //   commandEntries: [['server', {...}], ...],
 //   options: [...],
 //   optionsEntries: [['--port', {...}], ...],
+//   diagnostics: [...],
 // }
+
+// The high-level program: chained commands with schema-derived flags + typed config
+const { commands } = engine.cli.program.create(cmd => [
+    cmd('server')
+        .option({ flags: '--json', description: 'Print JSON.' })
+        .run(({ config, values, context }) => {
+            // `config` is the resolved `server` section.
+        }),
+]);
 ```
 
 ### `engine.jsonSchema`
@@ -5821,7 +6370,8 @@ const required = collectRequired(schema, 'server');
 ## Runtime parsers
 
 The parsers merge the enabled sources, apply overrides and validate by default.
-All of them accept Zod, untyped and plain/primitive schemas.
+`source` accepts `'file' | 'env' | 'cli'` or an ordered array such as
+`['env', 'cli']`. All of them accept Zod, untyped and plain/primitive schemas.
 
 ```ts
 import {
@@ -5840,6 +6390,9 @@ parseEnvConfig(schema, process.env, { envPrefix: 'MYAPP_' });
 // CLI only: --port 4000 --host localhost
 parseCliConfig(schema, process.argv.slice(2), { envPrefix: 'MYAPP_' });
 
+// An explicit source set
+parseConfig(schema, {}, { source: ['env', 'cli'], envPrefix: 'MYAPP_' });
+
 // Async variants accept promise inputs
 await parseConfigAsync(schema, Promise.resolve({ port: 4000 }));
 ```
@@ -5850,10 +6403,12 @@ the validated paths and messages.
 
 ## Loaders
 
-`loadConfig*` discover a config file, import it, merge `overrides` and then parse
-the value through the passed `parser` (or `schema`). You do **not** need to call
-`parseConfig`/`parseEnvConfig`/`parseCliConfig` after `loadConfig*`: it already
-did that for you.
+`loadConfig*` discover a config file, import it, layer env vars and CLI args over
+the file value, merge `overrides` and validate through the passed `parser` (or
+`schema`). The precedence is **file -> env -> CLI -> overrides -> validation**.
+You do **not** need to call `parseConfig`/`parseEnvConfig`/`parseCliConfig` after
+`loadConfig*`: it already did that for you. Use the parsers when you have no file
+to load.
 
 ```ts
 import { loadConfig, loadConfigAsync, loadConfigSync } from '@deltabox/toolchain/config';
@@ -5867,12 +6422,25 @@ const loaded = await loadConfigAsync({
     names: ['dbx.config.ts', 'dbx.config.js'],
     locations: ['.', 'config'],
     envPrefix: 'MYAPP_',
+    source: ['file', 'env', 'cli'], // the default
     validate: true, // default when a parser is provided
 });
 
 loaded?.config; // the parsed + validated value
 loaded?.path; // the file that was loaded
 ```
+
+The source-specific family makes the selection explicit:
+
+| Loader            | Sources                    |
+| ----------------- | -------------------------- |
+| `loadConfig*`     | file + env + CLI (default) |
+| `loadEnvConfig*`  | file + env                 |
+| `loadCliConfig*`  | file + CLI                 |
+| `loadFileConfig*` | file only                  |
+
+Each has `Sync` and `Async` variants. `source` also accepts a union on the
+loaders, so `source: ['env', 'cli']` is equivalent to the default.
 
 Without a `parser`/`schema`, the raw loaded value is returned:
 
@@ -5883,6 +6451,10 @@ const raw = await loadConfig({ cwd: process.cwd() });
 The parser-based loader also accepts the flat discovery fields (`cwd`, `names`,
 `locations`, `packageJsonKeys`, `parent`, `accept`, `tsconfig`, `fresh`) as well
 as `configFileOptions` when you need the full discovery shape.
+
+The default discovery names are neutral (`config.ts`, `config.js`,
+`config.json`, ...), never `dbx.config.*`. Pass `names` or
+`configFileOptions.filename` for an application-specific name.
 
 `loadConfigSync` supports JSON/YAML/CJS and custom synchronous loaders;
 `loadConfigAsync` also supports ESM and TypeScript.
@@ -5968,6 +6540,8 @@ import {
 } from '@deltabox/toolchain/config';
 
 const result = generateConfigCliOptions(scopes, {
+    includePaths: ['server', 'frontend.origin'], // optional path filter
+    excludePaths: ['frontend.secrets'],
     flags: { 'auto.aliases': '--aliases' }, // optional custom mapping
     types: { auto: 'boolean' }, // override an ambiguous schema type
 });
@@ -5981,7 +6555,7 @@ const options = toToolchainOptions(result.options);
 // [{ flags: '--port <value>', description: 'HTTP port', default: '3000' }, ...]
 ```
 
-`configCliCommand` builds a complete `ToolchainCommand` from the schema, parses
+`configCliCommand` builds a complete `CliCommand` from the schema, parses
 the provided flags into a validated config and passes it to `run`:
 
 ```ts
@@ -5999,28 +6573,309 @@ export const serveCommand = configCliCommand({
     },
 });
 
-// Register it like any other ToolchainCommand:
-registerToolchainCommands(program, [serveCommand]);
+// Build it into an engine program like any other CliCommand:
+const program = createConfigProgram([serveCommand]);
+await program.invokeAsync();
 ```
 
-For an existing command, merge generated options into its descriptor:
+For an existing command, prefer `engine.cli.program.create()` and keep only
+genuinely non-config flags (output modes, `--cwd`, `--json`, `--restore`)
+hand-written. The low-level `configCliOptions` one-liner remains available when
+you already have a command descriptor:
 
 ```ts
-import { generateConfigCliOptions, toToolchainOptions } from '@deltabox/toolchain/config';
+import { configCliOptions } from '@deltabox/toolchain/config';
 
 const command = {
     name: 'tsconfig',
     description: 'Generate workspace tsconfig files.',
     options: [
+        // The escape hatch: runtime selectors that are not config fields.
         { flags: '--cwd <dir>', description: 'Project root.' },
-        ...toToolchainOptions(generateConfigCliOptions(tsconfigConfigSchema).options),
         { flags: '--json', description: 'Print the resolved config.' },
+        // Config-backed options, generated recursively from the schema.
+        ...configCliOptions(tsconfigConfigSchema),
     ],
     run: (values, context) => {
         // values from generated flags are available alongside custom flags
     },
 };
 ```
+
+### `engine.cli.program`
+
+`engine.cli.generate()` and `engine.cli.options()` keep their low-level
+behavior; `engine.cli.program.create()` is the command-level entry point:
+
+```ts
+const program = engine.cli.program.create(cmd => [
+    cmd('serve')
+        .description('Run the server.')
+        .option({ flags: '--json', description: 'Print JSON.' })
+        .option({ flags: '--listen <port>', path: 'port', type: 'number' })
+        .command('serve', status =>
+            status
+                .name('status')
+                .description('Print the resolved status.')
+                .option({ flags: '--short', description: 'Short output.' })
+                .run(({ config, values }) => {
+                    // typed `serve` config + `short` value
+                })
+        )
+        .run(({ config, values, context }) => {
+            // config: the validated `serve` section
+            // values: the explicit CLI values
+            // context: the host CliCommandContext (dbx widens it to ToolchainCommandContext)
+        }),
+]);
+
+await program.invokeAsync();
+```
+
+`create()` returns a built program: `program.commands` is the normalized command
+list (a single command stays a single command; an empty list generates one
+command per eligible scope). `createCommand(scope, spec)` builds one command
+without a program. The callback may be async; `create()` then returns a promise.
+`ConfigScopeCommand` chains support `name`, `description`, `version`, `argv`,
+`bin`, `option`/`options`, `command`/`commands`, `subcommand`/`subcommands`,
+`onError` and terminal `run`. `onError(error, context)` receives the loaded host
+context. Omit `run` for a grouping command; it registers with its subcommands.
+
+Options and subcommands have commander-style shorthands as well as array forms:
+
+```ts
+engine.cli.program.create(cmd => [
+    cmd('serve')
+        .description('Run the server.')
+        .option('--json', 'Print JSON.')
+        .options([
+            ['--out <dir>', 'Output directory.', 'dist'],
+            '--check',
+            { flags: '--tag <value...>', description: 'Tags.' },
+        ])
+        .command('serve', 'Status.', status =>
+            status
+                .name('status')
+                .option('--short', 'Short output.')
+                .run(({ values }) => {
+                    // values.short?: boolean
+                })
+        )
+        .commands([['serve', 'Info.', info => info.name('info').run(() => {})], ['build']])
+        .run(({ config, values }) => {
+            // typed serve config + values
+        }),
+]);
+```
+
+`.options(...list)` and `.commands(...list)`/`.subcommands(...list)` accept the
+same inputs spread as separate arguments. A subcommand definition may be an
+already-built `CliCommand`, a `[scope, setup]` / `[scope, description, setup]`
+tuple, or `{ scope, description?, setup? }`.
+
+#### Global options
+
+Define options once at program level and every command parses them:
+
+```ts
+const program = engine.cli.program.create(
+    cmd => [
+        cmd('sync').option('--check', 'Check only.').run(syncHandler),
+        cmd('build').run(buildHandler),
+    ],
+    { globalOptions: [{ flags: '--json', description: 'Print JSON.' }] }
+);
+
+// Or after creation:
+program
+    .globalOption('--verbose', 'Verbose output.')
+    .globalOptions([['--cwd <dir>', 'Project root.']]);
+```
+
+Commands can declare their own global options too. A subcommand only receives
+the parent command's globals when it opts in with `.inherit()` (or
+`inherit: true` in a command definition). Program globals always apply.
+
+```ts
+cmd('serve')
+    .globalOptions([['--root <dir>', 'Project root.'], '--verbose'])
+    .command('serve', status =>
+        status
+            .name('status')
+            .inherit()
+            .run(({ values }) => {
+                // values.root / values.verbose are typed and parsed
+            })
+    )
+    .run(({ values }) => {
+        // the parent sees its own globals too
+    });
+```
+
+Resolution order is loaded config section → env vars → explicit CLI values →
+command-spec `overrides` → schema validation. Return an empty array
+(`create(() => [])`) to generate one command per eligible scope;
+`cliCommand: false` opts a scope out. Command metadata (`cliCommand`) supplies
+`name`, `description`, `aliases`, `hidden`, `passthrough` and `args` when a
+chain omits them.
+
+`scope` is a literal union of the schema's scopes, and `run.config` is inferred
+from that scope (via `ConfigOf`), so no explicit generic is needed. A
+single-schema engine infers the whole schema. `ConfigProgramCommand<TConfig>`
+stays exported as the base shape for custom program generators and wrappers.
+
+The host context is generic: `ConfigProgramRunContext<TConfig, TContext =
+CliCommandContext>` and `ConfigCliCommandOptions<TSchema, TContext =
+CliCommandContext>` default to the minimal `{ cwd }` context. Use the callback
+form to select a wider context and build commands with both `config` and
+`values` inferred:
+
+```ts
+engine.cli.program.create<ToolchainCommandContext>(cmd => [
+    cmd('sync')
+        .description('Regenerate managed files.')
+        .option({ flags: '--check', description: 'Check only.' })
+        .option({ flags: '--only <tasks>', description: 'Task names.' })
+        .option({ flags: '--json', description: 'Print JSON.' })
+        .run(({ config, values, context }) => {
+            // config: boolean | ToolchainSyncConfig
+            // values.check?: boolean, values.only?: string, values.json?: boolean
+            // context: ToolchainCommandContext
+        }),
+]);
+```
+
+Because `cmd()` is called directly, its literal `scope` and chained `option()`
+calls drive the inference; `create<Context>()` only fixes the host context.
+The engine itself stays schema-inferred.
+
+Chained commands are self-contained; use `.command(scope, setup)` for typed
+subcommands. Return an empty array (`create(() => [])`) to generate one command
+per command-eligible scope.
+
+#### Running a built program
+
+A built program is commander-like: `invoke()` runs synchronously and
+`invokeAsync()` awaits async handlers. `argv` defaults to
+`process.argv.slice(2)` unless the program or one of its commands sets
+`argv: [...]`.
+
+```ts
+const program = engine.cli.program.create(cmd => [
+    cmd('sync').option({ flags: '--check', description: 'Check only.' }).run(handler),
+    cmd('build').option({ flags: '--out <dir>', description: 'Output.' }).run(handler),
+]);
+
+program.argv(['sync', '--check']);
+program.withContext({ cwd: process.cwd() });
+await program.invokeAsync();
+// or pass both explicitly:
+await program.invokeAsync(['build', '--out', 'dist'], { cwd: process.cwd() });
+```
+
+Options are scoped per command: a subcommand never receives its parent's or a
+sibling's flags. A sole command with no subcommands is treated as the root
+command, so `invokeAsync(['--check'])` runs it without repeating the name.
+Invalid argv throws a `ConfigProgramError` whose message includes a misspelling
+suggestion; override the messages or render it with `program.formatError()`.
+
+```ts
+program.configure({
+    error: { messages: { unknownCommand: input => `no such command: ${input}` } },
+});
+```
+
+#### Help, errors, hooks and binaries
+
+Help and error output are colourless by default. Supply colour hooks (for
+example `picocolors`) to opt in; the defaults merge recursively into
+subcommands and can be overridden per command, option, value, description and
+usage.
+
+```ts
+import pc from 'picocolors';
+
+program.configure({
+    colors: {
+        command: pc.cyan,
+        option: pc.yellow,
+        value: pc.green,
+        description: pc.gray,
+        usage: pc.bold,
+    },
+    options: { '--json': pc.magenta },
+    commands: { sync: { colors: { command: pc.green } } },
+    help: {
+        template: 'box', // or 'plain', or (model) => string
+        box: {
+            corners: { topLeft: '┌', topRight: '┐', bottomLeft: '└', bottomRight: '┘' },
+            padding: 1,
+        },
+    },
+    error: {
+        // 'box' (default: message + stack) | 'message' | custom formatter
+        template: 'box',
+        showStack: false,
+        messageColor: pc.red,
+    },
+});
+
+program.formatHelp('sync');
+program.formatError(error);
+```
+
+Hooks run around the selected action and infer every declared command's
+context, scope, name and runtime `values`:
+
+```ts
+program
+    .hook('before', 'all', ({ name, scope, values, context }) => {})
+    .hook('after', 'sync', ({ values }) => {
+        // values is typed from the `sync` command's options
+    })
+    .hooks({ phase: 'before', target: 'build', handler: async payload => {} });
+```
+
+Set `bin` on a command to execute a relative or absolute binary instead of the
+in-process handler; the arguments after the command name are forwarded verbatim.
+
+```ts
+cmd('deploy')
+    .bin('./scripts/deploy.mjs')
+    .run(() => {});
+```
+
+The same inference applies to `configCliCommand({ options: [...] })`: its
+`run`/`parse` values are typed from the extra runtime options, while
+schema-derived values remain addressable through the index signature.
+
+### Schema metadata for CLI
+
+```ts
+const serveConfig = z.object({
+    port: z
+        .number()
+        .default(3000)
+        .meta({
+            cli: { short: 'p', description: 'HTTP port.' },
+        }),
+    aliases: z
+        .boolean()
+        .default(true)
+        .meta({
+            cli: { flag: '--no-aliases', type: 'boolean', description: 'Skip aliases.' },
+        }),
+    internal: z.string().meta({ cli: false }), // never a generated flag
+    format: z.union([z.boolean(), z.object({ fix: z.boolean(), command: z.string() })]),
+});
+```
+
+`cli: false` prunes a field and its subtree from generated flags (env/types/docs
+still include it). Arrays of scalars become list flags; arrays of objects,
+records, maps and sets are skipped unless a field defines `cli` explicitly.
+Ambiguous union paths are omitted and reported through the generator
+`diagnostics`. Env exposure stays on `envName`/`envPath`; set
+`envExpose: false` to keep a value CLI-only.
 
 `configCommands` returns the library `config:*` generator commands; it does not
 add commands to the `dbx` binary.
@@ -6040,6 +6895,7 @@ add commands to the `dbx` binary.
 | `required`    | Config value is required.                        |
 | `multiple`    | Repeated occurrences collect into an array.      |
 | `choices`     | Allowed enum values, when available.             |
+| `hidden`      | Registered but omitted from generated docs.      |
 | `scope`       | Config scope.                                    |
 | `path`        | Dotted config path (`auto.aliases`).             |
 | `parse`       | Coerce one raw CLI string into the config value. |
@@ -6057,451 +6913,6 @@ monorepoRoot(process.cwd()); // nearest workspace root
 
 All types can be found at
 [packages/config/src/types](https://github.com/deltabox-studio/toolchain/tree/main/packages/config/src/types).
-
----
-
----
-url: https://toolchain.deltabox.studio/guide/config-generator/client-and-server.md
----
-# Client and server configs
-
-Config code is often shared between an API and a browser app. The schemas can
-share primitives, but the **engines**, loaders and runtime imports must stay in
-their own context. A client bundle should never pull in `node:fs`, a server
-secret, or the server config engine; a server process should not depend on
-browser-only globals.
-
-The safest structure is one folder per context, each with its own schema entry,
-engine and public import path. Do not put a single barrel `index.ts` above both
-contexts that re-exports their engines or schemas.
-
-## Project layout
-
-```tree
-- name: packages/shared/src/config
-  children:
-    - name: common
-      description: Context-free primitives only
-      children:
-        - name: primitives.ts
-        - name: meta.ts
-    - name: client
-      description: Browser-safe config
-      children:
-        - name: schema
-          children:
-            - name: index.ts
-              description: Client schemas only
-            - name: api.ts
-            - name: telemetry.ts
-        - name: engine.ts
-          description: createConfigEngine(client schemas)
-        - name: index.ts
-          description: Public client entry
-    - name: server
-      description: Server-only config
-      children:
-        - name: schema
-          children:
-            - name: index.ts
-              description: Server schemas only
-            - name: database.ts
-            - name: http.ts
-        - name: engine.ts
-          description: createConfigEngine(server schemas)
-        - name: index.ts
-          description: Public server entry
-    - name: index.ts
-      status: deleted
-      description: Never re-export both contexts
-```
-
-`common/` may be imported by either side, but it must stay free of runtime
-dependencies such as `node:fs`, database clients or browser APIs. Everything
-else is context-specific.
-
-## Server context
-
-### Server schemas
-
-Keep each server schema module focused, and export only server schemas from the
-server schema entry:
-
-```ts
-// packages/shared/src/config/server/schema/database.ts
-import { z } from 'zod';
-
-export const databaseConfig = z.object({
-    url: z.string().meta({
-        envName: 'APP_DATABASE_URL',
-        required: true,
-        secret: true,
-    }),
-    poolSize: z.number().default(10).meta({ envName: 'APP_DATABASE_POOL_SIZE' }),
-});
-```
-
-```ts
-// packages/shared/src/config/server/schema/http.ts
-import { z } from 'zod';
-
-export const httpConfig = z.object({
-    port: z.number().default(3000).meta({ envName: 'APP_HTTP_PORT' }),
-    trustProxy: z.boolean().default(false).meta({ envName: 'APP_HTTP_TRUST_PROXY' }),
-});
-```
-
-```ts
-// packages/shared/src/config/server/schema/index.ts
-export { databaseConfig } from './database.js';
-export { httpConfig } from './http.js';
-```
-
-### Server engine
-
-The server engine imports the server schema entry only:
-
-```ts
-// packages/shared/src/config/server/engine.ts
-import { createConfigEngine } from '@deltabox/toolchain/config';
-
-import * as serverSchema from './schema/index.js';
-
-export const serverConfig = createConfigEngine({
-    schema: {
-        database: serverSchema.databaseConfig,
-        http: serverSchema.httpConfig,
-    },
-    envPrefix: 'APP_',
-});
-```
-
-The public server entry is the only module the server application imports:
-
-```ts
-// packages/shared/src/config/server/index.ts
-export { serverConfig } from './engine.js';
-export * from './schema/index.js';
-```
-
-### Loading server config
-
-Read files and `process.env` in the server process:
-
-```ts
-// apps/api/src/config.ts
-import { loadConfigAsync, parseEnvConfig } from '@acme/shared/config/server';
-import { serverConfig } from '@acme/shared/config/server';
-
-export async function loadServerConfig() {
-    const loaded = await loadConfigAsync({
-        parser: serverConfig.schema,
-        cwd: process.cwd(),
-        names: ['dbx.config.ts', 'dbx.config.js'],
-    });
-
-    if (loaded) return loaded.config;
-
-    return parseEnvConfig(serverConfig.schema, process.env, {
-        envPrefix: 'APP_',
-    });
-}
-```
-
-`loadConfigAsync` can import TypeScript and read the filesystem, so it must not
-appear in a client module graph.
-
-## Client context
-
-### Client schema
-
-Client schemas may only describe browser-visible values. Prefix public values
-with the client-visible prefix (`PUBLIC_`), and keep secrets out entirely:
-
-```ts
-// packages/shared/src/config/client/schema/api.ts
-import { z } from 'zod';
-
-export const apiConfig = z.object({
-    baseUrl: z.string().default('/api').meta({ envName: 'PUBLIC_API_BASE_URL' }),
-    timeout: z.number().default(10_000).meta({ envName: 'PUBLIC_API_TIMEOUT' }),
-});
-```
-
-```ts
-// packages/shared/src/config/client/schema/telemetry.ts
-import { z } from 'zod';
-
-export const telemetryConfig = z.object({
-    enabled: z.boolean().default(false).meta({ envName: 'PUBLIC_TELEMETRY_ENABLED' }),
-});
-```
-
-```ts
-// packages/shared/src/config/client/schema/index.ts
-export { apiConfig } from './api.js';
-export { telemetryConfig } from './telemetry.js';
-```
-
-### Client engine
-
-The client engine imports only the client schema entry:
-
-```ts
-// packages/shared/src/config/client/engine.ts
-import { createConfigEngine } from '@deltabox/toolchain/config';
-
-import * as clientSchema from './schema/index.js';
-
-export const clientConfig = createConfigEngine({
-    schema: {
-        api: clientSchema.apiConfig,
-        telemetry: clientSchema.telemetryConfig,
-    },
-    envPrefix: 'PUBLIC_',
-});
-```
-
-```ts
-// packages/shared/src/config/client/index.ts
-export { clientConfig } from './engine.js';
-export * from './schema/index.js';
-```
-
-### Loading client config
-
-The browser has `import.meta.env`, not `process.env`, and it must not import
-the server engine or `node:fs`:
-
-```ts
-// apps/web/src/config.ts
-import { parseEnvConfig } from '@acme/shared/config/client';
-import { clientConfig } from '@acme/shared/config/client';
-
-export const webConfig = parseEnvConfig(
-    clientConfig.schema,
-    import.meta.env as Record<string, string | undefined>,
-    { envPrefix: 'PUBLIC_' }
-);
-```
-
-Vite/Vite+ only exposes env vars with the configured public prefix; the schema
-above uses `PUBLIC_` consistently. Never put a server secret in a client schema.
-
-## Bundlers
-
-Treeshaking depends on what a module **imports**, not on which exports you
-happen to use. A top-level barrel defeats the split:
-
-```tree
-- name: packages/shared/src/config
-  children:
-    - name: index.ts
-      status: deleted
-      description: Re-exports client + server; every importer pulls both
-    - name: client/index.ts
-      description: Client-only entry
-    - name: server/index.ts
-      description: Server-only entry
-```
-
-Import the context entry explicitly:
-
-```ts
-// Bad: the barrel can load both engines into the same module graph
-import { clientConfig } from '@acme/shared/config';
-// Good: the client graph only sees the client engine
-import { clientConfig } from '@acme/shared/config/client';
-```
-
-Expose separate package subpaths instead of one mixed entry:
-
-```json [package.json]
-{
-    "exports": {
-        "./config/client": "./dist/config/client/index.js",
-        "./config/server": "./dist/config/server/index.js"
-    },
-    "sideEffects": false
-}
-```
-
-### Side effects and boundaries
-
-Treeshaking cannot remove a module with import-time side effects. Keep the config
-modules declarative:
-
-* Do not open database connections, read files or start servers at module load.
-* Do not import `node:*` from the client schema or client engine.
-* Do not import the client engine from the server engine, or vice versa.
-* Keep `createConfigEngine` calls in the context's `engine.ts`; import that file
-  only from the matching side.
-* If a package needs a server-only guard, make the server entry the only one
-  that imports the server dependencies. A client import of the server entry
-  should fail at build time, not silently bundle it.
-
-### A correct import graph
-
-```tree
-- name: apps/web/src/config.ts
-  description: imports @acme/shared/config/client only
-  status: added
-- name: apps/api/src/config.ts
-  description: imports @acme/shared/config/server only
-  status: added
-```
-
-The client bundle never reaches `server/engine.ts`, `server/schema/*` or
-`node:fs`; the server process never reaches `client/schema/*` or
-`import.meta.env` parsing.
-
-## Checklist
-
-* One schema folder and one engine per context.
-* No `config/index.ts` that re-exports both context engines.
-* Client code imports only `config/client`; server code imports only
-  `config/server`.
-* Shared `common` modules are context-free.
-* Client schemas use only public env names and no secrets.
-* Server-only modules are never imported from client code.
-* `sideEffects: false` plus no import-time side effects, so unused context
-  modules are actually removed.
-
-See [Load the config](/guide/config-generator/load-the-config) for the parser
-and loader options, and the [API reference](/guide/config-generator/api) for the
-engine and CLI APIs.
-
----
-
----
-url: https://toolchain.deltabox.studio/guide/config-generator/real-world-shape.md
----
-# Real-world shape
-
-A real project usually has **two engines**, one per runtime context, rather than
-one engine that mixes server and browser settings:
-
-* a server engine with database, HTTP and secret-bearing schemas;
-* a client engine with public API URLs, feature flags and other browser-safe
-  values.
-
-Keeping them in separate folders and entry points is what lets bundlers drop the
-server engine from the browser bundle (and vice versa). See
-[Client and server](/guide/config-generator/client-and-server) for the full
-layout and bundler guidance.
-
-## Server engine
-
-```ts
-// packages/shared/src/config/server/engine.ts
-import { createConfigEngine } from '@deltabox/toolchain/config';
-
-import * as serverSchema from './schema/index.js';
-
-export const serverConfig = createConfigEngine({
-    schema: {
-        database: serverSchema.databaseConfig,
-        http: serverSchema.httpConfig,
-    },
-    envPrefix: 'APP_',
-    baseGroup: ['base', 'http'],
-    root: monorepoRoot(),
-});
-```
-
-## Client engine
-
-```ts
-// packages/shared/src/config/client/engine.ts
-import { createConfigEngine } from '@deltabox/toolchain/config';
-
-import * as clientSchema from './schema/index.js';
-
-export const clientConfig = createConfigEngine({
-    schema: {
-        api: clientSchema.apiConfig,
-        telemetry: clientSchema.telemetryConfig,
-    },
-    envPrefix: 'PUBLIC_',
-});
-```
-
-## Generation
-
-Run the generators against each engine so each context's `.env.example`, types,
-JSON Schema and markdown reference stay scoped to its own schema:
-
-```ts
-import { configCommands } from '@deltabox/toolchain/config';
-
-import { clientConfig } from './client/engine.js';
-import { serverConfig } from './server/engine.js';
-
-export const commands = [
-    ...configCommands({
-        engine: serverConfig,
-        defaults: { envDir: 'config/server' },
-    }),
-    ...configCommands({
-        engine: clientConfig,
-        defaults: { envDir: 'config/client' },
-    }),
-];
-```
-
-If the project exposes one `config:all` command, call the generators for both
-engines explicitly. Do not build a single engine whose schema imports both
-`server/` and `client/` modules.
-
-## Loading
-
-At runtime, each context loads its own engine:
-
-```ts
-import { serverConfig } from '@acme/shared/config/server';
-
-// apps/api/src/config.ts (server)
-import { loadConfigAsync } from '@deltabox/toolchain/config';
-
-const loaded = await loadConfigAsync({ parser: serverConfig.schema });
-```
-
-```ts
-import { clientConfig } from '@acme/shared/config/client';
-
-// apps/web/src/config.ts (client)
-import { parseEnvConfig } from '@deltabox/toolchain/config';
-
-export const webConfig = parseEnvConfig(
-    clientConfig.schema,
-    import.meta.env as Record<string, string | undefined>,
-    { envPrefix: 'PUBLIC_' }
-);
-```
-
-`loadConfig*` parses the file for you; use `parseEnvConfig`/`parseConfig` when
-you need env or CLI sources directly.
-
-## Keep the boundaries clean
-
-* Import `@acme/shared/config/client` from browser code and
-  `@acme/shared/config/server` from server code.
-* Never create a `packages/shared/src/config/index.ts` that re-exports both
-  engines.
-* Keep shared `common` modules context-free (no `node:*`, no secrets, no
-  browser-only globals).
-* Mark config packages as side-effect free and avoid import-time connections or
-  file reads.
-* Client schemas use public env names only; server secrets never enter the
-  client schema.
-
-These `config:*` commands belong to the consumer's own CLI; `dbx` itself does
-not expose them.
-
-See [Client and server](/guide/config-generator/client-and-server) for the
-complete folder layout, import graph and bundler checklist, and the
-[API reference](/guide/config-generator/api) for every generator and runtime
-export.
 
 ---
 
@@ -7789,7 +8200,7 @@ a subpath.
 * [Logging](/guide/api/logging) — the shared logger.
 * [Examples](/guide/api/examples) — short, copy-pasteable recipes.
 * [Registering commands](/guide/api/registering-commands) — wire
-  `ToolchainCommand[]` onto a commander program.
+  `CliCommand[]` onto the engine program runtime.
 
 ```ts
 import { defineConfig, loadToolchainConfig, runSync, defaultSyncTasks } from '@deltabox/toolchain';
@@ -7918,7 +8329,7 @@ the template engine.
 | `toYaml(value)`                                                                            | A tiny YAML emitter for the GitHub Actions subset.                                          |
 
 The config **types** and **schemas** also live here: `ToolchainConfig`, `DbxConfig`,
-`SyncTask`, `SyncContext`, `ManagedFile`, `ToolchainCommand`, `ToolchainOption`,
+`SyncTask`, `SyncContext`, `ManagedFile`, `CliCommand`, `CliOption`,
 `ToolchainProvider`, `ToolchainViteConfig` (Vite+'s config type), `Replacements`,
 and the generated `config-types` / `config-schema` exports.
 
@@ -7987,7 +8398,7 @@ guide for the full workflow).
 | `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                         |
 | `generateConfigTypes` / `generateConfigEnv`                                              | Type/env generators (optional disk writes).                    |
 | `generateConfigMarkdown` / `generateCliOptions`                                          | Markdown/CLI generators (optional disk writes).                |
-| `generateCliDocs(commands, options?)`                                                    | A CLI reference from `ToolchainCommand` descriptors.           |
+| `generateCliDocs(commands, options?)`                                                    | A CLI reference from `CliCommand` descriptors.                 |
 | `generateConfigJsonSchema` / `generateJsonSchemaFile`                                    | JSON Schema generation.                                        |
 | `normalizeJsonSchemaMetadata(node)`                                                      | Normalize Zod JSON Schema metadata for editor schemas.         |
 | `generateEnv` / `generateEnvDts` / `generateConfigEnv`                                   | `.env` / env type generation.                                  |
@@ -8014,14 +8425,14 @@ sync task (see the [Providers](/guide/providers) guide).
 
 ## `@deltabox/toolchain/cli`
 
-| Export                                         | Description                                                            |
-| ---------------------------------------------- | ---------------------------------------------------------------------- |
-| `registerToolchainCommands(program, commands)` | Wire framework-agnostic commands onto a commander program.             |
-| `builtinCommands()`                            | The commands built into the root CLI (config commands need an engine). |
-| `createCli()`                                  | Build the `dbx` commander program.                                     |
-| `runCli(argv?)`                                | Parse and run the CLI (extracts logger flags, defaults bare Vite+).    |
-| `withDefaultVite(argv, commandNames?)`         | Insert `vite` before a bare Vite+ command.                             |
-| `extractLogOptions(argv)`                      | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
+| Export                                 | Description                                                            |
+| -------------------------------------- | ---------------------------------------------------------------------- |
+| `createConfigProgram(commands)`        | Build the engine program from framework-agnostic commands.             |
+| `builtinCommands()`                    | The commands built into the root CLI (config commands need an engine). |
+| `createCli()`                          | Build the `dbx` program on the engine runtime.                         |
+| `runCli(argv?)`                        | Parse and run the CLI (extracts logger flags, defaults bare Vite+).    |
+| `withDefaultVite(argv, commandNames?)` | Insert `vite` before a bare Vite+ command.                             |
+| `extractLogOptions(argv)`              | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
 
 See the [CLI](/guide/cli) guide for the routing behaviour.
 
@@ -8131,20 +8542,22 @@ url: https://toolchain.deltabox.studio/guide/api/registering-commands.md
 ---
 # Registering commands
 
-Packages export framework-agnostic `ToolchainCommand[]` descriptors; wire them onto
-a commander program with `registerToolchainCommands` (this is how the bundled
-`dbx` binary, and a consumer's own CLI, are assembled):
+Packages export framework-agnostic `CliCommand[]` descriptors; build them into a
+program with `createConfigProgram` (this is how the bundled `dbx` binary, and a
+consumer's own CLI, are assembled):
 
 ```ts
-import { Command } from 'commander';
+import { configCommands, createConfigProgram } from '@deltabox/toolchain/config';
 
-import { registerToolchainCommands } from '@deltabox/toolchain/cli';
-import { configCommands } from '@deltabox/toolchain/config';
-
-const program = new Command();
-registerToolchainCommands(program, configCommands({ engine }));
-await program.parseAsync();
+const program = createConfigProgram(configCommands({ engine }), {
+    name: 'acme',
+    version: '1.0.0',
+});
+await program.invokeAsync();
 ```
+
+For config-driven commands, `engine.cli.program.create(...)` builds the same
+program runtime with schema-derived options and typed `run` values.
 
 Custom descriptors do not need to be added to `builtinCommands()` to appear in
 the generated reference. Pass the same command list to `generateCliDocs`:
@@ -8162,6 +8575,40 @@ const markdown = generateCliDocs([...builtinCommands(), ...myCommands], {
 name, and renders args/options (with defaults) the same way as the `dbx`
 reference.
 
+## Typed command args
+
+`CliCommand` infers its `run(args, context)` object from the literal `options`
+list. Use `defineCliCommand` so the literal tuple is preserved:
+
+```ts
+import { defineCliCommand } from '@deltabox/toolchain/shared';
+
+const command = defineCliCommand({
+    name: 'serve',
+    description: 'Serve.',
+    options: [
+        { flags: '--json', description: 'JSON output.' },
+        { flags: '--cwd <dir>', description: 'Project root.' },
+        { flags: '--tag <value...>', description: 'Tags.' },
+        { flags: '--no-color', description: 'Disable colour.' },
+    ],
+    // args.json?: boolean, args.cwd?: string,
+    // args.tag?: string[], args.color?: boolean
+    run: args => serve(args),
+});
+```
+
+The same inference is available as a type through
+`CliOptionValues<typeof options>`. Unknown positional args and dynamic flags
+remain addressable through the index signature.
+
+Descriptors also carry optional `argv` and `bin` fields. `argv` feeds the
+standalone config program runtime (`program.invoke()`/`invokeAsync()`, defaulting
+to `process.argv.slice(2)`); `bin` makes that runtime execute a relative or
+absolute binary instead of the in-process `run`. See
+[the config program runtime](/guide/config-generator/api#running-a-built-program)
+for `create()`, hooks and help/error formatting.
+
 ---
 
 ---
@@ -8171,7 +8618,7 @@ url: https://toolchain.deltabox.studio/guide/api/subpath-exports.md
 
 | Import                          | What it provides                                                                                |
 | ------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `@deltabox/toolchain/cli`       | Build/register the `dbx` commander program + bare-command routing.                              |
+| `@deltabox/toolchain/cli`       | Build the `dbx` engine program + bare-command routing.                                          |
 | `@deltabox/toolchain/core`      | Load `dbx.config.*`, run/watch sync, the project graph, manifest, reset.                        |
 | `@deltabox/toolchain/config`    | The Zod/env config engine, generators and the `config:*` commands.                              |
 | `@deltabox/toolchain/vite`      | Resolve/run `vp`, the Vite+ provider, the `dbx()` plugin and `vite` sync.                       |
@@ -10077,22 +10524,22 @@ import {
     createCli,
     runCli,
     builtinCommands,
-    registerToolchainCommands,
+    withCliContext,
     withDefaultVite,
     extractConfigSelection,
     extractLogOptions,
 } from '@deltabox/toolchain/cli';
 ```
 
-| Export                                         | Description                                                            |
-| ---------------------------------------------- | ---------------------------------------------------------------------- |
-| `createCli()`                                  | Build the `dbx` commander program (global flags + built-in commands).  |
-| `runCli(argv?)`                                | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
-| `builtinCommands()`                            | The commands built into the root CLI (config commands need an engine). |
-| `registerToolchainCommands(program, commands)` | Wire `ToolchainCommand[]` descriptors onto a commander program.        |
-| `withDefaultVite(argv, commandNames?)`         | Insert `vite` before a bare Vite+ command (built-ins win).             |
-| `extractLogOptions(argv)`                      | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
-| `extractConfigSelection(argv)`                 | Pull `--config <file>` / `--no-config` out of argv.                    |
+| Export                                 | Description                                                            |
+| -------------------------------------- | ---------------------------------------------------------------------- |
+| `createCli()`                          | Build the `dbx` engine program (global flags + built-in commands).     |
+| `runCli(argv?)`                        | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
+| `builtinCommands()`                    | The commands built into the root CLI (config commands need an engine). |
+| `withCliContext(commands)`             | Wrap commands with dbx config loading, logging and framing.            |
+| `withDefaultVite(argv, commandNames?)` | Insert `vite` before a bare Vite+ command (built-ins win).             |
+| `extractLogOptions(argv)`              | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
+| `extractConfigSelection(argv)`         | Pull `--config <file>` / `--no-config` out of argv.                    |
 
 `extractLogOptions` makes the logger flags work before *or* after the
 subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.
@@ -12035,6 +12482,10 @@ The VS Code **Providers** view manages the registry items (**Add provider...** /
 **Remove provider**), and the **Registries** view shows the provider search
 paths. See [VS Code Extension](/guide/vscode).
 
+For a rendered directory tree of a typical custom provider, template and
+registry, see
+[Template and registry structures](/guide/template-structures#custom-providers).
+
 ## Providers in the editor
 
 The VS Code extension reads `providers --json` and builds its **Providers** view
@@ -12229,6 +12680,745 @@ See the [Monorepo guide](/guide/monorepo) for the full task setup,
 ---
 
 ---
+url: https://toolchain.deltabox.studio/guide/template-structures.md
+---
+# Template and registry structures
+
+These trees are rendered with
+[`vitepress-plugin-folder-tree`](https://github.com/s00d/vitepress-plugin-folder-tree).
+They show the files each builtin template produces and how the Vite+ provider
+templates, custom templates, providers and registries are laid out.
+
+> The package-manager catalog file depends on the chosen manager: `.yarnrc.yml`
+> for Yarn, `pnpm-workspace.yaml` for pnpm, and `.npmrc`/`package.json` fields
+> for npm or Bun. The trees below show Yarn.
+
+## Offline project templates
+
+### `project`
+
+```tree
+- name: acme
+  description: project
+  children:
+    - name: vite.config.ts
+      description: Vite+ plugin + Oxc defaults
+    - name: package.json
+    - name: src
+      children:
+        - index.ts
+    - name: tests
+      children:
+        - index.test.ts
+    - name: tsconfig.base.json
+    - name: tsconfig.default.json
+    - name: tsconfig.build.json
+    - name: tsconfig.json
+    - name: .gitignore
+    - name: README.md
+    - name: .yarnrc.yml
+      description: catalog
+```
+
+### `application`
+
+```tree
+- name: acme
+  description: application
+  children:
+    - name: vite.config.ts
+      description: Vite+ plugin + Oxc defaults
+    - name: package.json
+    - name: index.html
+      highlight: true
+    - name: src
+      children:
+        - name: main.ts
+          highlight: true
+        - name: index.ts
+    - name: tests
+      children:
+        - index.test.ts
+    - name: tsconfig.base.json
+    - name: tsconfig.default.json
+    - name: tsconfig.build.json
+    - name: tsconfig.json
+    - name: .gitignore
+    - name: README.md
+    - name: .yarnrc.yml
+      description: catalog
+```
+
+### `folder`
+
+```tree
+- name: scratch
+  description: folder
+  children:
+    - name: README.md
+```
+
+### `monorepo`
+
+```tree
+- name: acme
+  description: monorepo root
+  children:
+    - name: vite.config.ts
+      description: Vite+ plugin + Oxc defaults
+    - name: package.json
+      description: workspaces + run scripts
+    - name: tsconfig.base.json
+    - name: tsconfig.workspaces.json
+      description: root paths + references
+    - name: tsconfig.json
+    - name: .gitignore
+    - name: README.md
+    - name: .yarnrc.yml
+      description: catalog
+```
+
+### `monorepo-example`
+
+```tree
+- name: acme
+  description: monorepo + example workspace
+  children:
+    - name: vite.config.ts
+    - name: package.json
+    - name: tsconfig.base.json
+    - name: tsconfig.workspaces.json
+    - name: tsconfig.json
+    - name: .gitignore
+    - name: README.md
+    - name: .yarnrc.yml
+    - name: packages
+      children:
+        - name: core
+          highlight: true
+          children:
+            - vite.config.ts
+            - package.json
+            - name: src
+              children:
+                - index.ts
+            - name: tests
+              children:
+                - index.test.ts
+            - tsconfig.default.json
+            - tsconfig.build.json
+            - tsconfig.json
+```
+
+### `workspace`
+
+`dbx create --template workspace --name core` writes the workspace package into
+the nearest workspace directory (here `packages/core`).
+
+```tree
+- name: packages
+  children:
+    - name: core
+      description: workspace package
+      children:
+        - vite.config.ts
+        - package.json
+        - name: src
+          children:
+            - index.ts
+        - name: tests
+          children:
+            - index.test.ts
+        - tsconfig.default.json
+        - tsconfig.build.json
+        - tsconfig.json
+```
+
+## Quality-of-life builtins
+
+These templates layer a working app over the `project`/`application` scaffold.
+Highlighted files are the template-specific ones.
+
+### `vitepress`
+
+```tree
+- name: acme
+  description: VitePress docs
+  children:
+    - name: vite.config.ts
+    - name: package.json
+    - name: tsconfig.base.json
+    - name: tsconfig.default.json
+    - name: tsconfig.build.json
+    - name: tsconfig.json
+    - name: .gitignore
+    - name: README.md
+    - name: .yarnrc.yml
+    - name: docs
+      children:
+        - name: index.md
+          highlight: true
+        - name: guide
+          children:
+            - name: getting-started.md
+              highlight: true
+        - name: .vitepress
+          children:
+            - name: config.ts
+              highlight: true
+    - name: tests
+      children:
+        - name: config.test.ts
+          highlight: true
+```
+
+### `express`
+
+```tree
+- name: acme
+  description: Express 5 API
+  children:
+    - name: vite.config.ts
+    - name: package.json
+    - name: tsconfig.base.json
+    - name: tsconfig.default.json
+    - name: tsconfig.build.json
+    - name: tsconfig.json
+    - name: .gitignore
+    - name: README.md
+    - name: .yarnrc.yml
+    - name: src
+      children:
+        - name: app.ts
+          highlight: true
+        - name: index.ts
+          highlight: true
+    - name: tests
+      children:
+        - name: app.test.ts
+          highlight: true
+```
+
+### `bun`
+
+```tree
+- name: acme
+  description: Bun HTTP server
+  children:
+    - name: vite.config.ts
+    - name: package.json
+    - name: tsconfig.base.json
+    - name: tsconfig.default.json
+      description: node + bun types
+    - name: tsconfig.build.json
+    - name: tsconfig.json
+    - name: .gitignore
+    - name: README.md
+    - name: .yarnrc.yml
+    - name: src
+      children:
+        - name: app.ts
+          highlight: true
+        - name: index.ts
+          highlight: true
+    - name: tests
+      children:
+        - name: app.test.ts
+          highlight: true
+```
+
+### `fastify`
+
+```tree
+- name: acme
+  description: Fastify 5 API
+  children:
+    - name: vite.config.ts
+    - name: package.json
+    - name: tsconfig.base.json
+    - name: tsconfig.default.json
+    - name: tsconfig.build.json
+    - name: tsconfig.json
+    - name: .gitignore
+    - name: README.md
+    - name: .yarnrc.yml
+    - name: src
+      children:
+        - name: app.ts
+          highlight: true
+        - name: index.ts
+          highlight: true
+    - name: tests
+      children:
+        - name: app.test.ts
+          highlight: true
+```
+
+### `orpc`
+
+```tree
+- name: acme
+  description: oRPC + Zod API
+  children:
+    - name: vite.config.ts
+    - name: package.json
+    - name: tsconfig.base.json
+    - name: tsconfig.default.json
+    - name: tsconfig.build.json
+    - name: tsconfig.json
+    - name: .gitignore
+    - name: README.md
+    - name: .yarnrc.yml
+    - name: src
+      children:
+        - name: planets.ts
+          highlight: true
+        - name: router.ts
+          highlight: true
+        - name: index.ts
+          highlight: true
+    - name: tests
+      children:
+        - name: planets.test.ts
+          highlight: true
+```
+
+### `file-server`
+
+```tree
+- name: acme
+  description: dependency-free file server
+  children:
+    - name: vite.config.ts
+    - name: package.json
+    - name: tsconfig.base.json
+    - name: tsconfig.default.json
+    - name: tsconfig.build.json
+    - name: tsconfig.json
+    - name: .gitignore
+    - name: README.md
+    - name: .yarnrc.yml
+    - name: public
+      children:
+        - index.html
+          highlight: true
+    - name: src
+      children:
+        - name: server.ts
+          highlight: true
+        - name: index.ts
+          highlight: true
+    - name: tests
+      children:
+        - name: server.test.ts
+          highlight: true
+```
+
+### `file-server-s3`
+
+```tree
+- name: acme
+  description: AWS S3 file server
+  children:
+    - name: vite.config.ts
+    - name: package.json
+    - name: .env.example
+      highlight: true
+      description: S3_BUCKET / S3_REGION / credentials
+    - name: tsconfig.base.json
+    - name: tsconfig.default.json
+    - name: tsconfig.build.json
+    - name: tsconfig.json
+    - name: .gitignore
+    - name: README.md
+    - name: .yarnrc.yml
+    - name: src
+      children:
+        - name: server.ts
+          highlight: true
+        - name: index.ts
+          highlight: true
+    - name: tests
+      children:
+        - name: server.test.ts
+          highlight: true
+```
+
+### `file-server-bun-s3`
+
+```tree
+- name: acme
+  description: Bun S3 file server
+  children:
+    - name: vite.config.ts
+    - name: package.json
+    - name: .env.example
+      highlight: true
+    - name: tsconfig.base.json
+    - name: tsconfig.default.json
+      description: node + bun types
+    - name: tsconfig.build.json
+    - name: tsconfig.json
+    - name: .gitignore
+    - name: README.md
+    - name: .yarnrc.yml
+    - name: src
+      children:
+        - name: app.ts
+          highlight: true
+        - name: index.ts
+          highlight: true
+    - name: tests
+      children:
+        - name: app.test.ts
+          highlight: true
+```
+
+### `file-server-minio`
+
+```tree
+- name: acme
+  description: MinIO / S3-compatible file server
+  children:
+    - name: vite.config.ts
+    - name: package.json
+    - name: .env.example
+      highlight: true
+      description: local MinIO defaults
+    - name: tsconfig.base.json
+    - name: tsconfig.default.json
+    - name: tsconfig.build.json
+    - name: tsconfig.json
+    - name: .gitignore
+    - name: README.md
+    - name: .yarnrc.yml
+    - name: src
+      children:
+        - name: server.ts
+          highlight: true
+        - name: index.ts
+          highlight: true
+    - name: tests
+      children:
+        - name: server.test.ts
+          highlight: true
+```
+
+### `file-server-rclone`
+
+```tree
+- name: acme
+  description: rclone-backed file server
+  children:
+    - name: vite.config.ts
+    - name: package.json
+    - name: tsconfig.base.json
+    - name: tsconfig.default.json
+    - name: tsconfig.build.json
+    - name: tsconfig.json
+    - name: .gitignore
+    - name: README.md
+    - name: .yarnrc.yml
+    - name: src
+      children:
+        - name: server.ts
+          highlight: true
+        - name: index.ts
+          highlight: true
+    - name: tests
+      children:
+        - name: server.test.ts
+          highlight: true
+```
+
+### `ollama-chat`
+
+```tree
+- name: acme
+  description: Ollama chat UI
+  children:
+    - name: vite.config.ts
+    - name: package.json
+    - name: index.html
+      highlight: true
+    - name: tsconfig.base.json
+    - name: tsconfig.default.json
+    - name: tsconfig.build.json
+    - name: tsconfig.json
+    - name: .gitignore
+    - name: README.md
+    - name: .yarnrc.yml
+    - name: src
+      children:
+        - name: main.ts
+          highlight: true
+        - name: ollama.ts
+          highlight: true
+        - name: style.css
+          highlight: true
+    - name: tests
+      children:
+        - name: ollama.test.ts
+          highlight: true
+```
+
+## Vite+ provider templates
+
+These are delegated to `vp create`; the exact files can change between Vite+
+versions. The trees below show the current built-in layouts.
+
+### `vite-plus` (interactive)
+
+`vite-plus` runs `vp create` with no fixed template id, so the tree is whichever
+Vite+ template you pick interactively. Use one of the fixed entries below for a
+stable shape.
+
+### `vite-plus-monorepo` (`vite:monorepo`)
+
+```tree
+- name: acme
+  description: Vite+ monorepo
+  children:
+    - name: package.json
+    - name: pnpm-workspace.yaml
+    - name: README.md
+    - name: tsconfig.json
+    - name: vite.config.ts
+    - name: .gitignore
+    - name: .yarnrc.yml
+    - name: packages
+      description: created by the workspace template
+```
+
+### `vite-plus-application` (`vite:application`)
+
+```tree
+- name: acme
+  description: Vite+ application
+  children:
+    - name: .gitignore
+    - name: index.html
+    - name: package.json
+    - name: public
+    - name: src
+      children:
+        - name: main.ts
+        - name: style.css
+    - name: tsconfig.json
+    - name: vite.config.ts
+```
+
+### `vite-plus-library` (`vite:library`)
+
+```tree
+- name: acme
+  description: Vite+ library
+  children:
+    - name: .gitignore
+    - name: README.md
+    - name: package.json
+    - name: src
+      children:
+        - name: index.ts
+    - name: tsconfig.json
+    - name: vite.config.ts
+```
+
+### `vite-plus-generator` (`vite:generator`)
+
+Requires a Vite+ monorepo. The generator is placed in `generators/` or `tools/`
+when such a parent exists and is registered in the root `create.templates`.
+
+```tree
+- name: generators
+  children:
+    - name: my-generator
+      description: Vite+ Bingo generator
+      children:
+        - name: package.json
+        - name: README.md
+        - name: tsconfig.json
+        - name: bin
+          children:
+            - name: index.ts
+              description: runTemplateCLI entry
+        - name: src
+          children:
+            - name: template.ts
+              description: createTemplate + Zod options + produce()
+```
+
+## Custom templates
+
+A local template is any directory with a `template.json`. Files and directory
+names may use `{{ token }}` placeholders; actions can be builtin, a JS module or
+a shell command.
+
+```tree
+- name: templates
+  children:
+    - name: acme-service
+      description: custom template
+      children:
+        - name: template.json
+          highlight: true
+          description: inputs, actions, ignore
+        - name: action.mjs
+          description: optional module action (not copied)
+        - name: README.md
+        - name: src
+          children:
+            - name: "{{name}}.ts"
+              highlight: true
+              description: resolved while copying
+```
+
+Register it project-locally or globally:
+
+```tree
+- name: acme
+  children:
+    - name: .dbx
+      children:
+        - name: toolchain
+          children:
+            - name: registries.json
+              description: project template/provider paths
+    - name: templates
+      children:
+        - name: acme-service
+          description: source registered above
+```
+
+## Custom providers
+
+A provider registry is a JSON file (or a directory of `*.json` files, or an
+`http(s)` URL). Project paths are searched before global paths.
+
+```tree
+- name: acme
+  description: project
+  children:
+    - name: .dbx
+      children:
+        - name: toolchain
+          children:
+            - name: registries.json
+            - name: .registry
+              children:
+                - name: providers
+                  children:
+                    - name: providers.json
+                      highlight: true
+                      description: provider descriptors
+    - name: tools
+      children:
+        - name: echo-provider
+          children:
+            - name: index.mjs
+              description: binary the provider forwards to
+```
+
+Typical `providers.json` content:
+
+```json [.dbx/toolchain/.registry/providers/providers.json]
+[
+    {
+        "id": "echo",
+        "name": "Echo",
+        "binary": "node",
+        "commands": [
+            {
+                "name": "echo:version",
+                "subcommand": "--version",
+                "description": "Print the Node version"
+            }
+        ]
+    }
+]
+```
+
+## Registries
+
+### Project registry
+
+```tree
+- name: acme
+  children:
+    - name: .dbx
+      children:
+        - name: toolchain
+          children:
+            - name: registries.json
+              description: templates + providers arrays
+            - name: .registry
+              children:
+                - name: templates
+                  description: implicit local registry
+                - name: providers
+                  description: implicit local registry
+```
+
+### Global registry
+
+```tree
+- name: ~
+  description: home
+  children:
+    - name: .dbx
+      children:
+        - name: toolchain
+          children:
+            - name: cli
+              children:
+                - name: config.json
+                  description: registrySearchPaths + providerRegistrySearchPaths
+            - name: .registry
+              children:
+                - name: templates
+                - name: providers
+```
+
+### Remote registry
+
+A remote registry is a JSON document with a `sources` array (or a bare array).
+Each source is resolved by its own type (`local`, `npm`, `git`, `remote`).
+
+```tree
+- name: https://example.com
+  children:
+    - name: dbx-templates.json
+      highlight: true
+      description: "{ sources: [...] } or [...]"
+```
+
+### npm organization registry (Vite+)
+
+Vite+ also accepts an `@org/create` package whose `package.json` declares
+`createConfig.templates`:
+
+```tree
+- name: "@acme/create"
+  children:
+    - name: package.json
+      highlight: true
+      description: createConfig.templates
+    - name: README.md
+    - name: templates
+      children:
+        - name: web
+          children:
+            - package.json
+            - src
+        - name: library
+          children:
+            - package.json
+            - src
+```
+
+---
+
+---
 url: https://toolchain.deltabox.studio/guide/templates.md
 ---
 # Templates
@@ -12273,6 +13463,10 @@ prompts for the template, name and scope instead (Ctrl-C cancels).
 
 ## Builtin templates
 
+See [Template and registry structures](/guide/template-structures) for a
+rendered directory tree of every builtin template (including the Vite+ provider
+templates) and for the layout of custom templates, providers and registries.
+
 | id                      | Kind          | Description                                    |
 | ----------------------- | ------------- | ---------------------------------------------- |
 | `project`               | `project`     | A single-package TypeScript project.           |
@@ -12302,25 +13496,33 @@ The offline builtins (`project`, `application`, `folder`, `monorepo`,
 `monorepo-example`, `workspace`) scaffold a generic, current project: a
 `dbx.config.ts` with `project` metadata, a runnable `src/index.ts` + smoke test,
 and a `package.json` that depends on the same `@deltabox/toolchain` version as the
-CLI. There is no Turbo (Vite Task replaces it). They ask for a **package manager**
+CLI.
+
+There is no Turbo (Vite Task replaces it). They ask for a **package manager**
 (default `yarn`) and write that manager's catalog file (see
-[Package catalogs](/guide/catalogs)). The `vite-plus*`
-builtins delegate to `vp create` and need network access.
+[Package catalogs](/guide/catalogs)).
+
+The `vite-plus*` builtins delegate to `vp create` and need network access.
 
 The root-oriented builtins (`project`, `application`, `monorepo`,
 `monorepo-example`, and the quality-of-life templates) write the Oxc `fmt` /
 `lint` defaults into `vite.config.ts` (the Vite+ configuration surface) and opt
-in with `fmt.oxc` / `lint.oxc`. A nested `project`/`application` scaffold instead
+in with `fmt.oxc` / `lint.oxc`.
+
+A nested `project`/`application` scaffold instead
 detects an ancestor that already owns those settings and inherits them. `folder`
-and `workspace` never create Oxc config. Existing files are never overwritten
-unless `dbx create --force` is passed.
+and `workspace` never create Oxc config.
+
+Existing files are never overwritten unless `dbx create --force` is passed.
 
 ## Quality-of-life builtins
 
 The quality-of-life templates are fully offline and layer a working app on top
 of the same project scaffold (package manager, catalogs, `vite.config.ts` with
-`dbx()`, formatter/linter). They all accept the standard `name`, `scope`,
-`packageManager` and `includeConfig` inputs and an opt-in install action.
+`dbx()`, formatter/linter).
+
+They all accept the standard `name`, `scope`, `packageManager` and `includeConfig`
+inputs and an opt-in install action.
 
 Pass `--containerize` (or use the [Docker](/guide/docker) section) to also write
 a multi-stage `Dockerfile`, `.dockerignore` and `docker-compose.yaml` for local

@@ -65,12 +65,12 @@ const INTRODUCTION = {
                 { text: 'CLI commands', link: '/guide/config-generator/cli-commands' },
                 { text: 'Load the config', link: '/guide/config-generator/load-the-config' },
                 { text: 'Generated outputs', link: '/guide/config-generator/generated-outputs' },
-                { text: 'API reference', link: '/guide/config-generator/api' },
                 {
                     text: 'Client and server',
                     link: '/guide/config-generator/client-and-server',
                 },
                 { text: 'Real-world shape', link: '/guide/config-generator/real-world-shape' },
+                { text: 'API reference', link: '/guide/config-generator/api' },
             ],
         },
         {

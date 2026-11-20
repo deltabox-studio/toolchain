@@ -101,8 +101,9 @@ export const webConfig = parseEnvConfig(
 );
 ```
 
-`loadConfig*` parses the file for you; use `parseEnvConfig`/`parseCliConfig`/`parseConfig` when
-you need env or CLI sources directly.
+`loadConfig*` loads a file and layers env/CLI over it (`loadEnvConfig*` and
+`loadCliConfig*` select one explicitly). Use `parseEnvConfig`/`parseCliConfig`/
+`parseConfig` when there is no file and you are parsing a pure source.
 
 ## Keep the boundaries clean
 

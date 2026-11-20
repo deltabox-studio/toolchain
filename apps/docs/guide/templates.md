@@ -40,6 +40,10 @@ prompts for the template, name and scope instead (Ctrl-C cancels).
 
 ## Builtin templates
 
+See [Template and registry structures](/guide/template-structures) for a
+rendered directory tree of every builtin template (including the Vite+ provider
+templates) and for the layout of custom templates, providers and registries.
+
 | id                      | Kind          | Description                                    |
 | ----------------------- | ------------- | ---------------------------------------------- |
 | `project`               | `project`     | A single-package TypeScript project.           |
@@ -69,25 +73,33 @@ The offline builtins (`project`, `application`, `folder`, `monorepo`,
 `monorepo-example`, `workspace`) scaffold a generic, current project: a
 `dbx.config.ts` with `project` metadata, a runnable `src/index.ts` + smoke test,
 and a `package.json` that depends on the same `@deltabox/toolchain` version as the
-CLI. There is no Turbo (Vite Task replaces it). They ask for a **package manager**
+CLI.
+
+There is no Turbo (Vite Task replaces it). They ask for a **package manager**
 (default `yarn`) and write that manager's catalog file (see
-[Package catalogs](/guide/catalogs)). The `vite-plus*`
-builtins delegate to `vp create` and need network access.
+[Package catalogs](/guide/catalogs)).
+
+The `vite-plus*` builtins delegate to `vp create` and need network access.
 
 The root-oriented builtins (`project`, `application`, `monorepo`,
 `monorepo-example`, and the quality-of-life templates) write the Oxc `fmt` /
 `lint` defaults into `vite.config.ts` (the Vite+ configuration surface) and opt
-in with `fmt.oxc` / `lint.oxc`. A nested `project`/`application` scaffold instead
+in with `fmt.oxc` / `lint.oxc`.
+
+A nested `project`/`application` scaffold instead
 detects an ancestor that already owns those settings and inherits them. `folder`
-and `workspace` never create Oxc config. Existing files are never overwritten
-unless `dbx create --force` is passed.
+and `workspace` never create Oxc config.
+
+Existing files are never overwritten unless `dbx create --force` is passed.
 
 ## Quality-of-life builtins
 
 The quality-of-life templates are fully offline and layer a working app on top
 of the same project scaffold (package manager, catalogs, `vite.config.ts` with
-`dbx()`, formatter/linter). They all accept the standard `name`, `scope`,
-`packageManager` and `includeConfig` inputs and an opt-in install action.
+`dbx()`, formatter/linter).
+
+They all accept the standard `name`, `scope`, `packageManager` and `includeConfig`
+inputs and an opt-in install action.
 
 Pass `--containerize` (or use the [Docker](/guide/docker) section) to also write
 a multi-stage `Dockerfile`, `.dockerignore` and `docker-compose.yaml` for local

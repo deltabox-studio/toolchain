@@ -193,6 +193,10 @@ The VS Code **Providers** view manages the registry items (**Add provider...** /
 **Remove provider**), and the **Registries** view shows the provider search
 paths. See [VS Code Extension](/guide/vscode).
 
+For a rendered directory tree of a typical custom provider, template and
+registry, see
+[Template and registry structures](/guide/template-structures#custom-providers).
+
 ## Providers in the editor
 
 The VS Code extension reads `providers --json` and builds its **Providers** view

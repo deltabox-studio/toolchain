@@ -26,7 +26,7 @@ the template engine.
 | `toYaml(value)`                                                                            | A tiny YAML emitter for the GitHub Actions subset.                                          |
 
 The config **types** and **schemas** also live here: `ToolchainConfig`, `DbxConfig`,
-`SyncTask`, `SyncContext`, `ManagedFile`, `ToolchainCommand`, `ToolchainOption`,
+`SyncTask`, `SyncContext`, `ManagedFile`, `CliCommand`, `CliOption`,
 `ToolchainProvider`, `ToolchainViteConfig` (Vite+'s config type), `Replacements`,
 and the generated `config-types` / `config-schema` exports.
 
@@ -95,7 +95,7 @@ guide for the full workflow).
 | `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                         |
 | `generateConfigTypes` / `generateConfigEnv`                                              | Type/env generators (optional disk writes).                    |
 | `generateConfigMarkdown` / `generateCliOptions`                                          | Markdown/CLI generators (optional disk writes).                |
-| `generateCliDocs(commands, options?)`                                                    | A CLI reference from `ToolchainCommand` descriptors.           |
+| `generateCliDocs(commands, options?)`                                                    | A CLI reference from `CliCommand` descriptors.                 |
 | `generateConfigJsonSchema` / `generateJsonSchemaFile`                                    | JSON Schema generation.                                        |
 | `normalizeJsonSchemaMetadata(node)`                                                      | Normalize Zod JSON Schema metadata for editor schemas.         |
 | `generateEnv` / `generateEnvDts` / `generateConfigEnv`                                   | `.env` / env type generation.                                  |
@@ -122,14 +122,14 @@ sync task (see the [Providers](/guide/providers) guide).
 
 ## `@deltabox/toolchain/cli`
 
-| Export                                         | Description                                                            |
-| ---------------------------------------------- | ---------------------------------------------------------------------- |
-| `registerToolchainCommands(program, commands)` | Wire framework-agnostic commands onto a commander program.             |
-| `builtinCommands()`                            | The commands built into the root CLI (config commands need an engine). |
-| `createCli()`                                  | Build the `dbx` commander program.                                     |
-| `runCli(argv?)`                                | Parse and run the CLI (extracts logger flags, defaults bare Vite+).    |
-| `withDefaultVite(argv, commandNames?)`         | Insert `vite` before a bare Vite+ command.                             |
-| `extractLogOptions(argv)`                      | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
+| Export                                 | Description                                                            |
+| -------------------------------------- | ---------------------------------------------------------------------- |
+| `createConfigProgram(commands)`        | Build the engine program from framework-agnostic commands.             |
+| `builtinCommands()`                    | The commands built into the root CLI (config commands need an engine). |
+| `createCli()`                          | Build the `dbx` program on the engine runtime.                         |
+| `runCli(argv?)`                        | Parse and run the CLI (extracts logger flags, defaults bare Vite+).    |
+| `withDefaultVite(argv, commandNames?)` | Insert `vite` before a bare Vite+ command.                             |
+| `extractLogOptions(argv)`              | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
 
 See the [CLI](/guide/cli) guide for the routing behaviour.
 

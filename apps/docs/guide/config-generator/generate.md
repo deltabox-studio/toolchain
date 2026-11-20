@@ -23,6 +23,7 @@ grouped `.generate` methods return the content and only write when you pass `out
 | Metadata JSON  | `engine.configJson.build()`                                  | `buildConfigJson()`                                       |
 | CLI options    | `engine.cli.generate()` / `engine.cli.write()`               | `generateCliOptions()`                                    |
 | Scoped CLI     | `engine.cli.options()`                                       | `generateConfigCliOptions()` / `configCliCommand()`       |
+| CLI program    | `engine.cli.program.create()`                                | `generateConfigProgram()`                                 |
 | CLI docs       | `engine.markdown.cli.generate()` / `.write()`                | `generateCliDocs()`                                       |
 | Env docs       | `engine.markdown.env.generate()` / `.write()`                | `generateEnvMarkdown()`                                   |
 | Markdown page  | `engine.markdown.file.generate()` / `.write()`               | `generateMarkdownFile()`                                  |
@@ -215,7 +216,7 @@ Options: `scope` (default `cli`), `output`, `shortFlags`, `envPathOf`.
 ## CLI docs
 
 `generateCliDocs(commands, options?)` renders a markdown reference from
-`ToolchainCommand` descriptors. It is standalone because it does not read a
+`CliCommand` descriptors. It is standalone because it does not read a
 config schema:
 
 ```ts

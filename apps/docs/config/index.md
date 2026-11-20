@@ -64,4 +64,6 @@ fields defined in Zod/Untyped schemas:
 - `public`
 - `defaultValue`
 - `envName` (the env fields)
-- `envPath` and more.
+- `envPath`
+- `cli` / `cliCommand` (schema-driven CLI flags and commands)
+- `envExpose` (keep a value CLI-only) and more.

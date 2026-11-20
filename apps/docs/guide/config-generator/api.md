@@ -120,7 +120,7 @@ engine.types.write({ outputDir: 'types', extension: 'mts' });
 ### `engine.markdown`
 
 ```ts
-const commands = [/* your ToolchainCommand descriptors */];
+const commands = [/* your CliCommand descriptors */];
 
 const pages = engine.markdown.generate({ outputDir: 'docs/reference' });
 // { 'server.md': '...', 'cli.md': '...', 'index.md': '...' }
@@ -156,7 +156,17 @@ const scoped = engine.cli.options();
 //   commandEntries: [['server', {...}], ...],
 //   options: [...],
 //   optionsEntries: [['--port', {...}], ...],
+//   diagnostics: [...],
 // }
+
+// The high-level program: chained commands with schema-derived flags + typed config
+const { commands } = engine.cli.program.create(cmd => [
+    cmd('server')
+        .option({ flags: '--json', description: 'Print JSON.' })
+        .run(({ config, values, context }) => {
+            // `config` is the resolved `server` section.
+        }),
+]);
 ```
 
 ### `engine.jsonSchema`
@@ -233,7 +243,8 @@ const required = collectRequired(schema, 'server');
 ## Runtime parsers
 
 The parsers merge the enabled sources, apply overrides and validate by default.
-All of them accept Zod, untyped and plain/primitive schemas.
+`source` accepts `'file' | 'env' | 'cli'` or an ordered array such as
+`['env', 'cli']`. All of them accept Zod, untyped and plain/primitive schemas.
 
 ```ts
 import {
@@ -252,6 +263,9 @@ parseEnvConfig(schema, process.env, { envPrefix: 'MYAPP_' });
 // CLI only: --port 4000 --host localhost
 parseCliConfig(schema, process.argv.slice(2), { envPrefix: 'MYAPP_' });
 
+// An explicit source set
+parseConfig(schema, {}, { source: ['env', 'cli'], envPrefix: 'MYAPP_' });
+
 // Async variants accept promise inputs
 await parseConfigAsync(schema, Promise.resolve({ port: 4000 }));
 ```
@@ -262,10 +276,12 @@ the validated paths and messages.
 
 ## Loaders
 
-`loadConfig*` discover a config file, import it, merge `overrides` and then parse
-the value through the passed `parser` (or `schema`). You do **not** need to call
-`parseConfig`/`parseEnvConfig`/`parseCliConfig` after `loadConfig*`: it already
-did that for you.
+`loadConfig*` discover a config file, import it, layer env vars and CLI args over
+the file value, merge `overrides` and validate through the passed `parser` (or
+`schema`). The precedence is **file -> env -> CLI -> overrides -> validation**.
+You do **not** need to call `parseConfig`/`parseEnvConfig`/`parseCliConfig` after
+`loadConfig*`: it already did that for you. Use the parsers when you have no file
+to load.
 
 ```ts
 import { loadConfig, loadConfigAsync, loadConfigSync } from '@deltabox/toolchain/config';
@@ -279,12 +295,25 @@ const loaded = await loadConfigAsync({
     names: ['dbx.config.ts', 'dbx.config.js'],
     locations: ['.', 'config'],
     envPrefix: 'MYAPP_',
+    source: ['file', 'env', 'cli'], // the default
     validate: true, // default when a parser is provided
 });
 
 loaded?.config; // the parsed + validated value
 loaded?.path; // the file that was loaded
 ```
+
+The source-specific family makes the selection explicit:
+
+| Loader            | Sources                    |
+| ----------------- | -------------------------- |
+| `loadConfig*`     | file + env + CLI (default) |
+| `loadEnvConfig*`  | file + env                 |
+| `loadCliConfig*`  | file + CLI                 |
+| `loadFileConfig*` | file only                  |
+
+Each has `Sync` and `Async` variants. `source` also accepts a union on the
+loaders, so `source: ['env', 'cli']` is equivalent to the default.
 
 Without a `parser`/`schema`, the raw loaded value is returned:
 
@@ -295,6 +324,10 @@ const raw = await loadConfig({ cwd: process.cwd() });
 The parser-based loader also accepts the flat discovery fields (`cwd`, `names`,
 `locations`, `packageJsonKeys`, `parent`, `accept`, `tsconfig`, `fresh`) as well
 as `configFileOptions` when you need the full discovery shape.
+
+The default discovery names are neutral (`config.ts`, `config.js`,
+`config.json`, ...), never `dbx.config.*`. Pass `names` or
+`configFileOptions.filename` for an application-specific name.
 
 `loadConfigSync` supports JSON/YAML/CJS and custom synchronous loaders;
 `loadConfigAsync` also supports ESM and TypeScript.
@@ -380,6 +413,8 @@ import {
 } from '@deltabox/toolchain/config';
 
 const result = generateConfigCliOptions(scopes, {
+    includePaths: ['server', 'frontend.origin'], // optional path filter
+    excludePaths: ['frontend.secrets'],
     flags: { 'auto.aliases': '--aliases' }, // optional custom mapping
     types: { auto: 'boolean' }, // override an ambiguous schema type
 });
@@ -393,7 +428,7 @@ const options = toToolchainOptions(result.options);
 // [{ flags: '--port <value>', description: 'HTTP port', default: '3000' }, ...]
 ```
 
-`configCliCommand` builds a complete `ToolchainCommand` from the schema, parses
+`configCliCommand` builds a complete `CliCommand` from the schema, parses
 the provided flags into a validated config and passes it to `run`:
 
 ```ts
@@ -411,28 +446,309 @@ export const serveCommand = configCliCommand({
     },
 });
 
-// Register it like any other ToolchainCommand:
-registerToolchainCommands(program, [serveCommand]);
+// Build it into an engine program like any other CliCommand:
+const program = createConfigProgram([serveCommand]);
+await program.invokeAsync();
 ```
 
-For an existing command, merge generated options into its descriptor:
+For an existing command, prefer `engine.cli.program.create()` and keep only
+genuinely non-config flags (output modes, `--cwd`, `--json`, `--restore`)
+hand-written. The low-level `configCliOptions` one-liner remains available when
+you already have a command descriptor:
 
 ```ts
-import { generateConfigCliOptions, toToolchainOptions } from '@deltabox/toolchain/config';
+import { configCliOptions } from '@deltabox/toolchain/config';
 
 const command = {
     name: 'tsconfig',
     description: 'Generate workspace tsconfig files.',
     options: [
+        // The escape hatch: runtime selectors that are not config fields.
         { flags: '--cwd <dir>', description: 'Project root.' },
-        ...toToolchainOptions(generateConfigCliOptions(tsconfigConfigSchema).options),
         { flags: '--json', description: 'Print the resolved config.' },
+        // Config-backed options, generated recursively from the schema.
+        ...configCliOptions(tsconfigConfigSchema),
     ],
     run: (values, context) => {
         // values from generated flags are available alongside custom flags
     },
 };
 ```
+
+### `engine.cli.program`
+
+`engine.cli.generate()` and `engine.cli.options()` keep their low-level
+behavior; `engine.cli.program.create()` is the command-level entry point:
+
+```ts
+const program = engine.cli.program.create(cmd => [
+    cmd('serve')
+        .description('Run the server.')
+        .option({ flags: '--json', description: 'Print JSON.' })
+        .option({ flags: '--listen <port>', path: 'port', type: 'number' })
+        .command('serve', status =>
+            status
+                .name('status')
+                .description('Print the resolved status.')
+                .option({ flags: '--short', description: 'Short output.' })
+                .run(({ config, values }) => {
+                    // typed `serve` config + `short` value
+                })
+        )
+        .run(({ config, values, context }) => {
+            // config: the validated `serve` section
+            // values: the explicit CLI values
+            // context: the host CliCommandContext (dbx widens it to ToolchainCommandContext)
+        }),
+]);
+
+await program.invokeAsync();
+```
+
+`create()` returns a built program: `program.commands` is the normalized command
+list (a single command stays a single command; an empty list generates one
+command per eligible scope). `createCommand(scope, spec)` builds one command
+without a program. The callback may be async; `create()` then returns a promise.
+`ConfigScopeCommand` chains support `name`, `description`, `version`, `argv`,
+`bin`, `option`/`options`, `command`/`commands`, `subcommand`/`subcommands`,
+`onError` and terminal `run`. `onError(error, context)` receives the loaded host
+context. Omit `run` for a grouping command; it registers with its subcommands.
+
+Options and subcommands have commander-style shorthands as well as array forms:
+
+```ts
+engine.cli.program.create(cmd => [
+    cmd('serve')
+        .description('Run the server.')
+        .option('--json', 'Print JSON.')
+        .options([
+            ['--out <dir>', 'Output directory.', 'dist'],
+            '--check',
+            { flags: '--tag <value...>', description: 'Tags.' },
+        ])
+        .command('serve', 'Status.', status =>
+            status
+                .name('status')
+                .option('--short', 'Short output.')
+                .run(({ values }) => {
+                    // values.short?: boolean
+                })
+        )
+        .commands([['serve', 'Info.', info => info.name('info').run(() => {})], ['build']])
+        .run(({ config, values }) => {
+            // typed serve config + values
+        }),
+]);
+```
+
+`.options(...list)` and `.commands(...list)`/`.subcommands(...list)` accept the
+same inputs spread as separate arguments. A subcommand definition may be an
+already-built `CliCommand`, a `[scope, setup]` / `[scope, description, setup]`
+tuple, or `{ scope, description?, setup? }`.
+
+#### Global options
+
+Define options once at program level and every command parses them:
+
+```ts
+const program = engine.cli.program.create(
+    cmd => [
+        cmd('sync').option('--check', 'Check only.').run(syncHandler),
+        cmd('build').run(buildHandler),
+    ],
+    { globalOptions: [{ flags: '--json', description: 'Print JSON.' }] }
+);
+
+// Or after creation:
+program
+    .globalOption('--verbose', 'Verbose output.')
+    .globalOptions([['--cwd <dir>', 'Project root.']]);
+```
+
+Commands can declare their own global options too. A subcommand only receives
+the parent command's globals when it opts in with `.inherit()` (or
+`inherit: true` in a command definition). Program globals always apply.
+
+```ts
+cmd('serve')
+    .globalOptions([['--root <dir>', 'Project root.'], '--verbose'])
+    .command('serve', status =>
+        status
+            .name('status')
+            .inherit()
+            .run(({ values }) => {
+                // values.root / values.verbose are typed and parsed
+            })
+    )
+    .run(({ values }) => {
+        // the parent sees its own globals too
+    });
+```
+
+Resolution order is loaded config section → env vars → explicit CLI values →
+command-spec `overrides` → schema validation. Return an empty array
+(`create(() => [])`) to generate one command per eligible scope;
+`cliCommand: false` opts a scope out. Command metadata (`cliCommand`) supplies
+`name`, `description`, `aliases`, `hidden`, `passthrough` and `args` when a
+chain omits them.
+
+`scope` is a literal union of the schema's scopes, and `run.config` is inferred
+from that scope (via `ConfigOf`), so no explicit generic is needed. A
+single-schema engine infers the whole schema. `ConfigProgramCommand<TConfig>`
+stays exported as the base shape for custom program generators and wrappers.
+
+The host context is generic: `ConfigProgramRunContext<TConfig, TContext =
+CliCommandContext>` and `ConfigCliCommandOptions<TSchema, TContext =
+CliCommandContext>` default to the minimal `{ cwd }` context. Use the callback
+form to select a wider context and build commands with both `config` and
+`values` inferred:
+
+```ts
+engine.cli.program.create<ToolchainCommandContext>(cmd => [
+    cmd('sync')
+        .description('Regenerate managed files.')
+        .option({ flags: '--check', description: 'Check only.' })
+        .option({ flags: '--only <tasks>', description: 'Task names.' })
+        .option({ flags: '--json', description: 'Print JSON.' })
+        .run(({ config, values, context }) => {
+            // config: boolean | ToolchainSyncConfig
+            // values.check?: boolean, values.only?: string, values.json?: boolean
+            // context: ToolchainCommandContext
+        }),
+]);
+```
+
+Because `cmd()` is called directly, its literal `scope` and chained `option()`
+calls drive the inference; `create<Context>()` only fixes the host context.
+The engine itself stays schema-inferred.
+
+Chained commands are self-contained; use `.command(scope, setup)` for typed
+subcommands. Return an empty array (`create(() => [])`) to generate one command
+per command-eligible scope.
+
+#### Running a built program
+
+A built program is commander-like: `invoke()` runs synchronously and
+`invokeAsync()` awaits async handlers. `argv` defaults to
+`process.argv.slice(2)` unless the program or one of its commands sets
+`argv: [...]`.
+
+```ts
+const program = engine.cli.program.create(cmd => [
+    cmd('sync').option({ flags: '--check', description: 'Check only.' }).run(handler),
+    cmd('build').option({ flags: '--out <dir>', description: 'Output.' }).run(handler),
+]);
+
+program.argv(['sync', '--check']);
+program.withContext({ cwd: process.cwd() });
+await program.invokeAsync();
+// or pass both explicitly:
+await program.invokeAsync(['build', '--out', 'dist'], { cwd: process.cwd() });
+```
+
+Options are scoped per command: a subcommand never receives its parent's or a
+sibling's flags. A sole command with no subcommands is treated as the root
+command, so `invokeAsync(['--check'])` runs it without repeating the name.
+Invalid argv throws a `ConfigProgramError` whose message includes a misspelling
+suggestion; override the messages or render it with `program.formatError()`.
+
+```ts
+program.configure({
+    error: { messages: { unknownCommand: input => `no such command: ${input}` } },
+});
+```
+
+#### Help, errors, hooks and binaries
+
+Help and error output are colourless by default. Supply colour hooks (for
+example `picocolors`) to opt in; the defaults merge recursively into
+subcommands and can be overridden per command, option, value, description and
+usage.
+
+```ts
+import pc from 'picocolors';
+
+program.configure({
+    colors: {
+        command: pc.cyan,
+        option: pc.yellow,
+        value: pc.green,
+        description: pc.gray,
+        usage: pc.bold,
+    },
+    options: { '--json': pc.magenta },
+    commands: { sync: { colors: { command: pc.green } } },
+    help: {
+        template: 'box', // or 'plain', or (model) => string
+        box: {
+            corners: { topLeft: '┌', topRight: '┐', bottomLeft: '└', bottomRight: '┘' },
+            padding: 1,
+        },
+    },
+    error: {
+        // 'box' (default: message + stack) | 'message' | custom formatter
+        template: 'box',
+        showStack: false,
+        messageColor: pc.red,
+    },
+});
+
+program.formatHelp('sync');
+program.formatError(error);
+```
+
+Hooks run around the selected action and infer every declared command's
+context, scope, name and runtime `values`:
+
+```ts
+program
+    .hook('before', 'all', ({ name, scope, values, context }) => {})
+    .hook('after', 'sync', ({ values }) => {
+        // values is typed from the `sync` command's options
+    })
+    .hooks({ phase: 'before', target: 'build', handler: async payload => {} });
+```
+
+Set `bin` on a command to execute a relative or absolute binary instead of the
+in-process handler; the arguments after the command name are forwarded verbatim.
+
+```ts
+cmd('deploy')
+    .bin('./scripts/deploy.mjs')
+    .run(() => {});
+```
+
+The same inference applies to `configCliCommand({ options: [...] })`: its
+`run`/`parse` values are typed from the extra runtime options, while
+schema-derived values remain addressable through the index signature.
+
+### Schema metadata for CLI
+
+```ts
+const serveConfig = z.object({
+    port: z
+        .number()
+        .default(3000)
+        .meta({
+            cli: { short: 'p', description: 'HTTP port.' },
+        }),
+    aliases: z
+        .boolean()
+        .default(true)
+        .meta({
+            cli: { flag: '--no-aliases', type: 'boolean', description: 'Skip aliases.' },
+        }),
+    internal: z.string().meta({ cli: false }), // never a generated flag
+    format: z.union([z.boolean(), z.object({ fix: z.boolean(), command: z.string() })]),
+});
+```
+
+`cli: false` prunes a field and its subtree from generated flags (env/types/docs
+still include it). Arrays of scalars become list flags; arrays of objects,
+records, maps and sets are skipped unless a field defines `cli` explicitly.
+Ambiguous union paths are omitted and reported through the generator
+`diagnostics`. Env exposure stays on `envName`/`envPath`; set
+`envExpose: false` to keep a value CLI-only.
 
 `configCommands` returns the library `config:*` generator commands; it does not
 add commands to the `dbx` binary.
@@ -452,6 +768,7 @@ add commands to the `dbx` binary.
 | `required`    | Config value is required.                        |
 | `multiple`    | Repeated occurrences collect into an array.      |
 | `choices`     | Allowed enum values, when available.             |
+| `hidden`      | Registered but omitted from generated docs.      |
 | `scope`       | Config scope.                                    |
 | `path`        | Dotted config path (`auto.aliases`).             |
 | `parse`       | Coerce one raw CLI string into the config value. |

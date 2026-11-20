@@ -5,7 +5,7 @@
  *   yarn config:docs
  *
  * All three pages go through `engine.markdown`: the CLI page from the same
- * `ToolchainCommand` descriptors the CLI registers, and the env page from the
+ * `CliCommand` descriptors the CLI registers, and the env page from the
  * config schemas' `ConfigMeta` (`.meta()`).
  */
 
@@ -84,7 +84,9 @@ fields defined in Zod/Untyped schemas:
 - \`public\`
 - \`defaultValue\`
 - \`envName\` (the env fields)
-- \`envPath\` and more.`;
+- \`envPath\`
+- \`cli\` / \`cliCommand\` (schema-driven CLI flags and commands)
+- \`envExpose\` (keep a value CLI-only) and more.`;
 
 engine.markdown.file.write({
     output: path.join(docsDir, 'index.md'),
@@ -94,7 +96,7 @@ engine.markdown.file.write({
 engine.markdown.cli.write(builtinCommands(), {
     output: path.join(docsDir, 'cli.md'),
     intro: [
-        'Generated from the same `ToolchainCommand` descriptors the `dbx` binary',
+        'Generated from the same `CliCommand` descriptors the `dbx` binary',
         'registers. Run `yarn config:docs` after changing a command.',
     ].join('\n'),
 });

@@ -92,7 +92,7 @@ await engine.jsonSchema.write({ output: 'config.schema.json' });
 
 ## CLI docs - `engine.markdown.cli` / `generateCliDocs()`
 
-`generateCliDocs` reads `ToolchainCommand` descriptors rather than the config
+`generateCliDocs` reads `CliCommand` descriptors rather than the config
 schema: it renders a markdown reference from the commands your CLI actually
 registers. The engine exposes the same generator as
 `engine.markdown.cli.generate()` (and `.write()`):
