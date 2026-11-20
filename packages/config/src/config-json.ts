@@ -3,37 +3,9 @@
  * tooling to list every available configuration variable.
  */
 
-import { type CollectOptions, collectDefinitions, DEFAULT_ENV_PREFIX } from './collect.js';
+import { collectDefinitions, DEFAULT_ENV_PREFIX } from './collect.js';
 import { envNameOf, isEnvVariable } from './generators/env-file.js';
-import type { ConfigSchema } from './types/index.js';
-
-/** A serialized env var entry in `config.json`. */
-export interface ConfigJsonEntry {
-    name: string;
-    path: string;
-    scope: string;
-    description?: string;
-    default?: unknown;
-    required?: boolean;
-    secret?: boolean;
-    public?: boolean;
-}
-
-/** The generated config metadata document (`config.json`). */
-export interface ConfigJsonDoc {
-    $comment: string;
-    version: number;
-    env: ConfigJsonEntry[];
-}
-
-export interface BuildConfigJsonOptions {
-    /** The env-var prefix (default `APP_`). */
-    envPrefix?: string;
-    /** Override the `$comment` banner. */
-    comment?: string;
-    /** Custom env-name -> dotted-path derivation. */
-    envPathOf?: CollectOptions['envPathOf'];
-}
+import type { BuildConfigJsonOptions, ConfigJsonDoc, ConfigSchema } from './types/index.js';
 
 /** Build the config metadata JSON document. */
 export function buildConfigJson(

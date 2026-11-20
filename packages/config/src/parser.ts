@@ -106,7 +106,7 @@ export function parseConfig(
         ...(envSource ? { envSource } : {}),
         ...(argv ? { argv } : {}),
     };
-    return resolveConfig(parser as ConfigSchema, merged, overrides);
+    return resolveConfig(parser as never, merged as never, overrides) as unknown;
 }
 
 /** Synchronous alias of {@link parseConfig}. */

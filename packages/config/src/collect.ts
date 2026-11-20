@@ -37,8 +37,6 @@ import type {
     RewriteMessageContext,
 } from './types/index.js';
 
-export type * from './types/collect.js';
-
 /** The default env-var prefix used when none is configured. */
 export const DEFAULT_ENV_PREFIX = 'APP_';
 
@@ -396,11 +394,16 @@ function collectScoped(schema: ConfigSchema, options: CollectOptions): ScopedDef
     const entries = Object.entries(schema as Record<string, ConfigSchema>);
     const scopes = entries.map(([scope]) => scope);
     return entries.flatMap(([scope, value]) =>
-        collectDefinitions(value, {
-            ...options,
-            include: scopeFilter(include, scope, scopes),
-            exclude: scopeFilter(exclude, scope, scopes),
-        }).map(def => ({ def, scope }))
+        collectDefinitions(
+            // Wrap the scope value so a plain object is read as that scope's
+            // fields instead of being mistaken for another scope map.
+            { [scope]: value },
+            {
+                ...options,
+                include: scopeFilter(include, scope, scopes),
+                exclude: scopeFilter(exclude, scope, scopes),
+            }
+        ).map(def => ({ def, scope }))
     );
 }
 

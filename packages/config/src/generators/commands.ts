@@ -6,17 +6,7 @@
 
 import type { ToolchainCommand } from '@deltabox/toolchain/shared';
 
-/** Options for {@link generateCliDocs}. */
-export interface GenerateCliDocsOptions {
-    /** Page title (default `CLI reference`). */
-    title?: string;
-    /** Frontmatter outline levels (default `[2, 3]`). */
-    outline?: number[];
-    /** Intro markdown rendered before the command table. */
-    intro?: string;
-    /** Command prefix used in headings and links (default `dbx`). */
-    prefix?: string;
-}
+import type { GenerateCliDocsOptions } from '../types/index.js';
 
 /** Escape raw `<`/`>` so Vue does not parse option placeholders as tags. */
 function esc(value: string): string {

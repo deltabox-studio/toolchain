@@ -10,12 +10,7 @@
  * formatter.
  */
 
-export interface FormatGeneratedOptions {
-    /** File name used to infer the language (default `generated.ts`). */
-    fileName?: string;
-    /** Extra Oxfmt options merged over {@link GENERATED_FORMAT_OPTIONS}. */
-    options?: Record<string, unknown>;
-}
+import type { FormatGeneratedOptions } from '../types/index.js';
 
 /**
  * Baseline Oxfmt options matching the toolchain's own `vite.config.ts`.

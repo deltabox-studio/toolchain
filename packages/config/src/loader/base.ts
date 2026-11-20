@@ -56,14 +56,15 @@ function parseLoaded(options: AnyLoadInput, value: unknown): unknown {
             overrides && value && typeof value === 'object' && typeof overrides === 'object'
                 ? deepMerge(value as Record<string, any>, overrides)
                 : (overrides ?? value);
-        return parseConfig(
-            parse.parser,
-            merged as never,
-            {
-                ...parse,
-                source: 'file',
-            } as ParseConfigOptions
-        );
+        const run = parseConfig as unknown as (
+            parser: unknown,
+            overrides?: unknown,
+            options?: ParseConfigOptions
+        ) => unknown;
+        return run(parse.parser, merged, {
+            ...parse,
+            source: 'file',
+        });
     }
     const schema = (options as LoadConfigOptions<unknown>).schema;
     return schema ? schema.parse(value) : value;
@@ -229,5 +230,8 @@ export function loadConfig<T = unknown>(
     options?: LoadConfigOptions<T>
 ): Promise<LoadedConfig<T> | undefined>;
 export function loadConfig(input?: unknown): Promise<LoadedConfig<any> | undefined> {
-    return resolveInput(input).then(options => loadConfigAsync(options as never));
+    const run = loadConfigAsync as unknown as (
+        options?: unknown
+    ) => Promise<LoadedConfig<any> | undefined>;
+    return resolveInput(input).then(options => run(options));
 }

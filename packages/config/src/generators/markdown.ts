@@ -9,7 +9,7 @@ import type { Schema } from 'untyped';
 
 import { sanitizeText, titleCase } from '@deltabox/toolchain/shared';
 
-import { type CollectOptions, collectDefinitions, DEFAULT_ENV_PREFIX } from '../collect.js';
+import { collectDefinitions, DEFAULT_ENV_PREFIX } from '../collect.js';
 import {
     isSchemaType,
     isZodSchema,
@@ -18,95 +18,23 @@ import {
     splitBaseSchema,
     toJsonSchemaSafe,
 } from '../schema.js';
-import type { ConfigDef, ConfigEngineOptions, ConfigSchema } from '../types/index.js';
-import { type CliFlagOptions, cliFlagLabel } from './cli.js';
+import type { CollectOptions } from '../types/collect.js';
+import type {
+    CliFlagOptions,
+    ConfigDef,
+    ConfigGroup,
+    ConfigSchema,
+    GenerateEnvMarkdownOptions,
+    GenerateMarkdownFileOptions,
+    GenerateMarkdownOptions,
+    RenderConfigFileOptions,
+    RenderMarkdownFrontmatter,
+    RenderMarkdownOptions,
+} from '../types/index.js';
+import { cliFlagLabel } from './cli.js';
 import { envNameOf, isEnvVariable } from './env-file.js';
 import { flattenBaseJsonSchema } from './json.js';
 import { resolveGeneratedFile } from './output.js';
-
-export interface RenderMarkdownFrontmatter {
-    options: GenerateMarkdownOptions;
-}
-
-export interface RenderMarkdownOptions extends Pick<ConfigEngineOptions, 'baseGroup'> {
-    /** Output directory. Set false (or omit it) to disable writing. */
-    outputDir?: string | false;
-    /** Frontmatter toggle, raw body, or callback. */
-    frontmatter?: boolean | string | ((ctx: RenderMarkdownFrontmatter) => string);
-    /** Render every scope into one file instead of one file per scope. */
-    combined?: boolean;
-    /** Show env var equivalents (default true). */
-    includeEnv?: boolean;
-    /** Show CLI flag equivalents (default true). */
-    includeCli?: boolean;
-    /** Page outline (defaults to `[2, 3, 4]`). */
-    outline?: number[];
-    /** The scope whose env vars render as CLI flags (default `cli`). */
-    cliScope?: string;
-    /** Env-var prefix (default `APP_`). */
-    envPrefix?: string;
-    /** Label overrides for the index page. */
-    labels?: { required?: string; core?: string; title?: string };
-    /** A raw intro paragraph for the index page (replaces the default one). */
-    intro?: string;
-    /** A note shown above the required table (default: the standard sentence). */
-    requiredNote?: string;
-    /** A note shown above the core table (default: the standard sentence). */
-    coreNote?: string;
-    /** A "References" list appended to the index page. */
-    references?: { label: string; href: string }[];
-    /** Shorthand flags keyed by env var name (for the CLI scope). */
-    shortFlags?: Record<string, string>;
-    /** Custom env-name -> dotted-path derivation. */
-    envPathOf?: CollectOptions['envPathOf'];
-    /** Emit `- **Required**` lines (default true). */
-    includeRequired?: boolean;
-    /** Emit `- **Deprecated**` lines (default true). */
-    includeDeprecated?: boolean;
-    /** Emit `**Example(s):**` blocks (default true). */
-    includeExamples?: boolean;
-    /** Emit `- **Since**` lines (default true). */
-    includeSince?: boolean;
-    /** Emit `- **See**` lines (default true). */
-    includeSee?: boolean;
-    /** Emit `**Remarks:**` blocks (default true). */
-    includeRemarks?: boolean;
-    /** Emit `- **Experimental**` lines (default true). */
-    includeExperimental?: boolean;
-    /** Emit `- **Alpha**` lines (default true). */
-    includeAlpha?: boolean;
-    /** Emit `- **Beta**` lines (default true). */
-    includeBeta?: boolean;
-}
-
-export interface GenerateMarkdownOptions extends RenderMarkdownOptions {
-    /** Document title (default `Configuration`). */
-    title?: string;
-    /** Index file name (defaults to `index.md`). */
-    indexFilename?: string;
-}
-
-/** Options for a single generated markdown page. */
-export interface GenerateMarkdownFileOptions {
-    /** Page title (frontmatter and `#` heading). */
-    title: string;
-    /** Frontmatter outline levels (default `[2, 3]`). */
-    outline?: number[];
-    /** Page body, rendered below the title. */
-    body: string;
-}
-
-/** Options for the environment-variable reference page. */
-export interface GenerateEnvMarkdownOptions {
-    /** Page title (default `Environment variables`). */
-    title?: string;
-    /** Frontmatter outline levels (default `[2, 3]`). */
-    outline?: number[];
-    /** Intro markdown rendered below the title. */
-    intro?: string;
-    /** Env-var prefix (default `APP_`). */
-    envPrefix?: string;
-}
 
 interface EnvVarRow {
     name: string;
@@ -146,7 +74,7 @@ interface SchemaNode {
 
 interface RenderOptions extends CliFlagOptions {
     useFlags?: boolean;
-    baseGroup: string;
+    baseGroup?: ConfigGroup;
     includeEnv?: boolean;
     includeCli?: boolean;
     includeRequired?: boolean;
@@ -317,9 +245,7 @@ function renderScopeMarkdown(
     const outline = options.outline ?? [2, 3, 4];
     const opts: RenderOptions = {
         useFlags: scope === (options.cliScope ?? 'cli'),
-        baseGroup: Array.isArray(options.baseGroup)
-            ? String((options.baseGroup as unknown[])[0] ?? 'base')
-            : String(options.baseGroup ?? 'base'),
+        baseGroup: options.baseGroup,
         ...(options.envPrefix ? { envPrefix: options.envPrefix } : {}),
         ...(options.shortFlags ? { shortFlags: options.shortFlags } : {}),
         ...(options.includeRequired !== undefined
@@ -388,9 +314,6 @@ function envRowOf(def: ConfigDef, scope: string, envPrefix: string): EnvVarRow {
 /** Render the index file: explains the env convention + lists required/core. */
 function renderConfigIndex(schema: ConfigSchema, options: RenderMarkdownOptions = {}): string {
     const outline = options.outline ?? [2, 3, 4];
-    const baseGroup = Array.isArray(options.baseGroup)
-        ? String((options.baseGroup as unknown[])[0] ?? 'base')
-        : String(options.baseGroup ?? 'base');
     const envPrefix = options.envPrefix ?? DEFAULT_ENV_PREFIX;
     const labels = options.labels ?? {};
     const required: EnvVarRow[] = [];
@@ -398,7 +321,7 @@ function renderConfigIndex(schema: ConfigSchema, options: RenderMarkdownOptions 
     const scopes = normalizeConfigSchema(schema);
 
     for (const [scopeName, scopeSchema] of Object.entries(scopes)) {
-        const { base } = splitBaseSchema(scopeSchema, baseGroup);
+        const { base } = splitBaseSchema(scopeSchema, options.baseGroup);
         for (const def of collectDefinitions(base as unknown as ConfigSchema, {
             envPrefix,
             envPathOf: options.envPathOf,
@@ -581,33 +504,6 @@ export function generateConfigMarkdown(
         }
     }
     return contents;
-}
-
-export interface RenderConfigFileOptions {
-    /** Document title (default `Configuration`). */
-    title?: string;
-    /** Intro paragraph under the title. */
-    intro?: string;
-    /** Page outline (default `[2, 3, 4]`). */
-    outline?: number[];
-    /** Emit `- **Required**` lines (default true). */
-    includeRequired?: boolean;
-    /** Emit `- **Deprecated**` lines (default true). */
-    includeDeprecated?: boolean;
-    /** Emit `**Example(s):**` blocks (default true). */
-    includeExamples?: boolean;
-    /** Emit `- **Since**` lines (default true). */
-    includeSince?: boolean;
-    /** Emit `- **See**` lines (default true). */
-    includeSee?: boolean;
-    /** Emit `**Remarks:**` blocks (default true). */
-    includeRemarks?: boolean;
-    /** Emit `- **Experimental**` lines (default true). */
-    includeExperimental?: boolean;
-    /** Emit `- **Alpha**` lines (default true). */
-    includeAlpha?: boolean;
-    /** Emit `- **Beta**` lines (default true). */
-    includeBeta?: boolean;
 }
 
 /** A JSON Schema (draft 2020-12) node as produced by `z.toJSONSchema`. */
@@ -870,9 +766,6 @@ function renderConfigSectionsMarkdown(
     options: RenderConfigFileOptions & RenderMarkdownOptions = {}
 ): string {
     const title = options.title ?? 'Configuration';
-    const baseGroup = Array.isArray(options.baseGroup)
-        ? String((options.baseGroup as unknown[])[0] ?? 'base')
-        : String(options.baseGroup ?? 'base');
     const parts: string[] = [
         ...frontmatterLines(options, title, options.outline ?? [2, 3, 4]),
         `# ${title}`,
@@ -888,7 +781,7 @@ function renderConfigSectionsMarkdown(
         // JSON Schema generator do, so the combined reference has one shape.
         const node = flattenBaseJsonSchema(
             resolved as unknown as Record<string, unknown>,
-            baseGroup,
+            options.baseGroup,
             defs as unknown as Record<string, Record<string, unknown>>
         ) as unknown as JsonSchemaJson;
         const meta = metaOf(node as unknown as Schema);

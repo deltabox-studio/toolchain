@@ -104,17 +104,17 @@ export interface CollectErrorOptions {
     rewriteMessage?: RewriteMessage;
     /** Build the problem message when no `rewriteMessage` is set. */
     defaultMessage?: DefaultMessage;
-    /** Which collected error(s) to report (default `collect-all`). */
+    /** Which collected error(s) to report. @default "collect-all" */
     trigger?: ErrorTrigger;
 }
 
 /** Options for the definition collector. */
 export interface CollectOptions {
-    /** The env-var prefix (default `APP_`); `null` disables it. */
+    /** The env-var prefix; `null` disables it. @default "APP_" */
     envPrefix?: string | null;
     /** Custom env-name -> dotted-path derivation. */
     envPathOf?: (env: string) => string;
-    /** Maximum schema nesting depth to walk (default: unlimited). */
+    /** Maximum schema nesting depth to walk. @default unlimited */
     maxDepth?: number;
     /** Only keep these config paths or presence kinds. */
     include?: CollectFilter;
@@ -139,6 +139,6 @@ export interface CollectNarrowOptions<T extends ConfigDef> extends CollectOption
 
 /** Options shared by the runtime parsers. */
 export interface ParseConfigOptions extends CollectOptions {
-    /** The input source (default: every enabled source). */
+    /** The input source. @default every enabled source */
     source?: ConfigSource;
 }

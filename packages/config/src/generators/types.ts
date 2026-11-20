@@ -21,59 +21,12 @@ import {
     splitBaseSchema,
     zodToSchemaMap,
 } from '../schema.js';
-import type { ConfigEngineOptions, ConfigSchema } from '../types/index.js';
+import type { ConfigSchema, GenerateTypesOptions } from '../types/index.js';
 import { escapeJsDoc } from './jsdoc.js';
 import { resolveGeneratedFile } from './output.js';
 
 /** The `generateTypes` options shared by every interface. */
 const GENERATE_OPTIONS = { addExport: true, partial: true } as const;
-
-export interface GenerateTypesOptions extends Pick<ConfigEngineOptions, 'baseGroup'> {
-    /** Output directory. `false` (or omitted) disables writing. */
-    outputDir?: string | false;
-    /**
-     * Per-scope main interface name. Defaults to `<PascalScope>Config`.
-     */
-    interfaceNames?: Record<string, string>;
-    /** Per-scope extra aliases appended after the generated interface. */
-    aliases?: Record<string, string>;
-    /**
-     * Per-scope hand-written overrides: the full declaration text emitted
-     * verbatim instead of a generated interface. Keyed by type name.
-     */
-    overrides?: Record<string, string>;
-    /**
-     * Import lines emitted once at the top of the file (after the header) so a
-     * hand-written override can reference an imported type.
-     */
-    imports?: string[];
-    /** File extension for generated files (default `ts`). */
-    extension?: string;
-    /** A raw (verbatim) header prepended to every generated file. */
-    header?: string;
-    /** Emit `@required` JSDoc tags (default true). */
-    includeRequired?: boolean;
-    /** Emit `@deprecated` JSDoc tags (default true). */
-    includeDeprecated?: boolean;
-    /** Emit `@example` JSDoc tags (default true). */
-    includeExamples?: boolean;
-    /** Emit `@since` JSDoc tags (default true). */
-    includeSince?: boolean;
-    /** Emit `@see` JSDoc tags (default true). */
-    includeSee?: boolean;
-    /** Emit `@remarks` JSDoc tags (default true). */
-    includeRemarks?: boolean;
-    /** Emit `@experimental` JSDoc tags (default true). */
-    includeExperimental?: boolean;
-    /** Emit `@alpha` JSDoc tags (default true). */
-    includeAlpha?: boolean;
-    /** Emit `@beta` JSDoc tags (default true). */
-    includeBeta?: boolean;
-    /** Show the env var equivalent in JSDoc (default true). */
-    includeEnv?: boolean;
-    /** Show the CLI flag equivalent in JSDoc (default true). */
-    includeCli?: boolean;
-}
 
 /**
  * Drop the blank line untyped inserts between members inside a type body
@@ -317,9 +270,6 @@ function renderConfigTypes(
     schema: Schema,
     options: GenerateTypesOptions = {}
 ): string {
-    const baseGroup = Array.isArray(options.baseGroup)
-        ? String((options.baseGroup as unknown[])[0] ?? 'base')
-        : String(options.baseGroup ?? 'base');
     const meta = metaOf(schema);
     const interfaceName =
         options.interfaceNames?.[scopeName] ??
@@ -346,7 +296,7 @@ function renderConfigTypes(
     }
 
     const tagged = withJsDocTags(schema, options);
-    const { base, groups, hasBase } = splitBaseSchema(tagged, baseGroup);
+    const { base, groups, hasBase } = splitBaseSchema(tagged, options.baseGroup);
     const groupKeys = Object.keys((groups.properties ?? {}) as Record<string, unknown>);
 
     // Without a base group the full schema becomes the main interface directly.

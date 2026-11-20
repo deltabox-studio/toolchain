@@ -16,7 +16,7 @@ import path from 'node:path';
 
 import { logger, type ToolchainCommand, withSpinner } from '@deltabox/toolchain/shared';
 
-import type { ConfigEngine } from '../engine.js';
+import type { ConfigEngine } from '../types/engine.js';
 
 /** Default output locations for the config commands. */
 export interface ConfigCommandDefaults {

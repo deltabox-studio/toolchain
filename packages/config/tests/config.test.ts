@@ -124,7 +124,10 @@ describe('generators', () => {
             const output = path.join(cwd, 'nested', 'cli-options.json');
             const defs = generateCliOptions(scopes, { envPrefix: 'MYAPP_', output });
 
-            expect(JSON.parse(fs.readFileSync(output, 'utf-8'))).toEqual(defs);
+            // Functions are not serializable; the written JSON carries the data fields.
+            expect(JSON.parse(fs.readFileSync(output, 'utf-8'))).toEqual(
+                JSON.parse(JSON.stringify(defs))
+            );
         } finally {
             fs.rmSync(cwd, { recursive: true, force: true });
         }
