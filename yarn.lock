@@ -762,7 +762,6 @@ __metadata:
   resolution: "@deltabox/toolchain@portal:.::locator=%40deltabox%2Ftoolchain%40workspace%3A."
   dependencies:
     "@clack/prompts": "catalog:"
-    commander: "npm:^14.0.0"
     glob: "catalog:"
     jsonc-parser: "npm:^3.3.1"
     lodash: "catalog:"
@@ -813,7 +812,6 @@ __metadata:
     "@types/node": "catalog:"
     "@typescript/native-preview": "catalog:"
     ajv: "npm:^8.20.0"
-    commander: "npm:^14.0.0"
     cross-env: "catalog:"
     dotenv: "catalog:"
     glob: "catalog:"
@@ -4382,13 +4380,6 @@ __metadata:
   version: 2.0.3
   resolution: "comma-separated-tokens@npm:2.0.3"
   checksum: 10c0/91f90f1aae320f1755d6957ef0b864fe4f54737f3313bd95e0802686ee2ca38bff1dd381964d00ae5db42912dd1f4ae5c2709644e82706ffc6f6842a813cdd67
-  languageName: node
-  linkType: hard
-
-"commander@npm:^14.0.0":
-  version: 14.0.3
-  resolution: "commander@npm:14.0.3"
-  checksum: 10c0/755652564bbf56ff2ff083313912b326450d3f8d8c85f4b71416539c9a05c3c67dbd206821ca72635bf6b160e2afdefcb458e86b317827d5cb333b69ce7f1a24
   languageName: node
   linkType: hard
 

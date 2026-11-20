@@ -76,7 +76,6 @@
     ],
     "dependencies": {
         "@clack/prompts": "catalog:",
-        "commander": "^14.0.0",
         "glob": "catalog:",
         "jsonc-parser": "^3.3.1",
         "lodash": "catalog:",

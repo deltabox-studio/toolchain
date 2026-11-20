@@ -13,12 +13,13 @@ import path from 'node:path';
 import { assertToolingDependency, loadToolchainConfig } from '@deltabox/toolchain/core';
 import {
     declaredDependencies,
+    defineCliCommand,
     type FormatterTool,
     type LinterTool,
     logger,
     sectionConfig,
     spawnCross,
-    type ToolchainCommand,
+    type CliCommand,
     type ToolchainCommandContext,
 } from '@deltabox/toolchain/shared';
 import { which } from 'vite-plugin-dbx';
@@ -257,11 +258,11 @@ async function runDiscoveredTool(
  * when it is not Oxc. The generic `vite` command is handled too, since a bare
  * `dbx fmt` is rewritten to `dbx vite fmt`.
  */
-export function withToolingRouting(commands: ToolchainCommand[]): ToolchainCommand[] {
+export function withToolingRouting(commands: CliCommand[]) {
     return commands.map(command => {
         if (command.name === 'vite') {
             const original = command.run;
-            return {
+            return defineCliCommand({
                 ...command,
                 run: async (opts, context) => {
                     const args = (opts.args as string[] | undefined) ?? [];
@@ -274,19 +275,19 @@ export function withToolingRouting(commands: ToolchainCommand[]): ToolchainComma
                     }
                     return original(opts, context);
                 },
-            };
+            });
         }
         if (command.name === 'vite:fmt' || command.name === 'vite:lint') {
             const kind: Kind = command.name === 'vite:fmt' ? 'fmt' : 'lint';
             const original = command.run;
-            return {
+            return defineCliCommand({
                 ...command,
                 run: async (opts, context) => {
                     const args = (opts.args as string[] | undefined) ?? [];
                     if (await runDiscoveredTool(kind, args, opts, context)) return;
                     return original(opts, context);
                 },
-            };
+            });
         }
         return command;
     });

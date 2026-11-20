@@ -96,8 +96,8 @@ export function normalizeLogLevel(value: unknown, fallback: LogLevel = 'info'): 
 }
 
 /**
- * Strip ANSI SGR escape codes from `text`. Used to keep commander's help/error
- * output plain when the logger's colours are disabled (`--no-color` or
+ * Strip ANSI SGR escape codes from `text`. Used to keep help/error output plain
+ * when the logger's colours are disabled (`--no-color` or
  * `logger.color: false`).
  */
 export function stripAnsi(text: string): string {

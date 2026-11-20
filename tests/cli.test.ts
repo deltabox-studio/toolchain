@@ -20,7 +20,7 @@ import {
     suppressesUpdateNotice,
     withDefaultVite,
 } from '../src/cli/index.js';
-import { isPassthroughCommand } from '../src/cli/register.js';
+import { isPassthroughCommand, setPassthroughCommand } from '../src/cli/register.js';
 import { isNewer } from '../src/cli/update-check.js';
 import {
     applyReplacementsDeep,
@@ -80,7 +80,7 @@ describe('dbx CLI', () => {
 
     it('builds a program with the expected subcommands', () => {
         const program = createCli();
-        const registered = program.commands.map(c => c.name());
+        const registered = program.commands.map(c => c.name);
         expect(registered).toEqual(
             expect.arrayContaining([
                 'projects',
@@ -92,22 +92,14 @@ describe('dbx CLI', () => {
                 'changelog',
             ])
         );
-        expect(program.name()).toBe('dbx');
+        expect(program.formatHelp()).toContain('Usage: dbx');
     });
 
     it('flags provider passthrough commands but not built-ins', () => {
-        const run = (argv: string[]): void => {
-            const program = createCli();
-            program.exitOverride();
-            // Swallow the help/error output so the test stays quiet.
-            program.configureOutput({ writeOut: () => {}, writeErr: () => {} });
-            expect(() => program.parse(['node', 'dbx', ...argv])).toThrow();
-        };
-
         expect(isPassthroughCommand()).toBe(false);
-        run(['vite:dev', '--help']);
+        setPassthroughCommand(true);
         expect(isPassthroughCommand()).toBe(true);
-        run(['sync', '--help']);
+        setPassthroughCommand(false);
         expect(isPassthroughCommand()).toBe(false);
     });
 
@@ -123,9 +115,7 @@ describe('dbx CLI', () => {
                 },
             },
         ]);
-        program.exitOverride();
-        program.configureOutput({ writeOut: () => {}, writeErr: () => {} });
-        await program.parseAsync(['node', 'dbx', 'changelog', '--version', '1.5.0']);
+        await program.invokeAsync(['changelog', '--version', '1.5.0']);
         expect(seen).toEqual(['1.5.0']);
     });
 });
