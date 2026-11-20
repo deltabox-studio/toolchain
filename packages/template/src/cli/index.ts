@@ -12,11 +12,11 @@ import {
     setProjectProviderRegistries,
 } from '@deltabox/toolchain/core';
 import {
+    defineCliCommand,
     logger,
     parseToolVersions,
     type Replacements,
     sectionConfig,
-    type ToolchainCommand,
     withSpinner,
 } from '@deltabox/toolchain/shared';
 
@@ -105,9 +105,9 @@ function abortPrompt(): void {
 }
 
 /** The `template:*` commands plus the template-driven `create`. */
-export function templateCommands(): ToolchainCommand[] {
+export function templateCommands() {
     return [
-        {
+        defineCliCommand({
             name: 'template:list',
             description: 'List templates (builtin + local + opted-in online sources).',
             options: [
@@ -205,8 +205,8 @@ export function templateCommands(): ToolchainCommand[] {
                     );
                 }
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'template:init',
             description: 'Write a template.json to a directory, making it a local template.',
             args: [{ name: 'dir', description: 'Directory (default: cwd).', required: false }],
@@ -291,8 +291,8 @@ export function templateCommands(): ToolchainCommand[] {
                 logger.info(`wrote ${file}`);
                 if (opts.add) logger.info('registered the folder as a template.');
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'template:add',
             description: 'Record a template source in .dbx/toolchain/templates.json.',
             args: [
@@ -399,8 +399,8 @@ export function templateCommands(): ToolchainCommand[] {
                     `added ${source.type}:${source.locate} (${registry.sources.length} source(s)).`
                 );
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'template:remove',
             description: 'Remove a source from .dbx/toolchain/templates.json.',
             args: [{ name: 'id', description: 'Source id or type:locate.' }],
@@ -436,8 +436,8 @@ export function templateCommands(): ToolchainCommand[] {
                 }
                 logger.info(`removed ${removed} source(s) (${registry.sources.length} left).`);
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'template:registry',
             description:
                 'Manage the global template search paths (and sync them to the VS Code setting).',
@@ -490,8 +490,8 @@ export function templateCommands(): ToolchainCommand[] {
                 if (cli.vscodeDir) logger.info(`VS Code user dir: ${cli.vscodeDir}`);
                 if (changed) logger.info('updated the CLI config and VS Code setting.');
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'registry',
             description: 'List or manage the template/provider registries.',
             options: [
@@ -569,8 +569,8 @@ export function templateCommands(): ToolchainCommand[] {
                         );
                 }
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'template:info',
             description: 'Show one template by id.',
             args: [{ name: 'id', description: 'The template id.' }],
@@ -594,8 +594,8 @@ export function templateCommands(): ToolchainCommand[] {
                 }
                 logger.raw(JSON.stringify(toJson(template), null, 4));
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'create',
             description: 'Scaffold a project from a template (builtin, local or Vite+).',
             options: [
@@ -823,6 +823,6 @@ export function templateCommands(): ToolchainCommand[] {
                 }
                 for (const file of result.written) logger.info(`Created ${file}`);
             },
-        },
+        }),
     ];
 }

@@ -1,10 +1,10 @@
 import {
+    defineCliCommand,
     logger,
     regenerateEnabled,
     resolveChangelogConfig,
     resolveCiConfig,
     resolveToolchainEnabled,
-    type ToolchainCommand,
     type ToolchainConfig,
     withSpinner,
 } from '@deltabox/toolchain/shared';
@@ -28,9 +28,9 @@ export function changelogRegenerateEnabled(config?: ToolchainConfig): boolean {
 }
 
 /** Build the changelog commands (`changelog`, `workflow`). */
-export function changelogCommands(): ToolchainCommand[] {
+export function changelogCommands() {
     return [
-        {
+        defineCliCommand({
             name: 'workflow',
             description:
                 'Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).',
@@ -102,8 +102,8 @@ export function changelogCommands(): ToolchainCommand[] {
                 }
                 if (failed) process.exitCode = 1;
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'changelog',
             description:
                 'Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.',
@@ -184,6 +184,6 @@ export function changelogCommands(): ToolchainCommand[] {
                     }
                 );
             },
-        },
+        }),
     ];
 }

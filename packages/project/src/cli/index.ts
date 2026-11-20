@@ -6,12 +6,12 @@ import { ensureToolingDependencies, loadToolchainConfig } from '@deltabox/toolch
 import { writeDockerFiles } from '@deltabox/toolchain/docker';
 import {
     DEFAULT_PACKAGE_MANAGER_VERSIONS,
+    defineCliCommand,
     logger,
     parseToolVersions,
     type ProjectType,
     type Replacements,
     sectionConfig,
-    type ToolchainCommand,
     type ToolchainCommandContext,
     withSpinner,
 } from '@deltabox/toolchain/shared';
@@ -225,9 +225,9 @@ function scaffoldTsconfigExtends(
 }
 
 /** Build the project scaffolding commands. */
-export function projectCommands(): ToolchainCommand[] {
+export function projectCommands() {
     return [
-        {
+        defineCliCommand({
             name: 'project:init',
             description: 'Scaffold a single-package TypeScript project.',
             options: [
@@ -295,8 +295,8 @@ export function projectCommands(): ToolchainCommand[] {
                 });
                 for (const file of written) logger.info(`Created ${file}`);
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'project:init:monorepo',
             description: 'Scaffold a monorepo root (add --example for one example workspace).',
             options: [
@@ -360,8 +360,8 @@ export function projectCommands(): ToolchainCommand[] {
                 });
                 for (const file of written) logger.info(`Created ${file}`);
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'project:init:workspace',
             description: 'Scaffold a monorepo workspace package into an existing monorepo root.',
             options: [
@@ -447,8 +447,8 @@ export function projectCommands(): ToolchainCommand[] {
                 );
                 for (const file of written) logger.info(`Created ${file}`);
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'project:config',
             description: 'Generate dbx.config.* for existing projects that are missing one.',
             options: [
@@ -570,6 +570,6 @@ export function projectCommands(): ToolchainCommand[] {
                     }
                 }
             },
-        },
+        }),
     ];
 }

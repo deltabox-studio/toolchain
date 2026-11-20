@@ -8,7 +8,7 @@
 
 import path from 'node:path';
 
-import { logger, sectionConfig, type ToolchainCommand } from '@deltabox/toolchain/shared';
+import { logger, sectionConfig, defineCliCommand } from '@deltabox/toolchain/shared';
 
 import { VP_COMMANDS, viteCommandName } from '../commands.js';
 import { runVp } from '../vp.js';
@@ -36,12 +36,8 @@ export function runGuard(args: string[], cwd: string): string | undefined {
 }
 
 /** Build a passthrough command that forwards `leading + raw operands` to `vp`. */
-function passthroughCommand(
-    name: string,
-    description: string,
-    leading: string[]
-): ToolchainCommand {
-    return {
+function passthroughCommand(name: string, description: string, leading: string[]) {
+    return defineCliCommand({
         name,
         description,
         passthrough: true,
@@ -73,11 +69,11 @@ function passthroughCommand(
                 process.exitCode = result.code;
             }
         },
-    };
+    });
 }
 
 /** Every Vite+ passthrough command (the generic `vite` + one per subcommand). */
-export function viteCommands(): ToolchainCommand[] {
+export function viteCommands() {
     const generic = passthroughCommand(
         'vite',
         'Run any Vite+ command through `vp` (eg. `dbx vite dev`).',

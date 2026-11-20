@@ -350,16 +350,20 @@ describe('registry CLI validation', () => {
         const cwd = makeTmp();
 
         expect(() =>
-            command.run(
-                { cwd, scope: 'bogus', add: './registry' },
-                { cwd, projectType: 'project', config: {}, tokens: {} }
-            )
+            command.run({ cwd, scope: 'bogus', add: './registry' } as never, {
+                cwd,
+                projectType: 'project',
+                config: {},
+                tokens: {},
+            })
         ).toThrow(/invalid --scope "bogus"/);
         expect(() =>
-            command.run(
-                { cwd, kind: 'bogus', add: './registry' },
-                { cwd, projectType: 'project', config: {}, tokens: {} }
-            )
+            command.run({ cwd, kind: 'bogus', add: './registry' } as never, {
+                cwd,
+                projectType: 'project',
+                config: {},
+                tokens: {},
+            })
         ).toThrow(/invalid --kind "bogus"/);
         expect(fs.existsSync(path.join(cwd, '.dbx'))).toBe(false);
     });

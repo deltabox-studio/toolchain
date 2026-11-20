@@ -2,7 +2,7 @@
 
 import path from 'node:path';
 
-import { logger, type ToolchainCommand, withSpinner } from '@deltabox/toolchain/shared';
+import { logger, defineCliCommand, withSpinner } from '@deltabox/toolchain/shared';
 
 import mcpPkg from '../../package.json' with { type: 'json' };
 import { installMcp, listMcpProviders, type McpProviderId, type McpScope } from '../install.js';
@@ -21,8 +21,8 @@ export function createServeServer(cwd: string): ReturnType<typeof createMcpServe
 }
 
 /** `dbx mcp:serve` — run the stdio MCP server for the current project. */
-function serveCommand(): ToolchainCommand {
-    return {
+function serveCommand() {
+    return defineCliCommand({
         name: 'mcp:serve',
         description: 'Run the dbx MCP server over stdio (for MCP clients).',
         passthrough: true,
@@ -31,12 +31,12 @@ function serveCommand(): ToolchainCommand {
             const cwd = (opts.cwd as string | undefined) ?? context.cwd;
             await serveStdio(createServeServer(cwd));
         },
-    };
+    });
 }
 
 /** `dbx mcp:install` — write the MCP config + skill for a provider. */
-function installCommand(): ToolchainCommand {
-    return {
+function installCommand() {
+    return defineCliCommand({
         name: 'mcp:install',
         description: 'Install the dbx MCP server + skill into an AI harness/editor.',
         options: [
@@ -84,12 +84,12 @@ function installCommand(): ToolchainCommand {
             logger.info(`  config: ${result.configPath}`);
             if (result.skillPath) logger.info(`  skill:  ${result.skillPath}`);
         },
-    };
+    });
 }
 
 /** `dbx mcp:list` — list the builtin MCP providers and their files. */
-function listCommand(): ToolchainCommand {
-    return {
+function listCommand() {
+    return defineCliCommand({
         name: 'mcp:list',
         description: 'List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).',
         options: [
@@ -121,10 +121,10 @@ function listCommand(): ToolchainCommand {
                 logger.info(`             ${provider.description}`);
             }
         },
-    };
+    });
 }
 
 /** Every `mcp:*` command. */
-export function mcpCommands(): ToolchainCommand[] {
+export function mcpCommands() {
     return [serveCommand(), installCommand(), listCommand()];
 }
