@@ -639,6 +639,7 @@ __metadata:
     vite-plugin-vitepress-auto-sidebar: "npm:^1.7.1"
     vitepress: "npm:^1.6.4"
     vitepress-carbon: "npm:^1.7.0"
+    vitepress-plugin-folder-tree: "npm:1.2.1"
     vitepress-plugin-group-icons: "npm:^1.8.2"
     vitepress-plugin-llms: "npm:^1.15.0"
   languageName: unknown
@@ -10113,6 +10114,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"vitepress-plugin-folder-tree@npm:1.2.1":
+  version: 1.2.1
+  resolution: "vitepress-plugin-folder-tree@npm:1.2.1"
+  dependencies:
+    yaml: "npm:^2.8.2"
+    zod: "npm:^4.3.6"
+  peerDependencies:
+    vitepress: ^1.0.0
+  checksum: 10c0/b62d7bf97ea2512ef05e9296afa2dc20deacec7d2e25ccd90307330e49f3fb7654f4528173d92dbc47fe62a2e4611b1c0bcff71203e6e4d499711cfafb32e327
+  languageName: node
+  linkType: hard
+
 "vitepress-plugin-group-icons@npm:^1.8.2":
   version: 1.8.2
   resolution: "vitepress-plugin-group-icons@npm:1.8.2"
@@ -10508,6 +10521,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"yaml@npm:^2.8.2":
+  version: 2.9.1
+  resolution: "yaml@npm:2.9.1"
+  bin:
+    yaml: bin.mjs
+  checksum: 10c0/9d06676ef02b89559a8b10a71882bd2cdae81e8393dc8dbc871615c3259475d9609ad973d19cb3c9e71e72d6206e3d1e7aa241c7e55f3d16fd2e77db305827d6
+  languageName: node
+  linkType: hard
+
 "yargs-parser@npm:^21.1.1":
   version: 21.1.1
   resolution: "yargs-parser@npm:21.1.1"
@@ -10626,7 +10648,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:^4.3.0":
+"zod@npm:^4.3.0, zod@npm:^4.3.6":
   version: 4.6.7
   resolution: "zod@npm:4.6.7"
   checksum: 10c0/4ce2eb14034317b7254e347ca37b5ad591cf8333147030cf05b9b5d31692d45073f7f2747aa50cf8c6b29012194d2b22978cecc89969cf34a0d18e89d0ee7d7b
