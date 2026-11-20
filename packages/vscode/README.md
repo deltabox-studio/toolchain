@@ -39,32 +39,32 @@ See all the [commands](#commands) below.
 
 ## Commands
 
-| Command                                               | What it does                                                                              |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Sync all / active / selected                          | `dbx sync` (`--recursive` / per project).                                                 |
-| Check sync                                            | `sync --check` across the workspace.                                                      |
-| Sync tsconfig                                         | `dbx sync --only tsconfig` (refresh aliases/references after builds).                     |
-| Format project / Lint project                         | `dbx fmt` / `dbx lint` with the detected or configured formatter/linter.                  |
-| Manage tsconfig...                                      | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                 |
-| Scaffold project                                      | Single project, monorepo root, workspace, or **From template...**.                          |
-| Generate configs / Generate config                    | `project:config` for missing configs (or one project), or refresh only the project graph. |
-| Migrate tooling...                                      | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).    |
-| Run workflow                                          | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                     |
-| Run Vite+ command...                                    | QuickPick over the Vite+ provider commands, run in a terminal.                            |
-| Create Vite+ project...                                 | `vp create` in a terminal.                                                                |
-| Install MCP server + skill... / List MCP installations  | `dbx mcp:install` / `dbx mcp:list`.                                                       |
-| Generate changelog                                    | Run `dbx changelog` in the selected project.                                              |
-| Clean build artifacts                                 | Remove `dist/` and `*.tsbuildinfo` (`dbx cleanup`).                                       |
-| Add provider... / Refresh providers / Run command...  | Register a provider, reload the list, or run one of its commands.                         |
+| Command                                                   | What it does                                                                              |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Sync all / active / selected                              | `dbx sync` (`--recursive` / per project).                                                 |
+| Check sync                                                | `sync --check` across the workspace.                                                      |
+| Sync tsconfig                                             | `dbx sync --only tsconfig` (refresh aliases/references after builds).                     |
+| Format project / Lint project                             | `dbx fmt` / `dbx lint` with the detected or configured formatter/linter.                  |
+| Manage tsconfig...                                        | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                 |
+| Scaffold project                                          | Single project, monorepo root, workspace, or **From template...**.                        |
+| Generate configs / Generate config                        | `project:config` for missing configs (or one project), or refresh only the project graph. |
+| Migrate tooling...                                        | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).    |
+| Run workflow                                              | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                     |
+| Run Vite+ command...                                      | QuickPick over the Vite+ provider commands, run in a terminal.                            |
+| Create Vite+ project...                                   | `vp create` in a terminal.                                                                |
+| Install MCP server + skill... / List MCP installations    | `dbx mcp:install` / `dbx mcp:list`.                                                       |
+| Generate changelog                                        | Run `dbx changelog` in the selected project.                                              |
+| Clean build artifacts                                     | Remove `dist/` and `*.tsbuildinfo` (`dbx cleanup`).                                       |
+| Add provider... / Refresh providers / Run command...      | Register a provider, reload the list, or run one of its commands.                         |
 | Add template... / Remove template...                      | `template:init --add` / `template:list --registry` + `template:remove`.                   |
-| Add template... / Remove template source...           | Add a registry template source or drop one; **Refresh templates** reloads the list.       |
-| Create from template...                               | `dbx create --template <id>` (terminal for online templates).                             |
+| Add template... / Remove template source...               | Add a registry template source or drop one; **Refresh templates** reloads the list.       |
+| Create from template...                                   | `dbx create --template <id>` (terminal for online templates).                             |
 | New registry... / Remove registry... / Refresh registries | Manage registry search paths and reload the **Registries** view.                          |
 | Choose dbx source... / Select dbx version...              | Pick the project's `dbx` or the bundled CLI, and pin the toolchain version.               |
-| Refresh projects / Refresh files                      | Rediscover the project graph / reload the **Managed Files** view.                         |
-| Show all actions                                      | Open the searchable action palette (see [Actions](#actions)).                             |
-| Reset tooling                                         | Remove generated files / manifest / config.                                               |
-| Toggle auto-sync                                      | Enable/disable sync-on-change.                                                            |
+| Refresh projects / Refresh files                          | Rediscover the project graph / reload the **Managed Files** view.                         |
+| Show all actions                                          | Open the searchable action palette (see [Actions](#actions)).                             |
+| Reset tooling                                             | Remove generated files / manifest / config.                                               |
+| Toggle auto-sync                                          | Enable/disable sync-on-change.                                                            |
 
 Interactive commands (the dev server, `vp create`, online scaffolding) run in an
 integrated terminal at the project root; everything else runs in the output

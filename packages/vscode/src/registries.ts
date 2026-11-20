@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { captureCli } from './cli.js';
+import { sanitizePathForDisplay } from './paths.js';
 
 /** A detected registry (mirrors `dbx registry --json`). */
 export interface RegistryEntry {
@@ -97,9 +98,10 @@ export class RegistryTreeProvider implements vscode.TreeDataProvider<RegistryTre
         }
 
         const entry = node.entry;
-        const item = new vscode.TreeItem(entry.path, vscode.TreeItemCollapsibleState.None);
+        const displayPath = sanitizePathForDisplay(entry.path);
+        const item = new vscode.TreeItem(displayPath, vscode.TreeItemCollapsibleState.None);
         item.description = entry.scope;
-        item.tooltip = `${entry.path}\n${entry.kind} · ${entry.scope}${entry.remote ? ' · remote' : ''}`;
+        item.tooltip = `${displayPath}\n${entry.kind} · ${entry.scope}${entry.remote ? ' · remote' : ''}`;
         item.iconPath = new vscode.ThemeIcon(
             entry.remote ? 'globe' : entry.scope === 'project' ? 'folder' : 'folder-library'
         );
