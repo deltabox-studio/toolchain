@@ -45,6 +45,9 @@ interface JsonSchemaNode {
     path?: string;
     cliFlag?: string;
     cliFlagShort?: string;
+    cli?: false | Record<string, unknown>;
+    cliCommand?: false | Record<string, unknown>;
+    envExpose?: boolean;
     typeName?: string;
     id?: string;
     scope?: string;
@@ -107,6 +110,9 @@ const CONFIG_META_KEYS: (keyof ConfigMeta)[] = [
     'typeName',
     'cliFlag',
     'cliFlagShort',
+    'cli',
+    'cliCommand',
+    'envExpose',
     'tsType',
 ];
 
@@ -371,6 +377,9 @@ function nodeMeta(
     let pathMeta = node.path ?? resolved?.path;
     let cliFlag = node.cliFlag ?? resolved?.cliFlag;
     let cliFlagShort = node.cliFlagShort ?? resolved?.cliFlagShort;
+    let cli = node.cli ?? resolved?.cli;
+    let cliCommand = node.cliCommand ?? resolved?.cliCommand;
+    let envExpose = node.envExpose ?? resolved?.envExpose;
     let typeName = node.typeName ?? resolved?.typeName;
     let id = node.id ?? resolved?.id;
     let deprecated = node.deprecated ?? resolved?.deprecated;
@@ -393,6 +402,9 @@ function nodeMeta(
         pathMeta ??= variant.path ?? variantResolved?.path;
         cliFlag ??= variant.cliFlag ?? variantResolved?.cliFlag;
         cliFlagShort ??= variant.cliFlagShort ?? variantResolved?.cliFlagShort;
+        cli ??= variant.cli ?? variantResolved?.cli;
+        cliCommand ??= variant.cliCommand ?? variantResolved?.cliCommand;
+        envExpose ??= variant.envExpose ?? variantResolved?.envExpose;
         typeName ??= variant.typeName ?? variantResolved?.typeName;
         id ??= variant.id ?? variantResolved?.id;
         deprecated ??= variant.deprecated ?? variantResolved?.deprecated;
@@ -412,6 +424,9 @@ function nodeMeta(
         ...(pathMeta !== undefined ? { path: pathMeta } : {}),
         ...(cliFlag !== undefined ? { cliFlag } : {}),
         ...(cliFlagShort !== undefined ? { cliFlagShort } : {}),
+        ...(cli !== undefined ? { cli } : {}),
+        ...(cliCommand !== undefined ? { cliCommand } : {}),
+        ...(envExpose !== undefined ? { envExpose } : {}),
         ...(typeName !== undefined ? { typeName } : {}),
         ...(id !== undefined ? { id } : {}),
         ...(required !== undefined ? { required } : {}),
@@ -699,6 +714,9 @@ const NON_JSON_SCHEMA_KEYS = [
     'path',
     'cliFlag',
     'cliFlagShort',
+    'cli',
+    'cliCommand',
+    'envExpose',
     'typeName',
     'scope',
     'secret',

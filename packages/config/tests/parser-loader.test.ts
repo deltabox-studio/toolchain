@@ -235,7 +235,10 @@ describe('loadConfig', () => {
         const cwd = tempDir();
         fs.mkdirSync(path.join(cwd, 'config'), { recursive: true });
         fs.writeFileSync(path.join(cwd, 'config', 'dbx.config.json'), '{"a":1}');
-        const loaded = await loadConfig<{ a: number }>({ cwd });
+        const loaded = await loadConfig<{ a: number }>({
+            cwd,
+            names: ['dbx.config.json'],
+        });
         expect(loaded?.config.a).toBe(1);
         expect(loaded?.source).toBe('file');
     });
@@ -264,13 +267,17 @@ describe('loadConfig', () => {
     it('validates through a schema', async () => {
         const cwd = tempDir();
         fs.writeFileSync(path.join(cwd, 'dbx.config.json'), '{"a":"wrong"}');
-        await expect(loadConfig({ cwd, schema: z.object({ a: z.number() }) })).rejects.toThrow();
+        await expect(
+            loadConfig({ cwd, names: ['dbx.config.json'], schema: z.object({ a: z.number() }) })
+        ).rejects.toThrow();
     });
 
     it('rejects a synchronous TypeScript load', () => {
         const cwd = tempDir();
         fs.writeFileSync(path.join(cwd, 'dbx.config.ts'), 'export default {};');
-        expect(() => loadConfigSync({ cwd })).toThrow(/TypeScript config synchronously/);
+        expect(() => loadConfigSync({ cwd, names: ['dbx.config.ts'] })).toThrow(
+            /TypeScript config synchronously/
+        );
     });
 
     it('uses a custom loader', async () => {
@@ -368,19 +375,20 @@ describe('bug regressions', () => {
         fs.writeFileSync(path.join(cwd, 'dbx.config.js'), 'module.exports = {');
         fs.writeFileSync(path.join(cwd, 'dbx.config.json'), '{"a":2}');
 
-        expect(() => loadConfigSync({ cwd })).toThrow();
+        expect(() => loadConfigSync({ cwd, names: ['dbx.config.js'] })).toThrow();
     });
 
-    it('does not merge ambient env into a file load with a parser', async () => {
+    it('merges ambient env into a file load with a parser', async () => {
         const cwd = tempDir();
         fs.writeFileSync(path.join(cwd, 'dbx.config.json'), '{}');
         process.env.APP_PORT = '999';
         try {
             const loaded = await loadConfig({
                 cwd,
+                names: ['dbx.config.json'],
                 parser: z.object({ port: z.number().default(1) }),
             });
-            expect(loaded?.config).toEqual({ port: 1 });
+            expect(loaded?.config).toEqual({ port: 999 });
         } finally {
             delete process.env.APP_PORT;
         }
@@ -400,7 +408,9 @@ describe('bug regressions', () => {
         const fallback = tempDir();
         fs.writeFileSync(path.join(fallback, 'dbx.config.ts'), 'export default { a: 1 };');
         fs.writeFileSync(path.join(fallback, 'dbx.config.json'), '{"a":2}');
-        expect(loadConfigSync({ cwd: fallback })?.config).toEqual({ a: 2 });
+        expect(
+            loadConfigSync({ cwd: fallback, names: ['dbx.config.ts', 'dbx.config.json'] })?.config
+        ).toEqual({ a: 2 });
 
         const unsupported = tempDir();
         fs.writeFileSync(path.join(unsupported, 'dbx.config.anything'), 'ignored');
@@ -547,15 +557,15 @@ describe('session 9 hunt 2 regressions', () => {
         );
         try {
             process.env.__DBX_FRESH = '1';
-            const asyncOne = await loadConfigAsync({ cwd, fresh: true });
+            const asyncOne = await loadConfigAsync({ cwd, names: ['dbx.config.cjs'], fresh: true });
             process.env.__DBX_FRESH = '2';
-            const asyncTwo = await loadConfigAsync({ cwd, fresh: true });
+            const asyncTwo = await loadConfigAsync({ cwd, names: ['dbx.config.cjs'], fresh: true });
             expect([asyncOne?.config, asyncTwo?.config]).toEqual([{ n: '1' }, { n: '2' }]);
 
             process.env.__DBX_FRESH = '3';
-            const syncOne = loadConfigSync({ cwd, fresh: true });
+            const syncOne = loadConfigSync({ cwd, names: ['dbx.config.cjs'], fresh: true });
             process.env.__DBX_FRESH = '4';
-            const syncTwo = loadConfigSync({ cwd, fresh: true });
+            const syncTwo = loadConfigSync({ cwd, names: ['dbx.config.cjs'], fresh: true });
             expect([syncOne?.config, syncTwo?.config]).toEqual([{ n: '3' }, { n: '4' }]);
         } finally {
             delete process.env.__DBX_FRESH;

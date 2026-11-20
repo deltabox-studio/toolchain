@@ -115,10 +115,13 @@ export interface LoadConfigDiscoveryOptions {
     accept?: (file: string) => boolean;
 }
 
-/** Options for the object-based loader API (no parser/schema required). */
-export interface LoadConfigOptions<T = unknown> extends LoaderOptions, LoadConfigDiscoveryOptions {
+/** Options for the object-based loader API (no parser required). */
+export interface LoadConfigOptions<T = unknown>
+    extends LoaderOptions, LoadConfigDiscoveryOptions, ParseConfigOptions {
     /** Validate/normalize the loaded value. */
     schema?: ZodType<T>;
+    /** Values merged over the file/env/CLI result before validation. */
+    overrides?: Record<string, any>;
     /** Re-evaluate an already-imported module (watch/regenerate runs). */
     fresh?: boolean;
 }
@@ -135,12 +138,12 @@ export type LoadConfigFileOptions<
 > = LoadConfigDiscoveryOptions & {
     /** Resolve the loaded value through `parseConfig`. */
     parser: P;
-    /** Overrides merged over the resolved config. */
+    /** Overrides merged over the resolved config (after env/CLI). */
     overrides?: O;
     /** Re-evaluate an already-imported module (watch/regenerate runs). */
     fresh?: boolean;
 } & LoaderOptions &
-    Omit<ParseConfigOptions, 'envSource' | 'argv'>;
+    ParseConfigOptions;
 
 /** A candidate discovered on disk (or a `package.json` key). */
 export interface ConfigCandidate {

@@ -20,6 +20,7 @@ export function envNameOf(def: ConfigDef, envPrefix: string): string {
  * values cannot be represented and parsed back as a single env string.
  */
 export function isEnvVariable(def: ConfigDef): boolean {
+    if (def.meta?.envExpose === false) return false;
     return !COMPLEX_KINDS.has(def.kind ?? '');
 }
 

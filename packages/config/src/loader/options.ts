@@ -9,15 +9,19 @@ import type {
     LoadConfigOptions,
 } from '../types/loader.js';
 
-/** The config files the loader looks for, in priority order. */
+/**
+ * The config files the loader looks for, in priority order. These are neutral
+ * (`config.*`); an application such as `dbx` passes `names` or
+ * `configFileOptions.filename` for its own filename.
+ */
 export const DEFAULT_CONFIG_NAMES = [
-    'dbx.config.ts',
-    'dbx.config.mts',
-    'dbx.config.cts',
-    'dbx.config.js',
-    'dbx.config.mjs',
-    'dbx.config.cjs',
-    'dbx.config.json',
+    'config.ts',
+    'config.mts',
+    'config.cts',
+    'config.js',
+    'config.mjs',
+    'config.cjs',
+    'config.json',
 ] as const;
 
 /** The directories the loader checks, relative to `cwd`, in priority order. */

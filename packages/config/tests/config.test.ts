@@ -5,7 +5,7 @@ import path from 'node:path';
 import { describe, expect, expectTypeOf, it } from 'vite-plus/test';
 import { z } from 'zod';
 
-import { dbxConfigSchema, type ToolchainCommand } from '@deltabox/toolchain/shared';
+import { dbxConfigSchema, type CliCommand } from '@deltabox/toolchain/shared';
 
 import {
     buildConfigJson,
@@ -134,7 +134,7 @@ describe('generators', () => {
     });
 
     it('renders custom command descriptors', () => {
-        const commands: ToolchainCommand[] = [
+        const commands: CliCommand[] = [
             {
                 name: 'deploy',
                 description: 'Deploy the app | safely <now>',

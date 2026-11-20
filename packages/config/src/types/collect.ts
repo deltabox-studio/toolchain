@@ -7,6 +7,9 @@ export type { ConfigValueKind };
 /** The value source the runtime parser understands. */
 export type ConfigSource = 'file' | 'env' | 'cli';
 
+/** One source or an ordered set of sources. */
+export type ConfigSourceSelection = ConfigSource | readonly ConfigSource[];
+
 /** The presence states include/exclude filters can target. */
 export type CollectValueKind = 'required' | 'undefined' | 'null' | 'defined';
 
@@ -124,6 +127,11 @@ export interface CollectOptions {
     envSource?: Record<string, string | undefined>;
     /** The CLI argv used by the runtime collector. */
     argv?: string[];
+    /**
+     * Base values merged below every enabled source. Loaders pass the config
+     * file value here so env/CLI override it while schema defaults do not.
+     */
+    base?: Record<string, any>;
     /** Validate the resolved config through `schema.safeParse()`. */
     validate?: boolean;
     /** How validation problems are reported. */
@@ -139,6 +147,10 @@ export interface CollectNarrowOptions<T extends ConfigDef> extends CollectOption
 
 /** Options shared by the runtime parsers. */
 export interface ParseConfigOptions extends CollectOptions {
-    /** The input source. @default every enabled source */
-    source?: ConfigSource;
+    /**
+     * The input source(s) to read, in precedence order. A single source or an
+     * array (`['env', 'cli']`). File values are supplied as `overrides` by
+     * `parseConfig*`; loaders merge the file value first. @default env + CLI
+     */
+    source?: ConfigSourceSelection;
 }
