@@ -345,7 +345,7 @@ describe('update check', () => {
         expect(suppressesUpdateNotice(argv('-V'))).toBe(true);
         expect(suppressesUpdateNotice(argv('--version'))).toBe(true);
         expect(suppressesUpdateNotice(argv('--help'))).toBe(true);
-        expect(suppressesUpdateNotice(argv('changelog', '--release-notes', '1.0.0'))).toBe(true);
+        expect(suppressesUpdateNotice(argv('changelog', '--release-body', '1.0.0'))).toBe(true);
         expect(suppressesUpdateNotice(argv('mcp:serve'))).toBe(true);
         expect(suppressesUpdateNotice(argv('sync'))).toBe(false);
     });

@@ -60,7 +60,7 @@ export interface BuildSummaryOptions {
     groups?: ChangelogGroupsSetting;
     /** How breaking changes are detected (default: Conventional Commits). */
     breaking?: ChangelogBreakingSetting;
-    /** Whether this is the release-mode changelog (Release Notes details). */
+    /** Whether to use release body wrapping (Release Notes details). */
     release?: boolean;
 }
 

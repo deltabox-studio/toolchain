@@ -26,7 +26,7 @@ export interface ChangelogTargetResolvers {
     outro?: (dir: string) => string | undefined;
     commit?: (dir: string) => CommitFormatOptions | undefined;
     provider?: (dir: string) => ChangelogProviderSetting | undefined;
-    /** Release mode (Release Notes details). */
+    /** Release body wrapping (Release Notes details). */
     release?: boolean;
 }
 

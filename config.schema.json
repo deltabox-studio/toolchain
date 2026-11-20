@@ -1843,7 +1843,7 @@
                                     "$ref": "#/$defs/ChangelogDetailsOptions"
                                 }
                             ],
-                            "description": "Wrap the version body in a collapsible titled Release notes (default false; enabled by default in release mode; requires 10 commits by default)."
+                            "description": "Wrap the version body in a collapsible titled Release notes (default false; enabled by default with release body wrapping; requires 10 commits by default)."
                         },
                         "releaseNotes": {
                             "anyOf": [
@@ -1854,7 +1854,7 @@
                                     "$ref": "#/$defs/ChangelogDetailsOptions"
                                 }
                             ],
-                            "description": "Wrap the release-mode entry in a collapsible titled Release notes."
+                            "description": "Wrap the release body entry in a collapsible titled Release notes."
                         },
                         "intro": {
                             "anyOf": [

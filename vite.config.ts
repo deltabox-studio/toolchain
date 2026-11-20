@@ -273,7 +273,7 @@ export default defineConfig({
                                             // released version. The CLI helper only considers
                                             // tags whose versions exist in CHANGELOG.md, so
                                             // calendar/CI tags cannot leak the whole file.
-                                            'notes="$({{packageManager}} dbx changelog --release-notes "${{ steps.release.outputs.version }}")"',
+                                            'notes="$({{packageManager}} dbx changelog --release-body "${{ steps.release.outputs.version }}")"',
                                             '[ -n "$notes" ] || notes="Release v${{ steps.release.outputs.version }}"',
                                             'printf \'%s\\n\' "$notes" > RELEASE_NOTES.md',
                                         ].join('\n'),

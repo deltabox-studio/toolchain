@@ -276,11 +276,11 @@ export const changelogDetailsConfigSchema = z
                 .optional(),
             body: changelogDetailsToggleSchema
                 .describe(
-                    'Wrap the version body in a collapsible titled Release notes (default false; enabled by default in release mode; requires 10 commits by default).'
+                    'Wrap the version body in a collapsible titled Release notes (default false; enabled by default with release body wrapping; requires 10 commits by default).'
                 )
                 .optional(),
             releaseNotes: changelogDetailsToggleSchema
-                .describe('Wrap the release-mode entry in a collapsible titled Release notes.')
+                .describe('Wrap the release body entry in a collapsible titled Release notes.')
                 .optional(),
             intro: changelogDetailsToggleSchema
                 .describe('Wrap the intro text in a collapsible.')

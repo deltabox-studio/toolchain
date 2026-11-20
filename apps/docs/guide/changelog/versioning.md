@@ -249,9 +249,9 @@ out.
   as a collapsible whose summary is `**See more...**`.
 - `breaking` (default on) wraps the breaking section; the summary names the
   section, so the duplicate heading is not repeated inside.
-- The version stays a normal `##` heading. Release mode wraps the body with the
-  `**Release notes**` summary and `details.body` is opt-out there; in
-  non-release mode `details.body` is opt-in.
+- The version stays a normal `##` heading. `--release-body-wrap` wraps the body
+  with the `**Release notes**` summary and `details.body` is opt-out there; in
+  non-wrapping mode `details.body` is opt-in.
 - `intro`/`outro`/`footer` are opt-in wrappers; `types` (default on) wraps the
   CC type sections, leaving the generated `Package changes`/`New contributors`
   footers alone.
@@ -303,6 +303,7 @@ Every flag also accepts `{ title?: string; expanded?: boolean }`.
 - `before`: details are applied while the entry is rendered.
 
 `details.body` wraps the whole version body in a collapsible titled
-`Release notes`. It is opt-in in non-release mode and opt-out in release mode,
-and requires at least 10 commits (`minCommits`) when enabled unless overridden.
-Release mode uses `details.releaseNotes` with the same title by default.
+`Release notes`. It is opt-in normally and opt-out with
+`--release-body-wrap`, and requires at least 10 commits (`minCommits`) when
+enabled unless overridden. Release body wrapping uses `details.releaseNotes`
+with the same title by default.

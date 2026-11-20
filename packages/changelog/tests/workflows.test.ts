@@ -42,7 +42,7 @@ describe('default workflows', () => {
         // Not the marker-only extraction (which only ever yields the latest entry).
         expect(release).not.toContain('<!-- release:start -->');
         // The CLI resolves the last released version and guards first releases.
-        expect(release).toContain('changelog --release-notes');
+        expect(release).toContain('changelog --release-body');
         expect(release).not.toContain('cat CHANGELOG.md');
     });
 });

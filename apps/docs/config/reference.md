@@ -936,13 +936,13 @@ Minimum entries in the section before wrapping (nested overrides the top-level d
 
 - **Type**: `boolean | ChangelogDetailsOptions`
 
-Wrap the version body in a collapsible titled Release notes (default false; enabled by default in release mode; requires 10 commits by default).
+Wrap the version body in a collapsible titled Release notes (default false; enabled by default with release body wrapping; requires 10 commits by default).
 
 ###### `releaseNotes`
 
 - **Type**: `boolean | ChangelogDetailsOptions`
 
-Wrap the release-mode entry in a collapsible titled Release notes.
+Wrap the release body entry in a collapsible titled Release notes.
 
 ###### `intro`
 
@@ -1711,13 +1711,13 @@ Minimum entries in the section before wrapping (nested overrides the top-level d
 
 - **Type**: `boolean | ChangelogDetailsOptions`
 
-Wrap the version body in a collapsible titled Release notes (default false; enabled by default in release mode; requires 10 commits by default).
+Wrap the version body in a collapsible titled Release notes (default false; enabled by default with release body wrapping; requires 10 commits by default).
 
 ###### `releaseNotes`
 
 - **Type**: `boolean | ChangelogDetailsOptions`
 
-Wrap the release-mode entry in a collapsible titled Release notes.
+Wrap the release body entry in a collapsible titled Release notes.
 
 ###### `intro`
 

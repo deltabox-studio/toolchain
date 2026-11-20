@@ -96,7 +96,7 @@ export function registerToolchainCommands(program: Command, commands: ToolchainC
                 provided.alias === true ||
                 provided.paths === true ||
                 provided.references === true ||
-                provided.releaseNotes !== undefined;
+                provided.releaseBody !== undefined;
             const framed = !cmd.passthrough && !machine && provided.quiet !== true;
             const label = `${command.parent?.name() ?? ''} ${cmd.name}`.trim();
             setSpinnerEnabled(framed ? undefined : false);

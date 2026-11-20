@@ -11,7 +11,7 @@ function git(cwd: string, ...args: string[]): void {
     execFileSync('git', args, { cwd, stdio: 'ignore' });
 }
 
-describe('runChangelog --release-notes', () => {
+describe('runChangelog --release-body', () => {
     const originalCwd = process.cwd();
     const originalNoGh = process.env.DBX_NO_GH;
     let dir: string;
@@ -49,7 +49,7 @@ describe('runChangelog --release-notes', () => {
         }) as typeof process.stdout.write);
 
         try {
-            runChangelog(['--release-notes', '1.0.0'], undefined, { enabled: false });
+            runChangelog(['--release-body', '1.0.0'], undefined, { enabled: false });
         } finally {
             spy.mockRestore();
         }

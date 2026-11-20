@@ -48,6 +48,6 @@ jobs:
           git add -A
           git commit -m "chore: version packages ($version)" || true
           git push origin "$branch"
-          notes="$(yarn dbx changelog --release-notes "$version")"
+          notes="$(yarn dbx changelog --release-body "$version")"
           [ -n "$notes" ] || notes="Release $version"
           gh pr create --base main --head "$branch" --title "release: $version" --body "$notes"

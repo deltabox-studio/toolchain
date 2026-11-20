@@ -665,7 +665,7 @@ export function defaultWorkflows(
                                 // version and falls back to the newest entry on a
                                 // first release, so unrelated tags cannot leak the
                                 // whole changelog into the PR body.
-                                `notes="$(${engine} changelog --release-notes "$version")"`,
+                                `notes="$(${engine} changelog --release-body "$version")"`,
                                 '[ -n "$notes" ] || notes="Release $version"',
                                 `gh pr create --base ${main} --head "$branch" --title "release: $version" --body "$notes"`,
                             ].join('\n'),

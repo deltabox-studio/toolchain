@@ -7,11 +7,11 @@ export interface CliOptions {
     version?: string;
     baseVersion?: string;
     /** Print the release body for this version (and exit). */
-    releaseNotes?: string;
+    releaseBody?: string;
     processingMethod: ProcessingMethod;
     formatOnly: boolean;
-    /** Release mode (uses the **Release notes** details wrapper). */
-    release: boolean;
+    /** Wrap the generated entry in the **Release notes** details block. */
+    releaseBodyWrap: boolean;
     /** Include the `### Package changes` footer (disable with --no-package-changes-section). */
     packageChanges: boolean;
     /** Inline intro text for the new entry. */

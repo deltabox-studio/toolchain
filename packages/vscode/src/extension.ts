@@ -1114,7 +1114,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 placeHolder: '1.2.3',
             });
             if (!version) return;
-            const code = await runRootCli(['changelog', '--release-notes', version]);
+            const code = await runRootCli(['changelog', '--release-body', version]);
             if (code === 0) output.show();
         }),
         vscode.commands.registerCommand('deltabox.toolchain.mcpList', () =>

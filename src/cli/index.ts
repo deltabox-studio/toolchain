@@ -208,6 +208,8 @@ export const MACHINE_OUTPUT_FLAGS = new Set([
     '--alias',
     '--paths',
     '--references',
+    '--release-body',
+    // Deprecated alias: keep machine output clean for existing scripts.
     '--release-notes',
 ]);
 
