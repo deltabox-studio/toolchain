@@ -18,7 +18,6 @@ import {
     splitBaseSchema,
     toJsonSchemaSafe,
 } from '../schema.js';
-import type { CollectOptions } from '../types/collect.js';
 import type {
     CliFlagOptions,
     ConfigDef,
@@ -28,7 +27,6 @@ import type {
     GenerateMarkdownFileOptions,
     GenerateMarkdownOptions,
     RenderConfigFileOptions,
-    RenderMarkdownFrontmatter,
     RenderMarkdownOptions,
 } from '../types/index.js';
 import { cliFlagLabel } from './cli.js';

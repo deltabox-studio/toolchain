@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import {
     configCliCommand,
+    configCliOptions,
     configFlagOf,
     createConfigEngine,
     generateCliOptions,
@@ -66,6 +67,7 @@ describe('config CLI options', () => {
         const defs = generateConfigCliOptions(schema, {
             pathPrefix: 'auto.',
             flags: { 'auto.aliases': '--aliases' },
+            descriptions: { 'auto.aliases': 'Custom alias description' },
             types: { 'auto.aliases': 'boolean' },
         }).options;
         expect(defs).toHaveLength(1);
@@ -73,8 +75,36 @@ describe('config CLI options', () => {
             flag: '--aliases',
             path: 'auto.aliases',
             type: 'boolean',
+            description: 'Custom alias description',
         });
         expect(defs[0]?.parse?.('yes')).toBe(true);
+    });
+
+    it('filters by exact paths and their descendants', () => {
+        const scoped = {
+            serve: z.object({
+                host: z.string().default('localhost'),
+                port: z.number().default(3000),
+                tls: z.object({ cert: z.string().optional() }),
+            }),
+        };
+        expect(
+            generateConfigCliOptions(scoped, { includePaths: ['port', 'tls'] }).options.map(
+                def => def.path
+            )
+        ).toEqual(['port', 'tls.cert']);
+        expect(
+            generateConfigCliOptions(scoped, { excludePaths: ['tls'] }).options.map(def => def.path)
+        ).toEqual(['host', 'port']);
+    });
+
+    it('maps a schema scope to CLI options in one call', () => {
+        const options = configCliOptions(schema, { includePaths: ['port', 'tags'] });
+        expect(options.map(option => option.flags)).toEqual([
+            '--port <value>',
+            '--tags <value...>',
+        ]);
+        expect(options[0]).toMatchObject({ description: 'HTTP port', default: '3000' });
     });
 
     it('maps generated options to commander-ready flags', () => {
@@ -84,16 +114,17 @@ describe('config CLI options', () => {
             flags: '--port <value>',
             description: 'HTTP port',
             default: '3000',
+            type: 'number',
         });
         expect(options).toContainEqual({
             flags: '--debug',
             description: 'Debug logging',
-            default: 'false',
+            type: 'boolean',
         });
         expect(options).toContainEqual({
             flags: '--tags <value...>',
             description: 'Tags',
-            default: '',
+            type: 'array',
         });
     });
 
@@ -151,7 +182,7 @@ describe('config CLI options', () => {
 });
 
 describe('config CLI commands', () => {
-    it('builds a ToolchainCommand and parses provided values', async () => {
+    it('builds a CliCommand and parses provided values', async () => {
         const run = vi.fn();
         const command = configCliCommand({
             name: 'serve',
@@ -165,6 +196,7 @@ describe('config CLI commands', () => {
             flags: '--port <value>',
             description: 'HTTP port',
             default: '3000',
+            type: 'number',
         });
 
         await command.run({ port: 4000, debug: true }, {} as never);
@@ -190,7 +222,22 @@ describe('config CLI commands', () => {
             flags: '--port <value>',
             description: 'Set `port`.',
             default: '3000',
+            type: 'number',
         });
+    });
+
+    it('maps negated flags back to their config key', async () => {
+        const run = vi.fn();
+        const command = configCliCommand({
+            name: 'serve',
+            description: 'Run the server.',
+            schema: { serve: z.object({ aliases: z.boolean().default(true) }) },
+            commandName: 'serve',
+            flags: { aliases: '--no-aliases' },
+            run,
+        });
+        await command.run({ aliases: false }, {} as never);
+        expect(run.mock.calls[0]![1]).toMatchObject({ serve: { aliases: false } });
     });
 
     it('supports a custom parse callback', async () => {

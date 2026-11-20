@@ -10,6 +10,19 @@ type UnionToIntersection<U> = (U extends unknown ? (value: U) => void : never) e
     ? I
     : never;
 
+/** Widen a literal default to its primitive type (a plain schema is a default). */
+type WidenPrimitive<P> = P extends string
+    ? string
+    : P extends number
+      ? number
+      : P extends boolean
+        ? boolean
+        : P extends bigint
+          ? bigint
+          : P extends symbol
+            ? symbol
+            : P;
+
 /**
  * Schema -> config object. Zod schemas infer their output; untyped/scoped
  * schemas resolve to a nested object (their runtime shape is not statically
@@ -17,14 +30,43 @@ type UnionToIntersection<U> = (U extends unknown ? (value: U) => void : never) e
  */
 export type ConfigOf<P> = P extends ZodType<infer T> ? T : InferConfigSchema<P>;
 
-/** Infer the shape of an untyped/scoped config schema. */
-export type InferConfigSchema<P> = P extends ConfigSchemaType
-    ? Record<string, unknown>
-    : P extends readonly (infer I)[]
-      ? Simplify<UnionToIntersection<InferConfigSchema<I>>>
-      : P extends Record<string, any>
-        ? Simplify<{ [K in keyof P]: InferConfigSchema<P[K]> }>
-        : never;
+/** Infer the shape of an untyped/scoped/plain config schema. */
+export type InferConfigSchema<P> =
+    P extends ZodType<infer T>
+        ? T
+        : P extends ConfigSchemaType
+          ? Record<string, unknown>
+          : P extends readonly (infer I)[]
+            ? Simplify<UnionToIntersection<InferConfigSchema<I>>>
+            : P extends Record<string, any>
+              ? Simplify<{ -readonly [K in keyof P]: InferConfigSchema<P[K]> }>
+              : WidenPrimitive<P>;
+
+/**
+ * The scope names a schema exposes as statically known keys.
+ *
+ * A scope map (`{ server, cli }`) yields its own keys; a single Zod schema, an
+ * array of schemas or an untyped schema yields `string` because its scopes are
+ * resolved at runtime.
+ */
+export type ConfigScopeKeys<TSchema> = TSchema extends ZodType
+    ? string
+    : TSchema extends readonly unknown[]
+      ? string
+      : TSchema extends Record<string, unknown>
+        ? 'type' extends keyof TSchema
+            ? string
+            : 'properties' extends keyof TSchema
+              ? string
+              : Extract<keyof TSchema, string>
+        : string;
+
+/** The validated config value for one schema scope. */
+export type ConfigScopeOf<TSchema, K extends string = string> = TSchema extends ZodType
+    ? ConfigOf<TSchema>
+    : K extends keyof TSchema
+      ? ConfigOf<TSchema[K]>
+      : ConfigOf<TSchema>;
 
 type OverrideOf<O> = O extends Record<string, any> ? PartialDeep<O> : {};
 

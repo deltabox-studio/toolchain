@@ -1,15 +1,16 @@
 import type { ParseArgsOptionsConfig } from 'node:util';
 
 import type {
-    ToolchainArgument,
-    ToolchainCommandContext,
-    ToolchainOption,
+    CliArgument,
+    CliCommandContext,
+    CliOption,
+    CliOptionValues,
 } from '@deltabox/toolchain/shared';
 
-import type { CollectOptions, ParseConfigOptions } from './collect.js';
-import type { ConfigValueType } from './definition.js';
-import type { ConfigMeta } from './meta.js';
-import type { ConfigSchema } from './schema.js';
+import type { CollectOptions, ParseConfigOptions } from '../collect.js';
+import type { ConfigValueType } from '../definition.js';
+import type { ConfigMeta } from '../meta.js';
+import type { ConfigSchema } from '../schema.js';
 
 /** Flag-shaping options shared by every CLI helper. */
 export interface CliFlagOptions {
@@ -43,6 +44,8 @@ export interface CliOptionDef {
     multiple?: boolean;
     /** Allowed values, when the config is an enum. */
     choices?: readonly string[];
+    /** Keep the option registered but out of the generated docs. */
+    hidden?: boolean;
     /** The config scope the option belongs to. */
     scope?: string;
     /** The dotted config path, when the option maps to a config field. */
@@ -80,6 +83,18 @@ export interface CliCommandDef {
     optionsEntries: Array<[string, CliOptionDef]>;
 }
 
+/** A generator diagnostic for a schema shape that cannot be exposed as a CLI flag. */
+export interface ConfigCliDiagnostic {
+    /** The config scope. */
+    scope: string;
+    /** The dotted config path (or the scope name for scope-level shapes). */
+    path: string;
+    /** What happened. */
+    kind: 'ambiguous-union' | 'skipped-union' | 'skipped-array' | 'unsupported-shape';
+    /** Human-readable explanation. */
+    message: string;
+}
+
 /** The scoped result of {@link generateConfigCliOptions}. */
 export interface ConfigCliOptionsResult {
     /** Commands keyed by scope name. */
@@ -90,6 +105,8 @@ export interface ConfigCliOptionsResult {
     options: CliOptionDef[];
     /** The flat options as `[flag, def]` entries. */
     optionsEntries: Array<[string, CliOptionDef]>;
+    /** Shapes that could not be turned into options (ambiguous/skipped). */
+    diagnostics: ConfigCliDiagnostic[];
 }
 
 /** CLI option generation options (env-backed `cli` scope). */
@@ -104,8 +121,14 @@ export interface GenerateCliOptionsOptions extends CliFlagOptions {
 export interface GenerateConfigCliOptions extends CliFlagOptions {
     /** Only include definitions under this dotted path prefix. */
     pathPrefix?: string;
+    /** Only include these dotted paths (and their descendants). */
+    includePaths?: readonly string[];
+    /** Drop these dotted paths (and their descendants). */
+    excludePaths?: readonly string[];
     /** Override the flag for a dotted path (eg. `{ aliases: '--aliases' }`). */
     flags?: Record<string, string>;
+    /** Override the description for a dotted path (eg. negated flags). */
+    descriptions?: Record<string, string>;
     /** Override the value type/parser for a dotted path. */
     types?: Record<string, ConfigValueType | 'boolean'>;
 }
@@ -135,7 +158,11 @@ export interface CliArgsParser {
 }
 
 /** Options for a generated config CLI command. */
-export interface ConfigCliCommandOptions<TSchema extends ConfigSchema = ConfigSchema> {
+export interface ConfigCliCommandOptions<
+    TSchema extends ConfigSchema = ConfigSchema,
+    TContext extends CliCommandContext = CliCommandContext,
+    TOptions extends readonly CliOption[] = readonly CliOption[],
+> {
     /** Command name. */
     name: string;
     /** Command description. */
@@ -146,16 +173,22 @@ export interface ConfigCliCommandOptions<TSchema extends ConfigSchema = ConfigSc
     commandName?: string;
     /** Generate options for all fields under this dotted path prefix. */
     pathPrefix?: string;
+    /** Only generate these dotted paths (and their descendants). */
+    includePaths?: readonly string[];
+    /** Drop these dotted paths (and their descendants). */
+    excludePaths?: readonly string[];
     /** The env prefix used by the generated options. */
     envPrefix?: string;
     /** Override flags by dotted path. */
     flags?: Record<string, string>;
+    /** Override descriptions by dotted path. */
+    descriptions?: Record<string, string>;
     /** Override value types by dotted path. */
     types?: Record<string, ConfigValueType | 'boolean'>;
     /** Extra command-specific options (eg. `--json`, `--cwd`). */
-    options?: ToolchainOption[];
+    options?: TOptions;
     /** Positional arguments. */
-    args?: ToolchainArgument[];
+    args?: CliArgument[];
     /** Hide the command from generated docs. */
     hidden?: boolean;
     /** Forward unknown options/operands (provider passthroughs). */
@@ -163,11 +196,14 @@ export interface ConfigCliCommandOptions<TSchema extends ConfigSchema = ConfigSc
     /** Extra parse options passed to `parseConfig`. */
     parseOptions?: Omit<ParseConfigOptions, 'source'>;
     /** Parse the provided values into the config object. @default parseConfig */
-    parse?: (values: Record<string, unknown>, options: ConfigCliCommandOptions<TSchema>) => unknown;
+    parse?: (
+        values: CliOptionValues<TOptions>,
+        options: ConfigCliCommandOptions<TSchema, TContext, TOptions>
+    ) => unknown;
     /** Run with the parsed config + the raw provided values. */
-    run: (
-        values: Record<string, unknown>,
+    run(
+        values: CliOptionValues<TOptions>,
         parsed: unknown,
-        context: ToolchainCommandContext
-    ) => void | Promise<void>;
+        context: TContext
+    ): void | Promise<void>;
 }

@@ -223,6 +223,10 @@ function withJsDocTags(schema: Schema, options: JsDocOptions): Schema {
         tags.push(`@cli ${source.cliFlag}`);
     }
     const out: Record<string, unknown> = { ...rest };
+    // CLI-only metadata never belongs in generated type docs.
+    delete out.cli;
+    delete out.cliCommand;
+    delete out.envExpose;
     if (typeof out.description === 'string') out.description = escapeJsDoc(out.description);
     // A boolean `required` is metadata; an array is the object's required keys.
     if (requiredMeta) delete out.required;

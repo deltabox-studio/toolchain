@@ -17,7 +17,7 @@ export const projectTypeSchema = z
 export const projectConfigSchema = z
     .object({
         type: projectTypeSchema.optional(),
-        regenerate: z.boolean().optional().describe(REGENERATE_DESCRIPTION),
+        regenerate: z.boolean().optional().describe(REGENERATE_DESCRIPTION).meta({ cli: false }),
         name: z
             .string()
             .describe('The unscoped project name (written as `<scope>/<name>`).')

@@ -10,13 +10,14 @@ import { type ParseArgsOptionsConfig, parseArgs } from 'node:util';
 
 import {
     formatCliFlag,
-    type ToolchainCommand,
-    type ToolchainOption,
+    type CliCommand,
+    type CliCommandContext,
+    type CliOption,
+    type CliOptionValues,
 } from '@deltabox/toolchain/shared';
 
 import { collectDefinitions, DEFAULT_ENV_PREFIX } from '../collect.js';
 import { parseConfig } from '../parser.js';
-import { metaOf, normalizeConfigSchema } from '../schema.js';
 import type {
     CliArgsOptionConfig,
     CliArgsParser,
@@ -26,11 +27,13 @@ import type {
     CliFlagOptions,
     CliOptionDef,
     ConfigCliCommandOptions,
+    ConfigCliDiagnostic,
     ConfigCliOptionsResult,
     ConfigSchema,
     GenerateCliOptionsOptions,
     GenerateConfigCliOptions,
 } from '../types/index.js';
+import { keepsCliPath, cliScopeSchemas, scopeMetaOf, walkScopeCliOptions } from './cli-schema.js';
 import { isEnvVariable } from './env-file.js';
 
 /** Coerce one raw CLI value to the config definition's type. */
@@ -57,7 +60,7 @@ export function parseCliValue(value: string, type: string | undefined): unknown 
 }
 
 /** Convert generated option definitions into framework-agnostic command options. */
-export function toToolchainOptions(defs: readonly CliOptionDef[]): ToolchainOption[] {
+export function toToolchainOptions(defs: readonly CliOptionDef[]): CliOption[] {
     return defs.map(def => {
         const value =
             def.type === 'boolean' ? '' : def.type === 'array' ? ' <value...>' : ' <value>';
@@ -65,7 +68,15 @@ export function toToolchainOptions(defs: readonly CliOptionDef[]): ToolchainOpti
         return {
             flags,
             description: def.description ?? `Set \`${def.path ?? def.flag}\`.`,
-            ...(def.default !== undefined ? { default: def.default } : {}),
+            ...(def.type && def.type !== 'string' ? { type: def.type } : {}),
+            ...(def.choices && def.choices.length > 0 ? { choices: [...def.choices] } : {}),
+            ...(def.hidden ? { hidden: true } : {}),
+            // Boolean flags are presence switches: a "false" default would be a
+            // truthy string in commander. Variadic arrays start empty; config
+            // defaults come from context either way.
+            ...(def.default !== undefined && def.type !== 'boolean' && def.type !== 'array'
+                ? { default: def.default }
+                : {}),
             // Arrays use the variadic `<value...>` form; other options opt into
             // repeated occurrences explicitly.
             ...(def.multiple && def.type !== 'array' ? { multiple: true } : {}),
@@ -82,30 +93,6 @@ export function configFlagOf(path: string): string {
 }
 
 /** Build one option definition from a collected config definition. */
-function optionOf(
-    def: ReturnType<typeof collectDefinitions>[number],
-    flags: GenerateConfigCliOptions
-): CliOptionDef {
-    const type = flags.types?.[def.path] ?? def.type ?? 'string';
-    const flag = flags.flags?.[def.path] ?? def.meta?.cliFlag ?? configFlagOf(def.path);
-    const short = def.meta?.cliFlagShort
-        ? `-${def.meta.cliFlagShort.replace(/^-/, '')}`
-        : undefined;
-    return {
-        flag,
-        ...(short ? { short } : {}),
-        ...(def.name ? { env: def.name } : {}),
-        type,
-        ...(def.description ? { description: def.description } : {}),
-        ...(def.secret ? { secret: true } : {}),
-        ...(def.default !== undefined && !def.secret ? { default: String(def.default) } : {}),
-        ...(def.required ? { required: true } : {}),
-        ...(type === 'array' ? { multiple: true } : {}),
-        ...(def.scope ? { scope: def.scope } : {}),
-        path: def.path,
-        parse: value => parseCliValue(value, type),
-    };
-}
 
 /**
  * Generate CLI definitions from config fields (not just env-backed `cli` scope
@@ -118,26 +105,23 @@ export function generateConfigCliOptions(
     schema: ConfigSchema,
     options: GenerateConfigCliOptions = {}
 ): ConfigCliOptionsResult {
-    const scopes = normalizeConfigSchema(schema);
-    const byScope = new Map<string, CliOptionDef[]>();
-    for (const def of collectDefinitions(schema, {
-        envPrefix: options.envPrefix,
-        envPathOf: options.envPathOf,
-    })) {
-        if (!def.path) continue;
-        if (options.pathPrefix && !def.path.startsWith(options.pathPrefix)) continue;
-        const scope = def.scope || 'config';
-        const list = byScope.get(scope) ?? [];
-        list.push(optionOf(def, options));
-        byScope.set(scope, list);
-    }
-
+    const diagnostics: ConfigCliDiagnostic[] = [];
+    const scopes = cliScopeSchemas(schema);
     const command: Record<string, CliCommandDef> = {};
-    for (const [scopeName, scopeSchema] of Object.entries(scopes)) {
+    for (const { name: scopeName, schema: scopeSchema } of scopes) {
+        const meta = scopeMetaOf(scopeSchema);
+        const scopeOptions = walkScopeCliOptions(
+            scopeName,
+            scopeSchema,
+            {
+                ...(options.flags ? { flags: options.flags } : {}),
+                ...(options.descriptions ? { descriptions: options.descriptions } : {}),
+                ...(options.types ? { types: options.types } : {}),
+            },
+            diagnostics
+        ).filter(def => keepsCliPath(def.path ?? '', options));
         const raw = scopeSchema as Record<string, unknown>;
-        const meta = metaOf(scopeSchema);
         const type = typeof raw.type === 'string' ? raw.type : 'object';
-        const scopeOptions = byScope.get(scopeName) ?? [];
         command[scopeName] = {
             name: scopeName,
             type,
@@ -170,30 +154,58 @@ export function generateConfigCliOptions(
         commandEntries: Object.entries(command),
         options: allOptions,
         optionsEntries,
+        diagnostics,
     };
 }
 
-/** Build a `ToolchainCommand` from a config schema + generated options. */
-export function configCliCommand<TSchema extends ConfigSchema>(
-    options: ConfigCliCommandOptions<TSchema>
-): ToolchainCommand {
+/**
+ * Map a schema's config fields (or one scope) to framework-agnostic CLI options.
+ * This is the one-liner package CLIs use before appending their genuinely
+ * non-config flags (output modes, `--cwd`, `--json`, ...).
+ */
+export function configCliOptions(
+    schema: ConfigSchema,
+    options: GenerateConfigCliOptions & { scope?: string } = {}
+): CliOption[] {
+    const generated = generateConfigCliOptions(schema, options);
+    const defs = options.scope
+        ? (generated.command[options.scope]?.options ?? [])
+        : generated.options;
+    return toToolchainOptions(defs);
+}
+
+/** Build a `CliCommand` from a config schema + generated options. */
+export function configCliCommand<
+    TSchema extends ConfigSchema,
+    TContext extends CliCommandContext = CliCommandContext,
+    const TOptions extends readonly CliOption[] = readonly CliOption[],
+>(
+    options: ConfigCliCommandOptions<TSchema, TContext, TOptions>
+): CliCommand<readonly CliOption[], TContext> {
     const generated = generateConfigCliOptions(options.schema, {
         ...(options.envPrefix ? { envPrefix: options.envPrefix } : {}),
         ...(options.pathPrefix ? { pathPrefix: options.pathPrefix } : {}),
+        ...(options.includePaths ? { includePaths: options.includePaths } : {}),
+        ...(options.excludePaths ? { excludePaths: options.excludePaths } : {}),
         ...(options.flags ? { flags: options.flags } : {}),
+        ...(options.descriptions ? { descriptions: options.descriptions } : {}),
         ...(options.types ? { types: options.types } : {}),
     });
     const commandDef = options.commandName ? generated.command[options.commandName] : undefined;
     const commandOptions = commandDef?.options ?? generated.options;
     const byKey = new Map<string, CliOptionDef>();
     for (const def of commandOptions) {
+        // Commander exposes `--no-foo` as the `foo` key with a `false` value.
         const key = def.flag
             .replace(/^--/, '')
+            .replace(/^no-/, '')
             .replace(/-([a-z])/g, (_, char) => char.toUpperCase());
         byKey.set(key, def);
     }
-    const parse = (values: Record<string, unknown>): unknown => {
-        if (options.parse) return options.parse(values, options);
+    const parse = (values: CliOptionValues<TOptions>): unknown => {
+        if (options.parse) {
+            return options.parse(values, options);
+        }
         const overrides: Record<string, unknown> = {};
         for (const [key, def] of byKey) {
             if (!(key in values) || def.path === undefined) continue;
@@ -221,7 +233,10 @@ export function configCliCommand<TSchema extends ConfigSchema>(
         options: [...toToolchainOptions(commandOptions), ...(options.options ?? [])],
         ...(options.hidden ? { hidden: true } : {}),
         ...(options.passthrough ? { passthrough: true } : {}),
-        run: (values, context) => options.run(values, parse(values), context),
+        run: (values, context) => {
+            const typed = values as CliOptionValues<TOptions>;
+            return options.run(typed, parse(typed), context);
+        },
     };
 }
 
@@ -270,8 +285,17 @@ export function generateCliOptions(
             ...(short ? { short } : {}),
             ...(def.description ? { description: def.description } : {}),
             ...(def.secret ? { secret: true } : {}),
-            // Never bake a secret default into a tracked file.
-            ...(def.default !== undefined && !def.secret ? { default: String(def.default) } : {}),
+            // Never bake a secret default into a tracked file, and skip complex
+            // defaults that have no stable CLI string form.
+            ...(def.default !== undefined &&
+            !def.secret &&
+            (typeof def.default === 'string' ||
+                typeof def.default === 'number' ||
+                typeof def.default === 'boolean')
+                ? { default: String(def.default) }
+                : Array.isArray(def.default)
+                  ? { default: def.default.join(',') }
+                  : {}),
             ...(def.required ? { required: true } : {}),
             ...(type === 'array' ? { multiple: true } : {}),
             ...(def.scope ? { scope: def.scope } : {}),

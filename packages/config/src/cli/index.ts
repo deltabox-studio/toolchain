@@ -14,9 +14,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { logger, type ToolchainCommand, withSpinner } from '@deltabox/toolchain/shared';
+import {
+    defineCliCommand,
+    logger,
+    type ToolchainCommandContext,
+    withSpinner,
+} from '@deltabox/toolchain/shared';
 
 import type { ConfigEngine } from '../types/engine.js';
+
+export * from './format.js';
+export * from './program.js';
 
 /** Default output locations for the config commands. */
 export interface ConfigCommandDefaults {
@@ -44,12 +52,12 @@ function resolve(value: string | undefined, fallback: string): string {
 }
 
 /** Build the config commands bound to a consumer's engine. */
-export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
+export function configCommands(ctx: ConfigCommandContext) {
     const { engine } = ctx;
     const d = ctx.defaults ?? {};
 
-    const commands: ToolchainCommand[] = [
-        {
+    const commands = [
+        defineCliCommand({
             name: 'config:env',
             description: 'Generate .env.example from the config schemas.',
             options: [{ flags: '-o, --out <dir>', description: 'Output directory.' }],
@@ -61,8 +69,8 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
                 engine.env.write({ output });
                 logger.info(`Generated ${path.relative(process.cwd(), output)}`);
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'config:types',
             description: 'Generate the config and env types.',
             options: [
@@ -79,8 +87,8 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
                 for (const file of written)
                     logger.info(`Generated ${path.relative(process.cwd(), file)}`);
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'config:json',
             description: 'Generate the config metadata JSON.',
             options: [{ flags: '-o, --out <file>', description: 'Output file.' }],
@@ -94,8 +102,8 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
                 fs.writeFileSync(output, `${JSON.stringify(doc, null, 4)}\n`, 'utf-8');
                 logger.info(`Generated ${path.relative(process.cwd(), output)}`);
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'config:schema',
             description: 'Generate the untyped JSON Schema.',
             options: [{ flags: '-o, --out <file>', description: 'Output file.' }],
@@ -107,8 +115,8 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
                 await engine.jsonSchema.write({ output });
                 logger.info(`Generated ${path.relative(process.cwd(), output)}`);
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'config:markdown',
             description: 'Generate the markdown configuration reference.',
             options: [{ flags: '-o, --out <dir>', description: 'Output directory.' }],
@@ -121,8 +129,8 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
                 for (const file of written)
                     logger.info(`Generated ${path.relative(process.cwd(), file)}`);
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'config:cli',
             description: 'Generate the CLI options JSON.',
             options: [{ flags: '-o, --out <file>', description: 'Output file.' }],
@@ -134,8 +142,8 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
                 engine.cli.write({ output });
                 logger.info(`Generated ${path.relative(process.cwd(), output)}`);
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'config:all',
             description: 'Run every config generator.',
             options: [{ flags: '-o, --out <dir>', description: 'Base output directory.' }],
@@ -180,13 +188,13 @@ export function configCommands(ctx: ConfigCommandContext): ToolchainCommand[] {
                     logger.info(`Generated ${path.relative(process.cwd(), file)}`);
                 }
             },
-        },
+        }),
     ];
 
     return commands.map(command => ({
         ...command,
-        run: (args, context) =>
-            withSpinner(() => Promise.resolve(command.run(args, context)), {
+        run: (args: Record<string, unknown>, context: ToolchainCommandContext) =>
+            withSpinner(() => Promise.resolve(command.run(args as never, context)), {
                 start: command.description,
                 success: command.description,
             }),

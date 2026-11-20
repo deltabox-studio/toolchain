@@ -1333,6 +1333,7 @@ export interface ToolchainTsconfigConfig {
      * JSON indentation.
      *
      * @default 4
+     * @cliFlagShort i
      */
     indent?: number;
     /**

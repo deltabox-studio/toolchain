@@ -1,10 +1,10 @@
 /**
- * CLI reference generator. Renders a markdown page from `ToolchainCommand`
+ * CLI reference generator. Renders a markdown page from `CliCommand`
  * descriptors, so a consumer's own CLI (including its custom commands) can
  * generate the same reference as the bundled `dbx` binary.
  */
 
-import type { ToolchainCommand } from '@deltabox/toolchain/shared';
+import type { CliCommand } from '@deltabox/toolchain/shared';
 
 import type { GenerateCliDocsOptions } from '../types/index.js';
 
@@ -32,14 +32,13 @@ function anchor(name: string): string {
  * and duplicate names keep the first descriptor.
  */
 export function generateCliDocs(
-    commands: readonly ToolchainCommand[],
+    commands: readonly CliCommand[],
     options: GenerateCliDocsOptions = {}
 ): string {
     const title = options.title ?? 'CLI reference';
     const outline = options.outline ?? [2, 3];
     const prefix = options.prefix ?? 'dbx';
-    const intro =
-        options.intro ?? 'Generated from the `ToolchainCommand` descriptors the CLI registers.';
+    const intro = options.intro ?? 'Generated from the `CliCommand` descriptors the CLI registers.';
     const seen = new Set<string>();
     const all = commands.filter(command => {
         if (command.hidden) return false;
@@ -72,6 +71,7 @@ export function generateCliDocs(
             lines.push(`- \`${code(label)}\` — ${esc(arg.description)}`);
         }
         for (const option of command.options ?? []) {
+            if (option.hidden) continue;
             const fallback =
                 option.default !== undefined ? ` (default: \`${String(option.default)}\`)` : '';
             lines.push(`- \`${code(option.flags)}\` — ${esc(option.description)}${fallback}`);

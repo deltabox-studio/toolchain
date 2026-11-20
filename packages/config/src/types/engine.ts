@@ -1,13 +1,12 @@
-import type { ZodType } from 'zod';
-
-import type { ToolchainCommand } from '@deltabox/toolchain/shared';
+import type { CliCommand } from '@deltabox/toolchain/shared';
 
 import type {
     CliOptionDef,
     ConfigCliOptionsResult,
+    ConfigEngineCliProgram,
     GenerateCliOptionsOptions,
     GenerateConfigCliOptions,
-} from './cli.js';
+} from './cli/index.js';
 import type { ConfigDef, ConfigGroup } from './definition.js';
 import type {
     BuildConfigJsonOptions,
@@ -21,26 +20,8 @@ import type {
     GenerateMarkdownOptions,
     GenerateTypesOptions,
 } from './generators.js';
+import type { ConfigScopeKeys } from './resolved.js';
 import type { ConfigSchema } from './schema.js';
-
-/**
- * The scope names a schema exposes as statically known keys.
- *
- * A scope map (`{ server, cli }`) yields its own keys; a single Zod schema, an
- * array of schemas or an untyped schema yields `string` because its scopes are
- * resolved at runtime.
- */
-export type ConfigScopeKeys<TSchema> = TSchema extends ZodType
-    ? string
-    : TSchema extends readonly unknown[]
-      ? string
-      : TSchema extends Record<string, unknown>
-        ? 'type' extends keyof TSchema
-            ? string
-            : 'properties' extends keyof TSchema
-              ? string
-              : Extract<keyof TSchema, string>
-        : string;
 
 /**
  * Flatten the schema by `n` levels.
@@ -157,10 +138,10 @@ export interface ConfigEngineTypes<TSchema extends ConfigSchema = ConfigSchema> 
 /** Rendered markdown pages for CLI commands, env vars and single files. */
 export interface ConfigEngineMarkdownCli {
     /** Render the command reference page. */
-    generate(commands: readonly ToolchainCommand[], options?: GenerateCliDocsOptions): string;
+    generate(commands: readonly CliCommand[], options?: GenerateCliDocsOptions): string;
     /** Render and write the command reference page; returns the written path. */
     write(
-        commands: readonly ToolchainCommand[],
+        commands: readonly CliCommand[],
         options: GenerateCliDocsOptions & { output: string }
     ): string;
 }
@@ -206,6 +187,8 @@ export interface ConfigEngineCli<TSchema extends ConfigSchema = ConfigSchema> {
      * schema scope becomes a command; its fields become options.
      */
     options(options?: GenerateConfigCliOptions): ConfigCliOptionsResult;
+    /** High-level program generation (schema-derived options + typed run config). */
+    program: ConfigEngineCliProgram<TSchema>;
 }
 
 /** A combined JSON Schema document keyed by the schema's scopes. */

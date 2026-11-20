@@ -27,7 +27,12 @@ export function withEnabled<T extends ZodObject<ZodRawShape>>(
     description = ENABLED_DESCRIPTION
 ): T {
     return schema.extend({
-        enabled: z.boolean().optional().describe(description),
-        regenerate: z.boolean().default(true).optional().describe(REGENERATE_DESCRIPTION),
+        enabled: z.boolean().optional().describe(description).meta({ cli: false }),
+        regenerate: z
+            .boolean()
+            .default(true)
+            .optional()
+            .describe(REGENERATE_DESCRIPTION)
+            .meta({ cli: false }),
     }) as unknown as T;
 }
