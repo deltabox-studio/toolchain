@@ -1,8 +1,20 @@
 # Changelog
 
-## 3.0.0-beta.14 (November 2026)
+## 3.0.0-beta.15 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Documentation</summary>
+
+- Clarify vite-plus is a dev dependency ([#b7d5ce6](https://github.com/deltabox-studio/toolchain/commit/b7d5ce6) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.14 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -11,9 +23,6 @@
 - Preserve markdown key narrowing with typed options ([#0cd420a](https://github.com/deltabox-studio/toolchain/commit/0cd420a) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.13 (November 2026)
 
