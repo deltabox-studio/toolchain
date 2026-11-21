@@ -9,7 +9,7 @@ the template engine.
 | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
 | `defineConfig(config)`                                                                     | Identity helper for a typed `dbx.config.*` (object, promise, or sync/async callback).       |
 | `sectionEnabled(section)` / `sectionConfig(section)`                                       | Opt-in-by-presence helpers for a config section.                                            |
-| `resolveTokens(config)`                                                                    | Flatten a config into <code v-pre>{{ token }}</code> replacements.                                           |
+| `resolveTokens(config)`                                                                    | Flatten a config into <code v-pre>{{ token }}</code> replacements.                          |
 | `CONFIG_FILE_NAMES`                                                                        | The config file names the loader probes, in priority order.                                 |
 | `repoSlugFromUrl(url)`                                                                     | Derive an `owner/name` slug from a repository URL.                                          |
 | `findOwnCliEntry(cwd?)` / `localToolchainVersion(cwd?)` / `TOOLCHAIN_PACKAGE`              | Locate a project's own toolchain bin + pinned version (prefer them over a global `dbx`).    |
@@ -22,7 +22,7 @@ the template engine.
 | `deepMerge` / `applyOverrides` / `isPlainObject` / `sort` / `mapValues`                    | Object utilities (including layered typed overrides).                                       |
 | `defineCliCommand(command)`                                                                | Build a `CliCommand` while preserving the literal `options` tuple for typed values.         |
 | `CliOptionValues<TOptions>`                                                                | The commander-style typed values produced by an option tuple.                               |
-| `applyReplacements` / `applyReplacementsDeep` / `createReplacer`                           | The <code v-pre>{{ token }}</code> template engine (also `tokenPattern`, `extractTokens`).                   |
+| `applyReplacements` / `applyReplacementsDeep` / `createReplacer`                           | The <code v-pre>{{ token }}</code> template engine (also `tokenPattern`, `extractTokens`).  |
 | `DEFAULT_IGNORE_PATTERNS` / `DEFAULT_FMT_IGNORE_PATTERNS` / `DEFAULT_LINT_IGNORE_PATTERNS` | The shared build/cache ignores and the Oxfmt/Oxlint extensions.                             |
 | `resolveIgnorePatterns(cwd?, options?)` / `collectGitignorePatterns(cwd?)`                 | Defaults + `exclude` + `.gitignore` resolution, and the matching helpers (`isIgnoredPath`). |
 | `toYaml(value)`                                                                            | A tiny YAML emitter for the GitHub Actions subset.                                          |
@@ -83,30 +83,30 @@ tasks it skipped. Unknown task names throw.
 The generic Zod/env engine (see the [Config Generator](/guide/config-generator/)
 guide for the full workflow).
 
-| Export                                                                                   | Description                                                    |
-| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `createConfigEngine(options)`                                                            | Bind a schema, env prefix, base group and root into an engine. |
-| `parseConfig` / `parseEnvConfig` / `parseCliConfig`                                      | Runtime parsers: env + CLI + overrides, validated.             |
-| `loadConfig` / `loadConfigSync` / `loadConfigAsync`                                      | Discover/import a config file and parse it.                    |
-| `loadEnvConfig*` / `loadCliConfig*` / `loadFileConfig*`                                  | Source-specific loader variants (Sync/Async).                  |
-| `collect(schema, options?)`                                                              | Resolve env + CLI into a typed config (no overrides).          |
-| `configCommands({ engine, defaults? })`                                                  | The `config:*` commands for a consumer's own CLI.              |
+| Export                                                                                   | Description                                                      |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `createConfigEngine(options)`                                                            | Bind a schema, env prefix, base group and root into an engine.   |
+| `parseConfig` / `parseEnvConfig` / `parseCliConfig`                                      | Runtime parsers: env + CLI + overrides, validated.               |
+| `loadConfig` / `loadConfigSync` / `loadConfigAsync`                                      | Discover/import a config file and parse it.                      |
+| `loadEnvConfig*` / `loadCliConfig*` / `loadFileConfig*`                                  | Source-specific loader variants (Sync/Async).                    |
+| `collect(schema, options?)`                                                              | Resolve env + CLI into a typed config (no overrides).            |
+| `configCommands({ engine, defaults? })`                                                  | The `config:*` commands for a consumer's own CLI.                |
 | `createConfigProgram(commands, options?)`                                                | Low-level program factory; prefer `engine.cli.program.create()`. |
-| `generateConfigProgram(schema, options)`                                                | Generate `CliCommand[]` from a config schema.                  |
-| `ConfigProgramError`                                                                    | Invalid-argv error (`code`, `input`, optional `suggestion`).   |
-| `formatGenerated(source, options?)`                                                      | Format generated output with Oxfmt (see below).                |
-| `GENERATED_FORMAT_OPTIONS`                                                               | The baseline Oxfmt options used by the generators.             |
-| `parseEnvTree(env, prefix?)` / `envString` / `envInt` / `envBool` / `envList` / `envMap` | Legacy dependency-free tree accessors.                         |
-| `compileZodSchema(schema)`                                                               | Compile a Zod schema for fast repeated parsing.                |
-| `envPathOf(env, prefix?)` / `metaOf(schema)`                                             | Env-name to dotted-path derivation and `.meta()` reading.      |
-| `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                         |
-| `generateConfigTypes` / `generateConfigEnv`                                              | Type/env generators (optional disk writes).                    |
-| `generateConfigMarkdown` / `generateCliOptions`                                          | Markdown/CLI generators (optional disk writes).                |
-| `generateCliDocs(commands, options?)`                                                    | A CLI reference from `CliCommand` descriptors.                 |
-| `generateConfigJsonSchema` / `generateJsonSchemaFile`                                    | JSON Schema generation.                                        |
-| `normalizeJsonSchemaMetadata(node)`                                                      | Normalize Zod JSON Schema metadata for editor schemas.         |
-| `generateEnv` / `generateEnvDts` / `generateConfigEnv`                                   | `.env` / env type generation.                                  |
-| `generateCliOptions` / `flagOf` / `cliFlagOf` / `createCliArgsParser`                    | CLI option generation + parsing.                               |
+| `generateConfigProgram(schema, options)`                                                 | Generate `CliCommand[]` from a config schema.                    |
+| `ConfigProgramError`                                                                     | Invalid-argv error (`code`, `input`, optional `suggestion`).     |
+| `formatGenerated(source, options?)`                                                      | Format generated output with Oxfmt (see below).                  |
+| `GENERATED_FORMAT_OPTIONS`                                                               | The baseline Oxfmt options used by the generators.               |
+| `parseEnvTree(env, prefix?)` / `envString` / `envInt` / `envBool` / `envList` / `envMap` | Legacy dependency-free tree accessors.                           |
+| `compileZodSchema(schema)`                                                               | Compile a Zod schema for fast repeated parsing.                  |
+| `envPathOf(env, prefix?)` / `metaOf(schema)`                                             | Env-name to dotted-path derivation and `.meta()` reading.        |
+| `findProjectRoot(start?)` / `monorepoRoot(from?)`                                        | Walk up to the nearest `package.json`.                           |
+| `generateConfigTypes` / `generateConfigEnv`                                              | Type/env generators (optional disk writes).                      |
+| `generateConfigMarkdown` / `generateCliOptions`                                          | Markdown/CLI generators (optional disk writes).                  |
+| `generateCliDocs(commands, options?)`                                                    | A CLI reference from `CliCommand` descriptors.                   |
+| `generateConfigJsonSchema` / `generateJsonSchemaFile`                                    | JSON Schema generation.                                          |
+| `normalizeJsonSchemaMetadata(node)`                                                      | Normalize Zod JSON Schema metadata for editor schemas.           |
+| `generateEnv` / `generateEnvDts` / `generateConfigEnv`                                   | `.env` / env type generation.                                    |
+| `generateCliOptions` / `flagOf` / `cliFlagOf` / `createCliArgsParser`                    | CLI option generation + parsing.                                 |
 
 ## `@deltabox/toolchain/vite`
 
@@ -129,13 +129,13 @@ sync task (see the [Providers](/guide/providers) guide).
 
 ## `@deltabox/toolchain/cli`
 
-| Export                                 | Description                                                            |
-| -------------------------------------- | ---------------------------------------------------------------------- |
-| `builtinCommands()`                    | The commands built into the root CLI (config commands need an engine). |
+| Export                                 | Description                                                                |
+| -------------------------------------- | -------------------------------------------------------------------------- |
+| `builtinCommands()`                    | The commands built into the root CLI (config commands need an engine).     |
 | `createCli(commands?)`                 | Build the `dbx` program; pre-typed arrays keep their command/option types. |
-| `runCli(argv?)`                        | Parse and run the CLI (extracts logger flags, defaults bare Vite+).    |
-| `withDefaultVite(argv, commandNames?)` | Insert `vite` before a bare Vite+ command.                             |
-| `extractLogOptions(argv)`              | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
+| `runCli(argv?)`                        | Parse and run the CLI (extracts logger flags, defaults bare Vite+).        |
+| `withDefaultVite(argv, commandNames?)` | Insert `vite` before a bare Vite+ command.                                 |
+| `extractLogOptions(argv)`              | Pull `--log-level` / `--color` / `--no-color` out of argv.                 |
 
 See the [CLI](/guide/cli) guide for the routing behaviour.
 

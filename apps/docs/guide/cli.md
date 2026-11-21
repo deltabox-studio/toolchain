@@ -12,7 +12,7 @@ command line.
 | ------------------- | -------------------------------------------------------------- |
 | `--log-level <lvl>` | Minimum log level: `debug`, `info`, `warn`, `error`, `silent`. |
 | `--color`           | Force coloured output (the default).                           |
-| `--no-color`        | Disable coloured output (including help/error formatting).      |
+| `--no-color`        | Disable coloured output (including help/error formatting).     |
 | `--no-update-check` | Do not check for a newer `dbx` version.                        |
 | `--config <file>`   | Use a specific config file instead of discovering one.         |
 | `--no-config`       | Ignore config files and use CLI flags/env defaults only.       |

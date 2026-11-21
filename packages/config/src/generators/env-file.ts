@@ -52,7 +52,10 @@ export function quoteEnvValue(value: string): string {
  * Generate `.env` content from the config schemas. Secrets and required-without-
  * default vars are emitted blank so operators fill them in.
  */
-export function generateEnvFile(schema: ConfigSchema, options: GenerateEnvFileOptions = {}): string {
+export function generateEnvFile(
+    schema: ConfigSchema,
+    options: GenerateEnvFileOptions = {}
+): string {
     const envPrefix = options.envPrefix ?? DEFAULT_ENV_PREFIX;
     const sep = options.scopeSeparator ?? '----';
     const vars = collectDefinitions(schema, { envPrefix, envPathOf: options.envPathOf }).filter(

@@ -56,7 +56,8 @@ export interface GenerateEnvTypesOptions extends GenerateBaseOptions {
 }
 
 /** Config type generation options. */
-export interface GenerateTypesOptions extends GenerateBaseOptions, Pick<ConfigEngineOptions, 'baseGroup'> {
+export interface GenerateTypesOptions
+    extends GenerateBaseOptions, Pick<ConfigEngineOptions, 'baseGroup'> {
     /** Output directory. `false` (or omitted) disables writing. */
     outputDir?: string | false;
     /**
@@ -110,7 +111,8 @@ export interface RenderMarkdownFrontmatter {
 }
 
 /** Markdown reference generation options (shared by per-scope and combined renders). */
-export interface RenderMarkdownOptions extends GenerateBaseOptions, Pick<ConfigEngineOptions, 'baseGroup'> {
+export interface RenderMarkdownOptions
+    extends GenerateBaseOptions, Pick<ConfigEngineOptions, 'baseGroup'> {
     /** Output directory. `false` (or omitted) disables writing. */
     outputDir?: string | false;
     /** Frontmatter toggle, raw body, or callback. @default true */
@@ -220,7 +222,8 @@ export interface RenderConfigFileOptions {
 }
 
 /** JSON Schema generation options. */
-export interface GenerateJsonSchemaOptions extends GenerateBaseOptions, Pick<ConfigEngineOptions, 'baseGroup'> {
+export interface GenerateJsonSchemaOptions
+    extends GenerateBaseOptions, Pick<ConfigEngineOptions, 'baseGroup'> {
     /** Output file path. When omitted, nothing is written. */
     output?: string | false;
     /** Document metadata overrides. */

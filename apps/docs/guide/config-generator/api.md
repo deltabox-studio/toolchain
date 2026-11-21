@@ -527,21 +527,21 @@ grouping command; it registers with its subcommands.
 
 A `ConfigProgram` exposes the runtime surface:
 
-| Member                                   | Description                                                              |
-| ---------------------------------------- | ------------------------------------------------------------------------ |
-| `commands`                               | The normalized commands (single command stays single).                   |
-| `globals`                                | The program-level global options.                                        |
-| `name()` / `description()` / `version()` | Set the metadata shown in help/version output.                           |
-| `output(writeOut, writeErr?)`            | Route help/version output; `writeErr` is reserved for error rendering.    |
-| `globalOption()` / `globalOptions()`     | Append program-level globals.                                            |
-| `argv(values)`                           | Set the explicit argv used by `invoke()`.                                |
-| `withContext(context)`                   | Set the default host context.                                            |
-| `configure(format)`                      | Merge help/error formatting options.                                     |
-| `formatHelp(command?)`                   | Render program or command help.                                          |
-| `formatError(error)`                     | Render an error with the configured template.                            |
-| `invoke(argv?, context?)`                | Run synchronously (async handlers/resolvers throw).                      |
-| `invokeAsync(argv?, context?)`           | Run and await async handlers, hooks and resolvers.                       |
-| `hook()` / `hooks()`                     | Register inferred before/after hooks.                                    |
+| Member                                   | Description                                                            |
+| ---------------------------------------- | ---------------------------------------------------------------------- |
+| `commands`                               | The normalized commands (single command stays single).                 |
+| `globals`                                | The program-level global options.                                      |
+| `name()` / `description()` / `version()` | Set the metadata shown in help/version output.                         |
+| `output(writeOut, writeErr?)`            | Route help/version output; `writeErr` is reserved for error rendering. |
+| `globalOption()` / `globalOptions()`     | Append program-level globals.                                          |
+| `argv(values)`                           | Set the explicit argv used by `invoke()`.                              |
+| `withContext(context)`                   | Set the default host context.                                          |
+| `configure(format)`                      | Merge help/error formatting options.                                   |
+| `formatHelp(command?)`                   | Render program or command help.                                        |
+| `formatError(error)`                     | Render an error with the configured template.                          |
+| `invoke(argv?, context?)`                | Run synchronously (async handlers/resolvers throw).                    |
+| `invokeAsync(argv?, context?)`           | Run and await async handlers, hooks and resolvers.                     |
+| `hook()` / `hooks()`                     | Register inferred before/after hooks.                                  |
 
 Build the program through the engine — this is the preferred entry point because
 it infers the config/values types and accepts the full program options:

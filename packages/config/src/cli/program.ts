@@ -7,6 +7,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { parseArgs, type ParseArgsOptionsConfig } from 'node:util';
 
+import type { Awaitable } from '@deltabox/toolchain-shared';
 import {
     camelCase,
     type CliCommand,
@@ -30,7 +31,6 @@ import {
     renderError,
     renderProgramHelp,
 } from './format.js';
-import type { Awaitable } from '@deltabox/toolchain-shared';
 
 type AnyCommand = CliCommand<any, any>;
 
@@ -236,7 +236,7 @@ function selectCommand(
     let level = [...commands];
     let path: string[] = [];
     let rest = [...argv];
-    let leading: string[] = [];
+    const leading: string[] = [];
     let command: AnyCommand | undefined;
     let ancestors: AnyCommand[] = [];
 
@@ -257,7 +257,10 @@ function selectCommand(
                 ...globalOptions,
                 ...ancestors.flatMap(ancestor => ancestor.globalOptions ?? []),
             ];
-            const definitions = globals.length > 0 ? optionDefinitions({ ...level[0], options: globals } as AnyCommand) : [];
+            const definitions =
+                globals.length > 0
+                    ? optionDefinitions({ ...level[0], options: globals } as AnyCommand)
+                    : [];
             const def = definitions.find(
                 candidate =>
                     (candidate.negated ? candidate.long === token : candidate.long === token) ||
@@ -325,7 +328,9 @@ function selectCommand(
         if (!command && level.length === 1 && (level[0]!.commands?.length ?? 0) === 0) {
             command = level[0]!;
             ancestors = [command];
-            return { selected: { command, path: [command.name], rest: [...leading, ...rest], ancestors } };
+            return {
+                selected: { command, path: [command.name], rest: [...leading, ...rest], ancestors },
+            };
         }
         break;
     }
@@ -547,9 +552,7 @@ function withoutColors(options: ConfigProgramFormatOptions): ConfigProgramFormat
                 {
                     ...command,
                     colors: {},
-                    ...(command.box
-                        ? { box: { ...command.box, color: undefined } }
-                        : {}),
+                    ...(command.box ? { box: { ...command.box, color: undefined } } : {}),
                 },
             ])
         ),
@@ -807,11 +810,7 @@ async function executeAsync<TContext extends CliCommandContext>(
     if (hasTokenBeforeSeparator(rest, ['--help', '-H'])) {
         writeProgramOut(
             state,
-            renderCommandHelp(
-                withGlobalOptions(command, globals),
-                commandPath.slice(0, -1),
-                format
-            )
+            renderCommandHelp(withGlobalOptions(command, globals), commandPath.slice(0, -1), format)
         );
         return;
     }
@@ -865,11 +864,7 @@ function executeSync<TContext extends CliCommandContext>(
         if (selection.help?.command) {
             writeProgramOut(
                 state,
-                renderCommandHelp(
-                    selection.help.command,
-                    selection.help.path.slice(0, -1),
-                    format
-                )
+                renderCommandHelp(selection.help.command, selection.help.path.slice(0, -1), format)
             );
         } else if (selection.help) {
             writeProgramOut(
@@ -910,11 +905,7 @@ function executeSync<TContext extends CliCommandContext>(
     if (hasTokenBeforeSeparator(rest, ['--help', '-H'])) {
         writeProgramOut(
             state,
-            renderCommandHelp(
-                withGlobalOptions(command, globals),
-                commandPath.slice(0, -1),
-                format
-            )
+            renderCommandHelp(withGlobalOptions(command, globals), commandPath.slice(0, -1), format)
         );
         return;
     }

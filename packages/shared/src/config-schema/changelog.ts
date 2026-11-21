@@ -15,9 +15,7 @@ export const changelogBranchesConfigSchema = z
     .object({
         main: z
             .union([z.string(), z.array(z.string())])
-            .describe(
-                'Branch glob(s) the CI + release workflows run on, and the release PR base.'
-        )
+            .describe('Branch glob(s) the CI + release workflows run on, and the release PR base.')
             .default(['main'])
             .optional(),
         dev: z
@@ -270,9 +268,7 @@ export const changelogDetailsConfigSchema = z
                 )
                 .optional(),
             descriptions: changelogDetailsToggleSchema
-                .describe(
-                    'Wrap commit description paragraphs in a nested collapsible.'
-                )
+                .describe('Wrap commit description paragraphs in a nested collapsible.')
                 .default(true)
                 .optional(),
             body: changelogDetailsToggleSchema
@@ -472,9 +468,8 @@ export const changelogVersioningConfigSchema = z
         allowOverBump: changelogTargetedOption(
             z
                 .boolean()
-                .describe(
-                    'Apply a bump once per matching change instead of once per run.'
-                ).default(false),
+                .describe('Apply a bump once per matching change instead of once per run.')
+                .default(false),
             'ChangelogTargetedAllowOverBump'
         )
             .describe('Enable over-bumping globally, or per-target via `{ target, options }`.')

@@ -171,7 +171,7 @@ export const tsconfigConfigSchema = withEnabled(
                 'only use the entries you define yourself. An object additionally accepts ' +
                 '`include`/`exclude`, `rewriteAlias`, `modes`, `prefix`, `devMode` and `dist`.'
         )
-        .default(false)
+            .default(false)
             .meta({ cli: false })
             .optional(),
         aliasAuto: tsconfigAliasAutoSetting(

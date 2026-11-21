@@ -3,7 +3,12 @@ import { z } from 'zod';
 
 import type { CliCommandContext } from '@deltabox/toolchain/shared';
 
-import { createConfigEngine, configCliCommand, generateConfigCliOptions, generateConfigProgram } from '../src/index.js';
+import {
+    createConfigEngine,
+    configCliCommand,
+    generateConfigCliOptions,
+    generateConfigProgram,
+} from '../src/index.js';
 
 const nativeEnv = { ...process.env };
 
@@ -404,10 +409,7 @@ describe('standalone program generation', () => {
             ],
         });
         expect(commands.map(command => command.name)).toEqual(['serve']);
-        await commands[0]!.run(
-            { port: 4000 },
-            { config: { serve: { port: 5000 } } } as never
-        );
+        await commands[0]!.run({ port: 4000 }, { config: { serve: { port: 5000 } } } as never);
         expect(seen[0]).toMatchObject({
             config: { port: 4000 },
             values: { port: 4000 },
