@@ -163,9 +163,9 @@ export interface ConfigEngineMarkdownFile {
 /** Markdown reference generation. */
 export interface ConfigEngineMarkdown<TSchema extends ConfigSchema = ConfigSchema> {
     /** Render the markdown reference files, keyed by file name. */
-    generate(
-        options?: ConfigMarkdownOptions<TSchema>
-    ): Record<MarkdownFileKeys<TSchema, ConfigMarkdownOptions<TSchema>>, string>;
+    generate<const O extends ConfigMarkdownOptions<TSchema> = {}>(
+        options?: ConfigMarkdownOptions<TSchema> & O
+    ): Record<MarkdownFileKeys<TSchema, O>, string>;
     /** Render and write the markdown reference files; returns the written paths. */
     write(options: ConfigMarkdownOptions<TSchema> & { outputDir: string }): string[];
     /** Command reference docs. */

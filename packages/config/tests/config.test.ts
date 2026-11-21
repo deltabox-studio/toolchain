@@ -364,6 +364,11 @@ describe('createConfigEngine', () => {
         expectTypeOf(
             engine.env.types.generate({ envFile: 'types.ts', dtsFile: 'types.d.ts' })
         ).toEqualTypeOf<Record<'types.ts' | 'types.d.ts', string>>();
+        const withHook = engine.markdown.generate({
+            combined: true,
+            onContent: content => content.trim(),
+        });
+        expectTypeOf(withHook).toEqualTypeOf<Record<'index.md', string>>();
     });
 
     it('renders docs through engine.markdown', () => {
