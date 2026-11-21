@@ -11,12 +11,10 @@
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import pc from 'picocolors';
+
 import { changelogCommands } from '@deltabox/toolchain/changelog/cli';
-import {
-    createConfigProgram,
-    ConfigProgramError,
-    type ConfigProgram,
-} from '@deltabox/toolchain/config';
+import { createConfigProgram, ConfigProgramError } from '@deltabox/toolchain/config';
 import { loadToolchainConfig } from '@deltabox/toolchain/core';
 import { mcpCommands } from '@deltabox/toolchain/mcp/cli';
 import { migrateCommands } from '@deltabox/toolchain/migrate/cli';
@@ -24,6 +22,7 @@ import { cleanupCommands } from '@deltabox/toolchain/pack/cli';
 import { projectCommands } from '@deltabox/toolchain/project/cli';
 import {
     cancelActiveSpinner,
+    getLogOverrides,
     LOG_LEVELS,
     logger,
     normalizeLogLevel,
@@ -38,6 +37,8 @@ import { tsconfigCommands } from '@deltabox/toolchain/tsconfig/cli';
 import { resolveVpCommand, viteCommands } from 'vite-plugin-dbx/cli';
 
 import rootPkg from '../../package.json' with { type: 'json' };
+import type { ConfigProgram, ResolveConfigProgramCommands } from '../config.js';
+import type { CliCommandContext, CliOption } from '../shared.js';
 import { syncCommands } from './commands/index.js';
 import { extractConfigSelection, setConfigSelection } from './config-selection.js';
 import { setPassthroughCommand, withCliContext } from './register.js';
@@ -222,7 +223,7 @@ export function suppressesUpdateNotice(
     machineCommands: ReadonlySet<string> = MACHINE_OUTPUT_COMMANDS
 ): boolean {
     const wantsHelp = argv.some(
-        arg => arg === '--help' || arg === '-h' || arg === '--version' || arg === '-V'
+        arg => arg === '--help' || arg === '-H' || arg === '--version' || arg === '-V'
     );
     const wantsJson =
         argv.some(arg => MACHINE_OUTPUT_FLAGS.has(arg)) ||
@@ -230,32 +231,95 @@ export function suppressesUpdateNotice(
     return wantsHelp || wantsJson;
 }
 
+const globalOptions = [
+    {
+        flags: '--log-level <level>',
+        description: `Minimum log level (${LOG_LEVELS.join('|')}).`,
+    },
+    { flags: '--no-color', description: 'Disable coloured output.' },
+    { flags: '--no-update-check', description: 'Do not check for a newer dbx version.' },
+    { flags: '--config <file>', description: 'Use a specific dbx config file.' },
+    { flags: '--no-config', description: 'Ignore discovered config; use CLI flags/env only.' },
+    { flags: '-V, --version', description: 'Output the version number.' },
+] as const;
+
 /**
  * Build the `dbx` program on the config engine runtime.
  *
  * Help/version output is routed through the shared logger so it honours the
  * same colour settings and sink as everything else.
  */
-export function createCli(
-    commands: CliCommand[] = builtinCommands()
-): ConfigProgram<CliCommand[], ToolchainCommandContext> {
-    return createConfigProgram<CliCommand[], ToolchainCommandContext>(withCliContext(commands), {
+export function createCli<
+    TContext extends CliCommandContext = ToolchainCommandContext,
+>(): ConfigProgram<
+    ResolveConfigProgramCommands<ReturnType<typeof builtinCommands>, TContext>,
+    TContext,
+    typeof globalOptions
+>;
+export function createCli<
+    const TOptions extends readonly CliOption[] = readonly CliOption[],
+    TContext extends CliCommandContext = ToolchainCommandContext,
+    const TCommands extends readonly CliCommand<any, TContext>[] = readonly any[],
+    const TScope extends string | undefined = string | undefined,
+    const TName extends string = string,
+    const TGlobalOptions extends readonly CliOption[] = readonly CliOption[],
+>(
+    commands: readonly CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions>[]
+): ConfigProgram<
+    ResolveConfigProgramCommands<
+        readonly CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions>[],
+        TContext
+    >,
+    TContext,
+    typeof globalOptions
+>;
+export function createCli<
+    const Commands extends readonly CliCommand<any, any>[],
+    TContext extends CliCommandContext = ToolchainCommandContext,
+>(
+    commands: Commands
+): ConfigProgram<ResolveConfigProgramCommands<Commands, TContext>, TContext, typeof globalOptions>;
+export function createCli<
+    const TOptions extends readonly CliOption[] = readonly CliOption[],
+    TContext extends CliCommandContext = ToolchainCommandContext,
+    const TCommands extends readonly CliCommand<any, TContext>[] = readonly any[],
+    const TScope extends string | undefined = string | undefined,
+    const TName extends string = string,
+    const TGlobalOptions extends readonly CliOption[] = readonly CliOption[],
+>(commands?: readonly CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions>[]) {
+    return createConfigProgram(withCliContext(commands ?? (builtinCommands() as any)), {
         name: 'dbx',
         description: rootPkg.description,
         version: rootPkg.version,
+        globalOptions,
+        disableColors: ({ color }) => {
+            return getLogOverrides().color === false || color === false;
+        },
         writeOut: text => logger.write('out', text),
         writeErr: text => logger.write('err', text),
-    }).globalOptions([
-        {
-            flags: '--log-level <level>',
-            description: `Minimum log level (${LOG_LEVELS.join('|')}).`,
+    }).configure({
+        colors: {
+            command: pc.cyan,
+            option: pc.yellow,
+            value: pc.green,
+            description: pc.dim,
+            usage: pc.bold,
         },
-        { flags: '--no-color', description: 'Disable coloured output.' },
-        { flags: '--no-update-check', description: 'Do not check for a newer dbx version.' },
-        { flags: '--config <file>', description: 'Use a specific dbx config file.' },
-        { flags: '--no-config', description: 'Ignore discovered config; use CLI flags/env only.' },
-        { flags: '-V, --version', description: 'Output the version number.' },
-    ]) as unknown as ConfigProgram<CliCommand[], ToolchainCommandContext>;
+        error: {
+            messageColor: pc.red,
+            stackColor: input => pc.dim(pc.red(input)),
+        },
+    }) as unknown as ConfigProgram<
+        ResolveConfigProgramCommands<
+            Exclude<
+                readonly CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions>[],
+                undefined
+            >,
+            TContext
+        >,
+        TContext,
+        typeof globalOptions
+    >;
 }
 
 let interruptHandlerInstalled = false;

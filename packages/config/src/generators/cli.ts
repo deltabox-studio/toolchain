@@ -306,7 +306,8 @@ export function generateCliOptions(
 
     if (typeof options.output === 'string') {
         fs.mkdirSync(path.dirname(options.output), { recursive: true });
-        fs.writeFileSync(options.output, `${JSON.stringify(defs, null, 4)}\n`, 'utf-8');
+        const content = `${JSON.stringify(defs, null, 4)}\n`;
+        fs.writeFileSync(options.output, options.onContent?.(content) ?? content, 'utf-8');
     }
 
     return defs;

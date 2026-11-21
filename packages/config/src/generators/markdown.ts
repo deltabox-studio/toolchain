@@ -286,7 +286,8 @@ function renderScopeMarkdown(
             ...renderFields(groupSchema as unknown as SchemaNode, '###', opts)
         );
     }
-    return `${parts.join('\n').trim()}\n`;
+    const content = `${parts.join('\n').trim()}\n`;
+    return options.onContent?.(content) ?? content;
 }
 
 function formatDefault(value: unknown): string {
@@ -364,7 +365,7 @@ variable equivalent.`;
                   .join('\n')}\n`
             : '';
 
-    return `${frontmatterLines(options, title, outline).join('\n')}
+    const content = `${frontmatterLines(options, title, outline).join('\n')}
 # ${title}
 
 ${intro}
@@ -381,6 +382,7 @@ ${coreNote}
 
 ${table(core)}
 ${references}`;
+    return options.onContent?.(content) ?? content;
 }
 
 /** Render a single markdown page with frontmatter and a title. */
@@ -392,7 +394,8 @@ export function generateMarkdownFile(options: GenerateMarkdownFileOptions): stri
         '',
         options.body.trim(),
     ];
-    return `${parts.join('\n').trimEnd()}\n`;
+    const content = `${parts.join('\n').trimEnd()}\n`;
+    return options.onContent?.(content) ?? content;
 }
 
 /** Escape a table cell so Vue/Markdown do not parse its content as markup. */
@@ -438,7 +441,8 @@ export function generateEnvMarkdown(
             )
         );
     }
-    return `${parts.join('\n').trimEnd()}\n`;
+    const content = `${parts.join('\n').trimEnd()}\n`;
+    return options.onContent?.(content) ?? content;
 }
 
 /**
@@ -797,5 +801,6 @@ function renderConfigSectionsMarkdown(
         }
         parts.push(...renderJsonFields(node, '###', defs, new Set<string>(), options), '');
     }
-    return `${parts.join('\n').trim()}\n`;
+    const content = `${parts.join('\n').trim()}\n`;
+    return options.onContent?.(content) ?? content;
 }

@@ -9,6 +9,7 @@ import type {
 
 import type { CollectOptions, ParseConfigOptions } from '../collect.js';
 import type { ConfigValueType } from '../definition.js';
+import type { GenerateBaseOptions } from '../generators.js';
 import type { ConfigMeta } from '../meta.js';
 import type { ConfigSchema } from '../schema.js';
 
@@ -110,7 +111,7 @@ export interface ConfigCliOptionsResult {
 }
 
 /** CLI option generation options (env-backed `cli` scope). */
-export interface GenerateCliOptionsOptions extends CliFlagOptions {
+export interface GenerateCliOptionsOptions extends GenerateBaseOptions, CliFlagOptions {
     /** The scope whose env vars become flags. @default "cli" */
     scope?: string;
     /** Output file path to write the options as JSON. */

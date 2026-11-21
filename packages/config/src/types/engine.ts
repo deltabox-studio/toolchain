@@ -11,7 +11,7 @@ import type { ConfigDef, ConfigGroup } from './definition.js';
 import type {
     BuildConfigJsonOptions,
     ConfigJsonDoc,
-    EnvFileOptions,
+    GenerateEnvFileOptions,
     GenerateCliDocsOptions,
     GenerateEnvMarkdownOptions,
     GenerateEnvTypesOptions,
@@ -120,9 +120,9 @@ export interface ConfigEngineEnvTypes {
 /** `.env` file and env typing generation. */
 export interface ConfigEngineEnv {
     /** Render the `.env` file content. */
-    generate(options?: EnvFileOptions): string;
+    generate(options?: GenerateEnvFileOptions): string;
     /** Render and write the `.env` file; returns the written path. */
-    write(options: EnvFileOptions & { output: string }): string;
+    write(options: GenerateEnvFileOptions & { output: string }): string;
     /** Env typings (`env.ts` and its ambient `.d.ts`). */
     types: ConfigEngineEnvTypes;
 }
@@ -163,9 +163,9 @@ export interface ConfigEngineMarkdownFile {
 /** Markdown reference generation. */
 export interface ConfigEngineMarkdown<TSchema extends ConfigSchema = ConfigSchema> {
     /** Render the markdown reference files, keyed by file name. */
-    generate<const O extends ConfigMarkdownOptions<TSchema> = {}>(
-        options?: O
-    ): Record<MarkdownFileKeys<TSchema, O>, string>;
+    generate(
+        options?: ConfigMarkdownOptions<TSchema>
+    ): Record<MarkdownFileKeys<TSchema, ConfigMarkdownOptions<TSchema>>, string>;
     /** Render and write the markdown reference files; returns the written paths. */
     write(options: ConfigMarkdownOptions<TSchema> & { outputDir: string }): string[];
     /** Command reference docs. */

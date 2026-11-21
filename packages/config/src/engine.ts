@@ -36,6 +36,7 @@ import type {
     ConfigMarkdownOptions,
     ConfigProgramCommand,
     ConfigProgramCommands,
+    ConfigProgramOptions,
     ConfigScopeCommand,
     ConfigSchema,
     ConfigScopeKeys,
@@ -460,7 +461,7 @@ export function createConfigEngine<const TSchema extends ConfigSchema>(
                     >[],
                 >(
                     build: (command: ConfigCommandBuilder<TSchema, Context>) => Commands,
-                    programOptions?: { globalOptions?: readonly CliOption[] }
+                    programOptions?: ConfigProgramOptions<Context, readonly CliOption[]>
                 ) => {
                     const builder = makeCommandBuilder<Context>();
                     const finalize = (commands: unknown) => {
@@ -472,9 +473,7 @@ export function createConfigEngine<const TSchema extends ConfigSchema>(
                                       envPrefix,
                                       ...(envPathOf ? { envPathOf } : {}),
                                   });
-                        return createConfigProgram(resolved as never, {
-                            globalOptions: programOptions?.globalOptions,
-                        });
+                        return createConfigProgram(resolved as never, programOptions);
                     };
                     const result = build(builder);
                     return (isThenable(result) ? result.then(finalize) : finalize(result)) as never;

@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import type { CliCommandContext } from '@deltabox/toolchain/shared';
 
-import { createConfigEngine, configCliCommand, generateConfigCliOptions } from '../src/index.js';
+import { createConfigEngine, configCliCommand, generateConfigCliOptions, generateConfigProgram } from '../src/index.js';
 
 const nativeEnv = { ...process.env };
 
@@ -381,5 +381,36 @@ describe('schema-driven program generation', () => {
         ]);
         await command!.run({}, { config: {} } as never);
         expect(seen[0]).toEqual({ port: 3000 });
+    });
+});
+
+describe('standalone program generation', () => {
+    it('accepts plain command specs and resolves their scoped config', async () => {
+        const schema = {
+            serve: z.object({ port: z.number().default(3000) }),
+        };
+        const seen: unknown[] = [];
+        const commands = generateConfigProgram(schema, {
+            envPrefix: 'DBX_',
+            commands: [
+                {
+                    scope: 'serve',
+                    name: 'serve',
+                    description: 'Serve.',
+                    run: ({ config, values }) => {
+                        seen.push({ config, values });
+                    },
+                },
+            ],
+        });
+        expect(commands.map(command => command.name)).toEqual(['serve']);
+        await commands[0]!.run(
+            { port: 4000 },
+            { config: { serve: { port: 5000 } } } as never
+        );
+        expect(seen[0]).toMatchObject({
+            config: { port: 4000 },
+            values: { port: 4000 },
+        });
     });
 });

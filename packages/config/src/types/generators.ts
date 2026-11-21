@@ -2,7 +2,7 @@ import type { CollectOptions } from './collect.js';
 import type { ConfigEngineOptions } from './engine.js';
 
 /** `.env` file generation options. */
-export interface EnvFileOptions {
+export interface GenerateEnvFileOptions extends GenerateBaseOptions {
     /** Env vars to include. @default all */
     include?: string[];
     /** Env vars to exclude. */
@@ -26,7 +26,7 @@ export interface EnvFileOptions {
 }
 
 /** Env type generation options (`env.ts` + `dbx-env.d.ts`). */
-export interface GenerateEnvTypesOptions {
+export interface GenerateEnvTypesOptions extends GenerateBaseOptions {
     /** Output directory. `false` (or omitted) disables writing. */
     outputDir?: string | false;
     /** The env-var prefix. @default "APP_" */
@@ -56,7 +56,7 @@ export interface GenerateEnvTypesOptions {
 }
 
 /** Config type generation options. */
-export interface GenerateTypesOptions extends Pick<ConfigEngineOptions, 'baseGroup'> {
+export interface GenerateTypesOptions extends GenerateBaseOptions, Pick<ConfigEngineOptions, 'baseGroup'> {
     /** Output directory. `false` (or omitted) disables writing. */
     outputDir?: string | false;
     /**
@@ -106,11 +106,11 @@ export interface GenerateTypesOptions extends Pick<ConfigEngineOptions, 'baseGro
 
 /** Frontmatter callback context. */
 export interface RenderMarkdownFrontmatter {
-    options: GenerateMarkdownOptions;
+    options: Omit<GenerateMarkdownOptions, 'onContent'>;
 }
 
 /** Markdown reference generation options (shared by per-scope and combined renders). */
-export interface RenderMarkdownOptions extends Pick<ConfigEngineOptions, 'baseGroup'> {
+export interface RenderMarkdownOptions extends GenerateBaseOptions, Pick<ConfigEngineOptions, 'baseGroup'> {
     /** Output directory. `false` (or omitted) disables writing. */
     outputDir?: string | false;
     /** Frontmatter toggle, raw body, or callback. @default true */
@@ -170,7 +170,7 @@ export interface GenerateMarkdownOptions extends RenderMarkdownOptions {
 }
 
 /** A single generated markdown page. */
-export interface GenerateMarkdownFileOptions {
+export interface GenerateMarkdownFileOptions extends GenerateBaseOptions {
     /** Page title (frontmatter and `#` heading). */
     title: string;
     /** Frontmatter outline levels. @default [2, 3] */
@@ -180,7 +180,7 @@ export interface GenerateMarkdownFileOptions {
 }
 
 /** Environment-variable reference page options. */
-export interface GenerateEnvMarkdownOptions {
+export interface GenerateEnvMarkdownOptions extends GenerateBaseOptions {
     /** Page title. @default "Environment variables" */
     title?: string;
     /** Frontmatter outline levels. @default [2, 3] */
@@ -220,7 +220,7 @@ export interface RenderConfigFileOptions {
 }
 
 /** JSON Schema generation options. */
-export interface GenerateJsonSchemaOptions extends Pick<ConfigEngineOptions, 'baseGroup'> {
+export interface GenerateJsonSchemaOptions extends GenerateBaseOptions, Pick<ConfigEngineOptions, 'baseGroup'> {
     /** Output file path. When omitted, nothing is written. */
     output?: string | false;
     /** Document metadata overrides. */
@@ -246,7 +246,7 @@ export interface GenerateJsonSchemaOptions extends Pick<ConfigEngineOptions, 'ba
 }
 
 /** CLI reference generation options. */
-export interface GenerateCliDocsOptions {
+export interface GenerateCliDocsOptions extends GenerateBaseOptions {
     /** Page title. @default "CLI reference" */
     title?: string;
     /** Frontmatter outline levels. @default [2, 3] */
@@ -255,6 +255,11 @@ export interface GenerateCliDocsOptions {
     intro?: string;
     /** Command prefix used in headings and links. @default "dbx" */
     prefix?: string;
+}
+
+export interface GenerateBaseOptions {
+    /** Intercept the resolved content. */
+    onContent?: (content: string) => string;
 }
 
 /** Generated output formatting options. */

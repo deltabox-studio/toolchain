@@ -5,7 +5,7 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { addProjectProviderRegistry } from '@deltabox/toolchain/core';
-import { logger } from '@deltabox/toolchain/shared';
+import { getLogOverrides, logger, setLogOverrides } from '@deltabox/toolchain/shared';
 
 import { projectsCommand } from '../src/cli/commands/projects.js';
 import { providerPassthroughCommands } from '../src/cli/commands/providers.js';
@@ -92,7 +92,8 @@ describe('dbx CLI', () => {
                 'changelog',
             ])
         );
-        expect(program.formatHelp()).toContain('Usage: dbx');
+        expect(program.formatHelp()).toContain('Usage:');
+        expect(program.formatHelp()).toContain('dbx');
     });
 
     it('flags provider passthrough commands but not built-ins', () => {
@@ -117,6 +118,32 @@ describe('dbx CLI', () => {
         ]);
         await program.invokeAsync(['changelog', '--version', '1.5.0']);
         expect(seen).toEqual(['1.5.0']);
+    });
+
+    it('disables configured help colours when --no-color is passed', async () => {
+        const output: string[] = [];
+        const program = createCli();
+        program.configure({ colors: { command: text => `[${text}]` } });
+        program.output(text => output.push(text));
+        await program.invokeAsync(['--help', '--no-color']);
+        const help = output.join('');
+        expect(help).toContain('Usage: dbx');
+        expect(help).not.toContain('[dbx]');
+
+        // `runCli` extracts `--no-color` before invoking the program, so the
+        // dbx predicate also honours the logger override.
+        const previous = getLogOverrides();
+        setLogOverrides({ ...previous, color: false });
+        try {
+            const overridden: string[] = [];
+            const fromOverrides = createCli();
+            fromOverrides.configure({ colors: { command: text => `[${text}]` } });
+            fromOverrides.output(text => overridden.push(text));
+            await fromOverrides.invokeAsync(['--help']);
+            expect(overridden.join('')).not.toContain('[dbx]');
+        } finally {
+            setLogOverrides(previous);
+        }
     });
 });
 

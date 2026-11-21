@@ -208,7 +208,7 @@ async function runDiscoveredTool(
     const passthrough = args.some(
         arg =>
             arg === '--help' ||
-            arg === '-h' ||
+            arg === '-H' ||
             arg === '--version' ||
             arg === '-V' ||
             arg.startsWith('--stdin-filepath') ||

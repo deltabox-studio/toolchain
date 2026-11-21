@@ -1,4 +1,4 @@
-import type { PartialDeep, Promisable } from 'type-fest';
+import type { IsNever, PartialDeep, Promisable } from 'type-fest';
 
 import type {
     CliArgument,
@@ -51,7 +51,7 @@ export interface ConfigProgramCommand<
     hidden?: boolean;
     /** Forward unknown options/operands (provider passthroughs). */
     passthrough?: boolean;
-    /** Explicit argv for `program.invoke()` (default `process.argv.slice(2)`). */
+    /** Explicit argv for `program.invoke()`. @default `process.argv.slice(2)` */
     argv?: readonly string[];
     /** Execute this binary instead of the in-process handler. */
     bin?: string;
@@ -549,7 +549,7 @@ export interface GenerateConfigProgramOptions<
      * Explicit command specs. When omitted, one command is generated per
      * command-eligible scope (`cliCommand: false` opts a scope out).
      */
-    commands?: readonly ConfigProgramCommandFor<TSchema, TContext>[];
+    commands?: readonly ConfigProgramCommand<unknown, TContext>[];
 }
 
 /**
@@ -718,6 +718,58 @@ export type ConfigProgramHookItem<TCommands, TGlobalOptions extends readonly Cli
     };
 }[ConfigProgramCommandTarget<TCommands>];
 
+type CliCommandsAny<
+    TCommands = any,
+    TCommandsValue extends Extract<TCommands, readonly any[]> = Extract<TCommands, readonly any[]>,
+> = IsNever<TCommandsValue> extends false ? TCommandsValue : readonly CliCommand[];
+
+/**
+ * Decide whether configured CLI colours are printed. A boolean is static; a
+ * function receives the parsed program global options and the invocation
+ * context and may be async.
+ */
+export type ConfigProgramDisableColors<
+    TContext extends CliCommandContext = CliCommandContext,
+    TGlobalOptions extends readonly CliOption[] = [],
+> =
+    | boolean
+    | ((args: CliOptionValues<TGlobalOptions>, context: TContext) => Promisable<boolean>)
+    | Promisable<(args: CliOptionValues<TGlobalOptions>, context: TContext) => boolean>;
+
+export type ConfigProgramOptions<
+    TContext extends CliCommandContext = CliCommandContext,
+    TGlobalOptions extends readonly CliOption[] = [],
+> = {
+    /** Explicit argv for `program.invoke()`. @default `process.argv.slice(2)` */
+    argv?: readonly string[];
+    /** The program name. @default `'program'` */
+    name?: string;
+    /** Human-readable description. */
+    description?: string;
+    /** Program version. */
+    version?: string;
+    /**
+     * Options inherited by commands. A subcommand sees them only when it
+     * opts in with {@link inherit}.
+     */
+    globalOptions?: TGlobalOptions;
+    /** The host-provided command context. */
+    context?: TContext;
+    /**
+     * Disable the configured CLI colours (help, error, command and option
+     * hooks). A boolean is static; a function receives the parsed program
+     * global options and the invocation context and may be async.
+     * @default `false`
+     */
+    disableColors?: ConfigProgramDisableColors<TContext, TGlobalOptions>;
+    /** Write to a different stdout */
+    writeOut?: (text: string) => void;
+    /** Write to a different stderr */
+    writeErr?: (text: string) => void;
+    /** Program help/error formatting options. */
+    format?: ConfigProgramFormatOptions;
+};
+
 /**
  * A built CLI program: the resolved commands plus the commander-like runtime
  * (`invoke`, hooks and help/error formatting).
@@ -829,7 +881,9 @@ export interface ConfigEngineCliProgram<
         const Global extends readonly CliOption[] = [],
     >(
         build: (command: ConfigCommandBuilder<TSchema, Context>) => Commands,
-        options?: { globalOptions?: Global }
+        options?: Omit<ConfigProgramOptions<Context, Global>, 'globalOptions'> & {
+            globalOptions?: Global;
+        }
     ): ConfigProgram<ResolveConfigProgramCommands<Commands, Context>, Context, Global>;
     /**
      * Build the program's commands asynchronously. The callback is awaited and
@@ -841,7 +895,9 @@ export interface ConfigEngineCliProgram<
         const Global extends readonly CliOption[] = [],
     >(
         build: (command: ConfigCommandBuilder<TSchema, Context>) => Promisable<Commands>,
-        options?: { globalOptions?: Global }
+        options?: Omit<ConfigProgramOptions<Context, Global>, 'globalOptions'> & {
+            globalOptions?: Global;
+        }
     ): Promise<ConfigProgram<ResolveConfigProgramCommands<Commands, Context>, Context, Global>>;
     /** Build one typed command without creating a whole program. */
     createCommand<

@@ -161,8 +161,8 @@ export function usageFor(command: AnyCommand | undefined, name: string): string 
 
 function withHelpOption(options: readonly CliOption[], command?: AnyCommand): CliOption[] {
     const all = [...options];
-    if (!all.some(option => option.flags.includes('--help') || option.flags.includes('-h'))) {
-        all.push({ flags: '-h, --help', description: 'Display help for command' });
+    if (!all.some(option => option.flags.includes('--help') || option.flags.includes('-H'))) {
+        all.push({ flags: '-H, --help', description: 'Display help for command' });
     }
     if (command?.version && !all.some(option => option.flags.includes('--version'))) {
         all.push({ flags: '-V, --version', description: 'Output the version number' });
@@ -246,7 +246,7 @@ function commandFormat(command: AnyCommand | undefined, options: ConfigProgramFo
     const byName = command ? options.commands?.[command.name] : undefined;
     return {
         options,
-        help: byName?.help ?? options.help?.template ?? 'box',
+        help: byName?.help ?? options.help?.template ?? 'plain',
         box: { ...options.help?.box, ...byName?.box },
         error: byName?.error,
     };
@@ -335,7 +335,7 @@ function errorList(error: unknown): ConfigErrorModel['errors'] {
 export function renderError(error: unknown, options: ConfigProgramFormatOptions = {}): string {
     const model: ConfigErrorModel = { errors: errorList(error) };
     const config = options.error ?? {};
-    const template = config.messageOnly ? 'message' : (config.template ?? 'box');
+    const template = config.messageOnly ? 'message' : (config.template ?? 'message');
     if (typeof template === 'function') return template(model, options);
     const messageColor = config.messageColor ?? identity;
     const stackColor = config.stackColor ?? identity;

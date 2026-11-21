@@ -10,6 +10,7 @@ import type { CliCommand, CliCommandContext } from '@deltabox/toolchain/shared';
 import {
     ConfigProgramError,
     createConfigEngine,
+    createConfigProgram,
     renderBox,
     type ResolveConfigProgramCommands,
 } from '../src/index.js';
@@ -429,6 +430,52 @@ describe('global options', () => {
         expect(program.formatHelp('serve')).toContain('--json');
         expect(program.formatHelp('serve')).toContain('--root');
     });
+
+    it('accepts program globals before the command', async () => {
+        const seen: Record<string, unknown>[] = [];
+        const program = engine().cli.program.create(
+            cmd => [
+                cmd('serve', {
+                    name: 'serve',
+                    run: ({ values }) => void seen.push(values),
+                }),
+            ],
+            { globalOptions: [{ flags: '--json', description: 'JSON output.' }] }
+        );
+        await program.invokeAsync(['--json', 'serve']);
+        expect(seen[0]).toMatchObject({ json: true });
+
+        const listProgram = engine().cli.program.create(
+            cmd => [
+                cmd('serve', {
+                    name: 'serve',
+                    run: ({ values }) => void seen.push(values),
+                }),
+            ],
+            {
+                globalOptions: [{ flags: '--tag <value...>', description: 'Tags.' }],
+            }
+        );
+        await listProgram.invokeAsync(['--tag', 'a', 'b', 'serve']);
+        expect(seen[1]).toMatchObject({ tag: ['a', 'b'] });
+    });
+
+    it('accepts a parent global before a subcommand', async () => {
+        const seen: Record<string, unknown>[] = [];
+        const program = engine().cli.program.create(cmd => [
+            cmd('serve')
+                .globalOption('--root <dir>', 'Root.')
+                .command('serve', child =>
+                    child
+                        .name('status')
+                        .inherit()
+                        .run(({ values }) => void seen.push(values))
+                )
+                .run(() => {}),
+        ]);
+        await program.invokeAsync(['serve', '--root', 'x', 'status']);
+        expect(seen[0]).toMatchObject({ root: 'x' });
+    });
 });
 
 describe('program invocation', () => {
@@ -487,6 +534,41 @@ describe('program invocation', () => {
         });
         await program.invokeAsync(['serve', '--no-color']);
         expect(seen[1]).toMatchObject({ color: false });
+    });
+
+    it('rejects invalid number/boolean option values', () => {
+        const program = createConfigProgram([
+            {
+                name: 'serve',
+                description: 'Serve.',
+                options: [
+                    { flags: '--port <value>', description: 'Port.', type: 'number' },
+                    { flags: '--enabled <value>', description: 'Enabled.', type: 'boolean' },
+                ],
+                run: () => {},
+            },
+        ]);
+        expect(() => program.invoke(['serve', '--port', 'nope'])).toThrow(ConfigProgramError);
+        expect(() => program.invoke(['serve', '--enabled', 'maybe'])).toThrow(ConfigProgramError);
+    });
+
+    it('lets a positive flag override a preceding negative form', async () => {
+        const seen: Record<string, unknown>[] = [];
+        const program = createConfigProgram([
+            {
+                name: 'serve',
+                description: 'Serve.',
+                options: [
+                    { flags: '--auto', description: 'Auto.' },
+                    { flags: '--no-auto', description: 'No auto.' },
+                ],
+                run: (values: Record<string, unknown>) => void seen.push(values),
+            },
+        ]);
+        await program.invokeAsync(['serve', '--no-auto', '--auto']);
+        await program.invokeAsync(['serve', '--auto', '--no-auto']);
+        expect(seen[0]).toMatchObject({ auto: true });
+        expect(seen[1]).toMatchObject({ auto: false });
     });
 
     it('supports optional values, variadic values and -- operands', async () => {
@@ -569,7 +651,24 @@ describe('program invocation', () => {
 });
 
 describe('program help and errors', () => {
-    it('renders colourless boxed help by default and plain/custom variants', () => {
+    it('accepts program options through engine.cli.program.create', async () => {
+        const output: string[] = [];
+        const program = engine().cli.program.create(
+            cmd => [cmd('serve', { name: 'serve', description: 'Serve.', run: () => {} })],
+            {
+                name: 'acme',
+                disableColors: true,
+                writeOut: text => output.push(text),
+                format: { colors: { command: text => `[${text}]` } },
+            }
+        );
+        await program.invokeAsync(['--help']);
+        const help = output.join('');
+        expect(help).toContain('Usage: acme');
+        expect(help).not.toContain('[acme]');
+    });
+
+    it('renders colourless boxed help and plain/custom variants', () => {
         const program = engine().cli.program.create(cmd => [
             cmd('serve', {
                 name: 'serve',
@@ -578,6 +677,7 @@ describe('program help and errors', () => {
                 run: () => {},
             }),
         ]);
+        program.configure({ help: { template: 'box' } });
         const boxed = program.formatHelp('serve');
         expect(boxed).toContain('Usage: serve [options]');
         expect(boxed).toContain('--port <value>');
@@ -616,10 +716,92 @@ describe('program help and errors', () => {
         expect(program.formatHelp('serve')).toContain('{serve}');
     });
 
-    it('renders boxed errors by default with stack, and supports variants', () => {
+    it('disables configured colours on demand', async () => {
+        const output: string[] = [];
+        const program = createConfigProgram(
+            [
+                {
+                    name: 'serve',
+                    description: 'Serve.',
+                    options: [{ flags: '--port <value>', description: 'Port.' }],
+                    run: () => {},
+                },
+            ],
+            {
+                globalOptions: [{ flags: '--no-color', description: 'No colour.' }] as const,
+                disableColors: args => {
+                    expectTypeOf(args.color).toEqualTypeOf<boolean | undefined>();
+                    return args.color === false;
+                },
+                writeOut: text => output.push(text),
+            }
+        );
+        program.configure({
+            colors: { command: text => `[${text}]`, option: text => `<${text}>` },
+            error: { template: 'message', messageColor: text => `[${text}]` },
+        });
+
+        // A function resolver applies once it has seen an invocation.
+        expect(program.formatHelp('serve')).toContain('[serve]');
+
+        await program.invokeAsync(['serve', '--help', '--no-color']);
+        const help = output.join('');
+        expect(help).not.toContain('[serve]');
+        expect(help).not.toContain('<--port');
+        expect(help).toContain('--port <value>');
+        expect(program.formatHelp('serve')).not.toContain('[serve]');
+        expect(program.formatError(new Error('boom'))).toBe('boom');
+    });
+
+    it('supports a static disableColors value and async resolvers', async () => {
+        const staticProgram = createConfigProgram(
+            [{ name: 'serve', description: 'Serve.', run: () => {} }],
+            { disableColors: true }
+        );
+        staticProgram.configure({
+            colors: { command: text => `[${text}]` },
+            error: { template: 'message', messageColor: text => `[${text}]` },
+        });
+        expect(staticProgram.formatHelp('serve')).not.toContain('[serve]');
+        expect(staticProgram.formatError(new Error('boom'))).toBe('boom');
+
+        const output: string[] = [];
+        const asyncProgram = createConfigProgram(
+            [{ name: 'serve', description: 'Serve.', run: () => {} }],
+            {
+                globalOptions: [{ flags: '--no-color', description: 'No colour.' }] as const,
+                disableColors: async args => args.color === false,
+                writeOut: text => output.push(text),
+            }
+        );
+        asyncProgram.configure({ colors: { command: text => `[${text}]` } });
+        await asyncProgram.invokeAsync(['serve', '--help', '--no-color']);
+        expect(output.join('')).not.toContain('[serve]');
+        expect(() => asyncProgram.invoke(['serve', '--help', '--no-color'])).toThrow(/invokeAsync/);
+    });
+
+    it('passes parsed globals and the context to disableColors', async () => {
+        const seen: { args: unknown; context: unknown }[] = [];
+        const program = createConfigProgram(
+            [{ name: 'serve', description: 'Serve.', run: () => {} }],
+            {
+                globalOptions: [{ flags: '--no-color', description: 'No colour.' }] as const,
+                disableColors: (args, context) => {
+                    seen.push({ args, context });
+                    return false;
+                },
+            }
+        );
+        const context = { cwd: '/work' };
+        await program.invokeAsync(['serve', '--no-color'], context);
+        expect(seen).toEqual([{ args: { color: false }, context }]);
+    });
+
+    it('renders boxed errors with stack, and supports variants', () => {
         const program = engine().cli.program.create(cmd => [
             cmd('serve', { name: 'serve', run: () => {} }),
         ]);
+        program.configure({ error: { template: 'box' } });
         const error = new Error('boom');
         const boxed = program.formatError(error);
         expect(boxed).toContain('boom');

@@ -539,7 +539,10 @@ export function keepsCliPath(
         excludePaths?: readonly string[];
     }
 ): boolean {
-    if (options.pathPrefix && !path.startsWith(options.pathPrefix)) return false;
+    if (options.pathPrefix) {
+        const prefix = options.pathPrefix.replace(/\.+$/, '');
+        if (path !== prefix && !path.startsWith(`${prefix}.`)) return false;
+    }
     if (options.includePaths && !matchesPath(path, options.includePaths)) return false;
     if (options.excludePaths && matchesPath(path, options.excludePaths)) return false;
     return true;

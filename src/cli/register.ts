@@ -37,11 +37,11 @@ export function isPassthroughCommand(): boolean {
  * clack's intro/outro framing. This is the only dbx-specific layer the generic
  * config program needs.
  */
-export function withCliContext(
-    commands: readonly CliCommand[],
+export function withCliContext<TCommands extends readonly CliCommand[]>(
+    commands: TCommands,
     parent = '',
     inheritedOnError?: (error: unknown, context: ToolchainCommandContext) => void | Promise<void>
-): CliCommand[] {
+): TCommands {
     return commands.map(command => {
         const label = `${parent} ${command.name}`.trim();
         const onError = command.onError ?? inheritedOnError;
@@ -104,5 +104,5 @@ export function withCliContext(
                 : {}),
         };
         return wrapped;
-    });
+    }) as unknown as TCommands;
 }

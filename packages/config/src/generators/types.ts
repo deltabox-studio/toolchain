@@ -274,6 +274,7 @@ function renderConfigTypes(
     schema: Schema,
     options: GenerateTypesOptions = {}
 ): string {
+    let content = '';
     const meta = metaOf(schema);
     const interfaceName =
         options.interfaceNames?.[scopeName] ??
@@ -286,7 +287,8 @@ function renderConfigTypes(
     // A hand-written override replaces the generated interface verbatim.
     const override = options.overrides?.[scopeName];
     if (override !== undefined) {
-        return wrap(`${override.trimEnd()}\n${aliases}`.trimEnd());
+        content = wrap(`${override.trimEnd()}\n${aliases}`.trimEnd());
+        return options.onContent?.(content) ?? content;
     }
 
     const allowExtraKeys = (schema as { allowExtraKeys?: boolean }).allowExtraKeys === true;
@@ -294,9 +296,10 @@ function renderConfigTypes(
     // A non-object root (enum, union, record, ...) is rendered as a type alias.
     if (!schema.properties) {
         const tsType = (schema as { tsType?: string }).tsType ?? 'unknown';
-        return wrap(
+        content = wrap(
             `${withInterfaceJsDoc(`export type ${interfaceName} = ${tsType};`, schema, options)}\n${aliases}`
         );
+        return options.onContent?.(content) ?? content;
     }
 
     const tagged = withJsDocTags(schema, options);
@@ -307,7 +310,8 @@ function renderConfigTypes(
     if (!hasBase) {
         let body = withInterfaceJsDoc(tidyInterface(tagged, interfaceName), schema, options);
         if (allowExtraKeys) body = withIndexSignature(body);
-        return wrap(`${body}\n${aliases}`);
+        content = wrap(`${body}\n${aliases}`);
+        return options.onContent?.(content) ?? content;
     }
 
     const baseInterface = tidyInterface(base, `${interfaceName}Base`);
@@ -324,7 +328,8 @@ function renderConfigTypes(
     mainInterface = withInterfaceJsDoc(mainInterface, schema, options);
     if (allowExtraKeys) mainInterface = withIndexSignature(mainInterface);
 
-    return wrap(`${baseInterface}\n${mainInterface}\n${aliases}`);
+    content = wrap(`${baseInterface}\n${mainInterface}\n${aliases}`);
+    return options.onContent?.(content) ?? content;
 }
 
 /** Render every config type file, keyed by scope name. */

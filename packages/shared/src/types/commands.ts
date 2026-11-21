@@ -21,7 +21,7 @@ export interface CliOption {
      * the generated command passes the parsed value through config validation.
      */
     path?: string;
-    /** The config value type used to parse {@link path} (default `string`). */
+    /** The config value type used to parse {@link path}. @default `string` */
     type?: string;
     /** Coerce one raw CLI string before it is applied at {@link path}. */
     parse?: (value: string) => unknown;
@@ -163,7 +163,7 @@ export interface CliArgument {
     description: string;
     /** Accept one value (default) or many (variadic, collected into an array). */
     variadic?: boolean;
-    /** Whether the argument is required (default true). */
+    /** Whether the argument is required. @default `true` */
     required?: boolean;
 }
 
@@ -248,4 +248,21 @@ export function defineCliCommand<
     command: CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions>
 ): CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions> {
     return command;
+}
+
+/**
+ * Define multiple `CliCommand`'s while inferring `values` from the literal `options`
+ * list. The returned descriptor keeps the inferred option tuple.
+ */
+export function defineCliCommands<
+    const TOptions extends readonly CliOption[] = readonly CliOption[],
+    TContext extends CliCommandContext = ToolchainCommandContext,
+    TCommands extends readonly CliCommand<any, TContext>[] = readonly any[],
+    TScope extends string | undefined = string | undefined,
+    TName extends string = string,
+    TGlobalOptions extends readonly CliOption[] = readonly CliOption[],
+>(
+    commands: readonly CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions>[]
+): readonly CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions>[] {
+    return commands;
 }

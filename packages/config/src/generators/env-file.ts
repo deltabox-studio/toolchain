@@ -3,7 +3,7 @@
  */
 
 import { collectDefinitions, DEFAULT_ENV_PREFIX, pathOf } from '../collect.js';
-import type { ConfigDef, ConfigSchema, EnvFileOptions } from '../types/index.js';
+import type { ConfigDef, ConfigSchema, GenerateEnvFileOptions } from '../types/index.js';
 
 /** Kinds that cannot be expressed as a single env value. */
 const COMPLEX_KINDS = new Set(['object', 'record', 'map', 'set', 'tuple', 'unknown', 'any']);
@@ -52,7 +52,7 @@ export function quoteEnvValue(value: string): string {
  * Generate `.env` content from the config schemas. Secrets and required-without-
  * default vars are emitted blank so operators fill them in.
  */
-export function generateEnvFile(schema: ConfigSchema, options: EnvFileOptions = {}): string {
+export function generateEnvFile(schema: ConfigSchema, options: GenerateEnvFileOptions = {}): string {
     const envPrefix = options.envPrefix ?? DEFAULT_ENV_PREFIX;
     const sep = options.scopeSeparator ?? '----';
     const vars = collectDefinitions(schema, { envPrefix, envPathOf: options.envPathOf }).filter(
@@ -97,5 +97,6 @@ export function generateEnvFile(schema: ConfigSchema, options: EnvFileOptions = 
             lines.push('', `# ${sep} EXTRA ${sep}`, ...extra);
         }
     }
-    return `${lines.join('\n')}\n`;
+    const content = `${lines.join('\n')}\n`;
+    return options.onContent?.(content) ?? content;
 }

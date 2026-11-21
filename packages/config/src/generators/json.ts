@@ -298,7 +298,8 @@ export async function generateConfigJsonSchema(
 
     if (typeof options.output === 'string') {
         fs.mkdirSync(path.dirname(options.output), { recursive: true });
-        fs.writeFileSync(options.output, `${JSON.stringify(doc, null, 4)}\n`, 'utf-8');
+        const content = `${JSON.stringify(doc, null, 4)}\n`;
+        fs.writeFileSync(options.output, options.onContent?.(content) ?? content, 'utf-8');
     }
 
     return doc;

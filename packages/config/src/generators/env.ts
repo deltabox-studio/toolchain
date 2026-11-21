@@ -46,7 +46,8 @@ export function generateEnv(schema: ConfigSchema, options: GenerateEnvTypesOptio
         lines.push(`    ${def.name}?: string;`);
     }
     lines.push('}');
-    return `${lines.join('\n').trimEnd()}\n`;
+    const content = `${lines.join('\n').trimEnd()}\n`;
+    return options.onContent?.(content) ?? content;
 }
 
 /** Render the ambient `.d.ts` content. */
@@ -77,7 +78,7 @@ declare module 'vite' {
     interface ImportMetaEnv extends ${viteEnvInterface} {}
 }`
         : '';
-    return `${header}import type { ${envInterface}, ${viteEnvInterface} } from '${importPath}';
+    const content = `${header}import type { ${envInterface}, ${viteEnvInterface} } from '${importPath}';
 
 declare global {
     namespace NodeJS {
@@ -89,6 +90,7 @@ declare global {
 
 export {};
 `;
+    return options.onContent?.(content) ?? content;
 }
 
 /** Generate env type file contents (and optionally write them). */

@@ -18,6 +18,7 @@ import type {
     ConfigProgram,
     ConfigProgramCommands,
     ConfigProgramHookItem,
+    ConfigProgramOptions,
     ResolveConfigProgramCommands,
 } from '../types/cli/index.js';
 import type { ConfigProgramFormatOptions } from '../types/format.js';
@@ -29,6 +30,7 @@ import {
     renderError,
     renderProgramHelp,
 } from './format.js';
+import type { Awaitable } from '@deltabox/toolchain-shared';
 
 type AnyCommand = CliCommand<any, any>;
 
@@ -51,8 +53,16 @@ interface ProgramState<TContext extends CliCommandContext> {
     explicitArgv?: readonly string[];
     context?: TContext;
     format: ConfigProgramFormatOptions;
+    disableColors?: RuntimeDisableColors<TContext>;
+    colorsDisabled: boolean;
     hooks: RuntimeHook[];
 }
+
+/** The runtime shape of {@link ConfigProgramOptions.disableColors}. */
+type RuntimeDisableColors<TContext extends CliCommandContext> =
+    | boolean
+    | ((args: Record<string, unknown>, context: TContext) => Awaitable<boolean>)
+    | Promise<(args: Record<string, unknown>, context: TContext) => boolean>;
 
 function listOf<TContext extends CliCommandContext>(
     commands: ConfigProgramCommands<TContext>
@@ -218,22 +228,83 @@ function matchesCommand(command: CliCommand, token: string): boolean {
     );
 }
 
-function selectCommand(commands: readonly AnyCommand[], argv: readonly string[]): Selection {
+function selectCommand(
+    commands: readonly AnyCommand[],
+    argv: readonly string[],
+    globalOptions: readonly CliOption[] = []
+): Selection {
     let level = [...commands];
     let path: string[] = [];
     let rest = [...argv];
+    let leading: string[] = [];
     let command: AnyCommand | undefined;
     let ancestors: AnyCommand[] = [];
 
     while (true) {
         const token = rest[0];
-        if (token === '--help' || token === '-h') {
+        if (token === '--help' || token === '-H') {
             return {
                 help: { ...(command ? { command } : {}), path, ancestors },
             };
         }
         if ((token === '--version' || token === '-V') && command?.version !== undefined) {
             return { version: { command, value: command.version } };
+        }
+        // Global options may appear before the command (`--json serve`). Keep
+        // them in the rest so the selected command still parses them.
+        if (token !== undefined && token.startsWith('-') && token !== '--') {
+            const globals = [
+                ...globalOptions,
+                ...ancestors.flatMap(ancestor => ancestor.globalOptions ?? []),
+            ];
+            const definitions = globals.length > 0 ? optionDefinitions({ ...level[0], options: globals } as AnyCommand) : [];
+            const def = definitions.find(
+                candidate =>
+                    (candidate.negated ? candidate.long === token : candidate.long === token) ||
+                    (!candidate.negated && candidate.short === token)
+            );
+            if (!def) {
+                // A sole root command may accept any option; leave unknown
+                // options for its own parser. For a real command level an
+                // unknown option is handled by the selected command.
+                if (command || level.length !== 1 || (level[0]!.commands?.length ?? 0) > 0) {
+                    break;
+                }
+            } else {
+                let consumed = 1;
+                if (def.takesValue && !token.includes('=')) {
+                    const next = rest[1];
+                    if (
+                        def.multiple &&
+                        next !== undefined &&
+                        next !== '--' &&
+                        !next.startsWith('-')
+                    ) {
+                        let cursor = 1;
+                        while (
+                            rest[cursor] !== undefined &&
+                            rest[cursor] !== '--' &&
+                            !rest[cursor]!.startsWith('-') &&
+                            !level.some(candidate => matchesCommand(candidate, rest[cursor]!))
+                        ) {
+                            cursor += 1;
+                        }
+                        consumed = cursor;
+                    } else if (
+                        !(
+                            def.optionalValue &&
+                            (next === undefined || next === '--' || next.startsWith('-'))
+                        ) &&
+                        next !== undefined &&
+                        next !== '--'
+                    ) {
+                        consumed = 2;
+                    }
+                }
+                leading.push(...rest.slice(0, consumed));
+                rest = rest.slice(consumed);
+                continue;
+            }
         }
         if (token !== undefined && !token.startsWith('-')) {
             const match = level.find(candidate => matchesCommand(candidate, token));
@@ -254,12 +325,12 @@ function selectCommand(commands: readonly AnyCommand[], argv: readonly string[])
         if (!command && level.length === 1 && (level[0]!.commands?.length ?? 0) === 0) {
             command = level[0]!;
             ancestors = [command];
-            return { selected: { command, path: [command.name], rest, ancestors } };
+            return { selected: { command, path: [command.name], rest: [...leading, ...rest], ancestors } };
         }
         break;
     }
 
-    if (command) return { selected: { command, path, rest, ancestors } };
+    if (command) return { selected: { command, path, rest: [...leading, ...rest], ancestors } };
     return { missingCommand: { level } };
 }
 
@@ -275,6 +346,9 @@ function parseCommandArgs(
 ): ParsedCommand {
     const defs = optionDefinitions(command);
     const negated: Record<string, boolean> = {};
+    const negatedKeys = new Set(defs.filter(def => def.negated).map(def => def.key));
+    const lastPositive = new Map<string, number>();
+    const lastNegated = new Map<string, number>();
     const processed: string[] = [];
     let afterSeparator = false;
     for (let index = 0; index < argv.length; index++) {
@@ -292,6 +366,7 @@ function parseCommandArgs(
             const def = defs.find(candidate => candidate.negated && candidate.long === token);
             if (def) {
                 negated[def.key] = false;
+                lastNegated.set(def.key, index);
                 continue;
             }
         }
@@ -299,6 +374,7 @@ function parseCommandArgs(
             candidate =>
                 !candidate.negated && (candidate.long === token || candidate.short === token)
         );
+        if (def && negatedKeys.has(def.key)) lastPositive.set(def.key, index);
         if (def?.takesValue && !token.includes('=')) {
             const next = argv[index + 1];
             // `--restore [kind]` is a switch when no value follows.
@@ -371,6 +447,13 @@ function parseCommandArgs(
         if (value === undefined) continue;
         const def = findLastDefinition(defs, key);
         const coerced = coerceValue(def, value);
+        const declaredType = def?.option.type;
+        if (declaredType === 'number' || declaredType === 'boolean') {
+            const items = Array.isArray(coerced) ? coerced : [coerced];
+            if (items.some(item => typeof item !== declaredType)) {
+                throw new ConfigProgramError('invalidValue', String(value), format);
+            }
+        }
         if (def?.option.choices && def.option.choices.length > 0) {
             const list = Array.isArray(coerced) ? coerced : [coerced];
             for (const item of list) {
@@ -389,7 +472,12 @@ function parseCommandArgs(
         }
         values[key] = coerced;
     }
-    for (const [key, value] of Object.entries(negated)) values[key] = value;
+    for (const [key, value] of Object.entries(negated)) {
+        // A positive flag after the negated one wins; otherwise the last
+        // `--no-*` occurrence disables the value.
+        if ((lastPositive.get(key) ?? -1) > (lastNegated.get(key) ?? -1)) continue;
+        values[key] = value;
+    }
 
     return { values, positionals: parsed.positionals };
 }
@@ -432,6 +520,132 @@ function applyArguments(
         throw new ConfigProgramError('excessArguments', positionals.slice(index).join(' '), format);
     }
     return out;
+}
+
+/** Strip every configured colour hook (program, help, error and per-command). */
+function withoutColors(options: ConfigProgramFormatOptions): ConfigProgramFormatOptions {
+    const box = options.help?.box;
+    const errorBox = options.error?.box;
+    return {
+        ...options,
+        colors: {},
+        help: {
+            ...options.help,
+            colors: {},
+            ...(box ? { box: { ...box, color: undefined } } : {}),
+        },
+        error: {
+            ...options.error,
+            messageColor: undefined,
+            stackColor: undefined,
+            ...(errorBox ? { box: { ...errorBox, color: undefined } } : {}),
+        },
+        options: {},
+        commands: Object.fromEntries(
+            Object.entries(options.commands ?? {}).map(([name, command]) => [
+                name,
+                {
+                    ...command,
+                    colors: {},
+                    ...(command.box
+                        ? { box: { ...command.box, color: undefined } }
+                        : {}),
+                },
+            ])
+        ),
+    };
+}
+
+/** Parse only the program-level globals from the raw argv (leniently). */
+function globalArgsOf<TContext extends CliCommandContext>(
+    state: ProgramState<TContext>,
+    argv: readonly string[]
+): Record<string, unknown> {
+    try {
+        return parseCommandArgs(
+            {
+                name: '',
+                description: '',
+                options: state.globalOptions,
+                passthrough: true,
+            } as AnyCommand,
+            argv,
+            state.format
+        ).values;
+    } catch {
+        return {};
+    }
+}
+
+/** Resolve {@link ProgramState.disableColors} for one invocation. */
+async function resolveDisableColors<TContext extends CliCommandContext>(
+    state: ProgramState<TContext>,
+    argv: readonly string[],
+    context: TContext
+): Promise<boolean> {
+    const option = state.disableColors;
+    if (option === undefined) return false;
+    const args = globalArgsOf(state, argv);
+    const resolved = await option;
+    if (typeof resolved === 'boolean') return resolved;
+    if (typeof resolved === 'function') return Boolean(await resolved(args, context));
+    return false;
+}
+
+/** Synchronous counterpart of {@link resolveDisableColors} (`invoke()`). */
+function resolveDisableColorsSync<TContext extends CliCommandContext>(
+    state: ProgramState<TContext>,
+    argv: readonly string[],
+    context: TContext
+): boolean {
+    const option = state.disableColors;
+    if (option === undefined) return false;
+    if (isThenable(option)) {
+        throw new Error(
+            '`disableColors` is asynchronous; use `program.invokeAsync()` for async resolvers.'
+        );
+    }
+    if (typeof option === 'boolean') return option;
+    if (typeof option === 'function') {
+        const result = option(globalArgsOf(state, argv), context);
+        if (isThenable(result)) {
+            // The resolver may already be running; swallow its eventual
+            // rejection so the synchronous error below stays the only one.
+            void Promise.resolve(result).catch(() => {});
+            throw new Error(
+                '`disableColors` is asynchronous; use `program.invokeAsync()` for async resolvers.'
+            );
+        }
+        return Boolean(result);
+    }
+    return false;
+}
+
+/** The format options for the last/current invocation. */
+function formatForState<TContext extends CliCommandContext>(
+    state: ProgramState<TContext>
+): ConfigProgramFormatOptions {
+    const disabled =
+        typeof state.disableColors === 'boolean' ? state.disableColors : state.colorsDisabled;
+    return disabled ? withoutColors(state.format) : state.format;
+}
+
+async function formatForInvocation<TContext extends CliCommandContext>(
+    state: ProgramState<TContext>,
+    argv: readonly string[],
+    context: TContext
+): Promise<ConfigProgramFormatOptions> {
+    state.colorsDisabled = await resolveDisableColors(state, argv, context);
+    return formatForState(state);
+}
+
+function formatForSyncInvocation<TContext extends CliCommandContext>(
+    state: ProgramState<TContext>,
+    argv: readonly string[],
+    context: TContext
+): ConfigProgramFormatOptions {
+    state.colorsDisabled = resolveDisableColorsSync(state, argv, context);
+    return formatForState(state);
 }
 
 function binInvocation(
@@ -537,11 +751,12 @@ async function executeAsync<TContext extends CliCommandContext>(
     argv: readonly string[],
     context: TContext
 ): Promise<void> {
+    const format = await formatForInvocation(state, argv, context);
     if (state.version && (argv[0] === '--version' || argv[0] === '-V')) {
         writeProgramOut(state, state.version);
         return;
     }
-    const selection = selectCommand(state.list, argv);
+    const selection = selectCommand(state.list, argv, state.globalOptions);
     if (selection.help) {
         const globals = applicableGlobalOptions(
             state.globalOptions,
@@ -553,13 +768,13 @@ async function executeAsync<TContext extends CliCommandContext>(
                 ? renderCommandHelp(
                       withGlobalOptions(selection.help.command, globals),
                       selection.help.path.slice(0, -1),
-                      state.format
+                      format
                   )
                 : renderProgramHelp(
                       state.name,
                       state.description,
                       state.list,
-                      state.format,
+                      format,
                       state.globalOptions
                   )
         );
@@ -573,7 +788,7 @@ async function executeAsync<TContext extends CliCommandContext>(
         throw new ConfigProgramError(
             'unknownCommand',
             selection.unknownCommand.input,
-            state.format,
+            format,
             suggest(
                 selection.unknownCommand.input,
                 selection.unknownCommand.level.flatMap(command => [
@@ -585,17 +800,17 @@ async function executeAsync<TContext extends CliCommandContext>(
         );
     }
     if (selection.missingCommand || !selection.selected) {
-        throw new ConfigProgramError('missingCommand', '', state.format);
+        throw new ConfigProgramError('missingCommand', '', format);
     }
     const { command, path: commandPath, rest, ancestors } = selection.selected;
     const globals = applicableGlobalOptions(state.globalOptions, ancestors);
-    if (hasTokenBeforeSeparator(rest, ['--help', '-h'])) {
+    if (hasTokenBeforeSeparator(rest, ['--help', '-H'])) {
         writeProgramOut(
             state,
             renderCommandHelp(
                 withGlobalOptions(command, globals),
                 commandPath.slice(0, -1),
-                state.format
+                format
             )
         );
         return;
@@ -604,8 +819,8 @@ async function executeAsync<TContext extends CliCommandContext>(
         writeProgramOut(state, command.version);
         return;
     }
-    const parsed = parseCommandArgs(withGlobalOptions(command, globals), rest, state.format);
-    const values = applyArguments(command, parsed.values, parsed.positionals, rest, state.format);
+    const parsed = parseCommandArgs(withGlobalOptions(command, globals), rest, format);
+    const values = applyArguments(command, parsed.values, parsed.positionals, rest, format);
     const payload = hookPayload(command, values, context);
 
     try {
@@ -639,11 +854,12 @@ function executeSync<TContext extends CliCommandContext>(
     argv: readonly string[],
     context: TContext
 ): void {
+    const format = formatForSyncInvocation(state, argv, context);
     if (state.version && (argv[0] === '--version' || argv[0] === '-V')) {
         writeProgramOut(state, state.version);
         return;
     }
-    const selection = selectCommand(state.list, argv);
+    const selection = selectCommand(state.list, argv, state.globalOptions);
     if (selection.help || selection.version) {
         // Re-use the async path for pure output (no user code).
         if (selection.help?.command) {
@@ -652,7 +868,7 @@ function executeSync<TContext extends CliCommandContext>(
                 renderCommandHelp(
                     selection.help.command,
                     selection.help.path.slice(0, -1),
-                    state.format
+                    format
                 )
             );
         } else if (selection.help) {
@@ -662,7 +878,7 @@ function executeSync<TContext extends CliCommandContext>(
                     state.name,
                     state.description,
                     state.list,
-                    state.format,
+                    format,
                     state.globalOptions
                 )
             );
@@ -675,7 +891,7 @@ function executeSync<TContext extends CliCommandContext>(
         throw new ConfigProgramError(
             'unknownCommand',
             selection.unknownCommand.input,
-            state.format,
+            format,
             suggest(
                 selection.unknownCommand.input,
                 selection.unknownCommand.level.flatMap(command => [
@@ -687,17 +903,17 @@ function executeSync<TContext extends CliCommandContext>(
         );
     }
     if (selection.missingCommand || !selection.selected) {
-        throw new ConfigProgramError('missingCommand', '', state.format);
+        throw new ConfigProgramError('missingCommand', '', format);
     }
     const { command, path: commandPath, rest, ancestors } = selection.selected;
     const globals = applicableGlobalOptions(state.globalOptions, ancestors);
-    if (hasTokenBeforeSeparator(rest, ['--help', '-h'])) {
+    if (hasTokenBeforeSeparator(rest, ['--help', '-H'])) {
         writeProgramOut(
             state,
             renderCommandHelp(
                 withGlobalOptions(command, globals),
                 commandPath.slice(0, -1),
-                state.format
+                format
             )
         );
         return;
@@ -706,8 +922,8 @@ function executeSync<TContext extends CliCommandContext>(
         writeProgramOut(state, command.version);
         return;
     }
-    const parsed = parseCommandArgs(withGlobalOptions(command, globals), rest, state.format);
-    const values = applyArguments(command, parsed.values, parsed.positionals, rest, state.format);
+    const parsed = parseCommandArgs(withGlobalOptions(command, globals), rest, format);
+    const values = applyArguments(command, parsed.values, parsed.positionals, rest, format);
     const payload = hookPayload(command, values, context);
 
     const assertSync = (value: unknown, label: string): void => {
@@ -807,17 +1023,7 @@ export function createConfigProgram<
     TGlobalOptions extends readonly CliOption[] = [],
 >(
     commands: TCommands,
-    options: {
-        argv?: readonly string[];
-        context?: TContext;
-        globalOptions?: readonly CliOption[];
-        name?: string;
-        description?: string;
-        version?: string;
-        writeOut?: (text: string) => void;
-        writeErr?: (text: string) => void;
-        format?: ConfigProgramFormatOptions;
-    } = {}
+    options: ConfigProgramOptions<TContext, TGlobalOptions> = {}
 ): ConfigProgram<ResolveConfigProgramCommands<TCommands, TContext>, TContext, TGlobalOptions> {
     const state: ProgramState<TContext> = {
         commands,
@@ -830,7 +1036,13 @@ export function createConfigProgram<
         ...(options.writeErr ? { writeErr: options.writeErr } : {}),
         ...(options.argv ? { explicitArgv: options.argv } : {}),
         ...(options.context ? { context: options.context } : {}),
+        ...(options.disableColors !== undefined
+            ? {
+                  disableColors: options.disableColors as unknown as RuntimeDisableColors<TContext>,
+              }
+            : {}),
         format: mergeFormatOptions({}, options.format),
+        colorsDisabled: false,
         hooks: [],
     };
 
@@ -885,16 +1097,17 @@ export function createConfigProgram<
             return program;
         },
         formatHelp(command) {
+            const format = formatForState(state);
             if (typeof command === 'string') {
                 const found = findCommand(state.list, command);
-                if (!found) throw new ConfigProgramError('unknownCommand', command, state.format);
+                if (!found) throw new ConfigProgramError('unknownCommand', command, format);
                 return renderCommandHelp(
                     withGlobalOptions(found, [
                         ...state.globalOptions,
                         ...(found.globalOptions ?? []),
                     ]),
                     [],
-                    state.format
+                    format
                 );
             }
             if (command) {
@@ -904,19 +1117,19 @@ export function createConfigProgram<
                         ...(command.globalOptions ?? []),
                     ]),
                     [],
-                    state.format
+                    format
                 );
             }
             return renderProgramHelp(
                 state.name,
                 state.description,
                 state.list,
-                state.format,
+                format,
                 state.globalOptions
             );
         },
         formatError(error) {
-            return renderError(error, state.format);
+            return renderError(error, formatForState(state));
         },
         invoke(argv, context) {
             const resolved = resolveInvocation(state, argv, context);

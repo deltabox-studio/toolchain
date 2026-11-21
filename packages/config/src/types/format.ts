@@ -6,9 +6,9 @@ export type ConfigFormatColor<T = unknown> = (text: string, item?: T) => string;
 /** Colour hooks shared by commands, options, values, descriptions and usage. */
 export interface ConfigFormatColors {
     /** Command names in usage lines and command lists. */
-    command?: ConfigFormatColor<CliCommand<any, any>>;
+    command?: ConfigFormatColor;
     /** Option terms (`--json`, `-o, --out <path>`). */
-    option?: ConfigFormatColor<CliOption>;
+    option?: ConfigFormatColor;
     /** Value placeholders (`<path>`, `[kind]`). */
     value?: ConfigFormatColor<string>;
     /** Descriptions (of commands, options and arguments). */
@@ -19,7 +19,7 @@ export interface ConfigFormatColors {
 
 /** Rounded-box renderer options. */
 export interface ConfigBoxOptions {
-    /** Padding around the content (default one space on every side). */
+    /** Padding around the content. @default `1` */
     padding?:
         | number
         | {
