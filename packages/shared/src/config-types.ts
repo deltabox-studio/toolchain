@@ -1405,11 +1405,11 @@ export interface ToolchainTsconfigAliasAutoSetting {
     /**
      * Rewrite the alias keys auto-wiring generates (custom keys are preserved). Patterns are
      * URL-rewrite style: a string is a regular-expression source and replacements support `$1`, `$2`,
-     * ... capture groups. Examples: `{ "^@org/(.+)$": "@org/pkg/$1" }` (string patterns), `[{
-     * pattern: /^@org\/(.+)$/, replacement: "@org/pkg/$1" }]` (RegExp patterns), `[{ pattern:
-     * ["^@org/a$", "^@org/b$"], replacement: "@org/x" }]` (an array of keys), and an array of such
-     * rules (applied in order; the first matching rule wins). `RegExp` patterns are only available
-     * from TS/JS configs; JSON configs use string patterns.
+     * ... capture groups. Examples: `{ "^@org/(.+)$": "@org/pkg/$1" }` (string patterns), `[{ pattern:
+     * /^@org\/(.+)$/, replacement: "@org/pkg/$1" }]` (RegExp patterns), `[{ pattern: ["^@org/a$",
+     * "^@org/b$"], replacement: "@org/x" }]` (an array of keys), and an array of such rules (applied
+     * in order; the first matching rule wins). `RegExp` patterns are only available from TS/JS
+     * configs; JSON configs use string patterns.
      */
     rewriteAlias?: ToolchainTsconfigAliasRewrite;
     /**

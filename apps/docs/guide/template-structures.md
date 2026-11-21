@@ -1,8 +1,6 @@
 # Template and registry structures
 
-These trees are rendered with
-[`vitepress-plugin-folder-tree`](https://github.com/s00d/vitepress-plugin-folder-tree).
-They show the files each builtin template produces and how the Vite+ provider
+These trees show the files each builtin template produces and how the Vite+ provider
 templates, custom templates, providers and registries are laid out.
 
 > The package-manager catalog file depends on the chosen manager: `.yarnrc.yml`

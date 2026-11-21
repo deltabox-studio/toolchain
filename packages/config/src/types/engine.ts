@@ -111,7 +111,7 @@ export type ConfigMarkdownOptions<TSchema> = Omit<GenerateMarkdownOptions, 'cliS
 export interface ConfigEngineEnvTypes {
     /** Render the env typing files, keyed by file name. */
     generate<const O extends GenerateEnvTypesOptions = {}>(
-        options?: O
+        options?: GenerateEnvTypesOptions & O
     ): Record<EnvTypeFileKeys<O>, string>;
     /** Render and write the env typing files; returns the written paths. */
     write(options: GenerateEnvTypesOptions & { outputDir: string }): string[];

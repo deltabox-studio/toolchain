@@ -6,17 +6,37 @@
 
 Provides a sidebar for managing projects.
 
-VS Code extension for **deltabox toolchain** — a superset of [Vite+](https://viteplus.dev) with project synchronization, a config generator, tsconfig management, MCP server, CI and changelog automation, providers, catalogs and managed files. Use the toolchain as a Vite/Vite+ plugin or standalone.
+`@deltabox/toolchain` itself is a config-driven layer around [Vite+](https://viteplus.dev).
+It exists to remove the glue work that appears once a project grows beyond a
+single package: the same settings spread across a dozen files, generated files
+that drift, and release chores that are easy to get wrong.
 
-- **Project synchronization** — keep workspaces, configs, docs and CI up to date.
-- **Save and use templates (local/remote)** so you never have to scaffold the same projects over and over again.
-- **Generate** config types, env variables, cli flags, markdown and JSON schemas, so your codebase stays consistent, validated and well-documented.
-- **Automate CI, changelogs and releases** for your project and workspaces.
-- **Use it as a Vite/Vite+ plugin or standalone** — the plugin is optional.
+You describe the project once, and the toolchain keeps the rest in sync.
 
-See the [list of features](https://github.com/deltabox-studio/toolchain#features).
+<details>
+<summary><strong>Features</strong></summary>
 
-See docs [here](https://toolchain.deltabox.studio/).
+- Project synchronization
+- Config-driven
+- Config generator
+- Vite / Vite+ plugin (optional)
+- Changelogs & releases
+- CI automation
+- tsconfig management
+- Providers
+- Catalogs
+- Templates
+- Migrations
+- MCP server
+- VS Code extension
+- Editor first
+- Monorepo aware
+
+---
+
+</details>
+
+Documentation, guides and examples at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
 
 See all the [commands](#commands) below.
 

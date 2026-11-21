@@ -8,38 +8,17 @@
 [![tests](https://img.shields.io/github/actions/workflow/status/deltabox-studio/toolchain/ci.yml?label=tests&logo=github)](https://github.com/deltabox-studio/toolchain/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/@deltabox/toolchain.svg?color=cb3837&label=npm)](https://www.npmjs.com/package/@deltabox/toolchain)
 
-**deltabox toolchain** is a superset of [Vite+](https://viteplus.dev) with:
+`@deltabox/toolchain` is a config-driven layer around [Vite+](https://viteplus.dev).
+It exists to remove the glue work that appears once a project grows beyond a
+single package: the same settings spread across a dozen files, generated files
+that drift, and release chores that are easy to get wrong.
 
-- Project synchronization
-- Config generator
-- Tsconfig management
-- MCP server
-- CI/changelog automation
-- Providers
-- Catalogs
-- A VS Code extension
-- And more...
+You describe the project once, and the toolchain keeps the rest in sync.
 
-Use it as a Vite/Vite+ plugin or standalone `dbx.config.*`.
-
-See the [list of features](#features) below.
-
-See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
-
-Documentation, guides and examples at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
-
-## Why use this?
-
-Curious what the toolchain fixes and who it is for? Read
-[Why use this?](https://toolchain.deltabox.studio/guide/why-use-this) for the
-problems it removes, the core features and when it might not fit.
-
-## Table of contents
+<details>
+<summary><strong>Table of contents</strong></summary>
 
 - [deltabox toolchain](#deltabox-toolchain)
-    - [Why use this?](#why-use-this)
-    - [Table of contents](#table-of-contents)
-    - [Features](#features)
     - [Install](#install)
     - [Quickstart](#quickstart)
     - [Config generator](#config-generator)
@@ -52,25 +31,32 @@ problems it removes, the core features and when it might not fit.
     - [Troubleshooting](#troubleshooting)
     - [License](#license)
 
-## Features
+---
 
-- **Project synchronization**
-- **Config-driven**
-- **Config generator**
-- **Vite / Vite+ plugin (optional)**
-- **Changelogs & releases**
-- **CI automation**
-- **tsconfig management**
-- **Providers**
-- **Catalogs**
-- **Templates**
-- **Migrations**
-- **MCP server**
-- **VS Code extension**
-- **Editor first**
-- **Monorepo aware**
+</details>
+
+<details>
+<summary><strong>Features</strong></summary>
+
+- Project synchronization
+- Config-driven
+- Config generator
+- Vite / Vite+ plugin (optional)
+- Changelogs & releases
+- CI automation
+- tsconfig management
+- Providers
+- Catalogs
+- Templates
+- Migrations
+- MCP server
+- VS Code extension
+- Editor first
+- Monorepo aware
 
 See more at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
+
+---
 
 The video and screenshot below is the VS Code extension. Read more about it at [toolchain.deltabox.studio/guide/vscode](https://toolchain.deltabox.studio/guide/vscode).
 
@@ -79,6 +65,47 @@ https://github.com/user-attachments/assets/a4f1ad75-fedd-40ee-b84d-3365f7025a3e
 <div align="left">
   <img src="./apps/docs/public/vscode-screenshot.png" width="300" />
 </div>
+
+---
+
+</details>
+
+<details>
+<summary><strong>Why use this?</strong></summary>
+
+`deltabox toolchain` is a superset of [Vite+](https://viteplus.dev)
+but can be used standalone.
+
+It is most useful when at least one of these is true:
+
+- you **maintain a monorepo** or several related packages;
+- you want **one place** for **toolchain, CI and release configuration**;
+- you use **Vite or Vite+** and want a **consistent project workflow**;
+- you define **schemas or config formats** and want **types, docs, JSON Schema
+  and typed CLI options** generated from them;
+- you maintain **many environment variables** and want **documented, typed
+  config** with **file/env/CLI precedence**;
+- you want **one consistent CLI and task surface** for scripts, tasks and
+  provider toolchains;
+- you build a **library or internal tool** that needs its own **typed config and
+  CLI** without rebuilding loaders, validation and help;
+- you work **across languages** and want Python, .NET, Java, Rust and other
+  tools exposed through the **same command surface**;
+- you **scaffold projects or packages** regularly;
+- you work in **VS Code or with AI agents** and want them to understand the
+  **same project model**;
+- you are tired of **generated files and release chores drifting**.
+
+Read the rest of [Why use this?](https://toolchain.deltabox.studio/guide/why-use-this) for the
+problems it removes, the core features and when it might not fit.
+
+</details>
+
+---
+
+See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
+
+Documentation, guides and examples at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
 
 ## Install
 
@@ -315,7 +342,7 @@ See [packages/vscode/README.md](./packages/vscode/README.md) to learn more about
 
 Feel free to contribute to the development or docs.
 
-Visit [toolchain.deltabox.studio/contribute/](https://toolchain.deltabox.studio/contribute/) for more information.
+Visit [toolchain.deltabox.studio/contribute](https://toolchain.deltabox.studio/contribute) for more information.
 
 ## Troubleshooting
 

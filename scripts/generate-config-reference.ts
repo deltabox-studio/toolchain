@@ -28,9 +28,6 @@ const markdown = engine.markdown.generate({
         '`@deltabox/toolchain` settings live under the `toolchain` key. Every',
         'section is **opt-in by presence** (see [Configuration](/guide/config/opt-in-by-presence)):',
         'define it to enable it, omit it to leave that area untouched.',
-        '',
-        '> Generated from the Zod config schema — do not edit by hand.',
-        '> Run `yarn config:generate`.',
     ].join('\n'),
     onContent: content =>
         content.replace(
