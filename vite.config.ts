@@ -113,6 +113,9 @@ export default defineConfig({
                             target: 'individual',
                             prerelease: 'beta',
                         },
+                        // A stable release groups every beta since the last stable
+                        // release into one body; each beta still gets its own delta.
+                        release: { group: true },
                         // `dev` has no default: preset it to keep the `dev` -> `main`
                         // flow (pushes to `dev` generate the changelog; `main` releases).
                         branches: { dev: 'dev' },
@@ -233,11 +236,15 @@ export default defineConfig({
                                     {
                                         name: 'Extract release notes',
                                         if: "steps.release.outputs.skip == 'false'",
+                                        // Published-release discovery uses `gh release list`.
+                                        env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' },
                                         run: [
                                             // Aggregate every changelog entry since the last
                                             // released version. The CLI helper only considers
                                             // tags whose versions exist in CHANGELOG.md, so
                                             // calendar/CI tags cannot leak the whole file.
+                                            // `ci.changelog.release.group` rolls every beta
+                                            // since the last stable release into one body.
                                             'notes="$({{packageManager}} dbx changelog --release-body "${{ steps.release.outputs.version }}")"',
                                             '[ -n "$notes" ] || notes="Release v${{ steps.release.outputs.version }}"',
                                             'printf \'%s\\n\' "$notes" > RELEASE_NOTES.md',

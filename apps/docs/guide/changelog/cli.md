@@ -7,6 +7,9 @@ dbx changelog --range v1.2.0..HEAD  # scan a specific range
 dbx changelog --version 2.0.0       # force a version (retags the changelogs)
 dbx changelog --format-only         # regroup existing changelogs, no bump
 dbx changelog --release-body 2.0.0 # print the release PR body for a version
+dbx changelog --release-body 2.0.0 --release-group          # group since the last release
+dbx changelog --release-body 2.0.0 --release-since v1.9.0   # explicit boundary
+dbx changelog --release-body 2.0.0 --no-release-group       # disable configured grouping
 ```
 
 The command reads `ci.changelog` and falls back to the manual

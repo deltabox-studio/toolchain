@@ -15,6 +15,10 @@ export function parseArgsCli(argv: string[]): CliOptions {
             'release-body': { type: 'string' },
             // Deprecated alias, kept for existing scripts until they are updated.
             'release-notes': { type: 'string' },
+            'release-group': { type: 'boolean' },
+            'no-release-group': { type: 'boolean' },
+            'release-since': { type: 'string' },
+            'release-include-prereleases': { type: 'boolean' },
             'processing-method': { type: 'string' },
             'format-only': { type: 'boolean', default: false },
             'release-body-wrap': { type: 'boolean', default: false },
@@ -42,6 +46,17 @@ export function parseArgsCli(argv: string[]): CliOptions {
         version: values.version,
         baseVersion: values['base-version'],
         releaseBody: values['release-body'] ?? values['release-notes'],
+        ...(values['release-group'] === true
+            ? { releaseGroup: true }
+            : values['no-release-group'] === true
+              ? { releaseGroup: false }
+              : {}),
+        ...(values['release-since']?.trim()
+            ? { releaseSince: values['release-since'].trim() }
+            : {}),
+        ...(values['release-include-prereleases'] === true
+            ? { releaseIncludePrereleases: true }
+            : {}),
         processingMethod,
         formatOnly: values['format-only'] ?? false,
         releaseBodyWrap: values['release-body-wrap'] === true || values.release === true,

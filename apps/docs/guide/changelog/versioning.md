@@ -78,6 +78,10 @@ The tag is a single identifier (`^[0-9A-Za-z-]+$`); the numeric counter is added
 automatically. The same rule applies to `uniform`, `root-only` and `individual`
 targets, including each workspace's own version in `individual` mode.
 
+A stable release can group every prerelease since the last stable release into
+one GitHub Release body with `changelog.release.group: true`. See
+[Grouped release bodies](/guide/ci/releases#grouped-release-bodies).
+
 ## Version hooks
 
 Use [`toolchain.hooks.beforeVersion`](/guide/config/hooks#beforeversion) for

@@ -1224,6 +1224,10 @@
                         }
                     ],
                     "description": "How breaking changes are detected: `conventional` (default: a `!` in the CC subject or a `BREAKING CHANGE:` footer), `any` (legacy loose match), `false` (disable), `{ pattern }` / `{ match }`, or a callback (TS/JS configs only)."
+                },
+                "release": {
+                    "description": "Release-body aggregation options, used by `dbx changelog --release-body` and the generated release workflow.",
+                    "$ref": "#/$defs/ChangelogReleaseConfig"
                 }
             },
             "additionalProperties": false,
@@ -2299,6 +2303,27 @@
             "additionalProperties": false,
             "description": "One Conventional-Commits group."
         },
+        "ChangelogReleaseConfig": {
+            "type": "object",
+            "properties": {
+                "group": {
+                    "default": false,
+                    "type": "boolean",
+                    "description": "Group every changelog version since the previous published release into one release body instead of exposing each intermediate version separately. A stable release skips prerelease versions when it picks that boundary, so all prereleases since the last stable release are part of the same body; a prerelease release still stops at the previous prerelease."
+                },
+                "includePrereleases": {
+                    "default": false,
+                    "type": "boolean",
+                    "description": "Let a prerelease version bound the grouped body even for a stable release (so the stable body only covers the changes since the latest prerelease)."
+                },
+                "since": {
+                    "type": "string",
+                    "description": "Explicit lower boundary for the grouped body: a version or tag (eg. `1.2.0`, `v1.2.0`, `@scope/pkg@1.2.0`). Overrides the published-release lookup; a missing version falls back to automatic discovery."
+                }
+            },
+            "additionalProperties": false,
+            "description": "Release-body aggregation: group every version since the previous published release into one entry."
+        },
         "ChangelogWorkflowSetting": {
             "anyOf": [
                 {
@@ -2837,6 +2862,10 @@
                         }
                     ],
                     "description": "How breaking changes are detected: `conventional` (default: a `!` in the CC subject or a `BREAKING CHANGE:` footer), `any` (legacy loose match), `false` (disable), `{ pattern }` / `{ match }`, or a callback (TS/JS configs only)."
+                },
+                "release": {
+                    "description": "Release-body aggregation options, used by `dbx changelog --release-body` and the generated release workflow.",
+                    "$ref": "#/$defs/ChangelogReleaseConfig"
                 },
                 "enabled": {
                     "description": "Enable/disable this section (default: enabled when defined).",

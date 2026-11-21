@@ -21,6 +21,8 @@ export {
     buildReleaseNotes,
     normalizeReleaseVersion,
     releaseNotesFromGit,
+    type ReleaseNotesFromGitOptions,
+    type ReleaseNotesOptions,
 } from './utils/release-notes.js';
 export { buildSummary, renderCommitRef } from './utils/summary.js';
 export * from './types/index.js';

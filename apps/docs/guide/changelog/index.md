@@ -96,6 +96,10 @@ groups: context => [
 Callbacks are TS/JS-config-only. `dbx changelog --format-only` also uses the
 configured order/titles when regrouping existing entries.
 
+`groups` only groups **commit sections** inside one version. To treat several
+changelog versions as one release body, use
+[`release.group`](/guide/ci/releases#grouped-release-bodies) instead.
+
 ## Breaking-change detection
 
 Breaking commits are detected by Conventional Commits rules by default: a `!`

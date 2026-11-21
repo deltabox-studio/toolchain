@@ -2,7 +2,9 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { publishedReleaseTags } from './git.js';
 import { repoRoot } from './repo.js';
+import { isPrereleaseVersion } from './version.js';
 
 interface ChangelogEntry {
     version: string;
@@ -134,12 +136,54 @@ function splitDetails(body: string): { text: string; details: DetailsBlock[] } {
 }
 
 /**
+ * Keep only the first `### Package changes` section. Each version's entry has
+ * its own footer comparing against the version before it; in a grouped release
+ * the newest footer already covers the whole range, so older duplicates would
+ * otherwise repeat the section (and show stale diffs).
+ */
+function keepFirstPackageChanges(body: string): string {
+    const lines = body.split('\n');
+    const out: string[] = [];
+    let seen = false;
+    for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index]!;
+        if (!/^###\s+Package changes\s*$/.test(line)) {
+            out.push(line);
+            continue;
+        }
+        if (!seen) {
+            seen = true;
+            out.push(line);
+            continue;
+        }
+        // Drop the duplicate heading + its content. Stop at the next heading or
+        // at the end of the enclosing details block (a footer may be wrapped).
+        let depth = 0;
+        for (index += 1; index < lines.length; index += 1) {
+            const current = lines[index]!;
+            const opens = (current.match(/<details\b/g) ?? []).length;
+            const closes = (current.match(/<\/details>/g) ?? []).length;
+            if (depth === 0 && (/^###\s+/.test(current) || (closes > 0 && opens === 0))) {
+                index -= 1;
+                break;
+            }
+            depth += opens - closes;
+        }
+    }
+    return out
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
+/**
  * Merge several version bodies into one release body.
  *
  * The commits in a range may span multiple changelog entries (for example
  * `beta.8`, `beta.9` and `beta.10` before the next stable release). Release
  * bodies should read as one version, so equal summary groups are merged and
- * duplicate preamble text is dropped.
+ * duplicate preamble text is dropped. Repeated `Package changes` footers are
+ * collapsed to the newest one (the cumulative diff).
  */
 function mergeBodies(bodies: string[]): string {
     const text: string[] = [];
@@ -177,56 +221,114 @@ function mergeBodies(bodies: string[]): string {
             ].join('\n')
         );
     }
-    return parts.join('\n\n');
+    return keepFirstPackageChanges(parts.join('\n\n'));
+}
+
+/** Aggregation options for a release body. */
+export interface ReleaseNotesOptions {
+    /**
+     * Group every version since the previous published release into one body.
+     * Without it only the newest entry is used when the boundary is ambiguous.
+     */
+    group?: boolean;
+    /**
+     * Let a prerelease version act as the boundary even when the version being
+     * released is stable.
+     */
+    includePrereleases?: boolean;
+    /** Explicit lower boundary version/tag (overrides release discovery). */
+    since?: string;
 }
 
 /**
- * Build the release body from a changelog and its candidate tag versions.
+ * Build the release body from a changelog and its candidate release versions.
  *
- * - Finds the newest tag version that exists in the changelog (excluding the
- *   version being released) and combines every entry above it.
+ * - Finds the newest released version that exists in the changelog (excluding
+ *   the version being released) and combines every entry above it.
+ * - With `group: true` a stable release ignores prerelease boundaries, so all
+ *   prereleases since the last stable release become one body. A prerelease
+ *   release still stops at the previous prerelease.
+ * - When the version being released is not a heading yet, the newest entry is
+ *   included instead of returning an empty body.
+ * - With `group: true` and no previous published release (first release), every
+ *   entry is grouped; without grouping only the newest entry is used.
  * - Returns only the content inside `<!-- release:start -->` /
- *   `<!-- release:end -->` when those markers are present.
- * - Version headings are never included; entries are merged as if they were one
- *   version (equal `<details>` summary groups are concatenated).
- * - If there is no prior released version (first release), returns only the
- *   newest changelog entry instead of the entire file.
+ *   `<!-- release:end -->` when those markers are present, and never includes
+ *   version headings.
  * - Returns '' when the changelog has no version headings.
  */
 export function buildReleaseNotes(
     changelog: string,
     tagVersions: string[],
-    currentVersion?: string
+    currentVersion?: string,
+    options: ReleaseNotesOptions = {}
 ): string {
     const entries = changelogEntries(changelog);
     if (entries.length === 0) return '';
+
+    // Accept both `2.0.0` and `v2.0.0` as the version being released.
+    const current = currentVersion
+        ? (normalizeReleaseVersion(currentVersion) ?? currentVersion)
+        : undefined;
+    const currentIsHeading = entries.some(entry => entry.version === current);
 
     const versions = new Set(
         tagVersions
             .map(normalizeReleaseVersion)
             .filter((version): version is string => version !== undefined)
     );
-    // Accept both `2.0.0` and `v2.0.0` as the version being released.
-    const current = currentVersion
-        ? (normalizeReleaseVersion(currentVersion) ?? currentVersion)
+    const grouping = options.group === true;
+    // A stable release rolls every prerelease since the previous stable release
+    // into one body. A prerelease release keeps prerelease boundaries, so each
+    // beta only lists its own delta instead of repeating the whole cycle.
+    const skipPrereleases =
+        grouping &&
+        options.includePrereleases !== true &&
+        !(current !== undefined && isPrereleaseVersion(current));
+    const boundaries = skipPrereleases
+        ? new Set([...versions].filter(version => !isPrereleaseVersion(version)))
+        : versions;
+
+    // An explicit `since` wins over discovery when it names a changelog version.
+    const since = options.since?.trim();
+    const sinceVersion = since ? (normalizeReleaseVersion(since) ?? since) : undefined;
+    const explicit = sinceVersion
+        ? entries.find(entry => entry.version === sinceVersion && entry.version !== current)
         : undefined;
-    const previous = entries.find(
-        entry => entry.version !== current && versions.has(entry.version)
-    );
-    // When the version being released is not a heading yet, the newest tagged
-    // heading is not "previous": include the newest entry instead of returning
-    // an empty body.
-    const currentIsHeading = entries.some(entry => entry.version === current);
-    const selected =
-        previous && (currentIsHeading || previous !== entries[0])
-            ? entries.slice(0, entries.indexOf(previous))
-            : entries.slice(0, 1);
+
+    const previous =
+        explicit ??
+        entries.find(entry => entry.version !== current && boundaries.has(entry.version));
+    let selected: ChangelogEntry[];
+    if (previous) {
+        // Grouping always walks the whole range; without it, keep the legacy
+        // guard that avoids re-exposing an already released newest entry.
+        selected =
+            grouping || currentIsHeading || previous !== entries[0]
+                ? entries.slice(0, entries.indexOf(previous))
+                : entries.slice(0, 1);
+    } else if (grouping) {
+        // No published boundary: the whole changelog is one release.
+        selected = entries;
+    } else {
+        selected = entries.slice(0, 1);
+    }
     const bodies = selected.map(entry => entryBody(changelog, entry)).filter(Boolean);
     return mergeBodies(bodies);
 }
 
-/** Read the release body from the repo's changelog + tags (with a first-release guard). */
-export function releaseNotesFromGit(currentVersion: string, cwd = repoRoot()): string {
+/** Options for {@link releaseNotesFromGit}. */
+export interface ReleaseNotesFromGitOptions extends ReleaseNotesOptions {
+    /** Override tag discovery (tests or callers with an existing tag list). */
+    tags?: string[];
+}
+
+/** Read the release body from the repo's changelog + published releases/tags. */
+export function releaseNotesFromGit(
+    currentVersion: string,
+    cwd = repoRoot(),
+    options: ReleaseNotesFromGitOptions = {}
+): string {
     const file = resolve(cwd, 'CHANGELOG.md');
     let changelog = '';
     if (existsSync(file)) {
@@ -236,11 +338,22 @@ export function releaseNotesFromGit(currentVersion: string, cwd = repoRoot()): s
             changelog = '';
         }
     }
-    const tags = spawnSync('git', ['tag', '--merged', 'HEAD', '--sort=-v:refname'], {
-        cwd,
-        encoding: 'utf8',
-    });
-    const tagVersions = (tags.stdout ?? '').split(/\r?\n/).filter(Boolean);
-    const notes = buildReleaseNotes(changelog, tagVersions, currentVersion);
+    let tagVersions = options.tags;
+    if (tagVersions === undefined) {
+        // Prefer the tags of published GitHub Releases so drafts and local-only
+        // tags cannot bound the grouped body. Empty means "no releases yet", so
+        // fall back to the local tags for a first-release/unsupported setup.
+        const published = publishedReleaseTags();
+        if (published && published.length > 0) {
+            tagVersions = published;
+        } else {
+            const tags = spawnSync('git', ['tag', '--merged', 'HEAD', '--sort=-v:refname'], {
+                cwd,
+                encoding: 'utf8',
+            });
+            tagVersions = (tags.stdout ?? '').split(/\r?\n/).filter(Boolean);
+        }
+    }
+    const notes = buildReleaseNotes(changelog, tagVersions, currentVersion, options);
     return notes || `Release ${currentVersion}`;
 }

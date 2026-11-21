@@ -1162,6 +1162,32 @@ A regular expression matched against the subject and body.
 
 A substring matched against the subject and body.
 
+#### `release`
+
+- **Type**: `ChangelogReleaseConfig`
+
+Release-body aggregation options, used by `dbx changelog --release-body` and the generated release workflow.
+
+##### `group`
+
+- **Type**: `boolean`
+- **Default**: `false`
+
+Group every changelog version since the previous published release into one release body instead of exposing each intermediate version separately. A stable release skips prerelease versions when it picks that boundary, so all prereleases since the last stable release are part of the same body; a prerelease release still stops at the previous prerelease.
+
+##### `includePrereleases`
+
+- **Type**: `boolean`
+- **Default**: `false`
+
+Let a prerelease version bound the grouped body even for a stable release (so the stable body only covers the changes since the latest prerelease).
+
+##### `since`
+
+- **Type**: `string`
+
+Explicit lower boundary for the grouped body: a version or tag (eg. `1.2.0`, `v1.2.0`, `@scope/pkg@1.2.0`). Overrides the published-release lookup; a missing version falls back to automatic discovery.
+
 ### `release`
 
 - **Type**: `WorkflowSetting`
@@ -1939,6 +1965,32 @@ A regular expression matched against the subject and body.
 - **Type**: `string`
 
 A substring matched against the subject and body.
+
+### `release`
+
+- **Type**: `ChangelogReleaseConfig`
+
+Release-body aggregation options, used by `dbx changelog --release-body` and the generated release workflow.
+
+#### `group`
+
+- **Type**: `boolean`
+- **Default**: `false`
+
+Group every changelog version since the previous published release into one release body instead of exposing each intermediate version separately. A stable release skips prerelease versions when it picks that boundary, so all prereleases since the last stable release are part of the same body; a prerelease release still stops at the previous prerelease.
+
+#### `includePrereleases`
+
+- **Type**: `boolean`
+- **Default**: `false`
+
+Let a prerelease version bound the grouped body even for a stable release (so the stable body only covers the changes since the latest prerelease).
+
+#### `since`
+
+- **Type**: `string`
+
+Explicit lower boundary for the grouped body: a version or tag (eg. `1.2.0`, `v1.2.0`, `@scope/pkg@1.2.0`). Overrides the published-release lookup; a missing version falls back to automatic discovery.
 
 ### `enabled`
 

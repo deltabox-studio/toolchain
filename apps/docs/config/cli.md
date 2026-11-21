@@ -225,6 +225,10 @@ Scan commits, derive the semver bump and update the CHANGELOG.md files + version
 - `--version ‹semver›` — Override the version.
 - `--base-version ‹semver›` — Bump from this version instead.
 - `--release-body ‹semver›` — Print the release body for this version and exit.
+- `--release-group` — Group every version since the previous published release into the body.
+- `--no-release-group` — Disable release grouping configured in the changelog config.
+- `--release-since ‹version›` — Group from this version/tag instead of the released boundary.
+- `--release-include-prereleases` — Let prerelease versions bound the grouped release body.
 - `--processing-method ‹method›` — `latest` (default), `all`, or a git range.
 - `--format-only` — Only regroup existing changelogs.
 - `--release-body-wrap` — Wrap the generated entry as a `**Release notes**` details block.

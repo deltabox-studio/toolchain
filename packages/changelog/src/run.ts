@@ -186,7 +186,19 @@ function* changelogSteps(
     // would corrupt the release body.
     if (options.releaseBody) {
         if (!isGitRepository()) throw new Error('dbx changelog: not a git repository.');
-        logger.raw(releaseNotesFromGit(options.releaseBody));
+        // Config supplies the defaults; explicit CLI flags win (including
+        // `--no-release-group`).
+        const release = changelog && typeof changelog === 'object' ? changelog.release : undefined;
+        logger.raw(
+            releaseNotesFromGit(options.releaseBody, repoRoot(), {
+                ...release,
+                ...(options.releaseGroup !== undefined ? { group: options.releaseGroup } : {}),
+                ...(options.releaseSince !== undefined ? { since: options.releaseSince } : {}),
+                ...(options.releaseIncludePrereleases !== undefined
+                    ? { includePrereleases: options.releaseIncludePrereleases }
+                    : {}),
+            })
+        );
         return;
     }
     if (runOptions.enabled === false) {

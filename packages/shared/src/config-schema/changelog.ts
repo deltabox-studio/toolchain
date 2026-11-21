@@ -628,6 +628,43 @@ export const changelogBreakingSettingSchema = z
             'configs only).'
     );
 
+/** Release-body aggregation options (used by `--release-body` and the release workflow). */
+export const changelogReleaseConfigSchema = z
+    .object({
+        group: z
+            .boolean()
+            .describe(
+                'Group every changelog version since the previous published release into one ' +
+                    'release body instead of exposing each intermediate version separately. A ' +
+                    'stable release skips prerelease versions when it picks that boundary, so ' +
+                    'all prereleases since the last stable release are part of the same body; a ' +
+                    'prerelease release still stops at the previous prerelease.'
+            )
+            .default(false)
+            .optional(),
+        includePrereleases: z
+            .boolean()
+            .describe(
+                'Let a prerelease version bound the grouped body even for a stable release ' +
+                    '(so the stable body only covers the changes since the latest prerelease).'
+            )
+            .default(false)
+            .optional(),
+        since: z
+            .string()
+            .describe(
+                'Explicit lower boundary for the grouped body: a version or tag (eg. `1.2.0`, ' +
+                    '`v1.2.0`, `@scope/pkg@1.2.0`). Overrides the published-release lookup; a ' +
+                    'missing version falls back to automatic discovery.'
+            )
+            .optional(),
+    })
+    .describe(
+        'Release-body aggregation: group every version since the previous published release ' +
+            'into one entry.'
+    )
+    .meta({ id: 'ChangelogReleaseConfig' });
+
 /**
  * The changelog pipeline options shared by `ci.changelog` and the manual
  * `toolchain.changelog` section (the latter omits workflow options and
@@ -660,6 +697,12 @@ const changelogPipelineShape = {
         .optional(),
     groups: changelogGroupsSettingSchema.optional(),
     breaking: changelogBreakingSettingSchema.optional(),
+    release: changelogReleaseConfigSchema
+        .describe(
+            'Release-body aggregation options, used by `dbx changelog --release-body` and ' +
+                'the generated release workflow.'
+        )
+        .optional(),
 };
 
 /**

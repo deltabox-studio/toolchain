@@ -134,6 +134,37 @@ export function hasReleaseTag(version: string, cwd?: string): boolean {
     return exists;
 }
 
+/**
+ * The tags of published GitHub Releases (drafts excluded). Returns `undefined`
+ * when `gh` is unavailable or the query fails, so callers can fall back to the
+ * local tags; an empty array means the repository has no published releases.
+ */
+export function publishedReleaseTags(): string[] | undefined {
+    if (!isGhAvailable()) return undefined;
+    const out = ghWithRetries(() =>
+        execGh(
+            ['release', 'list', '--exclude-drafts', '--limit', '1000', '--json', 'tagName'],
+            10_000
+        )
+    );
+    if (out === undefined) return undefined;
+    try {
+        const parsed = JSON.parse(out) as unknown;
+        if (!Array.isArray(parsed)) return undefined;
+        return parsed
+            .map(entry => {
+                const tagName =
+                    entry && typeof entry === 'object'
+                        ? (entry as { tagName?: unknown }).tagName
+                        : undefined;
+                return typeof tagName === 'string' ? tagName : undefined;
+            })
+            .filter((tag): tag is string => Boolean(tag));
+    } catch {
+        return undefined;
+    }
+}
+
 /** Whether a commit subject is a generated release/version commit. */
 export function isReleaseCommit(subject: string): boolean {
     return /^(?:chore: version packages\b|release:)/i.test(subject.trim());

@@ -71,6 +71,8 @@ jobs:
           fi
       - name: Extract release notes
         if: steps.release.outputs.skip == 'false'
+        env:
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |-
           notes="$(yarn dbx changelog --release-body "${{ steps.release.outputs.version }}")"
           [ -n "$notes" ] || notes="Release v${{ steps.release.outputs.version }}"

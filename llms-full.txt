@@ -627,6 +627,10 @@ Scan commits, derive the semver bump and update the CHANGELOG.md files + version
 * `--version ‹semver›` — Override the version.
 * `--base-version ‹semver›` — Bump from this version instead.
 * `--release-body ‹semver›` — Print the release body for this version and exit.
+* `--release-group` — Group every version since the previous published release into the body.
+* `--no-release-group` — Disable release grouping configured in the changelog config.
+* `--release-since ‹version›` — Group from this version/tag instead of the released boundary.
+* `--release-include-prereleases` — Let prerelease versions bound the grouped release body.
 * `--processing-method ‹method›` — `latest` (default), `all`, or a git range.
 * `--format-only` — Only regroup existing changelogs.
 * `--release-body-wrap` — Wrap the generated entry as a `**Release notes**` details block.
@@ -2286,6 +2290,32 @@ A regular expression matched against the subject and body.
 
 A substring matched against the subject and body.
 
+#### `release`
+
+* **Type**: `ChangelogReleaseConfig`
+
+Release-body aggregation options, used by `dbx changelog --release-body` and the generated release workflow.
+
+##### `group`
+
+* **Type**: `boolean`
+* **Default**: `false`
+
+Group every changelog version since the previous published release into one release body instead of exposing each intermediate version separately. A stable release skips prerelease versions when it picks that boundary, so all prereleases since the last stable release are part of the same body; a prerelease release still stops at the previous prerelease.
+
+##### `includePrereleases`
+
+* **Type**: `boolean`
+* **Default**: `false`
+
+Let a prerelease version bound the grouped body even for a stable release (so the stable body only covers the changes since the latest prerelease).
+
+##### `since`
+
+* **Type**: `string`
+
+Explicit lower boundary for the grouped body: a version or tag (eg. `1.2.0`, `v1.2.0`, `@scope/pkg@1.2.0`). Overrides the published-release lookup; a missing version falls back to automatic discovery.
+
 ### `release`
 
 * **Type**: `WorkflowSetting`
@@ -3063,6 +3093,32 @@ A regular expression matched against the subject and body.
 * **Type**: `string`
 
 A substring matched against the subject and body.
+
+### `release`
+
+* **Type**: `ChangelogReleaseConfig`
+
+Release-body aggregation options, used by `dbx changelog --release-body` and the generated release workflow.
+
+#### `group`
+
+* **Type**: `boolean`
+* **Default**: `false`
+
+Group every changelog version since the previous published release into one release body instead of exposing each intermediate version separately. A stable release skips prerelease versions when it picks that boundary, so all prereleases since the last stable release are part of the same body; a prerelease release still stops at the previous prerelease.
+
+#### `includePrereleases`
+
+* **Type**: `boolean`
+* **Default**: `false`
+
+Let a prerelease version bound the grouped body even for a stable release (so the stable body only covers the changes since the latest prerelease).
+
+#### `since`
+
+* **Type**: `string`
+
+Explicit lower boundary for the grouped body: a version or tag (eg. `1.2.0`, `v1.2.0`, `@scope/pkg@1.2.0`). Overrides the published-release lookup; a missing version falls back to automatic discovery.
 
 ### `enabled`
 
@@ -12122,6 +12178,10 @@ groups: context => [
 Callbacks are TS/JS-config-only. `dbx changelog --format-only` also uses the
 configured order/titles when regrouping existing entries.
 
+`groups` only groups **commit sections** inside one version. To treat several
+changelog versions as one release body, use
+[`release.group`](/guide/ci/releases#grouped-release-bodies) instead.
+
 ## Breaking-change detection
 
 Breaking commits are detected by Conventional Commits rules by default: a `!`
@@ -12259,6 +12319,9 @@ dbx changelog --range v1.2.0..HEAD  # scan a specific range
 dbx changelog --version 2.0.0       # force a version (retags the changelogs)
 dbx changelog --format-only         # regroup existing changelogs, no bump
 dbx changelog --release-body 2.0.0 # print the release PR body for a version
+dbx changelog --release-body 2.0.0 --release-group          # group since the last release
+dbx changelog --release-body 2.0.0 --release-since v1.9.0   # explicit boundary
+dbx changelog --release-body 2.0.0 --no-release-group       # disable configured grouping
 ```
 
 The command reads `ci.changelog` and falls back to the manual
@@ -12524,6 +12587,10 @@ ci: { changelog: { versioning: { target: 'individual', prerelease: 'beta' } } }
 The tag is a single identifier (`^[0-9A-Za-z-]+$`); the numeric counter is added
 automatically. The same rule applies to `uniform`, `root-only` and `individual`
 targets, including each workspace's own version in `individual` mode.
+
+A stable release can group every prerelease since the last stable release into
+one GitHub Release body with `changelog.release.group: true`. See
+[Grouped release bodies](/guide/ci/releases#grouped-release-bodies).
 
 ## Version hooks
 
@@ -13264,7 +13331,7 @@ the latest one, not just the newest entry. So a release that skips versions
 (eg. `v1.7.0` → `v1.7.8`) still documents `1.7.1`–`1.7.8` in one place.
 
 The body is produced by `dbx changelog --release-body <version>`, which only
-considers tags whose version actually appears in `CHANGELOG.md` (so unrelated
+considers versions that actually appear in `CHANGELOG.md` (so unrelated
 CI/calendar tags are ignored). For a first release, when there is no prior
 version, it falls back to the newest changelog entry instead of the whole file.
 
@@ -13279,6 +13346,66 @@ toolchain: {
 The workflow is opt-in. Use [Workflow settings](/guide/ci/settings) to override
 the job's extra steps/jobs or supply a fully hand-authored workflow. It can also
 be a complete GitLab/Azure pipeline via `{ provider, workflow }`.
+
+## Grouped release bodies
+
+By default each release body stops at the previous released version. When a
+project publishes prereleases (for example `3.0.0-beta.1` … `3.0.0-beta.16`
+before `3.0.0`), the stable GitHub Release would only mention the changes since
+the last beta. Set `release.group` to treat every version since the previous
+**published** release as one version:
+
+```ts [dbx.config.ts]
+toolchain: {
+    ci: {
+        changelog: {
+            versioning: { target: 'individual', prerelease: 'beta' },
+            release: { group: true },
+        },
+    },
+}
+```
+
+* A **stable** release skips prerelease versions when it picks the boundary, so
+  all betas since the last stable release are merged into one body. Version
+  headings and duplicate section groups are never repeated; the newest
+  `### Package changes` footer wins because it already covers the whole range.
+* A **prerelease** release still stops at the previous prerelease, so each beta
+  lists only its own changes instead of repeating the whole cycle.
+* A **first release** (no published release yet) groups every changelog entry
+  when grouping is enabled; without grouping it keeps the newest-entry
+  fallback.
+* Missing tags are tolerated: if no released version can be found, grouping
+  selects the entries above the newest match, or the whole changelog when none
+  matches.
+
+When `gh` is available and the repository has published releases, the boundary
+comes from them (drafts are excluded); otherwise it falls back to the local tags
+merged into `HEAD`. The command is read-only, so re-running it produces the same
+body.
+
+### Overrides
+
+| Setting                      | Effect                                                                                    |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| `release.group`              | Enable grouped release bodies. **Default `false`.**                                       |
+| `release.includePrereleases` | Let a prerelease bound a stable release's body (only the changes since that beta).        |
+| `release.since`              | Explicit lower boundary version/tag (eg. `v1.2.0`); a missing version falls back to auto. |
+
+The same options are available as one-off CLI flags:
+
+```sh
+dbx changelog --release-body 3.0.0 --release-group
+dbx changelog --release-body 3.0.0 --release-since v3.0.0-beta.1
+dbx changelog --release-body 3.0.0 --no-release-group
+```
+
+`--release-group` wins over the config for that run, and `--no-release-group`
+turns a configured grouping off (useful for debugging).
+
+With `versioning.target: 'individual'`, the root `CHANGELOG.md` remains the
+aggregate release body: it lists every pushed commit, while package changelogs
+stay scoped to their own package and are not merged into the GitHub Release.
 
 ---
 
@@ -14507,6 +14634,8 @@ The v3 line also adds a large set of capabilities on top of v2, grouped by area:
 * `beforeVersion` / `afterVersion` lifecycle hooks.
 * Changelog `intro` / `outro`, `minCommits`, nested `See more...` descriptions,
   release mode and collapsible bodies.
+* Grouped release bodies (`changelog.release.group`) that roll every prerelease
+  since the previous published release into one stable release entry.
 * Scoped versioning options and configurable breaking-change detection.
 * Batched GitHub metadata lookups (commit authors, PR credit, issue titles).
 * Complete GitHub, GitLab and Azure workflow configs with autocomplete and
@@ -15141,16 +15270,17 @@ console.log(toolchainProviders().map(p => p.id));
 
 ## `@deltabox/toolchain/changelog`
 
-| Export                                                                 | Description                                          |
-| ---------------------------------------------------------------------- | ---------------------------------------------------- |
-| `runChangelog(argv?)` / `main`                                         | Derive the bump and update the changelog + versions. |
-| `runWorkflows(options)` / `resolveWorkflowId(name)`                    | Trigger generated workflows with the vendor CLI.     |
-| `workflowTargets(config)` / `workflowRunCommand(target, options)`      | List enabled workflows / build a vendor CLI command. |
-| `renderWorkflow(id, options)` / `renderWorkflows(...)`                 | Render workflow YAML.                                |
-| `renderCommitlintConfig(options?)` / `changelogSyncTask()`             | Commitlint config + the changelog sync task.         |
-| `readCommits(range)` / `deriveBump(records)` / `buildSummary(records)` | Git commit reading, bump derivation and summaries.   |
-| `renderChangelogEntry(...)` / `parseExistingChangelog(content)`        | Changelog entry rendering/parsing.                   |
-| `formatBody(body)` / `formatLine(line, repo)`                          | Description + changelog-line normalization.          |
+| Export                                                                  | Description                                          |
+| ----------------------------------------------------------------------- | ---------------------------------------------------- |
+| `runChangelog(argv?)` / `main`                                          | Derive the bump and update the changelog + versions. |
+| `runWorkflows(options)` / `resolveWorkflowId(name)`                     | Trigger generated workflows with the vendor CLI.     |
+| `workflowTargets(config)` / `workflowRunCommand(target, options)`       | List enabled workflows / build a vendor CLI command. |
+| `renderWorkflow(id, options)` / `renderWorkflows(...)`                  | Render workflow YAML.                                |
+| `renderCommitlintConfig(options?)` / `changelogSyncTask()`              | Commitlint config + the changelog sync task.         |
+| `readCommits(range)` / `deriveBump(records)` / `buildSummary(records)`  | Git commit reading, bump derivation and summaries.   |
+| `renderChangelogEntry(...)` / `parseExistingChangelog(content)`         | Changelog entry rendering/parsing.                   |
+| `buildReleaseNotes(...)` / `releaseNotesFromGit(version, cwd, options)` | Aggregate release bodies (optionally grouped).       |
+| `formatBody(body)` / `formatLine(line, repo)`                           | Description + changelog-line normalization.          |
 
 `formatLine(line, repo)` normalizes a changelog line in place: numeric-only
 short hashes (eg. `#4033009`) stay commit links, genuine issue numbers stay
@@ -15548,6 +15678,32 @@ the repository at
 url: https://toolchain.deltabox.studio/CHANGELOG.md
 ---
 # Changelog
+
+## 3.0.0-beta.11 (November 2026)
+
+* Use the published Vite subpath in generated configs ([#d5f2fab](https://github.com/deltabox-studio/toolchain/commit/d5f2fab) by [T0chi](https://github.com/T0chi))
+
+- Rename format scripts and tasks to fmt ([#fcd3ae0](https://github.com/deltabox-studio/toolchain/commit/fcd3ae0) by [T0chi](https://github.com/T0chi))
+
+* Refresh readmes and extension copy ([#ad7e37d](https://github.com/deltabox-studio/toolchain/commit/ad7e37d) by [T0chi](https://github.com/T0chi))
+* Highlight who the toolchain is for ([#bdd324a](https://github.com/deltabox-studio/toolchain/commit/bdd324a) by [T0chi](https://github.com/T0chi))
+* Expand who the toolchain is for ([#128d875](https://github.com/deltabox-studio/toolchain/commit/128d875) by [T0chi](https://github.com/T0chi))
+* Explain providers for other language toolchains ([#1671f9e](https://github.com/deltabox-studio/toolchain/commit/1671f9e) by [T0chi](https://github.com/T0chi))
+* Note the toolchain dogfoods itself ([#e864aef](https://github.com/deltabox-studio/toolchain/commit/e864aef) by [T0chi](https://github.com/T0chi))
+* Cover core features in why use this ([#195bba8](https://github.com/deltabox-studio/toolchain/commit/195bba8) by [T0chi](https://github.com/T0chi))
+* Split programmatic API examples into sections ([#8f8ebd9](https://github.com/deltabox-studio/toolchain/commit/8f8ebd9) by [T0chi](https://github.com/T0chi))
+* Add contextual sidebar sections ([#aca7fdf](https://github.com/deltabox-studio/toolchain/commit/aca7fdf) by [T0chi](https://github.com/T0chi))
+* Remove Contribute from the top navbar ([#5dce447](https://github.com/deltabox-studio/toolchain/commit/5dce447) by [T0chi](https://github.com/T0chi))
+* Move navbar search beside the logo ([#aa7c7de](https://github.com/deltabox-studio/toolchain/commit/aa7c7de) by [T0chi](https://github.com/T0chi))
+* Add v3 new features to the migration guide ([#0a5ee8b](https://github.com/deltabox-studio/toolchain/commit/0a5ee8b) by [T0chi](https://github.com/T0chi))
+* Fix invalid folder-tree YAML in template structures ([#c7e8efa](https://github.com/deltabox-studio/toolchain/commit/c7e8efa) by [T0chi](https://github.com/T0chi))
+
+- Commit pending docs and type updates ([#5701b52](https://github.com/deltabox-studio/toolchain/commit/5701b52) by [T0chi](https://github.com/T0chi))
+- Cleanup references ([#a0027cd](https://github.com/deltabox-studio/toolchain/commit/a0027cd) by [T0chi](https://github.com/T0chi))
+
+## 3.0.0-beta.10 (November 2026)
+
+* Align hooks and monorepo guidance with Vite+ ([#0aadd01](https://github.com/deltabox-studio/toolchain/commit/0aadd01) by [T0chi](https://github.com/T0chi))
 
 ## 3.0.0-beta.9 (November 2026)
 

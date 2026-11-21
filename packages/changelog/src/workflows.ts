@@ -661,10 +661,11 @@ export function defaultWorkflows(
                                 'git add -A',
                                 'git commit -m "chore: version packages ($version)" || true',
                                 'git push origin "$branch"',
-                                // The CLI extracts entries since the last released
-                                // version and falls back to the newest entry on a
+                                // The CLI extracts entries since the last published
+                                // release and falls back to the newest entry on a
                                 // first release, so unrelated tags cannot leak the
-                                // whole changelog into the PR body.
+                                // whole changelog into the PR body. Grouping is
+                                // opt-in through `changelog.release.group`.
                                 `notes="$(${engine} changelog --release-body "$version")"`,
                                 '[ -n "$notes" ] || notes="Release $version"',
                                 `gh pr create --base ${main} --head "$branch" --title "release: $version" --body "$notes"`,

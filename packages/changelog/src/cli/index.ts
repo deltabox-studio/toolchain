@@ -120,6 +120,23 @@ export function changelogCommands() {
                     description: 'Print the release body for this version and exit.',
                 },
                 {
+                    flags: '--release-group',
+                    description:
+                        'Group every version since the previous published release into the body.',
+                },
+                {
+                    flags: '--no-release-group',
+                    description: 'Disable release grouping configured in the changelog config.',
+                },
+                {
+                    flags: '--release-since <version>',
+                    description: 'Group from this version/tag instead of the released boundary.',
+                },
+                {
+                    flags: '--release-include-prereleases',
+                    description: 'Let prerelease versions bound the grouped release body.',
+                },
+                {
                     flags: '--processing-method <method>',
                     description: '`latest` (default), `all`, or a git range.',
                 },
@@ -158,6 +175,12 @@ export function changelogCommands() {
                 if (opts.releaseBody) {
                     argv.push('--release-body', String(opts.releaseBody));
                 }
+                if (opts.releaseGroup === true) argv.push('--release-group');
+                if (opts.releaseGroup === false) argv.push('--no-release-group');
+                if (opts.releaseSince) {
+                    argv.push('--release-since', String(opts.releaseSince));
+                }
+                if (opts.releaseIncludePrereleases) argv.push('--release-include-prereleases');
                 if (opts.processingMethod) {
                     argv.push('--processing-method', String(opts.processingMethod));
                 }
