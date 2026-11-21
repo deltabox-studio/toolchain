@@ -21,7 +21,7 @@
         "@deltabox/toolchain-migrate": "workspace:*",
         "@deltabox/toolchain-shared": "workspace:*",
         "@deltabox/toolchain-tsconfig": "workspace:*",
-        "jsonc-parser": "^3.3.1"
+        "jsonc-parser": "catalog:"
     },
     "devDependencies": {
         "@deltabox/toolchain-pack": "workspace:*",

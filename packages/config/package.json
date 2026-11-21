@@ -19,7 +19,7 @@
         "lodash": "catalog:",
         "tsx": "catalog:",
         "type-fest": "catalog:",
-        "untyped": "^2.0.0",
+        "untyped": "catalog:",
         "zod": "catalog:"
     },
     "devDependencies": {
