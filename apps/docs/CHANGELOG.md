@@ -1,8 +1,20 @@
 # Changelog
 
-## 3.0.0-beta.9 (November 2026)
+## 3.0.0-beta.10 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>New features</summary>
+
+- Align hooks and monorepo guidance with Vite+ ([#0aadd01](https://github.com/deltabox-studio/toolchain/commit/0aadd01) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.9 (November 2026)
 
 <details>
 <summary>Documentation</summary>
@@ -10,9 +22,6 @@
 - Clarify vite-plus is a dev dependency ([#b7d5ce6](https://github.com/deltabox-studio/toolchain/commit/b7d5ce6) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.8 (November 2026)
 
