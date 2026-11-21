@@ -83,6 +83,7 @@ export default defineConfig({
                             '**/dist/**',
                             '**/.turbo/**',
                             '**/.generated/**',
+                            '**/.vite-hooks/_/**',
                             '*.json',
                             'packages/*/*.json',
                             '**/tsconfig*.json',
@@ -115,6 +116,7 @@ export default defineConfig({
                             '**/dist/**',
                             '**/.turbo/**',
                             '**/.generated/**',
+                            '**/.vite-hooks/_/**',
                         ],
                         rules: {
                             'jsx-a11y/alt-text': 'off',
@@ -495,6 +497,11 @@ export default defineConfig({
         environment: 'node',
         testTimeout: 20000,
         exclude: ['**/node_modules/**', '**/dist/**'],
+    },
+    // Vite+ staged checks: `.vite-hooks/pre-commit` runs `vp staged`, which
+    // applies this to the files in the commit.
+    staged: {
+        '*': 'vp check --fix',
     },
     // Each package declares its own
     // build/typecheck/test tasks (with cache input/output) in its vite.config.ts;

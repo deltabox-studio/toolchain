@@ -1,6 +1,7 @@
 /**
- * The root `postinstall`: activate husky (a checkout-only step) and bootstrap
- * the built `dist` the root `vite.config.ts` needs.
+ * The root `postinstall`: install the Vite+ Git hook dispatcher (a
+ * checkout-only step) and bootstrap the built `dist` the root `vite.config.ts`
+ * needs.
  *
  * The root `vite.config.ts` imports the `dbx()` plugin from
  * `@deltabox/toolchain/vite`, so `vp` — which loads that config to resolve
@@ -15,9 +16,9 @@
  *
  * The same `postinstall` also runs for consumers who install the published
  * package (npm runs a dependency's `postinstall`). Every step below is therefore
- * guarded so a consumer install is a clean no-op: husky only runs in a checkout
- * (`.husky` present) and the build only runs when there is a source tree
- * (`packages/` present).
+ * guarded so a consumer install is a clean no-op: hooks are only installed in
+ * a checkout (`.vite-hooks` present) and the build only runs when there is a
+ * source tree (`packages/` present).
  */
 
 import { execSync } from 'node:child_process';
@@ -27,13 +28,16 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-// Checkout-only: activate husky's git hooks. A published install has no `.husky`,
-// and `husky` is a devDependency (absent for consumers), so never fail on it.
-if (fs.existsSync(path.join(root, '.husky'))) {
+// Checkout-only: install Vite+'s Git hook dispatcher. The project-owned hook
+// scripts live in `.vite-hooks`; `vp hooks enable` recreates the generated
+// `.vite-hooks/_` dispatcher and points `core.hooksPath` at it. A published
+// install has no `.vite-hooks`, and `vite-plus` is absent for consumers, so
+// never fail on it.
+if (fs.existsSync(path.join(root, '.vite-hooks'))) {
     try {
-        execSync('husky', { cwd: root, stdio: 'inherit' });
+        execSync('vp hooks enable', { cwd: root, stdio: 'inherit' });
     } catch {
-        // best-effort: a missing husky must not fail the install
+        // best-effort: a missing `vp` (or a restricted clone) must not fail the install
     }
 }
 

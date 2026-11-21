@@ -12,7 +12,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { logger, spawnCross } from '@deltabox/toolchain/shared';
+import {
+    declaresVitePlus as declaresVitePlusShared,
+    logger,
+    spawnCross,
+} from '@deltabox/toolchain/shared';
 
 const IS_WINDOWS = process.platform === 'win32';
 
@@ -98,40 +102,13 @@ export function hasVp(cwd: string = process.cwd()): boolean {
     return resolveVp(cwd).source !== 'npx';
 }
 
-/** The package.json fields that declare a dependency. */
-const DEPENDENCY_FIELDS = [
-    'dependencies',
-    'devDependencies',
-    'peerDependencies',
-    'optionalDependencies',
-] as const;
-
 /**
  * Whether the project declares `vite-plus` in any `package.json` dependency
  * field. Walks up to the repository boundary so a hoisted workspace dependency
- * is found. This is the static signal that Vite+ is part of the project, even
- * before it is installed.
+ * is found. The detection lives in `@deltabox/toolchain/shared` so the changelog
+ * and config generators can use the same signal without importing Vite+.
  */
-export function declaresVitePlus(cwd: string = process.cwd()): boolean {
-    let dir = path.resolve(cwd);
-    for (;;) {
-        try {
-            const pkg = JSON.parse(
-                fs.readFileSync(path.join(dir, 'package.json'), 'utf-8').replace(/^\uFEFF/, '')
-            ) as Record<string, Record<string, string> | undefined>;
-            if (DEPENDENCY_FIELDS.some(field => pkg[field]?.['vite-plus'] !== undefined)) {
-                return true;
-            }
-        } catch {
-            // no/invalid package.json here; keep walking
-        }
-        if (fs.existsSync(path.join(dir, '.git'))) break;
-        const parent = path.dirname(dir);
-        if (parent === dir) break;
-        dir = parent;
-    }
-    return false;
-}
+export const declaresVitePlus = declaresVitePlusShared;
 
 /**
  * Whether Vite+ is available for a project: declared in its dependencies or

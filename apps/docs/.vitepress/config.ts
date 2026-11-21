@@ -33,7 +33,7 @@ const LLMS_DETAILS = [
     '- **Vite plugin.** `dbx()` in `vite.config.*` can carry the whole toolchain config, so a Vite/Vite+ project needs no `dbx.config.*`; the CLI reads the plugin options back. dbx never manages `vite.config.*` in plugin mode, and Vite+ passthrough commands are gated on Vite+ being detected.',
     '- **MCP.** `dbx mcp:serve` exposes every public dbx API over MCP; `dbx mcp:install` writes the server + skill for Claude, Codex, VS Code, OpenCode, Pi or a custom directory.',
     '- **Sections.** `project`, `ci` (workflows + changelog), `fmt`, `lint`, `biome`, `tsconfig`, `loader`, `templates`, `vite`, `watch`, `logger`, `providers`; every workflow under `ci` is opt-in.',
-    '- **Runtime.** Node ≥ 22.5 and Yarn 4 (corepack); Vite+ (`vp`) resolves at the repo root.',
+    '- **Runtime.** Node ≥ 22.22.1 (or ≥ 24.11.0) and Yarn 4 (corepack); Vite+ (`vp`) resolves at the repo root.',
 ].join('\n');
 
 /** The hand-picked entries kept at the top of the generated guide sidebar. */
@@ -222,9 +222,10 @@ export default withFolderTree(
                         return data;
                     },
                 }) as any,
-                // `llmstxt()` / `groupIconVitePlugin()` are typed against the repo's
-                // `vite` (v8), while VitePress ships its own `vite` (v5); the `Plugin`
-                // types don't unify, so cast to the option VitePress expects.
+                // `llmstxt()` / `groupIconVitePlugin()` are typed against Vite+
+                // (`@voidzero-dev/vite-plus-core`), while VitePress ships its own
+                // Vite 5; the `Plugin` types don't unify, so cast to the option
+                // VitePress expects.
                 llmstxt({
                     domain: 'https://toolchain.deltabox.studio',
                     title: 'deltabox toolchain',

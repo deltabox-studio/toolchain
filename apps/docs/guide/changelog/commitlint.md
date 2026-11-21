@@ -13,7 +13,7 @@ ci: {
 } // -> .config/commitlint.config.mjs
 ```
 
-When a custom dir is set, the generated husky hook and the CI commitlint step
+When a custom dir is set, the generated commit hook and the CI commitlint step
 both pass `--config <dir>/commitlint.config.mjs`, so commitlint finds it. Note
 that editor tooling that discovers the config by convention (eg. the
 Conventional Commits VS Code extension, which loads from the repo root) expects
@@ -37,7 +37,7 @@ ci: {
 
 Set `ci.changelog.commitlint: false` (or `{ enabled: false }`) to generate
 changelogs **without** the Conventional-Commits rules. The changelog workflow is
-still generated, but dbx writes no `commitlint.config.mjs`, no husky hook and no
+still generated, but dbx writes no `commitlint.config.mjs`, no commit hook and no
 commitlint step in the CI workflow.
 
 The changelog then falls back to a coarse grouping: commits are hoisted into

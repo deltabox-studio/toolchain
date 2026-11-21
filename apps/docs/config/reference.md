@@ -10,9 +10,6 @@ A `dbx.config.ts` file exports `{ toolchain: { ...sections } }`: the
 section is **opt-in by presence** (see [Configuration](/guide/config/opt-in-by-presence)):
 define it to enable it, omit it to leave that area untouched.
 
-> Generated from the Zod config schema — do not edit by hand.
-> Run `yarn config:generate`.
-
 ## `enabled`
 
 Enable/disable the toolchain. The shorthand is workspace-scoped; the object form is reserved for APIs and the VS Code extension.
@@ -619,7 +616,7 @@ commitlint config; set `false` to disable the Conventional-Commits pipeline.
 
 - **Type**: `string`
 
-Directory the generated `commitlint.config.mjs` is written to (default: the project root). The husky hook and CI use `--config` to point at it.
+Directory the generated `commitlint.config.mjs` is written to (default: the project root). The generated commit hook and CI use `--config` to point at it.
 
 ##### `types`
 
@@ -1397,7 +1394,7 @@ commitlint config; set `false` to disable the Conventional-Commits pipeline.
 
 - **Type**: `string`
 
-Directory the generated `commitlint.config.mjs` is written to (default: the project root). The husky hook and CI use `--config` to point at it.
+Directory the generated `commitlint.config.mjs` is written to (default: the project root). The generated commit hook and CI use `--config` to point at it.
 
 #### `types`
 

@@ -125,7 +125,7 @@ export const changelogCommitlintConfigSchema = withEnabled(
             .string()
             .describe(
                 'Directory the generated `commitlint.config.mjs` is written to ' +
-                    '(default: the project root). The husky hook and CI use ' +
+                    '(default: the project root). The generated commit hook and CI use ' +
                     '`--config` to point at it.'
             )
             .optional(),

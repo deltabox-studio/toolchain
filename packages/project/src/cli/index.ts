@@ -201,7 +201,7 @@ function resolveName(name: string, dir: string): string {
  * with the config of the directory it is invoked from, which is usually the
  * *parent* (a monorepo root when adding a workspace). Honouring it would tag the
  * new project with the wrong kind — eg. a workspace scaffolded as
- * `monorepo-root`, which then generates root-only CI/husky/vscode files inside
+ * `monorepo-root`, which then generates root-only CI/hooks/vscode files inside
  * the workspace.
  */
 function resolveType(opts: Record<string, unknown>, fallback: ProjectType): ProjectType {

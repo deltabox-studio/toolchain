@@ -25,6 +25,7 @@ export const DEFAULT_IGNORE_PATTERNS = [
     '**/.cache/**',
     '**/.output/**',
     '**/.vite/**',
+    '**/.vite-hooks/_/**',
     '**/.vscode/**',
     '**/.nyc_output/**',
     '**/*.tsbuildinfo',
@@ -66,6 +67,7 @@ const IGNORED_DIR_NAMES = new Set([
     '.cache',
     '.output',
     '.vite',
+    '.vite-hooks',
 ]);
 
 /** Options shared by the `tsconfig` / `watch` ignore resolution. */

@@ -47,7 +47,7 @@ export default defineConfig({
         vite: {
             shim: 'static',
             resolve: { tsconfigPaths: true },
-            run: { tasks: { build: { command: 'tsdown' } } },
+            run: { tasks: { build: { command: 'vp pack' } } },
         },
     },
 });

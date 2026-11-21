@@ -1141,7 +1141,7 @@ describe('emulate: CLI + templates', () => {
     );
 
     it(
-        'scaffolds a workspace without root-only files (CI/husky/vscode stay at the root)',
+        'scaffolds a workspace without root-only files (CI/hooks/vscode stay at the root)',
         async () => {
             const ws = scratch('workspace-scaffold');
             const root = path.join(ws, 'root');
@@ -1172,7 +1172,7 @@ describe('emulate: CLI + templates', () => {
             const rootSync = await dbx(root, ['sync']);
             expect(rootSync.code, rootSync.stderr).toBe(0);
             expect(fs.existsSync(path.join(root, 'commitlint.config.mjs'))).toBe(true);
-            expect(fs.existsSync(path.join(root, '.husky'))).toBe(true);
+            expect(fs.existsSync(path.join(root, '.vite-hooks'))).toBe(true);
 
             // Scaffold a workspace into it (the extension's workspace flow).
             const scaffold = await dbx(root, [
@@ -1188,14 +1188,14 @@ describe('emulate: CLI + templates', () => {
 
             const pkg = path.join(root, 'packages/my-package');
             // The generated config tags the folder a workspace, not the root's
-            // `monorepo-root` (which would generate CI/husky/vscode inside it).
+            // `monorepo-root` (which would generate CI/hooks/vscode inside it).
             expect(fs.readFileSync(path.join(pkg, 'vite.config.ts'), 'utf-8')).toContain(
                 "type: 'monorepo-workspace'"
             );
 
             const sync = await dbx(pkg, ['sync']);
             expect(sync.code, sync.stderr).toBe(0);
-            for (const entry of ['.github', '.husky', '.vscode', 'commitlint.config.mjs']) {
+            for (const entry of ['.github', '.vite-hooks', '.vscode', 'commitlint.config.mjs']) {
                 expect(fs.existsSync(path.join(pkg, entry))).toBe(false);
             }
         },

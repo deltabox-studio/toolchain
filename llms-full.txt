@@ -195,38 +195,44 @@ dbx project:init:workspace --name utils --scope @acme --root . --dir packages/ut
 
 ## Tasks
 
-`deltabox toolchain` (and Vite+ consumers) use **Vite Task** (`dbx run`) instead of Turbo.
-The package graph orders execution via each package's `package.json`
-dependencies.
+`deltabox toolchain` (and Vite+ consumers) use **Vite Task** (`vp run`, exposed
+as `dbx run`) instead of Turbo. The package graph orders execution via each
+package's `package.json` dependencies.
 
-Each package declares `build`, `typecheck` and `test` in its own
-`dbx.config.*` with explicit cache input/output, so `dbx run` reports cache
-hits (a `package.json` script cannot carry cache config):
+Run tasks from the workspace root. `vp run -r <task>` runs every package's task
+in dependency order; `vp run --filter ./apps/web <task>` narrows it. For the
+built-in app commands, Vite+ resolves the target package from the root and prints
+the direct `vp -C <dir> <command>` form, so you never need to `cd` between
+packages. Use `-C` when a command must behave as if it ran inside a package.
+To always target one app from the root, set `defaultPackage: './apps/web'`
+(a per-command object also works) in the root `vite.config.ts`.
 
-```ts [packages/<pkg>/dbx.config.ts]
-import { defineConfig } from '@deltabox/toolchain';
+Each package can declare `build`, `typecheck` and `test` in its own
+`vite.config.ts` `run.tasks` (or in `dbx.config.ts` under `toolchain.vite`) with
+explicit cache input/output, so `vp run` reports cache hits (a `package.json`
+script cannot carry cache config). Use `vp pack` / `vp test` instead of the
+individual `tsdown` / `vitest` binaries:
+
+```ts [packages/<pkg>/vite.config.ts]
+import { defineConfig } from 'vite-plus';
 
 export default defineConfig({
-    toolchain: {
-        vite: {
-            run: {
-                tasks: {
-                    build: {
-                        command: 'tsdown --config-loader unrun',
-                        cache: {
-                            input: [{ auto: true }, '!dist/**', '!**/*.tsbuildinfo'],
-                            output: ['dist/**'],
-                        },
-                    },
-                    typecheck: {
-                        command: 'tsc -p tsconfig.build.json --noEmit',
-                        cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
-                    },
-                    test: {
-                        command: 'vitest run',
-                        cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
-                    },
+    run: {
+        tasks: {
+            build: {
+                command: 'vp pack',
+                cache: {
+                    input: [{ auto: true }, '!dist/**', '!**/*.tsbuildinfo'],
+                    output: ['dist/**'],
                 },
+            },
+            typecheck: {
+                command: 'tsc -p tsconfig.build.json --noEmit',
+                cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
+            },
+            test: {
+                command: 'vp test run',
+                cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
             },
         },
     },
@@ -247,6 +253,31 @@ The root `package.json` orchestrates them and adds the umbrella build:
 `dbx run --filter "./packages/*" build` runs each package's `build` in
 dependency order (excluding the root, which avoids recursion), then `build:root`
 builds the umbrella dist.
+
+## Shared formatting and linting
+
+Define `fmt` and `lint` once in the root `vite.config.ts`, and run `vp fmt`,
+`vp lint` and `vp check` from the root. Vite+ does not apply nested configs to
+individual files, and `vp check` always uses the root blocks, so package-level
+`fmt` / `lint` blocks are not recommended. Use `overrides` for package- or
+file-specific settings:
+
+```ts [vite.config.ts]
+export default defineConfig({
+    lint: {
+        overrides: [
+            { files: ['apps/api/**'], env: { node: true } },
+            { files: ['**/*.test.ts'], plugins: ['vitest'] },
+        ],
+    },
+    fmt: {
+        overrides: [{ files: ['**/*.md'], options: { proseWrap: 'always' } }],
+    },
+});
+```
+
+Globs resolve from the root config, so use workspace paths such as
+`apps/web/**`; do not add per-package formatter/linter blocks.
 
 ---
 
@@ -559,6 +590,28 @@ There are two ways to use dbx with Vite:
 Both can be combined: a `dbx.config.*` provides shared config and the plugin
 options are merged on top.
 
+## Vite+ as the local CLI
+
+Install `vite-plus` as a dev dependency and let it provide Vite, Vitest, Oxfmt,
+Oxlint, Rolldown and tsdown. Do not add those packages separately. On Yarn, add
+`resolutions` so every dependency resolves the copies Vite+ bundles:
+
+```json [package.json]
+{
+    "resolutions": {
+        "vite": "npm:@voidzero-dev/vite-plus-core@<core-version>",
+        "vitest": "<vitest-version>"
+    }
+}
+```
+
+Run `vp toolchain vite-plus-core` and `vp toolchain vitest` to get the exact
+versions. Without the Vitest pin, a dependency or workspace package can pull a
+different Vitest and split its internals (mocks, `expect`, runner state). Use
+`vp` in the package scripts (`vp dev`, `vp build`, `vp test`, `vp check`,
+`vp pack`) so contributors only need the project-local CLI; a global `vp`
+delegates to the same installed version.
+
 ## Plugin mode
 
 ```ts [vite.config.ts]
@@ -622,7 +675,7 @@ export default defineConfig({
             fmt: { semi: true, singleQuote: true },
             lint: { ignorePatterns: ['dist/**'] },
             test: { include: ['src/**/*.test.ts'], environment: 'node' },
-            run: { tasks: { build: { command: 'tsdown --config-loader unrun' } } },
+            run: { tasks: { build: { command: 'vp pack' } } },
         },
     },
 });
@@ -637,9 +690,9 @@ The section is typed as Vite+'s own config (`ToolchainViteConfig` = Vite's
 `dbx sync` writes a fixed `vite.config.ts`:
 
 ```ts [vite.config.ts]
+// Generated by @deltabox/toolchain.
 import { defineConfig, type ViteUserConfig } from 'vite-plus';
 
-// Generated by @deltabox/toolchain — edit the vite section in dbx.config and run `dbx sync`.
 import { resolveVite } from '@deltabox/toolchain/vite';
 
 export default defineConfig(resolveVite<ViteUserConfig>({ cwd: import.meta.dirname }));
@@ -694,7 +747,7 @@ export default defineConfig({
         vite: {
             shim: 'static',
             resolve: { tsconfigPaths: true },
-            run: { tasks: { build: { command: 'tsdown' } } },
+            run: { tasks: { build: { command: 'vp pack' } } },
         },
     },
 });
@@ -703,6 +756,11 @@ export default defineConfig({
 `vite.fmt` / `vite.lint` are the exception: when the workspace opts into `fmt` /
 `lint`, they are hoisted into the top-level `fmt.oxc` / `lint.oxc` before
 inheritance, so shared formatting still flows down.
+
+Vite+ recommends one root `fmt` / `lint` block with `overrides` for per-package
+rules; per-workspace formatter/linter blocks are not applied by `vp check`, so
+prefer the root `fmt.oxc.overrides` / `lint.oxc.overrides` (see the
+[Monorepo guide](/guide/monorepo#shared-formatting-and-linting)).
 
 ## Keep the shim out of Oxfmt
 
@@ -1574,9 +1632,6 @@ A `dbx.config.ts` file exports `{ toolchain: { ...sections } }`: the
 section is **opt-in by presence** (see [Configuration](/guide/config/opt-in-by-presence)):
 define it to enable it, omit it to leave that area untouched.
 
-> Generated from the Zod config schema — do not edit by hand.
-> Run `yarn config:generate`.
-
 ## `enabled`
 
 Enable/disable the toolchain. The shorthand is workspace-scoped; the object form is reserved for APIs and the VS Code extension.
@@ -2183,7 +2238,7 @@ commitlint config; set `false` to disable the Conventional-Commits pipeline.
 
 * **Type**: `string`
 
-Directory the generated `commitlint.config.mjs` is written to (default: the project root). The husky hook and CI use `--config` to point at it.
+Directory the generated `commitlint.config.mjs` is written to (default: the project root). The generated commit hook and CI use `--config` to point at it.
 
 ##### `types`
 
@@ -2961,7 +3016,7 @@ commitlint config; set `false` to disable the Conventional-Commits pipeline.
 
 * **Type**: `string`
 
-Directory the generated `commitlint.config.mjs` is written to (default: the project root). The husky hook and CI use `--config` to point at it.
+Directory the generated `commitlint.config.mjs` is written to (default: the project root). The generated commit hook and CI use `--config` to point at it.
 
 #### `types`
 
@@ -7560,7 +7615,9 @@ Full changelog
 * The redesigned config-generator programmatic API.
 * The config CLI program runtime replacing the commander-based CLI assembly.
 * The `dbx()` Vite plugin becoming the preferred config path (available from the `@deltabox/toolchain/vite` subpath as usual).
-* Vite+ (`vite-plus`) as the bundled toolchain with per-package releases.
+* Vite+ (`vite-plus`) replacing the separate `vite`, `vitest` and `tsdown` dev
+  dependencies (it bundles those tools behind `vp`).
+* `@deltabox/toolchain` packages releasing independently instead of in lockstep.
 * Vite+ projects configuring `pack`, `test` and `run.tasks` in `vite.config.*`
   instead of `tsdown.config.*`, `vitest.config.*` and `turbo.json`.
 * `fmt`/`lint` moving into `vite.config.*` in Vite+ mode.
@@ -7747,12 +7804,13 @@ In plugin mode the whole toolchain config lives in `vite.config.*`; there is no
 programmatically, expect the generated `vite.config.*` to carry the plugin
 instead of a separate `dbx.config.*`.
 
-### Vite+ is the bundled toolchain
+### Vite+ is the single dev dependency
 
 **v3** no longer installs `vite`, `vitest` or `tsdown` for you. `vite-plus` is the
-single toolchain dependency and provides `vp` (Vite, Vitest, Oxfmt, Oxlint,
-Rolldown and tsdown). Replace the individual dev dependencies with `vite-plus`
-and use `vp` / `vp run` for those commands:
+single dev dependency and provides `vp` (Vite, Vitest, Oxfmt, Oxlint, Rolldown
+and tsdown); it is not bundled into `@deltabox/toolchain` at runtime. Replace the
+individual dev dependencies with `vite-plus` and use `vp` / `vp run` for those
+commands (declare it in the monorepo root, not in every single workspace):
 
 ```diff [package.json]
  {
@@ -7780,6 +7838,24 @@ workspace has its own version and `CHANGELOG.md`, and the release workflow
 publishes any package whose version is not on npm yet. A consumer that depends on
 a published subpackage should track that package's version instead of the
 umbrella's.
+
+### Git hooks use the Vite+ dispatcher
+
+When `ci.changelog` is enabled, `dbx sync` writes the `commit-msg` hook to
+`.vite-hooks/commit-msg` on a Vite+ project (it used to be `.husky/commit-msg`);
+projects without Vite+ keep the husky fallback. To migrate:
+
+```sh
+yarn remove husky
+rm -rf .husky
+git config --unset core.hooksPath   # only if it still points at .husky/_
+```
+
+Replace `"postinstall": "husky"` with `"postinstall": "vp hooks enable"`, then
+run `vp hooks enable` to install the `.vite-hooks/_` dispatcher. Add
+`.vite-hooks/* text eol=lf` to `.gitattributes` on Windows. Staged checks move
+to Vite+ too: add `.vite-hooks/pre-commit` running `vp staged` and a `staged`
+block in the root `vite.config.ts` (`staged: { '*': 'vp check --fix' }`).
 
 ### Config generator programmatic API
 
@@ -8273,6 +8349,9 @@ This repo is a Yarn 4 workspace. Vite+ (`vp`) drives format, lint, test and the
 task runner from the root `vite.config.ts`, which dogfoods the `dbx()` plugin.
 There is no root `dbx.config.ts`, `vitest.config.ts` or `tsdown.config.ts`.
 
+Node `^22.22.1` or `^24.11.0` is required: that is the floor for the bundled
+Vitest 5 and for `vp staged`.
+
 The toolchain config lives in the plugin's `toolchain` option; Vitest and the
 published package build live in the standard `test` and `pack` fields.
 
@@ -8296,7 +8375,22 @@ yarn test:clean     # remove leftover emulation temp workspaces
 > `yarn build` is only needed for the published `dist`/VSIX: typechecks,
 > `vp run`/`fmt`/`lint`/`test`, `yarn dev` and Vitest run from source. The
 > emulate suite spawns the built `dist/cli/index.js` and therefore needs a
-> build.
+> build. To run a command against one package, use `vp -C <dir> <command>`
+> (`vp -C packages/config test`) rather than `cd`-ing into it.
+
+## Git hooks
+
+The project-owned hooks live in `.vite-hooks`:
+
+* `commit-msg` runs commitlint.
+* `pre-commit` runs `vp staged`, which applies the root `staged` config
+  (`'*': 'vp check --fix'`) to the staged files.
+
+`yarn install` runs the `postinstall` bootstrap, which calls `vp hooks enable`
+to install the generated dispatcher and point `core.hooksPath` at it. Disable
+hooks for one clone with `vp hooks disable`, or for one process with
+`VP_GIT_HOOKS=0`. The dispatcher and its shims live in the ignored
+`.vite-hooks/_` directory; the hook scripts themselves are committed.
 
 The VS Code extension's unit tests run with the root Vitest suite. Its
 integration suite launches a real extension host
@@ -9114,7 +9208,7 @@ url: https://toolchain.deltabox.studio/guide/changelog.md
 ## CI
 
 The `ci` section drives everything Conventional Commits (by default): the CI that lints
-commit messages, the local husky hook, the `commitlint.config.mjs`, the GitHub
+commit messages, the local commit hook, the `commitlint.config.mjs`, the GitHub
 workflows, and the changelog pipeline that bumps versions and writes
 `CHANGELOG.md`. Its `ci.changelog` config holds the changelog-specific options.
 
@@ -9138,14 +9232,23 @@ export default defineConfig({
 ```
 
 `dbx sync` writes the opted-in GitHub workflows (`.github/workflows`), the
-commitlint config, and the husky `commit-msg` hook (`.husky/commit-msg`). Activate
-the hook with a `postinstall` script (Yarn Berry never runs `prepare`):
+commitlint config, and the `commit-msg` hook. On a Vite+ project the hook is
+`.vite-hooks/commit-msg`, installed by `vp hooks enable` / `vp config`; projects
+without Vite+ keep the husky fallback (`.husky/commit-msg`). Activate the
+dispatcher with a `postinstall` script:
 
 ```json [package.json]
-{ "scripts": { "commitlint": "commitlint", "postinstall": "husky" } }
+{
+    "scripts": {
+        "commitlint": "commitlint",
+        "postinstall": "vp hooks enable"
+    }
+}
 ```
 
-See [Package scripts](/guide/scripts) for the full recommended script set.
+For Vite+ projects, add a `.vite-hooks/pre-commit` running `vp staged` and put
+the staged checks in the root `vite.config.ts` (`staged: { '*': 'vp check --fix' }`). See [Package scripts](/guide/scripts) for the full recommended script
+set.
 
 ## Group order and titles
 
@@ -9380,7 +9483,7 @@ ci: {
 } // -> .config/commitlint.config.mjs
 ```
 
-When a custom dir is set, the generated husky hook and the CI commitlint step
+When a custom dir is set, the generated commit hook and the CI commitlint step
 both pass `--config <dir>/commitlint.config.mjs`, so commitlint finds it. Note
 that editor tooling that discovers the config by convention (eg. the
 Conventional Commits VS Code extension, which loads from the repo root) expects
@@ -9404,7 +9507,7 @@ ci: {
 
 Set `ci.changelog.commitlint: false` (or `{ enabled: false }`) to generate
 changelogs **without** the Conventional-Commits rules. The changelog workflow is
-still generated, but dbx writes no `commitlint.config.mjs`, no husky hook and no
+still generated, but dbx writes no `commitlint.config.mjs`, no commit hook and no
 commitlint step in the CI workflow.
 
 The changelog then falls back to a coarse grouping: commits are hoisted into
@@ -9502,7 +9605,7 @@ package is **ESM-only** (`exports` has no `require`/`default`), so the extension
 bundled (older) commitlint cannot `require.resolve` it. The config is read fine —
 the *preset* fails to resolve, so the extension falls back to empty rules.
 
-The husky hook and CI are unaffected when commitlint is recent enough to resolve
+The commit hook and CI are unaffected when commitlint is recent enough to resolve
 pure-ESM presets (commitlint ≥ 21.2.3). If your local commitlint is older, pin
 the preset to the last CJS-compatible release:
 
@@ -11313,7 +11416,7 @@ export default defineConfig({
         vite: {
             shim: 'static',
             resolve: { tsconfigPaths: true },
-            run: { tasks: { build: { command: 'tsdown' } } },
+            run: { tasks: { build: { command: 'vp pack' } } },
         },
     },
 });
@@ -11558,7 +11661,7 @@ export default defineConfig({
         vite: {
             shim: 'static',
             resolve: { tsconfigPaths: true },
-            run: { tasks: { build: { command: 'tsdown' } } },
+            run: { tasks: { build: { command: 'vp pack' } } },
         },
     },
 });
@@ -12793,7 +12896,7 @@ The repo root `package.json`:
         "dbx:sync": "dbx sync",
         "dbx:watch": "dbx watch",
         "commitlint": "commitlint",
-        "postinstall": "husky"
+        "postinstall": "vp hooks enable"
     }
 }
 ```
@@ -12803,7 +12906,7 @@ The repo root `package.json`:
 | `format` / `lint` / `check`    | Oxfmt / Oxlint across the repo (`check` = format check + lint). |
 | `build` / `typecheck` / `test` | Runs the task in every workspace, in dependency order.          |
 | `dbx:sync` / `dbx:watch`       | Regenerate the managed files / re-sync on change.               |
-| `commitlint` / `postinstall`   | Conventional Commits via commitlint + husky.                    |
+| `commitlint` / `postinstall`   | Conventional Commits + the Vite+ hook dispatcher.               |
 
 Notes:
 
@@ -12820,12 +12923,28 @@ Notes:
 * `dbx` is the toolchain binary, so `yarn dbx <cmd>` (eg. `yarn dbx sync`) works
   even without a script; the `dbx:*` aliases are just for discoverability.
 
-When `ci.changelog` is enabled, `dbx sync` also writes a husky
-`commit-msg` hook (`.husky/commit-msg`) that runs commitlint, so commits are
-linted locally as well as in CI. Use `postinstall` (not `prepare`) to activate
-husky: Yarn Berry never runs `prepare` on install. Husky hooks have no file
-extension, so on Windows add `.husky/* text eol=lf` to `.gitattributes` — a
-trailing CR silently breaks the hook.
+When `ci.changelog` is enabled, `dbx sync` writes a `commit-msg` hook that runs
+commitlint, so commits are linted locally as well as in CI. On a Vite+ project it
+writes the project-owned `.vite-hooks/commit-msg`; activate the dispatcher on
+install with `vp hooks enable` (or `vp config`, which also wires agent
+integration). Projects without Vite+ keep the husky fallback
+(`.husky/commit-msg` with `postinstall: husky`). Hook scripts have no extension,
+so on Windows add `.vite-hooks/* text eol=lf` (or the husky equivalent) to
+`.gitattributes` — a trailing CR silently breaks the hook.
+
+To check staged files before a commit, add a project-owned
+`.vite-hooks/pre-commit` that runs `vp staged`, and configure the checks in the
+root `vite.config.ts`:
+
+```ts [vite.config.ts]
+staged: {
+    '*': 'vp check --fix',
+},
+```
+
+`vp staged` bundles lint-staged and requires Node.js ≥ 22.22.1 (or ≥ 24.11.0).
+`vp hooks enable` only manages the dispatcher; it never overwrites project-owned
+hooks such as `commit-msg` and `pre-commit`.
 
 ## Vite+ commands with the `dbx()` plugin
 
@@ -12917,27 +13036,24 @@ Remove `turbo` and `turbo.json`. Ordering comes from each package's
 
 ## Per-workspace tasks
 
-For cached, dependency-aware tasks, define them in each package's
-`dbx.config.*` rather than `package.json` — a task and a script cannot share a
-name:
+Each package declares `build`, `typecheck` and `test` in its own `vite.config.*`
+(or `dbx.config.*`) with explicit cache input/output, so `dbx run` reports cache
+hits (a `package.json` script cannot carry cache config). Use the Vite+ commands
+rather than the individual tools:
 
-```ts [packages/<pkg>/dbx.config.ts]
-import { defineConfig } from '@deltabox/toolchain';
+```ts [packages/<pkg>/vite.config.ts]
+import { defineConfig } from 'vite-plus';
 
 export default defineConfig({
-    toolchain: {
-        vite: {
-            run: {
-                tasks: {
-                    build: {
-                        command: 'tsdown --config-loader unrun',
-                        cache: { input: [{ auto: true }, '!dist/**'], output: ['dist/**'] },
-                    },
-                    test: {
-                        command: 'vitest run',
-                        cache: { input: [{ auto: true }], output: [] },
-                    },
-                },
+    run: {
+        tasks: {
+            build: {
+                command: 'vp pack',
+                cache: { input: [{ auto: true }, '!dist/**'], output: ['dist/**'] },
+            },
+            test: {
+                command: 'vp test run',
+                cache: { input: [{ auto: true }], output: [] },
             },
         },
     },
@@ -12955,9 +13071,7 @@ url: https://toolchain.deltabox.studio/guide/template-structures.md
 ---
 # Template and registry structures
 
-These trees are rendered with
-[`vitepress-plugin-folder-tree`](https://github.com/s00d/vitepress-plugin-folder-tree).
-They show the files each builtin template produces and how the Vite+ provider
+These trees show the files each builtin template produces and how the Vite+ provider
 templates, custom templates, providers and registries are laid out.
 
 > The package-manager catalog file depends on the chosen manager: `.yarnrc.yml`
@@ -15089,6 +15203,33 @@ configures the **CLI** `dbx watch` command.
 url: https://toolchain.deltabox.studio/CHANGELOG.md
 ---
 # Changelog
+
+## 3.0.0-beta.8 (November 2026)
+
+#### Changelog
+
+* Build release bodies from markers and rename flags ([#825985d](https://github.com/deltabox-studio/toolchain/commit/825985d) by [T0chi](https://github.com/T0chi))
+
+- Prefer engine.cli.program.create and update v3 guides ([#325d2fd](https://github.com/deltabox-studio/toolchain/commit/325d2fd) by [T0chi](https://github.com/T0chi))
+
+- Cover template structures and config CLI programs ([#8d5e2c5](https://github.com/deltabox-studio/toolchain/commit/8d5e2c5) by [T0chi](https://github.com/T0chi))
+
+  * Document folder-tree template structures, the config-engine program/command APIs, schema-driven CLI metadata, and the new source-specific loaders. Refresh generated CLI/config pages and the llms bundles.
+
+- Document static config types in the overview ([#fd00295](https://github.com/deltabox-studio/toolchain/commit/fd00295) by [T0chi](https://github.com/T0chi))
+
+- Expand the v2 to v3 migration guide ([#854baaf](https://github.com/deltabox-studio/toolchain/commit/854baaf) by [T0chi](https://github.com/T0chi))
+
+- Revamp the config generator guides ([#f54c5f1](https://github.com/deltabox-studio/toolchain/commit/f54c5f1) by [T0chi](https://github.com/T0chi))
+
+- Add client and server config guide ([#5dcbedc](https://github.com/deltabox-studio/toolchain/commit/5dcbedc) by [T0chi](https://github.com/T0chi))
+
+#### Config
+
+* Regenerate schema and reference artifacts ([#2f0b6af](https://github.com/deltabox-studio/toolchain/commit/2f0b6af) by [T0chi](https://github.com/T0chi))
+
+- Format generated config artifacts and docs ([#2ff28be](https://github.com/deltabox-studio/toolchain/commit/2ff28be) by [T0chi](https://github.com/T0chi))
+- Replace unicode ellipses with three dots ([#2d7c130](https://github.com/deltabox-studio/toolchain/commit/2d7c130) by [T0chi](https://github.com/T0chi))
 
 ## 3.0.0-beta.7 (November 2026)
 

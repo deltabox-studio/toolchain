@@ -23,7 +23,7 @@ See all the [commands](#commands) below.
 **Requirements:**
 
 - Visual Studio Code version >= 1.85.0
-- Node.js version >= 22.5.0
+- Node.js version ^22.22.1 or ^24.11.0
 
 **Quick showcase:**
 

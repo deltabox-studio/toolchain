@@ -3,7 +3,7 @@
 ## CI
 
 The `ci` section drives everything Conventional Commits (by default): the CI that lints
-commit messages, the local husky hook, the `commitlint.config.mjs`, the GitHub
+commit messages, the local commit hook, the `commitlint.config.mjs`, the GitHub
 workflows, and the changelog pipeline that bumps versions and writes
 `CHANGELOG.md`. Its `ci.changelog` config holds the changelog-specific options.
 
@@ -27,14 +27,24 @@ export default defineConfig({
 ```
 
 `dbx sync` writes the opted-in GitHub workflows (`.github/workflows`), the
-commitlint config, and the husky `commit-msg` hook (`.husky/commit-msg`). Activate
-the hook with a `postinstall` script (Yarn Berry never runs `prepare`):
+commitlint config, and the `commit-msg` hook. On a Vite+ project the hook is
+`.vite-hooks/commit-msg`, installed by `vp hooks enable` / `vp config`; projects
+without Vite+ keep the husky fallback (`.husky/commit-msg`). Activate the
+dispatcher with a `postinstall` script:
 
 ```json [package.json]
-{ "scripts": { "commitlint": "commitlint", "postinstall": "husky" } }
+{
+    "scripts": {
+        "commitlint": "commitlint",
+        "postinstall": "vp hooks enable"
+    }
+}
 ```
 
-See [Package scripts](/guide/scripts) for the full recommended script set.
+For Vite+ projects, add a `.vite-hooks/pre-commit` running `vp staged` and put
+the staged checks in the root `vite.config.ts` (`staged: { '*': 'vp check
+--fix' }`). See [Package scripts](/guide/scripts) for the full recommended script
+set.
 
 ## Group order and titles
 

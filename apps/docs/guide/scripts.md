@@ -23,7 +23,7 @@ The repo root `package.json`:
         "dbx:sync": "dbx sync",
         "dbx:watch": "dbx watch",
         "commitlint": "commitlint",
-        "postinstall": "husky"
+        "postinstall": "vp hooks enable"
     }
 }
 ```
@@ -33,7 +33,7 @@ The repo root `package.json`:
 | `format` / `lint` / `check`    | Oxfmt / Oxlint across the repo (`check` = format check + lint). |
 | `build` / `typecheck` / `test` | Runs the task in every workspace, in dependency order.          |
 | `dbx:sync` / `dbx:watch`       | Regenerate the managed files / re-sync on change.               |
-| `commitlint` / `postinstall`   | Conventional Commits via commitlint + husky.                    |
+| `commitlint` / `postinstall`   | Conventional Commits + the Vite+ hook dispatcher.               |
 
 Notes:
 
@@ -50,12 +50,28 @@ Notes:
 - `dbx` is the toolchain binary, so `yarn dbx <cmd>` (eg. `yarn dbx sync`) works
   even without a script; the `dbx:*` aliases are just for discoverability.
 
-When `ci.changelog` is enabled, `dbx sync` also writes a husky
-`commit-msg` hook (`.husky/commit-msg`) that runs commitlint, so commits are
-linted locally as well as in CI. Use `postinstall` (not `prepare`) to activate
-husky: Yarn Berry never runs `prepare` on install. Husky hooks have no file
-extension, so on Windows add `.husky/* text eol=lf` to `.gitattributes` — a
-trailing CR silently breaks the hook.
+When `ci.changelog` is enabled, `dbx sync` writes a `commit-msg` hook that runs
+commitlint, so commits are linted locally as well as in CI. On a Vite+ project it
+writes the project-owned `.vite-hooks/commit-msg`; activate the dispatcher on
+install with `vp hooks enable` (or `vp config`, which also wires agent
+integration). Projects without Vite+ keep the husky fallback
+(`.husky/commit-msg` with `postinstall: husky`). Hook scripts have no extension,
+so on Windows add `.vite-hooks/* text eol=lf` (or the husky equivalent) to
+`.gitattributes` — a trailing CR silently breaks the hook.
+
+To check staged files before a commit, add a project-owned
+`.vite-hooks/pre-commit` that runs `vp staged`, and configure the checks in the
+root `vite.config.ts`:
+
+```ts [vite.config.ts]
+staged: {
+    '*': 'vp check --fix',
+},
+```
+
+`vp staged` bundles lint-staged and requires Node.js ≥ 22.22.1 (or ≥ 24.11.0).
+`vp hooks enable` only manages the dispatcher; it never overwrites project-owned
+hooks such as `commit-msg` and `pre-commit`.
 
 ## Vite+ commands with the `dbx()` plugin
 
@@ -147,27 +163,24 @@ Remove `turbo` and `turbo.json`. Ordering comes from each package's
 
 ## Per-workspace tasks
 
-For cached, dependency-aware tasks, define them in each package's
-`dbx.config.*` rather than `package.json` — a task and a script cannot share a
-name:
+Each package declares `build`, `typecheck` and `test` in its own `vite.config.*`
+(or `dbx.config.*`) with explicit cache input/output, so `dbx run` reports cache
+hits (a `package.json` script cannot carry cache config). Use the Vite+ commands
+rather than the individual tools:
 
-```ts [packages/<pkg>/dbx.config.ts]
-import { defineConfig } from '@deltabox/toolchain';
+```ts [packages/<pkg>/vite.config.ts]
+import { defineConfig } from 'vite-plus';
 
 export default defineConfig({
-    toolchain: {
-        vite: {
-            run: {
-                tasks: {
-                    build: {
-                        command: 'tsdown --config-loader unrun',
-                        cache: { input: [{ auto: true }, '!dist/**'], output: ['dist/**'] },
-                    },
-                    test: {
-                        command: 'vitest run',
-                        cache: { input: [{ auto: true }], output: [] },
-                    },
-                },
+    run: {
+        tasks: {
+            build: {
+                command: 'vp pack',
+                cache: { input: [{ auto: true }, '!dist/**'], output: ['dist/**'] },
+            },
+            test: {
+                command: 'vp test run',
+                cache: { input: [{ auto: true }], output: [] },
             },
         },
     },

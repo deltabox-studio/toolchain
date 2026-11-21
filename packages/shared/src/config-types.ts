@@ -562,7 +562,7 @@ export interface ChangelogBranchesConfig {
 export interface ChangelogCommitlintConfig {
     /**
      * Directory the generated `commitlint.config.mjs` is written to (default: the project root). The
-     * husky hook and CI use `--config` to point at it.
+     * generated commit hook and CI use `--config` to point at it.
      */
     dir?: string;
     /** Allowed commit types (commitlint). */

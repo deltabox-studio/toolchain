@@ -17,7 +17,7 @@ package is **ESM-only** (`exports` has no `require`/`default`), so the extension
 bundled (older) commitlint cannot `require.resolve` it. The config is read fine —
 the _preset_ fails to resolve, so the extension falls back to empty rules.
 
-The husky hook and CI are unaffected when commitlint is recent enough to resolve
+The commit hook and CI are unaffected when commitlint is recent enough to resolve
 pure-ESM presets (commitlint ≥ 21.2.3). If your local commitlint is older, pin
 the preset to the last CJS-compatible release:
 
