@@ -1,8 +1,20 @@
 # Changelog
 
-## 3.0.0-beta.6 (November 2026)
+## 3.0.0-beta.7 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>New features</summary>
+
+- Align hooks and monorepo guidance with Vite+ ([#0aadd01](https://github.com/deltabox-studio/toolchain/commit/0aadd01) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.6 (November 2026)
 
 <details>
 <summary>New features</summary>
@@ -40,9 +52,6 @@
 - Replace unicode ellipses with three dots ([#2d7c130](https://github.com/deltabox-studio/toolchain/commit/2d7c130) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.5 (November 2026)
 
