@@ -92,7 +92,7 @@ function parseArgs(argv: string[]): Options {
         } else if (arg === '--repo') {
             options.repo = argv[++index] ?? '';
             if (!options.repo) usage();
-        } else if (arg === '--help' || arg === '-h') usage();
+        } else if (arg === '--help' || arg === '-H') usage();
         else usage();
     }
     return options;

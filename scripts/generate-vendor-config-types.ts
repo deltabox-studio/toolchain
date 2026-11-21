@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generate the external tool config types that do not ship TypeScript types of
+ * Generate the external vendor config types that do not ship TypeScript types of
  * their own from their official JSON schema.
  *
  *   yarn config:generate

@@ -97,7 +97,7 @@ function parseArgs(argv: string[]): Options {
                 options.testScript = value();
                 break;
             case '--help':
-            case '-h':
+            case '-H':
                 log(
                     'options: --run --install --force --repo <url> --name <pkg> --dir <path> --depth <n> --branch <ref> --test <script>'
                 );

@@ -95,10 +95,7 @@ engine.markdown.file.write({
 });
 engine.markdown.cli.write(builtinCommands(), {
     output: path.join(docsDir, 'cli.md'),
-    intro: [
-        'Generated from the same `CliCommand` descriptors the `dbx` binary',
-        'registers. Run `yarn config:docs` after changing a command.',
-    ].join('\n'),
+    intro: 'Generated from the same `CliCommand` descriptors the `dbx` binary registers.',
 });
 engine.markdown.env.write({ output: path.join(docsDir, 'env.md') });
 
