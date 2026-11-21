@@ -1,4 +1,4 @@
-import type { IsNever, PartialDeep, Promisable } from 'type-fest';
+import type { PartialDeep, Promisable } from 'type-fest';
 
 import type {
     CliArgument,
@@ -549,7 +549,9 @@ export interface GenerateConfigProgramOptions<
      * Explicit command specs. When omitted, one command is generated per
      * command-eligible scope (`cliCommand: false` opts a scope out).
      */
-    commands?: readonly ConfigProgramCommand<unknown, TContext>[];
+    commands?: readonly (ConfigProgramCommand<unknown, TContext> & {
+        scope?: ConfigScopeKeys<TSchema>;
+    })[];
 }
 
 /**
@@ -717,11 +719,6 @@ export type ConfigProgramHookItem<TCommands, TGlobalOptions extends readonly Cli
         handler: ConfigProgramHookHandler<TCommands, Target, TGlobalOptions>;
     };
 }[ConfigProgramCommandTarget<TCommands>];
-
-type CliCommandsAny<
-    TCommands = any,
-    TCommandsValue extends Extract<TCommands, readonly any[]> = Extract<TCommands, readonly any[]>,
-> = IsNever<TCommandsValue> extends false ? TCommandsValue : readonly CliCommand[];
 
 /**
  * Decide whether configured CLI colours are printed. A boolean is static; a
