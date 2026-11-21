@@ -28,9 +28,16 @@ See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
 
 Documentation, guides and examples at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
 
+## Why use this?
+
+Curious what the toolchain fixes and who it is for? Read
+[Why use this?](https://toolchain.deltabox.studio/guide/why-use-this) for the
+problems it removes, the core features and when it might not fit.
+
 ## Table of contents
 
 - [deltabox toolchain](#deltabox-toolchain)
+    - [Why use this?](#why-use-this)
     - [Table of contents](#table-of-contents)
     - [Features](#features)
     - [Install](#install)
