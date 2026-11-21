@@ -110,7 +110,14 @@ that machinery instead of hand-writing each output. See the
 Providers describe the external toolchains a project can use, starting with
 Vite+. The CLI and the VS Code extension consume the same provider descriptors,
 so commands, availability and metadata do not drift between the terminal and
-the editor. See [Providers](/guide/providers).
+the editor.
+
+Providers are not limited to JavaScript. A descriptor can wrap any CLI binary,
+so the same surface can expose Python (`uv`, `ruff`, `pytest`), C#/.NET
+(`dotnet`), Java (Maven or Gradle), Rust (`cargo`), Go and other language
+toolchains. A polyglot repo can use `dbx python:*`, `dbx rust:*`, `dbx dotnet:*`
+and the rest without teaching the terminal, CI and editor a different command
+set for every language. See [Providers](/guide/providers#other-language-toolchains).
 
 ### MCP
 

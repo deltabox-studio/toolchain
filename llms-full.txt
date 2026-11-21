@@ -271,7 +271,14 @@ that machinery instead of hand-writing each output. See the
 Providers describe the external toolchains a project can use, starting with
 Vite+. The CLI and the VS Code extension consume the same provider descriptors,
 so commands, availability and metadata do not drift between the terminal and
-the editor. See [Providers](/guide/providers).
+the editor.
+
+Providers are not limited to JavaScript. A descriptor can wrap any CLI binary,
+so the same surface can expose Python (`uv`, `ruff`, `pytest`), C#/.NET
+(`dotnet`), Java (Maven or Gradle), Rust (`cargo`), Go and other language
+toolchains. A polyglot repo can use `dbx python:*`, `dbx rust:*`, `dbx dotnet:*`
+and the rest without teaching the terminal, CI and editor a different command
+set for every language. See [Providers](/guide/providers#other-language-toolchains).
 
 ### MCP
 
@@ -10748,6 +10755,58 @@ export default defineConfig({
   fallback) rather than relying on `dbx` being on `PATH` — a missing environment
   then warns instead of silently running the wrong binary. Use `dbxTaskCommand(sub)`
   to build a task command for another subcommand.
+
+## Other language toolchains
+
+Providers are not JavaScript-only. A provider is just a descriptor around a CLI
+binary, so the same mechanism can expose the tools a polyglot repository already
+uses:
+
+| Language  | Binary                     | Example commands                      |
+| --------- | -------------------------- | ------------------------------------- |
+| Python    | `uv` (or `ruff`, `pytest`) | `dbx python:run`, `dbx python:sync`   |
+| C# / .NET | `dotnet`                   | `dbx dotnet:build`, `dbx dotnet:test` |
+| Java      | `mvn` / `gradle`           | `dbx maven:test`, `dbx gradle:build`  |
+| Rust      | `cargo`                    | `dbx rust:build`, `dbx rust:clippy`   |
+| Go        | `go`                       | `dbx go:test`, `dbx go:vet`           |
+
+Each provider maps command names to a `binary` + `subcommand`; remaining operands
+are forwarded verbatim. Register one provider per binary, or use a runner such as
+`uv` or `cargo` to cover several tasks. Once registered, the commands appear in
+`dbx providers`, the CLI help and the VS Code Providers view, so a polyglot repo
+has one command surface even when the languages do not.
+
+```json [.dbx/toolchain/.registry/providers/rust.json]
+[
+    {
+        "id": "rust",
+        "name": "Rust (cargo)",
+        "binary": "cargo",
+        "commands": [
+            {
+                "name": "rust:build",
+                "subcommand": "build",
+                "description": "Build the Rust workspace."
+            },
+            {
+                "name": "rust:test",
+                "subcommand": "test",
+                "description": "Run Rust tests."
+            },
+            {
+                "name": "rust:clippy",
+                "subcommand": "clippy",
+                "description": "Lint with Clippy."
+            },
+            {
+                "name": "rust:fmt",
+                "subcommand": "fmt",
+                "description": "Format Rust sources."
+            }
+        ]
+    }
+]
+```
 
 ## Custom providers
 

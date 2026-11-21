@@ -139,6 +139,58 @@ export default defineConfig({
   then warns instead of silently running the wrong binary. Use `dbxTaskCommand(sub)`
   to build a task command for another subcommand.
 
+## Other language toolchains
+
+Providers are not JavaScript-only. A provider is just a descriptor around a CLI
+binary, so the same mechanism can expose the tools a polyglot repository already
+uses:
+
+| Language  | Binary                     | Example commands                      |
+| --------- | -------------------------- | ------------------------------------- |
+| Python    | `uv` (or `ruff`, `pytest`) | `dbx python:run`, `dbx python:sync`   |
+| C# / .NET | `dotnet`                   | `dbx dotnet:build`, `dbx dotnet:test` |
+| Java      | `mvn` / `gradle`           | `dbx maven:test`, `dbx gradle:build`  |
+| Rust      | `cargo`                    | `dbx rust:build`, `dbx rust:clippy`   |
+| Go        | `go`                       | `dbx go:test`, `dbx go:vet`           |
+
+Each provider maps command names to a `binary` + `subcommand`; remaining operands
+are forwarded verbatim. Register one provider per binary, or use a runner such as
+`uv` or `cargo` to cover several tasks. Once registered, the commands appear in
+`dbx providers`, the CLI help and the VS Code Providers view, so a polyglot repo
+has one command surface even when the languages do not.
+
+```json [.dbx/toolchain/.registry/providers/rust.json]
+[
+    {
+        "id": "rust",
+        "name": "Rust (cargo)",
+        "binary": "cargo",
+        "commands": [
+            {
+                "name": "rust:build",
+                "subcommand": "build",
+                "description": "Build the Rust workspace."
+            },
+            {
+                "name": "rust:test",
+                "subcommand": "test",
+                "description": "Run Rust tests."
+            },
+            {
+                "name": "rust:clippy",
+                "subcommand": "clippy",
+                "description": "Lint with Clippy."
+            },
+            {
+                "name": "rust:fmt",
+                "subcommand": "fmt",
+                "description": "Format Rust sources."
+            }
+        ]
+    }
+]
+```
+
 ## Custom providers
 
 Providers are loaded from **search paths** (JSON files, directories of
