@@ -26,7 +26,7 @@ export interface SelectProjectsOptions {
      * `unconfigured` (missing a dbx config).
      */
     kind?: 'all' | 'configured' | 'unconfigured';
-    /** Maximum directory depth to scan (default 5). */
+    /** Maximum directory depth to scan. @default `5` */
     maxDepth?: number;
     /** Use an already-built graph instead of scanning the filesystem again. */
     graph?: ProjectGraph;

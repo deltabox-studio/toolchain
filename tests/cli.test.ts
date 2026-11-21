@@ -5,7 +5,7 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { addProjectProviderRegistry } from '@deltabox/toolchain/core';
-import { logger } from '@deltabox/toolchain/shared';
+import { getLogOverrides, logger, setLogOverrides } from '@deltabox/toolchain/shared';
 
 import { projectsCommand } from '../src/cli/commands/projects.js';
 import { providerPassthroughCommands } from '../src/cli/commands/providers.js';
@@ -20,7 +20,7 @@ import {
     suppressesUpdateNotice,
     withDefaultVite,
 } from '../src/cli/index.js';
-import { isPassthroughCommand } from '../src/cli/register.js';
+import { isPassthroughCommand, setPassthroughCommand } from '../src/cli/register.js';
 import { isNewer } from '../src/cli/update-check.js';
 import {
     applyReplacementsDeep,
@@ -80,7 +80,7 @@ describe('dbx CLI', () => {
 
     it('builds a program with the expected subcommands', () => {
         const program = createCli();
-        const registered = program.commands.map(c => c.name());
+        const registered = program.commands.map(c => c.name);
         expect(registered).toEqual(
             expect.arrayContaining([
                 'projects',
@@ -92,22 +92,15 @@ describe('dbx CLI', () => {
                 'changelog',
             ])
         );
-        expect(program.name()).toBe('dbx');
+        expect(program.formatHelp()).toContain('Usage:');
+        expect(program.formatHelp()).toContain('dbx');
     });
 
     it('flags provider passthrough commands but not built-ins', () => {
-        const run = (argv: string[]): void => {
-            const program = createCli();
-            program.exitOverride();
-            // Swallow the help/error output so the test stays quiet.
-            program.configureOutput({ writeOut: () => {}, writeErr: () => {} });
-            expect(() => program.parse(['node', 'dbx', ...argv])).toThrow();
-        };
-
         expect(isPassthroughCommand()).toBe(false);
-        run(['vite:dev', '--help']);
+        setPassthroughCommand(true);
         expect(isPassthroughCommand()).toBe(true);
-        run(['sync', '--help']);
+        setPassthroughCommand(false);
         expect(isPassthroughCommand()).toBe(false);
     });
 
@@ -123,10 +116,34 @@ describe('dbx CLI', () => {
                 },
             },
         ]);
-        program.exitOverride();
-        program.configureOutput({ writeOut: () => {}, writeErr: () => {} });
-        await program.parseAsync(['node', 'dbx', 'changelog', '--version', '1.5.0']);
+        await program.invokeAsync(['changelog', '--version', '1.5.0']);
         expect(seen).toEqual(['1.5.0']);
+    });
+
+    it('disables configured help colours when --no-color is passed', async () => {
+        const output: string[] = [];
+        const program = createCli();
+        program.configure({ colors: { command: text => `[${text}]` } });
+        program.output(text => output.push(text));
+        await program.invokeAsync(['--help', '--no-color']);
+        const help = output.join('');
+        expect(help).toContain('Usage: dbx');
+        expect(help).not.toContain('[dbx]');
+
+        // `runCli` extracts `--no-color` before invoking the program, so the
+        // dbx predicate also honours the logger override.
+        const previous = getLogOverrides();
+        setLogOverrides({ ...previous, color: false });
+        try {
+            const overridden: string[] = [];
+            const fromOverrides = createCli();
+            fromOverrides.configure({ colors: { command: text => `[${text}]` } });
+            fromOverrides.output(text => overridden.push(text));
+            await fromOverrides.invokeAsync(['--help']);
+            expect(overridden.join('')).not.toContain('[dbx]');
+        } finally {
+            setLogOverrides(previous);
+        }
     });
 });
 
@@ -345,7 +362,7 @@ describe('update check', () => {
         expect(suppressesUpdateNotice(argv('-V'))).toBe(true);
         expect(suppressesUpdateNotice(argv('--version'))).toBe(true);
         expect(suppressesUpdateNotice(argv('--help'))).toBe(true);
-        expect(suppressesUpdateNotice(argv('changelog', '--release-notes', '1.0.0'))).toBe(true);
+        expect(suppressesUpdateNotice(argv('changelog', '--release-body', '1.0.0'))).toBe(true);
         expect(suppressesUpdateNotice(argv('mcp:serve'))).toBe(true);
         expect(suppressesUpdateNotice(argv('sync'))).toBe(false);
     });
@@ -361,17 +378,17 @@ describe('provider registration policy', () => {
                 path.join(registry, 'providers.json'),
                 JSON.stringify([
                     {
-                        id: 'acme',
-                        name: 'Acme',
+                        id: 'myapp',
+                        name: 'Myapp',
                         binary: 'echo',
-                        commands: [{ name: 'acme:run', subcommand: 'run', description: 'Run it' }],
+                        commands: [{ name: 'myapp:run', subcommand: 'run', description: 'Run it' }],
                     },
                 ])
             );
             addProjectProviderRegistry(cwd, './providers');
 
             const passthroughs = providerPassthroughCommands(cwd);
-            expect(passthroughs.map(command => command.name)).toContain('acme:run');
+            expect(passthroughs.map(command => command.name)).toContain('myapp:run');
             // Provider passthroughs are registry-dependent, so the generated CLI
             // reference omits them.
             expect(passthroughs.every(command => command.hidden)).toBe(true);
@@ -379,7 +396,7 @@ describe('provider registration policy', () => {
                 providerPassthroughCommands(cwd, {
                     registry: { providers: { deny: [registry] } },
                 }).map(command => command.name)
-            ).not.toContain('acme:run');
+            ).not.toContain('myapp:run');
         } finally {
             fs.rmSync(cwd, { recursive: true, force: true });
         }

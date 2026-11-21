@@ -10,7 +10,7 @@ tsconfig untouched.
 ```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
-        project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
+        project: { type: 'monorepo-root', name: 'myapp', scope: '@org' },
         tsconfig: { aliases: true, refs: true, indent: 4 },
     },
 });
@@ -79,7 +79,7 @@ reads. Everything else is optional and, if you prefer, renameable (see
   workspaces file is regenerated from the graph (aliases + references); with no
   workspaces there is nothing to wire.
 
-The `{{envTypesFile}}` token in the templates (default `src/dbx-env.d.ts`) is
+The <code v-pre>{{ envTypesFile }}</code> token in the templates (default `src/dbx-env.d.ts`) is
 resolved when a project is scaffolded, so a generated config's `include` points
 at the project's env types file.
 
@@ -87,7 +87,7 @@ at the project's env types file.
 
 `tsconfig.json` is the **editor/development** config: it extends
 `tsconfig.default.json` and layers the workspace `paths` aliases on top, so
-imports such as `@acme/core` resolve directly to `packages/core/src`. That is
+imports such as `@org/core` resolve directly to `packages/core/src`. That is
 what gives go-to-definition, inline diagnostics and fast editor feedback against
 the real workspace source.
 
@@ -194,7 +194,7 @@ Given `packages/core/package.json`:
 
 ```json
 {
-    "name": "@acme/core",
+    "name": "@org/core",
     "exports": {
         ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
         "./utils": { "types": "./dist/utils.d.ts", "import": "./dist/utils.js" }
@@ -223,9 +223,9 @@ workspace's generated `tsconfig.json`):
 {
     "compilerOptions": {
         "paths": {
-            "@acme/core": ["./packages/core/src/index.ts"],
-            "@acme/core/utils": ["./packages/core/src/utils.ts"],
-            "@acme/core/*": ["./packages/core/src/*"]
+            "@org/core": ["./packages/core/src/index.ts"],
+            "@org/core/utils": ["./packages/core/src/utils.ts"],
+            "@org/core/*": ["./packages/core/src/*"]
         }
     }
 }
@@ -235,9 +235,9 @@ With `devMode: false` the same exports resolve to the distributed files instead:
 
 ```json
 {
-    "@acme/core": ["./packages/core/dist/index.js"],
-    "@acme/core/utils": ["./packages/core/dist/utils.js"],
-    "@acme/core/*": ["./packages/core/dist/*"]
+    "@org/core": ["./packages/core/dist/index.js"],
+    "@org/core/utils": ["./packages/core/dist/utils.js"],
+    "@org/core/*": ["./packages/core/dist/*"]
 }
 ```
 
@@ -518,15 +518,15 @@ from a workspace list:
 import { buildMonorepoTsconfig, renderMonorepoTsconfig } from '@deltabox/toolchain/tsconfig';
 
 const config = buildMonorepoTsconfig({
-    scope: '@acme',
+    scope: '@org',
     workspaces: [
         { alias: 'core', dir: 'packages/core' },
         { alias: 'cli', dir: 'packages/cli' },
     ],
 });
-// -> { compilerOptions: { composite, paths: { '@acme/core': ['./packages/core/src/index.ts'], ... } },
+// -> { compilerOptions: { composite, paths: { '@org/core': ['./packages/core/src/index.ts'], ... } },
 //      references: [{ path: './packages/core/tsconfig.json' }, ...] }
-renderMonorepoTsconfig({ scope: '@acme', workspaces: [{ alias: 'core', dir: 'packages/core' }] });
+renderMonorepoTsconfig({ scope: '@org', workspaces: [{ alias: 'core', dir: 'packages/core' }] });
 ```
 
 ## CLI
@@ -570,7 +570,7 @@ dbx tsconfig --no-extends         # only the selected file
 
 The output is machine-clean JSON (absolute paths). Aliases are anchored
 regular expressions by default (`strict`, from exact keys to wildcards), so
-`@acme/core` never captures `@acme/core-utils`; they serialize as
+`@org/core` never captures `@org/core-utils`; they serialize as
 `{ source, flags }` so JSON keeps the pattern. With `strict: false`, exact keys
 stay plain strings (wildcards remain regexes). Use `deserializeTsconfigAlias` to
 turn an alias back into a `RegExp`. Aliases and `paths` keys are sorted
@@ -584,11 +584,11 @@ Input `tsconfig.json`:
 {
     "compilerOptions": {
         "paths": {
-            "@acme/core": ["./packages/core/src/index.ts"],
-            "@acme/core-utils": ["./packages/core-utils/src/index.ts"],
-            "@acme/core-utils/deep": ["./packages/core-utils-deep/src/index.ts"],
-            "@acme/core.lib": ["./packages/core-lib/src/index.ts"],
-            "@acme/*": ["./packages/*/src/index.ts"]
+            "@org/core": ["./packages/core/src/index.ts"],
+            "@org/core-utils": ["./packages/core-utils/src/index.ts"],
+            "@org/core-utils/deep": ["./packages/core-utils-deep/src/index.ts"],
+            "@org/core.lib": ["./packages/core-lib/src/index.ts"],
+            "@org/*": ["./packages/*/src/index.ts"]
         }
     }
 }
@@ -600,32 +600,32 @@ Input `tsconfig.json`:
 {
     "alias": [
         {
-            "find": { "source": "^@acme\\/core\\.lib$", "flags": "" },
+            "find": { "source": "^@org\\/core\\.lib$", "flags": "" },
             "replacement": ".../core-lib/src/index.ts"
         },
         {
-            "find": { "source": "^@acme\\/core-utils\\/deep$", "flags": "" },
+            "find": { "source": "^@org\\/core-utils\\/deep$", "flags": "" },
             "replacement": ".../core-utils-deep/src/index.ts"
         },
         {
-            "find": { "source": "^@acme\\/core-utils$", "flags": "" },
+            "find": { "source": "^@org\\/core-utils$", "flags": "" },
             "replacement": ".../core-utils/src/index.ts"
         },
         {
-            "find": { "source": "^@acme\\/core$", "flags": "" },
+            "find": { "source": "^@org\\/core$", "flags": "" },
             "replacement": ".../core/src/index.ts"
         },
         {
-            "find": { "source": "^@acme\\/(.*)$", "flags": "" },
+            "find": { "source": "^@org\\/(.*)$", "flags": "" },
             "replacement": ".../packages/$1/src/index.ts"
         }
     ],
     "paths": {
-        "@acme/core.lib": [".../core-lib/src/index.ts"],
-        "@acme/core-utils/deep": [".../core-utils-deep/src/index.ts"],
-        "@acme/core-utils": [".../core-utils/src/index.ts"],
-        "@acme/core": [".../core/src/index.ts"],
-        "@acme/*": [".../packages/*/src/index.ts"]
+        "@org/core.lib": [".../core-lib/src/index.ts"],
+        "@org/core-utils/deep": [".../core-utils-deep/src/index.ts"],
+        "@org/core-utils": [".../core-utils/src/index.ts"],
+        "@org/core": [".../core/src/index.ts"],
+        "@org/*": [".../packages/*/src/index.ts"]
     },
     "references": []
 }

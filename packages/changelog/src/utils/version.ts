@@ -24,13 +24,43 @@ export const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z
 /** The configured prerelease identifier (eg. `beta`, `rc`), without a counter. */
 const PRERELEASE_TAG = /^[0-9A-Za-z-]+$/;
 
+/** Whether a semver carries a prerelease suffix (eg. `3.0.0-beta.2`). */
+export function isPrereleaseVersion(version: string): boolean {
+    return /^\d+\.\d+\.\d+-[0-9A-Za-z.-]+(?:\+[0-9A-Za-z.-]+)?$/.test(version.trim());
+}
+
+/** The stable core of a version (`3.0.0-beta.2` -> `3.0.0`). */
+export function stableVersionOf(version: string): string {
+    const match = /^(\d+\.\d+\.\d+)/.exec(version.trim());
+    if (!match) throw new Error(`Cannot parse version "${version}"`);
+    return match[1]!;
+}
+
+export interface BumpVersionOptions {
+    /**
+     * Whether the stable core of a prerelease `current` is already released.
+     * `false` rolls the bump over to that core (`3.0.0-beta.315` -> `3.0.0`)
+     * instead of bumping past it; omitted keeps the plain numeric bump.
+     */
+    stableExists?: boolean;
+}
+
 /**
  * Apply a semver bump. With a `prerelease` tag the result becomes a prerelease:
  * a stable version bumps its core and starts at `<tag>.0`; an existing
  * prerelease keeps its core and continues the counter for the same tag (switching
  * tags starts that tag at `.0`). The suffix is never appended twice.
+ *
+ * Without a prerelease tag, `stableExists: false` finishes an in-progress
+ * prerelease cycle at its stable core (eg. `3.0.0-beta.315` -> `3.0.0`) rather
+ * than bumping to the next patch/minor/major.
  */
-export function bumpVersion(current: string, type: BumpType, prerelease?: string): string {
+export function bumpVersion(
+    current: string,
+    type: BumpType,
+    prerelease?: string,
+    options: BumpVersionOptions = {}
+): string {
     const match = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?/.exec(current.trim());
     if (!match) throw new Error(`Cannot parse version "${current}"`);
     const major = Number(match[1]);
@@ -56,6 +86,12 @@ export function bumpVersion(current: string, type: BumpType, prerelease?: string
         }
         const next = bumpedCore(major, minor, patch, type);
         return `${next}-${tag}.0`;
+    }
+
+    // The prerelease cycle already targets this core, so finish it instead of
+    // skipping past it when that stable version has not been released yet.
+    if (options.stableExists === false && existing !== undefined) {
+        return `${major}.${minor}.${patch}`;
     }
 
     return bumpedCore(major, minor, patch, type);
@@ -103,7 +139,7 @@ export function renderChangelogEntry(
         .filter(Boolean)
         .join('\n\n');
     // `lifecycle: 'before'` renders sections before the body (via `buildSummary`)
-    // but still needs the body/release-notes wrapper here.
+    // but still needs the body/release-body wrapper here.
     const bodyToggle = d.releaseNotes.enabled ? d.releaseNotes : d.body;
     const bodyBlock =
         d.lifecycle === 'before' && detailsEnabled(bodyToggle, entryCount)

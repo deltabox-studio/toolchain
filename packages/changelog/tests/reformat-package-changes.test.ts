@@ -30,7 +30,7 @@ const CHANGELOG = [
     '### Package changes',
     '',
     '#### Added',
-    '- `acme`',
+    '- `myapp`',
     '  - `left-pad` `1.3.0`',
     '',
     '<!-- release:end -->',
@@ -48,13 +48,13 @@ function fixture(tagNewest: boolean): void {
         root,
         'package.json',
         JSON.stringify({
-            name: 'acme',
+            name: 'myapp',
             version: '1.0.0',
             private: true,
             workspaces: ['packages/*'],
         })
     );
-    write(root, 'packages/a/package.json', JSON.stringify({ name: '@acme/a', version: '1.0.0' }));
+    write(root, 'packages/a/package.json', JSON.stringify({ name: '@org/a', version: '1.0.0' }));
     write(root, 'packages/a/index.ts', 'export {};\n');
     write(root, 'CHANGELOG.md', CHANGELOG);
     git(root, 'init');
@@ -68,7 +68,7 @@ function fixture(tagNewest: boolean): void {
         root,
         'package.json',
         JSON.stringify({
-            name: 'acme',
+            name: 'myapp',
             version: '1.0.0',
             private: true,
             workspaces: ['packages/*'],

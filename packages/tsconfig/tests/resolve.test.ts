@@ -67,8 +67,8 @@ describe('resolveTsconfig', () => {
         write(path.join(cwd, 'tsconfig.json'), {
             compilerOptions: {
                 paths: {
-                    '@acme/core': ['./packages/core/src/index.ts'],
-                    '@acme/*': ['./packages/*/src/index.ts'],
+                    '@org/core': ['./packages/core/src/index.ts'],
+                    '@org/*': ['./packages/*/src/index.ts'],
                 },
             },
             references: [{ path: './packages/core/tsconfig.json' }],
@@ -78,19 +78,19 @@ describe('resolveTsconfig', () => {
         const core = path.join(cwd, 'packages/core/src/index.ts');
 
         expect(resolved.paths).toEqual({
-            '@acme/core': [core],
-            '@acme/*': [path.join(cwd, 'packages/*/src/index.ts')],
+            '@org/core': [core],
+            '@org/*': [path.join(cwd, 'packages/*/src/index.ts')],
         });
         expect(resolved.references).toEqual([
             { path: path.join(cwd, 'packages/core/tsconfig.json') },
         ]);
         // Exact aliases sort before wildcards and are strict by default.
         expect(resolved.alias[0]).toEqual({
-            find: /^@acme\/core$/,
+            find: /^@org\/core$/,
             replacement: core.replace(/\\/g, '/'),
         });
         expect(resolved.alias[1]).toEqual({
-            find: /^@acme\/(.*)$/,
+            find: /^@org\/(.*)$/,
             replacement: path.join(cwd, 'packages/$1/src/index.ts').replace(/\\/g, '/'),
         });
         expect(resolved.strict).toBe(true);
@@ -100,7 +100,7 @@ describe('resolveTsconfig', () => {
         const cwd = tmp();
         write(path.join(cwd, 'tsconfig.base.json'), {
             compilerOptions: {
-                paths: { '@acme/core': ['./packages/core/src/index.ts'] },
+                paths: { '@org/core': ['./packages/core/src/index.ts'] },
             },
             references: [{ path: './packages/core/tsconfig.json' }],
         });
@@ -113,7 +113,7 @@ describe('resolveTsconfig', () => {
         });
 
         const inherited = resolveTsconfig({ cwd });
-        expect(inherited.paths['@acme/core']).toEqual([
+        expect(inherited.paths['@org/core']).toEqual([
             path.join(cwd, 'packages/core/src/index.ts'),
         ]);
         expect(inherited.references).toEqual([
@@ -126,7 +126,7 @@ describe('resolveTsconfig', () => {
             references: [{ path: './packages/shared/tsconfig.json' }],
         });
         const childWins = resolveTsconfig({ cwd });
-        expect(childWins.paths['@acme/core']).toEqual([
+        expect(childWins.paths['@org/core']).toEqual([
             path.join(cwd, 'packages/core/src/index.ts'),
         ]);
         expect(childWins.references).toEqual([
@@ -157,7 +157,7 @@ describe('resolveTsconfig', () => {
         const cwd = tmp();
         write(path.join(cwd, 'tsconfig.json'), {
             extends: 'https://example.com/tsconfig.json',
-            compilerOptions: { paths: { '@acme/core': ['./packages/core/src/index.ts'] } },
+            compilerOptions: { paths: { '@org/core': ['./packages/core/src/index.ts'] } },
         });
 
         expect(() => resolveTsconfig({ cwd })).toThrow(/was not prefetched/);
@@ -168,7 +168,7 @@ describe('resolveTsconfig', () => {
         write(path.join(cwd, 'base/tsconfig.json'), {
             compilerOptions: {
                 baseUrl: '.',
-                paths: { '@acme/*': ['packages/*/src/index.ts'] },
+                paths: { '@org/*': ['packages/*/src/index.ts'] },
             },
         });
         write(path.join(cwd, 'tsconfig.json'), {
@@ -176,7 +176,7 @@ describe('resolveTsconfig', () => {
             compilerOptions: { strict: true },
         });
 
-        expect(resolveTsconfig({ cwd }).paths['@acme/*']).toEqual([
+        expect(resolveTsconfig({ cwd }).paths['@org/*']).toEqual([
             path.join(cwd, 'base/packages/*/src/index.ts'),
         ]);
 
@@ -189,7 +189,7 @@ describe('resolveTsconfig', () => {
         const cwd = tmp();
         const root = path.join(cwd, 'repo');
         write(path.join(root, 'config/tsconfig.json'), {
-            compilerOptions: { paths: { '@acme/*': ['./src/*'] } },
+            compilerOptions: { paths: { '@org/*': ['./src/*'] } },
         });
 
         const resolved = resolveTsconfig({
@@ -197,7 +197,7 @@ describe('resolveTsconfig', () => {
             root,
             tsconfig: 'config/tsconfig.json',
         });
-        expect(resolved.paths['@acme/*']).toEqual([path.join(root, 'config/src/*')]);
+        expect(resolved.paths['@org/*']).toEqual([path.join(root, 'config/src/*')]);
     });
 
     it('anchors exact aliases by default and escapes the pattern', () => {
@@ -205,21 +205,21 @@ describe('resolveTsconfig', () => {
         write(path.join(cwd, 'tsconfig.json'), {
             compilerOptions: {
                 paths: {
-                    '@acme/core': ['./packages/core/src/index.ts'],
-                    '@acme/core-utils': ['./packages/core-utils/src/index.ts'],
-                    '@acme/core.lib': ['./packages/core-lib/src/index.ts'],
+                    '@org/core': ['./packages/core/src/index.ts'],
+                    '@org/core-utils': ['./packages/core-utils/src/index.ts'],
+                    '@org/core.lib': ['./packages/core-lib/src/index.ts'],
                 },
             },
         });
 
         const resolved = resolveTsconfig({ cwd });
         const exact = resolved.alias.find(
-            alias => alias.find instanceof RegExp && alias.find.source === '^@acme\\/core$'
+            alias => alias.find instanceof RegExp && alias.find.source === '^@org\\/core$'
         );
         expect(exact).toBeDefined();
         const pattern = exact?.find as RegExp;
-        expect(pattern.test('@acme/core')).toBe(true);
-        expect(pattern.test('@acme/core-utils')).toBe(false);
+        expect(pattern.test('@org/core')).toBe(true);
+        expect(pattern.test('@org/core-utils')).toBe(false);
         // The dot in a plain find must be escaped (not a wildcard).
         expect(
             resolved.alias.some(
@@ -229,8 +229,8 @@ describe('resolveTsconfig', () => {
 
         const loose = resolveTsconfig({ cwd, strict: false });
         expect(loose.strict).toBe(false);
-        expect(loose.alias.some(alias => alias.find === '@acme/core')).toBe(true);
-        expect(loose.alias.some(alias => alias.find === '@acme/core.lib')).toBe(true);
+        expect(loose.alias.some(alias => alias.find === '@org/core')).toBe(true);
+        expect(loose.alias.some(alias => alias.find === '@org/core.lib')).toBe(true);
     });
 
     it('sorts aliases and paths descending so the longest key comes first', () => {
@@ -238,26 +238,26 @@ describe('resolveTsconfig', () => {
         write(path.join(cwd, 'tsconfig.json'), {
             compilerOptions: {
                 paths: {
-                    '@acme/core': ['./packages/core/src/index.ts'],
-                    '@acme/*': ['./packages/*/src/index.ts'],
-                    '@acme/core-utils/deep': ['./packages/core-utils-deep/src/index.ts'],
-                    '@acme/core-utils': ['./packages/core-utils/src/index.ts'],
+                    '@org/core': ['./packages/core/src/index.ts'],
+                    '@org/*': ['./packages/*/src/index.ts'],
+                    '@org/core-utils/deep': ['./packages/core-utils-deep/src/index.ts'],
+                    '@org/core-utils': ['./packages/core-utils/src/index.ts'],
                 },
             },
         });
 
         const resolved = resolveTsconfig({ cwd, strict: false });
         expect(Object.keys(resolved.paths)).toEqual([
-            '@acme/core-utils/deep',
-            '@acme/core-utils',
-            '@acme/core',
-            '@acme/*',
+            '@org/core-utils/deep',
+            '@org/core-utils',
+            '@org/core',
+            '@org/*',
         ]);
         expect(
             resolved.alias.map(alias =>
                 typeof alias.find === 'string' ? alias.find : alias.find.source
             )
-        ).toEqual(['@acme/core-utils/deep', '@acme/core-utils', '@acme/core', '^@acme\\/(.*)$']);
+        ).toEqual(['@org/core-utils/deep', '@org/core-utils', '@org/core', '^@org\\/(.*)$']);
     });
 
     it('parses JSONC (comments + trailing commas)', () => {
@@ -267,13 +267,13 @@ describe('resolveTsconfig', () => {
             `{
                 // comment
                 "compilerOptions": {
-                    "paths": { "@acme/core": ["./src/index.ts"], },
+                    "paths": { "@org/core": ["./src/index.ts"], },
                 },
                 "references": [{ "path": "./tsconfig.base.json" },],
             }`
         );
 
-        expect(resolveTsconfig({ cwd }).paths['@acme/core']).toEqual([
+        expect(resolveTsconfig({ cwd }).paths['@org/core']).toEqual([
             path.join(cwd, 'src/index.ts'),
         ]);
     });
@@ -284,7 +284,7 @@ describe('resolveTsconfig', () => {
         write(path.join(cwd, 'tsconfig.json'), {
             compilerOptions: {
                 paths: {
-                    '@acme/*/feature/*': ['./packages/*/src/features/*/index.ts'],
+                    '@org/*/feature/*': ['./packages/*/src/features/*/index.ts'],
                 },
             },
         });
@@ -292,9 +292,9 @@ describe('resolveTsconfig', () => {
         const [alias] = resolveTsconfig({ cwd }).alias;
         expect(alias?.find).toBeInstanceOf(RegExp);
         const find = alias?.find as RegExp;
-        expect(find.test('@acme/core/feature/auth')).toBe(true);
-        expect(find.test('@acme/core/feature')).toBe(false);
-        expect('@acme/core/feature/auth'.replace(find, alias?.replacement ?? '')).toBe(
+        expect(find.test('@org/core/feature/auth')).toBe(true);
+        expect(find.test('@org/core/feature')).toBe(false);
+        expect('@org/core/feature/auth'.replace(find, alias?.replacement ?? '')).toBe(
             path.resolve(cwd, 'packages/core/src/features/auth/index.ts').replace(/\\/g, '/')
         );
     });
@@ -304,7 +304,7 @@ describe('resolveTsconfig', () => {
         write(path.join(cwd, 'base/tsconfig.json'), {
             compilerOptions: {
                 baseUrl: '.',
-                paths: { '@acme/*': ['packages/*/src/index.ts'] },
+                paths: { '@org/*': ['packages/*/src/index.ts'] },
             },
             references: [{ path: './packages/core/tsconfig.json' }],
         });
@@ -314,10 +314,10 @@ describe('resolveTsconfig', () => {
 
         const resolved = resolveTsconfig({ cwd, relativePaths: true });
         expect(resolved.relativePaths).toBe(true);
-        expect(resolved.paths['@acme/*']).toEqual(['packages/*/src/index.ts']);
+        expect(resolved.paths['@org/*']).toEqual(['packages/*/src/index.ts']);
         expect(resolved.references).toEqual([{ path: 'packages/core/tsconfig.json' }]);
         expect(resolved.alias[0]).toEqual({
-            find: /^@acme\/(.*)$/,
+            find: /^@org\/(.*)$/,
             replacement: 'packages/$1/src/index.ts',
         });
     });
@@ -329,7 +329,7 @@ describe('remote tsconfig extends', () => {
             '/base.json': {
                 compilerOptions: {
                     strict: true,
-                    paths: { '@acme/core': ['./src/index.ts'] },
+                    paths: { '@org/core': ['./src/index.ts'] },
                 },
             },
         });
@@ -339,19 +339,19 @@ describe('remote tsconfig extends', () => {
         });
 
         const resolved = await resolveTsconfigAsync({ cwd });
-        expect(resolved.paths['@acme/core']).toEqual([`${base}/src/index.ts`]);
+        expect(resolved.paths['@org/core']).toEqual([`${base}/src/index.ts`]);
     });
 
     it('follows nested relative extends against the remote URL', async () => {
         const base = await serve({
             '/configs/one.json': {
                 compilerOptions: {
-                    paths: { '@acme/one': ['./one.ts'] },
+                    paths: { '@org/one': ['./one.ts'] },
                 },
             },
             '/configs/two.json': {
                 compilerOptions: {
-                    paths: { '@acme/two': ['./two.ts'] },
+                    paths: { '@org/two': ['./two.ts'] },
                 },
             },
             '/configs/root.json': {
@@ -365,8 +365,8 @@ describe('remote tsconfig extends', () => {
 
         const resolved = await resolveTsconfigAsync({ cwd });
         // The later entry in the extends array wins, like a local config.
-        expect(resolved.paths['@acme/two']).toEqual([`${base}/configs/two.ts`]);
-        expect(resolved.paths['@acme/one']).toBeUndefined();
+        expect(resolved.paths['@org/two']).toEqual([`${base}/configs/two.ts`]);
+        expect(resolved.paths['@org/one']).toBeUndefined();
     });
 
     it('reports a remote fetch failure', async () => {
@@ -399,11 +399,11 @@ describe('remote tsconfig extends', () => {
         });
         const cwd = tmp();
         write(path.join(cwd, 'package.json'), {
-            name: '@acme/root',
+            name: '@org/root',
             private: true,
             workspaces: ['packages/*'],
         });
-        write(path.join(cwd, 'packages/core/package.json'), { name: '@acme/core' });
+        write(path.join(cwd, 'packages/core/package.json'), { name: '@org/core' });
         write(path.join(cwd, 'packages/core/tsconfig.default.json'), {
             extends: `${base}/base.json`,
         });
@@ -434,11 +434,11 @@ describe('remote tsconfig extends', () => {
         });
         const cwd = tmp();
         write(path.join(cwd, 'package.json'), {
-            name: '@acme/root',
+            name: '@org/root',
             private: true,
             workspaces: ['packages/*'],
         });
-        write(path.join(cwd, 'packages/core/package.json'), { name: '@acme/core' });
+        write(path.join(cwd, 'packages/core/package.json'), { name: '@org/core' });
         write(path.join(cwd, 'packages/core/tsconfig.base.json'), {
             compilerOptions: { paths: { '@local/*': ['./src/local/*'] } },
         });
@@ -480,17 +480,17 @@ describe('remote tsconfig extends', () => {
         });
         const cwd = tmp();
         write(path.join(cwd, 'package.json'), {
-            name: '@acme/root',
+            name: '@org/root',
             private: true,
             workspaces: ['packages/*'],
         });
-        write(path.join(cwd, 'packages/core/package.json'), { name: '@acme/core' });
+        write(path.join(cwd, 'packages/core/package.json'), { name: '@org/core' });
         write(path.join(cwd, 'packages/core/src/index.ts'), 'export {};\n');
         write(path.join(cwd, 'packages/core/tsconfig.default.json'), {
             extends: `${base}/base.json`,
             compilerOptions: { strict: true },
         });
-        write(path.join(cwd, 'packages/app/package.json'), { name: '@acme/app' });
+        write(path.join(cwd, 'packages/app/package.json'), { name: '@org/app' });
         write(path.join(cwd, 'packages/app/tsconfig.default.json'), {});
 
         const result = await generateWorkspaceTsconfigs({
@@ -522,8 +522,8 @@ describe('remote tsconfig extends', () => {
         expect(core.compilerOptions?.outDir).toBeUndefined();
         expect(JSON.stringify(core.compilerOptions?.paths)).not.toContain('@remote');
         expect(app.compilerOptions?.paths).toEqual({
-            '@acme/core': ['../core/src/index.ts'],
-            '@acme/core/*': ['../core/src/*'],
+            '@org/core': ['../core/src/index.ts'],
+            '@org/core/*': ['../core/src/*'],
         });
         expect(JSON.stringify(app.compilerOptions?.paths)).not.toContain('@remote');
     });
@@ -611,7 +611,7 @@ describe('remote tsconfig extends', () => {
         });
         const cwd = tmp();
         write(path.join(cwd, 'package.json'), {
-            name: '@acme/root',
+            name: '@org/root',
             private: true,
             workspaces: ['packages/*'],
         });
@@ -623,7 +623,7 @@ describe('remote tsconfig extends', () => {
             files: ['root.ts'],
             compilerOptions: { composite: true },
         });
-        write(path.join(cwd, 'packages/core/package.json'), { name: '@acme/core' });
+        write(path.join(cwd, 'packages/core/package.json'), { name: '@org/core' });
         write(path.join(cwd, 'packages/core/tsconfig.default.json'), {
             extends: `${base}/remote.json`,
         });
@@ -653,11 +653,11 @@ describe('remote tsconfig extends', () => {
         });
         const cwd = tmp();
         write(path.join(cwd, 'package.json'), {
-            name: '@acme/root',
+            name: '@org/root',
             private: true,
             workspaces: ['packages/*'],
         });
-        write(path.join(cwd, 'packages/core/package.json'), { name: '@acme/core' });
+        write(path.join(cwd, 'packages/core/package.json'), { name: '@org/core' });
         // An isolated (pnpm-like) install: the dependency is only visible from
         // the workspace, never from the repo root.
         write(
@@ -693,19 +693,19 @@ describe('remote tsconfig extends', () => {
 
 describe('alias serialization', () => {
     it('keeps exact aliases as strings', () => {
-        const alias = { find: '@acme/core', replacement: '/repo/packages/core/src/index.ts' };
+        const alias = { find: '@org/core', replacement: '/repo/packages/core/src/index.ts' };
         expect(serializeTsconfigAlias(alias)).toEqual(alias);
         expect(deserializeTsconfigAlias(serializeTsconfigAlias(alias))).toEqual(alias);
     });
 
     it('round-trips wildcard aliases through JSON', () => {
         const alias = {
-            find: /^@acme\/(.*)$/,
+            find: /^@org\/(.*)$/,
             replacement: '/repo/packages/$1/src/index.ts',
         };
         const serialized = serializeTsconfigAlias(alias);
         expect(serialized).toEqual({
-            find: { source: '^@acme\\/(.*)$', flags: '' },
+            find: { source: '^@org\\/(.*)$', flags: '' },
             replacement: '/repo/packages/$1/src/index.ts',
         });
 
@@ -714,19 +714,19 @@ describe('alias serialization', () => {
         const parsed = JSON.parse(json) as { alias: (typeof serialized)[] };
         const restored = deserializeTsconfigAlias(parsed.alias[0]!);
         expect(restored.find).toBeInstanceOf(RegExp);
-        expect((restored.find as RegExp).source).toBe('^@acme\\/(.*)$');
+        expect((restored.find as RegExp).source).toBe('^@org\\/(.*)$');
         expect(restored.replacement).toBe('/repo/packages/$1/src/index.ts');
     });
 
     it('serializes a whole resolved config', () => {
         const cwd = tmp();
         write(path.join(cwd, 'tsconfig.json'), {
-            compilerOptions: { paths: { '@acme/*': ['./packages/*/src/index.ts'] } },
+            compilerOptions: { paths: { '@org/*': ['./packages/*/src/index.ts'] } },
         });
 
         const serialized = serializeResolvedTsconfig(resolveTsconfig({ cwd }));
         const json = JSON.parse(JSON.stringify(serialized));
-        expect(json.alias[0].find).toEqual({ source: '^@acme\\/(.*)$', flags: '' });
-        expect(json.paths['@acme/*']).toHaveLength(1);
+        expect(json.alias[0].find).toEqual({ source: '^@org\\/(.*)$', flags: '' });
+        expect(json.paths['@org/*']).toHaveLength(1);
     });
 });

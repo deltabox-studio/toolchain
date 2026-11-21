@@ -69,7 +69,7 @@ const workspaceBuildTemplate = {
 };
 
 export interface RenderTsconfigBuildOptions {
-    /** JSON indentation (default 4). */
+    /** JSON indentation. @default `4` */
     indent?: number | string;
     /** Use workspace-relative include globs instead of the repo-root template. */
     workspace?: boolean;
@@ -100,13 +100,13 @@ export interface MonorepoWorkspace {
 }
 
 export interface MonorepoTsconfigOptions {
-    /** The npm scope, eg. `@acme` (used as the alias prefix). */
+    /** The npm scope, eg. `@org` (used as the alias prefix). */
     scope: string;
     /** The workspaces to wire into `paths` + `references`. */
     workspaces: MonorepoWorkspace[];
     /** Extra compiler options to merge in. */
     compilerOptions?: Record<string, unknown>;
-    /** Enable `composite` for the generated monorepo config (default false). */
+    /** Enable `composite` for the generated monorepo config. @default `false` */
     composite?: boolean;
 }
 

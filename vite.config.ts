@@ -3,7 +3,6 @@ import { defineConfig } from 'vite-plus';
 import { dbx } from '@deltabox/toolchain/vite';
 
 import { rootPackConfig } from './scripts/root-pack.js';
-import { syncScaffoldCatalog } from './scripts/sync-scaffold-catalog.js';
 
 /**
  * The toolchain dogfoods itself through the `dbx()` Vite/Vite+ plugin.
@@ -37,11 +36,6 @@ export default defineConfig({
                     packageManager: 'yarn',
                     packageManagerVersion: '4.17.1',
                 },
-                hooks: {
-                    // Keep the scaffold catalog's `vite-plugin-dbx` pin in step
-                    // with the root version before the changelog workflow commits.
-                    afterVersion: ({ cwd }) => syncScaffoldCatalog(cwd),
-                },
                 // Generate each workspace `tsconfig.json` from its
                 // `tsconfig.default.json`, wiring the shared `paths` from
                 // `tsconfig.workspaces.json`. The template fixtures under
@@ -64,25 +58,17 @@ export default defineConfig({
                 // Shared formatting/linting lives at the top level so every workspace
                 // (even one with a hand-written `vite.config.*`) inherits it.
                 fmt: {
-                    // Oxfmt (from `biome.json` formatter + javascript.formatter).
+                    // The toolchain defaults (DEFAULT_FMT_RULES) already cover the
+                    // formatter style, import sorting and default ignores; only the
+                    // repo's 4-space convention and its extra ignore globs differ.
                     oxc: {
-                        useTabs: false,
                         tabWidth: 4,
-                        printWidth: 100,
-                        endOfLine: 'lf',
-                        singleQuote: true,
-                        jsxSingleQuote: false,
-                        quoteProps: 'as-needed',
-                        trailingComma: 'es5',
-                        semi: true,
-                        arrowParens: 'avoid',
-                        bracketSpacing: true,
-                        bracketSameLine: false,
                         ignorePatterns: [
                             '**/node_modules/**',
                             '**/dist/**',
                             '**/.turbo/**',
                             '**/.generated/**',
+                            '**/.vite-hooks/_/**',
                             '*.json',
                             'packages/*/*.json',
                             '**/tsconfig*.json',
@@ -103,40 +89,19 @@ export default defineConfig({
                             '**/config-schema/generated/azure-pipelines.ts',
                             '**/config-schema/generated/oxlint-config.ts',
                         ],
-                        // Import sorting comes from the toolchain defaults; the
-                        // `workspace` group is resolved from the project graph.
                     },
                 },
                 lint: {
-                    // Oxlint (from `biome.json` linter.rules; `info` -> `off`, no Oxlint level).
+                    // Same idea: the default Oxlint rules apply untouched; the repo
+                    // only adds its generated-output ignores.
                     oxc: {
                         ignorePatterns: [
                             '**/node_modules/**',
                             '**/dist/**',
                             '**/.turbo/**',
                             '**/.generated/**',
+                            '**/.vite-hooks/_/**',
                         ],
-                        rules: {
-                            'jsx-a11y/alt-text': 'off',
-                            'react/button-has-type': 'off',
-                            'jsx-a11y/click-events-have-key-events': 'off',
-                            'typescript/no-empty-object-type': 'off',
-                            'no-useless-escape': 'off',
-                            'typescript/no-useless-empty-export': 'off',
-                            'no-constant-condition': 'off',
-                            'no-inner-declarations': 'off',
-                            'no-unused-vars': 'warn',
-                            'no-case-declarations': 'off',
-                            'react/exhaustive-deps': 'off',
-                            'prefer-exponentiation-operator': 'off',
-                            'typescript/no-non-null-assertion': 'off',
-                            'prefer-template': 'off',
-                            'no-return-assign': 'off',
-                            eqeqeq: 'warn',
-                            'typescript/no-explicit-any': 'off',
-                            // The markdown sanitizers intentionally match control chars.
-                            'no-control-regex': 'off',
-                        },
                     },
                 },
                 ci: {
@@ -240,6 +205,17 @@ export default defineConfig({
                                             'else',
                                             '  echo "skip=false" >> "$GITHUB_OUTPUT"',
                                             'fi',
+                                            // Publishing is gated by the registry, not the
+                                            // tag: a run that failed after creating the
+                                            // GitHub Release can be re-dispatched and
+                                            // still publish the missing version.
+                                            'name="$(node -p "require(\'./package.json\').name")"',
+                                            'if npm view "$name@$version" version >/dev/null 2>&1; then',
+                                            '  echo "$name@$version is already published."',
+                                            '  echo "npmPublished=true" >> "$GITHUB_OUTPUT"',
+                                            'else',
+                                            '  echo "npmPublished=false" >> "$GITHUB_OUTPUT"',
+                                            'fi',
                                         ].join('\n'),
                                     },
                                     {
@@ -262,7 +238,7 @@ export default defineConfig({
                                             // released version. The CLI helper only considers
                                             // tags whose versions exist in CHANGELOG.md, so
                                             // calendar/CI tags cannot leak the whole file.
-                                            'notes="$({{packageManager}} dbx changelog --release-notes "${{ steps.release.outputs.version }}")"',
+                                            'notes="$({{packageManager}} dbx changelog --release-body "${{ steps.release.outputs.version }}")"',
                                             '[ -n "$notes" ] || notes="Release v${{ steps.release.outputs.version }}"',
                                             'printf \'%s\\n\' "$notes" > RELEASE_NOTES.md',
                                         ].join('\n'),
@@ -284,7 +260,7 @@ export default defineConfig({
                                         // bundles npm 10 — without the upgrade the publish
                                         // silently falls back to token auth and fails.
                                         name: 'Upgrade npm for trusted publishing',
-                                        if: "steps.release.outputs.skip == 'false'",
+                                        if: "steps.release.outputs.skip == 'false' || steps.release.outputs.npmPublished == 'false'",
                                         run: 'npm install -g npm@^11.15.1',
                                     },
                                     {
@@ -296,15 +272,26 @@ export default defineConfig({
                                         // the GitHub OIDC token for a short-lived registry
                                         // token and adds provenance automatically. `yarn
                                         // pack` resolves `catalog:`/`workspace:` first.
+                                        //
+                                        // A prerelease must be published under an npm
+                                        // dist-tag (`3.0.0-beta.1` -> `beta`), otherwise
+                                        // npm refuses it; stable releases keep `latest`.
                                         name: 'Publish to npm (fallback: staged)',
-                                        if: "steps.release.outputs.skip == 'false'",
+                                        if: "steps.release.outputs.npmPublished == 'false'",
                                         run: [
+                                            'version="${{ steps.release.outputs.version }}"',
+                                            'if [[ "$version" == *-* ]]; then',
+                                            '  npm_tag="${version#*-}"',
+                                            '  npm_tag="${npm_tag%%[.+]*}"',
+                                            'else',
+                                            '  npm_tag="latest"',
+                                            'fi',
                                             '{{packageManager}} pack --out toolchain.tgz',
-                                            'if npm publish toolchain.tgz --access public; then',
-                                            '  echo "Published to npm."',
+                                            'if npm publish toolchain.tgz --access public --tag "$npm_tag"; then',
+                                            '  echo "Published to npm (tag: $npm_tag)."',
                                             'else',
                                             '  echo "::warning::Direct publish failed; falling back to a staged publish."',
-                                            '  npm stage publish toolchain.tgz --access public',
+                                            '  npm stage publish toolchain.tgz --access public --tag "$npm_tag"',
                                             'fi',
                                         ].join('\n'),
                                     },
@@ -314,7 +301,7 @@ export default defineConfig({
                                         // Private packages (and already-published
                                         // versions) are skipped by the script.
                                         name: 'Publish stale workspace packages',
-                                        if: "steps.release.outputs.skip == 'false'",
+                                        if: "steps.release.outputs.skip == 'false' || steps.release.outputs.npmPublished == 'false'",
                                         run: 'node scripts/publish-workspaces.mjs',
                                     },
                                 ],
@@ -390,7 +377,7 @@ export default defineConfig({
                                 {
                                     name: 'Verify generated config artifacts are up to date',
                                     run: [
-                                        'yarn format',
+                                        'yarn fmt',
                                         'git diff --exit-code -- apps/docs/config/reference.md apps/docs/config/index.md apps/docs/config/cli.md apps/docs/config/env.md config.schema.json packages/shared/src/config-types.ts packages/shared/src/config-schema/generated/biome-config.ts',
                                     ].join('\n'),
                                 },
@@ -474,6 +461,11 @@ export default defineConfig({
         testTimeout: 20000,
         exclude: ['**/node_modules/**', '**/dist/**'],
     },
+    // Vite+ staged checks: `.vite-hooks/pre-commit` runs `vp staged`, which
+    // applies this to the files in the commit.
+    staged: {
+        '*': 'vp check --fix',
+    },
     // Each package declares its own
     // build/typecheck/test tasks (with cache input/output) in its vite.config.ts;
     // here we define the workspace-root umbrella tasks.
@@ -495,11 +487,11 @@ export default defineConfig({
                 command: "vp test run --exclude 'packages/**'",
                 cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
             },
-            'format:root': {
+            'fmt:root': {
                 command: 'vp fmt',
                 cache: { input: [{ auto: true }], output: [] },
             },
-            'format:check:root': {
+            'fmt:check:root': {
                 command: 'vp fmt --check',
                 cache: { input: [{ auto: true }], output: [] },
             },

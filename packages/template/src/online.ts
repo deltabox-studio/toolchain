@@ -80,7 +80,7 @@ function parseNpmTemplates(pkg: string, raw: unknown, registry: string): Templat
 
 /**
  * List the templates an npm create package publishes. Scoped (`@scope/create`)
- * and unscoped (`create-acme`, `acme-create`) packages are supported; the
+ * and unscoped (`create-myapp`, `myapp-create`) packages are supported; the
  * registry defaults to the project package manager's registry.
  */
 export async function loadNpmTemplates(
@@ -124,8 +124,8 @@ export function gitTemplate(source: ToolchainTemplateSource): Template {
 }
 
 /**
- * Parse a `template:add` spec: `type:locate` (eg. `local:./tpl`, `git:https://…`,
- * `npm:@acme/create`, `npm:create-acme`) or an inferred source (a path that
+ * Parse a `template:add` spec: `type:locate` (eg. `local:./tpl`, `git:https://...`,
+ * `npm:@org/create`, `npm:create-myapp`) or an inferred source (a path that
  * exists -> local, a scoped/create-* package -> npm, a URL/scp -> git).
  */
 export function parseSourceSpec(

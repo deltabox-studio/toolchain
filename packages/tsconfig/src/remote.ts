@@ -8,7 +8,7 @@
  * error instead of silently disappearing.
  */
 
-import { parseTsconfig } from './resolve.js';
+import { parseTsconfig } from './resolve/index.js';
 import type { TsconfigJson } from './types/index.js';
 
 const remoteTsconfigCache = new Map<string, TsconfigJson>();

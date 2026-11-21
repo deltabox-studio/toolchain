@@ -5,8 +5,7 @@ outline: [2, 3]
 
 # CLI reference
 
-Generated from the same `ToolchainCommand` descriptors the `dbx` binary
-registers. Run `yarn config:docs` after changing a command.
+Generated from the same `CliCommand` descriptors the `dbx` binary registers.
 
 | Command                                                 | Description                                                                                     |
 | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -92,27 +91,24 @@ Discover projects and write .dbx/toolchain/projects.json.
 
 Regenerate every managed file from dbx.config.*.
 
-- `--cwd ‹dir›` — Project root (default: cwd).
-- `-q, --quiet` — Only log errors.
-- `--configless` — Manage projects without their own dbx.config.* (inherit the nearest config).
+- `--no-format` — Do not format the written managed files.
+- `--no-format-fix` — Run the formatter in check mode instead of rewriting the files.
+- `--format-command ‹value›` — Override the formatter command. `{files}` expands to the managed files (space-separated); when it is absent the files are appended.
+- `--format-exclude ‹value...›` — Globs of managed files to leave unformatted (per-file opt-out).
 - `--check` — Do not write; fail if files are out of date.
 - `--watch` — Keep running and re-sync on change.
 - `--recursive` — Sync every managed project in dependency order (nested workspaces included; configless projects only with --configless).
 - `--force` — Run even when no dbx.config.* is present.
 - `--only ‹tasks›` — Only run the named sync task(s), comma-separated (eg. `tsconfig`).
-- `--no-format` — Do not format the written managed files.
-- `--no-format-fix` — Run the formatter in check mode instead of rewriting the files.
-- `--format-command ‹command›` — Override the managed-file formatter command (`{files}` expands to the files).
-- `--format-exclude ‹glob...›` — Managed files to leave unformatted (repeatable globs).
 - `--json` — Print the sync result (including removed files) as JSON.
 
 ## `dbx watch`
 
 Sync once, then watch key files and re-sync on change.
 
-- `--cwd ‹dir›` — Project root (default: cwd).
-- `-q, --quiet` — Only log errors.
-- `--configless` — Manage projects without their own dbx.config.* (inherit the nearest config).
+- `--debounce ‹value›` — Debounce window in ms. (default: `150`)
+- `--exclude ‹value...›` — Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
+- `--no-gitignore` — Do not respect .gitignore files.
 - `--force` — Run even when no dbx.config.* is present.
 - `--list` — Print the resolved input globs (+ tsconfig file names) instead of watching.
 - `--json` — With --list: print the inputs as JSON.
@@ -123,8 +119,8 @@ Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a
 
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--recursive` — Reset every discovered project under the root.
-- `--include ‹pattern...›` — Only projects matching these patterns (glob or substring).
-- `--exclude ‹pattern...›` — Skip projects matching these patterns (glob or substring).
+- `--include ‹pattern...›` —
+- `--exclude ‹pattern...›` —
 - `--generated` — Remove only the generated/managed files.
 - `--manifest` — Remove only the .dbx/toolchain directory.
 - `--config` — Also remove dbx.config.*.
@@ -166,25 +162,25 @@ Disable the toolchain (workspace scope by default).
 
 Generate workspace tsconfig.json files from the default tsconfig (aliases + references).
 
-- `--cwd ‹dir›` — Repo root to scan (default: cwd).
-- `--no-aliases` — Skip path aliases.
-- `--composite` — Emit composite + references.
+- `--glob ‹value...›` — Glob(s) for the workspace default tsconfig files. Defaults to matching every `defaultFile` recursively.
+- `--exclude ‹value...›` — Glob(s) to exclude from `glob`. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
+- `--no-gitignore` — Do not respect .gitignore files.
 - `--refs` — Wire project references.
-- `--flatten-remote-extends` — Inline compiler options inherited from a remote http(s) extends chain (existing settings win).
+- `--composite` — Emit `composite: true`.
+- `--no-aliases` — Skip path aliases.
+- `--flatten-remote-extends` — Inline the compiler options inherited from a remote `http(s)` `extends` chain into the generated workspace configs. Useful when a tool cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` are skipped because they describe the remote tree. Settings the generated config already defines always win.
+- `--auto-src-dir ‹value›` — Source directory used to resolve workspace entry points when `package.json` does not declare `exports`/`main`/`types` (default: the workspace's final tsconfig `rootDir`/`baseUrl`, falling back to `src`).
+- `-i, --indent ‹value›` — JSON indentation. (default: `4`)
+- `--root-file ‹value›` — The workspaces tsconfig file name that holds `paths` + `references`. (default: `tsconfig.workspaces.json`)
+- `--default-file ‹value›` — The workspace default tsconfig file name that the generator expands. (default: `tsconfig.default.json`)
+- `--build-file ‹value›` — The workspace build tsconfig file name. (default: `tsconfig.build.json`)
+- `--cwd ‹dir›` — Repo root to scan (default: cwd).
 - `--auto` — Auto-wire the root workspaces tsconfig paths/references from the project graph (default false).
 - `--no-auto` — Only use the paths/references already in the root workspaces tsconfig.
 - `--auto-aliases` — Auto-wire path aliases (defaults to --auto).
 - `--no-auto-aliases` — Do not auto-wire path aliases.
 - `--auto-refs` — Auto-wire project references (defaults to --auto).
 - `--no-auto-refs` — Do not auto-wire project references.
-- `--auto-src-dir ‹dir›` — Source directory for auto entry points (default: the workspace tsconfig rootDir/baseUrl, then src).
-- `-i, --indent ‹n›` — JSON indentation.
-- `--glob ‹glob...›` — Glob(s) for the default tsconfig files.
-- `--exclude ‹glob...›` — Glob(s) to exclude (on top of the common ignored paths).
-- `--no-gitignore` — Do not respect .gitignore files.
-- `--default-file ‹file›` — Default tsconfig file name.
-- `--build-file ‹file›` — Build tsconfig file name.
-- `--root-file ‹file›` — Workspaces tsconfig file name.
 - `--tsconfig ‹file›` — Resolve this tsconfig instead of &lt;root&gt;/tsconfig.json.
 - `--root ‹dir›` — Root used to detect/resolve the tsconfig (default: cwd).
 - `--json` — Print the resolved { alias, paths, references } object.
@@ -228,10 +224,10 @@ Scan commits, derive the semver bump and update the CHANGELOG.md files + version
 - `--dry-run` — Print the proposed entry without writing.
 - `--version ‹semver›` — Override the version.
 - `--base-version ‹semver›` — Bump from this version instead.
-- `--release-notes ‹semver›` — Print the release body for this version and exit.
+- `--release-body ‹semver›` — Print the release body for this version and exit.
 - `--processing-method ‹method›` — `latest` (default), `all`, or a git range.
 - `--format-only` — Only regroup existing changelogs.
-- `--release` — Release mode: wrap the entry as `**Release notes**`.
+- `--release-body-wrap` — Wrap the generated entry as a `**Release notes**` details block.
 - `--intro ‹text›` — Inline intro text for the new changelog entry.
 - `--intro-file ‹file›` — Read the new entry intro text from a file.
 - `--outro ‹text›` — Inline outro text for the new changelog entry.
@@ -252,7 +248,7 @@ Install the dbx MCP server + skill into an AI harness/editor.
 - `--scope ‹scope›` — project (default) or global.
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--dir ‹dir›` — Custom directory (for --provider custom).
-- `--command ‹command›` — Client command (default `dbx`).
+- `--command ‹command›` — Client command (default `dbx`)
 - `--no-skills` — Do not write the skill/instructions file.
 - `--json` — Print the written paths as JSON.
 
@@ -294,7 +290,7 @@ List the registered migrations and whether each is detected.
 Scaffold a single-package TypeScript project.
 
 - `-n, --name ‹name›` — Project name.
-- `-s, --scope ‹scope›` — npm scope, eg. @acme.
+- `-s, --scope ‹scope›` — npm scope, eg. @org.
 - `-o, --out ‹dir›` — Output directory (default: cwd).
 - `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
 - `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
@@ -308,7 +304,7 @@ Scaffold a single-package TypeScript project.
 Scaffold a monorepo root (add --example for one example workspace).
 
 - `-n, --name ‹name›` — Project name.
-- `-s, --scope ‹scope›` — npm scope, eg. @acme.
+- `-s, --scope ‹scope›` — npm scope, eg. @org.
 - `-o, --out ‹dir›` — Output directory (default: cwd).
 - `--example` — Also scaffold one example workspace package.
 - `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
@@ -322,7 +318,7 @@ Scaffold a monorepo root (add --example for one example workspace).
 Scaffold a monorepo workspace package into an existing monorepo root.
 
 - `-n, --name ‹name›` — Workspace package name (unscoped).
-- `-s, --scope ‹scope›` — npm scope, eg. @acme.
+- `-s, --scope ‹scope›` — npm scope, eg. @org.
 - `-r, --root ‹dir›` — Monorepo root (default: cwd).
 - `-d, --dir ‹dir›` — Workspace dir relative to the root (default: packages/&lt;name&gt;).
 - `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
@@ -441,7 +437,7 @@ Scaffold a project from a template (builtin, local or Vite+).
 - `-t, --template ‹id›` — Template id (see template:list).
 - `--kind ‹kind›` — project \| workspace \| application \| folder \| tooling \| pipeline.
 - `-n, --name ‹name›` — Project / package name.
-- `-s, --scope ‹scope›` — npm scope, eg. @acme.
+- `-s, --scope ‹scope›` — npm scope, eg. @org.
 - `-o, --out ‹dir›` — Output directory (default: cwd).
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--var ‹pair...›` — Template variables as key=value (repeatable).

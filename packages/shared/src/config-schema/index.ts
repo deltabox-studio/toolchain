@@ -71,7 +71,7 @@ const enabledConfigSchema = z
         z.object({
             disabled: z
                 .boolean()
-                .describe('Disable the toolchain for this scope (default false).')
+                .describe('Disable the toolchain for this scope.')
                 .default(false)
                 .optional(),
             scope: z
@@ -87,7 +87,7 @@ const enabledConfigSchema = z
         'Enable/disable the toolchain. The shorthand is workspace-scoped; the object form is ' +
             'reserved for APIs and the VS Code extension.'
     )
-    .meta({ id: 'ToolchainEnabledConfig' });
+    .meta({ id: 'ToolchainEnabledConfig', cli: false });
 
 /** The full `dbx.config` schema (minus the function-bearing `hooks`). */
 export const toolchainConfigSchema = z

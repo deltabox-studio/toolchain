@@ -12,7 +12,7 @@ export function localFileServer(ctx: ProjectContext): GeneratedFile[] {
             file(
                 'README.md',
                 readme(ctx.name, 'A dependency-free file server that serves a local directory.', [
-                    'Set `FILE_ROOT` to the directory to serve (default `public`) and',
+                    'Set `FILE_ROOT` to the directory to serve (default: `public`). and',
                     '`PORT`/`HOST` to change the listener. The server refuses `..` traversal.',
                 ])
             ),

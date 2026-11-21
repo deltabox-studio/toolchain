@@ -46,7 +46,7 @@ describe('changelog details', () => {
         expect(ten).not.toMatch(/<summary><h[1-6]>/);
     });
 
-    it('keeps the body opt-out in release mode and opt-in otherwise', () => {
+    it('keeps the body opt-out with release body wrapping and opt-in otherwise', () => {
         expect(resolveDetails(true, true).body).toMatchObject({
             enabled: true,
             title: '**Release notes**',
@@ -86,7 +86,7 @@ describe('changelog details', () => {
         expect(end).toBeGreaterThan(output.lastIndexOf('</details>'));
     });
 
-    it('uses Release notes in release mode only', () => {
+    it('uses Release notes with release body wrapping only', () => {
         const release = applyDetailsToEntry(
             renderChangelogEntry('1.0.0', buildSummary(records, { release: true })),
             resolveDetails(true, true)
@@ -157,7 +157,7 @@ describe('changelog details', () => {
         expect(wrapped).toContain('after');
     });
 
-    it('opts out of the release-mode wrapper with body: false', () => {
+    it('opts out of the release-body-wrapping wrapper with body: false', () => {
         const entry = renderChangelogEntry('1.0.0', '- one\n- two');
         const optedOut = applyDetailsToEntry(entry, resolveDetails({ body: false }, true));
         expect(optedOut).not.toContain('<summary><strong>Release notes</strong></summary>');
@@ -490,7 +490,7 @@ describe('details minCommits', () => {
     });
 });
 
-describe('release mode with an explicit body', () => {
+describe('release body wrapping with an explicit body', () => {
     it('does not nest two identical Release notes summaries', () => {
         const entry = [
             '## 1.0.0',

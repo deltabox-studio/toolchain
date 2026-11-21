@@ -12,6 +12,13 @@ const syncFormatSchema = z
                 .describe(
                     'Format the managed files after writing them (default true once enabled).'
                 )
+                .meta({
+                    cli: {
+                        flag: '--no-format',
+                        type: 'boolean',
+                        description: 'Do not format the written managed files.',
+                    },
+                })
                 .optional(),
             fix: z
                 .boolean()
@@ -19,6 +26,14 @@ const syncFormatSchema = z
                     'Rewrite the managed files with the formatter (default true). Set false to ' +
                         'run the formatter in check mode instead.'
                 )
+                .meta({
+                    cli: {
+                        flag: '--no-format-fix',
+                        type: 'boolean',
+                        description:
+                            'Run the formatter in check mode instead of rewriting the files.',
+                    },
+                })
                 .optional(),
             command: z
                 .string()
@@ -30,11 +45,12 @@ const syncFormatSchema = z
             exclude: z
                 .array(z.string())
                 .describe('Globs of managed files to leave unformatted (per-file opt-out).')
+                .meta({ cli: { type: 'array', multiple: true } })
                 .optional(),
         }),
     ])
     .describe(
-        'Opt-in formatting of the managed files after generation (default off). `true` uses ' +
+        'Opt-in formatting of the managed files after generation. `true` uses ' +
             'the defaults, `false` disables it, and an object tunes `enabled`/`fix`/`command`/`exclude`.'
     );
 

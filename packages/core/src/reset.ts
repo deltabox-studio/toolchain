@@ -23,7 +23,7 @@ export interface ResetSelectors {
  */
 export type ResetRestore = (cwd: string, options: { dryRun: boolean }) => string[];
 
-export interface ResetToolchainOptions extends ResetSelectors {
+export interface ResetCliOptions extends ResetSelectors {
     /** The project directory to reset. */
     cwd: string;
     /** Report what would be removed without deleting anything. */
@@ -67,7 +67,7 @@ function resolveSelectors(options: ResetSelectors): Required<ResetSelectors> {
  * the `dbx.config.*` file. With no selectors the generated files + the
  * manifest directory are removed (the config is kept).
  */
-export function resetToolchain(options: ResetToolchainOptions): ResetToolchainResult {
+export function resetToolchain(options: ResetCliOptions): ResetToolchainResult {
     const { cwd } = options;
     const dryRun = options.dryRun ?? false;
     const selectors = resolveSelectors(options);

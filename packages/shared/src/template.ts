@@ -16,13 +16,13 @@ export interface Replacements {
 }
 
 export interface ReplacementOptions {
-    /** Opening token delimiter (default `{{`). */
+    /** Opening token delimiter. @default `{{` */
     open?: string;
-    /** Closing token delimiter (default `}}`). */
+    /** Closing token delimiter. @default `}}` */
     close?: string;
-    /** Keep unresolved tokens as-is instead of erasing them (default true). */
+    /** Keep unresolved tokens as-is instead of erasing them. @default `true` */
     keepUnresolved?: boolean;
-    /** Throw when a token cannot be resolved (default false). */
+    /** Throw when a token cannot be resolved. @default `false` */
     strict?: boolean;
     /** Transform every resolved value before it is written. */
     transform?: (value: string, key: string) => string;

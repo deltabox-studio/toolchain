@@ -22,6 +22,9 @@ This repo is a Yarn 4 workspace. Vite+ (`vp`) drives format, lint, test and the
 task runner from the root `vite.config.ts`, which dogfoods the `dbx()` plugin.
 There is no root `dbx.config.ts`, `vitest.config.ts` or `tsdown.config.ts`.
 
+Node `^22.22.1` or `^24.11.0` is required: that is the floor for the bundled
+Vitest 5 and for `vp staged`.
+
 The toolchain config lives in the plugin's `toolchain` option; Vitest and the
 published package build live in the standard `test` and `pack` fields.
 
@@ -34,7 +37,7 @@ yarn dev            # run the CLI from src/ via tsx
 yarn typecheck      # packages + root
 yarn check          # Oxfmt + Oxlint check (no writes)
 yarn check:fix      # same, auto-fixing every workspace + the root
-yarn format         # `vp fmt`
+yarn fmt            # `vp fmt`
 yarn lint           # `vp lint --fix`
 yarn build          # packages + root via `vp run` (root pack config)
 yarn test           # builds, then package + root tests
@@ -45,7 +48,22 @@ yarn test:clean     # remove leftover emulation temp workspaces
 > `yarn build` is only needed for the published `dist`/VSIX: typechecks,
 > `vp run`/`fmt`/`lint`/`test`, `yarn dev` and Vitest run from source. The
 > emulate suite spawns the built `dist/cli/index.js` and therefore needs a
-> build.
+> build. To run a command against one package, use `vp -C <dir> <command>`
+> (`vp -C packages/config test`) rather than `cd`-ing into it.
+
+## Git hooks
+
+The project-owned hooks live in `.vite-hooks`:
+
+- `commit-msg` runs commitlint.
+- `pre-commit` runs `vp staged`, which applies the root `staged` config
+  (`'*': 'vp check --fix'`) to the staged files.
+
+`yarn install` runs the `postinstall` bootstrap, which calls `vp hooks enable`
+to install the generated dispatcher and point `core.hooksPath` at it. Disable
+hooks for one clone with `vp hooks disable`, or for one process with
+`VP_GIT_HOOKS=0`. The dispatcher and its shims live in the ignored
+`.vite-hooks/_` directory; the hook scripts themselves are committed.
 
 The VS Code extension's unit tests run with the root Vitest suite. Its
 integration suite launches a real extension host

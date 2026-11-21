@@ -1,4 +1,4 @@
-# Vite+
+# Vite+ config
 
 The whole Vite+ config lives in `toolchain.vite`. Every key is passed through
 verbatim to Vite+, so `dbx.config.*` stays the only hand-authored root config:
@@ -59,7 +59,7 @@ export default defineConfig({
         vite: {
             shim: 'static',
             resolve: { tsconfigPaths: true },
-            run: { tasks: { build: { command: 'tsdown' } } },
+            run: { tasks: { build: { command: 'vp pack' } } },
         },
     },
 });
@@ -89,7 +89,7 @@ A static shim imports only `defineConfig`, so Vite+ can load it without a built
 must stay serializable: functions, regexps and class instances are rejected at
 sync time (plugins still work with `shim: 'runtime'`).
 
-Runtime shims import `vite-plugin-dbx` by default. Set
+Runtime shims import `@deltabox/toolchain/vite` by default. Set
 `vite.shimImport` to change that specifier, for example to a local wrapper that
 re-exports `resolveVite`. Relative values are resolved from the repository root
 and rewritten relative to each generated config:
@@ -170,7 +170,7 @@ To reuse the workspace group in your own `sortImports`, import the resolver:
 import { resolveFmtCustomGroups } from '@deltabox/toolchain';
 
 const customGroups = await resolveFmtCustomGroups();
-// [{ groupName: 'workspace', elementNamePattern: ['@acme/**', 'app', 'app/**', ...] }]
+// [{ groupName: 'workspace', elementNamePattern: ['@org/**', 'app', 'app/**', ...] }]
 ```
 
 `resolveFmtCustomGroups()` reads the project graph, so it is safe to call from

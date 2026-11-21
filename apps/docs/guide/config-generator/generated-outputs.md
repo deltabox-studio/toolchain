@@ -1,11 +1,12 @@
 # Generated outputs
 
-Every generator reads from the same Zod or untyped schema. The engine's own config model
-is the living example: its types are committed at
+Every generator reads from the same Zod, untyped or plain-value schema. The
+engine's own config model is the living example: its types are committed at
 [packages/shared/src/config-types.ts](https://github.com/deltabox-studio/toolchain/blob/main/packages/shared/src/config-types.ts).
 
 For the engine/standalone call forms and the full option list per generator, see
-[Generate](/guide/config-generator/generate).
+[Generate](/guide/config-generator/generate). For every export and option, see
+the [API reference](/guide/config-generator/api).
 
 ## Config types — `engine.types` / `generateConfigTypes()`
 
@@ -91,7 +92,7 @@ await engine.jsonSchema.write({ output: 'config.schema.json' });
 
 ## CLI docs - `engine.markdown.cli` / `generateCliDocs()`
 
-`generateCliDocs` reads `ToolchainCommand` descriptors rather than the config
+`generateCliDocs` reads `CliCommand` descriptors rather than the config
 schema: it renders a markdown reference from the commands your CLI actually
 registers. The engine exposes the same generator as
 `engine.markdown.cli.generate()` (and `.write()`):
@@ -139,7 +140,7 @@ engine.markdown.file.write({
 ## Post-processing
 
 The `generate*` functions return their content, so you can transform it before
-writing (the `write*` methods write immediately):
+writing (the grouped `.write()` methods write immediately):
 
 ```ts
 const files = generateConfigTypes(schema);
@@ -155,7 +156,7 @@ If the transform changes the formatting, run the result through
 ## Formatting — `formatGenerated()`
 
 Generated text is formatted **at generation time**, so a written file is already
-formatted instead of relying on a separate `yarn format` pass. `formatGenerated`
+formatted instead of relying on a separate `yarn fmt` pass. `formatGenerated`
 runs source through Oxfmt, preferring the project-local `vite-plus/fmt` (Oxfmt
 ships with Vite+), then `oxfmt`, and returns the input untouched when no formatter
 is resolvable, so generation never fails on a missing formatter.

@@ -29,8 +29,8 @@ function writeMonorepo(cwd: string): void {
             composite: true,
             types: ['node'],
             paths: {
-                '@acme/core': ['./packages/core/src/index.ts'],
-                '@acme/cli': ['./packages/cli/src/index.ts'],
+                '@org/core': ['./packages/core/src/index.ts'],
+                '@org/cli': ['./packages/cli/src/index.ts'],
             },
         },
         references: [
@@ -65,7 +65,7 @@ describe('generateTsconfigs', () => {
         expect(core.newTsconfig.compilerOptions?.composite).toBe(true);
         // Own aliases are dropped; only the other workspace remains.
         expect(core.newTsconfig.compilerOptions?.paths).toEqual({
-            '@acme/cli': ['../cli/src/index.ts'],
+            '@org/cli': ['../cli/src/index.ts'],
         });
         // Own reference is dropped (it is the workspace itself).
         expect(core.newTsconfig.references).toEqual([{ path: '../cli/tsconfig.json' }]);
@@ -120,8 +120,8 @@ describe('generateTsconfigs', () => {
         writeJson(path.join(cwd, 'tsconfig.base.json'), {
             compilerOptions: {
                 paths: {
-                    '@acme/core': ['./packages/core/src/index.ts'],
-                    '@acme/cli': ['./packages/cli/src/index.ts'],
+                    '@org/core': ['./packages/core/src/index.ts'],
+                    '@org/cli': ['./packages/cli/src/index.ts'],
                 },
             },
             references: [{ path: './packages/cli/tsconfig.json' }],
@@ -137,7 +137,7 @@ describe('generateTsconfigs', () => {
         const core = results.find(result => result.dirnameRelative === 'packages/core')!;
 
         expect(core.newTsconfig.compilerOptions?.paths).toEqual({
-            '@acme/cli': ['../cli/src/index.ts'],
+            '@org/cli': ['../cli/src/index.ts'],
         });
         expect(core.newTsconfig.references).toEqual([{ path: '../cli/tsconfig.json' }]);
     });
@@ -299,24 +299,24 @@ describe('generateTsconfigs include/exclude hoisting', () => {
 
     it('hoists include/exclude from a package tsconfig extends', () => {
         const cwd = tmp();
-        writeJson(path.join(cwd, 'node_modules/@acme/tsconfig/package.json'), {
-            name: '@acme/tsconfig',
+        writeJson(path.join(cwd, 'node_modules/@org/tsconfig/package.json'), {
+            name: '@org/tsconfig',
             version: '1.0.0',
             main: 'tsconfig.json',
         });
-        writeJson(path.join(cwd, 'node_modules/@acme/tsconfig/tsconfig.json'), {
+        writeJson(path.join(cwd, 'node_modules/@org/tsconfig/tsconfig.json'), {
             include: ['src'],
             exclude: ['dist'],
         });
         writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {
-            extends: '@acme/tsconfig',
+            extends: '@org/tsconfig',
         });
 
         const results = generateTsconfigs({ cwd, log: false, write: false });
         const core = results.find(result => result.dirnameRelative === 'packages/core')!;
 
-        expect(core.newTsconfig.include).toEqual(['../../node_modules/@acme/tsconfig/src']);
-        expect(core.newTsconfig.exclude).toEqual(['../../node_modules/@acme/tsconfig/dist']);
+        expect(core.newTsconfig.include).toEqual(['../../node_modules/@org/tsconfig/src']);
+        expect(core.newTsconfig.exclude).toEqual(['../../node_modules/@org/tsconfig/dist']);
     });
 
     it('hoists per workspace in a monorepo and leaves the root relative to itself', () => {
@@ -440,7 +440,7 @@ describe('tsconfigSyncTask', () => {
 describe('scaffolded workspace compiler options', () => {
     function writeMonorepoWorkspace(cwd: string, composite = true): void {
         writeJson(path.join(cwd, 'package.json'), {
-            name: '@acme/root',
+            name: '@org/root',
             private: true,
             workspaces: ['packages/*'],
         });
@@ -453,10 +453,10 @@ describe('scaffolded workspace compiler options', () => {
                 declaration: true,
                 emitDeclarationOnly: true,
                 strict: true,
-                paths: { '@acme/core': ['./packages/core/src/index.ts'] },
+                paths: { '@org/core': ['./packages/core/src/index.ts'] },
             },
         });
-        writeJson(path.join(cwd, 'packages/core/package.json'), { name: '@acme/core' });
+        writeJson(path.join(cwd, 'packages/core/package.json'), { name: '@org/core' });
         writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {});
     }
 
@@ -525,11 +525,11 @@ describe('missing managed tsconfig files', () => {
     it('regenerates a missing workspaces tsconfig from the project graph', async () => {
         const cwd = tmp();
         writeJson(path.join(cwd, 'package.json'), {
-            name: '@acme/root',
+            name: '@org/root',
             private: true,
             workspaces: ['packages/*'],
         });
-        writeJson(path.join(cwd, 'packages/core/package.json'), { name: '@acme/core' });
+        writeJson(path.join(cwd, 'packages/core/package.json'), { name: '@org/core' });
         writeJson(path.join(cwd, 'packages/core/tsconfig.default.json'), {});
         fs.mkdirSync(path.join(cwd, 'packages/core/src'), { recursive: true });
         fs.writeFileSync(path.join(cwd, 'packages/core/src/index.ts'), 'export {};\n');
@@ -548,8 +548,8 @@ describe('missing managed tsconfig files', () => {
             compilerOptions: {
                 composite: false,
                 paths: {
-                    '@acme/core': ['./packages/core/src/index.ts'],
-                    '@acme/core/*': ['./packages/core/src/*'],
+                    '@org/core': ['./packages/core/src/index.ts'],
+                    '@org/core/*': ['./packages/core/src/*'],
                 },
             },
             references: [{ path: './packages/core/tsconfig.json' }],

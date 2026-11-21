@@ -34,9 +34,9 @@ describe('loadToolchainConfig', () => {
             JSON.stringify({
                 toolchain: {
                     project: {
-                        name: 'acme',
-                        scope: '@acme',
-                        repo: 'https://github.com/acme/app',
+                        name: 'myapp',
+                        scope: '@org',
+                        repo: 'https://github.com/myapp/app',
                     },
                     ci: { changelog: { branches: { main: 'trunk', dev: 'develop' } } },
                 },
@@ -45,10 +45,10 @@ describe('loadToolchainConfig', () => {
         expect(findConfigFile(cwd)).toBe(path.join(cwd, 'dbx.config.json'));
 
         const loaded = await loadToolchainConfig(cwd);
-        expect(loaded.config.project?.name).toBe('acme');
-        expect(loaded.tokens.name).toBe('acme');
-        expect(loaded.tokens.scope).toBe('@acme');
-        expect(loaded.tokens.repoSlug).toBe('acme/app');
+        expect(loaded.config.project?.name).toBe('myapp');
+        expect(loaded.tokens.name).toBe('myapp');
+        expect(loaded.tokens.scope).toBe('@org');
+        expect(loaded.tokens.repoSlug).toBe('myapp/app');
         expect(loaded.tokens.mainBranch).toBe('trunk');
     });
 
@@ -208,7 +208,7 @@ describe('nested config inheritance', () => {
     it('does not inherit workspace-scoped sections', () => {
         const merged = mergeToolchainConfig(
             {
-                project: { name: 'acme', type: 'monorepo-root', author: 'Acme' },
+                project: { name: 'myapp', type: 'monorepo-root', author: 'Myapp' },
                 ci: { changelog: { branches: { main: 'main' } } },
                 changelog: { versioning: true },
                 catalogs: { packages: { react: '^19' } },
@@ -231,7 +231,7 @@ describe('nested config inheritance', () => {
         expect(merged.tsconfig).toBeUndefined();
         expect(merged.loader).toBeUndefined();
         expect(merged.vite).toEqual({ run: { tasks: { build: { command: 'tsdown' } } } });
-        expect(merged.project).toEqual({ author: 'Acme' });
+        expect(merged.project).toEqual({ author: 'Myapp' });
         // A nested config may still opt into its own tsconfig generation.
         expect(
             mergeToolchainConfig(
@@ -244,11 +244,11 @@ describe('nested config inheritance', () => {
     it('locks down the top-level inheritance matrix', () => {
         const parent = {
             project: {
-                name: 'acme',
-                scope: '@acme',
+                name: 'myapp',
+                scope: '@org',
                 description: 'root',
                 type: 'monorepo-root' as const,
-                author: 'Acme',
+                author: 'Myapp',
                 license: 'MIT',
             },
             ci: { ci: true },
@@ -293,7 +293,7 @@ describe('nested config inheritance', () => {
         expect(merged.biome).toBeUndefined();
         expect(merged.logger).toBeUndefined();
         // Project metadata is inherited minus its identity fields.
-        expect(merged.project).toEqual({ author: 'Acme', license: 'MIT' });
+        expect(merged.project).toEqual({ author: 'Myapp', license: 'MIT' });
 
         // When the child opts in, the parent's section fills in the details.
         const optedIn = mergeToolchainConfig(parent, {
@@ -330,28 +330,28 @@ describe('nested config inheritance', () => {
         const merged = mergeToolchainConfig(
             {
                 project: {
-                    name: 'acme',
-                    scope: '@acme',
+                    name: 'myapp',
+                    scope: '@org',
                     type: 'monorepo-root',
-                    author: 'Acme',
+                    author: 'Myapp',
                     license: 'MIT',
                 },
             },
             { biome: true }
         );
         // `name`/`scope`/`type` are identity; `author`/`license` flow down.
-        expect(merged.project).toEqual({ author: 'Acme', license: 'MIT' });
+        expect(merged.project).toEqual({ author: 'Myapp', license: 'MIT' });
 
         const explicit = mergeToolchainConfig(
-            { project: { name: 'acme', author: 'Acme', license: 'MIT' } },
+            { project: { name: 'myapp', author: 'Myapp', license: 'MIT' } },
             { project: { name: 'web' } }
         );
-        expect(explicit.project).toEqual({ name: 'web', author: 'Acme', license: 'MIT' });
+        expect(explicit.project).toEqual({ name: 'web', author: 'Myapp', license: 'MIT' });
 
         // A parent with only identity fields contributes nothing.
         expect(
             mergeToolchainConfig(
-                { project: { name: 'acme', type: 'monorepo-root' } },
+                { project: { name: 'myapp', type: 'monorepo-root' } },
                 { biome: true }
             ).project
         ).toBeUndefined();
@@ -360,7 +360,7 @@ describe('nested config inheritance', () => {
     it('keeps `project` independent when `project.inherit` is false', () => {
         const merged = mergeToolchainConfig(
             {
-                project: { name: 'acme', scope: '@acme', type: 'monorepo-root' },
+                project: { name: 'myapp', scope: '@org', type: 'monorepo-root' },
                 biome: true,
             },
             { project: { inherit: false, name: 'web' }, biome: true }
@@ -387,7 +387,7 @@ describe('nested config inheritance', () => {
             [
                 'export default {',
                 '    toolchain: {',
-                "        project: { name: 'acme' },",
+                "        project: { name: 'myapp' },",
                 '        hooks: { afterLoad: () => { globalThis.__dbxParentHook = true; } },',
                 '    },',
                 '};',
@@ -411,18 +411,18 @@ describe('nested config inheritance', () => {
         writeJson(path.join(root, 'dbx.config.json'), {
             toolchain: {
                 project: {
-                    name: 'acme',
-                    scope: '@acme',
+                    name: 'myapp',
+                    scope: '@org',
                     description: 'The root app',
                     type: 'monorepo-root',
-                    author: 'Acme',
+                    author: 'Myapp',
                     license: 'MIT',
-                    repo: 'https://github.com/acme/app',
+                    repo: 'https://github.com/myapp/app',
                 },
             },
         });
         writeJson(path.join(child, 'package.json'), {
-            name: '@acme/web',
+            name: '@org/web',
             description: 'The web package',
         });
         fs.writeFileSync(path.join(child, 'tsconfig.default.json'), '{}');
@@ -431,12 +431,12 @@ describe('nested config inheritance', () => {
 
         // Shared metadata flows down; identity comes from this project instead.
         expect(loaded.config.project).toEqual({
-            author: 'Acme',
+            author: 'Myapp',
             license: 'MIT',
-            repo: 'https://github.com/acme/app',
+            repo: 'https://github.com/myapp/app',
         });
         expect(loaded.tokens.name).toBe('web');
-        expect(loaded.tokens.scope).toBe('@acme');
+        expect(loaded.tokens.scope).toBe('@org');
         expect(loaded.tokens.description).toBe('The web package');
         // The root `type: 'monorepo-root'` must not leak into detection.
         expect(loaded.projectType).toBe('monorepo-workspace');
@@ -450,13 +450,13 @@ describe('nested config inheritance', () => {
         fs.mkdirSync(child, { recursive: true });
         writeJson(path.join(root, 'dbx.config.json'), {
             toolchain: {
-                project: { name: 'acme', author: 'Acme' },
+                project: { name: 'myapp', author: 'Myapp' },
                 fmt: { oxc: { semi: false } },
                 logger: { level: 'debug' },
                 vite: { fmt: { printWidth: 100 } },
             },
         });
-        writeJson(path.join(child, 'package.json'), { name: '@acme/web' });
+        writeJson(path.join(child, 'package.json'), { name: '@org/web' });
         fs.writeFileSync(path.join(child, 'tsconfig.default.json'), '{}');
 
         const loaded = await loadToolchainConfig(child);
@@ -469,7 +469,7 @@ describe('nested config inheritance', () => {
         expect(loaded.projectType).toBe('monorepo-workspace');
         // Tokens come from this project's own package.json, not the parent.
         expect(loaded.tokens.name).toBe('web');
-        expect(loaded.tokens.scope).toBe('@acme');
+        expect(loaded.tokens.scope).toBe('@org');
     });
 
     it('manages configless projects when the parent opts in', async () => {
@@ -478,18 +478,18 @@ describe('nested config inheritance', () => {
         fs.mkdirSync(child, { recursive: true });
         writeJson(path.join(root, 'dbx.config.json'), {
             toolchain: {
-                project: { name: 'acme', author: 'Acme', manageConfigless: true },
+                project: { name: 'myapp', author: 'Myapp', manageConfigless: true },
                 fmt: { oxc: { semi: false } },
             },
         });
-        writeJson(path.join(child, 'package.json'), { name: '@acme/web' });
+        writeJson(path.join(child, 'package.json'), { name: '@org/web' });
         fs.writeFileSync(path.join(child, 'tsconfig.default.json'), '{}');
 
         const loaded = await loadToolchainConfig(child);
 
         expect(loaded.configless).toBe(true);
         expect(loaded.managed).toBe(true);
-        expect(loaded.config.project).toEqual({ author: 'Acme', manageConfigless: true });
+        expect(loaded.config.project).toEqual({ author: 'Myapp', manageConfigless: true });
         expect(sectionConfig(loaded.config.fmt)).toEqual({ oxc: { semi: false } });
     });
 
@@ -499,7 +499,7 @@ describe('nested config inheritance', () => {
         fs.mkdirSync(child, { recursive: true });
         writeJson(path.join(root, 'dbx.config.json'), {
             toolchain: {
-                project: { name: 'acme', author: 'Acme' },
+                project: { name: 'myapp', author: 'Myapp' },
                 ci: { ci: true },
                 changelog: { versioning: true },
                 catalogs: { packages: { react: '^19' } },
@@ -518,7 +518,7 @@ describe('nested config inheritance', () => {
         const loaded = await loadToolchainConfig(child, { manageConfigless: true });
 
         // Shared sections flow down; repository/workspace-scoped ones do not.
-        expect(loaded.config.project).toEqual({ author: 'Acme' });
+        expect(loaded.config.project).toEqual({ author: 'Myapp' });
         expect(sectionConfig(loaded.config.logger)).toEqual({ level: 'debug' });
         // `vite` is never inherited; its fmt/lint are hoisted into fmt/lint.
         expect(loaded.config.vite).toBeUndefined();
@@ -537,7 +537,7 @@ describe('nested config inheritance', () => {
         const child = path.join(root, 'apps', 'web');
         fs.mkdirSync(child, { recursive: true });
         writeJson(path.join(root, 'dbx.config.json'), {
-            toolchain: { project: { name: 'acme', type: 'monorepo-root' } },
+            toolchain: { project: { name: 'myapp', type: 'monorepo-root' } },
         });
         writeJson(path.join(child, 'package.json'), { name: 'web' });
 
@@ -554,7 +554,7 @@ describe('nested config inheritance', () => {
         fs.mkdirSync(child, { recursive: true });
         writeJson(path.join(root, 'dbx.config.json'), {
             toolchain: {
-                project: { name: 'acme', type: 'monorepo-root' },
+                project: { name: 'myapp', type: 'monorepo-root' },
                 tsconfig: { refs: true, aliases: true },
                 logger: { level: 'debug', color: false },
                 ci: {
@@ -848,7 +848,7 @@ describe('dbx() plugin config', () => {
     it('loads the inline config without a dbx.config', async () => {
         const cwd = tmp();
         writePluginConfig(cwd, {
-            project: { name: 'plugin-app', scope: '@acme' },
+            project: { name: 'plugin-app', scope: '@org' },
             fmt: { oxc: { printWidth: 90 } },
         });
 
@@ -858,7 +858,7 @@ describe('dbx() plugin config', () => {
         expect(loaded.managed).toBe(true);
         expect(loaded.configless).toBe(false);
         expect(loaded.config.project?.name).toBe('plugin-app');
-        expect(loaded.tokens.scope).toBe('@acme');
+        expect(loaded.tokens.scope).toBe('@org');
         expect(sectionConfig(loaded.config.fmt)?.oxc).toEqual({ printWidth: 90 });
     });
 
@@ -920,7 +920,7 @@ describe('dbx() plugin config', () => {
         writeJson(path.join(cwd, 'dbx.config.json'), {
             toolchain: {
                 fmt: { oxc: { printWidth: 120 } },
-                project: { name: 'from-dbx', author: 'Acme' },
+                project: { name: 'from-dbx', author: 'Myapp' },
             },
         });
         writePluginConfig(cwd, { project: { name: 'from-plugin' } });
@@ -929,7 +929,7 @@ describe('dbx() plugin config', () => {
         expect(loaded.plugin).toBe(true);
         expect(loaded.managed).toBe(true);
         expect(loaded.config.project?.name).toBe('from-plugin');
-        expect(loaded.config.project?.author).toBe('Acme');
+        expect(loaded.config.project?.author).toBe('Myapp');
         expect(sectionConfig(loaded.config.fmt)?.oxc).toEqual({ printWidth: 120 });
     });
 
@@ -962,7 +962,7 @@ describe('dbx() plugin config', () => {
         const child = path.join(root, 'packages/app');
         fs.mkdirSync(child, { recursive: true });
         writePluginConfig(root, {
-            project: { author: 'Acme', license: 'MIT' },
+            project: { author: 'Myapp', license: 'MIT' },
             fmt: { oxc: { tabWidth: 4 } },
             lint: true,
         });
@@ -972,7 +972,7 @@ describe('dbx() plugin config', () => {
         expect(loaded.plugin).toBe(true);
         expect(loaded.managed).toBe(true);
         expect(sectionConfig(loaded.config.fmt)?.oxc).toEqual({ tabWidth: 4 });
-        expect(loaded.config.project?.author).toBe('Acme');
+        expect(loaded.config.project?.author).toBe('Myapp');
     });
 });
 

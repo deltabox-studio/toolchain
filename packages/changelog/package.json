@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-changelog",
-    "version": "3.0.0-beta.4",
+    "version": "3.0.0-beta.8",
     "private": true,
     "description": "Conventional-Commits changelog and versioning pipeline with commitlint, changelog formatting/rendering and CI workflow templates.",
     "author": "Victor Sango <victor@deltabox.studio>",

@@ -9,6 +9,7 @@ import {
     DBX_TASKS,
     dbx,
     dbxTaskCommand,
+    isDbxWatchInput,
     resolveDbx,
 } from '../src/index.js';
 
@@ -31,6 +32,14 @@ describe('dbx() plugin', () => {
         expect(typeof plugin.buildStart).toBe('function');
         expect(typeof plugin.configResolved).toBe('function');
         expect(typeof plugin.watchChange).toBe('function');
+    });
+
+    it('watches JSON config files as well as JS/TS ones', () => {
+        expect(isDbxWatchInput('/repo/dbx.config.json')).toBe(true);
+        expect(isDbxWatchInput('/repo/dbx.config.ts')).toBe(true);
+        expect(isDbxWatchInput('/repo/vite.config.mts')).toBe(true);
+        expect(isDbxWatchInput('/repo/tsconfig.default.json')).toBe(true);
+        expect(isDbxWatchInput('/repo/package.json')).toBe(false);
     });
 
     it('rejects a global-scoped enabled value in the inline toolchain config', () => {
@@ -76,6 +85,19 @@ describe('dbx resolution', () => {
         const resolved = resolveDbx(dir);
         expect(resolved.source).toBe('local');
         expect(resolved.args).toEqual([path.join(dir, 'dist', 'cli', 'index.js')]);
+    });
+
+    it('finds a hoisted project-local shim from a nested workspace', () => {
+        const root = makeTmp();
+        fs.mkdirSync(path.join(root, '.git'));
+        const bin = path.join(root, 'node_modules', '.bin');
+        fs.mkdirSync(bin, { recursive: true });
+        for (const name of ['dbx', 'dbx.cmd', 'dbx.exe']) {
+            fs.writeFileSync(path.join(bin, name), '');
+        }
+        const workspace = path.join(root, 'packages', 'app');
+        fs.mkdirSync(workspace, { recursive: true });
+        expect(resolveDbx(workspace).source).toBe('local');
     });
 
     it('falls back to a known source everywhere else', () => {

@@ -26,15 +26,15 @@ function fixture(): string {
     const root = tmp();
     writeJson(path.join(root, 'package.json'), { name: 'root', workspaces: ['packages/*'] });
     fs.writeFileSync(path.join(root, 'yarn.lock'), '# yarn lockfile v1\n');
-    writeJson(path.join(root, 'packages', 'b', 'package.json'), { name: '@acme/b' });
+    writeJson(path.join(root, 'packages', 'b', 'package.json'), { name: '@org/b' });
     fs.writeFileSync(path.join(root, 'packages', 'b', 'dbx.config.json'), '{}');
     writeJson(path.join(root, 'packages', 'a', 'package.json'), {
-        name: '@acme/a',
-        dependencies: { '@acme/b': 'workspace:*' },
+        name: '@org/a',
+        dependencies: { '@org/b': 'workspace:*' },
     });
     fs.writeFileSync(path.join(root, 'packages', 'a', 'dbx.config.json'), '{}');
     // A non-dbx package + a node_modules entry that must be ignored.
-    writeJson(path.join(root, 'packages', 'c', 'package.json'), { name: '@acme/c' });
+    writeJson(path.join(root, 'packages', 'c', 'package.json'), { name: '@org/c' });
     writeJson(path.join(root, 'node_modules', 'dep', 'package.json'), { name: 'dep' });
     writeJson(path.join(root, '.dbx/toolchain', 'manifest.json'), { files: [] });
     return root;
@@ -45,16 +45,16 @@ describe('buildProjectGraph', () => {
         const root = fixture();
         const graph = buildProjectGraph(root);
         const names = graph.projects.map(p => p.name).sort();
-        expect(names).toEqual(['@acme/a', '@acme/b', '@acme/c', 'root']);
+        expect(names).toEqual(['@org/a', '@org/b', '@org/c', 'root']);
         expect(graph.projects.some(p => p.name === 'dep')).toBe(false);
     });
 
     it('collects internal dependencies and dbx projects', () => {
         const root = fixture();
         const graph = buildProjectGraph(root);
-        const a = graph.projects.find(p => p.name === '@acme/a');
-        expect(a?.dependencies).toEqual(['@acme/b']);
-        expect(graph.dbxProjects.map(p => p.name).sort()).toEqual(['@acme/a', '@acme/b']);
+        const a = graph.projects.find(p => p.name === '@org/a');
+        expect(a?.dependencies).toEqual(['@org/b']);
+        expect(graph.dbxProjects.map(p => p.name).sort()).toEqual(['@org/a', '@org/b']);
     });
 
     it('orders dbx projects dependencies-first', () => {
@@ -66,14 +66,14 @@ describe('buildProjectGraph', () => {
     it('includes plugin-mode projects in dbxProjects and order', () => {
         const root = tmp();
         writeJson(path.join(root, 'package.json'), { name: 'root', workspaces: ['packages/*'] });
-        writeJson(path.join(root, 'packages', 'b', 'package.json'), { name: '@acme/b' });
+        writeJson(path.join(root, 'packages', 'b', 'package.json'), { name: '@org/b' });
         fs.writeFileSync(
             path.join(root, 'packages', 'b', 'vite.config.ts'),
             "import { dbx } from 'vite-plugin-dbx';\n\nexport default { plugins: [dbx({})] };\n"
         );
         writeJson(path.join(root, 'packages', 'a', 'package.json'), {
-            name: '@acme/a',
-            dependencies: { '@acme/b': 'workspace:*' },
+            name: '@org/a',
+            dependencies: { '@org/b': 'workspace:*' },
         });
         fs.writeFileSync(
             path.join(root, 'packages', 'a', 'vite.config.ts'),
@@ -81,15 +81,12 @@ describe('buildProjectGraph', () => {
         );
 
         const graph = buildProjectGraph(root);
-        const b = graph.projects.find(project => project.name === '@acme/b');
+        const b = graph.projects.find(project => project.name === '@org/b');
 
         expect(b?.hasConfig).toBe(false);
         expect(b?.hasPlugin).toBe(true);
         expect(b?.plugin).toBe('packages/b/vite.config.ts');
-        expect(graph.dbxProjects.map(project => project.name).sort()).toEqual([
-            '@acme/a',
-            '@acme/b',
-        ]);
+        expect(graph.dbxProjects.map(project => project.name).sort()).toEqual(['@org/a', '@org/b']);
         expect(graph.order).toEqual(['packages/b', 'packages/a']);
     });
 

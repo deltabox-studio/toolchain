@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-biome",
-    "version": "3.0.0-beta.2",
+    "version": "3.0.0-beta.3",
     "private": true,
     "description": "Biome configuration and VS Code settings templates, plus merge helpers and the Biome sync task for @deltabox/toolchain.",
     "author": "Victor Sango <victor@deltabox.studio>",

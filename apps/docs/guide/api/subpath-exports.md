@@ -2,9 +2,9 @@
 
 | Import                          | What it provides                                                                                |
 | ------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `@deltabox/toolchain/cli`       | Build/register the `dbx` commander program + bare-command routing.                              |
+| `@deltabox/toolchain/cli`       | Build the `dbx` engine program + bare-command routing.                                          |
 | `@deltabox/toolchain/core`      | Load `dbx.config.*`, run/watch sync, the project graph, manifest, reset.                        |
-| `@deltabox/toolchain/config`    | The Zod/env config engine, generators and the `config:*` commands.                              |
+| `@deltabox/toolchain/config`    | The Zod/env config engine, generators, `config:*` commands and CLI program runtime.             |
 | `@deltabox/toolchain/vite`      | Resolve/run `vp`, the Vite+ provider, the `dbx()` plugin and `vite` sync.                       |
 | `@deltabox/toolchain/migrate`   | Pluggable migrations to Oxfmt/Oxlint (Biome, ESLint, Prettier, Dprint).                         |
 | `@deltabox/toolchain/template`  | The builtin/local/online template registry, loading and scaffolding.                            |

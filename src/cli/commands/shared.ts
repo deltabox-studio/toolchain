@@ -1,4 +1,8 @@
-import { sectionConfig, type ToolchainCommandContext } from '@deltabox/toolchain/shared';
+import {
+    sectionConfig,
+    type ToolchainCommandContext,
+    type ToolchainWatchConfig,
+} from '@deltabox/toolchain/shared';
 
 import { defaultSyncTasks } from '../../sync.js';
 
@@ -10,11 +14,18 @@ export const baseOptions = [
         flags: '--configless',
         description: 'Manage projects without their own dbx.config.* (inherit the nearest config).',
     },
-];
+] as const;
 
-/** Build the run options for `runSync`/`runWatch` from the command context. */
-export function watchOptions(context: ToolchainCommandContext) {
-    const watch = sectionConfig(context.config.watch);
+/**
+ * Build the run options for `runSync`/`runWatch` from the command context. A
+ * validated `watch` section (from schema-derived flags) overrides the loaded
+ * config's section.
+ */
+export function watchOptions(
+    context: ToolchainCommandContext,
+    watchOverride?: ToolchainWatchConfig | boolean
+) {
+    const watch = sectionConfig(watchOverride ?? context.config.watch);
     return {
         tasks: defaultSyncTasks(),
         cwd: context.cwd,

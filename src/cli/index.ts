@@ -2,7 +2,7 @@
 /**
  * The `dbx` CLI entry point.
  *
- * Packages export framework-agnostic {@link ToolchainCommand} descriptors; the
+ * Packages export framework-agnostic {@link CliCommand} descriptors; the
  * root wires them together and hands each command the loaded
  * `dbx.config.*` context (see `./register.ts`). The config-driven
  * `projects`/`sync`/`watch` commands live in `./commands`.
@@ -11,9 +11,10 @@
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { Command } from 'commander';
+import pc from 'picocolors';
 
 import { changelogCommands } from '@deltabox/toolchain/changelog/cli';
+import { createConfigProgram, ConfigProgramError } from '@deltabox/toolchain/config';
 import { loadToolchainConfig } from '@deltabox/toolchain/core';
 import { mcpCommands } from '@deltabox/toolchain/mcp/cli';
 import { migrateCommands } from '@deltabox/toolchain/migrate/cli';
@@ -21,13 +22,14 @@ import { cleanupCommands } from '@deltabox/toolchain/pack/cli';
 import { projectCommands } from '@deltabox/toolchain/project/cli';
 import {
     cancelActiveSpinner,
+    getLogOverrides,
     LOG_LEVELS,
     logger,
     normalizeLogLevel,
     setLogOverrides,
-    stripAnsi,
     type LoggerOptions,
-    type ToolchainCommand,
+    type CliCommand,
+    type ToolchainCommandContext,
     type ToolchainConfig,
 } from '@deltabox/toolchain/shared';
 import { templateCommands } from '@deltabox/toolchain/template/cli';
@@ -35,18 +37,20 @@ import { tsconfigCommands } from '@deltabox/toolchain/tsconfig/cli';
 import { resolveVpCommand, viteCommands } from 'vite-plugin-dbx/cli';
 
 import rootPkg from '../../package.json' with { type: 'json' };
+import type { ConfigProgram, ResolveConfigProgramCommands } from '../config.js';
+import type { CliCommandContext, CliOption } from '../shared.js';
 import { syncCommands } from './commands/index.js';
 import { extractConfigSelection, setConfigSelection } from './config-selection.js';
-import { isPassthroughCommand, registerToolchainCommands } from './register.js';
+import { setPassthroughCommand, withCliContext } from './register.js';
 import { withToolingRouting } from './tooling-commands.js';
 import { runUpdateCheck } from './update-check.js';
 
 export { extractConfigSelection } from './config-selection.js';
-export { registerToolchainCommands } from './register.js';
+export { isPassthroughCommand, withCliContext } from './register.js';
 
 /** The first-class `dbx fmt` / `dbx lint` commands (delegating to the tooling routes). */
-function toolingAliases(commands: ToolchainCommand[]): ToolchainCommand[] {
-    const out: ToolchainCommand[] = [];
+function toolingAliases(commands: CliCommand[]) {
+    const out = [];
     for (const name of ['fmt', 'lint'] as const) {
         const command = commands.find(candidate => candidate.name === `vite:${name}`);
         if (!command) continue;
@@ -71,7 +75,7 @@ function toolingAliases(commands: ToolchainCommand[]): ToolchainCommand[] {
  * for a project that exposes its own config; `dbx` itself generates its
  * artifacts with `yarn config:generate`.
  */
-export function builtinCommands(config?: ToolchainConfig): ToolchainCommand[] {
+export function builtinCommands(config?: ToolchainConfig) {
     const vite = withToolingRouting(viteCommands());
     return [
         ...syncCommands(config),
@@ -88,7 +92,7 @@ export function builtinCommands(config?: ToolchainConfig): ToolchainCommand[] {
 }
 
 /** Every built-in command name (a bare Vite+ command never shadows one). */
-function builtinCommandNames(commands: ToolchainCommand[] = builtinCommands()): Set<string> {
+function builtinCommandNames(commands: CliCommand[] = builtinCommands()): Set<string> {
     return new Set(commands.map(command => command.name));
 }
 
@@ -208,6 +212,8 @@ export const MACHINE_OUTPUT_FLAGS = new Set([
     '--alias',
     '--paths',
     '--references',
+    '--release-body',
+    // Deprecated alias: keep machine output clean for existing scripts.
     '--release-notes',
 ]);
 
@@ -217,7 +223,7 @@ export function suppressesUpdateNotice(
     machineCommands: ReadonlySet<string> = MACHINE_OUTPUT_COMMANDS
 ): boolean {
     const wantsHelp = argv.some(
-        arg => arg === '--help' || arg === '-h' || arg === '--version' || arg === '-V'
+        arg => arg === '--help' || arg === '-H' || arg === '--version' || arg === '-V'
     );
     const wantsJson =
         argv.some(arg => MACHINE_OUTPUT_FLAGS.has(arg)) ||
@@ -225,68 +231,95 @@ export function suppressesUpdateNotice(
     return wantsHelp || wantsJson;
 }
 
+const globalOptions = [
+    {
+        flags: '--log-level <level>',
+        description: `Minimum log level (${LOG_LEVELS.join('|')}).`,
+    },
+    { flags: '--no-color', description: 'Disable coloured output.' },
+    { flags: '--no-update-check', description: 'Do not check for a newer dbx version.' },
+    { flags: '--config <file>', description: 'Use a specific dbx config file.' },
+    { flags: '--no-config', description: 'Ignore discovered config; use CLI flags/env only.' },
+    { flags: '-V, --version', description: 'Output the version number.' },
+] as const;
+
 /**
- * Build the `dbx` commander program.
+ * Build the `dbx` program on the config engine runtime.
  *
- * Commander's own help/error output is routed through the shared logger so it
- * honours the same colour settings and sink as everything else. A provider
- * passthrough (`vite:*`) is the exception: it keeps commander's default output
- * so the spawned `vp` process keeps its own coloured logging.
+ * Help/version output is routed through the shared logger so it honours the
+ * same colour settings and sink as everything else.
  */
-export function createCli(commands: ToolchainCommand[] = builtinCommands()): Command {
-    const program = new Command();
-    // Capture commander's defaults before overriding them (used for passthrough).
-    const defaults = program.configureOutput();
-    program.configureOutput({
-        writeOut: text =>
-            isPassthroughCommand() ? defaults.writeOut?.(text) : logger.write('out', text),
-        writeErr: text =>
-            isPassthroughCommand() ? defaults.writeErr?.(text) : logger.write('err', text),
-        getOutHasColors: () =>
-            isPassthroughCommand()
-                ? (defaults.getOutHasColors?.() ?? false)
-                : logger.colors.isColorSupported,
-        getErrHasColors: () =>
-            isPassthroughCommand()
-                ? (defaults.getErrHasColors?.() ?? false)
-                : logger.colors.isColorSupported,
-        stripColor: text =>
-            isPassthroughCommand() ? (defaults.stripColor?.(text) ?? text) : stripAnsi(text),
-    });
-    program
-        .name('dbx')
-        .description(
-            'A superset of Vite+ with project synchronization, a config generator, tsconfig management, MCP server, CI/changelog automation, providers, catalogs and a VS Code extension. Use it as a Vite plugin or standalone.'
-        )
-        // Global options are parsed before the subcommand, so a subcommand can
-        // reuse a name like `--version` (the changelog uses it for the target
-        // version) without the root version flag swallowing it.
-        .enablePositionalOptions()
-        .version(rootPkg.version, '-V, --version', 'Output the version number')
-        .option('--log-level <level>', `Minimum log level (${LOG_LEVELS.join('|')}).`)
-        .option('--no-color', 'Disable coloured output.')
-        .option('--no-update-check', 'Do not check for a newer dbx version.')
-        .option('--config <file>', 'Use a specific dbx config file.')
-        .option('--no-config', 'Ignore discovered config; use CLI flags/env only.')
-        .option(
-            '--configless',
-            'Manage projects without their own dbx.config.* (inherit the nearest config).'
-        )
-        .showHelpAfterError();
-    // Commander's built-in Help does not colourise; wire its style hooks to the
-    // logger's colour set (identity when colours are off, so `--no-color` is plain).
-    program.configureHelp({
-        styleTitle: str => logger.colors.bold(str),
-        styleCommandText: str => logger.colors.cyan(str),
-        styleOptionText: str => logger.colors.yellow(str),
-        styleOptionTerm: str => logger.colors.yellow(str),
-        styleSubcommandText: str => logger.colors.cyan(str),
-        styleSubcommandTerm: str => logger.colors.cyan(str),
-        styleArgumentText: str => logger.colors.yellow(str),
-        styleArgumentTerm: str => logger.colors.yellow(str),
-    });
-    registerToolchainCommands(program, commands);
-    return program;
+export function createCli<
+    TContext extends CliCommandContext = ToolchainCommandContext,
+>(): ConfigProgram<
+    ResolveConfigProgramCommands<ReturnType<typeof builtinCommands>, TContext>,
+    TContext,
+    typeof globalOptions
+>;
+export function createCli<
+    const TOptions extends readonly CliOption[] = readonly CliOption[],
+    TContext extends CliCommandContext = ToolchainCommandContext,
+    const TCommands extends readonly CliCommand<any, TContext>[] = readonly any[],
+    const TScope extends string | undefined = string | undefined,
+    const TName extends string = string,
+    const TGlobalOptions extends readonly CliOption[] = readonly CliOption[],
+>(
+    commands: readonly CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions>[]
+): ConfigProgram<
+    ResolveConfigProgramCommands<
+        readonly CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions>[],
+        TContext
+    >,
+    TContext,
+    typeof globalOptions
+>;
+export function createCli<
+    const Commands extends readonly CliCommand<any, any>[],
+    TContext extends CliCommandContext = ToolchainCommandContext,
+>(
+    commands: Commands
+): ConfigProgram<ResolveConfigProgramCommands<Commands, TContext>, TContext, typeof globalOptions>;
+export function createCli<
+    const TOptions extends readonly CliOption[] = readonly CliOption[],
+    TContext extends CliCommandContext = ToolchainCommandContext,
+    const TCommands extends readonly CliCommand<any, TContext>[] = readonly any[],
+    const TScope extends string | undefined = string | undefined,
+    const TName extends string = string,
+    const TGlobalOptions extends readonly CliOption[] = readonly CliOption[],
+>(commands?: readonly CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions>[]) {
+    return createConfigProgram(withCliContext(commands ?? (builtinCommands() as any)), {
+        name: 'dbx',
+        description: rootPkg.description,
+        version: rootPkg.version,
+        globalOptions,
+        disableColors: ({ color }) => {
+            return getLogOverrides().color === false || color === false;
+        },
+        writeOut: text => logger.write('out', text),
+        writeErr: text => logger.write('err', text),
+    }).configure({
+        colors: {
+            command: pc.cyan,
+            option: pc.yellow,
+            value: pc.green,
+            description: pc.dim,
+            usage: pc.bold,
+        },
+        error: {
+            messageColor: pc.red,
+            stackColor: input => pc.dim(pc.red(input)),
+        },
+    }) as unknown as ConfigProgram<
+        ResolveConfigProgramCommands<
+            Exclude<
+                readonly CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions>[],
+                undefined
+            >,
+            TContext
+        >,
+        TContext,
+        typeof globalOptions
+    >;
 }
 
 let interruptHandlerInstalled = false;
@@ -351,7 +384,32 @@ export async function runCli(argv: string[] = process.argv): Promise<void> {
     const commandNames = builtinCommandNames(commands);
     // The notice is human output on stdout; never let it corrupt machine output.
     if (!suppressesUpdateNotice(rest3)) runUpdateCheck(rootPkg.version, updateCheck);
-    await createCli(commands).parseAsync(withDefaultVite(rest3, commandNames));
+    const userArgv = withDefaultVite(rest3, commandNames).slice(2);
+    const first = userArgv[0];
+    const passthroughNames = new Set(
+        commands.filter(command => command.passthrough).map(command => command.name)
+    );
+    setPassthroughCommand(
+        Boolean(
+            first &&
+            !first.startsWith('-') &&
+            (passthroughNames.has(first) ||
+                (!commandNames.has(first) && resolveVpCommand(first) !== undefined))
+        )
+    );
+    const program = createCli(commands);
+    try {
+        await program.invokeAsync(userArgv);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error(message);
+        if (error instanceof ConfigProgramError) {
+            logger.write('err', `${program.formatHelp()}\n`);
+        }
+        process.exitCode = 1;
+    } finally {
+        setPassthroughCommand(false);
+    }
 }
 
 /** Whether this module is the process entry point (symlink-safe). */

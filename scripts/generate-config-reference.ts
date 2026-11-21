@@ -28,10 +28,12 @@ const markdown = engine.markdown.generate({
         '`@deltabox/toolchain` settings live under the `toolchain` key. Every',
         'section is **opt-in by presence** (see [Configuration](/guide/config/opt-in-by-presence)):',
         'define it to enable it, omit it to leave that area untouched.',
-        '',
-        '> Generated from the Zod config schema — do not edit by hand.',
-        '> Run `yarn config:generate`.',
     ].join('\n'),
+    onContent: content =>
+        content.replace(
+            /\(\`\{\{ (name|scope|author|license|homepage|repo|description|nodeVersion|packageManager|yarnVersion|packageManagerVersion|mainBranch|devBranch) \}\}\`\)/g,
+            '<code v-pre>{{ $1 }}</code>'
+        ),
 })['index.md'];
 const docsPath = path.join(root, 'apps/docs/config/reference.md');
 fs.mkdirSync(path.dirname(docsPath), { recursive: true });
@@ -44,7 +46,7 @@ const example = [
     '',
     'export default defineConfig({',
     '    toolchain: {',
-    "        project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },",
+    "        project: { type: 'monorepo-root', name: 'myapp', scope: '@org' },",
     '        ci: { ci: true, release: true, changelog: { branches: { main: "main" } } },',
     '        tsconfig: { refs: true },',
     "        templates: { sources: [{ type: 'local', locate: './templates', kind: 'application' }] },",

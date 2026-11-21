@@ -77,20 +77,20 @@ describe('repoSlug', () => {
             fs.writeFileSync(
                 path.join(root, 'package.json'),
                 JSON.stringify({
-                    name: 'acme',
-                    repository: { url: 'https://github.com/acme/toolchain.git' },
+                    name: 'myapp',
+                    repository: { url: 'https://github.com/myapp/toolchain.git' },
                 })
             );
             const nested = path.join(root, 'packages', 'app');
             fs.mkdirSync(nested, { recursive: true });
             fs.writeFileSync(
                 path.join(nested, 'package.json'),
-                JSON.stringify({ name: '@acme/app' })
+                JSON.stringify({ name: '@org/app' })
             );
             execFileSync('git', ['init'], { cwd: root, stdio: 'ignore' });
             process.chdir(nested);
 
-            expect(repoSlug()).toBe('acme/toolchain');
+            expect(repoSlug()).toBe('myapp/toolchain');
         } finally {
             process.chdir(originalCwd);
             fs.rmSync(root, { recursive: true, force: true });

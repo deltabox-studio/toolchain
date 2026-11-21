@@ -17,12 +17,12 @@ export const projectTypeSchema = z
 export const projectConfigSchema = z
     .object({
         type: projectTypeSchema.optional(),
-        regenerate: z.boolean().optional().describe(REGENERATE_DESCRIPTION),
+        regenerate: z.boolean().optional().describe(REGENERATE_DESCRIPTION).meta({ cli: false }),
         name: z
             .string()
             .describe('The unscoped project name (written as `<scope>/<name>`).')
             .optional(),
-        scope: z.string().describe('The npm scope, eg. `@acme`.').optional(),
+        scope: z.string().describe('The npm scope, eg. `@org`.').optional(),
         author: z.string().describe('Package author (`package.json` `author`).').optional(),
         license: z.string().describe('SPDX license id (`package.json` `license`).').optional(),
         homepage: z.string().describe('Project homepage (`package.json` `homepage`).').optional(),

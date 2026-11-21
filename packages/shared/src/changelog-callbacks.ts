@@ -31,13 +31,13 @@ export interface ChangelogIssueInfo {
 
 /** Options for rendering a commit bullet/credit line. */
 export interface ChangelogCommitFormatOptions {
-    /** Include the `by <author>` credit (default true). */
+    /** Include the `by <author>` credit. @default `true` */
     author?: boolean;
-    /** Include the commit hash link (default true). */
+    /** Include the commit hash link. @default `true` */
     commitSha?: boolean;
-    /** Include issue/fixes links (default true). */
+    /** Include issue/fixes links. @default `true` */
     issues?: boolean;
-    /** Prefix the author with their GitHub avatar (default false). */
+    /** Prefix the author with their GitHub avatar. @default `false` */
     authorAvatar?: boolean;
     /** Fully custom commit line formatter (TS/JS configs only). */
     format?: (ctx: ChangelogCommitFormatContext) => string;

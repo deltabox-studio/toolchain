@@ -101,7 +101,7 @@ describe('template registry', () => {
 
     it('round-trips the on-disk source registry', () => {
         const root = makeTmp();
-        addTemplateSource(root, { type: 'git', locate: 'https://github.com/acme/tpl.git' });
+        addTemplateSource(root, { type: 'git', locate: 'https://github.com/myapp/tpl.git' });
         addTemplateSource(root, { type: 'local', locate: './tpl' });
         expect(readTemplateRegistry(root).sources).toHaveLength(2);
         // dedupe on type:locate
@@ -112,12 +112,12 @@ describe('template registry', () => {
 
 describe('source parsing', () => {
     it('infers the source type', () => {
-        expect(parseSourceSpec('git:https://github.com/acme/x.git').type).toBe('git');
-        expect(parseSourceSpec('@acme/create').type).toBe('npm');
-        expect(parseSourceSpec('create-acme').type).toBe('npm');
-        expect(parseSourceSpec('acme-create').type).toBe('npm');
+        expect(parseSourceSpec('git:https://github.com/myapp/x.git').type).toBe('git');
+        expect(parseSourceSpec('@org/create').type).toBe('npm');
+        expect(parseSourceSpec('create-myapp').type).toBe('npm');
+        expect(parseSourceSpec('myapp-create').type).toBe('npm');
         expect(parseSourceSpec('remote:https://example.com/templates.json').type).toBe('remote');
-        expect(parseSourceSpec('https://github.com/acme/x').type).toBe('git');
+        expect(parseSourceSpec('https://github.com/myapp/x').type).toBe('git');
         expect(parseSourceSpec('./local-dir').type).toBe('local');
     });
 
@@ -160,8 +160,8 @@ describe('template authoring', () => {
         const out = makeTmp();
         const template = BUILTIN_TEMPLATES.find(candidate => candidate.id === 'folder');
         if (!template) throw new Error('missing builtin');
-        await scaffoldTemplate(template, { cwd: out, tokens: { name: 'acme' } });
-        expect(fs.readFileSync(path.join(out, 'README.md'), 'utf-8')).toBe('# acme\n');
+        await scaffoldTemplate(template, { cwd: out, tokens: { name: 'myapp' } });
+        expect(fs.readFileSync(path.join(out, 'README.md'), 'utf-8')).toBe('# myapp\n');
     });
 
     it('covers every registry kind in the builtins', () => {
@@ -190,7 +190,7 @@ describe('scaffolding', () => {
         const out = makeTmp();
         const template = BUILTIN_TEMPLATES.find(candidate => candidate.id === 'project');
         if (!template) throw new Error('missing builtin');
-        const result = await scaffoldTemplate(template, { cwd: out, tokens: { name: 'acme' } });
+        const result = await scaffoldTemplate(template, { cwd: out, tokens: { name: 'myapp' } });
         expect(result.written.length).toBeGreaterThan(0);
         expect(fs.existsSync(path.join(out, 'package.json'))).toBe(true);
         expect(fs.existsSync(path.join(out, 'vite.config.ts'))).toBe(true);
@@ -279,7 +279,7 @@ describe('scaffolding', () => {
 
             await scaffoldTemplate(template, {
                 cwd: out,
-                tokens: { name: 'acme', packageManager: 'yarn' },
+                tokens: { name: 'myapp', packageManager: 'yarn' },
             });
 
             for (const relative of testCase.files) {
@@ -312,7 +312,7 @@ describe('scaffolding', () => {
 
         await scaffoldTemplate(template, {
             cwd: out,
-            tokens: { name: 'acme' },
+            tokens: { name: 'myapp' },
             variables: { packageManager: 'pnpm' },
         });
 
@@ -333,7 +333,7 @@ describe('scaffolding', () => {
 
         await scaffoldTemplate(template, {
             cwd: out,
-            tokens: { name: 'acme', packageManager: 'yarn' },
+            tokens: { name: 'myapp', packageManager: 'yarn' },
             containerize: true,
         });
 
@@ -352,7 +352,7 @@ describe('scaffolding', () => {
         await scaffoldTemplate(template, {
             cwd: out,
             tokens: {
-                name: 'acme',
+                name: 'myapp',
                 packageManager: 'yarn',
                 packageManagerVersion: '4.17.1',
             },
@@ -385,11 +385,11 @@ describe('scaffolding', () => {
         const out = makeTmp();
         const [template] = loadLocalTemplates(root);
         if (!template) throw new Error('missing local template');
-        const result = await scaffoldTemplate(template, { cwd: out, tokens: { name: 'acme' } });
+        const result = await scaffoldTemplate(template, { cwd: out, tokens: { name: 'myapp' } });
 
-        const rendered = path.join(out, 'src', 'acme.ts');
+        const rendered = path.join(out, 'src', 'myapp.ts');
         expect(result.written).toContain(rendered);
-        expect(fs.readFileSync(rendered, 'utf-8')).toBe("export const name = 'acme';\n");
+        expect(fs.readFileSync(rendered, 'utf-8')).toBe("export const name = 'myapp';\n");
         // the manifest is never copied
         expect(fs.existsSync(path.join(out, 'template.json'))).toBe(false);
     });
@@ -469,10 +469,10 @@ describe('scaffolding', () => {
         const [template] = loadLocalTemplates(root);
         if (!template) throw new Error('missing local template');
 
-        await scaffoldTemplate(template, { cwd: out, tokens: { name: 'acme' } });
+        await scaffoldTemplate(template, { cwd: out, tokens: { name: 'myapp' } });
 
         expect(fs.readFileSync(path.join(out, 'logo.png')).equals(bytes)).toBe(true);
-        expect(fs.readFileSync(path.join(out, 'README.md'), 'utf-8')).toBe('# acme\n');
+        expect(fs.readFileSync(path.join(out, 'README.md'), 'utf-8')).toBe('# myapp\n');
     });
 });
 

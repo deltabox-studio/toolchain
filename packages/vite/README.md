@@ -1,21 +1,72 @@
 # vite-plugin-dbx
 
-A superset of [Vite+](https://viteplus.dev) with:
+This Vite plugin is a superset of [Vite+](https://viteplus.dev).
+
+It exists to remove the glue work that appears once a project grows beyond a
+single package: the same settings spread across a dozen files, generated files
+that drift, and release chores that are easy to get wrong.
+
+You describe the project once, and the toolchain keeps the rest in sync.
+
+---
+
+<details>
+<summary><strong>Why use this?</strong></summary>
+
+It is most useful when at least one of these is true:
+
+- you **maintain a monorepo** or several related packages;
+- you want **one place** for **toolchain, CI and release configuration**;
+- you use **Vite or Vite+** and want a **consistent project workflow**;
+- you define **schemas or config formats** and want **types, docs, JSON Schema
+  and typed CLI options** generated from them;
+- you maintain **many environment variables** and want **documented, typed
+  config** with **file/env/CLI precedence**;
+- you want **one consistent CLI and task surface** for scripts, tasks and
+  provider toolchains;
+- you build a **library or internal tool** that needs its own **typed config and
+  CLI** without rebuilding loaders, validation and help;
+- you work **across languages** and want Python, .NET, Java, Rust and other
+  tools exposed through the **same command surface**;
+- you **scaffold projects or packages** regularly;
+- you work in **VS Code or with AI agents** and want them to understand the
+  **same project model**;
+- you are tired of **generated files and release chores drifting**.
+
+Read the rest of [Why use this?](https://toolchain.deltabox.studio/guide/why-use-this) for the
+problems it removes, the core features and when it might not fit.
+
+---
+
+</details>
+
+<details>
+<summary><strong>Features</strong></summary>
 
 - Project synchronization
+- Config-driven
 - Config generator
-- Tsconfig management
-- MCP server
-- CI/changelog automation
+- Vite / Vite+ plugin (optional)
+- Changelogs & releases
+- CI automation
+- tsconfig management
 - Providers
 - Catalogs
-- a VS Code extension
+- Templates
+- Migrations
+- MCP server
+- VS Code extension
+- Editor first
+- Monorepo aware
+- And more...
 
-Running from inside the Vite / Vite+ pipeline.
+</details>
 
-`@deltabox/toolchain` used as a Vite plugin, or use the `dbx` CLI standalone.
+---
 
-The plugin carries the whole toolchain config inline, so a Vite project does not
+`@deltabox/toolchain` is used as a Vite plugin, but can be used standalone without Vite as a CLI or lib `@deltabox/toolchain`.
+
+This plugin carries the whole deltabox toolchain config inline, so a Vite project does not
 need a `dbx.config.*` at all, and it can run `dbx sync` before dev/build or
 `dbx sync --check` in CI.
 

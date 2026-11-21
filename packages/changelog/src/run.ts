@@ -159,9 +159,9 @@ function appendTextEntry<T>(setting: T | T[] | undefined, entry: T): T | T[] {
 }
 
 export interface RunChangelogOptions {
-    /** Top-level `toolchain.enabled` (default true). */
+    /** Top-level `toolchain.enabled`. @default `true` */
     enabled?: boolean;
-    /** `ci.regenerate` / `ci.changelog.regenerate` (default true). */
+    /** `ci.regenerate` / `ci.changelog.regenerate`. @default `true` */
     regenerate?: boolean;
     /** Top-level `toolchain.hooks` (the version hooks run around a bump). */
     hooks?: Pick<ToolchainHooks, 'beforeVersion' | 'afterVersion'>;
@@ -184,9 +184,9 @@ function* changelogSteps(
     // It is derived from git alone and needs no toolchain config, so it must
     // run before the `enabled` guard: printing a decorated info line to stdout
     // would corrupt the release body.
-    if (options.releaseNotes) {
+    if (options.releaseBody) {
         if (!isGitRepository()) throw new Error('dbx changelog: not a git repository.');
-        logger.raw(releaseNotesFromGit(options.releaseNotes));
+        logger.raw(releaseNotesFromGit(options.releaseBody));
         return;
     }
     if (runOptions.enabled === false) {
@@ -215,7 +215,7 @@ function* changelogSteps(
             groups,
             breaking,
             detailsOf(changelog),
-            options.release
+            options.releaseBodyWrap
         );
         return;
     }
@@ -365,7 +365,7 @@ function* changelogSteps(
                 groups,
                 breaking,
                 detailsOf(changelog),
-                options.release
+                options.releaseBodyWrap
             );
         } else {
             logger.info('No new commits since the last release; nothing to do.');
@@ -384,7 +384,7 @@ function* changelogSteps(
         ...(groups ? { groups } : {}),
         ...(breaking !== undefined ? { breaking } : {}),
         ...(rootCommit ? { commit: rootCommit } : {}),
-        release: options.release,
+        release: options.releaseBodyWrap,
     });
     if (provider && typeof provider === 'object' && typeof provider.run === 'function') {
         const custom = provider.run({ cwd: repoRoot(), changelog, records });
@@ -422,7 +422,7 @@ function* changelogSteps(
             options.packageChanges && previousVersion
                 ? packageChangesForCurrent(previousVersion)
                 : '';
-        const rootDetails = resolveDetails(rootCommit?.details, options.release);
+        const rootDetails = resolveDetails(rootCommit?.details, options.releaseBodyWrap);
         const entry =
             rootDetails.lifecycle === 'after'
                 ? applyDetailsToEntry(
@@ -435,7 +435,7 @@ function* changelogSteps(
                           introFor(root) ?? '',
                           outroFor(root) ?? '',
                           rootCommit?.details,
-                          options.release
+                          options.releaseBodyWrap
                       ),
                       rootDetails
                   )
@@ -448,7 +448,7 @@ function* changelogSteps(
                       introFor(root) ?? '',
                       outroFor(root) ?? '',
                       rootCommit?.details,
-                      options.release
+                      options.releaseBodyWrap
                   );
         logger.info(`[DRY-RUN] Range: ${range}`);
         logger.info(
@@ -471,7 +471,7 @@ function* changelogSteps(
                   groups,
                   breaking,
                   detailsOf(changelog),
-                  options.release
+                  options.releaseBodyWrap
               )
             : existing;
         const content = insertNewEntry(base, entry);
@@ -518,7 +518,7 @@ function* changelogSteps(
                     dir,
                     rootDir
                 ),
-            release: options.release,
+            release: options.releaseBodyWrap,
         },
         changelog
     );

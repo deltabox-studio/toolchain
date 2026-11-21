@@ -5,23 +5,23 @@ import { projectFromPackageJson, projectToPackageJson } from '../src/project.js'
 describe('projectFromPackageJson', () => {
     it('derives name/scope and metadata from a package.json', () => {
         const project = projectFromPackageJson({
-            name: '@acme/app',
+            name: '@org/app',
             description: 'An app',
-            author: { name: 'Acme', email: 'dev@acme.dev' },
+            author: { name: 'Myapp', email: 'dev@myapp.dev' },
             license: 'MIT',
-            homepage: 'https://acme.dev',
-            repository: { type: 'git', url: 'git+https://github.com/acme/app.git' },
+            homepage: 'https://myapp.dev',
+            repository: { type: 'git', url: 'git+https://github.com/myapp/app.git' },
             engines: { node: '>=22.5.0' },
             packageManager: 'yarn@4.17.1',
         });
         expect(project).toEqual({
             name: 'app',
-            scope: '@acme',
+            scope: '@org',
             description: 'An app',
-            author: 'Acme <dev@acme.dev>',
+            author: 'Myapp <dev@myapp.dev>',
             license: 'MIT',
-            homepage: 'https://acme.dev',
-            repo: 'https://github.com/acme/app',
+            homepage: 'https://myapp.dev',
+            repo: 'https://github.com/myapp/app',
             nodeVersion: '22.5.0',
             packageManager: 'yarn',
             packageManagerVersion: '4.17.1',
@@ -31,12 +31,12 @@ describe('projectFromPackageJson', () => {
     it('handles an unscoped name and a string repository', () => {
         const project = projectFromPackageJson({
             name: 'tool',
-            repository: 'https://github.com/acme/tool',
+            repository: 'https://github.com/myapp/tool',
             packageManager: 'pnpm',
         });
         expect(project.name).toBe('tool');
         expect(project.scope).toBeUndefined();
-        expect(project.repo).toBe('https://github.com/acme/tool');
+        expect(project.repo).toBe('https://github.com/myapp/tool');
         expect(project.packageManager).toBe('pnpm');
         expect(project.packageManagerVersion).toBeUndefined();
     });
@@ -44,18 +44,18 @@ describe('projectFromPackageJson', () => {
 
 describe('projectToPackageJson', () => {
     it('maps only the defined fields', () => {
-        const pkg = projectToPackageJson({ name: 'app', scope: '@acme', description: 'Hi' });
-        expect(pkg).toEqual({ name: '@acme/app', description: 'Hi' });
+        const pkg = projectToPackageJson({ name: 'app', scope: '@org', description: 'Hi' });
+        expect(pkg).toEqual({ name: '@org/app', description: 'Hi' });
     });
 
     it('writes the repository with the workspace directory', () => {
         const pkg = projectToPackageJson(
-            { repo: 'https://github.com/acme/app' },
+            { repo: 'https://github.com/myapp/app' },
             { directory: 'packages/app' }
         );
         expect(pkg.repository).toEqual({
             type: 'git',
-            url: 'git+https://github.com/acme/app.git',
+            url: 'git+https://github.com/myapp/app.git',
             directory: 'packages/app',
         });
     });

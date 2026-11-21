@@ -4,26 +4,81 @@
 
 # deltabox toolchain
 
-Provides a sidebar for managing projects.
+This VS Code extension provides a sidebar for managing projects.
 
-VS Code extension for **deltabox toolchain** — a superset of [Vite+](https://viteplus.dev) with project synchronization, a config generator, tsconfig management, MCP server, CI and changelog automation, providers, catalogs and managed files. Use the toolchain as a Vite/Vite+ plugin or standalone.
+`deltabox toolchain` is a superset of [Vite+](https://viteplus.dev)
+but can also be used standalone without Vite.
 
-- **Project synchronization** — keep workspaces, configs, docs and CI up to date.
-- **Save and use templates (local/remote)** so you never have to scaffold the same projects over and over again.
-- **Generate** config types, env variables, cli flags, markdown and JSON schemas, so your codebase stays consistent, validated and well-documented.
-- **Automate CI, changelogs and releases** for your project and workspaces.
-- **Use it as a Vite/Vite+ plugin or standalone** — the plugin is optional.
+It exists to remove the glue work that appears once a project grows beyond a
+single package: the same settings spread across a dozen files, generated files
+that drift, and release chores that are easy to get wrong.
 
-See the [list of features](https://github.com/deltabox-studio/toolchain#features).
+You describe the project once, and the toolchain keeps the rest in sync.
 
-See docs [here](https://toolchain.deltabox.studio/).
+---
+
+<details>
+<summary><strong>Why use this?</strong></summary>
+
+It is most useful when at least one of these is true:
+
+- you **maintain a monorepo** or several related packages;
+- you want **one place** for **toolchain, CI and release configuration**;
+- you use **Vite or Vite+** and want a **consistent project workflow**;
+- you define **schemas or config formats** and want **types, docs, JSON Schema
+  and typed CLI options** generated from them;
+- you maintain **many environment variables** and want **documented, typed
+  config** with **file/env/CLI precedence**;
+- you want **one consistent CLI and task surface** for scripts, tasks and
+  provider toolchains;
+- you build a **library or internal tool** that needs its own **typed config and
+  CLI** without rebuilding loaders, validation and help;
+- you work **across languages** and want Python, .NET, Java, Rust and other
+  tools exposed through the **same command surface**;
+- you **scaffold projects or packages** regularly;
+- you work in **VS Code or with AI agents** and want them to understand the
+  **same project model**;
+- you are tired of **generated files and release chores drifting**.
+
+Read the rest of [Why use this?](https://toolchain.deltabox.studio/guide/why-use-this) for the
+problems it removes, the core features and when it might not fit.
+
+---
+
+</details>
+
+<details>
+<summary><strong>Features</strong></summary>
+
+- Project synchronization
+- Config-driven
+- Config generator
+- Vite / Vite+ plugin (optional)
+- Changelogs & releases
+- CI automation
+- tsconfig management
+- Providers
+- Catalogs
+- Templates
+- Migrations
+- MCP server
+- VS Code extension
+- Editor first
+- Monorepo aware
+- And more...
+
+</details>
+
+---
+
+Documentation, guides and examples live at [toolchain.deltabox.studio](https://toolchain.deltabox.studio/guide/vscode).
 
 See all the [commands](#commands) below.
 
 **Requirements:**
 
 - Visual Studio Code version >= 1.85.0
-- Node.js version >= 22.5.0
+- Node.js version ^22.22.1 or ^24.11.0
 
 **Quick showcase:**
 
@@ -39,32 +94,32 @@ See all the [commands](#commands) below.
 
 ## Commands
 
-| Command                                               | What it does                                                                              |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Sync all / active / selected                          | `dbx sync` (`--recursive` / per project).                                                 |
-| Check sync                                            | `sync --check` across the workspace.                                                      |
-| Sync tsconfig                                         | `dbx sync --only tsconfig` (refresh aliases/references after builds).                     |
-| Format project / Lint project                         | `dbx fmt` / `dbx lint` with the detected or configured formatter/linter.                  |
-| Manage tsconfig…                                      | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                 |
-| Scaffold project                                      | Single project, monorepo root, workspace, or **From template…**.                          |
-| Generate configs / Generate config                    | `project:config` for missing configs (or one project), or refresh only the project graph. |
-| Migrate tooling…                                      | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).    |
-| Run workflow                                          | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                     |
-| Run Vite+ command…                                    | QuickPick over the Vite+ provider commands, run in a terminal.                            |
-| Create Vite+ project…                                 | `vp create` in a terminal.                                                                |
-| Install MCP server + skill… / List MCP installations  | `dbx mcp:install` / `dbx mcp:list`.                                                       |
-| Generate changelog                                    | Run `dbx changelog` in the selected project.                                              |
-| Clean build artifacts                                 | Remove `dist/` and `*.tsbuildinfo` (`dbx cleanup`).                                       |
-| Add provider... / Refresh providers / Run command...  | Register a provider, reload the list, or run one of its commands.                         |
-| Add template… / Remove template…                      | `template:init --add` / `template:list --registry` + `template:remove`.                   |
-| Add template... / Remove template source...           | Add a registry template source or drop one; **Refresh templates** reloads the list.       |
-| Create from template...                               | `dbx create --template <id>` (terminal for online templates).                             |
-| New registry… / Remove registry… / Refresh registries | Manage registry search paths and reload the **Registries** view.                          |
-| Choose dbx source… / Select dbx version…              | Pick the project's `dbx` or the bundled CLI, and pin the toolchain version.               |
-| Refresh projects / Refresh files                      | Rediscover the project graph / reload the **Managed Files** view.                         |
-| Show all actions                                      | Open the searchable action palette (see [Actions](#actions)).                             |
-| Reset tooling                                         | Remove generated files / manifest / config.                                               |
-| Toggle auto-sync                                      | Enable/disable sync-on-change.                                                            |
+| Command                                                   | What it does                                                                              |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Sync all / active / selected                              | `dbx sync` (`--recursive` / per project).                                                 |
+| Check sync                                                | `sync --check` across the workspace.                                                      |
+| Sync tsconfig                                             | `dbx sync --only tsconfig` (refresh aliases/references after builds).                     |
+| Format project / Lint project                             | `dbx fmt` / `dbx lint` with the detected or configured formatter/linter.                  |
+| Manage tsconfig...                                        | Auto-wire the root workspaces tsconfig paths/references (`dbx tsconfig`).                 |
+| Scaffold project                                          | Single project, monorepo root, workspace, or **From template...**.                        |
+| Generate configs / Generate config                        | `project:config` for missing configs (or one project), or refresh only the project graph. |
+| Migrate tooling...                                        | Migrate Biome/Prettier/Dprint/ESLint/Oxc/vite config to the toolchain (`dbx migrate`).    |
+| Run workflow                                              | Trigger generated workflows with their vendor CLI (`gh`/`glab`/`az`).                     |
+| Run Vite+ command...                                      | QuickPick over the Vite+ provider commands, run in a terminal.                            |
+| Create Vite+ project...                                   | `vp create` in a terminal.                                                                |
+| Install MCP server + skill... / List MCP installations    | `dbx mcp:install` / `dbx mcp:list`.                                                       |
+| Generate changelog                                        | Run `dbx changelog` in the selected project.                                              |
+| Clean build artifacts                                     | Remove `dist/` and `*.tsbuildinfo` (`dbx cleanup`).                                       |
+| Add provider... / Refresh providers / Run command...      | Register a provider, reload the list, or run one of its commands.                         |
+| Add template... / Remove template...                      | `template:init --add` / `template:list --registry` + `template:remove`.                   |
+| Add template... / Remove template source...               | Add a registry template source or drop one; **Refresh templates** reloads the list.       |
+| Create from template...                                   | `dbx create --template <id>` (terminal for online templates).                             |
+| New registry... / Remove registry... / Refresh registries | Manage registry search paths and reload the **Registries** view.                          |
+| Choose dbx source... / Select dbx version...              | Pick the project's `dbx` or the bundled CLI, and pin the toolchain version.               |
+| Refresh projects / Refresh files                          | Rediscover the project graph / reload the **Managed Files** view.                         |
+| Show all actions                                          | Open the searchable action palette (see [Actions](#actions)).                             |
+| Reset tooling                                             | Remove generated files / manifest / config.                                               |
+| Toggle auto-sync                                          | Enable/disable sync-on-change.                                                            |
 
 Interactive commands (the dev server, `vp create`, online scaffolding) run in an
 integrated terminal at the project root; everything else runs in the output
@@ -77,11 +132,11 @@ actions, scoped to that project:
 
 - **Sync** / **Check sync** — regenerate / verify the project's managed files.
 - **Generate config** — write a `dbx.config.*` (TS/JS), or refresh only the project graph.
-- **Run workflow…** — trigger one of the project's generated workflows. The picker
+- **Run workflow...** — trigger one of the project's generated workflows. The picker
   lists every enabled workflow with its provider and path, and dispatches it
   through the matching vendor CLI (`gh`, `glab` or `az`).
-- **Run Vite+ command…** — run a `vp` command in that project.
-- **Reset tooling…** — remove the generated files + manifest, or everything
+- **Run Vite+ command...** — run a `vp` command in that project.
+- **Reset tooling...** — remove the generated files + manifest, or everything
   including the config.
 - **Go to project** — reveal the project in the Explorer.
 
@@ -147,7 +202,7 @@ template registries as **Providers** / **Templates** roots.
 
 Each item has **Open registry** (the folder in the explorer, or the website for remote URLs), **Add new registry** and **Remove registry** (it only drops the path, keeping the files).
 
-The title bar's **New registry…** / **Remove registry…** actions add or remove
+The title bar's **New registry...** / **Remove registry...** actions add or remove
 search paths for either kind, asking whether they are global or project-scoped.
 
 Remote registries are `http(s)` JSON registries: template registries accept
@@ -170,10 +225,10 @@ Sync, Templates, Tools). Groups are collapsed by default and sorted ascending;
 expanding one shows its actions sorted by name. Selecting an action runs its VS
 Code command directly.
 
-The Home view's **More actions…** button opens the same list as a searchable,
+The Home view's **More actions...** button opens the same list as a searchable,
 paged QuickPick. Navigation entries (`Go back`, `Next page (n/m)`) are rendered
 before the real choices, and every prompt-based dbx flow (scaffolding, template
-pickers, …) uses the same paging factory.
+pickers, ...) uses the same paging factory.
 
 ## Auto-sync
 
@@ -236,7 +291,7 @@ workspace-scoped `.vscode/settings.json` value.
 
 When a workspace has its own `@deltabox/toolchain` whose version differs from the
 extension's bundled CLI, the extension asks which to run and shows both detected
-versions. **Select dbx version…** pins a version in the project's
+versions. **Select dbx version...** pins a version in the project's
 `.vscode/settings.json` (like TypeScript's version picker); it runs that version
 via `npx` unless the project already installs it.
 
@@ -247,25 +302,25 @@ Search for `deltabox:` to find:
 - **Sync active project** / **Sync selected projects** / **Sync all projects**
 - **Check sync**
 - **Sync tsconfig**
-- **Manage tsconfig…**
-- **Scaffold project…**
-- **Generate configs…** / **Generate config…**
-- **Migrate tooling…**
-- **Run workflow…**
-- **Run Vite+ command…**
-- **Create Vite+ project…**
-- **Install MCP server + skill…**
+- **Manage tsconfig...**
+- **Scaffold project...**
+- **Generate configs...** / **Generate config...**
+- **Migrate tooling...**
+- **Run workflow...**
+- **Run Vite+ command...**
+- **Create Vite+ project...**
+- **Install MCP server + skill...**
 - **List MCP installations**
 - **Generate changelog**
 - **Clean build artifacts**
 - **Add provider...** / **Refresh providers**
-- **Add template…** / **Remove template…**
+- **Add template...** / **Remove template...**
 - **Add template...** / **Remove template source...** / **Refresh templates**
-- **New registry…** / **Remove registry…** / **Refresh registries**
-- **Choose dbx source…** / **Select dbx version…**
+- **New registry...** / **Remove registry...** / **Refresh registries**
+- **Choose dbx source...** / **Select dbx version...**
 - **Refresh projects** / **Refresh files**
 - **Show all actions**
-- **Reset tooling…**
+- **Reset tooling...**
 - **Toggle auto-sync**
 
 The project and tree context menus add scoped commands that are intentionally

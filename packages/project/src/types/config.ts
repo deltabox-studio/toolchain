@@ -13,13 +13,13 @@ export interface GenerateProjectConfigsOptions {
     type?: ProjectType;
     /** Overwrite existing config files (default: skip projects that have one). */
     force?: boolean;
-    /** Maximum directory depth to scan (default 5). */
+    /** Maximum directory depth to scan. @default `5` */
     maxDepth?: number;
     /** Report what would be written without writing anything. */
     dryRun?: boolean;
     /** Only write the project graph; do not create `dbx.config.*` files. */
     skipConfig?: boolean;
-    /** Language for new configs (default `ts`). */
+    /** Language for new configs. @default `ts` */
     language?: ConfigLanguage;
     /** Force a config extension instead of inferring it from the language. */
     extension?: ConfigExtension;

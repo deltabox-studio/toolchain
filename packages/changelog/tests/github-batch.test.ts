@@ -49,7 +49,7 @@ if (args[0] === 'api' && args[1] === 'graphql') {
     const every = Number(process.env.DBX_GH_PR_EVERY ?? '0');
     const noIssues = process.env.DBX_GH_ISSUE_EMPTY === '1';
     const repoMatch = /repository\\(owner: "([^"]+)", name: "([^"]+)"\\)/.exec(query);
-    const repo = repoMatch ? \`\${repoMatch[1]}/\${repoMatch[2]}\` : 'acme/app';
+    const repo = repoMatch ? \`\${repoMatch[1]}/\${repoMatch[2]}\` : 'myapp/app';
     const repository = {};
     for (const match of query.matchAll(/c(\\d+): object\\(oid: "([0-9a-f]+)"\\)/g)) {
         const index = Number(match[1]);
@@ -220,7 +220,7 @@ describe('batched GitHub metadata', () => {
         process.env.DBX_GH_PR_EVERY = '2';
 
         utils.prefetchGitHubMetadata({
-            repo: 'acme/batch',
+            repo: 'myapp/batch',
             range: `${all[3]}..HEAD`,
             commits: records,
         });
@@ -234,17 +234,17 @@ describe('batched GitHub metadata', () => {
         expect(list.some(args => args.some(arg => arg.includes('/pulls')))).toBe(false);
         expect(list.some(args => args.some(arg => arg.includes('/commits/')))).toBe(false);
 
-        expect(utils.resolveAuthorInfo(records[0]!, 'acme/batch').name).toBe(
+        expect(utils.resolveAuthorInfo(records[0]!, 'myapp/batch').name).toBe(
             `pr-${records[0]!.hash.slice(0, 7)}`
         );
-        expect(utils.resolveAuthorInfo(records[1]!, 'acme/batch').name).toBe(
+        expect(utils.resolveAuthorInfo(records[1]!, 'myapp/batch').name).toBe(
             `compare-${records[1]!.hash.slice(0, 7)}`
         );
-        expect(utils.recordIssues(records[0]!, 'acme/batch')).toEqual([
+        expect(utils.recordIssues(records[0]!, 'myapp/batch')).toEqual([
             {
                 number: 12,
                 title: 'Issue 12',
-                url: 'https://github.com/acme/batch/issues/12',
+                url: 'https://github.com/myapp/batch/issues/12',
             },
         ]);
     });
@@ -254,10 +254,10 @@ describe('batched GitHub metadata', () => {
             commitRecord(index.toString(16).padStart(40, '0'), 'fix: chunked')
         );
 
-        utils.prefetchGitHubMetadata({ repo: 'acme/chunk', commits: records });
+        utils.prefetchGitHubMetadata({ repo: 'myapp/chunk', commits: records });
 
         expect(graphqlQueries()).toHaveLength(3);
-        expect(utils.resolveAuthorInfo(records[249]!, 'acme/chunk').name).toBe(
+        expect(utils.resolveAuthorInfo(records[249]!, 'myapp/chunk').name).toBe(
             `author-${records[249]!.hash.slice(0, 7)}`
         );
         expect(calls().some(args => args.some(arg => arg.includes('/pulls')))).toBe(false);
@@ -271,21 +271,21 @@ describe('batched GitHub metadata', () => {
             numbers.map(number => `fixes #${number}`).join('\n')
         );
 
-        utils.prefetchGitHubMetadata({ repo: 'acme/issue-batch', commits: [record] });
+        utils.prefetchGitHubMetadata({ repo: 'myapp/issue-batch', commits: [record] });
 
         const issueQueries = graphqlQueries().filter(query => query.includes('issueOrPullRequest'));
         expect(issueQueries).toHaveLength(3);
-        const issues = utils.recordIssues(record, 'acme/issue-batch');
+        const issues = utils.recordIssues(record, 'myapp/issue-batch');
         expect(issues).toHaveLength(250);
         expect(issues[0]).toEqual({
             number: 1,
             title: 'Issue 1',
-            url: 'https://github.com/acme/issue-batch/issues/1',
+            url: 'https://github.com/myapp/issue-batch/issues/1',
         });
         expect(issues[249]).toEqual({
             number: 250,
             title: 'Issue 250',
-            url: 'https://github.com/acme/issue-batch/issues/250',
+            url: 'https://github.com/myapp/issue-batch/issues/250',
         });
     });
 
@@ -295,24 +295,24 @@ describe('batched GitHub metadata', () => {
             commitRecord('c'.repeat(40), 'fix: second', 'closes #7'),
         ];
 
-        utils.prefetchGitHubMetadata({ repo: 'acme/dedupe', commits: records });
+        utils.prefetchGitHubMetadata({ repo: 'myapp/dedupe', commits: records });
 
         const issueQueries = graphqlQueries().filter(query => query.includes('issueOrPullRequest'));
         expect(issueQueries).toHaveLength(1);
         expect(issueQueries[0]).toContain('i0: issueOrPullRequest(number: 7)');
         expect(issueQueries[0]).not.toContain('i1:');
-        expect(utils.recordIssues(records[0]!, 'acme/dedupe')).toEqual([
+        expect(utils.recordIssues(records[0]!, 'myapp/dedupe')).toEqual([
             {
                 number: 7,
                 title: 'Issue 7',
-                url: 'https://github.com/acme/dedupe/issues/7',
+                url: 'https://github.com/myapp/dedupe/issues/7',
             },
         ]);
-        expect(utils.recordIssues(records[1]!, 'acme/dedupe')).toEqual([
+        expect(utils.recordIssues(records[1]!, 'myapp/dedupe')).toEqual([
             {
                 number: 7,
                 title: 'Issue 7',
-                url: 'https://github.com/acme/dedupe/issues/7',
+                url: 'https://github.com/myapp/dedupe/issues/7',
             },
         ]);
     });
@@ -320,16 +320,16 @@ describe('batched GitHub metadata', () => {
     it('reuses the cache across repeated prefetch calls', () => {
         const records = [commitRecord('d'.repeat(40), 'fix: cached', 'fixes #5')];
 
-        utils.prefetchGitHubMetadata({ repo: 'acme/cache', commits: records });
+        utils.prefetchGitHubMetadata({ repo: 'myapp/cache', commits: records });
         const first = calls();
         expect(first.length).toBeGreaterThan(0);
 
-        utils.prefetchGitHubMetadata({ repo: 'acme/cache', commits: records });
+        utils.prefetchGitHubMetadata({ repo: 'myapp/cache', commits: records });
         expect(calls()).toHaveLength(first.length);
     });
 
     it('buildSummary prefetches before rendering each commit', async () => {
-        git(root, 'remote', 'add', 'origin', 'https://github.com/acme/summary.git');
+        git(root, 'remote', 'add', 'origin', 'https://github.com/myapp/summary.git');
         const all = hashes();
         const records = all
             .slice(0, 2)
@@ -357,27 +357,27 @@ describe('batched GitHub metadata', () => {
             .join('\n');
 
         utils.prefetchGitHubMetadata({
-            repo: 'acme/ranges',
+            repo: 'myapp/ranges',
             range: `${all[3]}..HEAD`,
             commits: records,
         });
         utils.prefetchGitHubMetadata({
-            repo: 'acme/ranges',
+            repo: 'myapp/ranges',
             range: `${all[2]}...HEAD`,
             commits: records,
         });
         utils.prefetchGitHubMetadata({
-            repo: 'acme/ranges',
+            repo: 'myapp/ranges',
             range: 'HEAD',
             commits: records.slice(0, 1),
         });
 
         expect(compareEndpoints()).toEqual([
-            `repos/acme/ranges/compare/${all[3]}...${all[0]}`,
-            `repos/acme/ranges/compare/${all[2]}...${all[0]}`,
-            `repos/acme/ranges/compare/${all[1]}...${all[0]}`,
+            `repos/myapp/ranges/compare/${all[3]}...${all[0]}`,
+            `repos/myapp/ranges/compare/${all[2]}...${all[0]}`,
+            `repos/myapp/ranges/compare/${all[1]}...${all[0]}`,
         ]);
-        expect(utils.resolveAuthorInfo(records[0]!, 'acme/ranges').name).toBe(
+        expect(utils.resolveAuthorInfo(records[0]!, 'myapp/ranges').name).toBe(
             `compare-${records[0]!.hash.slice(0, 7)}`
         );
         // The second and third ranges reuse the PR-author cache: only the first
@@ -398,7 +398,7 @@ describe('batched GitHub metadata', () => {
             'missing-ref..HEAD',
             '-5..HEAD',
         ]) {
-            utils.prefetchGitHubMetadata({ repo: 'acme/skip', range, commits: records });
+            utils.prefetchGitHubMetadata({ repo: 'myapp/skip', range, commits: records });
         }
 
         expect(compareEndpoints()).toEqual([]);
@@ -413,15 +413,15 @@ describe('batched GitHub metadata', () => {
         process.env.DBX_GH_COMPARE = `${records[1]!.hash}\tcompare-${records[1]!.hash.slice(0, 7)}`;
 
         utils.prefetchGitHubMetadata({
-            repo: 'acme/partial',
+            repo: 'myapp/partial',
             range: `${all[2]}..HEAD`,
             commits: records,
         });
 
-        expect(utils.resolveAuthorInfo(records[0]!, 'acme/partial').name).toBe(
+        expect(utils.resolveAuthorInfo(records[0]!, 'myapp/partial').name).toBe(
             `author-${records[0]!.hash.slice(0, 7)}`
         );
-        expect(utils.resolveAuthorInfo(records[1]!, 'acme/partial').name).toBe(
+        expect(utils.resolveAuthorInfo(records[1]!, 'myapp/partial').name).toBe(
             `compare-${records[1]!.hash.slice(0, 7)}`
         );
     });
@@ -434,7 +434,7 @@ describe('batched GitHub metadata', () => {
             .map((hash, index) => commitRecord(hash, `fix: remote ${index}`));
 
         utils.prefetchGitHubMetadata({
-            repo: 'acme/remote',
+            repo: 'myapp/remote',
             range: `${all[3]}..HEAD`,
             commits: records,
         });
@@ -446,8 +446,8 @@ describe('batched GitHub metadata', () => {
         expect(queries[0]).toContain(`object(oid: "${all[2]}")`);
         expect(queries[0]).not.toContain(all[0]);
         expect(queries[0]).not.toContain(all[1]);
-        expect(utils.resolveAuthorInfo(records[0]!, 'acme/remote').name).toBe('Test');
-        expect(utils.resolveAuthorInfo(records[2]!, 'acme/remote').name).toBe(
+        expect(utils.resolveAuthorInfo(records[0]!, 'myapp/remote').name).toBe('Test');
+        expect(utils.resolveAuthorInfo(records[2]!, 'myapp/remote').name).toBe(
             `author-${all[2]!.slice(0, 7)}`
         );
         expect(calls().some(args => args.some(arg => arg.includes('/pulls')))).toBe(false);
@@ -455,7 +455,7 @@ describe('batched GitHub metadata', () => {
         // Once every commit is pushed, compare and GraphQL run again.
         git(root, 'update-ref', 'refs/remotes/origin/main', all[0]!);
         utils.prefetchGitHubMetadata({
-            repo: 'acme/pushed',
+            repo: 'myapp/pushed',
             range: `${all[1]}..HEAD`,
             commits: [records[0]!],
         });
@@ -467,10 +467,10 @@ describe('batched GitHub metadata', () => {
         process.env.DBX_GH_GRAPHQL_EMPTY = '1';
         const record = commitRecord('f'.repeat(40), 'fix: graphql down', 'fixes #3');
 
-        utils.prefetchGitHubMetadata({ repo: 'acme/graphql-down', commits: [record] });
+        utils.prefetchGitHubMetadata({ repo: 'myapp/graphql-down', commits: [record] });
 
-        expect(utils.resolveAuthorInfo(record, 'acme/graphql-down').name).toBe('legacy-pr');
-        expect(utils.recordIssues(record, 'acme/graphql-down')).toEqual([
+        expect(utils.resolveAuthorInfo(record, 'myapp/graphql-down').name).toBe('legacy-pr');
+        expect(utils.recordIssues(record, 'myapp/graphql-down')).toEqual([
             {
                 number: 3,
                 title: 'Legacy title',
@@ -485,9 +485,9 @@ describe('batched GitHub metadata', () => {
         process.env.DBX_GH_ISSUE_EMPTY = '1';
         const record = commitRecord('e'.repeat(40), 'fix: missing issue', 'fixes #99');
 
-        utils.prefetchGitHubMetadata({ repo: 'acme/no-issue', commits: [record] });
+        utils.prefetchGitHubMetadata({ repo: 'myapp/no-issue', commits: [record] });
 
-        expect(utils.recordIssues(record, 'acme/no-issue')).toEqual([{ number: 99 }]);
+        expect(utils.recordIssues(record, 'myapp/no-issue')).toEqual([{ number: 99 }]);
     });
 
     it('disables gh when the auth probe fails', () => {
@@ -500,10 +500,10 @@ describe('batched GitHub metadata', () => {
             '42+octocat@users.noreply.github.com'
         );
 
-        utils.prefetchGitHubMetadata({ repo: 'acme/no-auth', commits: [record] });
+        utils.prefetchGitHubMetadata({ repo: 'myapp/no-auth', commits: [record] });
 
         expect(calls().filter(args => args[0] !== 'auth')).toHaveLength(0);
-        expect(utils.resolveAuthorInfo(record, 'acme/no-auth')).toEqual({
+        expect(utils.resolveAuthorInfo(record, 'myapp/no-auth')).toEqual({
             name: 'octocat',
             url: 'https://github.com/octocat',
         });
@@ -523,13 +523,13 @@ describe('batched GitHub metadata', () => {
         process.env.DBX_GH_FAIL_HTTP = '500';
 
         utils.prefetchGitHubMetadata({
-            repo: 'acme/retry',
+            repo: 'myapp/retry',
             range: `${all[2]}..HEAD`,
             commits: records,
         });
 
         expect(compareEndpoints()).toHaveLength(3);
-        expect(utils.resolveAuthorInfo(records[0]!, 'acme/retry').name).toBe(
+        expect(utils.resolveAuthorInfo(records[0]!, 'myapp/retry').name).toBe(
             `compare-${records[0]!.hash.slice(0, 7)}`
         );
     });
@@ -545,14 +545,14 @@ describe('batched GitHub metadata', () => {
         process.env.DBX_GH_FAIL_HTTP = '404';
 
         utils.prefetchGitHubMetadata({
-            repo: 'acme/terminal-404',
+            repo: 'myapp/terminal-404',
             range: `${all[2]}..HEAD`,
             commits: records,
         });
 
         expect(compareEndpoints()).toHaveLength(1);
         expect(graphqlQueries()).toHaveLength(1);
-        expect(utils.resolveAuthorInfo(records[0]!, 'acme/terminal-404').name).toBe(
+        expect(utils.resolveAuthorInfo(records[0]!, 'myapp/terminal-404').name).toBe(
             `author-${records[0]!.hash.slice(0, 7)}`
         );
     });
@@ -568,14 +568,14 @@ describe('batched GitHub metadata', () => {
         process.env.DBX_GH_FAIL_HTTP = '403';
 
         utils.prefetchGitHubMetadata({
-            repo: 'acme/forbidden',
+            repo: 'myapp/forbidden',
             range: `${all[2]}..HEAD`,
             commits: records,
         });
 
         expect(compareEndpoints()).toHaveLength(1);
         expect(graphqlQueries()).toHaveLength(0);
-        expect(utils.resolveAuthorInfo(records[0]!, 'acme/forbidden').name).toBe('Test');
+        expect(utils.resolveAuthorInfo(records[0]!, 'myapp/forbidden').name).toBe('Test');
     });
 
     it('disables gh after exhausting the retry budget', () => {
@@ -592,14 +592,14 @@ describe('batched GitHub metadata', () => {
         process.env.DBX_GH_FAIL_ENDPOINT = '/compare/';
 
         utils.prefetchGitHubMetadata({
-            repo: 'acme/giveup',
+            repo: 'myapp/giveup',
             range: `${all[1]}..HEAD`,
             commits: [record],
         });
 
         expect(compareEndpoints()).toHaveLength(2);
         expect(graphqlQueries()).toHaveLength(0);
-        expect(utils.resolveAuthorInfo(record, 'acme/giveup')).toEqual({
+        expect(utils.resolveAuthorInfo(record, 'myapp/giveup')).toEqual({
             name: 'octocat',
             url: 'https://github.com/octocat',
         });
@@ -607,7 +607,7 @@ describe('batched GitHub metadata', () => {
     });
 
     it('does nothing without commits or a repo slug', () => {
-        utils.prefetchGitHubMetadata({ repo: 'acme/none', commits: [] });
+        utils.prefetchGitHubMetadata({ repo: 'myapp/none', commits: [] });
         expect(calls()).toHaveLength(0);
 
         utils.prefetchGitHubMetadata({ commits: [commitRecord('2'.repeat(40), 'fix: no repo')] });
@@ -618,7 +618,7 @@ describe('batched GitHub metadata', () => {
         const hash = 'f'.repeat(40);
         const record = commitRecord(hash, 'fix: legacy');
 
-        expect(utils.resolveAuthorInfo(record, 'acme/legacy').name).toBe('legacy-pr');
+        expect(utils.resolveAuthorInfo(record, 'myapp/legacy').name).toBe('legacy-pr');
         expect(calls().some(args => args.some(arg => arg.includes(`/commits/${hash}/pulls`)))).toBe(
             true
         );
@@ -635,9 +635,9 @@ describe('batched GitHub metadata', () => {
             '123+octocat@users.noreply.github.com'
         );
 
-        utils.prefetchGitHubMetadata({ repo: 'acme/offline', commits: [record] });
+        utils.prefetchGitHubMetadata({ repo: 'myapp/offline', commits: [record] });
 
         expect(calls().filter(args => args[0] !== 'auth')).toHaveLength(0);
-        expect(utils.resolveAuthorInfo(record, 'acme/offline').name).toBe('octocat');
+        expect(utils.resolveAuthorInfo(record, 'myapp/offline').name).toBe('octocat');
     });
 });

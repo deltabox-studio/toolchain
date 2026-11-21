@@ -15,10 +15,8 @@ export const changelogBranchesConfigSchema = z
     .object({
         main: z
             .union([z.string(), z.array(z.string())])
-            .describe(
-                'Branch glob(s) the CI + release workflows run on, and the release PR ' +
-                    'base (default `["main"]`).'
-            )
+            .describe('Branch glob(s) the CI + release workflows run on, and the release PR base.')
+            .default(['main'])
             .optional(),
         dev: z
             .union([z.string(), z.array(z.string())])
@@ -127,7 +125,7 @@ export const changelogCommitlintConfigSchema = withEnabled(
             .string()
             .describe(
                 'Directory the generated `commitlint.config.mjs` is written to ' +
-                    '(default: the project root). The husky hook and CI use ' +
+                    '(default: the project root). The generated commit hook and CI use ' +
                     '`--config` to point at it.'
             )
             .optional(),
@@ -270,17 +268,16 @@ export const changelogDetailsConfigSchema = z
                 )
                 .optional(),
             descriptions: changelogDetailsToggleSchema
-                .describe(
-                    'Wrap commit description paragraphs in a nested collapsible (default true).'
-                )
+                .describe('Wrap commit description paragraphs in a nested collapsible.')
+                .default(true)
                 .optional(),
             body: changelogDetailsToggleSchema
                 .describe(
-                    'Wrap the version body in a collapsible titled Release notes (default false; enabled by default in release mode; requires 10 commits by default).'
+                    'Wrap the version body in a collapsible titled Release notes (default false; enabled by default with release body wrapping; requires 10 commits by default).'
                 )
                 .optional(),
             releaseNotes: changelogDetailsToggleSchema
-                .describe('Wrap the release-mode entry in a collapsible titled Release notes.')
+                .describe('Wrap the release body entry in a collapsible titled Release notes.')
                 .optional(),
             intro: changelogDetailsToggleSchema
                 .describe('Wrap the intro text in a collapsible.')
@@ -471,9 +468,8 @@ export const changelogVersioningConfigSchema = z
         allowOverBump: changelogTargetedOption(
             z
                 .boolean()
-                .describe(
-                    'Apply a bump once per matching change instead of once per run (default false).'
-                ),
+                .describe('Apply a bump once per matching change instead of once per run.')
+                .default(false),
             'ChangelogTargetedAllowOverBump'
         )
             .describe('Enable over-bumping globally, or per-target via `{ target, options }`.')
@@ -498,10 +494,11 @@ export const changelogVersioningConfigSchema = z
     .describe('Automatic version bumping options.')
     .meta({ id: 'ChangelogVersioningConfig' });
 
-/** Automatic version bumping: `true` (default), `false`, or a set of options. */
+/** Automatic version bumping: `true`, `false`, or a set of options. */
 export const changelogVersioningSchema = z
     .union([z.boolean(), changelogVersioningConfigSchema])
     .describe('Automatic version bumping when a changelog entry is generated.')
+    .default(true)
     .meta({ id: 'ChangelogVersioning' });
 
 /** The subset of a grouped changelog item exposed to group callbacks. */
@@ -641,7 +638,8 @@ const changelogPipelineShape = {
         .describe('commitlint config; set `false` to disable the Conventional-Commits pipeline.')
         .optional(),
     versioning: changelogVersioningSchema
-        .describe('Automatic version bumping on changelog generation (default `true`).')
+        .describe('Automatic version bumping on changelog generation.')
+        .default(true)
         .optional(),
     intro: changelogTextSettingSchema
         .describe(

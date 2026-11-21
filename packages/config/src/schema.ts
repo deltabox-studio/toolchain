@@ -12,6 +12,7 @@ import type { Schema } from 'untyped';
 import { type ZodType, z } from 'zod';
 
 import type {
+    ConfigGroup,
     ConfigMeta,
     ConfigSchema,
     ConfigSchemaInput,
@@ -44,6 +45,9 @@ interface JsonSchemaNode {
     path?: string;
     cliFlag?: string;
     cliFlagShort?: string;
+    cli?: false | Record<string, unknown>;
+    cliCommand?: false | Record<string, unknown>;
+    envExpose?: boolean;
     typeName?: string;
     id?: string;
     scope?: string;
@@ -106,6 +110,9 @@ const CONFIG_META_KEYS: (keyof ConfigMeta)[] = [
     'typeName',
     'cliFlag',
     'cliFlagShort',
+    'cli',
+    'cliCommand',
+    'envExpose',
     'tsType',
 ];
 
@@ -183,9 +190,17 @@ export function metaOf(schema: ZodType | Schema): ConfigMeta | undefined {
     return Object.keys(meta).length > 0 ? (meta as ConfigMeta) : undefined;
 }
 
-/** Convert a Zod schema or untyped schema to the untyped representation. */
+/**
+ * Convert a Zod schema, a resolved untyped schema, a plain object or a
+ * primitive value to the resolved untyped representation.
+ *
+ * Plain values keep their value as the default (`{ port: 3000 }` -> a `port`
+ * leaf with `type: 'number'` and `default: 3000`).
+ */
 export function toSchemaType(schema: ConfigSchemaInput): ConfigSchemaType {
-    return (isZodSchema(schema) ? zodToJsonSchema(schema) : schema) as ConfigSchemaType;
+    if (isZodSchema(schema)) return zodToJsonSchema(schema) as ConfigSchemaType;
+    if (isSchemaType(schema)) return schema as ConfigSchemaType;
+    return resolveUntypedSchema(schema) as ConfigSchemaType;
 }
 
 /** Merge several root object schemas into one. */
@@ -214,6 +229,10 @@ export function normalizeConfigSchema(schema: ConfigSchema): ConfigSchemaMap {
         return { [metaOf(merged)?.id ?? 'config']: merged };
     }
     if (isZodSchema(schema) || isSchemaType(schema)) {
+        const resolved = toSchemaType(schema);
+        return { [metaOf(resolved)?.id ?? 'config']: resolved };
+    }
+    if (schema === null || typeof schema !== 'object') {
         const resolved = toSchemaType(schema);
         return { [metaOf(resolved)?.id ?? 'config']: resolved };
     }
@@ -358,6 +377,9 @@ function nodeMeta(
     let pathMeta = node.path ?? resolved?.path;
     let cliFlag = node.cliFlag ?? resolved?.cliFlag;
     let cliFlagShort = node.cliFlagShort ?? resolved?.cliFlagShort;
+    let cli = node.cli ?? resolved?.cli;
+    let cliCommand = node.cliCommand ?? resolved?.cliCommand;
+    let envExpose = node.envExpose ?? resolved?.envExpose;
     let typeName = node.typeName ?? resolved?.typeName;
     let id = node.id ?? resolved?.id;
     let deprecated = node.deprecated ?? resolved?.deprecated;
@@ -380,6 +402,9 @@ function nodeMeta(
         pathMeta ??= variant.path ?? variantResolved?.path;
         cliFlag ??= variant.cliFlag ?? variantResolved?.cliFlag;
         cliFlagShort ??= variant.cliFlagShort ?? variantResolved?.cliFlagShort;
+        cli ??= variant.cli ?? variantResolved?.cli;
+        cliCommand ??= variant.cliCommand ?? variantResolved?.cliCommand;
+        envExpose ??= variant.envExpose ?? variantResolved?.envExpose;
         typeName ??= variant.typeName ?? variantResolved?.typeName;
         id ??= variant.id ?? variantResolved?.id;
         deprecated ??= variant.deprecated ?? variantResolved?.deprecated;
@@ -399,6 +424,9 @@ function nodeMeta(
         ...(pathMeta !== undefined ? { path: pathMeta } : {}),
         ...(cliFlag !== undefined ? { cliFlag } : {}),
         ...(cliFlagShort !== undefined ? { cliFlagShort } : {}),
+        ...(cli !== undefined ? { cli } : {}),
+        ...(cliCommand !== undefined ? { cliCommand } : {}),
+        ...(envExpose !== undefined ? { envExpose } : {}),
         ...(typeName !== undefined ? { typeName } : {}),
         ...(id !== undefined ? { id } : {}),
         ...(required !== undefined ? { required } : {}),
@@ -664,11 +692,13 @@ function resolveUntypedNode(
 
 /**
  * Resolve an untyped definition into a `Schema`, mirroring untyped's
- * `resolveSchema` synchronously.
+ * `resolveSchema` synchronously. Plain values and primitives are supported too:
+ * they become a leaf with their value as the default.
  */
-export function resolveUntypedSchema(input: Record<string, unknown>): Schema {
+export function resolveUntypedSchema(input: unknown): Schema {
     const cache = new Map<string, unknown>();
-    return resolveUntypedNode(input, '', { root: input, cache }) as Schema;
+    const root = isObject(input) ? input : {};
+    return resolveUntypedNode(input, '', { root, cache }) as Schema;
 }
 
 /** Keys that are only meaningful to the untyped/type generators, not JSON Schema. */
@@ -684,6 +714,9 @@ const NON_JSON_SCHEMA_KEYS = [
     'path',
     'cliFlag',
     'cliFlagShort',
+    'cli',
+    'cliCommand',
+    'envExpose',
     'typeName',
     'scope',
     'secret',
@@ -826,26 +859,63 @@ export function zodToJsonSchema(zodSchema: ZodType): Schema {
     return resolveUntypedSchema(zodToUntypedDefinition(zodSchema));
 }
 
-/** A resolved untyped schema split into its base group and the remaining groups. */
+/** A resolved untyped schema split into its base groups and the remaining groups. */
 export interface SplitSchema {
     base: Schema;
     groups: Schema;
     hasBase: boolean;
 }
 
+/** Normalize a string/array `baseGroup` into a non-empty, de-duplicated list. */
+export function normalizeBaseGroups(baseGroup?: ConfigGroup | undefined): string[] {
+    const names: string[] = [];
+    const visit = (value: unknown): void => {
+        if (Array.isArray(value)) {
+            for (const item of value) visit(item);
+            return;
+        }
+        if (typeof value === 'string' && value.trim()) names.push(value.trim());
+    };
+    visit(baseGroup);
+    return names.length > 0 ? [...new Set(names)] : ['base'];
+}
+
 /**
- * Split a resolved untyped schema into its base group (flat config fields) and
- * the remaining nested groups. Schemas without the base property treat the whole
- * schema as the base group.
+ * Split a resolved untyped schema into its base groups (flat config fields) and
+ * the remaining nested groups. Multiple base groups are merged in declaration
+ * order. Schemas without any base property treat the whole schema as the base
+ * group.
  */
-export function splitBaseSchema(schema: Schema, baseGroup = 'base'): SplitSchema {
+export function splitBaseSchema(schema: Schema, baseGroup?: ConfigGroup): SplitSchema {
+    const names = normalizeBaseGroups(baseGroup);
     const props = (schema.properties ?? {}) as Record<string, Schema>;
-    const baseProp = props[baseGroup];
-    if (baseProp && baseProp.type === 'object' && baseProp.properties) {
-        const { [baseGroup]: _base, ...restProps } = props;
-        const restRequired = ((schema.required ?? []) as string[]).filter(k => k !== baseGroup);
+    const found = names
+        .map(name => props[name])
+        .filter(
+            (prop): prop is Schema & { properties: Record<string, Schema> } =>
+                prop?.type === 'object' && prop.properties !== undefined && prop.properties !== null
+        );
+    if (found.length > 0) {
+        const baseProperties: Record<string, Schema> = {};
+        const baseRequired: string[] = [];
+        for (const prop of found) {
+            Object.assign(baseProperties, prop.properties);
+            for (const name of (prop.required ?? []) as string[]) {
+                if (!baseRequired.includes(name)) baseRequired.push(name);
+            }
+        }
+        const restProps = { ...props };
+        for (const name of names) delete restProps[name];
+        const restRequired = ((schema.required ?? []) as string[]).filter(
+            key => !names.includes(key)
+        );
         return {
-            base: baseProp,
+            base: {
+                ...(found.length === 1 ? found[0]! : {}),
+                type: 'object',
+                properties: baseProperties,
+                ...(baseRequired.length > 0 ? { required: baseRequired } : {}),
+            },
             groups: {
                 ...schema,
                 properties: restProps,
@@ -857,20 +927,26 @@ export function splitBaseSchema(schema: Schema, baseGroup = 'base'): SplitSchema
     return { base: schema, groups: { ...schema, properties: {} }, hasBase: false };
 }
 
-/** Flatten the base group of a resolved schema into the top level. */
-export function flattenBaseSchema(schema: Schema, baseGroup = 'base'): Schema {
+/** Flatten the base groups of a resolved schema into the top level. */
+export function flattenBaseSchema(schema: Schema, baseGroup?: ConfigGroup): Schema {
+    const names = normalizeBaseGroups(baseGroup);
     const props = (schema.properties ?? {}) as Record<string, Schema>;
-    const baseProp = props[baseGroup];
-    if (baseProp?.type !== 'object') return schema;
-    const baseProps = baseProp.properties;
-    if (!baseProps) return schema;
-    const { [baseGroup]: _base, ...restProps } = props;
+    const found = names
+        .map(name => props[name])
+        .filter(
+            (prop): prop is Schema & { properties: Record<string, Schema> } =>
+                prop?.type === 'object' && prop.properties !== undefined && prop.properties !== null
+        );
+    if (found.length === 0) return schema;
+    const restProps = { ...props };
+    for (const name of names) delete restProps[name];
+    const required = [
+        ...((schema.required ?? []) as string[]).filter(key => !names.includes(key)),
+        ...found.flatMap(prop => (prop.required ?? []) as string[]),
+    ];
     return {
         ...schema,
-        properties: { ...(baseProps as Record<string, Schema>), ...restProps },
-        required: [
-            ...((schema.required ?? []) as string[]).filter(k => k !== baseGroup),
-            ...((baseProp.required ?? []) as string[]),
-        ],
+        properties: { ...Object.assign({}, ...found.map(prop => prop.properties)), ...restProps },
+        ...(required.length > 0 ? { required: [...new Set(required)] } : {}),
     };
 }

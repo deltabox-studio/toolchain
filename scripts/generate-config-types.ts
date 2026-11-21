@@ -30,7 +30,7 @@ const overrides = {
     | ConfigJsonValue[]
     | { [key: string & {}]: ConfigJsonValue };`,
     ToolchainViteConfig: `export type ToolchainViteConfig = Omit<ViteUserConfig, 'fmt' | 'lint'> & {
-    /** Write the managed Vite config (default true); a string sets its file name/path. */
+    /** Write the managed Vite config; a string sets its file name/path. @default \`true\` */
     config?: boolean | string;
     /** Render the shim at runtime (default) or as a fully static config. */
     shim?: 'runtime' | 'static';
@@ -76,11 +76,11 @@ const overrides = {
 }`,
     // The custom logger carries functions, so it needs the hand-written type.
     ToolchainLoggerConfig: `export interface ToolchainLoggerConfig {
-    /** Minimum level to print (default \`info\`). */
+    /** Minimum level to print. @default \`'info'\` */
     level?: 'debug' | 'info' | 'warn' | 'error' | 'silent';
     /** Force colours on/off (default: on; \`--no-color\` disables). */
     color?: boolean;
-    /** Prefix non-indented lines with \`<name>:\` (default \`dbx\`). */
+    /** Prefix non-indented lines with \`<name>:\`. @default \`'dbx'\` */
     name?: string;
     /** Warning/error id, message substring, or \`/regex/\` to silence (single value or array). */
     suppress?: string | Array<string>;

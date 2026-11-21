@@ -1,19 +1,29 @@
 # Registering commands
 
-Packages export framework-agnostic `ToolchainCommand[]` descriptors; wire them onto
-a commander program with `registerToolchainCommands` (this is how the bundled
-`dbx` binary, and a consumer's own CLI, are assembled):
+Packages export framework-agnostic `CliCommand[]` descriptors; build them into a
+program with `engine.cli.program.create()` (preferred), or with the lower-level
+`createConfigProgram` when the command list is not tied to an engine (this is how
+the bundled `dbx` binary and a consumer's own CLI are assembled):
 
 ```ts
-import { Command } from 'commander';
-
-import { registerToolchainCommands } from '@deltabox/toolchain/cli';
 import { configCommands } from '@deltabox/toolchain/config';
 
-const program = new Command();
-registerToolchainCommands(program, configCommands({ engine }));
-await program.parseAsync();
+const program = engine.cli.program.create(() => configCommands({ engine }), {
+    name: 'myapp',
+    version: '1.0.0',
+    globalOptions: [{ flags: '--json', description: 'Print JSON.' }],
+    disableColors: ({ color }) => color === false,
+});
+await program.invokeAsync();
 ```
+
+For config-driven commands, `engine.cli.program.create(...)` builds the program
+runtime with schema-derived options and typed `run` values. It accepts the full
+program options, including `globalOptions`, `disableColors`, `format`, `argv` and
+the output hooks. See
+[Running a built program](/guide/config-generator/api#running-a-built-program)
+and the
+[program members](/guide/config-generator/api#program-members-and-options).
 
 Custom descriptors do not need to be added to `builtinCommands()` to appear in
 the generated reference. Pass the same command list to `generateCliDocs`:
@@ -30,3 +40,37 @@ const markdown = generateCliDocs([...builtinCommands(), ...myCommands], {
 `generateCliDocs` omits `hidden` commands, keeps the first of any duplicate
 name, and renders args/options (with defaults) the same way as the `dbx`
 reference.
+
+## Typed command args
+
+`CliCommand` infers its `run(args, context)` object from the literal `options`
+list. Use `defineCliCommand` so the literal tuple is preserved:
+
+```ts
+import { defineCliCommand } from '@deltabox/toolchain/shared';
+
+const command = defineCliCommand({
+    name: 'serve',
+    description: 'Serve.',
+    options: [
+        { flags: '--json', description: 'JSON output.' },
+        { flags: '--cwd <dir>', description: 'Project root.' },
+        { flags: '--tag <value...>', description: 'Tags.' },
+        { flags: '--no-color', description: 'Disable colour.' },
+    ],
+    // args.json?: boolean, args.cwd?: string,
+    // args.tag?: string[], args.color?: boolean
+    run: args => serve(args),
+});
+```
+
+The same inference is available as a type through
+`CliOptionValues<typeof options>`. Unknown positional args and dynamic flags
+remain addressable through the index signature.
+
+Descriptors also carry optional `argv` and `bin` fields. `argv` feeds the
+standalone config program runtime (`program.invoke()`/`invokeAsync()`, defaulting
+to `process.argv.slice(2)`); `bin` makes that runtime execute a relative or
+absolute binary instead of the in-process `run`. See
+[the config program runtime](/guide/config-generator/api#running-a-built-program)
+for `create()`, hooks and help/error formatting.

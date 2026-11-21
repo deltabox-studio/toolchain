@@ -36,7 +36,7 @@ export interface ResolvedTsconfig {
     references: TsconfigReference[];
     /** Whether the returned paths are relative. */
     relativePaths: boolean;
-    /** Whether exact aliases are anchored regexes (default true). */
+    /** Whether exact aliases are anchored regexes. @default `true` */
     strict: boolean;
 }
 
@@ -48,18 +48,19 @@ export interface ResolveTsconfigOptions {
     /** Repo/workspace root (default: `cwd`). Used to detect the default config. */
     root?: string;
     /**
-     * Return relative paths instead of absolute paths (default false). Paths are
+     * Return relative paths instead of absolute paths. Paths are
      * relative to the config that defines them (its `baseUrl` for `paths`, its
      * directory for `references`), matching how TypeScript resolves them.
+     * @default `false`
      */
     relativePaths?: boolean;
     /**
      * Anchor exact aliases as `^...$` regexes (default true) so a bundler never
-     * resolves a module through a shorter prefix (`@acme/core` vs
-     * `@acme/core-utils`). Set `false` to keep exact aliases as plain strings.
+     * resolves a module through a shorter prefix (`@org/core` vs
+     * `@org/core-utils`). Set `false` to keep exact aliases as plain strings.
      */
     strict?: boolean;
-    /** Follow `extends` (default true). */
+    /** Follow `extends`. @default `true` */
     extends?: boolean;
     /** Deep-merged into the selected config before reading its fields. */
     overrides?: object;

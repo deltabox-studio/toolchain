@@ -1,144 +1,120 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { createConfigEngine, type ConfigEngineCliProgram } from '@deltabox/toolchain/config';
 import {
     logger,
     regenerateEnabled,
     resolveToolchainEnabled,
+    section,
     sectionConfig,
-    type ToolchainCommand,
+    tsconfigConfigSchema,
+    type ToolchainCommandContext,
     type ToolchainTsconfigConfig,
     warningMessage,
     withSpinner,
 } from '@deltabox/toolchain/shared';
 
-import { generateWorkspaceTsconfigs, parseTsconfigIndent } from '../cli/generate/index.js';
+import { generateWorkspaceTsconfigs } from '../cli/generate/index.js';
 import { hasOverrideKeys, TSCONFIG_OVERRIDE_KINDS } from '../overrides.js';
-import { resolveTsconfigAsync, serializeTsconfigAlias } from '../resolve.js';
+import { resolveTsconfigAsync, serializeTsconfigAlias } from '../resolve/index.js';
 import { restoreTsconfigOverrides } from '../snapshots.js';
 import type { TsconfigOverrideKind, TsconfigOverrides } from '../types/index.js';
+
+/** The engine the `tsconfig` command derives config-backed flags from. */
+const tsconfigCommandSchema = { tsconfig: section(tsconfigConfigSchema) };
+const tsconfigCliEngine = createConfigEngine({
+    schema: tsconfigCommandSchema,
+    envPrefix: 'DBX_',
+});
+const tsconfigCliProgram: ConfigEngineCliProgram<
+    typeof tsconfigCommandSchema,
+    ToolchainCommandContext
+> = tsconfigCliEngine.cli.program;
 
 /**
  * The `tsconfig` command. Defaults come from `dbx.config.tsconfig.*`
  * (via the command context); any CLI flag overrides them.
  */
-export function tsconfigCommands(): ToolchainCommand[] {
-    return [
-        {
-            name: 'tsconfig',
-            description:
-                'Generate workspace tsconfig.json files from the default tsconfig (aliases + references).',
-            options: [
-                { flags: '--cwd <dir>', description: 'Repo root to scan (default: cwd).' },
-                { flags: '--no-aliases', description: 'Skip path aliases.' },
-                { flags: '--composite', description: 'Emit composite + references.' },
-                { flags: '--refs', description: 'Wire project references.' },
-                {
-                    flags: '--flatten-remote-extends',
-                    description:
-                        'Inline compiler options inherited from a remote http(s) extends chain (existing settings win).',
-                },
-                {
-                    flags: '--auto',
-                    description:
-                        'Auto-wire the root workspaces tsconfig paths/references from the project graph (default false).',
-                },
-                {
-                    flags: '--no-auto',
-                    description:
-                        'Only use the paths/references already in the root workspaces tsconfig.',
-                },
-                {
-                    flags: '--auto-aliases',
-                    description: 'Auto-wire path aliases (defaults to --auto).',
-                },
-                {
-                    flags: '--no-auto-aliases',
-                    description: 'Do not auto-wire path aliases.',
-                },
-                {
-                    flags: '--auto-refs',
-                    description: 'Auto-wire project references (defaults to --auto).',
-                },
-                {
-                    flags: '--no-auto-refs',
-                    description: 'Do not auto-wire project references.',
-                },
-                {
-                    flags: '--auto-src-dir <dir>',
-                    description:
-                        'Source directory for auto entry points (default: the workspace tsconfig rootDir/baseUrl, then src).',
-                },
-                { flags: '-i, --indent <n>', description: 'JSON indentation.' },
-                {
-                    flags: '--glob <glob...>',
-                    description: 'Glob(s) for the default tsconfig files.',
-                },
-                {
-                    flags: '--exclude <glob...>',
-                    description: 'Glob(s) to exclude (on top of the common ignored paths).',
-                },
-                { flags: '--no-gitignore', description: 'Do not respect .gitignore files.' },
-                { flags: '--default-file <file>', description: 'Default tsconfig file name.' },
-                { flags: '--build-file <file>', description: 'Build tsconfig file name.' },
-                { flags: '--root-file <file>', description: 'Workspaces tsconfig file name.' },
-                {
-                    flags: '--tsconfig <file>',
-                    description: 'Resolve this tsconfig instead of <root>/tsconfig.json.',
-                },
-                {
-                    flags: '--root <dir>',
-                    description: 'Root used to detect/resolve the tsconfig (default: cwd).',
-                },
-                {
-                    flags: '--json',
-                    description: 'Print the resolved { alias, paths, references } object.',
-                },
-                {
-                    flags: '--alias',
-                    description: 'Print only the resolved Vite/Vitest aliases.',
-                },
-                { flags: '--paths', description: 'Print only the resolved compilerOptions.paths.' },
-                {
-                    flags: '--references',
-                    description: 'Print only the resolved project references.',
-                },
-                {
-                    flags: '--no-extends',
-                    description: 'Do not follow the tsconfig extends chain.',
-                },
-                {
-                    flags: '--restore [kind]',
-                    description:
-                        'Remove the applied tsconfig overrides (all, or base|root|default|build) using the manifest snapshots.',
-                },
-            ],
-            run: async (opts, context) => {
+export function tsconfigCommands() {
+    return tsconfigCliProgram.create(cmd => [
+        cmd('tsconfig')
+            .description(
+                'Generate workspace tsconfig.json files from the default tsconfig (aliases + references).'
+            )
+            .option({ flags: '--cwd <dir>', description: 'Repo root to scan (default: cwd).' })
+            .option({
+                flags: '--auto',
+                description:
+                    'Auto-wire the root workspaces tsconfig paths/references from the project graph (default false).',
+            })
+            .option({
+                flags: '--no-auto',
+                description:
+                    'Only use the paths/references already in the root workspaces tsconfig.',
+            })
+            .option({
+                flags: '--auto-aliases',
+                description: 'Auto-wire path aliases (defaults to --auto).',
+            })
+            .option({
+                flags: '--no-auto-aliases',
+                description: 'Do not auto-wire path aliases.',
+            })
+            .option({
+                flags: '--auto-refs',
+                description: 'Auto-wire project references (defaults to --auto).',
+            })
+            .option({
+                flags: '--no-auto-refs',
+                description: 'Do not auto-wire project references.',
+            })
+            .option({
+                flags: '--tsconfig <file>',
+                description: 'Resolve this tsconfig instead of <root>/tsconfig.json.',
+            })
+            .option({
+                flags: '--root <dir>',
+                description: 'Root used to detect/resolve the tsconfig (default: cwd).',
+            })
+            .option({
+                flags: '--json',
+                description: 'Print the resolved { alias, paths, references } object.',
+            })
+            .option({
+                flags: '--alias',
+                description: 'Print only the resolved Vite/Vitest aliases.',
+            })
+            .option({
+                flags: '--paths',
+                description: 'Print only the resolved compilerOptions.paths.',
+            })
+            .option({
+                flags: '--references',
+                description: 'Print only the resolved project references.',
+            })
+            .option({
+                flags: '--no-extends',
+                description: 'Do not follow the tsconfig extends chain.',
+            })
+            .option({
+                flags: '--restore [kind]',
+                description:
+                    'Remove the applied tsconfig overrides (all, or base|root|default|build) using the manifest snapshots.',
+            })
+            .run(async ({ config, values: opts, context }) => {
                 const cwd = (opts.cwd as string | undefined) ?? context.cwd;
                 const root = (opts.root as string | undefined) ?? cwd;
-                const t = sectionConfig(context.config.tsconfig) ?? {};
-                const defaultFile =
-                    (opts.defaultFile as string | undefined) ??
-                    t.defaultFile ??
-                    'tsconfig.default.json';
-                const buildFile =
-                    (opts.buildFile as string | undefined) ?? t.buildFile ?? 'tsconfig.build.json';
-                const rootFile =
-                    (opts.rootFile as string | undefined) ??
-                    t.rootFile ??
-                    'tsconfig.workspaces.json';
+                const t = sectionConfig(config) ?? {};
+                const defaultFile = t.defaultFile ?? 'tsconfig.default.json';
+                const buildFile = t.buildFile ?? 'tsconfig.build.json';
+                const rootFile = t.rootFile ?? 'tsconfig.workspaces.json';
                 const selectors = (['alias', 'paths', 'references'] as const).filter(
                     key => opts[key] === true
                 );
-                // Validate eagerly so an invalid value never reaches
-                // `JSON.stringify` (NaN produces minified output).
-                const indent =
-                    opts.indent !== undefined
-                        ? parseTsconfigIndent(String(opts.indent))
-                        : undefined;
 
                 const restore = opts.restore;
-                if (restore !== undefined && restore !== false) {
+                if (typeof restore === 'string' || restore === true) {
                     const kind =
                         typeof restore === 'string' ? (restore as TsconfigOverrideKind) : undefined;
                     if (kind !== undefined && !TSCONFIG_OVERRIDE_KINDS.includes(kind)) {
@@ -219,23 +195,15 @@ export function tsconfigCommands(): ToolchainCommand[] {
                     return;
                 }
 
-                const overrides: Partial<ToolchainTsconfigConfig> = {};
-                if (opts.aliases !== undefined) overrides.aliases = Boolean(opts.aliases);
-                if (opts.composite !== undefined) overrides.composite = Boolean(opts.composite);
-                if (opts.refs !== undefined) overrides.refs = Boolean(opts.refs);
-                if (opts.flattenRemoteExtends !== undefined) {
-                    overrides.flattenRemoteExtends = Boolean(opts.flattenRemoteExtends);
-                }
+                // The program already resolved config → env → CLI for the
+                // schema-backed fields, so `t` carries the effective values.
+                // Only the runtime `--auto*` switches still need mapping.
+                const overrides: Partial<ToolchainTsconfigConfig> = { ...t };
                 if (opts.auto !== undefined) overrides.auto = Boolean(opts.auto);
                 if (opts.autoAliases !== undefined) {
                     overrides.aliasAuto = Boolean(opts.autoAliases);
                 }
                 if (opts.autoRefs !== undefined) overrides.refsAuto = Boolean(opts.autoRefs);
-                if (opts.autoSrcDir !== undefined) overrides.autoSrcDir = String(opts.autoSrcDir);
-                if (indent !== undefined) overrides.indent = indent;
-                if (opts.glob !== undefined) overrides.glob = opts.glob as string[];
-                if (opts.exclude !== undefined) overrides.exclude = opts.exclude as string[];
-                if (opts.gitignore !== undefined) overrides.gitignore = Boolean(opts.gitignore);
                 overrides.defaultFile = defaultFile;
                 overrides.buildFile = buildFile;
                 overrides.rootFile = rootFile;
@@ -270,7 +238,6 @@ export function tsconfigCommands(): ToolchainCommand[] {
                         'toolchain.tsconfig is not enabled in dbx.config; skipping the tsconfig task.'
                     );
                 }
-            },
-        },
-    ];
+            }),
+    ]).commands;
 }

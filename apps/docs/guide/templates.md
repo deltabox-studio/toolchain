@@ -30,7 +30,7 @@ dbx template:list --json               # machine-readable (used by the editor)
 
 dbx create --template project --name my-app --out ./my-app
 dbx create --kind folder --name scratch --out ./scratch
-dbx create --template mytpl --name acme --var port=4000
+dbx create --template mytpl --name myapp --var port=4000
 ```
 
 With no `--template`, `create --kind <kind>` picks the first matching template.
@@ -39,6 +39,10 @@ On an interactive terminal, a bare `dbx create` (no `--template`/`--kind`/`--nam
 prompts for the template, name and scope instead (Ctrl-C cancels).
 
 ## Builtin templates
+
+See [Template and registry structures](/guide/template-structures) for a
+rendered directory tree of every builtin template (including the Vite+ provider
+templates) and for the layout of custom templates, providers and registries.
 
 | id                      | Kind          | Description                                    |
 | ----------------------- | ------------- | ---------------------------------------------- |
@@ -69,25 +73,33 @@ The offline builtins (`project`, `application`, `folder`, `monorepo`,
 `monorepo-example`, `workspace`) scaffold a generic, current project: a
 `dbx.config.ts` with `project` metadata, a runnable `src/index.ts` + smoke test,
 and a `package.json` that depends on the same `@deltabox/toolchain` version as the
-CLI. There is no Turbo (Vite Task replaces it). They ask for a **package manager**
+CLI.
+
+There is no Turbo (Vite Task replaces it). They ask for a **package manager**
 (default `yarn`) and write that manager's catalog file (see
-[Package catalogs](/guide/catalogs)). The `vite-plus*`
-builtins delegate to `vp create` and need network access.
+[Package catalogs](/guide/catalogs)).
+
+The `vite-plus*` builtins delegate to `vp create` and need network access.
 
 The root-oriented builtins (`project`, `application`, `monorepo`,
 `monorepo-example`, and the quality-of-life templates) write the Oxc `fmt` /
 `lint` defaults into `vite.config.ts` (the Vite+ configuration surface) and opt
-in with `fmt.oxc` / `lint.oxc`. A nested `project`/`application` scaffold instead
+in with `fmt.oxc` / `lint.oxc`.
+
+A nested `project`/`application` scaffold instead
 detects an ancestor that already owns those settings and inherits them. `folder`
-and `workspace` never create Oxc config. Existing files are never overwritten
-unless `dbx create --force` is passed.
+and `workspace` never create Oxc config.
+
+Existing files are never overwritten unless `dbx create --force` is passed.
 
 ## Quality-of-life builtins
 
 The quality-of-life templates are fully offline and layer a working app on top
 of the same project scaffold (package manager, catalogs, `vite.config.ts` with
-`dbx()`, formatter/linter). They all accept the standard `name`, `scope`,
-`packageManager` and `includeConfig` inputs and an opt-in install action.
+`dbx()`, formatter/linter).
+
+They all accept the standard `name`, `scope`, `packageManager` and `includeConfig`
+inputs and an opt-in install action.
 
 Pass `--containerize` (or use the [Docker](/guide/docker) section) to also write
 a multi-stage `Dockerfile`, `.dockerignore` and `docker-compose.yaml` for local
@@ -126,17 +138,17 @@ is scaffolded. Declare them in `template.json`:
 }
 ```
 
-- `name` — the token name (also `{{ name }}` in files).
+- `name` — the token name (also <code v-pre>{{ name }}</code> in files).
 - `prompt` — the prompt text (defaults to the name).
 - `default` — the value used when nothing is entered.
 - `options` — a fixed list of choices: the value is picked from a select.
 - `required` — whether a value must be provided.
 
-Files and directory names may contain `{{ token }}` placeholders, resolved while
+Files and directory names may contain <code v-pre>{{ token }}</code> placeholders, resolved while
 copying:
 
 ```
-src/{{name}}.ts   ->   src/acme.ts
+src/{{name}}.ts   ->   src/myapp.ts
 ```
 
 The **same input pipeline** runs everywhere:
@@ -145,7 +157,7 @@ The **same input pipeline** runs everywhere:
   standard `name`/`scope` first, then the template's own inputs). Pass
   `--var key=value` (repeatable) to skip a prompt.
 - **Programmatic API** — `scaffoldTemplate(template, { cwd, tokens, variables })`.
-- **VS Code** — **Create from template…** prompts for each input (a quick pick
+- **VS Code** — **Create from template...** prompts for each input (a quick pick
   when `options` is set).
 
 The builtin templates use the same pipeline (they declare `name`, `scope`,
@@ -188,13 +200,13 @@ A local template is a directory with a `template.json`. Turn any folder into one
 with `template:init` (and register it in one step with `--add`):
 
 ```sh
-dbx template:init ./templates/acme-service \
-  --kind application --name "Acme service" --var name --tag service --add
+dbx template:init ./templates/myapp-service \
+  --kind application --name "Myapp service" --var name --tag service --add
 ```
 
 ```json [template.json]
 {
-    "name": "Acme service",
+    "name": "Myapp service",
     "description": "A service package",
     "kind": "application",
     "tags": ["service"],
@@ -207,8 +219,8 @@ Register sources so they are picked up automatically:
 
 ```sh
 dbx template:add ./templates             # local dir (auto-inits if needed)
-dbx template:add @acme/create            # npm @scope/create
-dbx template:add git:https://github.com/acme/tpl.git
+dbx template:add @org/create            # npm @scope/create
+dbx template:add git:https://github.com/myapp/tpl.git
 dbx template:remove local:./templates    # drop a source
 ```
 
@@ -221,7 +233,7 @@ export default defineConfig({
         templates: {
             sources: [
                 { type: 'local', locate: './templates', kind: 'application' },
-                { type: 'npm', locate: '@acme/create', online: true },
+                { type: 'npm', locate: '@org/create', online: true },
             ],
         },
     },
@@ -236,7 +248,7 @@ available in every project (and in the VS Code extension). Pass `--no-global` to
 keep it project-only:
 
 ```sh
-dbx template:init ./templates/acme --kind application --name "Acme" --add  # local + global
+dbx template:init ./templates/myapp --kind application --name "Myapp" --add  # local + global
 dbx template:add ./templates --no-global                                  # project only
 ```
 
@@ -248,7 +260,7 @@ sources):
 
 ```sh
 dbx template:registry                         # list the resolved paths
-dbx template:registry --add ~/shared/templates --add https://acme.dev/templates.json
+dbx template:registry --add ~/shared/templates --add https://myapp.dev/templates.json
 dbx template:registry --set ~/shared/templates
 dbx template:registry --remove ~/shared/templates
 dbx template:registry --clear                 # reset to the default
@@ -267,7 +279,7 @@ the detected template/provider registries, and `dbx registry --add <path>
 --scope global|project` (or `--remove`) manages them. A remote (`http(s)`)
 registry is a JSON `{ "sources": [...] }` / array of sources. The VS Code
 **Registries** view (below **Templates**) shows the Providers/Templates roots
-with **New registry…** / **Remove registry…** actions; remote registries open in
+with **New registry...** / **Remove registry...** actions; remote registries open in
 the browser. `dbx template:remove --global <id>` removes a stored global
 template.
 
@@ -277,23 +289,23 @@ Online sources are resolved with `--online` (or `dbx template:add`):
 
 - **npm** — a published create package whose `package.json` has a
   `createConfig.templates` (or `dbx.templates`) manifest. Scoped
-  (`@acme/create`) and unscoped (`create-acme`, `acme-create`) packages are
+  (`@org/create`) and unscoped (`create-myapp`, `myapp-create`) packages are
   supported; individual templates are listed and created through `vp create`.
   The registry defaults to the project package manager's registry
   (`.yarnrc.yml` `npmRegistryServer`, `.npmrc` `registry`, ...). Override it
   per source with `--registry`:
 
     ```sh
-    dbx template:add @acme/create
-    dbx template:add create-acme
-    dbx template:add create-acme --registry https://registry.example.com
+    dbx template:add @org/create
+    dbx template:add create-myapp
+    dbx template:add create-myapp --registry https://registry.example.com
     ```
 
 - **git** — a repository (optionally with a `ref` and/or `subdir`) listed as a
   template and created through `vp create`:
 
     ```sh
-    dbx template:add git:https://github.com/acme/templates --ref v1.2.0 --subdir apps/web
+    dbx template:add git:https://github.com/myapp/templates --ref v1.2.0 --subdir apps/web
     ```
 
 - **remote** — an `http(s)` JSON source registry (`{ sources }`, `{ templates }`
@@ -323,9 +335,9 @@ toolchain: {
 
 ## VS Code
 
-The extension drives the same CLI: **From template…** runs `template:list --json`
-then `create`; **Add template…** runs `template:init --add` on a folder you pick
+The extension drives the same CLI: **From template...** runs `template:list --json`
+then `create`; **Add template...** runs `template:init --add` on a folder you pick
 and asks whether to add it to the **global** registry (yes by default);
-**Remove template…** runs `template:list --registry` then `template:remove`. The
+**Remove template...** runs `template:list --registry` then `template:remove`. The
 `deltabox.registrySearchPaths` setting controls the global search paths (see
 [Global templates](#global-templates)).

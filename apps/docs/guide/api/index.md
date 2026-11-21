@@ -15,7 +15,7 @@ a subpath.
 - [Logging](/guide/api/logging) — the shared logger.
 - [Examples](/guide/api/examples) — short, copy-pasteable recipes.
 - [Registering commands](/guide/api/registering-commands) — wire
-  `ToolchainCommand[]` onto a commander program.
+  `CliCommand[]` onto the engine program runtime.
 
 ```ts
 import { defineConfig, loadToolchainConfig, runSync, defaultSyncTasks } from '@deltabox/toolchain';

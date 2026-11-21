@@ -44,7 +44,6 @@ const CATALOG: Record<string, string> = {
     '@deltabox/toolchain': rootPkg.version,
     '@types/node': '~22.10.2',
     typescript: '~6.0.3',
-    'vite-plugin-dbx': rootPkg.version,
     'vite-plus': '1.2.0',
 };
 
@@ -396,7 +395,7 @@ export function renderToolchainConfig(
         lintOxc?: boolean;
         /** The catalog the scaffold writes (`toolchain.catalogs.packages`). */
         catalogs?: Record<string, string>;
-        /** The generated file extension (default `ts`). */
+        /** The generated file extension. @default `ts` */
         configExtension?: ConfigExtension;
         /** The package's `type` (`module`/`commonjs`), used for `.js` syntax. */
         packageType?: string;
@@ -532,7 +531,7 @@ export function renderPluginViteConfig(options: PluginViteConfigOptions): string
 
     return `import { defineConfig } from 'vite-plus';
 
-import { dbx } from 'vite-plugin-dbx';
+import { dbx } from '@deltabox/toolchain/vite';
 
 export default defineConfig({
     plugins: [
@@ -593,7 +592,7 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
             ...(application
                 ? { dev: 'vp dev', build: 'vp build', preview: 'vp preview' }
                 : { build: 'vp pack' }),
-            format: 'dbx fmt',
+            fmt: 'dbx fmt',
             lint: 'dbx lint --fix',
             test: 'vp test',
             typecheck: 'tsc -p tsconfig.json --noEmit',
@@ -671,7 +670,7 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
             build: `dbx run ${filters} build`,
             test: `dbx run ${filters} test`,
             typecheck: `dbx run ${filters} typecheck`,
-            format: 'dbx fmt',
+            fmt: 'dbx fmt',
             lint: 'dbx lint --fix',
         },
         workspaces: workspacesField(ctx.packageManager, workspaceGlobs),
@@ -907,7 +906,7 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
         files: ['dist'],
         scripts: {
             build: 'vp pack',
-            format: 'dbx fmt',
+            fmt: 'dbx fmt',
             lint: 'dbx lint --fix',
             test: 'vp test',
             typecheck: 'tsc -p tsconfig.build.json --noEmit',

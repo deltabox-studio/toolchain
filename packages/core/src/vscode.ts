@@ -20,7 +20,7 @@ export interface VscodeSyncOptions {
     enabled?: (config: ToolchainConfig) => boolean;
     /** Whether the task should regenerate its managed files (default: true). */
     regenerate?: (config: ToolchainConfig) => boolean;
-    /** The project kinds the task applies to (default root + single project). */
+    /** The project kinds the task applies to. @default `['monorepo-root', 'project']` */
     projectTypes?: ProjectType[];
 }
 

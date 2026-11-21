@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain",
-    "version": "3.0.0-beta.11",
+    "version": "3.0.0-beta.17",
     "description": "A superset of Vite+ with rich extras: project synchronization, config generator, tsconfig management, MCP server, CI and changelog automation, providers, catalogs and a VS Code extension. Use it as a Vite plugin or standalone.",
     "homepage": "https://toolchain.deltabox.studio",
     "author": "Victor Sango <victor@deltabox.studio>",
@@ -45,8 +45,8 @@
         "build": "vp run --filter \"./packages/*\" build && vp run -w build:root && yarn build:vscode && yarn dbx sync --only tsconfig",
         "build:vscode": "yarn workspace toolchain-vscode package:vsix",
         "docs": "vp run --filter \"./apps/docs\"",
-        "format": "vp run --filter \"./packages/*\" format && vp run -w format:root",
-        "format:check": "vp run --filter \"./packages/*\" format:check && vp run -w format:check:root",
+        "fmt": "vp run --filter \"./packages/*\" fmt && vp run -w fmt:root",
+        "fmt:check": "vp run --filter \"./packages/*\" fmt:check && vp run -w fmt:check:root",
         "lint": "vp run --filter \"./packages/*\" lint && vp run -w lint:root",
         "lint:check": "vp run --filter \"./packages/*\" lint:check && vp run -w lint:check:root",
         "check": "vp run --filter \"./packages/*\" check && vp run -w check:root",
@@ -58,9 +58,12 @@
         "releases:reformat": "tsx scripts/reformat-github-releases.ts",
         "vp:test": "vp test --run --config vite.config.ts",
         "vp:toolchain": "vp toolchain",
-        "config:generate": "tsx scripts/generate-tool-config-types.ts && tsx scripts/generate-workflow-types.ts && tsx scripts/generate-config-types.ts && tsx scripts/generate-config.ts && tsx scripts/generate-config-docs.ts",
+        "config:generate": "yarn config:vendor && yarn config:workflow && yarn config:types && yarn config:reference && yarn config:docs",
         "config:docs": "tsx scripts/generate-config-docs.ts",
+        "config:reference": "tsx scripts/generate-config-reference.ts",
         "config:types": "tsx scripts/generate-config-types.ts",
+        "config:vendor": "tsx scripts/generate-vendor-config-types.ts",
+        "config:workflow": "tsx scripts/generate-workflow-types.ts",
         "dbx": "tsx src/cli/index.ts",
         "commitlint": "commitlint",
         "bootstrap": "node scripts/bootstrap.mjs",
@@ -76,14 +79,13 @@
     ],
     "dependencies": {
         "@clack/prompts": "catalog:",
-        "commander": "^14.0.0",
         "glob": "catalog:",
-        "jsonc-parser": "^3.3.1",
+        "jsonc-parser": "catalog:",
         "lodash": "catalog:",
         "picocolors": "catalog:",
         "tsx": "catalog:",
         "type-fest": "catalog:",
-        "untyped": "^2.0.0",
+        "untyped": "catalog:",
         "zod": "catalog:"
     },
     "devDependencies": {
@@ -107,7 +109,6 @@
         "ajv": "^8.20.0",
         "cross-env": "catalog:",
         "dotenv": "catalog:",
-        "husky": "^9.1.7",
         "publint": "^0.3.24",
         "typescript": "catalog:",
         "unrun": "^0.3.1",
@@ -136,7 +137,7 @@
     },
     "packageManager": "yarn@4.17.1",
     "engines": {
-        "node": ">=22.5.0"
+        "node": "^22.22.1 || ^24.11.0 || >=26.0.0"
     },
     "files": [
         "dist",

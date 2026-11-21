@@ -41,11 +41,11 @@ export interface RunWorkflowsOptions {
     ref?: string;
     /** The loaded tooling config, used to check the `ci` workflows. */
     config?: ToolchainConfig;
-    /** The `gh` executable (default `gh`). */
+    /** The `gh` executable. @default `gh` */
     gh?: string;
-    /** The `glab` executable (default `glab`). */
+    /** The `glab` executable. @default `glab` */
     glab?: string;
-    /** The `az` executable (default `az`). */
+    /** The `az` executable. @default `az` */
     az?: string;
 }
 
@@ -55,7 +55,7 @@ export interface WorkflowTarget {
     id: string;
     /** Whether the target comes from `ci.custom`. */
     custom: boolean;
-    /** The CI vendor the workflow targets (default `github`). */
+    /** The CI vendor the workflow targets. @default `github` */
     provider: WorkflowProvider;
     /** The workflow file's basename. */
     file: string;

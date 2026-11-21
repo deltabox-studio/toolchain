@@ -14,7 +14,7 @@ import { defineConfig } from '@deltabox/toolchain';
 
 export default defineConfig({
     toolchain: {
-        project: { name: 'acme', scope: '@acme' },
+        project: { name: 'myapp', scope: '@org' },
         ci: {
             ci: true,
             changelog: {
@@ -38,7 +38,7 @@ sections as `ToolchainCiConfig`, `ChangelogConfig`, ...):
 import type { ToolchainConfig, ToolchainCiConfig } from '@deltabox/toolchain';
 
 const ci: ToolchainCiConfig = { ci: true, changelog: true };
-const config: ToolchainConfig = { project: { name: 'acme' }, ci };
+const config: ToolchainConfig = { project: { name: 'myapp' }, ci };
 ```
 
 The same types are available from `@deltabox/toolchain/shared`, and each

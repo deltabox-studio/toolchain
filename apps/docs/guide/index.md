@@ -2,13 +2,14 @@
   <img src="/logo/outline_colored.png" width="150" />
 </div>
 
-# Getting Started
+# Getting started
 
-`@deltabox/toolchain` is a superset of [Vite+](https://viteplus.dev). It keeps the
-Vite+ workflow and adds project synchronization, a config generator, tsconfig
-management, an MCP server, CI and changelog automation, providers, catalogs and a
-VS Code extension. Use it as a Vite/Vite+ plugin or standalone — from the CLI, the
-programmatic API and the VS Code extension.
+`@deltabox/toolchain` is a config-driven layer around [Vite+](https://viteplus.dev).
+It exists to remove the glue work that appears once a project grows beyond a
+single package: the same settings spread across a dozen files, generated files
+that drift, and release chores that are easy to get wrong.
+
+You describe the project once, and the toolchain keeps the rest in sync.
 
 ## Install
 

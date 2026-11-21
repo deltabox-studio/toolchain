@@ -7,7 +7,7 @@ export default defineConfig({
     toolchain: {
         hooks: {
             afterLoad: ({ tokens }) => console.log(tokens),
-            beforeSync: ctx => ctx.log('syncing…'),
+            beforeSync: ctx => ctx.log('syncing...'),
             afterTask: ({ task, files }) => console.log(task.name, files?.length),
             afterSync: ({ result }) => console.log(result.written.length),
             beforeVersion: ({ previousVersion, version }) =>
@@ -36,12 +36,12 @@ hooks: {
 ```
 
 Throwing (or a rejected async hook) aborts the run before any files are
-written. It does not run for `--dry-run`, `--release-notes` or `--format-only`.
+written. It does not run for `--dry-run`, `--release-body` or `--format-only`.
 
 ## `afterVersion`
 
 `afterVersion` runs after `dbx changelog` writes the new versions and
-changelogs (it does not run for `--dry-run`, `--release-notes` or
+changelogs (it does not run for `--dry-run`, `--release-body` or
 `--format-only`). It receives the repository root and the new version:
 
 ```ts [dbx.config.ts]

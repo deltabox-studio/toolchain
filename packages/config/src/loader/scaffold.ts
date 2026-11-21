@@ -16,9 +16,9 @@ export type ConfigFileType = 'file' | 'json' | 'yaml' | 'env' | 'cli';
 
 /** Options for {@link createConfigFile}. */
 export interface CreateConfigFileOptions {
-    /** The directory to write the file to (default `process.cwd()`). */
+    /** The directory to write the file to. @default `process.cwd()` */
     cwd?: string;
-    /** The file name (default `dbx.config.ts`). */
+    /** The file name. @default `dbx.config.ts` */
     name?: string;
     /** The output format; inferred from `name` when omitted. */
     type?: ConfigFileType;
@@ -33,9 +33,9 @@ export interface CreateConfigFileOptions {
     defaults?: Record<string, unknown>;
     /** Values merged over `content` (object content only). */
     overrides?: Record<string, unknown>;
-    /** Overwrite an existing file (default false). */
+    /** Overwrite an existing file. @default `false` */
     overwrite?: boolean;
-    /** The `defineConfig` import specifier (default `@deltabox/toolchain/shared`). */
+    /** The `defineConfig` import specifier. @default `@deltabox/toolchain/shared` */
     defineConfigImport?: string;
 }
 

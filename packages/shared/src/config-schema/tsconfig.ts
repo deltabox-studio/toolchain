@@ -46,9 +46,9 @@ const tsconfigAliasRewrite = z
     .describe(
         'Rewrite the alias keys auto-wiring generates (custom keys are preserved). Patterns are ' +
             'URL-rewrite style: a string is a regular-expression source and replacements support ' +
-            '`$1`, `$2`, ... capture groups. Examples: `{ "^@acme/(.+)$": "@acme/pkg/$1" }` ' +
-            '(string patterns), `[{ pattern: /^@acme\\/(.+)$/, replacement: "@acme/pkg/$1" }]` ' +
-            '(RegExp patterns), `[{ pattern: ["^@acme/a$", "^@acme/b$"], replacement: "@acme/x" }]` ' +
+            '`$1`, `$2`, ... capture groups. Examples: `{ "^@org/(.+)$": "@org/pkg/$1" }` ' +
+            '(string patterns), `[{ pattern: /^@org\\/(.+)$/, replacement: "@org/pkg/$1" }]` ' +
+            '(RegExp patterns), `[{ pattern: ["^@org/a$", "^@org/b$"], replacement: "@org/x" }]` ' +
             '(an array of keys), and an array of such rules (applied in order; the first matching ' +
             'rule wins). `RegExp` patterns are only available from TS/JS configs; JSON configs use ' +
             'string patterns.'
@@ -118,6 +118,7 @@ export const tsconfigConfigSchema = withEnabled(
                 'Glob(s) for the workspace default tsconfig files. Defaults to matching ' +
                     'every `defaultFile` recursively.'
             )
+            .meta({ cli: { type: 'array', multiple: true } })
             .optional(),
         exclude: z
             .union([z.string(), z.array(z.string())])
@@ -125,20 +126,39 @@ export const tsconfigConfigSchema = withEnabled(
                 'Glob(s) to exclude from `glob`. Defaults to the common ignored paths ' +
                     '(`node_modules`, `.dbx`, `dist`, `build`, ...).'
             )
+            .meta({ cli: { type: 'array', multiple: true } })
             .optional(),
         gitignore: z
             .boolean()
             .describe('Also respect `.gitignore` files (root + nested) when matching `glob`.')
             .default(true)
-            .optional(),
+            .optional()
+            .meta({
+                cli: {
+                    flag: '--no-gitignore',
+                    type: 'boolean',
+                    description: 'Do not respect .gitignore files.',
+                },
+            }),
         refs: z.boolean().describe('Wire project references.').default(false).optional(),
         composite: z.boolean().describe('Emit `composite: true`.').default(false).optional(),
-        aliases: z.boolean().describe('Inject path aliases.').default(true).optional(),
+        aliases: z
+            .boolean()
+            .describe('Inject path aliases.')
+            .default(true)
+            .optional()
+            .meta({
+                cli: {
+                    flag: '--no-aliases',
+                    type: 'boolean',
+                    description: 'Skip path aliases.',
+                },
+            }),
         flattenRemoteExtends: z
             .boolean()
             .describe(
                 'Inline the compiler options inherited from a remote `http(s)` `extends` chain ' +
-                    'into the generated workspace configs (default false). Useful when a tool ' +
+                    'into the generated workspace configs. Useful when a tool ' +
                     'cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` ' +
                     'are skipped because they describe the remote tree. Settings the generated ' +
                     'config already defines always win.'
@@ -146,19 +166,26 @@ export const tsconfigConfigSchema = withEnabled(
             .default(false)
             .optional(),
         auto: tsconfigAliasAutoSetting(
-            'Auto-generate the root workspaces tsconfig paths/references from the project graph ' +
-                '(default false). Set true to derive them from the project graph; set false to ' +
+            'Auto-generate the root workspaces tsconfig paths/references from the project graph. ' +
+                'Set true to derive them from the project graph; set false to ' +
                 'only use the entries you define yourself. An object additionally accepts ' +
                 '`include`/`exclude`, `rewriteAlias`, `modes`, `prefix`, `devMode` and `dist`.'
-        ).optional(),
+        )
+            .default(false)
+            .meta({ cli: false })
+            .optional(),
         aliasAuto: tsconfigAliasAutoSetting(
             'Auto-generate path aliases (defaults to `auto`; `aliases` must also be enabled). ' +
                 'Accepts the same `include`/`exclude`/`rewriteAlias`/`modes`/`prefix`/`devMode`/' +
                 '`dist` object as `auto`.'
-        ).optional(),
+        )
+            .meta({ cli: false })
+            .optional(),
         refsAuto: tsconfigAutoSetting(
             'Auto-generate project references (defaults to `auto`; `refs` must also be enabled).'
-        ).optional(),
+        )
+            .meta({ cli: false })
+            .optional(),
         autoSrcDir: z
             .string()
             .describe(
@@ -168,7 +195,25 @@ export const tsconfigConfigSchema = withEnabled(
             )
             .meta({ tsType: "'src' | '.' | (string & {})" })
             .optional(),
-        indent: z.number().describe('JSON indentation.').default(4).optional(),
+        indent: z
+            .number()
+            .describe('JSON indentation.')
+            .default(4)
+            .meta({
+                cliFlagShort: 'i',
+                cli: {
+                    parse: (value: string) => {
+                        const text = value.trim();
+                        if (!/^\d+$/.test(text)) {
+                            throw new Error(
+                                `invalid --indent "${text}" (expected a non-negative integer).`
+                            );
+                        }
+                        return Number(text);
+                    },
+                },
+            })
+            .optional(),
         rootFile: z
             .string()
             .describe('The workspaces tsconfig file name that holds `paths` + `references`.')
@@ -188,7 +233,8 @@ export const tsconfigConfigSchema = withEnabled(
             .string()
             .describe('The root base tsconfig file name.')
             .default('tsconfig.base.json')
-            .optional(),
+            .optional()
+            .meta({ cli: false }),
         extends: z
             .object({
                 base: z
@@ -216,6 +262,7 @@ export const tsconfigConfigSchema = withEnabled(
                     .optional(),
             })
             .describe('Per-file `extends` overrides for generated/scaffolded tsconfig templates.')
+            .meta({ cli: false })
             .optional(),
         overrides: z
             .object({
@@ -237,7 +284,7 @@ export const tsconfigConfigSchema = withEnabled(
                     'during sync. The originals are snapshotted in the manifest, so removing a ' +
                     'key reverts it (restoring the original value when the file defined one).'
             )
-            .meta({ id: 'ToolchainTsconfigOverrides' })
+            .meta({ id: 'ToolchainTsconfigOverrides', cli: false })
             .optional(),
     })
 )

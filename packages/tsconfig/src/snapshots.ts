@@ -24,7 +24,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { readJsonFile, warningMessage } from '@deltabox/toolchain/shared';
 
 import { isAppliedOverride, overrideLeaves, revertOverride } from './overrides.js';
-import { parseTsconfig } from './resolve.js';
+import { parseTsconfig } from './resolve/index.js';
 import type { OverridesState, TsconfigOverrideKind } from './types/index.js';
 
 /** The nested snapshot tree stored in the manifest. */

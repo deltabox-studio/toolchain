@@ -24,14 +24,14 @@ function readJson(file: string): Record<string, unknown> {
 
 function scaffold(cwd: string): void {
     writeJson(path.join(cwd, 'package.json'), {
-        name: 'acme',
+        name: 'myapp',
         private: true,
         workspaces: ['packages/*'],
     });
     writeJson(path.join(cwd, 'tsconfig.workspaces.json'), {
         compilerOptions: { composite: true },
     });
-    writeJson(path.join(cwd, 'packages/a/package.json'), { name: '@acme/a' });
+    writeJson(path.join(cwd, 'packages/a/package.json'), { name: '@org/a' });
     writeJson(path.join(cwd, 'packages/a/tsconfig.default.json'), {
         compilerOptions: { strict: true },
     });
@@ -87,12 +87,12 @@ describe('tsconfig regeneration', () => {
     it('honours custom root/build/default file names', async () => {
         const cwd = tmp();
         writeJson(path.join(cwd, 'package.json'), {
-            name: 'acme',
+            name: 'myapp',
             private: true,
             workspaces: ['packages/*'],
         });
         writeJson(path.join(cwd, 'tsconfig.graph.json'), {});
-        writeJson(path.join(cwd, 'packages/a/package.json'), { name: '@acme/a' });
+        writeJson(path.join(cwd, 'packages/a/package.json'), { name: '@org/a' });
         writeJson(path.join(cwd, 'packages/a/tsconfig.src.json'), {});
         const config: ToolchainConfig = {
             tsconfig: {

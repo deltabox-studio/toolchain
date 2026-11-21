@@ -18,7 +18,7 @@ function makeRepo(): string {
     for (const name of ['a', 'b', 'c']) {
         const dir = path.join(root, 'packages', name);
         fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: `@acme/${name}` }));
+        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: `@org/${name}` }));
     }
     return root;
 }

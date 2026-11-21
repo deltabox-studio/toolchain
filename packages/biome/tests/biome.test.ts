@@ -19,26 +19,26 @@ describe('biome templates', () => {
     });
 
     it('resolves replacement tokens', () => {
-        const rendered = renderBiomeConfig({ name: 'acme', scope: '@acme' });
+        const rendered = renderBiomeConfig({ name: 'myapp', scope: '@org' });
         const groups = (rendered.assist as any).actions.source.organizeImports.options.groups;
         const flat = JSON.stringify(groups);
-        expect(flat).toContain('@acme/**');
-        expect(flat).toContain('acme');
+        expect(flat).toContain('@org/**');
+        expect(flat).toContain('myapp');
         expect(flat).not.toContain('{{');
     });
 
     it('drops scope-only import groups when no scope is set', () => {
-        const rendered = renderBiomeConfig({ name: 'acme' });
+        const rendered = renderBiomeConfig({ name: 'myapp' });
         const groups = (rendered.assist as any).actions.source.organizeImports.options.groups;
         const flat = JSON.stringify(groups);
         expect(flat).not.toContain('{{');
         expect(flat).not.toContain('!/**');
         expect(flat).not.toContain('"/**"');
-        expect(flat).toContain('acme');
+        expect(flat).toContain('myapp');
     });
 
     it('serializes to JSON', () => {
-        const json = renderBiomeJson({ name: 'acme', scope: '@acme' }, {}, 2);
+        const json = renderBiomeJson({ name: 'myapp', scope: '@org' }, {}, 2);
         expect(() => JSON.parse(json)).not.toThrow();
         expect(json).not.toContain('{{');
     });
@@ -55,7 +55,7 @@ describe('biome templates', () => {
             cwd: '/repo',
             projectType: 'project',
             config: { biome: true },
-            tokens: { name: 'acme', scope: '@acme' },
+            tokens: { name: 'myapp', scope: '@org' },
             log: () => {},
             warn: () => {},
         });
@@ -76,7 +76,7 @@ describe('biome templates', () => {
             cwd: '/repo',
             projectType: 'project',
             config,
-            tokens: { name: 'acme', scope: '@acme' },
+            tokens: { name: 'myapp', scope: '@org' },
             log: () => {},
             warn: () => {},
         });
@@ -94,7 +94,7 @@ describe('biome templates', () => {
                 cwd: '/repo',
                 projectType: 'project',
                 config: { fmt: { biome: false }, lint: { biome: false } },
-                tokens: { name: 'acme' },
+                tokens: { name: 'myapp' },
                 log: () => {},
                 warn: () => {},
             })
@@ -108,7 +108,7 @@ describe('biome templates', () => {
             cwd: '/repo',
             projectType: 'project',
             config: { fmt: { biome: true } },
-            tokens: { name: 'acme' },
+            tokens: { name: 'myapp' },
             log: () => {},
             warn: () => {},
         });
@@ -126,7 +126,7 @@ describe('biome templates', () => {
                 biome: { enabled: false, overrides: { formatter: { indentWidth: 2 } } },
                 fmt: { biome: { formatter: { lineWidth: 80 } } },
             },
-            tokens: { name: 'acme' },
+            tokens: { name: 'myapp' },
             log: () => {},
             warn: () => {},
         });
@@ -137,7 +137,7 @@ describe('biome templates', () => {
 
     it('merges overrides (arrays union, objects deep-merge)', () => {
         const rendered = renderBiomeConfig(
-            { name: 'acme', scope: '@acme' },
+            { name: 'myapp', scope: '@org' },
             {
                 files: { includes: ['!packages/x/gen.ts'] },
                 linter: { rules: { suspicious: { noExplicitAny: 'error' } } },
@@ -154,7 +154,7 @@ describe('biome templates', () => {
 
     it('removes default array entries with the $remove directive', () => {
         const rendered = renderBiomeConfig(
-            { name: 'acme', scope: '@acme' },
+            { name: 'myapp', scope: '@org' },
             { files: { includes: [removeBiomeEntry('!**/.generated'), '!**/gen/**'] } }
         );
         const includes = (rendered.files as any).includes as string[];
@@ -166,7 +166,7 @@ describe('biome templates', () => {
 
     it('replaces an array with the $reset directive', () => {
         const rendered = renderBiomeConfig(
-            { name: 'acme', scope: '@acme' },
+            { name: 'myapp', scope: '@org' },
             { files: { includes: [BIOME_RESET, 'src/**'] } }
         );
         expect((rendered.files as any).includes).toEqual(['src/**']);
@@ -174,7 +174,7 @@ describe('biome templates', () => {
 
     it('removes nested array entries with the $remove directive', () => {
         const rendered = renderBiomeConfig(
-            { name: 'acme', scope: '@acme' },
+            { name: 'myapp', scope: '@org' },
             {
                 assist: {
                     actions: {
@@ -208,7 +208,7 @@ describe('biome templates', () => {
                     },
                 },
             },
-            tokens: { name: 'acme', scope: '@acme' },
+            tokens: { name: 'myapp', scope: '@org' },
             log: () => {},
             warn: () => {},
         });

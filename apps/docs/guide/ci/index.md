@@ -84,7 +84,7 @@ toolchain: {
 ```
 
 `filename` and `dir` override the generated path for any provider. The workflow
-object is written as-is (only the toolchain's `{{ token }}` replacements are
+object is written as-is (only the toolchain's <code v-pre>{{ token }}</code> replacements are
 applied), so it must be a complete pipeline. `dbx workflow` dispatches each
 workflow with its vendor CLI — see [CLI](/guide/cli#tsconfig-cleanup-changelog-workflows).
 

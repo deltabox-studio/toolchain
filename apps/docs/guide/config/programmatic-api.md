@@ -1,4 +1,4 @@
-# Programmatic API
+# Programmatic config API
 
 ```ts
 import { loadToolchainConfig, runSync, defaultSyncTasks } from '@deltabox/toolchain';

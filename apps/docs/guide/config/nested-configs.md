@@ -13,7 +13,7 @@ The merge is recursive, but **sections are strictly opt-in**:
   the root defines it.
 - When the nested config **does** opt in, objects are merged key by key and
   leaves (booleans, strings, numbers, arrays) in the child replace the root's
-  value. `true` means “enabled with the parent's options”; `false` disables it.
+  value. `true` means "enabled with the parent's options"; `false` disables it.
 - **Repository/workspace-scoped sections are never inherited**: `ci`, `tsconfig`,
   `loader`, `templates`, `registry`, `watch`, `providers`, and `vite`. A
   workflow, workspace tsconfig tree, config loader, source/registry policy,
@@ -47,7 +47,7 @@ export default defineConfig({
         vite: {
             shim: 'static',
             resolve: { tsconfigPaths: true },
-            run: { tasks: { build: { command: 'tsdown' } } },
+            run: { tasks: { build: { command: 'vp pack' } } },
         },
     },
 });

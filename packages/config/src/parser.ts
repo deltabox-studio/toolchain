@@ -13,11 +13,18 @@ import { ConfigParseError } from './errors.js';
 import type {
     ConfigSchema,
     ConfigSource,
+    ConfigSourceSelection,
     ParseConfigOptions,
     ResolvedConfig,
 } from './types/index.js';
 
 export { ConfigParseError };
+
+/** Normalize a single source or an ordered array into a unique source list. */
+function selectionList(selection: ConfigSourceSelection | undefined): ConfigSource[] {
+    if (selection === undefined) return [];
+    return [...new Set(Array.isArray(selection) ? selection : [selection])] as ConfigSource[];
+}
 
 function sourceOptions(
     options: ParseConfigOptions | undefined,
@@ -98,15 +105,18 @@ export function parseConfig(
         envSource = (input as EnvSource | undefined) ?? envSource;
         overrides = undefined;
     }
+    // `file` has no ambient collector: file values arrive through `overrides`.
+    const selected: ConfigSource[] = source === undefined ? ['env', 'cli'] : selectionList(source);
+    const sources = selected.filter(item => item !== 'file');
     const merged: ResolveConfigOptions & ParseConfigOptions = {
         ...options,
-        ...(source ? { source } : {}),
-        sources: source === 'file' ? [] : source ? [source] : ['env', 'cli'],
+        ...(source ? { source: Array.isArray(source) ? (sources[0] ?? 'file') : source } : {}),
+        sources,
         validate: options?.validate ?? true,
         ...(envSource ? { envSource } : {}),
         ...(argv ? { argv } : {}),
     };
-    return resolveConfig(parser as ConfigSchema, merged, overrides);
+    return resolveConfig(parser as never, merged as never, overrides) as unknown;
 }
 
 /** Synchronous alias of {@link parseConfig}. */

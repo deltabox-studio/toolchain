@@ -62,13 +62,13 @@ export interface ResolveTsconfigWorkspacesOptions {
     cwd: string;
     /** The merged root config. */
     rootConfig: ToolchainConfig;
-    /** Skip projects without a source default tsconfig (default false). */
+    /** Skip projects without a source default tsconfig. @default `false` */
     requireDefaultFile?: boolean;
     /** Explicit glob(s) for the workspace default tsconfig files. */
     glob?: string | string[];
     /** Extra glob(s) to exclude. */
     exclude?: string | string[];
-    /** Respect `.gitignore` files (default true). */
+    /** Respect `.gitignore` files. @default `true` */
     gitignore?: boolean;
 }
 
@@ -224,7 +224,7 @@ export interface AutoSwitch {
     modes?: AliasDiscoveryMode[];
     /** Base key for generated aliases (default: the package name). */
     prefix?: string;
-    /** Resolve export targets to source files (default true). */
+    /** Resolve export targets to source files. @default `true` */
     devMode?: boolean;
     /** Output directory used for dist/source mapping. */
     dist?: string;

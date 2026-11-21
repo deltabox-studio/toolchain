@@ -39,11 +39,11 @@ export interface RunSyncOptions {
     projectType?: ProjectType;
     /** Dry-run: report drift and exit non-zero without writing. */
     check?: boolean;
-    /** Remove managed files no longer produced by the active tasks (default true). */
+    /** Remove managed files no longer produced by the active tasks. @default `true` */
     prune?: boolean;
     /** Suppress logging. */
     quiet?: boolean;
-    /** Custom logger (default `logger.info`). */
+    /** Custom logger. @default `logger.info` */
     log?: (message: string) => void;
     /** Whether the config came from a `dbx()` Vite/Vite+ plugin. */
     plugin?: boolean;

@@ -5,7 +5,7 @@
  * ```ts
  * // vite.config.ts
  * import { defineConfig } from 'vite-plus';
- * import { dbx, DBX_TASKS } from 'vite-plugin-dbx';
+ * import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
  *
  * export default defineConfig({
  *     plugins: [dbx()],
@@ -82,8 +82,20 @@ export interface ResolvedDbx {
 
 /** The `.bin/dbx` shim candidates inside a project (Windows variants first). */
 function localCandidates(cwd: string): string[] {
-    const base = path.join(cwd, 'node_modules', '.bin', 'dbx');
-    return IS_WINDOWS ? [`${base}.cmd`, `${base}.exe`, `${base}.ps1`, base] : [base];
+    const candidates: string[] = [];
+    let dir = path.resolve(cwd);
+    for (;;) {
+        const base = path.join(dir, 'node_modules', '.bin', 'dbx');
+        candidates.push(
+            ...(IS_WINDOWS ? [`${base}.cmd`, `${base}.exe`, `${base}.ps1`, base] : [base])
+        );
+        // A hoisted workspace dependency lives at the repo root; never walk past it.
+        if (fs.existsSync(path.join(dir, '.git'))) break;
+        const parent = path.dirname(dir);
+        if (parent === dir) break;
+        dir = parent;
+    }
+    return candidates;
 }
 
 /**
@@ -231,16 +243,16 @@ export const DBX_TASKS: Record<'dbx:sync' | 'dbx:check', DbxTask> = {
 export interface DbxPluginOptions {
     /** Project root (default: the resolved Vite root). */
     cwd?: string;
-    /** Run `dbx sync` before the dev server / build (default true). */
+    /** Run `dbx sync` before the dev server / build. @default `true` */
     sync?: boolean;
     /**
      * Run `dbx sync --check` and fail the build when generated files are out of
      * date (default: true when `CI` is set in the environment).
      */
     check?: boolean;
-    /** Re-sync when a dbx input file changes in watch mode (default true). */
+    /** Re-sync when a dbx input file changes in watch mode. @default `true` */
     watch?: boolean;
-    /** Debounce (ms) for watch-triggered syncs (default 150). */
+    /** Debounce (ms) for watch-triggered syncs. @default `150` */
     debounce?: number;
     /**
      * The toolchain config carried inline. This is what makes a `dbx.config.*`
@@ -252,10 +264,15 @@ export interface DbxPluginOptions {
 
 /** dbx input files whose change should trigger a re-sync in watch mode. */
 const WATCH_INPUTS = [
-    /dbx\.config\.[cm]?[jt]s$/,
+    /dbx\.config\.(?:json|[cm]?[jt]s)$/,
     /vite\.config\.[cm]?[jt]s$/,
     /tsconfig\.(?:default|workspaces|monorepo)\.json$/,
 ];
+
+/** Whether a changed file should trigger the plugin's debounced re-sync. */
+export function isDbxWatchInput(id: string): boolean {
+    return WATCH_INPUTS.some(pattern => pattern.test(id));
+}
 
 /** A Vite log level for a dbx logger level (`success` -> `info`). */
 function viteLogLevel(level: string | undefined): 'info' | 'warn' | 'error' | 'silent' | undefined {
@@ -425,7 +442,7 @@ export function dbx(options: DbxPluginOptions = {}): Plugin {
         },
         watchChange(id) {
             if (!watch || !sync) return;
-            if (WATCH_INPUTS.some(pattern => pattern.test(id))) schedule();
+            if (isDbxWatchInput(id)) schedule();
         },
     };
 

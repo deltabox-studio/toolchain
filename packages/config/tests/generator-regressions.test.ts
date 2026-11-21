@@ -10,7 +10,9 @@ import {
     collectDefinitions,
     createConfigEngine,
     findProjectRoot,
+    generateCliDocs,
     generateCliOptions,
+    generateConfigCliOptions,
     generateConfigEnv,
     generateConfigJsonSchema,
     generateConfigMarkdown,
@@ -258,5 +260,82 @@ describe('generated JSDoc', () => {
         expect(env).not.toContain('Header */ text');
         expect(dts).toContain('Header *\\/ text');
         expect(dts).not.toContain('Header */ text');
+    });
+});
+
+describe('generator onContent hooks', () => {
+    it('allows an empty transformed body', () => {
+        const schema = z.object({ port: z.number() });
+        expect(generateEnvFile(schema, { onContent: () => '' })).toBe('');
+        expect(
+            generateCliDocs([{ name: 'serve', description: 'Serve.', run: () => {} }], {
+                onContent: () => '',
+            })
+        ).toBe('');
+    });
+
+    it('applies onContent to every markdown page', () => {
+        const files = generateConfigMarkdown(
+            { server: z.object({ port: z.number() }) },
+            { onContent: content => `X${content.length}X` }
+        );
+        expect(Object.values(files)).toHaveLength(2);
+        expect(
+            Object.values(files).every(content => content.startsWith('X') && content.endsWith('X'))
+        ).toBe(true);
+    });
+
+    it('applies onContent once when the engine writes the env file', () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-oncontent-'));
+        try {
+            const engine = createConfigEngine({
+                schema: { server: z.object({ port: z.number().default(3000) }) },
+                envPrefix: 'MYAPP_',
+                root,
+            });
+            engine.env.write({
+                output: '.env.example',
+                onContent: content => `# banner\n${content}`,
+            });
+            const written = fs.readFileSync(path.join(root, '.env.example'), 'utf-8');
+            expect(written.match(/# banner/g)).toHaveLength(1);
+            expect(written).toContain('MYAPP_PORT=3000');
+        } finally {
+            fs.rmSync(root, { recursive: true, force: true });
+        }
+    });
+});
+
+describe('CLI generator edge cases', () => {
+    it('matches pathPrefix on segment boundaries only', () => {
+        const schema = {
+            config: z.object({
+                server: z.object({ port: z.number() }),
+                serverless: z.object({ region: z.string() }),
+            }),
+        };
+        const result = generateConfigCliOptions(schema, { pathPrefix: 'server' });
+        expect(result.options.some(option => option.path === 'server.port')).toBe(true);
+        expect(result.options.some(option => option.path?.startsWith('serverless'))).toBe(false);
+    });
+
+    it('renders nested commands and deduplicates generated anchors', () => {
+        const docs = generateCliDocs([
+            {
+                name: 'parent',
+                description: 'Parent.',
+                commands: [{ name: 'child', description: 'Child.', run: () => {} }],
+                run: () => {},
+            },
+            { name: 'foo:bar', description: 'Colon.', run: () => {} },
+            { name: 'foo-bar', description: 'Dash.', run: () => {} },
+            { name: 'multiline', description: 'First\nSecond.', run: () => {} },
+        ]);
+        expect(docs).toContain('dbx parent child');
+        expect(docs).toContain('## \`dbx parent child\`');
+        expect(docs).toContain('(#foo-bar)');
+        expect(docs).toContain('(#foo-bar-2)');
+        expect(docs).toContain('First Second.');
+        expect(docs).not.toContain('First\nSecond.');
     });
 });
