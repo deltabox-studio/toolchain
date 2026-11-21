@@ -80,7 +80,7 @@ targets, including each workspace's own version in `individual` mode.
 
 A stable release can group every prerelease since the last stable release into
 one GitHub Release body with `changelog.release.group: true`. See
-[Grouped release bodies](/guide/ci/releases#grouped-release-bodies).
+[Grouped release bodies](/guide/changelog/release#grouped-release-bodies).
 
 ## Version hooks
 

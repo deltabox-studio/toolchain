@@ -98,7 +98,15 @@ configured order/titles when regrouping existing entries.
 
 `groups` only groups **commit sections** inside one version. To treat several
 changelog versions as one release body, use
-[`release.group`](/guide/ci/releases#grouped-release-bodies) instead.
+[`release.group`](/guide/changelog/release#grouped-release-bodies) instead.
+
+## Release bodies
+
+`changelog.release` controls the body `dbx changelog --release-body <version>`
+prints for a release. It can group every version since the previous published
+release into one body, choose a different boundary, or include prereleases. See
+[Release bodies](/guide/changelog/release) for the options, CLI flags and
+individual-versioning behavior.
 
 ## Breaking-change detection
 
@@ -188,9 +196,11 @@ to point at a different `gh` executable.
   the no-commitlint fallback.
 - [Versioning](/guide/changelog/versioning) — which `package.json` versions a run
   bumps.
+- [Release bodies](/guide/changelog/release) — `--release-body`, grouping,
+  boundary rules and CLI overrides.
 - [CLI](/guide/changelog/cli) — running the changelog locally.
 - [Writing commit messages](/guide/changelog/writing-commit-messages) — avoiding
   shell-mangled messages.
 - [Troubleshooting](/guide/changelog/troubleshooting) — the upstream commitlint
   parser-preset error.
-- [Releases](/guide/ci/releases) — the aggregated release PR body.
+- [Releases](/guide/ci/releases) — the release PR workflow and GitHub Release.
