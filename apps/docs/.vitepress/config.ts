@@ -298,7 +298,6 @@ export default withFolderTree(
                 { text: 'Guide', link: '/guide/' },
                 { text: 'Config', link: '/config/' },
                 { text: 'Migrations', link: '/guide/migrations/' },
-                { text: 'Contribute', link: '/contribute/' },
                 {
                     text: `v${pkg.version}`,
                     items: [
