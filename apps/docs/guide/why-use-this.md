@@ -130,23 +130,23 @@ commands and types a developer uses. See [MCP](/guide/mcp).
 
 It is most useful when at least one of these is true:
 
-- you maintain a monorepo or several related packages;
-- you want one place for toolchain, CI and release configuration;
-- you use Vite or Vite+ and want a consistent project workflow;
-- you define schemas or config formats and want types, docs, JSON Schema and
-  typed CLI options generated from them;
-- you maintain many environment variables and want documented, typed config
-  with file/env/CLI precedence;
-- you want one consistent CLI and task surface for scripts, tasks and provider
-  toolchains;
-- you build a library or internal tool that needs its own typed config and CLI
-  without rebuilding loaders, validation and help;
-- you work across languages and want Python, .NET, Java, Rust and other tools
-  exposed through the same command surface;
-- you scaffold projects or packages regularly;
-- you work in VS Code or with AI agents and want them to understand the same
-  project model;
-- you are tired of generated files and release chores drifting.
+- you **maintain a monorepo** or several related packages;
+- you want **one place** for **toolchain, CI and release configuration**;
+- you use **Vite or Vite+** and want a **consistent project workflow**;
+- you define **schemas or config formats** and want **types, docs, JSON Schema
+  and typed CLI options** generated from them;
+- you maintain **many environment variables** and want **documented, typed
+  config** with **file/env/CLI precedence**;
+- you want **one consistent CLI and task surface** for scripts, tasks and
+  provider toolchains;
+- you build a **library or internal tool** that needs its own **typed config and
+  CLI** without rebuilding loaders, validation and help;
+- you work **across languages** and want Python, .NET, Java, Rust and other
+  tools exposed through the **same command surface**;
+- you **scaffold projects or packages** regularly;
+- you work in **VS Code or with AI agents** and want them to understand the
+  **same project model**;
+- you are tired of **generated files and release chores drifting**.
 
 ## When it might not fit
 
