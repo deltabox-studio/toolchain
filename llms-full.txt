@@ -239,6 +239,40 @@ toolchain instead of installing each tool separately.
 * **Editor and agent integration.** A VS Code extension and an MCP server for
   the same APIs.
 
+## Core features
+
+### VS Code extension
+
+The extension turns the same project model into a UI: browse managed files and
+the project graph, run sync and migrations, scaffold projects, open provider
+commands and inspect what the toolchain manages. It reads provider and project
+data from the CLI, so it stays aligned with the terminal workflow instead of
+being a separate configuration surface. See the
+[VS Code extension guide](/guide/vscode).
+
+### Config generator and engine
+
+The config engine is a schema-first way to describe configuration once and
+derive the surrounding artifacts from it. It generates TypeScript types, env
+docs, JSON Schema and typed CLI options/programs, and provides file/env/CLI
+loaders with predictable precedence. Teams that ship a config format can reuse
+that machinery instead of hand-writing each output. See the
+[Config generator guide](/guide/config-generator/).
+
+### Providers
+
+Providers describe the external toolchains a project can use, starting with
+Vite+. The CLI and the VS Code extension consume the same provider descriptors,
+so commands, availability and metadata do not drift between the terminal and
+the editor. See [Providers](/guide/providers).
+
+### MCP
+
+The MCP server exposes the public toolchain APIs to AI agents and editors. You
+can install it for Claude, Codex, VS Code, OpenCode, Pi or a custom directory,
+then let an agent inspect projects, configs and generated files through the same
+commands and types a developer uses. See [MCP](/guide/mcp).
+
 ## Who it is for
 
 It is most useful when at least one of these is true:
