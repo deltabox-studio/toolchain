@@ -1,8 +1,158 @@
 # Changelog
 
-## 3.0.0-beta.12 (November 2026)
+## 3.0.0-beta.13 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary><strong>BREAKING CHANGES</strong></summary>
+
+#### Cli
+- Replace commander with the config program ([#b515346](https://github.com/deltabox-studio/toolchain/commit/b515346) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Build the dbx CLI from createConfigProgram, wire schema-derived sync/watch flags through the root engine, and move context loading/framing into withCliContext. Remove commander from the dependency tree and update the root CLI tests for the engine runtime's invoke/help APIs.
+
+  </details>
+
+</details>
+
+<details>
+<summary>New features</summary>
+
+#### Config
+- Complete typed CLI program runtime and generator hooks ([#9dfb665](https://github.com/deltabox-studio/toolchain/commit/9dfb665) by [T0chi](https://github.com/T0chi))
+- Generate CLI programs from config schemas ([#29808e9](https://github.com/deltabox-studio/toolchain/commit/29808e9) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Add a config-engine program runtime with typed command chains, subcommands, global option inheritance, help formatting and output routing. Generate options and programs from schema metadata (cli/cliCommand), support array/variadic flags and custom parsers, and split the CLI types into their own modules. Annotate the shared schemas with the CLI-specific flags they map to.
+
+  </details>
+
+- Add source-specific config loaders ([#bf1fef0](https://github.com/deltabox-studio/toolchain/commit/bf1fef0) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Add file/env/CLI loader variants plus base-value merging so file values are overridden by env and argv without schema defaults replacing them. Support multi-source selections, neutral config.* discovery names, and envExpose metadata for CLI-only values.
+
+  </details>
+
+- Add scoped CLI generation and reorganize types ([#bfefaa4](https://github.com/deltabox-studio/toolchain/commit/bfefaa4) by [T0chi](https://github.com/T0chi))
+
+#### Shared
+- Add typed CLI command descriptors ([#afbb10b](https://github.com/deltabox-studio/toolchain/commit/afbb10b) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Replace the loose ToolchainCommand interfaces with generic CliCommand types that infer option values from the flags list, and add defineCliCommand for literal inference. Migrate the package command factories and tests, and rename the reset options type accordingly.
+
+  </details>
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Changelog
+- Build release bodies from markers and rename flags ([#825985d](https://github.com/deltabox-studio/toolchain/commit/825985d) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
+- Normalize default JSDoc annotations ([#04f47e8](https://github.com/deltabox-studio/toolchain/commit/04f47e8) by [T0chi](https://github.com/T0chi))
+
+#### Config
+- Narrow explicit program command scopes ([#e910d0f](https://github.com/deltabox-studio/toolchain/commit/e910d0f) by [T0chi](https://github.com/T0chi))
+
+#### Vscode
+- Sanitize registry paths for display ([#a1e8d56](https://github.com/deltabox-studio/toolchain/commit/a1e8d56) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Render registry paths relative to the workspace (and without control characters) in the tree, picker and confirmation prompts, and cover the shared helper plus registry tree with tests.
+
+  </details>
+
+#### Tsconfig
+- Split resolution and derive flags from schema ([#4d1d784](https://github.com/deltabox-studio/toolchain/commit/4d1d784) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Break the tsconfig resolver into focused modules and generate the tsconfig command's config-backed flags from the config engine. Runtime-only auto switches stay explicit, while aliases, refs, indentation, globs and gitignore now inherit config/env/CLI precedence from the schema.
+
+  </details>
+
+#### Mcp
+- Export public types explicitly ([#b78d810](https://github.com/deltabox-studio/toolchain/commit/b78d810) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+- Refresh llms bundle ([#d988259](https://github.com/deltabox-studio/toolchain/commit/d988259) by [T0chi](https://github.com/T0chi))
+- Prefer engine.cli.program.create and update v3 guides ([#325d2fd](https://github.com/deltabox-studio/toolchain/commit/325d2fd) by [T0chi](https://github.com/T0chi))
+- Cover template structures and config CLI programs ([#8d5e2c5](https://github.com/deltabox-studio/toolchain/commit/8d5e2c5) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Document folder-tree template structures, the config-engine program/command APIs, schema-driven CLI metadata, and the new source-specific loaders. Refresh generated CLI/config pages and the llms bundles.
+
+  </details>
+
+- Refresh generated llms bundles ([#b4f29e6](https://github.com/deltabox-studio/toolchain/commit/b4f29e6) by [T0chi](https://github.com/T0chi))
+- Document static config types in the overview ([#fd00295](https://github.com/deltabox-studio/toolchain/commit/fd00295) by [T0chi](https://github.com/T0chi))
+- Expand the v2 to v3 migration guide ([#854baaf](https://github.com/deltabox-studio/toolchain/commit/854baaf) by [T0chi](https://github.com/T0chi))
+- Revamp the config generator guides ([#f54c5f1](https://github.com/deltabox-studio/toolchain/commit/f54c5f1) by [T0chi](https://github.com/T0chi))
+- Add client and server config guide ([#5dcbedc](https://github.com/deltabox-studio/toolchain/commit/5dcbedc) by [T0chi](https://github.com/T0chi))
+
+#### Config
+- Regenerate schema and reference artifacts ([#2f0b6af](https://github.com/deltabox-studio/toolchain/commit/2f0b6af) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Styles</summary>
+
+- Format generated config artifacts and docs ([#2ff28be](https://github.com/deltabox-studio/toolchain/commit/2ff28be) by [T0chi](https://github.com/T0chi))
+- Replace unicode ellipses with three dots ([#2d7c130](https://github.com/deltabox-studio/toolchain/commit/2d7c130) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Build system</summary>
+
+- Split config generator scripts ([#2322fa6](https://github.com/deltabox-studio/toolchain/commit/2322fa6) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+### Package changes
+
+#### Added
+- `@deltabox/toolchain-docs`
+  - `vitepress-plugin-folder-tree` `1.2.1`
+- `@deltabox/toolchain-tsconfig`
+  - `@deltabox/toolchain-config` `workspace:*`
+
+#### Removed
+- `@deltabox/toolchain`
+  - `commander` `^14.0.0`
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.12 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -21,9 +171,6 @@
 - Streamline the README introduction ([#8076c13](https://github.com/deltabox-studio/toolchain/commit/8076c13) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.11 (November 2026)
 

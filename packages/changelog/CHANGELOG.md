@@ -1,8 +1,50 @@
 # Changelog
 
-## 3.0.0-beta.5 (November 2026)
+## 3.0.0-beta.6 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>New features</summary>
+
+#### Shared
+- Add typed CLI command descriptors ([#afbb10b](https://github.com/deltabox-studio/toolchain/commit/afbb10b) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Replace the loose ToolchainCommand interfaces with generic CliCommand types that infer option values from the flags list, and add defineCliCommand for literal inference. Migrate the package command factories and tests, and rename the reset options type accordingly.
+
+  </details>
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Changelog
+- Build release bodies from markers and rename flags ([#825985d](https://github.com/deltabox-studio/toolchain/commit/825985d) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
+- Normalize default JSDoc annotations ([#04f47e8](https://github.com/deltabox-studio/toolchain/commit/04f47e8) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Styles</summary>
+
+- Replace unicode ellipses with three dots ([#2d7c130](https://github.com/deltabox-studio/toolchain/commit/2d7c130) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.5 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -11,9 +53,6 @@
 - Roll prereleases over to their stable core ([#c27bbb5](https://github.com/deltabox-studio/toolchain/commit/c27bbb5) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.4 (November 2026)
 

@@ -1,8 +1,30 @@
 # Changelog
 
-## 3.0.0-beta.2 (November 2026)
+## 3.0.0-beta.3 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Refactors</summary>
+
+- Normalize default JSDoc annotations ([#04f47e8](https://github.com/deltabox-studio/toolchain/commit/04f47e8) by [T0chi](https://github.com/T0chi))
+
+#### Tsconfig
+- Split resolution and derive flags from schema ([#4d1d784](https://github.com/deltabox-studio/toolchain/commit/4d1d784) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Break the tsconfig resolver into focused modules and generate the tsconfig command's config-backed flags from the config engine. Runtime-only auto switches stay explicit, while aliases, refs, indentation, globs and gitignore now inherit config/env/CLI precedence from the schema.
+
+  </details>
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.2 (November 2026)
 
 <details>
 <summary>Chores</summary>
@@ -10,9 +32,6 @@
 - Make the workspace packages private ([#3b3c7d6](https://github.com/deltabox-studio/toolchain/commit/3b3c7d6) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.1 (November 2026)
 

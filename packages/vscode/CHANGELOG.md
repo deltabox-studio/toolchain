@@ -1,8 +1,43 @@
 # Changelog
 
-## 3.0.0-beta.5 (November 2026)
+## 3.0.0-beta.6 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Changelog
+- Build release bodies from markers and rename flags ([#825985d](https://github.com/deltabox-studio/toolchain/commit/825985d) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
+#### Vscode
+- Sanitize registry paths for display ([#a1e8d56](https://github.com/deltabox-studio/toolchain/commit/a1e8d56) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Render registry paths relative to the workspace (and without control characters) in the tree, picker and confirmation prompts, and cover the shared helper plus registry tree with tests.
+
+  </details>
+
+</details>
+
+<details>
+<summary>Styles</summary>
+
+- Replace unicode ellipses with three dots ([#2d7c130](https://github.com/deltabox-studio/toolchain/commit/2d7c130) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.5 (November 2026)
 
 <details>
 <summary>Chores</summary>
@@ -13,9 +48,6 @@
 - Add the pre-release VSIX script ([#385fa01](https://github.com/deltabox-studio/toolchain/commit/385fa01) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.4 (November 2026)
 
