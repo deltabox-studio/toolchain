@@ -1,4 +1,4 @@
-# Monorepo Guide
+# Monorepo guide
 
 ## Project graph
 

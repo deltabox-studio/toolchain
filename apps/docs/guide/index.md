@@ -2,7 +2,7 @@
   <img src="/logo/outline_colored.png" width="150" />
 </div>
 
-# Getting Started
+# Getting started
 
 `@deltabox/toolchain` is a superset of [Vite+](https://viteplus.dev). It keeps the
 Vite+ workflow and adds project synchronization, a config generator, tsconfig

@@ -1,4 +1,4 @@
-# Configuration
+# Configuration guide
 
 A project is configured in one of two ways:
 

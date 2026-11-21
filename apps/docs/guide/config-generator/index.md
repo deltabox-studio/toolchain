@@ -1,4 +1,4 @@
-# Config Generator
+# Config generator
 
 `@deltabox/toolchain/config` is a configuration engine.
 

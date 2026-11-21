@@ -36,62 +36,55 @@ const LLMS_DETAILS = [
     '- **Runtime.** Node ≥ 22.22.1 (or ≥ 24.11.0) and Yarn 4 (corepack); Vite+ (`vp`) resolves at the repo root.',
 ].join('\n');
 
-/** The hand-picked entries kept at the top of the generated guide sidebar. */
-const INTRODUCTION = {
-    text: 'Introduction',
+/** The opening pages in the hand-picked guide sidebar. */
+type SidebarItem = {
+    text?: string;
+    link?: string;
+    items?: SidebarItem[];
+    collapsed?: boolean;
+};
+
+const GETTING_STARTED = { text: 'Getting started', link: '/guide/' };
+const WHY_USE_THIS = { text: 'Why use this?', link: '/guide/why-use-this' };
+
+const CONFIG_REFERENCE = {
+    text: 'Config reference',
+    collapsed: true,
     items: [
-        { text: 'Getting Started', link: '/guide/' },
-        { text: 'Monorepo Guide', link: '/guide/monorepo' },
-        { text: 'VS Code Extension', link: '/guide/vscode' },
-        { text: 'Vite+', link: '/guide/vite' },
+        { text: 'Overview', link: '/config/' },
+        { text: 'CLI reference', link: '/config/cli' },
+        { text: 'Environment variables', link: '/config/env' },
+        { text: 'dbx.config', link: '/config/reference' },
+    ],
+};
+
+const CONFIG_GENERATOR = {
+    text: 'Config generator',
+    collapsed: true,
+    items: [
+        { text: 'Overview', link: '/guide/config-generator/' },
+        { text: 'Describe a scope', link: '/guide/config-generator/describe-a-scope' },
+        { text: 'Create the engine', link: '/guide/config-generator/create-the-engine' },
+        { text: 'Generate', link: '/guide/config-generator/generate' },
+        { text: 'CLI commands', link: '/guide/config-generator/cli-commands' },
+        { text: 'Load the config', link: '/guide/config-generator/load-the-config' },
+        { text: 'Generated outputs', link: '/guide/config-generator/generated-outputs' },
         {
-            text: 'Config reference',
-            collapsed: true,
-            items: [
-                { text: 'Overview', link: '/config/' },
-                { text: 'CLI reference', link: '/config/cli' },
-                { text: 'Environment variables', link: '/config/env' },
-                { text: 'dbx.config', link: '/config/reference' },
-            ],
+            text: 'Client and server',
+            link: '/guide/config-generator/client-and-server',
         },
-        {
-            text: 'Config generator',
-            collapsed: true,
-            items: [
-                { text: 'Overview', link: '/guide/config-generator/' },
-                { text: 'Describe a scope', link: '/guide/config-generator/describe-a-scope' },
-                { text: 'Create the engine', link: '/guide/config-generator/create-the-engine' },
-                { text: 'Generate', link: '/guide/config-generator/generate' },
-                { text: 'CLI commands', link: '/guide/config-generator/cli-commands' },
-                { text: 'Load the config', link: '/guide/config-generator/load-the-config' },
-                { text: 'Generated outputs', link: '/guide/config-generator/generated-outputs' },
-                {
-                    text: 'Client and server',
-                    link: '/guide/config-generator/client-and-server',
-                },
-                { text: 'Real-world shape', link: '/guide/config-generator/real-world-shape' },
-                { text: 'API reference', link: '/guide/config-generator/api' },
-            ],
-        },
-        {
-            text: 'Migrations',
-            collapsed: true,
-            items: [
-                { text: 'Overview', link: '/guide/migrations/' },
-                { text: 'Migrating from v1 to v2', link: '/guide/migrations/v1-v2' },
-                { text: 'Migrating from v2 to v3', link: '/guide/migrations/v2-v3' },
-            ],
-        },
-        {
-            text: 'Contribute',
-            collapsed: true,
-            items: [
-                { text: 'Overview', link: '/contribute/' },
-                { text: 'Development', link: '/contribute/development' },
-                { text: 'Documentation', link: '/contribute/documentation' },
-            ],
-        },
-        { text: 'LLMs', link: '/llms' },
+        { text: 'Real-world shape', link: '/guide/config-generator/real-world-shape' },
+        { text: 'API reference', link: '/guide/config-generator/api' },
+    ],
+};
+
+const MIGRATIONS = {
+    text: 'Migrations',
+    collapsed: true,
+    items: [
+        { text: 'Overview', link: '/guide/migrations/' },
+        { text: 'Migrating from v1 to v2', link: '/guide/migrations/v1-v2' },
+        { text: 'Migrating from v2 to v3', link: '/guide/migrations/v2-v3' },
     ],
 };
 
@@ -101,15 +94,8 @@ const HOME = {
     items: [{ text: 'Guide', link: '/guide/' }],
 };
 
-/** Generated sidebar links that the hand-picked Introduction already covers. */
-const INTRODUCTION_LINKS = new Set([
-    '/guide/index.html',
-    '/guide/monorepo.html',
-    '/guide/vscode.html',
-    '/guide/vite.html',
-    '/llms',
-    '/llms.html',
-]);
+/** Generated sidebar links the hand-picked Introduction already covers. */
+const INTRODUCTION_LINKS = new Set(['/guide/index.html', '/guide/why-use-this.html']);
 
 /**
  * VitePress 1.6 deep-merges a plugin's `config` hook result into the existing
@@ -174,7 +160,7 @@ export default withFolderTree(
                             .sort((a, b) => a.localeCompare(b));
                         return [...index, ...rest];
                     },
-                    // Drop the entries the Introduction already covers and strip
+                    // Drop the entries the hand-picked sidebar covers and strip
                     // markdown backticks (eg. `defineConfig`) from generated titles.
                     sideBarItemsResolved(items) {
                         return items
@@ -182,8 +168,7 @@ export default withFolderTree(
                                 item =>
                                     !INTRODUCTION_LINKS.has(item.link ?? '') &&
                                     item.text !== 'Migrations' &&
-                                    // The Config generator section is hand-picked in
-                                    // the Introduction, in the overview's order.
+                                    // The Config generator section is hand-picked below.
                                     !/^config generator$/i.test(item.text ?? '')
                             )
                             .map(item => {
@@ -199,12 +184,95 @@ export default withFolderTree(
                     },
                     sideBarResolved(data) {
                         const guide = Array.isArray(data['/guide/']) ? data['/guide/'] : [];
-                        const guideSidebar = [INTRODUCTION, ...guide];
-                        data['/guide/'] = guideSidebar;
+                        const generated: SidebarItem[] = Array.isArray(guide[0]?.items)
+                            ? guide[0].items
+                            : [];
+                        // Partition the generated pages/groups into context sections.
+                        // Taking an item removes it from the map, so a page can only
+                        // appear once and a new page fails the build until it is placed.
+                        const byText = new Map<string, SidebarItem>();
+                        for (const item of generated) {
+                            if (item.text && !byText.has(item.text)) byText.set(item.text, item);
+                        }
+                        const take = (...texts: string[]): SidebarItem[] =>
+                            texts.flatMap(text => {
+                                const item = byText.get(text);
+                                if (!item) return [];
+                                byText.delete(text);
+                                return [item];
+                            });
+                        const sections = [
+                            {
+                                text: 'Introduction',
+                                items: [GETTING_STARTED, WHY_USE_THIS],
+                            },
+                            {
+                                text: 'Configuration',
+                                items: [
+                                    CONFIG_REFERENCE,
+                                    CONFIG_GENERATOR,
+                                    ...take('Configuration guide'),
+                                ],
+                            },
+                            {
+                                text: 'Project & templates',
+                                items: take(
+                                    'Monorepo guide',
+                                    'Project',
+                                    'TypeScript',
+                                    'tsconfig',
+                                    'Package catalogs',
+                                    'Templates',
+                                    'Template and registry structures'
+                                ),
+                            },
+                            {
+                                text: 'Toolchain',
+                                items: take(
+                                    'Vite+',
+                                    'Vite plugin',
+                                    'VS Code extension',
+                                    'Providers',
+                                    'Formatting & linting',
+                                    'Package scripts',
+                                    'CLI',
+                                    'Docker',
+                                    'MCP (Model Context Protocol)',
+                                    'Logger',
+                                    'Watch'
+                                ),
+                            },
+                            {
+                                text: 'Automation & API',
+                                items: [
+                                    ...take('Changelog', 'CI'),
+                                    MIGRATIONS,
+                                    ...take('Programmatic API'),
+                                ],
+                            },
+                            {
+                                text: 'Contribute',
+                                items: [
+                                    { text: 'Overview', link: '/contribute/' },
+                                    { text: 'Development', link: '/contribute/development' },
+                                    { text: 'Documentation', link: '/contribute/documentation' },
+                                ],
+                            },
+                            {
+                                text: 'LLMs',
+                                items: [{ text: 'Overview', link: '/llms' }],
+                            },
+                        ];
+                        if (byText.size > 0) {
+                            throw new Error(
+                                `Unassigned docs sidebar items: ${[...byText.keys()].join(', ')}`
+                            );
+                        }
+                        data['/guide/'] = sections;
                         // The LLMs page reuses the guide navigation as-is; the
                         // config reference adds a Home -> Guide section first.
-                        data['/llms'] = guideSidebar;
-                        data['/llms.html'] = guideSidebar;
+                        data['/llms'] = sections;
+                        data['/llms.html'] = sections;
                         const configItems = data['/config/'] ?? data['/config'];
                         const configSidebar = [
                             HOME,

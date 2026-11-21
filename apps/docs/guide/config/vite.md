@@ -1,4 +1,4 @@
-# Vite+
+# Vite+ config
 
 The whole Vite+ config lives in `toolchain.vite`. Every key is passed through
 verbatim to Vite+, so `dbx.config.*` stays the only hand-authored root config:

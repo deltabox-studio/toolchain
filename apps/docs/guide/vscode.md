@@ -1,4 +1,4 @@
-# VS Code Extension
+# VS Code extension
 
 The `deltabox toolchain` extension provides a sidebar for managing projects.
 
