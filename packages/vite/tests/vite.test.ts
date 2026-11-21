@@ -16,6 +16,7 @@ import {
     resolveShimImport,
     resolveVite,
     resolveVp,
+    resolveVpCommand,
     VP_COMMANDS,
     viteCommandName,
     viteConfigObject,
@@ -40,6 +41,11 @@ afterEach(() => {
 describe('vp command catalog', () => {
     it('namespaces command names', () => {
         expect(viteCommandName('dev')).toBe('vite:dev');
+    });
+
+    it('maps the vp `format` alias to `fmt`', () => {
+        expect(resolveVpCommand('format')).toBe('fmt');
+        expect(resolveVpCommand('fmt')).toBe('fmt');
     });
 
     it('covers the documented vp commands', () => {
@@ -184,6 +190,41 @@ describe('vite.config.ts shim', () => {
         const importLine = shim.split('\n').find(line => line.includes("from 'vite-plus'")) ?? '';
         expect((importLine.match(/defineConfig/g) ?? []).length).toBe(1);
         expect((importLine.match(/ViteUserConfig/g) ?? []).length).toBe(1);
+    });
+
+    it('keeps other imports from the resolveVite module', () => {
+        const existing = [
+            "import { dbx, resolveVite } from 'vite-plugin-dbx';",
+            '',
+            'export default dbx();',
+            '',
+        ].join('\n');
+        const shim = renderViteConfig('vite-plus', existing);
+        expect(shim).toContain("import { dbx } from 'vite-plugin-dbx';");
+        expect(shim).toContain("import { resolveVite } from 'vite-plugin-dbx';");
+        expect(shim).not.toContain('dbx, resolveVite');
+        // Regenerating from the shim is stable (idempotent).
+        expect(renderViteConfig('vite-plus', shim)).toBe(shim);
+    });
+
+    it('drops defineConfig imported from the other Vite package', () => {
+        const existing = [
+            "import { defineConfig, type UserConfig } from 'vite';",
+            "import react from '@vitejs/plugin-react';",
+            '',
+            'export default defineConfig({ plugins: [react()] });',
+            '',
+        ].join('\n');
+        const shim = renderViteConfig('vite-plus', existing);
+        expect(shim).not.toContain("from 'vite';");
+        expect(shim).toContain("import react from '@vitejs/plugin-react';");
+        expect(shim).toContain("import { defineConfig, type ViteUserConfig } from 'vite-plus';");
+
+        const staticShim = renderStaticViteConfig('vite-plus', { test: {} }, existing);
+        expect(staticShim).not.toContain("from 'vite';");
+        expect(staticShim).toContain(
+            "import { defineConfig, type ViteUserConfig } from 'vite-plus';"
+        );
     });
 
     it('strips toolchain-only keys from the resolved object', () => {
@@ -340,6 +381,24 @@ describe('vite.config.ts shim', () => {
         expect(files?.some(file => file.path === 'vite.config.ts')).toBe(false);
         const fmt = files?.find(file => file.path === OXC_FMT_CONFIG_FILE);
         expect(JSON.parse(fmt?.content ?? '{}').semi).toBe(false);
+    });
+
+    it('generates Oxc files for the fmt/lint shorthand', async () => {
+        const config = { fmt: true, lint: true };
+        const ctx = {
+            cwd: makeTmp(),
+            projectType: 'project' as const,
+            config,
+            ownConfig: config,
+            tokens: {},
+            log: () => {},
+            warn: () => {},
+        };
+        const files = await viteSyncTask().run(ctx);
+        const fmt = files?.find(file => file.path === OXC_FMT_CONFIG_FILE);
+        const lint = files?.find(file => file.path === OXC_LINT_CONFIG_FILE);
+        expect(JSON.parse(fmt?.content ?? '{}').semi).toBe(DEFAULT_FMT_RULES.semi);
+        expect(JSON.parse(lint?.content ?? '{}').rules).toEqual(DEFAULT_LINT_RULES.rules);
     });
 
     it('lets vite.fmt override fmt.oxc when generating the Oxc config', async () => {
@@ -612,6 +671,18 @@ describe('resolveVite', () => {
         expect(config.lint.rules.eqeqeq).toBe('error');
     });
 
+    it('includes the fmt/lint shorthand as the shared defaults', async () => {
+        const config = (await resolveVite({
+            toolchain: { fmt: true, lint: true },
+        })) as {
+            fmt: typeof DEFAULT_FMT_RULES;
+            lint: typeof DEFAULT_LINT_RULES;
+        };
+        expect(config.fmt.semi).toBe(DEFAULT_FMT_RULES.semi);
+        expect(config.fmt.printWidth).toBe(DEFAULT_FMT_RULES.printWidth);
+        expect(config.lint.rules).toEqual(DEFAULT_LINT_RULES.rules);
+    });
+
     it('lets `vite.fmt` override the top-level fmt.oxc options', async () => {
         const config = (await resolveVite({
             toolchain: { fmt: { oxc: { tabWidth: 2 } }, vite: { fmt: { semi: false } } },
@@ -643,5 +714,17 @@ describe('vp resolution in a workspace', () => {
         const child = path.join(root, 'packages', 'app');
         fs.mkdirSync(child, { recursive: true });
         expect(resolveVp(child).source).toBe('local');
+    });
+
+    it('does not escape the repository boundary for a local shim', () => {
+        const outer = makeTmp();
+        const bin = path.join(outer, 'node_modules', '.bin');
+        fs.mkdirSync(bin, { recursive: true });
+        for (const name of ['vp', 'vp.cmd', 'vp.exe']) {
+            fs.writeFileSync(path.join(bin, name), '');
+        }
+        const repo = path.join(outer, 'repo');
+        fs.mkdirSync(path.join(repo, '.git'), { recursive: true });
+        expect(resolveVp(repo).source).not.toBe('local');
     });
 });

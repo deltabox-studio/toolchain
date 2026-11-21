@@ -35,6 +35,18 @@ export function runGuard(args: string[], cwd: string): string | undefined {
     return `${path.resolve(cwd)}|${args.slice(1).join(' ')}`;
 }
 
+/**
+ * Commands that bootstrap a project and therefore must work before `vite-plus`
+ * is installed: `vp create` and `vp migrate` run inside projects that do not
+ * declare (or have not installed) Vite+ yet.
+ */
+const NPX_BOOTSTRAP_COMMANDS = new Set(['create', 'migrate']);
+
+/** Whether a `vp` passthrough may fall back to `npx` for this subcommand. */
+export function vpAllowsNpx(subcommand: string | undefined): boolean {
+    return subcommand !== undefined && NPX_BOOTSTRAP_COMMANDS.has(subcommand);
+}
+
 /** Build a passthrough command that forwards `leading + raw operands` to `vp`. */
 function passthroughCommand(name: string, description: string, leading: string[]) {
     return defineCliCommand({
@@ -59,6 +71,7 @@ function passthroughCommand(name: string, description: string, leading: string[]
             const result = await runVp(args, {
                 cwd,
                 color,
+                allowNpx: vpAllowsNpx(leading[0]),
                 ...(guard ? { env: { [RUN_GUARD_ENV]: guard } } : {}),
             });
             if (result.code !== 0) {

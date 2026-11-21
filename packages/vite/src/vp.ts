@@ -42,6 +42,8 @@ function localCandidates(cwd: string): string[] {
         candidates.push(
             ...(IS_WINDOWS ? [`${base}.cmd`, `${base}.exe`, `${base}.ps1`, base] : [base])
         );
+        // A hoisted workspace dependency lives at the repo root; never walk past it.
+        if (fs.existsSync(path.join(dir, '.git'))) break;
         const parent = path.dirname(dir);
         if (parent === dir) break;
         dir = parent;
