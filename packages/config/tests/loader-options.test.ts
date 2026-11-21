@@ -162,11 +162,11 @@ describe('scaffold formats', () => {
         const file = createConfigFile({
             cwd,
             name: 'dbx.config.yaml',
-            content: { project: { name: 'acme' }, tags: ['a', 'b'] },
+            content: { project: { name: 'myapp' }, tags: ['a', 'b'] },
         });
         const source = fs.readFileSync(file, 'utf-8');
         expect(source).toContain('project:');
-        expect(source).toContain('name: "acme"');
+        expect(source).toContain('name: "myapp"');
         expect(source).toContain('- "a"');
         expect(source).toContain('- "b"');
     });

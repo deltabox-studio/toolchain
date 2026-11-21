@@ -170,7 +170,7 @@ To reuse the workspace group in your own `sortImports`, import the resolver:
 import { resolveFmtCustomGroups } from '@deltabox/toolchain';
 
 const customGroups = await resolveFmtCustomGroups();
-// [{ groupName: 'workspace', elementNamePattern: ['@acme/**', 'app', 'app/**', ...] }]
+// [{ groupName: 'workspace', elementNamePattern: ['@org/**', 'app', 'app/**', ...] }]
 ```
 
 `resolveFmtCustomGroups()` reads the project graph, so it is safe to call from

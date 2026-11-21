@@ -13,7 +13,7 @@ for (const m of detectMigrations(process.cwd())) await m.run({ cwd: process.cwd(
 // Templates
 import { loadTemplates, scaffoldTemplate } from '@deltabox/toolchain/template';
 const [template] = await loadTemplates({ cwd: process.cwd() });
-if (template) await scaffoldTemplate(template, { cwd: './out', tokens: { name: 'acme' } });
+if (template) await scaffoldTemplate(template, { cwd: './out', tokens: { name: 'myapp' } });
 
 // Providers (what the editor reads)
 import { toolchainProviders } from '@deltabox/toolchain/providers';

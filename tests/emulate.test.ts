@@ -338,7 +338,7 @@ describe('emulate: CLI + templates', () => {
                 '--name',
                 'demo',
                 '--scope',
-                '@acme',
+                '@org',
                 '--out',
                 single,
             ]);
@@ -430,7 +430,7 @@ describe('emulate: CLI + templates', () => {
                 '--name',
                 'app',
                 '--scope',
-                '@acme',
+                '@org',
                 '--var',
                 'packageManager=yarn',
                 '--out',
@@ -924,7 +924,7 @@ describe('emulate: CLI + templates', () => {
             const ws = scratch('nested');
             const root = path.join(ws, 'root');
             writeJson(path.join(root, 'package.json'), {
-                name: '@acme/root',
+                name: '@org/root',
                 version: '0.1.0',
                 private: true,
                 type: 'module',
@@ -935,14 +935,14 @@ describe('emulate: CLI + templates', () => {
                     project: {
                         type: 'monorepo-root',
                         name: 'root',
-                        scope: '@acme',
-                        author: 'Acme',
+                        scope: '@org',
+                        author: 'Myapp',
                     },
                 },
             });
             const child = path.join(root, 'packages/a');
             writeJson(path.join(child, 'package.json'), {
-                name: '@acme/a',
+                name: '@org/a',
                 version: '0.1.0',
                 type: 'module',
             });
@@ -956,8 +956,8 @@ describe('emulate: CLI + templates', () => {
             const childPkg = readJson<{ name: string; author?: string }>(
                 path.join(child, 'package.json')
             );
-            expect(childPkg.name).toBe('@acme/a');
-            expect(childPkg.author).toBe('Acme');
+            expect(childPkg.name).toBe('@org/a');
+            expect(childPkg.author).toBe('Myapp');
             const check = await dbx(root, ['sync', '--recursive', '--check']);
             expect(check.code, check.stderr).toBe(0);
         },
@@ -970,7 +970,7 @@ describe('emulate: CLI + templates', () => {
             const ws = scratch('configless-sync');
             const root = path.join(ws, 'root');
             writeJson(path.join(root, 'package.json'), {
-                name: '@acme/root',
+                name: '@org/root',
                 version: '0.1.0',
                 private: true,
                 type: 'module',
@@ -981,14 +981,14 @@ describe('emulate: CLI + templates', () => {
                     project: {
                         type: 'monorepo-root',
                         name: 'root',
-                        scope: '@acme',
-                        author: 'Acme',
+                        scope: '@org',
+                        author: 'Myapp',
                     },
                 },
             });
             const child = path.join(root, 'packages/a');
             writeJson(path.join(child, 'package.json'), {
-                name: '@acme/a',
+                name: '@org/a',
                 version: '0.1.0',
                 type: 'module',
             });
@@ -998,7 +998,7 @@ describe('emulate: CLI + templates', () => {
             const before = readJson<{ name: string; author?: string }>(
                 path.join(child, 'package.json')
             );
-            expect(before.name).toBe('@acme/a');
+            expect(before.name).toBe('@org/a');
             expect(before.author).toBeUndefined();
 
             // Opting in manages it with the inherited root config.
@@ -1007,8 +1007,8 @@ describe('emulate: CLI + templates', () => {
             const childPkg = readJson<{ name: string; author?: string }>(
                 path.join(child, 'package.json')
             );
-            expect(childPkg.name).toBe('@acme/a');
-            expect(childPkg.author).toBe('Acme');
+            expect(childPkg.name).toBe('@org/a');
+            expect(childPkg.author).toBe('Myapp');
             const check = await dbx(child, ['sync', '--check', '--configless']);
             expect(check.code, check.stderr).toBe(0);
         },
@@ -1153,7 +1153,7 @@ describe('emulate: CLI + templates', () => {
                 '--name',
                 'root',
                 '--scope',
-                '@acme',
+                '@org',
                 '--out',
                 root,
             ]);
@@ -1162,7 +1162,7 @@ describe('emulate: CLI + templates', () => {
             fs.rmSync(path.join(root, 'vite.config.ts'), { force: true });
             writeJson(path.join(root, 'dbx.config.json'), {
                 toolchain: {
-                    project: { type: 'monorepo-root', name: 'root', scope: '@acme' },
+                    project: { type: 'monorepo-root', name: 'root', scope: '@org' },
                     ci: { changelog: true },
                     biome: true,
                 },

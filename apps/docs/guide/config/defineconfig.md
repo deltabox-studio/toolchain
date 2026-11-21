@@ -12,7 +12,7 @@ export default defineConfig(async () => {
 
     return {
         toolchain: {
-            project: { name: 'acme', nodeVersion: version },
+            project: { name: 'myapp', nodeVersion: version },
         },
     };
 });

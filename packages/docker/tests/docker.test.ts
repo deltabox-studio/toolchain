@@ -29,7 +29,7 @@ afterEach(() => {
 describe('docker plans', () => {
     it('detects a Node server and renders a multi-stage Vite+ build', () => {
         const cwd = project({
-            name: '@acme/api',
+            name: '@org/api',
             engines: { node: '>=22' },
             scripts: { build: 'vp pack', start: 'node dist/index.js' },
             packageManager: 'pnpm@10.11.1',
@@ -278,7 +278,7 @@ describe('docker plans', () => {
         const cwd = project({ name: 'svc', scripts: { start: 'node dist/index.js' } });
         const files = dockerFiles({
             cwd,
-            image: 'registry.example.com/acme/svc',
+            image: 'registry.example.com/myapp/svc',
             tag: 'v1',
             port: 8081,
             entry: 'dist/server.js',
@@ -293,7 +293,7 @@ describe('docker plans', () => {
             'docker-compose.yaml',
         ]);
         const compose = files.find(file => file.path === 'docker-compose.yaml')!;
-        expect(compose.content).toContain('image: registry.example.com/acme/svc:v1');
+        expect(compose.content).toContain('image: registry.example.com/myapp/svc:v1');
         expect(compose.content).toContain('- "8081:8081"');
         expect(files[0]!.content).toContain('CMD ["node", "dist/server.js"]');
         expect(files[0]!.content).not.toContain('HEALTHCHECK');
@@ -301,8 +301,8 @@ describe('docker plans', () => {
     });
 
     it('sanitizes image names', () => {
-        expect(dockerImageName('@acme/my app')).toBe('my-app');
-        expect(dockerImageName('@acme/core')).toBe('core');
+        expect(dockerImageName('@org/my app')).toBe('my-app');
+        expect(dockerImageName('@org/core')).toBe('core');
         expect(dockerImageName('!!!')).toBe('app');
     });
 });

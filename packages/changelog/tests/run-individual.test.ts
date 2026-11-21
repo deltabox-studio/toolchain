@@ -32,17 +32,17 @@ describe('individual changelog versioning end to end', () => {
         process.env.DBX_NO_GH = '1';
         root = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-individual-'));
         write(path.join(root, 'package.json'), {
-            name: 'acme',
+            name: 'myapp',
             version: '1.0.0',
             private: true,
             workspaces: ['packages/*'],
         });
         write(path.join(root, 'packages', 'a', 'package.json'), {
-            name: '@acme/a',
+            name: '@org/a',
             version: '0.1.0',
         });
         write(path.join(root, 'packages', 'b', 'package.json'), {
-            name: '@acme/b',
+            name: '@org/b',
             version: '0.1.0',
         });
         write(path.join(root, 'dbx.config.json'), {

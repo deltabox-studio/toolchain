@@ -42,7 +42,7 @@ function configExtensionOf(file: string): ConfigExtension {
     return isConfigExtension(extension) ? extension : DEFAULT_CONFIG_EXTENSION;
 }
 
-/** Derive `{ name, scope }` from a package name (`@acme/app` -> `app`/`@acme`). */
+/** Derive `{ name, scope }` from a package name (`@org/app` -> `app`/`@org`). */
 function splitName(pkgName: string | undefined, dir: string): { name: string; scope?: string } {
     if (!pkgName) return { name: path.basename(dir) };
     const match = pkgName.match(/^(@[^/]+)\/(.+)$/);

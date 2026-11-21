@@ -5,7 +5,7 @@ import type { MonorepoWorkspace, TsconfigExtendsOptions } from '@deltabox/toolch
 export interface ProjectContext {
     /** The project/package name (unscoped). */
     name: string;
-    /** The npm scope, eg. `@acme`. */
+    /** The npm scope, eg. `@org`. */
     scope?: string;
     /** Package description. */
     description?: string;

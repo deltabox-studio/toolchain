@@ -177,7 +177,7 @@ Enable the `tsconfig` section and the toolchain generates each workspace's
 ```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
-        project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
+        project: { type: 'monorepo-root', name: 'myapp', scope: '@org' },
         tsconfig: { refs: true, aliases: true, indent: 4 },
     },
 });
@@ -189,8 +189,8 @@ splits the config across several files.
 ## Scaffolding a monorepo
 
 ```sh
-dbx project:init:monorepo --name acme --scope @acme --out .
-dbx project:init:workspace --name utils --scope @acme --root . --dir packages/utils
+dbx project:init:monorepo --name myapp --scope @org --out .
+dbx project:init:workspace --name utils --scope @org --root . --dir packages/utils
 ```
 
 ## Tasks
@@ -623,7 +623,7 @@ export default defineConfig({
     plugins: [
         dbx({
             toolchain: {
-                project: { name: 'my-app', scope: '@acme' },
+                project: { name: 'my-app', scope: '@org' },
                 fmt: { oxc: true },
                 lint: { oxc: true },
                 ci: { sync: true },
@@ -1190,7 +1190,7 @@ List the registered migrations and whether each is detected.
 Scaffold a single-package TypeScript project.
 
 * `-n, --name ‹name›` — Project name.
-* `-s, --scope ‹scope›` — npm scope, eg. @acme.
+* `-s, --scope ‹scope›` — npm scope, eg. @org.
 * `-o, --out ‹dir›` — Output directory (default: cwd).
 * `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
 * `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
@@ -1204,7 +1204,7 @@ Scaffold a single-package TypeScript project.
 Scaffold a monorepo root (add --example for one example workspace).
 
 * `-n, --name ‹name›` — Project name.
-* `-s, --scope ‹scope›` — npm scope, eg. @acme.
+* `-s, --scope ‹scope›` — npm scope, eg. @org.
 * `-o, --out ‹dir›` — Output directory (default: cwd).
 * `--example` — Also scaffold one example workspace package.
 * `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
@@ -1218,7 +1218,7 @@ Scaffold a monorepo root (add --example for one example workspace).
 Scaffold a monorepo workspace package into an existing monorepo root.
 
 * `-n, --name ‹name›` — Workspace package name (unscoped).
-* `-s, --scope ‹scope›` — npm scope, eg. @acme.
+* `-s, --scope ‹scope›` — npm scope, eg. @org.
 * `-r, --root ‹dir›` — Monorepo root (default: cwd).
 * `-d, --dir ‹dir›` — Workspace dir relative to the root (default: packages/\<name>).
 * `--package-manager ‹pm›` — Package manager: yarn (default) | pnpm | npm | bun.
@@ -1337,7 +1337,7 @@ Scaffold a project from a template (builtin, local or Vite+).
 * `-t, --template ‹id›` — Template id (see template:list).
 * `--kind ‹kind›` — project | workspace | application | folder | tooling | pipeline.
 * `-n, --name ‹name›` — Project / package name.
-* `-s, --scope ‹scope›` — npm scope, eg. @acme.
+* `-s, --scope ‹scope›` — npm scope, eg. @org.
 * `-o, --out ‹dir›` — Output directory (default: cwd).
 * `--cwd ‹dir›` — Project root (default: cwd).
 * `--var ‹pair...›` — Template variables as key=value (repeatable).
@@ -1592,7 +1592,7 @@ environment variable with `.meta({ envName: "..." })` (see the
 | ----------------------------------- | --------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `DBX_PROJECT_REGENERATE`            | toolchain | —       | Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.                                        |
 | `DBX_PROJECT_NAME`                  | toolchain | —       | The unscoped project name (written as `&lt;scope&gt;/&lt;name&gt;`).                                                                                                                       |
-| `DBX_PROJECT_SCOPE`                 | toolchain | —       | The npm scope, eg. `@acme`.                                                                                                                                                                |
+| `DBX_PROJECT_SCOPE`                 | toolchain | —       | The npm scope, eg. `@org`.                                                                                                                                                                 |
 | `DBX_PROJECT_AUTHOR`                | toolchain | —       | Package author (`package.json` `author`).                                                                                                                                                  |
 | `DBX_PROJECT_LICENSE`               | toolchain | —       | SPDX license id (`package.json` `license`).                                                                                                                                                |
 | `DBX_PROJECT_HOMEPAGE`              | toolchain | —       | Project homepage (`package.json` `homepage`).                                                                                                                                              |
@@ -1662,7 +1662,7 @@ The unscoped project name (written as `<scope>/<name>`).
 
 * **Type**: `string`
 
-The npm scope, eg. `@acme`.
+The npm scope, eg. `@org`.
 
 ### `author`
 
@@ -3803,7 +3803,7 @@ Skip entries matching these globs (same targets as `include`).
 
 * **Type**: `ToolchainTsconfigAliasRewrite`
 
-Rewrite the alias keys auto-wiring generates (custom keys are preserved). Patterns are URL-rewrite style: a string is a regular-expression source and replacements support `$1`, `$2`, ... capture groups. Examples: `{ "^@acme/(.+)$": "@acme/pkg/$1" }` (string patterns), `[{ pattern: /^@acme\/(.+)$/, replacement: "@acme/pkg/$1" }]` (RegExp patterns), `[{ pattern: ["^@acme/a$", "^@acme/b$"], replacement: "@acme/x" }]` (an array of keys), and an array of such rules (applied in order; the first matching rule wins). `RegExp` patterns are only available from TS/JS configs; JSON configs use string patterns.
+Rewrite the alias keys auto-wiring generates (custom keys are preserved). Patterns are URL-rewrite style: a string is a regular-expression source and replacements support `$1`, `$2`, ... capture groups. Examples: `{ "^@org/(.+)$": "@org/pkg/$1" }` (string patterns), `[{ pattern: /^@org\/(.+)$/, replacement: "@org/pkg/$1" }]` (RegExp patterns), `[{ pattern: ["^@org/a$", "^@org/b$"], replacement: "@org/x" }]` (an array of keys), and an array of such rules (applied in order; the first matching rule wins). `RegExp` patterns are only available from TS/JS configs; JSON configs use string patterns.
 
 #### `modes`
 
@@ -4424,7 +4424,7 @@ import { defineConfig } from '@deltabox/toolchain';
 
 export default defineConfig({
     toolchain: {
-        project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
+        project: { type: 'monorepo-root', name: 'myapp', scope: '@org' },
         ci: { ci: true, release: true, changelog: { branches: { main: 'main' } } },
         tsconfig: { refs: true },
         templates: { sources: [{ type: 'local', locate: './templates', kind: 'application' }] },
@@ -5101,8 +5101,8 @@ import { generateConfigJsonSchema, generateJsonSchemaFile } from '@deltabox/tool
 
 const doc = await generateConfigJsonSchema(schema, {
     baseGroup: 'base',
-    id: 'https://acme.dev/schemas/config.json',
-    title: 'Acme configuration',
+    id: 'https://myapp.dev/schemas/config.json',
+    title: 'Myapp configuration',
     description: 'Every env-backed setting.',
 });
 const path = await generateJsonSchemaFile(schema, { output: 'config.schema.json' });
@@ -5182,7 +5182,7 @@ const program = engine.cli.program.create(
             }),
     ],
     {
-        name: 'acme',
+        name: 'myapp',
         globalOptions: [{ flags: '--json', description: 'Print JSON.' }],
         disableColors: ({ color }) => color === false,
     }
@@ -5354,7 +5354,7 @@ const commands = configCommands({
     engine,
     defaults: { typesDir: 'packages/shared/src/types', docsDir: 'docs/reference' },
 });
-const program = engine.cli.program.create(() => commands, { name: 'acme' });
+const program = engine.cli.program.create(() => commands, { name: 'myapp' });
 await program.invokeAsync();
 ```
 
@@ -5916,7 +5916,7 @@ export * from './schema/index.js';
 Read files and `process.env` in the server process:
 
 ```ts
-import { serverConfig } from '@acme/shared/config/server';
+import { serverConfig } from '@org/shared/config/server';
 
 // apps/api/src/config.ts
 import { loadConfigAsync, parseEnvConfig } from '@deltabox/toolchain/config';
@@ -6004,7 +6004,7 @@ The browser has `import.meta.env`, not `process.env`, and it must not import
 the server engine or `node:fs`:
 
 ```ts
-import { clientConfig } from '@acme/shared/config/client';
+import { clientConfig } from '@org/shared/config/client';
 
 // apps/web/src/config.ts
 import { parseEnvConfig } from '@deltabox/toolchain/config';
@@ -6041,10 +6041,10 @@ Import the context entry explicitly:
 ```ts
 // Bad:
 // the barrel can load both engines into the same module graph
-import { clientConfig } from '@acme/shared/config';
+import { clientConfig } from '@org/shared/config';
 // Good:
 // the client graph only sees the client engine
-import { clientConfig } from '@acme/shared/config/client';
+import { clientConfig } from '@org/shared/config/client';
 ```
 
 Expose separate package subpaths instead of one mixed entry:
@@ -6077,10 +6077,10 @@ modules declarative:
 
 ```tree
 - name: apps/web/src/config.ts
-  description: imports @acme/shared/config/client only
+  description: imports @org/shared/config/client only
   status: added
 - name: apps/api/src/config.ts
-  description: imports @acme/shared/config/server only
+  description: imports @org/shared/config/server only
   status: added
 ```
 
@@ -6190,7 +6190,7 @@ engines explicitly. Do not build a single engine whose schema imports both
 At runtime, each context loads its own engine:
 
 ```ts
-import { serverConfig } from '@acme/shared/config/server';
+import { serverConfig } from '@org/shared/config/server';
 
 // apps/api/src/config.ts (server)
 import { loadConfigAsync } from '@deltabox/toolchain/config';
@@ -6199,7 +6199,7 @@ const loaded = await loadConfigAsync({ parser: serverConfig.schema });
 ```
 
 ```ts
-import { clientConfig } from '@acme/shared/config/client';
+import { clientConfig } from '@org/shared/config/client';
 
 // apps/web/src/config.ts (client)
 import { parseEnvConfig } from '@deltabox/toolchain/config';
@@ -6217,8 +6217,8 @@ export const webConfig = parseEnvConfig(
 
 ## Keep the boundaries clean
 
-* Import `@acme/shared/config/client` from browser code and
-  `@acme/shared/config/server` from server code.
+* Import `@org/shared/config/client` from browser code and
+  `@org/shared/config/server` from server code.
 * Never create a `packages/shared/src/config/index.ts` that re-exports both
   engines.
 * Keep shared `common` modules context-free (no `node:*` unless your bundler handles them, no secrets, no
@@ -6799,8 +6799,8 @@ const program = engine.cli.program.create(
         }),
     ],
     {
-        name: 'acme',
-        description: 'Acme tooling.',
+        name: 'myapp',
+        description: 'Myapp tooling.',
         version: '1.0.0',
         globalOptions: [{ flags: '--json', description: 'Print JSON.' }],
         context: { cwd: process.cwd() },
@@ -7664,10 +7664,10 @@ and the workspace dependency for maintainers/contributors:
 `(overrides, banner)` pair:
 
 ```diff [tsdown.config.ts]
--const config = createTsdownConfig({ format: ['cjs'] }, { name: 'Acme' });
+-const config = createTsdownConfig({ format: ['cjs'] }, { name: 'Myapp' });
 +const config = createTsdownConfig({
 +    overrides: { format: ['cjs'] },
-+    banner: { name: 'Acme' },
++    banner: { name: 'Myapp' },
 +});
 ```
 
@@ -7954,7 +7954,7 @@ Custom CLIs now build the same program the `dbx` binary uses:
 import { configCommands } from '@deltabox/toolchain/config';
 
 const program = engine.cli.program.create(() => configCommands({ engine }), {
-    name: 'acme',
+    name: 'myapp',
     version: '1.0.0',
     globalOptions: [{ flags: '--json', description: 'Print JSON.' }],
     disableColors: ({ color }) => color === false,
@@ -8182,8 +8182,8 @@ Local and builtin templates work without it, and a local-only run never touches 
 Scripts and CI that relied on implicit online resolution must add the flag:
 
 ```diff
--dbx create --template @acme/template --name app
-+dbx create --template @acme/template --name app --online
+-dbx create --template @org/template --name app
++dbx create --template @org/template --name app --online
 ```
 
 ### Toolchain enable/disable
@@ -8631,7 +8631,7 @@ for (const m of detectMigrations(process.cwd())) await m.run({ cwd: process.cwd(
 // Templates
 import { loadTemplates, scaffoldTemplate } from '@deltabox/toolchain/template';
 const [template] = await loadTemplates({ cwd: process.cwd() });
-if (template) await scaffoldTemplate(template, { cwd: './out', tokens: { name: 'acme' } });
+if (template) await scaffoldTemplate(template, { cwd: './out', tokens: { name: 'myapp' } });
 
 // Providers (what the editor reads)
 import { toolchainProviders } from '@deltabox/toolchain/providers';
@@ -8751,7 +8751,7 @@ and the generated `config-types` / `config-schema` exports.
 ```ts
 import { defineConfig, sectionEnabled, applyReplacements } from '@deltabox/toolchain/shared';
 
-const text = applyReplacements('Hello {{name:world}}', { name: 'acme' });
+const text = applyReplacements('Hello {{name:world}}', { name: 'myapp' });
 ```
 
 ## `@deltabox/toolchain/core`
@@ -8969,7 +8969,7 @@ the bundled `dbx` binary and a consumer's own CLI are assembled):
 import { configCommands } from '@deltabox/toolchain/config';
 
 const program = engine.cli.program.create(() => configCommands({ engine }), {
-    name: 'acme',
+    name: 'myapp',
     version: '1.0.0',
     globalOptions: [{ flags: '--json', description: 'Print JSON.' }],
     disableColors: ({ color }) => color === false,
@@ -11025,8 +11025,8 @@ export default defineConfig({
     toolchain: {
         project: {
             type: 'monorepo-root',
-            name: 'acme',
-            scope: '@acme',
+            name: 'myapp',
+            scope: '@org',
         },
         ci: {
             ci: true,
@@ -11118,7 +11118,7 @@ export default defineConfig(async () => {
 
     return {
         toolchain: {
-            project: { name: 'acme', nodeVersion: version },
+            project: { name: 'myapp', nodeVersion: version },
         },
     };
 });
@@ -11235,7 +11235,7 @@ one itself.
 With the default loader, imports resolve the way the project's TypeScript does:
 
 ```ts [dbx.config.ts]
-import { shared } from '@acme/shared/config.js'; // shared/config.ts
+import { shared } from '@org/shared/config.js'; // shared/config.ts
 
 import { defineConfig } from '@deltabox/toolchain';
 
@@ -11355,7 +11355,7 @@ serialized for the chosen format, and `defaults`/`overrides` merge under/over it
 ```ts
 createConfigFile({
     name: 'myapp.config.yaml',
-    content: { project: { name: 'acme' } },
+    content: { project: { name: 'myapp' } },
     defaults: { project: { license: 'MIT' } },
 });
 
@@ -11843,7 +11843,7 @@ To reuse the workspace group in your own `sortImports`, import the resolver:
 import { resolveFmtCustomGroups } from '@deltabox/toolchain';
 
 const customGroups = await resolveFmtCustomGroups();
-// [{ groupName: 'workspace', elementNamePattern: ['@acme/**', 'app', 'app/**', ...] }]
+// [{ groupName: 'workspace', elementNamePattern: ['@org/**', 'app', 'app/**', ...] }]
 ```
 
 `resolveFmtCustomGroups()` reads the project graph, so it is safe to call from
@@ -11910,7 +11910,7 @@ import { dockerFiles, writeDockerFiles } from '@deltabox/toolchain/docker';
 
 const files = dockerFiles({
     cwd: process.cwd(),
-    image: 'acme/api',
+    image: 'myapp/api',
     tag: 'latest',
     port: 3000,
 });
@@ -12535,13 +12535,13 @@ export default defineConfig({
     toolchain: {
         project: {
             type: 'monorepo-root',
-            name: 'acme',
-            scope: '@acme',
-            author: 'Acme Inc. <hello@acme.dev>',
+            name: 'myapp',
+            scope: '@org',
+            author: 'Myapp Inc. <hello@myapp.dev>',
             license: 'MIT',
-            homepage: 'https://acme.dev',
-            repo: 'https://github.com/acme/acme',
-            description: 'The acme monorepo',
+            homepage: 'https://myapp.dev',
+            repo: 'https://github.com/myapp/myapp',
+            description: 'The myapp monorepo',
             nodeVersion: '22',
             packageManager: 'yarn',
             packageManagerVersion: '4.17.1',
@@ -12557,7 +12557,7 @@ touched. The mapping:
 
 | `project` field  | `package.json` field | Notes                                              |
 | ---------------- | -------------------- | -------------------------------------------------- |
-| `name` + `scope` | `name`               | `@acme/app` when a scope is set, else `app`.       |
+| `name` + `scope` | `name`               | `@org/app` when a scope is set, else `app`.        |
 | `description`    | `description`        |                                                    |
 | `author`         | `author`             |                                                    |
 | `license`        | `license`            |                                                    |
@@ -12584,7 +12584,7 @@ specifically:
   `package.json` for `name`/`scope`/`description`, and is still detected from its
   own files — a root `project` never renames or rescopes a workspace. The scope
   therefore comes from the workspace's own `package.json` name (eg.
-  `@acme/web`); an unscoped name stays unscoped unless the workspace config sets
+  `@org/web`); an unscoped name stays unscoped unless the workspace config sets
   `scope`.
 * **Shared metadata is inherited** (`author`, `license`, `homepage`, `repo`,
   `packageManager`, ...), so those `package.json` values and replacement tokens
@@ -12601,7 +12601,7 @@ specifically:
 export default defineConfig({
     toolchain: {
         // `name`/`scope` are identity; here the scope comes from the package's
-        // `@acme/web` name. `author`/`license`/`repo` still inherit from the root.
+        // `@org/web` name. `author`/`license`/`repo` still inherit from the root.
         project: { name: 'web' },
         // ...
     },
@@ -12617,7 +12617,7 @@ repository, written as `repository.directory`:
 {
     "repository": {
         "type": "git",
-        "url": "https://github.com/acme/acme",
+        "url": "https://github.com/myapp/myapp",
         "directory": "packages/web"
     }
 }
@@ -12651,9 +12651,9 @@ section still generates correct tokens from its existing metadata.
   root's type).
 
 ```sh
-dbx project:init --name my-app --scope @acme --type project --out ./my-app
-dbx project:init:monorepo --name acme --scope @acme --out .
-dbx project:init:monorepo --name acme --scope @acme --example --out .
+dbx project:init --name my-app --scope @org --type project --out ./my-app
+dbx project:init:monorepo --name myapp --scope @org --out .
+dbx project:init:monorepo --name myapp --scope @org --example --out .
 dbx project:init:workspace --name web --root . --dir packages/web
 ```
 
@@ -13154,7 +13154,7 @@ templates, custom templates, providers and registries are laid out.
 ### `project`
 
 ```tree
-- name: acme
+- name: myapp
   description: project
   children:
     - name: vite.config.ts
@@ -13179,7 +13179,7 @@ templates, custom templates, providers and registries are laid out.
 ### `application`
 
 ```tree
-- name: acme
+- name: myapp
   description: application
   children:
     - name: vite.config.ts
@@ -13217,7 +13217,7 @@ templates, custom templates, providers and registries are laid out.
 ### `monorepo`
 
 ```tree
-- name: acme
+- name: myapp
   description: monorepo root
   children:
     - name: vite.config.ts
@@ -13237,7 +13237,7 @@ templates, custom templates, providers and registries are laid out.
 ### `monorepo-example`
 
 ```tree
-- name: acme
+- name: myapp
   description: monorepo + example workspace
   children:
     - name: vite.config.ts
@@ -13298,7 +13298,7 @@ Highlighted files are the template-specific ones.
 ### `vitepress`
 
 ```tree
-- name: acme
+- name: myapp
   description: VitePress docs
   children:
     - name: vite.config.ts
@@ -13331,7 +13331,7 @@ Highlighted files are the template-specific ones.
 ### `express`
 
 ```tree
-- name: acme
+- name: myapp
   description: Express 5 API
   children:
     - name: vite.config.ts
@@ -13358,7 +13358,7 @@ Highlighted files are the template-specific ones.
 ### `bun`
 
 ```tree
-- name: acme
+- name: myapp
   description: Bun HTTP server
   children:
     - name: vite.config.ts
@@ -13386,7 +13386,7 @@ Highlighted files are the template-specific ones.
 ### `fastify`
 
 ```tree
-- name: acme
+- name: myapp
   description: Fastify 5 API
   children:
     - name: vite.config.ts
@@ -13413,7 +13413,7 @@ Highlighted files are the template-specific ones.
 ### `orpc`
 
 ```tree
-- name: acme
+- name: myapp
   description: oRPC + Zod API
   children:
     - name: vite.config.ts
@@ -13442,7 +13442,7 @@ Highlighted files are the template-specific ones.
 ### `file-server`
 
 ```tree
-- name: acme
+- name: myapp
   description: dependency-free file server
   children:
     - name: vite.config.ts
@@ -13473,7 +13473,7 @@ Highlighted files are the template-specific ones.
 ### `file-server-s3`
 
 ```tree
-- name: acme
+- name: myapp
   description: AWS S3 file server
   children:
     - name: vite.config.ts
@@ -13503,7 +13503,7 @@ Highlighted files are the template-specific ones.
 ### `file-server-bun-s3`
 
 ```tree
-- name: acme
+- name: myapp
   description: Bun S3 file server
   children:
     - name: vite.config.ts
@@ -13533,7 +13533,7 @@ Highlighted files are the template-specific ones.
 ### `file-server-minio`
 
 ```tree
-- name: acme
+- name: myapp
   description: MinIO / S3-compatible file server
   children:
     - name: vite.config.ts
@@ -13563,7 +13563,7 @@ Highlighted files are the template-specific ones.
 ### `file-server-rclone`
 
 ```tree
-- name: acme
+- name: myapp
   description: rclone-backed file server
   children:
     - name: vite.config.ts
@@ -13590,7 +13590,7 @@ Highlighted files are the template-specific ones.
 ### `ollama-chat`
 
 ```tree
-- name: acme
+- name: myapp
   description: Ollama chat UI
   children:
     - name: vite.config.ts
@@ -13632,7 +13632,7 @@ stable shape.
 ### `vite-plus-monorepo` (`vite:monorepo`)
 
 ```tree
-- name: acme
+- name: myapp
   description: Vite+ monorepo
   children:
     - name: package.json
@@ -13649,7 +13649,7 @@ stable shape.
 ### `vite-plus-application` (`vite:application`)
 
 ```tree
-- name: acme
+- name: myapp
   description: Vite+ application
   children:
     - name: .gitignore
@@ -13667,7 +13667,7 @@ stable shape.
 ### `vite-plus-library` (`vite:library`)
 
 ```tree
-- name: acme
+- name: myapp
   description: Vite+ library
   children:
     - name: .gitignore
@@ -13713,7 +13713,7 @@ a shell command.
 ```tree
 - name: templates
   children:
-    - name: acme-service
+    - name: myapp-service
       description: custom template
       children:
         - name: template.json
@@ -13732,7 +13732,7 @@ a shell command.
 Register it project-locally or globally:
 
 ```tree
-- name: acme
+- name: myapp
   children:
     - name: .dbx
       children:
@@ -13742,7 +13742,7 @@ Register it project-locally or globally:
               description: project template/provider paths
     - name: templates
       children:
-        - name: acme-service
+        - name: myapp-service
           description: source registered above
 ```
 
@@ -13752,7 +13752,7 @@ A provider registry is a JSON file (or a directory of `*.json` files, or an
 `http(s)` URL). Project paths are searched before global paths.
 
 ```tree
-- name: acme
+- name: myapp
   description: project
   children:
     - name: .dbx
@@ -13799,7 +13799,7 @@ Typical `providers.json` content:
 ### Project registry
 
 ```tree
-- name: acme
+- name: myapp
   children:
     - name: .dbx
       children:
@@ -13854,7 +13854,7 @@ Vite+ also accepts an `@org/create` package whose `package.json` declares
 `createConfig.templates`:
 
 ```tree
-- name: "@acme/create"
+- name: "@org/create"
   children:
     - name: package.json
       highlight: true
@@ -13909,7 +13909,7 @@ dbx template:list --json               # machine-readable (used by the editor)
 
 dbx create --template project --name my-app --out ./my-app
 dbx create --kind folder --name scratch --out ./scratch
-dbx create --template mytpl --name acme --var port=4000
+dbx create --template mytpl --name myapp --var port=4000
 ```
 
 With no `--template`, `create --kind <kind>` picks the first matching template.
@@ -14027,7 +14027,7 @@ Files and directory names may contain {{ token }} placeholders, resolved while
 copying:
 
 ```
-src/{{name}}.ts   ->   src/acme.ts
+src/{{name}}.ts   ->   src/myapp.ts
 ```
 
 The **same input pipeline** runs everywhere:
@@ -14079,13 +14079,13 @@ A local template is a directory with a `template.json`. Turn any folder into one
 with `template:init` (and register it in one step with `--add`):
 
 ```sh
-dbx template:init ./templates/acme-service \
-  --kind application --name "Acme service" --var name --tag service --add
+dbx template:init ./templates/myapp-service \
+  --kind application --name "Myapp service" --var name --tag service --add
 ```
 
 ```json [template.json]
 {
-    "name": "Acme service",
+    "name": "Myapp service",
     "description": "A service package",
     "kind": "application",
     "tags": ["service"],
@@ -14098,8 +14098,8 @@ Register sources so they are picked up automatically:
 
 ```sh
 dbx template:add ./templates             # local dir (auto-inits if needed)
-dbx template:add @acme/create            # npm @scope/create
-dbx template:add git:https://github.com/acme/tpl.git
+dbx template:add @org/create            # npm @scope/create
+dbx template:add git:https://github.com/myapp/tpl.git
 dbx template:remove local:./templates    # drop a source
 ```
 
@@ -14112,7 +14112,7 @@ export default defineConfig({
         templates: {
             sources: [
                 { type: 'local', locate: './templates', kind: 'application' },
-                { type: 'npm', locate: '@acme/create', online: true },
+                { type: 'npm', locate: '@org/create', online: true },
             ],
         },
     },
@@ -14127,7 +14127,7 @@ available in every project (and in the VS Code extension). Pass `--no-global` to
 keep it project-only:
 
 ```sh
-dbx template:init ./templates/acme --kind application --name "Acme" --add  # local + global
+dbx template:init ./templates/myapp --kind application --name "Myapp" --add  # local + global
 dbx template:add ./templates --no-global                                  # project only
 ```
 
@@ -14139,7 +14139,7 @@ sources):
 
 ```sh
 dbx template:registry                         # list the resolved paths
-dbx template:registry --add ~/shared/templates --add https://acme.dev/templates.json
+dbx template:registry --add ~/shared/templates --add https://myapp.dev/templates.json
 dbx template:registry --set ~/shared/templates
 dbx template:registry --remove ~/shared/templates
 dbx template:registry --clear                 # reset to the default
@@ -14167,23 +14167,23 @@ Online sources are resolved with `--online` (or `dbx template:add`):
 
 * **npm** — a published create package whose `package.json` has a
   `createConfig.templates` (or `dbx.templates`) manifest. Scoped
-  (`@acme/create`) and unscoped (`create-acme`, `acme-create`) packages are
+  (`@org/create`) and unscoped (`create-myapp`, `myapp-create`) packages are
   supported; individual templates are listed and created through `vp create`.
   The registry defaults to the project package manager's registry
   (`.yarnrc.yml` `npmRegistryServer`, `.npmrc` `registry`, ...). Override it
   per source with `--registry`:
 
   ```sh
-  dbx template:add @acme/create
-  dbx template:add create-acme
-  dbx template:add create-acme --registry https://registry.example.com
+  dbx template:add @org/create
+  dbx template:add create-myapp
+  dbx template:add create-myapp --registry https://registry.example.com
   ```
 
 * **git** — a repository (optionally with a `ref` and/or `subdir`) listed as a
   template and created through `vp create`:
 
   ```sh
-  dbx template:add git:https://github.com/acme/templates --ref v1.2.0 --subdir apps/web
+  dbx template:add git:https://github.com/myapp/templates --ref v1.2.0 --subdir apps/web
   ```
 
 * **remote** — an `http(s)` JSON source registry (`{ sources }`, `{ templates }`
@@ -14237,7 +14237,7 @@ tsconfig untouched.
 ```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
-        project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
+        project: { type: 'monorepo-root', name: 'myapp', scope: '@org' },
         tsconfig: { aliases: true, refs: true, indent: 4 },
     },
 });
@@ -14314,7 +14314,7 @@ at the project's env types file.
 
 `tsconfig.json` is the **editor/development** config: it extends
 `tsconfig.default.json` and layers the workspace `paths` aliases on top, so
-imports such as `@acme/core` resolve directly to `packages/core/src`. That is
+imports such as `@org/core` resolve directly to `packages/core/src`. That is
 what gives go-to-definition, inline diagnostics and fast editor feedback against
 the real workspace source.
 
@@ -14421,7 +14421,7 @@ Given `packages/core/package.json`:
 
 ```json
 {
-    "name": "@acme/core",
+    "name": "@org/core",
     "exports": {
         ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
         "./utils": { "types": "./dist/utils.d.ts", "import": "./dist/utils.js" }
@@ -14450,9 +14450,9 @@ workspace's generated `tsconfig.json`):
 {
     "compilerOptions": {
         "paths": {
-            "@acme/core": ["./packages/core/src/index.ts"],
-            "@acme/core/utils": ["./packages/core/src/utils.ts"],
-            "@acme/core/*": ["./packages/core/src/*"]
+            "@org/core": ["./packages/core/src/index.ts"],
+            "@org/core/utils": ["./packages/core/src/utils.ts"],
+            "@org/core/*": ["./packages/core/src/*"]
         }
     }
 }
@@ -14462,9 +14462,9 @@ With `devMode: false` the same exports resolve to the distributed files instead:
 
 ```json
 {
-    "@acme/core": ["./packages/core/dist/index.js"],
-    "@acme/core/utils": ["./packages/core/dist/utils.js"],
-    "@acme/core/*": ["./packages/core/dist/*"]
+    "@org/core": ["./packages/core/dist/index.js"],
+    "@org/core/utils": ["./packages/core/dist/utils.js"],
+    "@org/core/*": ["./packages/core/dist/*"]
 }
 ```
 
@@ -14745,15 +14745,15 @@ from a workspace list:
 import { buildMonorepoTsconfig, renderMonorepoTsconfig } from '@deltabox/toolchain/tsconfig';
 
 const config = buildMonorepoTsconfig({
-    scope: '@acme',
+    scope: '@org',
     workspaces: [
         { alias: 'core', dir: 'packages/core' },
         { alias: 'cli', dir: 'packages/cli' },
     ],
 });
-// -> { compilerOptions: { composite, paths: { '@acme/core': ['./packages/core/src/index.ts'], ... } },
+// -> { compilerOptions: { composite, paths: { '@org/core': ['./packages/core/src/index.ts'], ... } },
 //      references: [{ path: './packages/core/tsconfig.json' }, ...] }
-renderMonorepoTsconfig({ scope: '@acme', workspaces: [{ alias: 'core', dir: 'packages/core' }] });
+renderMonorepoTsconfig({ scope: '@org', workspaces: [{ alias: 'core', dir: 'packages/core' }] });
 ```
 
 ## CLI
@@ -14797,7 +14797,7 @@ dbx tsconfig --no-extends         # only the selected file
 
 The output is machine-clean JSON (absolute paths). Aliases are anchored
 regular expressions by default (`strict`, from exact keys to wildcards), so
-`@acme/core` never captures `@acme/core-utils`; they serialize as
+`@org/core` never captures `@org/core-utils`; they serialize as
 `{ source, flags }` so JSON keeps the pattern. With `strict: false`, exact keys
 stay plain strings (wildcards remain regexes). Use `deserializeTsconfigAlias` to
 turn an alias back into a `RegExp`. Aliases and `paths` keys are sorted
@@ -14811,11 +14811,11 @@ Input `tsconfig.json`:
 {
     "compilerOptions": {
         "paths": {
-            "@acme/core": ["./packages/core/src/index.ts"],
-            "@acme/core-utils": ["./packages/core-utils/src/index.ts"],
-            "@acme/core-utils/deep": ["./packages/core-utils-deep/src/index.ts"],
-            "@acme/core.lib": ["./packages/core-lib/src/index.ts"],
-            "@acme/*": ["./packages/*/src/index.ts"]
+            "@org/core": ["./packages/core/src/index.ts"],
+            "@org/core-utils": ["./packages/core-utils/src/index.ts"],
+            "@org/core-utils/deep": ["./packages/core-utils-deep/src/index.ts"],
+            "@org/core.lib": ["./packages/core-lib/src/index.ts"],
+            "@org/*": ["./packages/*/src/index.ts"]
         }
     }
 }
@@ -14827,32 +14827,32 @@ Input `tsconfig.json`:
 {
     "alias": [
         {
-            "find": { "source": "^@acme\\/core\\.lib$", "flags": "" },
+            "find": { "source": "^@org\\/core\\.lib$", "flags": "" },
             "replacement": ".../core-lib/src/index.ts"
         },
         {
-            "find": { "source": "^@acme\\/core-utils\\/deep$", "flags": "" },
+            "find": { "source": "^@org\\/core-utils\\/deep$", "flags": "" },
             "replacement": ".../core-utils-deep/src/index.ts"
         },
         {
-            "find": { "source": "^@acme\\/core-utils$", "flags": "" },
+            "find": { "source": "^@org\\/core-utils$", "flags": "" },
             "replacement": ".../core-utils/src/index.ts"
         },
         {
-            "find": { "source": "^@acme\\/core$", "flags": "" },
+            "find": { "source": "^@org\\/core$", "flags": "" },
             "replacement": ".../core/src/index.ts"
         },
         {
-            "find": { "source": "^@acme\\/(.*)$", "flags": "" },
+            "find": { "source": "^@org\\/(.*)$", "flags": "" },
             "replacement": ".../packages/$1/src/index.ts"
         }
     ],
     "paths": {
-        "@acme/core.lib": [".../core-lib/src/index.ts"],
-        "@acme/core-utils/deep": [".../core-utils-deep/src/index.ts"],
-        "@acme/core-utils": [".../core-utils/src/index.ts"],
-        "@acme/core": [".../core/src/index.ts"],
-        "@acme/*": [".../packages/*/src/index.ts"]
+        "@org/core.lib": [".../core-lib/src/index.ts"],
+        "@org/core-utils/deep": [".../core-utils-deep/src/index.ts"],
+        "@org/core-utils": [".../core-utils/src/index.ts"],
+        "@org/core": [".../core/src/index.ts"],
+        "@org/*": [".../packages/*/src/index.ts"]
     },
     "references": []
 }
@@ -15003,7 +15003,7 @@ import { defineConfig } from '@deltabox/toolchain';
 
 export default defineConfig({
     toolchain: {
-        project: { name: 'acme', scope: '@acme' },
+        project: { name: 'myapp', scope: '@org' },
         ci: {
             ci: true,
             changelog: {
@@ -15027,7 +15027,7 @@ sections as `ToolchainCiConfig`, `ChangelogConfig`, ...):
 import type { ToolchainConfig, ToolchainCiConfig } from '@deltabox/toolchain';
 
 const ci: ToolchainCiConfig = { ci: true, changelog: true };
-const config: ToolchainConfig = { project: { name: 'acme' }, ci };
+const config: ToolchainConfig = { project: { name: 'myapp' }, ci };
 ```
 
 The same types are available from `@deltabox/toolchain/shared`, and each
@@ -15164,7 +15164,7 @@ export default defineConfig({
     plugins: [
         dbx({
             toolchain: {
-                project: { name: 'my-app', scope: '@acme' },
+                project: { name: 'my-app', scope: '@org' },
                 fmt: true,
                 lint: true,
                 // ...any other dbx sections

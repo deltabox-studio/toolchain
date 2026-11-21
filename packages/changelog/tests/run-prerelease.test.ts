@@ -32,13 +32,13 @@ describe('prerelease changelog versioning end to end', () => {
         process.env.DBX_NO_GH = '1';
         root = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-prerelease-'));
         write(path.join(root, 'package.json'), {
-            name: 'acme',
+            name: 'myapp',
             version: '1.0.0',
             private: true,
             workspaces: ['packages/*'],
         });
         write(path.join(root, 'packages', 'a', 'package.json'), {
-            name: '@acme/a',
+            name: '@org/a',
             version: '0.1.0',
         });
         git(root, 'init');
@@ -85,13 +85,13 @@ describe('prerelease changelog versioning end to end', () => {
 
     it('rolls a disabled prerelease cycle over to its stable core', () => {
         write(path.join(root, 'package.json'), {
-            name: 'acme',
+            name: 'myapp',
             version: '3.0.0-beta.315',
             private: true,
             workspaces: ['packages/*'],
         });
         write(path.join(root, 'packages', 'a', 'package.json'), {
-            name: '@acme/a',
+            name: '@org/a',
             version: '0.2.0-beta.1',
         });
 
@@ -107,13 +107,13 @@ describe('prerelease changelog versioning end to end', () => {
 
     it('bumps normally when the stable core already has a changelog heading', () => {
         write(path.join(root, 'package.json'), {
-            name: 'acme',
+            name: 'myapp',
             version: '3.0.0-beta.315',
             private: true,
             workspaces: ['packages/*'],
         });
         write(path.join(root, 'packages', 'a', 'package.json'), {
-            name: '@acme/a',
+            name: '@org/a',
             version: '0.2.0-beta.1',
         });
         fs.writeFileSync(
@@ -136,13 +136,13 @@ describe('prerelease changelog versioning end to end', () => {
 
     it('bumps normally when the stable core is already tagged', () => {
         write(path.join(root, 'package.json'), {
-            name: 'acme',
+            name: 'myapp',
             version: '3.0.0-beta.315',
             private: true,
             workspaces: ['packages/*'],
         });
         write(path.join(root, 'packages', 'a', 'package.json'), {
-            name: '@acme/a',
+            name: '@org/a',
             version: '0.2.0-beta.1',
         });
         git(root, 'tag', 'v3.0.0');

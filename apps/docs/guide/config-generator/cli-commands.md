@@ -22,7 +22,7 @@ const commands = configCommands({
     engine,
     defaults: { typesDir: 'packages/shared/src/types', docsDir: 'docs/reference' },
 });
-const program = engine.cli.program.create(() => commands, { name: 'acme' });
+const program = engine.cli.program.create(() => commands, { name: 'myapp' });
 await program.invokeAsync();
 ```
 

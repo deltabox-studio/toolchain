@@ -9,7 +9,7 @@ the bundled `dbx` binary and a consumer's own CLI are assembled):
 import { configCommands } from '@deltabox/toolchain/config';
 
 const program = engine.cli.program.create(() => configCommands({ engine }), {
-    name: 'acme',
+    name: 'myapp',
     version: '1.0.0',
     globalOptions: [{ flags: '--json', description: 'Print JSON.' }],
     disableColors: ({ color }) => color === false,

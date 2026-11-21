@@ -290,7 +290,7 @@ List the registered migrations and whether each is detected.
 Scaffold a single-package TypeScript project.
 
 - `-n, --name ‹name›` — Project name.
-- `-s, --scope ‹scope›` — npm scope, eg. @acme.
+- `-s, --scope ‹scope›` — npm scope, eg. @org.
 - `-o, --out ‹dir›` — Output directory (default: cwd).
 - `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
 - `--tool-version ‹name@range›` — Override a formatter/linter dependency version, eg. `oxfmt@^0.80.0`.
@@ -304,7 +304,7 @@ Scaffold a single-package TypeScript project.
 Scaffold a monorepo root (add --example for one example workspace).
 
 - `-n, --name ‹name›` — Project name.
-- `-s, --scope ‹scope›` — npm scope, eg. @acme.
+- `-s, --scope ‹scope›` — npm scope, eg. @org.
 - `-o, --out ‹dir›` — Output directory (default: cwd).
 - `--example` — Also scaffold one example workspace package.
 - `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
@@ -318,7 +318,7 @@ Scaffold a monorepo root (add --example for one example workspace).
 Scaffold a monorepo workspace package into an existing monorepo root.
 
 - `-n, --name ‹name›` — Workspace package name (unscoped).
-- `-s, --scope ‹scope›` — npm scope, eg. @acme.
+- `-s, --scope ‹scope›` — npm scope, eg. @org.
 - `-r, --root ‹dir›` — Monorepo root (default: cwd).
 - `-d, --dir ‹dir›` — Workspace dir relative to the root (default: packages/&lt;name&gt;).
 - `--package-manager ‹pm›` — Package manager: yarn (default) \| pnpm \| npm \| bun.
@@ -437,7 +437,7 @@ Scaffold a project from a template (builtin, local or Vite+).
 - `-t, --template ‹id›` — Template id (see template:list).
 - `--kind ‹kind›` — project \| workspace \| application \| folder \| tooling \| pipeline.
 - `-n, --name ‹name›` — Project / package name.
-- `-s, --scope ‹scope›` — npm scope, eg. @acme.
+- `-s, --scope ‹scope›` — npm scope, eg. @org.
 - `-o, --out ‹dir›` — Output directory (default: cwd).
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--var ‹pair...›` — Template variables as key=value (repeatable).

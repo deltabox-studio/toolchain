@@ -44,7 +44,7 @@ export default defineConfig({
     plugins: [
         dbx({
             toolchain: {
-                project: { name: 'my-app', scope: '@acme' },
+                project: { name: 'my-app', scope: '@org' },
                 fmt: { oxc: true },
                 lint: { oxc: true },
                 ci: { sync: true },

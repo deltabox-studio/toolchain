@@ -14,7 +14,7 @@ templates, custom templates, providers and registries are laid out.
 ### `project`
 
 ```tree
-- name: acme
+- name: myapp
   description: project
   children:
     - name: vite.config.ts
@@ -39,7 +39,7 @@ templates, custom templates, providers and registries are laid out.
 ### `application`
 
 ```tree
-- name: acme
+- name: myapp
   description: application
   children:
     - name: vite.config.ts
@@ -77,7 +77,7 @@ templates, custom templates, providers and registries are laid out.
 ### `monorepo`
 
 ```tree
-- name: acme
+- name: myapp
   description: monorepo root
   children:
     - name: vite.config.ts
@@ -97,7 +97,7 @@ templates, custom templates, providers and registries are laid out.
 ### `monorepo-example`
 
 ```tree
-- name: acme
+- name: myapp
   description: monorepo + example workspace
   children:
     - name: vite.config.ts
@@ -158,7 +158,7 @@ Highlighted files are the template-specific ones.
 ### `vitepress`
 
 ```tree
-- name: acme
+- name: myapp
   description: VitePress docs
   children:
     - name: vite.config.ts
@@ -191,7 +191,7 @@ Highlighted files are the template-specific ones.
 ### `express`
 
 ```tree
-- name: acme
+- name: myapp
   description: Express 5 API
   children:
     - name: vite.config.ts
@@ -218,7 +218,7 @@ Highlighted files are the template-specific ones.
 ### `bun`
 
 ```tree
-- name: acme
+- name: myapp
   description: Bun HTTP server
   children:
     - name: vite.config.ts
@@ -246,7 +246,7 @@ Highlighted files are the template-specific ones.
 ### `fastify`
 
 ```tree
-- name: acme
+- name: myapp
   description: Fastify 5 API
   children:
     - name: vite.config.ts
@@ -273,7 +273,7 @@ Highlighted files are the template-specific ones.
 ### `orpc`
 
 ```tree
-- name: acme
+- name: myapp
   description: oRPC + Zod API
   children:
     - name: vite.config.ts
@@ -302,7 +302,7 @@ Highlighted files are the template-specific ones.
 ### `file-server`
 
 ```tree
-- name: acme
+- name: myapp
   description: dependency-free file server
   children:
     - name: vite.config.ts
@@ -333,7 +333,7 @@ Highlighted files are the template-specific ones.
 ### `file-server-s3`
 
 ```tree
-- name: acme
+- name: myapp
   description: AWS S3 file server
   children:
     - name: vite.config.ts
@@ -363,7 +363,7 @@ Highlighted files are the template-specific ones.
 ### `file-server-bun-s3`
 
 ```tree
-- name: acme
+- name: myapp
   description: Bun S3 file server
   children:
     - name: vite.config.ts
@@ -393,7 +393,7 @@ Highlighted files are the template-specific ones.
 ### `file-server-minio`
 
 ```tree
-- name: acme
+- name: myapp
   description: MinIO / S3-compatible file server
   children:
     - name: vite.config.ts
@@ -423,7 +423,7 @@ Highlighted files are the template-specific ones.
 ### `file-server-rclone`
 
 ```tree
-- name: acme
+- name: myapp
   description: rclone-backed file server
   children:
     - name: vite.config.ts
@@ -450,7 +450,7 @@ Highlighted files are the template-specific ones.
 ### `ollama-chat`
 
 ```tree
-- name: acme
+- name: myapp
   description: Ollama chat UI
   children:
     - name: vite.config.ts
@@ -492,7 +492,7 @@ stable shape.
 ### `vite-plus-monorepo` (`vite:monorepo`)
 
 ```tree
-- name: acme
+- name: myapp
   description: Vite+ monorepo
   children:
     - name: package.json
@@ -509,7 +509,7 @@ stable shape.
 ### `vite-plus-application` (`vite:application`)
 
 ```tree
-- name: acme
+- name: myapp
   description: Vite+ application
   children:
     - name: .gitignore
@@ -527,7 +527,7 @@ stable shape.
 ### `vite-plus-library` (`vite:library`)
 
 ```tree
-- name: acme
+- name: myapp
   description: Vite+ library
   children:
     - name: .gitignore
@@ -573,7 +573,7 @@ a shell command.
 ```tree
 - name: templates
   children:
-    - name: acme-service
+    - name: myapp-service
       description: custom template
       children:
         - name: template.json
@@ -592,7 +592,7 @@ a shell command.
 Register it project-locally or globally:
 
 ```tree
-- name: acme
+- name: myapp
   children:
     - name: .dbx
       children:
@@ -602,7 +602,7 @@ Register it project-locally or globally:
               description: project template/provider paths
     - name: templates
       children:
-        - name: acme-service
+        - name: myapp-service
           description: source registered above
 ```
 
@@ -612,7 +612,7 @@ A provider registry is a JSON file (or a directory of `*.json` files, or an
 `http(s)` URL). Project paths are searched before global paths.
 
 ```tree
-- name: acme
+- name: myapp
   description: project
   children:
     - name: .dbx
@@ -659,7 +659,7 @@ Typical `providers.json` content:
 ### Project registry
 
 ```tree
-- name: acme
+- name: myapp
   children:
     - name: .dbx
       children:
@@ -714,7 +714,7 @@ Vite+ also accepts an `@org/create` package whose `package.json` declares
 `createConfig.templates`:
 
 ```tree
-- name: "@acme/create"
+- name: "@org/create"
   children:
     - name: package.json
       highlight: true

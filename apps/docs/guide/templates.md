@@ -30,7 +30,7 @@ dbx template:list --json               # machine-readable (used by the editor)
 
 dbx create --template project --name my-app --out ./my-app
 dbx create --kind folder --name scratch --out ./scratch
-dbx create --template mytpl --name acme --var port=4000
+dbx create --template mytpl --name myapp --var port=4000
 ```
 
 With no `--template`, `create --kind <kind>` picks the first matching template.
@@ -148,7 +148,7 @@ Files and directory names may contain <code v-pre>{{ token }}</code> placeholder
 copying:
 
 ```
-src/{{name}}.ts   ->   src/acme.ts
+src/{{name}}.ts   ->   src/myapp.ts
 ```
 
 The **same input pipeline** runs everywhere:
@@ -200,13 +200,13 @@ A local template is a directory with a `template.json`. Turn any folder into one
 with `template:init` (and register it in one step with `--add`):
 
 ```sh
-dbx template:init ./templates/acme-service \
-  --kind application --name "Acme service" --var name --tag service --add
+dbx template:init ./templates/myapp-service \
+  --kind application --name "Myapp service" --var name --tag service --add
 ```
 
 ```json [template.json]
 {
-    "name": "Acme service",
+    "name": "Myapp service",
     "description": "A service package",
     "kind": "application",
     "tags": ["service"],
@@ -219,8 +219,8 @@ Register sources so they are picked up automatically:
 
 ```sh
 dbx template:add ./templates             # local dir (auto-inits if needed)
-dbx template:add @acme/create            # npm @scope/create
-dbx template:add git:https://github.com/acme/tpl.git
+dbx template:add @org/create            # npm @scope/create
+dbx template:add git:https://github.com/myapp/tpl.git
 dbx template:remove local:./templates    # drop a source
 ```
 
@@ -233,7 +233,7 @@ export default defineConfig({
         templates: {
             sources: [
                 { type: 'local', locate: './templates', kind: 'application' },
-                { type: 'npm', locate: '@acme/create', online: true },
+                { type: 'npm', locate: '@org/create', online: true },
             ],
         },
     },
@@ -248,7 +248,7 @@ available in every project (and in the VS Code extension). Pass `--no-global` to
 keep it project-only:
 
 ```sh
-dbx template:init ./templates/acme --kind application --name "Acme" --add  # local + global
+dbx template:init ./templates/myapp --kind application --name "Myapp" --add  # local + global
 dbx template:add ./templates --no-global                                  # project only
 ```
 
@@ -260,7 +260,7 @@ sources):
 
 ```sh
 dbx template:registry                         # list the resolved paths
-dbx template:registry --add ~/shared/templates --add https://acme.dev/templates.json
+dbx template:registry --add ~/shared/templates --add https://myapp.dev/templates.json
 dbx template:registry --set ~/shared/templates
 dbx template:registry --remove ~/shared/templates
 dbx template:registry --clear                 # reset to the default
@@ -289,23 +289,23 @@ Online sources are resolved with `--online` (or `dbx template:add`):
 
 - **npm** — a published create package whose `package.json` has a
   `createConfig.templates` (or `dbx.templates`) manifest. Scoped
-  (`@acme/create`) and unscoped (`create-acme`, `acme-create`) packages are
+  (`@org/create`) and unscoped (`create-myapp`, `myapp-create`) packages are
   supported; individual templates are listed and created through `vp create`.
   The registry defaults to the project package manager's registry
   (`.yarnrc.yml` `npmRegistryServer`, `.npmrc` `registry`, ...). Override it
   per source with `--registry`:
 
     ```sh
-    dbx template:add @acme/create
-    dbx template:add create-acme
-    dbx template:add create-acme --registry https://registry.example.com
+    dbx template:add @org/create
+    dbx template:add create-myapp
+    dbx template:add create-myapp --registry https://registry.example.com
     ```
 
 - **git** — a repository (optionally with a `ref` and/or `subdir`) listed as a
   template and created through `vp create`:
 
     ```sh
-    dbx template:add git:https://github.com/acme/templates --ref v1.2.0 --subdir apps/web
+    dbx template:add git:https://github.com/myapp/templates --ref v1.2.0 --subdir apps/web
     ```
 
 - **remote** — an `http(s)` JSON source registry (`{ sources }`, `{ templates }`

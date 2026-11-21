@@ -232,7 +232,7 @@ export function projectCommands() {
             description: 'Scaffold a single-package TypeScript project.',
             options: [
                 { flags: '-n, --name <name>', description: 'Project name.' },
-                { flags: '-s, --scope <scope>', description: 'npm scope, eg. @acme.' },
+                { flags: '-s, --scope <scope>', description: 'npm scope, eg. @org.' },
                 { flags: '-o, --out <dir>', description: 'Output directory (default: cwd).' },
                 PACKAGE_MANAGER_OPTION,
                 TOOL_VERSION_OPTION,
@@ -301,7 +301,7 @@ export function projectCommands() {
             description: 'Scaffold a monorepo root (add --example for one example workspace).',
             options: [
                 { flags: '-n, --name <name>', description: 'Project name.' },
-                { flags: '-s, --scope <scope>', description: 'npm scope, eg. @acme.' },
+                { flags: '-s, --scope <scope>', description: 'npm scope, eg. @org.' },
                 { flags: '-o, --out <dir>', description: 'Output directory (default: cwd).' },
                 { flags: '--example', description: 'Also scaffold one example workspace package.' },
                 PACKAGE_MANAGER_OPTION,
@@ -366,7 +366,7 @@ export function projectCommands() {
             description: 'Scaffold a monorepo workspace package into an existing monorepo root.',
             options: [
                 { flags: '-n, --name <name>', description: 'Workspace package name (unscoped).' },
-                { flags: '-s, --scope <scope>', description: 'npm scope, eg. @acme.' },
+                { flags: '-s, --scope <scope>', description: 'npm scope, eg. @org.' },
                 { flags: '-r, --root <dir>', description: 'Monorepo root (default: cwd).' },
                 {
                     flags: '-d, --dir <dir>',

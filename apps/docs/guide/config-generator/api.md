@@ -556,8 +556,8 @@ const program = engine.cli.program.create(
         }),
     ],
     {
-        name: 'acme',
-        description: 'Acme tooling.',
+        name: 'myapp',
+        description: 'Myapp tooling.',
         version: '1.0.0',
         globalOptions: [{ flags: '--json', description: 'Print JSON.' }],
         context: { cwd: process.cwd() },

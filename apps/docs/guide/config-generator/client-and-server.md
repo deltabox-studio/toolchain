@@ -126,7 +126,7 @@ export * from './schema/index.js';
 Read files and `process.env` in the server process:
 
 ```ts
-import { serverConfig } from '@acme/shared/config/server';
+import { serverConfig } from '@org/shared/config/server';
 
 // apps/api/src/config.ts
 import { loadConfigAsync, parseEnvConfig } from '@deltabox/toolchain/config';
@@ -214,7 +214,7 @@ The browser has `import.meta.env`, not `process.env`, and it must not import
 the server engine or `node:fs`:
 
 ```ts
-import { clientConfig } from '@acme/shared/config/client';
+import { clientConfig } from '@org/shared/config/client';
 
 // apps/web/src/config.ts
 import { parseEnvConfig } from '@deltabox/toolchain/config';
@@ -251,10 +251,10 @@ Import the context entry explicitly:
 ```ts
 // Bad:
 // the barrel can load both engines into the same module graph
-import { clientConfig } from '@acme/shared/config';
+import { clientConfig } from '@org/shared/config';
 // Good:
 // the client graph only sees the client engine
-import { clientConfig } from '@acme/shared/config/client';
+import { clientConfig } from '@org/shared/config/client';
 ```
 
 Expose separate package subpaths instead of one mixed entry:
@@ -287,10 +287,10 @@ modules declarative:
 
 ```tree
 - name: apps/web/src/config.ts
-  description: imports @acme/shared/config/client only
+  description: imports @org/shared/config/client only
   status: added
 - name: apps/api/src/config.ts
-  description: imports @acme/shared/config/server only
+  description: imports @org/shared/config/server only
   status: added
 ```
 

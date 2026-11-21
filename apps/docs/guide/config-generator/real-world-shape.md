@@ -80,7 +80,7 @@ engines explicitly. Do not build a single engine whose schema imports both
 At runtime, each context loads its own engine:
 
 ```ts
-import { serverConfig } from '@acme/shared/config/server';
+import { serverConfig } from '@org/shared/config/server';
 
 // apps/api/src/config.ts (server)
 import { loadConfigAsync } from '@deltabox/toolchain/config';
@@ -89,7 +89,7 @@ const loaded = await loadConfigAsync({ parser: serverConfig.schema });
 ```
 
 ```ts
-import { clientConfig } from '@acme/shared/config/client';
+import { clientConfig } from '@org/shared/config/client';
 
 // apps/web/src/config.ts (client)
 import { parseEnvConfig } from '@deltabox/toolchain/config';
@@ -107,8 +107,8 @@ export const webConfig = parseEnvConfig(
 
 ## Keep the boundaries clean
 
-- Import `@acme/shared/config/client` from browser code and
-  `@acme/shared/config/server` from server code.
+- Import `@org/shared/config/client` from browser code and
+  `@org/shared/config/server` from server code.
 - Never create a `packages/shared/src/config/index.ts` that re-exports both
   engines.
 - Keep shared `common` modules context-free (no `node:*` unless your bundler handles them, no secrets, no

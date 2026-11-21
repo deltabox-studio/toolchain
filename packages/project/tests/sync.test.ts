@@ -79,10 +79,10 @@ describe('projectSyncTask', () => {
         const root = tmp();
         fs.mkdirSync(path.join(root, '.git'));
         const ws = path.join(root, 'packages', 'app');
-        writeJson(path.join(ws, 'package.json'), { name: '@acme/app' });
+        writeJson(path.join(ws, 'package.json'), { name: '@org/app' });
 
         const files = await projectSyncTask().run(
-            ctx(ws, { project: { repo: 'https://github.com/acme/app' } })
+            ctx(ws, { project: { repo: 'https://github.com/myapp/app' } })
         );
         const pkg = JSON.parse(files!.find(f => f.path === 'package.json')!.content);
         expect(pkg.repository.directory).toBe('packages/app');
@@ -92,10 +92,10 @@ describe('projectSyncTask', () => {
         const root = tmp();
         fs.writeFileSync(path.join(root, 'dbx.config.ts'), 'export default {};\n');
         const ws = path.join(root, 'packages', 'app');
-        writeJson(path.join(ws, 'package.json'), { name: '@acme/app' });
+        writeJson(path.join(ws, 'package.json'), { name: '@org/app' });
 
         const files = await projectSyncTask().run(
-            ctx(ws, { project: { repo: 'https://github.com/acme/app' } })
+            ctx(ws, { project: { repo: 'https://github.com/myapp/app' } })
         );
         const pkg = JSON.parse(files!.find(f => f.path === 'package.json')!.content);
         expect(pkg.repository.directory).toBe('packages/app');
@@ -107,18 +107,18 @@ describe('projectSyncTask', () => {
         writeJson(path.join(root, 'dbx.config.json'), {
             toolchain: {
                 project: {
-                    name: 'acme',
-                    scope: '@acme',
+                    name: 'myapp',
+                    scope: '@org',
                     description: 'The root app',
                     type: 'monorepo-root',
-                    author: 'Acme',
-                    repo: 'https://github.com/acme/app',
+                    author: 'Myapp',
+                    repo: 'https://github.com/myapp/app',
                 },
             },
         });
         const ws = path.join(root, 'packages', 'web');
         writeJson(path.join(ws, 'package.json'), {
-            name: '@acme/web',
+            name: '@org/web',
             description: 'The web package',
         });
 
@@ -131,13 +131,13 @@ describe('projectSyncTask', () => {
 
         expect(loaded.projectType).toBe('project');
         // The workspace keeps its own identity...
-        expect(pkg.name).toBe('@acme/web');
+        expect(pkg.name).toBe('@org/web');
         expect(pkg.description).toBe('The web package');
         // ...but still inherits the root's shared metadata.
-        expect(pkg.author).toBe('Acme');
+        expect(pkg.author).toBe('Myapp');
         expect(pkg.repository).toEqual({
             type: 'git',
-            url: 'git+https://github.com/acme/app.git',
+            url: 'git+https://github.com/myapp/app.git',
             directory: 'packages/web',
         });
     });
@@ -145,33 +145,33 @@ describe('projectSyncTask', () => {
     it('does not scope a monorepo root package name', async () => {
         const cwd = tmp();
         fs.mkdirSync(path.join(cwd, '.git'));
-        writeJson(path.join(cwd, 'package.json'), { name: 'acme' });
+        writeJson(path.join(cwd, 'package.json'), { name: 'myapp' });
 
         const files = await projectSyncTask().run({
             ...ctx(cwd, {
-                project: { name: 'acme', scope: '@acme', type: 'monorepo-root' },
+                project: { name: 'myapp', scope: '@org', type: 'monorepo-root' },
             }),
             projectType: 'monorepo-root',
         });
 
         const pkg = JSON.parse(files!.find(f => f.path === 'package.json')!.content);
-        expect(pkg.name).toBe('acme');
+        expect(pkg.name).toBe('myapp');
     });
 
     it('keeps an already-scoped monorepo root name', async () => {
         const cwd = tmp();
         fs.mkdirSync(path.join(cwd, '.git'));
-        writeJson(path.join(cwd, 'package.json'), { name: '@acme/toolchain' });
+        writeJson(path.join(cwd, 'package.json'), { name: '@org/toolchain' });
 
         const files = await projectSyncTask().run({
             ...ctx(cwd, {
-                project: { name: 'toolchain', scope: '@acme', type: 'monorepo-root' },
+                project: { name: 'toolchain', scope: '@org', type: 'monorepo-root' },
             }),
             projectType: 'monorepo-root',
         });
 
         const pkg = JSON.parse(files!.find(f => f.path === 'package.json')!.content);
-        expect(pkg.name).toBe('@acme/toolchain');
+        expect(pkg.name).toBe('@org/toolchain');
     });
 
     it('returns nothing when no field is defined', async () => {

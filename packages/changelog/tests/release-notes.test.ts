@@ -174,7 +174,7 @@ describe('release notes', () => {
 
     it('normalizes v-prefixed and scoped tags', () => {
         expect(normalizeReleaseVersion('v1.2.3')).toBe('1.2.3');
-        expect(normalizeReleaseVersion('@acme/app@1.2.3')).toBe('1.2.3');
+        expect(normalizeReleaseVersion('@org/app@1.2.3')).toBe('1.2.3');
         expect(normalizeReleaseVersion('20261026.1')).toBeUndefined();
     });
 

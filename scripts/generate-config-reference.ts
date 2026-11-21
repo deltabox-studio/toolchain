@@ -49,7 +49,7 @@ const example = [
     '',
     'export default defineConfig({',
     '    toolchain: {',
-    "        project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },",
+    "        project: { type: 'monorepo-root', name: 'myapp', scope: '@org' },",
     '        ci: { ci: true, release: true, changelog: { branches: { main: "main" } } },',
     '        tsconfig: { refs: true },',
     "        templates: { sources: [{ type: 'local', locate: './templates', kind: 'application' }] },",

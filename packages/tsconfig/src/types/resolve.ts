@@ -56,8 +56,8 @@ export interface ResolveTsconfigOptions {
     relativePaths?: boolean;
     /**
      * Anchor exact aliases as `^...$` regexes (default true) so a bundler never
-     * resolves a module through a shorter prefix (`@acme/core` vs
-     * `@acme/core-utils`). Set `false` to keep exact aliases as plain strings.
+     * resolves a module through a shorter prefix (`@org/core` vs
+     * `@org/core-utils`). Set `false` to keep exact aliases as plain strings.
      */
     strict?: boolean;
     /** Follow `extends`. @default `true` */

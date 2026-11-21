@@ -36,7 +36,7 @@ and the generated `config-types` / `config-schema` exports.
 ```ts
 import { defineConfig, sectionEnabled, applyReplacements } from '@deltabox/toolchain/shared';
 
-const text = applyReplacements('Hello {{name:world}}', { name: 'acme' });
+const text = applyReplacements('Hello {{name:world}}', { name: 'myapp' });
 ```
 
 ## `@deltabox/toolchain/core`

@@ -100,7 +100,7 @@ export interface MonorepoWorkspace {
 }
 
 export interface MonorepoTsconfigOptions {
-    /** The npm scope, eg. `@acme` (used as the alias prefix). */
+    /** The npm scope, eg. `@org` (used as the alias prefix). */
     scope: string;
     /** The workspaces to wire into `paths` + `references`. */
     workspaces: MonorepoWorkspace[];

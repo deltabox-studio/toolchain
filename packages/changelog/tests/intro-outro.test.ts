@@ -31,17 +31,17 @@ describe('changelog intro/outro', () => {
         process.env.DBX_NO_GH = '1';
         root = fs.mkdtempSync(path.join(os.tmpdir(), 'dbx-intro-outro-'));
         write(path.join(root, 'package.json'), {
-            name: 'acme',
+            name: 'myapp',
             version: '2.0.0',
             private: true,
             workspaces: ['packages/*'],
         });
         write(path.join(root, 'packages', 'a', 'package.json'), {
-            name: '@acme/a',
+            name: '@org/a',
             version: '1.0.0',
         });
         write(path.join(root, 'packages', 'b', 'package.json'), {
-            name: '@acme/b',
+            name: '@org/b',
             version: '1.0.0',
         });
         git(root, 'init');

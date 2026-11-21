@@ -419,10 +419,10 @@ describe('vite -> toolchain', () => {
     });
 
     it('splices a `vite` key into an existing toolchain', () => {
-        const base = `export default defineConfig({\n    toolchain: {\n        project: { name: 'acme' },\n    },\n});\n`;
+        const base = `export default defineConfig({\n    toolchain: {\n        project: { name: 'myapp' },\n    },\n});\n`;
         const folded = foldViteIntoConfig(base, '{ fmt: { semi: true } }');
         expect('content' in folded && folded.content).toContain('vite: { fmt: { semi: true } },');
-        expect('content' in folded && folded.content).toContain("project: { name: 'acme' }");
+        expect('content' in folded && folded.content).toContain("project: { name: 'myapp' }");
     });
 
     it('deep-merges object literals (arrays/scalars replaced, objects combined)', () => {
@@ -524,7 +524,7 @@ describe('vite -> toolchain', () => {
         const dir = makeTmp();
         fs.writeFileSync(
             path.join(dir, 'dbx.config.ts'),
-            `import { defineConfig } from '@deltabox/toolchain';\n\nexport default defineConfig({\n    toolchain: {\n        project: { name: 'acme' },\n    },\n});\n`,
+            `import { defineConfig } from '@deltabox/toolchain';\n\nexport default defineConfig({\n    toolchain: {\n        project: { name: 'myapp' },\n    },\n});\n`,
             'utf-8'
         );
         fs.writeFileSync(path.join(dir, 'vite.config.ts'), VITE_SAMPLE, 'utf-8');
@@ -536,7 +536,7 @@ describe('vite -> toolchain', () => {
         expect(content).toContain('vite: {');
         expect(content).toContain("environment: 'node'");
         expect(content).toContain('singleQuote: true');
-        expect(content).toContain("project: { name: 'acme' }");
+        expect(content).toContain("project: { name: 'myapp' }");
         expect(content).toContain("ignorePatterns: ['/vite.config.ts']");
     });
 

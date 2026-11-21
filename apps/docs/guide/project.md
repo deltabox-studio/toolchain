@@ -16,13 +16,13 @@ export default defineConfig({
     toolchain: {
         project: {
             type: 'monorepo-root',
-            name: 'acme',
-            scope: '@acme',
-            author: 'Acme Inc. <hello@acme.dev>',
+            name: 'myapp',
+            scope: '@org',
+            author: 'Myapp Inc. <hello@myapp.dev>',
             license: 'MIT',
-            homepage: 'https://acme.dev',
-            repo: 'https://github.com/acme/acme',
-            description: 'The acme monorepo',
+            homepage: 'https://myapp.dev',
+            repo: 'https://github.com/myapp/myapp',
+            description: 'The myapp monorepo',
             nodeVersion: '22',
             packageManager: 'yarn',
             packageManagerVersion: '4.17.1',
@@ -38,7 +38,7 @@ touched. The mapping:
 
 | `project` field  | `package.json` field | Notes                                              |
 | ---------------- | -------------------- | -------------------------------------------------- |
-| `name` + `scope` | `name`               | `@acme/app` when a scope is set, else `app`.       |
+| `name` + `scope` | `name`               | `@org/app` when a scope is set, else `app`.        |
 | `description`    | `description`        |                                                    |
 | `author`         | `author`             |                                                    |
 | `license`        | `license`            |                                                    |
@@ -65,7 +65,7 @@ specifically:
   `package.json` for `name`/`scope`/`description`, and is still detected from its
   own files — a root `project` never renames or rescopes a workspace. The scope
   therefore comes from the workspace's own `package.json` name (eg.
-  `@acme/web`); an unscoped name stays unscoped unless the workspace config sets
+  `@org/web`); an unscoped name stays unscoped unless the workspace config sets
   `scope`.
 - **Shared metadata is inherited** (`author`, `license`, `homepage`, `repo`,
   `packageManager`, ...), so those `package.json` values and replacement tokens
@@ -82,7 +82,7 @@ specifically:
 export default defineConfig({
     toolchain: {
         // `name`/`scope` are identity; here the scope comes from the package's
-        // `@acme/web` name. `author`/`license`/`repo` still inherit from the root.
+        // `@org/web` name. `author`/`license`/`repo` still inherit from the root.
         project: { name: 'web' },
         // ...
     },
@@ -98,7 +98,7 @@ repository, written as `repository.directory`:
 {
     "repository": {
         "type": "git",
-        "url": "https://github.com/acme/acme",
+        "url": "https://github.com/myapp/myapp",
         "directory": "packages/web"
     }
 }
@@ -132,9 +132,9 @@ section still generates correct tokens from its existing metadata.
   root's type).
 
 ```sh
-dbx project:init --name my-app --scope @acme --type project --out ./my-app
-dbx project:init:monorepo --name acme --scope @acme --out .
-dbx project:init:monorepo --name acme --scope @acme --example --out .
+dbx project:init --name my-app --scope @org --type project --out ./my-app
+dbx project:init:monorepo --name myapp --scope @org --out .
+dbx project:init:monorepo --name myapp --scope @org --example --out .
 dbx project:init:workspace --name web --root . --dir packages/web
 ```
 

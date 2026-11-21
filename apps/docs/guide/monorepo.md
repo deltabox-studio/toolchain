@@ -15,7 +15,7 @@ Enable the `tsconfig` section and the toolchain generates each workspace's
 ```ts [dbx.config.ts]
 export default defineConfig({
     toolchain: {
-        project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
+        project: { type: 'monorepo-root', name: 'myapp', scope: '@org' },
         tsconfig: { refs: true, aliases: true, indent: 4 },
     },
 });
@@ -27,8 +27,8 @@ splits the config across several files.
 ## Scaffolding a monorepo
 
 ```sh
-dbx project:init:monorepo --name acme --scope @acme --out .
-dbx project:init:workspace --name utils --scope @acme --root . --dir packages/utils
+dbx project:init:monorepo --name myapp --scope @org --out .
+dbx project:init:workspace --name utils --scope @org --root . --dir packages/utils
 ```
 
 ## Tasks

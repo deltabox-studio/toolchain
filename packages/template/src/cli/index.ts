@@ -602,7 +602,7 @@ export function templateCommands() {
                 { flags: '-t, --template <id>', description: 'Template id (see template:list).' },
                 KIND_OPTION,
                 { flags: '-n, --name <name>', description: 'Project / package name.' },
-                { flags: '-s, --scope <scope>', description: 'npm scope, eg. @acme.' },
+                { flags: '-s, --scope <scope>', description: 'npm scope, eg. @org.' },
                 { flags: '-o, --out <dir>', description: 'Output directory (default: cwd).' },
                 CWD_OPTION,
                 {

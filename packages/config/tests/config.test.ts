@@ -162,13 +162,13 @@ describe('generators', () => {
         const markdown = generateCliDocs(
             [{ name: 'build', description: 'Build.', run: () => {} }],
             {
-                prefix: 'acme',
+                prefix: 'myapp',
                 title: 'Commands',
             }
         );
         expect(markdown).toContain('# Commands');
-        expect(markdown).toContain('[`acme build`](#build)');
-        expect(markdown).toContain('## `acme build`');
+        expect(markdown).toContain('[`myapp build`](#build)');
+        expect(markdown).toContain('## `myapp build`');
     });
 
     it('supports custom frontmatter strings and callbacks', () => {

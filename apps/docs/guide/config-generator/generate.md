@@ -150,8 +150,8 @@ import { generateConfigJsonSchema, generateJsonSchemaFile } from '@deltabox/tool
 
 const doc = await generateConfigJsonSchema(schema, {
     baseGroup: 'base',
-    id: 'https://acme.dev/schemas/config.json',
-    title: 'Acme configuration',
+    id: 'https://myapp.dev/schemas/config.json',
+    title: 'Myapp configuration',
     description: 'Every env-backed setting.',
 });
 const path = await generateJsonSchemaFile(schema, { output: 'config.schema.json' });
@@ -231,7 +231,7 @@ const program = engine.cli.program.create(
             }),
     ],
     {
-        name: 'acme',
+        name: 'myapp',
         globalOptions: [{ flags: '--json', description: 'Print JSON.' }],
         disableColors: ({ color }) => color === false,
     }

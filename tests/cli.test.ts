@@ -378,17 +378,17 @@ describe('provider registration policy', () => {
                 path.join(registry, 'providers.json'),
                 JSON.stringify([
                     {
-                        id: 'acme',
-                        name: 'Acme',
+                        id: 'myapp',
+                        name: 'Myapp',
                         binary: 'echo',
-                        commands: [{ name: 'acme:run', subcommand: 'run', description: 'Run it' }],
+                        commands: [{ name: 'myapp:run', subcommand: 'run', description: 'Run it' }],
                     },
                 ])
             );
             addProjectProviderRegistry(cwd, './providers');
 
             const passthroughs = providerPassthroughCommands(cwd);
-            expect(passthroughs.map(command => command.name)).toContain('acme:run');
+            expect(passthroughs.map(command => command.name)).toContain('myapp:run');
             // Provider passthroughs are registry-dependent, so the generated CLI
             // reference omits them.
             expect(passthroughs.every(command => command.hidden)).toBe(true);
@@ -396,7 +396,7 @@ describe('provider registration policy', () => {
                 providerPassthroughCommands(cwd, {
                     registry: { providers: { deny: [registry] } },
                 }).map(command => command.name)
-            ).not.toContain('acme:run');
+            ).not.toContain('myapp:run');
         } finally {
             fs.rmSync(cwd, { recursive: true, force: true });
         }

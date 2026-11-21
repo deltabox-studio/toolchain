@@ -61,15 +61,15 @@ describe('tsconfig templates', () => {
 describe('monorepo tsconfig', () => {
     it('builds paths + references from workspaces', () => {
         const config = buildMonorepoTsconfig({
-            scope: '@acme',
+            scope: '@org',
             workspaces: [
                 { alias: 'core', dir: 'packages/core' },
                 { alias: 'cli', dir: 'packages/cli' },
             ],
         });
         const paths = (config.compilerOptions as any).paths;
-        expect(paths['@acme/core']).toEqual(['./packages/core/src/index.ts']);
-        expect(paths['@acme/cli/*']).toEqual(['./packages/cli/src/*']);
+        expect(paths['@org/core']).toEqual(['./packages/core/src/index.ts']);
+        expect(paths['@org/cli/*']).toEqual(['./packages/cli/src/*']);
         expect(config.references).toEqual([
             { path: './packages/core/tsconfig.json' },
             { path: './packages/cli/tsconfig.json' },
@@ -78,7 +78,7 @@ describe('monorepo tsconfig', () => {
 
     it('serializes to JSON', () => {
         const json = renderMonorepoTsconfig({
-            scope: '@acme',
+            scope: '@org',
             workspaces: [{ alias: 'core', dir: 'packages/core' }],
         });
         expect(() => JSON.parse(json)).not.toThrow();

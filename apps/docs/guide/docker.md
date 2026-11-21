@@ -31,7 +31,7 @@ import { dockerFiles, writeDockerFiles } from '@deltabox/toolchain/docker';
 
 const files = dockerFiles({
     cwd: process.cwd(),
-    image: 'acme/api',
+    image: 'myapp/api',
     tag: 'latest',
     port: 3000,
 });

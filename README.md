@@ -109,7 +109,7 @@ import { defineConfig } from '@deltabox/toolchain';
 
 export default defineConfig({
     toolchain: {
-        project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
+        project: { type: 'monorepo-root', name: 'myapp', scope: '@org' },
         changelog: { workflows: { ci: true, release: true } },
         tsconfig: { refs: true },
         biome: true,
@@ -225,7 +225,7 @@ export default defineConfig({
     plugins: [
         dbx({
             toolchain: {
-                project: { name: 'my-app', scope: '@acme' },
+                project: { name: 'my-app', scope: '@org' },
                 fmt: { oxc: true },
                 lint: { oxc: true },
                 ci: { sync: true },

@@ -11,7 +11,7 @@
 import type { ToolchainProjectConfig } from './config-types.js';
 import type { PackageJson } from './types/index.js';
 
-/** Split a package name into its unscoped name + scope (`@acme/app` -> `app`/`@acme`). */
+/** Split a package name into its unscoped name + scope (`@org/app` -> `app`/`@org`). */
 export function splitPackageName(pkgName: string | undefined): {
     name?: string;
     scope?: string;

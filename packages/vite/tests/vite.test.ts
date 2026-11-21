@@ -627,14 +627,14 @@ describe('resolveVite', () => {
 
     it('adds the resolved workspace group to sortImports', async () => {
         const dir = makeTmp();
-        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: '@acme/root' }));
+        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: '@org/root' }));
         fs.writeFileSync(
             path.join(dir, 'dbx.config.json'),
             JSON.stringify({ toolchain: { vite: { fmt: true } } })
         );
         const app = path.join(dir, 'packages', 'app');
         fs.mkdirSync(app, { recursive: true });
-        fs.writeFileSync(path.join(app, 'package.json'), JSON.stringify({ name: '@acme/app' }));
+        fs.writeFileSync(path.join(app, 'package.json'), JSON.stringify({ name: '@org/app' }));
         fs.writeFileSync(path.join(app, 'dbx.config.json'), '{}');
 
         const config = (await resolveVite({ cwd: dir })) as {
@@ -644,7 +644,7 @@ describe('resolveVite', () => {
         expect(config.fmt.sortImports.customGroups).toEqual([
             {
                 groupName: 'workspace',
-                elementNamePattern: ['@acme/**', 'app', 'app/**', 'root', 'root/**'],
+                elementNamePattern: ['@org/**', 'app', 'app/**', 'root', 'root/**'],
             },
         ]);
     });

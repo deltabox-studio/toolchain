@@ -122,7 +122,7 @@ function resolveChain(
         : (pathsEntry?.dir ?? refDir(file));
 
     // Longest/most specific keys first, so a shorter prefix never shadows a
-    // longer entry (eg. `@acme/core` before `@acme`).
+    // longer entry (eg. `@org/core` before `@org`).
     const pathEntries = Object.entries(pathsEntry?.config.compilerOptions?.paths ?? {}).sort(
         ([a], [b]) => compareKeysDescending(a, b)
     );

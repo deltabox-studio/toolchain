@@ -18,9 +18,9 @@ const OXFMT = fileURLToPath(new URL('../../../node_modules/oxfmt/bin/oxfmt', imp
 
 const SOURCE = `import { z } from 'zod';
 import path from 'node:path';
-import { app } from '@acme/app';
+import { app } from '@org/app';
 import helper from './helper.js';
-import { core } from '@acme/core';
+import { core } from '@org/core';
 import { config } from '@/config.js';
 import './style.css';
 
@@ -41,14 +41,14 @@ function writeJson(file: string, value: unknown): void {
 /** Root + one workspace, both with a dbx config. */
 function fixture(): string {
     const root = tmp();
-    writeJson(path.join(root, 'package.json'), { name: '@acme/root' });
+    writeJson(path.join(root, 'package.json'), { name: '@org/root' });
     writeJson(path.join(root, 'dbx.config.json'), { toolchain: {} });
     const app = path.join(root, 'packages', 'app');
-    writeJson(path.join(app, 'package.json'), { name: '@acme/app' });
+    writeJson(path.join(app, 'package.json'), { name: '@org/app' });
     writeJson(path.join(app, 'dbx.config.json'), { toolchain: {} });
     // Discovery only includes projects that actually have a dbx config.
     writeJson(path.join(root, 'packages', 'ignored', 'package.json'), {
-        name: '@acme/ignored',
+        name: '@org/ignored',
     });
     // Test fixtures are dbx projects too, but are not importable packages.
     const fixture = path.join(root, 'packages', 'vscode', 'test-fixtures', 'workspace');
@@ -63,7 +63,7 @@ describe('resolveFmtCustomGroups', () => {
         expect(await resolveFmtCustomGroups({ cwd: root })).toEqual([
             {
                 groupName: 'workspace',
-                elementNamePattern: ['@acme/**', 'app', 'app/**', 'root', 'root/**'],
+                elementNamePattern: ['@org/**', 'app', 'app/**', 'root', 'root/**'],
             },
         ]);
     });
@@ -146,8 +146,8 @@ describe('formatter output', () => {
 
 import { z } from 'zod';
 
-import { app } from '@acme/app';
-import { core } from '@acme/core';
+import { app } from '@org/app';
+import { core } from '@org/core';
 
 import { config } from '@/config.js';
 
@@ -169,8 +169,8 @@ export const items = [path, z, app, core, config, helper];
         const output = formatFixture(root, fmt);
         expect(output).toBe(`import path from 'node:path';
 
-import { app } from '@acme/app';
-import { core } from '@acme/core';
+import { app } from '@org/app';
+import { core } from '@org/core';
 import { z } from 'zod';
 
 import { config } from '@/config.js';

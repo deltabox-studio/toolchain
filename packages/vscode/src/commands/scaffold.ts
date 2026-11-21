@@ -240,7 +240,7 @@ export function createScaffoldCommands(deps: CommandDeps): ScaffoldCommands {
         if (!name) return;
         const scope = await vscode.window.showInputBox({
             prompt: 'npm scope (optional)',
-            placeHolder: '@acme',
+            placeHolder: '@org',
         });
         // Cancelling any prompt aborts the whole scaffold (no files are written).
         if (scope === undefined) return;
@@ -402,7 +402,7 @@ export function createScaffoldCommands(deps: CommandDeps): ScaffoldCommands {
         // any one of them aborts the scaffold so it can't leave orphan files.
         const scope = await vscode.window.showInputBox({
             prompt: 'npm scope (optional)',
-            placeHolder: '@acme',
+            placeHolder: '@org',
         });
         if (scope === undefined) return;
         const packageManager = await vscode.window.showQuickPick(['yarn', 'pnpm', 'npm', 'bun'], {

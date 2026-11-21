@@ -656,7 +656,7 @@ describe('program help and errors', () => {
         const program = engine().cli.program.create(
             cmd => [cmd('serve', { name: 'serve', description: 'Serve.', run: () => {} })],
             {
-                name: 'acme',
+                name: 'myapp',
                 disableColors: true,
                 writeOut: text => output.push(text),
                 format: { colors: { command: text => `[${text}]` } },
@@ -664,8 +664,8 @@ describe('program help and errors', () => {
         );
         await program.invokeAsync(['--help']);
         const help = output.join('');
-        expect(help).toContain('Usage: acme');
-        expect(help).not.toContain('[acme]');
+        expect(help).toContain('Usage: myapp');
+        expect(help).not.toContain('[myapp]');
     });
 
     it('renders colourless boxed help and plain/custom variants', () => {

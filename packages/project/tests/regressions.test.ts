@@ -58,7 +58,7 @@ describe('generated file containment', () => {
 describe('monorepo workspace globs', () => {
     it('threads workspaceGlobs into package.json, scripts and pnpm-workspace.yaml', () => {
         const files = createMonorepoRootFiles({
-            name: 'acme',
+            name: 'myapp',
             packageManager: 'pnpm',
             workspaces: [],
             workspaceGlobs: ['apps/*', 'packages/*'],
@@ -109,16 +109,16 @@ describe('template interpolation escaping', () => {
     });
 
     it('asserts the full health payload in the Bun test', () => {
-        const files = createProjectTemplateFiles('bun', { name: 'acme' });
+        const files = createProjectTemplateFiles('bun', { name: 'myapp' });
         const test = files.find(file => file.path === 'tests/app.test.ts')!.content;
-        expect(test).toContain("toEqual({ name: 'acme', status: 'ok' })");
+        expect(test).toContain("toEqual({ name: 'myapp', status: 'ok' })");
         expect(test).not.toContain("toEqual({ status: 'ok' })");
     });
 });
 
 describe('file-server regression', () => {
     it('serves only files, guards decodeURIComponent and handles stream errors', () => {
-        const files = createProjectTemplateFiles('file-server', { name: 'acme' });
+        const files = createProjectTemplateFiles('file-server', { name: 'myapp' });
         const server = files.find(file => file.path === 'src/server.ts')!.content;
 
         expect(server).toContain('if (!info.isFile())');

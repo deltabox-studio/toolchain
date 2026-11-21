@@ -29,7 +29,7 @@ export default defineConfig({
     plugins: [
         dbx({
             toolchain: {
-                project: { name: 'my-app', scope: '@acme' },
+                project: { name: 'my-app', scope: '@org' },
                 fmt: true,
                 lint: true,
                 // ...any other dbx sections
