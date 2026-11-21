@@ -9,7 +9,7 @@ the template engine.
 | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
 | `defineConfig(config)`                                                                     | Identity helper for a typed `dbx.config.*` (object, promise, or sync/async callback).       |
 | `sectionEnabled(section)` / `sectionConfig(section)`                                       | Opt-in-by-presence helpers for a config section.                                            |
-| `resolveTokens(config)`                                                                    | Flatten a config into `{{ token }}` replacements.                                           |
+| `resolveTokens(config)`                                                                    | Flatten a config into <code v-pre>{{ token }}</code> replacements.                                           |
 | `CONFIG_FILE_NAMES`                                                                        | The config file names the loader probes, in priority order.                                 |
 | `repoSlugFromUrl(url)`                                                                     | Derive an `owner/name` slug from a repository URL.                                          |
 | `findOwnCliEntry(cwd?)` / `localToolchainVersion(cwd?)` / `TOOLCHAIN_PACKAGE`              | Locate a project's own toolchain bin + pinned version (prefer them over a global `dbx`).    |
@@ -20,14 +20,17 @@ the template engine.
 | `readJsonFile` / `readJsonAt` / `toJson` / `writeJsonFile`                                 | Small JSON file helpers.                                                                    |
 | `mergeJsonAt(cwd, relative, patch)`                                                        | Deep-merge a patch over an existing JSON file.                                              |
 | `deepMerge` / `applyOverrides` / `isPlainObject` / `sort` / `mapValues`                    | Object utilities (including layered typed overrides).                                       |
-| `applyReplacements` / `applyReplacementsDeep` / `createReplacer`                           | The `{{ token }}` template engine (also `tokenPattern`, `extractTokens`).                   |
+| `defineCliCommand(command)`                                                                | Build a `CliCommand` while preserving the literal `options` tuple for typed values.         |
+| `CliOptionValues<TOptions>`                                                                | The commander-style typed values produced by an option tuple.                               |
+| `applyReplacements` / `applyReplacementsDeep` / `createReplacer`                           | The <code v-pre>{{ token }}</code> template engine (also `tokenPattern`, `extractTokens`).                   |
 | `DEFAULT_IGNORE_PATTERNS` / `DEFAULT_FMT_IGNORE_PATTERNS` / `DEFAULT_LINT_IGNORE_PATTERNS` | The shared build/cache ignores and the Oxfmt/Oxlint extensions.                             |
 | `resolveIgnorePatterns(cwd?, options?)` / `collectGitignorePatterns(cwd?)`                 | Defaults + `exclude` + `.gitignore` resolution, and the matching helpers (`isIgnoredPath`). |
 | `toYaml(value)`                                                                            | A tiny YAML emitter for the GitHub Actions subset.                                          |
 
 The config **types** and **schemas** also live here: `ToolchainConfig`, `DbxConfig`,
 `SyncTask`, `SyncContext`, `ManagedFile`, `CliCommand`, `CliOption`,
-`ToolchainProvider`, `ToolchainViteConfig` (Vite+'s config type), `Replacements`,
+`CliOptionValues`, `CliCommandContext`, `ToolchainProvider`,
+`ToolchainViteConfig` (Vite+'s config type), `Replacements`,
 and the generated `config-types` / `config-schema` exports.
 
 ```ts
@@ -84,9 +87,13 @@ guide for the full workflow).
 | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `createConfigEngine(options)`                                                            | Bind a schema, env prefix, base group and root into an engine. |
 | `parseConfig` / `parseEnvConfig` / `parseCliConfig`                                      | Runtime parsers: env + CLI + overrides, validated.             |
-| `loadConfig` / `loadConfigAsync`                                                         | Discover/import a config file and parse it.                    |
+| `loadConfig` / `loadConfigSync` / `loadConfigAsync`                                      | Discover/import a config file and parse it.                    |
+| `loadEnvConfig*` / `loadCliConfig*` / `loadFileConfig*`                                  | Source-specific loader variants (Sync/Async).                  |
 | `collect(schema, options?)`                                                              | Resolve env + CLI into a typed config (no overrides).          |
 | `configCommands({ engine, defaults? })`                                                  | The `config:*` commands for a consumer's own CLI.              |
+| `createConfigProgram(commands, options?)`                                                | Low-level program factory; prefer `engine.cli.program.create()`. |
+| `generateConfigProgram(schema, options)`                                                | Generate `CliCommand[]` from a config schema.                  |
+| `ConfigProgramError`                                                                    | Invalid-argv error (`code`, `input`, optional `suggestion`).   |
 | `formatGenerated(source, options?)`                                                      | Format generated output with Oxfmt (see below).                |
 | `GENERATED_FORMAT_OPTIONS`                                                               | The baseline Oxfmt options used by the generators.             |
 | `parseEnvTree(env, prefix?)` / `envString` / `envInt` / `envBool` / `envList` / `envMap` | Legacy dependency-free tree accessors.                         |
@@ -124,9 +131,8 @@ sync task (see the [Providers](/guide/providers) guide).
 
 | Export                                 | Description                                                            |
 | -------------------------------------- | ---------------------------------------------------------------------- |
-| `createConfigProgram(commands)`        | Build the engine program from framework-agnostic commands.             |
 | `builtinCommands()`                    | The commands built into the root CLI (config commands need an engine). |
-| `createCli()`                          | Build the `dbx` program on the engine runtime.                         |
+| `createCli(commands?)`                 | Build the `dbx` program; pre-typed arrays keep their command/option types. |
 | `runCli(argv?)`                        | Parse and run the CLI (extracts logger flags, defaults bare Vite+).    |
 | `withDefaultVite(argv, commandNames?)` | Insert `vite` before a bare Vite+ command.                             |
 | `extractLogOptions(argv)`              | Pull `--log-level` / `--color` / `--no-color` out of argv.             |

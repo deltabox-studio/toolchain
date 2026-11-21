@@ -24,6 +24,8 @@ All from that one schema.
 - [Generate](/guide/config-generator/generate) — the generator methods.
 - [CLI commands](/guide/config-generator/cli-commands) — the `config:*` command
   descriptors.
+- [CLI program](/guide/config-generator/generate#cli-program) — build schema
+  commands into a runnable program with `invoke`, hooks and formatting.
 - [Load the config](/guide/config-generator/load-the-config) — the runtime
   parsers and `loadConfig*` (which already parse the loaded file).
 - [Generated outputs](/guide/config-generator/generated-outputs) — types,

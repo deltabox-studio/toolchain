@@ -79,7 +79,7 @@ reads. Everything else is optional and, if you prefer, renameable (see
   workspaces file is regenerated from the graph (aliases + references); with no
   workspaces there is nothing to wire.
 
-The `{{envTypesFile}}` token in the templates (default `src/dbx-env.d.ts`) is
+The <code v-pre>{{ envTypesFile }}</code> token in the templates (default `src/dbx-env.d.ts`) is
 resolved when a project is scaffolded, so a generated config's `include` points
 at the project's env types file.
 

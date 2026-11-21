@@ -140,7 +140,7 @@ engine.markdown.file.write({
 ## Post-processing
 
 The `generate*` functions return their content, so you can transform it before
-writing (the `write*` methods write immediately):
+writing (the grouped `.write()` methods write immediately):
 
 ```ts
 const files = generateConfigTypes(schema);

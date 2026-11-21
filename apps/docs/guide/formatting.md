@@ -241,7 +241,7 @@ export default defineConfig({
 });
 ```
 
-`dbx sync` writes `biome.json`, resolving the `{{name}}` / `{{scope}}`
+`dbx sync` writes `biome.json`, resolving the <code v-pre>{{ name }}</code> / <code v-pre>{{ scope }}</code>
 replacement tokens and merging your overrides over the defaults.
 
 If any other formatter/linter is also configured, sync still writes both the

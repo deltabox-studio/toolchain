@@ -1,7 +1,9 @@
 # CLI commands docs
 
-`configCommands({ engine, defaults })` returns `CliCommand[]` (register them
-on your cli program with `@deltabox/toolchain/cli`) and can be used to generate config artifacts:
+`configCommands({ engine, defaults })` returns typed `CliCommand[]`; register
+them on the engine program with `engine.cli.program.create()` (preferred), or on
+a program built with the lower-level `createConfigProgram()` if the command list
+is not tied to an engine. They generate config artifacts:
 
 | Command           | Writes                                       |
 | ----------------- | -------------------------------------------- |
@@ -20,7 +22,8 @@ const commands = configCommands({
     engine,
     defaults: { typesDir: 'packages/shared/src/types', docsDir: 'docs/reference' },
 });
-// register `commands` on your cli program
+const program = engine.cli.program.create(() => commands, { name: 'acme' });
+await program.invokeAsync();
 ```
 
 > These commands are library-only: `dbx` itself does not register a `config:*`
@@ -56,8 +59,9 @@ Config-backed flags are derived recursively: objects and union object branches
 expand to dotted paths (`sync.format` → `--format-*`), scalar arrays become list
 flags, and arrays of objects/records/maps are skipped unless the field defines
 `cli` metadata. Use `engine.cli.program.createCommand(scope, spec)` when you want the
-runtime `values` object inferred from the command's `options` list. Metadata
-lives in the schema:
+runtime `values` object inferred from the command's `options` list;
+`createCommand('name', spec)` / `cmd('name', spec)` build a runtime-only command
+with no config scope. Metadata lives in the schema:
 
 ```ts
 port: z.number().default(3000).meta({ cli: { short: 'p' } }),

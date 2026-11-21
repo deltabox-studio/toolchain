@@ -6,7 +6,10 @@ with the engine and drop to a single generator when you only need one artifact.
 
 ```ts
 import {
+    ConfigProgramError,
     createConfigEngine,
+    createConfigProgram,
+    generateConfigProgram,
     generateConfigTypes,
     parseConfig,
     parseEnvConfig,
@@ -199,6 +202,7 @@ import {
     generateConfigEnv,
     generateConfigJsonSchema,
     generateConfigMarkdown,
+    generateConfigProgram,
     generateConfigTypes,
     generateEnvFile,
     generateEnvMarkdown,
@@ -214,6 +218,7 @@ generateEnvMarkdown(collectDefinitions(schema, { envPrefix: 'MYAPP_' }));
 generateMarkdownFile({ title: 'Docs', body: 'Hello.' });
 generateCliOptions(schema, { envPrefix: 'MYAPP_', scope: 'cli' });
 generateCliDocs(commands, { output: 'docs/cli.md' });
+const generated = generateConfigProgram(schema, { envPrefix: 'MYAPP_' });
 
 await generateConfigJsonSchema(schema, { baseGroup: ['base', 'server'] });
 await generateJsonSchemaFile(schema, { output: 'config.schema.json' });
@@ -446,8 +451,8 @@ export const serveCommand = configCliCommand({
     },
 });
 
-// Build it into an engine program like any other CliCommand:
-const program = createConfigProgram([serveCommand]);
+// Build it into the engine program like any other CliCommand:
+const program = engine.cli.program.create(() => [serveCommand]);
 await program.invokeAsync();
 ```
 
@@ -507,12 +512,88 @@ await program.invokeAsync();
 
 `create()` returns a built program: `program.commands` is the normalized command
 list (a single command stays a single command; an empty list generates one
-command per eligible scope). `createCommand(scope, spec)` builds one command
-without a program. The callback may be async; `create()` then returns a promise.
+command per eligible scope). `createCommand(scope, spec)` builds one config-backed
+command without a program; `cmd('name', spec)` / `createCommand('name', spec)`
+build a runtime-only command without a config scope. The callback may be async;
+`create()` then returns a promise.
+
 `ConfigScopeCommand` chains support `name`, `description`, `version`, `argv`,
-`bin`, `option`/`options`, `command`/`commands`, `subcommand`/`subcommands`,
-`onError` and terminal `run`. `onError(error, context)` receives the loaded host
-context. Omit `run` for a grouping command; it registers with its subcommands.
+`bin`, `option`/`options`, `globalOption`/`globalOptions`, `inherit`,
+`command`/`commands`, `subcommand`/`subcommands`, `onError` and terminal `run`.
+`onError(error, context)` receives the loaded host context. Omit `run` for a
+grouping command; it registers with its subcommands.
+
+#### Program members and options
+
+A `ConfigProgram` exposes the runtime surface:
+
+| Member                                   | Description                                                              |
+| ---------------------------------------- | ------------------------------------------------------------------------ |
+| `commands`                               | The normalized commands (single command stays single).                   |
+| `globals`                                | The program-level global options.                                        |
+| `name()` / `description()` / `version()` | Set the metadata shown in help/version output.                           |
+| `output(writeOut, writeErr?)`            | Route help/version output; `writeErr` is reserved for error rendering.    |
+| `globalOption()` / `globalOptions()`     | Append program-level globals.                                            |
+| `argv(values)`                           | Set the explicit argv used by `invoke()`.                                |
+| `withContext(context)`                   | Set the default host context.                                            |
+| `configure(format)`                      | Merge help/error formatting options.                                     |
+| `formatHelp(command?)`                   | Render program or command help.                                          |
+| `formatError(error)`                     | Render an error with the configured template.                            |
+| `invoke(argv?, context?)`                | Run synchronously (async handlers/resolvers throw).                      |
+| `invokeAsync(argv?, context?)`           | Run and await async handlers, hooks and resolvers.                       |
+| `hook()` / `hooks()`                     | Register inferred before/after hooks.                                    |
+
+Build the program through the engine — this is the preferred entry point because
+it infers the config/values types and accepts the full program options:
+
+```ts
+const program = engine.cli.program.create(
+    cmd => [
+        cmd('serve', {
+            name: 'serve',
+            description: 'Serve.',
+            run: ({ config, values, context }) => {},
+        }),
+    ],
+    {
+        name: 'acme',
+        description: 'Acme tooling.',
+        version: '1.0.0',
+        globalOptions: [{ flags: '--json', description: 'Print JSON.' }],
+        context: { cwd: process.cwd() },
+        disableColors: ({ color }) => color === false,
+        writeOut: text => process.stdout.write(text),
+        writeErr: text => process.stderr.write(text),
+    }
+);
+```
+
+`argv` defaults to `process.argv.slice(2)`, `name` defaults to `'program'`, and
+`disableColors` defaults to `false`. `program.configure()` merges formatting;
+`program.argv()`, `program.withContext()` and `program.output()` set the runtime
+pieces.
+
+Use the lower-level `createConfigProgram(commands, options?)` only when you
+already have a command list that is not tied to an engine. It accepts the same
+options and is what `engine.cli.program.create()` calls internally.
+
+Program types: `ConfigProgram`, `ConfigProgramOptions`,
+`ConfigProgramFormatOptions`, `ConfigProgramCommand`, `ConfigScopeCommand`,
+`ConfigCommandBuilder`, `ConfigEngineCliProgram` and `ConfigProgramError`.
+
+The standalone equivalent is
+`generateConfigProgram(schema, { envPrefix, ... })`: it returns `CliCommand[]`
+with schema-derived options. Use `engine.cli.program.create()` when you want the
+typed `run({ config, values, context })` callback. See
+[Generate → CLI program](/guide/config-generator/generate#cli-program).
+
+#### `ConfigProgramError`
+
+Invalid argv throws a `ConfigProgramError` with `code` (for example
+`unknownCommand`, `unknownOption`, `missingOptionValue`, `invalidValue`,
+`missingCommand`), `input` and an optional misspelling `suggestion`. Use
+`format.error.messages` to override the messages and `program.formatError()` to
+render one.
 
 Options and subcommands have commander-style shorthands as well as array forms:
 
@@ -663,7 +744,8 @@ program.configure({
 Help and error output are colourless by default. Supply colour hooks (for
 example `picocolors`) to opt in; the defaults merge recursively into
 subcommands and can be overridden per command, option, value, description and
-usage.
+usage. The default help template is `'plain'`; the default error template is
+`'message'`.
 
 ```ts
 import pc from 'picocolors';
@@ -679,14 +761,14 @@ program.configure({
     options: { '--json': pc.magenta },
     commands: { sync: { colors: { command: pc.green } } },
     help: {
-        template: 'box', // or 'plain', or (model) => string
+        template: 'box', // 'plain' (default) | 'box' | (model) => string
         box: {
             corners: { topLeft: '┌', topRight: '┐', bottomLeft: '└', bottomRight: '┘' },
             padding: 1,
         },
     },
     error: {
-        // 'box' (default: message + stack) | 'message' | custom formatter
+        // 'message' (default) | 'box' (message + stack) | custom formatter
         template: 'box',
         showStack: false,
         messageColor: pc.red,
@@ -696,6 +778,38 @@ program.configure({
 program.formatHelp('sync');
 program.formatError(error);
 ```
+
+`help.template: 'box'` wraps the commander-style content in the rounded box.
+`error.template: 'box'` renders one box per error; `'message'` prints only the
+message. Error formatting also exposes `messageColor`, `stackColor`,
+`showStack`, `messageOnly`, `box` and `messages` (the invalid-argv message
+overrides). Custom formatters receive the resolved `ConfigHelpModel` (`name`,
+`description`, `usage`, `options`, `commands`, `command`) or `ConfigErrorModel`
+(`errors[]`). Per-command overrides live under `commands[name]` and per-option
+colors under `options['--flag']`.
+
+Set `disableColors` when the host has its own colour switch. A function receives
+the parsed program globals and the invocation context, so a `--no-color` flag
+can turn every configured hook off at runtime:
+
+```ts
+const program = engine.cli.program.create(
+    cmd => [
+        cmd('serve', {
+            name: 'serve',
+            description: 'Serve.',
+            run: () => {},
+        }),
+    ],
+    {
+        globalOptions: [{ flags: '--no-color', description: 'Disable colours.' }] as const,
+        disableColors: ({ color }) => color === false,
+    }
+);
+```
+
+The callback may be async. `invoke()` requires a synchronous resolver; use
+`invokeAsync()` (the normal CLI path) for async predicates.
 
 Hooks run around the selected action and infer every declared command's
 context, scope, name and runtime `values`:

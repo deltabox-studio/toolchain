@@ -37,4 +37,14 @@ import { createConfigEngine, parseEnvConfig } from '@deltabox/toolchain/config';
 
 const engine = createConfigEngine({ schema, envPrefix: 'MYAPP_' });
 const runtimeConfig = parseEnvConfig(engine.schema, process.env, { envPrefix: 'MYAPP_' });
+
+// Build a runnable CLI program from the generated config commands
+import { configCommands } from '@deltabox/toolchain/config';
+
+const program = engine.cli.program.create(() => configCommands({ engine }), {
+    name: 'my-cli',
+    globalOptions: [{ flags: '--no-color', description: 'Disable colours.' }] as const,
+    disableColors: ({ color }) => color === false,
+});
+await program.invokeAsync(process.argv.slice(2));
 ```

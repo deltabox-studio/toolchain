@@ -23,7 +23,7 @@ grouped `.generate` methods return the content and only write when you pass `out
 | Metadata JSON  | `engine.configJson.build()`                                  | `buildConfigJson()`                                       |
 | CLI options    | `engine.cli.generate()` / `engine.cli.write()`               | `generateCliOptions()`                                    |
 | Scoped CLI     | `engine.cli.options()`                                       | `generateConfigCliOptions()` / `configCliCommand()`       |
-| CLI program    | `engine.cli.program.create()`                                | `generateConfigProgram()`                                 |
+| Program        | `engine.cli.program.create()`                                | `generateConfigProgram()`                                 |
 | CLI docs       | `engine.markdown.cli.generate()` / `.write()`                | `generateCliDocs()`                                       |
 | Env docs       | `engine.markdown.env.generate()` / `.write()`                | `generateEnvMarkdown()`                                   |
 | Markdown page  | `engine.markdown.file.generate()` / `.write()`               | `generateMarkdownFile()`                                  |
@@ -213,6 +213,58 @@ parser.parse(['--base-url', 'http://localhost:8080']);
 
 Options: `scope` (default `cli`), `output`, `shortFlags`, `envPathOf`.
 
+## CLI program
+
+The preferred entry point is `engine.cli.program.create()`. It derives options
+from the engine schema, infers `run` values and accepts the full program options:
+
+```ts
+const program = engine.cli.program.create(
+    cmd => [
+        cmd('serve')
+            .description('Run the server.')
+            .option({ flags: '--json', description: 'Print JSON.' })
+            .run(({ config, values, context }) => {
+                // config: the validated `serve` section
+                // values: the explicit CLI values
+                // context: the host command context
+            }),
+    ],
+    {
+        name: 'acme',
+        globalOptions: [{ flags: '--json', description: 'Print JSON.' }],
+        disableColors: ({ color }) => color === false,
+    }
+);
+await program.invokeAsync();
+```
+
+`engine.cli.program.create()` accepts `argv`, `name`, `description`, `version`,
+`globalOptions`, `context`, `disableColors`, `writeOut`, `writeErr` and
+`format`. See the
+[API reference](/guide/config-generator/api#program-members-and-options)
+for `invoke`/`invokeAsync`, hooks, help/error formatting and `bin`.
+
+Without an engine, `generateConfigProgram(schema, options)` returns the same
+`CliCommand[]`; each command spec runs with the validated scope config. It
+requires `envPrefix`; `envPathOf`, `commands`, `includePaths`, `excludePaths`,
+`flags`, `descriptions` and `types` shape the generated commands. When `commands`
+is omitted, one command is generated per command-eligible scope
+(`cliCommand: false` opts a scope out).
+
+```ts
+import { generateConfigProgram } from '@deltabox/toolchain/config';
+
+const commands = generateConfigProgram(schema, {
+    envPrefix: 'MYAPP_',
+    includePaths: ['server', 'server.port'],
+});
+```
+
+Use the lower-level `createConfigProgram(commands, options?)` only when you
+already have a command list that is not tied to an engine; it accepts the same
+program options.
+
 ## CLI docs
 
 `generateCliDocs(commands, options?)` renders a markdown reference from
@@ -294,8 +346,8 @@ generateConfigTypes(schema, { outputDir: false });
 await generateConfigJsonSchema(schema, { output: false });
 ```
 
-The engine's `write*` methods always write; use the `generate*` methods when you
-only need the content.
+The grouped `.write()` methods always write; use the `.generate()` methods when
+you only need the content.
 
 ### Engine vs standalone
 

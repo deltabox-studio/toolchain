@@ -1,7 +1,7 @@
 # Load the config at runtime
 
 Generation is only half of it: the same schema loads the value back. The runtime
-parsers read the `envName` / `cliFlag` metadata, coerce env and CLI strings,
+parsers read the `envName` / `cli` metadata, coerce env and CLI strings,
 merge overrides and validate the result through the schema, so the returned
 object matches the generated types.
 
@@ -86,8 +86,8 @@ Every parser shares the collect options:
 - `envPathOf` — override env-name -> dotted-path derivation (eg. dual prefixes).
 
 Env names come from `.meta({ envName })`; without it, the prefix plus the field
-path is used (`MYAPP_SERVER_PORT`). CLI flags come from `.meta({ cliFlag })`,
-falling back to `--server-port`.
+path is used (`MYAPP_SERVER_PORT`). CLI flags come from `.meta({ cli: { flag } })`
+(or the legacy `cliFlag`), falling back to `--server-port`.
 
 ## Load from a file
 

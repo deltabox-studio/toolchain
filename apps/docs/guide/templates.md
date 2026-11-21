@@ -138,13 +138,13 @@ is scaffolded. Declare them in `template.json`:
 }
 ```
 
-- `name` — the token name (also `{{ name }}` in files).
+- `name` — the token name (also <code v-pre>{{ name }}</code> in files).
 - `prompt` — the prompt text (defaults to the name).
 - `default` — the value used when nothing is entered.
 - `options` — a fixed list of choices: the value is picked from a select.
 - `required` — whether a value must be provided.
 
-Files and directory names may contain `{{ token }}` placeholders, resolved while
+Files and directory names may contain <code v-pre>{{ token }}</code> placeholders, resolved while
 copying:
 
 ```

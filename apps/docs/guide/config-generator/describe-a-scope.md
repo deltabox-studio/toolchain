@@ -293,7 +293,7 @@ export const serverConfig = {
 The [ConfigMeta](https://github.com/deltabox-studio/toolchain/blob/main/packages/config/src/types/meta.ts)
 fields used in the Zod/Untyped schemas:
 
-- `id` (override the name of the generateed type)
+- `id` (override the name of the generated type)
 - `typeName` (same as `id`)
 - `public` (safe to expose as public API, true by default)
 - `description`
@@ -301,6 +301,7 @@ fields used in the Zod/Untyped schemas:
 - `env` (deprecated, use `envName` instead)
 - `envPath` (dotted config path)
 - `path` (deprecated, use `envPath` instead)
+- `envExpose` (set `false` to keep a value out of env output)
 - `required`
 - `deprecated`
 - `deprecationMessage`
@@ -314,8 +315,9 @@ fields used in the Zod/Untyped schemas:
 - `secret`
 - `scope`
 - `defaultValue` (when the resolved default differs)
-- `cliFlag`
-- `cliFlagShort`
+- `cli` (`false`, or `ConfigCliOptionMeta`: `flag`, `short`, `description`, `type`, `parse`, `default`, `choices`, `multiple`, `required`, `hidden`)
+- `cliCommand` (`false`, or `ConfigCliCommandMeta`: `name`, `description`, `aliases`, `hidden`, `passthrough`, `args`)
+- `cliFlag` / `cliFlagShort` (legacy aliases for `cli.flag` / `cli.short`)
 
 ### Annotations
 
@@ -350,7 +352,7 @@ Disable them with `includeEnv: false` or `includeCli: false` in the [config engi
 
 ```ts
 engine.markdown.generate({ includeCli: false, includeEnv: false });
-engine.types.generate({ includeEnv: false, includeEnv: false });
+engine.types.generate({ includeEnv: false });
 ```
 
 ## API reference

@@ -6,7 +6,7 @@ place to declare who a package is, and it does three jobs:
 1. **Defines `package.json` fields.** On `dbx sync`, the fields the section
    defines are written into the project's `package.json` (everything else is left
    untouched).
-2. **Feeds the `{{ token }}` replacements.** Every template (`biome.json`,
+2. **Feeds the <code v-pre>{{ token }}</code> replacements.** Every template (`biome.json`,
    workflows, tsconfigs, READMEs, ...) reads these values.
 3. **Drives scaffolding.** `dbx project:init*` uses the section as its defaults
    (and `project.type` picks the kind of project to generate).

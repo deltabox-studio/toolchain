@@ -567,7 +567,7 @@ when such a parent exists and is registered in the root `create.templates`.
 ## Custom templates
 
 A local template is any directory with a `template.json`. Files and directory
-names may use `{{ token }}` placeholders; actions can be builtin, a JS module or
+names may use <code v-pre>{{ token }}</code> placeholders; actions can be builtin, a JS module or
 a shell command.
 
 ```tree

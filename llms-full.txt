@@ -847,79 +847,78 @@ url: https://toolchain.deltabox.studio/config/cli.md
 
 # CLI reference
 
-Generated from the same `CliCommand` descriptors the `dbx` binary
-registers. Run `yarn config:docs` after changing a command.
+Generated from the same `CliCommand` descriptors the `dbx` binary registers.
 
-| Command                                                 | Description                                                                                     |
-| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| [`dbx projects`](#projects)                             | Discover projects and write .dbx/toolchain/projects.json.                                       |
-| [`dbx sync`](#sync)                                     | Regenerate every managed file from dbx.config.*.                                                |
-| [`dbx watch`](#watch)                                   | Sync once, then watch key files and re-sync on change.                                          |
-| [`dbx reset`](#reset)                                   | Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a project.       |
-| [`dbx providers`](#providers)                           | List the tooling providers (Vite+, ...) and their commands.                                     |
-| [`dbx enabled`](#enabled)                               | Print whether the toolchain is enabled for this project (and the scope).                        |
-| [`dbx enable`](#enable)                                 | Enable the toolchain (workspace scope by default).                                              |
-| [`dbx disable`](#disable)                               | Disable the toolchain (workspace scope by default).                                             |
-| [`dbx tsconfig`](#tsconfig)                             | Generate workspace tsconfig.json files from the default tsconfig (aliases + references).        |
-| [`dbx cleanup`](#cleanup)                               | Remove build artifacts (*.tsbuildinfo, dist/).                                                  |
-| [`dbx cleanup:turbo`](#cleanup-turbo)                   | Remove the turbo cache (.turbo/).                                                               |
-| [`dbx workflow`](#workflow)                             | Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).                       |
-| [`dbx changelog`](#changelog)                           | Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.              |
-| [`dbx mcp:serve`](#mcp-serve)                           | Run the dbx MCP server over stdio (for MCP clients).                                            |
-| [`dbx mcp:install`](#mcp-install)                       | Install the dbx MCP server + skill into an AI harness/editor.                                   |
-| [`dbx mcp:list`](#mcp-list)                             | List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).                          |
-| [`dbx migrate`](#migrate)                               | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.\* into dbx.config. |
-| [`dbx migrate:list`](#migrate-list)                     | List the registered migrations and whether each is detected.                                    |
-| [`dbx project:init`](#project-init)                     | Scaffold a single-package TypeScript project.                                                   |
-| [`dbx project:init:monorepo`](#project-init-monorepo)   | Scaffold a monorepo root (add --example for one example workspace).                             |
-| [`dbx project:init:workspace`](#project-init-workspace) | Scaffold a monorepo workspace package into an existing monorepo root.                           |
-| [`dbx project:config`](#project-config)                 | Generate dbx.config.\* for existing projects that are missing one.                               |
-| [`dbx template:list`](#template-list)                   | List templates (builtin + local + opted-in online sources).                                     |
-| [`dbx template:init`](#template-init)                   | Write a template.json to a directory, making it a local template.                               |
-| [`dbx template:add`](#template-add)                     | Record a template source in .dbx/toolchain/templates.json.                                      |
-| [`dbx template:remove`](#template-remove)               | Remove a source from .dbx/toolchain/templates.json.                                             |
-| [`dbx template:registry`](#template-registry)           | Manage the global template search paths (and sync them to the VS Code setting).                 |
-| [`dbx registry`](#registry)                             | List or manage the template/provider registries.                                                |
-| [`dbx template:info`](#template-info)                   | Show one template by id.                                                                        |
-| [`dbx create`](#create)                                 | Scaffold a project from a template (builtin, local or Vite+).                                   |
-| [`dbx vite`](#vite)                                     | Run any Vite+ command through `vp` (eg. `dbx vite dev`).                                        |
-| [`dbx vite:create`](#vite-create)                       | Vite+: Create a new project from a template.                                                    |
-| [`dbx vite:migrate`](#vite-migrate)                     | Vite+: Migrate an existing project to Vite+.                                                    |
-| [`dbx vite:config`](#vite-config)                       | Vite+: Configure hooks and agent integration.                                                   |
-| [`dbx vite:hooks`](#vite-hooks)                         | Vite+: Manage the Git hook dispatcher.                                                          |
-| [`dbx vite:staged`](#vite-staged)                       | Vite+: Run linters on staged files.                                                             |
-| [`dbx vite:install`](#vite-install)                     | Vite+: Install dependencies with the detected package manager.                                  |
-| [`dbx vite:env`](#vite-env)                             | Vite+: Manage Node.js and package managers.                                                     |
-| [`dbx vite:dev`](#vite-dev)                             | Vite+: Run the Vite development server.                                                         |
-| [`dbx vite:check`](#vite-check)                         | Vite+: Run format, lint and type checks.                                                        |
-| [`dbx vite:lint`](#vite-lint)                           | Vite+: Lint code with the active linter (Oxlint via Vite+).                                     |
-| [`dbx vite:fmt`](#vite-fmt)                             | Vite+: Format code with the active formatter (Oxfmt via Vite+).                                 |
-| [`dbx vite:test`](#vite-test)                           | Vite+: Run tests through bundled Vitest.                                                        |
-| [`dbx vite:run`](#vite-run)                             | Vite+: Run package scripts and monorepo tasks.                                                  |
-| [`dbx vite:exec`](#vite-exec)                           | Vite+: Execute a binary from local node_modules.                                                |
-| [`dbx vite:node`](#vite-node)                           | Vite+: Run a Node.js script in the Vite+ env.                                                   |
-| [`dbx vite:dlx`](#vite-dlx)                             | Vite+: Run a package binary without installing it.                                              |
-| [`dbx vite:cache`](#vite-cache)                         | Vite+: Manage the task cache.                                                                   |
-| [`dbx vite:build`](#vite-build)                         | Vite+: Build for production.                                                                    |
-| [`dbx vite:pack`](#vite-pack)                           | Vite+: Build libraries for npm or standalone binaries.                                          |
-| [`dbx vite:preview`](#vite-preview)                     | Vite+: Preview the production build.                                                            |
-| [`dbx vite:add`](#vite-add)                             | Vite+: Add packages to dependencies.                                                            |
-| [`dbx vite:remove`](#vite-remove)                       | Vite+: Remove packages from dependencies.                                                       |
-| [`dbx vite:update`](#vite-update)                       | Vite+: Update packages.                                                                         |
-| [`dbx vite:dedupe`](#vite-dedupe)                       | Vite+: Deduplicate dependencies.                                                                |
-| [`dbx vite:outdated`](#vite-outdated)                   | Vite+: Check for outdated packages.                                                             |
-| [`dbx vite:list`](#vite-list)                           | Vite+: List installed packages.                                                                 |
-| [`dbx vite:why`](#vite-why)                             | Vite+: Explain why a package is installed.                                                      |
-| [`dbx vite:info`](#vite-info)                           | Vite+: View package metadata.                                                                   |
-| [`dbx vite:link`](#vite-link)                           | Vite+: Link local packages.                                                                     |
-| [`dbx vite:unlink`](#vite-unlink)                       | Vite+: Unlink local packages.                                                                   |
-| [`dbx vite:rebuild`](#vite-rebuild)                     | Vite+: Rebuild native modules.                                                                  |
-| [`dbx vite:pm`](#vite-pm)                               | Vite+: Forward a command to the package manager.                                                |
-| [`dbx vite:toolchain`](#vite-toolchain)                 | Vite+: Show Vite+ tool versions.                                                                |
-| [`dbx vite:upgrade`](#vite-upgrade)                     | Vite+: Update `vp` itself.                                                                      |
-| [`dbx vite:implode`](#vite-implode)                     | Vite+: Remove `vp` and all related data.                                                        |
-| [`dbx fmt`](#fmt)                                       | Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc).               |
-| [`dbx lint`](#lint)                                     | Lint with the detected linter (Vite+ Oxlint, ESLint or Biome).                                  |
+| Command | Description |
+| ------- | ----------- |
+| [`dbx projects`](#projects) | Discover projects and write .dbx/toolchain/projects.json. |
+| [`dbx sync`](#sync) | Regenerate every managed file from dbx.config.*. |
+| [`dbx watch`](#watch) | Sync once, then watch key files and re-sync on change. |
+| [`dbx reset`](#reset) | Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a project. |
+| [`dbx providers`](#providers) | List the tooling providers (Vite+, ...) and their commands. |
+| [`dbx enabled`](#enabled) | Print whether the toolchain is enabled for this project (and the scope). |
+| [`dbx enable`](#enable) | Enable the toolchain (workspace scope by default). |
+| [`dbx disable`](#disable) | Disable the toolchain (workspace scope by default). |
+| [`dbx tsconfig`](#tsconfig) | Generate workspace tsconfig.json files from the default tsconfig (aliases + references). |
+| [`dbx cleanup`](#cleanup) | Remove build artifacts (*.tsbuildinfo, dist/). |
+| [`dbx cleanup:turbo`](#cleanup-turbo) | Remove the turbo cache (.turbo/). |
+| [`dbx workflow`](#workflow) | Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`). |
+| [`dbx changelog`](#changelog) | Scan commits, derive the semver bump and update the CHANGELOG.md files + versions. |
+| [`dbx mcp:serve`](#mcp-serve) | Run the dbx MCP server over stdio (for MCP clients). |
+| [`dbx mcp:install`](#mcp-install) | Install the dbx MCP server + skill into an AI harness/editor. |
+| [`dbx mcp:list`](#mcp-list) | List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi). |
+| [`dbx migrate`](#migrate) | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.\* into dbx.config. |
+| [`dbx migrate:list`](#migrate-list) | List the registered migrations and whether each is detected. |
+| [`dbx project:init`](#project-init) | Scaffold a single-package TypeScript project. |
+| [`dbx project:init:monorepo`](#project-init-monorepo) | Scaffold a monorepo root (add --example for one example workspace). |
+| [`dbx project:init:workspace`](#project-init-workspace) | Scaffold a monorepo workspace package into an existing monorepo root. |
+| [`dbx project:config`](#project-config) | Generate dbx.config.\* for existing projects that are missing one. |
+| [`dbx template:list`](#template-list) | List templates (builtin + local + opted-in online sources). |
+| [`dbx template:init`](#template-init) | Write a template.json to a directory, making it a local template. |
+| [`dbx template:add`](#template-add) | Record a template source in .dbx/toolchain/templates.json. |
+| [`dbx template:remove`](#template-remove) | Remove a source from .dbx/toolchain/templates.json. |
+| [`dbx template:registry`](#template-registry) | Manage the global template search paths (and sync them to the VS Code setting). |
+| [`dbx registry`](#registry) | List or manage the template/provider registries. |
+| [`dbx template:info`](#template-info) | Show one template by id. |
+| [`dbx create`](#create) | Scaffold a project from a template (builtin, local or Vite+). |
+| [`dbx vite`](#vite) | Run any Vite+ command through `vp` (eg. `dbx vite dev`). |
+| [`dbx vite:create`](#vite-create) | Vite+: Create a new project from a template. |
+| [`dbx vite:migrate`](#vite-migrate) | Vite+: Migrate an existing project to Vite+. |
+| [`dbx vite:config`](#vite-config) | Vite+: Configure hooks and agent integration. |
+| [`dbx vite:hooks`](#vite-hooks) | Vite+: Manage the Git hook dispatcher. |
+| [`dbx vite:staged`](#vite-staged) | Vite+: Run linters on staged files. |
+| [`dbx vite:install`](#vite-install) | Vite+: Install dependencies with the detected package manager. |
+| [`dbx vite:env`](#vite-env) | Vite+: Manage Node.js and package managers. |
+| [`dbx vite:dev`](#vite-dev) | Vite+: Run the Vite development server. |
+| [`dbx vite:check`](#vite-check) | Vite+: Run format, lint and type checks. |
+| [`dbx vite:lint`](#vite-lint) | Vite+: Lint code with the active linter (Oxlint via Vite+). |
+| [`dbx vite:fmt`](#vite-fmt) | Vite+: Format code with the active formatter (Oxfmt via Vite+). |
+| [`dbx vite:test`](#vite-test) | Vite+: Run tests through bundled Vitest. |
+| [`dbx vite:run`](#vite-run) | Vite+: Run package scripts and monorepo tasks. |
+| [`dbx vite:exec`](#vite-exec) | Vite+: Execute a binary from local node_modules. |
+| [`dbx vite:node`](#vite-node) | Vite+: Run a Node.js script in the Vite+ env. |
+| [`dbx vite:dlx`](#vite-dlx) | Vite+: Run a package binary without installing it. |
+| [`dbx vite:cache`](#vite-cache) | Vite+: Manage the task cache. |
+| [`dbx vite:build`](#vite-build) | Vite+: Build for production. |
+| [`dbx vite:pack`](#vite-pack) | Vite+: Build libraries for npm or standalone binaries. |
+| [`dbx vite:preview`](#vite-preview) | Vite+: Preview the production build. |
+| [`dbx vite:add`](#vite-add) | Vite+: Add packages to dependencies. |
+| [`dbx vite:remove`](#vite-remove) | Vite+: Remove packages from dependencies. |
+| [`dbx vite:update`](#vite-update) | Vite+: Update packages. |
+| [`dbx vite:dedupe`](#vite-dedupe) | Vite+: Deduplicate dependencies. |
+| [`dbx vite:outdated`](#vite-outdated) | Vite+: Check for outdated packages. |
+| [`dbx vite:list`](#vite-list) | Vite+: List installed packages. |
+| [`dbx vite:why`](#vite-why) | Vite+: Explain why a package is installed. |
+| [`dbx vite:info`](#vite-info) | Vite+: View package metadata. |
+| [`dbx vite:link`](#vite-link) | Vite+: Link local packages. |
+| [`dbx vite:unlink`](#vite-unlink) | Vite+: Unlink local packages. |
+| [`dbx vite:rebuild`](#vite-rebuild) | Vite+: Rebuild native modules. |
+| [`dbx vite:pm`](#vite-pm) | Vite+: Forward a command to the package manager. |
+| [`dbx vite:toolchain`](#vite-toolchain) | Vite+: Show Vite+ tool versions. |
+| [`dbx vite:upgrade`](#vite-upgrade) | Vite+: Update `vp` itself. |
+| [`dbx vite:implode`](#vite-implode) | Vite+: Remove `vp` and all related data. |
+| [`dbx fmt`](#fmt) | Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc). |
+| [`dbx lint`](#lint) | Lint with the detected linter (Vite+ Oxlint, ESLint or Biome). |
 
 ## `dbx projects`
 
@@ -938,9 +937,6 @@ Regenerate every managed file from dbx.config.\*.
 * `--no-format-fix` — Run the formatter in check mode instead of rewriting the files.
 * `--format-command ‹value›` — Override the formatter command. `{files}` expands to the managed files (space-separated); when it is absent the files are appended.
 * `--format-exclude ‹value...›` — Globs of managed files to leave unformatted (per-file opt-out).
-* `--cwd ‹dir›` — Project root (default: cwd).
-* `-q, --quiet` — Only log errors.
-* `--configless` — Manage projects without their own dbx.config.\* (inherit the nearest config).
 * `--check` — Do not write; fail if files are out of date.
 * `--watch` — Keep running and re-sync on change.
 * `--recursive` — Sync every managed project in dependency order (nested workspaces included; configless projects only with --configless).
@@ -955,9 +951,6 @@ Sync once, then watch key files and re-sync on change.
 * `--debounce ‹value›` — Debounce window in ms. (default: `150`)
 * `--exclude ‹value...›` — Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
 * `--no-gitignore` — Do not respect .gitignore files.
-* `--cwd ‹dir›` — Project root (default: cwd).
-* `-q, --quiet` — Only log errors.
-* `--configless` — Manage projects without their own dbx.config.\* (inherit the nearest config).
 * `--force` — Run even when no dbx.config.\* is present.
 * `--list` — Print the resolved input globs (+ tsconfig file names) instead of watching.
 * `--json` — With --list: print the inputs as JSON.
@@ -968,8 +961,8 @@ Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a
 
 * `--cwd ‹dir›` — Project root (default: cwd).
 * `--recursive` — Reset every discovered project under the root.
-* `--include ‹pattern...›` — Only projects matching these patterns (glob or substring).
-* `--exclude ‹pattern...›` — Skip projects matching these patterns (glob or substring).
+* `--include ‹pattern...›` —
+* `--exclude ‹pattern...›` —
 * `--generated` — Remove only the generated/managed files.
 * `--manifest` — Remove only the .dbx/toolchain directory.
 * `--config` — Also remove dbx.config.\*.
@@ -1017,7 +1010,7 @@ Generate workspace tsconfig.json files from the default tsconfig (aliases + refe
 * `--refs` — Wire project references.
 * `--composite` — Emit `composite: true`.
 * `--no-aliases` — Skip path aliases.
-* `--flatten-remote-extends` — Inline the compiler options inherited from a remote `http(s)` `extends` chain into the generated workspace configs (default false). Useful when a tool cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` are skipped because they describe the remote tree. Settings the generated config already defines always win.
+* `--flatten-remote-extends` — Inline the compiler options inherited from a remote `http(s)` `extends` chain into the generated workspace configs. Useful when a tool cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` are skipped because they describe the remote tree. Settings the generated config already defines always win.
 * `--auto-src-dir ‹value›` — Source directory used to resolve workspace entry points when `package.json` does not declare `exports`/`main`/`types` (default: the workspace's final tsconfig `rootDir`/`baseUrl`, falling back to `src`).
 * `-i, --indent ‹value›` — JSON indentation. (default: `4`)
 * `--root-file ‹value›` — The workspaces tsconfig file name that holds `paths` + `references`. (default: `tsconfig.workspaces.json`)
@@ -1097,7 +1090,7 @@ Install the dbx MCP server + skill into an AI harness/editor.
 * `--scope ‹scope›` — project (default) or global.
 * `--cwd ‹dir›` — Project root (default: cwd).
 * `--dir ‹dir›` — Custom directory (for --provider custom).
-* `--command ‹command›` — Client command (default `dbx`).
+* `--command ‹command›` — Client command (default `dbx`)
 * `--no-skills` — Do not write the skill/instructions file.
 * `--json` — Print the written paths as JSON.
 
@@ -1537,36 +1530,36 @@ The toolchain config is file/CLI backed; a schema leaf opts into an
 environment variable with `.meta({ envName: "..." })` (see the
 [Config Generator](/guide/config-generator/describe-a-scope)).
 
-| Variable                            | Scope     | Default | Description                                                                                                                                                                                |
-| ----------------------------------- | --------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `DBX_PROJECT_REGENERATE`            | toolchain | —       | Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.                         |
-| `DBX_PROJECT_NAME`                  | toolchain | —       | The unscoped project name (written as `&lt;scope&gt;/&lt;name&gt;`).                                                                                                                       |
-| `DBX_PROJECT_SCOPE`                 | toolchain | —       | The npm scope, eg. `@acme`.                                                                                                                                                                |
-| `DBX_PROJECT_AUTHOR`                | toolchain | —       | Package author (`package.json` `author`).                                                                                                                                                  |
-| `DBX_PROJECT_LICENSE`               | toolchain | —       | SPDX license id (`package.json` `license`).                                                                                                                                                |
-| `DBX_PROJECT_HOMEPAGE`              | toolchain | —       | Project homepage (`package.json` `homepage`).                                                                                                                                              |
-| `DBX_PROJECT_REPO`                  | toolchain | —       | Repository URL (`package.json` `repository`). For a workspace it also resolves to the workspace path (`repository.directory`).                                                             |
-| `DBX_PROJECT_NODEVERSION`           | toolchain | —       | Node version for CI/templates, eg. `22` (not `package.json` `engines`).                                                                                                                    |
-| `DBX_PROJECT_PACKAGEMANAGER`        | toolchain | `yarn`  | Package manager name, written as `&lt;name&gt;@&lt;version&gt;`.                                                                                                                           |
-| `DBX_PROJECT_PACKAGEMANAGERVERSION` | toolchain | —       | Package manager version, eg. `4.17.1`.                                                                                                                                                     |
-| `DBX_PROJECT_DESCRIPTION`           | toolchain | —       | One-line description (`package.json` `description`).                                                                                                                                       |
-| `DBX_PROJECT_INHERIT`               | toolchain | `true`  | Inherit the parent project metadata. Set false to keep this project metadata independent of the root config (other sections still merge normally).                                         |
-| `DBX_PROJECT_MANAGECONFIGLESS`      | toolchain | `false` | Manage projects that have no dbx.config.\* of their own by inheriting the nearest ancestor config. Disabled by default so configless projects are never touched unless explicitly opted in. |
-| `DBX_CI`                            | toolchain | `{}`    | GitHub Actions workflows to generate (CI, release, issues, changelog, sync).                                                                                                               |
-| `DBX_CHANGELOG`                     | toolchain | `{}`    | Manual changelog pipeline options for `dbx changelog`, the VS Code actions and the API. `ci.changelog` inherits these options.                                                             |
-| `DBX_FMT`                           | toolchain | `{}`    | Formatter configuration: Oxc/Biome options, editor defaults and tools.                                                                                                                     |
-| `DBX_LINT`                          | toolchain | `{}`    | Linter configuration: Oxc/Biome/ESLint options and editor defaults.                                                                                                                        |
-| `DBX_BIOME`                         | toolchain | `{}`    | Biome config generation (for consumers that still want a `biome.json`).                                                                                                                    |
-| `DBX_TSCONFIG`                      | toolchain | `{}`    | Workspace tsconfig generation (path aliases + project references).                                                                                                                         |
-| `DBX_LOADER`                        | toolchain | `{}`    | How `dbx.config.*` files are imported (tsconfig discovery).                                                                                                                                |
-| `DBX_TEMPLATES`                     | toolchain | `{}`    | Template sources / scaffolding.                                                                                                                                                            |
-| `DBX_REGISTRY`                      | toolchain | `{}`    | Allow/deny host and path globs for template/provider registries.                                                                                                                           |
-| `DBX_CATALOGS`                      | toolchain | `{}`    | Package catalogs written to the package manager catalog file (`catalog:`).                                                                                                                 |
-| `DBX_VITE`                          | toolchain | `{}`    | The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it.                                                                                                                |
-| `DBX_WATCH`                         | toolchain | `{}`    | Watch behaviour for `dbx watch`.                                                                                                                                                           |
-| `DBX_SYNC`                          | toolchain | `{}`    | `dbx sync` behaviour (formatting of the generated managed files).                                                                                                                          |
-| `DBX_LOGGER`                        | toolchain | `{}`    | Logging level, colours and prefix for toolchain output.                                                                                                                                    |
-| `DBX_PROVIDERS`                     | toolchain | `{}`    | Provider command behaviour (eg. colour for the passthrough commands).                                                                                                                      |
+| Variable | Scope | Default | Description |
+| -------- | ----- | ------- | ----------- |
+| `DBX_PROJECT_REGENERATE` | toolchain | — | Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked. |
+| `DBX_PROJECT_NAME` | toolchain | — | The unscoped project name (written as `&lt;scope&gt;/&lt;name&gt;`). |
+| `DBX_PROJECT_SCOPE` | toolchain | — | The npm scope, eg. `@acme`. |
+| `DBX_PROJECT_AUTHOR` | toolchain | — | Package author (`package.json` `author`). |
+| `DBX_PROJECT_LICENSE` | toolchain | — | SPDX license id (`package.json` `license`). |
+| `DBX_PROJECT_HOMEPAGE` | toolchain | — | Project homepage (`package.json` `homepage`). |
+| `DBX_PROJECT_REPO` | toolchain | — | Repository URL (`package.json` `repository`). For a workspace it also resolves to the workspace path (`repository.directory`). |
+| `DBX_PROJECT_NODEVERSION` | toolchain | — | Node version for CI/templates, eg. `22` (not `package.json` `engines`). |
+| `DBX_PROJECT_PACKAGEMANAGER` | toolchain | `yarn` | Package manager name, written as `&lt;name&gt;@&lt;version&gt;`. |
+| `DBX_PROJECT_PACKAGEMANAGERVERSION` | toolchain | — | Package manager version, eg. `4.17.1`. |
+| `DBX_PROJECT_DESCRIPTION` | toolchain | — | One-line description (`package.json` `description`). |
+| `DBX_PROJECT_INHERIT` | toolchain | `true` | Inherit the parent project metadata. Set false to keep this project metadata independent of the root config (other sections still merge normally). |
+| `DBX_PROJECT_MANAGECONFIGLESS` | toolchain | `false` | Manage projects that have no dbx.config.\* of their own by inheriting the nearest ancestor config. Disabled by default so configless projects are never touched unless explicitly opted in. |
+| `DBX_CI` | toolchain | `{}` | GitHub Actions workflows to generate (CI, release, issues, changelog, sync). |
+| `DBX_CHANGELOG` | toolchain | `{}` | Manual changelog pipeline options for `dbx changelog`, the VS Code actions and the API. `ci.changelog` inherits these options. |
+| `DBX_FMT` | toolchain | `{}` | Formatter configuration: Oxc/Biome options, editor defaults and tools. |
+| `DBX_LINT` | toolchain | `{}` | Linter configuration: Oxc/Biome/ESLint options and editor defaults. |
+| `DBX_BIOME` | toolchain | `{}` | Biome config generation (for consumers that still want a `biome.json`). |
+| `DBX_TSCONFIG` | toolchain | `{}` | Workspace tsconfig generation (path aliases + project references). |
+| `DBX_LOADER` | toolchain | `{}` | How `dbx.config.*` files are imported (tsconfig discovery). |
+| `DBX_TEMPLATES` | toolchain | `{}` | Template sources / scaffolding. |
+| `DBX_REGISTRY` | toolchain | `{}` | Allow/deny host and path globs for template/provider registries. |
+| `DBX_CATALOGS` | toolchain | `{}` | Package catalogs written to the package manager catalog file (`catalog:`). |
+| `DBX_VITE` | toolchain | `{}` | The full Vite+ config; `dbx sync` writes the root `vite.config.ts` from it. |
+| `DBX_WATCH` | toolchain | `{}` | Watch behaviour for `dbx watch`. |
+| `DBX_SYNC` | toolchain | `{}` | `dbx sync` behaviour (formatting of the generated managed files). |
+| `DBX_LOGGER` | toolchain | `{}` | Logging level, colours and prefix for toolchain output. |
+| `DBX_PROVIDERS` | toolchain | `{}` | Provider command behaviour (eg. colour for the passthrough commands). |
 
 ---
 
@@ -1602,7 +1595,7 @@ The project kind (detected when omitted).
 
 * **Type**: `boolean`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ### `name`
 
@@ -1695,7 +1688,7 @@ The CI checks workflow (`ci.yml`).
 * **Type**: `'github'`
 * **Default**: `"github"`
 
-Workflow vendor for a full `workflow` object (default `github`).
+Workflow vendor for a full `workflow` object.
 
 #### `workflow`
 
@@ -1980,79 +1973,79 @@ Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
 
 * **Type**: `string`
 
-Project name (`{{name}}`).
+Project name {{ name }}.
 
 ##### `scope`
 
 * **Type**: `string`
 
-Package scope (`{{scope}}`).
+Package scope {{ scope }}.
 
 ##### `author`
 
 * **Type**: `string`
 
-Author (`{{author}}`).
+Author {{ author }}.
 
 ##### `license`
 
 * **Type**: `string`
 
-License (`{{license}}`).
+License {{ license }}.
 
 ##### `homepage`
 
 * **Type**: `string`
 
-Homepage (`{{homepage}}`).
+Homepage {{ homepage }}.
 
 ##### `repo`
 
 * **Type**: `string`
 
-Repository URL (`{{repo}}`).
+Repository URL {{ repo }}.
 
 ##### `description`
 
 * **Type**: `string`
 
-Description (`{{description}}`).
+Description {{ description }}.
 
 ##### `nodeVersion`
 
 * **Type**: `string`
 
-Node version (`{{nodeVersion}}`).
+Node version {{ nodeVersion }}.
 
 ##### `packageManager`
 
 * **Type**: `string`
 
-Package manager (`{{packageManager}}`).
+Package manager {{ packageManager }}.
 
 ##### `yarnVersion`
 
 * **Type**: `string`
 
-Yarn version (`{{yarnVersion}}`).
+Yarn version {{ yarnVersion }}.
 
 ##### `packageManagerVersion`
 
 * **Type**: `string`
 
-Package manager version (`{{packageManagerVersion}}`).
+Package manager version {{ packageManagerVersion }}.
 
 ##### `mainBranch`
 
 * **Type**: `string`
 
-Main branch (`{{mainBranch}}`).
+Main branch {{ mainBranch }}.
 
 ##### `devBranch`
 
 * **Type**: `string`
 
-Dev branch (`{{devBranch}}`).
+Dev branch {{ devBranch }}.
 
 ##### `vitePlus`
 
@@ -2071,7 +2064,7 @@ Exact `voidzero-dev/setup-vp` version or commit SHA to pin.
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ### `changelog`
 
@@ -2084,7 +2077,7 @@ The changelog/version workflow (`changelog.yml`) plus the changelog pipeline con
 * **Type**: `'github'`
 * **Default**: `"github"`
 
-Workflow vendor for a full `workflow` object (default `github`).
+Workflow vendor for a full `workflow` object.
 
 #### `pushBranches`
 
@@ -2159,7 +2152,7 @@ Enable/disable the changelog workflow and pipeline (default: enabled when presen
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 #### `branches`
 
@@ -2170,8 +2163,9 @@ Branches the generated workflows target.
 ##### `main`
 
 * **Type**: `string | Array<string>`
+* **Default**: `["main"]`
 
-Branch glob(s) the CI + release workflows run on, and the release PR base (default `["main"]`).
+Branch glob(s) the CI + release workflows run on, and the release PR base.
 
 ##### `dev`
 
@@ -2214,13 +2208,14 @@ Enable commitlint (default true when the changelog is enabled). Set false to gen
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 #### `versioning`
 
 * **Type**: `ChangelogVersioning`
+* **Default**: `true`
 
-Automatic version bumping on changelog generation (default `true`).
+Automatic version bumping on changelog generation.
 
 ##### `target`
 
@@ -2385,8 +2380,9 @@ Skip workspaces whose repo-relative directory matches these globs.
 
 * **Required**
 * **Type**: `boolean`
+* **Default**: `false`
 
-Apply a bump once per matching change instead of once per run (default false).
+Apply a bump once per matching change instead of once per run.
 
 ##### `commit`
 
@@ -2482,8 +2478,9 @@ Default minimum entries for every details section (a nested minCommits wins; the
 ###### `descriptions`
 
 * **Type**: `boolean | ChangelogDetailsOptions`
+* **Default**: `true`
 
-Wrap commit description paragraphs in a nested collapsible (default true).
+Wrap commit description paragraphs in a nested collapsible.
 
 ###### `title`
 
@@ -2929,7 +2926,7 @@ Enable/disable this section (default: enabled when defined).
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ### `custom`
 
@@ -2948,7 +2945,7 @@ Enable/disable this section (default: enabled when defined).
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `changelog`
 
@@ -2989,13 +2986,14 @@ Enable commitlint (default true when the changelog is enabled). Set false to gen
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ### `versioning`
 
 * **Type**: `ChangelogVersioning`
+* **Default**: `true`
 
-Automatic version bumping on changelog generation (default `true`).
+Automatic version bumping on changelog generation.
 
 #### `target`
 
@@ -3160,8 +3158,9 @@ Skip workspaces whose repo-relative directory matches these globs.
 
 * **Required**
 * **Type**: `boolean`
+* **Default**: `false`
 
-Apply a bump once per matching change instead of once per run (default false).
+Apply a bump once per matching change instead of once per run.
 
 #### `commit`
 
@@ -3257,8 +3256,9 @@ Default minimum entries for every details section (a nested minCommits wins; the
 ###### `descriptions`
 
 * **Type**: `boolean | ChangelogDetailsOptions`
+* **Default**: `true`
 
-Wrap commit description paragraphs in a nested collapsible (default true).
+Wrap commit description paragraphs in a nested collapsible.
 
 ###### `title`
 
@@ -3518,7 +3518,7 @@ Enable/disable this section (default: enabled when defined).
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `fmt`
 
@@ -3582,7 +3582,7 @@ Enable/disable this section (default: enabled when defined).
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `lint`
 
@@ -3639,7 +3639,7 @@ Enable/disable this section (default: enabled when defined).
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `biome`
 
@@ -3672,7 +3672,7 @@ Enable/disable this section (default: enabled when defined).
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `tsconfig`
 
@@ -3723,13 +3723,14 @@ Inject path aliases.
 * **Type**: `boolean`
 * **Default**: `false`
 
-Inline the compiler options inherited from a remote `http(s)` `extends` chain into the generated workspace configs (default false). Useful when a tool cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` are skipped because they describe the remote tree. Settings the generated config already defines always win.
+Inline the compiler options inherited from a remote `http(s)` `extends` chain into the generated workspace configs. Useful when a tool cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` are skipped because they describe the remote tree. Settings the generated config already defines always win.
 
 ### `auto`
 
 * **Type**: `boolean | ToolchainTsconfigAliasAutoSetting`
+* **Default**: `false`
 
-Auto-generate the root workspaces tsconfig paths/references from the project graph (default false). Set true to derive them from the project graph; set false to only use the entries you define yourself. An object additionally accepts `include`/`exclude`, `rewriteAlias`, `modes`, `prefix`, `devMode` and `dist`.
+Auto-generate the root workspaces tsconfig paths/references from the project graph. Set true to derive them from the project graph; set false to only use the entries you define yourself. An object additionally accepts `include`/`exclude`, `rewriteAlias`, `modes`, `prefix`, `devMode` and `dist`.
 
 #### `include`
 
@@ -3908,7 +3909,7 @@ Enable/disable this section (default: enabled when defined).
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `loader`
 
@@ -3934,7 +3935,7 @@ Enable/disable this section (default: enabled when defined).
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `templates`
 
@@ -4025,7 +4026,7 @@ Enable/disable this section (default: enabled when defined).
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `registry`
 
@@ -4066,7 +4067,7 @@ Enable/disable this section (default: enabled when defined).
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `catalogs`
 
@@ -4095,7 +4096,7 @@ Enable/disable this section (default: enabled when defined).
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `vite`
 
@@ -4146,7 +4147,7 @@ Enable/disable this section (default: enabled when defined).
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `watch`
 
@@ -4183,7 +4184,7 @@ Enable/disable this section (default: enabled when defined).
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `sync`
 
@@ -4193,7 +4194,7 @@ Regenerate this section's managed files during `dbx sync` (default true). When f
 
 * **Type**: `boolean | object`
 
-Opt-in formatting of the managed files after generation (default off). `true` uses the defaults, `false` disables it, and an object tunes `enabled`/`fix`/`command`/`exclude`.
+Opt-in formatting of the managed files after generation. `true` uses the defaults, `false` disables it, and an object tunes `enabled`/`fix`/`command`/`exclude`.
 
 #### `enabled`
 
@@ -4230,7 +4231,7 @@ Enable/disable this section (default: enabled when defined).
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `logger`
 
@@ -4336,7 +4337,7 @@ Enable/disable this section (default: enabled when defined).
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## `providers`
 
@@ -4359,7 +4360,7 @@ Enable/disable this section (default: enabled when defined).
 * **Type**: `boolean`
 * **Default**: `true`
 
-Regenerate this section's managed files during `dbx sync` (default true). When false, existing files are left untouched and are neither written nor drift-checked.
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
 ## Full example
 
@@ -4369,7 +4370,7 @@ import { defineConfig } from '@deltabox/toolchain';
 export default defineConfig({
     toolchain: {
         project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
-        ci: { ci: true, release: true, changelog: { branches: { main: 'main' } } },
+        ci: { ci: true, release: true, changelog: { branches: { main: "main" } } },
         tsconfig: { refs: true },
         templates: { sources: [{ type: 'local', locate: './templates', kind: 'application' }] },
         vite: { fmt: { semi: true, singleQuote: true }, test: { include: ['src/**/*.test.ts'] } },
@@ -4409,6 +4410,8 @@ All from that one schema.
 * [Generate](/guide/config-generator/generate) — the generator methods.
 * [CLI commands](/guide/config-generator/cli-commands) — the `config:*` command
   descriptors.
+* [CLI program](/guide/config-generator/generate#cli-program) — build schema
+  commands into a runnable program with `invoke`, hooks and formatting.
 * [Load the config](/guide/config-generator/load-the-config) — the runtime
   parsers and `loadConfig*` (which already parse the loaded file).
 * [Generated outputs](/guide/config-generator/generated-outputs) — types,
@@ -4727,7 +4730,7 @@ export const serverConfig = {
 The [ConfigMeta](https://github.com/deltabox-studio/toolchain/blob/main/packages/config/src/types/meta.ts)
 fields used in the Zod/Untyped schemas:
 
-* `id` (override the name of the generateed type)
+* `id` (override the name of the generated type)
 * `typeName` (same as `id`)
 * `public` (safe to expose as public API, true by default)
 * `description`
@@ -4735,6 +4738,7 @@ fields used in the Zod/Untyped schemas:
 * `env` (deprecated, use `envName` instead)
 * `envPath` (dotted config path)
 * `path` (deprecated, use `envPath` instead)
+* `envExpose` (set `false` to keep a value out of env output)
 * `required`
 * `deprecated`
 * `deprecationMessage`
@@ -4748,8 +4752,9 @@ fields used in the Zod/Untyped schemas:
 * `secret`
 * `scope`
 * `defaultValue` (when the resolved default differs)
-* `cliFlag`
-* `cliFlagShort`
+* `cli` (`false`, or `ConfigCliOptionMeta`: `flag`, `short`, `description`, `type`, `parse`, `default`, `choices`, `multiple`, `required`, `hidden`)
+* `cliCommand` (`false`, or `ConfigCliCommandMeta`: `name`, `description`, `aliases`, `hidden`, `passthrough`, `args`)
+* `cliFlag` / `cliFlagShort` (legacy aliases for `cli.flag` / `cli.short`)
 
 ### Annotations
 
@@ -4784,7 +4789,7 @@ Disable them with `includeEnv: false` or `includeCli: false` in the [config engi
 
 ```ts
 engine.markdown.generate({ includeCli: false, includeEnv: false });
-engine.types.generate({ includeEnv: false, includeEnv: false });
+engine.types.generate({ includeEnv: false });
 ```
 
 ## API reference
@@ -4914,7 +4919,7 @@ grouped `.generate` methods return the content and only write when you pass `out
 | Metadata JSON  | `engine.configJson.build()`                                  | `buildConfigJson()`                                       |
 | CLI options    | `engine.cli.generate()` / `engine.cli.write()`               | `generateCliOptions()`                                    |
 | Scoped CLI     | `engine.cli.options()`                                       | `generateConfigCliOptions()` / `configCliCommand()`       |
-| CLI program    | `engine.cli.program.create()`                                | `generateConfigProgram()`                                 |
+| Program        | `engine.cli.program.create()`                                | `generateConfigProgram()`                                 |
 | CLI docs       | `engine.markdown.cli.generate()` / `.write()`                | `generateCliDocs()`                                       |
 | Env docs       | `engine.markdown.env.generate()` / `.write()`                | `generateEnvMarkdown()`                                   |
 | Markdown page  | `engine.markdown.file.generate()` / `.write()`               | `generateMarkdownFile()`                                  |
@@ -5104,6 +5109,58 @@ parser.parse(['--base-url', 'http://localhost:8080']);
 
 Options: `scope` (default `cli`), `output`, `shortFlags`, `envPathOf`.
 
+## CLI program
+
+The preferred entry point is `engine.cli.program.create()`. It derives options
+from the engine schema, infers `run` values and accepts the full program options:
+
+```ts
+const program = engine.cli.program.create(
+    cmd => [
+        cmd('serve')
+            .description('Run the server.')
+            .option({ flags: '--json', description: 'Print JSON.' })
+            .run(({ config, values, context }) => {
+                // config: the validated `serve` section
+                // values: the explicit CLI values
+                // context: the host command context
+            }),
+    ],
+    {
+        name: 'acme',
+        globalOptions: [{ flags: '--json', description: 'Print JSON.' }],
+        disableColors: ({ color }) => color === false,
+    }
+);
+await program.invokeAsync();
+```
+
+`engine.cli.program.create()` accepts `argv`, `name`, `description`, `version`,
+`globalOptions`, `context`, `disableColors`, `writeOut`, `writeErr` and
+`format`. See the
+[API reference](/guide/config-generator/api#program-members-and-options)
+for `invoke`/`invokeAsync`, hooks, help/error formatting and `bin`.
+
+Without an engine, `generateConfigProgram(schema, options)` returns the same
+`CliCommand[]`; each command spec runs with the validated scope config. It
+requires `envPrefix`; `envPathOf`, `commands`, `includePaths`, `excludePaths`,
+`flags`, `descriptions` and `types` shape the generated commands. When `commands`
+is omitted, one command is generated per command-eligible scope
+(`cliCommand: false` opts a scope out).
+
+```ts
+import { generateConfigProgram } from '@deltabox/toolchain/config';
+
+const commands = generateConfigProgram(schema, {
+    envPrefix: 'MYAPP_',
+    includePaths: ['server', 'server.port'],
+});
+```
+
+Use the lower-level `createConfigProgram(commands, options?)` only when you
+already have a command list that is not tied to an engine; it accepts the same
+program options.
+
 ## CLI docs
 
 `generateCliDocs(commands, options?)` renders a markdown reference from
@@ -5185,8 +5242,8 @@ generateConfigTypes(schema, { outputDir: false });
 await generateConfigJsonSchema(schema, { output: false });
 ```
 
-The engine's `write*` methods always write; use the `generate*` methods when you
-only need the content.
+The grouped `.write()` methods always write; use the `.generate()` methods when
+you only need the content.
 
 ### Engine vs standalone
 
@@ -5220,8 +5277,10 @@ url: https://toolchain.deltabox.studio/guide/config-generator/cli-commands.md
 ---
 # CLI commands docs
 
-`configCommands({ engine, defaults })` returns `CliCommand[]` (register them
-on your cli program with `@deltabox/toolchain/cli`) and can be used to generate config artifacts:
+`configCommands({ engine, defaults })` returns typed `CliCommand[]`; register
+them on the engine program with `engine.cli.program.create()` (preferred), or on
+a program built with the lower-level `createConfigProgram()` if the command list
+is not tied to an engine. They generate config artifacts:
 
 | Command           | Writes                                       |
 | ----------------- | -------------------------------------------- |
@@ -5240,7 +5299,8 @@ const commands = configCommands({
     engine,
     defaults: { typesDir: 'packages/shared/src/types', docsDir: 'docs/reference' },
 });
-// register `commands` on your cli program
+const program = engine.cli.program.create(() => commands, { name: 'acme' });
+await program.invokeAsync();
 ```
 
 > These commands are library-only: `dbx` itself does not register a `config:*`
@@ -5276,8 +5336,9 @@ Config-backed flags are derived recursively: objects and union object branches
 expand to dotted paths (`sync.format` → `--format-*`), scalar arrays become list
 flags, and arrays of objects/records/maps are skipped unless the field defines
 `cli` metadata. Use `engine.cli.program.createCommand(scope, spec)` when you want the
-runtime `values` object inferred from the command's `options` list. Metadata
-lives in the schema:
+runtime `values` object inferred from the command's `options` list;
+`createCommand('name', spec)` / `cmd('name', spec)` build a runtime-only command
+with no config scope. Metadata lives in the schema:
 
 ```ts
 port: z.number().default(3000).meta({ cli: { short: 'p' } }),
@@ -5323,7 +5384,7 @@ url: https://toolchain.deltabox.studio/guide/config-generator/load-the-config.md
 # Load the config at runtime
 
 Generation is only half of it: the same schema loads the value back. The runtime
-parsers read the `envName` / `cliFlag` metadata, coerce env and CLI strings,
+parsers read the `envName` / `cli` metadata, coerce env and CLI strings,
 merge overrides and validate the result through the schema, so the returned
 object matches the generated types.
 
@@ -5408,8 +5469,8 @@ Every parser shares the collect options:
 * `envPathOf` — override env-name -> dotted-path derivation (eg. dual prefixes).
 
 Env names come from `.meta({ envName })`; without it, the prefix plus the field
-path is used (`MYAPP_SERVER_PORT`). CLI flags come from `.meta({ cliFlag })`,
-falling back to `--server-port`.
+path is used (`MYAPP_SERVER_PORT`). CLI flags come from `.meta({ cli: { flag } })`
+(or the legacy `cliFlag`), falling back to `--server-port`.
 
 ## Load from a file
 
@@ -5628,7 +5689,7 @@ engine.markdown.file.write({
 ## Post-processing
 
 The `generate*` functions return their content, so you can transform it before
-writing (the `write*` methods write immediately):
+writing (the grouped `.write()` methods write immediately):
 
 ```ts
 const files = generateConfigTypes(schema);
@@ -6133,7 +6194,10 @@ with the engine and drop to a single generator when you only need one artifact.
 
 ```ts
 import {
+    ConfigProgramError,
     createConfigEngine,
+    createConfigProgram,
+    generateConfigProgram,
     generateConfigTypes,
     parseConfig,
     parseEnvConfig,
@@ -6326,6 +6390,7 @@ import {
     generateConfigEnv,
     generateConfigJsonSchema,
     generateConfigMarkdown,
+    generateConfigProgram,
     generateConfigTypes,
     generateEnvFile,
     generateEnvMarkdown,
@@ -6341,6 +6406,7 @@ generateEnvMarkdown(collectDefinitions(schema, { envPrefix: 'MYAPP_' }));
 generateMarkdownFile({ title: 'Docs', body: 'Hello.' });
 generateCliOptions(schema, { envPrefix: 'MYAPP_', scope: 'cli' });
 generateCliDocs(commands, { output: 'docs/cli.md' });
+const generated = generateConfigProgram(schema, { envPrefix: 'MYAPP_' });
 
 await generateConfigJsonSchema(schema, { baseGroup: ['base', 'server'] });
 await generateJsonSchemaFile(schema, { output: 'config.schema.json' });
@@ -6573,8 +6639,8 @@ export const serveCommand = configCliCommand({
     },
 });
 
-// Build it into an engine program like any other CliCommand:
-const program = createConfigProgram([serveCommand]);
+// Build it into the engine program like any other CliCommand:
+const program = engine.cli.program.create(() => [serveCommand]);
 await program.invokeAsync();
 ```
 
@@ -6634,12 +6700,88 @@ await program.invokeAsync();
 
 `create()` returns a built program: `program.commands` is the normalized command
 list (a single command stays a single command; an empty list generates one
-command per eligible scope). `createCommand(scope, spec)` builds one command
-without a program. The callback may be async; `create()` then returns a promise.
+command per eligible scope). `createCommand(scope, spec)` builds one config-backed
+command without a program; `cmd('name', spec)` / `createCommand('name', spec)`
+build a runtime-only command without a config scope. The callback may be async;
+`create()` then returns a promise.
+
 `ConfigScopeCommand` chains support `name`, `description`, `version`, `argv`,
-`bin`, `option`/`options`, `command`/`commands`, `subcommand`/`subcommands`,
-`onError` and terminal `run`. `onError(error, context)` receives the loaded host
-context. Omit `run` for a grouping command; it registers with its subcommands.
+`bin`, `option`/`options`, `globalOption`/`globalOptions`, `inherit`,
+`command`/`commands`, `subcommand`/`subcommands`, `onError` and terminal `run`.
+`onError(error, context)` receives the loaded host context. Omit `run` for a
+grouping command; it registers with its subcommands.
+
+#### Program members and options
+
+A `ConfigProgram` exposes the runtime surface:
+
+| Member                                   | Description                                                              |
+| ---------------------------------------- | ------------------------------------------------------------------------ |
+| `commands`                               | The normalized commands (single command stays single).                   |
+| `globals`                                | The program-level global options.                                        |
+| `name()` / `description()` / `version()` | Set the metadata shown in help/version output.                           |
+| `output(writeOut, writeErr?)`            | Route help/version output; `writeErr` is reserved for error rendering.    |
+| `globalOption()` / `globalOptions()`     | Append program-level globals.                                            |
+| `argv(values)`                           | Set the explicit argv used by `invoke()`.                                |
+| `withContext(context)`                   | Set the default host context.                                            |
+| `configure(format)`                      | Merge help/error formatting options.                                     |
+| `formatHelp(command?)`                   | Render program or command help.                                          |
+| `formatError(error)`                     | Render an error with the configured template.                            |
+| `invoke(argv?, context?)`                | Run synchronously (async handlers/resolvers throw).                      |
+| `invokeAsync(argv?, context?)`           | Run and await async handlers, hooks and resolvers.                       |
+| `hook()` / `hooks()`                     | Register inferred before/after hooks.                                    |
+
+Build the program through the engine — this is the preferred entry point because
+it infers the config/values types and accepts the full program options:
+
+```ts
+const program = engine.cli.program.create(
+    cmd => [
+        cmd('serve', {
+            name: 'serve',
+            description: 'Serve.',
+            run: ({ config, values, context }) => {},
+        }),
+    ],
+    {
+        name: 'acme',
+        description: 'Acme tooling.',
+        version: '1.0.0',
+        globalOptions: [{ flags: '--json', description: 'Print JSON.' }],
+        context: { cwd: process.cwd() },
+        disableColors: ({ color }) => color === false,
+        writeOut: text => process.stdout.write(text),
+        writeErr: text => process.stderr.write(text),
+    }
+);
+```
+
+`argv` defaults to `process.argv.slice(2)`, `name` defaults to `'program'`, and
+`disableColors` defaults to `false`. `program.configure()` merges formatting;
+`program.argv()`, `program.withContext()` and `program.output()` set the runtime
+pieces.
+
+Use the lower-level `createConfigProgram(commands, options?)` only when you
+already have a command list that is not tied to an engine. It accepts the same
+options and is what `engine.cli.program.create()` calls internally.
+
+Program types: `ConfigProgram`, `ConfigProgramOptions`,
+`ConfigProgramFormatOptions`, `ConfigProgramCommand`, `ConfigScopeCommand`,
+`ConfigCommandBuilder`, `ConfigEngineCliProgram` and `ConfigProgramError`.
+
+The standalone equivalent is
+`generateConfigProgram(schema, { envPrefix, ... })`: it returns `CliCommand[]`
+with schema-derived options. Use `engine.cli.program.create()` when you want the
+typed `run({ config, values, context })` callback. See
+[Generate → CLI program](/guide/config-generator/generate#cli-program).
+
+#### `ConfigProgramError`
+
+Invalid argv throws a `ConfigProgramError` with `code` (for example
+`unknownCommand`, `unknownOption`, `missingOptionValue`, `invalidValue`,
+`missingCommand`), `input` and an optional misspelling `suggestion`. Use
+`format.error.messages` to override the messages and `program.formatError()` to
+render one.
 
 Options and subcommands have commander-style shorthands as well as array forms:
 
@@ -6790,7 +6932,8 @@ program.configure({
 Help and error output are colourless by default. Supply colour hooks (for
 example `picocolors`) to opt in; the defaults merge recursively into
 subcommands and can be overridden per command, option, value, description and
-usage.
+usage. The default help template is `'plain'`; the default error template is
+`'message'`.
 
 ```ts
 import pc from 'picocolors';
@@ -6806,14 +6949,14 @@ program.configure({
     options: { '--json': pc.magenta },
     commands: { sync: { colors: { command: pc.green } } },
     help: {
-        template: 'box', // or 'plain', or (model) => string
+        template: 'box', // 'plain' (default) | 'box' | (model) => string
         box: {
             corners: { topLeft: '┌', topRight: '┐', bottomLeft: '└', bottomRight: '┘' },
             padding: 1,
         },
     },
     error: {
-        // 'box' (default: message + stack) | 'message' | custom formatter
+        // 'message' (default) | 'box' (message + stack) | custom formatter
         template: 'box',
         showStack: false,
         messageColor: pc.red,
@@ -6823,6 +6966,38 @@ program.configure({
 program.formatHelp('sync');
 program.formatError(error);
 ```
+
+`help.template: 'box'` wraps the commander-style content in the rounded box.
+`error.template: 'box'` renders one box per error; `'message'` prints only the
+message. Error formatting also exposes `messageColor`, `stackColor`,
+`showStack`, `messageOnly`, `box` and `messages` (the invalid-argv message
+overrides). Custom formatters receive the resolved `ConfigHelpModel` (`name`,
+`description`, `usage`, `options`, `commands`, `command`) or `ConfigErrorModel`
+(`errors[]`). Per-command overrides live under `commands[name]` and per-option
+colors under `options['--flag']`.
+
+Set `disableColors` when the host has its own colour switch. A function receives
+the parsed program globals and the invocation context, so a `--no-color` flag
+can turn every configured hook off at runtime:
+
+```ts
+const program = engine.cli.program.create(
+    cmd => [
+        cmd('serve', {
+            name: 'serve',
+            description: 'Serve.',
+            run: () => {},
+        }),
+    ],
+    {
+        globalOptions: [{ flags: '--no-color', description: 'Disable colours.' }] as const,
+        disableColors: ({ color }) => color === false,
+    }
+);
+```
+
+The callback may be async. `invoke()` requires a synchronous resolver; use
+`invokeAsync()` (the normal CLI path) for async predicates.
 
 Hooks run around the selected action and infer every declared command's
 context, scope, name and runtime `values`:
@@ -7365,8 +7540,10 @@ url: https://toolchain.deltabox.studio/guide/migrations/v2-v3.md
 
 **v3** is a correctness and cleanup release.
 
-Release notes [here](https://github.com/deltabox-studio/toolchain/releases/tag/v3.0.1).
-Full changelog [here](https://github.com/deltabox-studio/toolchain/blob/main/CHANGELOG.md#301-november-2026).
+Release notes
+[here](https://github.com/deltabox-studio/toolchain/releases).
+Full changelog
+[here](https://github.com/deltabox-studio/toolchain/blob/main/CHANGELOG.md).
 
 ## Table of contents
 
@@ -7381,6 +7558,7 @@ Full changelog [here](https://github.com/deltabox-studio/toolchain/blob/main/CHA
 
 * The `tsdown` workspace rename to `pack`.
 * The redesigned config-generator programmatic API.
+* The config CLI program runtime replacing the commander-based CLI assembly.
 * The `dbx()` Vite plugin becoming the preferred config path (available from the `@deltabox/toolchain/vite` subpath as usual).
 * Vite+ (`vite-plus`) as the bundled toolchain with per-package releases.
 * Vite+ projects configuring `pack`, `test` and `run.tasks` in `vite.config.*`
@@ -7612,22 +7790,33 @@ the surrounding API:
   Update the `include`/`files` entries in your tsconfigs if you referenced the
   old file name.
 * Runtime loading uses `parseConfig`, `parseEnvConfig` and `parseCliConfig`, plus
-  `collect` and `loadConfig` / `loadConfigAsync` for file-backed configs. The old
+  `collect` and `loadConfig` / `loadConfigAsync` for file-backed configs. The
+  source-specific `loadEnvConfig*`, `loadCliConfig*` and `loadFileConfig*` family
+  (with `Sync`/`Async` variants) selects the file+env, file+CLI or file-only
+  source set explicitly. The old
   `parseEnvTree` + `envString`/`envInt`/`envBool` accessors and `applyOverrides`
   remain available, but are legacy; prefer the parsers so env, CLI and overrides
   are validated through the schema.
 * The engine groups its generators: `engine.env` (and `engine.env.types`),
-  `engine.types`, `engine.markdown`, `engine.cli`, `engine.jsonSchema` and
+  `engine.types`, `engine.markdown` (`.cli`, `.env`, `.file`), `engine.cli`
+  (`.generate`, `.options`, `.program`), `engine.jsonSchema` and
   `engine.configJson`. `configCommands({ engine })` now also exposes `config:all`,
   and the standalone `generateConfig*` functions return content unless you pass an
   output path.
+* The high-level CLI program is now part of the public API:
+  `engine.cli.program.create()` returns a runnable `ConfigProgram` (with
+  `createCommand()` for one command), and `createConfigProgram(commands,
+  options?)` builds one from framework-agnostic `CliCommand[]`. `commander` is
+  no longer used or exported. The standalone
+  `generateConfigProgram(schema, options)` returns the generated command
+  descriptors without building a program.
 * JSON Schema generation can preserve Zod's `$ref`/`$defs` graph
   (`preserveDefs: true`), and the markdown/CLI generators expose more
   frontmatter, scope and reference options. Static schema defaults are also new.
 
 The `engine.*` generator methods are grouped now:
 
-```diff [scripts/generate-config.ts]
+```diff [scripts/generate-config-reference.ts]
 -engine.writeConfigTypes({ outputDir: 'types' });
 +engine.types.write({ outputDir: 'types' });
 
@@ -7678,6 +7867,48 @@ And the ambient env declarations change file name:
 
 If you only consume the generated files, re-run the generators; if you imported
 the engine, update the calls to the grouped API and the runtime parsers.
+
+### CLI command descriptors and program runtime
+
+v3 replaces the commander-based CLI assembly with the config program runtime.
+Custom CLIs now build the same program the `dbx` binary uses:
+
+```ts
+import { configCommands } from '@deltabox/toolchain/config';
+
+const program = engine.cli.program.create(() => configCommands({ engine }), {
+    name: 'acme',
+    version: '1.0.0',
+    globalOptions: [{ flags: '--json', description: 'Print JSON.' }],
+    disableColors: ({ color }) => color === false,
+});
+await program.invokeAsync(process.argv.slice(2));
+```
+
+* Rename `ToolchainCommand` / `ToolchainOption(s)` annotations to
+  `CliCommand` / `CliOption(s)`. Wrap inline descriptors in
+  `defineCliCommand()` from `@deltabox/toolchain/shared`; this preserves the
+  literal `options` tuple so `run` values are inferred. The
+  `CliOptionValues<typeof options>` type exposes the same shape directly.
+* `engine.cli.program.create()` builds schema-derived commands with typed
+  `run({ config, values, context })`; `createCommand(scope, spec)` builds one
+  config-backed command and `createCommand('name', spec)` builds a runtime-only
+  one. The callback may be async. `engine.cli.generate()` / `.options()` remain
+  the low-level option generators.
+* If you used the v3 beta program names, `engine.cli.program.generate()` is now
+  `create()` and the old `engine.cli.program.command()` builder is now
+  `createCommand()`. The chain's `.command()` method for subcommands is
+  unchanged.
+* A built program exposes `invoke()` / `invokeAsync()`, `argv()`,
+  `withContext()`, `globalOption()` / `globalOptions()`, `hook()` / `hooks()`,
+  `bin`, `formatHelp()`, `formatError()` and `configure()`. `invoke()` throws
+  when a handler, hook or `disableColors` resolver is async; use
+  `invokeAsync()`.
+* `configCommands()` remains library-only; `dbx` does not register a `config:*`
+  group because each command needs a consumer-bound `ConfigEngine`.
+* A command's `bin` field executes a relative/absolute binary instead of the
+  in-process handler; `argv` overrides the invocation arguments for
+  `program.invoke()`.
 
 ### Oxc configs live in `vite.config.*` in Vite+ mode
 
@@ -7927,6 +8158,8 @@ If you version workspaces individually, opt excluded packages out of the glob:
 
 ### CLI and VS Code
 
+* `--no-color` now also disables the configured help/error colours. A custom
+  program can implement the same switch with the `disableColors` program option.
 * `dbx sync --json` always emits a JSON envelope, including when the config
   failed to load (`{ results: [], upToDate: false, error }`).
 * `dbx projects --max-depth` rejects non-numeric values instead of silently
@@ -7986,6 +8219,10 @@ If you version workspaces individually, opt excluded packages out of the glob:
 12. If you use `ci.dependabot`, opt into `security` and add the
     `DBX_GITHUB_TOKEN` secret (repository admin) before the generated security
     workflow runs.
+13. If you assemble a custom CLI, rebuild it with `engine.cli.program.create()`
+    (or the lower-level `createConfigProgram()` for engine-agnostic command
+    lists), wrap descriptors in `defineCliCommand()`, and move any `commander`
+    wiring to the program runtime.
 
 ---
 
@@ -8253,6 +8490,16 @@ import { createConfigEngine, parseEnvConfig } from '@deltabox/toolchain/config';
 
 const engine = createConfigEngine({ schema, envPrefix: 'MYAPP_' });
 const runtimeConfig = parseEnvConfig(engine.schema, process.env, { envPrefix: 'MYAPP_' });
+
+// Build a runnable CLI program from the generated config commands
+import { configCommands } from '@deltabox/toolchain/config';
+
+const program = engine.cli.program.create(() => configCommands({ engine }), {
+    name: 'my-cli',
+    globalOptions: [{ flags: '--no-color', description: 'Disable colours.' }] as const,
+    disableColors: ({ color }) => color === false,
+});
+await program.invokeAsync(process.argv.slice(2));
 ```
 
 ---
@@ -8312,7 +8559,7 @@ the template engine.
 | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
 | `defineConfig(config)`                                                                     | Identity helper for a typed `dbx.config.*` (object, promise, or sync/async callback).       |
 | `sectionEnabled(section)` / `sectionConfig(section)`                                       | Opt-in-by-presence helpers for a config section.                                            |
-| `resolveTokens(config)`                                                                    | Flatten a config into `{{ token }}` replacements.                                           |
+| `resolveTokens(config)`                                                                    | Flatten a config into {{ token }} replacements.                                           |
 | `CONFIG_FILE_NAMES`                                                                        | The config file names the loader probes, in priority order.                                 |
 | `repoSlugFromUrl(url)`                                                                     | Derive an `owner/name` slug from a repository URL.                                          |
 | `findOwnCliEntry(cwd?)` / `localToolchainVersion(cwd?)` / `TOOLCHAIN_PACKAGE`              | Locate a project's own toolchain bin + pinned version (prefer them over a global `dbx`).    |
@@ -8323,14 +8570,17 @@ the template engine.
 | `readJsonFile` / `readJsonAt` / `toJson` / `writeJsonFile`                                 | Small JSON file helpers.                                                                    |
 | `mergeJsonAt(cwd, relative, patch)`                                                        | Deep-merge a patch over an existing JSON file.                                              |
 | `deepMerge` / `applyOverrides` / `isPlainObject` / `sort` / `mapValues`                    | Object utilities (including layered typed overrides).                                       |
-| `applyReplacements` / `applyReplacementsDeep` / `createReplacer`                           | The `{{ token }}` template engine (also `tokenPattern`, `extractTokens`).                   |
+| `defineCliCommand(command)`                                                                | Build a `CliCommand` while preserving the literal `options` tuple for typed values.         |
+| `CliOptionValues<TOptions>`                                                                | The commander-style typed values produced by an option tuple.                               |
+| `applyReplacements` / `applyReplacementsDeep` / `createReplacer`                           | The {{ token }} template engine (also `tokenPattern`, `extractTokens`).                   |
 | `DEFAULT_IGNORE_PATTERNS` / `DEFAULT_FMT_IGNORE_PATTERNS` / `DEFAULT_LINT_IGNORE_PATTERNS` | The shared build/cache ignores and the Oxfmt/Oxlint extensions.                             |
 | `resolveIgnorePatterns(cwd?, options?)` / `collectGitignorePatterns(cwd?)`                 | Defaults + `exclude` + `.gitignore` resolution, and the matching helpers (`isIgnoredPath`). |
 | `toYaml(value)`                                                                            | A tiny YAML emitter for the GitHub Actions subset.                                          |
 
 The config **types** and **schemas** also live here: `ToolchainConfig`, `DbxConfig`,
 `SyncTask`, `SyncContext`, `ManagedFile`, `CliCommand`, `CliOption`,
-`ToolchainProvider`, `ToolchainViteConfig` (Vite+'s config type), `Replacements`,
+`CliOptionValues`, `CliCommandContext`, `ToolchainProvider`,
+`ToolchainViteConfig` (Vite+'s config type), `Replacements`,
 and the generated `config-types` / `config-schema` exports.
 
 ```ts
@@ -8387,9 +8637,13 @@ guide for the full workflow).
 | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `createConfigEngine(options)`                                                            | Bind a schema, env prefix, base group and root into an engine. |
 | `parseConfig` / `parseEnvConfig` / `parseCliConfig`                                      | Runtime parsers: env + CLI + overrides, validated.             |
-| `loadConfig` / `loadConfigAsync`                                                         | Discover/import a config file and parse it.                    |
+| `loadConfig` / `loadConfigSync` / `loadConfigAsync`                                      | Discover/import a config file and parse it.                    |
+| `loadEnvConfig*` / `loadCliConfig*` / `loadFileConfig*`                                  | Source-specific loader variants (Sync/Async).                  |
 | `collect(schema, options?)`                                                              | Resolve env + CLI into a typed config (no overrides).          |
 | `configCommands({ engine, defaults? })`                                                  | The `config:*` commands for a consumer's own CLI.              |
+| `createConfigProgram(commands, options?)`                                                | Low-level program factory; prefer `engine.cli.program.create()`. |
+| `generateConfigProgram(schema, options)`                                                | Generate `CliCommand[]` from a config schema.                  |
+| `ConfigProgramError`                                                                    | Invalid-argv error (`code`, `input`, optional `suggestion`).   |
 | `formatGenerated(source, options?)`                                                      | Format generated output with Oxfmt (see below).                |
 | `GENERATED_FORMAT_OPTIONS`                                                               | The baseline Oxfmt options used by the generators.             |
 | `parseEnvTree(env, prefix?)` / `envString` / `envInt` / `envBool` / `envList` / `envMap` | Legacy dependency-free tree accessors.                         |
@@ -8427,9 +8681,8 @@ sync task (see the [Providers](/guide/providers) guide).
 
 | Export                                 | Description                                                            |
 | -------------------------------------- | ---------------------------------------------------------------------- |
-| `createConfigProgram(commands)`        | Build the engine program from framework-agnostic commands.             |
 | `builtinCommands()`                    | The commands built into the root CLI (config commands need an engine). |
-| `createCli()`                          | Build the `dbx` program on the engine runtime.                         |
+| `createCli(commands?)`                 | Build the `dbx` program; pre-typed arrays keep their command/option types. |
 | `runCli(argv?)`                        | Parse and run the CLI (extracts logger flags, defaults bare Vite+).    |
 | `withDefaultVite(argv, commandNames?)` | Insert `vite` before a bare Vite+ command.                             |
 | `extractLogOptions(argv)`              | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
@@ -8543,21 +8796,29 @@ url: https://toolchain.deltabox.studio/guide/api/registering-commands.md
 # Registering commands
 
 Packages export framework-agnostic `CliCommand[]` descriptors; build them into a
-program with `createConfigProgram` (this is how the bundled `dbx` binary, and a
-consumer's own CLI, are assembled):
+program with `engine.cli.program.create()` (preferred), or with the lower-level
+`createConfigProgram` when the command list is not tied to an engine (this is how
+the bundled `dbx` binary and a consumer's own CLI are assembled):
 
 ```ts
-import { configCommands, createConfigProgram } from '@deltabox/toolchain/config';
+import { configCommands } from '@deltabox/toolchain/config';
 
-const program = createConfigProgram(configCommands({ engine }), {
+const program = engine.cli.program.create(() => configCommands({ engine }), {
     name: 'acme',
     version: '1.0.0',
+    globalOptions: [{ flags: '--json', description: 'Print JSON.' }],
+    disableColors: ({ color }) => color === false,
 });
 await program.invokeAsync();
 ```
 
-For config-driven commands, `engine.cli.program.create(...)` builds the same
-program runtime with schema-derived options and typed `run` values.
+For config-driven commands, `engine.cli.program.create(...)` builds the program
+runtime with schema-derived options and typed `run` values. It accepts the full
+program options, including `globalOptions`, `disableColors`, `format`, `argv` and
+the output hooks. See
+[Running a built program](/guide/config-generator/api#running-a-built-program)
+and the
+[program members](/guide/config-generator/api#program-members-and-options).
 
 Custom descriptors do not need to be added to `builtinCommands()` to appear in
 the generated reference. Pass the same command list to `generateCliDocs`:
@@ -8620,7 +8881,7 @@ url: https://toolchain.deltabox.studio/guide/api/subpath-exports.md
 | ------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `@deltabox/toolchain/cli`       | Build the `dbx` engine program + bare-command routing.                                          |
 | `@deltabox/toolchain/core`      | Load `dbx.config.*`, run/watch sync, the project graph, manifest, reset.                        |
-| `@deltabox/toolchain/config`    | The Zod/env config engine, generators and the `config:*` commands.                              |
+| `@deltabox/toolchain/config`    | The Zod/env config engine, generators, `config:*` commands and CLI program runtime.             |
 | `@deltabox/toolchain/vite`      | Resolve/run `vp`, the Vite+ provider, the `dbx()` plugin and `vite` sync.                       |
 | `@deltabox/toolchain/migrate`   | Pluggable migrations to Oxfmt/Oxlint (Biome, ESLint, Prettier, Dprint).                         |
 | `@deltabox/toolchain/template`  | The builtin/local/online template registry, loading and scaffolding.                            |
@@ -9702,7 +9963,7 @@ toolchain: {
 ```
 
 `filename` and `dir` override the generated path for any provider. The workflow
-object is written as-is (only the toolchain's `{{ token }}` replacements are
+object is written as-is (only the toolchain's {{ token }} replacements are
 applied), so it must be a complete pipeline. `dbx workflow` dispatches each
 workflow with its vendor CLI — see [CLI](/guide/cli#tsconfig-cleanup-changelog-workflows).
 
@@ -10160,7 +10421,7 @@ steps: [
 
 ## Tokens
 
-The default workflow templates use `{{ token }}` replacements. `tokens` merges
+The default workflow templates use {{ token }} replacements. `tokens` merges
 over the project-wide values, so one workflow can use a different Node version or
 package manager without changing `project`. Overriding `packageManager` switches
 to that manager's default version unless you also set `packageManagerVersion`
@@ -10230,7 +10491,7 @@ token-replaced and gets no generated header; an empty string disables it.
 
 Set `provider` (`github`, `gitlab` or `azure`) with a complete `workflow` object
 to write another CI vendor's pipeline instead of the generated GitHub default.
-The object is written as-is (with the toolchain's `{{ token }}` replacements
+The object is written as-is (with the toolchain's {{ token }} replacements
 applied), so it must be a complete pipeline:
 
 ```ts [dbx.config.ts]
@@ -10362,10 +10623,12 @@ command line.
 | ------------------- | -------------------------------------------------------------- |
 | `--log-level <lvl>` | Minimum log level: `debug`, `info`, `warn`, `error`, `silent`. |
 | `--color`           | Force coloured output (the default).                           |
-| `--no-color`        | Disable coloured output.                                       |
+| `--no-color`        | Disable coloured output (including help/error formatting).      |
 | `--no-update-check` | Do not check for a newer `dbx` version.                        |
 | `--config <file>`   | Use a specific config file instead of discovering one.         |
 | `--no-config`       | Ignore config files and use CLI flags/env defaults only.       |
+| `-H, --help`        | Display help for the program or subcommand.                    |
+| `-V, --version`     | Output the version number.                                     |
 
 These override the [`logger` config](/guide/config/logging) and may appear
 before or after the subcommand. `--config` resolves relative to the current
@@ -10395,6 +10658,8 @@ explicit flags disable prompts. See [Scaffolding](#scaffolding) and
 ## Output
 
 Colour is on by default and follows `--no-color` / the [`logger` config](/guide/config/logging).
+`--no-color` also disables the program's configured help/error colours (the
+`dbx` program passes `disableColors` from the parsed global `color` flag).
 
 ## Core
 
@@ -10533,13 +10798,17 @@ import {
 
 | Export                                 | Description                                                            |
 | -------------------------------------- | ---------------------------------------------------------------------- |
-| `createCli()`                          | Build the `dbx` engine program (global flags + built-in commands).     |
+| `createCli(commands?)`                 | Build the `dbx` engine program (global flags + built-in commands).     |
 | `runCli(argv?)`                        | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
 | `builtinCommands()`                    | The commands built into the root CLI (config commands need an engine). |
 | `withCliContext(commands)`             | Wrap commands with dbx config loading, logging and framing.            |
 | `withDefaultVite(argv, commandNames?)` | Insert `vite` before a bare Vite+ command (built-ins win).             |
 | `extractLogOptions(argv)`              | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
 | `extractConfigSelection(argv)`         | Pull `--config <file>` / `--no-config` out of argv.                    |
+
+`createCli(commands)` accepts a typed command array (for example from
+`defineCliCommand`) and keeps the command/option types on `program.commands`;
+`createCli()` uses `builtinCommands()`.
 
 `extractLogOptions` makes the logger flags work before *or* after the
 subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.
@@ -10986,7 +11255,8 @@ export default defineConfig({
 ```
 
 On the CLI, `--log-level <level>` and `--no-color` override the config (see the
-[CLI reference](/guide/cli)). Machine output (`--json`) is written unprefixed
+[CLI reference](/guide/cli)); `--no-color` also disables the program's configured
+help/error colours. Machine output (`--json`) is written unprefixed
 through the same logger.
 
 ---
@@ -11802,7 +12072,7 @@ export default defineConfig({
 });
 ```
 
-`dbx sync` writes `biome.json`, resolving the `{{name}}` / `{{scope}}`
+`dbx sync` writes `biome.json`, resolving the {{ name }} / {{ scope }}
 replacement tokens and merging your overrides over the defaults.
 
 If any other formatter/linter is also configured, sync still writes both the
@@ -11964,6 +12234,7 @@ toolchain: {
 | `--no-color`        | Disable coloured output.                                   |
 
 They win over the config and may appear before or after the subcommand.
+`--no-color` also disables the program's configured help/error colours.
 
 ## Machine output
 
@@ -12080,7 +12351,7 @@ place to declare who a package is, and it does three jobs:
 1. **Defines `package.json` fields.** On `dbx sync`, the fields the section
    defines are written into the project's `package.json` (everything else is left
    untouched).
-2. **Feeds the `{{ token }}` replacements.** Every template (`biome.json`,
+2. **Feeds the {{ token }} replacements.** Every template (`biome.json`,
    workflows, tsconfigs, READMEs, ...) reads these values.
 3. **Drives scaffolding.** `dbx project:init*` uses the section as its defaults
    (and `project.type` picks the kind of project to generate).
@@ -13251,7 +13522,7 @@ when such a parent exists and is registered in the root `create.templates`.
 ## Custom templates
 
 A local template is any directory with a `template.json`. Files and directory
-names may use `{{ token }}` placeholders; actions can be builtin, a JS module or
+names may use {{ token }} placeholders; actions can be builtin, a JS module or
 a shell command.
 
 ```tree
@@ -13561,13 +13832,13 @@ is scaffolded. Declare them in `template.json`:
 }
 ```
 
-* `name` — the token name (also `{{ name }}` in files).
+* `name` — the token name (also {{ name }} in files).
 * `prompt` — the prompt text (defaults to the name).
 * `default` — the value used when nothing is entered.
 * `options` — a fixed list of choices: the value is picked from a select.
 * `required` — whether a value must be provided.
 
-Files and directory names may contain `{{ token }}` placeholders, resolved while
+Files and directory names may contain {{ token }} placeholders, resolved while
 copying:
 
 ```
@@ -13850,7 +14121,7 @@ reads. Everything else is optional and, if you prefer, renameable (see
   workspaces file is regenerated from the graph (aliases + references); with no
   workspaces there is nothing to wire.
 
-The `{{envTypesFile}}` token in the templates (default `src/dbx-env.d.ts`) is
+The {{ envTypesFile }} token in the templates (default `src/dbx-env.d.ts`) is
 resolved when a project is scaffolded, so a generated config's `include` points
 at the project's env types file.
 

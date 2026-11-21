@@ -1,21 +1,29 @@
 # Registering commands
 
 Packages export framework-agnostic `CliCommand[]` descriptors; build them into a
-program with `createConfigProgram` (this is how the bundled `dbx` binary, and a
-consumer's own CLI, are assembled):
+program with `engine.cli.program.create()` (preferred), or with the lower-level
+`createConfigProgram` when the command list is not tied to an engine (this is how
+the bundled `dbx` binary and a consumer's own CLI are assembled):
 
 ```ts
-import { configCommands, createConfigProgram } from '@deltabox/toolchain/config';
+import { configCommands } from '@deltabox/toolchain/config';
 
-const program = createConfigProgram(configCommands({ engine }), {
+const program = engine.cli.program.create(() => configCommands({ engine }), {
     name: 'acme',
     version: '1.0.0',
+    globalOptions: [{ flags: '--json', description: 'Print JSON.' }],
+    disableColors: ({ color }) => color === false,
 });
 await program.invokeAsync();
 ```
 
-For config-driven commands, `engine.cli.program.create(...)` builds the same
-program runtime with schema-derived options and typed `run` values.
+For config-driven commands, `engine.cli.program.create(...)` builds the program
+runtime with schema-derived options and typed `run` values. It accepts the full
+program options, including `globalOptions`, `disableColors`, `format`, `argv` and
+the output hooks. See
+[Running a built program](/guide/config-generator/api#running-a-built-program)
+and the
+[program members](/guide/config-generator/api#program-members-and-options).
 
 Custom descriptors do not need to be added to `builtinCommands()` to appear in
 the generated reference. Pass the same command list to `generateCliDocs`:

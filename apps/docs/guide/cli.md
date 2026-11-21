@@ -12,10 +12,12 @@ command line.
 | ------------------- | -------------------------------------------------------------- |
 | `--log-level <lvl>` | Minimum log level: `debug`, `info`, `warn`, `error`, `silent`. |
 | `--color`           | Force coloured output (the default).                           |
-| `--no-color`        | Disable coloured output.                                       |
+| `--no-color`        | Disable coloured output (including help/error formatting).      |
 | `--no-update-check` | Do not check for a newer `dbx` version.                        |
 | `--config <file>`   | Use a specific config file instead of discovering one.         |
 | `--no-config`       | Ignore config files and use CLI flags/env defaults only.       |
+| `-H, --help`        | Display help for the program or subcommand.                    |
+| `-V, --version`     | Output the version number.                                     |
 
 These override the [`logger` config](/guide/config/logging) and may appear
 before or after the subcommand. `--config` resolves relative to the current
@@ -45,6 +47,8 @@ explicit flags disable prompts. See [Scaffolding](#scaffolding) and
 ## Output
 
 Colour is on by default and follows `--no-color` / the [`logger` config](/guide/config/logging).
+`--no-color` also disables the program's configured help/error colours (the
+`dbx` program passes `disableColors` from the parsed global `color` flag).
 
 ## Core
 
@@ -183,13 +187,17 @@ import {
 
 | Export                                 | Description                                                            |
 | -------------------------------------- | ---------------------------------------------------------------------- |
-| `createCli()`                          | Build the `dbx` engine program (global flags + built-in commands).     |
+| `createCli(commands?)`                 | Build the `dbx` engine program (global flags + built-in commands).     |
 | `runCli(argv?)`                        | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
 | `builtinCommands()`                    | The commands built into the root CLI (config commands need an engine). |
 | `withCliContext(commands)`             | Wrap commands with dbx config loading, logging and framing.            |
 | `withDefaultVite(argv, commandNames?)` | Insert `vite` before a bare Vite+ command (built-ins win).             |
 | `extractLogOptions(argv)`              | Pull `--log-level` / `--color` / `--no-color` out of argv.             |
 | `extractConfigSelection(argv)`         | Pull `--config <file>` / `--no-config` out of argv.                    |
+
+`createCli(commands)` accepts a typed command array (for example from
+`defineCliCommand`) and keeps the command/option types on `program.commands`;
+`createCli()` uses `builtinCommands()`.
 
 `extractLogOptions` makes the logger flags work before _or_ after the
 subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.

@@ -59,7 +59,7 @@ steps: [
 
 ## Tokens
 
-The default workflow templates use `{{ token }}` replacements. `tokens` merges
+The default workflow templates use <code v-pre>{{ token }}</code> replacements. `tokens` merges
 over the project-wide values, so one workflow can use a different Node version or
 package manager without changing `project`. Overriding `packageManager` switches
 to that manager's default version unless you also set `packageManagerVersion`
@@ -129,7 +129,7 @@ token-replaced and gets no generated header; an empty string disables it.
 
 Set `provider` (`github`, `gitlab` or `azure`) with a complete `workflow` object
 to write another CI vendor's pipeline instead of the generated GitHub default.
-The object is written as-is (with the toolchain's `{{ token }}` replacements
+The object is written as-is (with the toolchain's <code v-pre>{{ token }}</code> replacements
 applied), so it must be a complete pipeline:
 
 ```ts [dbx.config.ts]
