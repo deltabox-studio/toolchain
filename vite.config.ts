@@ -64,20 +64,11 @@ export default defineConfig({
                 // Shared formatting/linting lives at the top level so every workspace
                 // (even one with a hand-written `vite.config.*`) inherits it.
                 fmt: {
-                    // Oxfmt (from `biome.json` formatter + javascript.formatter).
+                    // The toolchain defaults (DEFAULT_FMT_RULES) already cover the
+                    // formatter style, import sorting and default ignores; only the
+                    // repo's 4-space convention and its extra ignore globs differ.
                     oxc: {
-                        useTabs: false,
                         tabWidth: 4,
-                        printWidth: 100,
-                        endOfLine: 'lf',
-                        singleQuote: true,
-                        jsxSingleQuote: false,
-                        quoteProps: 'as-needed',
-                        trailingComma: 'es5',
-                        semi: true,
-                        arrowParens: 'avoid',
-                        bracketSpacing: true,
-                        bracketSameLine: false,
                         ignorePatterns: [
                             '**/node_modules/**',
                             '**/dist/**',
@@ -104,12 +95,11 @@ export default defineConfig({
                             '**/config-schema/generated/azure-pipelines.ts',
                             '**/config-schema/generated/oxlint-config.ts',
                         ],
-                        // Import sorting comes from the toolchain defaults; the
-                        // `workspace` group is resolved from the project graph.
                     },
                 },
                 lint: {
-                    // Oxlint (from `biome.json` linter.rules; `info` -> `off`, no Oxlint level).
+                    // Same idea: the default Oxlint rules apply untouched; the repo
+                    // only adds its generated-output ignores.
                     oxc: {
                         ignorePatterns: [
                             '**/node_modules/**',
@@ -118,27 +108,6 @@ export default defineConfig({
                             '**/.generated/**',
                             '**/.vite-hooks/_/**',
                         ],
-                        rules: {
-                            'jsx-a11y/alt-text': 'off',
-                            'react/button-has-type': 'off',
-                            'jsx-a11y/click-events-have-key-events': 'off',
-                            'typescript/no-empty-object-type': 'off',
-                            'no-useless-escape': 'off',
-                            'typescript/no-useless-empty-export': 'off',
-                            'no-constant-condition': 'off',
-                            'no-inner-declarations': 'off',
-                            'no-unused-vars': 'warn',
-                            'no-case-declarations': 'off',
-                            'react/exhaustive-deps': 'off',
-                            'prefer-exponentiation-operator': 'off',
-                            'typescript/no-non-null-assertion': 'off',
-                            'prefer-template': 'off',
-                            'no-return-assign': 'off',
-                            eqeqeq: 'warn',
-                            'typescript/no-explicit-any': 'off',
-                            // The markdown sanitizers intentionally match control chars.
-                            'no-control-regex': 'off',
-                        },
                     },
                 },
                 ci: {
