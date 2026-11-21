@@ -158,7 +158,7 @@ export const tsconfigConfigSchema = withEnabled(
             .boolean()
             .describe(
                 'Inline the compiler options inherited from a remote `http(s)` `extends` chain ' +
-                    'into the generated workspace configs (default false). Useful when a tool ' +
+                    'into the generated workspace configs. Useful when a tool ' +
                     'cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` ' +
                     'are skipped because they describe the remote tree. Settings the generated ' +
                     'config already defines always win.'
@@ -166,11 +166,12 @@ export const tsconfigConfigSchema = withEnabled(
             .default(false)
             .optional(),
         auto: tsconfigAliasAutoSetting(
-            'Auto-generate the root workspaces tsconfig paths/references from the project graph ' +
-                '(default false). Set true to derive them from the project graph; set false to ' +
+            'Auto-generate the root workspaces tsconfig paths/references from the project graph. ' +
+                'Set true to derive them from the project graph; set false to ' +
                 'only use the entries you define yourself. An object additionally accepts ' +
                 '`include`/`exclude`, `rewriteAlias`, `modes`, `prefix`, `devMode` and `dist`.'
         )
+        .default(false)
             .meta({ cli: false })
             .optional(),
         aliasAuto: tsconfigAliasAutoSetting(

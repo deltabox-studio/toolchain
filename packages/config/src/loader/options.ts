@@ -82,7 +82,7 @@ function stripConfigExtension(filename: string, allowed: readonly string[]): str
 
 /**
  * Resolve discovery options from either the parser-based
- * (``configFileOptions``) or object-based API.
+ * (`configFileOptions`) or object-based API.
  */
 export function normalizeConfigFileOptions(options: AnyLoadInput): ResolvedConfigFileOptions {
     const legacy = options as LoadConfigOptions<unknown>;

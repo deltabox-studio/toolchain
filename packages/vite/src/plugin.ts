@@ -231,16 +231,16 @@ export const DBX_TASKS: Record<'dbx:sync' | 'dbx:check', DbxTask> = {
 export interface DbxPluginOptions {
     /** Project root (default: the resolved Vite root). */
     cwd?: string;
-    /** Run `dbx sync` before the dev server / build (default true). */
+    /** Run `dbx sync` before the dev server / build. @default `true` */
     sync?: boolean;
     /**
      * Run `dbx sync --check` and fail the build when generated files are out of
      * date (default: true when `CI` is set in the environment).
      */
     check?: boolean;
-    /** Re-sync when a dbx input file changes in watch mode (default true). */
+    /** Re-sync when a dbx input file changes in watch mode. @default `true` */
     watch?: boolean;
-    /** Debounce (ms) for watch-triggered syncs (default 150). */
+    /** Debounce (ms) for watch-triggered syncs. @default `150` */
     debounce?: number;
     /**
      * The toolchain config carried inline. This is what makes a `dbx.config.*`

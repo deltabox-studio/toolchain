@@ -159,9 +159,9 @@ function appendTextEntry<T>(setting: T | T[] | undefined, entry: T): T | T[] {
 }
 
 export interface RunChangelogOptions {
-    /** Top-level `toolchain.enabled` (default true). */
+    /** Top-level `toolchain.enabled`. @default `true` */
     enabled?: boolean;
-    /** `ci.regenerate` / `ci.changelog.regenerate` (default true). */
+    /** `ci.regenerate` / `ci.changelog.regenerate`. @default `true` */
     regenerate?: boolean;
     /** Top-level `toolchain.hooks` (the version hooks run around a bump). */
     hooks?: Pick<ToolchainHooks, 'beforeVersion' | 'afterVersion'>;

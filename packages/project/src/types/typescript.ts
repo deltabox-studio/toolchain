@@ -38,7 +38,7 @@ export interface ProjectContext {
      * local file + `dbx.config.ts` opt-in are omitted so the root owns them.
      */
     rootOxc?: RootOxcFiles;
-    /** Write a `dbx.config.ts` (default true). */
+    /** Write a `dbx.config.ts`. @default `true` */
     includeConfig?: boolean;
     /** Per-file `extends` overrides for the scaffolded tsconfig templates. */
     tsconfigExtends?: TsconfigExtendsOptions;
@@ -78,7 +78,7 @@ export interface PluginViteConfigOptions {
 export interface MonorepoRootContext extends ProjectContext {
     /** The workspaces to wire into the monorepo tsconfig. */
     workspaces: MonorepoWorkspace[];
-    /** The workspace globs (default `['packages/*']`). */
+    /** The workspace globs. @default `['packages/*']` */
     workspaceGlobs?: string[];
 }
 
@@ -92,7 +92,7 @@ export interface WorkspaceContext extends ProjectContext {
 }
 
 export interface WriteGeneratedFilesOptions {
-    /** Overwrite files that already exist (default false). */
+    /** Overwrite files that already exist. @default `false` */
     force?: boolean;
     /**
      * Validate the targets (containment, duplicates, overwrites) without writing.

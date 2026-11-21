@@ -50,7 +50,7 @@ const syncFormatSchema = z
         }),
     ])
     .describe(
-        'Opt-in formatting of the managed files after generation (default off). `true` uses ' +
+        'Opt-in formatting of the managed files after generation. `true` uses ' +
             'the defaults, `false` disables it, and an object tunes `enabled`/`fix`/`command`/`exclude`.'
     );
 

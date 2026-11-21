@@ -396,7 +396,7 @@ export function renderToolchainConfig(
         lintOxc?: boolean;
         /** The catalog the scaffold writes (`toolchain.catalogs.packages`). */
         catalogs?: Record<string, string>;
-        /** The generated file extension (default `ts`). */
+        /** The generated file extension. @default `ts` */
         configExtension?: ConfigExtension;
         /** The package's `type` (`module`/`commonjs`), used for `.js` syntax. */
         packageType?: string;

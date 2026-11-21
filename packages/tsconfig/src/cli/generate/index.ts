@@ -59,33 +59,33 @@ import {
 import { type GeneratedTsconfigResult, generateTsconfig } from './utils.js';
 
 export interface GenerateTsconfigsOptions {
-    /** The repo root to scan (default `process.cwd()`). */
+    /** The repo root to scan. @default `process.cwd()` */
     cwd?: string;
-    /** Inject path aliases from the workspaces config (default true). */
+    /** Inject path aliases from the workspaces config. @default `true` */
     aliases?: boolean;
-    /** Emit `composite: true` + project references (default false). */
+    /** Emit `composite: true` + project references. @default `false` */
     composite?: boolean;
-    /** Wire project references between workspaces (default false). */
+    /** Wire project references between workspaces. @default `false` */
     refs?: boolean;
-    /** Inline compiler options inherited from a remote `extends` chain (default false). */
+    /** Inline compiler options inherited from a remote `extends` chain. @default `false` */
     flattenRemoteExtends?: boolean;
-    /** JSON indentation (default 4). */
+    /** JSON indentation. @default `4` */
     indent?: number;
     /** The glob(s) for the workspace default tsconfig files. */
     glob?: string | string[];
     /** Extra glob(s) to exclude from `glob` (on top of the common ignored paths). */
     exclude?: string | string[];
-    /** Respect `.gitignore` files (default true). */
+    /** Respect `.gitignore` files. @default `true` */
     gitignore?: boolean;
-    /** The workspace default tsconfig file name (default `tsconfig.default.json`). */
+    /** The workspace default tsconfig file name. @default `tsconfig.default.json` */
     defaultFile?: string;
-    /** The workspace build tsconfig file name (default `tsconfig.build.json`). */
+    /** The workspace build tsconfig file name. @default `tsconfig.build.json` */
     buildFile?: string;
-    /** The workspaces tsconfig file name (default `tsconfig.workspaces.json`). */
+    /** The workspaces tsconfig file name. @default `tsconfig.workspaces.json` */
     monorepoTsconfigFilename?: string;
-    /** Log progress (default true). */
+    /** Log progress. @default `true` */
     log?: boolean;
-    /** Write the generated files to disk (default true; false for a dry run). */
+    /** Write the generated files to disk. @default `true; false for a dry run` */
     write?: boolean;
     /** Managed file overrides applied before generating each workspace. */
     overrides?: TsconfigOverrides;
@@ -281,26 +281,27 @@ export function generateTsconfigs(
 }
 
 export interface GenerateWorkspaceTsconfigsOptions {
-    /** Repo root (default `process.cwd()`). */
+    /** Repo root. @default `process.cwd()` */
     cwd?: string;
     /** The merged root config. */
     config: ToolchainConfig;
     /** CLI overrides for the `tsconfig` section. */
     overrides?: Partial<ToolchainTsconfigConfig>;
-    /** Write the outputs to disk (default true). */
+    /** Write the outputs to disk. @default `true` */
     write?: boolean;
     /** Previous auto state (from the sync manifest); otherwise the sidecar is read. */
     previousAuto?: TsconfigAutoState;
     /** Override the auto sidecar path. */
     autoStateFile?: string;
-    /** Write the auto-state sidecar (default true; sync stores it in the manifest instead). */
+    /** Write the auto-state sidecar. @default `true; sync stores it in the manifest instead` */
     writeSidecar?: boolean;
     /** In-memory contents (absolute path -> JSONC) that win over files on disk. */
     fileContents?: TsconfigContents;
     /**
-     * Apply `tsconfig.overrides` while generating (default true). A caller that
+     * Apply `tsconfig.overrides` while generating. A caller that
      * already patched the contents passed via `fileContents` disables this so
      * the same override is not applied twice (and a removed one stays removed).
+     * @default `true`
      */
     applyOverrides?: boolean;
 }

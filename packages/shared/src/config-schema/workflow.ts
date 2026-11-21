@@ -166,22 +166,22 @@ export const workflowExtraSchema = z
 /** Per-workflow token overrides, with the known tokens suggested. */
 export const workflowTokensSchema = z
     .object({
-        name: z.string().describe('Project name (`{{name}}`).').optional(),
-        scope: z.string().describe('Package scope (`{{scope}}`).').optional(),
-        author: z.string().describe('Author (`{{author}}`).').optional(),
-        license: z.string().describe('License (`{{license}}`).').optional(),
-        homepage: z.string().describe('Homepage (`{{homepage}}`).').optional(),
-        repo: z.string().describe('Repository URL (`{{repo}}`).').optional(),
-        description: z.string().describe('Description (`{{description}}`).').optional(),
-        nodeVersion: z.string().describe('Node version (`{{nodeVersion}}`).').optional(),
-        packageManager: z.string().describe('Package manager (`{{packageManager}}`).').optional(),
-        yarnVersion: z.string().describe('Yarn version (`{{yarnVersion}}`).').optional(),
+        name: z.string().describe('Project name (`{{ name }}`).').optional(),
+        scope: z.string().describe('Package scope (`{{ scope }}`).').optional(),
+        author: z.string().describe('Author (`{{ author }}`).').optional(),
+        license: z.string().describe('License (`{{ license }}`).').optional(),
+        homepage: z.string().describe('Homepage (`{{ homepage }}`).').optional(),
+        repo: z.string().describe('Repository URL (`{{ repo }}`).').optional(),
+        description: z.string().describe('Description (`{{ description }}`).').optional(),
+        nodeVersion: z.string().describe('Node version (`{{ nodeVersion }}`).').optional(),
+        packageManager: z.string().describe('Package manager (`{{ packageManager }}`).').optional(),
+        yarnVersion: z.string().describe('Yarn version (`{{ yarnVersion }}`).').optional(),
         packageManagerVersion: z
             .string()
-            .describe('Package manager version (`{{packageManagerVersion}}`).')
+            .describe('Package manager version (`{{ packageManagerVersion }}`).')
             .optional(),
-        mainBranch: z.string().describe('Main branch (`{{mainBranch}}`).').optional(),
-        devBranch: z.string().describe('Dev branch (`{{devBranch}}`).').optional(),
+        mainBranch: z.string().describe('Main branch (`{{ mainBranch }}`).').optional(),
+        devBranch: z.string().describe('Dev branch (`{{ devBranch }}`).').optional(),
         vitePlus: z
             .boolean()
             .describe(
@@ -202,7 +202,7 @@ export const workflowOptionsSchema = withEnabled(
     z.object({
         provider: z
             .literal('github')
-            .describe('Workflow vendor for a full `workflow` object (default `github`).')
+            .describe('Workflow vendor for a full `workflow` object.')
             .default('github')
             .optional(),
         pushBranches: z.array(z.string()).describe('Replace `on.push.branches`.').optional(),
@@ -252,7 +252,7 @@ const vendorWorkflowFields = {
         .boolean()
         .describe(
             'Inject the provider-specific checkout/Node/Corepack/install setup ' +
-                '(default false: the workflow is written as-is).'
+                '(default false = the workflow is written as-is).'
         )
         .default(false)
         .optional(),

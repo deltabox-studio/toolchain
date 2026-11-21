@@ -81,7 +81,7 @@ type MaxDepth<O> = O extends { maxDepth: infer D }
         : 8
     : 8;
 
-/** Enumerate nested dotted paths, bounded by a literal `maxDepth` (default 8). */
+/** Enumerate nested dotted paths, bounded by a literal `maxDepth`. @default `8` */
 export type DotPath<
     C,
     Depth extends number = 8,

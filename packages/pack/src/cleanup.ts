@@ -6,9 +6,9 @@ import { Glob } from 'glob';
 import { logger } from '@deltabox/toolchain/shared';
 
 export interface CleanupOptions {
-    /** Directory to search from (default `process.cwd()`). */
+    /** Directory to search from. @default `process.cwd()` */
     cwd?: string;
-    /** Glob patterns to ignore (default `['**\/node_modules\/**']`). */
+    /** Glob patterns to ignore. @default `['**\/node_modules\/**']` */
     ignore?: string[];
     /** Return the removed paths instead of logging each one. */
     silent?: boolean;

@@ -289,7 +289,7 @@ export interface PlanVersionsOptions {
     bump: BumpType;
     /** Custom bump rules (used for per-workspace derivation). */
     bumpRules?: BumpRules;
-    /** Allow over-bumping (default false). */
+    /** Allow over-bumping. @default `false` */
     allowOverBump?: boolean;
     /** How breaking changes are detected (default: Conventional Commits). */
     breaking?: ChangelogBreakingSetting;

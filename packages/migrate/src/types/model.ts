@@ -33,7 +33,7 @@ export interface MigrationContext {
      * `oxc` source).
      */
     target?: MigrateTarget;
-    /** Write the result (default false = dry-run). */
+    /** Write the result. @default `false = dry-run` */
     write?: boolean;
     /** Allow network (eg. npx-based migrators). Default false. */
     online?: boolean;

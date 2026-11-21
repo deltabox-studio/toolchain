@@ -54,7 +54,7 @@ export interface ProjectGraph {
 }
 
 export interface BuildProjectGraphOptions {
-    /** Maximum directory depth to descend (default 5). */
+    /** Maximum directory depth to descend. @default `5` */
     maxDepth?: number;
 }
 

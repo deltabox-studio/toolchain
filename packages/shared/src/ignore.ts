@@ -72,7 +72,7 @@ const IGNORED_DIR_NAMES = new Set([
 export interface IgnoreOptions {
     /** Extra glob(s) to exclude on top of the defaults. */
     exclude?: string | string[];
-    /** Respect `.gitignore` files (default true). */
+    /** Respect `.gitignore` files. @default `true` */
     gitignore?: boolean;
 }
 

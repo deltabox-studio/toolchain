@@ -47,7 +47,7 @@ function installCommand() {
             { flags: '--scope <scope>', description: 'project (default) or global.' },
             { flags: '--cwd <dir>', description: 'Project root (default: cwd).' },
             { flags: '--dir <dir>', description: 'Custom directory (for --provider custom).' },
-            { flags: '--command <command>', description: 'Client command (default `dbx`).' },
+            { flags: '--command <command>', description: 'Client command (default `dbx`)' },
             { flags: '--no-skills', description: 'Do not write the skill/instructions file.' },
             { flags: '--json', description: 'Print the written paths as JSON.' },
         ],

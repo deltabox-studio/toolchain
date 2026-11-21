@@ -539,7 +539,7 @@ function injectProviderSetup(
 }
 
 export interface DefaultWorkflowOptions {
-    /** Include commitlint in the CI workflow (default true). */
+    /** Include commitlint in the CI workflow. @default `true` */
     commitlint?: boolean;
     /** Config-defined workflows (enabled by presence; no boolean form). */
     custom?: Record<string, CustomWorkflowSettings>;
@@ -774,7 +774,7 @@ export interface RenderWorkflowOptions {
     tokens: Replacements;
     /** The consumer's per-workflow config. */
     config?: WorkflowOptions;
-    /** Include commitlint in the CI workflow (default true). */
+    /** Include commitlint in the CI workflow. @default `true` */
     commitlint?: boolean;
 }
 

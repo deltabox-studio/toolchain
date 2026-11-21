@@ -10,7 +10,7 @@ export interface TemplateActionContext {
     tokens: Replacements;
     /** The resolved variable values. */
     variables: Record<string, string>;
-    /** The selected package manager (default `yarn`). */
+    /** The selected package manager. @default `yarn` */
     packageManager: string;
     /** Log a line. */
     log: (message: string) => void;
@@ -26,7 +26,7 @@ export interface TemplateAction {
     id: string;
     /** Prompt text shown when interactive (default: `Run <id>?`). */
     prompt?: string;
-    /** Whether the action runs by default (default false — opt-in). */
+    /** Whether the action runs by default. @default `false` */
     default?: boolean;
     /** A builtin action to run (eg. `install`). */
     builtin?: 'install';

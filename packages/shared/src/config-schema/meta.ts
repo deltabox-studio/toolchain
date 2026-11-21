@@ -5,7 +5,7 @@ export const ENABLED_DESCRIPTION = 'Enable/disable this section (default: enable
 
 /** The default description for the shared `regenerate` flag. */
 export const REGENERATE_DESCRIPTION =
-    "Regenerate this section's managed files during `dbx sync` (default true). " +
+    "Regenerate this section's managed files during `dbx sync`. " +
     'When false, existing files are left untouched and are neither written nor drift-checked.';
 
 /** A section: enabled/disabled with a boolean, or configured with an object. */

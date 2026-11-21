@@ -39,9 +39,10 @@ export function renderCommitRef(repo: string | undefined, hash: string): string 
 
 export interface BuildSummaryOptions {
     /**
-     * Use the Conventional-Commits grouping (default true). When commitlint is
+     * Use the Conventional-Commits grouping. When commitlint is
      * disabled, commits are hoisted into coarse Major/Minor/Patch buckets
      * instead, so a non-CC history still produces a readable changelog.
+     * @default `true`
      */
     commitlint?: boolean;
     /**
@@ -81,9 +82,9 @@ function bumpGroupOf(record: CommitRecord, breaking?: ChangelogBreakingSetting):
 }
 
 interface CommitItemOptions {
-    /** Include the `by <author>` credit (default true). */
+    /** Include the `by <author>` credit. @default `true` */
     author?: boolean;
-    /** Include the commit body as nested bullets (default true). */
+    /** Include the commit body as nested bullets. @default `true` */
     body?: boolean;
     /** How breaking changes are detected (default: Conventional Commits). */
     breaking?: ChangelogBreakingSetting;

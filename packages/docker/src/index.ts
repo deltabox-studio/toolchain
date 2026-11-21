@@ -28,15 +28,15 @@ export type DockerRuntime = 'node' | 'static' | 'bun';
 export interface DockerOptions {
     /** Container image name (default: the project name). */
     image?: string;
-    /** Container image tag (default `latest`). */
+    /** Container image tag. @default `latest` */
     tag?: string;
-    /** Container port to expose (default 3000, or 8080 for static sites). */
+    /** Container port to expose. @default `3000, or 8080 for static sites` */
     port?: number;
-    /** Runtime layout (default `auto`, detected from `package.json`). */
+    /** Runtime layout. @default `auto`, detected from `package.json` */
     runtime?: 'auto' | DockerRuntime;
-    /** Built entry file, relative to the project root (default `dist/index.js`). */
+    /** Built entry file, relative to the project root. @default `dist/index.js` */
     entry?: string;
-    /** Build output directory (default `dist`, or the VitePress output). */
+    /** Build output directory. @default `'dist', or the VitePress output` */
     output?: string;
     /** Node.js version for non-Vite+ images. */
     nodeVersion?: string;
@@ -46,24 +46,25 @@ export interface DockerOptions {
     runtimeImage?: string;
     /** Runtime user to run as. */
     user?: string;
-    /** Also write `docker-compose.yaml` (default false). */
+    /** Also write `docker-compose.yaml`. @default `false` */
     compose?: boolean;
-    /** Add a `HEALTHCHECK` to the runtime image (default true). */
+    /** Add a `HEALTHCHECK` to the runtime image. @default `true` */
     healthcheck?: boolean;
-    /** HTTP path the healthcheck requests (default `/`). */
+    /** HTTP path the healthcheck requests. @default `/` */
     healthcheckPath?: string;
-    /** Dockerfile name (default `Dockerfile`). */
+    /** Dockerfile name. @default `Dockerfile` */
     dockerfile?: string;
-    /** Write a `.dockerignore` alongside the Dockerfile (default true). */
+    /** Write a `.dockerignore` alongside the Dockerfile. @default `true` */
     dockerignore?: boolean;
     /** Extra files/directories copied from the build stage into the runtime image. */
     assets?: string[];
     /** Runtime system packages installed with `apt-get` (eg. `rclone`). */
     runtimePackages?: string[];
     /**
-     * Emit a runnable server image (default true). Set `false` for a library or
+     * Emit a runnable server image. Set `false` for a library or
      * other package that has no server entry point: `dockerFiles` then emits no
      * artifacts at all instead of a broken Node image.
+     * @default `true`
      */
     runnableServer?: boolean;
 }

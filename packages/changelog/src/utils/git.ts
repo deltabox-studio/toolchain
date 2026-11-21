@@ -228,9 +228,9 @@ function isGhAvailable(): boolean {
 const ghApiCache = new Map<string, string | undefined>();
 const ghGraphQLCache = new Map<string, unknown>();
 
-/** Retries after the first `gh api` failure (default 5). */
+/** Retries after the first `gh api` failure. @default `5` */
 const GH_API_DEFAULT_MAX_RETRIES = 5;
-/** Delay between `gh api` retries (default 3000ms). */
+/** Delay between `gh api` retries. @default `3000ms` */
 const GH_API_DEFAULT_RETRY_DELAY_MS = 3000;
 /** Commits/issues per batched GraphQL request (GitHub caps node aliases at 100). */
 const GH_BATCH_SIZE = 100;

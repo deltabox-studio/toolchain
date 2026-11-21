@@ -111,7 +111,7 @@ export function s3FileServer(ctx: ProjectContext, minio: boolean): GeneratedFile
     const title = minio ? 'A MinIO / S3 file server' : 'An AWS S3 file server';
     const env = minio
         ? [
-              '`S3_BUCKET` (required), `S3_ENDPOINT` (default `http://127.0.0.1:9000`),',
+              '`S3_BUCKET` (required), `S3_ENDPOINT` (default: `http://127.0.0.1:9000`),',
               '`S3_REGION`, `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY`',
               '(defaults `minioadmin` for local development).',
           ]

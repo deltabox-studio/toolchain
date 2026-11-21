@@ -71,7 +71,7 @@ const enabledConfigSchema = z
         z.object({
             disabled: z
                 .boolean()
-                .describe('Disable the toolchain for this scope (default false).')
+                .describe('Disable the toolchain for this scope.')
                 .default(false)
                 .optional(),
             scope: z
