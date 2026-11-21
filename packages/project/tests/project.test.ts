@@ -87,8 +87,16 @@ describe('project scaffolding', () => {
                 if (!specifier || specifier.startsWith('.') || specifier.startsWith('node:')) {
                     continue;
                 }
+                // A subpath import (`@deltabox/toolchain/vite`) is declared by
+                // its package root (`@deltabox/toolchain`).
+                const packageName = specifier.startsWith('@')
+                    ? specifier.split('/').slice(0, 2).join('/') || specifier
+                    : (specifier.split('/')[0] ?? specifier);
                 expect(
-                    pkg.devDependencies?.[specifier] ?? pkg.dependencies?.[specifier],
+                    pkg.devDependencies?.[specifier] ??
+                        pkg.dependencies?.[specifier] ??
+                        pkg.devDependencies?.[packageName] ??
+                        pkg.dependencies?.[packageName],
                     `${specifier} import in ${config}`
                 ).toBeDefined();
             }
@@ -383,7 +391,7 @@ describe('project scaffolding', () => {
         expect(pkg.devDependencies.tsdown).toBeUndefined();
         expect(pkg.devDependencies.vitest).toBeUndefined();
         const vite = files.find(f => f.path === 'vite.config.ts')!.content;
-        expect(vite).toContain("from 'vite-plugin-dbx'");
+        expect(vite).toContain("from '@deltabox/toolchain/vite'");
         expect(vite).not.toMatch(/\brun:\s*\{/);
         // The root config owns fmt/lint; the workspace must not shadow it.
         expect(vite).not.toContain('fmt:');

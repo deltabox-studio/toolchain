@@ -2553,7 +2553,7 @@ How the generated `vite.config.ts` is rendered. `runtime` loads the config from 
 
 - **Type**: `string`
 
-Module specifier used to import `resolveVite` in runtime shims (default `vite-plugin-dbx`, or the umbrella `@deltabox/toolchain/vite`). A relative path is resolved from the repo root and rewritten relative to each generated config - useful for dogfooding a source checkout without a built `dist`.
+Module specifier used to import `resolveVite` in runtime shims (default `@deltabox/toolchain/vite`; the legacy `vite-plugin-dbx` is still accepted). A relative path is resolved from the repo root and rewritten relative to each generated config - useful for dogfooding a source checkout without a built `dist`.
 
 ### `fmt`
 

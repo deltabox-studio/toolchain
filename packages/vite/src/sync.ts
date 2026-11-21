@@ -243,7 +243,7 @@ function leadingHeader(source: string): HeaderEntry[] {
 }
 
 /** The default module the runtime shim imports `resolveVite` from. */
-export const DEFAULT_RESOLVE_IMPORT = 'vite-plugin-dbx';
+export const DEFAULT_RESOLVE_IMPORT = '@deltabox/toolchain/vite';
 
 /**
  * Merge the required `defineConfig` + config-type specifiers into an existing

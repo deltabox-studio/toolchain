@@ -3,7 +3,6 @@ import { defineConfig } from 'vite-plus';
 import { dbx } from '@deltabox/toolchain/vite';
 
 import { rootPackConfig } from './scripts/root-pack.js';
-import { syncScaffoldCatalog } from './scripts/sync-scaffold-catalog.js';
 
 /**
  * The toolchain dogfoods itself through the `dbx()` Vite/Vite+ plugin.
@@ -36,11 +35,6 @@ export default defineConfig({
                     nodeVersion: '22',
                     packageManager: 'yarn',
                     packageManagerVersion: '4.17.1',
-                },
-                hooks: {
-                    // Keep the scaffold catalog's `vite-plugin-dbx` pin in step
-                    // with the root version before the changelog workflow commits.
-                    afterVersion: ({ cwd }) => syncScaffoldCatalog(cwd),
                 },
                 // Generate each workspace `tsconfig.json` from its
                 // `tsconfig.default.json`, wiring the shared `paths` from

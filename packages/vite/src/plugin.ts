@@ -5,7 +5,7 @@
  * ```ts
  * // vite.config.ts
  * import { defineConfig } from 'vite-plus';
- * import { dbx, DBX_TASKS } from 'vite-plugin-dbx';
+ * import { dbx, DBX_TASKS } from '@deltabox/toolchain/vite';
  *
  * export default defineConfig({
  *     plugins: [dbx()],

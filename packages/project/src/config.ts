@@ -129,7 +129,7 @@ export function generateProjectConfigs(
                 configPath,
                 extension,
                 created: false,
-                skipped: 'uses vite-plugin-dbx',
+                skipped: 'uses @deltabox/toolchain/vite',
                 ...(viteFile ? { vite: { path: viteFile, folded: false } } : {}),
             });
             continue;

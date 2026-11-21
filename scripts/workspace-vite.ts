@@ -23,9 +23,10 @@ const require = createRequire(import.meta.url);
  * The explicit `pack`/`run` options below keep the build deterministic when the
  * plugin is unavailable; once the package is built, the plugin is used again.
  */
-export function resolveDbxPlugin(): typeof import('vite-plugin-dbx').dbx | undefined {
+export function resolveDbxPlugin(): typeof import('@deltabox/toolchain/vite').dbx | undefined {
     try {
-        return (require('vite-plugin-dbx') as typeof import('vite-plugin-dbx')).dbx;
+        return (require('@deltabox/toolchain/vite') as typeof import('@deltabox/toolchain/vite'))
+            .dbx;
     } catch {
         return undefined;
     }
