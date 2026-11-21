@@ -15,6 +15,8 @@ that drift, and release chores that are easy to get wrong.
 
 You describe the project once, and the toolchain keeps the rest in sync.
 
+---
+
 <details>
 <summary><strong>Table of contents</strong></summary>
 
@@ -53,6 +55,7 @@ You describe the project once, and the toolchain keeps the rest in sync.
 - VS Code extension
 - Editor first
 - Monorepo aware
+- And more...
 
 See more at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
 
@@ -74,7 +77,7 @@ https://github.com/user-attachments/assets/a4f1ad75-fedd-40ee-b84d-3365f7025a3e
 <summary><strong>Why use this?</strong></summary>
 
 `deltabox toolchain` is a superset of [Vite+](https://viteplus.dev)
-but can be used standalone.
+but can be used standalone without Vite.
 
 It is most useful when at least one of these is true:
 
@@ -105,7 +108,7 @@ problems it removes, the core features and when it might not fit.
 
 See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
 
-Documentation, guides and examples at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
+Documentation, guides and examples live at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
 
 ## Install
 

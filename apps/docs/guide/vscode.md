@@ -1,6 +1,6 @@
 # VS Code extension
 
-The `deltabox toolchain` extension provides a sidebar for managing projects.
+This VS Code extension provides a sidebar for managing projects.
 
 <div align="center">
   <video width="1342" controls>
