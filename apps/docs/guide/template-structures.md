@@ -316,7 +316,7 @@ Highlighted files are the template-specific ones.
     - name: .yarnrc.yml
     - name: public
       children:
-        - index.html
+        - name: index.html
           highlight: true
     - name: src
       children:
@@ -678,7 +678,7 @@ Typical `providers.json` content:
 ### Global registry
 
 ```tree
-- name: ~
+- name: "~"
   description: home
   children:
     - name: .dbx
