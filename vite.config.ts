@@ -383,7 +383,7 @@ export default defineConfig({
                                 {
                                     name: 'Verify generated config artifacts are up to date',
                                     run: [
-                                        'yarn format',
+                                        'yarn fmt',
                                         'git diff --exit-code -- apps/docs/config/reference.md apps/docs/config/index.md apps/docs/config/cli.md apps/docs/config/env.md config.schema.json packages/shared/src/config-types.ts packages/shared/src/config-schema/generated/biome-config.ts',
                                     ].join('\n'),
                                 },
@@ -493,11 +493,11 @@ export default defineConfig({
                 command: "vp test run --exclude 'packages/**'",
                 cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
             },
-            'format:root': {
+            'fmt:root': {
                 command: 'vp fmt',
                 cache: { input: [{ auto: true }], output: [] },
             },
-            'format:check:root': {
+            'fmt:check:root': {
                 command: 'vp fmt --check',
                 cache: { input: [{ auto: true }], output: [] },
             },

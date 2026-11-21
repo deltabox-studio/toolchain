@@ -14,7 +14,7 @@ The repo root `package.json`:
 ```json [package.json]
 {
     "scripts": {
-        "format": "dbx fmt",
+        "fmt": "dbx fmt",
         "lint": "dbx lint --fix",
         "check": "dbx check",
         "build": "dbx run -r build",
@@ -30,7 +30,7 @@ The repo root `package.json`:
 
 | Script                         | What it does                                                    |
 | ------------------------------ | --------------------------------------------------------------- |
-| `format` / `lint` / `check`    | Oxfmt / Oxlint across the repo (`check` = format check + lint). |
+| `fmt` / `lint` / `check`       | Oxfmt / Oxlint across the repo (`check` = format check + lint). |
 | `build` / `typecheck` / `test` | Runs the task in every workspace, in dependency order.          |
 | `dbx:sync` / `dbx:watch`       | Regenerate the managed files / re-sync on change.               |
 | `commitlint` / `postinstall`   | Conventional Commits + the Vite+ hook dispatcher.               |
@@ -42,7 +42,7 @@ Notes:
   Built-in commands win, so `dbx migrate` is the toolchain's migration — use
   `dbx vite migrate` for Vite+'s. The explicit `dbx vite <command>` passthrough
   always works.
-- Vite+ resolves from the **repo root**, so `format`/`lint` live there — keep
+- Vite+ resolves from the **repo root**, so `fmt`/`lint` live there — keep
   them out of the individual workspaces.
 - `dbx run -r <task>` runs a task in every workspace package in dependency order.
   A task is either a `package.json` script or a `vite.config.ts` `run.tasks`
@@ -146,7 +146,7 @@ commands are built in and which run `package.json` scripts.
 | `biome.json`             | `vite.config.ts` |
 
 Remove `@biomejs/biome`, delete `biome.json`, and drop any per-workspace
-`format`/`lint` scripts.
+`fmt`/`lint` scripts.
 
 ### Turbo → Vite Task
 

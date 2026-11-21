@@ -55,7 +55,7 @@ describe('project scaffolding', () => {
         expect(pkg.devDependencies['vite-plus']).toBe('catalog:');
         expect(pkg.devDependencies['@biomejs/biome']).toBeUndefined();
         expect(paths).not.toContain('biome.json');
-        expect(pkg.scripts.format).toBe('dbx fmt');
+        expect(pkg.scripts.fmt).toBe('dbx fmt');
         expect(pkg.scripts.lint).toBe('dbx lint --fix');
         // Vite+ reads fmt/lint from vite.config; no standalone Oxc files.
         expect(paths).not.toContain('.oxfmtrc.json');

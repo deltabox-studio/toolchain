@@ -354,7 +354,7 @@ describe('emulate: CLI + templates', () => {
             expect(singlePkg.devDependencies['@types/node']).toBe('catalog:');
             expect(singlePkg.devDependencies['vite-plus']).toBe('catalog:');
             expect(singlePkg.devDependencies['@biomejs/biome']).toBeUndefined();
-            expect(singlePkg.scripts.format).toBe('dbx fmt');
+            expect(singlePkg.scripts.fmt).toBe('dbx fmt');
             expect(singlePkg.scripts.lint).toBe('dbx lint --fix');
             expect(singlePkg.packageManager).toMatch(/^yarn@\d/);
             // Vite+ reads fmt/lint from vite.config; no standalone Oxc files.

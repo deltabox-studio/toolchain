@@ -37,7 +37,7 @@ yarn dev            # run the CLI from src/ via tsx
 yarn typecheck      # packages + root
 yarn check          # Oxfmt + Oxlint check (no writes)
 yarn check:fix      # same, auto-fixing every workspace + the root
-yarn format         # `vp fmt`
+yarn fmt            # `vp fmt`
 yarn lint           # `vp lint --fix`
 yarn build          # packages + root via `vp run` (root pack config)
 yarn test           # builds, then package + root tests

@@ -593,7 +593,7 @@ export function createRootProjectFiles(ctx: ProjectContext): GeneratedFile[] {
             ...(application
                 ? { dev: 'vp dev', build: 'vp build', preview: 'vp preview' }
                 : { build: 'vp pack' }),
-            format: 'dbx fmt',
+            fmt: 'dbx fmt',
             lint: 'dbx lint --fix',
             test: 'vp test',
             typecheck: 'tsc -p tsconfig.json --noEmit',
@@ -671,7 +671,7 @@ export function createMonorepoRootFiles(ctx: MonorepoRootContext): GeneratedFile
             build: `dbx run ${filters} build`,
             test: `dbx run ${filters} test`,
             typecheck: `dbx run ${filters} typecheck`,
-            format: 'dbx fmt',
+            fmt: 'dbx fmt',
             lint: 'dbx lint --fix',
         },
         workspaces: workspacesField(ctx.packageManager, workspaceGlobs),
@@ -907,7 +907,7 @@ export function createWorkspaceFiles(ctx: WorkspaceContext): GeneratedFile[] {
         files: ['dist'],
         scripts: {
             build: 'vp pack',
-            format: 'dbx fmt',
+            fmt: 'dbx fmt',
             lint: 'dbx lint --fix',
             test: 'vp test',
             typecheck: 'tsc -p tsconfig.build.json --noEmit',

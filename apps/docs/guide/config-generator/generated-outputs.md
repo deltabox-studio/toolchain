@@ -156,7 +156,7 @@ If the transform changes the formatting, run the result through
 ## Formatting — `formatGenerated()`
 
 Generated text is formatted **at generation time**, so a written file is already
-formatted instead of relying on a separate `yarn format` pass. `formatGenerated`
+formatted instead of relying on a separate `yarn fmt` pass. `formatGenerated`
 runs source through Oxfmt, preferring the project-local `vite-plus/fmt` (Oxfmt
 ships with Vite+), then `oxfmt`, and returns the input untouched when no formatter
 is resolvable, so generation never fails on a missing formatter.

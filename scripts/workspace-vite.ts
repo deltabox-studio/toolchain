@@ -49,8 +49,8 @@ export function workspaceTasks(): WorkspaceTasks {
             command: 'vp test run',
             cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
         },
-        format: { command: 'vp fmt', cache: { input: [{ auto: true }], output: [] } },
-        'format:check': {
+        fmt: { command: 'vp fmt', cache: { input: [{ auto: true }], output: [] } },
+        'fmt:check': {
             command: 'vp fmt --check',
             cache: { input: [{ auto: true }], output: [] },
         },
