@@ -169,6 +169,12 @@ that drift, and release chores that are easy to get wrong.
 
 You describe the project once, and the toolchain keeps the rest in sync.
 
+The open-source [`dbx` toolchain repository](https://github.com/deltabox-studio/toolchain)
+uses the toolchain itself to maintain its development: sync, config generation,
+`tsconfig` management, changelog/release automation and the docs site are all
+driven by the same setup described here. That dogfooding keeps the workflow
+honest.
+
 ## The problems it removes
 
 ### Configuration sprawl
@@ -192,11 +198,12 @@ artifacts consistent and make drift visible before it lands.
 
 ### Local and CI differences
 
-“Works on my machine” usually means a different formatter version, a missing
+"Works on my machine" usually means a different formatter version, a missing
 commit hook, stale generated files or a release step that only runs locally.
 
-The toolchain uses the same Vite+ commands, generated files and hooks locally
+The toolchain uses it's commands in generated files and hooks locally
 and in CI, with `sync --check` as a single verification gate.
+For Vite+ projects it passes through Vite+ commands.
 
 ### Release and CI glue
 
@@ -209,7 +216,7 @@ releases stay repeatable and the release notes stay readable.
 
 ### Inconsistent scaffolding
 
-Every new package starts from a different copy of “the right setup”, and the
+Every new package starts from a different copy of "the right setup", and the
 copy slowly diverges.
 
 Builtin templates and generators produce a consistent project shape, including
@@ -232,8 +239,8 @@ toolchain instead of installing each tool separately.
   Schema and typed CLI options.
 * **Project-aware tooling.** Workspace graph, tsconfig refs/aliases, catalogs
   and per-package releases.
-* **Scaffolds and templates.** Consistent projects, workspaces, Vite apps,
-  libraries and server templates.
+* **Scaffolds and templates.** Consistent projects, workspaces, built-in & custom
+  libraries, server templates and Vite apps.
 * **Automated maintenance.** CI, changelog, releases, issues and Dependabot
   workflows.
 * **Editor and agent integration.** A VS Code extension and an MCP server for
@@ -7070,7 +7077,7 @@ The merge is recursive, but **sections are strictly opt-in**:
   the root defines it.
 * When the nested config **does** opt in, objects are merged key by key and
   leaves (booleans, strings, numbers, arrays) in the child replace the root's
-  value. `true` means “enabled with the parent's options”; `false` disables it.
+  value. `true` means "enabled with the parent's options"; `false` disables it.
 * **Repository/workspace-scoped sections are never inherited**: `ci`, `tsconfig`,
   `loader`, `templates`, `registry`, `watch`, `providers`, and `vite`. A
   workflow, workspace tsconfig tree, config loader, source/registry policy,
