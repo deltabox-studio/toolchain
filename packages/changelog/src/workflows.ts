@@ -67,6 +67,10 @@ export const DEFAULT_WORKFLOW_TOKENS = {
     // Whether the project is a Vite/Vite+ project; the changelog sync task sets
     // this from the project files (and a consumer can override it per workflow).
     vitePlus: false,
+    // Whether the changelog pipeline uses the changesets provider. The
+    // changelog sync task sets this from the config so the commit step stages
+    // the consumed `.changeset` files.
+    changesets: false,
 } as const;
 
 /** Default file name per workflow id. */
@@ -622,6 +626,11 @@ export function defaultWorkflows(
                                 // Stage only the files this pipeline owns, so a
                                 // stray working-tree change is never committed.
                                 'git add -- "*package.json" "*CHANGELOG.md"',
+                                // The changesets provider consumes changeset
+                                // files; stage their deletions/edits too.
+                                ...(tokens.changesets
+                                    ? ['if [ -d .changeset ]; then git add -A -- .changeset; fi']
+                                    : []),
                                 // The `afterVersion` hook may update the scaffold
                                 // catalog in `.yarnrc.yml`.
                                 'if [ -f .yarnrc.yml ]; then git add .yarnrc.yml; fi',

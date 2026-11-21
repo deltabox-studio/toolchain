@@ -60,6 +60,24 @@ function workflowRegenerates(setting: unknown): boolean {
     return (setting as { regenerate?: unknown }).regenerate !== false;
 }
 
+/** Whether a resolved changelog config selects the changesets provider. */
+function usesChangesetsProvider(
+    config: ReturnType<typeof resolveChangelogConfig> | undefined
+): boolean {
+    const versioning = config?.versioning;
+    if (!versioning || typeof versioning !== 'object') return false;
+    const provider = versioning.provider;
+    const entries = Array.isArray(provider) ? provider : [provider];
+    return entries.some(entry => {
+        if (entry === 'changesets') return true;
+        return Boolean(
+            entry &&
+            typeof entry === 'object' &&
+            (entry as { options?: unknown }).options === 'changesets'
+        );
+    });
+}
+
 /** The workflow settings declared under `toolchain.ci` (all opt-in). */
 function declaredWorkflows(config: ToolchainConfig): Partial<Record<WorkflowId, WorkflowSetting>> {
     const ci = sectionEnabled(config.ci) ? (sectionConfig(config.ci) ?? {}) : {};
@@ -262,6 +280,9 @@ export function changelogSyncTask(): SyncTask {
                 // Vite/Vite+ projects install `vp` with `voidzero-dev/setup-vp`
                 // instead of the Node/Corepack/package-manager steps.
                 vitePlus: usesVitePlus(ctx.cwd, ctx.config),
+                // changesets owns version/changelog writes, including consuming
+                // `.changeset/*.md`; the generated commit must stage those.
+                changesets: usesChangesetsProvider(ch),
             };
 
             for (const [id, filename] of Object.entries(WORKFLOW_FILENAMES) as [

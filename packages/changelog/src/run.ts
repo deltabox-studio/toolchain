@@ -66,7 +66,6 @@
  *   node scripts/dist/changelog/index.js --processing-method all --dry-run
  *   CHANGELOG_PROCESSING_METHOD=all node scripts/dist/changelog/index.js
  */
-import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -87,6 +86,11 @@ import { parseArgsCli } from './utils/args.js';
 import { applyDetailsToEntry, resolveDetails } from './utils/details.js';
 import { isGitRepository, isReleaseCommit, lastReleaseRef, readCommits } from './utils/git.js';
 import { packageChangesForCurrent } from './utils/packages.js';
+import {
+    assertChangesetsSetup,
+    assertKnownProvider,
+    runChangesetsVersion,
+} from './utils/provider.js';
 import {
     formatExistingChangelogs,
     parseExistingChangelog,
@@ -112,6 +116,7 @@ import {
 import {
     bumpRulesFor,
     deriveCustomBump,
+    discoverVersionPackages,
     overBumpFor,
     planVersions,
     resolveVersioning,
@@ -304,11 +309,34 @@ function* changelogSteps(
     }
 
     const rootDir = repoRoot();
-    const provider = resolveScopedOption<ChangelogProviderSetting | undefined>(
-        versioning.provider as never,
-        rootDir,
-        rootDir
-    );
+    const resolveProvider = (dir: string): ChangelogProviderSetting | undefined =>
+        resolveScopedOption<ChangelogProviderSetting | undefined>(
+            versioning.provider as never,
+            dir,
+            rootDir
+        );
+    const provider = resolveProvider(rootDir);
+    assertKnownProvider(provider);
+    // The changesets provider is repository-wide: run it once when any target
+    // that will be versioned resolves to it, not just when the root does. A
+    // plain provider applies everywhere, so only a scoped provider needs the
+    // workspace scan (and its extra glob).
+    const providerSetting = versioning.provider;
+    const scopedProvider =
+        Array.isArray(providerSetting) ||
+        Boolean(
+            providerSetting && typeof providerSetting === 'object' && 'options' in providerSetting
+        );
+    const providerDirs =
+        versioning.target === 'root-only' || !scopedProvider
+            ? [rootDir]
+            : [rootDir, ...discoverVersionPackages(versioning.workspaces, rootDir).workspaces];
+    let changesets = provider === 'changesets';
+    for (const dir of providerDirs) {
+        const dirProvider = dir === rootDir ? provider : resolveProvider(dir);
+        assertKnownProvider(dirProvider);
+        if (dirProvider === 'changesets') changesets = true;
+    }
     const rootCommit = resolveScopedOption<CommitFormatOptions | undefined>(
         versioning.commit as never,
         rootDir,
@@ -342,16 +370,19 @@ function* changelogSteps(
         resolveTextSetting(introSetting, dir, rootDir, rootDir);
     const outroFor = (dir: string): string | undefined =>
         resolveTextSetting(outroSetting, dir, rootDir, rootDir);
-    if (!options.dryRun && provider === 'changesets') {
+    if (changesets) {
+        // Fail before the dry-run early return when the changesets setup is
+        // missing; otherwise a preview would hide a guaranteed failure.
+        assertChangesetsSetup(rootDir);
+        if (options.dryRun) {
+            logger.info(
+                'changesets provider: changesets owns the version/changelog output; ' +
+                    'rerun without --dry-run to apply `changeset version`.'
+            );
+            return;
+        }
         yield;
-        const result = spawnSync('npx', ['--yes', 'changeset', 'version'], {
-            cwd: repoRoot(),
-            stdio: 'inherit',
-            // `npx` is a `.cmd` shim on Windows, which spawn cannot execute
-            // directly without a shell.
-            shell: process.platform === 'win32',
-        });
-        if (result.status !== 0) throw new Error('changesets provider failed.');
+        runChangesetsVersion(rootDir);
         logger.info('Ran the changesets provider; changesets owns the changelog/version output.');
         return;
     }

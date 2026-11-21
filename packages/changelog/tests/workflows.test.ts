@@ -619,6 +619,17 @@ describe('workflow command fixes', () => {
         const files = renderWorkflows({ packageManager: 'yarn' }, { changelog: true });
         expect(files['changelog.yml']).toContain('git add -- "*package.json" "*CHANGELOG.md"');
         expect(files['changelog.yml']).not.toContain('git add -u');
+        expect(files['changelog.yml']).not.toContain('.changeset');
+    });
+
+    it('stages consumed .changeset files for the changesets provider', () => {
+        const files = renderWorkflows(
+            { packageManager: 'yarn', changesets: true },
+            { changelog: true }
+        );
+        expect(files['changelog.yml']).toContain(
+            'if [ -d .changeset ]; then git add -A -- .changeset; fi'
+        );
     });
 
     it('names the changelog workflow after the resolved branch', () => {

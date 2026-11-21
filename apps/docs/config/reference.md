@@ -698,7 +698,7 @@ Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core 
 
 - **Type**: `object`
 
-Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{ target, options }`.
+Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{ target, options }`. Configuring any level replaces Conventional-Commits detection for that target; the result is at least a patch bump.
 
 ###### `major`
 
@@ -1015,7 +1015,7 @@ The closing marker.
 
 - **Type**: `ChangelogTargetedProvider | Array<ChangelogTargetedProvider | string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)> | string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
 
-The provider globally, or per-target via `{ target, options }`.
+The provider globally, or per-target via `{ target, options }`. The `changesets` provider is repository-wide and runs once when any versioned target selects it.
 
 ###### `target`
 
@@ -1040,7 +1040,7 @@ Skip workspaces whose repo-relative directory matches these globs.
 - **Required**
 - **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
 
-`default`, `changesets`, a provider id, or a custom provider/callback.
+`default`, `changesets`, a built-in provider id, or a custom provider/callback.
 
 ###### `id`
 
@@ -1502,7 +1502,7 @@ Opt into a prerelease cycle (eg. `beta`, `rc`). Stable versions bump their core 
 
 - **Type**: `object`
 
-Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{ target, options }`.
+Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{ target, options }`. Configuring any level replaces Conventional-Commits detection for that target; the result is at least a patch bump.
 
 ##### `major`
 
@@ -1819,7 +1819,7 @@ The closing marker.
 
 - **Type**: `ChangelogTargetedProvider | Array<ChangelogTargetedProvider | string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)> | string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
 
-The provider globally, or per-target via `{ target, options }`.
+The provider globally, or per-target via `{ target, options }`. The `changesets` provider is repository-wide and runs once when any versioned target selects it.
 
 ##### `target`
 
@@ -1844,7 +1844,7 @@ Skip workspaces whose repo-relative directory matches these globs.
 - **Required**
 - **Type**: `string | ChangelogProviderConfig | ((ctx: ChangelogProviderContext) => string | void)`
 
-`default`, `changesets`, a provider id, or a custom provider/callback.
+`default`, `changesets`, a built-in provider id, or a custom provider/callback.
 
 ##### `id`
 

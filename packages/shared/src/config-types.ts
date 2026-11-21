@@ -604,7 +604,8 @@ export interface ChangelogVersioningConfig {
     prerelease?: ChangelogTargetedPrerelease | Array<ChangelogTargetedPrerelease | string> | string;
     /**
      * Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{
-     * target, options }`.
+     * target, options }`. Configuring any level replaces Conventional-Commits detection for that
+     * target; the result is at least a patch bump.
      */
     bump?: {
         /** A bump rule globally, or per-target via `{ target, include, exclude, options }`. */
@@ -633,7 +634,10 @@ export interface ChangelogVersioningConfig {
         | ChangelogTargetedCommit
         | Array<ChangelogTargetedCommit | ChangelogCommitFormatConfig>
         | ChangelogCommitFormatConfig;
-    /** The provider globally, or per-target via `{ target, options }`. */
+    /**
+     * The provider globally, or per-target via `{ target, options }`. The `changesets` provider is
+     * repository-wide and runs once when any versioned target selects it.
+     */
     provider?:
         | ChangelogTargetedProvider
         | Array<
@@ -850,7 +854,7 @@ export interface ChangelogTargetedProvider {
     /** Skip workspaces whose repo-relative directory matches these globs. */
     exclude?: string | Array<string>;
     /**
-     * `default`, `changesets`, a provider id, or a custom provider/callback.
+     * `default`, `changesets`, a built-in provider id, or a custom provider/callback.
      *
      * @required
      */

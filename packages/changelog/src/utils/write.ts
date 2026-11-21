@@ -15,6 +15,7 @@ import { formatChangelogFile } from './format.js';
 import { readCommits, repoSlug } from './git.js';
 import { relatedWorkspacePaths } from './graph.js';
 import { packageChangesForCurrent } from './packages.js';
+import { assertKnownProvider } from './provider.js';
 import { formatExistingChangelogs, parseExistingChangelog } from './reformat.js';
 import { discoverWorkspaceDirs, isCommitReleased, readReleasedHashes, repoRoot } from './repo.js';
 import { buildSummary } from './summary.js';
@@ -37,6 +38,7 @@ function applyProvider(
     records: CommitRecord[],
     summary: string
 ): string {
+    assertKnownProvider(provider);
     if (!provider || provider === 'default' || provider === 'changesets') return summary;
     if (typeof provider === 'object' && typeof provider.run === 'function') {
         const custom = provider.run({ cwd, changelog, records });

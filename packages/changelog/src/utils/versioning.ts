@@ -65,7 +65,7 @@ export function resolveVersioning(changelog?: ChangelogConfig): ResolvedVersioni
         ...(versioning.allowOverBump !== undefined
             ? { allowOverBump: versioning.allowOverBump }
             : {}),
-        ...(versioning.provider ? { provider: versioning.provider } : {}),
+        ...(versioning.provider !== undefined ? { provider: versioning.provider } : {}),
         ...(versioning.commit ? { commit: versioning.commit } : {}),
     };
 }
@@ -138,8 +138,13 @@ export function discoverVersionPackages(workspaces?: string[], root = repoRoot()
 /** Context handed to custom bump callbacks. */
 export type BumpRuleContext = ChangelogBumpRuleContext;
 
-/** Whether a bump rule matches a commit. */
-function bumpRuleMatches(rule: unknown, record: CommitRecord, context: BumpRuleContext): boolean {
+/** Whether a bump rule matches a commit at the given bump level. */
+function bumpRuleMatches(
+    rule: unknown,
+    record: CommitRecord,
+    context: BumpRuleContext,
+    level: BumpType
+): boolean {
     if (rule === true) return true;
     if (rule === false || rule === undefined || rule === null) return false;
     if (typeof rule === 'string') {
@@ -155,19 +160,34 @@ function bumpRuleMatches(rule: unknown, record: CommitRecord, context: BumpRuleC
         }
         return `${record.subject}\n${record.body}`.includes(rule);
     }
-    if (Array.isArray(rule)) return rule.some(item => bumpRuleMatches(item, record, context));
+    // A TS/JS config may pass a real RegExp even though the serializable form is
+    // a `/pattern/flags` string. Never let it fall into the object branch below,
+    // where an empty matcher would match every commit.
+    if (rule instanceof RegExp) {
+        return rule.test(`${record.subject}\n${record.body}`);
+    }
+    if (Array.isArray(rule)) {
+        return rule.some(item => bumpRuleMatches(item, record, context, level));
+    }
     if (typeof rule === 'function') {
-        return Boolean(
-            (rule as (ctx: BumpRuleContext & { commit: CommitRecord }) => unknown)({
-                ...context,
-                commit: record,
-            })
-        );
+        // Callbacks receive the level being evaluated (also when nested in an
+        // array) and may return `true` or that same level.
+        const value = (
+            rule as (
+                ctx: BumpRuleContext & { commit: CommitRecord; level: BumpType }
+            ) => boolean | BumpType
+        )({ ...context, commit: record, level });
+        return typeof value === 'string' ? value === level : Boolean(value);
     }
     if (typeof rule === 'object') {
         const source = rule as Record<string, unknown>;
         const parsed = parseCcSubject(record.subject);
-        if (source.breaking === true && !isBreakingCommit(record, context.breaking)) return false;
+        if (
+            source.breaking !== undefined &&
+            isBreakingCommit(record, context.breaking) !== source.breaking
+        ) {
+            return false;
+        }
         if (typeof source.type === 'string' && parsed.type !== source.type) return false;
         if (Array.isArray(source.types) && !source.types.includes(parsed.type)) return false;
         if (typeof source.scope === 'string' && parsed.scope !== source.scope) return false;
@@ -198,29 +218,18 @@ export function deriveCustomBump(
 ): BumpType {
     if (!rules || Object.keys(rules).length === 0) return deriveBump(records, context.breaking);
     let result: BumpType = 'patch';
-    let matches = 0;
+    // Count distinct commits, not level/commit pairs: one commit matching both
+    // `minor` and `patch` is one change and must not over-bump twice.
+    const matched = new Set<string>();
     for (const level of BUMP_ORDER) {
         const rule = rules[level];
         for (const record of records) {
-            const matched =
-                typeof rule === 'function'
-                    ? (() => {
-                          const value = (
-                              rule as (
-                                  ctx: BumpRuleContext & {
-                                      commit: CommitRecord;
-                                      level: string;
-                                  }
-                              ) => string | boolean
-                          )({ ...context, commit: record, level });
-                          return typeof value === 'string' ? value === level : Boolean(value);
-                      })()
-                    : bumpRuleMatches(rule, record, context);
-            if (!matched) continue;
-            matches += 1;
+            if (!bumpRuleMatches(rule, record, context, level)) continue;
+            matched.add(record.hash || `${record.subject}\n${record.body}\n${record.authorEmail}`);
             if (BUMP_ORDER.indexOf(level) > BUMP_ORDER.indexOf(result)) result = level;
         }
     }
+    const matches = matched.size;
     if (allowOverBump && matches > 1) {
         // Repeated over-bumping is intentionally opt-in.
         for (let i = 1; i < matches; i += 1) {
@@ -347,7 +356,10 @@ export function bumpRulesFor(
     for (const level of ['major', 'minor', 'patch'] as const) {
         const value = rules[level];
         if (value === undefined) continue;
-        const resolved = resolveScopedOption<unknown>(value as never, dir, root, value);
+        // No fallback: a targeted matcher that does not apply to `dir` must stay
+        // unset. Falling back to the original `{ target, options }` array would
+        // turn it into a matcher object that matches every commit.
+        const resolved = resolveScopedOption<unknown>(value as never, dir, root);
         if (resolved !== undefined) out[level] = resolved;
     }
     return Object.keys(out).length > 0 ? out : undefined;

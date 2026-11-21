@@ -352,8 +352,8 @@ export const changelogProviderConfigSchema = z
 export const changelogProviderSettingSchema = z
     .union([z.string(), changelogProviderConfigSchema, changelogProviderCallbackSchema])
     .describe(
-        '`default`, `changesets`, a provider id, a custom provider object, or a ' +
-            'callback (TS/JS configs only).'
+        '`default`, `changesets`, a built-in provider id, a custom provider object, or a ' +
+            'callback (TS/JS configs only). An unknown string id fails the run.'
     );
 
 /** The context handed to custom bump-rule callbacks. */
@@ -462,7 +462,9 @@ export const changelogVersioningConfigSchema = z
             })
             .describe(
                 'Custom bump rules for major/minor/patch (matchers or callbacks), globally ' +
-                    'or per-target via `{ target, options }`.'
+                    'or per-target via `{ target, options }`. Configuring any level replaces ' +
+                    'Conventional-Commits detection for that target; the result is at least a ' +
+                    'patch bump.'
             )
             .optional(),
         allowOverBump: changelogTargetedOption(
@@ -484,11 +486,15 @@ export const changelogVersioningConfigSchema = z
             .optional(),
         provider: changelogTargetedOption(
             changelogProviderSettingSchema.describe(
-                '`default`, `changesets`, a provider id, or a custom provider/callback.'
+                '`default`, `changesets`, a built-in provider id, or a custom provider/callback.'
             ),
             'ChangelogTargetedProvider'
         )
-            .describe('The provider globally, or per-target via `{ target, options }`.')
+            .describe(
+                'The provider globally, or per-target via `{ target, options }`. The ' +
+                    '`changesets` provider is repository-wide and runs once when any versioned ' +
+                    'target selects it.'
+            )
             .optional(),
     })
     .describe('Automatic version bumping options.')

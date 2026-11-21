@@ -1425,7 +1425,7 @@
                         }
                     },
                     "additionalProperties": false,
-                    "description": "Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{ target, options }`."
+                    "description": "Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{ target, options }`. Configuring any level replaces Conventional-Commits detection for that target; the result is at least a patch bump."
                 },
                 "allowOverBump": {
                     "anyOf": [
@@ -1505,7 +1505,7 @@
                                                 "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
                                             }
                                         ],
-                                        "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
+                                        "description": "`default`, `changesets`, a built-in provider id, or a custom provider/callback."
                                     }
                                 ]
                             }
@@ -1522,10 +1522,10 @@
                                     "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
                                 }
                             ],
-                            "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
+                            "description": "`default`, `changesets`, a built-in provider id, or a custom provider/callback."
                         }
                     ],
-                    "description": "The provider globally, or per-target via `{ target, options }`."
+                    "description": "The provider globally, or per-target via `{ target, options }`. The `changesets` provider is repository-wide and runs once when any versioned target selects it."
                 }
             },
             "additionalProperties": false,
@@ -2087,7 +2087,7 @@
                             "description": "A custom provider callback returning the changelog body (TS/JS configs only)."
                         }
                     ],
-                    "description": "`default`, `changesets`, a provider id, or a custom provider/callback."
+                    "description": "`default`, `changesets`, a built-in provider id, or a custom provider/callback."
                 }
             },
             "required": [

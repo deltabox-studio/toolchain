@@ -73,6 +73,26 @@ describe('changelogSyncTask', () => {
         expect(files?.some(file => file.path === 'commitlint.config.mjs')).toBe(true);
     });
 
+    it('stages .changeset files when the config selects the changesets provider', async () => {
+        const files = await changelogSyncTask().run(
+            makeContext({
+                ci: { changelog: { versioning: { provider: 'changesets' } } },
+            })
+        );
+        const changelog = files?.find(file => file.path === '.github/workflows/changelog.yml');
+        expect(changelog?.content).toContain(
+            'if [ -d .changeset ]; then git add -A -- .changeset; fi'
+        );
+    });
+
+    it('does not stage .changeset for the built-in provider', async () => {
+        const files = await changelogSyncTask().run(
+            makeContext({ ci: { changelog: { versioning: true } } })
+        );
+        const changelog = files?.find(file => file.path === '.github/workflows/changelog.yml');
+        expect(changelog?.content).not.toContain('.changeset');
+    });
+
     it('writes a raw string workflow verbatim, with no generated header', async () => {
         const raw = 'name: Custom CI\non: [push]\n';
         const files = await changelogSyncTask().run(makeContext({ ci: { ci: raw } }));
