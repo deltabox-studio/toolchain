@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-project",
-    "version": "3.0.0-beta.4",
+    "version": "3.0.0-beta.5",
     "private": true,
     "description": "Project and workspace scaffolding generators: TypeScript roots, monorepos, catalogs, package.json, tsconfig and Vite/dbx config files.",
     "author": "Victor Sango <victor@deltabox.studio>",

@@ -1,8 +1,37 @@
 # Changelog
 
-## 3.0.0-beta.5 (November 2026)
+## 3.0.0-beta.6 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+- Use the published Vite subpath in generated configs ([#d5f2fab](https://github.com/deltabox-studio/toolchain/commit/d5f2fab) by [T0chi](https://github.com/T0chi))
+
+#### Vite
+- Harden resolution, shim merging and Vite+ detection ([#0558430](https://github.com/deltabox-studio/toolchain/commit/0558430) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+- Refresh readmes and extension copy ([#ad7e37d](https://github.com/deltabox-studio/toolchain/commit/ad7e37d) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Chores</summary>
+
+- Cleanup references ([#a0027cd](https://github.com/deltabox-studio/toolchain/commit/a0027cd) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.5 (November 2026)
 
 <details>
 <summary>New features</summary>
@@ -10,9 +39,6 @@
 - Align hooks and monorepo guidance with Vite+ ([#0aadd01](https://github.com/deltabox-studio/toolchain/commit/0aadd01) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.4 (November 2026)
 

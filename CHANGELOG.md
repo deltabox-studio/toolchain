@@ -1,8 +1,65 @@
 # Changelog
 
-## 3.0.0-beta.16 (November 2026)
+## 3.0.0-beta.17 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+- Use the published Vite subpath in generated configs ([#d5f2fab](https://github.com/deltabox-studio/toolchain/commit/d5f2fab) by [T0chi](https://github.com/T0chi))
+
+#### Vite
+- Harden resolution, shim merging and Vite+ detection ([#0558430](https://github.com/deltabox-studio/toolchain/commit/0558430) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
+- Rename format scripts and tasks to fmt ([#fcd3ae0](https://github.com/deltabox-studio/toolchain/commit/fcd3ae0) by [T0chi](https://github.com/T0chi))
+- Rely on toolchain fmt/lint defaults in root config ([#9a3a305](https://github.com/deltabox-studio/toolchain/commit/9a3a305) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+- Refresh readmes and extension copy ([#ad7e37d](https://github.com/deltabox-studio/toolchain/commit/ad7e37d) by [T0chi](https://github.com/T0chi))
+- Highlight who the toolchain is for ([#bdd324a](https://github.com/deltabox-studio/toolchain/commit/bdd324a) by [T0chi](https://github.com/T0chi))
+- Expand who the toolchain is for ([#128d875](https://github.com/deltabox-studio/toolchain/commit/128d875) by [T0chi](https://github.com/T0chi))
+- Explain providers for other language toolchains ([#1671f9e](https://github.com/deltabox-studio/toolchain/commit/1671f9e) by [T0chi](https://github.com/T0chi))
+- Link why use this from the README ([#ee746d0](https://github.com/deltabox-studio/toolchain/commit/ee746d0) by [T0chi](https://github.com/T0chi))
+- Note the toolchain dogfoods itself ([#e864aef](https://github.com/deltabox-studio/toolchain/commit/e864aef) by [T0chi](https://github.com/T0chi))
+- Cover core features in why use this ([#195bba8](https://github.com/deltabox-studio/toolchain/commit/195bba8) by [T0chi](https://github.com/T0chi))
+- Split programmatic API examples into sections ([#8f8ebd9](https://github.com/deltabox-studio/toolchain/commit/8f8ebd9) by [T0chi](https://github.com/T0chi))
+- Add contextual sidebar sections ([#aca7fdf](https://github.com/deltabox-studio/toolchain/commit/aca7fdf) by [T0chi](https://github.com/T0chi))
+- Remove Contribute from the top navbar ([#5dce447](https://github.com/deltabox-studio/toolchain/commit/5dce447) by [T0chi](https://github.com/T0chi))
+- Move navbar search beside the logo ([#aa7c7de](https://github.com/deltabox-studio/toolchain/commit/aa7c7de) by [T0chi](https://github.com/T0chi))
+- Add v3 new features to the migration guide ([#0a5ee8b](https://github.com/deltabox-studio/toolchain/commit/0a5ee8b) by [T0chi](https://github.com/T0chi))
+- Fix invalid folder-tree YAML in template structures ([#c7e8efa](https://github.com/deltabox-studio/toolchain/commit/c7e8efa) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Build system</summary>
+
+- Move jsonc-parser and untyped to the yarn catalog ([#8a77bf2](https://github.com/deltabox-studio/toolchain/commit/8a77bf2) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Chores</summary>
+
+- Commit pending docs and type updates ([#5701b52](https://github.com/deltabox-studio/toolchain/commit/5701b52) by [T0chi](https://github.com/T0chi))
+- Cleanup references ([#a0027cd](https://github.com/deltabox-studio/toolchain/commit/a0027cd) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.16 (November 2026)
 
 <details>
 <summary>New features</summary>
@@ -18,9 +75,6 @@
   - `husky` `^9.1.7`
 - `@deltabox/toolchain-docs`
   - `vite` `^6.4.5`
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.15 (November 2026)
 

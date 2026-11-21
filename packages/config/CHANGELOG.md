@@ -1,8 +1,35 @@
 # Changelog
 
-## 3.0.0-beta.4 (November 2026)
+## 3.0.0-beta.5 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Refactors</summary>
+
+- Rename format scripts and tasks to fmt ([#fcd3ae0](https://github.com/deltabox-studio/toolchain/commit/fcd3ae0) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Build system</summary>
+
+- Move jsonc-parser and untyped to the yarn catalog ([#8a77bf2](https://github.com/deltabox-studio/toolchain/commit/8a77bf2) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Chores</summary>
+
+- Commit pending docs and type updates ([#5701b52](https://github.com/deltabox-studio/toolchain/commit/5701b52) by [T0chi](https://github.com/T0chi))
+- Cleanup references ([#a0027cd](https://github.com/deltabox-studio/toolchain/commit/a0027cd) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.4 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -11,9 +38,6 @@
 - Preserve markdown key narrowing with typed options ([#0cd420a](https://github.com/deltabox-studio/toolchain/commit/0cd420a) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.3 (November 2026)
 

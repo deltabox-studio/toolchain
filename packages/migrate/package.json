@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-migrate",
-    "version": "3.0.0-beta.3",
+    "version": "3.0.0-beta.4",
     "private": true,
     "description": "Pluggable migrations of Biome, ESLint, Prettier and dprint tooling to Oxfmt and Oxlint, mapping formatter/linter rules into dbx config.",
     "author": "Victor Sango <victor@deltabox.studio>",

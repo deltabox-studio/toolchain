@@ -1,8 +1,41 @@
 # Changelog
 
-## 3.0.0-beta.4 (November 2026)
+## 3.0.0-beta.5 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+- Use the published Vite subpath in generated configs ([#d5f2fab](https://github.com/deltabox-studio/toolchain/commit/d5f2fab) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
+- Rename format scripts and tasks to fmt ([#fcd3ae0](https://github.com/deltabox-studio/toolchain/commit/fcd3ae0) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Build system</summary>
+
+- Move jsonc-parser and untyped to the yarn catalog ([#8a77bf2](https://github.com/deltabox-studio/toolchain/commit/8a77bf2) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Chores</summary>
+
+- Cleanup references ([#a0027cd](https://github.com/deltabox-studio/toolchain/commit/a0027cd) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.4 (November 2026)
 
 <details>
 <summary>New features</summary>
@@ -10,9 +43,6 @@
 - Align hooks and monorepo guidance with Vite+ ([#0aadd01](https://github.com/deltabox-studio/toolchain/commit/0aadd01) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.3 (November 2026)
 
