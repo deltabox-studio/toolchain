@@ -1,8 +1,21 @@
 # Changelog
 
-## 3.0.0-beta.13 (November 2026)
+## 3.0.0-beta.14 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Config
+- Preserve markdown key narrowing with typed options ([#0cd420a](https://github.com/deltabox-studio/toolchain/commit/0cd420a) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.13 (November 2026)
 
 <details>
 <summary><strong>BREAKING CHANGES</strong></summary>
@@ -148,9 +161,6 @@
 #### Removed
 - `@deltabox/toolchain`
   - `commander` `^14.0.0`
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.12 (November 2026)
 

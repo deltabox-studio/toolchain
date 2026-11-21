@@ -1,8 +1,21 @@
 # Changelog
 
-## 3.0.0-beta.3 (November 2026)
+## 3.0.0-beta.4 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Config
+- Preserve markdown key narrowing with typed options ([#0cd420a](https://github.com/deltabox-studio/toolchain/commit/0cd420a) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.3 (November 2026)
 
 <details>
 <summary>New features</summary>
@@ -47,9 +60,6 @@
 - Format generated config artifacts and docs ([#2ff28be](https://github.com/deltabox-studio/toolchain/commit/2ff28be) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.2 (November 2026)
 
