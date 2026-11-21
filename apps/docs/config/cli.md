@@ -5,84 +5,82 @@ outline: [2, 3]
 
 # CLI reference
 
-Generated from the same `CliCommand` descriptors the `dbx` binary
-registers. Run `yarn config:docs` after changing a command.
+Generated from the same `CliCommand` descriptors the `dbx` binary registers.
 
-| Command                                                 | Description                                                                                     |
-| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| [`dbx projects`](#projects)                             | Discover projects and write .dbx/toolchain/projects.json.                                       |
-| [`dbx sync`](#sync)                                     | Regenerate every managed file from dbx.config.*.                                                |
-| [`dbx watch`](#watch)                                   | Sync once, then watch key files and re-sync on change.                                          |
-| [`dbx reset`](#reset)                                   | Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a project.       |
-| [`dbx providers`](#providers)                           | List the tooling providers (Vite+, ...) and their commands.                                     |
-| [`dbx enabled`](#enabled)                               | Print whether the toolchain is enabled for this project (and the scope).                        |
-| [`dbx enable`](#enable)                                 | Enable the toolchain (workspace scope by default).                                              |
-| [`dbx disable`](#disable)                               | Disable the toolchain (workspace scope by default).                                             |
-| [`dbx tsconfig`](#tsconfig)                             | Generate workspace tsconfig.json files from the default tsconfig (aliases + references).        |
-| [`dbx cleanup`](#cleanup)                               | Remove build artifacts (*.tsbuildinfo, dist/).                                                  |
-| [`dbx cleanup:turbo`](#cleanup-turbo)                   | Remove the turbo cache (.turbo/).                                                               |
-| [`dbx workflow`](#workflow)                             | Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).                       |
-| [`dbx changelog`](#changelog)                           | Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.              |
-| [`dbx mcp:serve`](#mcp-serve)                           | Run the dbx MCP server over stdio (for MCP clients).                                            |
-| [`dbx mcp:install`](#mcp-install)                       | Install the dbx MCP server + skill into an AI harness/editor.                                   |
-| [`dbx mcp:list`](#mcp-list)                             | List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).                          |
-| [`dbx migrate`](#migrate)                               | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.* into dbx.config. |
-| [`dbx migrate:list`](#migrate-list)                     | List the registered migrations and whether each is detected.                                    |
-| [`dbx project:init`](#project-init)                     | Scaffold a single-package TypeScript project.                                                   |
-| [`dbx project:init:monorepo`](#project-init-monorepo)   | Scaffold a monorepo root (add --example for one example workspace).                             |
-| [`dbx project:init:workspace`](#project-init-workspace) | Scaffold a monorepo workspace package into an existing monorepo root.                           |
-| [`dbx project:config`](#project-config)                 | Generate dbx.config.* for existing projects that are missing one.                               |
-| [`dbx template:list`](#template-list)                   | List templates (builtin + local + opted-in online sources).                                     |
-| [`dbx template:init`](#template-init)                   | Write a template.json to a directory, making it a local template.                               |
-| [`dbx template:add`](#template-add)                     | Record a template source in .dbx/toolchain/templates.json.                                      |
-| [`dbx template:remove`](#template-remove)               | Remove a source from .dbx/toolchain/templates.json.                                             |
-| [`dbx template:registry`](#template-registry)           | Manage the global template search paths (and sync them to the VS Code setting).                 |
-| [`dbx registry`](#registry)                             | List or manage the template/provider registries.                                                |
-| [`dbx template:info`](#template-info)                   | Show one template by id.                                                                        |
-| [`dbx create`](#create)                                 | Scaffold a project from a template (builtin, local or Vite+).                                   |
-| [`dbx vite`](#vite)                                     | Run any Vite+ command through `vp` (eg. `dbx vite dev`).                                        |
-| [`dbx vite:create`](#vite-create)                       | Vite+: Create a new project from a template.                                                    |
-| [`dbx vite:migrate`](#vite-migrate)                     | Vite+: Migrate an existing project to Vite+.                                                    |
-| [`dbx vite:config`](#vite-config)                       | Vite+: Configure hooks and agent integration.                                                   |
-| [`dbx vite:hooks`](#vite-hooks)                         | Vite+: Manage the Git hook dispatcher.                                                          |
-| [`dbx vite:staged`](#vite-staged)                       | Vite+: Run linters on staged files.                                                             |
-| [`dbx vite:install`](#vite-install)                     | Vite+: Install dependencies with the detected package manager.                                  |
-| [`dbx vite:env`](#vite-env)                             | Vite+: Manage Node.js and package managers.                                                     |
-| [`dbx vite:dev`](#vite-dev)                             | Vite+: Run the Vite development server.                                                         |
-| [`dbx vite:check`](#vite-check)                         | Vite+: Run format, lint and type checks.                                                        |
-| [`dbx vite:lint`](#vite-lint)                           | Vite+: Lint code with the active linter (Oxlint via Vite+).                                     |
-| [`dbx vite:fmt`](#vite-fmt)                             | Vite+: Format code with the active formatter (Oxfmt via Vite+).                                 |
-| [`dbx vite:test`](#vite-test)                           | Vite+: Run tests through bundled Vitest.                                                        |
-| [`dbx vite:run`](#vite-run)                             | Vite+: Run package scripts and monorepo tasks.                                                  |
-| [`dbx vite:exec`](#vite-exec)                           | Vite+: Execute a binary from local node_modules.                                                |
-| [`dbx vite:node`](#vite-node)                           | Vite+: Run a Node.js script in the Vite+ env.                                                   |
-| [`dbx vite:dlx`](#vite-dlx)                             | Vite+: Run a package binary without installing it.                                              |
-| [`dbx vite:cache`](#vite-cache)                         | Vite+: Manage the task cache.                                                                   |
-| [`dbx vite:build`](#vite-build)                         | Vite+: Build for production.                                                                    |
-| [`dbx vite:pack`](#vite-pack)                           | Vite+: Build libraries for npm or standalone binaries.                                          |
-| [`dbx vite:preview`](#vite-preview)                     | Vite+: Preview the production build.                                                            |
-| [`dbx vite:add`](#vite-add)                             | Vite+: Add packages to dependencies.                                                            |
-| [`dbx vite:remove`](#vite-remove)                       | Vite+: Remove packages from dependencies.                                                       |
-| [`dbx vite:update`](#vite-update)                       | Vite+: Update packages.                                                                         |
-| [`dbx vite:dedupe`](#vite-dedupe)                       | Vite+: Deduplicate dependencies.                                                                |
-| [`dbx vite:outdated`](#vite-outdated)                   | Vite+: Check for outdated packages.                                                             |
-| [`dbx vite:list`](#vite-list)                           | Vite+: List installed packages.                                                                 |
-| [`dbx vite:why`](#vite-why)                             | Vite+: Explain why a package is installed.                                                      |
-| [`dbx vite:info`](#vite-info)                           | Vite+: View package metadata.                                                                   |
-| [`dbx vite:link`](#vite-link)                           | Vite+: Link local packages.                                                                     |
-| [`dbx vite:unlink`](#vite-unlink)                       | Vite+: Unlink local packages.                                                                   |
-| [`dbx vite:rebuild`](#vite-rebuild)                     | Vite+: Rebuild native modules.                                                                  |
-| [`dbx vite:pm`](#vite-pm)                               | Vite+: Forward a command to the package manager.                                                |
-| [`dbx vite:toolchain`](#vite-toolchain)                 | Vite+: Show Vite+ tool versions.                                                                |
-| [`dbx vite:upgrade`](#vite-upgrade)                     | Vite+: Update `vp` itself.                                                                      |
-| [`dbx vite:implode`](#vite-implode)                     | Vite+: Remove `vp` and all related data.                                                        |
-| [`dbx fmt`](#fmt)                                       | Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc).               |
-| [`dbx lint`](#lint)                                     | Lint with the detected linter (Vite+ Oxlint, ESLint or Biome).                                  |
+| Command | Description |
+| ------- | ----------- |
+| [`dbx projects`](#projects) | Discover projects and write .dbx/toolchain/projects.json. |
+| [`dbx sync`](#sync) | Regenerate every managed file from dbx.config.*. |
+| [`dbx watch`](#watch) | Sync once, then watch key files and re-sync on change. |
+| [`dbx reset`](#reset) | Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a project. |
+| [`dbx providers`](#providers) | List the tooling providers (Vite+, ...) and their commands. |
+| [`dbx enabled`](#enabled) | Print whether the toolchain is enabled for this project (and the scope). |
+| [`dbx enable`](#enable) | Enable the toolchain (workspace scope by default). |
+| [`dbx disable`](#disable) | Disable the toolchain (workspace scope by default). |
+| [`dbx tsconfig`](#tsconfig) | Generate workspace tsconfig.json files from the default tsconfig (aliases + references). |
+| [`dbx cleanup`](#cleanup) | Remove build artifacts (*.tsbuildinfo, dist/). |
+| [`dbx cleanup:turbo`](#cleanup-turbo) | Remove the turbo cache (.turbo/). |
+| [`dbx workflow`](#workflow) | Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`). |
+| [`dbx changelog`](#changelog) | Scan commits, derive the semver bump and update the CHANGELOG.md files + versions. |
+| [`dbx mcp:serve`](#mcp-serve) | Run the dbx MCP server over stdio (for MCP clients). |
+| [`dbx mcp:install`](#mcp-install) | Install the dbx MCP server + skill into an AI harness/editor. |
+| [`dbx mcp:list`](#mcp-list) | List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi). |
+| [`dbx migrate`](#migrate) | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.* into dbx.config. |
+| [`dbx migrate:list`](#migrate-list) | List the registered migrations and whether each is detected. |
+| [`dbx project:init`](#project-init) | Scaffold a single-package TypeScript project. |
+| [`dbx project:init:monorepo`](#project-init-monorepo) | Scaffold a monorepo root (add --example for one example workspace). |
+| [`dbx project:init:workspace`](#project-init-workspace) | Scaffold a monorepo workspace package into an existing monorepo root. |
+| [`dbx project:config`](#project-config) | Generate dbx.config.* for existing projects that are missing one. |
+| [`dbx template:list`](#template-list) | List templates (builtin + local + opted-in online sources). |
+| [`dbx template:init`](#template-init) | Write a template.json to a directory, making it a local template. |
+| [`dbx template:add`](#template-add) | Record a template source in .dbx/toolchain/templates.json. |
+| [`dbx template:remove`](#template-remove) | Remove a source from .dbx/toolchain/templates.json. |
+| [`dbx template:registry`](#template-registry) | Manage the global template search paths (and sync them to the VS Code setting). |
+| [`dbx registry`](#registry) | List or manage the template/provider registries. |
+| [`dbx template:info`](#template-info) | Show one template by id. |
+| [`dbx create`](#create) | Scaffold a project from a template (builtin, local or Vite+). |
+| [`dbx vite`](#vite) | Run any Vite+ command through `vp` (eg. `dbx vite dev`). |
+| [`dbx vite:create`](#vite-create) | Vite+: Create a new project from a template. |
+| [`dbx vite:migrate`](#vite-migrate) | Vite+: Migrate an existing project to Vite+. |
+| [`dbx vite:config`](#vite-config) | Vite+: Configure hooks and agent integration. |
+| [`dbx vite:hooks`](#vite-hooks) | Vite+: Manage the Git hook dispatcher. |
+| [`dbx vite:staged`](#vite-staged) | Vite+: Run linters on staged files. |
+| [`dbx vite:install`](#vite-install) | Vite+: Install dependencies with the detected package manager. |
+| [`dbx vite:env`](#vite-env) | Vite+: Manage Node.js and package managers. |
+| [`dbx vite:dev`](#vite-dev) | Vite+: Run the Vite development server. |
+| [`dbx vite:check`](#vite-check) | Vite+: Run format, lint and type checks. |
+| [`dbx vite:lint`](#vite-lint) | Vite+: Lint code with the active linter (Oxlint via Vite+). |
+| [`dbx vite:fmt`](#vite-fmt) | Vite+: Format code with the active formatter (Oxfmt via Vite+). |
+| [`dbx vite:test`](#vite-test) | Vite+: Run tests through bundled Vitest. |
+| [`dbx vite:run`](#vite-run) | Vite+: Run package scripts and monorepo tasks. |
+| [`dbx vite:exec`](#vite-exec) | Vite+: Execute a binary from local node_modules. |
+| [`dbx vite:node`](#vite-node) | Vite+: Run a Node.js script in the Vite+ env. |
+| [`dbx vite:dlx`](#vite-dlx) | Vite+: Run a package binary without installing it. |
+| [`dbx vite:cache`](#vite-cache) | Vite+: Manage the task cache. |
+| [`dbx vite:build`](#vite-build) | Vite+: Build for production. |
+| [`dbx vite:pack`](#vite-pack) | Vite+: Build libraries for npm or standalone binaries. |
+| [`dbx vite:preview`](#vite-preview) | Vite+: Preview the production build. |
+| [`dbx vite:add`](#vite-add) | Vite+: Add packages to dependencies. |
+| [`dbx vite:remove`](#vite-remove) | Vite+: Remove packages from dependencies. |
+| [`dbx vite:update`](#vite-update) | Vite+: Update packages. |
+| [`dbx vite:dedupe`](#vite-dedupe) | Vite+: Deduplicate dependencies. |
+| [`dbx vite:outdated`](#vite-outdated) | Vite+: Check for outdated packages. |
+| [`dbx vite:list`](#vite-list) | Vite+: List installed packages. |
+| [`dbx vite:why`](#vite-why) | Vite+: Explain why a package is installed. |
+| [`dbx vite:info`](#vite-info) | Vite+: View package metadata. |
+| [`dbx vite:link`](#vite-link) | Vite+: Link local packages. |
+| [`dbx vite:unlink`](#vite-unlink) | Vite+: Unlink local packages. |
+| [`dbx vite:rebuild`](#vite-rebuild) | Vite+: Rebuild native modules. |
+| [`dbx vite:pm`](#vite-pm) | Vite+: Forward a command to the package manager. |
+| [`dbx vite:toolchain`](#vite-toolchain) | Vite+: Show Vite+ tool versions. |
+| [`dbx vite:upgrade`](#vite-upgrade) | Vite+: Update `vp` itself. |
+| [`dbx vite:implode`](#vite-implode) | Vite+: Remove `vp` and all related data. |
+| [`dbx fmt`](#fmt) | Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc). |
+| [`dbx lint`](#lint) | Lint with the detected linter (Vite+ Oxlint, ESLint or Biome). |
 
 ## `dbx projects`
 
 Discover projects and write .dbx/toolchain/projects.json.
-
 - `--cwd ‹dir›` — Root to scan (default: cwd).
 - `--max-depth ‹n›` — Max directory depth. (default: `5`)
 - `--no-write` — Do not write the graph file.
@@ -91,14 +89,10 @@ Discover projects and write .dbx/toolchain/projects.json.
 ## `dbx sync`
 
 Regenerate every managed file from dbx.config.*.
-
 - `--no-format` — Do not format the written managed files.
 - `--no-format-fix` — Run the formatter in check mode instead of rewriting the files.
 - `--format-command ‹value›` — Override the formatter command. `{files}` expands to the managed files (space-separated); when it is absent the files are appended.
 - `--format-exclude ‹value...›` — Globs of managed files to leave unformatted (per-file opt-out).
-- `--cwd ‹dir›` — Project root (default: cwd).
-- `-q, --quiet` — Only log errors.
-- `--configless` — Manage projects without their own dbx.config.* (inherit the nearest config).
 - `--check` — Do not write; fail if files are out of date.
 - `--watch` — Keep running and re-sync on change.
 - `--recursive` — Sync every managed project in dependency order (nested workspaces included; configless projects only with --configless).
@@ -109,13 +103,9 @@ Regenerate every managed file from dbx.config.*.
 ## `dbx watch`
 
 Sync once, then watch key files and re-sync on change.
-
 - `--debounce ‹value›` — Debounce window in ms. (default: `150`)
 - `--exclude ‹value...›` — Glob(s) excluded from watching. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
 - `--no-gitignore` — Do not respect .gitignore files.
-- `--cwd ‹dir›` — Project root (default: cwd).
-- `-q, --quiet` — Only log errors.
-- `--configless` — Manage projects without their own dbx.config.* (inherit the nearest config).
 - `--force` — Run even when no dbx.config.* is present.
 - `--list` — Print the resolved input globs (+ tsconfig file names) instead of watching.
 - `--json` — With --list: print the inputs as JSON.
@@ -123,11 +113,10 @@ Sync once, then watch key files and re-sync on change.
 ## `dbx reset`
 
 Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a project.
-
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--recursive` — Reset every discovered project under the root.
-- `--include ‹pattern...›` — Only projects matching these patterns (glob or substring).
-- `--exclude ‹pattern...›` — Skip projects matching these patterns (glob or substring).
+- `--include ‹pattern...›` — 
+- `--exclude ‹pattern...›` — 
 - `--generated` — Remove only the generated/managed files.
 - `--manifest` — Remove only the .dbx/toolchain directory.
 - `--config` — Also remove dbx.config.*.
@@ -138,19 +127,16 @@ Remove generated files, the .dbx/toolchain manifest and/or the dbx config from a
 ## `dbx providers`
 
 List the tooling providers (Vite+, ...) and their commands.
-
 - `--json` — Print the providers (with actions) as JSON.
 
 ## `dbx enabled`
 
 Print whether the toolchain is enabled for this project (and the scope).
-
 - `--json` — Print the resolved state as JSON.
 
 ## `dbx enable`
 
 Enable the toolchain (workspace scope by default).
-
 - `--global` — Set the global scope (`~/.dbx/toolchain/cli/config.json`).
 - `--workspace` — Set the workspace scope (`.vscode/settings.json`).
 - `--cwd ‹dir›` — Project root (default: cwd).
@@ -159,7 +145,6 @@ Enable the toolchain (workspace scope by default).
 ## `dbx disable`
 
 Disable the toolchain (workspace scope by default).
-
 - `--global` — Set the global scope (`~/.dbx/toolchain/cli/config.json`).
 - `--workspace` — Set the workspace scope (`.vscode/settings.json`).
 - `--cwd ‹dir›` — Project root (default: cwd).
@@ -168,14 +153,13 @@ Disable the toolchain (workspace scope by default).
 ## `dbx tsconfig`
 
 Generate workspace tsconfig.json files from the default tsconfig (aliases + references).
-
 - `--glob ‹value...›` — Glob(s) for the workspace default tsconfig files. Defaults to matching every `defaultFile` recursively.
 - `--exclude ‹value...›` — Glob(s) to exclude from `glob`. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
 - `--no-gitignore` — Do not respect .gitignore files.
 - `--refs` — Wire project references.
 - `--composite` — Emit `composite: true`.
 - `--no-aliases` — Skip path aliases.
-- `--flatten-remote-extends` — Inline the compiler options inherited from a remote `http(s)` `extends` chain into the generated workspace configs (default false). Useful when a tool cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` are skipped because they describe the remote tree. Settings the generated config already defines always win.
+- `--flatten-remote-extends` — Inline the compiler options inherited from a remote `http(s)` `extends` chain into the generated workspace configs. Useful when a tool cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` are skipped because they describe the remote tree. Settings the generated config already defines always win.
 - `--auto-src-dir ‹value›` — Source directory used to resolve workspace entry points when `package.json` does not declare `exports`/`main`/`types` (default: the workspace's final tsconfig `rootDir`/`baseUrl`, falling back to `src`).
 - `-i, --indent ‹value›` — JSON indentation. (default: `4`)
 - `--root-file ‹value›` — The workspaces tsconfig file name that holds `paths` + `references`. (default: `tsconfig.workspaces.json`)
@@ -200,20 +184,17 @@ Generate workspace tsconfig.json files from the default tsconfig (aliases + refe
 ## `dbx cleanup`
 
 Remove build artifacts (*.tsbuildinfo, dist/).
-
 - `--cwd ‹dir›` — Directory to clean (default: cwd).
 - `--pattern ‹glob...›` — Override the match globs.
 
 ## `dbx cleanup:turbo`
 
 Remove the turbo cache (.turbo/).
-
 - `--cwd ‹dir›` — Directory to clean (default: cwd).
 
 ## `dbx workflow`
 
 Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).
-
 - `[workflows]` — Workflow ids, custom ids, or file names (default: every enabled workflow).
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--ref ‹ref›` — Git ref to run the workflow on.
@@ -226,7 +207,6 @@ Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).
 ## `dbx changelog`
 
 Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.
-
 - `--range ‹range›` — Git revision range to scan.
 - `--dry-run` — Print the proposed entry without writing.
 - `--version ‹semver›` — Override the version.
@@ -244,32 +224,28 @@ Scan commits, derive the semver bump and update the CHANGELOG.md files + version
 ## `dbx mcp:serve`
 
 Run the dbx MCP server over stdio (for MCP clients).
-
 - `--cwd ‹dir›` — Project root (default: cwd).
 
 ## `dbx mcp:install`
 
 Install the dbx MCP server + skill into an AI harness/editor.
-
 - `--provider ‹id›` — claude, codex, vscode, opencode, pi or custom.
 - `--scope ‹scope›` — project (default) or global.
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--dir ‹dir›` — Custom directory (for --provider custom).
-- `--command ‹command›` — Client command (default `dbx`).
+- `--command ‹command›` — Client command (default `dbx`)
 - `--no-skills` — Do not write the skill/instructions file.
 - `--json` — Print the written paths as JSON.
 
 ## `dbx mcp:list`
 
 List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).
-
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--json` — Print the providers as JSON.
 
 ## `dbx migrate`
 
 Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.* into dbx.config.
-
 - `--from ‹tool›` — Source tool (repeatable): biome \| eslint \| prettier \| dprint \| oxc \| vite \| all.
 - `--to ‹tool›` — Target tool (default: oxc). (default: `oxc`)
 - `--cwd ‹dir›` — Project root (default: cwd).
@@ -288,14 +264,12 @@ Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.* i
 ## `dbx migrate:list`
 
 List the registered migrations and whether each is detected.
-
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--json` — Print as JSON.
 
 ## `dbx project:init`
 
 Scaffold a single-package TypeScript project.
-
 - `-n, --name ‹name›` — Project name.
 - `-s, --scope ‹scope›` — npm scope, eg. @acme.
 - `-o, --out ‹dir›` — Output directory (default: cwd).
@@ -309,7 +283,6 @@ Scaffold a single-package TypeScript project.
 ## `dbx project:init:monorepo`
 
 Scaffold a monorepo root (add --example for one example workspace).
-
 - `-n, --name ‹name›` — Project name.
 - `-s, --scope ‹scope›` — npm scope, eg. @acme.
 - `-o, --out ‹dir›` — Output directory (default: cwd).
@@ -323,7 +296,6 @@ Scaffold a monorepo root (add --example for one example workspace).
 ## `dbx project:init:workspace`
 
 Scaffold a monorepo workspace package into an existing monorepo root.
-
 - `-n, --name ‹name›` — Workspace package name (unscoped).
 - `-s, --scope ‹scope›` — npm scope, eg. @acme.
 - `-r, --root ‹dir›` — Monorepo root (default: cwd).
@@ -337,7 +309,6 @@ Scaffold a monorepo workspace package into an existing monorepo root.
 ## `dbx project:config`
 
 Generate dbx.config.* for existing projects that are missing one.
-
 - `--cwd ‹dir›` — Root to scan (default: cwd).
 - `--include ‹pattern...›` — Only projects matching these patterns (glob or substring).
 - `--exclude ‹pattern...›` — Skip projects matching these patterns (glob or substring).
@@ -352,7 +323,6 @@ Generate dbx.config.* for existing projects that are missing one.
 ## `dbx template:list`
 
 List templates (builtin + local + opted-in online sources).
-
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--online` — Resolve online sources (npm/git).
 - `--offline` — Force offline (skip npm/git).
@@ -364,7 +334,6 @@ List templates (builtin + local + opted-in online sources).
 ## `dbx template:init`
 
 Write a template.json to a directory, making it a local template.
-
 - `[dir]` — Directory (default: cwd).
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--kind ‹kind›` — project \| workspace \| application \| folder \| tooling \| pipeline.
@@ -381,7 +350,6 @@ Write a template.json to a directory, making it a local template.
 ## `dbx template:add`
 
 Record a template source in .dbx/toolchain/templates.json.
-
 - `‹source›` — local path \| git URL \| @scope/create \| type:locate
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--type ‹type›` — Force: builtin \| local \| npm \| git \| vite-plus \| remote.
@@ -397,7 +365,6 @@ Record a template source in .dbx/toolchain/templates.json.
 ## `dbx template:remove`
 
 Remove a source from .dbx/toolchain/templates.json.
-
 - `‹id›` — Source id or type:locate.
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--global` — Remove the template from the global registry.
@@ -406,7 +373,6 @@ Remove a source from .dbx/toolchain/templates.json.
 ## `dbx template:registry`
 
 Manage the global template search paths (and sync them to the VS Code setting).
-
 - `--list` — List the resolved search paths (default).
 - `--add ‹path...›` — Add global search path(s).
 - `--remove ‹path...›` — Remove global search path(s).
@@ -418,7 +384,6 @@ Manage the global template search paths (and sync them to the VS Code setting).
 ## `dbx registry`
 
 List or manage the template/provider registries.
-
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--kind ‹kind›` — What --add/--remove manages: templates \| providers.
 - `--add ‹path›` — Add a registry path (or remote URL).
@@ -431,7 +396,6 @@ List or manage the template/provider registries.
 ## `dbx template:info`
 
 Show one template by id.
-
 - `‹id›` — The template id.
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--online` — Resolve online sources.
@@ -440,7 +404,6 @@ Show one template by id.
 ## `dbx create`
 
 Scaffold a project from a template (builtin, local or Vite+).
-
 - `-t, --template ‹id›` — Template id (see template:list).
 - `--kind ‹kind›` — project \| workspace \| application \| folder \| tooling \| pipeline.
 - `-n, --name ‹name›` — Project / package name.
@@ -458,227 +421,189 @@ Scaffold a project from a template (builtin, local or Vite+).
 ## `dbx vite`
 
 Run any Vite+ command through `vp` (eg. `dbx vite dev`).
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:create`
 
 Vite+: Create a new project from a template.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:migrate`
 
 Vite+: Migrate an existing project to Vite+.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:config`
 
 Vite+: Configure hooks and agent integration.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:hooks`
 
 Vite+: Manage the Git hook dispatcher.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:staged`
 
 Vite+: Run linters on staged files.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:install`
 
 Vite+: Install dependencies with the detected package manager.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:env`
 
 Vite+: Manage Node.js and package managers.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:dev`
 
 Vite+: Run the Vite development server.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:check`
 
 Vite+: Run format, lint and type checks.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:lint`
 
 Vite+: Lint code with the active linter (Oxlint via Vite+).
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:fmt`
 
 Vite+: Format code with the active formatter (Oxfmt via Vite+).
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:test`
 
 Vite+: Run tests through bundled Vitest.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:run`
 
 Vite+: Run package scripts and monorepo tasks.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:exec`
 
 Vite+: Execute a binary from local node_modules.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:node`
 
 Vite+: Run a Node.js script in the Vite+ env.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:dlx`
 
 Vite+: Run a package binary without installing it.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:cache`
 
 Vite+: Manage the task cache.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:build`
 
 Vite+: Build for production.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:pack`
 
 Vite+: Build libraries for npm or standalone binaries.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:preview`
 
 Vite+: Preview the production build.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:add`
 
 Vite+: Add packages to dependencies.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:remove`
 
 Vite+: Remove packages from dependencies.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:update`
 
 Vite+: Update packages.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:dedupe`
 
 Vite+: Deduplicate dependencies.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:outdated`
 
 Vite+: Check for outdated packages.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:list`
 
 Vite+: List installed packages.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:why`
 
 Vite+: Explain why a package is installed.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:info`
 
 Vite+: View package metadata.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:link`
 
 Vite+: Link local packages.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:unlink`
 
 Vite+: Unlink local packages.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:rebuild`
 
 Vite+: Rebuild native modules.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:pm`
 
 Vite+: Forward a command to the package manager.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:toolchain`
 
 Vite+: Show Vite+ tool versions.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:upgrade`
 
 Vite+: Update `vp` itself.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx vite:implode`
 
 Vite+: Remove `vp` and all related data.
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx fmt`
 
 Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc).
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
 ## `dbx lint`
 
 Lint with the detected linter (Vite+ Oxlint, ESLint or Biome).
-
 - `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
