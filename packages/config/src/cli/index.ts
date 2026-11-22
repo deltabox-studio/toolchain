@@ -24,7 +24,7 @@ import {
 import type { ConfigEngine } from '../types/engine.js';
 
 export * from './format.js';
-export * from './program.js';
+export * from './program/index.js';
 
 /** Default output locations for the config commands. */
 export interface ConfigCommandDefaults {

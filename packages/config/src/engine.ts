@@ -8,7 +8,7 @@ import path from 'node:path';
 
 import type { CliCommand, CliCommandContext, CliOption } from '@deltabox/toolchain/shared';
 
-import { createConfigProgram } from './cli/program.js';
+import { createConfigProgram } from './cli/program/index.js';
 import { collectDefinitions, DEFAULT_ENV_PREFIX } from './collect.js';
 import { buildConfigJson } from './config-json.js';
 import { cliScopeSchemas } from './generators/cli-schema.js';
