@@ -15,6 +15,7 @@ import type {
     ConfigProgramErrorMessageKey,
     ConfigProgramFormatOptions,
     ConfigProgramGroupsOptions,
+    ConfigProgramSortOrder,
 } from '../types/format.js';
 
 type AnyCommand = CliCommand<any, any>;
@@ -313,6 +314,22 @@ function commandSections(
     return sections;
 }
 
+/**
+ * Sort commands by name for one help section. `false` keeps the declaration
+ * order, which also preserves group first-appearance order.
+ */
+function sortCommands(
+    commands: readonly AnyCommand[],
+    order: ConfigProgramSortOrder | undefined
+): AnyCommand[] {
+    if (order === false) return [...commands];
+    const direction = order === 'desc' ? -1 : 1;
+    return [...commands].sort((a, b) => {
+        if (a.name === b.name) return 0;
+        return a.name < b.name ? -direction : direction;
+    });
+}
+
 /** Build the commander-like content shared by the help templates. */
 export function renderHelpContent(
     model: ConfigHelpModel,
@@ -355,7 +372,7 @@ export function renderHelpContent(
             lines.push('', usageColor(section.heading));
             lines.push(
                 ...table(
-                    section.items.map(child => ({
+                    sortCommands(section.items, model.sort).map(child => ({
                         term: child.name,
                         description: child.description,
                         item: child,
@@ -405,7 +422,8 @@ export function renderProgramHelp(
     commands: readonly AnyCommand[],
     options: ConfigProgramFormatOptions = {},
     cliOptions: readonly CliOption[] = [],
-    groups?: ConfigProgramGroupsOptions
+    groups?: ConfigProgramGroupsOptions,
+    sort?: ConfigProgramSortOrder
 ): string {
     return renderHelp(
         {
@@ -415,6 +433,7 @@ export function renderProgramHelp(
             options: cliOptions,
             commands,
             ...(groups !== undefined ? { groups } : {}),
+            ...(sort !== undefined ? { sort } : {}),
         },
         options
     );
@@ -425,7 +444,8 @@ export function renderCommandHelp(
     command: AnyCommand,
     path: readonly string[] = [],
     options: ConfigProgramFormatOptions = {},
-    groups?: ConfigProgramGroupsOptions
+    groups?: ConfigProgramGroupsOptions,
+    sort?: ConfigProgramSortOrder
 ): string {
     const name = [...path, command.name].join(' ');
     return renderHelp(
@@ -436,6 +456,7 @@ export function renderCommandHelp(
             options: command.options ?? [],
             commands: command.commands ?? [],
             ...(groups !== undefined ? { groups } : {}),
+            ...(sort !== undefined ? { sort } : {}),
             command,
         },
         options

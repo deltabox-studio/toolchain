@@ -18,6 +18,7 @@ import {
     createConfigProgram,
     ConfigProgramError,
     type ConfigProgramGroupsOptions,
+    type ConfigProgramSortOrder,
 } from '@deltabox/toolchain/config';
 import { loadToolchainConfig } from '@deltabox/toolchain/core';
 import { mcpCommands } from '@deltabox/toolchain/mcp/cli';
@@ -267,6 +268,12 @@ export interface RootCliOptions {
      * @default `true`
      */
     groups?: ConfigProgramGroupsOptions;
+    /**
+     * Sort commands by name within each help section, including groups.
+     * `'asc'` (default), `'desc'`, or `false` to keep registration order.
+     * @default `'asc'`
+     */
+    sort?: ConfigProgramSortOrder;
 }
 
 /**
@@ -343,6 +350,7 @@ export function createCli<
         },
         helpOnError: programOptions.helpOnError === true,
         ...(programOptions.groups !== undefined ? { groups: programOptions.groups } : {}),
+        ...(programOptions.sort !== undefined ? { sort: programOptions.sort } : {}),
         writeOut: text => logger.write('out', text),
         writeErr: text => logger.write('err', text),
     }).configure({

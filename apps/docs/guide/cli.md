@@ -209,9 +209,11 @@ unknown option/command or a bad value.
 `Vite+ commands:` heading. The built-in commands mirror the docs sidebar:
 core workspace commands stay under `Commands:`, followed by
 `Project & templates`, `Tooling`, `Automation & API`, `Agents` and `Vite+`.
-Pass `{ groups: false }` for flat lists, or `{ groups: { auto: false } }` to only
-honor explicit command groups. The same options work through `createCli` and
-`runCli`.
+Commands are sorted ascending by name within each section by default; pass
+`{ sort: 'desc' }` to reverse that or `{ sort: false }` to keep registration
+order (in groups too). Pass `{ groups: false }` for flat lists, or
+`{ groups: { auto: false } }` to only honor explicit command groups. The same
+options work through `createCli` and `runCli`.
 
 `extractLogOptions` makes the logger flags work before _or_ after the
 subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.

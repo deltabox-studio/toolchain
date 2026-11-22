@@ -977,6 +977,42 @@ describe('program help and errors', () => {
         expect(flat.slice(flat.indexOf('Commands:'))).toContain('info');
     });
 
+    it('sorts commands ascending by default and supports opt-out or descending', () => {
+        const commands = [
+            { name: 'zeta', description: 'Z.', run: () => {} },
+            { name: 'alpha', description: 'A.', group: 'Group', run: () => {} },
+            { name: 'beta', description: 'B.', group: 'Group', run: () => {} },
+            { name: 'gamma', description: 'G.', run: () => {} },
+        ];
+
+        const asc = createConfigProgram(commands);
+        expect(asc.sort).toBe('asc');
+        const ascHelp = asc.formatHelp();
+        const ascDefault = ascHelp.indexOf('Commands:');
+        const ascGroup = ascHelp.indexOf('Group commands:');
+        expect(ascDefault).toBeGreaterThan(-1);
+        expect(ascGroup).toBeGreaterThan(ascDefault);
+        expect(ascHelp.slice(ascDefault, ascGroup)).toMatch(/gamma[\s\S]*zeta/);
+        expect(ascHelp.slice(ascGroup)).toMatch(/alpha[\s\S]*beta/);
+
+        const desc = createConfigProgram(commands, { sort: 'desc' });
+        expect(desc.sort).toBe('desc');
+        const descHelp = desc.formatHelp();
+        const descDefault = descHelp.indexOf('Commands:');
+        const descGroup = descHelp.indexOf('Group commands:');
+        expect(descHelp.slice(descDefault, descGroup)).toMatch(/zeta[\s\S]*gamma/);
+        expect(descHelp.slice(descGroup)).toMatch(/beta[\s\S]*alpha/);
+
+        const off = createConfigProgram(commands, { sort: false });
+        expect(off.sort).toBe(false);
+        const offHelp = off.formatHelp();
+        const offDefault = offHelp.indexOf('Commands:');
+        const offGroup = offHelp.indexOf('Group commands:');
+        // Declaration order: zeta, gamma; group: alpha, beta.
+        expect(offHelp.slice(offDefault, offGroup)).toMatch(/zeta[\s\S]*gamma/);
+        expect(offHelp.slice(offGroup)).toMatch(/alpha[\s\S]*beta/);
+    });
+
     it('renders colourless boxed help and plain/custom variants', () => {
         const program = engine().cli.program.create(cmd => [
             cmd('serve', {

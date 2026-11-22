@@ -59,6 +59,8 @@ export interface ConfigHelpModel {
     commands: readonly CliCommand<any, any>[];
     /** The command-grouping setting used to render {@link commands}. */
     groups?: ConfigProgramGroupsOptions;
+    /** Command ordering within each section. @default `'asc'` */
+    sort?: ConfigProgramSortOrder;
     /** The selected command, when rendering command help. */
     command?: CliCommand<any, any>;
 }
@@ -68,6 +70,14 @@ export type ConfigHelpTemplate =
     | 'box'
     | 'plain'
     | ((model: ConfigHelpModel, options: ConfigProgramFormatOptions) => string);
+
+/**
+ * Command ordering in help output.
+ *
+ * `'asc'` (default) sort commands by name within each section (including
+ * groups); `'desc'` reverses that; `false` keeps declaration order.
+ */
+export type ConfigProgramSortOrder = 'asc' | 'desc' | false;
 
 /**
  * Help grouping for options and commands.

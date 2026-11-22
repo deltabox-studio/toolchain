@@ -163,6 +163,39 @@ describe('dbx CLI', () => {
         }
     });
 
+    it('sorts built-in commands in runCli help with RootCliOptions', async () => {
+        const write = vi.spyOn(logger, 'write').mockImplementation(() => {});
+        const helpText = (): string =>
+            write.mock.calls
+                .filter(([channel]) => channel === 'out')
+                .map(([, text]) => text)
+                .join('')
+                .replace(/\u001b\[[0-9;]*m/g, '');
+        const lineOf = (text: string, name: string): number => text.indexOf(`\n  ${name} `);
+        try {
+            await runCli(['node', 'dbx', '--help']);
+            const asc = helpText();
+            expect(lineOf(asc, 'disable')).toBeLessThan(lineOf(asc, 'enable'));
+            expect(lineOf(asc, 'enable')).toBeLessThan(lineOf(asc, 'projects'));
+            expect(asc).toContain('Vite+ commands:');
+
+            write.mockClear();
+            await runCli(['node', 'dbx', '--help'], { sort: 'desc' });
+            const desc = helpText();
+            expect(lineOf(desc, 'watch')).toBeLessThan(lineOf(desc, 'sync'));
+            expect(lineOf(desc, 'sync')).toBeLessThan(lineOf(desc, 'reset'));
+            expect(desc).toContain('Vite+ commands:');
+
+            write.mockClear();
+            await runCli(['node', 'dbx', '--help'], { sort: false });
+            const off = helpText();
+            expect(lineOf(off, 'projects')).toBeLessThan(lineOf(off, 'sync'));
+            expect(off).toContain('Vite+ commands:');
+        } finally {
+            write.mockRestore();
+        }
+    });
+
     it('groups the built-in commands like the docs sidebar', () => {
         const groups = Object.fromEntries(
             builtinCommands().map(command => [command.name, command.group])

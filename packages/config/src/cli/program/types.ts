@@ -5,7 +5,11 @@
 import type { Awaitable } from '@deltabox/toolchain-shared';
 import type { CliCommand, CliCommandContext, CliOption } from '@deltabox/toolchain/shared';
 
-import type { ConfigProgramFormatOptions, ConfigProgramGroupsOptions } from '../../types/format.js';
+import type {
+    ConfigProgramFormatOptions,
+    ConfigProgramGroupsOptions,
+    ConfigProgramSortOrder,
+} from '../../types/format.js';
 
 export type AnyCommand = CliCommand<any, any>;
 
@@ -32,6 +36,7 @@ export interface ProgramState<TContext extends CliCommandContext> {
     disableColors?: RuntimeDisableColors<TContext>;
     helpOnError: boolean;
     groups: ConfigProgramGroupsOptions;
+    sort: ConfigProgramSortOrder;
     colorsDisabled: boolean;
     hooks: RuntimeHook[];
 }

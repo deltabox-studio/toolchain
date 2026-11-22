@@ -4920,8 +4920,8 @@ await program.invokeAsync();
 ```
 
 `engine.cli.program.create()` accepts `argv`, `name`, `description`, `version`,
-`globalOptions`, `context`, `disableColors`, `helpOnError`, `groups`, `writeOut`,
-`writeErr` and `format`. See the
+`globalOptions`, `context`, `disableColors`, `helpOnError`, `groups`, `sort`,
+`writeOut`, `writeErr` and `format`. See the
 [API reference](/guide/config-generator/api#program-members-and-options)
 for `invoke`/`invokeAsync`, hooks, help/error formatting and `bin`.
 
@@ -6504,7 +6504,8 @@ A `ConfigProgram` exposes the runtime surface:
 | `commands`                               | The normalized commands (single command stays single).                  |
 | `globals`                                | The program-level global options.                                       |
 | `helpOnError`                            | Whether to print help after an invalid-argv error (`false` by default). |
-| `groups`                                 | Command-grouping setting (`true` by default).                           |
+| `groups`                                 | Option/command grouping setting (`true` by default).                    |
+| `sort`                                   | Command ordering within each section (`'asc'` by default).              |
 | `name()` / `description()` / `version()` | Set the metadata shown in help/version output.                          |
 | `output(writeOut, writeErr?)`            | Route help/version output; `writeErr` is reserved for error rendering.  |
 | `globalOption()` / `globalOptions()`     | Append program-level globals.                                           |
@@ -6543,9 +6544,11 @@ const program = engine.cli.program.create(
 ```
 
 `argv` defaults to `process.argv.slice(2)`, `name` defaults to `'program'`, and
-`disableColors` defaults to `false`. `program.configure()` merges formatting;
-`program.argv()`, `program.withContext()` and `program.output()` set the runtime
-pieces.
+`disableColors` defaults to `false`. Commands are sorted ascending by name in
+each help section by default; pass `sort: 'desc'` to reverse it or `sort: false`
+to keep declaration order (including inside groups). `program.configure()` merges
+formatting; `program.argv()`, `program.withContext()` and `program.output()` set
+the runtime pieces.
 
 `helpOnError` defaults to `false`, so invalid argv throws a
 `ConfigProgramError` without printing help. Pass `helpOnError: true` and append
@@ -6566,7 +6569,8 @@ Commands are grouped by their delimited name path (`vite:list` ->
 `Vite commands:`), while options use their explicit `group` labels. Set
 `groups: false` for flat lists, or `groups: { auto: false }` to only honor
 explicit `group` labels on commands. `delimiter` accepts one string or an array
-(default `':'`).
+(default `':'`). Command entries within every section (including groups) are
+sorted by `sort` (`'asc'` by default; `'desc'` or `false` to change/disable).
 
 ```ts
 const program = engine.cli.program.create(
@@ -11941,9 +11945,11 @@ unknown option/command or a bad value.
 `Vite+ commands:` heading. The built-in commands mirror the docs sidebar:
 core workspace commands stay under `Commands:`, followed by
 `Project & templates`, `Tooling`, `Automation & API`, `Agents` and `Vite+`.
-Pass `{ groups: false }` for flat lists, or `{ groups: { auto: false } }` to only
-honor explicit command groups. The same options work through `createCli` and
-`runCli`.
+Commands are sorted ascending by name within each section by default; pass
+`{ sort: 'desc' }` to reverse that or `{ sort: false }` to keep registration
+order (in groups too). Pass `{ groups: false }` for flat lists, or
+`{ groups: { auto: false } }` to only honor explicit command groups. The same
+options work through `createCli` and `runCli`.
 
 `extractLogOptions` makes the logger flags work before *or* after the
 subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.
@@ -16177,7 +16183,7 @@ await program.invokeAsync();
 For config-driven commands, `engine.cli.program.create(...)` builds the program
 runtime with schema-derived options and typed `run` values. It accepts the full
 program options, including `globalOptions`, `disableColors`, `helpOnError`,
-`groups`, `format`, `argv` and the output hooks. See
+`groups`, `sort`, `format`, `argv` and the output hooks. See
 [Running a built program](/guide/config-generator/api#running-a-built-program)
 and the
 [program members](/guide/config-generator/api#program-members-and-options).

@@ -240,8 +240,8 @@ await program.invokeAsync();
 ```
 
 `engine.cli.program.create()` accepts `argv`, `name`, `description`, `version`,
-`globalOptions`, `context`, `disableColors`, `helpOnError`, `groups`, `writeOut`,
-`writeErr` and `format`. See the
+`globalOptions`, `context`, `disableColors`, `helpOnError`, `groups`, `sort`,
+`writeOut`, `writeErr` and `format`. See the
 [API reference](/guide/config-generator/api#program-members-and-options)
 for `invoke`/`invokeAsync`, hooks, help/error formatting and `bin`.
 

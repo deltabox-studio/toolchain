@@ -77,6 +77,7 @@ export function createConfigProgram<
         format: mergeFormatOptions({}, options.format),
         helpOnError: options.helpOnError === true,
         groups: options.groups ?? true,
+        sort: options.sort ?? 'asc',
         colorsDisabled: false,
         hooks: [],
     };
@@ -97,6 +98,9 @@ export function createConfigProgram<
         },
         get groups() {
             return state.groups;
+        },
+        get sort() {
+            return state.sort;
         },
         name(value: string) {
             state.name = value;
@@ -149,7 +153,8 @@ export function createConfigProgram<
                     ]),
                     [],
                     format,
-                    state.groups
+                    state.groups,
+                    state.sort
                 );
             }
             if (command) {
@@ -160,7 +165,8 @@ export function createConfigProgram<
                     ]),
                     [],
                     format,
-                    state.groups
+                    state.groups,
+                    state.sort
                 );
             }
             return renderProgramHelp(
@@ -169,7 +175,8 @@ export function createConfigProgram<
                 state.list,
                 format,
                 state.globalOptions,
-                state.groups
+                state.groups,
+                state.sort
             );
         },
         formatError(error) {

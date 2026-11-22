@@ -8,7 +8,11 @@ import type {
     CliOptionValues,
 } from '@deltabox/toolchain/shared';
 
-import type { ConfigProgramFormatOptions, ConfigProgramGroupsOptions } from '../format.js';
+import type {
+    ConfigProgramFormatOptions,
+    ConfigProgramGroupsOptions,
+    ConfigProgramSortOrder,
+} from '../format.js';
 import type { ConfigScopeKeys, ConfigScopeOf } from '../resolved.js';
 import type { ConfigSchema } from '../schema.js';
 import type { GenerateConfigCliOptions } from './options.js';
@@ -776,6 +780,13 @@ export type ConfigProgramOptions<
      * @default `true`
      */
     groups?: ConfigProgramGroupsOptions;
+    /**
+     * Sort commands by name within each help section, including command groups.
+     * `'asc'` (the default) sorts ascending, `'desc'` descending, and `false`
+     * keeps declaration/registration order.
+     * @default `'asc'`
+     */
+    sort?: ConfigProgramSortOrder;
     /** Write to a different stdout */
     writeOut?: (text: string) => void;
     /** Write to a different stderr */
@@ -804,6 +815,8 @@ export interface ConfigProgram<
     readonly helpOnError: boolean;
     /** The option/command grouping setting ({@link ConfigProgramOptions.groups}). */
     readonly groups: ConfigProgramGroupsOptions;
+    /** The command sort order in help ({@link ConfigProgramOptions.sort}). */
+    readonly sort: ConfigProgramSortOrder;
     /** Set the program name shown in help. */
     name(value: string): this;
     /** Set the program description shown in help. */

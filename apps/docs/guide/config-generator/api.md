@@ -532,7 +532,8 @@ A `ConfigProgram` exposes the runtime surface:
 | `commands`                               | The normalized commands (single command stays single).                  |
 | `globals`                                | The program-level global options.                                       |
 | `helpOnError`                            | Whether to print help after an invalid-argv error (`false` by default). |
-| `groups`                                 | Command-grouping setting (`true` by default).                           |
+| `groups`                                 | Option/command grouping setting (`true` by default).                    |
+| `sort`                                   | Command ordering within each section (`'asc'` by default).              |
 | `name()` / `description()` / `version()` | Set the metadata shown in help/version output.                          |
 | `output(writeOut, writeErr?)`            | Route help/version output; `writeErr` is reserved for error rendering.  |
 | `globalOption()` / `globalOptions()`     | Append program-level globals.                                           |
@@ -571,9 +572,11 @@ const program = engine.cli.program.create(
 ```
 
 `argv` defaults to `process.argv.slice(2)`, `name` defaults to `'program'`, and
-`disableColors` defaults to `false`. `program.configure()` merges formatting;
-`program.argv()`, `program.withContext()` and `program.output()` set the runtime
-pieces.
+`disableColors` defaults to `false`. Commands are sorted ascending by name in
+each help section by default; pass `sort: 'desc'` to reverse it or `sort: false`
+to keep declaration order (including inside groups). `program.configure()` merges
+formatting; `program.argv()`, `program.withContext()` and `program.output()` set
+the runtime pieces.
 
 `helpOnError` defaults to `false`, so invalid argv throws a
 `ConfigProgramError` without printing help. Pass `helpOnError: true` and append
@@ -594,7 +597,8 @@ Commands are grouped by their delimited name path (`vite:list` ->
 `Vite commands:`), while options use their explicit `group` labels. Set
 `groups: false` for flat lists, or `groups: { auto: false }` to only honor
 explicit `group` labels on commands. `delimiter` accepts one string or an array
-(default `':'`).
+(default `':'`). Command entries within every section (including groups) are
+sorted by `sort` (`'asc'` by default; `'desc'` or `false` to change/disable).
 
 ```ts
 const program = engine.cli.program.create(

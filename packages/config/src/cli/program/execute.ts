@@ -47,7 +47,8 @@ export async function executeAsync<TContext extends CliCommandContext>(
                       withGlobalOptions(selection.help.command, globals),
                       selection.help.path.slice(0, -1),
                       format,
-                      state.groups
+                      state.groups,
+                      state.sort
                   )
                 : renderProgramHelp(
                       state.name,
@@ -55,7 +56,8 @@ export async function executeAsync<TContext extends CliCommandContext>(
                       state.list,
                       format,
                       state.globalOptions,
-                      state.groups
+                      state.groups,
+                      state.sort
                   )
         );
         return;
@@ -87,7 +89,8 @@ export async function executeAsync<TContext extends CliCommandContext>(
                 withGlobalOptions(command, globals),
                 commandPath.slice(0, -1),
                 format,
-                state.groups
+                state.groups,
+                state.sort
             )
         );
         return;
@@ -145,7 +148,8 @@ export function executeSync<TContext extends CliCommandContext>(
                     selection.help.command,
                     selection.help.path.slice(0, -1),
                     format,
-                    state.groups
+                    state.groups,
+                    state.sort
                 )
             );
         } else if (selection.help) {
@@ -157,7 +161,8 @@ export function executeSync<TContext extends CliCommandContext>(
                     state.list,
                     format,
                     state.globalOptions,
-                    state.groups
+                    state.groups,
+                    state.sort
                 )
             );
         } else if (selection.version) {
@@ -188,7 +193,8 @@ export function executeSync<TContext extends CliCommandContext>(
                 withGlobalOptions(command, globals),
                 commandPath.slice(0, -1),
                 format,
-                state.groups
+                state.groups,
+                state.sort
             )
         );
         return;
