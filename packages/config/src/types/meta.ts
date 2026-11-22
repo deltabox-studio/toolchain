@@ -1,3 +1,7 @@
+import type { CliArgument } from '@deltabox/toolchain/shared';
+
+import type { ConfigValueType } from './definition.js';
+
 export type ConfigMeta = ConfigBaseMeta & ConfigEnvMeta & ConfigTypeMeta & ConfigCliMeta;
 
 /**
@@ -66,6 +70,13 @@ export interface ConfigEnvMeta {
      * @deprecated use `envPath` instead.
      */
     path?: string;
+    /**
+     * Whether this value may be read from / documented as an environment
+     * variable. Set `false` to keep a CLI-only value out of the generated env
+     * reference and the runtime env collector.
+     * @default true
+     */
+    envExpose?: boolean;
 }
 
 /**
@@ -83,6 +94,56 @@ export interface ConfigTypeMeta {
 }
 
 /**
+ * Normalized metadata for one config-backed CLI option.
+ *
+ * Every field is optional: unset values are derived from the schema (the
+ * dotted path, the value type, its default and description) or the legacy
+ * `cliFlag` / `cliFlagShort` aliases.
+ */
+export interface ConfigCliOptionMeta {
+    /** The long flag, e.g. `--base-url` (defaults to the kebab-case config path). */
+    flag?: string;
+    /** The shorthand flag, e.g. `-u`. */
+    short?: string;
+    /** Human-readable description (defaults to the schema `.describe()`). */
+    description?: string;
+    /** The value type, when the schema is an ambiguous union/array. */
+    type?: ConfigValueType | 'boolean' | (string & {});
+    /** Coerce one raw CLI string into the config value (overrides the type). */
+    parse?: (value: string) => unknown;
+    /** The resolved default value shown in help/docs. */
+    default?: unknown;
+    /** Allowed values, when the schema is an enum. */
+    choices?: readonly string[];
+    /** Collect repeated occurrences into an array (`--tag a --tag b`). */
+    multiple?: boolean;
+    /** Whether the config value is required. */
+    required?: boolean;
+    /** Keep the option registered but out of the generated docs. */
+    hidden?: boolean;
+}
+
+/**
+ * Metadata for a config scope exposed as a CLI command (the object/scope
+ * schema carries it). `false` opts the scope out of automatic command
+ * generation.
+ */
+export interface ConfigCliCommandMeta {
+    /** The command name (defaults to the schema scope key). */
+    name?: string;
+    /** Human-readable description (defaults to the scope `.describe()`). */
+    description?: string;
+    /** Command aliases registered by the CLI. */
+    aliases?: readonly string[];
+    /** Keep the command registered but out of the generated docs. */
+    hidden?: boolean;
+    /** Forward unknown options/operands (provider passthroughs). */
+    passthrough?: boolean;
+    /** Positional arguments the command accepts. */
+    args?: readonly CliArgument[];
+}
+
+/**
  * The metadata attached to a Zod leaf via `.meta()` to describe the
  * generated cli flag that backs the config value.
  */
@@ -91,4 +152,12 @@ export interface ConfigCliMeta {
     cliFlag?: string;
     /** Shorthand CLI flag, e.g. `-u`. */
     cliFlagShort?: string;
+    /**
+     * Normalized CLI option metadata. `false` prunes this field (and its
+     * subtree) from generated CLI options; it does not hide the value from the
+     * env/types/docs generators.
+     */
+    cli?: false | ConfigCliOptionMeta;
+    /** Command metadata for object/scope schemas; `false` opts the scope out. */
+    cliCommand?: false | ConfigCliCommandMeta;
 }

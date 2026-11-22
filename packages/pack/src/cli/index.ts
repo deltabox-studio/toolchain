@@ -1,4 +1,4 @@
-import { type ToolchainCommand, withSpinner } from '@deltabox/toolchain/shared';
+import { defineCliCommand, withSpinner } from '@deltabox/toolchain/shared';
 
 import { cleanup } from '../cleanup.js';
 
@@ -6,9 +6,9 @@ import { cleanup } from '../cleanup.js';
  * The cleanup commands (`cleanup`, `cleanup:turbo`). The working directory
  * comes from `context.cwd` (the root the config was loaded from).
  */
-export function cleanupCommands(): ToolchainCommand[] {
+export function cleanupCommands() {
     return [
-        {
+        defineCliCommand({
             name: 'cleanup',
             description: 'Remove build artifacts (*.tsbuildinfo, dist/).',
             options: [
@@ -25,8 +25,8 @@ export function cleanupCommands(): ToolchainCommand[] {
                     success: 'Removed build artifacts.',
                 });
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'cleanup:turbo',
             description: 'Remove the turbo cache (.turbo/).',
             options: [{ flags: '--cwd <dir>', description: 'Directory to clean (default: cwd).' }],
@@ -39,6 +39,6 @@ export function cleanupCommands(): ToolchainCommand[] {
                     }
                 );
             },
-        },
+        }),
     ];
 }

@@ -1,8 +1,91 @@
 # Changelog
 
-## 3.0.0-beta.2 (November 2026)
+## 3.0.0-beta.5 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Refactors</summary>
+
+- Rename format scripts and tasks to fmt ([#fcd3ae0](https://github.com/deltabox-studio/toolchain/commit/fcd3ae0) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Build system</summary>
+
+- Move jsonc-parser and untyped to the yarn catalog ([#8a77bf2](https://github.com/deltabox-studio/toolchain/commit/8a77bf2) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Chores</summary>
+
+- Commit pending docs and type updates ([#5701b52](https://github.com/deltabox-studio/toolchain/commit/5701b52) by [T0chi](https://github.com/T0chi))
+- Cleanup references ([#a0027cd](https://github.com/deltabox-studio/toolchain/commit/a0027cd) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.4 (November 2026)
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Config
+- Preserve markdown key narrowing with typed options ([#0cd420a](https://github.com/deltabox-studio/toolchain/commit/0cd420a) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+## 3.0.0-beta.3 (November 2026)
+
+<details>
+<summary>New features</summary>
+
+#### Config
+- Complete typed CLI program runtime and generator hooks ([#9dfb665](https://github.com/deltabox-studio/toolchain/commit/9dfb665) by [T0chi](https://github.com/T0chi))
+- Generate CLI programs from config schemas ([#29808e9](https://github.com/deltabox-studio/toolchain/commit/29808e9) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Add a config-engine program runtime with typed command chains, subcommands, global option inheritance, help formatting and output routing. Generate options and programs from schema metadata (cli/cliCommand), support array/variadic flags and custom parsers, and split the CLI types into their own modules. Annotate the shared schemas with the CLI-specific flags they map to.
+
+  </details>
+
+- Add source-specific config loaders ([#bf1fef0](https://github.com/deltabox-studio/toolchain/commit/bf1fef0) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Add file/env/CLI loader variants plus base-value merging so file values are overridden by env and argv without schema defaults replacing them. Support multi-source selections, neutral config.* discovery names, and envExpose metadata for CLI-only values.
+
+  </details>
+
+- Add scoped CLI generation and reorganize types ([#bfefaa4](https://github.com/deltabox-studio/toolchain/commit/bfefaa4) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
+- Normalize default JSDoc annotations ([#04f47e8](https://github.com/deltabox-studio/toolchain/commit/04f47e8) by [T0chi](https://github.com/T0chi))
+
+#### Config
+- Narrow explicit program command scopes ([#e910d0f](https://github.com/deltabox-studio/toolchain/commit/e910d0f) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Styles</summary>
+
+- Format generated config artifacts and docs ([#2ff28be](https://github.com/deltabox-studio/toolchain/commit/2ff28be) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+## 3.0.0-beta.2 (November 2026)
 
 <details>
 <summary>Chores</summary>
@@ -10,9 +93,6 @@
 - Make the workspace packages private ([#3b3c7d6](https://github.com/deltabox-studio/toolchain/commit/3b3c7d6) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.1 (November 2026)
 

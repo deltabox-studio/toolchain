@@ -103,7 +103,7 @@ function isTargetedOption(value: unknown): value is ChangelogTargetedOption<unkn
  * when nothing matches, the base value (or the supplied fallback) is returned.
  */
 export function resolveScopedOption<T>(
-    value: T | ChangelogTargetedOption<T> | ChangelogTargetedOption<T>[] | undefined,
+    value: T | ChangelogTargetedOption<T> | Array<T | ChangelogTargetedOption<T>> | undefined,
     dir: string,
     root: string,
     fallback?: T
@@ -123,7 +123,12 @@ export function resolveScopedOption<T>(
                 score = next;
             }
         }
-        return best ? best.options : fallback;
+        if (best) return best.options;
+        // Mixed arrays (`['feat', { target, options }]`) keep the plain entries
+        // as the fallback for targets no scoped entry matches.
+        const plain = value.filter(entry => !isTargetedOption(entry));
+        if (plain.length > 0) return (plain.length === 1 ? plain[0] : plain) as T;
+        return fallback;
     }
     if (isTargetedOption(value)) {
         return matchesTarget(value, dir, root) ? (value.options as T) : fallback;

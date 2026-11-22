@@ -82,14 +82,14 @@ describe('Vite+ scaffolding prerequisites', () => {
                 kind: 'project',
                 source: {
                     type: 'git',
-                    locate: 'https://github.com/acme/tpl',
+                    locate: 'https://github.com/myapp/tpl',
                     ref: 'v1.2.0',
                 },
             },
             { cwd: out, tokens: { name: 'app' } }
         );
         expect(runVpMock).toHaveBeenLastCalledWith(
-            ['create', 'https://github.com/acme/tpl#v1.2.0', 'app'],
+            ['create', 'https://github.com/myapp/tpl#v1.2.0', 'app'],
             expect.any(Object)
         );
 
@@ -100,14 +100,14 @@ describe('Vite+ scaffolding prerequisites', () => {
                 kind: 'project',
                 source: {
                     type: 'npm',
-                    locate: '@acme/create',
+                    locate: '@org/create',
                     registry: 'https://npm.example.com',
                 },
             },
             { cwd: out, tokens: { name: 'app' } }
         );
         expect(runVpMock).toHaveBeenLastCalledWith(
-            ['create', '@acme/create', 'app'],
+            ['create', '@org/create', 'app'],
             expect.objectContaining({
                 env: { npm_config_registry: 'https://npm.example.com' },
             })
@@ -127,7 +127,7 @@ describe('Vite+ scaffolding prerequisites', () => {
             id: 'online-lib',
             name: 'Online library',
             kind: 'project',
-            source: { type: 'git', locate: 'https://github.com/acme/library' },
+            source: { type: 'git', locate: 'https://github.com/myapp/library' },
         };
         await scaffoldTemplate(template, { cwd: library, containerize: true });
         expect(fs.existsSync(path.join(library, 'Dockerfile'))).toBe(false);
@@ -159,7 +159,7 @@ describe('Vite+ scaffolding prerequisites', () => {
             id: 'online',
             name: 'Online',
             kind: 'project',
-            source: { type: 'git', locate: 'https://github.com/acme/tpl' },
+            source: { type: 'git', locate: 'https://github.com/myapp/tpl' },
         };
 
         fs.writeFileSync(path.join(out, 'Dockerfile'), 'mine\n', 'utf-8');
@@ -179,7 +179,7 @@ describe('template-aware containerization', () => {
         const out = makeTmp();
         await scaffoldTemplate(builtin('project'), {
             cwd: out,
-            tokens: { name: 'acme' },
+            tokens: { name: 'myapp' },
             containerize: true,
         });
         expect(fs.existsSync(path.join(out, 'Dockerfile'))).toBe(false);
@@ -264,8 +264,8 @@ describe('template input validation', () => {
         );
         expect(fs.readdirSync(out)).toEqual([]);
 
-        await scaffoldTemplate(template, { cwd: out, variables: { owner: 'acme' } });
-        expect(fs.existsSync(path.join(out, 'acme.txt'))).toBe(true);
+        await scaffoldTemplate(template, { cwd: out, variables: { owner: 'myapp' } });
+        expect(fs.existsSync(path.join(out, 'myapp.txt'))).toBe(true);
     });
 
     it('rejects a value outside a declared option list', async () => {
@@ -289,7 +289,7 @@ describe('template input validation', () => {
         await expect(
             scaffoldTemplate(builtin('project'), {
                 cwd: out,
-                tokens: { name: 'acme' },
+                tokens: { name: 'myapp' },
                 variables: { packageManager: 'deno' },
             })
         ).rejects.toThrow(/invalid (?:value "deno"|package manager)/);
@@ -350,16 +350,20 @@ describe('registry CLI validation', () => {
         const cwd = makeTmp();
 
         expect(() =>
-            command.run(
-                { cwd, scope: 'bogus', add: './registry' },
-                { cwd, projectType: 'project', config: {}, tokens: {} }
-            )
+            command.run({ cwd, scope: 'bogus', add: './registry' } as never, {
+                cwd,
+                projectType: 'project',
+                config: {},
+                tokens: {},
+            })
         ).toThrow(/invalid --scope "bogus"/);
         expect(() =>
-            command.run(
-                { cwd, kind: 'bogus', add: './registry' },
-                { cwd, projectType: 'project', config: {}, tokens: {} }
-            )
+            command.run({ cwd, kind: 'bogus', add: './registry' } as never, {
+                cwd,
+                projectType: 'project',
+                config: {},
+                tokens: {},
+            })
         ).toThrow(/invalid --kind "bogus"/);
         expect(fs.existsSync(path.join(cwd, '.dbx'))).toBe(false);
     });

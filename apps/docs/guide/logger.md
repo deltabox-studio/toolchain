@@ -59,6 +59,7 @@ toolchain: {
 | `--no-color`        | Disable coloured output.                                   |
 
 They win over the config and may appear before or after the subcommand.
+`--no-color` also disables the program's configured help/error colours.
 
 ## Machine output
 

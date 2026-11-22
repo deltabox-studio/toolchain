@@ -154,3 +154,9 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Vite+ generated hook dispatcher (project-owned hooks are committed).
+.vite-hooks/_
+
+# VitePress loads .vitepress/config.ts through Vite's temp-config loader.
+**/.vitepress/config.ts.timestamp-*

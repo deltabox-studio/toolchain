@@ -20,7 +20,7 @@ import {
 describe('dbx.config model', () => {
     it('defineConfig is the identity', () => {
         const config: DbxConfig = {
-            toolchain: { project: { name: 'acme' }, ci: true, vite: true },
+            toolchain: { project: { name: 'myapp' }, ci: true, vite: true },
         };
         expect(defineConfig(config)).toBe(config);
     });
@@ -42,16 +42,16 @@ describe('dbx.config model', () => {
             toolchain: {
                 project: {
                     type: 'monorepo-root',
-                    name: 'acme',
-                    scope: '@acme',
-                    author: 'Acme',
+                    name: 'myapp',
+                    scope: '@org',
+                    author: 'Myapp',
                     license: 'MIT',
-                    homepage: 'https://acme.dev',
-                    repo: 'https://github.com/acme/app',
+                    homepage: 'https://myapp.dev',
+                    repo: 'https://github.com/myapp/app',
                     nodeVersion: '22',
                     packageManager: 'yarn',
                     packageManagerVersion: '4.17.1',
-                    description: 'Acme app',
+                    description: 'Myapp app',
                 },
                 // CI workflows + the changelog pipeline live in the `ci` section.
                 ci: {

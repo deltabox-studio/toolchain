@@ -5,7 +5,7 @@ import path from 'node:path';
 import { describe, expect, expectTypeOf, it } from 'vite-plus/test';
 import { z } from 'zod';
 
-import { dbxConfigSchema, type ToolchainCommand } from '@deltabox/toolchain/shared';
+import { dbxConfigSchema, type CliCommand } from '@deltabox/toolchain/shared';
 
 import {
     buildConfigJson,
@@ -124,14 +124,17 @@ describe('generators', () => {
             const output = path.join(cwd, 'nested', 'cli-options.json');
             const defs = generateCliOptions(scopes, { envPrefix: 'MYAPP_', output });
 
-            expect(JSON.parse(fs.readFileSync(output, 'utf-8'))).toEqual(defs);
+            // Functions are not serializable; the written JSON carries the data fields.
+            expect(JSON.parse(fs.readFileSync(output, 'utf-8'))).toEqual(
+                JSON.parse(JSON.stringify(defs))
+            );
         } finally {
             fs.rmSync(cwd, { recursive: true, force: true });
         }
     });
 
     it('renders custom command descriptors', () => {
-        const commands: ToolchainCommand[] = [
+        const commands: CliCommand[] = [
             {
                 name: 'deploy',
                 description: 'Deploy the app | safely <now>',
@@ -159,13 +162,13 @@ describe('generators', () => {
         const markdown = generateCliDocs(
             [{ name: 'build', description: 'Build.', run: () => {} }],
             {
-                prefix: 'acme',
+                prefix: 'myapp',
                 title: 'Commands',
             }
         );
         expect(markdown).toContain('# Commands');
-        expect(markdown).toContain('[`acme build`](#build)');
-        expect(markdown).toContain('## `acme build`');
+        expect(markdown).toContain('[`myapp build`](#build)');
+        expect(markdown).toContain('## `myapp build`');
     });
 
     it('supports custom frontmatter strings and callbacks', () => {
@@ -361,6 +364,11 @@ describe('createConfigEngine', () => {
         expectTypeOf(
             engine.env.types.generate({ envFile: 'types.ts', dtsFile: 'types.d.ts' })
         ).toEqualTypeOf<Record<'types.ts' | 'types.d.ts', string>>();
+        const withHook = engine.markdown.generate({
+            combined: true,
+            onContent: content => content.trim(),
+        });
+        expectTypeOf(withHook).toEqualTypeOf<Record<'index.md', string>>();
     });
 
     it('renders docs through engine.markdown', () => {

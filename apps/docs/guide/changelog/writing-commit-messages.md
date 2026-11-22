@@ -3,7 +3,7 @@
 The changelog is rendered from commit **subjects and bodies**, so what you commit
 is what readers see. Watch out for characters that a **shell** re-interprets —
 especially when a message is drafted by an **AI/LLM** and committed through
-`git commit -m "…"`.
+`git commit -m "..."`.
 
 ## Shell escaping
 
@@ -11,7 +11,7 @@ especially when a message is drafted by an **AI/LLM** and committed through
   `` `t `` / `` `b `` become CR / LF / TAB / backspace. A preceding `\` is left
   behind, so `` `resolveVite `` can land in the changelog as a stray `\`, a CR and
   `esolveVite`.
-- **bash** runs an unquoted `` `…` `` as command substitution, and `$(…)` / `${…}`
+- **bash** runs an unquoted `` `...` `` as command substitution, and `$(...)` / `${...}`
   expand before `git` ever sees them.
 
 The result is invisible control characters, stray `\` and dropped letters.
@@ -26,7 +26,7 @@ the shell consumed without leaving a trace still cannot be recovered.
 ## Authoring safely
 
 - Prefer a **file over `-m`**: `git commit -F message.txt`, or a quoted heredoc
-  (`git commit -F - <<'EOF' … EOF`) — nothing is re-interpreted. Avoid assembling
+  (`git commit -F - <<'EOF' ... EOF`) — nothing is re-interpreted. Avoid assembling
   multi-line messages inline in PowerShell.
 - When an AI/LLM drafts the message, strip **typographic characters** before
   committing: curly quotes (`’ “ ”`), em/en dashes (`— –`), non-breaking spaces,

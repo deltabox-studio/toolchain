@@ -23,17 +23,19 @@ export interface ManagedFile {
      */
     header?: string;
     /**
-     * Record the file in the manifest (default true). An untracked file is
+     * Record the file in the manifest. An untracked file is
      * written and drift-checked like any other, but stays user-owned: it is
      * never pruned by a later sync or removed by `dbx reset` (eg. a user
      * tsconfig a `tsconfig.overrides` entry patches).
+     * @default `true`
      */
     track?: boolean;
     /**
-     * Whether the post-write formatter may format this file (default true).
+     * Whether the post-write formatter may format this file.
      * Set `false` for files the task already writes in their final form (eg.
      * generated tsconfigs, which may use a custom indent), so `sync --check`
      * compares the generator output directly.
+     * @default `true`
      */
     format?: boolean;
 }

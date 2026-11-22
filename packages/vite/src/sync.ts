@@ -243,13 +243,15 @@ function leadingHeader(source: string): HeaderEntry[] {
 }
 
 /** The default module the runtime shim imports `resolveVite` from. */
-export const DEFAULT_RESOLVE_IMPORT = 'vite-plugin-dbx';
+export const DEFAULT_RESOLVE_IMPORT = '@deltabox/toolchain/vite';
 
 /**
  * Merge the required `defineConfig` + config-type specifiers into an existing
  * `vite`/`vite-plus` import, preserving its default/namespace/other named
- * imports. Other imports and comments are kept; the `resolveVite` import is
- * dropped (the shim re-adds it) so regeneration is idempotent.
+ * imports. Other imports and comments are kept; only the `resolveVite` specifier
+ * is dropped (the shim re-adds it) so regeneration is idempotent. A
+ * `defineConfig`/config-type import from the *other* Vite package is removed so
+ * the regenerated shim cannot declare the same binding twice.
  */
 function mergeHeader(
     entries: HeaderEntry[],
@@ -258,6 +260,7 @@ function mergeHeader(
     resolveImport: string = DEFAULT_RESOLVE_IMPORT
 ): string[] {
     const out: string[] = [];
+    const bare = (name: string): string => name.replace(/^type\s+/, '');
     let merged = false;
     for (const entry of entries) {
         if (entry.kind === 'text') {
@@ -265,25 +268,37 @@ function mergeHeader(
             continue;
         }
         const { from, clause } = entry.parsed;
-        if (from === DEFAULT_RESOLVE_IMPORT || from === resolveImport) continue;
         const parts = parseImportClause(clause);
-        const withoutResolve = parts.named.filter(
-            name => name.replace(/^type\s+/, '') !== 'resolveVite'
-        );
-        if (from === specifier && !merged) {
-            const named = withoutResolve.filter(
+        const isResolveImport = from === DEFAULT_RESOLVE_IMPORT || from === resolveImport;
+        const isVitePackage = from === 'vite' || from === 'vite-plus';
+        let named = isResolveImport
+            ? parts.named.filter(name => bare(name) !== 'resolveVite')
+            : [...parts.named];
+        if (isVitePackage && from !== specifier) {
+            named = named.filter(
                 name =>
-                    name.replace(/^type\s+/, '') !== 'defineConfig' &&
-                    name.replace(/^type\s+/, '') !== type
+                    bare(name) !== 'defineConfig' &&
+                    bare(name) !== 'UserConfig' &&
+                    bare(name) !== 'ViteUserConfig'
             );
-            named.unshift('defineConfig');
-            named.push(`type ${type}`);
-            out.push(`import ${formatImportClause({ ...parts, named })} from '${specifier}';`);
+        }
+        if (from === specifier && !merged) {
+            const mergedNamed = named.filter(
+                name =>
+                    bare(name) !== 'defineConfig' &&
+                    bare(name) !== 'UserConfig' &&
+                    bare(name) !== 'ViteUserConfig'
+            );
+            mergedNamed.unshift('defineConfig');
+            mergedNamed.push(`type ${type}`);
+            out.push(
+                `import ${formatImportClause({ ...parts, named: mergedNamed })} from '${specifier}';`
+            );
             merged = true;
             continue;
         }
-        if (withoutResolve.length !== parts.named.length) {
-            const next = { ...parts, named: withoutResolve };
+        if (named.length !== parts.named.length) {
+            const next = { ...parts, named };
             if (next.default || next.namespace || next.named.length > 0) {
                 out.push(`import ${formatImportClause(next)} from '${from}';`);
             }
@@ -449,15 +464,13 @@ export function viteSyncTask(): SyncTask {
             const ownConfig = ctx.ownConfig ?? ctx.config;
             const ownViteEnabled = sectionEnabled(ownConfig.vite);
             const ownVite = ownViteEnabled ? (sectionConfig(ownConfig.vite) ?? {}) : {};
-            const ownFmt = sectionEnabled(ownConfig.fmt)
-                ? sectionConfig(ownConfig.fmt)?.oxc
-                : undefined;
-            const ownLint = sectionEnabled(ownConfig.lint)
-                ? sectionConfig(ownConfig.lint)?.oxc
-                : undefined;
             const effective: Record<string, unknown> = { ...section };
-            const fmt = resolveOxcFmtConfig(ctx.config);
-            const lint = resolveOxcLintConfig(ctx.config);
+            const fmt =
+                resolveOxcFmtConfig(ctx.config) ??
+                (sectionEnabled(ctx.config.fmt) ? true : undefined);
+            const lint =
+                resolveOxcLintConfig(ctx.config) ??
+                (sectionEnabled(ctx.config.lint) ? true : undefined);
             if (fmt !== undefined) effective.fmt = fmt;
             if (lint !== undefined) effective.lint = lint;
             const resolved = viteConfigObject(effective as ToolchainViteConfig) as {
@@ -531,12 +544,12 @@ export function viteSyncTask(): SyncTask {
             const usesVitePlus = declaresVitePlus(ctx.cwd);
             const hasFmt =
                 !usesVitePlus &&
-                (ownFmt !== undefined || ownVite.fmt !== undefined) &&
+                (sectionEnabled(ownConfig.fmt) || ownVite.fmt !== undefined) &&
                 resolved.fmt !== undefined &&
                 resolved.fmt !== false;
             const hasLint =
                 !usesVitePlus &&
-                (ownLint !== undefined || ownVite.lint !== undefined) &&
+                (sectionEnabled(ownConfig.lint) || ownVite.lint !== undefined) &&
                 resolved.lint !== undefined &&
                 resolved.lint !== false;
             if (hasFmt) {

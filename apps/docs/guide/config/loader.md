@@ -37,7 +37,7 @@ one itself.
 With the default loader, imports resolve the way the project's TypeScript does:
 
 ```ts [dbx.config.ts]
-import { shared } from '@acme/shared/config.js'; // shared/config.ts
+import { shared } from '@org/shared/config.js'; // shared/config.ts
 
 import { defineConfig } from '@deltabox/toolchain';
 
@@ -157,7 +157,7 @@ serialized for the chosen format, and `defaults`/`overrides` merge under/over it
 ```ts
 createConfigFile({
     name: 'myapp.config.yaml',
-    content: { project: { name: 'acme' } },
+    content: { project: { name: 'myapp' } },
     defaults: { project: { license: 'MIT' } },
 });
 

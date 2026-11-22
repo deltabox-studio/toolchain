@@ -8,26 +8,19 @@
 [![tests](https://img.shields.io/github/actions/workflow/status/deltabox-studio/toolchain/ci.yml?label=tests&logo=github)](https://github.com/deltabox-studio/toolchain/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/@deltabox/toolchain.svg?color=cb3837&label=npm)](https://www.npmjs.com/package/@deltabox/toolchain)
 
-**deltabox toolchain** is a superset of [Vite+](https://viteplus.dev): it keeps the Vite+ workflow and adds project synchronization, a config generator, tsconfig management, an MCP server, CI and changelog automation, providers, catalogs and a VS Code extension. Use it as a Vite/Vite+ plugin or standalone.
+`@deltabox/toolchain` is a config-driven layer around [Vite+](https://viteplus.dev).
+It exists to remove the glue work that appears once a project grows beyond a
+single package: the same settings spread across a dozen files, generated files
+that drift, and release chores that are easy to get wrong.
 
-- **Project synchronization** — keep workspaces, configs, docs and CI up to date.
-- **Save and use templates (local/remote)** so you never have to scaffold the same projects over and over again.
-- **Generate** config types, env variables, cli flags, markdown and JSON schemas, so your codebase stays consistent, validated and well-documented.
-- **Automate CI, changelogs and releases** for your project and workspaces.
-- **Use it as a Vite/Vite+ plugin or standalone** — the plugin is optional.
-- **Use it from AI agents** over MCP, with one-command installs for Claude, Codex, VS Code, OpenCode and more.
+You describe the project once, and the toolchain keeps the rest in sync.
 
-See the [list of features](#features).
+---
 
-See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
-
-Documentation, guides and examples at [toolchain.deltabox.studio](https://toolchain.deltabox.studio/guide).
-
-## Table of contents
+<details>
+<summary><strong>Table of contents</strong></summary>
 
 - [deltabox toolchain](#deltabox-toolchain)
-    - [Table of contents](#table-of-contents)
-    - [Features](#features)
     - [Install](#install)
     - [Quickstart](#quickstart)
     - [Config generator](#config-generator)
@@ -40,25 +33,33 @@ Documentation, guides and examples at [toolchain.deltabox.studio](https://toolch
     - [Troubleshooting](#troubleshooting)
     - [License](#license)
 
-## Features
+---
 
-- **Project synchronization**
-- **Config-driven**
-- **Config generator**
-- **Vite / Vite+ plugin (optional)**
-- **Changelogs & releases**
-- **CI automation**
-- **tsconfig management**
-- **Providers**
-- **Catalogs**
-- **Templates**
-- **Migrations**
-- **MCP server**
-- **VS Code extension**
-- **Editor first**
-- **Monorepo aware**
+</details>
+
+<details>
+<summary><strong>Features</strong></summary>
+
+- Project synchronization
+- Config-driven
+- Config generator
+- Vite / Vite+ plugin (optional)
+- Changelogs & releases
+- CI automation
+- tsconfig management
+- Providers
+- Catalogs
+- Templates
+- Migrations
+- MCP server
+- VS Code extension
+- Editor first
+- Monorepo aware
+- And more...
 
 See more at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
+
+---
 
 The video and screenshot below is the VS Code extension. Read more about it at [toolchain.deltabox.studio/guide/vscode](https://toolchain.deltabox.studio/guide/vscode).
 
@@ -67,6 +68,47 @@ https://github.com/user-attachments/assets/a4f1ad75-fedd-40ee-b84d-3365f7025a3e
 <div align="left">
   <img src="./apps/docs/public/vscode-screenshot.png" width="300" />
 </div>
+
+---
+
+</details>
+
+<details>
+<summary><strong>Why use this?</strong></summary>
+
+`deltabox toolchain` is a superset of [Vite+](https://viteplus.dev)
+but can be used standalone without Vite.
+
+It is most useful when at least one of these is true:
+
+- you **maintain a monorepo** or several related packages;
+- you want **one place** for **toolchain, CI and release configuration**;
+- you use **Vite or Vite+** and want a **consistent project workflow**;
+- you define **schemas or config formats** and want **types, docs, JSON Schema
+  and typed CLI options** generated from them;
+- you maintain **many environment variables** and want **documented, typed
+  config** with **file/env/CLI precedence**;
+- you want **one consistent CLI and task surface** for scripts, tasks and
+  provider toolchains;
+- you build a **library or internal tool** that needs its own **typed config and
+  CLI** without rebuilding loaders, validation and help;
+- you work **across languages** and want Python, .NET, Java, Rust and other
+  tools exposed through the **same command surface**;
+- you **scaffold projects or packages** regularly;
+- you work in **VS Code or with AI agents** and want them to understand the
+  **same project model**;
+- you are tired of **generated files and release chores drifting**.
+
+Read the rest of [Why use this?](https://toolchain.deltabox.studio/guide/why-use-this) for the
+problems it removes, the core features and when it might not fit.
+
+</details>
+
+---
+
+See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
+
+Documentation, guides and examples live at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
 
 ## Install
 
@@ -104,7 +146,7 @@ import { defineConfig } from '@deltabox/toolchain';
 
 export default defineConfig({
     toolchain: {
-        project: { type: 'monorepo-root', name: 'acme', scope: '@acme' },
+        project: { type: 'monorepo-root', name: 'myapp', scope: '@org' },
         changelog: { workflows: { ci: true, release: true } },
         tsconfig: { refs: true },
         biome: true,
@@ -220,7 +262,7 @@ export default defineConfig({
     plugins: [
         dbx({
             toolchain: {
-                project: { name: 'my-app', scope: '@acme' },
+                project: { name: 'my-app', scope: '@org' },
                 fmt: { oxc: true },
                 lint: { oxc: true },
                 ci: { sync: true },
@@ -303,7 +345,7 @@ See [packages/vscode/README.md](./packages/vscode/README.md) to learn more about
 
 Feel free to contribute to the development or docs.
 
-Visit [toolchain.deltabox.studio/contribute/](https://toolchain.deltabox.studio/contribute/) for more information.
+Visit [toolchain.deltabox.studio/contribute](https://toolchain.deltabox.studio/contribute) for more information.
 
 ## Troubleshooting
 

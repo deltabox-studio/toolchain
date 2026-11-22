@@ -23,6 +23,7 @@ describe('isIgnoredPath', () => {
         expect(isIgnoredPath('packages/app/dist/index.js', DEFAULT_IGNORE_PATTERNS)).toBe(true);
         expect(isIgnoredPath('packages/app/dist', DEFAULT_IGNORE_PATTERNS)).toBe(true);
         expect(isIgnoredPath('.dbx/toolchain/manifest.json', DEFAULT_IGNORE_PATTERNS)).toBe(true);
+        expect(isIgnoredPath('.vite-hooks/_/h', DEFAULT_IGNORE_PATTERNS)).toBe(true);
         expect(isIgnoredPath('packages/app/src/index.ts', DEFAULT_IGNORE_PATTERNS)).toBe(false);
     });
 

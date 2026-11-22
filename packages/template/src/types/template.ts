@@ -18,7 +18,7 @@ export interface TemplateVariable {
      * rather than typed, and must be one of these (eg. `['yes', 'no']`).
      */
     options?: string[];
-    /** Whether a value is required (default false). */
+    /** Whether a value is required. @default `false` */
     required?: boolean;
 }
 
@@ -60,6 +60,6 @@ export interface Template {
     variables?: TemplateVariable[];
     /** Post-scaffold actions (install, custom JS/shell steps). */
     actions?: TemplateAction[];
-    /** The token prefix used by a local template's files (default `{{`/`}}`). */
+    /** The token prefix used by a local template's files. @default `{{`/`}}` */
     tokens?: { open?: string; close?: string };
 }

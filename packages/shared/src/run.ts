@@ -110,11 +110,11 @@ export interface SpawnCrossOptions extends SpawnOptions {
 }
 
 export interface RunOptions extends SpawnCrossOptions {
-    /** Exit the main process with the child's exit code (default true). */
+    /** Exit the main process with the child's exit code. @default `true` */
     exitWithMainProc?: boolean;
-    /** Append a trailing `--` to the args (default true). */
+    /** Append a trailing `--` to the args. @default `true` */
     argsEndingDashes?: boolean;
-    /** Log the command before spawning (default true). */
+    /** Log the command before spawning. @default `true` */
     verbose?: boolean;
 }
 

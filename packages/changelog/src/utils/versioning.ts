@@ -12,11 +12,12 @@ import {
 import type { BumpType, CommitRecord } from '../types/index.js';
 import { isBreakingCommit } from './breaking.js';
 import { parseCcSubject } from './format.js';
-import { deriveBump, readCommits } from './git.js';
+import { deriveBump, hasReleaseTag, readCommits } from './git.js';
 import { relatedWorkspacePaths } from './graph.js';
+import { parseExistingChangelog } from './reformat.js';
 import { globWorkspaces, isCommitReleased, readReleasedHashes, repoRoot } from './repo.js';
 import { resolveScopedOption } from './target.js';
-import { bumpVersion } from './version.js';
+import { bumpVersion, isPrereleaseVersion, stableVersionOf } from './version.js';
 
 /** The configured custom bump rules (major/minor/patch only, possibly targeted). */
 type BumpRules = Record<string, unknown>;
@@ -64,7 +65,7 @@ export function resolveVersioning(changelog?: ChangelogConfig): ResolvedVersioni
         ...(versioning.allowOverBump !== undefined
             ? { allowOverBump: versioning.allowOverBump }
             : {}),
-        ...(versioning.provider ? { provider: versioning.provider } : {}),
+        ...(versioning.provider !== undefined ? { provider: versioning.provider } : {}),
         ...(versioning.commit ? { commit: versioning.commit } : {}),
     };
 }
@@ -137,8 +138,13 @@ export function discoverVersionPackages(workspaces?: string[], root = repoRoot()
 /** Context handed to custom bump callbacks. */
 export type BumpRuleContext = ChangelogBumpRuleContext;
 
-/** Whether a bump rule matches a commit. */
-function bumpRuleMatches(rule: unknown, record: CommitRecord, context: BumpRuleContext): boolean {
+/** Whether a bump rule matches a commit at the given bump level. */
+function bumpRuleMatches(
+    rule: unknown,
+    record: CommitRecord,
+    context: BumpRuleContext,
+    level: BumpType
+): boolean {
     if (rule === true) return true;
     if (rule === false || rule === undefined || rule === null) return false;
     if (typeof rule === 'string') {
@@ -154,19 +160,34 @@ function bumpRuleMatches(rule: unknown, record: CommitRecord, context: BumpRuleC
         }
         return `${record.subject}\n${record.body}`.includes(rule);
     }
-    if (Array.isArray(rule)) return rule.some(item => bumpRuleMatches(item, record, context));
+    // A TS/JS config may pass a real RegExp even though the serializable form is
+    // a `/pattern/flags` string. Never let it fall into the object branch below,
+    // where an empty matcher would match every commit.
+    if (rule instanceof RegExp) {
+        return rule.test(`${record.subject}\n${record.body}`);
+    }
+    if (Array.isArray(rule)) {
+        return rule.some(item => bumpRuleMatches(item, record, context, level));
+    }
     if (typeof rule === 'function') {
-        return Boolean(
-            (rule as (ctx: BumpRuleContext & { commit: CommitRecord }) => unknown)({
-                ...context,
-                commit: record,
-            })
-        );
+        // Callbacks receive the level being evaluated (also when nested in an
+        // array) and may return `true` or that same level.
+        const value = (
+            rule as (
+                ctx: BumpRuleContext & { commit: CommitRecord; level: BumpType }
+            ) => boolean | BumpType
+        )({ ...context, commit: record, level });
+        return typeof value === 'string' ? value === level : Boolean(value);
     }
     if (typeof rule === 'object') {
         const source = rule as Record<string, unknown>;
         const parsed = parseCcSubject(record.subject);
-        if (source.breaking === true && !isBreakingCommit(record, context.breaking)) return false;
+        if (
+            source.breaking !== undefined &&
+            isBreakingCommit(record, context.breaking) !== source.breaking
+        ) {
+            return false;
+        }
         if (typeof source.type === 'string' && parsed.type !== source.type) return false;
         if (Array.isArray(source.types) && !source.types.includes(parsed.type)) return false;
         if (typeof source.scope === 'string' && parsed.scope !== source.scope) return false;
@@ -197,29 +218,18 @@ export function deriveCustomBump(
 ): BumpType {
     if (!rules || Object.keys(rules).length === 0) return deriveBump(records, context.breaking);
     let result: BumpType = 'patch';
-    let matches = 0;
+    // Count distinct commits, not level/commit pairs: one commit matching both
+    // `minor` and `patch` is one change and must not over-bump twice.
+    const matched = new Set<string>();
     for (const level of BUMP_ORDER) {
         const rule = rules[level];
         for (const record of records) {
-            const matched =
-                typeof rule === 'function'
-                    ? (() => {
-                          const value = (
-                              rule as (
-                                  ctx: BumpRuleContext & {
-                                      commit: CommitRecord;
-                                      level: string;
-                                  }
-                              ) => string | boolean
-                          )({ ...context, commit: record, level });
-                          return typeof value === 'string' ? value === level : Boolean(value);
-                      })()
-                    : bumpRuleMatches(rule, record, context);
-            if (!matched) continue;
-            matches += 1;
+            if (!bumpRuleMatches(rule, record, context, level)) continue;
+            matched.add(record.hash || `${record.subject}\n${record.body}\n${record.authorEmail}`);
             if (BUMP_ORDER.indexOf(level) > BUMP_ORDER.indexOf(result)) result = level;
         }
     }
+    const matches = matched.size;
     if (allowOverBump && matches > 1) {
         // Repeated over-bumping is intentionally opt-in.
         for (let i = 1; i < matches; i += 1) {
@@ -239,6 +249,47 @@ export interface VersionPlan {
     entries: Map<string, string>;
 }
 
+/** Whether a stable version was already released for `dir`. */
+export type StableExists = (dir: string, version: string) => boolean;
+
+/** The versions already headed in a directory's changelog (cached). */
+function changelogVersions(dir: string, cache: Map<string, Set<string>>): Set<string> {
+    const cached = cache.get(dir);
+    if (cached) return cached;
+    const versions = new Set<string>();
+    const file = resolve(dir, 'CHANGELOG.md');
+    if (existsSync(file)) {
+        try {
+            for (const entry of parseExistingChangelog(readFileSync(file, 'utf8'))) {
+                versions.add(entry.version);
+            }
+        } catch {
+            // An unreadable changelog cannot vouch for a release.
+        }
+    }
+    cache.set(dir, versions);
+    return versions;
+}
+
+/**
+ * The default release-existence check: a stable version counts as released
+ * when the directory's changelog already has its heading or `v<version>` is a
+ * known tag (locally or on `origin`). Results are cached for the run.
+ */
+export function createStableExists(root: string): StableExists {
+    const changelogCache = new Map<string, Set<string>>();
+    const tagCache = new Map<string, boolean>();
+    return (dir, version) => {
+        if (changelogVersions(dir, changelogCache).has(version)) return true;
+        let tagged = tagCache.get(version);
+        if (tagged === undefined) {
+            tagged = hasReleaseTag(version, root);
+            tagCache.set(version, tagged);
+        }
+        return tagged;
+    };
+}
+
 export interface PlanVersionsOptions {
     versioning: ResolvedVersioning;
     /** The starting root version (`--base-version` when provided). */
@@ -247,7 +298,7 @@ export interface PlanVersionsOptions {
     bump: BumpType;
     /** Custom bump rules (used for per-workspace derivation). */
     bumpRules?: BumpRules;
-    /** Allow over-bumping (default false). */
+    /** Allow over-bumping. @default `false` */
     allowOverBump?: boolean;
     /** How breaking changes are detected (default: Conventional Commits). */
     breaking?: ChangelogBreakingSetting;
@@ -257,6 +308,8 @@ export interface PlanVersionsOptions {
     root?: string;
     /** Read the commits touching a workspace dir (injected for tests). */
     commitsFor?: (dir: string) => CommitRecord[];
+    /** Whether a stable version already exists (injected for tests). */
+    stableExists?: StableExists;
 }
 
 /**
@@ -303,7 +356,10 @@ export function bumpRulesFor(
     for (const level of ['major', 'minor', 'patch'] as const) {
         const value = rules[level];
         if (value === undefined) continue;
-        const resolved = resolveScopedOption<unknown>(value as never, dir, root, value);
+        // No fallback: a targeted matcher that does not apply to `dir` must stay
+        // unset. Falling back to the original `{ target, options }` array would
+        // turn it into a matcher object that matches every commit.
+        const resolved = resolveScopedOption<unknown>(value as never, dir, root);
         if (resolved !== undefined) out[level] = resolved;
     }
     return Object.keys(out).length > 0 ? out : undefined;
@@ -319,11 +375,21 @@ export function planVersions(options: PlanVersionsOptions): VersionPlan {
         options.commitsFor ??
         ((dir: string) => readCommits(range, relatedWorkspacePaths(dir, root)));
 
-    const rootVersion = bumpVersion(
-        options.rootVersion,
-        bump,
-        prereleaseFor(versioning, root, root)
-    );
+    const stableExists = options.stableExists ?? createStableExists(root);
+    // A prerelease cycle that is being left behind finishes at its stable core
+    // once, as long as that stable version has not shipped yet.
+    const nextVersion = (dir: string, current: string, type: BumpType): string => {
+        const prerelease = prereleaseFor(versioning, dir, root);
+        if (prerelease !== undefined && prerelease.trim() !== '') {
+            return bumpVersion(current, type, prerelease);
+        }
+        if (isPrereleaseVersion(current) && !stableExists(dir, stableVersionOf(current))) {
+            return bumpVersion(current, type, undefined, { stableExists: false });
+        }
+        return bumpVersion(current, type);
+    };
+
+    const rootVersion = nextVersion(root, options.rootVersion, bump);
     const writes = new Map<string, string>();
     const entries = new Map<string, string>();
     // A disabled pipeline behaves like `uniform` for the changelog headings.
@@ -341,7 +407,8 @@ export function planVersions(options: PlanVersionsOptions): VersionPlan {
                 record => !isCommitReleased(record.hash, released)
             );
             if (commits.length === 0) continue;
-            const next = bumpVersion(
+            const next = nextVersion(
+                dir,
                 readPackageVersion(dir) ?? '0.0.0',
                 deriveCustomBump(
                     commits,
@@ -354,8 +421,7 @@ export function planVersions(options: PlanVersionsOptions): VersionPlan {
                         logger,
                         ...(options.breaking !== undefined ? { breaking: options.breaking } : {}),
                     }
-                ),
-                prereleaseFor(versioning, dir, root)
+                )
             );
             entries.set(dir, next);
             if (versioning.enabled) writes.set(dir, next);

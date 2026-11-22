@@ -9,4 +9,11 @@
 export * from './install.js';
 export * from './protocol.js';
 export * from './tools.js';
-export type * from './types/index.js';
+export type {
+    JsonValue,
+    McpTextContent,
+    McpTool,
+    McpToolContext,
+    McpToolInputSchema,
+    McpToolResult,
+} from './types/index.js';

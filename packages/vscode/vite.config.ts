@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 
-import { defineConfig } from 'vite-plus';
+import { defineConfig, type ViteUserConfig } from 'vite-plus';
 
 import { baseTsdownConfig } from '../pack/src/config/node.js';
 import { workspaceSourceAliases } from '../pack/src/config/workspace.js';
@@ -10,7 +10,6 @@ import { resolveDbxPlugin, workspaceTasks } from '../../scripts/workspace-vite.j
 const root = fileURLToPath(new URL('../..', import.meta.url));
 /** Resolve a repo-relative path to an absolute one. */
 const src = (file: string): string => fileURLToPath(new URL(`../../${file}`, import.meta.url));
-const dbx = resolveDbxPlugin();
 
 /**
  * Two packages are produced here:
@@ -25,60 +24,65 @@ const dbx = resolveDbxPlugin();
  *
  * `vp pack` builds both; `-F extension` / `-F dbx` selects one.
  */
-export default defineConfig({
-    plugins: dbx ? [dbx()] : [],
-    resolve: { tsconfigPaths: true },
-    pack: [
-        {
-            name: 'extension',
-            ...baseTsdownConfig,
-            entry: { extension: 'src/extension.ts' },
-            format: ['cjs'],
-            fixedExtension: true,
-            dts: false,
-            minify: false,
-            sourcemap: true,
-            publint: false,
-            exports: false,
-            deps: {
-                ...baseTsdownConfig.deps,
-                neverBundle: [/(^node:)|\/tests\/|node_modules/, /^vscode$/],
+export default defineConfig(async (): Promise<ViteUserConfig> => {
+    // Resolving the dogfood plugin is async so it can wait for the ESM entry the
+    // root config may still be loading (see `resolveDbxPlugin`).
+    const dbx = await resolveDbxPlugin();
+    return {
+        plugins: dbx ? [dbx()] : [],
+        resolve: { tsconfigPaths: true },
+        pack: [
+            {
+                name: 'extension',
+                ...baseTsdownConfig,
+                entry: { extension: 'src/extension.ts' },
+                format: ['cjs'],
+                fixedExtension: true,
+                dts: false,
+                minify: false,
+                sourcemap: true,
+                publint: false,
+                exports: false,
+                deps: {
+                    ...baseTsdownConfig.deps,
+                    neverBundle: [/(^node:)|\/tests\/|node_modules/, /^vscode$/],
+                },
             },
+            {
+                name: 'dbx',
+                ...baseTsdownConfig,
+                cwd: root,
+                entry: { dbx: 'src/cli/index.ts' },
+                outDir: 'packages/vscode/dist',
+                format: ['cjs'],
+                fixedExtension: true,
+                dts: false,
+                clean: false,
+                exports: false,
+                unbundle: false,
+                minify: true,
+                shims: true,
+                tsconfig: 'tsconfig.build.json',
+                publint: false,
+                sourcemap: false,
+                alias: {
+                    // `jsonc-parser`'s UMD entry keeps relative `require('./impl/*')`
+                    // calls that a single-file CJS bundle cannot resolve. Use its ESM
+                    // entry so rolldown can inline the statically imported modules.
+                    'jsonc-parser': src('node_modules/jsonc-parser/lib/esm/main.js'),
+                    ...workspaceSourceAliases(),
+                },
+                deps: {
+                    alwaysBundle: id => !id.startsWith('node:') && !/^tsx(\/|$)/.test(id),
+                    neverBundle: [/^node:/, /^tsx(\/|$)/],
+                },
+            },
+        ],
+        test: {
+            environment: 'node',
+            include: ['tests/**/*.test.ts'],
+            testTimeout: 20000,
         },
-        {
-            name: 'dbx',
-            ...baseTsdownConfig,
-            cwd: root,
-            entry: { dbx: 'src/cli/index.ts' },
-            outDir: 'packages/vscode/dist',
-            format: ['cjs'],
-            fixedExtension: true,
-            dts: false,
-            clean: false,
-            exports: false,
-            unbundle: false,
-            minify: true,
-            shims: true,
-            tsconfig: 'tsconfig.build.json',
-            publint: false,
-            sourcemap: false,
-            alias: {
-                // `jsonc-parser`'s UMD entry keeps relative `require('./impl/*')`
-                // calls that a single-file CJS bundle cannot resolve. Use its ESM
-                // entry so rolldown can inline the statically imported modules.
-                'jsonc-parser': src('node_modules/jsonc-parser/lib/esm/main.js'),
-                ...workspaceSourceAliases(),
-            },
-            deps: {
-                alwaysBundle: id => !id.startsWith('node:') && !/^tsx(\/|$)/.test(id),
-                neverBundle: [/^node:/, /^tsx(\/|$)/],
-            },
-        },
-    ],
-    test: {
-        environment: 'node',
-        include: ['tests/**/*.test.ts'],
-        testTimeout: 20000,
-    },
-    run: { tasks: workspaceTasks() },
+        run: { tasks: workspaceTasks() },
+    };
 });

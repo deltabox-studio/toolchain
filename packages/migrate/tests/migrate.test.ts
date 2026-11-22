@@ -419,10 +419,10 @@ describe('vite -> toolchain', () => {
     });
 
     it('splices a `vite` key into an existing toolchain', () => {
-        const base = `export default defineConfig({\n    toolchain: {\n        project: { name: 'acme' },\n    },\n});\n`;
+        const base = `export default defineConfig({\n    toolchain: {\n        project: { name: 'myapp' },\n    },\n});\n`;
         const folded = foldViteIntoConfig(base, '{ fmt: { semi: true } }');
         expect('content' in folded && folded.content).toContain('vite: { fmt: { semi: true } },');
-        expect('content' in folded && folded.content).toContain("project: { name: 'acme' }");
+        expect('content' in folded && folded.content).toContain("project: { name: 'myapp' }");
     });
 
     it('deep-merges object literals (arrays/scalars replaced, objects combined)', () => {
@@ -524,7 +524,7 @@ describe('vite -> toolchain', () => {
         const dir = makeTmp();
         fs.writeFileSync(
             path.join(dir, 'dbx.config.ts'),
-            `import { defineConfig } from '@deltabox/toolchain';\n\nexport default defineConfig({\n    toolchain: {\n        project: { name: 'acme' },\n    },\n});\n`,
+            `import { defineConfig } from '@deltabox/toolchain';\n\nexport default defineConfig({\n    toolchain: {\n        project: { name: 'myapp' },\n    },\n});\n`,
             'utf-8'
         );
         fs.writeFileSync(path.join(dir, 'vite.config.ts'), VITE_SAMPLE, 'utf-8');
@@ -536,7 +536,7 @@ describe('vite -> toolchain', () => {
         expect(content).toContain('vite: {');
         expect(content).toContain("environment: 'node'");
         expect(content).toContain('singleQuote: true');
-        expect(content).toContain("project: { name: 'acme' }");
+        expect(content).toContain("project: { name: 'myapp' }");
         expect(content).toContain("ignorePatterns: ['/vite.config.ts']");
     });
 
@@ -636,14 +636,17 @@ function migrateCommand() {
 describe('migrate CLI post-migration sync', () => {
     it('accepts repeated --from values', () => {
         const from = migrateCommand().options?.find(option => option.flags.includes('--from'));
-        expect(from?.multiple).toBe(true);
+        expect(from && 'multiple' in from ? from.multiple : undefined).toBe(true);
     });
 
     it('regenerates managed files after --write', async () => {
         const dir = makeTmp();
         fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
         const ran: string[] = [];
-        await migrateCommand().run({ from: 'biome', write: true }, cliContext(dir, [spyTask(ran)]));
+        await migrateCommand().run(
+            { from: ['biome'], write: true },
+            cliContext(dir, [spyTask(ran)])
+        );
         expect(ran).toEqual([dir]);
         expect(fs.existsSync(path.join(dir, '.oxfmtrc.json'))).toBe(true);
     });
@@ -652,7 +655,7 @@ describe('migrate CLI post-migration sync', () => {
         const dir = makeTmp();
         fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
         await migrateCommand().run(
-            { from: 'biome', write: true, toolVersion: ['oxfmt@^0.80.0'] },
+            { from: ['biome'], write: true, toolVersion: ['oxfmt@^0.80.0'] },
             cliContext(dir)
         );
         const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8')) as {
@@ -667,7 +670,7 @@ describe('migrate CLI post-migration sync', () => {
     it('reports the dependencies a dry run would add', async () => {
         const dir = makeTmp();
         fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
-        await migrateCommand().run({ from: 'biome' }, cliContext(dir));
+        await migrateCommand().run({ from: ['biome'] }, cliContext(dir));
         const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8')) as {
             devDependencies?: Record<string, string>;
         };
@@ -679,7 +682,7 @@ describe('migrate CLI post-migration sync', () => {
         fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
         const ran: string[] = [];
         await migrateCommand().run(
-            { from: 'biome', write: true, ignoreManagedFiles: true },
+            { from: ['biome'], write: true, ignoreManagedFiles: true },
             cliContext(dir, [spyTask(ran)])
         );
         expect(ran).toEqual([]);
@@ -689,7 +692,7 @@ describe('migrate CLI post-migration sync', () => {
         const dir = makeTmp();
         fs.writeFileSync(path.join(dir, 'biome.json'), JSON.stringify(BIOME), 'utf-8');
         const ran: string[] = [];
-        await migrateCommand().run({ from: 'biome' }, cliContext(dir, [spyTask(ran)]));
+        await migrateCommand().run({ from: ['biome'] }, cliContext(dir, [spyTask(ran)]));
         expect(ran).toEqual([]);
     });
 
@@ -705,7 +708,7 @@ describe('migrate CLI post-migration sync', () => {
             },
         });
         await migrateCommand().run(
-            { from: 'biome', write: true, ignoreChangelog: true },
+            { from: ['biome'], write: true, ignoreChangelog: true },
             cliContext(dir, [named('changelog'), named('other')])
         );
         expect(ran).toEqual(['other']);
@@ -754,7 +757,7 @@ describe('migrate fmt/lint routing', () => {
         const dir = makeTmp();
         fs.writeFileSync(path.join(dir, '.prettierrc'), JSON.stringify({ semi: false }), 'utf-8');
 
-        await migrateCommand().run({ cwd: dir, from: 'prettier', write: true }, cliContext(dir));
+        await migrateCommand().run({ cwd: dir, from: ['prettier'], write: true }, cliContext(dir));
         await migrateCommand().run({ cwd: dir, write: true }, cliContext(dir));
 
         process.exitCode = 0;
@@ -780,7 +783,7 @@ describe('migrate fmt/lint routing', () => {
         fs.writeFileSync(path.join(ws, '.prettierrc'), JSON.stringify({ semi: false }), 'utf-8');
 
         process.exitCode = 0;
-        await migrateCommand().run({ cwd: ws, from: 'prettier', check: true }, cliContext(ws));
+        await migrateCommand().run({ cwd: ws, from: ['prettier'], check: true }, cliContext(ws));
         expect(process.exitCode ?? 0).toBe(0);
         process.exitCode = 0;
     });
@@ -798,7 +801,7 @@ describe('migrate fmt/lint routing', () => {
         fs.writeFileSync(path.join(ws, '.prettierrc'), JSON.stringify({ semi: false }), 'utf-8');
 
         process.exitCode = 0;
-        await migrateCommand().run({ cwd: ws, from: 'prettier', check: true }, cliContext(ws));
+        await migrateCommand().run({ cwd: ws, from: ['prettier'], check: true }, cliContext(ws));
         expect(process.exitCode).toBe(1);
         process.exitCode = 0;
     });

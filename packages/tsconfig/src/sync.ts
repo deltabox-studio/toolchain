@@ -22,7 +22,7 @@ import {
     mergeOverride,
     reconcileOverride,
 } from './overrides.js';
-import { parseTsconfig } from './resolve.js';
+import { parseTsconfig } from './resolve/index.js';
 import {
     deleteSnapshot,
     detectIndent,

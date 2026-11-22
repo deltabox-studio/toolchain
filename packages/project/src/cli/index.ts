@@ -6,12 +6,12 @@ import { ensureToolingDependencies, loadToolchainConfig } from '@deltabox/toolch
 import { writeDockerFiles } from '@deltabox/toolchain/docker';
 import {
     DEFAULT_PACKAGE_MANAGER_VERSIONS,
+    defineCliCommand,
     logger,
     parseToolVersions,
     type ProjectType,
     type Replacements,
     sectionConfig,
-    type ToolchainCommand,
     type ToolchainCommandContext,
     withSpinner,
 } from '@deltabox/toolchain/shared';
@@ -201,7 +201,7 @@ function resolveName(name: string, dir: string): string {
  * with the config of the directory it is invoked from, which is usually the
  * *parent* (a monorepo root when adding a workspace). Honouring it would tag the
  * new project with the wrong kind — eg. a workspace scaffolded as
- * `monorepo-root`, which then generates root-only CI/husky/vscode files inside
+ * `monorepo-root`, which then generates root-only CI/hooks/vscode files inside
  * the workspace.
  */
 function resolveType(opts: Record<string, unknown>, fallback: ProjectType): ProjectType {
@@ -225,14 +225,14 @@ function scaffoldTsconfigExtends(
 }
 
 /** Build the project scaffolding commands. */
-export function projectCommands(): ToolchainCommand[] {
+export function projectCommands() {
     return [
-        {
+        defineCliCommand({
             name: 'project:init',
             description: 'Scaffold a single-package TypeScript project.',
             options: [
                 { flags: '-n, --name <name>', description: 'Project name.' },
-                { flags: '-s, --scope <scope>', description: 'npm scope, eg. @acme.' },
+                { flags: '-s, --scope <scope>', description: 'npm scope, eg. @org.' },
                 { flags: '-o, --out <dir>', description: 'Output directory (default: cwd).' },
                 PACKAGE_MANAGER_OPTION,
                 TOOL_VERSION_OPTION,
@@ -295,13 +295,13 @@ export function projectCommands(): ToolchainCommand[] {
                 });
                 for (const file of written) logger.info(`Created ${file}`);
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'project:init:monorepo',
             description: 'Scaffold a monorepo root (add --example for one example workspace).',
             options: [
                 { flags: '-n, --name <name>', description: 'Project name.' },
-                { flags: '-s, --scope <scope>', description: 'npm scope, eg. @acme.' },
+                { flags: '-s, --scope <scope>', description: 'npm scope, eg. @org.' },
                 { flags: '-o, --out <dir>', description: 'Output directory (default: cwd).' },
                 { flags: '--example', description: 'Also scaffold one example workspace package.' },
                 PACKAGE_MANAGER_OPTION,
@@ -360,13 +360,13 @@ export function projectCommands(): ToolchainCommand[] {
                 });
                 for (const file of written) logger.info(`Created ${file}`);
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'project:init:workspace',
             description: 'Scaffold a monorepo workspace package into an existing monorepo root.',
             options: [
                 { flags: '-n, --name <name>', description: 'Workspace package name (unscoped).' },
-                { flags: '-s, --scope <scope>', description: 'npm scope, eg. @acme.' },
+                { flags: '-s, --scope <scope>', description: 'npm scope, eg. @org.' },
                 { flags: '-r, --root <dir>', description: 'Monorepo root (default: cwd).' },
                 {
                     flags: '-d, --dir <dir>',
@@ -447,8 +447,8 @@ export function projectCommands(): ToolchainCommand[] {
                 );
                 for (const file of written) logger.info(`Created ${file}`);
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'project:config',
             description: 'Generate dbx.config.* for existing projects that are missing one.',
             options: [
@@ -570,6 +570,6 @@ export function projectCommands(): ToolchainCommand[] {
                     }
                 }
             },
-        },
+        }),
     ];
 }

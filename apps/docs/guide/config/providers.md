@@ -1,4 +1,4 @@
-# Providers
+# Provider config
 
 Provider passthrough commands (Vite+) follow the logger's colour setting. The
 `providers` section can force provider colours on or off on its own:

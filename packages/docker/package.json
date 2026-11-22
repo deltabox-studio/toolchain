@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-docker",
-    "version": "3.0.0-beta.1",
+    "version": "3.0.0-beta.3",
     "private": true,
     "description": "Dockerfile, .dockerignore and compose generation for @deltabox/toolchain projects, with Vite+ image support.",
     "author": "Victor Sango <victor@deltabox.studio>",

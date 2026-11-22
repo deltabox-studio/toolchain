@@ -10,10 +10,10 @@ import {
     selectProjects,
 } from '@deltabox/toolchain/core';
 import {
+    defineCliCommand,
     logger,
     parseToolVersions,
     sectionEnabled,
-    type ToolchainCommand,
     type ToolingSelection,
     withSpinner,
 } from '@deltabox/toolchain/shared';
@@ -120,9 +120,9 @@ function abortPrompt(): void {
  * root); on an interactive terminal it prompts for which projects (multi-select,
  * with an "All projects" option).
  */
-export function migrateCommands(): ToolchainCommand[] {
+export function migrateCommands() {
     return [
-        {
+        defineCliCommand({
             name: 'migrate',
             description:
                 'Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.* into dbx.config.',
@@ -534,8 +534,8 @@ export function migrateCommands(): ToolchainCommand[] {
                 await postSync();
                 if (!write) logger.info('dry-run — re-run with --write to apply.');
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'migrate:list',
             description: 'List the registered migrations and whether each is detected.',
             options: [
@@ -556,6 +556,6 @@ export function migrateCommands(): ToolchainCommand[] {
                     logger.info(`    ${info.description}`);
                 }
             },
-        },
+        }),
     ];
 }

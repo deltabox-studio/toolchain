@@ -37,8 +37,8 @@ describe('applyReplacements', () => {
 
 describe('createReplacer / deep / tokens', () => {
     it('creates a reusable replacer', () => {
-        const replace = createReplacer({ scope: '@acme' });
-        expect(replace('{{scope}}/core')).toBe('@acme/core');
+        const replace = createReplacer({ scope: '@org' });
+        expect(replace('{{scope}}/core')).toBe('@org/core');
     });
 
     it('applies deep replacements through objects and arrays', () => {

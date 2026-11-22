@@ -92,6 +92,79 @@ export function lastReleaseRef(): string | undefined {
     }
 }
 
+const releaseTagCache = new Map<string, boolean>();
+
+/**
+ * Whether a release tag (`v<version>`) exists locally or on `origin`. Tags are
+ * how a release run records that a stable version already shipped, so a
+ * disabled prerelease cycle can roll over to it exactly once.
+ */
+export function hasReleaseTag(version: string, cwd?: string): boolean {
+    const tag = version.startsWith('v') ? version : `v${version}`;
+    const key = `${cwd ?? process.cwd()}::${tag}`;
+    const cached = releaseTagCache.get(key);
+    if (cached !== undefined) return cached;
+
+    let exists = false;
+    try {
+        exists =
+            execFileSync('git', ['tag', '--list', tag], {
+                ...(cwd ? { cwd } : {}),
+                encoding: 'utf8',
+                stdio: ['ignore', 'pipe', 'ignore'],
+            }).trim() !== '';
+    } catch {
+        // no tags / not a repository
+    }
+    if (!exists) {
+        try {
+            exists =
+                execFileSync('git', ['ls-remote', '--tags', 'origin', `refs/tags/${tag}`], {
+                    ...(cwd ? { cwd } : {}),
+                    encoding: 'utf8',
+                    stdio: ['ignore', 'pipe', 'ignore'],
+                    timeout: 5000,
+                }).trim() !== '';
+        } catch {
+            // no origin / offline: fall back to the local tags only
+        }
+    }
+
+    releaseTagCache.set(key, exists);
+    return exists;
+}
+
+/**
+ * The tags of published GitHub Releases (drafts excluded). Returns `undefined`
+ * when `gh` is unavailable or the query fails, so callers can fall back to the
+ * local tags; an empty array means the repository has no published releases.
+ */
+export function publishedReleaseTags(): string[] | undefined {
+    if (!isGhAvailable()) return undefined;
+    const out = ghWithRetries(() =>
+        execGh(
+            ['release', 'list', '--exclude-drafts', '--limit', '1000', '--json', 'tagName'],
+            10_000
+        )
+    );
+    if (out === undefined) return undefined;
+    try {
+        const parsed = JSON.parse(out) as unknown;
+        if (!Array.isArray(parsed)) return undefined;
+        return parsed
+            .map(entry => {
+                const tagName =
+                    entry && typeof entry === 'object'
+                        ? (entry as { tagName?: unknown }).tagName
+                        : undefined;
+                return typeof tagName === 'string' ? tagName : undefined;
+            })
+            .filter((tag): tag is string => Boolean(tag));
+    } catch {
+        return undefined;
+    }
+}
+
 /** Whether a commit subject is a generated release/version commit. */
 export function isReleaseCommit(subject: string): boolean {
     return /^(?:chore: version packages\b|release:)/i.test(subject.trim());
@@ -186,9 +259,9 @@ function isGhAvailable(): boolean {
 const ghApiCache = new Map<string, string | undefined>();
 const ghGraphQLCache = new Map<string, unknown>();
 
-/** Retries after the first `gh api` failure (default 5). */
+/** Retries after the first `gh api` failure. @default `5` */
 const GH_API_DEFAULT_MAX_RETRIES = 5;
-/** Delay between `gh api` retries (default 3000ms). */
+/** Delay between `gh api` retries. @default `3000ms` */
 const GH_API_DEFAULT_RETRY_DELAY_MS = 3000;
 /** Commits/issues per batched GraphQL request (GitHub caps node aliases at 100). */
 const GH_BATCH_SIZE = 100;

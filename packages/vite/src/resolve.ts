@@ -21,6 +21,7 @@ import {
     resolveOxcLintConfig,
     resolveTokens,
     sectionConfig,
+    sectionEnabled,
     type ToolchainConfig,
     type ToolchainConfigSections,
     type ToolchainOxfmtConfig,
@@ -77,8 +78,10 @@ export async function resolveVite<T extends object = ViteUserConfig>(
     // top-level `toolchain.fmt.oxc` / `toolchain.lint.oxc` options belong in the
     // Vite config too, with `vite.fmt` / `vite.lint` as overrides.
     const effective: Record<string, unknown> = { ...baseVite };
-    const fmt = resolveOxcFmtConfig(toolchain);
-    const lint = resolveOxcLintConfig(toolchain);
+    const fmt =
+        resolveOxcFmtConfig(toolchain) ?? (sectionEnabled(toolchain.fmt) ? true : undefined);
+    const lint =
+        resolveOxcLintConfig(toolchain) ?? (sectionEnabled(toolchain.lint) ? true : undefined);
     if (fmt !== undefined) effective.fmt = fmt;
     if (lint !== undefined) effective.lint = lint;
     const vite =

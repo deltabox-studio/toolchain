@@ -67,6 +67,16 @@
     transition: 0.5s;
 }
 
+/* Keep the command-palette search beside the logo instead of grouping it with
+   the nav menu on the right. The search still takes the free space, so the
+   menu and icon controls stay pinned to the right edge. */
+@media (min-width: 768px) {
+    .VPNavBar .content-body > .search {
+        justify-content: flex-start;
+        padding-left: 16px;
+    }
+}
+
 .VPNavBarTitle .VPImage.logo:hover {
     rotate: 5deg;
     transition: 0.15s;

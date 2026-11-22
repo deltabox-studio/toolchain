@@ -40,12 +40,12 @@ afterEach(() => {
 
 describe('project scaffolding', () => {
     it('creates root files', () => {
-        const files = createRootProjectFiles({ name: 'acme', scope: '@acme', license: 'MIT' });
+        const files = createRootProjectFiles({ name: 'myapp', scope: '@org', license: 'MIT' });
         const paths = files.map(f => f.path);
         expect(paths).toContain('package.json');
         expect(paths).toContain('tsconfig.base.json');
         const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
-        expect(pkg.name).toBe('@acme/acme');
+        expect(pkg.name).toBe('@org/myapp');
         expect(pkg.license).toBe('MIT');
         // The default manager (yarn) supports catalogs: the catalog file is
         // written and the deps reference `catalog:`.
@@ -55,7 +55,7 @@ describe('project scaffolding', () => {
         expect(pkg.devDependencies['vite-plus']).toBe('catalog:');
         expect(pkg.devDependencies['@biomejs/biome']).toBeUndefined();
         expect(paths).not.toContain('biome.json');
-        expect(pkg.scripts.format).toBe('dbx fmt');
+        expect(pkg.scripts.fmt).toBe('dbx fmt');
         expect(pkg.scripts.lint).toBe('dbx lint --fix');
         // Vite+ reads fmt/lint from vite.config; no standalone Oxc files.
         expect(paths).not.toContain('.oxfmtrc.json');
@@ -70,11 +70,11 @@ describe('project scaffolding', () => {
 
     it('declares every bare import used by the generated Vite config', () => {
         const cases = [
-            createRootProjectFiles({ name: 'acme' }),
-            createRootProjectFiles({ name: 'acme', kind: 'application' }),
-            createMonorepoRootFiles({ name: 'acme', workspaces: [] }),
-            createWorkspaceFiles({ name: 'acme', wsName: 'core', wsDir: 'packages/core' }),
-            ...PROJECT_TEMPLATE_IDS.map(id => createProjectTemplateFiles(id, { name: 'acme' })),
+            createRootProjectFiles({ name: 'myapp' }),
+            createRootProjectFiles({ name: 'myapp', kind: 'application' }),
+            createMonorepoRootFiles({ name: 'myapp', workspaces: [] }),
+            createWorkspaceFiles({ name: 'myapp', wsName: 'core', wsDir: 'packages/core' }),
+            ...PROJECT_TEMPLATE_IDS.map(id => createProjectTemplateFiles(id, { name: 'myapp' })),
         ];
         for (const files of cases) {
             const pkg = JSON.parse(files.find(file => file.path === 'package.json')!.content) as {
@@ -87,8 +87,16 @@ describe('project scaffolding', () => {
                 if (!specifier || specifier.startsWith('.') || specifier.startsWith('node:')) {
                     continue;
                 }
+                // A subpath import (`@deltabox/toolchain/vite`) is declared by
+                // its package root (`@deltabox/toolchain`).
+                const packageName = specifier.startsWith('@')
+                    ? specifier.split('/').slice(0, 2).join('/') || specifier
+                    : (specifier.split('/')[0] ?? specifier);
                 expect(
-                    pkg.devDependencies?.[specifier] ?? pkg.dependencies?.[specifier],
+                    pkg.devDependencies?.[specifier] ??
+                        pkg.dependencies?.[specifier] ??
+                        pkg.devDependencies?.[packageName] ??
+                        pkg.dependencies?.[packageName],
                     `${specifier} import in ${config}`
                 ).toBeDefined();
             }
@@ -97,11 +105,11 @@ describe('project scaffolding', () => {
 
     it('does not declare Vite+ tasks that shadow package scripts', () => {
         const cases = [
-            createRootProjectFiles({ name: 'acme' }),
-            createRootProjectFiles({ name: 'acme', kind: 'application' }),
-            createMonorepoRootFiles({ name: 'acme', workspaces: [] }),
-            createWorkspaceFiles({ name: 'acme', wsName: 'core', wsDir: 'packages/core' }),
-            ...PROJECT_TEMPLATE_IDS.map(id => createProjectTemplateFiles(id, { name: 'acme' })),
+            createRootProjectFiles({ name: 'myapp' }),
+            createRootProjectFiles({ name: 'myapp', kind: 'application' }),
+            createMonorepoRootFiles({ name: 'myapp', workspaces: [] }),
+            createWorkspaceFiles({ name: 'myapp', wsName: 'core', wsDir: 'packages/core' }),
+            ...PROJECT_TEMPLATE_IDS.map(id => createProjectTemplateFiles(id, { name: 'myapp' })),
         ];
         for (const files of cases) {
             const pkg = JSON.parse(files.find(file => file.path === 'package.json')!.content) as {
@@ -206,7 +214,7 @@ describe('project scaffolding', () => {
     });
 
     it('pins dependencies (no catalog) for npm', () => {
-        const files = createRootProjectFiles({ name: 'acme', packageManager: 'npm' });
+        const files = createRootProjectFiles({ name: 'myapp', packageManager: 'npm' });
         const paths = files.map(f => f.path);
         const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
         expect(pkg.devDependencies['@deltabox/toolchain']).toBe(
@@ -219,17 +227,17 @@ describe('project scaffolding', () => {
 
     it('creates monorepo root files with references', () => {
         const files = createMonorepoRootFiles({
-            name: 'acme',
-            scope: '@acme',
+            name: 'myapp',
+            scope: '@org',
             workspaces: [{ alias: 'core', dir: 'packages/core' }],
         });
         const mono = JSON.parse(files.find(f => f.path === 'tsconfig.workspaces.json')!.content);
-        expect(mono.compilerOptions.paths['@acme/core']).toEqual(['./packages/core/src/index.ts']);
+        expect(mono.compilerOptions.paths['@org/core']).toEqual(['./packages/core/src/index.ts']);
         expect(mono.compilerOptions).toEqual({
             composite: false,
             paths: {
-                '@acme/core': ['./packages/core/src/index.ts'],
-                '@acme/core/*': ['./packages/core/src/*'],
+                '@org/core': ['./packages/core/src/index.ts'],
+                '@org/core/*': ['./packages/core/src/*'],
             },
         });
         expect(mono.references).toEqual([{ path: './packages/core/tsconfig.json' }]);
@@ -241,7 +249,7 @@ describe('project scaffolding', () => {
     });
 
     it('wires a root tsconfig and scripts into a monorepo scaffold', () => {
-        const files = createMonorepoRootFiles({ name: 'acme', scope: '@acme', workspaces: [] });
+        const files = createMonorepoRootFiles({ name: 'myapp', scope: '@org', workspaces: [] });
         const paths = files.map(file => file.path);
         expect(paths).toContain('tsconfig.json');
         expect(paths).toContain('tsconfig.workspaces.json');
@@ -255,20 +263,20 @@ describe('project scaffolding', () => {
     });
 
     it('enables the tsconfig task only for the monorepo root template', () => {
-        const root = createMonorepoRootFiles({ name: 'acme', workspaces: [] });
+        const root = createMonorepoRootFiles({ name: 'myapp', workspaces: [] });
         const rootConfig = root.find(file => file.path === 'vite.config.ts')!.content;
         expect(rootConfig).toContain('tsconfig: true');
 
         for (const files of [
             createRootProjectFiles({ name: 'app' }),
-            createWorkspaceFiles({ name: 'acme', wsName: 'core', wsDir: 'packages/core' }),
+            createWorkspaceFiles({ name: 'myapp', wsName: 'core', wsDir: 'packages/core' }),
         ]) {
             expect(files.find(file => file.path === 'vite.config.ts')!.content).not.toContain(
                 'tsconfig: true'
             );
         }
 
-        expect(renderToolchainConfig({ name: 'acme', type: 'monorepo-root' })).toContain(
+        expect(renderToolchainConfig({ name: 'myapp', type: 'monorepo-root' })).toContain(
             'tsconfig: true'
         );
         expect(renderToolchainConfig({ name: 'app', type: 'project' })).not.toContain(
@@ -285,13 +293,13 @@ describe('project scaffolding', () => {
                 references: [],
             })
         );
-        expect(upsertWorkspaceTsconfig(root, { alias: 'web', dir: 'packages/web' }, '@acme')).toBe(
+        expect(upsertWorkspaceTsconfig(root, { alias: 'web', dir: 'packages/web' }, '@org')).toBe(
             true
         );
         const config = JSON.parse(
             fs.readFileSync(path.join(root, 'tsconfig.workspaces.json'), 'utf-8')
         );
-        expect(config.compilerOptions.paths['@acme/web']).toEqual(['./packages/web/src/index.ts']);
+        expect(config.compilerOptions.paths['@org/web']).toEqual(['./packages/web/src/index.ts']);
         expect(config.references).toEqual([{ path: './packages/web/tsconfig.json' }]);
     });
 
@@ -302,7 +310,7 @@ describe('project scaffolding', () => {
             JSON.stringify({
                 compilerOptions: {
                     composite: true,
-                    paths: { '@acme/web': ['./packages/old/src/index.ts'] },
+                    paths: { '@org/web': ['./packages/old/src/index.ts'] },
                 },
                 references: [{ path: './packages/old/tsconfig.json' }],
             })
@@ -311,12 +319,12 @@ describe('project scaffolding', () => {
             upsertWorkspaceTsconfig(
                 root,
                 { alias: 'web', dir: 'packages/new' },
-                '@acme',
+                '@org',
                 'tsconfig.graph.json'
             )
         ).toBe(true);
         const config = JSON.parse(fs.readFileSync(path.join(root, 'tsconfig.graph.json'), 'utf-8'));
-        expect(config.compilerOptions.paths['@acme/web']).toEqual(['./packages/new/src/index.ts']);
+        expect(config.compilerOptions.paths['@org/web']).toEqual(['./packages/new/src/index.ts']);
         expect(config.references).toEqual([{ path: './packages/new/tsconfig.json' }]);
     });
 
@@ -324,7 +332,7 @@ describe('project scaffolding', () => {
         const root = makeTmp();
         fs.writeFileSync(path.join(root, 'tsconfig.workspaces.json'), '{}');
         expect(() =>
-            upsertWorkspaceTsconfig(root, { alias: 'web', dir: '../outside' }, '@acme')
+            upsertWorkspaceTsconfig(root, { alias: 'web', dir: '../outside' }, '@org')
         ).toThrow('invalid workspace directory');
     });
 
@@ -337,7 +345,7 @@ describe('project scaffolding', () => {
         // Keep the existing aliases
         "paths": {
             // Existing core alias
-            "@acme/core": ["./packages/core/src/index.ts"]
+            "@org/core": ["./packages/core/src/index.ts"]
         }
     },
     "references": [
@@ -347,7 +355,7 @@ describe('project scaffolding', () => {
 }
 `;
         fs.writeFileSync(path.join(root, 'tsconfig.workspaces.json'), text);
-        expect(upsertWorkspaceTsconfig(root, { alias: 'web', dir: 'packages/web' }, '@acme')).toBe(
+        expect(upsertWorkspaceTsconfig(root, { alias: 'web', dir: 'packages/web' }, '@org')).toBe(
             true
         );
         const updated = fs.readFileSync(path.join(root, 'tsconfig.workspaces.json'), 'utf-8');
@@ -356,7 +364,7 @@ describe('project scaffolding', () => {
         expect(updated).toContain('// Existing core alias');
         expect(updated).toContain('// Existing core reference');
         const config = parseTsconfig(updated);
-        expect(config.compilerOptions?.paths?.['@acme/web']).toEqual([
+        expect(config.compilerOptions?.paths?.['@org/web']).toEqual([
             './packages/web/src/index.ts',
         ]);
         expect(config.references).toContainEqual({ path: './packages/web/tsconfig.json' });
@@ -364,13 +372,13 @@ describe('project scaffolding', () => {
 
     it('creates workspace files', () => {
         const files = createWorkspaceFiles({
-            name: 'acme',
-            scope: '@acme',
+            name: 'myapp',
+            scope: '@org',
             wsName: 'core',
             wsDir: 'packages/core',
         });
         const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
-        expect(pkg.name).toBe('@acme/core');
+        expect(pkg.name).toBe('@org/core');
         expect(pkg.main).toBe('./dist/index.js');
         expect(pkg.types).toBe('./dist/index.d.ts');
         expect(pkg.exports['.']).toEqual({
@@ -383,7 +391,7 @@ describe('project scaffolding', () => {
         expect(pkg.devDependencies.tsdown).toBeUndefined();
         expect(pkg.devDependencies.vitest).toBeUndefined();
         const vite = files.find(f => f.path === 'vite.config.ts')!.content;
-        expect(vite).toContain("from 'vite-plugin-dbx'");
+        expect(vite).toContain("from '@deltabox/toolchain/vite'");
         expect(vite).not.toMatch(/\brun:\s*\{/);
         // The root config owns fmt/lint; the workspace must not shadow it.
         expect(vite).not.toContain('fmt:');
@@ -396,34 +404,34 @@ describe('project scaffolding', () => {
 
     it('writes the inherited project metadata into package.json and vite.config.ts', () => {
         const files = createRootProjectFiles({
-            name: 'acme',
-            scope: '@acme',
-            description: 'The acme app',
-            author: 'Acme Inc. <hello@acme.dev>',
+            name: 'myapp',
+            scope: '@org',
+            description: 'The myapp app',
+            author: 'Myapp Inc. <hello@myapp.dev>',
             license: 'MIT',
-            homepage: 'https://acme.dev',
-            repo: 'https://github.com/acme/acme',
+            homepage: 'https://myapp.dev',
+            repo: 'https://github.com/myapp/myapp',
             nodeVersion: '24',
         });
         const pkg = JSON.parse(files.find(f => f.path === 'package.json')!.content);
-        expect(pkg.description).toBe('The acme app');
-        expect(pkg.author).toBe('Acme Inc. <hello@acme.dev>');
+        expect(pkg.description).toBe('The myapp app');
+        expect(pkg.author).toBe('Myapp Inc. <hello@myapp.dev>');
         expect(pkg.license).toBe('MIT');
-        expect(pkg.homepage).toBe('https://acme.dev');
+        expect(pkg.homepage).toBe('https://myapp.dev');
         expect(pkg.repository).toEqual({
             type: 'git',
-            url: 'git+https://github.com/acme/acme.git',
+            url: 'git+https://github.com/myapp/myapp.git',
         });
         expect(pkg.engines.node).toBe('>=24');
         const config = files.find(f => f.path === 'vite.config.ts')!.content;
-        expect(config).toContain("description: 'The acme app'");
-        expect(config).toContain("repo: 'https://github.com/acme/acme'");
+        expect(config).toContain("description: 'The myapp app'");
+        expect(config).toContain("repo: 'https://github.com/myapp/myapp'");
         expect(config).toContain("nodeVersion: '24'");
     });
 
     it('escapes control characters in generated config strings', () => {
         const config = createRootProjectFiles({
-            name: 'acme',
+            name: 'myapp',
             description: 'line1\nline2\rline3',
         }).find(file => file.path === 'vite.config.ts')!.content;
         expect(config).toContain("description: 'line1\\u000aline2\\u000dline3'");
@@ -431,11 +439,11 @@ describe('project scaffolding', () => {
     });
 
     it('does not write Oxc files with --no-config', () => {
-        const files = createRootProjectFiles({ name: 'acme', includeConfig: false });
+        const files = createRootProjectFiles({ name: 'myapp', includeConfig: false });
         expect(files.some(file => file.path === '.oxfmtrc.json')).toBe(false);
         expect(files.some(file => file.path === '.oxlintrc.json')).toBe(false);
         const mono = createMonorepoRootFiles({
-            name: 'acme',
+            name: 'myapp',
             includeConfig: false,
             workspaces: [],
         });
@@ -447,13 +455,13 @@ describe('project scaffolding', () => {
         fs.writeFileSync(
             path.join(dir, 'package.json'),
             JSON.stringify({
-                name: '@acme/app',
+                name: '@org/app',
                 version: '1.0.0',
                 description: 'An app',
-                author: 'Acme <hi@acme.dev>',
+                author: 'Myapp <hi@myapp.dev>',
                 license: 'MIT',
-                homepage: 'https://acme.dev',
-                repository: 'https://github.com/acme/app',
+                homepage: 'https://myapp.dev',
+                repository: 'https://github.com/myapp/app',
                 engines: { node: '>=24' },
                 packageManager: 'pnpm@10.11.1',
             })
@@ -462,10 +470,10 @@ describe('project scaffolding', () => {
         expect(result.created).toContain('.');
         const config = fs.readFileSync(path.join(dir, 'dbx.config.ts'), 'utf-8');
         expect(config).toContain("description: 'An app'");
-        expect(config).toContain("author: 'Acme <hi@acme.dev>'");
+        expect(config).toContain("author: 'Myapp <hi@myapp.dev>'");
         expect(config).toContain("license: 'MIT'");
-        expect(config).toContain("homepage: 'https://acme.dev'");
-        expect(config).toContain("repo: 'https://github.com/acme/app'");
+        expect(config).toContain("homepage: 'https://myapp.dev'");
+        expect(config).toContain("repo: 'https://github.com/myapp/app'");
         expect(config).toContain("nodeVersion: '24'");
         expect(config).toContain("packageManager: 'pnpm'");
         expect(config).toContain("packageManagerVersion: '10.11.1'");
@@ -473,7 +481,7 @@ describe('project scaffolding', () => {
 
     it('writes the project graph before generating a config', () => {
         const dir = makeTmp();
-        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'acme' }));
+        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'myapp' }));
 
         const result = generateProjectConfigs({ root: dir });
         const graphPath = path.join(dir, '.dbx', 'toolchain', 'projects.json');
@@ -488,7 +496,7 @@ describe('project scaffolding', () => {
 
     it('skips a project already configured through the Vite plugin', () => {
         const dir = makeTmp();
-        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'acme' }));
+        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'myapp' }));
         fs.writeFileSync(
             path.join(dir, 'vite.config.ts'),
             "import { dbx } from 'vite-plugin-dbx';\n\nexport default { plugins: [dbx({})] };\n"
@@ -505,18 +513,18 @@ describe('project scaffolding', () => {
         const dir = makeTmp();
         fs.writeFileSync(
             path.join(dir, 'package.json'),
-            JSON.stringify({ name: 'acme', workspaces: ['packages/*'] })
+            JSON.stringify({ name: 'myapp', workspaces: ['packages/*'] })
         );
         const plugin = path.join(dir, 'packages', 'a');
         fs.mkdirSync(plugin, { recursive: true });
-        fs.writeFileSync(path.join(plugin, 'package.json'), JSON.stringify({ name: '@acme/a' }));
+        fs.writeFileSync(path.join(plugin, 'package.json'), JSON.stringify({ name: '@org/a' }));
         fs.writeFileSync(
             path.join(plugin, 'vite.config.ts'),
             "import { dbx } from 'vite-plugin-dbx';\n\nexport default { plugins: [dbx({})] };\n"
         );
         const plain = path.join(dir, 'packages', 'b');
         fs.mkdirSync(plain, { recursive: true });
-        fs.writeFileSync(path.join(plain, 'package.json'), JSON.stringify({ name: '@acme/b' }));
+        fs.writeFileSync(path.join(plain, 'package.json'), JSON.stringify({ name: '@org/b' }));
 
         const result = generateProjectConfigs({ root: dir });
 
@@ -534,7 +542,7 @@ describe('project scaffolding', () => {
 
     it('writes only the project graph when skipConfig is set', () => {
         const dir = makeTmp();
-        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'acme' }));
+        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'myapp' }));
 
         const result = generateProjectConfigs({ root: dir, skipConfig: true });
         expect(result.created).toEqual([]);
@@ -570,7 +578,7 @@ describe('project scaffolding', () => {
         const dir = makeTmp();
         fs.writeFileSync(
             path.join(dir, 'package.json'),
-            JSON.stringify({ name: 'acme', type: 'module' })
+            JSON.stringify({ name: 'myapp', type: 'module' })
         );
         generateProjectConfigs({ root: dir, language: 'js', extension: 'js' });
         expect(fs.existsSync(path.join(dir, 'dbx.config.js'))).toBe(true);
@@ -582,7 +590,7 @@ describe('project scaffolding', () => {
     it('names the workspace config after the workspace, not the root', () => {
         const files = createWorkspaceFiles({
             name: 'root',
-            scope: '@acme',
+            scope: '@org',
             wsName: 'core',
             wsDir: 'packages/core',
         });
@@ -593,10 +601,10 @@ describe('project scaffolding', () => {
 
     it('generates a runnable source entry and smoke test', () => {
         for (const files of [
-            createRootProjectFiles({ name: 'acme' }),
+            createRootProjectFiles({ name: 'myapp' }),
             createWorkspaceFiles({
-                name: 'acme',
-                scope: '@acme',
+                name: 'myapp',
+                scope: '@org',
                 wsName: 'core',
                 wsDir: 'packages/core',
             }),
@@ -694,7 +702,7 @@ describe('project scaffolding', () => {
         const dir = makeTmp();
         fs.writeFileSync(
             path.join(dir, 'package.json'),
-            JSON.stringify({ name: '@acme/a', version: '0.1.0' })
+            JSON.stringify({ name: '@org/a', version: '0.1.0' })
         );
         const files = (await projectSyncTask().run({
             cwd: dir,
@@ -705,7 +713,7 @@ describe('project scaffolding', () => {
             warn: () => {},
         })) as { path: string; content: string }[];
         const pkg = JSON.parse(files.find(file => file.path === 'package.json')!.content);
-        expect(pkg.name).toBe('@acme/a');
+        expect(pkg.name).toBe('@org/a');
     });
 
     it('detects a usable root catalog for workspace scaffolds', () => {
@@ -761,7 +769,7 @@ describe('project scaffolding', () => {
 
     it('does not use catalog refs for npm workspaces', () => {
         const files = createWorkspaceFiles({
-            name: 'acme',
+            name: 'myapp',
             packageManager: 'npm',
             wsName: 'core',
             wsDir: 'packages/core',
@@ -836,10 +844,10 @@ describe('project:init CLI', () => {
                 projectType: 'project',
                 config: {},
                 tokens: {
-                    scope: '@acme',
+                    scope: '@org',
                     description: 'The toolchain',
-                    author: 'Acme',
-                    repo: 'https://github.com/acme/toolchain',
+                    author: 'Myapp',
+                    repo: 'https://github.com/myapp/toolchain',
                     nodeVersion: '22',
                 },
             }

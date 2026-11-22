@@ -100,7 +100,7 @@ export function mergeBiomeConfig(base: unknown, patch: unknown): unknown {
     return patch;
 }
 
-/** Scope-only import groups (eg. `@acme/**`) have no meaning without a scope. */
+/** Scope-only import groups (eg. `@org/**`) have no meaning without a scope. */
 function withoutUnscopedGroups(value: unknown, replacements: Replacements): unknown {
     if (replacements.scope) return value;
     if (Array.isArray(value)) {
@@ -124,7 +124,7 @@ function withoutUnscopedGroups(value: unknown, replacements: Replacements): unkn
 
 /**
  * Render the Biome config for a project by resolving its replacement tokens
- * (`{{name}}` = unscoped project name, `{{scope}}` = npm scope, eg. `@acme`)
+ * (`{{name}}` = unscoped project name, `{{scope}}` = npm scope, eg. `@org`)
  * and merging the consumer's `overrides` over the defaults. Pass several
  * patches to apply them in order (later patches see earlier results).
  */

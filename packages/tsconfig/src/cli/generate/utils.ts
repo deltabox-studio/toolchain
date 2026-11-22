@@ -15,7 +15,7 @@ import {
     resolveTsconfigConfig,
     resolveTsconfigFilePatterns,
     type TsconfigContents,
-} from '../../resolve.js';
+} from '../../resolve/index.js';
 import type { ResolvedTsconfig, TsconfigOverrides } from '../../types/index.js';
 
 export type GeneratedTsconfigResult = ReturnType<typeof generateTsconfig>;
@@ -46,11 +46,11 @@ export function generateTsconfig(options: {
     aliases?: boolean;
     refs?: boolean;
     composite?: boolean;
-    /** Inline compiler options inherited from a remote `extends` chain (default false). */
+    /** Inline compiler options inherited from a remote `extends` chain. @default `false` */
     flattenRemoteExtends?: boolean;
     /** In-memory workspaces tsconfig (the auto-generated object). */
     monorepoConfig?: TsConfigJson;
-    /** Write the generated files to disk (default true). */
+    /** Write the generated files to disk. @default `true` */
     write?: boolean;
     /** Log sink (default: the shared info logger). Pass a no-op to stay quiet. */
     log?: (message: string) => void;

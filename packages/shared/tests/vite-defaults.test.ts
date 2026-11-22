@@ -37,7 +37,7 @@ describe('DEFAULT_FMT_RULES', () => {
 describe('applyFmtCustomGroups', () => {
     const workspace = {
         groupName: 'workspace',
-        elementNamePattern: ['@acme/**', 'app', 'app/**'],
+        elementNamePattern: ['@org/**', 'app', 'app/**'],
     };
 
     it('adds the workspace group and lists it in groups', () => {
@@ -68,7 +68,7 @@ describe('applyFmtCustomGroups', () => {
         expect(sortImports.customGroups).toHaveLength(1);
         expect(sortImports.customGroups[0]?.elementNamePattern).toEqual([
             '@other/**',
-            '@acme/**',
+            '@org/**',
             'app',
             'app/**',
         ]);

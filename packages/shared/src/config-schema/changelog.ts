@@ -15,10 +15,8 @@ export const changelogBranchesConfigSchema = z
     .object({
         main: z
             .union([z.string(), z.array(z.string())])
-            .describe(
-                'Branch glob(s) the CI + release workflows run on, and the release PR ' +
-                    'base (default `["main"]`).'
-            )
+            .describe('Branch glob(s) the CI + release workflows run on, and the release PR base.')
+            .default(['main'])
             .optional(),
         dev: z
             .union([z.string(), z.array(z.string())])
@@ -127,7 +125,7 @@ export const changelogCommitlintConfigSchema = withEnabled(
             .string()
             .describe(
                 'Directory the generated `commitlint.config.mjs` is written to ' +
-                    '(default: the project root). The husky hook and CI use ' +
+                    '(default: the project root). The generated commit hook and CI use ' +
                     '`--config` to point at it.'
             )
             .optional(),
@@ -270,17 +268,16 @@ export const changelogDetailsConfigSchema = z
                 )
                 .optional(),
             descriptions: changelogDetailsToggleSchema
-                .describe(
-                    'Wrap commit description paragraphs in a nested collapsible (default true).'
-                )
+                .describe('Wrap commit description paragraphs in a nested collapsible.')
+                .default(true)
                 .optional(),
             body: changelogDetailsToggleSchema
                 .describe(
-                    'Wrap the version body in a collapsible titled Release notes (default false; enabled by default in release mode; requires 10 commits by default).'
+                    'Wrap the version body in a collapsible titled Release notes (default false; enabled by default with release body wrapping; requires 10 commits by default).'
                 )
                 .optional(),
             releaseNotes: changelogDetailsToggleSchema
-                .describe('Wrap the release-mode entry in a collapsible titled Release notes.')
+                .describe('Wrap the release body entry in a collapsible titled Release notes.')
                 .optional(),
             intro: changelogDetailsToggleSchema
                 .describe('Wrap the intro text in a collapsible.')
@@ -355,8 +352,8 @@ export const changelogProviderConfigSchema = z
 export const changelogProviderSettingSchema = z
     .union([z.string(), changelogProviderConfigSchema, changelogProviderCallbackSchema])
     .describe(
-        '`default`, `changesets`, a provider id, a custom provider object, or a ' +
-            'callback (TS/JS configs only).'
+        '`default`, `changesets`, a built-in provider id, a custom provider object, or a ' +
+            'callback (TS/JS configs only). An unknown string id fails the run.'
     );
 
 /** The context handed to custom bump-rule callbacks. */
@@ -465,15 +462,16 @@ export const changelogVersioningConfigSchema = z
             })
             .describe(
                 'Custom bump rules for major/minor/patch (matchers or callbacks), globally ' +
-                    'or per-target via `{ target, options }`.'
+                    'or per-target via `{ target, options }`. Configuring any level replaces ' +
+                    'Conventional-Commits detection for that target; the result is at least a ' +
+                    'patch bump.'
             )
             .optional(),
         allowOverBump: changelogTargetedOption(
             z
                 .boolean()
-                .describe(
-                    'Apply a bump once per matching change instead of once per run (default false).'
-                ),
+                .describe('Apply a bump once per matching change instead of once per run.')
+                .default(false),
             'ChangelogTargetedAllowOverBump'
         )
             .describe('Enable over-bumping globally, or per-target via `{ target, options }`.')
@@ -488,20 +486,25 @@ export const changelogVersioningConfigSchema = z
             .optional(),
         provider: changelogTargetedOption(
             changelogProviderSettingSchema.describe(
-                '`default`, `changesets`, a provider id, or a custom provider/callback.'
+                '`default`, `changesets`, a built-in provider id, or a custom provider/callback.'
             ),
             'ChangelogTargetedProvider'
         )
-            .describe('The provider globally, or per-target via `{ target, options }`.')
+            .describe(
+                'The provider globally, or per-target via `{ target, options }`. The ' +
+                    '`changesets` provider is repository-wide and runs once when any versioned ' +
+                    'target selects it.'
+            )
             .optional(),
     })
     .describe('Automatic version bumping options.')
     .meta({ id: 'ChangelogVersioningConfig' });
 
-/** Automatic version bumping: `true` (default), `false`, or a set of options. */
+/** Automatic version bumping: `true`, `false`, or a set of options. */
 export const changelogVersioningSchema = z
     .union([z.boolean(), changelogVersioningConfigSchema])
     .describe('Automatic version bumping when a changelog entry is generated.')
+    .default(true)
     .meta({ id: 'ChangelogVersioning' });
 
 /** The subset of a grouped changelog item exposed to group callbacks. */
@@ -631,6 +634,43 @@ export const changelogBreakingSettingSchema = z
             'configs only).'
     );
 
+/** Release-body aggregation options (used by `--release-body` and the release workflow). */
+export const changelogReleaseConfigSchema = z
+    .object({
+        group: z
+            .boolean()
+            .describe(
+                'Group every changelog version since the previous published release into one ' +
+                    'release body instead of exposing each intermediate version separately. A ' +
+                    'stable release skips prerelease versions when it picks that boundary, so ' +
+                    'all prereleases since the last stable release are part of the same body; a ' +
+                    'prerelease release still stops at the previous prerelease.'
+            )
+            .default(false)
+            .optional(),
+        includePrereleases: z
+            .boolean()
+            .describe(
+                'Let a prerelease version bound the grouped body even for a stable release ' +
+                    '(so the stable body only covers the changes since the latest prerelease).'
+            )
+            .default(false)
+            .optional(),
+        since: z
+            .string()
+            .describe(
+                'Explicit lower boundary for the grouped body: a version or tag (eg. `1.2.0`, ' +
+                    '`v1.2.0`, `@scope/pkg@1.2.0`). Overrides the published-release lookup; a ' +
+                    'missing version falls back to automatic discovery.'
+            )
+            .optional(),
+    })
+    .describe(
+        'Release-body aggregation: group every version since the previous published release ' +
+            'into one entry.'
+    )
+    .meta({ id: 'ChangelogReleaseConfig' });
+
 /**
  * The changelog pipeline options shared by `ci.changelog` and the manual
  * `toolchain.changelog` section (the latter omits workflow options and
@@ -641,7 +681,8 @@ const changelogPipelineShape = {
         .describe('commitlint config; set `false` to disable the Conventional-Commits pipeline.')
         .optional(),
     versioning: changelogVersioningSchema
-        .describe('Automatic version bumping on changelog generation (default `true`).')
+        .describe('Automatic version bumping on changelog generation.')
+        .default(true)
         .optional(),
     intro: changelogTextSettingSchema
         .describe(
@@ -662,6 +703,12 @@ const changelogPipelineShape = {
         .optional(),
     groups: changelogGroupsSettingSchema.optional(),
     breaking: changelogBreakingSettingSchema.optional(),
+    release: changelogReleaseConfigSchema
+        .describe(
+            'Release-body aggregation options, used by `dbx changelog --release-body` and ' +
+                'the generated release workflow.'
+        )
+        .optional(),
 };
 
 /**

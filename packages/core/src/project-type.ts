@@ -10,9 +10,9 @@ import {
 
 /** The tsconfig file names a project can be detected from. */
 export interface TsconfigFileNames {
-    /** The workspaces tsconfig file name (default `tsconfig.workspaces.json`). */
+    /** The workspaces tsconfig file name. @default `tsconfig.workspaces.json` */
     rootFile?: string;
-    /** The workspace default tsconfig file name (default `tsconfig.default.json`). */
+    /** The workspace default tsconfig file name. @default `tsconfig.default.json` */
     defaultFile?: string;
 }
 

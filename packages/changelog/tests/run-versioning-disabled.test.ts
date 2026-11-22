@@ -82,4 +82,33 @@ describe('runChangelog with versioning disabled', () => {
         expect(changelog.match(/first feature/gi)).toHaveLength(1);
         expect(changelog.match(/second fix/gi)).toHaveLength(1);
     });
+
+    it('rolls a prerelease heading over to its stable core once', () => {
+        const config: ChangelogConfig = { versioning: false };
+        fs.writeFileSync(
+            path.join(dir, 'CHANGELOG.md'),
+            '# Changelog\n\n## 3.0.0-beta.315 (November 2026)\n\n- previous\n'
+        );
+        fs.writeFileSync(path.join(dir, 'file.txt'), 'two\n');
+        git(dir, 'add', '-A');
+        git(dir, 'commit', '-m', 'feat: first feature');
+
+        runChangelog([], config);
+
+        expect(readVersion(dir)).toBe('1.0.0');
+        const rolled = readChangelog(dir);
+        expect(rolled).toContain('## 3.0.0 (');
+        expect(rolled).toContain('## 3.0.0-beta.315 (');
+        expect(rolled.indexOf('## 3.0.0 (')).toBeLessThan(rolled.indexOf('## 3.0.0-beta.315 ('));
+
+        fs.writeFileSync(path.join(dir, 'file.txt'), 'three\n');
+        git(dir, 'add', '-A');
+        git(dir, 'commit', '-m', 'fix: second fix');
+        runChangelog([], config);
+
+        // The stable core is now headed, so the next run bumps past it.
+        const bumped = readChangelog(dir);
+        expect(bumped).toContain('## 3.0.1 (');
+        expect(bumped.indexOf('## 3.0.1 (')).toBeLessThan(bumped.indexOf('## 3.0.0 ('));
+    });
 });

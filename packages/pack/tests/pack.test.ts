@@ -185,15 +185,15 @@ describe('tsdown config helpers', () => {
     });
 
     it('builds a branded post banner', () => {
-        const banner = createPostBanner({ name: 'Acme', version: '1.2.3', license: 'MIT' });
+        const banner = createPostBanner({ name: 'Myapp', version: '1.2.3', license: 'MIT' });
         const out = banner({ fileName: 'index.js' });
-        expect(out).toContain('Acme v1.2.3');
+        expect(out).toContain('Myapp v1.2.3');
         expect(out).toContain('MIT');
         expect(out).toContain('index.js');
     });
 
     it('attaches the banner when requested', () => {
-        const config = createTsdownConfig({ banner: { name: 'Acme' } });
+        const config = createTsdownConfig({ banner: { name: 'Myapp' } });
         expect(typeof (config.outputOptions as any)?.postBanner).toBe('function');
     });
 

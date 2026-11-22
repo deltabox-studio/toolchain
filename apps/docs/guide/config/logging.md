@@ -60,5 +60,6 @@ export default defineConfig({
 ```
 
 On the CLI, `--log-level <level>` and `--no-color` override the config (see the
-[CLI reference](/guide/cli)). Machine output (`--json`) is written unprefixed
+[CLI reference](/guide/cli)); `--no-color` also disables the program's configured
+help/error colours. Machine output (`--json`) is written unprefixed
 through the same logger.

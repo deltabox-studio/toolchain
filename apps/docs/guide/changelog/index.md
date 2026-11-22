@@ -3,7 +3,7 @@
 ## CI
 
 The `ci` section drives everything Conventional Commits (by default): the CI that lints
-commit messages, the local husky hook, the `commitlint.config.mjs`, the GitHub
+commit messages, the local commit hook, the `commitlint.config.mjs`, the GitHub
 workflows, and the changelog pipeline that bumps versions and writes
 `CHANGELOG.md`. Its `ci.changelog` config holds the changelog-specific options.
 
@@ -27,14 +27,24 @@ export default defineConfig({
 ```
 
 `dbx sync` writes the opted-in GitHub workflows (`.github/workflows`), the
-commitlint config, and the husky `commit-msg` hook (`.husky/commit-msg`). Activate
-the hook with a `postinstall` script (Yarn Berry never runs `prepare`):
+commitlint config, and the `commit-msg` hook. On a Vite+ project the hook is
+`.vite-hooks/commit-msg`, installed by `vp hooks enable` / `vp config`; projects
+without Vite+ keep the husky fallback (`.husky/commit-msg`). Activate the
+dispatcher with a `postinstall` script:
 
 ```json [package.json]
-{ "scripts": { "commitlint": "commitlint", "postinstall": "husky" } }
+{
+    "scripts": {
+        "commitlint": "commitlint",
+        "postinstall": "vp hooks enable"
+    }
+}
 ```
 
-See [Package scripts](/guide/scripts) for the full recommended script set.
+For Vite+ projects, add a `.vite-hooks/pre-commit` running `vp staged` and put
+the staged checks in the root `vite.config.ts` (`staged: { '*': 'vp check
+--fix' }`). See [Package scripts](/guide/scripts) for the full recommended script
+set.
 
 ## Group order and titles
 
@@ -85,6 +95,18 @@ groups: context => [
 
 Callbacks are TS/JS-config-only. `dbx changelog --format-only` also uses the
 configured order/titles when regrouping existing entries.
+
+`groups` only groups **commit sections** inside one version. To treat several
+changelog versions as one release body, use
+[`release.group`](/guide/changelog/release#grouped-release-bodies) instead.
+
+## Release bodies
+
+`changelog.release` controls the body `dbx changelog --release-body <version>`
+prints for a release. It can group every version since the previous published
+release into one body, choose a different boundary, or include prereleases. See
+[Release bodies](/guide/changelog/release) for the options, CLI flags and
+individual-versioning behavior.
 
 ## Breaking-change detection
 
@@ -174,9 +196,11 @@ to point at a different `gh` executable.
   the no-commitlint fallback.
 - [Versioning](/guide/changelog/versioning) — which `package.json` versions a run
   bumps.
+- [Release bodies](/guide/changelog/release) — `--release-body`, grouping,
+  boundary rules and CLI overrides.
 - [CLI](/guide/changelog/cli) — running the changelog locally.
 - [Writing commit messages](/guide/changelog/writing-commit-messages) — avoiding
   shell-mangled messages.
 - [Troubleshooting](/guide/changelog/troubleshooting) — the upstream commitlint
   parser-preset error.
-- [Releases](/guide/ci/releases) — the aggregated release PR body.
+- [Releases](/guide/ci/releases) — the release PR workflow and GitHub Release.

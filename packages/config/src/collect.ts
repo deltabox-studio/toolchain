@@ -27,6 +27,7 @@ import type {
     ConfigDef,
     ConfigSchema,
     ConfigSource,
+    ConfigSourceSelection,
     ConfigValueKind,
     ConfigValueType,
     DefaultMessage,
@@ -36,8 +37,6 @@ import type {
     RewriteMessage,
     RewriteMessageContext,
 } from './types/index.js';
-
-export type * from './types/collect.js';
 
 /** The default env-var prefix used when none is configured. */
 export const DEFAULT_ENV_PREFIX = 'APP_';
@@ -245,7 +244,7 @@ function walkSchema(
     if (options.maxDepth !== undefined && depth > options.maxDepth) return;
     const meta = metaOf(schema);
     const children = schemaChildren(schema);
-    const envName = meta?.envName ?? meta?.env;
+    const envName = meta?.envExpose === false ? undefined : (meta?.envName ?? meta?.env);
     const path =
         meta?.envPath ??
         meta?.path ??
@@ -396,11 +395,16 @@ function collectScoped(schema: ConfigSchema, options: CollectOptions): ScopedDef
     const entries = Object.entries(schema as Record<string, ConfigSchema>);
     const scopes = entries.map(([scope]) => scope);
     return entries.flatMap(([scope, value]) =>
-        collectDefinitions(value, {
-            ...options,
-            include: scopeFilter(include, scope, scopes),
-            exclude: scopeFilter(exclude, scope, scopes),
-        }).map(def => ({ def, scope }))
+        collectDefinitions(
+            // Wrap the scope value so a plain object is read as that scope's
+            // fields instead of being mistaken for another scope map.
+            { [scope]: value },
+            {
+                ...options,
+                include: scopeFilter(include, scope, scopes),
+                exclude: scopeFilter(exclude, scope, scopes),
+            }
+        ).map(def => ({ def, scope }))
     );
 }
 
@@ -603,9 +607,10 @@ function buildFromSources(
     options: CollectOptions,
     sources: ConfigSource[],
     envSource: Record<string, string | undefined>,
-    argv: string[]
+    argv: string[],
+    base?: Record<string, unknown>
 ): Record<string, unknown> {
-    const config: Record<string, unknown> = {};
+    const config: Record<string, unknown> = base ? deepMerge({}, base) : {};
     const prefix = options.envPrefix === null ? '' : (options.envPrefix ?? DEFAULT_ENV_PREFIX);
     const envTree = sources.includes('env') ? parseEnvTree(envSource, prefix) : {};
     const cliValues = sources.includes('cli')
@@ -621,7 +626,7 @@ function buildFromSources(
                 raw = def.type === 'array' && list.length > 1 ? list.join(',') : list.at(-1);
             }
         }
-        if (raw === undefined && sources.includes('env')) {
+        if (raw === undefined && sources.includes('env') && def.meta?.envExpose !== false) {
             const named = def.name ? envSource[def.name] : undefined;
             const path = def.meta?.envPath ?? def.meta?.path ?? def.path;
             const generated = envSource[envVarNameOf(path, prefix)];
@@ -638,6 +643,10 @@ function buildFromSources(
             continue;
         }
         if (def.default !== undefined && !def.secret) {
+            const path = entry.scope ? `${entry.scope}.${pathOf(def)}` : pathOf(def);
+            // A file value (base) or an earlier source already set this field;
+            // a schema default must never replace it.
+            if (getPath(config, path) !== undefined) continue;
             if (passesValueFilters(def, def.default, options)) {
                 setPathInScope(config, entry, def.default);
             }
@@ -866,7 +875,7 @@ export interface ResolveConfigOptions extends CollectOptions {
     /** Which sources to read (defaults to env + CLI). */
     sources?: ConfigSource[];
     /** The primary source, used for error context. */
-    source?: ConfigSource;
+    source?: ConfigSourceSelection;
 }
 
 /**
@@ -883,7 +892,7 @@ export function resolveConfig<
     const envSource = options.envSource ?? defaultEnvSource();
     const argv = options.argv ?? defaultArgv();
     const entries = collectScoped(schema, options);
-    let config = buildFromSources(entries, options, sources, envSource, argv);
+    let config = buildFromSources(entries, options, sources, envSource, argv, options.base);
     if (overrides !== undefined && overrides !== null) {
         if (isPlainRecord(overrides)) {
             config = deepMerge(config, overrides);

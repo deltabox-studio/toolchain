@@ -2,7 +2,6 @@ import { readAllProvidersSync } from '@deltabox/toolchain/core';
 import {
     logger,
     spawnCross,
-    type ToolchainCommand,
     type ToolchainConfig,
     type ToolchainProvider,
     type ToolchainProviderCommand,
@@ -10,6 +9,7 @@ import {
 } from '@deltabox/toolchain/shared';
 
 import { loadToolchainProviders, providerPolicy } from '../../providers.js';
+import { rootCliProgram } from '../engine.js';
 
 const CWD_OPTION = { flags: '--cwd <dir>', description: 'Project root (default: cwd).' };
 
@@ -18,17 +18,14 @@ const CWD_OPTION = { flags: '--cwd <dir>', description: 'Project root (default: 
  * to the provider's binary (`<binary> <subcommand> ...`), so a registered
  * provider's commands are runnable as `dbx <command.name>`.
  */
-function providerPassthrough(
-    provider: ToolchainProvider,
-    command: ToolchainProviderCommand
-): ToolchainCommand {
-    return {
+function providerPassthrough(provider: ToolchainProvider, command: ToolchainProviderCommand) {
+    return rootCliProgram.createCommand(command.name, {
         name: command.name,
         description: `${provider.name}: ${command.description}`,
         passthrough: true,
         hidden: true,
         options: [CWD_OPTION],
-        run: async (opts, context) => {
+        run: async ({ values: opts, context }) => {
             const raw = (opts.args as string[] | undefined) ?? [];
             const cwd = (opts.cwd as string | undefined) ?? context.cwd;
             const policy = providerPolicy(context.config);
@@ -58,14 +55,11 @@ function providerPassthrough(
             });
             if (code !== 0) process.exitCode = code;
         },
-    };
+    });
 }
 
 /** The passthrough commands for every command of the project's custom providers. */
-export function providerPassthroughCommands(
-    cwd: string = process.cwd(),
-    config?: ToolchainConfig
-): ToolchainCommand[] {
+export function providerPassthroughCommands(cwd: string = process.cwd(), config?: ToolchainConfig) {
     return readAllProvidersSync(cwd, providerPolicy(config)).flatMap(provider =>
         provider.commands.map(command => providerPassthrough(provider, command))
     );
@@ -76,15 +70,14 @@ export function providerPassthroughCommands(
  * they contribute. `--json` is the machine-readable form the VS Code extension
  * consumes to build its menus.
  */
-export function providerCommands(config?: ToolchainConfig): ToolchainCommand[] {
-    return [
-        {
-            name: 'providers',
-            description: 'List the tooling providers (Vite+, ...) and their commands.',
-            options: [
-                { flags: '--json', description: 'Print the providers (with actions) as JSON.' },
-            ],
-            run: async (opts, context) => {
+export function providerCommands(config?: ToolchainConfig) {
+    const {
+        commands: [command],
+    } = rootCliProgram.create(cmd => [
+        cmd('providers')
+            .description('List the tooling providers (Vite+, ...) and their commands.')
+            .option('--json', 'Print the providers (with actions) as JSON.')
+            .run(async ({ values: opts, context }) => {
                 const providers = await withSpinner(
                     () => loadToolchainProviders(process.cwd(), context.config),
                     {
@@ -100,12 +93,13 @@ export function providerCommands(config?: ToolchainConfig): ToolchainCommand[] {
                     const binary = provider.binary ? ` (${provider.binary})` : '';
                     logger.info(`${provider.name}${binary} [${provider.id}]`);
                     if (provider.description) logger.info(`  ${provider.description}`);
-                    for (const command of provider.commands) {
-                        logger.info(`  ${command.name.padEnd(20)} ${command.description}`);
+                    for (const providerCommand of provider.commands) {
+                        logger.info(
+                            `  ${providerCommand.name.padEnd(20)} ${providerCommand.description}`
+                        );
                     }
                 }
-            },
-        },
-        ...providerPassthroughCommands(process.cwd(), config),
-    ];
+            }),
+    ]);
+    return [command, ...providerPassthroughCommands(process.cwd(), config)];
 }

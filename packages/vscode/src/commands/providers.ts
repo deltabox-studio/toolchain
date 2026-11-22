@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+import { sanitizePathForDisplay } from '../paths.js';
 import {
     loadProviders,
     type Provider,
@@ -245,7 +246,11 @@ export function createProviderRegistryCommands(
             return;
         }
         const picked = await vscode.window.showQuickPick(
-            entries.map(entry => ({ label: entry.path, description: entry.scope, entry })),
+            entries.map(entry => ({
+                label: sanitizePathForDisplay(entry.path),
+                description: entry.scope,
+                entry,
+            })),
             { canPickMany: true, placeHolder: 'Which registries should be removed?' }
         );
         if (!picked || picked.length === 0) return;
@@ -277,7 +282,7 @@ export function createProviderRegistryCommands(
         const root = deps.workspaceRoots()[0];
         if (!root) return;
         const confirm = await vscode.window.showWarningMessage(
-            `Remove registry "${node.entry.path}"? The files are kept.`,
+            `Remove registry "${sanitizePathForDisplay(node.entry.path)}"? The files are kept.`,
             { modal: true },
             'Remove'
         );

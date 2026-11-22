@@ -96,7 +96,7 @@ export interface LoadToolchainConfigOptions {
     loaderTsconfig?: string | false;
     /**
      * Manage projects without their own `dbx.config.*` by inheriting the nearest
-     * ancestor config. Overrides `project.manageConfigless` (default false).
+     * ancestor config. Overrides `project.manageConfigless`. @default `false`
      */
     manageConfigless?: boolean;
     /**

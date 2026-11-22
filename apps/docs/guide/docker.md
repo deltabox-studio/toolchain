@@ -13,7 +13,7 @@ dbx create --template express --name api --containerize
 dbx project:init --name api --containerize
 ```
 
-In VS Code, **Create from template…** asks _Containerize with Docker?_. The
+In VS Code, **Create from template...** asks _Containerize with Docker?_. The
 setting `deltabox.toolchain.containerizeTemplates` supplies the default and is
 used by the curated **Scaffold** flow. Programmatically, pass
 `containerize: true` to `scaffoldTemplate()`.
@@ -31,7 +31,7 @@ import { dockerFiles, writeDockerFiles } from '@deltabox/toolchain/docker';
 
 const files = dockerFiles({
     cwd: process.cwd(),
-    image: 'acme/api',
+    image: 'myapp/api',
     tag: 'latest',
     port: 3000,
 });

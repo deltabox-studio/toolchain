@@ -95,7 +95,7 @@ export interface ScaffoldOptions {
     tsconfigRootFile?: string;
     /** Version overrides for the provisioned formatter/linter dependencies. */
     toolVersions?: Record<string, string>;
-    /** Also write Docker artifacts (default false). */
+    /** Also write Docker artifacts. @default `false` */
     containerize?: boolean;
     /**
      * Route action output to stderr instead of stdout, for machine-readable runs
@@ -148,7 +148,7 @@ interface ContainerSpec {
     assets?: string[];
     /** Runtime system packages (eg. `rclone`). */
     runtimePackages?: string[];
-    /** HTTP path the healthcheck requests (default `/`). */
+    /** HTTP path the healthcheck requests. @default `/` */
     healthcheckPath?: string;
     /** Disable the healthcheck when the server has no reliable GET endpoint. */
     healthcheck?: boolean;
@@ -601,7 +601,7 @@ async function runAction(
     ctx: TemplateActionContext
 ): Promise<void> {
     if (action.builtin === 'install') {
-        ctx.log(`Installing dependencies with ${ctx.packageManager}…`);
+        ctx.log(`Installing dependencies with ${ctx.packageManager}...`);
         const code = await runCommand(
             ctx.packageManager,
             ['install'],

@@ -35,6 +35,12 @@ function runQuiet(command, args, options = {}) {
     }
 }
 
+/** The npm dist-tag for a version (`3.0.0-beta.1` -> `beta`, stable -> `latest`). */
+function distTag(version) {
+    const prerelease = version.split('-', 2)[1];
+    return prerelease ? prerelease.split(/[.+]/)[0] : 'latest';
+}
+
 const dirs = fs
     .readdirSync(packagesDir, { withFileTypes: true })
     .filter(entry => entry.isDirectory())
@@ -65,13 +71,16 @@ for (const dir of dirs) {
         outDir,
         `${pkg.name.replace(/^@/, '').replace(/[/]/g, '-')}-${pkg.version}.tgz`
     );
-    console.log(`publish ${spec}`);
+    // npm rejects a prerelease without an explicit dist-tag.
+    const tag = distTag(pkg.version);
+    const publishArgs = ['--access', 'public', '--tag', tag];
+    console.log(`publish ${spec} (npm tag: ${tag})`);
     run('yarn', ['pack', '--out', tarball], { cwd });
     try {
-        run('npm', ['publish', tarball, '--access', 'public']);
+        run('npm', ['publish', tarball, ...publishArgs]);
     } catch {
         console.warn(`direct publish failed for ${spec}; falling back to a staged publish`);
-        run('npm', ['stage', 'publish', tarball, '--access', 'public']);
+        run('npm', ['stage', 'publish', tarball, ...publishArgs]);
     }
     published += 1;
 }

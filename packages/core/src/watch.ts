@@ -30,11 +30,11 @@ import { type RunSyncOptions, runSync, selectSyncTasks } from './sync.js';
 export interface RunWatchOptions extends Omit<RunSyncOptions, 'check'> {
     /** The config file to watch (re-runs every task on change). */
     configPath?: string;
-    /** Debounce window in ms (default 150). */
+    /** Debounce window in ms. @default `150` */
     debounce?: number;
     /** Extra glob(s) excluded from watching (on top of the common ignored paths). */
     exclude?: string | string[];
-    /** Respect `.gitignore` files (default true). */
+    /** Respect `.gitignore` files. @default `true` */
     gitignore?: boolean;
 }
 
@@ -85,7 +85,7 @@ export interface ResolveWatchInputFilesOptions {
     userGlobs?: string[];
     /** Extra glob(s) to exclude. */
     exclude?: string | string[];
-    /** Respect `.gitignore` files (default true). */
+    /** Respect `.gitignore` files. @default `true` */
     gitignore?: boolean;
 }
 

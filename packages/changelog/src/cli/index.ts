@@ -1,10 +1,10 @@
 import {
+    defineCliCommand,
     logger,
     regenerateEnabled,
     resolveChangelogConfig,
     resolveCiConfig,
     resolveToolchainEnabled,
-    type ToolchainCommand,
     type ToolchainConfig,
     withSpinner,
 } from '@deltabox/toolchain/shared';
@@ -28,9 +28,9 @@ export function changelogRegenerateEnabled(config?: ToolchainConfig): boolean {
 }
 
 /** Build the changelog commands (`changelog`, `workflow`). */
-export function changelogCommands(): ToolchainCommand[] {
+export function changelogCommands() {
     return [
-        {
+        defineCliCommand({
             name: 'workflow',
             description:
                 'Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).',
@@ -102,8 +102,8 @@ export function changelogCommands(): ToolchainCommand[] {
                 }
                 if (failed) process.exitCode = 1;
             },
-        },
-        {
+        }),
+        defineCliCommand({
             name: 'changelog',
             description:
                 'Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.',
@@ -116,8 +116,25 @@ export function changelogCommands(): ToolchainCommand[] {
                     description: 'Bump from this version instead.',
                 },
                 {
-                    flags: '--release-notes <semver>',
+                    flags: '--release-body <semver>',
                     description: 'Print the release body for this version and exit.',
+                },
+                {
+                    flags: '--release-group',
+                    description:
+                        'Group every version since the previous published release into the body.',
+                },
+                {
+                    flags: '--no-release-group',
+                    description: 'Disable release grouping configured in the changelog config.',
+                },
+                {
+                    flags: '--release-since <version>',
+                    description: 'Group from this version/tag instead of the released boundary.',
+                },
+                {
+                    flags: '--release-include-prereleases',
+                    description: 'Let prerelease versions bound the grouped release body.',
                 },
                 {
                     flags: '--processing-method <method>',
@@ -125,8 +142,8 @@ export function changelogCommands(): ToolchainCommand[] {
                 },
                 { flags: '--format-only', description: 'Only regroup existing changelogs.' },
                 {
-                    flags: '--release',
-                    description: 'Release mode: wrap the entry as `**Release notes**`.',
+                    flags: '--release-body-wrap',
+                    description: 'Wrap the generated entry as a `**Release notes**` details block.',
                 },
                 {
                     flags: '--intro <text>',
@@ -155,14 +172,20 @@ export function changelogCommands(): ToolchainCommand[] {
                 if (opts.dryRun) argv.push('--dry-run');
                 if (opts.version) argv.push('--version', String(opts.version));
                 if (opts.baseVersion) argv.push('--base-version', String(opts.baseVersion));
-                if (opts.releaseNotes) {
-                    argv.push('--release-notes', String(opts.releaseNotes));
+                if (opts.releaseBody) {
+                    argv.push('--release-body', String(opts.releaseBody));
                 }
+                if (opts.releaseGroup === true) argv.push('--release-group');
+                if (opts.releaseGroup === false) argv.push('--no-release-group');
+                if (opts.releaseSince) {
+                    argv.push('--release-since', String(opts.releaseSince));
+                }
+                if (opts.releaseIncludePrereleases) argv.push('--release-include-prereleases');
                 if (opts.processingMethod) {
                     argv.push('--processing-method', String(opts.processingMethod));
                 }
                 if (opts.formatOnly) argv.push('--format-only');
-                if (opts.release) argv.push('--release');
+                if (opts.releaseBodyWrap) argv.push('--release-body-wrap');
                 if (opts.intro) argv.push('--intro', String(opts.intro));
                 if (opts.introFile) argv.push('--intro-file', String(opts.introFile));
                 if (opts.outro) argv.push('--outro', String(opts.outro));
@@ -184,6 +207,6 @@ export function changelogCommands(): ToolchainCommand[] {
                     }
                 );
             },
-        },
+        }),
     ];
 }

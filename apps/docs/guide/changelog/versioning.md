@@ -78,6 +78,10 @@ The tag is a single identifier (`^[0-9A-Za-z-]+$`); the numeric counter is added
 automatically. The same rule applies to `uniform`, `root-only` and `individual`
 targets, including each workspace's own version in `individual` mode.
 
+A stable release can group every prerelease since the last stable release into
+one GitHub Release body with `changelog.release.group: true`. See
+[Grouped release bodies](/guide/changelog/release#grouped-release-bodies).
+
 ## Version hooks
 
 Use [`toolchain.hooks.beforeVersion`](/guide/config/hooks#beforeversion) for
@@ -152,28 +156,159 @@ changes.
 
 ## Custom bump rules
 
-`versioning.bump` maps `major`, `minor` and `patch` to a matcher.
-Matchers can be booleans, substrings, `/regex/` strings, arrays, objects
-(`{ type, types, scope, scopes, pattern, match, breaking }`) or callbacks.
+`versioning.bump` maps `major`, `minor` and `patch` to a matcher. Matchers can be
+booleans, substrings, `/regex/flags` strings, arrays, matcher objects
+(`{ type, types, scope, scopes, pattern, match, breaking }`) or callbacks
+(TS/JS configs only).
 
 ```ts
 ci: {
     changelog: {
         versioning: {
             bump: {
-                major: { scope: 'api', breaking: true },
-                minor: [{ type: 'feat' }, /^feat\(ui\)/],
-                patch: 'fix',
+                major: [{ breaking: true }, { type: 'feat', scope: 'api' }],
+                minor: { type: 'feat' },
+                patch: { type: 'fix' },
             },
-            // Apply one bump per matching change instead of once per run.
-            allowOverBump: false,
         },
     },
 }
 ```
 
-Callbacks receive `{ env, logger, packageJson?, commit }` and may return a
-boolean or a version index.
+A matcher object requires only the fields you want; the rest are ignored:
+
+| Field      | Matches                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------ |
+| `type`     | One Conventional-Commits type (for example `feat`).                                              |
+| `types`    | Any type in the list.                                                                            |
+| `scope`    | One Conventional-Commits scope.                                                                  |
+| `scopes`   | Any scope in the list.                                                                           |
+| `pattern`  | A regular expression tested against the subject + body.                                          |
+| `match`    | A substring of the subject + body.                                                               |
+| `breaking` | `true` for breaking commits, `false` for non-breaking commits. Omit it to ignore breaking state. |
+
+### Rules replace Conventional Commits
+
+This is the most important rule: **adding any `bump` level replaces the
+Conventional-Commits fallback for that target.** Unlisted levels never match, so
+they cannot add their own bump. A run always produces at least a `patch` bump
+because semver has no smaller published version.
+
+```ts
+bump: {
+    minor: { type: 'feat' },
+}
+```
+
+With only a `minor` rule, a `feat!:` commit is a **minor** bump (there is no
+`major` rule), and a `fix:` commit is a **patch** bump (the minimum). If you want
+the usual Conventional-Commits behavior plus one override, spell every level out:
+
+```ts
+bump: {
+    major: { breaking: true },
+    minor: { type: 'feat' },
+    patch: true,
+}
+```
+
+`versioning.bump` only decides the next version number. Changelog section
+grouping (`feat`, `fix`, ...) is controlled separately by `groups` and still uses
+Conventional Commits.
+
+### Disabling a level
+
+Set a level to `false` (or leave it out) to disable it. This is useful when a
+team only wants major bumps from an explicit marker, or never wants minor bumps:
+
+```ts
+bump: {
+    // Breaking changes no longer bump major.
+    major: false,
+    minor: { type: 'feat' },
+    patch: true,
+}
+```
+
+What each switch does:
+
+| Setting           | Result                                                                                             |
+| ----------------- | -------------------------------------------------------------------------------------------------- |
+| `major: false`    | Breaking commits cannot bump major. They use the highest other match, or patch.                    |
+| `minor: false`    | Feats cannot bump minor. They use the highest other match, or patch.                               |
+| `patch: false`    | Custom patch matchers stop matching, but a run still produces at least a patch bump.               |
+| all three `false` | Nothing matches; the run still produces a patch bump.                                              |
+| remove `bump`     | Conventional Commits decides again (`feat` minor, `fix`/other patch, `!`/`BREAKING CHANGE` major). |
+
+`breaking: false` is not the same as omitting `breaking`: it matches only
+**non-breaking** commits. `{ breaking: true }` matches only breaking commits.
+
+### More examples
+
+Bump major for an explicit marker instead of Conventional Commits:
+
+```ts
+bump: {
+    major: 'BREAKING CHANGE:',
+    minor: { type: 'feat' },
+    patch: true,
+}
+```
+
+That matches the literal footer text. Use `{ breaking: true }` instead if you
+want the configured Conventional-Commits detection (`!` or a `BREAKING CHANGE:`
+footer) to decide.
+
+Bump major for a specific scope and keep everything else on Conventional
+Commits:
+
+```ts
+bump: {
+    major: [{ breaking: true }, { type: 'feat', scope: 'api' }],
+    minor: { type: 'feat' },
+    patch: true,
+}
+```
+
+Only let `feat` and `fix` drive the higher levels. Other types still produce a
+patch (the minimum), but never a minor/major bump through this rule set:
+
+```ts
+bump: {
+    minor: { type: 'feat' },
+    patch: { type: 'fix' },
+}
+```
+
+Use the commit body, or any custom rule, through a callback. Callbacks receive
+`{ env, logger, packageJson?, commit, level }` and return a boolean or the level
+name. Returning a level name only matches while that same level is being
+evaluated, which keeps the highest-match rule predictable:
+
+```ts
+bump: {
+    major: ({ commit }) => commit.subject.startsWith('feat!'),
+    minor: ({ commit, packageJson }) =>
+        commit.subject.startsWith('feat') &&
+        packageJson?.name === '@org/ui',
+    patch: ({ commit }) => commit.subject.startsWith('fix'),
+}
+```
+
+Apply one escalation per additional matching commit:
+
+```ts
+bump: {
+    minor: { type: 'feat' },
+    patch: true,
+},
+// Two matching commits become minor -> major; one stays minor.
+allowOverBump: true,
+```
+
+Targeted rules apply per workspace. A target with no matching scoped rule falls
+back to Conventional Commits (unless it has another scoped rule for that target):
+see [Targeted options](#targeted-options).
 
 ## Commit credits and formatting
 
@@ -199,21 +334,151 @@ ci: {
 
 ## Providers
 
-`versioning.provider` selects the changelog provider:
+`versioning.provider` selects who writes versions and changelog entries. It
+accepts one of:
 
-- `default` (or omitted) uses the built-in pipeline.
-- `changesets` runs `npx changeset version` and leaves changelog/version output
-  to changesets.
-- a callback `(ctx) => string | void` can replace the summary.
-- an object `{ id, run(ctx) }` can run custom logic and optionally return the
-  summary string.
+| Provider             | What it does                                                                                 |
+| -------------------- | -------------------------------------------------------------------------------------------- |
+| `default` or omitted | The built-in pipeline: derive the bump, write `package.json` versions and changelog entries. |
+| `changesets`         | Runs `changeset version` and leaves versions/changelogs to changesets.                       |
+| `(ctx) => string`    | A callback that returns a custom version body (TS/JS configs only).                          |
+| `{ id, run(ctx) }`   | The same as a callback, with a stable id for readability.                                    |
+
+Unknown string ids throw instead of silently falling back to the built-in
+pipeline.
+
+### Use changesets
+
+The changesets provider is for a repository that already uses
+[changesets](https://github.com/changesets/changesets) for versions and
+changelogs. It runs the repo-wide `changeset version` and does **not** run the
+built-in version bump, changelog writer, or version hooks.
+
+1. Install and initialize changesets:
+
+    ```sh
+    yarn add -D @changesets/cli
+    npx @changesets/cli init
+    ```
+
+    This creates `.changeset/config.json`. Commit the `.changeset` directory.
+
+2. Add a changeset with every user-facing change:
+
+    ```sh
+    npx @changesets/cli
+    ```
+
+3. Select the provider. Keep `versioning` as an object; `versioning: false`
+   disables the provider with the rest of the versioning section:
+
+    ```ts
+    ci: {
+        changelog: {
+            versioning: {
+                provider: 'changesets',
+            },
+        },
+    }
+    ```
+
+4. Run `dbx sync` after changing the provider. The generated changelog workflow
+   then also stages the `.changeset/*.md` files that `changeset version`
+   consumes, so the version commit is complete.
+
+What changesets owns:
+
+- Package versions and `CHANGELOG.md` files. The built-in `target`,
+  `workspaces`, `prerelease`, `bump`, `allowOverBump` and `commit` options are
+  ignored (the changelog-specific `groups`, `intro`, `outro` and `details`
+  options are also not applied).
+- Publishing/tagging. The provider only runs `changeset version`; run
+  `changeset publish` (or changesets' GitHub Action) for the release itself.
+  The generated release workflow is built around the root `package.json`
+  version, so independent-package releases usually need changesets' own
+  release automation.
+
+Behavior:
+
+- The command is `npx --yes @changesets/cli version` in the repository root.
+  Set `DBX_CHANGESET_BIN` to run a local binary (or a `.js`/`.mjs` entrypoint)
+  instead.
+- A missing `.changeset/config.json` fails with a setup hint before any writes.
+- `--dry-run` explains that changesets owns the output and returns without
+  writing a proposed changelog.
+- `--version` takes precedence and retags the changelog headings, so do not
+  combine it with the changesets provider.
+- Version hooks (`beforeVersion`/`afterVersion`) do not run for changesets.
+- Use changesets' prerelease mode (`changeset pre enter beta`,
+  `changeset pre exit`) for prereleases; `versioning.prerelease` is ignored
+  because changesets owns the version strings.
+
+If any versioned target selects `changesets` (for example through a targeted
+provider entry), changesets runs once for the whole repository.
+
+### Custom providers
+
+A callback receives `{ cwd, changelog, records }`, where `cwd` is the repository
+root and `records` are the commits in the scanned range. Return a string to
+replace the version body for that target; return `undefined` to keep the
+built-in body.
+
+```ts
+ci: {
+    changelog: {
+        versioning: {
+            provider: ctx => {
+                if (ctx.records.length === 0) return 'No user-facing changes.';
+                return `This release contains ${ctx.records.length} changes.`;
+            },
+        },
+    },
+}
+```
+
+The object form is the same, with an id:
+
+```ts
+provider: {
+    id: 'release-summary',
+    run: ctx => `${ctx.records.length} commits`,
+}
+```
+
+The provider output is the body inside the version heading; the heading, release
+markers, package-changes footer and version bump are still written by the
+built-in pipeline.
+
+### Targeted providers
+
+`provider` accepts the same scoped form as the other versioning options. This
+lets the root and each workspace use a different provider:
+
+```ts
+ci: {
+    changelog: {
+        versioning: {
+            target: 'individual',
+            provider: [
+                { target: '.', options: { id: 'root', run: () => 'Root summary' } },
+                { target: 'packages/ui', options: 'changesets' },
+                { include: 'apps/*', options: ctx => `${ctx.records.length} app commits` },
+            ],
+        },
+    },
+}
+```
+
+With this config, selecting changesets for `packages/ui` still runs changesets
+once for the repository; the root and app providers are not used in that run.
+Without a changesets target, each target uses its own provider.
 
 ## Targeted options
 
-prerelease, `bump.{major,minor,patch}`, `allowOverBump`, `commit` and
+`prerelease`, `bump.{major,minor,patch}`, `allowOverBump`, `commit` and
 `provider` accept either the plain value or a scoped form:
 
-`ts
+```ts
 ci: {
     changelog: {
         versioning: {
@@ -224,17 +489,30 @@ ci: {
             bump: { minor: [{ target: 'packages/core', options: /^feat/ }] },
             allowOverBump: [{ target: 'packages/ui', options: true }],
             commit: [{ exclude: 'packages/legacy', options: { authorAvatar: true } }],
-            provider: [{ target: '.', options: { id: 'custom', run: ctx => ctx.records.length + ' commits' } }],
+            provider: [
+                {
+                    target: '.',
+                    options: { id: 'custom', run: ctx => ctx.records.length + ' commits' },
+                },
+            ],
         },
     },
 }
-`
+```
 
 Each scoped entry shares the same selector as `toolchain.changelog.intro` /
 `outro`: `target` (a workspace path, `.` for the root, or a glob like
 `apps/*`), `include` and `exclude`. The narrowest matching target wins; when
 nothing matches, the plain value is used. Workspaces outside
 `versioning.workspaces` are never considered.
+
+A targeted bump rule that does not match a target is **ignored** (not treated as
+a match-all rule). If no scoped level applies to that target, it falls back to
+Conventional Commits. If at least one level applies, the target uses the custom
+rules and unlisted levels do not auto-bump (see
+[Rules replace Conventional Commits](#rules-replace-conventional-commits)). If a
+level applies but its matcher does not match any commit, the result is patch
+(the minimum).
 
 `Arrayable` entries (one value or an array) are supported for every targeted
 option and for the intro/outro settings.
@@ -249,9 +527,9 @@ out.
   as a collapsible whose summary is `**See more...**`.
 - `breaking` (default on) wraps the breaking section; the summary names the
   section, so the duplicate heading is not repeated inside.
-- The version stays a normal `##` heading. Release mode wraps the body with the
-  `**Release notes**` summary and `details.body` is opt-out there; in
-  non-release mode `details.body` is opt-in.
+- The version stays a normal `##` heading. `--release-body-wrap` wraps the body
+  with the `**Release notes**` summary and `details.body` is opt-out there; in
+  non-wrapping mode `details.body` is opt-in.
 - `intro`/`outro`/`footer` are opt-in wrappers; `types` (default on) wraps the
   CC type sections, leaving the generated `Package changes`/`New contributors`
   footers alone.
@@ -303,6 +581,7 @@ Every flag also accepts `{ title?: string; expanded?: boolean }`.
 - `before`: details are applied while the entry is rendered.
 
 `details.body` wraps the whole version body in a collapsible titled
-`Release notes`. It is opt-in in non-release mode and opt-out in release mode,
-and requires at least 10 commits (`minCommits`) when enabled unless overridden.
-Release mode uses `details.releaseNotes` with the same title by default.
+`Release notes`. It is opt-in normally and opt-out with
+`--release-body-wrap`, and requires at least 10 commits (`minCommits`) when
+enabled unless overridden. Release body wrapping uses `details.releaseNotes`
+with the same title by default.

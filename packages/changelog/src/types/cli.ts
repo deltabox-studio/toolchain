@@ -7,11 +7,17 @@ export interface CliOptions {
     version?: string;
     baseVersion?: string;
     /** Print the release body for this version (and exit). */
-    releaseNotes?: string;
+    releaseBody?: string;
+    /** Group every version since the previous published release into one body. */
+    releaseGroup?: boolean;
+    /** Explicit lower boundary version/tag for a grouped release body. */
+    releaseSince?: string;
+    /** Let prerelease versions bound a grouped release body. */
+    releaseIncludePrereleases?: boolean;
     processingMethod: ProcessingMethod;
     formatOnly: boolean;
-    /** Release mode (uses the **Release notes** details wrapper). */
-    release: boolean;
+    /** Wrap the generated entry in the **Release notes** details block. */
+    releaseBodyWrap: boolean;
     /** Include the `### Package changes` footer (disable with --no-package-changes-section). */
     packageChanges: boolean;
     /** Inline intro text for the new entry. */

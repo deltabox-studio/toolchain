@@ -34,7 +34,7 @@ export interface ConfigFileOptions {
     filename: string;
     /** Throw instead of returning `undefined` when nothing is found. */
     required?: boolean;
-    /** Resolve symlinks (default true). */
+    /** Resolve symlinks. @default true */
     followSymlinks?: boolean;
     /** Read the config from a `package.json` key. */
     packageJson?: { enabled?: boolean; key: string };
@@ -88,9 +88,9 @@ export interface LoaderOptions {
     loader?: LoaderSetting | LoaderSetting[];
 }
 
-/** Options for the object-based loader API (no parser/schema required). */
-export interface LoadConfigOptions<T = unknown> extends LoaderOptions {
-    /** The directory to search from (default `process.cwd()`). */
+/** Discovery fields shared by the object-based and parser-based loaders. */
+export interface LoadConfigDiscoveryOptions {
+    /** The directory to search from. @default process.cwd() */
     cwd?: string;
     /**
      * Discovery options (filename/extensions/locations/package.json). Takes
@@ -105,11 +105,7 @@ export interface LoadConfigOptions<T = unknown> extends LoaderOptions {
     packageJsonKeys?: readonly string[];
     /** Throw instead of returning `undefined` when nothing is found. */
     required?: boolean;
-    /** Validate/normalize the loaded value. */
-    schema?: ZodType<T>;
-    /** Re-evaluate an already-imported module (watch/regenerate runs). */
-    fresh?: boolean;
-    /** Resolve symlinks (default true). */
+    /** Resolve symlinks. @default true */
     followSymlinks?: boolean;
     /** The tsconfig used to resolve a TypeScript config (see {@link ConfigFileOptions.tsconfig}). */
     tsconfig?: string | false;
@@ -119,23 +115,35 @@ export interface LoadConfigOptions<T = unknown> extends LoaderOptions {
     accept?: (file: string) => boolean;
 }
 
-/** The parser-based loader options. */
+/** Options for the object-based loader API (no parser required). */
+export interface LoadConfigOptions<T = unknown>
+    extends LoaderOptions, LoadConfigDiscoveryOptions, ParseConfigOptions {
+    /** Validate/normalize the loaded value. */
+    schema?: ZodType<T>;
+    /** Values merged over the file/env/CLI result before validation. */
+    overrides?: Record<string, any>;
+    /** Re-evaluate an already-imported module (watch/regenerate runs). */
+    fresh?: boolean;
+}
+
+/**
+ * The parser-based loader options. The loaded value is resolved through
+ * `parseConfig` with the passed `parser` (env + CLI by default, then
+ * `overrides`, then validation), so callers do not need to call
+ * `parseConfig`/`parseEnvConfig`/`parseCliConfig` themselves.
+ */
 export type LoadConfigFileOptions<
     P extends ConfigSchema = ConfigSchema,
     O extends Record<string, any> | null | undefined = Record<string, any> | null | undefined,
-> = {
+> = LoadConfigDiscoveryOptions & {
     /** Resolve the loaded value through `parseConfig`. */
     parser: P;
-    /** Overrides merged over the resolved config. */
+    /** Overrides merged over the resolved config (after env/CLI). */
     overrides?: O;
-    /** Config-file discovery options. */
-    configFileOptions?: ConfigFileOptions;
-    /** The directory to search from (default `process.cwd()`). */
-    cwd?: string;
     /** Re-evaluate an already-imported module (watch/regenerate runs). */
     fresh?: boolean;
 } & LoaderOptions &
-    Omit<ParseConfigOptions, 'envSource' | 'argv'>;
+    ParseConfigOptions;
 
 /** A candidate discovered on disk (or a `package.json` key). */
 export interface ConfigCandidate {

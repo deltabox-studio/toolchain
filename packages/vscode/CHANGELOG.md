@@ -1,8 +1,79 @@
 # Changelog
 
-## 3.0.0-beta.5 (November 2026)
+## 3.0.0-beta.9 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Vite
+- Resolve the workspace dbx plugin without an ESM require race ([#26803a6](https://github.com/deltabox-studio/toolchain/commit/26803a6) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.8 (November 2026)
+
+<details>
+<summary>Documentation</summary>
+
+- Refresh readmes and extension copy ([#ad7e37d](https://github.com/deltabox-studio/toolchain/commit/ad7e37d) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Chores</summary>
+
+- Commit pending docs and type updates ([#5701b52](https://github.com/deltabox-studio/toolchain/commit/5701b52) by [T0chi](https://github.com/T0chi))
+- Cleanup references ([#a0027cd](https://github.com/deltabox-studio/toolchain/commit/a0027cd) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+## 3.0.0-beta.7 (November 2026)
+
+<details>
+<summary>New features</summary>
+
+- Align hooks and monorepo guidance with Vite+ ([#0aadd01](https://github.com/deltabox-studio/toolchain/commit/0aadd01) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+## 3.0.0-beta.6 (November 2026)
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Changelog
+- Build release bodies from markers and rename flags ([#825985d](https://github.com/deltabox-studio/toolchain/commit/825985d) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
+#### Vscode
+- Sanitize registry paths for display ([#a1e8d56](https://github.com/deltabox-studio/toolchain/commit/a1e8d56) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Render registry paths relative to the workspace (and without control characters) in the tree, picker and confirmation prompts, and cover the shared helper plus registry tree with tests.
+
+  </details>
+
+</details>
+
+<details>
+<summary>Styles</summary>
+
+- Replace unicode ellipses with three dots ([#2d7c130](https://github.com/deltabox-studio/toolchain/commit/2d7c130) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+## 3.0.0-beta.5 (November 2026)
 
 <details>
 <summary>Chores</summary>
@@ -13,9 +84,6 @@
 - Add the pre-release VSIX script ([#385fa01](https://github.com/deltabox-studio/toolchain/commit/385fa01) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.4 (November 2026)
 

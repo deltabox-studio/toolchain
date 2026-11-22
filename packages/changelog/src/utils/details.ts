@@ -177,7 +177,7 @@ export function resolveDetails(value: unknown, release = false): ResolvedDetails
     const custom = (Array.isArray(customValue) ? customValue : [customValue])
         .map(item => customMatcher(item, configMin))
         .filter((item): item is DetailsCustomMatcher => item !== undefined);
-    // `details.body: false` opts out of the release-mode wrapper too; an
+    // `details.body: false` opts out of the release body wrapper too; an
     // explicit `releaseNotes` setting still wins.
     const releaseNotes =
         release && record.body === false && record.releaseNotes === undefined
@@ -482,7 +482,7 @@ function wrapBody(lines: string[], details: ResolvedDetails): string[] {
         );
         releaseWrapped = true;
     }
-    // Release mode already wraps the entry; a second body wrapper would nest
+    // Release body wrapping already wraps the entry; a second body wrapper would nest
     // two identical "Release notes" summaries.
     if (!releaseWrapped && details.body.enabled && detailsEnabled(details.body, count)) {
         inner = renderDetails(

@@ -48,13 +48,13 @@ export interface ToolchainProjectConfig {
     /** The project kind (detected when omitted). */
     type?: ProjectType;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      */
     regenerate?: boolean;
     /** The unscoped project name (written as `<scope>/<name>`). */
     name?: string;
-    /** The npm scope, eg. `@acme`. */
+    /** The npm scope, eg. `@org`. */
     scope?: string;
     /** Package author (`package.json` `author`). */
     author?: string;
@@ -104,8 +104,8 @@ export interface ToolchainCiConfig {
      * VS Code settings, commitlint).
      */
     changelog?: ChangelogWorkflowSetting;
-    /** The release workflow (`release.yml`). */
-    release?: WorkflowSetting;
+    /** The release workflow (`release.yml`), including prerelease marking. */
+    release?: ReleaseWorkflowSetting;
     /** The issue-title workflow (`issues.yml`). */
     issues?: WorkflowSetting;
     /** The toolchain sync workflow (`sync.yml`). */
@@ -124,8 +124,8 @@ export interface ToolchainCiConfig {
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */
@@ -152,7 +152,7 @@ export interface GitHubWorkflowSetting {
     /** Directory for the generated file. */
     dir?: string;
     /**
-     * Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow
+     * Inject the provider-specific checkout/Node/Corepack/install setup (default false = the workflow
      * is written as-is).
      *
      * @default false
@@ -182,7 +182,7 @@ export interface GitLabWorkflowSetting {
     /** Directory for the generated file. */
     dir?: string;
     /**
-     * Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow
+     * Inject the provider-specific checkout/Node/Corepack/install setup (default false = the workflow
      * is written as-is).
      *
      * @default false
@@ -212,7 +212,7 @@ export interface AzureWorkflowSetting {
     /** Directory for the generated file. */
     dir?: string;
     /**
-     * Inject the provider-specific checkout/Node/Corepack/install setup (default false: the workflow
+     * Inject the provider-specific checkout/Node/Corepack/install setup (default false = the workflow
      * is written as-is).
      *
      * @default false
@@ -224,7 +224,7 @@ export interface AzureWorkflowSetting {
 
 export interface WorkflowOptions {
     /**
-     * Workflow vendor for a full `workflow` object (default `github`).
+     * Workflow vendor for a full `workflow` object.
      *
      * @default 'github'
      */
@@ -273,8 +273,8 @@ export interface WorkflowOptions {
     /** Enable/disable this workflow (default: enabled when present). */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */
@@ -451,7 +451,7 @@ export type WorkflowSetting =
 
 export interface CiChangelogConfig {
     /**
-     * Workflow vendor for a full `workflow` object (default `github`).
+     * Workflow vendor for a full `workflow` object.
      *
      * @default 'github'
      */
@@ -500,8 +500,8 @@ export interface CiChangelogConfig {
     /** Enable/disable the changelog workflow and pipeline (default: enabled when present). */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */
@@ -510,7 +510,7 @@ export interface CiChangelogConfig {
     branches?: ChangelogBranchesConfig;
     /** Commitlint config; set `false` to disable the Conventional-Commits pipeline. */
     commitlint?: boolean | ChangelogCommitlintConfig;
-    /** Automatic version bumping on changelog generation (default `true`). */
+    /** Automatic version bumping on changelog generation. */
     versioning?: ChangelogVersioning;
     /**
      * Opt-in text inserted at the start of the new changelog entry, globally or for matching targets
@@ -547,10 +547,15 @@ export interface CiChangelogConfig {
         | 'any'
         | { pattern?: string; match?: string }
         | ((commit: ChangelogBreakingCommit) => boolean);
+    /**
+     * Release-body aggregation options, used by `dbx changelog --release-body` and the generated
+     * release workflow.
+     */
+    release?: ChangelogReleaseConfig;
 }
 
 export interface ChangelogBranchesConfig {
-    /** Branch glob(s) the CI + release workflows run on, and the release PR base (default `["main"]`). */
+    /** Branch glob(s) the CI + release workflows run on, and the release PR base. */
     main?: string | Array<string>;
     /**
      * Branch glob(s) the changelog/version workflow runs on. No default: when omitted it reuses `main`
@@ -562,7 +567,7 @@ export interface ChangelogBranchesConfig {
 export interface ChangelogCommitlintConfig {
     /**
      * Directory the generated `commitlint.config.mjs` is written to (default: the project root). The
-     * husky hook and CI use `--config` to point at it.
+     * generated commit hook and CI use `--config` to point at it.
      */
     dir?: string;
     /** Allowed commit types (commitlint). */
@@ -575,8 +580,8 @@ export interface ChangelogCommitlintConfig {
      */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */
@@ -599,7 +604,8 @@ export interface ChangelogVersioningConfig {
     prerelease?: ChangelogTargetedPrerelease | Array<ChangelogTargetedPrerelease | string> | string;
     /**
      * Custom bump rules for major/minor/patch (matchers or callbacks), globally or per-target via `{
-     * target, options }`.
+     * target, options }`. Configuring any level replaces Conventional-Commits detection for that
+     * target; the result is at least a patch bump.
      */
     bump?: {
         /** A bump rule globally, or per-target via `{ target, include, exclude, options }`. */
@@ -628,7 +634,10 @@ export interface ChangelogVersioningConfig {
         | ChangelogTargetedCommit
         | Array<ChangelogTargetedCommit | ChangelogCommitFormatConfig>
         | ChangelogCommitFormatConfig;
-    /** The provider globally, or per-target via `{ target, options }`. */
+    /**
+     * The provider globally, or per-target via `{ target, options }`. The `changesets` provider is
+     * repository-wide and runs once when any versioned target selects it.
+     */
     provider?:
         | ChangelogTargetedProvider
         | Array<
@@ -731,8 +740,9 @@ export interface ChangelogTargetedAllowOverBump {
     /** Skip workspaces whose repo-relative directory matches these globs. */
     exclude?: string | Array<string>;
     /**
-     * Apply a bump once per matching change instead of once per run (default false).
+     * Apply a bump once per matching change instead of once per run.
      *
+     * @default false
      * @required
      */
     options: boolean;
@@ -844,7 +854,7 @@ export interface ChangelogTargetedProvider {
     /** Skip workspaces whose repo-relative directory matches these globs. */
     exclude?: string | Array<string>;
     /**
-     * `default`, `changesets`, a provider id, or a custom provider/callback.
+     * `default`, `changesets`, a built-in provider id, or a custom provider/callback.
      *
      * @required
      */
@@ -942,6 +952,31 @@ export interface ChangelogGroupOptions {
     hidden?: boolean | ((ctx: ChangelogGroupContext) => boolean);
 }
 
+export interface ChangelogReleaseConfig {
+    /**
+     * Group every changelog version since the previous published release into one release body instead
+     * of exposing each intermediate version separately. A stable release skips prerelease versions
+     * when it picks that boundary, so all prereleases since the last stable release are part of the
+     * same body; a prerelease release still stops at the previous prerelease.
+     *
+     * @default false
+     */
+    group?: boolean;
+    /**
+     * Let a prerelease version bound the grouped body even for a stable release (so the stable body
+     * only covers the changes since the latest prerelease).
+     *
+     * @default false
+     */
+    includePrereleases?: boolean;
+    /**
+     * Explicit lower boundary for the grouped body: a version or tag (eg. `1.2.0`, `v1.2.0`,
+     * `@scope/pkg@1.2.0`). Overrides the published-release lookup; a missing version falls back to
+     * automatic discovery.
+     */
+    since?: string;
+}
+
 export type ChangelogWorkflowSetting =
     | boolean
     | string
@@ -949,6 +984,79 @@ export type ChangelogWorkflowSetting =
     | GitLabWorkflowSetting
     | AzureWorkflowSetting
     | CiChangelogConfig;
+
+export interface ReleaseWorkflowOptions {
+    /**
+     * Workflow vendor for a full `workflow` object.
+     *
+     * @default 'github'
+     */
+    provider?: 'github';
+    /** Replace `on.push.branches`. */
+    pushBranches?: Array<string>;
+    /** Replace `on.pull_request.branches`. */
+    pullRequestBranches?: Array<string>;
+    /**
+     * Extra `on.*` workflow triggers.
+     *
+     * @allowExtraKeys true
+     */
+    triggers?: WorkflowTriggers;
+    /**
+     * Extra top-level workflow keys (`permissions`, `concurrency`, `env`, ...).
+     *
+     * @allowExtraKeys true
+     */
+    extra?: WorkflowExtra;
+    /** Extra steps for a job (one group, or per-job groups). */
+    steps?: WorkflowStepsConfig | Array<WorkflowStepsConfig>;
+    /** Extra complete jobs merged in. */
+    jobs?: Record<string & {}, WorkflowJob>;
+    /**
+     * Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
+     *
+     * @allowExtraKeys true
+     */
+    tokens?: WorkflowTokens;
+    /** Override the generated workflow file name (eg. `deploy.yml`). */
+    filename?: string;
+    /**
+     * Directory for the workflow file.
+     *
+     * @default '.github/workflows'
+     */
+    dir?: string;
+    /**
+     * Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs; built-in
+     * workflows already include them.
+     *
+     * @default false
+     */
+    setup?: boolean;
+    /** Enable/disable this workflow (default: enabled when present). */
+    enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
+    /**
+     * Mark a version with a prerelease suffix (eg. `3.0.0-beta.2`) as a GitHub prerelease when a
+     * release job creates it. `auto` (default) detects a semver suffix after `-`; `true` always marks;
+     * `false` never marks. Custom release jobs can read the `{{ releasePrerelease }}` token.
+     */
+    prerelease?: boolean | 'auto';
+}
+
+export type ReleaseWorkflowSetting =
+    | boolean
+    | string
+    | GitHubWorkflowSetting
+    | GitLabWorkflowSetting
+    | AzureWorkflowSetting
+    | ReleaseWorkflowOptions;
 
 /** @see https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file */
 export interface ToolchainDependabotConfig {
@@ -1049,8 +1157,8 @@ export interface ToolchainDependabotConfig {
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */
@@ -1104,7 +1212,7 @@ export type CustomWorkflowSettings =
 export interface ChangelogConfig {
     /** Commitlint config; set `false` to disable the Conventional-Commits pipeline. */
     commitlint?: boolean | ChangelogCommitlintConfig;
-    /** Automatic version bumping on changelog generation (default `true`). */
+    /** Automatic version bumping on changelog generation. */
     versioning?: ChangelogVersioning;
     /**
      * Opt-in text inserted at the start of the new changelog entry, globally or for matching targets
@@ -1141,11 +1249,16 @@ export interface ChangelogConfig {
         | 'any'
         | { pattern?: string; match?: string }
         | ((commit: ChangelogBreakingCommit) => boolean);
+    /**
+     * Release-body aggregation options, used by `dbx changelog --release-body` and the generated
+     * release workflow.
+     */
+    release?: ChangelogReleaseConfig;
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */
@@ -1187,8 +1300,8 @@ export interface ToolchainFmtConfig {
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */
@@ -1231,8 +1344,8 @@ export interface ToolchainLintConfig {
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */
@@ -1257,8 +1370,8 @@ export interface ToolchainBiomeConfig {
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */
@@ -1302,18 +1415,18 @@ export interface ToolchainTsconfigConfig {
     aliases?: boolean;
     /**
      * Inline the compiler options inherited from a remote `http(s)` `extends` chain into the generated
-     * workspace configs (default false). Useful when a tool cannot follow a remote URL; path-valued
-     * options such as `paths`/`baseUrl` are skipped because they describe the remote tree. Settings
-     * the generated config already defines always win.
+     * workspace configs. Useful when a tool cannot follow a remote URL; path-valued options such as
+     * `paths`/`baseUrl` are skipped because they describe the remote tree. Settings the generated
+     * config already defines always win.
      *
      * @default false
      */
     flattenRemoteExtends?: boolean;
     /**
-     * Auto-generate the root workspaces tsconfig paths/references from the project graph (default
-     * false). Set true to derive them from the project graph; set false to only use the entries you
-     * define yourself. An object additionally accepts `include`/`exclude`, `rewriteAlias`, `modes`,
-     * `prefix`, `devMode` and `dist`.
+     * Auto-generate the root workspaces tsconfig paths/references from the project graph. Set true to
+     * derive them from the project graph; set false to only use the entries you define yourself. An
+     * object additionally accepts `include`/`exclude`, `rewriteAlias`, `modes`, `prefix`, `devMode`
+     * and `dist`.
      */
     auto?: boolean | ToolchainTsconfigAliasAutoSetting;
     /**
@@ -1333,6 +1446,7 @@ export interface ToolchainTsconfigConfig {
      * JSON indentation.
      *
      * @default 4
+     * @cliFlagShort i
      */
     indent?: number;
     /**
@@ -1384,8 +1498,8 @@ export interface ToolchainTsconfigConfig {
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */
@@ -1403,11 +1517,11 @@ export interface ToolchainTsconfigAliasAutoSetting {
     /**
      * Rewrite the alias keys auto-wiring generates (custom keys are preserved). Patterns are
      * URL-rewrite style: a string is a regular-expression source and replacements support `$1`, `$2`,
-     * ... capture groups. Examples: `{ "^@acme/(.+)$": "@acme/pkg/$1" }` (string patterns), `[{
-     * pattern: /^@acme\/(.+)$/, replacement: "@acme/pkg/$1" }]` (RegExp patterns), `[{ pattern:
-     * ["^@acme/a$", "^@acme/b$"], replacement: "@acme/x" }]` (an array of keys), and an array of such
-     * rules (applied in order; the first matching rule wins). `RegExp` patterns are only available
-     * from TS/JS configs; JSON configs use string patterns.
+     * ... capture groups. Examples: `{ "^@org/(.+)$": "@org/pkg/$1" }` (string patterns), `[{ pattern:
+     * /^@org\/(.+)$/, replacement: "@org/pkg/$1" }]` (RegExp patterns), `[{ pattern: ["^@org/a$",
+     * "^@org/b$"], replacement: "@org/x" }]` (an array of keys), and an array of such rules (applied
+     * in order; the first matching rule wins). `RegExp` patterns are only available from TS/JS
+     * configs; JSON configs use string patterns.
      */
     rewriteAlias?: ToolchainTsconfigAliasRewrite;
     /**
@@ -1481,8 +1595,8 @@ export interface ToolchainLoaderConfig {
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */
@@ -1495,8 +1609,8 @@ export interface ToolchainTemplatesConfig {
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */
@@ -1560,8 +1674,8 @@ export interface ToolchainRegistryConfig {
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */
@@ -1586,8 +1700,8 @@ export interface ToolchainCatalogsConfig {
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */
@@ -1595,7 +1709,7 @@ export interface ToolchainCatalogsConfig {
 }
 
 export type ToolchainViteConfig = Omit<ViteUserConfig, 'fmt' | 'lint'> & {
-    /** Write the managed Vite config (default true); a string sets its file name/path. */
+    /** Write the managed Vite config; a string sets its file name/path. @default `true` */
     config?: boolean | string;
     /** Render the shim at runtime (default) or as a fully static config. */
     shim?: 'runtime' | 'static';
@@ -1630,8 +1744,8 @@ export interface ToolchainWatchConfig {
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */
@@ -1640,8 +1754,8 @@ export interface ToolchainWatchConfig {
 
 export interface ToolchainSyncConfig {
     /**
-     * Opt-in formatting of the managed files after generation (default off). `true` uses the defaults,
-     * `false` disables it, and an object tunes `enabled`/`fix`/`command`/`exclude`.
+     * Opt-in formatting of the managed files after generation. `true` uses the defaults, `false`
+     * disables it, and an object tunes `enabled`/`fix`/`command`/`exclude`.
      */
     format?:
         | boolean
@@ -1649,8 +1763,8 @@ export interface ToolchainSyncConfig {
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */
@@ -1658,11 +1772,11 @@ export interface ToolchainSyncConfig {
 }
 
 export interface ToolchainLoggerConfig {
-    /** Minimum level to print (default `info`). */
+    /** Minimum level to print. @default `'info'` */
     level?: 'debug' | 'info' | 'warn' | 'error' | 'silent';
     /** Force colours on/off (default: on; `--no-color` disables). */
     color?: boolean;
-    /** Prefix non-indented lines with `<name>:` (default `dbx`). */
+    /** Prefix non-indented lines with `<name>:`. @default `'dbx'` */
     name?: string;
     /** Warning/error id, message substring, or `/regex/` to silence (single value or array). */
     suppress?: string | Array<string>;
@@ -1678,8 +1792,8 @@ export interface ToolchainProvidersConfig {
     /** Enable/disable this section (default: enabled when defined). */
     enabled?: boolean;
     /**
-     * Regenerate this section's managed files during `dbx sync` (default true). When false, existing
-     * files are left untouched and are neither written nor drift-checked.
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
      *
      * @default true
      */

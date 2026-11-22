@@ -52,5 +52,5 @@ dbx mcp:install --provider custom --dir ./tools/mcp
 ...). `--no-skills` writes only the MCP config, and `--json` prints the exact
 paths that were written.
 
-The VS Code extension exposes the same flow from **Install MCP server + skill…**
+The VS Code extension exposes the same flow from **Install MCP server + skill...**
 (and the Home view's Quick Actions).

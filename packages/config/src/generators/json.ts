@@ -15,10 +15,16 @@ import {
     isSchemaType,
     isZodSchema,
     metaOf,
+    normalizeBaseGroups,
     normalizeJsonSchemaMetadata,
     toJsonSchemaSafe,
 } from '../schema.js';
-import type { ConfigEngineOptions, ConfigSchema, ConfigSchemaInput } from '../types/index.js';
+import type {
+    ConfigGroup,
+    ConfigSchema,
+    ConfigSchemaInput,
+    GenerateJsonSchemaOptions,
+} from '../types/index.js';
 
 type JsonNode = Record<string, unknown>;
 
@@ -93,29 +99,44 @@ function resolveLocalRef(node: JsonNode | undefined, defs: Record<string, JsonNo
 /** The JSON Schema equivalent of {@link flattenBaseSchema}. */
 export function flattenBaseJsonSchema(
     node: JsonNode,
-    baseGroup: string,
+    baseGroup?: ConfigGroup,
     defs: Record<string, JsonNode> = {}
 ): JsonNode {
     const properties = node.properties;
     if (!isJsonNode(properties)) return node;
-    const base = resolveLocalRef(properties[baseGroup] as JsonNode, defs);
-    if (!isJsonNode(base) || base.type !== 'object' || !isJsonNode(base.properties)) return node;
-    const { [baseGroup]: _base, ...rest } = properties;
-    // Only promote the base children when `base` itself is required; otherwise
-    // an omitted base (allowed by Zod) would still require its children.
-    const baseRequired =
-        Array.isArray(node.required) && node.required.some(name => String(name) === baseGroup);
-    const required = [
-        ...(Array.isArray(node.required)
-            ? node.required.filter(name => String(name) !== baseGroup)
-            : []),
-        ...(baseRequired && Array.isArray(base.required) ? base.required : []),
-    ];
+    const names = normalizeBaseGroups(baseGroup);
+    const found: Array<{ name: string; base: JsonNode }> = [];
+    for (const name of names) {
+        const base = resolveLocalRef(properties[name] as JsonNode, defs);
+        if (isJsonNode(base) && base.type === 'object' && isJsonNode(base.properties)) {
+            found.push({ name, base });
+        }
+    }
+    if (found.length === 0) return node;
+    const rest = { ...properties };
+    for (const name of names) delete rest[name];
+    const requiredNames = (Array.isArray(node.required) ? node.required : []).filter(
+        name => !names.includes(String(name))
+    );
+    // Only promote a base group's children when that group itself is required;
+    // otherwise an omitted base (allowed by Zod) would still require them.
+    for (const { name, base } of found) {
+        if (
+            Array.isArray(node.required) &&
+            node.required.some(entry => String(entry) === name) &&
+            Array.isArray(base.required)
+        ) {
+            requiredNames.push(...base.required);
+        }
+    }
     const out: JsonNode = {
         ...node,
-        properties: { ...(base.properties as JsonNode), ...rest },
+        properties: {
+            ...Object.assign({}, ...found.map(({ base }) => base.properties)),
+            ...rest,
+        },
     };
-    if (required.length > 0) out.required = [...new Set(required)];
+    if (requiredNames.length > 0) out.required = [...new Set(requiredNames)];
     else delete out.required;
     return out;
 }
@@ -152,7 +173,7 @@ function cloneJsonNode(value: unknown): unknown {
 /** Lower one scope to a JSON Schema node, plus its `$defs` when refs are preserved. */
 function toJsonScope(
     value: ConfigSchemaInput,
-    baseGroup: string,
+    baseGroup: ConfigGroup | undefined,
     preserveDefs: boolean
 ): { node: JsonNode; defs: Record<string, JsonNode> } {
     if (isZodSchema(value)) {
@@ -196,37 +217,17 @@ function jsonSchemaScopes(
     schema: ConfigSchema
 ): Record<string, ConfigSchemaInput | ConfigSchemaInput[]> {
     if (Array.isArray(schema)) {
-        const name = schema.length === 1 ? (metaOf(schema[0]!)?.id ?? 'config') : 'config';
-        return { [name]: schema };
+        const first = schema[0];
+        const firstSchema =
+            schema.length === 1 && (isZodSchema(first) || isSchemaType(first))
+                ? metaOf(first)?.id
+                : undefined;
+        return { [firstSchema ?? 'config']: schema };
     }
     if (isZodSchema(schema) || isSchemaType(schema)) {
         return { [metaOf(schema)?.id ?? 'config']: schema };
     }
     return schema as Record<string, ConfigSchemaInput | ConfigSchemaInput[]>;
-}
-
-export interface GenerateJsonSchemaOptions extends Pick<ConfigEngineOptions, 'baseGroup'> {
-    /** Output file path. When omitted, nothing is written. */
-    output?: string | false;
-    /** Document metadata overrides. */
-    id?: string;
-    title?: string;
-    description?: string;
-    /**
-     * Scopes the document requires. Defaults to none: every config section is
-     * opt-in by presence, so an empty config remains valid.
-     */
-    requiredScopes?: string[];
-    /**
-     * Keep Zod's document-level `$ref`/`$defs` graph instead of inlining every
-     * reference into its scope (default false). The `$defs` tables are hoisted
-     * to the document root so the references stay valid.
-     */
-    preserveDefs?: boolean;
-    /** Descriptions for the generated scope properties, keyed by scope name. */
-    scopeDescriptions?: Record<string, string>;
-    /** Set the document root's `additionalProperties` constraint. */
-    additionalProperties?: boolean;
 }
 
 /**
@@ -242,9 +243,7 @@ export async function generateConfigJsonSchema(
     schema: ConfigSchema,
     options: GenerateJsonSchemaOptions = {}
 ): Promise<Record<string, unknown>> {
-    const baseGroup = Array.isArray(options.baseGroup)
-        ? String((options.baseGroup as unknown[])[0] ?? 'base')
-        : String(options.baseGroup ?? 'base');
+    const baseGroup = options.baseGroup;
     const scopes = jsonSchemaScopes(schema);
     const properties: Record<string, unknown> = {};
     const defs: Record<string, JsonNode> = {};
@@ -299,7 +298,8 @@ export async function generateConfigJsonSchema(
 
     if (typeof options.output === 'string') {
         fs.mkdirSync(path.dirname(options.output), { recursive: true });
-        fs.writeFileSync(options.output, `${JSON.stringify(doc, null, 4)}\n`, 'utf-8');
+        const content = `${JSON.stringify(doc, null, 4)}\n`;
+        fs.writeFileSync(options.output, options.onContent?.(content) ?? content, 'utf-8');
     }
 
     return doc;

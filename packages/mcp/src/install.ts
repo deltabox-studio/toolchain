@@ -156,13 +156,13 @@ export interface InstallMcpOptions {
     cwd?: string;
     /** The custom directory (required for `provider: 'custom'`). */
     dir?: string;
-    /** The command clients run (default `dbx`). */
+    /** The command clients run. @default `dbx` */
     command?: string;
-    /** The server arguments (default `['mcp:serve']`). */
+    /** The server arguments. @default `['mcp:serve']` */
     args?: string[];
     /** Do not write the skill file. */
     skills?: boolean;
-    /** Overwrite an existing skill file (default true). */
+    /** Overwrite an existing skill file. @default `true` */
     force?: boolean;
 }
 

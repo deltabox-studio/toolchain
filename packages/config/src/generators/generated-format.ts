@@ -3,19 +3,14 @@
  *
  * The config generators emit deterministic text; this helper runs it through
  * Oxfmt **at generation time** instead of shelling out to the repo-root `vp`
- * (or relying on a separate `yarn format` pass), so a generated file is written
+ * (or relying on a separate `yarn fmt` pass), so a generated file is written
  * already formatted. It prefers the project-local `vite-plus/fmt` (Oxfmt ships
  * with Vite+), falls back to `oxfmt`, and finally returns the input untouched
  * when no formatter is resolvable — so generation never fails on a missing
  * formatter.
  */
 
-export interface FormatGeneratedOptions {
-    /** File name used to infer the language (default `generated.ts`). */
-    fileName?: string;
-    /** Extra Oxfmt options merged over {@link GENERATED_FORMAT_OPTIONS}. */
-    options?: Record<string, unknown>;
-}
+import type { FormatGeneratedOptions } from '../types/index.js';
 
 /**
  * Baseline Oxfmt options matching the toolchain's own `vite.config.ts`.

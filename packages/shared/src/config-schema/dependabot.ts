@@ -6,7 +6,8 @@ import { withEnabled } from './meta.js';
 const dependabotGroupSchema = z.object({
     'applies-to': z
         .enum(['version-updates', 'security-updates'])
-        .describe('Which update kind this group applies to (default `version-updates`).')
+        .describe('Which update kind this group applies to.')
+        .default('version-updates')
         .optional(),
     patterns: z.array(z.string()).describe('Package name patterns.').default(['*']).optional(),
     'exclude-patterns': z

@@ -8,20 +8,20 @@ import {
 
 describe('scaffolded vite.config.ts', () => {
     it('is included by default with the project type', () => {
-        const files = createRootProjectFiles({ name: 'acme', scope: '@acme' });
+        const files = createRootProjectFiles({ name: 'myapp', scope: '@org' });
         const config = files.find(f => f.path === 'vite.config.ts');
         expect(config?.content).toContain('defineConfig');
         expect(config?.content).toContain("type: 'project'");
     });
 
     it('is skipped when includeConfig is false', () => {
-        const files = createRootProjectFiles({ name: 'acme', includeConfig: false });
+        const files = createRootProjectFiles({ name: 'myapp', includeConfig: false });
         expect(files.some(f => f.path === 'vite.config.ts')).toBe(false);
     });
 
     it('uses monorepo-root for the monorepo scaffold', () => {
         const files = createMonorepoRootFiles({
-            name: 'acme',
+            name: 'myapp',
             workspaces: [{ alias: 'core', dir: 'packages/core' }],
         });
         const config = files.find(f => f.path === 'vite.config.ts');
@@ -29,7 +29,7 @@ describe('scaffolded vite.config.ts', () => {
     });
 
     it('opts into the catalog the scaffold writes', () => {
-        const files = createRootProjectFiles({ name: 'acme' });
+        const files = createRootProjectFiles({ name: 'myapp' });
         const config = files.find(f => f.path === 'vite.config.ts')?.content ?? '';
         expect(config).toContain('catalogs:');
         expect(config).toContain('packages:');
@@ -39,7 +39,7 @@ describe('scaffolded vite.config.ts', () => {
     it('opts into the catalog for a yarn/pnpm monorepo root', () => {
         for (const packageManager of ['yarn', 'pnpm'] as const) {
             const files = createMonorepoRootFiles({
-                name: 'acme',
+                name: 'myapp',
                 packageManager,
                 workspaces: [],
             });
@@ -50,16 +50,16 @@ describe('scaffolded vite.config.ts', () => {
     });
 
     it('does not opt into catalogs when no catalog file is written', () => {
-        const npm = createRootProjectFiles({ name: 'acme', packageManager: 'npm' });
+        const npm = createRootProjectFiles({ name: 'myapp', packageManager: 'npm' });
         expect(npm.find(f => f.path === 'vite.config.ts')?.content).not.toContain('catalogs:');
         // A single Bun project pins (nowhere to declare a catalog).
-        const bun = createRootProjectFiles({ name: 'acme', packageManager: 'bun' });
+        const bun = createRootProjectFiles({ name: 'myapp', packageManager: 'bun' });
         expect(bun.find(f => f.path === 'vite.config.ts')?.content).not.toContain('catalogs:');
     });
 
     it('uses monorepo-workspace for workspace files', () => {
         const files = createWorkspaceFiles({
-            name: 'acme',
+            name: 'myapp',
             wsName: 'core',
             wsDir: 'packages/core',
         });

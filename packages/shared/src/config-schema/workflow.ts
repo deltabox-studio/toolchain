@@ -166,26 +166,34 @@ export const workflowExtraSchema = z
 /** Per-workflow token overrides, with the known tokens suggested. */
 export const workflowTokensSchema = z
     .object({
-        name: z.string().describe('Project name (`{{name}}`).').optional(),
-        scope: z.string().describe('Package scope (`{{scope}}`).').optional(),
-        author: z.string().describe('Author (`{{author}}`).').optional(),
-        license: z.string().describe('License (`{{license}}`).').optional(),
-        homepage: z.string().describe('Homepage (`{{homepage}}`).').optional(),
-        repo: z.string().describe('Repository URL (`{{repo}}`).').optional(),
-        description: z.string().describe('Description (`{{description}}`).').optional(),
-        nodeVersion: z.string().describe('Node version (`{{nodeVersion}}`).').optional(),
-        packageManager: z.string().describe('Package manager (`{{packageManager}}`).').optional(),
-        yarnVersion: z.string().describe('Yarn version (`{{yarnVersion}}`).').optional(),
+        name: z.string().describe('Project name (`{{ name }}`).').optional(),
+        scope: z.string().describe('Package scope (`{{ scope }}`).').optional(),
+        author: z.string().describe('Author (`{{ author }}`).').optional(),
+        license: z.string().describe('License (`{{ license }}`).').optional(),
+        homepage: z.string().describe('Homepage (`{{ homepage }}`).').optional(),
+        repo: z.string().describe('Repository URL (`{{ repo }}`).').optional(),
+        description: z.string().describe('Description (`{{ description }}`).').optional(),
+        nodeVersion: z.string().describe('Node version (`{{ nodeVersion }}`).').optional(),
+        packageManager: z.string().describe('Package manager (`{{ packageManager }}`).').optional(),
+        yarnVersion: z.string().describe('Yarn version (`{{ yarnVersion }}`).').optional(),
         packageManagerVersion: z
             .string()
-            .describe('Package manager version (`{{packageManagerVersion}}`).')
+            .describe('Package manager version (`{{ packageManagerVersion }}`).')
             .optional(),
-        mainBranch: z.string().describe('Main branch (`{{mainBranch}}`).').optional(),
-        devBranch: z.string().describe('Dev branch (`{{devBranch}}`).').optional(),
+        mainBranch: z.string().describe('Main branch (`{{ mainBranch }}`).').optional(),
+        devBranch: z.string().describe('Dev branch (`{{ devBranch }}`).').optional(),
         vitePlus: z
             .boolean()
             .describe(
                 'Use `voidzero-dev/setup-vp` for this workflow (default: detected from the project).'
+            )
+            .optional(),
+        releasePrerelease: z
+            .union([z.boolean(), z.literal('auto')])
+            .describe(
+                'Whether a version with a prerelease suffix (eg. `3.0.0-beta.2`) should be ' +
+                    'marked as a GitHub prerelease (`{{ releasePrerelease }}`). `auto` detects ' +
+                    'the suffix, `true` always marks and `false` never marks.'
             )
             .optional(),
         setupVpVersion: z
@@ -202,7 +210,7 @@ export const workflowOptionsSchema = withEnabled(
     z.object({
         provider: z
             .literal('github')
-            .describe('Workflow vendor for a full `workflow` object (default `github`).')
+            .describe('Workflow vendor for a full `workflow` object.')
             .default('github')
             .optional(),
         pushBranches: z.array(z.string()).describe('Replace `on.push.branches`.').optional(),
@@ -252,7 +260,7 @@ const vendorWorkflowFields = {
         .boolean()
         .describe(
             'Inject the provider-specific checkout/Node/Corepack/install setup ' +
-                '(default false: the workflow is written as-is).'
+                '(default false = the workflow is written as-is).'
         )
         .default(false)
         .optional(),
@@ -341,6 +349,35 @@ export const workflowSettingSchema = z
     .meta({ id: 'WorkflowSetting' });
 
 /**
+ * Release workflow overrides: the shared workflow options plus GitHub
+ * prerelease marking for release-creation jobs.
+ */
+export const releaseWorkflowOptionsSchema = workflowOptionsSchema
+    .extend({
+        prerelease: z
+            .union([z.boolean(), z.literal('auto')])
+            .describe(
+                'Mark a version with a prerelease suffix (eg. `3.0.0-beta.2`) as a GitHub ' +
+                    'prerelease when a release job creates it. `auto` (default) detects a ' +
+                    'semver suffix after `-`; `true` always marks; `false` never marks. Custom ' +
+                    'release jobs can read the `{{ releasePrerelease }}` token.'
+            )
+            .default('auto')
+            .optional(),
+    })
+    .describe('Release workflow overrides, including GitHub prerelease marking.')
+    .meta({ id: 'ReleaseWorkflowOptions' });
+
+/** The release workflow setting (defaults, a full workflow, or raw YAML). */
+export const releaseWorkflowSettingSchema = z
+    .union([z.boolean(), z.string(), ...workflowVendorSchemas, releaseWorkflowOptionsSchema])
+    .describe(
+        '`true`/`false`, a raw YAML string, a complete GitHub/GitLab/Azure workflow, or ' +
+            'release workflow overrides (including `prerelease`).'
+    )
+    .meta({ id: 'ReleaseWorkflowSetting' });
+
+/**
  * A custom workflow is enabled by presence (no boolean): a raw YAML string is
  * written verbatim, a complete vendor workflow (with `provider`), or a GitHub
  * options object merged over an empty workflow (`triggers`, `extra`, `jobs`, ...
@@ -365,7 +402,9 @@ export const workflowConfigSchema = z
         changelog: workflowSettingSchema
             .describe('The changelog/version workflow (`changelog.yml`).')
             .optional(),
-        release: workflowSettingSchema.describe('The release workflow (`release.yml`).').optional(),
+        release: releaseWorkflowSettingSchema
+            .describe('The release workflow (`release.yml`), including prerelease marking.')
+            .optional(),
         issues: workflowSettingSchema
             .describe('The issue-title workflow (`issues.yml`).')
             .optional(),

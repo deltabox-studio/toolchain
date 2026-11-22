@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
 
 import type { ViteUserConfig } from 'vite-plus';
 import type { PackUserConfig } from 'vite-plus/pack';
@@ -23,9 +24,17 @@ const require = createRequire(import.meta.url);
  * The explicit `pack`/`run` options below keep the build deterministic when the
  * plugin is unavailable; once the package is built, the plugin is used again.
  */
-export function resolveDbxPlugin(): typeof import('vite-plugin-dbx').dbx | undefined {
+export async function resolveDbxPlugin(): Promise<
+    typeof import('@deltabox/toolchain/vite').dbx | undefined
+> {
     try {
-        return (require('vite-plugin-dbx') as typeof import('vite-plugin-dbx')).dbx;
+        // Resolve through Node (package `exports`, not the tsconfig paths that
+        // would load the toolchain sources), then import the resulting file
+        // URL. A dynamic import (unlike `require`) waits for an ESM module the
+        // root config is already loading; requiring it throws
+        // `ERR_REQUIRE_ESM_RACE_CONDITION`.
+        const entry = require.resolve('@deltabox/toolchain/vite');
+        return (await import(pathToFileURL(entry).href)).dbx;
     } catch {
         return undefined;
     }
@@ -49,8 +58,8 @@ export function workspaceTasks(): WorkspaceTasks {
             command: 'vp test run',
             cache: { input: [{ auto: true }, '!**/*.tsbuildinfo'], output: [] },
         },
-        format: { command: 'vp fmt', cache: { input: [{ auto: true }], output: [] } },
-        'format:check': {
+        fmt: { command: 'vp fmt', cache: { input: [{ auto: true }], output: [] } },
+        'fmt:check': {
             command: 'vp fmt --check',
             cache: { input: [{ auto: true }], output: [] },
         },
@@ -84,9 +93,9 @@ export interface WorkspaceViteOptions {
  * Oxfmt/Oxlint options (and ignore patterns) as the root instead of the
  * defaults a bare `fmt: true` / `lint: true` would select.
  */
-export function workspaceViteConfig(options: WorkspaceViteOptions): ViteUserConfig {
+export async function workspaceViteConfig(options: WorkspaceViteOptions): Promise<ViteUserConfig> {
     const { entry, alwaysBundle = SHARED_ONLY, exports: exportsOption } = options;
-    const dbx = resolveDbxPlugin();
+    const dbx = await resolveDbxPlugin();
     return {
         plugins: dbx ? [dbx()] : [],
         resolve: { tsconfigPaths: true },

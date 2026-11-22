@@ -79,7 +79,7 @@ export function extractConfigSelection(
                 found.config = value;
                 index += 1;
             } else {
-                // Missing value: leave the flag for commander to report.
+                // Missing value: leave the flag for the program to report.
                 rest.push(arg);
             }
         } else if (arg.startsWith('--config=')) {

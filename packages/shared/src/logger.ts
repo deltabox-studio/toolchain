@@ -51,14 +51,14 @@ export interface ToolchainLogger {
 export interface LoggerOptions {
     /** Use a custom logger implementation instead of the built-in clack sink. */
     logger?: ToolchainLogger;
-    /** Minimum level to print (default `info`). */
+    /** Minimum level to print. @default `info` */
     level?: LogLevel;
     /**
      * Force colors on/off (default: on). The toolchain colors its output by
      * default; `--no-color` or `logger.color: false` turn it off.
      */
     color?: boolean;
-    /** Prefix non-indented lines with `<name>:` (default `dbx`). */
+    /** Prefix non-indented lines with `<name>:`. @default `dbx` */
     name?: string;
     /**
      * Silence matching warnings/errors. A string matches an emitted id (exact)
@@ -90,14 +90,14 @@ export function isLogLevel(value: unknown): value is LogLevel {
     return typeof value === 'string' && (LOG_LEVELS as readonly string[]).includes(value);
 }
 
-/** Coerce a possibly-invalid level to a known one (default `info`). */
+/** Coerce a possibly-invalid level to a known one. @default `info` */
 export function normalizeLogLevel(value: unknown, fallback: LogLevel = 'info'): LogLevel {
     return isLogLevel(value) ? value : fallback;
 }
 
 /**
- * Strip ANSI SGR escape codes from `text`. Used to keep commander's help/error
- * output plain when the logger's colours are disabled (`--no-color` or
+ * Strip ANSI SGR escape codes from `text`. Used to keep help/error output plain
+ * when the logger's colours are disabled (`--no-color` or
  * `logger.color: false`).
  */
 export function stripAnsi(text: string): string {

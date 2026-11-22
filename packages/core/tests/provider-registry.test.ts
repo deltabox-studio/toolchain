@@ -36,11 +36,14 @@ describe('provider registry search paths', () => {
         const cwd = tmp();
         const registry = path.join(cwd, 'providers');
         fs.mkdirSync(registry, { recursive: true });
-        fs.writeFileSync(path.join(registry, 'providers.json'), JSON.stringify([provider('acme')]));
+        fs.writeFileSync(
+            path.join(registry, 'providers.json'),
+            JSON.stringify([provider('myapp')])
+        );
         addProjectProviderRegistry(cwd, './providers');
 
         expect(providerRegistryPaths(cwd).map(entry => entry.path)).toContain(registry);
-        expect(readAllProvidersSync(cwd).map(item => item.id)).toContain('acme');
+        expect(readAllProvidersSync(cwd).map(item => item.id)).toContain('myapp');
     });
 
     it('honours the registry policy', () => {

@@ -49,6 +49,7 @@ export const VP_COMMANDS: VpCommandInfo[] = [
     {
         name: 'fmt',
         group: 'develop',
+        aliases: ['format'],
         description: 'Format code with the active formatter (Oxfmt via Vite+).',
     },
     { name: 'test', group: 'develop', description: 'Run tests through bundled Vitest.' },

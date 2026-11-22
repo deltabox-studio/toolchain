@@ -37,12 +37,27 @@ describe('default workflows', () => {
         expect(release).not.toContain('binaries');
     });
 
+    it('resolves the releasePrerelease token for custom release jobs', () => {
+        const yaml = renderWorkflow('release', {
+            tokens: { releasePrerelease: false },
+            config: {
+                steps: {
+                    after: [
+                        { name: 'Check prerelease token', run: 'echo token={{releasePrerelease}}' },
+                    ],
+                },
+            },
+        })!;
+
+        expect(yaml).toContain('token=false');
+    });
+
     it('aggregates every changelog entry since the last released version', () => {
         const release = renderWorkflow('release', { tokens: {} })!;
         // Not the marker-only extraction (which only ever yields the latest entry).
         expect(release).not.toContain('<!-- release:start -->');
         // The CLI resolves the last released version and guards first releases.
-        expect(release).toContain('changelog --release-notes');
+        expect(release).toContain('changelog --release-body');
         expect(release).not.toContain('cat CHANGELOG.md');
     });
 });
@@ -619,6 +634,17 @@ describe('workflow command fixes', () => {
         const files = renderWorkflows({ packageManager: 'yarn' }, { changelog: true });
         expect(files['changelog.yml']).toContain('git add -- "*package.json" "*CHANGELOG.md"');
         expect(files['changelog.yml']).not.toContain('git add -u');
+        expect(files['changelog.yml']).not.toContain('.changeset');
+    });
+
+    it('stages consumed .changeset files for the changesets provider', () => {
+        const files = renderWorkflows(
+            { packageManager: 'yarn', changesets: true },
+            { changelog: true }
+        );
+        expect(files['changelog.yml']).toContain(
+            'if [ -d .changeset ]; then git add -A -- .changeset; fi'
+        );
     });
 
     it('names the changelog workflow after the resolved branch', () => {

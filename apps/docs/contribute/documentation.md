@@ -34,7 +34,7 @@ copies them to the repo root.
   Introduction groups are configured in `apps/docs/.vitepress/config.ts`.
 - The pages under `apps/docs/config` are generated. Run `yarn config:generate`
   after changing the config schema; do not edit those pages by hand.
-- Run `yarn format` and `yarn docs build` before opening a PR.
+- Run `yarn fmt` and `yarn docs build` before opening a PR.
 
 See the [VitePress documentation](https://vitepress.dev/) for Markdown syntax
 and theme options.

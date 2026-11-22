@@ -8,7 +8,7 @@ const NAME_VAR: TemplateVariable = {
     required: true,
 };
 
-/** The optional `scope` input (eg. `@acme`). */
+/** The optional `scope` input (eg. `@org`). */
 const SCOPE_VAR: TemplateVariable = {
     name: 'scope',
     prompt: 'npm scope (optional)',

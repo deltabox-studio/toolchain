@@ -19,7 +19,7 @@ import {
     type ToolchainTsconfigAliasRewrite,
 } from '@deltabox/toolchain/shared';
 
-import { resolveTsconfigCompilerOption } from './resolve.js';
+import { resolveTsconfigCompilerOption } from './resolve/index.js';
 import {
     type AliasDiscoveryMode,
     matchesAutoFilter,
@@ -77,11 +77,11 @@ function normalizeSrcDir(value: string): string {
 
 /** How the auto-wiring should resolve a workspace's aliases. */
 export interface WorkspaceAliasSettings {
-    /** Discovery modes (default `auto`). */
+    /** Discovery modes. @default `auto` */
     modes?: AliasDiscoveryMode[];
     /** Base key for generated aliases (default: the package name). */
     prefix?: string;
-    /** Resolve exports to source files (default true). */
+    /** Resolve exports to source files. @default `true` */
     devMode?: boolean;
     /** Output directory for source/dist mapping (default: tsconfig `outDir`, then `dist`). */
     dist?: string;

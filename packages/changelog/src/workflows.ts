@@ -67,6 +67,13 @@ export const DEFAULT_WORKFLOW_TOKENS = {
     // Whether the project is a Vite/Vite+ project; the changelog sync task sets
     // this from the project files (and a consumer can override it per workflow).
     vitePlus: false,
+    // Whether the changelog pipeline uses the changesets provider. The
+    // changelog sync task sets this from the config so the commit step stages
+    // the consumed `.changeset` files.
+    changesets: false,
+    // Whether a release job should mark a prerelease version as a GitHub
+    // prerelease. The changelog sync task sets this from `ci.release.prerelease`.
+    releasePrerelease: 'auto',
 } as const;
 
 /** Default file name per workflow id. */
@@ -539,7 +546,7 @@ function injectProviderSetup(
 }
 
 export interface DefaultWorkflowOptions {
-    /** Include commitlint in the CI workflow (default true). */
+    /** Include commitlint in the CI workflow. @default `true` */
     commitlint?: boolean;
     /** Config-defined workflows (enabled by presence; no boolean form). */
     custom?: Record<string, CustomWorkflowSettings>;
@@ -622,6 +629,11 @@ export function defaultWorkflows(
                                 // Stage only the files this pipeline owns, so a
                                 // stray working-tree change is never committed.
                                 'git add -- "*package.json" "*CHANGELOG.md"',
+                                // The changesets provider consumes changeset
+                                // files; stage their deletions/edits too.
+                                ...(tokens.changesets
+                                    ? ['if [ -d .changeset ]; then git add -A -- .changeset; fi']
+                                    : []),
                                 // The `afterVersion` hook may update the scaffold
                                 // catalog in `.yarnrc.yml`.
                                 'if [ -f .yarnrc.yml ]; then git add .yarnrc.yml; fi',
@@ -638,6 +650,9 @@ export function defaultWorkflows(
             on: { push: { branches: [main] }, workflow_dispatch: null },
             permissions: { contents: 'write', 'pull-requests': 'write' },
             concurrency: { group: 'release', 'cancel-in-progress': false },
+            // The default job opens a release PR. A custom job that creates the
+            // GitHub Release can use `{{releasePrerelease}}` (from
+            // `ci.release.prerelease`) to decide whether to pass `--prerelease`.
             jobs: {
                 'create-release-pr': {
                     'runs-on': 'ubuntu-latest',
@@ -661,11 +676,12 @@ export function defaultWorkflows(
                                 'git add -A',
                                 'git commit -m "chore: version packages ($version)" || true',
                                 'git push origin "$branch"',
-                                // The CLI extracts entries since the last released
-                                // version and falls back to the newest entry on a
+                                // The CLI extracts entries since the last published
+                                // release and falls back to the newest entry on a
                                 // first release, so unrelated tags cannot leak the
-                                // whole changelog into the PR body.
-                                `notes="$(${engine} changelog --release-notes "$version")"`,
+                                // whole changelog into the PR body. Grouping is
+                                // opt-in through `changelog.release.group`.
+                                `notes="$(${engine} changelog --release-body "$version")"`,
                                 '[ -n "$notes" ] || notes="Release $version"',
                                 `gh pr create --base ${main} --head "$branch" --title "release: $version" --body "$notes"`,
                             ].join('\n'),
@@ -774,7 +790,7 @@ export interface RenderWorkflowOptions {
     tokens: Replacements;
     /** The consumer's per-workflow config. */
     config?: WorkflowOptions;
-    /** Include commitlint in the CI workflow (default true). */
+    /** Include commitlint in the CI workflow. @default `true` */
     commitlint?: boolean;
 }
 

@@ -66,7 +66,6 @@
  *   node scripts/dist/changelog/index.js --processing-method all --dry-run
  *   CHANGELOG_PROCESSING_METHOD=all node scripts/dist/changelog/index.js
  */
-import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -87,6 +86,11 @@ import { parseArgsCli } from './utils/args.js';
 import { applyDetailsToEntry, resolveDetails } from './utils/details.js';
 import { isGitRepository, isReleaseCommit, lastReleaseRef, readCommits } from './utils/git.js';
 import { packageChangesForCurrent } from './utils/packages.js';
+import {
+    assertChangesetsSetup,
+    assertKnownProvider,
+    runChangesetsVersion,
+} from './utils/provider.js';
 import {
     formatExistingChangelogs,
     parseExistingChangelog,
@@ -112,6 +116,7 @@ import {
 import {
     bumpRulesFor,
     deriveCustomBump,
+    discoverVersionPackages,
     overBumpFor,
     planVersions,
     resolveVersioning,
@@ -159,9 +164,9 @@ function appendTextEntry<T>(setting: T | T[] | undefined, entry: T): T | T[] {
 }
 
 export interface RunChangelogOptions {
-    /** Top-level `toolchain.enabled` (default true). */
+    /** Top-level `toolchain.enabled`. @default `true` */
     enabled?: boolean;
-    /** `ci.regenerate` / `ci.changelog.regenerate` (default true). */
+    /** `ci.regenerate` / `ci.changelog.regenerate`. @default `true` */
     regenerate?: boolean;
     /** Top-level `toolchain.hooks` (the version hooks run around a bump). */
     hooks?: Pick<ToolchainHooks, 'beforeVersion' | 'afterVersion'>;
@@ -184,9 +189,21 @@ function* changelogSteps(
     // It is derived from git alone and needs no toolchain config, so it must
     // run before the `enabled` guard: printing a decorated info line to stdout
     // would corrupt the release body.
-    if (options.releaseNotes) {
+    if (options.releaseBody) {
         if (!isGitRepository()) throw new Error('dbx changelog: not a git repository.');
-        logger.raw(releaseNotesFromGit(options.releaseNotes));
+        // Config supplies the defaults; explicit CLI flags win (including
+        // `--no-release-group`).
+        const release = changelog && typeof changelog === 'object' ? changelog.release : undefined;
+        logger.raw(
+            releaseNotesFromGit(options.releaseBody, repoRoot(), {
+                ...release,
+                ...(options.releaseGroup !== undefined ? { group: options.releaseGroup } : {}),
+                ...(options.releaseSince !== undefined ? { since: options.releaseSince } : {}),
+                ...(options.releaseIncludePrereleases !== undefined
+                    ? { includePrereleases: options.releaseIncludePrereleases }
+                    : {}),
+            })
+        );
         return;
     }
     if (runOptions.enabled === false) {
@@ -215,7 +232,7 @@ function* changelogSteps(
             groups,
             breaking,
             detailsOf(changelog),
-            options.release
+            options.releaseBodyWrap
         );
         return;
     }
@@ -292,11 +309,34 @@ function* changelogSteps(
     }
 
     const rootDir = repoRoot();
-    const provider = resolveScopedOption<ChangelogProviderSetting | undefined>(
-        versioning.provider as never,
-        rootDir,
-        rootDir
-    );
+    const resolveProvider = (dir: string): ChangelogProviderSetting | undefined =>
+        resolveScopedOption<ChangelogProviderSetting | undefined>(
+            versioning.provider as never,
+            dir,
+            rootDir
+        );
+    const provider = resolveProvider(rootDir);
+    assertKnownProvider(provider);
+    // The changesets provider is repository-wide: run it once when any target
+    // that will be versioned resolves to it, not just when the root does. A
+    // plain provider applies everywhere, so only a scoped provider needs the
+    // workspace scan (and its extra glob).
+    const providerSetting = versioning.provider;
+    const scopedProvider =
+        Array.isArray(providerSetting) ||
+        Boolean(
+            providerSetting && typeof providerSetting === 'object' && 'options' in providerSetting
+        );
+    const providerDirs =
+        versioning.target === 'root-only' || !scopedProvider
+            ? [rootDir]
+            : [rootDir, ...discoverVersionPackages(versioning.workspaces, rootDir).workspaces];
+    let changesets = provider === 'changesets';
+    for (const dir of providerDirs) {
+        const dirProvider = dir === rootDir ? provider : resolveProvider(dir);
+        assertKnownProvider(dirProvider);
+        if (dirProvider === 'changesets') changesets = true;
+    }
     const rootCommit = resolveScopedOption<CommitFormatOptions | undefined>(
         versioning.commit as never,
         rootDir,
@@ -330,16 +370,19 @@ function* changelogSteps(
         resolveTextSetting(introSetting, dir, rootDir, rootDir);
     const outroFor = (dir: string): string | undefined =>
         resolveTextSetting(outroSetting, dir, rootDir, rootDir);
-    if (!options.dryRun && provider === 'changesets') {
+    if (changesets) {
+        // Fail before the dry-run early return when the changesets setup is
+        // missing; otherwise a preview would hide a guaranteed failure.
+        assertChangesetsSetup(rootDir);
+        if (options.dryRun) {
+            logger.info(
+                'changesets provider: changesets owns the version/changelog output; ' +
+                    'rerun without --dry-run to apply `changeset version`.'
+            );
+            return;
+        }
         yield;
-        const result = spawnSync('npx', ['--yes', 'changeset', 'version'], {
-            cwd: repoRoot(),
-            stdio: 'inherit',
-            // `npx` is a `.cmd` shim on Windows, which spawn cannot execute
-            // directly without a shell.
-            shell: process.platform === 'win32',
-        });
-        if (result.status !== 0) throw new Error('changesets provider failed.');
+        runChangesetsVersion(rootDir);
         logger.info('Ran the changesets provider; changesets owns the changelog/version output.');
         return;
     }
@@ -365,7 +408,7 @@ function* changelogSteps(
                 groups,
                 breaking,
                 detailsOf(changelog),
-                options.release
+                options.releaseBodyWrap
             );
         } else {
             logger.info('No new commits since the last release; nothing to do.');
@@ -384,7 +427,7 @@ function* changelogSteps(
         ...(groups ? { groups } : {}),
         ...(breaking !== undefined ? { breaking } : {}),
         ...(rootCommit ? { commit: rootCommit } : {}),
-        release: options.release,
+        release: options.releaseBodyWrap,
     });
     if (provider && typeof provider === 'object' && typeof provider.run === 'function') {
         const custom = provider.run({ cwd: repoRoot(), changelog, records });
@@ -422,7 +465,7 @@ function* changelogSteps(
             options.packageChanges && previousVersion
                 ? packageChangesForCurrent(previousVersion)
                 : '';
-        const rootDetails = resolveDetails(rootCommit?.details, options.release);
+        const rootDetails = resolveDetails(rootCommit?.details, options.releaseBodyWrap);
         const entry =
             rootDetails.lifecycle === 'after'
                 ? applyDetailsToEntry(
@@ -435,7 +478,7 @@ function* changelogSteps(
                           introFor(root) ?? '',
                           outroFor(root) ?? '',
                           rootCommit?.details,
-                          options.release
+                          options.releaseBodyWrap
                       ),
                       rootDetails
                   )
@@ -448,7 +491,7 @@ function* changelogSteps(
                       introFor(root) ?? '',
                       outroFor(root) ?? '',
                       rootCommit?.details,
-                      options.release
+                      options.releaseBodyWrap
                   );
         logger.info(`[DRY-RUN] Range: ${range}`);
         logger.info(
@@ -471,7 +514,7 @@ function* changelogSteps(
                   groups,
                   breaking,
                   detailsOf(changelog),
-                  options.release
+                  options.releaseBodyWrap
               )
             : existing;
         const content = insertNewEntry(base, entry);
@@ -518,7 +561,7 @@ function* changelogSteps(
                     dir,
                     rootDir
                 ),
-            release: options.release,
+            release: options.releaseBodyWrap,
         },
         changelog
     );

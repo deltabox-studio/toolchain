@@ -1,8 +1,307 @@
 # Changelog
 
-## 3.0.0-beta.11 (November 2026)
+## 3.0.0-beta.18 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>New features</summary>
+
+#### Release
+- Mark prerelease versions as GitHub prereleases ([#dd1c62f](https://github.com/deltabox-studio/toolchain/commit/dd1c62f) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+- Document bump rules and harden versioning providers ([#5ae5e02](https://github.com/deltabox-studio/toolchain/commit/5ae5e02) by [T0chi](https://github.com/T0chi))
+- Group release bodies since the last published release ([#93b8762](https://github.com/deltabox-studio/toolchain/commit/93b8762) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Changelog
+- Repair and audit markdown code fences ([#8a4ab01](https://github.com/deltabox-studio/toolchain/commit/8a4ab01) by [T0chi](https://github.com/T0chi))
+
+#### Vite
+- Resolve the workspace dbx plugin without an ESM require race ([#26803a6](https://github.com/deltabox-studio/toolchain/commit/26803a6) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+- Update permalinks ([#5abe04e](https://github.com/deltabox-studio/toolchain/commit/5abe04e) by [T0chi](https://github.com/T0chi))
+- Add a deprecations section to the v2-v3 guide ([#3121d44](https://github.com/deltabox-studio/toolchain/commit/3121d44) by [T0chi](https://github.com/T0chi))
+
+#### Release
+- Clarify auto prerelease detection ([#bc5c01f](https://github.com/deltabox-studio/toolchain/commit/bc5c01f) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+- Add a release bodies guide under the changelog section ([#e00a44b](https://github.com/deltabox-studio/toolchain/commit/e00a44b) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.17 (November 2026)
+
+<details>
+<summary>Bug fixes</summary>
+
+- Use the published Vite subpath in generated configs ([#d5f2fab](https://github.com/deltabox-studio/toolchain/commit/d5f2fab) by [T0chi](https://github.com/T0chi))
+
+#### Vite
+- Harden resolution, shim merging and Vite+ detection ([#0558430](https://github.com/deltabox-studio/toolchain/commit/0558430) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
+- Rename format scripts and tasks to fmt ([#fcd3ae0](https://github.com/deltabox-studio/toolchain/commit/fcd3ae0) by [T0chi](https://github.com/T0chi))
+- Rely on toolchain fmt/lint defaults in root config ([#9a3a305](https://github.com/deltabox-studio/toolchain/commit/9a3a305) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+- Refresh readmes and extension copy ([#ad7e37d](https://github.com/deltabox-studio/toolchain/commit/ad7e37d) by [T0chi](https://github.com/T0chi))
+- Highlight who the toolchain is for ([#bdd324a](https://github.com/deltabox-studio/toolchain/commit/bdd324a) by [T0chi](https://github.com/T0chi))
+- Expand who the toolchain is for ([#128d875](https://github.com/deltabox-studio/toolchain/commit/128d875) by [T0chi](https://github.com/T0chi))
+- Explain providers for other language toolchains ([#1671f9e](https://github.com/deltabox-studio/toolchain/commit/1671f9e) by [T0chi](https://github.com/T0chi))
+- Link why use this from the README ([#ee746d0](https://github.com/deltabox-studio/toolchain/commit/ee746d0) by [T0chi](https://github.com/T0chi))
+- Note the toolchain dogfoods itself ([#e864aef](https://github.com/deltabox-studio/toolchain/commit/e864aef) by [T0chi](https://github.com/T0chi))
+- Cover core features in why use this ([#195bba8](https://github.com/deltabox-studio/toolchain/commit/195bba8) by [T0chi](https://github.com/T0chi))
+- Split programmatic API examples into sections ([#8f8ebd9](https://github.com/deltabox-studio/toolchain/commit/8f8ebd9) by [T0chi](https://github.com/T0chi))
+- Add contextual sidebar sections ([#aca7fdf](https://github.com/deltabox-studio/toolchain/commit/aca7fdf) by [T0chi](https://github.com/T0chi))
+- Remove Contribute from the top navbar ([#5dce447](https://github.com/deltabox-studio/toolchain/commit/5dce447) by [T0chi](https://github.com/T0chi))
+- Move navbar search beside the logo ([#aa7c7de](https://github.com/deltabox-studio/toolchain/commit/aa7c7de) by [T0chi](https://github.com/T0chi))
+- Add v3 new features to the migration guide ([#0a5ee8b](https://github.com/deltabox-studio/toolchain/commit/0a5ee8b) by [T0chi](https://github.com/T0chi))
+- Fix invalid folder-tree YAML in template structures ([#c7e8efa](https://github.com/deltabox-studio/toolchain/commit/c7e8efa) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Build system</summary>
+
+- Move jsonc-parser and untyped to the yarn catalog ([#8a77bf2](https://github.com/deltabox-studio/toolchain/commit/8a77bf2) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Chores</summary>
+
+- Commit pending docs and type updates ([#5701b52](https://github.com/deltabox-studio/toolchain/commit/5701b52) by [T0chi](https://github.com/T0chi))
+- Cleanup references ([#a0027cd](https://github.com/deltabox-studio/toolchain/commit/a0027cd) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+## 3.0.0-beta.16 (November 2026)
+
+<details>
+<summary>New features</summary>
+
+- Align hooks and monorepo guidance with Vite+ ([#0aadd01](https://github.com/deltabox-studio/toolchain/commit/0aadd01) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+### Package changes
+
+#### Removed
+- `@deltabox/toolchain`
+  - `husky` `^9.1.7`
+- `@deltabox/toolchain-docs`
+  - `vite` `^6.4.5`
+
+## 3.0.0-beta.15 (November 2026)
+
+<details>
+<summary>Documentation</summary>
+
+- Clarify vite-plus is a dev dependency ([#b7d5ce6](https://github.com/deltabox-studio/toolchain/commit/b7d5ce6) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+## 3.0.0-beta.14 (November 2026)
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Config
+- Preserve markdown key narrowing with typed options ([#0cd420a](https://github.com/deltabox-studio/toolchain/commit/0cd420a) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+## 3.0.0-beta.13 (November 2026)
+
+<details>
+<summary><strong>BREAKING CHANGES</strong></summary>
+
+#### Cli
+- Replace commander with the config program ([#b515346](https://github.com/deltabox-studio/toolchain/commit/b515346) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Build the dbx CLI from createConfigProgram, wire schema-derived sync/watch flags through the root engine, and move context loading/framing into withCliContext. Remove commander from the dependency tree and update the root CLI tests for the engine runtime's invoke/help APIs.
+
+  </details>
+
+</details>
+
+<details>
+<summary>New features</summary>
+
+#### Config
+- Complete typed CLI program runtime and generator hooks ([#9dfb665](https://github.com/deltabox-studio/toolchain/commit/9dfb665) by [T0chi](https://github.com/T0chi))
+- Generate CLI programs from config schemas ([#29808e9](https://github.com/deltabox-studio/toolchain/commit/29808e9) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Add a config-engine program runtime with typed command chains, subcommands, global option inheritance, help formatting and output routing. Generate options and programs from schema metadata (cli/cliCommand), support array/variadic flags and custom parsers, and split the CLI types into their own modules. Annotate the shared schemas with the CLI-specific flags they map to.
+
+  </details>
+
+- Add source-specific config loaders ([#bf1fef0](https://github.com/deltabox-studio/toolchain/commit/bf1fef0) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Add file/env/CLI loader variants plus base-value merging so file values are overridden by env and argv without schema defaults replacing them. Support multi-source selections, neutral config.* discovery names, and envExpose metadata for CLI-only values.
+
+  </details>
+
+- Add scoped CLI generation and reorganize types ([#bfefaa4](https://github.com/deltabox-studio/toolchain/commit/bfefaa4) by [T0chi](https://github.com/T0chi))
+
+#### Shared
+- Add typed CLI command descriptors ([#afbb10b](https://github.com/deltabox-studio/toolchain/commit/afbb10b) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Replace the loose ToolchainCommand interfaces with generic CliCommand types that infer option values from the flags list, and add defineCliCommand for literal inference. Migrate the package command factories and tests, and rename the reset options type accordingly.
+
+  </details>
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Changelog
+- Build release bodies from markers and rename flags ([#825985d](https://github.com/deltabox-studio/toolchain/commit/825985d) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
+- Normalize default JSDoc annotations ([#04f47e8](https://github.com/deltabox-studio/toolchain/commit/04f47e8) by [T0chi](https://github.com/T0chi))
+
+#### Config
+- Narrow explicit program command scopes ([#e910d0f](https://github.com/deltabox-studio/toolchain/commit/e910d0f) by [T0chi](https://github.com/T0chi))
+
+#### Vscode
+- Sanitize registry paths for display ([#a1e8d56](https://github.com/deltabox-studio/toolchain/commit/a1e8d56) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Render registry paths relative to the workspace (and without control characters) in the tree, picker and confirmation prompts, and cover the shared helper plus registry tree with tests.
+
+  </details>
+
+#### Tsconfig
+- Split resolution and derive flags from schema ([#4d1d784](https://github.com/deltabox-studio/toolchain/commit/4d1d784) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Break the tsconfig resolver into focused modules and generate the tsconfig command's config-backed flags from the config engine. Runtime-only auto switches stay explicit, while aliases, refs, indentation, globs and gitignore now inherit config/env/CLI precedence from the schema.
+
+  </details>
+
+#### Mcp
+- Export public types explicitly ([#b78d810](https://github.com/deltabox-studio/toolchain/commit/b78d810) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+- Refresh llms bundle ([#d988259](https://github.com/deltabox-studio/toolchain/commit/d988259) by [T0chi](https://github.com/T0chi))
+- Prefer engine.cli.program.create and update v3 guides ([#325d2fd](https://github.com/deltabox-studio/toolchain/commit/325d2fd) by [T0chi](https://github.com/T0chi))
+- Cover template structures and config CLI programs ([#8d5e2c5](https://github.com/deltabox-studio/toolchain/commit/8d5e2c5) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Document folder-tree template structures, the config-engine program/command APIs, schema-driven CLI metadata, and the new source-specific loaders. Refresh generated CLI/config pages and the llms bundles.
+
+  </details>
+
+- Refresh generated llms bundles ([#b4f29e6](https://github.com/deltabox-studio/toolchain/commit/b4f29e6) by [T0chi](https://github.com/T0chi))
+- Document static config types in the overview ([#fd00295](https://github.com/deltabox-studio/toolchain/commit/fd00295) by [T0chi](https://github.com/T0chi))
+- Expand the v2 to v3 migration guide ([#854baaf](https://github.com/deltabox-studio/toolchain/commit/854baaf) by [T0chi](https://github.com/T0chi))
+- Revamp the config generator guides ([#f54c5f1](https://github.com/deltabox-studio/toolchain/commit/f54c5f1) by [T0chi](https://github.com/T0chi))
+- Add client and server config guide ([#5dcbedc](https://github.com/deltabox-studio/toolchain/commit/5dcbedc) by [T0chi](https://github.com/T0chi))
+
+#### Config
+- Regenerate schema and reference artifacts ([#2f0b6af](https://github.com/deltabox-studio/toolchain/commit/2f0b6af) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Styles</summary>
+
+- Format generated config artifacts and docs ([#2ff28be](https://github.com/deltabox-studio/toolchain/commit/2ff28be) by [T0chi](https://github.com/T0chi))
+- Replace unicode ellipses with three dots ([#2d7c130](https://github.com/deltabox-studio/toolchain/commit/2d7c130) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Build system</summary>
+
+- Split config generator scripts ([#2322fa6](https://github.com/deltabox-studio/toolchain/commit/2322fa6) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+### Package changes
+
+#### Added
+- `@deltabox/toolchain-docs`
+  - `vitepress-plugin-folder-tree` `1.2.1`
+- `@deltabox/toolchain-tsconfig`
+  - `@deltabox/toolchain-config` `workspace:*`
+
+#### Removed
+- `@deltabox/toolchain`
+  - `commander` `^14.0.0`
+
+## 3.0.0-beta.12 (November 2026)
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Release
+- Publish prereleases with an npm dist-tag ([#ebc3574](https://github.com/deltabox-studio/toolchain/commit/ebc3574) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+- Roll prereleases over to their stable core ([#c27bbb5](https://github.com/deltabox-studio/toolchain/commit/c27bbb5) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+- Streamline the README introduction ([#8076c13](https://github.com/deltabox-studio/toolchain/commit/8076c13) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+## 3.0.0-beta.11 (November 2026)
 
 <details>
 <summary>Documentation</summary>
@@ -43,9 +342,6 @@
 - Add the pre-release VSIX script ([#385fa01](https://github.com/deltabox-studio/toolchain/commit/385fa01) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.10 (November 2026)
 
@@ -1999,7 +2295,7 @@
   <details>
   <summary><strong>See more...</strong></summary>
 
-  - A new collapsible **Registries** view (below Templates) shows **Providers** and (explorer folder or browser for remote URLs), **Add new registry** (the category's add flow) and **Remove registry** (removes the path, keeps the files). The title bar has **New registry…** / **Remove registry…** (global or project scope), also available in the Home "More actions". Removing a template now offers the stored global templates too (`template:remove --global`).
+  - A new collapsible **Registries** view (below Templates) shows **Providers** and (explorer folder or browser for remote URLs), **Add new registry** (the category's add flow) and **Remove registry** (removes the path, keeps the files). The title bar has **New registry...** / **Remove registry...** (global or project scope), also available in the Home "More actions". Removing a template now offers the stored global templates too (`template:remove --global`).
 
   </details>
 
@@ -2009,8 +2305,8 @@
   <summary><strong>See more...</strong></summary>
 
   - Rename `templatesSearchPaths` to `registrySearchPaths` (VS Code setting, CLI config and code).
-    - Show the detected project/extension `@deltabox/toolchain` versions in the "which dbx?" notification, only ask when they differ, and add a **Select dbx version…** command that pins one in the workspace settings (npx fallback).
-    - Replace the Home "Run Vite+…" quick action with **Add provider…** (also in More actions), prefix More-actions buttons with a play glyph, start Managed Files collapsed, expand the Vite+ provider by default, and drop unused icon resources.
+    - Show the detected project/extension `@deltabox/toolchain` versions in the "which dbx?" notification, only ask when they differ, and add a **Select dbx version...** command that pins one in the workspace settings (npx fallback).
+    - Replace the Home "Run Vite+..." quick action with **Add provider...** (also in More actions), prefix More-actions buttons with a play glyph, start Managed Files collapsed, expand the Vite+ provider by default, and drop unused icon resources.
 
   </details>
 

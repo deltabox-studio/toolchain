@@ -1,4 +1,4 @@
-# Configuration
+# Configuration guide
 
 A project is configured in one of two ways:
 
@@ -16,8 +16,8 @@ export default defineConfig({
     toolchain: {
         project: {
             type: 'monorepo-root',
-            name: 'acme',
-            scope: '@acme',
+            name: 'myapp',
+            scope: '@org',
         },
         ci: {
             ci: true,
