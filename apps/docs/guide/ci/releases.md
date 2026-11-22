@@ -38,11 +38,11 @@ individual-versioning behavior.
 `ci.release.prerelease` controls whether a release job marks a version with a
 prerelease suffix (for example `3.0.0-beta.2`) as a GitHub prerelease:
 
-| Value    | Behavior                                                              |
-| -------- | --------------------------------------------------------------------- |
-| `'auto'` | **Default.** Mark the release when the version contains a `-` suffix. |
-| `true`   | Always mark the release as a prerelease.                              |
-| `false`  | Never mark the release; every version is a normal release.            |
+| Value    | Behavior                                                                                                                                        |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `'auto'` | **Default.** Mark the release when the version contains a `-`; everything from the first `-` is the prerelease identifier (eg. `1.4.2-beta.4`). |
+| `true`   | Always mark the release as a prerelease.                                                                                                        |
+| `false`  | Never mark the release; every version is a normal release.                                                                                      |
 
 Prerelease versions are not marked as the latest release.
 
@@ -60,6 +60,16 @@ run: |
       args+=(--prerelease)
     fi
     gh release create "v$version" "${args[@]}" "dist/artifact"
+```
+
+The default is automatic detection, so this is usually all you need:
+
+```ts
+ci: {
+    release: {
+        prerelease: 'auto',
+    },
+}
 ```
 
 Disable it for every release job:
