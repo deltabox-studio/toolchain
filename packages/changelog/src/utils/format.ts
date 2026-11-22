@@ -330,6 +330,34 @@ export function splitInlineDescription(rest: string): { main: string; inline: st
 const LIST_ITEM = /^(?:[-*+]|\d+[.)])\s+(.*)$/;
 const FENCE = /^(```|~~~)/;
 
+/** Tag-like sequences outside inline code spans. */
+const TAG_LIKE = /<\/?([A-Za-z][A-Za-z0-9-]*)(?:\s[^<>]*)?\/?>/g;
+
+function escapeTags(text: string): string {
+    return text.replace(TAG_LIKE, match => `&lt;${match.slice(1, -1)}&gt;`);
+}
+
+/**
+ * Escape HTML/Vue-like tags in commit text.
+ *
+ * VitePress compiles Markdown as Vue SFCs, so a raw `<Group>` in a generated
+ * changelog would be parsed as an unclosed element and fail the docs build.
+ * Inline code spans keep their content verbatim, and Markdown autolinks
+ * (`<https://...>`), email-ish placeholders and ordinary comparisons are left
+ * alone because they do not look like tags.
+ */
+export function escapeMarkdownHtml(text: string): string {
+    let out = '';
+    let index = 0;
+    const codeSpans = /(`+)([\s\S]*?)\1/g;
+    for (let match = codeSpans.exec(text); match; match = codeSpans.exec(text)) {
+        out += escapeTags(text.slice(index, match.index));
+        out += match[0];
+        index = match.index + match[0].length;
+    }
+    return out + escapeTags(text.slice(index));
+}
+
 /**
  * Split a commit body into description paragraphs and conventional footers
  * (`KEY: value` lines), skipping issue-only lines. Each list item becomes its
@@ -347,7 +375,7 @@ export function formatBody(body: string): string[][] {
 
     const flush = (): void => {
         if (current.length === 0) return;
-        paragraphs.push([current.join(' ')]);
+        paragraphs.push([escapeMarkdownHtml(current.join(' '))]);
         current = [];
     };
 
@@ -522,7 +550,9 @@ export function formatChangelogFile(file: string, repo: string | undefined): voi
                 fence = open[1];
                 return line;
             }
-            return formatLine(line, repo);
+            return /^\s*[-*+]\s+/.test(line)
+                ? formatLine(escapeMarkdownHtml(line), repo)
+                : formatLine(line, repo);
         })
         .join('\n');
     if (formatted !== content) {

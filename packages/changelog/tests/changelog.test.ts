@@ -23,6 +23,7 @@ vi.mock('../src/utils/git.js', async importOriginal => {
 
 import {
     buildSummary,
+    escapeMarkdownHtml,
     formatBody,
     formatLine,
     groupItems,
@@ -63,6 +64,29 @@ function safeRange(): string {
 }
 
 describe('changelog formatting', () => {
+    it('escapes HTML-like tags in commit text so the docs build stays valid', () => {
+        expect(escapeMarkdownHtml('<Group> options')).toBe('&lt;Group&gt; options');
+        expect(escapeMarkdownHtml('</Group>')).toBe('&lt;/Group&gt;');
+        expect(escapeMarkdownHtml('<https://example.com>')).toBe('<https://example.com>');
+        expect(escapeMarkdownHtml('a < b')).toBe('a < b');
+        expect(escapeMarkdownHtml('<user@example.com>')).toBe('<user@example.com>');
+        expect(escapeMarkdownHtml('Use `<Group>` and <Tag>')).toBe('Use `<Group>` and &lt;Tag&gt;');
+        expect(formatBody('Use <Group> here')).toEqual([['Use &lt;Group&gt; here']]);
+
+        const summary = buildSummary([
+            {
+                hash: 'a'.repeat(40),
+                subject: 'docs: render <Group> options',
+                body: 'Mention <Tag> in the description.',
+                author: 'A',
+                authorEmail: '',
+            },
+        ]);
+        expect(summary).toContain('&lt;Group&gt;');
+        expect(summary).toContain('&lt;Tag&gt;');
+        expect(summary).not.toContain('<Group>');
+    });
+
     it('parses Conventional-Commits subjects into type + scope', () => {
         expect(parseCcSubject('feat(server): add things')).toEqual({
             type: 'feat',
