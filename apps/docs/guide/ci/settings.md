@@ -65,6 +65,11 @@ package manager without changing `project`. Overriding `packageManager` switches
 to that manager's default version unless you also set `packageManagerVersion`
 (or the legacy `yarnVersion` alias).
 
+`tokens.releasePrerelease` is seeded from `ci.release.prerelease` (default
+`auto`) for release jobs. Custom release steps can use
+<code v-pre>{{ releasePrerelease }}</code> to decide whether to pass
+`gh release create --prerelease`; see [Releases](/guide/ci/releases#github-prereleases).
+
 ## Vite+ projects
 
 For a Vite/Vite+ project the generated workflows install `vp` with the

@@ -309,8 +309,8 @@
                     "$ref": "#/$defs/ChangelogWorkflowSetting"
                 },
                 "release": {
-                    "description": "The release workflow (`release.yml`).",
-                    "$ref": "#/$defs/WorkflowSetting"
+                    "description": "The release workflow (`release.yml`), including prerelease marking.",
+                    "$ref": "#/$defs/ReleaseWorkflowSetting"
                 },
                 "issues": {
                     "description": "The issue-title workflow (`issues.yml`).",
@@ -1002,6 +1002,18 @@
                 "vitePlus": {
                     "type": "boolean",
                     "description": "Use `voidzero-dev/setup-vp` for this workflow (default: detected from the project)."
+                },
+                "releasePrerelease": {
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "string",
+                            "const": "auto"
+                        }
+                    ],
+                    "description": "Whether a version with a prerelease suffix (eg. `3.0.0-beta.2`) should be marked as a GitHub prerelease (`{{ releasePrerelease }}`). `auto` detects the suffix, `true` always marks and `false` never marks."
                 },
                 "setupVpVersion": {
                     "type": "string",
@@ -2346,6 +2358,125 @@
                 }
             ],
             "description": "`true`/`false` to enable/disable, a complete GitHub/GitLab/Azure workflow (with `provider`), the changelog pipeline config object, or a raw YAML string written verbatim as the changelog workflow file."
+        },
+        "ReleaseWorkflowOptions": {
+            "type": "object",
+            "properties": {
+                "provider": {
+                    "default": "github",
+                    "type": "string",
+                    "const": "github",
+                    "description": "Workflow vendor for a full `workflow` object."
+                },
+                "pushBranches": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Replace `on.push.branches`."
+                },
+                "pullRequestBranches": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Replace `on.pull_request.branches`."
+                },
+                "triggers": {
+                    "$ref": "#/$defs/WorkflowTriggers"
+                },
+                "extra": {
+                    "$ref": "#/$defs/WorkflowExtra"
+                },
+                "steps": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/$defs/WorkflowStepsConfig"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/$defs/WorkflowStepsConfig"
+                            }
+                        }
+                    ],
+                    "description": "Extra steps for a job (one group, or per-job groups)."
+                },
+                "jobs": {
+                    "type": "object",
+                    "propertyNames": {
+                        "type": "string"
+                    },
+                    "additionalProperties": {
+                        "$ref": "#/$defs/WorkflowJob"
+                    },
+                    "description": "Extra complete jobs merged in."
+                },
+                "tokens": {
+                    "$ref": "#/$defs/WorkflowTokens"
+                },
+                "filename": {
+                    "type": "string",
+                    "description": "Override the generated workflow file name (eg. `deploy.yml`)."
+                },
+                "dir": {
+                    "default": ".github/workflows",
+                    "type": "string",
+                    "description": "Directory for the workflow file."
+                },
+                "setup": {
+                    "default": false,
+                    "type": "boolean",
+                    "description": "Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs; built-in workflows already include them."
+                },
+                "enabled": {
+                    "description": "Enable/disable this workflow (default: enabled when present).",
+                    "type": "boolean"
+                },
+                "regenerate": {
+                    "description": "Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.",
+                    "default": true,
+                    "type": "boolean"
+                },
+                "prerelease": {
+                    "default": "auto",
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "string",
+                            "const": "auto"
+                        }
+                    ],
+                    "description": "Mark a version with a prerelease suffix (eg. `3.0.0-beta.2`) as a GitHub prerelease when a release job creates it. `auto` (default) detects a semver suffix after `-`; `true` always marks; `false` never marks. Custom release jobs can read the `{{ releasePrerelease }}` token."
+                }
+            },
+            "additionalProperties": false,
+            "description": "Release workflow overrides, including GitHub prerelease marking."
+        },
+        "ReleaseWorkflowSetting": {
+            "anyOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "string"
+                },
+                {
+                    "$ref": "#/$defs/GitHubWorkflowSetting"
+                },
+                {
+                    "$ref": "#/$defs/GitLabWorkflowSetting"
+                },
+                {
+                    "$ref": "#/$defs/AzureWorkflowSetting"
+                },
+                {
+                    "$ref": "#/$defs/ReleaseWorkflowOptions"
+                }
+            ],
+            "description": "`true`/`false`, a raw YAML string, a complete GitHub/GitLab/Azure workflow, or release workflow overrides (including `prerelease`)."
         },
         "ToolchainDependabotConfig": {
             "type": "object",

@@ -73,6 +73,49 @@ describe('changelogSyncTask', () => {
         expect(files?.some(file => file.path === 'commitlint.config.mjs')).toBe(true);
     });
 
+    it('exposes ci.release.prerelease to custom release jobs', async () => {
+        const files = await changelogSyncTask().run(
+            makeContext({
+                ci: {
+                    release: {
+                        prerelease: false,
+                        steps: {
+                            after: [
+                                {
+                                    name: 'Check prerelease token',
+                                    run: 'echo token={{releasePrerelease}}',
+                                },
+                            ],
+                        },
+                    },
+                },
+            })
+        );
+        const release = files?.find(file => file.path === '.github/workflows/release.yml');
+        expect(release?.content).toContain('token=false');
+    });
+
+    it('defaults releasePrerelease to auto', async () => {
+        const files = await changelogSyncTask().run(
+            makeContext({
+                ci: {
+                    release: {
+                        steps: {
+                            after: [
+                                {
+                                    name: 'Check prerelease token',
+                                    run: 'echo token={{releasePrerelease}}',
+                                },
+                            ],
+                        },
+                    },
+                },
+            })
+        );
+        const release = files?.find(file => file.path === '.github/workflows/release.yml');
+        expect(release?.content).toContain('token=auto');
+    });
+
     it('stages .changeset files when the config selects the changesets provider', async () => {
         const files = await changelogSyncTask().run(
             makeContext({

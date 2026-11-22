@@ -486,6 +486,12 @@ Dev branch <code v-pre>{{ devBranch }}</code>.
 
 Use `voidzero-dev/setup-vp` for this workflow (default: detected from the project).
 
+##### `releasePrerelease`
+
+- **Type**: `boolean | 'auto'`
+
+Whether a version with a prerelease suffix (eg. `3.0.0-beta.2`) should be marked as a GitHub prerelease (`{{ releasePrerelease }}`). `auto` detects the suffix, `true` always marks and `false` never marks.
+
 ##### `setupVpVersion`
 
 - **Type**: `string`
@@ -1190,9 +1196,98 @@ Explicit lower boundary for the grouped body: a version or tag (eg. `1.2.0`, `v1
 
 ### `release`
 
-- **Type**: `WorkflowSetting`
+- **Type**: `ReleaseWorkflowSetting`
 
-The release workflow (`release.yml`).
+The release workflow (`release.yml`), including prerelease marking.
+
+#### `provider`
+
+- **Type**: `'github'`
+- **Default**: `"github"`
+
+Workflow vendor for a full `workflow` object.
+
+#### `pushBranches`
+
+- **Type**: `Array<string>`
+
+Replace `on.push.branches`.
+
+#### `pullRequestBranches`
+
+- **Type**: `Array<string>`
+
+Replace `on.pull_request.branches`.
+
+#### `triggers`
+
+- **Type**: `WorkflowTriggers`
+
+Extra `on.*` workflow triggers.
+
+#### `extra`
+
+- **Type**: `WorkflowExtra`
+
+Extra top-level workflow keys (`permissions`, `concurrency`, `env`, ...).
+
+#### `steps`
+
+- **Type**: `WorkflowStepsConfig | Array<WorkflowStepsConfig>`
+
+Extra steps for a job (one group, or per-job groups).
+
+#### `jobs`
+
+- **Type**: `Record<string, WorkflowJob>`
+
+Extra complete jobs merged in.
+
+#### `tokens`
+
+- **Type**: `WorkflowTokens`
+
+Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
+
+#### `filename`
+
+- **Type**: `string`
+
+Override the generated workflow file name (eg. `deploy.yml`).
+
+#### `dir`
+
+- **Type**: `string`
+- **Default**: `".github/workflows"`
+
+Directory for the workflow file.
+
+#### `setup`
+
+- **Type**: `boolean`
+- **Default**: `false`
+
+Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs; built-in workflows already include them.
+
+#### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this workflow (default: enabled when present).
+
+#### `regenerate`
+
+- **Type**: `boolean`
+- **Default**: `true`
+
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
+
+#### `prerelease`
+
+- **Type**: `boolean | 'auto'`
+- **Default**: `"auto"`
+
+Mark a version with a prerelease suffix (eg. `3.0.0-beta.2`) as a GitHub prerelease when a release job creates it. `auto` (default) detects a semver suffix after `-`; `true` always marks; `false` never marks. Custom release jobs can read the `{{ releasePrerelease }}` token.
 
 ### `issues`
 

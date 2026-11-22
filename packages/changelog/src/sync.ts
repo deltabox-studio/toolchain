@@ -60,6 +60,14 @@ function workflowRegenerates(setting: unknown): boolean {
     return (setting as { regenerate?: unknown }).regenerate !== false;
 }
 
+/** Whether the release workflow should mark prerelease versions on GitHub. */
+function releasePrerelease(setting: unknown): boolean | 'auto' {
+    if (!setting || typeof setting !== 'object' || Array.isArray(setting)) return 'auto';
+    const value = (setting as { prerelease?: unknown }).prerelease;
+    if (value === true || value === false || value === 'auto') return value;
+    return 'auto';
+}
+
 /** Whether a resolved changelog config selects the changesets provider. */
 function usesChangesetsProvider(
     config: ReturnType<typeof resolveChangelogConfig> | undefined
@@ -283,6 +291,9 @@ export function changelogSyncTask(): SyncTask {
                 // changesets owns version/changelog writes, including consuming
                 // `.changeset/*.md`; the generated commit must stage those.
                 changesets: usesChangesetsProvider(ch),
+                // Custom release jobs read this to pass `gh release create
+                // --prerelease` for a prerelease version.
+                releasePrerelease: releasePrerelease(workflows.release),
             };
 
             for (const [id, filename] of Object.entries(WORKFLOW_FILENAMES) as [

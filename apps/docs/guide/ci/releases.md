@@ -32,3 +32,56 @@ prerelease cycle instead of only the last beta. See
 [Release bodies](/guide/changelog/release#grouped-release-bodies) for grouping,
 `includePrereleases`, `since`, CLI overrides, the boundary rules and
 individual-versioning behavior.
+
+## GitHub prereleases
+
+`ci.release.prerelease` controls whether a release job marks a version with a
+prerelease suffix (for example `3.0.0-beta.2`) as a GitHub prerelease:
+
+| Value    | Behavior                                                              |
+| -------- | --------------------------------------------------------------------- |
+| `'auto'` | **Default.** Mark the release when the version contains a `-` suffix. |
+| `true`   | Always mark the release as a prerelease.                              |
+| `false`  | Never mark the release; every version is a normal release.            |
+
+Prerelease versions are not marked as the latest release.
+
+The default `ci.release` job only opens the release PR; it does not create the
+GitHub Release itself. When you replace that job with one that creates the
+release, pass `--prerelease` conditionally. The `{{ releasePrerelease }}` token
+carries the setting:
+
+```yaml
+run: |
+    version="$(node -p "require('./package.json').version")"
+    args=(--title "v$version" --notes-file RELEASE_NOTES.md)
+    prerelease="{{releasePrerelease}}"
+    if [ "$prerelease" = "true" ] || { [ "$prerelease" = "auto" ] && [[ "$version" == *-* ]]; }; then
+      args+=(--prerelease)
+    fi
+    gh release create "v$version" "${args[@]}" "dist/artifact"
+```
+
+Disable it for every release job:
+
+```ts
+ci: {
+    release: {
+        prerelease: false,
+    },
+}
+```
+
+Or force every release, including stable versions, to be marked:
+
+```ts
+ci: {
+    release: {
+        prerelease: true,
+    },
+}
+```
+
+The managed release job in this repository uses `{{ releasePrerelease }}` for
+its `gh release create` step, so a beta such as `3.0.0-beta.17` is published as a
+GitHub prerelease.

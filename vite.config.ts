@@ -148,6 +148,10 @@ export default defineConfig({
                     // npm and publish the extension to the VS Code Marketplace. The
                     // whole flow is managed here - no hand-written workflow file.
                     release: {
+                        // Mark beta versions as GitHub prereleases from their
+                        // semver suffix. Set false to publish every version as a
+                        // normal release, or true to always mark them.
+                        prerelease: 'auto',
                         extra: {
                             permissions: { contents: 'write', 'id-token': 'write' },
                             concurrency: { group: 'release', 'cancel-in-progress': false },
@@ -255,10 +259,15 @@ export default defineConfig({
                                         if: "steps.release.outputs.skip == 'false'",
                                         env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' },
                                         run: [
-                                            'gh release create "v${{ steps.release.outputs.version }}" \\',
-                                            '  --title "v${{ steps.release.outputs.version }}" \\',
-                                            '  --notes-file RELEASE_NOTES.md \\',
-                                            '  "packages/vscode/deltabox-toolchain.vsix"',
+                                            'version="${{ steps.release.outputs.version }}"',
+                                            'args=(--title "v$version" --notes-file RELEASE_NOTES.md)',
+                                            // `releasePrerelease` comes from
+                                            // `ci.release.prerelease` (`auto` by default).
+                                            'prerelease="{{releasePrerelease}}"',
+                                            'if [ "$prerelease" = "true" ] || { [ "$prerelease" = "auto" ] && [[ "$version" == *-* ]]; }; then',
+                                            '  args+=(--prerelease)',
+                                            'fi',
+                                            'gh release create "v$version" "${args[@]}" "packages/vscode/deltabox-toolchain.vsix"',
                                         ].join('\n'),
                                     },
                                     {

@@ -71,6 +71,9 @@ export const DEFAULT_WORKFLOW_TOKENS = {
     // changelog sync task sets this from the config so the commit step stages
     // the consumed `.changeset` files.
     changesets: false,
+    // Whether a release job should mark a prerelease version as a GitHub
+    // prerelease. The changelog sync task sets this from `ci.release.prerelease`.
+    releasePrerelease: 'auto',
 } as const;
 
 /** Default file name per workflow id. */
@@ -647,6 +650,9 @@ export function defaultWorkflows(
             on: { push: { branches: [main] }, workflow_dispatch: null },
             permissions: { contents: 'write', 'pull-requests': 'write' },
             concurrency: { group: 'release', 'cancel-in-progress': false },
+            // The default job opens a release PR. A custom job that creates the
+            // GitHub Release can use `{{releasePrerelease}}` (from
+            // `ci.release.prerelease`) to decide whether to pass `--prerelease`.
             jobs: {
                 'create-release-pr': {
                     'runs-on': 'ubuntu-latest',

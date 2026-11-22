@@ -37,6 +37,21 @@ describe('default workflows', () => {
         expect(release).not.toContain('binaries');
     });
 
+    it('resolves the releasePrerelease token for custom release jobs', () => {
+        const yaml = renderWorkflow('release', {
+            tokens: { releasePrerelease: false },
+            config: {
+                steps: {
+                    after: [
+                        { name: 'Check prerelease token', run: 'echo token={{releasePrerelease}}' },
+                    ],
+                },
+            },
+        })!;
+
+        expect(yaml).toContain('token=false');
+    });
+
     it('aggregates every changelog entry since the last released version', () => {
         const release = renderWorkflow('release', { tokens: {} })!;
         // Not the marker-only extraction (which only ever yields the latest entry).

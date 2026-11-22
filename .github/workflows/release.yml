@@ -82,10 +82,13 @@ jobs:
         env:
           GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |-
-          gh release create "v${{ steps.release.outputs.version }}" \
-            --title "v${{ steps.release.outputs.version }}" \
-            --notes-file RELEASE_NOTES.md \
-            "packages/vscode/deltabox-toolchain.vsix"
+          version="${{ steps.release.outputs.version }}"
+          args=(--title "v$version" --notes-file RELEASE_NOTES.md)
+          prerelease="auto"
+          if [ "$prerelease" = "true" ] || { [ "$prerelease" = "auto" ] && [[ "$version" == *-* ]]; }; then
+            args+=(--prerelease)
+          fi
+          gh release create "v$version" "${args[@]}" "packages/vscode/deltabox-toolchain.vsix"
       - name: Upgrade npm for trusted publishing
         if: steps.release.outputs.skip == 'false' || steps.release.outputs.npmPublished == 'false'
         run: npm install -g npm@^11.15.1

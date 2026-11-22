@@ -104,8 +104,8 @@ export interface ToolchainCiConfig {
      * VS Code settings, commitlint).
      */
     changelog?: ChangelogWorkflowSetting;
-    /** The release workflow (`release.yml`). */
-    release?: WorkflowSetting;
+    /** The release workflow (`release.yml`), including prerelease marking. */
+    release?: ReleaseWorkflowSetting;
     /** The issue-title workflow (`issues.yml`). */
     issues?: WorkflowSetting;
     /** The toolchain sync workflow (`sync.yml`). */
@@ -984,6 +984,79 @@ export type ChangelogWorkflowSetting =
     | GitLabWorkflowSetting
     | AzureWorkflowSetting
     | CiChangelogConfig;
+
+export interface ReleaseWorkflowOptions {
+    /**
+     * Workflow vendor for a full `workflow` object.
+     *
+     * @default 'github'
+     */
+    provider?: 'github';
+    /** Replace `on.push.branches`. */
+    pushBranches?: Array<string>;
+    /** Replace `on.pull_request.branches`. */
+    pullRequestBranches?: Array<string>;
+    /**
+     * Extra `on.*` workflow triggers.
+     *
+     * @allowExtraKeys true
+     */
+    triggers?: WorkflowTriggers;
+    /**
+     * Extra top-level workflow keys (`permissions`, `concurrency`, `env`, ...).
+     *
+     * @allowExtraKeys true
+     */
+    extra?: WorkflowExtra;
+    /** Extra steps for a job (one group, or per-job groups). */
+    steps?: WorkflowStepsConfig | Array<WorkflowStepsConfig>;
+    /** Extra complete jobs merged in. */
+    jobs?: Record<string & {}, WorkflowJob>;
+    /**
+     * Per-workflow token overrides (`nodeVersion`, `packageManager`, ...).
+     *
+     * @allowExtraKeys true
+     */
+    tokens?: WorkflowTokens;
+    /** Override the generated workflow file name (eg. `deploy.yml`). */
+    filename?: string;
+    /**
+     * Directory for the workflow file.
+     *
+     * @default '.github/workflows'
+     */
+    dir?: string;
+    /**
+     * Inject the shared checkout/Node/Corepack/install steps into custom workflow jobs; built-in
+     * workflows already include them.
+     *
+     * @default false
+     */
+    setup?: boolean;
+    /** Enable/disable this workflow (default: enabled when present). */
+    enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
+    /**
+     * Mark a version with a prerelease suffix (eg. `3.0.0-beta.2`) as a GitHub prerelease when a
+     * release job creates it. `auto` (default) detects a semver suffix after `-`; `true` always marks;
+     * `false` never marks. Custom release jobs can read the `{{ releasePrerelease }}` token.
+     */
+    prerelease?: boolean | 'auto';
+}
+
+export type ReleaseWorkflowSetting =
+    | boolean
+    | string
+    | GitHubWorkflowSetting
+    | GitLabWorkflowSetting
+    | AzureWorkflowSetting
+    | ReleaseWorkflowOptions;
 
 /** @see https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file */
 export interface ToolchainDependabotConfig {
