@@ -187,6 +187,51 @@ function table(
     });
 }
 
+/** A help section: a heading plus the options rendered under it. */
+interface OptionSection {
+    heading: string;
+    options: CliOption[];
+}
+
+/** The normalized group label of an option (`undefined` = default section). */
+function groupLabel(option: CliOption): string | undefined {
+    const label = option.group?.trim().replace(/:+$/, '').trim();
+    return label ? label : undefined;
+}
+
+/**
+ * Bucket options by `group`, keeping the default `Options:` section first and
+ * named groups in first-appearance order. Group labels are case-insensitive and
+ * rendered with a capitalised heading.
+ */
+function optionSections(options: readonly CliOption[], defaultHeading: string): OptionSection[] {
+    const defaultOptions: CliOption[] = [];
+    const groups = new Map<string, OptionSection>();
+    for (const option of options) {
+        const label = groupLabel(option);
+        if (!label) {
+            defaultOptions.push(option);
+            continue;
+        }
+        const key = label.toLowerCase();
+        const existing = groups.get(key);
+        if (existing) {
+            existing.options.push(option);
+            continue;
+        }
+        groups.set(key, {
+            heading: `${label.charAt(0).toUpperCase()}${label.slice(1)}:`,
+            options: [option],
+        });
+    }
+    const sections: OptionSection[] = [];
+    if (defaultOptions.length > 0) {
+        sections.push({ heading: defaultHeading, options: defaultOptions });
+    }
+    sections.push(...groups.values());
+    return sections;
+}
+
 /** Build the commander-like content shared by the help templates. */
 export function renderHelpContent(
     model: ConfigHelpModel,
@@ -209,11 +254,11 @@ export function renderHelpContent(
         lines.push('', descriptionColor(model.description));
     }
     const optionsWithHelp = withHelpOption(model.options, command);
-    if (optionsWithHelp.length > 0) {
-        lines.push('', usageColor('Options:'));
+    for (const section of optionSections(optionsWithHelp, 'Options:')) {
+        lines.push('', usageColor(section.heading));
         lines.push(
             ...table(
-                optionsWithHelp.map(option => ({
+                section.options.map(option => ({
                     term: optionTerm(option),
                     description: option.description,
                     item: option,

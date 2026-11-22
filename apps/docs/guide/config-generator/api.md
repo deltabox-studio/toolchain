@@ -643,6 +643,34 @@ same inputs spread as separate arguments. A subcommand definition may be an
 already-built `CliCommand`, a `[scope, setup]` / `[scope, description, setup]`
 tuple, or `{ scope, description?, setup? }`.
 
+#### Grouped options
+
+Give an option a `group` label to render it under its own heading. Ungrouped
+options stay in the default `Options:` section; groups appear in
+first-appearance order and merge case-insensitively. Grouping applies to program
+globals and command options alike.
+
+```ts
+cmd('sync')
+    .options([
+        { flags: '--check', description: 'Check only.' },
+        { flags: '--trace', description: 'Trace resolution.', group: 'Diagnostics' },
+        { flags: '--profile', description: 'Write a profile.', group: 'Diagnostics' },
+    ])
+    .run(syncHandler);
+```
+
+`formatHelp` prints:
+
+```text
+Options:
+  --check   Check only.
+
+Diagnostics:
+  --trace   Trace resolution.
+  --profile Write a profile.
+```
+
 #### Global options
 
 Define options once at program level and every command parses them:

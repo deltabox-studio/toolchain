@@ -27,6 +27,11 @@ export interface CliOption {
     parse?: (value: string) => unknown;
     /** Allowed values; used for validation and misspelling suggestions. */
     choices?: readonly string[];
+    /**
+     * Optional help group. Options sharing a group are rendered under their own
+     * heading (eg. `Advanced:`) instead of the default `Options:` section.
+     */
+    group?: string;
     /** Keep the option registered but out of the generated docs. */
     hidden?: boolean;
 }

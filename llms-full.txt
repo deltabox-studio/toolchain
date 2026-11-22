@@ -6539,6 +6539,34 @@ same inputs spread as separate arguments. A subcommand definition may be an
 already-built `CliCommand`, a `[scope, setup]` / `[scope, description, setup]`
 tuple, or `{ scope, description?, setup? }`.
 
+#### Grouped options
+
+Give an option a `group` label to render it under its own heading. Ungrouped
+options stay in the default `Options:` section; groups appear in
+first-appearance order and merge case-insensitively. Grouping applies to program
+globals and command options alike.
+
+```ts
+cmd('sync')
+    .options([
+        { flags: '--check', description: 'Check only.' },
+        { flags: '--trace', description: 'Trace resolution.', group: 'Diagnostics' },
+        { flags: '--profile', description: 'Write a profile.', group: 'Diagnostics' },
+    ])
+    .run(syncHandler);
+```
+
+`formatHelp` prints:
+
+```text
+Options:
+  --check   Check only.
+
+Diagnostics:
+  --trace   Trace resolution.
+  --profile Write a profile.
+```
+
 #### Global options
 
 Define options once at program level and every command parses them:
@@ -13401,6 +13429,7 @@ the shell consumed without leaving a trace still cannot be recovered.
   `commitlint` or the markdown.
 * **Preview the entry**: `dbx changelog --dry-run` prints the proposed entry —
   check it for stray `\`, `\r`, `\b`, `\t` or mojibake before releasing.
+* Prefer to highlight references and nouns like `npm`, `index.ts`, `some/path`, `https://hello.world`, `Vite`, `SomeType`, `funcName()`, `import { ... } from 'yes'`, `#fff`, `a-package-name`, and so on in the commit messages, for better readability for end-users.
 
 ---
 
@@ -14697,7 +14726,7 @@ Full changelog
 
 * Improved changelog and release notes formatting.
 * Managed `tsconfig.json` now declaring `include`/`exclude`/`compilerOptions.types` from extended tsconfig.
-* UTF-8 BOM support (great for Windows Powershell users).
+* UTF-8 BOM support (great for shells).
 * Dockerfiles that build from a fresh scaffold.
 * Scaffold-only Docker generation.
 * `--online` for online templates.

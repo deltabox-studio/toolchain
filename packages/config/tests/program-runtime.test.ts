@@ -714,6 +714,55 @@ describe('program help and errors', () => {
         expect(help).not.toContain('[myapp]');
     });
 
+    it('groups options under their own help headings', () => {
+        const program = createConfigProgram(
+            [
+                {
+                    name: 'serve',
+                    description: 'Serve.',
+                    options: [
+                        { flags: '--port <value>', description: 'Port.' },
+                        { flags: '--trace', description: 'Trace.', group: 'diagnostics' },
+                        { flags: '--profile', description: 'Profile.', group: 'Diagnostics' },
+                        { flags: '--out <dir>', description: 'Out.' },
+                        { flags: '--json', description: 'JSON.', group: 'Output' },
+                    ],
+                    run: () => {},
+                },
+            ],
+            {
+                globalOptions: [
+                    { flags: '--cwd <dir>', description: 'Root.' },
+                    { flags: '--verbose', description: 'Verbose.', group: 'diagnostics' },
+                ] as const,
+            }
+        );
+
+        const help = program.formatHelp('serve');
+        const optionsIndex = help.indexOf('Options:');
+        const diagnosticsIndex = help.indexOf('Diagnostics:');
+        const outputIndex = help.indexOf('Output:');
+        expect(optionsIndex).toBeGreaterThan(-1);
+        expect(diagnosticsIndex).toBeGreaterThan(optionsIndex);
+        expect(outputIndex).toBeGreaterThan(diagnosticsIndex);
+
+        const defaults = help.slice(optionsIndex, diagnosticsIndex);
+        expect(defaults).toContain('--cwd');
+        expect(defaults).toContain('--port');
+        expect(defaults).not.toContain('--trace');
+
+        const diagnostics = help.slice(diagnosticsIndex, outputIndex);
+        // Group labels merge case-insensitively into one section.
+        expect(diagnostics.match(/Diagnostics:/g)).toHaveLength(1);
+        expect(diagnostics).toContain('--trace');
+        expect(diagnostics).toContain('--profile');
+        expect(diagnostics).toContain('--verbose');
+
+        expect(help.slice(outputIndex)).toContain('--json');
+        // Program help groups its globals through the same renderer.
+        expect(program.formatHelp()).toContain('Diagnostics:');
+    });
+
     it('renders colourless boxed help and plain/custom variants', () => {
         const program = engine().cli.program.create(cmd => [
             cmd('serve', {
