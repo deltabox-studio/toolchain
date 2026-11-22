@@ -34,3 +34,4 @@ the shell consumed without leaving a trace still cannot be recovered.
   `commitlint` or the markdown.
 - **Preview the entry**: `dbx changelog --dry-run` prints the proposed entry —
   check it for stray `\`, `\r`, `\b`, `\t` or mojibake before releasing.
+- Prefer to highlight references and nouns like `npm`, `index.ts`, `some/path`, `https://hello.world`, `Vite`, `SomeType`, `funcName()`, `import { ... } from 'yes'`, `#fff`, `a-package-name`, and so on in the commit messages, for better readability for end-users.
