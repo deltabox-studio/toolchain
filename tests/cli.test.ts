@@ -137,6 +137,31 @@ describe('dbx CLI', () => {
         });
     });
 
+    it('only prints help after an argv error when helpOnError is enabled', async () => {
+        const error = vi.spyOn(logger, 'error').mockImplementation(() => {});
+        const write = vi.spyOn(logger, 'write').mockImplementation(() => {});
+        const previous = process.exitCode;
+        const argv = (...args: string[]) => ['node', 'dbx', '--no-update-check', ...args];
+        try {
+            expect(createCli().helpOnError).toBe(false);
+            expect(createCli({ helpOnError: true }).helpOnError).toBe(true);
+
+            await runCli(argv('not-a-real-command'));
+            expect(error).toHaveBeenCalledWith(expect.stringContaining('unknown command'));
+            expect(write).not.toHaveBeenCalledWith('err', expect.stringContaining('Usage:'));
+            expect(process.exitCode).toBe(1);
+
+            write.mockClear();
+            process.exitCode = undefined;
+            await runCli(argv('not-a-real-command'), { helpOnError: true });
+            expect(write).toHaveBeenCalledWith('err', expect.stringMatching(/Usage:/));
+        } finally {
+            process.exitCode = previous;
+            error.mockRestore();
+            write.mockRestore();
+        }
+    });
+
     it('disables configured help colours when --no-color is passed', async () => {
         const output: string[] = [];
         const program = createCli();

@@ -826,6 +826,21 @@ describe('program help and errors', () => {
         expect(() => asyncProgram.invoke(['serve', '--help', '--no-color'])).toThrow(/invokeAsync/);
     });
 
+    it('exposes helpOnError as an opt-in program option', () => {
+        const quiet = createConfigProgram([{ name: 'serve', run: () => {} }]);
+        expect(quiet.helpOnError).toBe(false);
+
+        const noisy = createConfigProgram([{ name: 'serve', run: () => {} }], {
+            helpOnError: true,
+        });
+        expect(noisy.helpOnError).toBe(true);
+
+        const engineProgram = engine().cli.program.create(cmd => [cmd('serve').run(() => {})], {
+            helpOnError: true,
+        });
+        expect(engineProgram.helpOnError).toBe(true);
+    });
+
     it('passes parsed globals and the context to disableColors', async () => {
         const seen: { args: unknown; context: unknown }[] = [];
         const program = createConfigProgram(

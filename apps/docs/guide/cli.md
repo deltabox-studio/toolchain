@@ -187,8 +187,8 @@ import {
 
 | Export                                 | Description                                                            |
 | -------------------------------------- | ---------------------------------------------------------------------- |
-| `createCli(commands?)`                 | Build the `dbx` engine program (global flags + built-in commands).     |
-| `runCli(argv?)`                        | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
+| `createCli(commands?, options?)`       | Build the `dbx` engine program (global flags + built-in commands).     |
+| `runCli(argv?, options?)`              | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
 | `builtinCommands()`                    | The commands built into the root CLI (config commands need an engine). |
 | `withCliContext(commands)`             | Wrap commands with dbx config loading, logging and framing.            |
 | `withDefaultVite(argv, commandNames?)` | Insert `vite` before a bare Vite+ command (built-ins win).             |
@@ -198,6 +198,12 @@ import {
 `createCli(commands)` accepts a typed command array (for example from
 `defineCliCommand`) and keeps the command/option types on `program.commands`;
 `createCli()` uses `builtinCommands()`.
+
+Invalid argv prints only the error message by default. Pass
+`{ helpOnError: true }` to `createCli({ helpOnError: true })`,
+`createCli(commands, { helpOnError: true })` or
+`runCli(argv, { helpOnError: true })` to also print the full help after an
+unknown option/command or a bad value.
 
 `extractLogOptions` makes the logger flags work before _or_ after the
 subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.

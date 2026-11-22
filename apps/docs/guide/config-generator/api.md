@@ -527,21 +527,22 @@ grouping command; it registers with its subcommands.
 
 A `ConfigProgram` exposes the runtime surface:
 
-| Member                                   | Description                                                            |
-| ---------------------------------------- | ---------------------------------------------------------------------- |
-| `commands`                               | The normalized commands (single command stays single).                 |
-| `globals`                                | The program-level global options.                                      |
-| `name()` / `description()` / `version()` | Set the metadata shown in help/version output.                         |
-| `output(writeOut, writeErr?)`            | Route help/version output; `writeErr` is reserved for error rendering. |
-| `globalOption()` / `globalOptions()`     | Append program-level globals.                                          |
-| `argv(values)`                           | Set the explicit argv used by `invoke()`.                              |
-| `withContext(context)`                   | Set the default host context.                                          |
-| `configure(format)`                      | Merge help/error formatting options.                                   |
-| `formatHelp(command?)`                   | Render program or command help.                                        |
-| `formatError(error)`                     | Render an error with the configured template.                          |
-| `invoke(argv?, context?)`                | Run synchronously (async handlers/resolvers throw).                    |
-| `invokeAsync(argv?, context?)`           | Run and await async handlers, hooks and resolvers.                     |
-| `hook()` / `hooks()`                     | Register inferred before/after hooks.                                  |
+| Member                                   | Description                                                             |
+| ---------------------------------------- | ----------------------------------------------------------------------- |
+| `commands`                               | The normalized commands (single command stays single).                  |
+| `globals`                                | The program-level global options.                                       |
+| `helpOnError`                            | Whether to print help after an invalid-argv error (`false` by default). |
+| `name()` / `description()` / `version()` | Set the metadata shown in help/version output.                          |
+| `output(writeOut, writeErr?)`            | Route help/version output; `writeErr` is reserved for error rendering.  |
+| `globalOption()` / `globalOptions()`     | Append program-level globals.                                           |
+| `argv(values)`                           | Set the explicit argv used by `invoke()`.                               |
+| `withContext(context)`                   | Set the default host context.                                           |
+| `configure(format)`                      | Merge help/error formatting options.                                    |
+| `formatHelp(command?)`                   | Render program or command help.                                         |
+| `formatError(error)`                     | Render an error with the configured template.                           |
+| `invoke(argv?, context?)`                | Run synchronously (async handlers/resolvers throw).                     |
+| `invokeAsync(argv?, context?)`           | Run and await async handlers, hooks and resolvers.                      |
+| `hook()` / `hooks()`                     | Register inferred before/after hooks.                                   |
 
 Build the program through the engine — this is the preferred entry point because
 it infers the config/values types and accepts the full program options:
@@ -573,6 +574,20 @@ const program = engine.cli.program.create(
 `program.argv()`, `program.withContext()` and `program.output()` set the runtime
 pieces.
 
+`helpOnError` defaults to `false`, so invalid argv throws a
+`ConfigProgramError` without printing help. Pass `helpOnError: true` and append
+`program.formatHelp()` in your catch handler when you want the full help text:
+
+```ts
+program.invokeAsync().catch(error => {
+    console.error(error instanceof Error ? error.message : String(error));
+    if (error instanceof ConfigProgramError && program.helpOnError) {
+        console.error(program.formatHelp());
+    }
+    process.exitCode = 1;
+});
+```
+
 Use the lower-level `createConfigProgram(commands, options?)` only when you
 already have a command list that is not tied to an engine. It accepts the same
 options and is what `engine.cli.program.create()` calls internally.
@@ -593,7 +608,8 @@ Invalid argv throws a `ConfigProgramError` with `code` (for example
 `unknownCommand`, `unknownOption`, `missingOptionValue`, `invalidValue`,
 `missingCommand`), `input` and an optional misspelling `suggestion`. Use
 `format.error.messages` to override the messages and `program.formatError()` to
-render one.
+render one. Help is only printed when `helpOnError` is enabled (see
+[Program members and options](#program-members-and-options)).
 
 Options and subcommands have commander-style shorthands as well as array forms:
 

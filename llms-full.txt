@@ -4844,8 +4844,8 @@ await program.invokeAsync();
 ```
 
 `engine.cli.program.create()` accepts `argv`, `name`, `description`, `version`,
-`globalOptions`, `context`, `disableColors`, `writeOut`, `writeErr` and
-`format`. See the
+`globalOptions`, `context`, `disableColors`, `helpOnError`, `writeOut`, `writeErr`
+and `format`. See the
 [API reference](/guide/config-generator/api#program-members-and-options)
 for `invoke`/`invokeAsync`, hooks, help/error formatting and `bin`.
 
@@ -6423,21 +6423,22 @@ grouping command; it registers with its subcommands.
 
 A `ConfigProgram` exposes the runtime surface:
 
-| Member                                   | Description                                                            |
-| ---------------------------------------- | ---------------------------------------------------------------------- |
-| `commands`                               | The normalized commands (single command stays single).                 |
-| `globals`                                | The program-level global options.                                      |
-| `name()` / `description()` / `version()` | Set the metadata shown in help/version output.                         |
-| `output(writeOut, writeErr?)`            | Route help/version output; `writeErr` is reserved for error rendering. |
-| `globalOption()` / `globalOptions()`     | Append program-level globals.                                          |
-| `argv(values)`                           | Set the explicit argv used by `invoke()`.                              |
-| `withContext(context)`                   | Set the default host context.                                          |
-| `configure(format)`                      | Merge help/error formatting options.                                   |
-| `formatHelp(command?)`                   | Render program or command help.                                        |
-| `formatError(error)`                     | Render an error with the configured template.                          |
-| `invoke(argv?, context?)`                | Run synchronously (async handlers/resolvers throw).                    |
-| `invokeAsync(argv?, context?)`           | Run and await async handlers, hooks and resolvers.                     |
-| `hook()` / `hooks()`                     | Register inferred before/after hooks.                                  |
+| Member                                   | Description                                                             |
+| ---------------------------------------- | ----------------------------------------------------------------------- |
+| `commands`                               | The normalized commands (single command stays single).                  |
+| `globals`                                | The program-level global options.                                       |
+| `helpOnError`                            | Whether to print help after an invalid-argv error (`false` by default). |
+| `name()` / `description()` / `version()` | Set the metadata shown in help/version output.                          |
+| `output(writeOut, writeErr?)`            | Route help/version output; `writeErr` is reserved for error rendering.  |
+| `globalOption()` / `globalOptions()`     | Append program-level globals.                                           |
+| `argv(values)`                           | Set the explicit argv used by `invoke()`.                               |
+| `withContext(context)`                   | Set the default host context.                                           |
+| `configure(format)`                      | Merge help/error formatting options.                                    |
+| `formatHelp(command?)`                   | Render program or command help.                                         |
+| `formatError(error)`                     | Render an error with the configured template.                           |
+| `invoke(argv?, context?)`                | Run synchronously (async handlers/resolvers throw).                     |
+| `invokeAsync(argv?, context?)`           | Run and await async handlers, hooks and resolvers.                      |
+| `hook()` / `hooks()`                     | Register inferred before/after hooks.                                   |
 
 Build the program through the engine — this is the preferred entry point because
 it infers the config/values types and accepts the full program options:
@@ -6469,6 +6470,20 @@ const program = engine.cli.program.create(
 `program.argv()`, `program.withContext()` and `program.output()` set the runtime
 pieces.
 
+`helpOnError` defaults to `false`, so invalid argv throws a
+`ConfigProgramError` without printing help. Pass `helpOnError: true` and append
+`program.formatHelp()` in your catch handler when you want the full help text:
+
+```ts
+program.invokeAsync().catch(error => {
+    console.error(error instanceof Error ? error.message : String(error));
+    if (error instanceof ConfigProgramError && program.helpOnError) {
+        console.error(program.formatHelp());
+    }
+    process.exitCode = 1;
+});
+```
+
 Use the lower-level `createConfigProgram(commands, options?)` only when you
 already have a command list that is not tied to an engine. It accepts the same
 options and is what `engine.cli.program.create()` calls internally.
@@ -6489,7 +6504,8 @@ Invalid argv throws a `ConfigProgramError` with `code` (for example
 `unknownCommand`, `unknownOption`, `missingOptionValue`, `invalidValue`,
 `missingCommand`), `input` and an optional misspelling `suggestion`. Use
 `format.error.messages` to override the messages and `program.formatError()` to
-render one.
+render one. Help is only printed when `helpOnError` is enabled (see
+[Program members and options](#program-members-and-options)).
 
 Options and subcommands have commander-style shorthands as well as array forms:
 
@@ -11772,8 +11788,8 @@ import {
 
 | Export                                 | Description                                                            |
 | -------------------------------------- | ---------------------------------------------------------------------- |
-| `createCli(commands?)`                 | Build the `dbx` engine program (global flags + built-in commands).     |
-| `runCli(argv?)`                        | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
+| `createCli(commands?, options?)`       | Build the `dbx` engine program (global flags + built-in commands).     |
+| `runCli(argv?, options?)`              | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
 | `builtinCommands()`                    | The commands built into the root CLI (config commands need an engine). |
 | `withCliContext(commands)`             | Wrap commands with dbx config loading, logging and framing.            |
 | `withDefaultVite(argv, commandNames?)` | Insert `vite` before a bare Vite+ command (built-ins win).             |
@@ -11783,6 +11799,12 @@ import {
 `createCli(commands)` accepts a typed command array (for example from
 `defineCliCommand`) and keeps the command/option types on `program.commands`;
 `createCli()` uses `builtinCommands()`.
+
+Invalid argv prints only the error message by default. Pass
+`{ helpOnError: true }` to `createCli({ helpOnError: true })`,
+`createCli(commands, { helpOnError: true })` or
+`runCli(argv, { helpOnError: true })` to also print the full help after an
+unknown option/command or a bad value.
 
 `extractLogOptions` makes the logger flags work before *or* after the
 subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.
@@ -15805,8 +15827,8 @@ sync task (see the [Providers](/guide/providers) guide).
 | Export                                 | Description                                                                |
 | -------------------------------------- | -------------------------------------------------------------------------- |
 | `builtinCommands()`                    | The commands built into the root CLI (config commands need an engine).     |
-| `createCli(commands?)`                 | Build the `dbx` program; pre-typed arrays keep their command/option types. |
-| `runCli(argv?)`                        | Parse and run the CLI (extracts logger flags, defaults bare Vite+).        |
+| `createCli(commands?, options?)`       | Build the `dbx` program; pre-typed arrays keep their command/option types. |
+| `runCli(argv?, options?)`              | Parse and run the CLI (extracts logger flags, defaults bare Vite+).        |
 | `withDefaultVite(argv, commandNames?)` | Insert `vite` before a bare Vite+ command.                                 |
 | `extractLogOptions(argv)`              | Pull `--log-level` / `--color` / `--no-color` out of argv.                 |
 
@@ -15938,8 +15960,8 @@ await program.invokeAsync();
 
 For config-driven commands, `engine.cli.program.create(...)` builds the program
 runtime with schema-derived options and typed `run` values. It accepts the full
-program options, including `globalOptions`, `disableColors`, `format`, `argv` and
-the output hooks. See
+program options, including `globalOptions`, `disableColors`, `helpOnError`,
+`format`, `argv` and the output hooks. See
 [Running a built program](/guide/config-generator/api#running-a-built-program)
 and the
 [program members](/guide/config-generator/api#program-members-and-options).
@@ -16282,6 +16304,32 @@ the repository at
 url: https://toolchain.deltabox.studio/CHANGELOG.md
 ---
 # Changelog
+
+## 3.0.0-beta.12 (November 2026)
+
+#### Release
+
+* Mark prerelease versions as GitHub prereleases ([#dd1c62f](https://github.com/deltabox-studio/toolchain/commit/dd1c62f) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+
+* Document bump rules and harden versioning providers ([#5ae5e02](https://github.com/deltabox-studio/toolchain/commit/5ae5e02) by [T0chi](https://github.com/T0chi))
+* Group release bodies since the last published release ([#93b8762](https://github.com/deltabox-studio/toolchain/commit/93b8762) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+
+* Repair and audit markdown code fences ([#8a4ab01](https://github.com/deltabox-studio/toolchain/commit/8a4ab01) by [T0chi](https://github.com/T0chi))
+
+- Update permalinks ([#5abe04e](https://github.com/deltabox-studio/toolchain/commit/5abe04e) by [T0chi](https://github.com/T0chi))
+- Add a deprecations section to the v2-v3 guide ([#3121d44](https://github.com/deltabox-studio/toolchain/commit/3121d44) by [T0chi](https://github.com/T0chi))
+
+#### Release
+
+* Clarify auto prerelease detection ([#bc5c01f](https://github.com/deltabox-studio/toolchain/commit/bc5c01f) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+
+* Add a release bodies guide under the changelog section ([#e00a44b](https://github.com/deltabox-studio/toolchain/commit/e00a44b) by [T0chi](https://github.com/T0chi))
 
 ## 3.0.0-beta.11 (November 2026)
 

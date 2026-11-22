@@ -54,6 +54,7 @@ interface ProgramState<TContext extends CliCommandContext> {
     context?: TContext;
     format: ConfigProgramFormatOptions;
     disableColors?: RuntimeDisableColors<TContext>;
+    helpOnError: boolean;
     colorsDisabled: boolean;
     hooks: RuntimeHook[];
 }
@@ -1050,6 +1051,7 @@ export function createConfigProgram<
               }
             : {}),
         format: mergeFormatOptions({}, options.format),
+        helpOnError: options.helpOnError === true,
         colorsDisabled: false,
         hooks: [],
     };
@@ -1064,6 +1066,9 @@ export function createConfigProgram<
         },
         get globals() {
             return state.globalOptions as never;
+        },
+        get helpOnError() {
+            return state.helpOnError;
         },
         name(value: string) {
             state.name = value;

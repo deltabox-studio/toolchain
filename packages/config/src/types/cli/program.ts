@@ -759,6 +759,13 @@ export type ConfigProgramOptions<
      * @default `false`
      */
     disableColors?: ConfigProgramDisableColors<TContext, TGlobalOptions>;
+    /**
+     * Print the full help text after an invalid-argv error (unknown option or
+     * command, missing value). The error message is always thrown; the caller
+     * decides whether to render it with {@link ConfigProgram.formatError}.
+     * @default `false`
+     */
+    helpOnError?: boolean;
     /** Write to a different stdout */
     writeOut?: (text: string) => void;
     /** Write to a different stderr */
@@ -780,6 +787,11 @@ export interface ConfigProgram<
     readonly commands: TCommands;
     /** The program-level global options (parsed for every command). */
     readonly globals: TGlobalOptions;
+    /**
+     * Whether the host should print the full help text after an invalid-argv
+     * error ({@link ConfigProgramOptions.helpOnError}).
+     */
+    readonly helpOnError: boolean;
     /** Set the program name shown in help. */
     name(value: string): this;
     /** Set the program description shown in help. */
