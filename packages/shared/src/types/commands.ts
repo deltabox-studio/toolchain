@@ -193,6 +193,11 @@ export interface CliCommand<
     scope?: TScope;
     /** Alternative command names registered alongside {@link name}. */
     aliases?: string[];
+    /**
+     * Optional help group. Overrides the group derived from a delimited command
+     * name (`vite:list` -> `vite`) when command grouping is enabled.
+     */
+    group?: string;
     /** Human-readable description. */
     description: string;
     /** Positional arguments the command accepts. */

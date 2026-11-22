@@ -20,7 +20,7 @@ await program.invokeAsync();
 For config-driven commands, `engine.cli.program.create(...)` builds the program
 runtime with schema-derived options and typed `run` values. It accepts the full
 program options, including `globalOptions`, `disableColors`, `helpOnError`,
-`format`, `argv` and the output hooks. See
+`groups`, `format`, `argv` and the output hooks. See
 [Running a built program](/guide/config-generator/api#running-a-built-program)
 and the
 [program members](/guide/config-generator/api#program-members-and-options).

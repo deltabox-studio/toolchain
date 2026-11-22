@@ -57,6 +57,8 @@ export interface ConfigHelpModel {
     options: readonly CliOption[];
     /** The subcommands of the selected command. */
     commands: readonly CliCommand<any, any>[];
+    /** The command-grouping setting used to render {@link commands}. */
+    groups?: ConfigProgramGroupsOptions;
     /** The selected command, when rendering command help. */
     command?: CliCommand<any, any>;
 }
@@ -66,6 +68,28 @@ export type ConfigHelpTemplate =
     | 'box'
     | 'plain'
     | ((model: ConfigHelpModel, options: ConfigProgramFormatOptions) => string);
+
+/**
+ * Command help grouping.
+ *
+ * `true` enables grouping and derives groups from delimited command names
+ * (`vite:list` -> `vite`); `false` renders a flat command list. An object can
+ * disable the automatic derivation or change the delimiter(s).
+ */
+export type ConfigProgramGroupsOptions =
+    | boolean
+    | {
+          /**
+           * Derive groups from delimited command-name paths.
+           * @default `true`
+           */
+          auto?: boolean;
+          /**
+           * One or more delimiters used for automatic grouping.
+           * @default `':'`
+           */
+          delimiter?: string | readonly string[];
+      };
 
 /** Error output templates. */
 export type ConfigErrorTemplate =

@@ -14,7 +14,11 @@ import { fileURLToPath } from 'node:url';
 import pc from 'picocolors';
 
 import { changelogCommands } from '@deltabox/toolchain/changelog/cli';
-import { createConfigProgram, ConfigProgramError } from '@deltabox/toolchain/config';
+import {
+    createConfigProgram,
+    ConfigProgramError,
+    type ConfigProgramGroupsOptions,
+} from '@deltabox/toolchain/config';
 import { loadToolchainConfig } from '@deltabox/toolchain/core';
 import { mcpCommands } from '@deltabox/toolchain/mcp/cli';
 import { migrateCommands } from '@deltabox/toolchain/migrate/cli';
@@ -251,6 +255,13 @@ export interface RootCliOptions {
      * @default `false`
      */
     helpOnError?: boolean;
+    /**
+     * Group commands in help by their delimited name path (`vite:list` ->
+     * `Vite:`). `true` (default) enables auto grouping; `false` renders a flat
+     * list; an object can disable `auto` or change the delimiter(s).
+     * @default `true`
+     */
+    groups?: ConfigProgramGroupsOptions;
 }
 
 /**
@@ -326,6 +337,7 @@ export function createCli<
             return getLogOverrides().color === false || color === false;
         },
         helpOnError: programOptions.helpOnError === true,
+        ...(programOptions.groups !== undefined ? { groups: programOptions.groups } : {}),
         writeOut: text => logger.write('out', text),
         writeErr: text => logger.write('err', text),
     }).configure({

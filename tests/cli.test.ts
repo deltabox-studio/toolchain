@@ -96,6 +96,16 @@ describe('dbx CLI', () => {
         expect(program.formatHelp()).toContain('dbx');
     });
 
+    it('groups built-in commands by their name path by default', () => {
+        const grouped = createCli().formatHelp();
+        expect(grouped).toContain('Vite:');
+        expect(grouped.slice(grouped.indexOf('Vite:'))).toContain('vite:build');
+
+        const flat = createCli({ groups: false }).formatHelp();
+        expect(flat).not.toContain('Vite:');
+        expect(flat).toContain('vite:build');
+    });
+
     it('flags provider passthrough commands but not built-ins', () => {
         expect(isPassthroughCommand()).toBe(false);
         setPassthroughCommand(true);

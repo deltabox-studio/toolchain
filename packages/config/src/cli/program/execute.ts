@@ -46,14 +46,16 @@ export async function executeAsync<TContext extends CliCommandContext>(
                 ? renderCommandHelp(
                       withGlobalOptions(selection.help.command, globals),
                       selection.help.path.slice(0, -1),
-                      format
+                      format,
+                      state.groups
                   )
                 : renderProgramHelp(
                       state.name,
                       state.description,
                       state.list,
                       format,
-                      state.globalOptions
+                      state.globalOptions,
+                      state.groups
                   )
         );
         return;
@@ -81,7 +83,12 @@ export async function executeAsync<TContext extends CliCommandContext>(
     if (hasTokenBeforeSeparator(rest, ['--help', '-H'])) {
         writeProgramOut(
             state,
-            renderCommandHelp(withGlobalOptions(command, globals), commandPath.slice(0, -1), format)
+            renderCommandHelp(
+                withGlobalOptions(command, globals),
+                commandPath.slice(0, -1),
+                format,
+                state.groups
+            )
         );
         return;
     }
@@ -134,7 +141,12 @@ export function executeSync<TContext extends CliCommandContext>(
         if (selection.help?.command) {
             writeProgramOut(
                 state,
-                renderCommandHelp(selection.help.command, selection.help.path.slice(0, -1), format)
+                renderCommandHelp(
+                    selection.help.command,
+                    selection.help.path.slice(0, -1),
+                    format,
+                    state.groups
+                )
             );
         } else if (selection.help) {
             writeProgramOut(
@@ -144,7 +156,8 @@ export function executeSync<TContext extends CliCommandContext>(
                     state.description,
                     state.list,
                     format,
-                    state.globalOptions
+                    state.globalOptions,
+                    state.groups
                 )
             );
         } else if (selection.version) {
@@ -171,7 +184,12 @@ export function executeSync<TContext extends CliCommandContext>(
     if (hasTokenBeforeSeparator(rest, ['--help', '-H'])) {
         writeProgramOut(
             state,
-            renderCommandHelp(withGlobalOptions(command, globals), commandPath.slice(0, -1), format)
+            renderCommandHelp(
+                withGlobalOptions(command, globals),
+                commandPath.slice(0, -1),
+                format,
+                state.groups
+            )
         );
         return;
     }

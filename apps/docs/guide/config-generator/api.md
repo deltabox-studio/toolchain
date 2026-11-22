@@ -532,6 +532,7 @@ A `ConfigProgram` exposes the runtime surface:
 | `commands`                               | The normalized commands (single command stays single).                  |
 | `globals`                                | The program-level global options.                                       |
 | `helpOnError`                            | Whether to print help after an invalid-argv error (`false` by default). |
+| `groups`                                 | Command-grouping setting (`true` by default).                           |
 | `name()` / `description()` / `version()` | Set the metadata shown in help/version output.                          |
 | `output(writeOut, writeErr?)`            | Route help/version output; `writeErr` is reserved for error rendering.  |
 | `globalOption()` / `globalOptions()`     | Append program-level globals.                                           |
@@ -588,13 +589,34 @@ program.invokeAsync().catch(error => {
 });
 ```
 
+`groups` defaults to `true`, so help groups commands by their delimited name
+path (`vite:list` -> `Vite:`). Set `groups: false` for a flat list, or
+`groups: { auto: false }` to only honor explicit `group` labels. `delimiter`
+accepts one string or an array (default `':'`).
+
+```ts
+const program = engine.cli.program.create(
+    cmd => [
+        cmd('sync', { name: 'sync', run: syncHandler }),
+        cmd('vite:list', { name: 'vite:list', run: listHandler }), // -> Vite:
+        cmd('serve:status', {
+            name: 'serve:status',
+            group: 'Server',
+            run: statusHandler,
+        }),
+    ],
+    { groups: { delimiter: [':', '/'] } }
+);
+```
+
 Use the lower-level `createConfigProgram(commands, options?)` only when you
 already have a command list that is not tied to an engine. It accepts the same
 options and is what `engine.cli.program.create()` calls internally.
 
 Program types: `ConfigProgram`, `ConfigProgramOptions`,
-`ConfigProgramFormatOptions`, `ConfigProgramCommand`, `ConfigScopeCommand`,
-`ConfigCommandBuilder`, `ConfigEngineCliProgram` and `ConfigProgramError`.
+`ConfigProgramFormatOptions`, `ConfigProgramGroupsOptions`,
+`ConfigProgramCommand`, `ConfigScopeCommand`, `ConfigCommandBuilder`,
+`ConfigEngineCliProgram` and `ConfigProgramError`.
 
 The standalone equivalent is
 `generateConfigProgram(schema, { envPrefix, ... })`: it returns `CliCommand[]`

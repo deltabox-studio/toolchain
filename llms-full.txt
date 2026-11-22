@@ -4844,8 +4844,8 @@ await program.invokeAsync();
 ```
 
 `engine.cli.program.create()` accepts `argv`, `name`, `description`, `version`,
-`globalOptions`, `context`, `disableColors`, `helpOnError`, `writeOut`, `writeErr`
-and `format`. See the
+`globalOptions`, `context`, `disableColors`, `helpOnError`, `groups`, `writeOut`,
+`writeErr` and `format`. See the
 [API reference](/guide/config-generator/api#program-members-and-options)
 for `invoke`/`invokeAsync`, hooks, help/error formatting and `bin`.
 
@@ -6428,6 +6428,7 @@ A `ConfigProgram` exposes the runtime surface:
 | `commands`                               | The normalized commands (single command stays single).                  |
 | `globals`                                | The program-level global options.                                       |
 | `helpOnError`                            | Whether to print help after an invalid-argv error (`false` by default). |
+| `groups`                                 | Command-grouping setting (`true` by default).                           |
 | `name()` / `description()` / `version()` | Set the metadata shown in help/version output.                          |
 | `output(writeOut, writeErr?)`            | Route help/version output; `writeErr` is reserved for error rendering.  |
 | `globalOption()` / `globalOptions()`     | Append program-level globals.                                           |
@@ -6484,13 +6485,34 @@ program.invokeAsync().catch(error => {
 });
 ```
 
+`groups` defaults to `true`, so help groups commands by their delimited name
+path (`vite:list` -> `Vite:`). Set `groups: false` for a flat list, or
+`groups: { auto: false }` to only honor explicit `group` labels. `delimiter`
+accepts one string or an array (default `':'`).
+
+```ts
+const program = engine.cli.program.create(
+    cmd => [
+        cmd('sync', { name: 'sync', run: syncHandler }),
+        cmd('vite:list', { name: 'vite:list', run: listHandler }), // -> Vite:
+        cmd('serve:status', {
+            name: 'serve:status',
+            group: 'Server',
+            run: statusHandler,
+        }),
+    ],
+    { groups: { delimiter: [':', '/'] } }
+);
+```
+
 Use the lower-level `createConfigProgram(commands, options?)` only when you
 already have a command list that is not tied to an engine. It accepts the same
 options and is what `engine.cli.program.create()` calls internally.
 
 Program types: `ConfigProgram`, `ConfigProgramOptions`,
-`ConfigProgramFormatOptions`, `ConfigProgramCommand`, `ConfigScopeCommand`,
-`ConfigCommandBuilder`, `ConfigEngineCliProgram` and `ConfigProgramError`.
+`ConfigProgramFormatOptions`, `ConfigProgramGroupsOptions`,
+`ConfigProgramCommand`, `ConfigScopeCommand`, `ConfigCommandBuilder`,
+`ConfigEngineCliProgram` and `ConfigProgramError`.
 
 The standalone equivalent is
 `generateConfigProgram(schema, { envPrefix, ... })`: it returns `CliCommand[]`
@@ -11834,6 +11856,11 @@ Invalid argv prints only the error message by default. Pass
 `runCli(argv, { helpOnError: true })` to also print the full help after an
 unknown option/command or a bad value.
 
+`dbx` groups its command list by default: `vite:list` is listed under a
+`Vite:` heading. Pass `{ groups: false }` for a flat list, or
+`{ groups: { auto: false } }` to only honor explicit command groups. The same
+options work through `createCli` and `runCli`.
+
 `extractLogOptions` makes the logger flags work before *or* after the
 subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.
 `withDefaultVite` powers the bare-command passthrough described above:
@@ -15990,7 +16017,7 @@ await program.invokeAsync();
 For config-driven commands, `engine.cli.program.create(...)` builds the program
 runtime with schema-derived options and typed `run` values. It accepts the full
 program options, including `globalOptions`, `disableColors`, `helpOnError`,
-`format`, `argv` and the output hooks. See
+`groups`, `format`, `argv` and the output hooks. See
 [Running a built program](/guide/config-generator/api#running-a-built-program)
 and the
 [program members](/guide/config-generator/api#program-members-and-options).

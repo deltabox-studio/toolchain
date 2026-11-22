@@ -205,6 +205,11 @@ Invalid argv prints only the error message by default. Pass
 `runCli(argv, { helpOnError: true })` to also print the full help after an
 unknown option/command or a bad value.
 
+`dbx` groups its command list by default: `vite:list` is listed under a
+`Vite:` heading. Pass `{ groups: false }` for a flat list, or
+`{ groups: { auto: false } }` to only honor explicit command groups. The same
+options work through `createCli` and `runCli`.
+
 `extractLogOptions` makes the logger flags work before _or_ after the
 subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.
 `withDefaultVite` powers the bare-command passthrough described above:

@@ -76,6 +76,7 @@ export function createConfigProgram<
             : {}),
         format: mergeFormatOptions({}, options.format),
         helpOnError: options.helpOnError === true,
+        groups: options.groups ?? true,
         colorsDisabled: false,
         hooks: [],
     };
@@ -93,6 +94,9 @@ export function createConfigProgram<
         },
         get helpOnError() {
             return state.helpOnError;
+        },
+        get groups() {
+            return state.groups;
         },
         name(value: string) {
             state.name = value;
@@ -144,7 +148,8 @@ export function createConfigProgram<
                         ...(found.globalOptions ?? []),
                     ]),
                     [],
-                    format
+                    format,
+                    state.groups
                 );
             }
             if (command) {
@@ -154,7 +159,8 @@ export function createConfigProgram<
                         ...(command.globalOptions ?? []),
                     ]),
                     [],
-                    format
+                    format,
+                    state.groups
                 );
             }
             return renderProgramHelp(
@@ -162,7 +168,8 @@ export function createConfigProgram<
                 state.description,
                 state.list,
                 format,
-                state.globalOptions
+                state.globalOptions,
+                state.groups
             );
         },
         formatError(error) {

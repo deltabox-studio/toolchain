@@ -8,7 +8,7 @@ import type {
     CliOptionValues,
 } from '@deltabox/toolchain/shared';
 
-import type { ConfigProgramFormatOptions } from '../format.js';
+import type { ConfigProgramFormatOptions, ConfigProgramGroupsOptions } from '../format.js';
 import type { ConfigScopeKeys, ConfigScopeOf } from '../resolved.js';
 import type { ConfigSchema } from '../schema.js';
 import type { GenerateConfigCliOptions } from './options.js';
@@ -45,6 +45,8 @@ export interface ConfigProgramCommand<
     description?: string;
     /** Command aliases. */
     aliases?: readonly string[];
+    /** Explicit help group; otherwise the name's path prefix groups it. */
+    group?: string;
     /** Command version (`<name> --version`). */
     version?: string;
     /** Hide the command from generated docs. */
@@ -766,6 +768,14 @@ export type ConfigProgramOptions<
      * @default `false`
      */
     helpOnError?: boolean;
+    /**
+     * Group the command list in help output. `true` (the default) derives
+     * groups from delimited command names (`vite:list` -> `vite`); `false`
+     * renders a flat list. An object can disable `auto` grouping or change the
+     * delimiter(s).
+     * @default `true`
+     */
+    groups?: ConfigProgramGroupsOptions;
     /** Write to a different stdout */
     writeOut?: (text: string) => void;
     /** Write to a different stderr */
@@ -792,6 +802,8 @@ export interface ConfigProgram<
      * error ({@link ConfigProgramOptions.helpOnError}).
      */
     readonly helpOnError: boolean;
+    /** The command-grouping setting in effect ({@link ConfigProgramOptions.groups}). */
+    readonly groups: ConfigProgramGroupsOptions;
     /** Set the program name shown in help. */
     name(value: string): this;
     /** Set the program description shown in help. */

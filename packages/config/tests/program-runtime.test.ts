@@ -763,6 +763,97 @@ describe('program help and errors', () => {
         expect(program.formatHelp()).toContain('Diagnostics:');
     });
 
+    it('groups commands by their delimited name path by default', () => {
+        const program = createConfigProgram([
+            { name: 'sync', description: 'Sync.', run: () => {} },
+            { name: 'vite:list', description: 'List Vite+ commands.', run: () => {} },
+            { name: 'vite:build', description: 'Build.', run: () => {} },
+            { name: 'cleanup:turbo', description: 'Clear turbo.', run: () => {} },
+        ]);
+        expect(program.groups).toBe(true);
+
+        const help = program.formatHelp();
+        const commands = help.indexOf('Commands:');
+        const vite = help.indexOf('Vite:');
+        const cleanup = help.indexOf('Cleanup:');
+        expect(commands).toBeGreaterThan(-1);
+        expect(vite).toBeGreaterThan(commands);
+        expect(cleanup).toBeGreaterThan(vite);
+
+        expect(help.slice(commands, vite)).toContain('sync');
+        expect(help.slice(commands, vite)).not.toContain('vite:list');
+        expect(help.slice(vite, cleanup)).toContain('vite:list');
+        expect(help.slice(vite, cleanup)).toContain('vite:build');
+        expect(help.slice(cleanup)).toContain('cleanup:turbo');
+    });
+
+    it('can disable command grouping or only group explicit groups', () => {
+        const commands = [
+            { name: 'sync', description: 'Sync.', run: () => {} },
+            { name: 'vite:list', description: 'List.', run: () => {} },
+            { name: 'serve:status', description: 'Status.', group: 'Server', run: () => {} },
+        ];
+
+        const flat = createConfigProgram(commands, { groups: false });
+        expect(flat.groups).toBe(false);
+        const flatHelp = flat.formatHelp();
+        expect(flatHelp).toContain('Commands:');
+        expect(flatHelp).not.toContain('Vite:');
+        expect(flatHelp).not.toContain('Server:');
+
+        const explicit = createConfigProgram(commands, { groups: { auto: false } });
+        const explicitHelp = explicit.formatHelp();
+        expect(explicitHelp).toContain('Server:');
+        expect(explicitHelp).not.toContain('Vite:');
+        expect(explicitHelp.slice(explicitHelp.indexOf('Commands:'))).toContain('vite:list');
+
+        const engineProgram = engine().cli.program.create(
+            cmd => [
+                cmd('custom', {
+                    name: 'custom',
+                    group: 'Extras',
+                    description: 'Custom.',
+                    run: () => {},
+                }),
+            ],
+            { groups: { auto: false } }
+        );
+        expect(engineProgram.formatHelp()).toContain('Extras:');
+    });
+
+    it('supports custom and multiple grouping delimiters', () => {
+        const program = createConfigProgram(
+            [
+                { name: 'vite/list', description: 'List.', run: () => {} },
+                { name: 'vite/build', description: 'Build.', run: () => {} },
+                { name: 'db/tools', description: 'Tools.', run: () => {} },
+                { name: 'vite:dev', description: 'Dev.', run: () => {} },
+            ],
+            { groups: { delimiter: ['/', ':'] } }
+        );
+        const help = program.formatHelp();
+        const vite = help.indexOf('Vite:');
+        expect(vite).toBeGreaterThan(-1);
+        expect(help.match(/Vite:/g)).toHaveLength(1);
+        expect(help.slice(vite)).toContain('vite/list');
+        expect(help.slice(vite)).toContain('vite:dev');
+        expect(help).toContain('Db:');
+        expect(help).toContain('db/tools');
+
+        const slashes = createConfigProgram(
+            [
+                { name: 'vite/list', description: 'List.', run: () => {} },
+                { name: 'vite:dev', description: 'Dev.', run: () => {} },
+            ],
+            { groups: { delimiter: '/' } }
+        );
+        const slashHelp = slashes.formatHelp();
+        expect(slashHelp).toContain('Vite:');
+        expect(
+            slashHelp.slice(slashHelp.indexOf('Commands:'), slashHelp.indexOf('Vite:'))
+        ).toContain('vite:dev');
+    });
+
     it('renders colourless boxed help and plain/custom variants', () => {
         const program = engine().cli.program.create(cmd => [
             cmd('serve', {
