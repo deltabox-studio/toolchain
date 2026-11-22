@@ -60,7 +60,7 @@
             },
             {
                 "command": "deltabox.toolchain.selectVersion",
-                "title": "Select dbx version…",
+                "title": "Select dbx version...",
                 "category": "deltabox",
                 "icon": "$(versions)"
             },
@@ -93,43 +93,49 @@
             },
             {
                 "command": "deltabox.toolchain.scaffold",
-                "title": "Scaffold project…",
+                "title": "Scaffold project...",
                 "category": "deltabox",
                 "icon": "$(add)"
             },
             {
                 "command": "deltabox.toolchain.generateConfigs",
-                "title": "Generate configs…",
+                "title": "Generate configs...",
                 "category": "deltabox",
                 "icon": "$(new-file)"
             },
             {
                 "command": "deltabox.toolchain.installMcp",
-                "title": "Install MCP server + skill…",
+                "title": "Install MCP server + skill...",
                 "category": "deltabox",
                 "icon": "$(plug)"
             },
             {
+                "command": "deltabox.toolchain.installSkills",
+                "title": "Install official skill...",
+                "category": "deltabox",
+                "icon": "$(book)"
+            },
+            {
                 "command": "deltabox.toolchain.migrate",
-                "title": "Migrate tooling…",
+                "title": "Migrate tooling...",
                 "category": "deltabox",
                 "icon": "$(arrow-swap)"
             },
             {
                 "command": "deltabox.toolchain.generateConfig",
-                "title": "Generate config…",
+                "title": "Generate config...",
                 "category": "deltabox",
                 "icon": "$(new-file)"
             },
             {
                 "command": "deltabox.toolchain.runWorkflow",
-                "title": "Run workflow…",
+                "title": "Run workflow...",
                 "category": "deltabox",
                 "icon": "$(play)"
             },
             {
                 "command": "deltabox.toolchain.resetToolchain",
-                "title": "Reset tooling…",
+                "title": "Reset tooling...",
                 "category": "deltabox",
                 "icon": "$(trash)"
             },
@@ -179,33 +185,33 @@
             },
             {
                 "command": "deltabox.toolchain.runVite",
-                "title": "Run Vite+ command…",
+                "title": "Run Vite+ command...",
                 "category": "deltabox",
                 "icon": "$(play)",
                 "enablement": "deltabox.hasVite"
             },
             {
                 "command": "deltabox.toolchain.runProjectVite",
-                "title": "Run Vite+ command…",
+                "title": "Run Vite+ command...",
                 "category": "deltabox",
                 "icon": "$(play)",
                 "enablement": "deltabox.hasVite"
             },
             {
                 "command": "deltabox.toolchain.createVite",
-                "title": "Create Vite+ project…",
+                "title": "Create Vite+ project...",
                 "category": "deltabox",
                 "icon": "$(new-folder)"
             },
             {
                 "command": "deltabox.toolchain.templateAdd",
-                "title": "Add template…",
+                "title": "Add template...",
                 "category": "deltabox",
                 "icon": "$(add)"
             },
             {
                 "command": "deltabox.toolchain.templateRemove",
-                "title": "Remove template…",
+                "title": "Remove template...",
                 "category": "deltabox",
                 "icon": "$(remove)"
             },
@@ -280,13 +286,13 @@
             },
             {
                 "command": "deltabox.toolchain.registry.new",
-                "title": "New registry…",
+                "title": "New registry...",
                 "category": "deltabox",
                 "icon": "$(add)"
             },
             {
                 "command": "deltabox.toolchain.registry.remove",
-                "title": "Remove registry…",
+                "title": "Remove registry...",
                 "category": "deltabox",
                 "icon": "$(trash)"
             },
