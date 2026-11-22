@@ -107,6 +107,55 @@ describe('dbx CLI', () => {
         expect(flat).toContain('vite:build');
     });
 
+    it('disables explicit groups through createCli options', () => {
+        const commands = [
+            {
+                name: 'serve',
+                description: 'Serve.',
+                group: 'Server',
+                options: [
+                    { flags: '--port <value>', description: 'Port.' },
+                    { flags: '--trace', description: 'Trace.', group: 'Diagnostics' },
+                ],
+                run: () => {},
+            },
+        ];
+
+        const flat = createCli(commands, { groups: false });
+        expect(flat.formatHelp()).not.toContain('Server commands:');
+        expect(flat.formatHelp('serve')).not.toContain('Diagnostics options:');
+        expect(flat.formatHelp('serve')).toContain('--trace');
+
+        const explicit = createCli(commands, { groups: { auto: false } });
+        expect(explicit.formatHelp()).toContain('Server commands:');
+        expect(explicit.formatHelp('serve')).toContain('Diagnostics options:');
+    });
+
+    it('flattens command groups through runCli RootCliOptions', async () => {
+        const write = vi.spyOn(logger, 'write').mockImplementation(() => {});
+        const helpText = (): string =>
+            write.mock.calls
+                .filter(([channel]) => channel === 'out')
+                .map(([, text]) => text)
+                .join('');
+        try {
+            await runCli(['node', 'dbx', '--help'], { groups: false });
+            expect(helpText()).not.toContain('Vite commands:');
+            expect(helpText()).toContain('vite:build');
+
+            write.mockClear();
+            await runCli(['node', 'dbx', '--help'], { groups: { auto: false } });
+            expect(helpText()).not.toContain('Vite commands:');
+            expect(helpText()).toContain('vite:build');
+
+            write.mockClear();
+            await runCli(['node', 'dbx', '--help']);
+            expect(helpText()).toContain('Vite commands:');
+        } finally {
+            write.mockRestore();
+        }
+    });
+
     it('flags provider passthrough commands but not built-ins', () => {
         expect(isPassthroughCommand()).toBe(false);
         setPassthroughCommand(true);

@@ -870,6 +870,113 @@ describe('program help and errors', () => {
         ).toContain('vite:dev');
     });
 
+    it('disables explicit option and command groups when groups is false', () => {
+        const commands = [
+            {
+                name: 'serve',
+                description: 'Serve.',
+                group: 'Server',
+                options: [
+                    { flags: '--port <value>', description: 'Port.' },
+                    { flags: '--trace', description: 'Trace.', group: 'Diagnostics' },
+                ],
+                run: () => {},
+            },
+        ];
+
+        const flat = createConfigProgram(commands, {
+            groups: false,
+            globalOptions: [{ flags: '--verbose', description: 'Verbose.', group: 'Diagnostics' }],
+        });
+        const commandHelp = flat.formatHelp('serve');
+        expect(commandHelp).toContain('Options:');
+        expect(commandHelp).not.toContain('Diagnostics options:');
+        expect(commandHelp.slice(commandHelp.indexOf('Options:'))).toContain('--trace');
+        expect(commandHelp.slice(commandHelp.indexOf('Options:'))).toContain('--verbose');
+
+        const programHelp = flat.formatHelp();
+        expect(programHelp).toContain('Commands:');
+        expect(programHelp).not.toContain('Server commands:');
+        expect(programHelp.slice(programHelp.indexOf('Commands:'))).toContain('serve');
+
+        // `auto: false` only disables derived groups; explicit labels still work.
+        const explicit = createConfigProgram(commands, { groups: { auto: false } });
+        expect(explicit.formatHelp()).toContain('Server commands:');
+        const explicitCommand = explicit.formatHelp('serve');
+        expect(explicitCommand).toContain('Diagnostics options:');
+        expect(explicitCommand.slice(explicitCommand.indexOf('Diagnostics options:'))).toContain(
+            '--trace'
+        );
+    });
+
+    it('handles delimiter and heading edge cases', () => {
+        const emptyDelimiters = createConfigProgram(
+            [
+                { name: 'vite:list', description: 'List.', run: () => {} },
+                { name: 'serve:status', description: 'Status.', group: 'Server', run: () => {} },
+            ],
+            { groups: { delimiter: [] } }
+        );
+        const emptyHelp = emptyDelimiters.formatHelp();
+        expect(emptyHelp).not.toContain('Vite commands:');
+        expect(emptyHelp).toContain('Server commands:');
+        expect(emptyHelp.slice(emptyHelp.indexOf('Commands:'))).toContain('vite:list');
+
+        const leading = createConfigProgram([
+            { name: ':leading', description: 'Leading.', run: () => {} },
+        ]);
+        expect(leading.formatHelp()).not.toContain(' commands:');
+
+        const suffixed = createConfigProgram(
+            [
+                {
+                    name: 'sync',
+                    description: 'Sync.',
+                    group: 'Custom commands',
+                    options: [
+                        { flags: '--trace', description: 'Trace.', group: 'Advanced options' },
+                    ],
+                    run: () => {},
+                },
+            ],
+            { groups: { auto: false } }
+        );
+        const suffixedProgram = suffixed.formatHelp();
+        const suffixedCommand = suffixed.formatHelp('sync');
+        expect(suffixedProgram).toContain('Custom commands:');
+        expect(suffixedProgram).not.toContain('Custom commands commands:');
+        expect(suffixedCommand).toContain('Advanced options:');
+        expect(suffixedCommand).not.toContain('Advanced options options:');
+    });
+
+    it('groups subcommand help and strips the groups setting on demand', () => {
+        const build = (groups?: boolean) =>
+            createConfigProgram(
+                [
+                    {
+                        name: 'template',
+                        description: 'Templates.',
+                        commands: [
+                            { name: 'list', description: 'List.', group: 'Listing', run: () => {} },
+                            { name: 'info', description: 'Info.', run: () => {} },
+                        ],
+                        run: () => {},
+                    },
+                ],
+                groups === undefined ? {} : { groups }
+            );
+
+        const grouped = build().formatHelp('template');
+        expect(grouped).toContain('Listing commands:');
+        expect(grouped.slice(grouped.indexOf('Listing commands:'))).toContain('list');
+        expect(grouped.slice(0, grouped.indexOf('Listing commands:'))).toContain('info');
+
+        const flat = build(false).formatHelp('template');
+        expect(flat).not.toContain('Listing commands:');
+        expect(flat.slice(flat.indexOf('Commands:'))).toContain('list');
+        expect(flat.slice(flat.indexOf('Commands:'))).toContain('info');
+    });
+
     it('renders colourless boxed help and plain/custom variants', () => {
         const program = engine().cli.program.create(cmd => [
             cmd('serve', {
