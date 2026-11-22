@@ -1,8 +1,125 @@
 # Changelog
 
-## 3.0.0-beta.5 (November 2026)
+## 3.0.0-beta.6 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>New features</summary>
+
+#### Config
+- Sort help commands and add a sort option ([#518d057](https://github.com/deltabox-studio/toolchain/commit/518d057) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Commands now render in ascending name order within every help section, including command groups. A new sort option accepts 'asc' (default), 'desc' or false (declaration order), is exposed as program.sort and threads through createCli/runCli via RootCliOptions. Group headings keep their first-appearance order so the dogfood sidebar grouping is preserved. Docs and llms bundle updated.
+
+  </details>
+
+- Group commands by delimited name paths ([#8598303](https://github.com/deltabox-studio/toolchain/commit/8598303) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Add a groups program option (default true) that renders help commands in grouped sections. With auto enabled (default) commands sharing a name path such as vite:list are grouped under a capitalised heading using the configured delimiter(s), defaulting to ':'. Explicit CliCommand/ConfigProgramCommand group labels override the derived group, groups:false renders a flat list, and groups:{auto:false} only honours explicit groups. dbx createCli/runCli expose the same option.
+
+  </details>
+
+- Group help options by heading ([#4815336](https://github.com/deltabox-studio/toolchain/commit/4815336) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - CliOption gains an optional group label. The default help renderer keeps ungrouped options under Options: and prints each group under its own capitalised heading (case-insensitive, first-appearance order). Grouping works for command options and program globals; the help/format docs and llms bundle are updated.
+
+  </details>
+
+#### Cli
+- Make help-on-error opt-in ([#2a01d42](https://github.com/deltabox-studio/toolchain/commit/2a01d42) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Invalid argv no longer appends the full program help automatically, so failures stay short and scriptable. Config programs gain a helpOnError option (exposed as the readonly program.helpOnError), and dbx's createCli/runCli accept { helpOnError: true } to restore the old behavior. Defaults to false and matches the config engine cli program option.
+
+  </details>
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Config
+- Suffix grouped help headings with options or commands ([#342825a](https://github.com/deltabox-studio/toolchain/commit/342825a) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Named option groups now render as '<Group> options:' and command groups as '<Group> commands:', while the default sections stay 'Options:' and 'Commands:'. The program 'groups' option now also flattens option groups when false, so the same toggle controls every help group.
+
+  </details>
+
+- Accept hyphenated long options in the CLI program ([#d2f24df](https://github.com/deltabox-studio/toolchain/commit/d2f24df) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - node:util parseArgs matches option keys against the literal long name, but the program runtime keyed them by the camel-cased value name. Every hyphenated flag (dbx changelog --release-body, sync --dry-run, ...) was therefore rejected as unknown by the selected command. Key the parseArgs config by the literal flag and map the result back to the camel-cased values.
+
+  </details>
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
+#### Config
+- Split the cli program runtime into modules ([#e9f39ce](https://github.com/deltabox-studio/toolchain/commit/e9f39ce) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Move the commander-like runtime out of the single cli/program.ts file into cli/program/*, with index.ts as the public entry point. Routing, option definitions, parsing, colour resolution, invocation helpers and execution now live in focused modules; the exported createConfigProgram/suggest/renderBox surface is unchanged.
+
+  </details>
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+#### Config
+- Clarify that groups covers options and commands ([#c80cc9c](https://github.com/deltabox-studio/toolchain/commit/c80cc9c) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - The groups program option flattens both option and command groups when false and auto only affects derived command groups. Update the option JSDoc, RootCliOptions docs and guides to say so explicitly.
+
+  </details>
+
+</details>
+
+<details>
+<summary>Tests</summary>
+
+#### Config
+- Cover grouping opt-outs and edge cases ([#0967adc](https://github.com/deltabox-studio/toolchain/commit/0967adc) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Verify that groups:false disables explicit option/command groups from ConfigProgramOptions and createCli/RootCliOptions, that runCli flattens built-in groups, that auto:false keeps explicit labels, and that delimiter/heading edge cases and nested subcommand groups behave. Also add skill-guidance and skill installer edge-case assertions.
+
+  </details>
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.5 (November 2026)
 
 <details>
 <summary>Refactors</summary>
@@ -25,9 +142,6 @@
 - Cleanup references ([#a0027cd](https://github.com/deltabox-studio/toolchain/commit/a0027cd) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.4 (November 2026)
 

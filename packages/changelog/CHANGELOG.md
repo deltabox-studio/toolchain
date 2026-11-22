@@ -1,8 +1,28 @@
 # Changelog
 
-## 3.0.0-beta.9 (November 2026)
+## 3.0.0-beta.10 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Changelog
+- Keep grouped details when merging release footers ([#fef497e](https://github.com/deltabox-studio/toolchain/commit/fef497e) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - mergeBodies emitted the plain-text preamble before the details groups. When an older grouped entry carried a '### Package changes' footer, keepFirstPackageChanges stopped at the following details block and truncated the whole release body down to the footer. Split the footer out of the preamble and append it after the merged groups so it stays last.
+
+  </details>
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.9 (November 2026)
 
 <details>
 <summary>New features</summary>
@@ -15,9 +35,6 @@
 - Group release bodies since the last published release ([#93b8762](https://github.com/deltabox-studio/toolchain/commit/93b8762) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.8 (November 2026)
 
