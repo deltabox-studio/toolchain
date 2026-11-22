@@ -590,7 +590,7 @@ program.invokeAsync().catch(error => {
 ```
 
 `groups` defaults to `true`, so help groups commands by their delimited name
-path (`vite:list` -> `Vite:`). Set `groups: false` for a flat list, or
+path (`vite:list` -> `Vite commands:`). Set `groups: false` for a flat list, or
 `groups: { auto: false }` to only honor explicit `group` labels. `delimiter`
 accepts one string or an array (default `':'`).
 
@@ -598,7 +598,7 @@ accepts one string or an array (default `':'`).
 const program = engine.cli.program.create(
     cmd => [
         cmd('sync', { name: 'sync', run: syncHandler }),
-        cmd('vite:list', { name: 'vite:list', run: listHandler }), // -> Vite:
+        cmd('vite:list', { name: 'vite:list', run: listHandler }), // -> Vite commands:
         cmd('serve:status', {
             name: 'serve:status',
             group: 'Server',
@@ -669,8 +669,9 @@ tuple, or `{ scope, description?, setup? }`.
 
 Give an option a `group` label to render it under its own heading. Ungrouped
 options stay in the default `Options:` section; groups appear in
-first-appearance order and merge case-insensitively. Grouping applies to program
-globals and command options alike.
+first-appearance order, merge case-insensitively and render as
+`<Group> options:`. Grouping applies to program globals and command options
+alike, and `groups: false` flattens option groups too.
 
 ```ts
 cmd('sync')
@@ -688,7 +689,7 @@ cmd('sync')
 Options:
   --check   Check only.
 
-Diagnostics:
+Diagnostics options:
   --trace   Trace resolution.
   --profile Write a profile.
 ```

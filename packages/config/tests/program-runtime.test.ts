@@ -740,8 +740,8 @@ describe('program help and errors', () => {
 
         const help = program.formatHelp('serve');
         const optionsIndex = help.indexOf('Options:');
-        const diagnosticsIndex = help.indexOf('Diagnostics:');
-        const outputIndex = help.indexOf('Output:');
+        const diagnosticsIndex = help.indexOf('Diagnostics options:');
+        const outputIndex = help.indexOf('Output options:');
         expect(optionsIndex).toBeGreaterThan(-1);
         expect(diagnosticsIndex).toBeGreaterThan(optionsIndex);
         expect(outputIndex).toBeGreaterThan(diagnosticsIndex);
@@ -753,14 +753,30 @@ describe('program help and errors', () => {
 
         const diagnostics = help.slice(diagnosticsIndex, outputIndex);
         // Group labels merge case-insensitively into one section.
-        expect(diagnostics.match(/Diagnostics:/g)).toHaveLength(1);
+        expect(diagnostics.match(/Diagnostics options:/g)).toHaveLength(1);
         expect(diagnostics).toContain('--trace');
         expect(diagnostics).toContain('--profile');
         expect(diagnostics).toContain('--verbose');
 
         expect(help.slice(outputIndex)).toContain('--json');
         // Program help groups its globals through the same renderer.
-        expect(program.formatHelp()).toContain('Diagnostics:');
+        expect(program.formatHelp()).toContain('Diagnostics options:');
+
+        // `groups: false` flattens option groups too.
+        const flat = createConfigProgram(
+            [
+                {
+                    name: 'serve',
+                    description: 'Serve.',
+                    options: [{ flags: '--trace', description: 'Trace.', group: 'Diagnostics' }],
+                    run: () => {},
+                },
+            ],
+            { groups: false }
+        );
+        const flatHelp = flat.formatHelp('serve');
+        expect(flatHelp).not.toContain('Diagnostics options:');
+        expect(flatHelp.slice(flatHelp.indexOf('Options:'))).toContain('--trace');
     });
 
     it('groups commands by their delimited name path by default', () => {
@@ -774,8 +790,8 @@ describe('program help and errors', () => {
 
         const help = program.formatHelp();
         const commands = help.indexOf('Commands:');
-        const vite = help.indexOf('Vite:');
-        const cleanup = help.indexOf('Cleanup:');
+        const vite = help.indexOf('Vite commands:');
+        const cleanup = help.indexOf('Cleanup commands:');
         expect(commands).toBeGreaterThan(-1);
         expect(vite).toBeGreaterThan(commands);
         expect(cleanup).toBeGreaterThan(vite);
@@ -798,13 +814,13 @@ describe('program help and errors', () => {
         expect(flat.groups).toBe(false);
         const flatHelp = flat.formatHelp();
         expect(flatHelp).toContain('Commands:');
-        expect(flatHelp).not.toContain('Vite:');
-        expect(flatHelp).not.toContain('Server:');
+        expect(flatHelp).not.toContain('Vite commands:');
+        expect(flatHelp).not.toContain('Server commands:');
 
         const explicit = createConfigProgram(commands, { groups: { auto: false } });
         const explicitHelp = explicit.formatHelp();
-        expect(explicitHelp).toContain('Server:');
-        expect(explicitHelp).not.toContain('Vite:');
+        expect(explicitHelp).toContain('Server commands:');
+        expect(explicitHelp).not.toContain('Vite commands:');
         expect(explicitHelp.slice(explicitHelp.indexOf('Commands:'))).toContain('vite:list');
 
         const engineProgram = engine().cli.program.create(
@@ -818,7 +834,7 @@ describe('program help and errors', () => {
             ],
             { groups: { auto: false } }
         );
-        expect(engineProgram.formatHelp()).toContain('Extras:');
+        expect(engineProgram.formatHelp()).toContain('Extras commands:');
     });
 
     it('supports custom and multiple grouping delimiters', () => {
@@ -832,12 +848,12 @@ describe('program help and errors', () => {
             { groups: { delimiter: ['/', ':'] } }
         );
         const help = program.formatHelp();
-        const vite = help.indexOf('Vite:');
+        const vite = help.indexOf('Vite commands:');
         expect(vite).toBeGreaterThan(-1);
-        expect(help.match(/Vite:/g)).toHaveLength(1);
+        expect(help.match(/Vite commands:/g)).toHaveLength(1);
         expect(help.slice(vite)).toContain('vite/list');
         expect(help.slice(vite)).toContain('vite:dev');
-        expect(help).toContain('Db:');
+        expect(help).toContain('Db commands:');
         expect(help).toContain('db/tools');
 
         const slashes = createConfigProgram(
@@ -848,9 +864,9 @@ describe('program help and errors', () => {
             { groups: { delimiter: '/' } }
         );
         const slashHelp = slashes.formatHelp();
-        expect(slashHelp).toContain('Vite:');
+        expect(slashHelp).toContain('Vite commands:');
         expect(
-            slashHelp.slice(slashHelp.indexOf('Commands:'), slashHelp.indexOf('Vite:'))
+            slashHelp.slice(slashHelp.indexOf('Commands:'), slashHelp.indexOf('Vite commands:'))
         ).toContain('vite:dev');
     });
 

@@ -65,6 +65,7 @@ describe('dbx CLI', () => {
         expect(names).toContain('cleanup');
         expect(names).toContain('cleanup:turbo');
         expect(names).toContain('changelog');
+        expect(names).toContain('skills');
         expect(names).toContain('project:init');
         expect(names).toContain('fmt');
         expect(names).toContain('lint');
@@ -98,11 +99,11 @@ describe('dbx CLI', () => {
 
     it('groups built-in commands by their name path by default', () => {
         const grouped = createCli().formatHelp();
-        expect(grouped).toContain('Vite:');
-        expect(grouped.slice(grouped.indexOf('Vite:'))).toContain('vite:build');
+        expect(grouped).toContain('Vite commands:');
+        expect(grouped.slice(grouped.indexOf('Vite commands:'))).toContain('vite:build');
 
         const flat = createCli({ groups: false }).formatHelp();
-        expect(flat).not.toContain('Vite:');
+        expect(flat).not.toContain('Vite commands:');
         expect(flat).toContain('vite:build');
     });
 

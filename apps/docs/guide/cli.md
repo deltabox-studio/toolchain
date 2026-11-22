@@ -206,7 +206,7 @@ Invalid argv prints only the error message by default. Pass
 unknown option/command or a bad value.
 
 `dbx` groups its command list by default: `vite:list` is listed under a
-`Vite:` heading. Pass `{ groups: false }` for a flat list, or
+`Vite commands:` heading. Pass `{ groups: false }` for a flat list, or
 `{ groups: { auto: false } }` to only honor explicit command groups. The same
 options work through `createCli` and `runCli`.
 

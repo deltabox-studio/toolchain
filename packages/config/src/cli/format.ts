@@ -194,10 +194,14 @@ interface HelpSection<T> {
     items: T[];
 }
 
-/** Format a group label as a help heading (`diagnostics` -> `Diagnostics:`). */
-function headingFor(label: string): string {
-    const trimmed = label.trim().replace(/:+$/, '').trim();
-    return `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1)}:`;
+/** Format a group label as a help heading (`diagnostics` + options -> `Diagnostics options:`). */
+function headingFor(label: string, kind: 'options' | 'commands'): string {
+    const base = label
+        .trim()
+        .replace(/:+$/, '')
+        .trim()
+        .replace(new RegExp(`\\s+${kind}$`, 'i'), '');
+    return `${base.charAt(0).toUpperCase()}${base.slice(1)} ${kind}:`;
 }
 
 /** The normalized group label of an option (`undefined` = default section). */
@@ -209,16 +213,19 @@ function optionGroup(option: CliOption): string | undefined {
 /**
  * Bucket options by `group`, keeping the default `Options:` section first and
  * named groups in first-appearance order. Group labels are case-insensitive and
- * rendered with a capitalised heading.
+ * rendered as `<Group> options:` headings. Grouping is disabled (flat) when the
+ * program's `groups` option is `false`.
  */
 function optionSections(
     options: readonly CliOption[],
-    defaultHeading: string
+    defaultHeading: string,
+    setting: ConfigProgramGroupsOptions | undefined
 ): HelpSection<CliOption>[] {
+    const settings = groupSettings(setting);
     const defaults: CliOption[] = [];
     const groups = new Map<string, HelpSection<CliOption>>();
     for (const option of options) {
-        const label = optionGroup(option);
+        const label = settings.enabled ? optionGroup(option) : undefined;
         if (!label) {
             defaults.push(option);
             continue;
@@ -229,7 +236,7 @@ function optionSections(
             existing.items.push(option);
             continue;
         }
-        groups.set(key, { heading: headingFor(label), items: [option] });
+        groups.set(key, { heading: headingFor(label, 'options'), items: [option] });
     }
     const sections: HelpSection<CliOption>[] = [];
     if (defaults.length > 0) sections.push({ heading: defaultHeading, items: defaults });
@@ -298,7 +305,7 @@ function commandSections(
             existing.items.push(command);
             continue;
         }
-        groups.set(key, { heading: headingFor(label), items: [command] });
+        groups.set(key, { heading: headingFor(label, 'commands'), items: [command] });
     }
     const sections: HelpSection<AnyCommand>[] = [];
     if (defaults.length > 0) sections.push({ heading: defaultHeading, items: defaults });
@@ -328,7 +335,7 @@ export function renderHelpContent(
         lines.push('', descriptionColor(model.description));
     }
     const optionsWithHelp = withHelpOption(model.options, command);
-    for (const section of optionSections(optionsWithHelp, 'Options:')) {
+    for (const section of optionSections(optionsWithHelp, 'Options:', model.groups)) {
         lines.push('', usageColor(section.heading));
         lines.push(
             ...table(
