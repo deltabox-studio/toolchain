@@ -1,8 +1,21 @@
 # Changelog
 
-## 3.0.0-beta.8 (November 2026)
+## 3.0.0-beta.9 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Vite
+- Resolve the workspace dbx plugin without an ESM require race ([#26803a6](https://github.com/deltabox-studio/toolchain/commit/26803a6) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.8 (November 2026)
 
 <details>
 <summary>Documentation</summary>
@@ -18,9 +31,6 @@
 - Cleanup references ([#a0027cd](https://github.com/deltabox-studio/toolchain/commit/a0027cd) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.7 (November 2026)
 

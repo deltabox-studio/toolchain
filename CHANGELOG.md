@@ -1,8 +1,50 @@
 # Changelog
 
-## 3.0.0-beta.17 (November 2026)
+## 3.0.0-beta.18 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>New features</summary>
+
+#### Release
+- Mark prerelease versions as GitHub prereleases ([#dd1c62f](https://github.com/deltabox-studio/toolchain/commit/dd1c62f) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+- Document bump rules and harden versioning providers ([#5ae5e02](https://github.com/deltabox-studio/toolchain/commit/5ae5e02) by [T0chi](https://github.com/T0chi))
+- Group release bodies since the last published release ([#93b8762](https://github.com/deltabox-studio/toolchain/commit/93b8762) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Changelog
+- Repair and audit markdown code fences ([#8a4ab01](https://github.com/deltabox-studio/toolchain/commit/8a4ab01) by [T0chi](https://github.com/T0chi))
+
+#### Vite
+- Resolve the workspace dbx plugin without an ESM require race ([#26803a6](https://github.com/deltabox-studio/toolchain/commit/26803a6) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+- Update permalinks ([#5abe04e](https://github.com/deltabox-studio/toolchain/commit/5abe04e) by [T0chi](https://github.com/T0chi))
+- Add a deprecations section to the v2-v3 guide ([#3121d44](https://github.com/deltabox-studio/toolchain/commit/3121d44) by [T0chi](https://github.com/T0chi))
+
+#### Release
+- Clarify auto prerelease detection ([#bc5c01f](https://github.com/deltabox-studio/toolchain/commit/bc5c01f) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+- Add a release bodies guide under the changelog section ([#e00a44b](https://github.com/deltabox-studio/toolchain/commit/e00a44b) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.17 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -55,9 +97,6 @@
 - Cleanup references ([#a0027cd](https://github.com/deltabox-studio/toolchain/commit/a0027cd) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.16 (November 2026)
 
