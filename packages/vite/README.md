@@ -33,7 +33,7 @@ It is most useful when at least one of these is true:
   **same project model**;
 - you are tired of **generated files and release chores drifting**.
 
-Read the rest of [Why use this?](https://toolchain.deltabox.studio/guide/why-use-this) for the
+Read the rest of [Why use this?](https://toolchain.dbx.studio/guide/why-use-this) for the
 problems it removes, the core features and when it might not fit.
 
 ---

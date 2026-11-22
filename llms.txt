@@ -2,9 +2,9 @@
 
 > All-in-one development toolchain that let's you scaffold projects, generate and manage configs, tsconfigs, custom templates, syncing, changelogs, CI, Vite+, migrations, and more.
 
-> If `https://toolchain.deltabox.studio` is unavailable, the same documentation is available in the repository at <https://github.com/deltabox-studio/toolchain/tree/main/apps/docs> (source Markdown).
+> If `https://toolchain.dbx.studio` is unavailable, the same documentation is available in the repository at <https://github.com/deltabox-studio/toolchain/tree/main/apps/docs> (source Markdown).
 
-This file is a concise, link-first overview. For the **full** documentation in a single file, see [`llms-full.txt`](https://toolchain.deltabox.studio/llms-full.txt).
+This file is a concise, link-first overview. For the **full** documentation in a single file, see [`llms-full.txt`](https://toolchain.dbx.studio/llms-full.txt).
 
 **How it works** — `@deltabox/toolchain` is a config-driven toolchain:
 
@@ -21,120 +21,120 @@ This file is a concise, link-first overview. For the **full** documentation in a
 
 ### Introduction
 
-- [Getting started](https://toolchain.deltabox.studio/guide.md)
-- [Why use this?](https://toolchain.deltabox.studio/guide/why-use-this.md)
+- [Getting started](https://toolchain.dbx.studio/guide.md)
+- [Why use this?](https://toolchain.dbx.studio/guide/why-use-this.md)
 
 ### Configuration
 
 #### Config reference
 
-- [Overview](https://toolchain.deltabox.studio/config.md)
-- [CLI reference](https://toolchain.deltabox.studio/config/cli.md)
-- [Environment variables](https://toolchain.deltabox.studio/config/env.md)
-- [dbx.config](https://toolchain.deltabox.studio/config/reference.md)
+- [Overview](https://toolchain.dbx.studio/config.md)
+- [CLI reference](https://toolchain.dbx.studio/config/cli.md)
+- [Environment variables](https://toolchain.dbx.studio/config/env.md)
+- [dbx.config](https://toolchain.dbx.studio/config/reference.md)
 
 #### Config generator
 
-- [Config generator](https://toolchain.deltabox.studio/guide/config-generator.md)
-- [Describe a scope](https://toolchain.deltabox.studio/guide/config-generator/describe-a-scope.md)
-- [Create the engine](https://toolchain.deltabox.studio/guide/config-generator/create-the-engine.md)
-- [Generate](https://toolchain.deltabox.studio/guide/config-generator/generate.md)
-- [CLI commands docs](https://toolchain.deltabox.studio/guide/config-generator/cli-commands.md)
-- [Load the config at runtime](https://toolchain.deltabox.studio/guide/config-generator/load-the-config.md)
-- [Generated outputs](https://toolchain.deltabox.studio/guide/config-generator/generated-outputs.md)
-- [Client and server configs](https://toolchain.deltabox.studio/guide/config-generator/client-and-server.md)
-- [Real-world shape](https://toolchain.deltabox.studio/guide/config-generator/real-world-shape.md)
-- [API reference](https://toolchain.deltabox.studio/guide/config-generator/api.md)
+- [Config generator](https://toolchain.dbx.studio/guide/config-generator.md)
+- [Describe a scope](https://toolchain.dbx.studio/guide/config-generator/describe-a-scope.md)
+- [Create the engine](https://toolchain.dbx.studio/guide/config-generator/create-the-engine.md)
+- [Generate](https://toolchain.dbx.studio/guide/config-generator/generate.md)
+- [CLI commands docs](https://toolchain.dbx.studio/guide/config-generator/cli-commands.md)
+- [Load the config at runtime](https://toolchain.dbx.studio/guide/config-generator/load-the-config.md)
+- [Generated outputs](https://toolchain.dbx.studio/guide/config-generator/generated-outputs.md)
+- [Client and server configs](https://toolchain.dbx.studio/guide/config-generator/client-and-server.md)
+- [Real-world shape](https://toolchain.dbx.studio/guide/config-generator/real-world-shape.md)
+- [API reference](https://toolchain.dbx.studio/guide/config-generator/api.md)
 
 #### Configuration guide
 
-- [Configuration guide](https://toolchain.deltabox.studio/guide/config.md)
-- [Config file names](https://toolchain.deltabox.studio/guide/config/config-file-names.md)
-- [`defineConfig`](https://toolchain.deltabox.studio/guide/config/defineconfig.md)
-- [Hooks](https://toolchain.deltabox.studio/guide/config/hooks.md)
-- [Loader](https://toolchain.deltabox.studio/guide/config/loader.md)
-- [Logging](https://toolchain.deltabox.studio/guide/config/logging.md)
-- [Nested configs](https://toolchain.deltabox.studio/guide/config/nested-configs.md)
-- [Opt-in by presence](https://toolchain.deltabox.studio/guide/config/opt-in-by-presence.md)
-- [Programmatic config API](https://toolchain.deltabox.studio/guide/config/programmatic-api.md)
-- [Provider config](https://toolchain.deltabox.studio/guide/config/providers.md)
-- [Vite+ config](https://toolchain.deltabox.studio/guide/config/vite.md)
+- [Configuration guide](https://toolchain.dbx.studio/guide/config.md)
+- [Config file names](https://toolchain.dbx.studio/guide/config/config-file-names.md)
+- [`defineConfig`](https://toolchain.dbx.studio/guide/config/defineconfig.md)
+- [Hooks](https://toolchain.dbx.studio/guide/config/hooks.md)
+- [Loader](https://toolchain.dbx.studio/guide/config/loader.md)
+- [Logging](https://toolchain.dbx.studio/guide/config/logging.md)
+- [Nested configs](https://toolchain.dbx.studio/guide/config/nested-configs.md)
+- [Opt-in by presence](https://toolchain.dbx.studio/guide/config/opt-in-by-presence.md)
+- [Programmatic config API](https://toolchain.dbx.studio/guide/config/programmatic-api.md)
+- [Provider config](https://toolchain.dbx.studio/guide/config/providers.md)
+- [Vite+ config](https://toolchain.dbx.studio/guide/config/vite.md)
 
 ### Project & templates
 
-- [Monorepo guide](https://toolchain.deltabox.studio/guide/monorepo.md)
-- [Project](https://toolchain.deltabox.studio/guide/project.md)
-- [TypeScript](https://toolchain.deltabox.studio/guide/typescript.md)
-- [tsconfig](https://toolchain.deltabox.studio/guide/tsconfig.md)
-- [Package catalogs](https://toolchain.deltabox.studio/guide/catalogs.md)
-- [Templates](https://toolchain.deltabox.studio/guide/templates.md)
-- [Template and registry structures](https://toolchain.deltabox.studio/guide/template-structures.md)
+- [Monorepo guide](https://toolchain.dbx.studio/guide/monorepo.md)
+- [Project](https://toolchain.dbx.studio/guide/project.md)
+- [TypeScript](https://toolchain.dbx.studio/guide/typescript.md)
+- [tsconfig](https://toolchain.dbx.studio/guide/tsconfig.md)
+- [Package catalogs](https://toolchain.dbx.studio/guide/catalogs.md)
+- [Templates](https://toolchain.dbx.studio/guide/templates.md)
+- [Template and registry structures](https://toolchain.dbx.studio/guide/template-structures.md)
 
 ### Toolchain
 
-- [Vite+](https://toolchain.deltabox.studio/guide/vite.md)
-- [Vite plugin](https://toolchain.deltabox.studio/guide/vite-plugin.md)
-- [VS Code extension](https://toolchain.deltabox.studio/guide/vscode.md)
-- [Providers](https://toolchain.deltabox.studio/guide/providers.md)
-- [Formatting & linting](https://toolchain.deltabox.studio/guide/formatting.md)
-- [Package scripts](https://toolchain.deltabox.studio/guide/scripts.md)
-- [CLI](https://toolchain.deltabox.studio/guide/cli.md)
-- [Docker](https://toolchain.deltabox.studio/guide/docker.md)
-- [MCP (Model Context Protocol)](https://toolchain.deltabox.studio/guide/mcp.md)
-- [Logger](https://toolchain.deltabox.studio/guide/logger.md)
-- [Watch](https://toolchain.deltabox.studio/guide/watch.md)
+- [Vite+](https://toolchain.dbx.studio/guide/vite.md)
+- [Vite plugin](https://toolchain.dbx.studio/guide/vite-plugin.md)
+- [VS Code extension](https://toolchain.dbx.studio/guide/vscode.md)
+- [Providers](https://toolchain.dbx.studio/guide/providers.md)
+- [Formatting & linting](https://toolchain.dbx.studio/guide/formatting.md)
+- [Package scripts](https://toolchain.dbx.studio/guide/scripts.md)
+- [CLI](https://toolchain.dbx.studio/guide/cli.md)
+- [Docker](https://toolchain.dbx.studio/guide/docker.md)
+- [MCP (Model Context Protocol)](https://toolchain.dbx.studio/guide/mcp.md)
+- [Logger](https://toolchain.dbx.studio/guide/logger.md)
+- [Watch](https://toolchain.dbx.studio/guide/watch.md)
 
 ### Automation & API
 
 #### Changelog
 
-- [Changelog](https://toolchain.deltabox.studio/guide/changelog.md)
-- [Branches](https://toolchain.deltabox.studio/guide/changelog/branches.md)
-- [CLI](https://toolchain.deltabox.studio/guide/changelog/cli.md)
-- [commitlint](https://toolchain.deltabox.studio/guide/changelog/commitlint.md)
-- [Intro and outro text](https://toolchain.deltabox.studio/guide/changelog/intro-outro.md)
-- [Release bodies](https://toolchain.deltabox.studio/guide/changelog/release.md)
-- [Troubleshooting](https://toolchain.deltabox.studio/guide/changelog/troubleshooting.md)
-- [Versioning](https://toolchain.deltabox.studio/guide/changelog/versioning.md)
-- [Writing commit messages](https://toolchain.deltabox.studio/guide/changelog/writing-commit-messages.md)
+- [Changelog](https://toolchain.dbx.studio/guide/changelog.md)
+- [Branches](https://toolchain.dbx.studio/guide/changelog/branches.md)
+- [CLI](https://toolchain.dbx.studio/guide/changelog/cli.md)
+- [commitlint](https://toolchain.dbx.studio/guide/changelog/commitlint.md)
+- [Intro and outro text](https://toolchain.dbx.studio/guide/changelog/intro-outro.md)
+- [Release bodies](https://toolchain.dbx.studio/guide/changelog/release.md)
+- [Troubleshooting](https://toolchain.dbx.studio/guide/changelog/troubleshooting.md)
+- [Versioning](https://toolchain.dbx.studio/guide/changelog/versioning.md)
+- [Writing commit messages](https://toolchain.dbx.studio/guide/changelog/writing-commit-messages.md)
 
 #### CI
 
-- [CI](https://toolchain.deltabox.studio/guide/ci.md)
-- [Changelog workflow](https://toolchain.deltabox.studio/guide/ci/changelog.md)
-- [CI checks](https://toolchain.deltabox.studio/guide/ci/ci.md)
-- [Dependabot](https://toolchain.deltabox.studio/guide/ci/dependabot.md)
-- [Issues](https://toolchain.deltabox.studio/guide/ci/issues.md)
-- [Releases](https://toolchain.deltabox.studio/guide/ci/releases.md)
-- [Workflow settings](https://toolchain.deltabox.studio/guide/ci/settings.md)
-- [Sync](https://toolchain.deltabox.studio/guide/ci/sync.md)
+- [CI](https://toolchain.dbx.studio/guide/ci.md)
+- [Changelog workflow](https://toolchain.dbx.studio/guide/ci/changelog.md)
+- [CI checks](https://toolchain.dbx.studio/guide/ci/ci.md)
+- [Dependabot](https://toolchain.dbx.studio/guide/ci/dependabot.md)
+- [Issues](https://toolchain.dbx.studio/guide/ci/issues.md)
+- [Releases](https://toolchain.dbx.studio/guide/ci/releases.md)
+- [Workflow settings](https://toolchain.dbx.studio/guide/ci/settings.md)
+- [Sync](https://toolchain.dbx.studio/guide/ci/sync.md)
 
 #### Migrations
 
-- [Migrations](https://toolchain.deltabox.studio/guide/migrations.md)
-- [Migrating from v1 to v2](https://toolchain.deltabox.studio/guide/migrations/v1-v2.md)
-- [Migrating from v2 to v3](https://toolchain.deltabox.studio/guide/migrations/v2-v3.md)
+- [Migrations](https://toolchain.dbx.studio/guide/migrations.md)
+- [Migrating from v1 to v2](https://toolchain.dbx.studio/guide/migrations/v1-v2.md)
+- [Migrating from v2 to v3](https://toolchain.dbx.studio/guide/migrations/v2-v3.md)
 
 #### Programmatic API
 
-- [Programmatic API](https://toolchain.deltabox.studio/guide/api.md)
-- [Examples](https://toolchain.deltabox.studio/guide/api/examples.md)
-- [Logging](https://toolchain.deltabox.studio/guide/api/logging.md)
-- [Package reference](https://toolchain.deltabox.studio/guide/api/package-reference.md)
-- [Registering commands](https://toolchain.deltabox.studio/guide/api/registering-commands.md)
-- [Subpath exports](https://toolchain.deltabox.studio/guide/api/subpath-exports.md)
-- [Umbrella (`@deltabox/toolchain`)](https://toolchain.deltabox.studio/guide/api/umbrella.md)
+- [Programmatic API](https://toolchain.dbx.studio/guide/api.md)
+- [Examples](https://toolchain.dbx.studio/guide/api/examples.md)
+- [Logging](https://toolchain.dbx.studio/guide/api/logging.md)
+- [Package reference](https://toolchain.dbx.studio/guide/api/package-reference.md)
+- [Registering commands](https://toolchain.dbx.studio/guide/api/registering-commands.md)
+- [Subpath exports](https://toolchain.dbx.studio/guide/api/subpath-exports.md)
+- [Umbrella (`@deltabox/toolchain`)](https://toolchain.dbx.studio/guide/api/umbrella.md)
 
 ### Contribute
 
-- [Overview](https://toolchain.deltabox.studio/contribute.md)
-- [Development](https://toolchain.deltabox.studio/contribute/development.md)
-- [Documentation](https://toolchain.deltabox.studio/contribute/documentation.md)
+- [Overview](https://toolchain.dbx.studio/contribute.md)
+- [Development](https://toolchain.dbx.studio/contribute/development.md)
+- [Documentation](https://toolchain.dbx.studio/contribute/documentation.md)
 
 ### LLMs
 
-- [LLMs](https://toolchain.deltabox.studio/llms.md)
+- [LLMs](https://toolchain.dbx.studio/llms.md)
 
 ### Other
 
-- [Changelog](https://toolchain.deltabox.studio/CHANGELOG.md)
+- [Changelog](https://toolchain.dbx.studio/CHANGELOG.md)

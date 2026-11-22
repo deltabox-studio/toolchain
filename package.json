@@ -1,8 +1,8 @@
 {
     "name": "@deltabox/toolchain",
-    "version": "3.0.0-beta.20",
+    "version": "3.0.0-beta.22",
     "description": "A superset of Vite+ with rich extras: project synchronization, config generator, tsconfig management, MCP server, CI and changelog automation, providers, catalogs and a VS Code extension. Use it as a Vite plugin or standalone.",
-    "homepage": "https://toolchain.deltabox.studio",
+    "homepage": "https://toolchain.dbx.studio",
     "author": "Victor Sango <victor@deltabox.studio>",
     "repository": {
         "type": "git",

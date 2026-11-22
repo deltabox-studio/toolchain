@@ -28,7 +28,7 @@ export default defineConfig({
                     scope: '@deltabox',
                     author: 'Victor Sango <victor@deltabox.studio>',
                     license: 'MPL-2.0',
-                    homepage: 'https://toolchain.deltabox.studio',
+                    homepage: 'https://toolchain.dbx.studio',
                     repo: 'https://github.com/deltabox-studio/toolchain',
                     description:
                         'A superset of Vite+ with rich extras: project synchronization, config generator, tsconfig management, MCP server, CI and changelog automation, providers, catalogs and a VS Code extension. Use it as a Vite plugin or standalone.',

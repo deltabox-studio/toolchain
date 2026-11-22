@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-pack",
-    "version": "3.0.0-beta.4",
+    "version": "3.0.0-beta.5",
     "private": true,
     "description": "Build-pack base configuration (tsdown), workspace aliases and cleanup commands used by @deltabox/toolchain.",
     "author": "Victor Sango <victor@deltabox.studio>",
@@ -33,7 +33,7 @@
         "./config/node": "./dist/config/node.js",
         "./package.json": "./package.json"
     },
-    "homepage": "https://toolchain.deltabox.studio",
+    "homepage": "https://toolchain.dbx.studio",
     "packageManager": "yarn@4.17.1",
     "publishConfig": {
         "access": "public",

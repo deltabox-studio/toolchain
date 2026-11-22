@@ -1,8 +1,20 @@
 # Changelog
 
-## 3.0.0-beta.5 (November 2026)
+## 3.0.0-beta.6 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Chores</summary>
+
+- Update domain `toolchain.deltabox.studio` to `toolchain.dbx.studio` ([#966f975](https://github.com/deltabox-studio/toolchain/commit/966f975) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.5 (November 2026)
 
 <details>
 <summary>Bug fixes</summary>
@@ -11,9 +23,6 @@
 - Update skill name ([#004bbf9](https://github.com/deltabox-studio/toolchain/commit/004bbf9) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.4 (November 2026)
 
@@ -35,7 +44,7 @@
   <details>
   <summary><strong>See more...</strong></summary>
 
-  - Introduce the official docs skill, which tells agents to read https://toolchain.deltabox.studio/llms.txt before answering or editing. The mcp package gains checkSkill/installSkill/installOfficialSkill (idempotent, forceable), a 'dbx skills --official' command with provider/scope/dir options, and a skills sync task driven by the new toolchain.mcp.skills section (opt-in by presence). The VS Code extension exposes an 'Install official skill' prompt action and Home quick action. Config types, schema, generated reference and docs are updated.
+  - Introduce the official docs skill, which tells agents to read https://toolchain.dbx.studio/llms.txt before answering or editing. The mcp package gains checkSkill/installSkill/installOfficialSkill (idempotent, forceable), a 'dbx skills --official' command with provider/scope/dir options, and a skills sync task driven by the new toolchain.mcp.skills section (opt-in by presence). The VS Code extension exposes an 'Install official skill' prompt action and Home quick action. Config types, schema, generated reference and docs are updated.
 
   </details>
 

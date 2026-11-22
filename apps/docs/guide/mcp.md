@@ -59,7 +59,7 @@ The VS Code extension exposes the same flow from **Install MCP server + skill...
 
 `dbx skills` installs the **official dbx toolchain skill** without the MCP
 server. The skill is documentation-only: it tells the agent to read
-[`https://toolchain.deltabox.studio/llms.txt`](https://toolchain.deltabox.studio/llms.txt)
+[`https://toolchain.dbx.studio/llms.txt`](https://toolchain.dbx.studio/llms.txt)
 and follow the relevant docs page before answering or editing files. It also
 tells the agent to inspect the project first:
 

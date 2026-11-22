@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-docker",
-    "version": "3.0.0-beta.3",
+    "version": "3.0.0-beta.4",
     "private": true,
     "description": "Dockerfile, .dockerignore and compose generation for @deltabox/toolchain projects, with Vite+ image support.",
     "author": "Victor Sango <victor@deltabox.studio>",
@@ -27,7 +27,7 @@
         ".": "./dist/index.js",
         "./package.json": "./package.json"
     },
-    "homepage": "https://toolchain.deltabox.studio",
+    "homepage": "https://toolchain.dbx.studio",
     "packageManager": "yarn@4.17.1",
     "publishConfig": {
         "access": "public",
