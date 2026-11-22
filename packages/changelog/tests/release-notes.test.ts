@@ -402,6 +402,50 @@ describe('grouped release notes', () => {
         expect(notes).not.toContain('0.9.0 -> 1.0.0');
     });
 
+    it('keeps grouped details when an older entry has a Package changes footer', () => {
+        // Regression: the merged preamble (which can hold the footer) was
+        // emitted before the details groups, so keepFirstPackageChanges
+        // truncated the entire body down to the footer.
+        const changelog = [
+            '# Changelog',
+            '',
+            '## 3.0.0-beta.2 (November 2026)',
+            '',
+            '<details>',
+            '<summary>New features</summary>',
+            '',
+            '- Beta two',
+            '',
+            '</details>',
+            '',
+            '## 3.0.0-beta.1 (November 2026)',
+            '',
+            '<details>',
+            '<summary>New features</summary>',
+            '',
+            '- Beta one',
+            '',
+            '</details>',
+            '',
+            '### Package changes',
+            '- [myapp](https://example.test/myapp)',
+            '  - dependency: 0.9.0 -> 1.0.0',
+            '',
+            '## 2.9.0 (October 2026)',
+            '',
+            '- Released',
+            '',
+        ].join('\n');
+        const notes = buildReleaseNotes(changelog, ['v2.9.0'], '3.0.0-beta.2', { group: true });
+
+        expect(notes).toContain('- Beta two');
+        expect(notes).toContain('- Beta one');
+        expect(notes).not.toContain('- Released');
+        expect(notes.match(/### Package changes/g)).toHaveLength(1);
+        expect(notes).toContain('0.9.0 -> 1.0.0');
+        expect(notes.indexOf('### Package changes')).toBeGreaterThan(notes.indexOf('</details>'));
+    });
+
     it('keeps one Package changes footer inside a wrapped footer block', () => {
         const changelog = [
             '# Changelog',
