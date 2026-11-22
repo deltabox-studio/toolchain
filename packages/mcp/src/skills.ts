@@ -125,7 +125,7 @@ export function resolveMcpSkillsConfig(
 export function renderOfficialSkill(): string {
     return [
         '---',
-        'name: deltabox toolchain',
+        'name: deltabox-toolchain',
         'description: >',
         '  Official deltabox toolchain (`dbx`) guidance. Use when the user asks about',
         '  dbx or the @deltabox packages: its CLI, configuration, Vite plugin, config',

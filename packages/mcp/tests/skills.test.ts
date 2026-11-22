@@ -36,7 +36,7 @@ describe('official skill', () => {
         const skill = renderOfficialSkill();
         expect(skill.startsWith('---\n')).toBe(true);
         expect(skill).toContain(`<${OFFICIAL_SKILL_DOCS_URL}>`);
-        expect(skill).toContain('name: deltabox toolchain');
+        expect(skill).toContain('name: deltabox-toolchain');
         expect(skill).toContain('guide/config-generator');
         expect(skill).toContain('dbx <command> --help');
     });

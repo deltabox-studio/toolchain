@@ -306,7 +306,7 @@ function codexToml(current: string, command: string, args: string[]): string {
 export function renderSkill(provider: McpProviderId): string {
     return [
         '---',
-        'name: deltabox toolchain',
+        'name: deltabox-toolchain',
         'description: >',
         '  Manage this project with the deltabox MCP server (dbx_sync, dbx_projects,',
         '  dbx_changelog, dbx_migrate, dbx_tsconfig). Use when the user asks to sync',
