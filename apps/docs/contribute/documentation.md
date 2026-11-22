@@ -6,7 +6,7 @@ outline: [2, 3]
 # Documentation
 
 Full documentation, guides and examples live at
-[toolchain.deltabox.studio](https://toolchain.deltabox.studio/guide).
+[toolchain.dbx.studio](https://toolchain.dbx.studio/guide).
 
 The source pages live in `apps/docs` and are built with VitePress.
 

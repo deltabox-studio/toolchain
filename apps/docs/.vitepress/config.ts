@@ -17,12 +17,12 @@ const DESCRIPTION =
 
 /** The prose `llms.txt` opens with, before the generated table of contents. */
 const LLMS_DETAILS = [
-    '> If `https://toolchain.deltabox.studio` is unavailable, the same documentation is ' +
+    '> If `https://toolchain.dbx.studio` is unavailable, the same documentation is ' +
         'available in the repository at ' +
         '<https://github.com/deltabox-studio/toolchain/tree/main/apps/docs> (source Markdown).',
     '',
     'This file is a concise, link-first overview. For the **full** documentation in a ' +
-        'single file, see [`llms-full.txt`](https://toolchain.deltabox.studio/llms-full.txt).',
+        'single file, see [`llms-full.txt`](https://toolchain.dbx.studio/llms-full.txt).',
     '',
     '**How it works** — `@deltabox/toolchain` is a config-driven toolchain:',
     '',
@@ -295,7 +295,7 @@ export default withFolderTree(
                 // Vite 5; the `Plugin` types don't unify, so cast to the option
                 // VitePress expects.
                 llmstxt({
-                    domain: 'https://toolchain.deltabox.studio',
+                    domain: 'https://toolchain.dbx.studio',
                     title: 'deltabox toolchain',
                     description: DESCRIPTION,
                     details: LLMS_DETAILS,
@@ -352,7 +352,7 @@ export default withFolderTree(
         },
 
         // Publish the generated dbx JSON schema at the site root so editors can
-        // point at https://toolchain.deltabox.studio/config.schema.json.
+        // point at https://toolchain.dbx.studio/config.schema.json.
         buildEnd(siteConfig) {
             const schema = resolve(siteConfig.root, '../../config.schema.json');
             if (existsSync(schema)) {

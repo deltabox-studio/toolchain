@@ -59,7 +59,7 @@ See the [environment reference](/config/env) and the
 
 ## Editor JSON Schema
 
-The generated [config.schema.json](https://toolchain.deltabox.studio/config.schema.json)
+The generated [config.schema.json](https://toolchain.dbx.studio/config.schema.json)
 gives editors completion and validation for \`dbx.config.*\`.
 
 The exhaustive object reference is [dbx.config](/config/reference).

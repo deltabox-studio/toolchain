@@ -23,7 +23,7 @@
   <details>
   <summary><strong>See more...</strong></summary>
 
-  - Introduce the official docs skill, which tells agents to read https://toolchain.deltabox.studio/llms.txt before answering or editing. The mcp package gains checkSkill/installSkill/installOfficialSkill (idempotent, forceable), a 'dbx skills --official' command with provider/scope/dir options, and a skills sync task driven by the new toolchain.mcp.skills section (opt-in by presence). The VS Code extension exposes an 'Install official skill' prompt action and Home quick action. Config types, schema, generated reference and docs are updated.
+  - Introduce the official docs skill, which tells agents to read https://toolchain.dbx.studio/llms.txt before answering or editing. The mcp package gains checkSkill/installSkill/installOfficialSkill (idempotent, forceable), a 'dbx skills --official' command with provider/scope/dir options, and a skills sync task driven by the new toolchain.mcp.skills section (opt-in by presence). The VS Code extension exposes an 'Install official skill' prompt action and Home quick action. Config types, schema, generated reference and docs are updated.
 
   </details>
 

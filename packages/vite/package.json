@@ -70,6 +70,6 @@
         "access": "public",
         "provenance": true
     },
-    "homepage": "https://toolchain.deltabox.studio",
+    "homepage": "https://toolchain.dbx.studio",
     "packageManager": "yarn@4.17.1"
 }

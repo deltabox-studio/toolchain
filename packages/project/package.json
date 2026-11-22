@@ -34,7 +34,7 @@
         "./cli": "./dist/cli/index.js",
         "./package.json": "./package.json"
     },
-    "homepage": "https://toolchain.deltabox.studio",
+    "homepage": "https://toolchain.dbx.studio",
     "packageManager": "yarn@4.17.1",
     "publishConfig": {
         "access": "public",

@@ -102,7 +102,7 @@
   <details>
   <summary><strong>See more...</strong></summary>
 
-  - Introduce the official docs skill, which tells agents to read https://toolchain.deltabox.studio/llms.txt before answering or editing. The mcp package gains checkSkill/installSkill/installOfficialSkill (idempotent, forceable), a 'dbx skills --official' command with provider/scope/dir options, and a skills sync task driven by the new toolchain.mcp.skills section (opt-in by presence). The VS Code extension exposes an 'Install official skill' prompt action and Home quick action. Config types, schema, generated reference and docs are updated.
+  - Introduce the official docs skill, which tells agents to read https://toolchain.dbx.studio/llms.txt before answering or editing. The mcp package gains checkSkill/installSkill/installOfficialSkill (idempotent, forceable), a 'dbx skills --official' command with provider/scope/dir options, and a skills sync task driven by the new toolchain.mcp.skills section (opt-in by presence). The VS Code extension exposes an 'Install official skill' prompt action and Home quick action. Config types, schema, generated reference and docs are updated.
 
   </details>
 
@@ -4904,7 +4904,7 @@
   <details>
   <summary><strong>See more...</strong></summary>
 
-  - - The VitePress build now copies the generated `dbx` JSON schema into the dist root, so it is served at https://toolchain.deltabox.studio/config.schema.json.
+  - - The VitePress build now copies the generated `dbx` JSON schema into the dist root, so it is served at https://toolchain.dbx.studio/config.schema.json.
 
   </details>
 
@@ -5043,7 +5043,7 @@
 <details>
 <summary>Documentation</summary>
 
-- Highlight the config generator and link `toolchain.deltabox.studio` ([#836cd36](https://github.com/deltabox-studio/toolchain/commit/836cd36) by [T0chi](https://github.com/T0chi))
+- Highlight the config generator and link `toolchain.dbx.studio` ([#836cd36](https://github.com/deltabox-studio/toolchain/commit/836cd36) by [T0chi](https://github.com/T0chi))
 
 </details>
 

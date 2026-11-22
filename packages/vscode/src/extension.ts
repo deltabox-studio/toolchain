@@ -58,7 +58,7 @@ const TEMPLATES_VIEW_ID = 'deltabox.templates';
 const REGISTRIES_VIEW_ID = 'deltabox.registries';
 
 /** The public documentation site (the Home "Need help?" link). */
-const DOCS_URL = 'https://toolchain.deltabox.studio';
+const DOCS_URL = 'https://toolchain.dbx.studio';
 
 /** How long to wait for `dbx watch --list` before falling back to the defaults. */
 const WATCH_INPUTS_TIMEOUT_MS = 30_000;

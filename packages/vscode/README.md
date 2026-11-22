@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://toolchain.deltabox.studio/logo/logo.png" width="150" />
+  <img src="https://toolchain.dbx.studio/logo/logo.png" width="150" />
 </div>
 
 # deltabox toolchain
@@ -40,7 +40,7 @@ It is most useful when at least one of these is true:
   **same project model**;
 - you are tired of **generated files and release chores drifting**.
 
-Read the rest of [Why use this?](https://toolchain.deltabox.studio/guide/why-use-this) for the
+Read the rest of [Why use this?](https://toolchain.dbx.studio/guide/why-use-this) for the
 problems it removes, the core features and when it might not fit.
 
 ---
@@ -71,7 +71,7 @@ problems it removes, the core features and when it might not fit.
 
 ---
 
-Documentation, guides and examples live at [toolchain.deltabox.studio](https://toolchain.deltabox.studio/guide/vscode).
+Documentation, guides and examples live at [toolchain.dbx.studio](https://toolchain.dbx.studio/guide/vscode).
 
 See all the [commands](#commands) below.
 
@@ -84,12 +84,12 @@ See all the [commands](#commands) below.
 
 <div align="left">
   <video width="1342" controls>
-    <source src="https://toolchain.deltabox.studio/vscode-example.mp4" type="video/mp4">
+    <source src="https://toolchain.dbx.studio/vscode-example.mp4" type="video/mp4">
   </video>
 </div>
 
 <div align="left">
-  <img src="https://toolchain.deltabox.studio/vscode-screenshot.png" width="300" />
+  <img src="https://toolchain.dbx.studio/vscode-screenshot.png" width="300" />
 </div>
 
 ## Commands
@@ -351,5 +351,5 @@ The tests live in `tests/integration` and are compiled to `out/test`. To debug t
 and use **Test: Debug All Tests**.
 
 <div align="center">
-  <img src="https://toolchain.deltabox.studio/logo/outline_colored.png" width="150" />
+  <img src="https://toolchain.dbx.studio/logo/outline_colored.png" width="150" />
 </div>

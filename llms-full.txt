@@ -1,5 +1,5 @@
 ---
-url: https://toolchain.deltabox.studio/guide.md
+url: https://toolchain.dbx.studio/guide.md
 ---
 # Getting started
 
@@ -159,7 +159,7 @@ that area untouched.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/why-use-this.md
+url: https://toolchain.dbx.studio/guide/why-use-this.md
 ---
 # Why use this?
 
@@ -331,7 +331,7 @@ makes the project around Vite+ easier to keep consistent.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/config.md
+url: https://toolchain.dbx.studio/config.md
 ---
 
 # Overview
@@ -370,7 +370,7 @@ See the [environment reference](/config/env) and the
 
 ## Editor JSON Schema
 
-The generated [config.schema.json](https://toolchain.deltabox.studio/config.schema.json)
+The generated [config.schema.json](https://toolchain.dbx.studio/config.schema.json)
 gives editors completion and validation for `dbx.config.*`.
 
 The exhaustive object reference is [dbx.config](/config/reference).
@@ -402,7 +402,7 @@ fields defined in Zod/Untyped schemas:
 ---
 
 ---
-url: https://toolchain.deltabox.studio/config/cli.md
+url: https://toolchain.dbx.studio/config/cli.md
 ---
 
 # CLI reference
@@ -1098,7 +1098,7 @@ Vite+: Remove `vp` and all related data.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/config/env.md
+url: https://toolchain.dbx.studio/config/env.md
 ---
 
 # Environment variables
@@ -1142,7 +1142,7 @@ environment variable with `.meta({ envName: "..." })` (see the
 ---
 
 ---
-url: https://toolchain.deltabox.studio/config/reference.md
+url: https://toolchain.dbx.studio/config/reference.md
 ---
 
 # dbx.config
@@ -4166,7 +4166,7 @@ export default defineConfig({
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config-generator.md
+url: https://toolchain.dbx.studio/guide/config-generator.md
 ---
 # Config generator
 
@@ -4217,7 +4217,7 @@ can be found in the full [API reference](/guide/config-generator/api).
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config-generator/describe-a-scope.md
+url: https://toolchain.dbx.studio/guide/config-generator/describe-a-scope.md
 ---
 # Describe a scope
 
@@ -4584,7 +4584,7 @@ exports and every generator option.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config-generator/create-the-engine.md
+url: https://toolchain.dbx.studio/guide/config-generator/create-the-engine.md
 ---
 # Create the engine
 
@@ -4676,7 +4676,7 @@ generator option.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config-generator/generate.md
+url: https://toolchain.dbx.studio/guide/config-generator/generate.md
 ---
 # Generate
 
@@ -5057,7 +5057,7 @@ the complete export list.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config-generator/cli-commands.md
+url: https://toolchain.dbx.studio/guide/config-generator/cli-commands.md
 ---
 # CLI commands docs
 
@@ -5163,7 +5163,7 @@ documented as runtime-only.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config-generator/load-the-config.md
+url: https://toolchain.dbx.studio/guide/config-generator/load-the-config.md
 ---
 # Load the config at runtime
 
@@ -5329,7 +5329,7 @@ Options include `configFileOptions` (filename, extensions, locations,
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config-generator/generated-outputs.md
+url: https://toolchain.dbx.studio/guide/config-generator/generated-outputs.md
 ---
 # Generated outputs
 
@@ -5515,7 +5515,7 @@ For a full, real example of the generated config types, see
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config-generator/client-and-server.md
+url: https://toolchain.dbx.studio/guide/config-generator/client-and-server.md
 ---
 # Client and server configs
 
@@ -5835,7 +5835,7 @@ and loader options, and the [API reference](/guide/config-generator/api) for the
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config-generator/real-world-shape.md
+url: https://toolchain.dbx.studio/guide/config-generator/real-world-shape.md
 ---
 # Real-world shape
 
@@ -5968,7 +5968,7 @@ export.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config-generator/api.md
+url: https://toolchain.dbx.studio/guide/config-generator/api.md
 ---
 # API reference
 
@@ -6949,7 +6949,7 @@ All types can be found at
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config.md
+url: https://toolchain.dbx.studio/guide/config.md
 ---
 # Configuration guide
 
@@ -7021,7 +7021,7 @@ The generated, exhaustive section reference is [dbx.config](/config/reference).
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config/config-file-names.md
+url: https://toolchain.dbx.studio/guide/config/config-file-names.md
 ---
 # Config file names
 
@@ -7046,7 +7046,7 @@ custom tsconfigs and examples.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config/defineconfig.md
+url: https://toolchain.dbx.studio/guide/config/defineconfig.md
 ---
 # `defineConfig`
 
@@ -7071,7 +7071,7 @@ export default defineConfig(async () => {
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config/hooks.md
+url: https://toolchain.dbx.studio/guide/config/hooks.md
 ---
 # Hooks
 
@@ -7138,7 +7138,7 @@ committed in the same version-bump commit.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config/loader.md
+url: https://toolchain.dbx.studio/guide/config/loader.md
 ---
 # Loader
 
@@ -7309,7 +7309,7 @@ createConfigFile({ name: '.env.example', content: { APP_HOST: 'localhost' } });
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config/logging.md
+url: https://toolchain.dbx.studio/guide/config/logging.md
 ---
 # Logging
 
@@ -7380,7 +7380,7 @@ through the same logger.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config/nested-configs.md
+url: https://toolchain.dbx.studio/guide/config/nested-configs.md
 ---
 # Nested configs
 
@@ -7526,7 +7526,7 @@ there would select the shared defaults instead and shadow the root config.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config/opt-in-by-presence.md
+url: https://toolchain.dbx.studio/guide/config/opt-in-by-presence.md
 ---
 # Opt-in by presence
 
@@ -7559,7 +7559,7 @@ options when they are not overridden. See
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config/programmatic-api.md
+url: https://toolchain.dbx.studio/guide/config/programmatic-api.md
 ---
 # Programmatic config API
 
@@ -7587,7 +7587,7 @@ Full section reference: [dbx.config](/config/reference).
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config/providers.md
+url: https://toolchain.dbx.studio/guide/config/providers.md
 ---
 # Provider config
 
@@ -7613,7 +7613,7 @@ flag turns provider colour off too. See [Providers](/guide/providers#colour).
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/config/vite.md
+url: https://toolchain.dbx.studio/guide/config/vite.md
 ---
 # Vite+ config
 
@@ -7819,7 +7819,7 @@ dbx sync                          # writes the managed vite.config.ts shim
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/monorepo.md
+url: https://toolchain.dbx.studio/guide/monorepo.md
 ---
 # Monorepo guide
 
@@ -7943,7 +7943,7 @@ Globs resolve from the root config, so use workspace paths such as
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/project.md
+url: https://toolchain.dbx.studio/guide/project.md
 ---
 # Project
 
@@ -8158,7 +8158,7 @@ projectSyncTask();
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/typescript.md
+url: https://toolchain.dbx.studio/guide/typescript.md
 ---
 # TypeScript
 
@@ -8304,7 +8304,7 @@ site root, so a `dbx.config.json` gets editor completion. For a TypeScript confi
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/tsconfig.md
+url: https://toolchain.dbx.studio/guide/tsconfig.md
 ---
 # tsconfig
 
@@ -9066,7 +9066,7 @@ for the rules.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/catalogs.md
+url: https://toolchain.dbx.studio/guide/catalogs.md
 ---
 # Package catalogs
 
@@ -9227,7 +9227,7 @@ import {
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/templates.md
+url: https://toolchain.dbx.studio/guide/templates.md
 ---
 # Templates
 
@@ -9575,7 +9575,7 @@ and asks whether to add it to the **global** registry (yes by default);
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/template-structures.md
+url: https://toolchain.dbx.studio/guide/template-structures.md
 ---
 # Template and registry structures
 
@@ -10312,7 +10312,7 @@ Vite+ also accepts an `@org/create` package whose `package.json` declares
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/vite.md
+url: https://toolchain.dbx.studio/guide/vite.md
 ---
 # Vite+
 
@@ -10566,7 +10566,7 @@ See [Configuration](/guide/config/vite) for the `dbx.config` integration and the
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/vite-plugin.md
+url: https://toolchain.dbx.studio/guide/vite-plugin.md
 ---
 # Vite plugin
 
@@ -10633,7 +10633,7 @@ reference](/config/reference) for every section.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/vscode.md
+url: https://toolchain.dbx.studio/guide/vscode.md
 ---
 # VS Code extension
 
@@ -10928,7 +10928,7 @@ item actions).
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/providers.md
+url: https://toolchain.dbx.studio/guide/providers.md
 ---
 # Providers
 
@@ -11190,7 +11190,7 @@ and menus from it, so adding a provider surfaces it automatically. See
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/formatting.md
+url: https://toolchain.dbx.studio/guide/formatting.md
 ---
 # Formatting & linting
 
@@ -11534,7 +11534,7 @@ import {
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/scripts.md
+url: https://toolchain.dbx.studio/guide/scripts.md
 ---
 # Package scripts
 
@@ -11732,7 +11732,7 @@ See the [Monorepo guide](/guide/monorepo) for the full task setup,
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/cli.md
+url: https://toolchain.dbx.studio/guide/cli.md
 ---
 # CLI
 
@@ -11972,7 +11972,7 @@ on its **own** CLI. See [Config Generator](/guide/config-generator/).
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/docker.md
+url: https://toolchain.dbx.studio/guide/docker.md
 ---
 # Docker
 
@@ -12098,7 +12098,7 @@ With `runtime: 'auto'` the generator reads `package.json`:
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/mcp.md
+url: https://toolchain.dbx.studio/guide/mcp.md
 ---
 # MCP (Model Context Protocol)
 
@@ -12161,7 +12161,7 @@ The VS Code extension exposes the same flow from **Install MCP server + skill...
 
 `dbx skills` installs the **official dbx toolchain skill** without the MCP
 server. The skill is documentation-only: it tells the agent to read
-[`https://toolchain.deltabox.studio/llms.txt`](https://toolchain.deltabox.studio/llms.txt)
+[`https://toolchain.dbx.studio/llms.txt`](https://toolchain.dbx.studio/llms.txt)
 and follow the relevant docs page before answering or editing files. It also
 tells the agent to inspect the project first:
 
@@ -12236,7 +12236,7 @@ resolveMcpSkillsConfig(config); // the configured agents/scope, or undefined
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/logger.md
+url: https://toolchain.dbx.studio/guide/logger.md
 ---
 # Logger
 
@@ -12344,7 +12344,7 @@ Use `logger.info` for human messages and `logger.raw` for machine output; avoid
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/watch.md
+url: https://toolchain.dbx.studio/guide/watch.md
 ---
 # Watch
 
@@ -12417,7 +12417,7 @@ configures the **CLI** `dbx watch` command.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/changelog.md
+url: https://toolchain.dbx.studio/guide/changelog.md
 ---
 # Changelog
 
@@ -12628,7 +12628,7 @@ to point at a different `gh` executable.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/changelog/branches.md
+url: https://toolchain.dbx.studio/guide/changelog/branches.md
 ---
 # Branches
 
@@ -12656,7 +12656,7 @@ The `sync` workflow runs on both. Any per-workflow `pushBranches` override (eg.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/changelog/cli.md
+url: https://toolchain.dbx.studio/guide/changelog/cli.md
 ---
 # CLI
 
@@ -12699,7 +12699,7 @@ description is only filled in when the entry has none. See
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/changelog/commitlint.md
+url: https://toolchain.dbx.studio/guide/changelog/commitlint.md
 ---
 # commitlint
 
@@ -12756,7 +12756,7 @@ than the rule/scope grouping, but it works with any commit-message style.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/changelog/intro-outro.md
+url: https://toolchain.dbx.studio/guide/changelog/intro-outro.md
 ---
 # Intro and outro text
 
@@ -12817,7 +12817,7 @@ heading.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/changelog/release.md
+url: https://toolchain.dbx.studio/guide/changelog/release.md
 ---
 # Release bodies
 
@@ -12954,7 +12954,7 @@ automatically; no workflow change is needed after enabling grouping. See
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/changelog/troubleshooting.md
+url: https://toolchain.dbx.studio/guide/changelog/troubleshooting.md
 ---
 # Troubleshooting
 
@@ -12991,7 +12991,7 @@ version bundling the fixed commitlint also resolves it.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/changelog/versioning.md
+url: https://toolchain.dbx.studio/guide/changelog/versioning.md
 ---
 # Versioning
 
@@ -13584,7 +13584,7 @@ with the same title by default.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/changelog/writing-commit-messages.md
+url: https://toolchain.dbx.studio/guide/changelog/writing-commit-messages.md
 ---
 # Writing commit messages
 
@@ -13627,7 +13627,7 @@ the shell consumed without leaving a trace still cannot be recovered.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/ci.md
+url: https://toolchain.dbx.studio/guide/ci.md
 ---
 # CI
 
@@ -13788,7 +13788,7 @@ See [Workflow settings](/guide/ci/settings) for the shared object options and th
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/ci/changelog.md
+url: https://toolchain.dbx.studio/guide/ci/changelog.md
 ---
 # Changelog workflow
 
@@ -13833,7 +13833,7 @@ workflow. See [Workflow settings](/guide/ci/settings#vendor-workflows).
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/ci/ci.md
+url: https://toolchain.dbx.studio/guide/ci/ci.md
 ---
 # CI checks
 
@@ -13875,7 +13875,7 @@ complete `workflow` object to write that vendor's pipeline instead.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/ci/dependabot.md
+url: https://toolchain.dbx.studio/guide/ci/dependabot.md
 ---
 # Dependabot
 
@@ -14054,7 +14054,7 @@ untouched and reported as a conflict, exactly like a hand-written workflow.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/ci/issues.md
+url: https://toolchain.dbx.studio/guide/ci/issues.md
 ---
 # Issues
 
@@ -14081,7 +14081,7 @@ vendor.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/ci/releases.md
+url: https://toolchain.dbx.studio/guide/ci/releases.md
 ---
 # Releases
 
@@ -14184,7 +14184,7 @@ GitHub prerelease.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/ci/settings.md
+url: https://toolchain.dbx.studio/guide/ci/settings.md
 ---
 # Workflow settings
 
@@ -14413,7 +14413,7 @@ workflows and their exact paths; `dbx workflow <id|file>` honours `filename` and
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/ci/sync.md
+url: https://toolchain.dbx.studio/guide/ci/sync.md
 ---
 # Sync
 
@@ -14438,7 +14438,7 @@ set `provider` with a complete GitLab/Azure `workflow` to target another vendor.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/migrations.md
+url: https://toolchain.dbx.studio/guide/migrations.md
 ---
 # Migrations
 
@@ -14654,7 +14654,7 @@ handled here.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/migrations/v1-v2.md
+url: https://toolchain.dbx.studio/guide/migrations/v1-v2.md
 ---
 # Migrating from v1 to v2
 
@@ -14880,7 +14880,7 @@ delete it and use one of those two options.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/migrations/v2-v3.md
+url: https://toolchain.dbx.studio/guide/migrations/v2-v3.md
 ---
 # Migrating from v2 to v3
 
@@ -15485,7 +15485,7 @@ The v3 line also adds a large set of capabilities on top of v2, grouped by area:
   (`--provider`) and location (`--scope` / `--dir`), checks first and never
   overwrites unless `--force`. The `checkSkill` / `installSkill` /
   `installOfficialSkill` APIs expose the same flow. The skill tells agents to
-  read [`llms.txt`](https://toolchain.deltabox.studio/llms.txt) and inspect the
+  read [`llms.txt`](https://toolchain.dbx.studio/llms.txt) and inspect the
   project config, graph and managed-file manifest before acting. See
   [Skills](/guide/mcp#skills).
 * Opt-in automatic skill installation through `toolchain.mcp.skills`; `dbx sync`
@@ -15765,7 +15765,7 @@ If you version workspaces individually, opt excluded packages out of the glob:
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/api.md
+url: https://toolchain.dbx.studio/guide/api.md
 ---
 # Programmatic API
 
@@ -15796,7 +15796,7 @@ await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, p
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/api/examples.md
+url: https://toolchain.dbx.studio/guide/api/examples.md
 ---
 # Examples
 
@@ -15901,7 +15901,7 @@ await program.invokeAsync(process.argv.slice(2));
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/api/logging.md
+url: https://toolchain.dbx.studio/guide/api/logging.md
 ---
 # Logging
 
@@ -15942,7 +15942,7 @@ call `setLogConfig` / `setLogOverrides` under the hood.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/api/package-reference.md
+url: https://toolchain.dbx.studio/guide/api/package-reference.md
 ---
 # Package reference
 
@@ -16188,7 +16188,7 @@ bold.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/api/registering-commands.md
+url: https://toolchain.dbx.studio/guide/api/registering-commands.md
 ---
 # Registering commands
 
@@ -16270,7 +16270,7 @@ for `create()`, hooks and help/error formatting.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/api/subpath-exports.md
+url: https://toolchain.dbx.studio/guide/api/subpath-exports.md
 ---
 # Subpath exports
 
@@ -16293,7 +16293,7 @@ url: https://toolchain.deltabox.studio/guide/api/subpath-exports.md
 ---
 
 ---
-url: https://toolchain.deltabox.studio/guide/api/umbrella.md
+url: https://toolchain.dbx.studio/guide/api/umbrella.md
 ---
 # Umbrella (`@deltabox/toolchain`)
 
@@ -16343,7 +16343,7 @@ await runSync({ tasks: defaultSyncTasks(), cwd: process.cwd(), config, tokens, p
 ---
 
 ---
-url: https://toolchain.deltabox.studio/contribute.md
+url: https://toolchain.dbx.studio/contribute.md
 ---
 
 # Overview
@@ -16367,7 +16367,7 @@ Feel free to contribute to the development or docs.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/contribute/development.md
+url: https://toolchain.dbx.studio/contribute/development.md
 ---
 
 # Development
@@ -16479,13 +16479,13 @@ writing workflow.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/contribute/documentation.md
+url: https://toolchain.dbx.studio/contribute/documentation.md
 ---
 
 # Documentation
 
 Full documentation, guides and examples live at
-[toolchain.deltabox.studio](https://toolchain.deltabox.studio/guide).
+[toolchain.dbx.studio](https://toolchain.dbx.studio/guide).
 
 The source pages live in `apps/docs` and are built with VitePress.
 
@@ -16526,7 +16526,7 @@ linter/formatter bootstrap fix.
 ---
 
 ---
-url: https://toolchain.deltabox.studio/llms.md
+url: https://toolchain.dbx.studio/llms.md
 ---
 # LLMs
 
@@ -16545,14 +16545,14 @@ Every page is also available as raw Markdown by appending `.md` to its URL (eg.
 
 ## When the site is unavailable
 
-If `https://toolchain.deltabox.studio` is down, the same documentation lives in
+If `https://toolchain.dbx.studio` is down, the same documentation lives in
 the repository at
 [github.com/deltabox-studio/toolchain/tree/main/apps/docs](https://github.com/deltabox-studio/toolchain/tree/main/apps/docs).
 
 ---
 
 ---
-url: https://toolchain.deltabox.studio/CHANGELOG.md
+url: https://toolchain.dbx.studio/CHANGELOG.md
 ---
 # Changelog
 
@@ -16590,7 +16590,7 @@ url: https://toolchain.deltabox.studio/CHANGELOG.md
 
 * Add the official dbx skill installer ([#359e166](https://github.com/deltabox-studio/toolchain/commit/359e166) by [T0chi](https://github.com/T0chi))
 
-  * Introduce the official docs skill, which tells agents to read https://toolchain.deltabox.studio/llms.txt before answering or editing. The mcp package gains checkSkill/installSkill/installOfficialSkill (idempotent, forceable), a 'dbx skills --official' command with provider/scope/dir options, and a skills sync task driven by the new toolchain.mcp.skills section (opt-in by presence). The VS Code extension exposes an 'Install official skill' prompt action and Home quick action. Config types, schema, generated reference and docs are updated.
+  * Introduce the official docs skill, which tells agents to read https://toolchain.dbx.studio/llms.txt before answering or editing. The mcp package gains checkSkill/installSkill/installOfficialSkill (idempotent, forceable), a 'dbx skills --official' command with provider/scope/dir options, and a skills sync task driven by the new toolchain.mcp.skills section (opt-in by presence). The VS Code extension exposes an 'Install official skill' prompt action and Home quick action. Config types, schema, generated reference and docs are updated.
 
 #### Config
 

@@ -736,7 +736,7 @@
     },
     "author": "Victor Sango <victor@deltabox.studio>",
     "license": "MPL-2.0",
-    "homepage": "https://toolchain.deltabox.studio",
+    "homepage": "https://toolchain.dbx.studio",
     "packageManager": "yarn@4.17.1",
     "keywords": [
         "tooling",

@@ -15,6 +15,6 @@ Every page is also available as raw Markdown by appending `.md` to its URL (eg.
 
 ## When the site is unavailable
 
-If `https://toolchain.deltabox.studio` is down, the same documentation lives in
+If `https://toolchain.dbx.studio` is down, the same documentation lives in
 the repository at
 [github.com/deltabox-studio/toolchain/tree/main/apps/docs](https://github.com/deltabox-studio/toolchain/tree/main/apps/docs).

@@ -57,11 +57,11 @@ You describe the project once, and the toolchain keeps the rest in sync.
 - Monorepo aware
 - And more...
 
-See more at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
+See more at [toolchain.dbx.studio](https://toolchain.dbx.studio).
 
 ---
 
-The video and screenshot below is the VS Code extension. Read more about it at [toolchain.deltabox.studio/guide/vscode](https://toolchain.deltabox.studio/guide/vscode).
+The video and screenshot below is the VS Code extension. Read more about it at [toolchain.dbx.studio/guide/vscode](https://toolchain.dbx.studio/guide/vscode).
 
 https://github.com/user-attachments/assets/a4f1ad75-fedd-40ee-b84d-3365f7025a3e
 
@@ -99,7 +99,7 @@ It is most useful when at least one of these is true:
   **same project model**;
 - you are tired of **generated files and release chores drifting**.
 
-Read the rest of [Why use this?](https://toolchain.deltabox.studio/guide/why-use-this) for the
+Read the rest of [Why use this?](https://toolchain.dbx.studio/guide/why-use-this) for the
 problems it removes, the core features and when it might not fit.
 
 </details>
@@ -108,7 +108,7 @@ problems it removes, the core features and when it might not fit.
 
 See [CHANGELOG.md](/CHANGELOG.md) for latest updates.
 
-Documentation, guides and examples live at [toolchain.deltabox.studio](https://toolchain.deltabox.studio).
+Documentation, guides and examples live at [toolchain.dbx.studio](https://toolchain.dbx.studio).
 
 ## Install
 
@@ -158,13 +158,13 @@ export default defineConfig({
 The `@deltabox/toolchain` settings live under the `toolchain` key. Every section
 there is **opt-in by presence**: `section: true` enables it with defaults,
 `section: false` disables it, and `section: { ... }` configures it.
-See the [configuration reference](https://toolchain.deltabox.studio/config/reference).
+See the [configuration reference](https://toolchain.dbx.studio/config/reference).
 
-v3+ introduces a top-level [`toolchain.enabled`](https://toolchain.deltabox.studio/guide/migrations/v2-v3#toolchain-enable-disable)
+v3+ introduces a top-level [`toolchain.enabled`](https://toolchain.dbx.studio/guide/migrations/v2-v3#toolchain-enable-disable)
 switch, a per-section `regenerate` flag, lifecycle
-[hooks](https://toolchain.deltabox.studio/guide/config/hooks) (`beforeVersion` /
+[hooks](https://toolchain.dbx.studio/guide/config/hooks) (`beforeVersion` /
 `afterVersion`) and [Dependabot security
-updates](https://toolchain.deltabox.studio/guide/ci/dependabot)
+updates](https://toolchain.dbx.studio/guide/ci/dependabot)
 (`ci.dependabot.security`).
 
 ## Config generator
@@ -235,16 +235,16 @@ discover and import `myapp.config.*` (TS, JS, JSON or YAML) and resolve it throu
 the same schema.
 
 See the [config generator
-guide](https://toolchain.deltabox.studio/guide/config-generator) for loading,
+guide](https://toolchain.dbx.studio/guide/config-generator) for loading,
 overriding and validating the config.
 
 The toolchain generates its own config types this way — see
 `packages/shared/src/config-types.ts` and the [config generator
-guide](https://toolchain.deltabox.studio/guide/config-generator#generated-outputs).
+guide](https://toolchain.dbx.studio/guide/config-generator#generated-outputs).
 
 `configCommands({ engine })` also exposes the same generators as `config:*`
 commands on your own CLI. See the [config generator
-guide](https://toolchain.deltabox.studio/guide/config-generator).
+guide](https://toolchain.dbx.studio/guide/config-generator).
 
 ## Vite / Vite+ plugin
 
@@ -292,7 +292,7 @@ export default defineConfig({
   `vp run dbx:check` (Vite+ reads `run.tasks` from the static config, which a
   plugin cannot add). Drop the `run` block if you don't want those tasks.
 
-See the [providers guide](https://toolchain.deltabox.studio/guide/providers).
+See the [providers guide](https://toolchain.dbx.studio/guide/providers).
 
 ## MCP
 
@@ -315,7 +315,7 @@ extension exposes the same installer from its command palette.
 
 ## CLI
 
-Visit the [CLI docs](https://toolchain.deltabox.studio/guide/cli) to learn more.
+Visit the [CLI docs](https://toolchain.dbx.studio/guide/cli) to learn more.
 
 Note: Commands that run against a project load its `dbx.config.ts` first, so
 config-derived defaults apply unless overridden on the command line.
@@ -345,7 +345,7 @@ See [packages/vscode/README.md](./packages/vscode/README.md) to learn more about
 
 Feel free to contribute to the development or docs.
 
-Visit [toolchain.deltabox.studio/contribute](https://toolchain.deltabox.studio/contribute) for more information.
+Visit [toolchain.dbx.studio/contribute](https://toolchain.dbx.studio/contribute) for more information.
 
 ## Troubleshooting
 

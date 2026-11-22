@@ -27,7 +27,7 @@ import {
 export const OFFICIAL_SKILL_NAME = 'deltabox-toolchain';
 
 /** The published documentation bundle the skill points an agent at. */
-export const OFFICIAL_SKILL_DOCS_URL = 'https://toolchain.deltabox.studio/llms.txt';
+export const OFFICIAL_SKILL_DOCS_URL = 'https://toolchain.dbx.studio/llms.txt';
 
 /** A skill flavor: the official docs skill or the MCP tool skill. */
 export type McpSkillKind = 'official' | 'mcp';
@@ -130,7 +130,7 @@ export function renderOfficialSkill(): string {
         '  Official deltabox toolchain (`dbx`) guidance. Use when the user asks about',
         '  dbx or the @deltabox packages: its CLI, configuration, Vite plugin, config',
         '  generator, changelog/release automation, MCP server, templates, tsconfig',
-        '  or migrations. Read https://toolchain.deltabox.studio/llms.txt first and',
+        '  or migrations. Read https://toolchain.dbx.studio/llms.txt first and',
         '  follow the most relevant docs page before answering or editing files.',
         '---',
         '',
