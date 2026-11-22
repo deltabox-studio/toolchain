@@ -54,3 +54,70 @@ paths that were written.
 
 The VS Code extension exposes the same flow from **Install MCP server + skill...**
 (and the Home view's Quick Actions).
+
+## Skills
+
+`dbx skills` installs the **official dbx toolchain skill** without the MCP
+server. The skill is documentation-only: it tells the agent to read
+[`https://toolchain.deltabox.studio/llms.txt`](https://toolchain.deltabox.studio/llms.txt)
+and follow the relevant docs page before answering or editing files.
+
+```sh
+dbx skills                                  # list the install status per agent
+dbx skills --official                       # install for every builtin agent
+dbx skills --official --provider claude     # one agent
+dbx skills --official --provider vscode --scope global
+dbx skills --official --provider custom --dir ./tools/agent
+dbx skills --official --force               # overwrite an existing skill
+```
+
+Installs are idempotent: an existing skill file is left untouched unless
+`--force` is passed, so local edits are preserved. `--json` prints the status or
+write results.
+
+### Automatic installation
+
+Opt in through `toolchain.mcp.skills`; `dbx sync` (and `dbx watch`) then adds the
+skill wherever it is missing:
+
+```ts
+export default defineConfig({
+    toolchain: {
+        mcp: {
+            skills: {
+                agents: ['claude', 'vscode'],
+                scope: 'project',
+            },
+        },
+    },
+});
+```
+
+| Option    | Meaning                                                         |
+| --------- | --------------------------------------------------------------- |
+| `agents`  | Agent id or ids (default: every builtin provider).              |
+| `scope`   | `project` (default) or `global`.                                |
+| `dir`     | Custom directory (with `agents: ['custom']`).                   |
+| `force`   | Overwrite existing files (default: `false`).                    |
+| `enabled` | Set `false` to keep the section configured but stop installing. |
+
+The skill paths mirror the MCP provider table above, using the
+`deltabox-toolchain` stem (for example
+`.claude/skills/deltabox-toolchain/SKILL.md`). The VS Code extension adds an
+**Install official skill...** prompt action alongside the MCP installer.
+
+### Programmatic API
+
+```ts
+import {
+    checkSkill,
+    installOfficialSkill,
+    installSkill,
+    resolveMcpSkillsConfig,
+} from '@deltabox/toolchain/mcp';
+
+checkSkill({ agent: 'claude', cwd }); // { path, exists }
+installOfficialSkill({ agent: 'claude', cwd }); // writes only when missing
+installSkill({ agent: 'vscode', scope: 'global', force: true });
+resolveMcpSkillsConfig(config); // the configured agents/scope, or undefined
+```

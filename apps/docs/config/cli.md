@@ -25,6 +25,7 @@ Generated from the same `CliCommand` descriptors the `dbx` binary registers.
 | [`dbx mcp:serve`](#mcp-serve)                           | Run the dbx MCP server over stdio (for MCP clients).                                            |
 | [`dbx mcp:install`](#mcp-install)                       | Install the dbx MCP server + skill into an AI harness/editor.                                   |
 | [`dbx mcp:list`](#mcp-list)                             | List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).                          |
+| [`dbx skills`](#skills)                                 | Check or install the official dbx toolchain skill for AI agents (docs lookup).                  |
 | [`dbx migrate`](#migrate)                               | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.* into dbx.config. |
 | [`dbx migrate:list`](#migrate-list)                     | List the registered migrations and whether each is detected.                                    |
 | [`dbx project:init`](#project-init)                     | Scaffold a single-package TypeScript project.                                                   |
@@ -262,6 +263,18 @@ List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).
 
 - `--cwd ‹dir›` — Project root (default: cwd).
 - `--json` — Print the providers as JSON.
+
+## `dbx skills`
+
+Check or install the official dbx toolchain skill for AI agents (docs lookup).
+
+- `--official` — Install the official dbx docs skill (only when missing).
+- `--provider ‹id›` — claude, codex, vscode, opencode, pi or custom (default: all builtin).
+- `--scope ‹scope›` — project (default) or global.
+- `--cwd ‹dir›` — Project root (default: cwd).
+- `--dir ‹dir›` — Custom directory (for --provider custom).
+- `--force` — Overwrite an existing skill file.
+- `--json` — Print the status/results as JSON.
 
 ## `dbx migrate`
 

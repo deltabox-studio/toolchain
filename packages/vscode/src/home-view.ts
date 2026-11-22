@@ -47,6 +47,7 @@ export type HomeAction =
     | { type: 'scaffold' }
     | { type: 'migrate' }
     | { type: 'installMcp' }
+    | { type: 'installSkills' }
     | { type: 'refresh' }
     | { type: 'generateConfigs' }
     | { type: 'runWorkflow' }
@@ -332,6 +333,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
       <button class="secondary" data-action="refresh">Refresh projects</button>
       <button class="secondary" data-action="migrate">Migrate tooling\u2026</button>
       <button class="secondary" data-action="installMcp">Install MCP\u2026</button>
+      <button class="secondary" data-action="installSkills">Install skill\u2026</button>
     </div>
   </section>
   <section class="section">

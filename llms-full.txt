@@ -427,6 +427,7 @@ Generated from the same `CliCommand` descriptors the `dbx` binary registers.
 | [`dbx mcp:serve`](#mcp-serve)                           | Run the dbx MCP server over stdio (for MCP clients).                                            |
 | [`dbx mcp:install`](#mcp-install)                       | Install the dbx MCP server + skill into an AI harness/editor.                                   |
 | [`dbx mcp:list`](#mcp-list)                             | List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).                          |
+| [`dbx skills`](#skills)                                 | Check or install the official dbx toolchain skill for AI agents (docs lookup).                  |
 | [`dbx migrate`](#migrate)                               | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.\* into dbx.config. |
 | [`dbx migrate:list`](#migrate-list)                     | List the registered migrations and whether each is detected.                                    |
 | [`dbx project:init`](#project-init)                     | Scaffold a single-package TypeScript project.                                                   |
@@ -664,6 +665,18 @@ List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).
 
 * `--cwd ‹dir›` — Project root (default: cwd).
 * `--json` — Print the providers as JSON.
+
+## `dbx skills`
+
+Check or install the official dbx toolchain skill for AI agents (docs lookup).
+
+* `--official` — Install the official dbx docs skill (only when missing).
+* `--provider ‹id›` — claude, codex, vscode, opencode, pi or custom (default: all builtin).
+* `--scope ‹scope›` — project (default) or global.
+* `--cwd ‹dir›` — Project root (default: cwd).
+* `--dir ‹dir›` — Custom directory (for --provider custom).
+* `--force` — Overwrite an existing skill file.
+* `--json` — Print the status/results as JSON.
 
 ## `dbx migrate`
 
@@ -1124,6 +1137,7 @@ environment variable with `.meta({ envName: "..." })` (see the
 | `DBX_SYNC`                          | toolchain | `{}`    | `dbx sync` behaviour (formatting of the generated managed files).                                                                                                                          |
 | `DBX_LOGGER`                        | toolchain | `{}`    | Logging level, colours and prefix for toolchain output.                                                                                                                                    |
 | `DBX_PROVIDERS`                     | toolchain | `{}`    | Provider command behaviour (eg. colour for the passthrough commands).                                                                                                                      |
+| `DBX_MCP`                           | toolchain | `{}`    | Install the official dbx skill (and MCP helpers) into AI agent harnesses.                                                                                                                  |
 
 ---
 
@@ -4070,6 +4084,68 @@ Enable/disable this section (default: enabled when defined).
 
 Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
+## `mcp`
+
+MCP server and skill installation for AI harnesses.
+
+### `skills`
+
+* **Type**: `boolean | ToolchainMcpSkillsConfig`
+
+Install the official dbx skill into agent harnesses during `dbx sync`. Opt in by defining this section.
+
+#### `agents`
+
+* **Type**: `'claude' | 'codex' | 'vscode' | 'opencode' | 'pi' | 'custom' | Array<'claude' | 'codex' | 'vscode' | 'opencode' | 'pi' | 'custom'>`
+
+Agent harness(es) to install into (default: every builtin provider). `custom` requires `dir`.
+
+#### `scope`
+
+* **Type**: `'project' | 'global'`
+* **Default**: `"project"`
+
+Write the skill into the project (default) or the user profile.
+
+#### `dir`
+
+* **Type**: `string`
+
+Custom directory to write the skill into (with `agents: ['custom']`).
+
+#### `force`
+
+* **Type**: `boolean`
+* **Default**: `false`
+
+Overwrite an existing skill file (default: keep it).
+
+#### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
+#### `regenerate`
+
+* **Type**: `boolean`
+* **Default**: `true`
+
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
+
+### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+* **Type**: `boolean`
+* **Default**: `true`
+
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## Full example
 
 ```ts [dbx.config.ts]
@@ -6486,7 +6562,7 @@ program.invokeAsync().catch(error => {
 ```
 
 `groups` defaults to `true`, so help groups commands by their delimited name
-path (`vite:list` -> `Vite:`). Set `groups: false` for a flat list, or
+path (`vite:list` -> `Vite commands:`). Set `groups: false` for a flat list, or
 `groups: { auto: false }` to only honor explicit `group` labels. `delimiter`
 accepts one string or an array (default `':'`).
 
@@ -6494,7 +6570,7 @@ accepts one string or an array (default `':'`).
 const program = engine.cli.program.create(
     cmd => [
         cmd('sync', { name: 'sync', run: syncHandler }),
-        cmd('vite:list', { name: 'vite:list', run: listHandler }), // -> Vite:
+        cmd('vite:list', { name: 'vite:list', run: listHandler }), // -> Vite commands:
         cmd('serve:status', {
             name: 'serve:status',
             group: 'Server',
@@ -6565,8 +6641,9 @@ tuple, or `{ scope, description?, setup? }`.
 
 Give an option a `group` label to render it under its own heading. Ungrouped
 options stay in the default `Options:` section; groups appear in
-first-appearance order and merge case-insensitively. Grouping applies to program
-globals and command options alike.
+first-appearance order, merge case-insensitively and render as
+`<Group> options:`. Grouping applies to program globals and command options
+alike, and `groups: false` flattens option groups too.
 
 ```ts
 cmd('sync')
@@ -6584,7 +6661,7 @@ cmd('sync')
 Options:
   --check   Check only.
 
-Diagnostics:
+Diagnostics options:
   --trace   Trace resolution.
   --profile Write a profile.
 ```
@@ -10583,6 +10660,7 @@ code --install-extension deltabox.toolchain-vscode
 | Run Vite+ command...                                      | QuickPick over the Vite+ provider commands, run in a terminal.                                                                                                                                           |
 | Create Vite+ project...                                   | `vp create` in a terminal.                                                                                                                                                                               |
 | Install MCP server + skill...                             | `dbx mcp:install` with a provider picker (Claude, Codex, VS Code, OpenCode, Pi or a custom directory).                                                                                                   |
+| Install official skill...                                 | `dbx skills --official` with a provider picker; adds the official dbx docs skill only when missing.                                                                                                      |
 | List MCP installations                                    | `dbx mcp:list` — show where the MCP server + skill are installed.                                                                                                                                        |
 | Generate changelog                                        | Run `dbx changelog` in the selected project.                                                                                                                                                             |
 | Clean build artifacts                                     | Remove `dist/` and `*.tsbuildinfo` (`dbx cleanup`).                                                                                                                                                      |
@@ -10822,6 +10900,7 @@ Search for `deltabox:` to find:
 * **Run Vite+ command...**
 * **Create Vite+ project...**
 * **Install MCP server + skill...**
+* **Install official skill...**
 * **List MCP installations**
 * **Generate changelog**
 * **Clean build artifacts**
@@ -11857,7 +11936,7 @@ Invalid argv prints only the error message by default. Pass
 unknown option/command or a bad value.
 
 `dbx` groups its command list by default: `vite:list` is listed under a
-`Vite:` heading. Pass `{ groups: false }` for a flat list, or
+`Vite commands:` heading. Pass `{ groups: false }` for a flat list, or
 `{ groups: { auto: false } }` to only honor explicit command groups. The same
 options work through `createCli` and `runCli`.
 
@@ -12066,6 +12145,73 @@ paths that were written.
 
 The VS Code extension exposes the same flow from **Install MCP server + skill...**
 (and the Home view's Quick Actions).
+
+## Skills
+
+`dbx skills` installs the **official dbx toolchain skill** without the MCP
+server. The skill is documentation-only: it tells the agent to read
+[`https://toolchain.deltabox.studio/llms.txt`](https://toolchain.deltabox.studio/llms.txt)
+and follow the relevant docs page before answering or editing files.
+
+```sh
+dbx skills                                  # list the install status per agent
+dbx skills --official                       # install for every builtin agent
+dbx skills --official --provider claude     # one agent
+dbx skills --official --provider vscode --scope global
+dbx skills --official --provider custom --dir ./tools/agent
+dbx skills --official --force               # overwrite an existing skill
+```
+
+Installs are idempotent: an existing skill file is left untouched unless
+`--force` is passed, so local edits are preserved. `--json` prints the status or
+write results.
+
+### Automatic installation
+
+Opt in through `toolchain.mcp.skills`; `dbx sync` (and `dbx watch`) then adds the
+skill wherever it is missing:
+
+```ts
+export default defineConfig({
+    toolchain: {
+        mcp: {
+            skills: {
+                agents: ['claude', 'vscode'],
+                scope: 'project',
+            },
+        },
+    },
+});
+```
+
+| Option    | Meaning                                                         |
+| --------- | --------------------------------------------------------------- |
+| `agents`  | Agent id or ids (default: every builtin provider).              |
+| `scope`   | `project` (default) or `global`.                                |
+| `dir`     | Custom directory (with `agents: ['custom']`).                   |
+| `force`   | Overwrite existing files (default: `false`).                    |
+| `enabled` | Set `false` to keep the section configured but stop installing. |
+
+The skill paths mirror the MCP provider table above, using the
+`deltabox-toolchain` stem (for example
+`.claude/skills/deltabox-toolchain/SKILL.md`). The VS Code extension adds an
+**Install official skill...** prompt action alongside the MCP installer.
+
+### Programmatic API
+
+```ts
+import {
+    checkSkill,
+    installOfficialSkill,
+    installSkill,
+    resolveMcpSkillsConfig,
+} from '@deltabox/toolchain/mcp';
+
+checkSkill({ agent: 'claude', cwd }); // { path, exists }
+installOfficialSkill({ agent: 'claude', cwd }); // writes only when missing
+installSkill({ agent: 'vscode', scope: 'global', force: true });
+resolveMcpSkillsConfig(config); // the configured agents/scope, or undefined
+```
 
 ---
 

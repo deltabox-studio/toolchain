@@ -39,6 +39,7 @@ code --install-extension deltabox.toolchain-vscode
 | Run Vite+ command...                                      | QuickPick over the Vite+ provider commands, run in a terminal.                                                                                                                                           |
 | Create Vite+ project...                                   | `vp create` in a terminal.                                                                                                                                                                               |
 | Install MCP server + skill...                             | `dbx mcp:install` with a provider picker (Claude, Codex, VS Code, OpenCode, Pi or a custom directory).                                                                                                   |
+| Install official skill...                                 | `dbx skills --official` with a provider picker; adds the official dbx docs skill only when missing.                                                                                                      |
 | List MCP installations                                    | `dbx mcp:list` — show where the MCP server + skill are installed.                                                                                                                                        |
 | Generate changelog                                        | Run `dbx changelog` in the selected project.                                                                                                                                                             |
 | Clean build artifacts                                     | Remove `dist/` and `*.tsbuildinfo` (`dbx cleanup`).                                                                                                                                                      |
@@ -278,6 +279,7 @@ Search for `deltabox:` to find:
 - **Run Vite+ command...**
 - **Create Vite+ project...**
 - **Install MCP server + skill...**
+- **Install official skill...**
 - **List MCP installations**
 - **Generate changelog**
 - **Clean build artifacts**

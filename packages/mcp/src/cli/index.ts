@@ -5,8 +5,20 @@ import path from 'node:path';
 import { logger, defineCliCommand, withSpinner } from '@deltabox/toolchain/shared';
 
 import mcpPkg from '../../package.json' with { type: 'json' };
-import { installMcp, listMcpProviders, type McpProviderId, type McpScope } from '../install.js';
+import {
+    installMcp,
+    listMcpProviders,
+    MCP_PROVIDERS,
+    type McpProviderId,
+    type McpScope,
+} from '../install.js';
 import { createMcpServer, MCP_SERVER_NAME, serveStdio } from '../protocol.js';
+import {
+    checkSkill,
+    installSkill,
+    resolveMcpSkillsConfig,
+    type McpSkillTarget,
+} from '../skills.js';
 import { defaultMcpTools } from '../tools.js';
 
 /** The MCP server for `dbx mcp:serve`, advertising the running package version. */
@@ -124,7 +136,92 @@ function listCommand() {
     });
 }
 
+/** `dbx skills` — check or install the official dbx docs skill for AI agents. */
+function skillsCommand() {
+    return defineCliCommand({
+        name: 'skills',
+        description:
+            'Check or install the official dbx toolchain skill for AI agents (docs lookup).',
+        options: [
+            {
+                flags: '--official',
+                description: 'Install the official dbx docs skill (only when missing).',
+            },
+            {
+                flags: '--provider <id>',
+                description:
+                    'claude, codex, vscode, opencode, pi or custom (default: all builtin).',
+            },
+            { flags: '--scope <scope>', description: 'project (default) or global.' },
+            { flags: '--cwd <dir>', description: 'Project root (default: cwd).' },
+            { flags: '--dir <dir>', description: 'Custom directory (for --provider custom).' },
+            { flags: '--force', description: 'Overwrite an existing skill file.' },
+            { flags: '--json', description: 'Print the status/results as JSON.' },
+        ],
+        run: async (opts, context) => {
+            const cwd = (opts.cwd as string | undefined) ?? context.cwd;
+            const configured = resolveMcpSkillsConfig(context.config);
+            const scope = (opts.scope as McpScope | undefined) ?? configured?.scope ?? 'project';
+            if (scope !== 'project' && scope !== 'global') {
+                throw new Error('--scope must be `project` or `global`.');
+            }
+            if (opts.provider) {
+                const providers = listMcpProviders().map(provider => provider.id);
+                if (!providers.includes(opts.provider as McpProviderId)) {
+                    throw new Error(
+                        `unknown provider "${opts.provider}" (one of: ${providers.join(', ')}).`
+                    );
+                }
+            }
+            const agents: McpProviderId[] = opts.provider
+                ? [opts.provider as McpProviderId]
+                : (configured?.agents ?? MCP_PROVIDERS.map(provider => provider.id));
+            const dir = (opts.dir as string | undefined) ?? configured?.dir;
+            const force = opts.force === true || configured?.force === true;
+            const targets: McpSkillTarget[] = agents.map(agent => ({
+                agent,
+                scope,
+                cwd,
+                ...(dir ? { dir } : {}),
+            }));
+
+            if (!opts.official) {
+                const statuses = targets.map(target => checkSkill(target));
+                if (opts.json) {
+                    logger.raw(JSON.stringify(statuses, null, 4));
+                    return;
+                }
+                for (const status of statuses) {
+                    logger.info(
+                        `${status.exists ? 'installed' : 'missing  '} ${status.agent.padEnd(9)} ${status.path}`
+                    );
+                }
+                return;
+            }
+
+            const results = await withSpinner(
+                async () => targets.map(target => installSkill({ ...target, force })),
+                {
+                    start: 'Installing the official dbx skill...',
+                    success: 'Installed the official dbx skill.',
+                }
+            );
+            if (opts.json) {
+                logger.raw(JSON.stringify(results, null, 4));
+                return;
+            }
+            for (const result of results) {
+                if (result.installed) {
+                    logger.success(`skill installed for ${result.agent}: ${result.path}`);
+                } else {
+                    logger.info(`skill already present for ${result.agent}: ${result.path}`);
+                }
+            }
+        },
+    });
+}
+
 /** Every `mcp:*` command. */
 export function mcpCommands() {
-    return [serveCommand(), installCommand(), listCommand()];
+    return [serveCommand(), installCommand(), listCommand(), skillsCommand()];
 }

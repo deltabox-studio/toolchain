@@ -662,6 +662,41 @@ export function activate(context: vscode.ExtensionContext): void {
         terminal.sendText(`${cliInvocation(root)} ${command}`);
     };
 
+    /** The installable MCP/skill agents from `dbx mcp:list --json`. */
+    const loadMcpAgents = async (
+        root: string
+    ): Promise<{ id: string; name: string; description: string }[]> => {
+        const listed = await captureCli(root, ['mcp:list', '--json']);
+        try {
+            const parsed = JSON.parse(listed.stdout) as unknown;
+            return Array.isArray(parsed)
+                ? (parsed as { id: string; name: string; description: string }[])
+                : [];
+        } catch {
+            return [];
+        }
+    };
+
+    /** Prompt for the install scope. */
+    const pickScope = async (): Promise<'project' | 'global' | undefined> =>
+        (
+            await vscode.window.showQuickPick(
+                [
+                    {
+                        label: 'Project',
+                        description: 'Write the config into this workspace.',
+                        value: 'project' as const,
+                    },
+                    {
+                        label: 'Global',
+                        description: 'Write the config into your user profile.',
+                        value: 'global' as const,
+                    },
+                ],
+                { placeHolder: 'Install scope?' }
+            )
+        )?.value;
+
     /** Install the dbx MCP server + skill into an AI harness/editor. */
     const installMcp = async (cwd?: string): Promise<void> => {
         const root = cwd ?? workspaceRoots()[0];
@@ -669,14 +704,7 @@ export function activate(context: vscode.ExtensionContext): void {
             vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
             return;
         }
-        const listed = await captureCli(root, ['mcp:list', '--json']);
-        let providers: { id: string; name: string; description: string }[] = [];
-        try {
-            const parsed = JSON.parse(listed.stdout) as unknown;
-            if (Array.isArray(parsed)) providers = parsed as typeof providers;
-        } catch {
-            providers = [];
-        }
+        const providers = await loadMcpAgents(root);
         if (providers.length === 0) {
             vscode.window.showWarningMessage('deltabox: the MCP providers could not be loaded.');
             return;
@@ -694,26 +722,47 @@ export function activate(context: vscode.ExtensionContext): void {
             }
         );
         if (!provider) return;
-        const scope = await vscode.window.showQuickPick(
-            [
-                {
-                    label: 'Project',
-                    description: 'Write the config into this workspace.',
-                    value: 'project',
-                },
-                {
-                    label: 'Global',
-                    description: 'Write the config into your user profile.',
-                    value: 'global',
-                },
-            ],
-            { placeHolder: 'Install scope?' }
-        );
+        const scope = await pickScope();
         if (!scope) return;
-        const args = ['mcp:install', '--provider', provider.id, '--scope', scope.value];
+        const args = ['mcp:install', '--provider', provider.id, '--scope', scope];
         if ((await runCli(root, args)) === 0) {
             vscode.window.showInformationMessage(
-                `deltabox: MCP + skill installed for ${provider.label} (${scope.value}).`
+                `deltabox: MCP + skill installed for ${provider.label} (${scope}).`
+            );
+        }
+    };
+
+    /** Install the official dbx docs skill into an AI harness/editor. */
+    const installSkills = async (cwd?: string): Promise<void> => {
+        const root = cwd ?? workspaceRoots()[0];
+        if (!root) {
+            vscode.window.showWarningMessage('deltabox: open a workspace folder first.');
+            return;
+        }
+        const providers = await loadMcpAgents(root);
+        if (providers.length === 0) {
+            vscode.window.showWarningMessage('deltabox: the skill agents could not be loaded.');
+            return;
+        }
+        const provider = await vscode.window.showQuickPick(
+            providers.map(entry => ({
+                label: entry.name,
+                description: entry.id,
+                detail: entry.description,
+                id: entry.id,
+            })),
+            {
+                placeHolder: 'Install the official dbx skill for which client?',
+                matchOnDescription: true,
+            }
+        );
+        if (!provider) return;
+        const scope = await pickScope();
+        if (!scope) return;
+        const args = ['skills', '--official', '--provider', provider.id, '--scope', scope];
+        if ((await runCli(root, args)) === 0) {
+            vscode.window.showInformationMessage(
+                `deltabox: official skill installed for ${provider.label} (${scope}).`
             );
         }
     };
@@ -896,6 +945,9 @@ export function activate(context: vscode.ExtensionContext): void {
                 case 'installMcp':
                     await installMcp();
                     break;
+                case 'installSkills':
+                    await installSkills();
+                    break;
                 case 'resetToolchain':
                     await resetToolchain();
                     break;
@@ -1071,6 +1123,9 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('deltabox.toolchain.migrate', () => migrateTooling()),
         vscode.commands.registerCommand('deltabox.toolchain.installMcp', (cwd?: string) =>
             installMcp(cwd)
+        ),
+        vscode.commands.registerCommand('deltabox.toolchain.installSkills', (cwd?: string) =>
+            installSkills(cwd)
         ),
         vscode.commands.registerCommand(
             'deltabox.toolchain.generateConfig',

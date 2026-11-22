@@ -23,6 +23,7 @@ import { fmtConfigSchema, lintConfigSchema } from './format.js';
 import { toolchainHooksSchema } from './hooks.js';
 import { loaderConfigSchema } from './loader.js';
 import { loggerConfigSchema } from './logger.js';
+import { mcpConfigSchema } from './mcp.js';
 import { section } from './meta.js';
 import { projectConfigSchema } from './project.js';
 import { providersConfigSchema } from './providers.js';
@@ -52,6 +53,7 @@ export type { OxlintConfig } from './generated/oxlint-config.js';
 export * from './json.js';
 export * from './loader.js';
 export * from './logger.js';
+export * from './mcp.js';
 export * from './meta.js';
 export * from './project.js';
 export * from './providers.js';
@@ -147,6 +149,9 @@ export const toolchainConfigSchema = z
         providers: section(providersConfigSchema)
             .describe('Provider command behaviour (eg. colour for the passthrough commands).')
             .optional(),
+        mcp: section(mcpConfigSchema)
+            .describe('Install the official dbx skill (and MCP helpers) into AI agent harnesses.')
+            .optional(),
         hooks: toolchainHooksSchema.optional(),
     })
     .meta({ id: 'ToolchainConfigSections' });
@@ -178,4 +183,5 @@ export const configSchema = {
     sync: syncConfigSchema,
     logger: loggerConfigSchema,
     providers: providersConfigSchema,
+    mcp: mcpConfigSchema,
 } as const;
