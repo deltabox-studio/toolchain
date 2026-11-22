@@ -47,7 +47,7 @@
   <details>
   <summary><strong>See more...</strong></summary>
 
-  - Named option groups now render as '<Group> options:' and command groups as '<Group> commands:', while the default sections stay 'Options:' and 'Commands:'. The program 'groups' option now also flattens option groups when false, so the same toggle controls every help group.
+  - Named option groups now render as '&lt;Group&gt; options:' and command groups as '&lt;Group&gt; commands:', while the default sections stay 'Options:' and 'Commands:'. The program 'groups' option now also flattens option groups when false, so the same toggle controls every help group.
 
   </details>
 

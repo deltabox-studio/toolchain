@@ -1,8 +1,28 @@
 # Changelog
 
-## 3.0.0-beta.13 (November 2026)
+## 3.0.0-beta.14 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Changelog
+- Escape html-like tags so the docs build succeeds ([#b63280c](https://github.com/deltabox-studio/toolchain/commit/b63280c) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - VitePress compiles Markdown as Vue SFCs, so a raw '&lt;Group&gt;' placeholder from a commit body was parsed as an unclosed element and failed apps/docs. Escape tag-like sequences in generated commit subjects and bodies (and while reformatting bullets), while leaving inline code spans, autolinks and comparisons untouched. Also escape the existing beta.19 entry in both changelogs.
+
+  </details>
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.13 (November 2026)
 
 <details>
 <summary>New features</summary>
@@ -139,9 +159,6 @@
   </details>
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.12 (November 2026)
 
