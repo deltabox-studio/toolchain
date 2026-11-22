@@ -206,9 +206,12 @@ Invalid argv prints only the error message by default. Pass
 unknown option/command or a bad value.
 
 `dbx` groups options and commands by default: `vite:list` is listed under a
-`Vite commands:` heading. Pass `{ groups: false }` for flat lists, or
-`{ groups: { auto: false } }` to only honor explicit command groups. The same
-options work through `createCli` and `runCli`.
+`Vite+ commands:` heading. The built-in commands mirror the docs sidebar:
+core workspace commands stay under `Commands:`, followed by
+`Project & templates`, `Tooling`, `Automation & API`, `Agents` and `Vite+`.
+Pass `{ groups: false }` for flat lists, or `{ groups: { auto: false } }` to only
+honor explicit command groups. The same options work through `createCli` and
+`runCli`.
 
 `extractLogOptions` makes the logger flags work before _or_ after the
 subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.
