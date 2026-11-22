@@ -26,11 +26,13 @@ export function skillsSyncTask(): SyncTask {
                     ...(settings.dir ? { dir: settings.dir } : {}),
                 };
                 const status = checkSkill(target);
-                if (status.exists) continue;
                 if (ctx.check) {
-                    ctx.warn(`skill missing for ${agent}: ${status.path}`, 'skills.missing');
+                    if (!status.exists) {
+                        ctx.warn(`skill missing for ${agent}: ${status.path}`, 'skills.missing');
+                    }
                     continue;
                 }
+                if (status.exists && !settings.force) continue;
                 const result = installSkill({ ...target, force: settings.force });
                 if (result.installed) {
                     ctx.log(`Installed the dbx skill for ${agent}: ${result.path}`);
