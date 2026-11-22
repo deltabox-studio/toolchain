@@ -45,6 +45,7 @@ import type { ConfigProgram, ResolveConfigProgramCommands } from '../config.js';
 import type { CliCommandContext, CliOption } from '../shared.js';
 import { syncCommands } from './commands/index.js';
 import { extractConfigSelection, setConfigSelection } from './config-selection.js';
+import { withDogfoodGroups } from './groups.js';
 import { setPassthroughCommand, withCliContext } from './register.js';
 import { withToolingRouting } from './tooling-commands.js';
 import { runUpdateCheck } from './update-check.js';
@@ -81,18 +82,21 @@ function toolingAliases(commands: CliCommand[]) {
  */
 export function builtinCommands(config?: ToolchainConfig) {
     const vite = withToolingRouting(viteCommands());
-    return [
+    // Registration order drives the first-appearance group order in help, so
+    // keep it aligned with the docs sidebar: project/templates, tooling,
+    // automation, agents, then the Vite+ passthroughs.
+    return withDogfoodGroups([
         ...syncCommands(config),
-        ...tsconfigCommands(),
-        ...cleanupCommands(),
-        ...changelogCommands(),
-        ...mcpCommands(),
-        ...migrateCommands(),
         ...projectCommands(),
         ...templateCommands(),
-        ...vite,
+        ...tsconfigCommands(),
+        ...cleanupCommands(),
+        ...migrateCommands(),
         ...toolingAliases(vite),
-    ];
+        ...changelogCommands(),
+        ...mcpCommands(),
+        ...vite,
+    ]);
 }
 
 /** Every built-in command name (a bare Vite+ command never shadows one). */

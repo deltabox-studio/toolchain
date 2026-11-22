@@ -5,11 +5,17 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { addProjectProviderRegistry } from '@deltabox/toolchain/core';
-import { getLogOverrides, logger, setLogOverrides } from '@deltabox/toolchain/shared';
+import {
+    type CliCommand,
+    getLogOverrides,
+    logger,
+    setLogOverrides,
+} from '@deltabox/toolchain/shared';
 
 import { projectsCommand } from '../src/cli/commands/projects.js';
 import { providerPassthroughCommands } from '../src/cli/commands/providers.js';
 import { extractConfigSelection } from '../src/cli/config-selection.js';
+import { withDogfoodGroups } from '../src/cli/groups.js';
 import {
     builtinCommands,
     createCli,
@@ -97,13 +103,13 @@ describe('dbx CLI', () => {
         expect(program.formatHelp()).toContain('dbx');
     });
 
-    it('groups built-in commands by their name path by default', () => {
+    it('groups built-in commands by default', () => {
         const grouped = createCli().formatHelp();
-        expect(grouped).toContain('Vite commands:');
-        expect(grouped.slice(grouped.indexOf('Vite commands:'))).toContain('vite:build');
+        expect(grouped).toContain('Vite+ commands:');
+        expect(grouped.slice(grouped.indexOf('Vite+ commands:'))).toContain('vite:build');
 
         const flat = createCli({ groups: false }).formatHelp();
-        expect(flat).not.toContain('Vite commands:');
+        expect(flat).not.toContain('Vite+ commands:');
         expect(flat).toContain('vite:build');
     });
 
@@ -140,20 +146,119 @@ describe('dbx CLI', () => {
                 .join('');
         try {
             await runCli(['node', 'dbx', '--help'], { groups: false });
-            expect(helpText()).not.toContain('Vite commands:');
+            expect(helpText()).not.toContain('Vite+ commands:');
             expect(helpText()).toContain('vite:build');
 
+            // Explicit dogfood groups survive `auto: false`; only derived groups stop.
             write.mockClear();
             await runCli(['node', 'dbx', '--help'], { groups: { auto: false } });
-            expect(helpText()).not.toContain('Vite commands:');
+            expect(helpText()).toContain('Vite+ commands:');
             expect(helpText()).toContain('vite:build');
 
             write.mockClear();
             await runCli(['node', 'dbx', '--help']);
-            expect(helpText()).toContain('Vite commands:');
+            expect(helpText()).toContain('Vite+ commands:');
         } finally {
             write.mockRestore();
         }
+    });
+
+    it('groups the built-in commands like the docs sidebar', () => {
+        const groups = Object.fromEntries(
+            builtinCommands().map(command => [command.name, command.group])
+        );
+        expect(groups.sync).toBeUndefined();
+        expect(groups['project:init']).toBe('Project & templates');
+        expect(groups['template:list']).toBe('Project & templates');
+        expect(groups.tsconfig).toBe('Tooling');
+        expect(groups.changelog).toBe('Automation & API');
+        expect(groups['mcp:serve']).toBe('Agents');
+        expect(groups.skills).toBe('Agents');
+        expect(groups.vite).toBe('Vite+');
+        expect(groups['vite:build']).toBe('Vite+');
+
+        const help = createCli().formatHelp();
+        const headings = [
+            'Project & templates commands:',
+            'Tooling commands:',
+            'Automation & API commands:',
+            'Agents commands:',
+            'Vite+ commands:',
+        ];
+        let previous = help.indexOf('Commands:');
+        expect(previous).toBeGreaterThan(-1);
+        for (const heading of headings) {
+            const index = help.indexOf(heading);
+            expect(index, heading).toBeGreaterThan(previous);
+            previous = index;
+        }
+        expect(help.slice(help.indexOf('Project & templates commands:'))).toContain('project:init');
+        expect(help.slice(help.indexOf('Agents commands:'))).toContain('skills');
+        expect(help.slice(help.indexOf('Vite+ commands:'))).toContain('vite:build');
+
+        const flat = createCli({ groups: false }).formatHelp();
+        for (const heading of headings) expect(flat).not.toContain(heading);
+        expect(flat).toContain('project:init');
+        expect(flat).toContain('vite:build');
+    });
+
+    it('groups the built-in command options', () => {
+        const program = createCli();
+        const changelog = program.formatHelp('changelog');
+        for (const heading of [
+            'Range options:',
+            'Release options:',
+            'Text options:',
+            'Formatting options:',
+            'Output options:',
+        ]) {
+            expect(changelog, heading).toContain(heading);
+        }
+        expect(changelog).toContain('--release-body');
+
+        const sync = program.formatHelp('sync');
+        for (const heading of [
+            'Sync options:',
+            'Tasks options:',
+            'Formatting options:',
+            'Output options:',
+        ]) {
+            expect(sync, heading).toContain(heading);
+        }
+
+        const skills = program.formatHelp('skills');
+        for (const heading of ['Action options:', 'Target options:', 'Output options:']) {
+            expect(skills, heading).toContain(heading);
+        }
+
+        // RootCliOptions still disables the dogfood option groups.
+        const flat = createCli({ groups: false }).formatHelp('changelog');
+        expect(flat).not.toContain('Release options:');
+        expect(flat).toContain('--release-body');
+    });
+
+    it('preserves explicit dogfood groups and leaves unknown entries flat', () => {
+        const input: CliCommand[] = [
+            {
+                name: 'changelog',
+                description: 'Changelog.',
+                group: 'Custom',
+                options: [{ flags: '--x', description: 'X.', group: 'Explicit' }],
+                run: () => {},
+            },
+            {
+                name: 'custom-thing',
+                description: 'Custom.',
+                options: [{ flags: '--y', description: 'Y.' }],
+                run: () => {},
+            },
+        ];
+        const [custom, unknown] = withDogfoodGroups(input);
+
+        expect(custom?.group).toBe('Custom');
+        expect(custom?.options?.[0]?.group).toBe('Explicit');
+        expect(unknown?.group).toBeUndefined();
+        expect(unknown?.options?.[0]?.group).toBeUndefined();
     });
 
     it('flags provider passthrough commands but not built-ins', () => {
